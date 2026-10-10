@@ -58,7 +58,7 @@ export function DocumentRegisterExport({
               type="button"
               onClick={() => setRegisterType(type)}
               className={cn(
-                "flex items-center justify-between rounded-xl border-0 px-3 py-2 text-left text-xs transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+                "flex items-center justify-between rounded-xl border-0 px-3 py-2 text-left text-xs transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary",
                 registerType === type
                   ? "bg-selected font-semibold text-foreground"
                   : "bg-secondary text-foreground hover:bg-accent"
@@ -79,7 +79,7 @@ export function DocumentRegisterExport({
             type="button"
             onClick={() => setFormat("xlsx")}
             className={cn(
-              "flex items-center gap-3 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+              "flex items-center gap-3 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary",
               format === "xlsx"
                 ? "bg-selected text-foreground font-semibold"
                 : "bg-secondary text-foreground hover:bg-accent"
@@ -96,7 +96,7 @@ export function DocumentRegisterExport({
             type="button"
             onClick={() => setFormat("pdf")}
             className={cn(
-              "flex items-center gap-3 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+              "flex items-center gap-3 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary",
               format === "pdf"
                 ? "bg-selected text-foreground font-semibold"
                 : "bg-secondary text-foreground hover:bg-accent"

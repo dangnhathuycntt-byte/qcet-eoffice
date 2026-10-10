@@ -11,6 +11,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentPaginationProps {
   currentPage: number;
@@ -194,7 +195,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                     {effectivePageSizeOptions.map((size) => {
                       const isSelected = size === pageSize;
                       return (
-                        <button
+                        <Pressable
                           key={size}
                           type="button"
                           role="option"
@@ -217,7 +218,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                               strokeWidth={2}
                             />
                           )}
-                        </button>
+                        </Pressable>
                       );
                     })}
                   </Popover.Popup>

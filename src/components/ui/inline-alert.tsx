@@ -50,7 +50,7 @@ export function InlineAlert({
           type="button"
           onClick={onAction}
           aria-label={actionLabel}
-          className="ml-1 shrink-0 font-medium underline underline-offset-2 hover:opacity-80 active:opacity-100 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 rounded-xs relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+          className="ml-1 shrink-0 font-medium underline underline-offset-2 hover:opacity-80 active:opacity-100 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 rounded-xs relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
         >
           {actionLabel}
         </button>

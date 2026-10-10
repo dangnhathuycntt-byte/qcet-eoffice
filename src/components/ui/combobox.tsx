@@ -86,13 +86,13 @@ export function Combobox({
         />
         <BaseCombobox.Clear
           aria-label="Xóa lựa chọn"
-          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary data-[disabled]:hidden"
+          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary data-[disabled]:hidden"
         >
           <X className="size-3.5" />
         </BaseCombobox.Clear>
         <BaseCombobox.Trigger
           aria-label="Mở danh sách"
-          className="mr-1 flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary"
+          className="mr-1 flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary"
         >
           <ChevronDown className="size-4" />
         </BaseCombobox.Trigger>

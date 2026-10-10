@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import type { AgendaEventItem } from "@/components/dashboard/today-agenda-widget";
 import type { TaskScope } from "@/components/dashboard/unified-task-toolbar";
 import type { SchoolTask } from "@/types/dashboard";
+import { Pressable } from "@/components/ui/pressable";
 
 interface AttentionItem {
   id: string;
@@ -159,7 +160,7 @@ export function DashboardZone() {
           title: t.title,
           reason: "WAITING_APPROVAL",
           reasonLabel: "Chờ phê duyệt",
-          badgeStyle: "bg-amber-50 text-amber-700 border-amber-200/80",
+          badgeStyle: "bg-warning/10 text-warning border-warning/25",
           departmentName: t.leadDepartment || t.department || t.departmentName,
           assigneeName: t.leadAssigneeName || t.assignedTo,
           dueDate: t.dueDate,
@@ -172,7 +173,7 @@ export function DashboardZone() {
           title: t.title,
           reason: "OVERDUE",
           reasonLabel: "Trễ hạn",
-          badgeStyle: "bg-rose-50 text-rose-700 border-rose-200/80",
+          badgeStyle: "bg-danger-soft text-destructive border-destructive/25",
           departmentName: t.leadDepartment || t.department || t.departmentName,
           assigneeName: t.leadAssigneeName || t.assignedTo,
           dueDate: t.dueDate,
@@ -227,7 +228,7 @@ export function DashboardZone() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
+            <Pressable
               type="button"
               onClick={handleManualRefresh}
               disabled={isRefreshing}
@@ -240,7 +241,7 @@ export function DashboardZone() {
                 className={isRefreshing ? "animate-spin text-slate-800" : ""}
                 strokeWidth={1.75}
               />
-            </button>
+            </Pressable>
 
             {createPolicy.canCreate && (
               <Button
@@ -267,7 +268,7 @@ export function DashboardZone() {
                 {availableScopes.map((item) => {
                   const isSelected = scope === item.id;
                   return (
-                    <button
+                    <Pressable
                       key={item.id}
                       type="button"
                       role="tab"
@@ -281,7 +282,7 @@ export function DashboardZone() {
                       )}
                     >
                       {item.label}
-                    </button>
+                    </Pressable>
                   );
                 })}
               </div>
@@ -292,7 +293,7 @@ export function DashboardZone() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-slate-500 font-mono text-[11px]">
+          <div className="flex items-center gap-3 text-slate-500 font-mono text-xs">
             <span>{formattedTodayDate}</span>
             <span className="text-slate-300">·</span>
             <span>Học kỳ I (2026-2027)</span>
@@ -320,7 +321,7 @@ export function DashboardZone() {
                 Cần chú ý
               </h2>
               {attentionItems.length > 0 && (
-                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200/60">
+                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-danger-soft text-destructive border border-destructive/20">
                   {attentionItems.length}
                 </span>
               )}
@@ -342,7 +343,7 @@ export function DashboardZone() {
               <p className="text-xs font-medium text-slate-700">
                 Không có vấn đề cần xử lý khẩn cấp
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Mọi công việc trong phạm vi đang diễn ra đúng kế hoạch.
               </p>
             </div>
@@ -357,7 +358,7 @@ export function DashboardZone() {
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span
                       className={cn(
-                        "shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                        "shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border",
                         item.badgeStyle
                       )}
                     >
@@ -365,7 +366,7 @@ export function DashboardZone() {
                     </span>
 
                     {item.code && (
-                      <span className="shrink-0 font-mono text-[11px] text-slate-400">
+                      <span className="shrink-0 font-mono text-xs text-slate-400">
                         {item.code}
                       </span>
                     )}
@@ -375,7 +376,7 @@ export function DashboardZone() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-3 shrink-0 text-xs text-slate-400">
                     {item.departmentName && (
                       <span className="hidden sm:inline-block max-w-[120px] truncate text-slate-500">
                         {item.departmentName}
@@ -440,12 +441,12 @@ export function DashboardZone() {
                   className="px-3.5 py-2.5 hover:bg-slate-50/60 transition-colors text-xs"
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="font-mono text-[11px] font-medium text-slate-700">
+                    <span className="font-mono text-xs font-medium text-slate-700">
                       {evt.startTime} - {evt.endTime}
                     </span>
                     <span
                       className={cn(
-                        "text-[10px] px-1.5 py-0.2 rounded font-medium",
+                        "text-xs px-1.5 py-0.2 rounded font-medium",
                         evt.status === "IN_PROGRESS"
                           ? "bg-emerald-50 text-emerald-700"
                           : evt.status === "COMPLETED"
@@ -465,7 +466,7 @@ export function DashboardZone() {
                     {evt.title}
                   </p>
 
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-3 text-xs text-slate-400">
                     <span className="inline-flex items-center gap-1 truncate">
                       {evt.isOnline ? (
                         <Video size={11} className="text-blue-500 shrink-0" />
@@ -514,7 +515,7 @@ export function DashboardZone() {
                     key={act.id}
                     className="px-3.5 py-2.5 hover:bg-slate-50/60 transition-colors text-xs flex items-start gap-2.5"
                   >
-                    <div className="size-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 font-medium text-[10px] mt-0.5">
+                    <div className="size-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 font-medium text-xs mt-0.5">
                       {act.actorName ? act.actorName.charAt(0).toUpperCase() : "Q"}
                     </div>
 
@@ -524,7 +525,7 @@ export function DashboardZone() {
                         {act.action}{" "}
                         <span className="font-medium text-slate-900">{act.targetTitle}</span>
                       </p>
-                      <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
+                      <span className="text-xs text-slate-400 font-mono mt-0.5 block">
                         {formatRelativeTime(act.timestamp)}
                       </span>
                     </div>

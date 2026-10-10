@@ -38,6 +38,7 @@ import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { getMobileDrawerItems } from "@/lib/navigation/canonical-navigation-registry";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface MobileMenuDrawerProps {
   open: boolean;
@@ -180,7 +181,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       </div>
                       <span className="text-xs font-semibold truncate">{item.label}</span>
                       {isDocuments && (
-                        <span className="ml-auto px-1.5 py-0.5 rounded text-xs font-medium tracking-tight bg-amber-500/10 text-amber-800 border border-amber-500/20 shrink-0 leading-none select-none">
+                        <span className="ml-auto px-1.5 py-0.5 rounded text-xs font-medium tracking-tight bg-warning/10 text-warning border border-warning/20 shrink-0 leading-none select-none">
                           Đang phát triển
                         </span>
                       )}
@@ -204,7 +205,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
             </div>
 
             {/* Profile Quick Link */}
-            <button
+            <Pressable
               type="button"
               onClick={() => {
                 triggerHaptic("light");
@@ -227,7 +228,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 </div>
               </div>
               <ChevronRight size={15} className="text-muted-foreground" />
-            </button>
+            </Pressable>
           </div>
 
           {/* Mobile Push Notification & App Section */}
@@ -244,7 +245,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     Đã kích hoạt
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-warning/10 text-warning border border-warning/20">
                     Chưa bật
                   </span>
                 )
@@ -258,7 +259,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
             <div className="space-y-1.5">
               {/* Push Toggle Button */}
               {isSupported && (
-                <button
+                <Pressable
                   type="button"
                   disabled={isLoading}
                   onClick={async () => {
@@ -289,12 +290,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   <span className="text-xs text-muted-foreground font-mono">
                     {isSubscribed ? "Đang bật" : "Kích hoạt"}
                   </span>
-                </button>
+                </Pressable>
               )}
 
               {/* Test Ring Button */}
               {isSupported && isSubscribed && (
-                <button
+                <Pressable
                   type="button"
                   disabled={isTestingPush || isLoading}
                   onClick={async () => {
@@ -335,12 +336,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       ? "Lỗi gửi"
                       : "Gửi thử"}
                   </span>
-                </button>
+                </Pressable>
               )}
 
               {/* Install App Button if installable */}
               {isInstallable && (
-                <button
+                <Pressable
                   type="button"
                   onClick={async () => {
                     triggerHaptic("medium");
@@ -353,12 +354,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     <Download size={17} />
                     <span>Cài đặt lên màn hình chính</span>
                   </div>
-                </button>
+                </Pressable>
               )}
 
               {/* iOS Safari Guide Button if iOS & not standalone */}
               {isIOS && !isStandalone && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => {
                     triggerHaptic("light");
@@ -374,11 +375,11 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     <span>Xem hướng dẫn cài đặt iOS</span>
                   </div>
                   <ChevronRight size={14} />
-                </button>
+                </Pressable>
               )}
 
               {/* Feature Guide Help Button */}
-              <button
+              <Pressable
                 type="button"
                 onClick={() => {
                   triggerHaptic("light");
@@ -394,13 +395,13 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   <span>Trợ giúp &amp; Hướng dẫn</span>
                 </div>
                 <ChevronRight size={14} className="text-muted-foreground" />
-              </button>
+              </Pressable>
             </div>
           </div>
 
           {/* Preferences & Actions */}
           <div className="space-y-2 pt-2 border-t border-border/40">
-            <button
+            <Pressable
               type="button"
               onClick={() => {
                 triggerHaptic("warning");
@@ -411,7 +412,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
             >
               <LogOut size={16} />
               <span>Đăng xuất</span>
-            </button>
+            </Pressable>
           </div>
         </div>
       </BottomSheetContent>

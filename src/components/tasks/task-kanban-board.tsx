@@ -53,6 +53,7 @@ import { PrioritySignalBars } from "./priority-signal-bars";
 import { TaskStatusCircle } from "./task-status-circle";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { parseLeadAssignee } from "./table/components/task-row";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // Types & Display Settings
@@ -133,7 +134,7 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     title: "Cần chỉnh sửa",
     label: "Chờ duyệt",
     emoji: "",
-    iconColor: "text-amber-500",
+    iconColor: "text-warning",
   },
   {
     id: "COMPLETED",
@@ -171,7 +172,7 @@ export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
     title: "Cần chỉnh sửa",
     label: "Cần chỉnh sửa",
     emoji: "",
-    iconColor: "text-amber-500",
+    iconColor: "text-warning",
   },
   {
     id: "COMPLETED",
@@ -793,7 +794,7 @@ function KanbanCard({
                 }}
                 className="w-44 rounded-lg border border-border/80 bg-popover shadow-md py-1 animate-in fade-in-0 zoom-in-95 duration-75 text-xs text-popover-foreground"
               >
-                <button
+                <Pressable
                   type="button"
                   role="menuitem"
                   autoFocus
@@ -801,11 +802,11 @@ function KanbanCard({
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
                 >
                   Mở chi tiết
-                </button>
+                </Pressable>
 
                 <div className="h-px bg-border/40 mx-2 my-0.5" />
 
-                <button
+                <Pressable
                   type="button"
                   role="menuitem"
                   aria-label="Chuyển trạng thái"
@@ -824,14 +825,14 @@ function KanbanCard({
                       statusSubmenuOpen && "rotate-90"
                     )}
                   />
-                </button>
+                </Pressable>
 
                 {statusSubmenuOpen && (
                   <div className="px-1 py-1 space-y-0.5 bg-muted/20 border-y border-border/40">
                     {KANBAN_COLUMNS.map((col) => {
                       const isCurrent = mapTaskStatusToKanbanColumn(item.status) === col.id;
                       return (
-                        <button
+                        <Pressable
                           key={col.id}
                           type="button"
                           role="menuitem"
@@ -850,7 +851,7 @@ function KanbanCard({
                           <TaskStatusCircle status={col.id} />
                           <span>{STATUS_LABELS[col.id] ?? col.title}</span>
                           {isCurrent && <span className="ml-auto text-primary font-bold">✓</span>}
-                        </button>
+                        </Pressable>
                       );
                     })}
                   </div>
@@ -858,7 +859,7 @@ function KanbanCard({
 
                 <div className="h-px bg-border/40 mx-2 my-0.5" />
 
-                <button
+                <Pressable
                   type="button"
                   role="menuitem"
                   onClick={(e) => {
@@ -871,7 +872,7 @@ function KanbanCard({
                 >
                   <X strokeWidth={1.5} className="size-3" />
                   Đóng
-                </button>
+                </Pressable>
               </div>,
               document.body
             )}
@@ -899,7 +900,7 @@ function KanbanCard({
           <AlertCircle className="size-3 shrink-0" />
           <span className="truncate flex-1">{errorMessage}</span>
           {lastAttemptedStatus && (
-            <button
+            <Pressable
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
@@ -908,7 +909,7 @@ function KanbanCard({
               className="shrink-0 underline underline-offset-2 hover:no-underline cursor-pointer"
             >
               Thử lại
-            </button>
+            </Pressable>
           )}
         </div>
       )}
@@ -1055,7 +1056,7 @@ function DroppableColumn({
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover/col:opacity-100 transition-opacity">
           {onAddTask && (
-            <button
+            <Pressable
               type="button"
               onClick={() => onAddTask()}
               title={`Thêm công việc vào ${col.label || col.title}`}
@@ -1063,7 +1064,7 @@ function DroppableColumn({
               className="size-6 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
             >
               <Plus strokeWidth={1.5} className="size-3.5" />
-            </button>
+            </Pressable>
           )}
         </div>
       </div>
@@ -1095,13 +1096,13 @@ function DroppableColumn({
 
         {/* Load More Affordance */}
         {tasks.length > colLimit && (
-          <button
+          <Pressable
             type="button"
             onClick={onIncreaseLimit}
             className="w-full py-1.5 px-2 text-xs font-medium font-mono tabular-nums rounded border border-border/50 bg-card hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-center"
           >
             + {Math.min(30, tasks.length - colLimit)} việc nữa ({tasks.length - colLimit})
-          </button>
+          </Pressable>
         )}
       </div>
     </div>
@@ -1150,7 +1151,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
 
   return (
     <div ref={containerRef} className="relative inline-block">
-      <button
+      <Pressable
         type="button"
         title="Tùy chọn hiển thị thẻ"
         aria-label="Tùy chọn hiển thị thẻ"
@@ -1165,7 +1166,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
       >
         <SlidersHorizontal strokeWidth={1.5} className="size-3" />
         <span className="hidden sm:inline text-xs">Hiển thị thẻ</span>
-      </button>
+      </Pressable>
 
       {isOpen && (
         <div
@@ -1180,7 +1181,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
             {toggleOptions.map((opt) => {
               const active = settings[opt.key];
               return (
-                <button
+                <Pressable
                   key={opt.key}
                   type="button"
                   onClick={() => onToggle(opt.key)}
@@ -1190,7 +1191,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
                     {opt.label}
                   </span>
                   {active && <Check strokeWidth={1.5} className="size-3.5 text-primary shrink-0" />}
-                </button>
+                </Pressable>
               );
             })}
           </div>
@@ -1512,7 +1513,7 @@ export function TaskKanbanBoard({
       {/* Mobile Stage Tab Bar (Single column carousel switcher) */}
       <div className="flex md:hidden items-center gap-1 overflow-x-auto pb-1.5 mb-1.5 scrollbar-none shrink-0">
         {KANBAN_COLUMNS.map((col, idx) => (
-          <button
+          <Pressable
             key={col.id}
             type="button"
             onClick={() => scrollToColumn(idx)}
@@ -1526,7 +1527,7 @@ export function TaskKanbanBoard({
             <TaskStatusCircle status={col.id} />
             <span>{col.title}</span>
             <span className="font-mono tabular-nums opacity-80">({groupedTasks[col.id]?.length || 0})</span>
-          </button>
+          </Pressable>
         ))}
       </div>
 

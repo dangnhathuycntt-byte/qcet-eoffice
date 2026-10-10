@@ -84,7 +84,7 @@ export function AdvancedFilterPopover({
     <PopoverRoot open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-xl border-0 px-3 py-1.5 text-xs font-medium transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 cursor-pointer",
+          "inline-flex items-center gap-1.5 rounded-xl border-0 px-3 py-1.5 text-xs font-medium transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 cursor-pointer",
           activeFilterCount > 0
             ? "bg-selected text-foreground font-semibold"
             : "bg-secondary text-foreground hover:bg-accent"

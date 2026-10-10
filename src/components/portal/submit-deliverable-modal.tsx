@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // 1. Constants & Helper Utilities
@@ -396,13 +397,13 @@ export function SubmitDeliverableModal({
                   <CheckCircle2 className="size-4 text-blue-600 shrink-0" strokeWidth={1.5} />
                   <span>Đã khôi phục nội dung bản nháp lưu tạm trước đó.</span>
                 </div>
-                <button
+                <Pressable
                   type="button"
                   onClick={handleClearDraft}
                   className="font-medium underline hover:text-blue-900 cursor-pointer shrink-0"
                 >
                   Xóa nháp
-                </button>
+                </Pressable>
               </div>
             )}
 
@@ -476,7 +477,7 @@ export function SubmitDeliverableModal({
                       ({formatFileSize(selectedFile.size)})
                     </span>
                   </div>
-                  <button
+                  <Pressable
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -487,7 +488,7 @@ export function SubmitDeliverableModal({
                     className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
                   >
                     <Trash2 className="size-3.5" strokeWidth={1.5} />
-                  </button>
+                  </Pressable>
                 </div>
               )}
             </div>

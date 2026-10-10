@@ -26,6 +26,7 @@ import type { TaskStatus } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
 import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { Pressable } from "@/components/ui/pressable";
 
 /**
  * Tính ngày gia hạn hạn chót an toàn theo chuẩn UTC
@@ -305,7 +306,7 @@ export function BatchActionBar({
 
         {/* Hoàn thành nhanh (P0-07: chỉ khi cả lựa chọn đủ quyền) */}
         {onBulkStatusChange && isTargetAllowed("COMPLETED") && (
-          <button
+          <Pressable
             type="button"
             onClick={() => onBulkStatusChange("COMPLETED")}
             disabled={isLoading}
@@ -314,7 +315,7 @@ export function BatchActionBar({
           >
             <TaskIconComplete className={icon} />
             <span className="hidden sm:inline">Hoàn thành</span>
-          </button>
+          </Pressable>
         )}
 
         {/* Đổi trạng thái: chỉ các trạng thái hợp lệ cho TOÀN BỘ lựa chọn (P0-07) */}
@@ -351,7 +352,7 @@ export function BatchActionBar({
 
         {/* Giao lại */}
         {onBulkReassign && (
-          <button
+          <Pressable
             type="button"
             onClick={() => onBulkReassign("")}
             disabled={isLoading}
@@ -362,7 +363,7 @@ export function BatchActionBar({
             <TaskIconAssignee className={icon} />
             <span className="hidden sm:inline">Giao lại</span>
             <span className="sr-only">Phân công lại</span>
-          </button>
+          </Pressable>
         )}
 
         {/* Ưu tiên (T-08) */}
@@ -429,7 +430,7 @@ export function BatchActionBar({
         {onExportExcel && (
           <>
             {divider}
-            <button
+            <Pressable
               type="button"
               onClick={onExportExcel}
               disabled={isLoading}
@@ -438,7 +439,7 @@ export function BatchActionBar({
             >
               <TaskIconExport className={icon} />
               <span className="hidden sm:inline">Xuất Excel</span>
-            </button>
+            </Pressable>
           </>
         )}
 

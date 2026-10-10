@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export type AttentionLevel =
   | "urgent"
@@ -42,14 +43,14 @@ const levelConfigs: Record<
   urgent: {
     icon: AlertCircle,
     classes:
-      "bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100/80",
-    iconColor: "text-rose-700",
+      "bg-danger-soft text-destructive border-destructive/40 hover:bg-destructive/10",
+    iconColor: "text-destructive",
   },
   warning: {
     icon: AlertTriangle,
     classes:
-      "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100/80",
-    iconColor: "text-amber-700",
+      "bg-warning/10 text-warning border-warning/40 hover:bg-warning/10",
+    iconColor: "text-warning",
   },
   info: {
     icon: Info,
@@ -147,8 +148,8 @@ export const AttentionBadge = React.forwardRef<HTMLElement, AttentionBadgeProps>
               className="absolute -top-0.5 -right-0.5 flex h-2 w-2"
               aria-hidden="true"
             >
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
             </span>
           )}
         </span>
@@ -169,7 +170,7 @@ export const AttentionBadge = React.forwardRef<HTMLElement, AttentionBadgeProps>
 
     if (asButton || onClick) {
       return (
-        <button
+        <Pressable
           ref={ref as React.ForwardedRef<HTMLButtonElement>}
           type="button"
           onClick={onClick}
@@ -177,7 +178,7 @@ export const AttentionBadge = React.forwardRef<HTMLElement, AttentionBadgeProps>
           {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}
         >
           {content}
-        </button>
+        </Pressable>
       );
     }
 

@@ -77,9 +77,9 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
   const common = cn("size-3 shrink-0", className);
   switch (state) {
     case "overdue":
-      return <AlertTriangle className={cn(common, "text-rose-600")} aria-hidden="true" />;
+      return <AlertTriangle className={cn(common, "text-destructive")} aria-hidden="true" />;
     case "waiting":
-      return <Clock3 className={cn(common, "text-amber-600")} aria-hidden="true" />;
+      return <Clock3 className={cn(common, "text-warning")} aria-hidden="true" />;
     case "due_today":
       return <Clock3 className={cn(common, "text-orange-600")} aria-hidden="true" />;
     case "in_progress":
@@ -367,7 +367,7 @@ export function CalendarWeekView({
                       {totalCount} việc
                     </span>
                     {overdueCount > 0 && (
-                      <span className="text-xs font-semibold text-rose-600 tabular-nums">
+                      <span className="text-xs font-semibold text-destructive tabular-nums">
                         {overdueCount} trễ hạn
                       </span>
                     )}

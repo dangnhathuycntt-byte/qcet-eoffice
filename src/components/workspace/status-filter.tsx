@@ -165,11 +165,11 @@ export function StatusFilter({
                 "size-4 shrink-0 transition-colors",
                 isActive
                   ? opt.id === "OVERDUE"
-                    ? "text-rose-600"
+                    ? "text-destructive"
                     : opt.id === "COMPLETED"
                     ? "text-emerald-600"
                     : opt.id === "NEEDS_REVIEW"
-                    ? "text-amber-600"
+                    ? "text-warning"
                     : "text-blue-600"
                   : "text-slate-500 group-hover:text-slate-700"
               )}
@@ -184,11 +184,11 @@ export function StatusFilter({
                   "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 font-mono text-xs font-semibold transition-colors shrink-0",
                   isActive
                     ? opt.id === "OVERDUE"
-                      ? "bg-rose-100 text-rose-800 border border-rose-200"
+                      ? "bg-destructive/15 text-destructive border border-destructive/30"
                       : opt.id === "COMPLETED"
                       ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                       : opt.id === "NEEDS_REVIEW"
-                      ? "bg-amber-100 text-amber-800 border border-amber-200"
+                      ? "bg-warning/15 text-warning border border-warning/30"
                       : "bg-blue-100 text-blue-800 border border-blue-200"
                     : "bg-slate-200 text-slate-700"
                 )}

@@ -21,6 +21,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface SemesterGroup {
   id: string;
@@ -215,7 +216,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
 
         {/* Quick Shortcuts */}
         <div className="grid grid-cols-2 gap-1.5 py-2.5 border-b border-border/50">
-          <button
+          <Pressable
             type="button"
             onClick={() => handleSelectMonth(currentActualMonth)}
             className={cn(
@@ -232,9 +233,9 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
             {selectedMonth === currentActualMonth && (
               <Check size={12} className="text-primary shrink-0 ml-1" />
             )}
-          </button>
+          </Pressable>
 
-          <button
+          <Pressable
             type="button"
             onClick={() => handleSelectMonth("ALL")}
             className={cn(
@@ -251,7 +252,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
             {selectedMonth === "ALL" && (
               <Check size={12} className="text-primary shrink-0 ml-1" />
             )}
-          </button>
+          </Pressable>
         </div>
 
         {/* 12 Operational Months (Tháng 1 đến Tháng 12) */}
@@ -264,7 +265,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
               const count = monthlyTaskCounts[m];
 
               return (
-                <button
+                <Pressable
                   key={m}
                   type="button"
                   onClick={() => handleSelectMonth(m)}
@@ -309,7 +310,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
                       <Check size={13} className="text-primary shrink-0" />
                     )}
                   </div>
-                </button>
+                </Pressable>
               );
             })}
           </div>

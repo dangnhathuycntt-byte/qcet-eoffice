@@ -165,17 +165,17 @@ export function TaskProgressComposer({
 
             {/* Author */}
             <div className="flex items-center gap-1 text-foreground font-medium">
-              <span className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold">
+              <span className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
                 {leadName.charAt(0).toUpperCase()}
               </span>
               <span>{leadName}</span>
             </div>
 
             <span className="text-muted-foreground/40 select-none">•</span>
-            <span className="text-muted-foreground text-[11px]">Hôm nay</span>
+            <span className="text-muted-foreground text-xs">Hôm nay</span>
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {isAutoCalculated
               ? `Tự động từ ${completedSubtasks}/${totalSubtasks} việc thành phần`
               : "Cập nhật thủ công"}
@@ -216,7 +216,7 @@ export function TaskProgressComposer({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-medium text-foreground">Mức độ hoàn thành</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">Chọn một mốc hoặc nhập số chính xác.</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Chọn một mốc hoặc nhập số chính xác.</p>
               </div>
               <label className="flex h-9 items-center rounded-md border border-border bg-background px-2 focus-within:border-foreground/40">
               <input
@@ -248,7 +248,7 @@ export function TaskProgressComposer({
                   disabled={isSubmitting}
                   aria-pressed={progress === value}
                   className={cn(
-                    "h-8 rounded-md border text-[11px] font-medium tabular-nums transition-colors cursor-pointer disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
+                    "h-8 rounded-md border text-xs font-medium tabular-nums transition-colors cursor-pointer disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
                     progress === value
                       ? "border-foreground/20 bg-foreground text-background"
                       : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -277,7 +277,7 @@ export function TaskProgressComposer({
                 <span
                   className={cn(
                     "text-xs font-medium",
-                    feedback.type === "success" ? "text-emerald-600" : "text-rose-600"
+                    feedback.type === "success" ? "text-emerald-600" : "text-destructive"
                   )}
                 >
                   {feedback.message}

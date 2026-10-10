@@ -7,6 +7,7 @@ import type { ActivityEvent } from "@/types/dashboard";
 export type { ActivityEvent };
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format/date";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface ActivityFeedWidgetProps {
   activities?: ActivityEvent[];
@@ -232,7 +233,7 @@ export function ActivityFeedWidget({
       {/* Expand / Collapse Footer */}
       {uniqueActivities.length > initialLimit && (
         <div className="pt-2 mt-1 border-t border-border/40 text-center">
-          <button
+          <Pressable
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
@@ -249,7 +250,7 @@ export function ActivityFeedWidget({
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </>
             )}
-          </button>
+          </Pressable>
         </div>
       )}
     </div>

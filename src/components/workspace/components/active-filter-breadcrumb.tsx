@@ -26,6 +26,7 @@ import {
   NO_TASK_TIME_FILTER,
   type TaskTimeFilter,
 } from "@/lib/task-time-filter";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface ActiveFilterSummaryParams {
   dept?: string;
@@ -281,14 +282,14 @@ export function FilterSegmentChip({
       <span className="text-muted-foreground text-xs whitespace-nowrap">{label}:</span>
       <span className="font-medium text-xs truncate max-w-[240px]">{value}</span>
       {onRemove && (
-        <button
+        <Pressable
           type="button"
           onClick={onRemove}
           aria-label={removeAriaLabel || `Xóa lọc ${label}`}
           className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
         >
           <X className="size-2.5" strokeWidth={1.5} />
-        </button>
+        </Pressable>
       )}
     </span>
   );
@@ -585,7 +586,7 @@ export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCoun
 
       <div className="flex items-center gap-2.5 shrink-0 ml-auto">
         {onClearAll && (
-          <button
+          <Pressable
             type="button"
             data-slot="clear-all-filters"
             onClick={onClearAll}
@@ -594,7 +595,7 @@ export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCoun
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>
-          </button>
+          </Pressable>
         )}
 
         {filteredCount !== undefined && (

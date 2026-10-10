@@ -77,7 +77,7 @@ export function TopBanner({
         <button
           type="button"
           onClick={handleDismiss}
-          className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-100 cursor-pointer shrink-0 outline-none focus-visible:outline-2 focus-visible:outline-primary"
+          className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-100 cursor-pointer shrink-0 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary"
           aria-label="Ẩn thông báo"
         >
           <X className="size-3.5" />

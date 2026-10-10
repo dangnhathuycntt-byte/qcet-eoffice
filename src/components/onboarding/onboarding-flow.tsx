@@ -8,6 +8,7 @@ import { PenTool } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 // Roles labels mapping
 const ROLE_LABELS: Record<string, string> = {
@@ -218,13 +219,13 @@ export function OnboardingFlow() {
 
             {/* Mobile swipe hint */}
             <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
-              <button
+              <Pressable
                 type="button"
                 onClick={handleNext}
                 className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
                 Lướt sang để tiếp tục &rsaquo;
-              </button>
+              </Pressable>
             </div>
           </div>
         )}
@@ -279,13 +280,13 @@ export function OnboardingFlow() {
 
             {/* Mobile swipe hint */}
             <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
-              <button
+              <Pressable
                 type="button"
                 onClick={handleNext}
                 className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
                 Lướt sang để tiếp tục &rsaquo;
-              </button>
+              </Pressable>
             </div>
           </div>
         )}
@@ -345,13 +346,13 @@ export function OnboardingFlow() {
 
             {/* Mobile swipe hint */}
             <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
-              <button
+              <Pressable
                 type="button"
                 onClick={handleNext}
                 className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
                 Lướt sang để tiếp tục &rsaquo;
-              </button>
+              </Pressable>
             </div>
           </div>
         )}

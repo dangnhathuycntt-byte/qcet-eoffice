@@ -70,13 +70,13 @@ export function getRelativeDueTime(
   if (diffDays === 0) {
     return {
       text: "Hạn hôm nay",
-      color: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+      color: "border-warning/30 bg-warning/10 text-warning",
     };
   }
   if (diffDays === 1) {
     return {
       text: "Còn 1 ngày",
-      color: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+      color: "border-warning/30 bg-warning/10 text-warning",
     };
   }
   return {
@@ -137,12 +137,12 @@ export const TASK_STATUS_CONFIG: Record<
   },
   NEEDS_REVIEW: {
     label: "Cần chỉnh sửa",
-    className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+    className: "border-warning/20 bg-warning/10 text-warning",
     variant: "warning",
   },
   BLOCKED: {
     label: "Bị nghẽn / Phối hợp",
-    className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
+    className: "border-destructive/20 bg-destructive/10 text-destructive",
     variant: "destructive",
   },
   COMPLETED: {

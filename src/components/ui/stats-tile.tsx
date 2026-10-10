@@ -31,10 +31,10 @@ export function StatsTile({
 
   return (
     <div className={cn("flex flex-col select-none", className)} {...props}>
-      <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
+      <span className="text-compact font-medium text-muted-foreground">{label}</span>
       <span
         className={cn(
-          "text-[28px] font-semibold tracking-tight tabular-nums leading-snug mt-1",
+          "text-hero font-semibold tracking-tight tabular-nums leading-snug mt-1",
           valueColor
         )}
       >

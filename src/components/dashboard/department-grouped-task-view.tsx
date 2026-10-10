@@ -48,16 +48,16 @@ export const DEFAULT_PAGE_SIZE = 25;
 function RAGBadge({ status, reason }: { status: DepartmentRAGStatus; reason: string }) {
   if (status === "RED") {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 font-mono">
-        <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-danger-soft text-destructive border border-destructive/30 font-mono">
+        <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
         Cảnh báo trễ ({reason})
       </span>
     );
   }
   if (status === "AMBER") {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 font-mono">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-warning/10 text-warning border border-warning/30 font-mono">
+        <span className="h-1.5 w-1.5 rounded-full bg-warning" />
         Cần lưu ý
       </span>
     );
@@ -84,7 +84,7 @@ function formatTaskStatus(
     return {
       label: "Trễ hạn",
       className:
-        "bg-rose-50 text-rose-700 border border-rose-200",
+        "bg-danger-soft text-destructive border border-destructive/30",
     };
   }
 
@@ -105,13 +105,13 @@ function formatTaskStatus(
       return {
         label: "Cần đánh giá",
         className:
-          "bg-amber-50 text-amber-700 border border-amber-200",
+          "bg-warning/10 text-warning border border-warning/30",
       };
     case "BLOCKED":
       return {
         label: "Bị nghẽn",
         className:
-          "bg-rose-50 text-rose-700 border border-rose-200",
+          "bg-danger-soft text-destructive border border-destructive/30",
       };
     case "IN_PROGRESS":
       return {
@@ -359,9 +359,9 @@ export function DepartmentGroupedTaskView({
                         className={cn(
                           "h-full rounded-full transition-all duration-500",
                           group.stats.ragStatus === "RED"
-                            ? "bg-rose-500"
+                            ? "bg-destructive"
                             : group.stats.ragStatus === "AMBER"
-                            ? "bg-amber-500"
+                            ? "bg-warning"
                             : "bg-emerald-500"
                         )}
                         style={{ width: `${group.stats.averageProgress}%` }}

@@ -38,6 +38,7 @@ import {
   staggerContainerVariants,
 } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
+import { Pressable } from "@/components/ui/pressable";
 
 const PAGE_SIZE = 20;
 
@@ -204,7 +205,7 @@ export function NotificationCenter() {
           >
             {tab.label}
             {tab.key === "unread" && unreadCount > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary tabular-nums">
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary tabular-nums">
                 {unreadCount}
               </span>
             )}
@@ -242,14 +243,14 @@ export function NotificationCenter() {
             </div>
             <p className="text-sm font-medium text-foreground mb-1">Lỗi kết nối</p>
             <p className="text-xs text-muted-foreground mb-4 max-w-xs">{error}</p>
-            <button
+            <Pressable
               type="button"
               onClick={fetchNotifications}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-muted/60 text-foreground hover:bg-muted transition-colors cursor-pointer active:scale-[0.98]"
             >
               <RefreshCw size={14} strokeWidth={1.5} />
               Thử lại
-            </button>
+            </Pressable>
           </m.div>
         )}
 
@@ -447,7 +448,7 @@ function NotificationCenterRow({ item, onRead }: NotificationCenterRowProps) {
             {item.category}
           </span>
           {formatted.extraBadge && (
-            <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+            <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-warning/10 text-warning border border-warning/20">
               {formatted.extraBadge}
             </span>
           )}

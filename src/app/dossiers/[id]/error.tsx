@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
+import { Pressable } from "@/components/ui/pressable";
 
 export default function ErrorBoundary({
   error,
@@ -21,13 +22,13 @@ export default function ErrorBoundary({
             {error.message || "Không thể tải dữ liệu. Vui lòng thử lại."}
           </p>
         </div>
-        <button
+        <Pressable
           type="button"
           onClick={reset}
           className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98]"
         >
           Thử lại
-        </button>
+        </Pressable>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, ChevronRight, FileText, CheckSquare, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StandardDialog } from "@/components/ui/dialog";
+import { Pressable } from "@/components/ui/pressable";
 
 const STORAGE_PREFIX = "qcet_fg_";
 
@@ -81,7 +82,7 @@ export function resetAllFeatureGuides(): void {
 export function InboundDocumentPreview() {
   return (
     <div className="w-[230px] rounded-[10px] bg-white p-3.5 shadow-[0_0_0_1px_var(--border)]">
-      <div className="text-[11px] text-muted-foreground">Công văn đến · 214/CV-ĐT</div>
+      <div className="text-xs text-muted-foreground">Công văn đến · 214/CV-ĐT</div>
       <div className="mt-2 h-[7px] w-[90%] rounded bg-bg-hover" />
       <div className="mt-1.5 h-[7px] w-[70%] rounded bg-bg-hover" />
       <div className="mt-3 flex h-11 items-center rounded-lg border-[1.5px] border-dashed border-[var(--gray-7)] px-3">
@@ -440,7 +441,7 @@ export function HelpGuideModal() {
       size="md"
     >
       <div className="space-y-2 pt-1">
-        <button
+        <Pressable
           type="button"
           onClick={() => handleSelectGuide("inbox-sign", "/documents")}
           className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
@@ -455,9 +456,9 @@ export function HelpGuideModal() {
             </div>
           </div>
           <ChevronRight className="size-4 text-muted-foreground/60 shrink-0" />
-        </button>
+        </Pressable>
 
-        <button
+        <Pressable
           type="button"
           onClick={() => handleSelectGuide("tasks-sort", "/tasks")}
           className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
@@ -472,15 +473,15 @@ export function HelpGuideModal() {
             </div>
           </div>
           <ChevronRight className="size-4 text-muted-foreground/60 shrink-0" />
-        </button>
+        </Pressable>
 
-        <button
+        <Pressable
           type="button"
           onClick={() => handleSelectGuide("delegation-create", "/delegations")}
           className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
         >
           <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
               <Shield className="size-4" strokeWidth={1.5} />
             </div>
             <div>
@@ -489,16 +490,16 @@ export function HelpGuideModal() {
             </div>
           </div>
           <ChevronRight className="size-4 text-muted-foreground/60 shrink-0" />
-        </button>
+        </Pressable>
 
         <div className="pt-3 border-t border-border/50 flex justify-end">
-          <button
+          <Pressable
             type="button"
             onClick={handleResetAll}
             className="text-xs font-medium text-primary hover:underline cursor-pointer px-2 py-1"
           >
             Xem lại tất cả từ đầu
-          </button>
+          </Pressable>
         </div>
       </div>
     </StandardDialog>

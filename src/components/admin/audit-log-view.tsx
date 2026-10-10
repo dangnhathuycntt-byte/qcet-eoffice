@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { readAuditLogResponse } from "@/lib/admin/api-response";
+import { Pressable } from "@/components/ui/pressable";
 
 interface AuditLogEntry {
   id: string;
@@ -151,14 +152,14 @@ export function AuditLogView() {
           <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
           <div className="flex-1 space-y-2">
             <p className="text-sm font-medium text-red-800">{error}</p>
-            <button
+            <Pressable
               type="button"
               onClick={fetchEntries}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700 hover:text-red-900 min-h-[44px] sm:min-h-0 transition-colors"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Thử lại
-            </button>
+            </Pressable>
           </div>
         </div>
       </div>

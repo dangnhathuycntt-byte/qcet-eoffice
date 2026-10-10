@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // 1. Data Helpers & Constants
@@ -348,7 +349,7 @@ export function DelegationManagementModal({
                         {dept.members
                           .filter((m) => m.name !== grantorName)
                           .map((member) => (
-                            <button
+                            <Pressable
                               key={member.id}
                               type="button"
                               onClick={() => handleSelectMember(member.name, member.role)}
@@ -358,7 +359,7 @@ export function DelegationManagementModal({
                               )}
                             >
                               {member.name}
-                            </button>
+                            </Pressable>
                           ))}
                       </div>
                     </div>
@@ -371,7 +372,7 @@ export function DelegationManagementModal({
                     Vai trò cán bộ
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => setGranteeRole("STAFF")}
                       className={cn(
@@ -382,8 +383,8 @@ export function DelegationManagementModal({
                       )}
                     >
                       STAFF (Viên chức)
-                    </button>
-                    <button
+                    </Pressable>
+                    <Pressable
                       type="button"
                       onClick={() => setGranteeRole("MANAGER")}
                       className={cn(
@@ -394,7 +395,7 @@ export function DelegationManagementModal({
                       )}
                     >
                       MANAGER (Phó đơn vị)
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
 

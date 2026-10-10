@@ -45,7 +45,7 @@ export function getStatusBadgeConfig(status: DocumentStatus): {
     case "CHO_PHAN_CONG":
       return {
         label: "Chờ bút phê",
-        className: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+        className: "bg-warning/10 text-warning border-warning/20",
         icon: Clock,
       };
     case "processing":

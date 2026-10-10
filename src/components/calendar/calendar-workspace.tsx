@@ -47,6 +47,7 @@ import {
   QCET_DEPARTMENT_FILTER_OPTIONS,
 } from "@/components/calendar/executive-calendar-workspace";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
+import { Pressable } from "@/components/ui/pressable";
 
 export type CalendarViewMode = "month_grid" | "week_grid" | "day_view" | "agenda_list";
 
@@ -194,14 +195,14 @@ export function CalendarEventDetailModal({
               {event.title}
             </h3>
           </div>
-          <button
+          <Pressable
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
             aria-label="Đóng chi tiết sự kiện"
           >
             <X className="size-4" strokeWidth={1.5} />
-          </button>
+          </Pressable>
         </div>
 
         {/* Event Details Grid */}
@@ -222,7 +223,7 @@ export function CalendarEventDetailModal({
           {/* Location */}
           {event.location && (
             <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/50">
-              <MapPin className="size-4 text-amber-600 shrink-0" strokeWidth={1.5} />
+              <MapPin className="size-4 text-warning shrink-0" strokeWidth={1.5} />
               <div>
                 <span className="font-semibold text-foreground">Địa điểm:</span>{" "}
                 <span className="text-muted-foreground">{event.location}</span>
@@ -663,13 +664,13 @@ export function CalendarWorkspace({
               { id: "day_view", label: "Ngày", icon: Clock },
               { id: "agenda_list", label: "Lịch trình", icon: List },
             ].map(({ id, label, icon: Icon }) => (
-              <button
+              <Pressable
                 key={id}
                 type="button"
                 onClick={() => setViewMode(id as CalendarViewMode)}
                 aria-pressed={viewMode === id}
                 className={cn(
-                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                   viewMode === id
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -677,7 +678,7 @@ export function CalendarWorkspace({
               >
                 <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
                 <span>{label}</span>
-              </button>
+              </Pressable>
             ))}
           </div>
 
@@ -708,14 +709,14 @@ export function CalendarWorkspace({
             className="h-7 w-full rounded-md border border-border/80 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {searchQuery && (
-            <button
+            <Pressable
               type="button"
               onClick={() => setSearchQuery("")}
               className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
               aria-label="Xóa tìm kiếm"
             >
               <X className="size-3" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -777,58 +778,58 @@ export function CalendarWorkspace({
           {selectedDepartment !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
               <Building2 className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px]">Đơn vị:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Đơn vị:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {QCET_DEPARTMENT_FILTER_OPTIONS.find((d) => d.id === selectedDepartment)?.label}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setSelectedDepartment("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc đơn vị"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
           {selectedItemType !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
               <Layers className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px]">Loại:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Loại:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {QCET_ITEM_TYPE_OPTIONS.find((t) => t.id === selectedItemType)?.label}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setSelectedItemType("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc loại hình"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
           {selectedStatus !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
               <CheckCircle2 className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px]">Trạng thái:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Trạng thái:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {QCET_STATUS_FILTER_OPTIONS.find((s) => s.id === selectedStatus)?.label}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setSelectedStatus("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc trạng thái"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
-          <span className="text-muted-foreground/70 text-[11px] font-mono tabular-nums shrink-0 ml-1">
+          <span className="text-muted-foreground/70 text-xs font-mono tabular-nums shrink-0 ml-1">
             {filteredWorkItems.length} kết quả / {combinedWorkItems.length}
           </span>
-          <button
+          <Pressable
             type="button"
             onClick={() => {
               setSelectedDepartment("ALL");
@@ -836,11 +837,11 @@ export function CalendarWorkspace({
               setSelectedStatus("ALL");
               setSearchQuery("");
             }}
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>
-          </button>
+          </Pressable>
         </div>
       )}
 
@@ -945,7 +946,7 @@ export function CalendarWorkspace({
                             }}
                             className={cn(
                               "absolute z-10 p-0.5 transition-all select-none",
-                              layout.hasCollision && "ring-1 ring-amber-500/40 rounded-lg"
+                              layout.hasCollision && "ring-1 ring-warning/40 rounded-lg"
                             )}
                             style={{
                               top: `${layout.topPercent}%`,

@@ -98,7 +98,7 @@ interface MeetingDetailViewProps {
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   DRAFT_AGENDA: { label: "Dự thảo chương trình", className: "bg-muted text-muted-foreground border-border/50" },
   INVITED: { label: "Đã mời", className: "bg-sky-50 text-sky-700 border-sky-200" },
-  HELD: { label: "Đã họp", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  HELD: { label: "Đã họp", className: "bg-warning/10 text-warning border-warning/30" },
   MINUTES_DRAFT: { label: "Dự thảo biên bản", className: "bg-orange-50 text-orange-700 border-orange-200" },
   MINUTES_CONFIRMED: { label: "Biên bản đã duyệt", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   CANCELLED: { label: "Đã hủy", className: "bg-red-50 text-red-700 border-red-200" },
@@ -118,7 +118,7 @@ const ATTENDANCE_CONFIG: Record<string, { label: string; className: string }> = 
   ACCEPTED: { label: "Đã nhận", className: "bg-sky-50 text-sky-700" },
   DECLINED: { label: "Từ chối", className: "bg-red-50 text-red-700" },
   ATTENDED: { label: "Có mặt", className: "bg-emerald-50 text-emerald-700" },
-  ABSENT: { label: "Vắng mặt", className: "bg-amber-50 text-amber-700" },
+  ABSENT: { label: "Vắng mặt", className: "bg-warning/10 text-warning" },
 };
 
 /* ------------------------------------------------------------------ */

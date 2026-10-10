@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { DensityToggle } from "@/components/ui/density-toggle";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentFilterBarProps {
   /** Search query string */
@@ -75,8 +76,8 @@ export const URGENCY_FILTER_OPTIONS: Array<{
 }> = [
   { value: "ALL", label: "Độ khẩn: Tất cả" },
   { value: "flash", label: "Hỏa tốc", badgeClass: "text-red-700 bg-red-500/10" },
-  { value: "top_urgent", label: "Thượng khẩn", badgeClass: "text-amber-700 bg-amber-500/10" },
-  { value: "urgent", label: "Khẩn", badgeClass: "text-amber-700 bg-amber-500/10" },
+  { value: "top_urgent", label: "Thượng khẩn", badgeClass: "text-warning bg-warning/10" },
+  { value: "urgent", label: "Khẩn", badgeClass: "text-warning bg-warning/10" },
   { value: "normal", label: "Thường", badgeClass: "text-muted-foreground bg-muted" },
 ];
 
@@ -86,7 +87,7 @@ export const STATUS_FILTER_OPTIONS: Array<{
   dotClass?: string;
 }> = [
   { value: "ALL", label: "Trạng thái: Tất cả" },
-  { value: "pending_assignment", label: "Chờ phân công / Bút phê", dotClass: "bg-amber-500" },
+  { value: "pending_assignment", label: "Chờ phân công / Bút phê", dotClass: "bg-warning" },
   { value: "processing", label: "Đang xử lý", dotClass: "bg-blue-500" },
   { value: "delegated", label: "Đã giao việc", dotClass: "bg-emerald-500" },
   { value: "approved", label: "Chờ phê duyệt", dotClass: "bg-indigo-500" },
@@ -208,14 +209,14 @@ export function DocumentFilterBar({
               aria-label="Tìm kiếm văn bản và công văn"
             />
             {searchQuery.trim().length > 0 && (
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onSearchChange("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 size-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
                 aria-label="Xóa nội dung tìm kiếm"
               >
                 <X className="size-3.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             )}
           </div>
 
@@ -264,14 +265,14 @@ export function DocumentFilterBar({
                       )}
                     </div>
                     {hasActiveFilters && (
-                      <button
+                      <Pressable
                         type="button"
                         onClick={handleReset}
                         className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer active:scale-[0.98] transition-all"
                       >
                         <RotateCcw className="size-3" strokeWidth={1.5} />
                         <span>Đặt lại</span>
-                      </button>
+                      </Pressable>
                     )}
                   </div>
 
@@ -285,7 +286,7 @@ export function DocumentFilterBar({
                       {STATUS_FILTER_OPTIONS.map((opt) => {
                         const isSelected = statusFilter === opt.value;
                         return (
-                          <button
+                          <Pressable
                             key={opt.value}
                             type="button"
                             onClick={() => onStatusChange(opt.value)}
@@ -305,7 +306,7 @@ export function DocumentFilterBar({
                               />
                             )}
                             <span>{opt.label.replace("Trạng thái: ", "")}</span>
-                          </button>
+                          </Pressable>
                         );
                       })}
                     </div>
@@ -321,7 +322,7 @@ export function DocumentFilterBar({
                       {URGENCY_FILTER_OPTIONS.map((opt) => {
                         const isSelected = urgencyFilter === opt.value;
                         return (
-                          <button
+                          <Pressable
                             key={opt.value}
                             type="button"
                             onClick={() => onUrgencyChange(opt.value)}
@@ -333,7 +334,7 @@ export function DocumentFilterBar({
                             )}
                           >
                             <span>{opt.label.replace("Độ khẩn: ", "")}</span>
-                          </button>
+                          </Pressable>
                         );
                       })}
                     </div>
@@ -373,7 +374,7 @@ export function DocumentFilterBar({
                         {years.map((opt) => {
                           const isSelected = yearFilter === opt.value;
                           return (
-                            <button
+                            <Pressable
                               key={opt.value}
                               type="button"
                               onClick={() => onYearChange(opt.value)}
@@ -385,7 +386,7 @@ export function DocumentFilterBar({
                               )}
                             >
                               {opt.label.replace("Năm ban hành: ", "")}
-                            </button>
+                            </Pressable>
                           );
                         })}
                       </div>
@@ -453,14 +454,14 @@ export function DocumentFilterBar({
               <Search className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
               <span className="text-muted-foreground text-xs whitespace-nowrap">Tìm:</span>
               <span className="font-medium text-xs truncate max-w-[200px]">&quot;{searchQuery}&quot;</span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onSearchChange("")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa từ khóa tìm kiếm"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
 
@@ -471,14 +472,14 @@ export function DocumentFilterBar({
               <span className="font-medium text-xs truncate max-w-[200px]">
                 {selectedStatusObj.label.replace("Trạng thái: ", "")}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onStatusChange("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc trạng thái"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
 
@@ -489,14 +490,14 @@ export function DocumentFilterBar({
               <span className="font-medium text-xs truncate max-w-[200px]">
                 {selectedUrgencyObj.label.replace("Độ khẩn: ", "")}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onUrgencyChange("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc độ khẩn"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
 
@@ -507,14 +508,14 @@ export function DocumentFilterBar({
               <span className="font-medium text-xs truncate max-w-[200px]">
                 {selectedDeptObj.label.replace("Đơn vị: ", "")}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onDepartmentChange && onDepartmentChange("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc đơn vị"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
 
@@ -525,25 +526,25 @@ export function DocumentFilterBar({
               <span className="font-medium text-xs truncate max-w-[200px] font-mono tabular-nums">
                 {selectedYearObj.label.replace("Năm ban hành: ", "")}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onYearChange && onYearChange("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc năm"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
 
-          <button
+          <Pressable
             type="button"
             onClick={handleReset}
             className="text-xs text-primary hover:underline ml-1 cursor-pointer flex items-center gap-1 active:scale-[0.98] transition-all"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa tất cả</span>
-          </button>
+          </Pressable>
         </div>
       )}
     </div>

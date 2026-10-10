@@ -8,6 +8,7 @@ import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator"
 export type { DepartmentHealthSummary };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export type DepartmentMatrixViewMode = "cards" | "compact_table" | "ranking";
 
@@ -57,14 +58,14 @@ function getDeptProgressPercent(dept: DepartmentHealthSummary): number {
 
 function progressBarColor(percent: number): string {
   if (percent >= 80) return "bg-emerald-500";
-  if (percent >= 50) return "bg-amber-500";
-  return "bg-rose-500";
+  if (percent >= 50) return "bg-warning";
+  return "bg-destructive";
 }
 
 function progressTextColor(percent: number): string {
   if (percent >= 80) return "text-emerald-600";
-  if (percent >= 50) return "text-amber-600";
-  return "text-rose-600";
+  if (percent >= 50) return "text-warning";
+  return "text-destructive";
 }
 
 export function sortDepartmentsByOverdue(
@@ -222,7 +223,7 @@ export function DepartmentProgressMatrix({
               <span className="truncate max-w-[150px] sm:max-w-[220px]">
                 Đang lọc: {getDeptName(selectedDeptObj)}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -233,13 +234,13 @@ export function DepartmentProgressMatrix({
                 title="Xem toàn trường"
               >
                 <X className="size-3" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </div>
           )}
         </div>
 
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5 shrink-0">
-          <button
+          <Pressable
             type="button"
             aria-label="Chế độ xếp hạng"
             title="Chế độ xếp hạng tiến độ (Ranking Bar Chart)"
@@ -255,8 +256,8 @@ export function DepartmentProgressMatrix({
           >
             <BarChart3 className="size-3.5" strokeWidth={1.5} />
             <span className="hidden sm:inline">Xếp hạng</span>
-          </button>
-          <button
+          </Pressable>
+          <Pressable
             type="button"
             aria-label="Chế độ thẻ"
             title="Chế độ thẻ (Cards View)"
@@ -272,8 +273,8 @@ export function DepartmentProgressMatrix({
           >
             <LayoutGrid className="size-3.5" strokeWidth={1.5} />
             <span className="hidden sm:inline">Thẻ</span>
-          </button>
-          <button
+          </Pressable>
+          <Pressable
             type="button"
             aria-label="Chế độ bảng tinh gọn"
             title="Chế độ bảng tinh gọn (Compact Table View)"
@@ -289,7 +290,7 @@ export function DepartmentProgressMatrix({
           >
             <TableProperties className="size-3.5" strokeWidth={1.5} />
             <span className="hidden sm:inline">Bảng tinh gọn</span>
-          </button>
+          </Pressable>
         </div>
       </div>
 
@@ -302,7 +303,7 @@ export function DepartmentProgressMatrix({
               Xếp hạng theo {rankingSortBy === "progress" ? "tỷ lệ hoàn thành (cao xuống thấp)" : "số lượng việc trễ hạn (cần đôn đốc)"}
             </span>
             <div className="flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 p-0.5">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setRankingSortBy("progress")}
                 className={cn(
@@ -313,19 +314,19 @@ export function DepartmentProgressMatrix({
                 )}
               >
                 Tiến độ
-              </button>
-              <button
+              </Pressable>
+              <Pressable
                 type="button"
                 onClick={() => setRankingSortBy("overdue")}
                 className={cn(
                   "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer",
                   rankingSortBy === "overdue"
-                    ? "bg-background text-rose-600 shadow-2xs font-semibold"
+                    ? "bg-background text-destructive shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Cần đôn đốc
-              </button>
+              </Pressable>
             </div>
           </div>
 
@@ -378,11 +379,11 @@ export function DepartmentProgressMatrix({
                       className={cn(
                         "flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold tabular-nums",
                         index === 0
-                          ? "bg-amber-100 text-amber-800 border border-amber-300"
+                          ? "bg-warning/15 text-warning border border-warning/40"
                           : index === 1
                           ? "bg-slate-200 text-slate-700 border border-slate-300"
                           : index === 2
-                          ? "bg-amber-50 text-amber-700 border border-amber-200"
+                          ? "bg-warning/10 text-warning border border-warning/30"
                           : "bg-muted/60 text-muted-foreground"
                       )}
                     >
@@ -528,14 +529,14 @@ export function DepartmentProgressMatrix({
                     <span className="text-xs text-muted-foreground font-medium">
                       Tiến độ
                     </span>
-                    <span className="text-xs sm:text-[13px] font-bold font-mono tabular-nums text-foreground">
+                    <span className="text-xs sm:text-compact font-bold font-mono tabular-nums text-foreground">
                       {progressPercent}%
                     </span>
                   </div>
                 </div>
 
                 {/* Child stats (Hoàn thành / Đang làm / Trễ) */}
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-xs sm:text-[12.5px] font-medium text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-xs font-medium text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <span>Hoàn thành:</span>
                     <span className="font-semibold text-foreground font-mono tabular-nums">
@@ -554,7 +555,7 @@ export function DepartmentProgressMatrix({
                       className={cn(
                         "font-semibold font-mono tabular-nums",
                         overdueCount > 0
-                          ? "text-rose-600"
+                          ? "text-destructive"
                           : "text-foreground"
                       )}
                     >

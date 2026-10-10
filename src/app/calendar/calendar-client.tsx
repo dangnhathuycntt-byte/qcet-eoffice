@@ -53,6 +53,7 @@ import {
 import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 // ExecutiveCalendarWorkspace compatibility and canonical workspace integration
 export type { CalendarScope };
@@ -703,14 +704,14 @@ function CalendarRouteContent({
           </button>
           {isCreateDropdownOpen && (
             <div role="menu" className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-30 animate-in fade-in zoom-in-95 duration-150 text-xs text-popover-foreground">
-              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
+              <Pressable type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
                 <CheckSquare className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                 Tạo công việc
-              </button>
-              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
+              </Pressable>
+              <Pressable type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
                 <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                 Tạo sự kiện
-              </button>
+              </Pressable>
             </div>
           )}
         </div>
@@ -719,45 +720,45 @@ function CalendarRouteContent({
       {/* Primary calendar chrome — exactly 1 row */}
       <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card px-2.5 py-1.5 shadow-xs" data-slot="calendar-controls-container">
         {/* Month navigation: ‹ Tháng 9 › */}
-        <button
+        <Pressable
           type="button"
           onClick={viewMode === "week" ? handlePrevWeek : handlePrevMonth}
           aria-label={viewMode === "week" ? "Tuần trước" : "Tháng trước"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <ChevronLeft className="size-4" strokeWidth={1.5} />
-        </button>
+        </Pressable>
 
         <span className="font-mono tabular-nums text-sm font-semibold text-foreground select-none min-w-[7.5rem] text-center">
           {viewMode === "week" ? weekSpanLabel : currentPeriod.label}
         </span>
 
-        <button
+        <Pressable
           type="button"
           onClick={viewMode === "week" ? handleNextWeek : handleNextMonth}
           aria-label={viewMode === "week" ? "Tuần tiếp theo" : "Tháng sau"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <ChevronRight className="size-4" strokeWidth={1.5} />
-        </button>
+        </Pressable>
 
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
         {/* Hôm nay */}
-        <button
+        <Pressable
           type="button"
           onClick={handleCurrentMonth}
           className="inline-flex min-h-[44px] sm:min-h-9 items-center rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           Hôm nay
-        </button>
+        </Pressable>
 
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
         {/* View mode: Tuần | Tháng — primary toolbar */}
         <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex h-8 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5 select-none">
           {(["week", "month"] as const).map((mode) => (
-            <button
+            <Pressable
               key={mode}
               type="button"
               role="tab"
@@ -770,7 +771,7 @@ function CalendarRouteContent({
             >
               <CalendarIcon className="size-3.5 shrink-0" strokeWidth={1.5} />
               {mode === "week" ? "Tuần" : "Tháng"}
-            </button>
+            </Pressable>
           ))}
         </div>
 
@@ -778,7 +779,7 @@ function CalendarRouteContent({
 
         {/* Scope + Filter selector: Bộ lọc ▾ */}
         <div className="relative" ref={filterDropdownRef}>
-          <button
+          <Pressable
             type="button"
             aria-label="Bộ lọc"
             onClick={() => setIsFilterOpen((previous) => !previous)}
@@ -793,10 +794,10 @@ function CalendarRouteContent({
           >
             {activeScope === "school" ? "Toàn trường" : activeScope === "unit" ? "Đơn vị" : "Của tôi"}
             {hasActiveFilters && (
-              <span className="inline-flex items-center justify-center size-4 rounded-full bg-foreground/85 text-[10px] text-background font-mono font-bold">{activeFilterCount}</span>
+              <span className="inline-flex items-center justify-center size-4 rounded-full bg-foreground/85 text-xs text-background font-mono font-bold">{activeFilterCount}</span>
             )}
             <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isFilterOpen && "rotate-180")} strokeWidth={1.5} />
-          </button>
+          </Pressable>
 
           {isFilterOpen && (
             <div role="dialog" aria-label="Phạm vi và bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150 text-popover-foreground">
@@ -805,7 +806,7 @@ function CalendarRouteContent({
                 <span className="text-xs font-semibold text-muted-foreground">Phạm vi</span>
                 <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex w-full items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5">
                   {([["school", "Toàn trường"], ["unit", "Đơn vị"], ["my", "Của tôi"]] as const).map(([value, label]) => (
-                    <button
+                    <Pressable
                       key={value}
                       type="button"
                       role="tab"
@@ -817,7 +818,7 @@ function CalendarRouteContent({
                       )}
                     >
                       {label}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -829,12 +830,12 @@ function CalendarRouteContent({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
                   {hasActiveFilters && (
-                    <button type="button" onClick={handleResetFilters} className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">Đặt lại</button>
+                    <Pressable type="button" onClick={handleResetFilters} className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">Đặt lại</Pressable>
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-1">
                   {([["ALL", "Tất cả"], ["TRUONG", "Trường"], ["DON_VI", "Đơn vị"]] as const).map(([value, label]) => (
-                    <button
+                    <Pressable
                       key={value}
                       type="button"
                       onClick={() => setLevelFilter(value)}
@@ -842,7 +843,7 @@ function CalendarRouteContent({
                       className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors cursor-pointer select-none", levelFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -852,7 +853,7 @@ function CalendarRouteContent({
                 <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
                 <div className="grid grid-cols-2 gap-1">
                   {([["ALL", "Tất cả"], ["IN_PROGRESS", "Đang làm"], ["COMPLETED", "Hoàn thành"], ["OVERDUE", "Trễ hạn"]] as const).map(([value, label]) => (
-                    <button
+                    <Pressable
                       key={value}
                       type="button"
                       onClick={() => setStatusFilter(value)}
@@ -860,7 +861,7 @@ function CalendarRouteContent({
                       className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors cursor-pointer select-none", statusFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -873,7 +874,7 @@ function CalendarRouteContent({
 
         {/* Secondary disclosure ⋯ */}
         <div className="relative" ref={secondaryRef}>
-          <button
+          <Pressable
             type="button"
             onClick={() => setIsSecondaryOpen((previous) => !previous)}
             aria-expanded={isSecondaryOpen}
@@ -885,7 +886,7 @@ function CalendarRouteContent({
             )}
           >
             <MoreHorizontal className="size-4" strokeWidth={1.5} />
-          </button>
+          </Pressable>
 
           {isSecondaryOpen && (
             <div role="dialog" aria-label="Tùy chọn hiển thị" className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
@@ -932,18 +933,18 @@ function CalendarRouteContent({
                       className="w-full h-9 pl-8 pr-7 rounded-lg border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                     {searchQuery && (
-                      <button
+                      <Pressable
                         type="button"
                         onClick={() => setSearchQuery("")}
                         className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground"
                         aria-label="Xóa tìm kiếm"
                       >
                         <X className="mx-auto size-3.5" strokeWidth={1.5} />
-                      </button>
+                      </Pressable>
                     )}
                   </div>
                 ) : (
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => setIsSearchExpanded(true)}
                     className={cn(
@@ -955,7 +956,7 @@ function CalendarRouteContent({
                   >
                     <Search className="size-3.5 shrink-0" strokeWidth={1.5} />
                     {searchQuery || "Tìm việc, sự kiện..."}
-                  </button>
+                  </Pressable>
                 )}
               </div>
             </div>
@@ -973,14 +974,14 @@ function CalendarRouteContent({
           {levelFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
               <span>Cấp: {levelFilter === "TRUONG" ? "Trường" : "Đơn vị"}</span>
-              <button
+              <Pressable
                 type="button"
                 aria-label="Xóa lọc cấp"
                 onClick={() => setLevelFilter("ALL")}
                 className="hover:text-primary/70 transition-colors cursor-pointer"
               >
                 <X className="size-3" />
-              </button>
+              </Pressable>
             </span>
           )}
           {statusFilter !== "ALL" && (
@@ -995,36 +996,36 @@ function CalendarRouteContent({
                   ? "Trễ hạn"
                   : statusFilter}
               </span>
-              <button
+              <Pressable
                 type="button"
                 aria-label="Xóa lọc trạng thái"
                 onClick={() => setStatusFilter("ALL")}
                 className="hover:text-primary/70 transition-colors cursor-pointer"
               >
                 <X className="size-3" />
-              </button>
+              </Pressable>
             </span>
           )}
           {searchQuery.trim() && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
               <span>Tìm: &ldquo;{searchQuery}&rdquo;</span>
-              <button
+              <Pressable
                 type="button"
                 aria-label="Xóa từ khóa tìm kiếm"
                 onClick={() => setSearchQuery("")}
                 className="hover:text-primary/70 transition-colors cursor-pointer"
               >
                 <X className="size-3" />
-              </button>
+              </Pressable>
             </span>
           )}
-          <button
+          <Pressable
             type="button"
             onClick={handleResetFilters}
             className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1 cursor-pointer transition-colors"
           >
             Xóa tất cả
-          </button>
+          </Pressable>
         </div>
       )}
 

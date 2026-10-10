@@ -26,6 +26,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export type CalendarViewMode = "month" | "week" | "agenda";
 export type CalendarScope = "school" | "unit" | "my";
@@ -223,21 +224,21 @@ export function CalendarToolbar({
             {VIEW_OPTIONS.map((option) => {
               const isActive = viewMode === option.id;
               return (
-                <button
+                <Pressable
                   key={option.id}
                   type="button"
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => onViewChange(option.id)}
                   className={cn(
-                    "inline-flex items-center justify-center h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                    "inline-flex items-center justify-center h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                     isActive
                       ? "bg-background text-foreground shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   )}
                 >
                   {option.label}
-                </button>
+                </Pressable>
               );
             })}
           </div>
@@ -404,7 +405,7 @@ export function CalendarToolbar({
                   <span className="text-muted-foreground font-medium block">Loại</span>
                   <div className="grid grid-cols-1 gap-1">
                     {ITEM_TYPE_OPTIONS.map((opt) => (
-                      <button
+                      <Pressable
                         key={opt.id}
                         type="button"
                         onClick={() => onItemTypeFilterChange(opt.id)}
@@ -417,7 +418,7 @@ export function CalendarToolbar({
                       >
                         <span>{opt.label}</span>
                         {itemTypeFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                      </button>
+                      </Pressable>
                     ))}
                   </div>
                 </div>
@@ -428,7 +429,7 @@ export function CalendarToolbar({
                 <span className="text-muted-foreground font-medium block">Cấp nhiệm vụ</span>
                 <div className="grid grid-cols-1 gap-1">
                   {LEVEL_OPTIONS.map((opt) => (
-                    <button
+                    <Pressable
                       key={opt.id}
                       type="button"
                       onClick={() => onLevelFilterChange(opt.id)}
@@ -441,7 +442,7 @@ export function CalendarToolbar({
                     >
                       <span>{opt.label}</span>
                       {levelFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -451,7 +452,7 @@ export function CalendarToolbar({
                 <span className="text-muted-foreground font-medium block">Trạng thái tiến độ</span>
                 <div className="grid grid-cols-1 gap-1">
                   {STATUS_OPTIONS.map((opt) => (
-                    <button
+                    <Pressable
                       key={opt.id}
                       type="button"
                       onClick={() => onStatusFilterChange(opt.id)}
@@ -464,7 +465,7 @@ export function CalendarToolbar({
                     >
                       <span>{opt.label}</span>
                       {statusFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -497,7 +498,7 @@ export function CalendarToolbar({
                   <span className="font-bold text-foreground block">Năm học</span>
                   <div className="space-y-1">
                     {availableAcademicYears.map((yr) => (
-                      <button
+                      <Pressable
                         key={yr}
                         type="button"
                         onClick={() => {
@@ -513,7 +514,7 @@ export function CalendarToolbar({
                       >
                         <span className="font-mono tabular-nums">{yr}</span>
                         {academicYear === yr && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                      </button>
+                      </Pressable>
                     ))}
                   </div>
                 </div>
@@ -597,60 +598,60 @@ export function CalendarToolbar({
         <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/60">
           {itemTypeFilter && itemTypeFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <span className="text-muted-foreground text-[11px]">Loại:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Loại:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {ITEM_TYPE_OPTIONS.find((o) => o.id === itemTypeFilter)?.label}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onItemTypeFilterChange?.("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc loại"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
           {levelFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <span className="text-muted-foreground text-[11px]">Cấp:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Cấp:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {LEVEL_OPTIONS.find((o) => o.id === levelFilter)?.label}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onLevelFilterChange("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc cấp"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
           {statusFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <span className="text-muted-foreground text-[11px]">Trạng thái:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Trạng thái:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {STATUS_OPTIONS.find((o) => o.id === statusFilter)?.label}
               </span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onStatusFilterChange("ALL")}
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
                 aria-label="Xóa lọc trạng thái"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </span>
           )}
-          <button
+          <Pressable
             type="button"
             onClick={onResetFilters}
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>
-          </button>
+          </Pressable>
         </div>
       )}
     </div>

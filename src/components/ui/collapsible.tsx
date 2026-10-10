@@ -83,7 +83,7 @@ export function StandardCollapsible({
     >
       <BaseCollapsible.Trigger
         className={cn(
-          "w-full text-left cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1",
+          "w-full text-left cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1",
           triggerClassName
         )}
       >

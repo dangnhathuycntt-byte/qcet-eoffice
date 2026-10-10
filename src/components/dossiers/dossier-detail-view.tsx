@@ -100,11 +100,11 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   },
   READY_FOR_ARCHIVE: {
     label: "Sẵn sàng lưu trữ",
-    className: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+    className: "bg-warning/10 text-warning border-warning/20",
   },
   SUBMITTED_TO_ARCHIVE: {
     label: "Đã nộp lưu trữ",
-    className: "bg-amber-600/10 text-amber-800 border-amber-600/20",
+    className: "bg-warning/10 text-warning border-warning/20",
   },
   ACCEPTED: {
     label: "Đã chấp nhận",
@@ -430,7 +430,7 @@ export function DossierDetailView({
 
                 <span
                   className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded border",
+                    "text-xs font-medium px-1.5 py-0.5 rounded border",
                     statusCfg.className,
                   )}
                 >
@@ -439,7 +439,7 @@ export function DossierDetailView({
 
                 <span
                   className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded border",
+                    "text-xs font-medium px-1.5 py-0.5 rounded border",
                     "bg-muted/60 text-muted-foreground border-border/40",
                   )}
                 >
@@ -583,7 +583,7 @@ export function DossierDetailView({
                                 </span>
                               )}
                               {item.notes && (
-                                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                                   {item.notes}
                                 </p>
                               )}

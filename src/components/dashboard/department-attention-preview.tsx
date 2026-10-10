@@ -55,13 +55,13 @@ export function DepartmentAttentionPreview({
     >
       <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <Building2 className="size-4 text-amber-600" strokeWidth={1.5} />
+          <Building2 className="size-4 text-warning" strokeWidth={1.5} />
           <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
             Đơn vị cần chú ý
           </h3>
         </div>
         {attentionCount > 0 && (
-          <span className="text-xs text-amber-700 font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 font-mono tabular-nums">
+          <span className="text-xs text-warning font-semibold px-2 py-0.5 rounded-full bg-warning/10 border border-warning/20 font-mono tabular-nums">
             {attentionCount} đơn vị
           </span>
         )}
@@ -98,12 +98,12 @@ export function DepartmentAttentionPreview({
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     {overdue > 0 && (
-                      <span className="font-mono tabular-nums text-rose-700 font-medium">
+                      <span className="font-mono tabular-nums text-destructive font-medium">
                         {overdue} trễ hạn
                       </span>
                     )}
                     {blocked > 0 && (
-                      <span className="font-mono tabular-nums text-rose-700 font-medium">
+                      <span className="font-mono tabular-nums text-destructive font-medium">
                         {blocked} vướng mắc
                       </span>
                     )}
@@ -117,7 +117,7 @@ export function DepartmentAttentionPreview({
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          overdue > 0 || blocked > 0 ? "bg-rose-500/70" : "bg-emerald-500/70"
+                          overdue > 0 || blocked > 0 ? "bg-destructive/70" : "bg-emerald-500/70"
                         )}
                         style={{ width: `${Math.round((completed / total) * 100)}%` }}
                       />

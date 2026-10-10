@@ -33,7 +33,7 @@ export function InlineExplanation({
       <BasePopover.Trigger
         type="button"
         className={cn(
-          "inline-flex items-center gap-1 underline decoration-dotted underline-offset-2 text-xs text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 cursor-pointer select-none",
+          "inline-flex items-center gap-1 underline decoration-dotted underline-offset-2 text-xs text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 cursor-pointer select-none",
           className,
         )}
       >

@@ -171,7 +171,7 @@ export function PWASyncStatusBar({
     statusVariant = "conflict";
     statusText = OFFLINE_STATE_LABELS.conflict;
     statusDetail = `${conflictItems.length} thay đổi cần bạn quyết định, không tự ghi đè`;
-    statusIcon = <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />;
+    statusIcon = <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />;
   } else if (isSyncing) {
     statusVariant = "syncing";
     const current = syncProgress?.current ?? 1;
@@ -185,7 +185,7 @@ export function PWASyncStatusBar({
     statusVariant = "degraded";
     statusText = OFFLINE_STATE_LABELS.failed;
     statusDetail = "Máy chủ từ chối thay đổi; mở để xem và xử lý";
-    statusIcon = <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />;
+    statusIcon = <AlertCircle className="h-4 w-4 text-warning shrink-0" />;
   } else if (displayState === "local-only") {
     statusVariant = "offline";
     statusText = OFFLINE_STATE_LABELS["local-only"];
@@ -195,7 +195,7 @@ export function PWASyncStatusBar({
     statusVariant = "degraded";
     statusText = OFFLINE_STATE_LABELS.queued;
     statusDetail = "Đang đối chiếu lại kết quả với máy chủ...";
-    statusIcon = <Database className="h-4 w-4 text-amber-600 shrink-0" />;
+    statusIcon = <Database className="h-4 w-4 text-warning shrink-0" />;
   } else if (isOffline) {
     statusVariant = "offline";
     statusText = "Ngoại tuyến";
@@ -207,12 +207,12 @@ export function PWASyncStatusBar({
     statusDetail = hasPending
       ? `${pendingItems.length} thay đổi chờ gửi lại khi máy chủ phản hồi`
       : "Sẽ tự động thử lại khi máy chủ phản hồi";
-    statusIcon = <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />;
+    statusIcon = <AlertCircle className="h-4 w-4 text-warning shrink-0" />;
   } else if (hasPending) {
     statusVariant = "degraded";
     statusText = OFFLINE_STATE_LABELS.queued;
     statusDetail = `${pendingItems.length} thay đổi đang chờ đồng bộ`;
-    statusIcon = <Database className="h-4 w-4 text-amber-600 shrink-0" />;
+    statusIcon = <Database className="h-4 w-4 text-warning shrink-0" />;
   } else if (justSynced) {
     statusVariant = "online";
     statusText = OFFLINE_STATE_LABELS["server-confirmed"];
@@ -223,17 +223,17 @@ export function PWASyncStatusBar({
   const variantStyles = {
     online: "bg-white border-emerald-300 text-emerald-950 shadow-sm",
     syncing: "bg-white border-sky-300 text-sky-950 shadow-sm",
-    degraded: "bg-white border-amber-300 text-amber-950 shadow-sm",
+    degraded: "bg-white border-warning/40 text-warning shadow-sm",
     offline: "bg-white border-slate-300 text-slate-900 shadow-sm",
-    conflict: "bg-white border-rose-300 text-rose-950 shadow-sm",
+    conflict: "bg-white border-destructive/40 text-destructive shadow-sm",
   };
 
   const badgeStyles = {
     online: "bg-emerald-50 text-emerald-800 border-emerald-200",
     syncing: "bg-sky-50 text-sky-800 border-sky-200",
-    degraded: "bg-amber-50 text-amber-800 border-amber-200",
+    degraded: "bg-warning/10 text-warning border-warning/30",
     offline: "bg-slate-100 text-slate-800 border-slate-200",
-    conflict: "bg-rose-50 text-rose-800 border-rose-200",
+    conflict: "bg-danger-soft text-destructive border-destructive/30",
   };
 
   return (
@@ -278,7 +278,7 @@ export function PWASyncStatusBar({
                 variant="destructive"
                 size="sm"
                 onClick={() => setIsConflictOpen(true)}
-                className="min-h-[44px] px-3 font-semibold text-xs rounded-lg border border-rose-300"
+                className="min-h-[44px] px-3 font-semibold text-xs rounded-lg border border-destructive/40"
               >
                 Xử lý
               </Button>
@@ -346,11 +346,11 @@ export function PWASyncStatusBadge({ className }: { className?: string }) {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200",
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-danger-soft text-destructive border border-destructive/30",
           className
         )}
       >
-        <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+        <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
         <span>{`${conflictCount} ${OFFLINE_STATE_LABELS.conflict}`}</span>
       </span>
     );
@@ -374,11 +374,11 @@ export function PWASyncStatusBadge({ className }: { className?: string }) {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200",
+          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/30",
           className
         )}
       >
-        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+        <AlertCircle className="h-3.5 w-3.5 text-warning" />
         <span>Máy chủ gián đoạn</span>
       </span>
     );

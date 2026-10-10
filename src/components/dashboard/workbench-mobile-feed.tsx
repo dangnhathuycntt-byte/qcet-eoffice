@@ -404,7 +404,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       {/* ERROR / LOADING are DISTINCT from empty — never render zeros or claim health first. */}
       {contextError ? (
         <div
-          className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4"
+          className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4"
           data-slot="mobile-workbench-error"
           data-state="error"
           role="alert"
@@ -413,13 +413,13 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
             <AlertTriangle
               size={18}
               strokeWidth={1.5}
-              className="text-rose-600 shrink-0 mt-0.5"
+              className="text-destructive shrink-0 mt-0.5"
             />
             <div className="space-y-0.5 min-w-0">
-              <p className="text-sm font-semibold text-rose-900">
+              <p className="text-sm font-semibold text-destructive">
                 Không thể tải dữ liệu bàn làm việc
               </p>
-              <p className="text-xs text-rose-800/90">{contextError}</p>
+              <p className="text-xs text-destructive/90">{contextError}</p>
             </div>
           </div>
         </div>
@@ -446,13 +446,13 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       >
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <AlertTriangle size={13} strokeWidth={2} className="text-rose-500 shrink-0" />
+            <AlertTriangle size={13} strokeWidth={2} className="text-destructive shrink-0" />
             <h2 className="font-heading font-bold text-sm text-foreground">
               Cần xử lý ngay
             </h2>
           </div>
           {(pendingApprovalCount > 0 || overdueCount > 0) && (
-            <span className="font-mono tabular-nums text-xs font-bold text-rose-600 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md">
+            <span className="font-mono tabular-nums text-xs font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-md">
               {pendingApprovalCount + overdueCount} việc cấp bách
             </span>
           )}
@@ -461,29 +461,29 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         {/* Thống kê nhanh cấp bách cho BGH / Lãnh đạo đơn vị */}
         {(isExecutive || isManager) ? (
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="p-3 rounded-xl border border-amber-500/25 bg-amber-500/5 flex flex-col justify-between min-h-[64px]">
-              <span className="text-xs font-medium text-amber-900">
+            <div className="p-3 rounded-xl border border-warning/25 bg-warning/5 flex flex-col justify-between min-h-[64px]">
+              <span className="text-xs font-medium text-warning">
                 Hồ sơ chờ xem xét
               </span>
               <div className="flex items-baseline justify-between mt-1">
-                <span className="font-mono tabular-nums text-xl font-extrabold text-amber-900">
+                <span className="font-mono tabular-nums text-xl font-extrabold text-warning">
                   {pendingApprovalCount}
                 </span>
-                <span className="text-xs text-amber-700/80 font-medium">
+                <span className="text-xs text-warning/80 font-medium">
                   hồ sơ
                 </span>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl border border-rose-500/25 bg-rose-500/5 flex flex-col justify-between min-h-[64px]">
-              <span className="text-xs font-medium text-rose-900">
+            <div className="p-3 rounded-xl border border-destructive/25 bg-destructive/5 flex flex-col justify-between min-h-[64px]">
+              <span className="text-xs font-medium text-destructive">
                 {isExecutive ? "Trễ hạn toàn trường" : "Trễ hạn đơn vị"}
               </span>
               <div className="flex items-baseline justify-between mt-1">
-                <span className="font-mono tabular-nums text-xl font-extrabold text-rose-900">
+                <span className="font-mono tabular-nums text-xl font-extrabold text-destructive">
                   {overdueCount}
                 </span>
-                <span className="text-xs text-rose-700/80 font-medium">
+                <span className="text-xs text-destructive/80 font-medium">
                   nhiệm vụ
                 </span>
               </div>
@@ -679,7 +679,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
                           ? "bg-emerald-500"
                           : progress >= 50
                           ? "bg-primary"
-                          : "bg-amber-500"
+                          : "bg-warning"
                       )}
                       style={{ width: `${Math.min(progress, 100)}%` }}
                     />
@@ -772,7 +772,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       >
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <Bell size={13} strokeWidth={2} className="text-amber-500 shrink-0" />
+            <Bell size={13} strokeWidth={2} className="text-warning shrink-0" />
             <h2 className="font-heading font-bold text-sm text-foreground">
               Thông báo điều hành mới
             </h2>
@@ -791,7 +791,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
                 className="block p-3.5 rounded-xl border border-border bg-card hover:bg-muted/40 active:bg-muted/60 transition-colors shadow-2xs space-y-1.5 touch-manipulation min-h-[48px]"
               >
                 <div className="flex items-start gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0 mt-0.5">
                     <Bell size={14} strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 min-w-0">

@@ -122,8 +122,8 @@ describe("ExecutiveCalendarWorkspace Layout and Collision Detection Engine", () 
     assert.ok(academicStyle.includes("text-emerald-700"));
 
     const urgentStyle = getSemanticEventStyle("urgent");
-    assert.ok(urgentStyle.includes("bg-rose-500/10"));
-    assert.ok(urgentStyle.includes("text-rose-700"));
+    assert.ok(urgentStyle.includes("bg-destructive/10"));
+    assert.ok(urgentStyle.includes("text-destructive"));
 
     const internalStyle = getSemanticEventStyle("internal");
     assert.ok(internalStyle.includes("bg-zinc-500/10"));
@@ -271,7 +271,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
     );
 
     // Verify Overdue banner presence and styling
-    assert.ok(html.includes("prior-overdue-backlog-banner") || html.includes("bg-rose-50"), "Must have overdue banner");
+    assert.ok(html.includes("prior-overdue-backlog-banner") || html.includes("bg-danger-soft"), "Must have overdue banner");
     assert.ok(html.includes("Kế hoạch tu sửa xưởng thực hành E3"), "Must list overdue task title");
     assert.ok(html.includes("Trễ") || html.includes("trễ hạn"), "Must display overdue duration marker");
   });
@@ -355,7 +355,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
     assert.ok(html.includes("12 ngày"), "Should display 12 days overdue");
     assert.ok(html.includes("Kế hoạch tu sửa xưởng E3"), "Should display title");
     assert.ok(html.includes("NV-02"), "Should display code");
-    assert.ok(html.includes("bg-rose-50"), "Should use rose background styling");
+    assert.ok(html.includes("bg-danger-soft"), "Should use rose background styling");
     assert.ok(!html.includes("dark:"), "Must adhere to Light-Only standard (no dark:)");
   });
 

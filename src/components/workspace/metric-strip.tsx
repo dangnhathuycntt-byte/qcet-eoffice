@@ -79,20 +79,20 @@ const colorSchemeStyles: Record<
     badgeText: "text-blue-800",
   },
   amber: {
-    iconBg: "bg-amber-50",
-    iconColor: "text-amber-700",
-    borderActive: "border-amber-600",
-    ringActive: "ring-amber-600",
-    badgeBg: "bg-amber-50",
-    badgeText: "text-amber-800",
+    iconBg: "bg-warning/10",
+    iconColor: "text-warning",
+    borderActive: "border-warning",
+    ringActive: "ring-warning",
+    badgeBg: "bg-warning/10",
+    badgeText: "text-warning",
   },
   rose: {
-    iconBg: "bg-rose-50",
-    iconColor: "text-rose-700",
-    borderActive: "border-rose-600",
-    ringActive: "ring-rose-600",
-    badgeBg: "bg-rose-50",
-    badgeText: "text-rose-800",
+    iconBg: "bg-danger-soft",
+    iconColor: "text-destructive",
+    borderActive: "border-destructive",
+    ringActive: "ring-destructive",
+    badgeBg: "bg-danger-soft",
+    badgeText: "text-destructive",
   },
   emerald: {
     iconBg: "bg-emerald-50",
@@ -274,7 +274,7 @@ export function MetricStrip({
                     card.trend.direction === "up"
                       ? "text-emerald-700 bg-emerald-500/10 border border-emerald-500/20"
                       : card.trend.direction === "down"
-                      ? "text-rose-700 bg-rose-500/10 border border-rose-500/20"
+                      ? "text-destructive bg-destructive/10 border border-destructive/20"
                       : "text-muted-foreground bg-secondary border border-border/50"
                   )}
                   aria-label={`Xu hướng: ${card.trend.value} ${card.trend.label || ""}`}
@@ -282,7 +282,7 @@ export function MetricStrip({
                   {card.trend.direction === "up" ? (
                     <TrendingUp className="size-3 text-emerald-600" aria-hidden="true" />
                   ) : card.trend.direction === "down" ? (
-                    <TrendingDown className="size-3 text-rose-600" aria-hidden="true" />
+                    <TrendingDown className="size-3 text-destructive" aria-hidden="true" />
                   ) : (
                     <Minus className="size-3 text-muted-foreground" aria-hidden="true" />
                   )}

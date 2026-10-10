@@ -120,7 +120,7 @@ export function MobileBottomNav({ className }: MobileBottomNavProps) {
                   {numBadge > 0 && (
                     <span
                       aria-label={`${numBadge} mục chưa đọc`}
-                      className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white font-mono tabular-nums leading-none border border-card shadow-2xs"
+                      className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold text-white font-mono tabular-nums leading-none border border-card shadow-2xs"
                     >
                       {numBadge > 99 ? "99+" : numBadge}
                     </span>

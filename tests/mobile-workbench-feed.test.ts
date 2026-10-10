@@ -270,7 +270,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
       test("calculates overdue badges accurately", () => {
         const badge = getMobileDueBadge("2026-09-01", "IN_PROGRESS", "2026-09-05");
         assert.ok(badge.label.includes("Trễ hạn 4 ngày"));
-        assert.ok(badge.className.includes("text-rose-700"));
+        assert.ok(badge.className.includes("text-destructive"));
       });
 
       test("calculates completed status badge accurately", () => {

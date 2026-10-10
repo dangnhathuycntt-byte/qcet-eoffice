@@ -172,7 +172,7 @@ export function RemoteSigningFlow({
           type="button"
           onClick={() => setSelectedProvider("smart_ca")}
           className={cn(
-            "flex flex-col items-start gap-2 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+            "flex flex-col items-start gap-2 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary",
             selectedProvider === "smart_ca"
               ? "bg-selected text-foreground font-semibold"
               : "bg-secondary text-foreground hover:bg-accent"
@@ -189,7 +189,7 @@ export function RemoteSigningFlow({
           type="button"
           onClick={() => setSelectedProvider("usb_token")}
           className={cn(
-            "flex flex-col items-start gap-2 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+            "flex flex-col items-start gap-2 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary",
             selectedProvider === "usb_token"
               ? "bg-selected text-foreground font-semibold"
               : "bg-secondary text-foreground hover:bg-accent"

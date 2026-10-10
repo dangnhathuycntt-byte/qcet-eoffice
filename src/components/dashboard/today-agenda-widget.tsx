@@ -161,7 +161,7 @@ export function getAgendaTypeBadgeConfig(type?: AgendaEventItem["type"]): {
     return {
       label: "Đơn vị",
       className:
-        "bg-amber-500/10 text-amber-700 border-amber-500/25",
+        "bg-warning/10 text-warning border-warning/25",
     };
   }
   return {
@@ -289,7 +289,7 @@ export function TodayAgendaWidget({
                 Lịch công tác hôm nay
               </h3>
               {counts.inProgress > 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 animate-pulse">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 animate-pulse">
                   <span className="size-1.5 rounded-full bg-emerald-500" />
                   Đang diễn ra
                 </span>
@@ -389,7 +389,7 @@ export function TodayAgendaWidget({
                   <span className="font-mono font-bold text-xs leading-tight">
                     {event.startTime}
                   </span>
-                  <span className="text-[10px] text-muted-foreground font-mono leading-tight mt-0.5">
+                  <span className="text-xs text-muted-foreground font-mono leading-tight mt-0.5">
                     {event.endTime}
                   </span>
                 </div>
@@ -400,7 +400,7 @@ export function TodayAgendaWidget({
                     {/* Badge loại lịch */}
                     <span
                       className={cn(
-                        "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border",
+                        "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold border",
                         typeConfig.className
                       )}
                     >
@@ -410,7 +410,7 @@ export function TodayAgendaWidget({
                     {/* Badge trạng thái */}
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border",
                         statusConfig.badgeClass
                       )}
                     >
@@ -432,7 +432,7 @@ export function TodayAgendaWidget({
                   </h4>
 
                   {/* Metadata: Địa điểm & Chủ trì */}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     {/* Địa điểm */}
                     <div className="flex items-center gap-1 truncate">
                       {event.isOnline ? (
@@ -460,7 +460,7 @@ export function TodayAgendaWidget({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:underline py-0.5 px-1.5 rounded bg-blue-500/10 border border-blue-500/20"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline py-0.5 px-1.5 rounded bg-blue-500/10 border border-blue-500/20"
                       >
                         <Radio size={11} strokeWidth={1.5} className="animate-pulse text-blue-500" />
                         <span>Vào phòng họp trực tuyến</span>
@@ -477,7 +477,7 @@ export function TodayAgendaWidget({
 
       {/* FOOTER: Liên kết nhanh tới Lịch công tác */}
       <div className="pt-2 border-t border-border/30 flex items-center justify-between text-xs text-muted-foreground">
-        <span className="text-[11px]">
+        <span className="text-xs">
           Múi giờ chuẩn: <strong className="font-medium text-foreground">ICT (UTC+7)</strong>
         </span>
         <Button

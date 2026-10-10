@@ -27,6 +27,7 @@ import {
   type CalendarAttentionState,
   type CalendarDayFilter,
 } from "@/lib/calendar/calendar-presentation";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DayTaskItem {
   id: string;
@@ -85,8 +86,8 @@ function formatDateVi(dateStr: string): string {
 
 function StateIcon({ state, isEvent }: { state: CalendarAttentionState; isEvent?: boolean }) {
   if (isEvent) return <CalendarIcon className="size-3.5 text-sky-600 shrink-0" aria-hidden="true" />;
-  if (state === "overdue") return <AlertTriangle className="size-3.5 text-rose-600 shrink-0" aria-hidden="true" />;
-  if (state === "waiting") return <Clock className="size-3.5 text-amber-600 shrink-0" aria-hidden="true" />;
+  if (state === "overdue") return <AlertTriangle className="size-3.5 text-destructive shrink-0" aria-hidden="true" />;
+  if (state === "waiting") return <Clock className="size-3.5 text-warning shrink-0" aria-hidden="true" />;
   if (state === "due_today") return <Clock className="size-3.5 text-orange-600 shrink-0" aria-hidden="true" />;
   if (state === "completed") return <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" aria-hidden="true" />;
   return (
@@ -195,9 +196,9 @@ export function CalendarDaySheet({
 
       let statusBadge: React.ReactNode = null;
       if (state === "overdue") {
-        statusBadge = <span className="text-rose-600 font-medium">Trễ hạn</span>;
+        statusBadge = <span className="text-destructive font-medium">Trễ hạn</span>;
       } else if (state === "waiting") {
-        statusBadge = <span className="text-amber-600 font-medium">Chờ duyệt</span>;
+        statusBadge = <span className="text-warning font-medium">Chờ duyệt</span>;
       } else if (state === "due_today") {
         statusBadge = <span className="text-orange-600 font-medium">Hôm nay</span>;
       }
@@ -434,7 +435,7 @@ export function CalendarDaySheet({
             ) : visibleTasks.length === 0 ? (
               <div className="p-8 text-center text-xs text-muted-foreground space-y-1">
                 <p>Không có mục nào khớp bộ lọc.</p>
-                <button
+                <Pressable
                   type="button"
                   onClick={() => {
                     setFilter("all");
@@ -443,13 +444,13 @@ export function CalendarDaySheet({
                   className="font-medium text-primary hover:underline cursor-pointer"
                 >
                   Xem tất cả ({summary.total})
-                </button>
+                </Pressable>
               </div>
             ) : filter === "all" && attentionItems.length > 0 ? (
               <div className="space-y-0">
                 {/* Section Cần xử lý */}
                 <div>
-                  <div className="sticky top-0 z-5 px-4 py-1.5 bg-muted/30 border-b border-border/40 text-xs font-semibold text-rose-600 flex items-center justify-between">
+                  <div className="sticky top-0 z-5 px-4 py-1.5 bg-muted/30 border-b border-border/40 text-xs font-semibold text-destructive flex items-center justify-between">
                     <span>Cần xử lý</span>
                     <span className="font-mono tabular-nums text-xs">{attentionItems.length}</span>
                   </div>

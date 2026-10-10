@@ -8,6 +8,7 @@ import type { TableDensity } from "../types";
 import { SubtaskInlineRow } from "./subtask-inline-row";
 import { useAuth } from "@/lib/auth-context";
 import { matchesUser } from "@/lib/role-task-filter";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface SubtaskRowGroupProps {
   parentTask: SchoolTask;
@@ -80,14 +81,14 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                   <span>Nhiệm vụ này chưa có việc thành phần nào.</span>
                 </div>
                 {canAssign && onAddSubTask && (
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => onAddSubTask(parentTask.id)}
                     className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-[0.98] transition-colors"
                   >
                     <Plus className="size-3" strokeWidth={1.5} />
                     <span>Thêm việc con</span>
-                  </button>
+                  </Pressable>
                 )}
               </div>
             ) : (
@@ -128,14 +129,14 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                 {/* Optional "Add subtask" bottom line if permitted */}
                 {canAssign && onAddSubTask && (
                   <div className="pt-1 flex items-center">
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => onAddSubTask(parentTask.id)}
                       className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium cursor-pointer transition-colors"
                     >
                       <Plus className="size-3 text-primary" strokeWidth={1.5} />
                       <span>Thêm việc con cho nhiệm vụ này</span>
-                    </button>
+                    </Pressable>
                   </div>
                 )}
               </>

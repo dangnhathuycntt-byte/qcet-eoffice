@@ -97,15 +97,15 @@ export function SectionErrorFallback({
   const getSectionIcon = () => {
     switch (section) {
       case "document-viewer":
-        return <FileWarning className="size-5 text-amber-700" strokeWidth={1.5} />;
+        return <FileWarning className="size-5 text-warning" strokeWidth={1.5} />;
       case "dashboard":
-        return <LayoutDashboard className="size-5 text-amber-700" strokeWidth={1.5} />;
+        return <LayoutDashboard className="size-5 text-warning" strokeWidth={1.5} />;
       case "calendar":
-        return <CalendarX className="size-5 text-amber-700" strokeWidth={1.5} />;
+        return <CalendarX className="size-5 text-warning" strokeWidth={1.5} />;
       case "workspace":
-        return <Layers className="size-5 text-amber-700" strokeWidth={1.5} />;
+        return <Layers className="size-5 text-warning" strokeWidth={1.5} />;
       default:
-        return <AlertTriangle className="size-5 text-amber-700" strokeWidth={1.5} />;
+        return <AlertTriangle className="size-5 text-warning" strokeWidth={1.5} />;
     }
   };
 
@@ -114,7 +114,7 @@ export function SectionErrorFallback({
       <div
         role="alert"
         aria-live="assertive"
-        className="flex flex-col items-center justify-center p-4 text-center rounded-lg border border-amber-200 bg-amber-50/60 text-foreground w-full min-h-[140px] space-y-2.5 transition-all"
+        className="flex flex-col items-center justify-center p-4 text-center rounded-lg border border-warning/30 bg-warning/5 text-foreground w-full min-h-[140px] space-y-2.5 transition-all"
       >
         <div className="flex items-center gap-2">
           {getSectionIcon()}
@@ -131,7 +131,7 @@ export function SectionErrorFallback({
             variant="outline"
             size="xs"
             onClick={resetErrorBoundary}
-            className="border-amber-300 bg-card hover:bg-amber-100/60 text-foreground"
+            className="border-warning/40 bg-card hover:bg-warning/10 text-foreground"
           >
             <RotateCcw className="size-3.5 text-muted-foreground mr-1" strokeWidth={1.5} />
             Thử lại
@@ -147,7 +147,7 @@ export function SectionErrorFallback({
       aria-live="assertive"
       className="flex flex-col items-center justify-center p-6 sm:p-8 text-center rounded-xl border border-border bg-card shadow-xs text-foreground w-full my-4"
     >
-      <div className="size-11 rounded-full bg-amber-100 flex items-center justify-center mb-3.5 ring-4 ring-amber-50">
+      <div className="size-11 rounded-full bg-warning/15 flex items-center justify-center mb-3.5 ring-4 ring-warning/15">
         {getSectionIcon()}
       </div>
 

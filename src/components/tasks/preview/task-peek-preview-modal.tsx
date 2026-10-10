@@ -16,6 +16,7 @@ import { cn, getInitials } from "@/lib/utils";
 import { formatDetailDate, getRelativeDueTime } from "@/lib/task-detail-helpers";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskPeekPreviewModalProps {
   task: SchoolTask | StaffTask | null;
@@ -182,7 +183,7 @@ export function TaskPeekPreviewModal({
       : task.status === "IN_PROGRESS"
       ? "bg-blue-500"
       : task.status === "WAITING_APPROVAL" || task.status === "NEEDS_REVIEW"
-      ? "bg-amber-500"
+      ? "bg-warning"
       : "bg-muted-foreground/40";
 
   const priorityVal = (task as any).priority || "NORMAL";
@@ -197,9 +198,9 @@ export function TaskPeekPreviewModal({
 
   const priorityColorClass =
     priorityVal === "URGENT"
-      ? "text-rose-600 font-medium"
+      ? "text-destructive font-medium"
       : priorityVal === "HIGH"
-      ? "text-amber-600 font-medium"
+      ? "text-warning font-medium"
       : "text-muted-foreground/75";
 
   const completedSubtasks = subTasks.filter((s) => s.status === "COMPLETED").length;
@@ -219,7 +220,7 @@ export function TaskPeekPreviewModal({
     >
       {/* Header cực gọn: ID · Đơn vị bên trái, controls tối thiểu bên phải */}
       <div className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-muted-foreground/70">
+        <div className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground/70">
           <span className="font-mono font-medium text-muted-foreground/90 select-all tracking-wider">
             {taskCode}
           </span>
@@ -231,7 +232,7 @@ export function TaskPeekPreviewModal({
 
         <div className="flex items-center gap-0.5 shrink-0 text-muted-foreground/50">
           {onNavigatePrev && (
-            <button
+            <Pressable
               type="button"
               onClick={onNavigatePrev}
               disabled={!hasPrev}
@@ -240,10 +241,10 @@ export function TaskPeekPreviewModal({
               aria-label="Nhiệm vụ trước"
             >
               <ChevronUp className="size-3.5" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           )}
           {onNavigateNext && (
-            <button
+            <Pressable
               type="button"
               onClick={onNavigateNext}
               disabled={!hasNext}
@@ -252,9 +253,9 @@ export function TaskPeekPreviewModal({
               aria-label="Nhiệm vụ kế tiếp"
             >
               <ChevronDown className="size-3.5" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           )}
-          <button
+          <Pressable
             type="button"
             onClick={onClose}
             title="Đóng (Esc)"
@@ -262,12 +263,12 @@ export function TaskPeekPreviewModal({
             aria-label="Đóng"
           >
             <X className="size-3.5" strokeWidth={1.5} />
-          </button>
+          </Pressable>
         </div>
       </div>
 
       {(parentTaskTitle || parentTaskCode) && (
-        <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground/70" aria-label="Công việc chính">
+        <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground/70" aria-label="Công việc chính">
           <span className="shrink-0">Công việc chính</span>
           <span aria-hidden="true">·</span>
           {parentTaskCode && <span className="shrink-0 font-mono text-muted-foreground/90">{parentTaskCode}</span>}
@@ -276,7 +277,7 @@ export function TaskPeekPreviewModal({
       )}
 
       {/* Title — trọng tâm chính, leading thoáng, 2-3 dòng */}
-      <h2 className="text-[17px] sm:text-[18px] font-semibold text-foreground leading-snug tracking-tight line-clamp-3">
+      <h2 className="text-lg font-semibold text-foreground leading-snug tracking-tight line-clamp-3">
         {task.title}
       </h2>
 
@@ -315,9 +316,9 @@ export function TaskPeekPreviewModal({
               <span>{formatDetailDate(task.dueDate)}</span>
               {relativeDue && (
                 <span className={cn(
-                  "text-[11px]",
+                  "text-xs",
                   relativeDue.text.includes("Trễ hạn")
-                    ? "text-rose-600 font-medium"
+                    ? "text-destructive font-medium"
                     : "text-muted-foreground/60"
                 )}>
                   {relativeDue.text}
@@ -330,17 +331,17 @@ export function TaskPeekPreviewModal({
 
       {/* Description: phẳng, trực tiếp, không bọc box */}
       {taskDescription ? (
-        <p className="text-[13px] text-foreground/75 leading-relaxed line-clamp-4 whitespace-pre-line">
+        <p className="text-compact text-foreground/75 leading-relaxed line-clamp-4 whitespace-pre-line">
           {taskDescription}
         </p>
       ) : (
-        <p className="text-[12px] italic text-muted-foreground/40">Chưa có mô tả chi tiết.</p>
+        <p className="text-xs italic text-muted-foreground/40">Chưa có mô tả chi tiết.</p>
       )}
 
       {/* Subtasks (nếu có): danh sách phẳng tối giản */}
       {subTasks.length > 0 && (
         <div className="space-y-1 pt-1">
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground/60 font-medium">
+          <div className="flex items-center justify-between text-xs text-muted-foreground/60 font-medium">
             <span>Việc thành phần</span>
             <span className="font-mono tabular-nums">{completedSubtasks}/{subTasks.length}</span>
           </div>
@@ -360,7 +361,7 @@ export function TaskPeekPreviewModal({
               </div>
             ))}
             {subTasks.length > 3 && (
-              <span className="text-[11px] text-muted-foreground/50 pl-5">
+              <span className="text-xs text-muted-foreground/50 pl-5">
                 +{subTasks.length - 3} việc khác
               </span>
             )}
@@ -369,7 +370,7 @@ export function TaskPeekPreviewModal({
       )}
 
       {/* Footer: phím tắt cực mờ/gọn, không CTA đen nặng nề */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/40 text-[11px] text-muted-foreground/45 select-none shrink-0">
+      <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs text-muted-foreground/45 select-none shrink-0">
         <div className="flex items-center gap-1.5">
           <span>Space Đóng</span>
           <span className="text-muted-foreground/30">·</span>
@@ -378,14 +379,14 @@ export function TaskPeekPreviewModal({
           <span>Enter Mở chi tiết</span>
         </div>
 
-        <button
+        <Pressable
           type="button"
           onClick={() => onOpenDetail(task)}
-          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer font-normal"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer font-normal"
         >
           <span>Mở chi tiết</span>
           <ArrowRight className="size-3" strokeWidth={1.5} />
-        </button>
+        </Pressable>
       </div>
     </StandardDialog>
   );

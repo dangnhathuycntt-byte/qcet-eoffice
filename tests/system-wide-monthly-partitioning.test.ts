@@ -398,7 +398,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       assert.ok(markup.includes("Có 1 nhiệm vụ tồn đọng/trễ hạn từ các kỳ trước cần xử lý"));
       assert.ok(markup.includes("Xem danh sách"));
       assert.ok(markup.includes("xử lý") || markup.includes("Xem &amp; xử lý"));
-      assert.ok(markup.includes("border-amber-300") || markup.includes("amber-50"));
+      assert.ok(markup.includes("border-warning/40") || markup.includes("bg-warning/10"));
     });
 
     test("PriorOverdueBacklogBanner returns empty string (null) when selectedMonth === ALL", async () => {
@@ -478,8 +478,8 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       assert.match(markup, /TỒN ĐỌNG KỲ TRƯỚC \(1\)/);
       assert.match(markup, /Prior Overdue Backlog/);
       assert.match(markup, /Nhiệm vụ tuyển sinh tồn đọng Tháng 8/);
-      assert.ok(markup.includes("border-amber-300"));
-      assert.ok(markup.includes("bg-amber-50"));
+      assert.ok(markup.includes("border-warning/40"));
+      assert.ok(markup.includes("bg-warning/10"));
     });
 
     test("CascadingTaskTable hides Prior Overdue Backlog section when selectedAcademicMonth === ALL", async () => {

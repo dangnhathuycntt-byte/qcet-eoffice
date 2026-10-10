@@ -360,7 +360,7 @@ export function Drawer({
 
             {stats && (
               <div className="rounded-2xl p-4 bg-secondary flex flex-col gap-2.5">
-                <div className="flex items-center justify-between text-xs sm:text-[13px] font-semibold">
+                <div className="flex items-center justify-between text-xs sm:text-compact font-semibold">
                   <span className="text-foreground">
                     Tiến độ hoàn thành:{" "}
                     <span className="tabular-nums text-primary">

@@ -16,6 +16,7 @@ import {
   type AcademicMonthPeriod,
 } from "@/lib/academic-calendar";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
+import { Pressable } from "@/components/ui/pressable";
 
 function CalendarZoneComponent() {
   const {
@@ -45,7 +46,7 @@ function CalendarZoneComponent() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-2xs font-mono">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-warning/10 text-warning border border-warning/20 shadow-2xs font-mono">
               Phân khu Lịch công tác
             </span>
           </div>
@@ -96,7 +97,7 @@ function CalendarZoneComponent() {
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
           {/* Option: Cả năm */}
-          <button
+          <Pressable
             type="button"
             onClick={() => handleAcademicMonthChange("ALL")}
             className={cn(
@@ -117,7 +118,7 @@ function CalendarZoneComponent() {
             >
               {totalAllTasks}
             </span>
-          </button>
+          </Pressable>
 
           {/* 12 Academic Months in Order */}
           {ACADEMIC_MONTH_ORDER.map((m) => {
@@ -126,7 +127,7 @@ function CalendarZoneComponent() {
             const taskCount = monthlyTaskCounts[m] || 0;
 
             return (
-              <button
+              <Pressable
                 key={m}
                 type="button"
                 onClick={() => handleAcademicMonthChange(m)}
@@ -149,7 +150,7 @@ function CalendarZoneComponent() {
                 >
                   {taskCount}
                 </span>
-              </button>
+              </Pressable>
             );
           })}
         </div>

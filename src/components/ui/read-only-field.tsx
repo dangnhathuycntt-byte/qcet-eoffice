@@ -56,7 +56,7 @@ export function ReadOnlyField({
             type="button"
             onClick={handleCopy}
             aria-label={copied ? "Đã sao chép" : `Sao chép ${label}`}
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 cursor-pointer"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 cursor-pointer"
           >
             {copied ? (
               <Check className="size-3.5 text-foreground" />

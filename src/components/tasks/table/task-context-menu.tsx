@@ -43,6 +43,7 @@ import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { Pressable } from "@/components/ui/pressable";
 
 const ROW =
   "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors outline-none hover:bg-accent focus-visible:bg-accent";
@@ -70,7 +71,7 @@ function MenuRow({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className={cn(ROW, danger && "text-rose-600 hover:bg-rose-500/10 focus-visible:bg-rose-500/10")}
+      className={cn(ROW, danger && "text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10")}
     >
       <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
       <span className="flex-1 truncate">{label}</span>
@@ -107,7 +108,7 @@ function SubmenuRow({
 }) {
   return (
     <div className="relative" data-submenu={name} onMouseLeave={onLeave}>
-      <button
+      <Pressable
         type="button"
         role="menuitem"
         aria-haspopup="true"
@@ -120,7 +121,7 @@ function SubmenuRow({
         <span className="flex-1 truncate">{label}</span>
         <Kbd>{shortcut}</Kbd>
         <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" strokeWidth={1.5} />
-      </button>
+      </Pressable>
       {expanded ? (
         <div
           role="menu"
@@ -156,7 +157,7 @@ function OptionRow({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Pressable
       type="button"
       role="menuitem"
       aria-current={selected ? "true" : undefined}
@@ -167,7 +168,7 @@ function OptionRow({
       <span className="flex-1 truncate">{label}</span>
       {hint ? <span className="text-xs tabular-nums text-muted-foreground/80">{hint}</span> : null}
       {selected ? <Check className="size-3.5 shrink-0 text-foreground" strokeWidth={1.5} /> : null}
-    </button>
+    </Pressable>
   );
 }
 
@@ -405,7 +406,7 @@ export function TaskContextMenu({
   };
 
   const PRIORITY_OPTIONS: Array<{ priority: TaskPriority; label: string; icon: React.ComponentType<any>; color: string }> = [
-    { priority: "URGENT", label: "Khẩn cấp", icon: TaskIconPriorityUrgent, color: "text-rose-500" },
+    { priority: "URGENT", label: "Khẩn cấp", icon: TaskIconPriorityUrgent, color: "text-destructive" },
     { priority: "HIGH", label: "Ưu tiên cao", icon: TaskIconPriorityHigh, color: "text-foreground/70" },
     { priority: "NORMAL", label: "Bình thường", icon: TaskIconPriorityNormal, color: "text-muted-foreground" },
     { priority: "LOW", label: "Thấp", icon: TaskIconPriorityLow, color: "text-muted-foreground/50" },
@@ -459,7 +460,7 @@ export function TaskContextMenu({
       <MenuRow
         icon={
           <TaskIconPriorityUrgent
-            className={cn("size-4", currentPriority === "URGENT" ? "text-rose-600" : "text-muted-foreground")}
+            className={cn("size-4", currentPriority === "URGENT" ? "text-destructive" : "text-muted-foreground")}
           />
         }
         label={currentPriority === "URGENT" ? "Bỏ ưu tiên khẩn cấp" : "Đánh dấu khẩn cấp"}
@@ -579,7 +580,7 @@ export function TaskContextMenu({
           />
         ))}
         <div className="pt-1 mt-1 border-t border-border/40 relative">
-          <button
+          <Pressable
             type="button"
             role="menuitem"
             aria-haspopup="dialog"
@@ -593,7 +594,7 @@ export function TaskContextMenu({
             </span>
             <span className="flex-1 truncate">Chọn ngày khác</span>
             <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" strokeWidth={1.5} />
-          </button>
+          </Pressable>
           {calendarOpen ? (
             <div
               role="dialog"

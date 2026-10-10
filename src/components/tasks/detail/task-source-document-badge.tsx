@@ -111,11 +111,11 @@ export function TaskSourceDocumentBadge({
       <FileText className="size-4 shrink-0 text-muted-foreground mt-0.5" strokeWidth={1.5} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             {typeLabel}
           </span>
-          <span className="text-[11px] text-muted-foreground/60">·</span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground/60">·</span>
+          <span className="text-xs text-muted-foreground">
             {sourceDocument.issuingAuthority}
           </span>
         </div>
@@ -126,7 +126,7 @@ export function TaskSourceDocumentBadge({
           {sourceDocument.summary}
         </p>
         {statusLabel && (
-          <span className="inline-flex mt-1 rounded border border-border/60 bg-background px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="inline-flex mt-1 rounded border border-border/60 bg-background px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
             {statusLabel}
           </span>
         )}

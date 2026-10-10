@@ -102,7 +102,7 @@ export function WorkspaceToolbar({
                 aria-label="Tìm kiếm trong không gian làm việc"
                 className={cn(
                   "w-full rounded-control pl-10 pr-10 py-2 text-sm bg-secondary border-0 text-foreground placeholder:text-muted-foreground min-h-[40px] sm:min-h-[36px] transition-colors",
-                  "hover:bg-accent focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
+                  "hover:bg-accent focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1"
                 )}
               />
               {searchQuery && (
@@ -128,15 +128,15 @@ export function WorkspaceToolbar({
               onClick={onResetFilters}
               aria-label="Đặt lại tất cả bộ lọc"
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 min-h-[44px] shrink-0 transition-colors",
-                "hover:bg-rose-100 active:scale-[0.98]",
+                "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-destructive bg-danger-soft border border-destructive/30 min-h-[44px] shrink-0 transition-colors",
+                "hover:bg-destructive/15 active:scale-[0.98]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
               )}
             >
               <FilterX className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Đặt lại</span>
               {typeof filterCount === "number" && filterCount > 0 && (
-                <span className="font-mono bg-rose-200/60 px-1 rounded-full text-xs">
+                <span className="font-mono bg-destructive/10 px-1 rounded-full text-xs">
                   {filterCount}
                 </span>
               )}

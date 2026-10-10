@@ -40,7 +40,7 @@ export function Table({ className, enableKeyboardNavigation, density = "comforta
       <table
         role={enableKeyboardNavigation ? "grid" : undefined}
         onKeyDown={handleKeyDown}
-        className={cn("w-full border-collapse text-[13px] leading-5", className)}
+        className={cn("w-full border-collapse text-compact leading-5", className)}
         {...props}
       />
     </div>
@@ -91,7 +91,7 @@ export function TableRow({
       data-selected={selected ? "" : undefined}
       onKeyDown={handleKeyDown}
       className={cn(
-        "transition-colors duration-100 hover:bg-accent data-[selected]:bg-selected outline-none focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-2px] motion-reduce:transition-none",
+        "transition-colors duration-100 hover:bg-accent data-[selected]:bg-selected outline-none focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-[-2px] motion-reduce:transition-none",
         (onOpen || onSelectChange) && "cursor-pointer",
         className,
       )}
@@ -123,7 +123,7 @@ export function TableHead({ className, children, sort = null, sortable, onSort, 
         <button
           type="button"
           onClick={onSort}
-          className="-ml-1 inline-flex cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 outline-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary"
+          className="-ml-1 inline-flex cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 outline-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary"
         >
           {children}
           {sort === "asc" ? <ArrowUp aria-hidden="true" className="size-3" /> : null}

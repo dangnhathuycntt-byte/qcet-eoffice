@@ -96,6 +96,7 @@ import {
   isTaskAssignedToUserOrUnit,
   computeWorkspaceTabCounts,
 } from "@/lib/workspace-metrics-aggregator";
+import { Pressable } from "@/components/ui/pressable";
 
 export {
   isTaskWaitingApproval,
@@ -511,7 +512,7 @@ function ExecutiveDashboardSections({
           <span
             className={cn(
               "font-mono font-semibold tabular-nums",
-              metrics.urgentOverdueCount > 0 ? "text-rose-700" : "text-foreground"
+              metrics.urgentOverdueCount > 0 ? "text-destructive" : "text-foreground"
             )}
           >
             {metrics.urgentOverdueCount}
@@ -558,13 +559,13 @@ function ExecutiveDashboardSections({
                   >
                     {/* Task title + submitter */}
                     <div className="min-w-0">
-                      <button
+                      <Pressable
                         type="button"
                         onClick={() => onSelectTask(t)}
                         className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 block max-w-full min-h-[44px] sm:min-h-0 flex items-center"
                       >
                         {t.title}
-                      </button>
+                      </Pressable>
                       {item.submittedBy && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">
                           {item.submittedBy}
@@ -581,7 +582,7 @@ function ExecutiveDashboardSections({
                     </span>
                     {/* Review button */}
                     <div className="sm:text-right">
-                      <button
+                      <Pressable
                         type="button"
                         onClick={() => {
                           if (onReview) {
@@ -594,21 +595,21 @@ function ExecutiveDashboardSections({
                       >
                         Xem xét
                         <ChevronRight className="size-3.5" strokeWidth={1.5} />
-                      </button>
+                      </Pressable>
                     </div>
                   </div>
                 );
               })}
             </div>
             {hasMoreApprovals && (
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onViewAllApprovals?.()}
                 className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer px-3 py-2 min-h-[44px] sm:min-h-0"
               >
                 Xem tất cả {pendingApprovals.length} nhiệm vụ
                 <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             )}
           </>
         )}
@@ -623,8 +624,8 @@ function ExecutiveDashboardSections({
           {overdueTasks.length > 0 && (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 px-1">
-                <CircleAlert className="size-3.5 text-rose-600" strokeWidth={1.5} />
-                <h3 className="text-xs font-semibold text-rose-700">
+                <CircleAlert className="size-3.5 text-destructive" strokeWidth={1.5} />
+                <h3 className="text-xs font-semibold text-destructive">
                   Trễ hạn ({overdueTasks.length})
                 </h3>
               </div>
@@ -641,32 +642,32 @@ function ExecutiveDashboardSections({
                     key={t.id}
                     className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_120px] gap-1 sm:gap-3 items-center px-3 py-2"
                   >
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => onSelectTask(t)}
                       className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 min-h-[44px] sm:min-h-0 flex items-center"
                     >
                       {t.title}
-                    </button>
+                    </Pressable>
                     <span className="text-xs text-muted-foreground truncate">
                       {t.leadDepartment || t.department || "-"}
                     </span>
-                    <span className="font-mono text-xs tabular-nums text-rose-700">
+                    <span className="font-mono text-xs tabular-nums text-destructive">
                       {formatDisplayDate(t.dueDate)}
                     </span>
-                    <span className="text-xs text-rose-600">{statusLabel(t.status)}</span>
+                    <span className="text-xs text-destructive">{statusLabel(t.status)}</span>
                   </div>
                 ))}
               </div>
               {overdueTasks.length > MAX_ROWS && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => onViewAllOverdue?.()}
                   className="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer px-3 py-1 min-h-[44px] sm:min-h-0"
                 >
                   Xem tất cả {overdueTasks.length} nhiệm vụ trễ hạn
                   <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
-                </button>
+                </Pressable>
               )}
             </div>
           )}
@@ -675,8 +676,8 @@ function ExecutiveDashboardSections({
           {upcomingTasks.length > 0 && (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 px-1">
-                <Clock className="size-3.5 text-amber-600" strokeWidth={1.5} />
-                <h3 className="text-xs font-semibold text-amber-700">
+                <Clock className="size-3.5 text-warning" strokeWidth={1.5} />
+                <h3 className="text-xs font-semibold text-warning">
                   Sắp đến hạn ({upcomingTasks.length})
                 </h3>
               </div>
@@ -693,17 +694,17 @@ function ExecutiveDashboardSections({
                     key={t.id}
                     className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_120px] gap-1 sm:gap-3 items-center px-3 py-2"
                   >
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => onSelectTask(t)}
                       className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 min-h-[44px] sm:min-h-0 flex items-center"
                     >
                       {t.title}
-                    </button>
+                    </Pressable>
                     <span className="text-xs text-muted-foreground truncate">
                       {t.leadDepartment || t.department || "-"}
                     </span>
-                    <span className="font-mono text-xs tabular-nums text-amber-700">
+                    <span className="font-mono text-xs tabular-nums text-warning">
                       {formatDisplayDate(t.dueDate)}
                     </span>
                     <span className="text-xs text-muted-foreground">{statusLabel(t.status)}</span>
@@ -711,14 +712,14 @@ function ExecutiveDashboardSections({
                 ))}
               </div>
               {upcomingTasks.length > MAX_ROWS && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => onViewAllOverdue?.()}
                   className="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer px-3 py-1 min-h-[44px] sm:min-h-0"
                 >
                   Xem tất cả {upcomingTasks.length} nhiệm vụ sắp đến hạn
                   <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
-                </button>
+                </Pressable>
               )}
             </div>
           )}
@@ -2279,10 +2280,10 @@ function UnifiedAdaptiveWorkspaceInner({
         <aside
           data-slot="workspace-offline-alert"
           role="alert"
-          className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 text-xs"
+          className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-warning/30 bg-warning/10 text-warning text-xs"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <AlertTriangle className="size-4 shrink-0 text-amber-700" />
+            <AlertTriangle className="size-4 shrink-0 text-warning" />
             <div className="min-w-0">
               <p className="font-semibold text-foreground">
                 {isOffline ? "Mất kết nối máy chủ" : "Không thể đồng bộ dữ liệu"}
@@ -2519,7 +2520,7 @@ function UnifiedAdaptiveWorkspaceInner({
             {/* Action Queue Quick Trigger */}
             {actionQueueTotal > 0 && (
               <div className="flex items-center justify-end pb-1">
-                <button
+                <Pressable
                   type="button"
                   data-slot="action-queue-trigger"
                   onClick={() => setIsActionQueueOpen(true)}
@@ -2532,7 +2533,7 @@ function UnifiedAdaptiveWorkspaceInner({
                   <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tabular-nums leading-none">
                     {actionQueueTotal}
                   </span>
-                </button>
+                </Pressable>
               </div>
             )}
 
@@ -2775,14 +2776,14 @@ function UnifiedAdaptiveWorkspaceInner({
               <h3 className="text-sm font-semibold text-foreground">
                 Hàng đợi xử lý công việc
               </h3>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setIsActionQueueOpen(false)}
                 className="size-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 aria-label="Đóng hàng đợi"
               >
                 <X className="size-4" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </div>
             <div className="flex-1 overflow-y-auto thin-scrollbar">
               {/* Summary Metrics - Clean Typography & Alignment */}

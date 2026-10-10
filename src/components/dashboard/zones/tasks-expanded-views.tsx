@@ -19,6 +19,7 @@ import {
   useDashboardActions,
   useDashboardModal,
 } from "@/components/dashboard/dashboard-context";
+import { Pressable } from "@/components/ui/pressable";
 
 const TaskKanbanBoard = dynamic(
   () => import("@/components/tasks/task-kanban-board").then((m) => m.TaskKanbanBoard),
@@ -147,7 +148,7 @@ function TasksExpandedViewsComponent() {
                 const Icon = b.icon;
                 const isActive = viewMode === b.id;
                 return (
-                  <button
+                  <Pressable
                     key={b.id}
                     type="button"
                     onClick={() => handleViewModeChange(b.id as TaskViewMode)}
@@ -160,13 +161,13 @@ function TasksExpandedViewsComponent() {
                   >
                     <Icon size={13} strokeWidth={1.5} />
                     <span>{b.label}</span>
-                  </button>
+                  </Pressable>
                 );
               })}
             </div>
 
             <div className="flex items-center gap-2">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => {
                   if (isExecutive) {
@@ -176,13 +177,13 @@ function TasksExpandedViewsComponent() {
                     setActiveWorkbox("NEEDS_REVIEW");
                   }
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-700 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20 transition-colors cursor-pointer"
               >
                 <FileCheck size={13} strokeWidth={1.5} />
                 <span>Hàng đợi phê duyệt</span>
-              </button>
+              </Pressable>
 
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setUseAdvancedToolbar(true)}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors cursor-pointer"
@@ -190,7 +191,7 @@ function TasksExpandedViewsComponent() {
               >
                 <SlidersHorizontal size={13} strokeWidth={1.5} />
                 <span className="hidden md:inline">Thanh công cụ đầy đủ</span>
-              </button>
+              </Pressable>
 
               <DensityToggle className="h-7.5 rounded-xl border-border/70 shadow-2xs" />
             </div>
@@ -223,14 +224,14 @@ function TasksExpandedViewsComponent() {
         <section aria-label="Thanh công cụ điều khiển nhiệm vụ" className="space-y-2">
           {(user?.role === "ADMIN" || user?.role === "MANAGER") && useAdvancedToolbar && (
             <div className="flex justify-end mb-1">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setUseAdvancedToolbar(false)}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors cursor-pointer"
               >
                 <SlidersHorizontal size={13} strokeWidth={1.5} />
                 <span>Quay lại Bộ lọc tinh giản</span>
-              </button>
+              </Pressable>
             </div>
           )}
           <UnifiedTaskToolbar
@@ -264,13 +265,13 @@ function TasksExpandedViewsComponent() {
                   Đang lọc hiển thị theo chu kỳ <strong>{selectedMonthPeriod.fullLabel}</strong> ({filteredTasks.length} nhiệm vụ)
                 </span>
               </div>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => handleAcademicMonthChange("ALL")}
                 className="shrink-0 text-xs font-medium text-primary hover:underline cursor-pointer"
               >
                 Hiển thị cả năm
-              </button>
+              </Pressable>
             </div>
           )}
         </section>

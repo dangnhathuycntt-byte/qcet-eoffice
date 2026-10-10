@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface ExecutiveResolutionDrawerProps {
   isOpen: boolean;
@@ -159,7 +160,7 @@ export function ExecutiveResolutionDrawer({
           {/* Header */}
           <div className="flex items-start justify-between border-b border-border/80 px-5 py-4 bg-muted/20 shrink-0">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 shrink-0 border border-rose-500/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive shrink-0 border border-destructive/20">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -211,7 +212,7 @@ export function ExecutiveResolutionDrawer({
                 </div>
 
                 {/* Task Title (15px font-bold) */}
-                <h3 className="text-[15px] font-bold text-foreground leading-snug">
+                <h3 className="text-sm font-bold text-foreground leading-snug">
                   {bottleneck.title}
                 </h3>
 
@@ -239,9 +240,9 @@ export function ExecutiveResolutionDrawer({
 
                 {/* Blocked Reason callout if available */}
                 {bottleneck.blockedReason && (
-                  <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-2.5 flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-                    <div className="text-xs leading-relaxed text-rose-700">
+                  <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <div className="text-xs leading-relaxed text-destructive">
                       <span className="font-semibold">Vướng mắc: </span>
                       {bottleneck.blockedReason}
                     </div>
@@ -304,7 +305,7 @@ export function ExecutiveResolutionDrawer({
                               Thời gian gia hạn:
                             </span>
                             <div className="flex items-center gap-2">
-                              <button
+                              <Pressable
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -318,8 +319,8 @@ export function ExecutiveResolutionDrawer({
                                 )}
                               >
                                 +3 ngày (Mặc định)
-                              </button>
-                              <button
+                              </Pressable>
+                              <Pressable
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -333,7 +334,7 @@ export function ExecutiveResolutionDrawer({
                                 )}
                               >
                                 +7 ngày (1 tuần)
-                              </button>
+                              </Pressable>
                             </div>
                           </div>
                         )}
@@ -411,7 +412,7 @@ export function ExecutiveResolutionDrawer({
                     className={cn(
                       "rounded-xl border p-3.5 transition-all cursor-pointer select-none",
                       selectedType === "DEMAND_EXPLANATION"
-                        ? "border-rose-500/60 bg-rose-500/5 shadow-xs ring-1 ring-rose-500/40"
+                        ? "border-destructive/60 bg-destructive/5 shadow-xs ring-1 ring-destructive/40"
                         : "border-border/70 hover:border-border hover:bg-muted/30"
                     )}
                   >
@@ -420,7 +421,7 @@ export function ExecutiveResolutionDrawer({
                         className={cn(
                           "flex h-8 w-8 items-center justify-center rounded-lg shrink-0 mt-0.5 transition-colors",
                           selectedType === "DEMAND_EXPLANATION"
-                            ? "bg-rose-600 text-white"
+                            ? "bg-destructive text-white"
                             : "bg-muted text-muted-foreground"
                         )}
                       >
@@ -437,7 +438,7 @@ export function ExecutiveResolutionDrawer({
                             </Badge>
                           </div>
                           {selectedType === "DEMAND_EXPLANATION" && (
-                            <CheckCircle2 className="h-4 w-4 text-rose-600 shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-destructive shrink-0" />
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -446,7 +447,7 @@ export function ExecutiveResolutionDrawer({
 
                         {/* Sub-controls for Demand Explanation */}
                         {selectedType === "DEMAND_EXPLANATION" && (
-                          <div className="mt-3 rounded-lg bg-rose-500/10 border border-rose-500/20 p-2.5 text-xs text-rose-700 leading-relaxed">
+                          <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-xs text-destructive leading-relaxed">
                             Lệnh giải trình sẽ gửi trực tiếp đến Trưởng đơn vị{" "}
                             <strong>{bottleneck.departmentName}</strong>. Thời hạn phản hồi được giám sát tự động trong vòng 24 giờ kể từ khi ban hành.
                           </div>
@@ -520,7 +521,7 @@ export function ExecutiveResolutionDrawer({
                                   "Tập trung tối đa nhân sự hoàn thành đúng tiến độ, báo cáo BGH.",
                                   "Ưu tiên tháo gỡ dứt điểm điểm nghẽn này trước các việc phát sinh.",
                                 ].map((preset) => (
-                                  <button
+                                  <Pressable
                                     key={preset}
                                     type="button"
                                     onClick={(e) => {
@@ -531,7 +532,7 @@ export function ExecutiveResolutionDrawer({
                                     className="text-xs px-2 py-1 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 transition-colors text-left active:scale-[0.98] cursor-pointer"
                                   >
                                     {preset}
-                                  </button>
+                                  </Pressable>
                                 ))}
                               </div>
                             </div>
@@ -582,7 +583,7 @@ export function ExecutiveResolutionDrawer({
                 variant="default"
                 size="sm"
                 onClick={handleSubmit}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs gap-1.5 shadow-xs cursor-pointer active:scale-[0.98]"
+                className="bg-destructive hover:bg-destructive/90 text-white font-medium text-xs gap-1.5 shadow-xs cursor-pointer active:scale-[0.98]"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>Xác nhận chỉ đạo tháo gỡ</span>

@@ -76,8 +76,8 @@ const ROW_3: StatCardDef[] = [
     key: "urgent",
     label: "Khẩn/Hỏa tốc",
     icon: Flame,
-    valueClassName: "text-amber-600",
-    cardClassName: "border-amber-500/20 bg-amber-500/5",
+    valueClassName: "text-warning",
+    cardClassName: "border-warning/20 bg-warning/5",
   },
   { key: "linkedTasks", label: "Đã gắn nhiệm vụ", icon: Link2 },
 ];

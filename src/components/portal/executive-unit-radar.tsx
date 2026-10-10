@@ -5,6 +5,7 @@ import { Bell, Building2, FilterX, AlertCircle, X } from "lucide-react";
 import type { ElevenDepartmentRadarItem } from "@/types/workspace";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface ExecutiveUnitRadarProps {
   radarItems: ElevenDepartmentRadarItem[];
@@ -116,7 +117,7 @@ export function ExecutiveUnitRadar({
               TỔNG QUAN 11 ĐƠN VỊ
             </h3>
             {unitsWithIssues > 0 && (
-              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold rounded-full bg-rose-500/15 text-rose-600 tabular-nums">
+              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold rounded-full bg-destructive/15 text-destructive tabular-nums">
                 {unitsWithIssues}
               </span>
             )}
@@ -147,14 +148,14 @@ export function ExecutiveUnitRadar({
                 )}
               </strong>
             </span>
-            <button
+            <Pressable
               type="button"
               onClick={() => onSelectDepartment("")}
               className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 shrink-0 ml-1 cursor-pointer"
             >
               <FilterX className="w-3 h-3" />
               Xem tất cả
-            </button>
+            </Pressable>
           </div>
         )}
 
@@ -166,7 +167,7 @@ export function ExecutiveUnitRadar({
             const shortName = formatRadarUnitName(item.departmentName);
 
             return (
-              <button
+              <Pressable
                 key={item.departmentCode}
                 type="button"
                 onClick={() =>
@@ -177,9 +178,9 @@ export function ExecutiveUnitRadar({
                   isSelected
                     ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/25 border-primary/30"
                     : color === "RED"
-                    ? "bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/15 text-foreground"
+                    ? "bg-destructive/10 border-destructive/30 hover:bg-destructive/15 text-foreground"
                     : color === "YELLOW"
-                    ? "bg-amber-500/[0.07] border-amber-500/25 hover:bg-amber-500/[0.13] text-foreground"
+                    ? "bg-warning/[0.07] border-warning/25 hover:bg-warning/[0.13] text-foreground"
                     : "border-transparent hover:bg-muted/60 text-foreground"
                 )}
                 title={`${item.departmentName} - Nhấp để ${
@@ -194,7 +195,7 @@ export function ExecutiveUnitRadar({
                       isSelected
                         ? "text-primary font-semibold"
                         : color === "RED"
-                        ? "font-semibold text-rose-950"
+                        ? "font-semibold text-destructive"
                         : "text-foreground"
                     )}
                   >
@@ -205,13 +206,13 @@ export function ExecutiveUnitRadar({
                 {/* Right: Health Indicator Badge (Clear inline count badge, Zero Emojis) */}
                 <div className="flex items-center gap-1.5 shrink-0">
                   {color === "RED" ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-500/20 border border-rose-500/35 px-2 py-0.5 rounded-md shadow-2xs tabular-nums">
-                      <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0 animate-pulse" />
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-destructive bg-destructive/20 border border-destructive/35 px-2 py-0.5 rounded-md shadow-2xs tabular-nums">
+                      <span className="w-2 h-2 rounded-full bg-destructive shrink-0 animate-pulse" />
                       <span>{count}</span>
                     </span>
                   ) : color === "YELLOW" ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.5 rounded-md tabular-nums">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-warning bg-warning/20 border border-warning/30 px-1.5 py-0.5 rounded-md tabular-nums">
+                      <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
                       <span>{count > 0 ? count : 1}</span>
                     </span>
                   ) : (
@@ -224,7 +225,7 @@ export function ExecutiveUnitRadar({
                     </span>
                   )}
                 </div>
-              </button>
+              </Pressable>
             );
           })}
         </div>
@@ -243,8 +244,8 @@ export function ExecutiveUnitRadar({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2.5 text-amber-600">
-                <div className="p-2 rounded-lg bg-amber-500/15">
+              <div className="flex items-center gap-2.5 text-warning">
+                <div className="p-2 rounded-lg bg-warning/15">
                   <AlertCircle className="w-5 h-5" />
                 </div>
                 <h3
@@ -254,14 +255,14 @@ export function ExecutiveUnitRadar({
                   Xác nhận đôn đốc toàn trường
                 </h3>
               </div>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
                 className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer"
                 aria-label="Đóng"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Pressable>
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed">

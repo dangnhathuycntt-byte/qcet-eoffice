@@ -151,7 +151,7 @@ export function CreateEventModal({
           {error && (
             <div
               role="alert"
-              className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 flex items-center gap-2 shrink-0"
+              className="rounded-xl border border-destructive/30 bg-danger-soft p-3 text-xs text-destructive flex items-center gap-2 shrink-0"
             >
               <span>{error}</span>
             </div>
@@ -160,7 +160,7 @@ export function CreateEventModal({
           <form id="create-event-form" onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label htmlFor="calendar-event-title" className="block text-xs font-semibold text-foreground mb-1.5">
-                Tên sự kiện / Cuộc họp <span className="text-rose-600">*</span>
+                Tên sự kiện / Cuộc họp <span className="text-destructive">*</span>
               </label>
               <input
                 ref={titleInputRef}
@@ -178,7 +178,7 @@ export function CreateEventModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label htmlFor="calendar-event-date" className="block text-xs font-semibold text-foreground mb-1.5">
-                  Ngày <span className="text-rose-600">*</span>
+                  Ngày <span className="text-destructive">*</span>
                 </label>
                 <VietnameseDatePicker
                   id="calendar-event-date"

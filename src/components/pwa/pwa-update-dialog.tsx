@@ -4,6 +4,7 @@ import * as React from "react";
 import { Sparkles, RefreshCw, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface PWAUpdateDialogProps {
   isOpen: boolean;
@@ -44,7 +45,7 @@ export function PWAUpdateDialog({
         className={cn(
           "rounded-xl border p-4 shadow-xl backdrop-blur-md transition-all",
           hasUnsavedChanges
-            ? "bg-amber-50/95 border-amber-300 text-amber-950 shadow-amber-900/10"
+            ? "bg-warning/10 border-warning/40 text-warning shadow-warning/10"
             : "bg-white/95 border-border text-foreground shadow-slate-900/10"
         )}
       >
@@ -53,7 +54,7 @@ export function PWAUpdateDialog({
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-lg mt-0.5",
               hasUnsavedChanges
-                ? "bg-amber-100 text-amber-800"
+                ? "bg-warning/15 text-warning"
                 : "bg-primary/10 text-primary"
             )}
           >
@@ -71,14 +72,14 @@ export function PWAUpdateDialog({
                   ? "Bản cập nhật mới sẵn sàng"
                   : "Có phiên bản QCET E-Office mới"}
               </h3>
-              <button
+              <Pressable
                 type="button"
                 onClick={onDismiss}
                 className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
                 aria-label="Đóng thông báo cập nhật"
               >
                 <X className="size-4" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </div>
 
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

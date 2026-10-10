@@ -161,7 +161,7 @@ function PriorityIndicator({ priority }: { priority?: TaskPriority | string }) {
 
   if (p === "URGENT") {
     return (
-      <div className="inline-flex items-center gap-1 text-rose-600" title="Độ ưu tiên: Khẩn cấp">
+      <div className="inline-flex items-center gap-1 text-destructive" title="Độ ưu tiên: Khẩn cấp">
         <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
         <span className="text-xs font-medium hidden lg:inline">Khẩn cấp</span>
       </div>
@@ -169,7 +169,7 @@ function PriorityIndicator({ priority }: { priority?: TaskPriority | string }) {
   }
   if (p === "HIGH") {
     return (
-      <div className="inline-flex items-center gap-1 text-amber-600" title="Độ ưu tiên: Cao">
+      <div className="inline-flex items-center gap-1 text-warning" title="Độ ưu tiên: Cao">
         <SignalHigh className="size-3.5 shrink-0" strokeWidth={1.5} />
         <span className="text-xs font-medium hidden lg:inline">Cao</span>
       </div>

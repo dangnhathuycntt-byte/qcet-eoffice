@@ -19,6 +19,7 @@ import {
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface SubtaskInlineRowProps {
   subTask: StaffTask;
@@ -162,7 +163,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
         <div className="flex items-center gap-1.5 shrink-0 ml-1">
           {/* Submit Deliverable Modal Button */}
           {onOpenSubmitModal && (
-            <button
+            <Pressable
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
@@ -173,14 +174,14 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
             >
               <UploadCloud className="size-3" strokeWidth={1.5} />
               <span className="hidden sm:inline">Nộp minh chứng</span>
-            </button>
+            </Pressable>
           )}
 
           {/* Quick status transition actions */}
           {onStatusChange && (
             <>
               {subTask.status === "NEW" && (
-                <button
+                <Pressable
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -191,11 +192,11 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                 >
                   <ArrowRight className="size-3" strokeWidth={1.5} />
                   <span>Tiếp nhận</span>
-                </button>
+                </Pressable>
               )}
 
               {subTask.status === "IN_PROGRESS" && (
-                <button
+                <Pressable
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -206,11 +207,11 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                 >
                   <Check className="size-3" strokeWidth={1.5} />
                   <span>Hoàn thành</span>
-                </button>
+                </Pressable>
               )}
 
               {subTask.status === "NEEDS_REVIEW" && (
-                <button
+                <Pressable
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -221,7 +222,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                 >
                   <RotateCcw className="size-3" strokeWidth={1.5} />
                   <span>Chỉnh sửa</span>
-                </button>
+                </Pressable>
               )}
             </>
           )}

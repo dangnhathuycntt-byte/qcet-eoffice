@@ -13,6 +13,7 @@ import {
   resolveMentionIds,
   type MentionCandidate,
 } from "@/domain/tasks/comment-mentions";
+import { Pressable } from "@/components/ui/pressable";
 
 interface CommentView {
   id: string;
@@ -207,9 +208,9 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
       {status === "error" && (
         <p role="alert" className="px-2 text-xs text-destructive">
           {error}{" "}
-          <button type="button" className="underline underline-offset-2" onClick={() => { setStatus("loading"); setError(null); void load(); }}>
+          <Pressable type="button" className="underline underline-offset-2" onClick={() => { setStatus("loading"); setError(null); void load(); }}>
             Thử lại
-          </button>
+          </Pressable>
         </p>
       )}
 
@@ -309,7 +310,7 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
             >
               {suggestions.map((s, i) => (
                 <li key={s.id} role="option" aria-selected={i === highlight}>
-                  <button
+                  <Pressable
                     type="button"
                     tabIndex={-1}
                     onMouseDown={(e) => { e.preventDefault(); pick(s); }}
@@ -320,7 +321,7 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
                   >
                     <UserAvatar name={s.name} size="sm" />
                     <span className="truncate">{s.name}</span>
-                  </button>
+                  </Pressable>
                 </li>
               ))}
             </ul>

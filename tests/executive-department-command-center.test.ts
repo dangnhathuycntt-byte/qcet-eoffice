@@ -58,19 +58,19 @@ describe("Executive Department Command Center Component Helpers", () => {
     // RED: alert, rose palette, pulsing indicator
     const redConfig = getRAGBadgeConfig("RED");
     assert.equal(redConfig.label, "Báo động trễ");
-    assert.ok(redConfig.className.includes("bg-rose-50"));
-    assert.ok(redConfig.className.includes("text-rose-700"));
-    assert.ok(redConfig.className.includes("border-rose-200"));
-    assert.equal(redConfig.dotColor, "bg-rose-500");
+    assert.ok(redConfig.className.includes("bg-danger-soft"));
+    assert.ok(redConfig.className.includes("text-destructive"));
+    assert.ok(redConfig.className.includes("border-destructive/30"));
+    assert.equal(redConfig.dotColor, "bg-destructive");
     assert.strictEqual(redConfig.pulse, true, "RED alert must have pulsing dot");
 
     // AMBER: warning, amber palette, non-pulsing
     const amberConfig = getRAGBadgeConfig("AMBER");
     assert.equal(amberConfig.label, "Cần chú ý");
-    assert.ok(amberConfig.className.includes("bg-amber-50"));
-    assert.ok(amberConfig.className.includes("text-amber-700"));
-    assert.ok(amberConfig.className.includes("border-amber-200"));
-    assert.equal(amberConfig.dotColor, "bg-amber-500");
+    assert.ok(amberConfig.className.includes("bg-warning/10"));
+    assert.ok(amberConfig.className.includes("text-warning"));
+    assert.ok(amberConfig.className.includes("border-warning/30"));
+    assert.equal(amberConfig.dotColor, "bg-warning");
     assert.strictEqual(amberConfig.pulse, false);
 
     // GREEN: healthy, emerald palette, non-pulsing
@@ -86,13 +86,13 @@ describe("Executive Department Command Center Component Helpers", () => {
   test("getPriorityBadgeConfig chuyển đổi độ ưu tiên đúng nhãn tiếng Việt", () => {
     const high = getPriorityBadgeConfig("HIGH");
     assert.equal(high.label, "Ưu tiên cao");
-    assert.ok(high.className.includes("bg-rose-50"));
-    assert.ok(high.className.includes("text-rose-700"));
+    assert.ok(high.className.includes("bg-danger-soft"));
+    assert.ok(high.className.includes("text-destructive"));
 
     const medium = getPriorityBadgeConfig("MEDIUM");
     assert.equal(medium.label, "Trung bình");
-    assert.ok(medium.className.includes("bg-amber-50"));
-    assert.ok(medium.className.includes("text-amber-700"));
+    assert.ok(medium.className.includes("bg-warning/10"));
+    assert.ok(medium.className.includes("text-warning"));
 
     const low = getPriorityBadgeConfig("LOW");
     assert.equal(low.label, "Tiêu chuẩn");
@@ -114,7 +114,7 @@ describe("Executive Department Command Center Component Helpers", () => {
 
     const blocked = getTaskStatusConfig("BLOCKED");
     assert.equal(blocked.label, "Bị nghẽn");
-    assert.ok(blocked.className.includes("rose"));
+    assert.ok(blocked.className.includes("destructive"));
   });
 
   test("Quick Triage Tabs drive getTriageFilterCounts and filterExecutiveDepartmentSummaries", () => {

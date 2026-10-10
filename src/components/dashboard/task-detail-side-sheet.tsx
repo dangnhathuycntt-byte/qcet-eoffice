@@ -75,6 +75,7 @@ import {
   mapDbStatusToLifecycle,
   type TaskLifecycleStatus,
 } from "@/domain/tasks/canonical-semantics";
+import { Pressable } from "@/components/ui/pressable";
 
 /**
  * Stable empty delegation list shared across renders. A fresh `[]` default would
@@ -138,13 +139,13 @@ export function getRelativeDueTime(
   if (diffDays === 0) {
     return {
       text: "Hạn hôm nay",
-      color: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+      color: "border-warning/30 bg-warning/10 text-warning",
     };
   }
   if (diffDays === 1) {
     return {
       text: "Còn 1 ngày",
-      color: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+      color: "border-warning/30 bg-warning/10 text-warning",
     };
   }
   return {
@@ -209,13 +210,13 @@ export const TASK_STATUS_CONFIG: Record<
   NEEDS_REVIEW: {
     label: "Cần chỉnh sửa",
     className:
-      "border-amber-500/20 bg-amber-500/10 text-amber-700",
+      "border-warning/20 bg-warning/10 text-warning",
     variant: "warning",
   },
   BLOCKED: {
     label: "Bị nghẽn / Phối hợp",
     className:
-      "border-rose-500/20 bg-rose-500/10 text-rose-700",
+      "border-destructive/20 bg-destructive/10 text-destructive",
     variant: "destructive",
   },
   COMPLETED: {
@@ -524,19 +525,19 @@ function getRelativeTimeString(
     if (diffDays < 0) {
       return {
         text: `Trễ hạn ${Math.abs(diffDays)} ngày`,
-        color: "text-rose-600 bg-rose-500/10 border-rose-500/20 font-bold",
+        color: "text-destructive bg-destructive/10 border-destructive/20 font-bold",
       };
     }
     if (diffDays === 0) {
       return {
         text: "Hạn hôm nay",
-        color: "text-amber-600 bg-amber-500/10 border-amber-500/20 font-bold",
+        color: "text-warning bg-warning/10 border-warning/20 font-bold",
       };
     }
     if (diffDays <= 3) {
       return {
         text: `Còn ${diffDays} ngày`,
-        color: "text-amber-600 bg-amber-500/10 border-amber-500/20 font-medium",
+        color: "text-warning bg-warning/10 border-warning/20 font-medium",
       };
     }
     return {
@@ -1030,14 +1031,14 @@ export function TaskDetailSideSheet({
         {/* Sticky Header Bar: Task Code, Compact Status, Mobile Back & Close */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-2">
           {/* Mobile Back Button (< 768px) */}
-          <button
+          <Pressable
             type="button"
             onClick={onClose}
             className="md:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-[0.98] shrink-0"
             aria-label="Quay lại danh sách nhiệm vụ"
           >
             <ArrowLeft className="size-5" strokeWidth={1.5} />
-          </button>
+          </Pressable>
 
           {/* Task Code & Compact Status Indicator Pill */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1049,7 +1050,7 @@ export function TaskDetailSideSheet({
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0",
                 isOverdue
-                  ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
+                  ? "border-destructive/20 bg-destructive/10 text-destructive"
                   : statusConfig.className
               )}
             >
@@ -1059,7 +1060,7 @@ export function TaskDetailSideSheet({
                   isDone
                     ? "bg-emerald-500"
                     : isOverdue
-                    ? "bg-rose-500"
+                    ? "bg-destructive"
                     : "bg-primary"
                 )}
               />
@@ -1071,14 +1072,14 @@ export function TaskDetailSideSheet({
 
           {/* Close Button (lifecycle changes flow only through capability-driven actions) */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
+            <Pressable
               type="button"
               onClick={onClose}
               className="inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-[0.98]"
               aria-label="Đóng bảng chi tiết"
             >
               <X className="size-4" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           </div>
         </div>
 
@@ -1089,7 +1090,7 @@ export function TaskDetailSideSheet({
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/60">
               <Link2 className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
               <span>Nhiệm vụ cha:</span>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => {
                   const targetId =
@@ -1106,7 +1107,7 @@ export function TaskDetailSideSheet({
                   parentSchoolTaskTitle ||
                   (task as StaffTask).parentSchoolTaskId ||
                   "Xem nhiệm vụ cha"}
-              </button>
+              </Pressable>
             </div>
           )}
 
@@ -1131,7 +1132,7 @@ export function TaskDetailSideSheet({
                   className={cn(
                     "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 font-medium",
                     (task as StaffTask).requiresReview
-                      ? "border-amber-500/20 bg-amber-500/10 text-amber-600"
+                      ? "border-warning/20 bg-warning/10 text-warning"
                       : "border-blue-500/20 bg-blue-500/10 text-blue-600"
                   )}
                 >
@@ -1428,7 +1429,7 @@ export function TaskDetailSideSheet({
                   </div>
 
                   {deliverableError && (
-                    <p className="text-xs font-medium text-rose-600">
+                    <p className="text-xs font-medium text-destructive">
                       {deliverableError}
                     </p>
                   )}
@@ -1471,14 +1472,14 @@ export function TaskDetailSideSheet({
 
             {/* Warning Banner: BLOCKED Status */}
             {task.status === "BLOCKED" && (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs">
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-xs">
                 <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
+                  <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" strokeWidth={1.5} />
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-rose-700">
+                    <h4 className="font-semibold text-destructive">
                       Cảnh báo cản trở: Nhiệm vụ đang bị ách tắc / Cần phối hợp
                     </h4>
-                    <p className="text-rose-600/90 leading-relaxed">
+                    <p className="text-destructive/90 leading-relaxed">
                       {("blockedReason" in task && task.blockedReason) ||
                         "Công việc đang bị nghẽn tiến độ. Vui lòng kiểm tra vướng mắc hoặc tạo Phiếu phối hợp liên đơn vị để tháo gỡ."}
                     </p>
@@ -1489,14 +1490,14 @@ export function TaskDetailSideSheet({
 
             {/* Rejection Reason Notice (if returned to IN_PROGRESS) */}
             {"rejectionReason" in task && task.rejectionReason && task.status === "IN_PROGRESS" && (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+              <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-xs">
                 <div className="flex items-start gap-2.5">
-                  <RotateCcw className="size-4 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.5} />
+                  <RotateCcw className="size-4 shrink-0 text-warning mt-0.5" strokeWidth={1.5} />
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-amber-700">
+                    <h4 className="font-semibold text-warning">
                       Yêu cầu chỉnh sửa từ Trưởng đơn vị
                     </h4>
-                    <p className="text-amber-600/90 leading-relaxed">
+                    <p className="text-warning/90 leading-relaxed">
                       {task.rejectionReason}
                     </p>
                   </div>
@@ -1527,8 +1528,8 @@ export function TaskDetailSideSheet({
                     aiReview.complianceScore >= 80
                       ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
                       : aiReview.complianceScore >= 50
-                      ? "border-amber-500/20 bg-amber-500/10 text-amber-700"
-                      : "border-rose-500/20 bg-rose-500/10 text-rose-700"
+                      ? "border-warning/20 bg-warning/10 text-warning"
+                      : "border-destructive/20 bg-destructive/10 text-destructive"
                   )}>
                     Điểm tuân thủ: {aiReview.complianceScore}/100
                   </span>
@@ -1542,9 +1543,9 @@ export function TaskDetailSideSheet({
                       <li key={idx} className={cn(
                         "text-xs flex items-start gap-1.5",
                         flag.type === "CRITICAL"
-                          ? "text-rose-600"
+                          ? "text-destructive"
                           : flag.type === "WARNING"
-                          ? "text-amber-600"
+                          ? "text-warning"
                           : "text-blue-600"
                       )}>
                         <AlertTriangle className="size-3 shrink-0 mt-0.5" strokeWidth={1.5} />
@@ -1560,7 +1561,7 @@ export function TaskDetailSideSheet({
                   </div>
                 )}
                 {aiReview.suggestedAction === "REQUEST_CHANGES" && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                  <div className="flex items-center gap-1.5 text-xs text-warning font-medium">
                     <RotateCcw className="size-3" strokeWidth={1.5} />
                     <span>Khuyến nghị: Yêu cầu bổ sung</span>
                   </div>
@@ -1611,7 +1612,7 @@ export function TaskDetailSideSheet({
                       </Button>
                     )
                   ) : requiresReview ? (
-                    <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 font-medium">
+                    <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-warning/20 bg-warning/10 text-xs text-warning font-medium">
                       <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
                       <span>Đang thực hiện. Nghiệm thu chỉ khả dụng sau khi người phụ trách nộp minh chứng.</span>
                     </div>
@@ -1656,7 +1657,7 @@ export function TaskDetailSideSheet({
                         type="button"
                         variant="outline"
                         onClick={() => setIsRejectionModalOpen(true)}
-                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <RotateCcw className="size-3.5" strokeWidth={1.5} />
                         <span>Trả lại Yêu cầu Sửa</span>
@@ -1665,11 +1666,11 @@ export function TaskDetailSideSheet({
                   </div>
                 ) : isSeparationOfDutiesBlocked ? (
                   <div className="space-y-2 w-full">
-                    <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-700 font-medium">
-                      <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
+                    <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-destructive/30 bg-destructive/10 text-xs text-destructive font-medium">
+                      <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" strokeWidth={1.5} />
                       <div className="space-y-0.5">
                         <p className="font-semibold">Phân lập thẩm quyền công vụ</p>
-                        <p className="text-xs text-rose-600/90 leading-relaxed">
+                        <p className="text-xs text-destructive/90 leading-relaxed">
                           Theo chuẩn quản trị đại học (Separation of Duties), bạn không thể tự nghiệm thu công việc do chính mình phụ trách.
                         </p>
                       </div>
@@ -1695,7 +1696,7 @@ export function TaskDetailSideSheet({
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 font-medium">
+                  <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-warning/20 bg-warning/10 text-xs text-warning font-medium">
                     <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
                     <span>Đã nộp minh chứng. Đang chờ Trưởng đơn vị kiểm tra và nghiệm thu.</span>
                   </div>
@@ -1722,8 +1723,8 @@ export function TaskDetailSideSheet({
               const aiReview = (task as StaffTask).aiReview!;
               const riskColorMap: Record<string, string> = {
                 CLEAN: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                NEEDS_ATTENTION: "bg-amber-50 text-amber-700 border-amber-200",
-                HIGH_RISK: "bg-rose-50 text-rose-700 border-rose-200",
+                NEEDS_ATTENTION: "bg-warning/10 text-warning border-warning/30",
+                HIGH_RISK: "bg-danger-soft text-destructive border-destructive/30",
               };
               const riskLabel: Record<string, string> = {
                 CLEAN: "An toàn",
@@ -1753,8 +1754,8 @@ export function TaskDetailSideSheet({
                     <span className={cn(
                       "font-mono font-bold tabular-nums",
                       aiReview.complianceScore >= 80 ? "text-emerald-700" :
-                      aiReview.complianceScore >= 50 ? "text-amber-700" :
-                      "text-rose-700"
+                      aiReview.complianceScore >= 50 ? "text-warning" :
+                      "text-destructive"
                     )}>
                       {aiReview.complianceScore}/100
                     </span>
@@ -1789,8 +1790,8 @@ export function TaskDetailSideSheet({
                         {aiReview.flags.map((f, i) => (
                           <li key={i} className={cn(
                             "text-xs",
-                            f.type === "CRITICAL" ? "text-rose-600 font-medium" :
-                            f.type === "WARNING" ? "text-amber-600" :
+                            f.type === "CRITICAL" ? "text-destructive font-medium" :
+                            f.type === "WARNING" ? "text-warning" :
                             "text-muted-foreground"
                           )}>
                             [{f.type}] {f.message}
@@ -1822,7 +1823,7 @@ export function TaskDetailSideSheet({
                           }
                           setIsRejectionModalOpen(true);
                         }}
-                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <AlertTriangle className="size-3.5" strokeWidth={1.5} />
                         <span>Yêu cầu chỉnh sửa</span>
@@ -1835,7 +1836,7 @@ export function TaskDetailSideSheet({
 
             {/* Escalation Notice Banner (48h SLA exceeded) */}
             {!isSchool && (task as StaffTask).escalation?.isEscalated && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 p-4 text-xs" data-testid="escalation-notice">
+              <div className="rounded-xl border border-destructive/30 bg-danger-soft text-destructive p-4 text-xs" data-testid="escalation-notice">
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={1.5} />
                   <div className="space-y-1">
@@ -1849,7 +1850,7 @@ export function TaskDetailSideSheet({
                       )}
                     </p>
                     {(task as StaffTask).escalation?.escalatedAt && (
-                      <span className="text-xs font-mono tabular-nums text-rose-600">
+                      <span className="text-xs font-mono tabular-nums text-destructive">
                         Leo thang lúc: {formatDetailDate((task as StaffTask).escalation!.escalatedAt)}
                       </span>
                     )}
@@ -2154,9 +2155,9 @@ export function TaskDetailSideSheet({
                   type="button"
                   variant="outline"
                   onClick={() => setIsRejectionModalOpen(true)}
-                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold border-amber-500/30 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold border-warning/30 bg-warning/10 text-warning hover:bg-warning/15 rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
                 >
-                  <AlertTriangle className="size-4 text-amber-600" strokeWidth={1.5} />
+                  <AlertTriangle className="size-4 text-warning" strokeWidth={1.5} />
                   <span>Yêu cầu sửa</span>
                 </Button>
                 <Button
@@ -2231,7 +2232,7 @@ export function TaskDetailSideSheet({
                     aria-hidden="true"
                   />
                   <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border/70 bg-card p-1.5 shadow-xl z-40 space-y-0.5 animate-in fade-in slide-in-from-bottom-2 duration-150 text-xs">
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => {
                         const code = isSchool ? (task as SchoolTask).taskCode : (task as StaffTask).code;
@@ -2244,8 +2245,8 @@ export function TaskDetailSideSheet({
                     >
                       <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Sao chép mã NV</span>
-                    </button>
-                    <button
+                    </Pressable>
+                    <Pressable
                       type="button"
                       onClick={() => {
                         if (typeof window !== "undefined" && navigator.clipboard) {
@@ -2259,19 +2260,19 @@ export function TaskDetailSideSheet({
                     >
                       <Share2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Chia sẻ liên kết</span>
-                    </button>
+                    </Pressable>
                     {onStatusChange && task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
-                      <button
+                      <Pressable
                         type="button"
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           onStatusChange(task.id, "BLOCKED");
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-rose-700 hover:bg-rose-50 font-medium transition-colors text-left cursor-pointer min-h-[36px]"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-danger-soft font-medium transition-colors text-left cursor-pointer min-h-[36px]"
                       >
-                        <AlertTriangle className="size-3.5 text-rose-600" strokeWidth={1.5} />
+                        <AlertTriangle className="size-3.5 text-destructive" strokeWidth={1.5} />
                         <span>Báo bị nghẽn (BLOCKED)</span>
-                      </button>
+                      </Pressable>
                     )}
                   </div>
                 </>
@@ -2294,12 +2295,12 @@ export function TaskDetailSideSheet({
               <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-xl space-y-4">
                 <div className="flex items-center justify-between border-b border-border/50 pb-3">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="size-4 text-amber-600" strokeWidth={1.5} />
+                    <AlertTriangle className="size-4 text-warning" strokeWidth={1.5} />
                     <h3 id="rejection-dialog-title" className="text-sm font-semibold text-foreground">
                       Trả lại yêu cầu chỉnh sửa minh chứng
                     </h3>
                   </div>
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => {
                       setIsRejectionModalOpen(false);
@@ -2309,7 +2310,7 @@ export function TaskDetailSideSheet({
                     aria-label="Đóng hộp thoại"
                   >
                     <X className="size-4" strokeWidth={1.5} />
-                  </button>
+                  </Pressable>
                 </div>
 
                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -2339,7 +2340,7 @@ export function TaskDetailSideSheet({
                   </div>
 
                   {rejectionError && (
-                    <p className="text-xs font-medium text-rose-600">
+                    <p className="text-xs font-medium text-destructive">
                       {rejectionError}
                     </p>
                   )}
@@ -2361,7 +2362,7 @@ export function TaskDetailSideSheet({
                       type="submit"
                       size="sm"
                       disabled={!rejectionReasonInput.trim()}
-                      className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-50"
+                      className="h-8 text-xs bg-warning hover:bg-warning/90 text-white cursor-pointer disabled:opacity-50"
                     >
                       Xác nhận trả lại
                     </Button>

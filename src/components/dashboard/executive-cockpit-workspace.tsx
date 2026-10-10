@@ -245,7 +245,7 @@ export function ExecutiveAttentionQueue({
     >
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-700">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning/10 text-warning">
             <ShieldAlert size={16} />
           </div>
           <div>
@@ -253,7 +253,7 @@ export function ExecutiveAttentionQueue({
               <h2 className="text-sm font-semibold text-foreground tracking-tight">
                 Hàng đợi cần BGH xử lý
               </h2>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 tabular-nums">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-warning/15 text-warning tabular-nums">
                 {items.length}
               </span>
             </div>
@@ -303,7 +303,7 @@ export function ExecutiveAttentionQueue({
                     className={cn(
                       "text-xs px-1.5 py-0 font-medium",
                       item.badgeVariant === "warning" &&
-                        "border-amber-500/50 bg-amber-50 text-amber-900"
+                        "border-warning/50 bg-warning/10 text-warning"
                     )}
                   >
                     {item.typeLabel}
@@ -365,7 +365,7 @@ export function ExecutiveAttentionQueue({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-7 px-2 text-xs font-medium text-amber-700 hover:text-amber-800 hover:bg-amber-50 border-amber-300"
+                    className="h-7 px-2 text-xs font-medium text-warning hover:text-warning hover:bg-warning/10 border-warning/40"
                     onClick={() => onSendReminder(item.departmentCode, item.title)}
                   >
                     <Send size={12} className="mr-1" />

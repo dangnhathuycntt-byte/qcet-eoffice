@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ArrowHint, InkIllustration } from "@/components/ui/empty-state";
 import { motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskEmptyStateProps {
   title?: string;
@@ -224,7 +225,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       {/* Action Buttons */}
       <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
         {hasFilterActive && onResetFilters && (
-          <button
+          <Pressable
             type="button"
             onClick={onResetFilters}
             title="Đặt lại bộ lọc"
@@ -233,11 +234,11 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           >
             <RotateCcw className="size-3.5" strokeWidth={1.5} />
             <span>Xóa bộ lọc</span>
-          </button>
+          </Pressable>
         )}
 
         {canAddTask && onAddTask && (
-          <button
+          <Pressable
             type="button"
             onClick={onAddTask}
             className={cn(
@@ -250,7 +251,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           >
             <Plus className="size-3.5" strokeWidth={1.5} />
             <span>Tạo nhiệm vụ mới</span>
-          </button>
+          </Pressable>
         )}
       </div>
     </div>

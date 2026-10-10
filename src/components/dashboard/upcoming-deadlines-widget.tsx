@@ -10,6 +10,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials } from "@/lib/utils";
 export { getInitials };
 import { formatDisplayDate } from "@/lib/format";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface UpcomingDeadlinesWidgetProps {
   items?: UpcomingItem[];
@@ -215,8 +216,8 @@ export function UpcomingDeadlinesWidget({
                     </span>
                     <span aria-hidden="true" className="text-border">·</span>
                     {overdue ? (
-                      <span className="text-rose-600 font-semibold inline-flex items-center gap-1">
-                        <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
+                      <span className="text-destructive font-semibold inline-flex items-center gap-1">
+                        <span className="size-1.5 rounded-full bg-destructive shrink-0" />
                         {relativeDistance.startsWith("Trễ hạn") ? relativeDistance : `Trễ hạn · ${relativeDistance}`}
                       </span>
                     ) : (
@@ -260,7 +261,7 @@ export function UpcomingDeadlinesWidget({
           <ChevronRight className="size-3.5" strokeWidth={1.5} />
         </Link>
         {windowTotal > initialLimit && (
-          <button
+          <Pressable
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
             className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
@@ -277,7 +278,7 @@ export function UpcomingDeadlinesWidget({
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </>
             )}
-          </button>
+          </Pressable>
         )}
       </div>
     </div>

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTaskDetailUrl } from "@/lib/tasks/task-detail-navigation";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskDetailHeaderNavProps {
   taskId: string;
@@ -66,14 +67,14 @@ export function TaskDetailHeaderNav({
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
         {/* Cập nhật tiến độ */}
         {onOpenProgressModal && (
-          <button
+          <Pressable
             type="button"
             onClick={onOpenProgressModal}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors cursor-pointer"
             title="Cập nhật tiến độ nhiệm vụ"
           >
             <span className="text-xs">Cập nhật tiến độ</span>
-          </button>
+          </Pressable>
         )}
 
         {/* Copy link — subtle direct icon, visible on hover/focus and touch */}

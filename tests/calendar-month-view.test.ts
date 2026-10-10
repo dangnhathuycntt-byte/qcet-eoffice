@@ -40,15 +40,15 @@ describe("Calendar Month View Component & Precision Specs", () => {
 
     test("getStatusDotClass returns amber for NEW or NEEDS_REVIEW", () => {
       const newDot = getStatusDotClass("NEW");
-      assert.ok(newDot.includes("amber"));
+      assert.ok(newDot.includes("warning"));
       const reviewDot = getStatusDotClass("NEEDS_REVIEW");
-      assert.ok(reviewDot.includes("amber"));
+      assert.ok(reviewDot.includes("warning"));
     });
 
     test("getStatusDotClass returns rose for overdue tasks", () => {
       // Due date in the past relative to demo anchor (2026-09-04)
       const overdueDot = getStatusDotClass("IN_PROGRESS", "2026-08-30");
-      assert.equal(overdueDot, "bg-rose-500");
+      assert.equal(overdueDot, "bg-destructive");
     });
 
     test("getStatusLabel returns accurate Vietnamese labels", () => {

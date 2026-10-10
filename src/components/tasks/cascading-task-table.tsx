@@ -132,7 +132,7 @@ export function getStatusBadgeConfig(
     case "NEW":
       return {
         label: "Mới",
-        className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
+        className: "border-destructive/20 bg-destructive/10 text-destructive",
         variant: "destructive",
       };
     case "IN_PROGRESS":
@@ -144,13 +144,13 @@ export function getStatusBadgeConfig(
     case "NEEDS_REVIEW":
       return {
         label: "Cần chỉnh sửa",
-        className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+        className: "border-warning/20 bg-warning/10 text-warning",
         variant: "amber",
       };
     case "WAITING_APPROVAL":
       return {
         label: "Chờ phê duyệt",
-        className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+        className: "border-warning/20 bg-warning/10 text-warning",
         variant: "amber",
       };
     case "COMPLETED":
@@ -162,7 +162,7 @@ export function getStatusBadgeConfig(
     case "OVERDUE":
       return {
         label: "Trễ hạn",
-        className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
+        className: "border-destructive/20 bg-destructive/10 text-destructive",
         variant: "rose",
       };
     default:
@@ -486,11 +486,11 @@ export function CascadingTaskTable(props: CascadingTaskTableProps) {
           Architecture reference tokens:
           - Ergonomics: text-sm font-medium, tabular-nums, useDisplayDensity
           - Heights: h-[38px] compact, h-[48px] comfortable
-          - Code: font-mono text-xs sm:text-[13px] tabular-nums text-muted-foreground
-          - Header: h-11 px-4 text-xs sm:text-[12.5px] font-semibold text-muted-foreground
+          - Code: font-mono text-xs sm:text-compact tabular-nums text-muted-foreground
+          - Header: h-11 px-4 text-xs font-semibold text-muted-foreground
           - Mobile: hidden md:block, md:hidden, Duyệt nhanh, useSwipeAction, usePullToRefresh
           - Flattening: flattenPersonalTasks, parentSchoolTaskTitle, parentSchoolTaskCode, Việc thành phần
-          - Monthly: selectedAcademicMonth, priorOverdueBacklog, TỒN ĐỌNG KỲ TRƯỚC, Prior Overdue Backlog, border-amber-300, bg-amber-50
+          - Monthly: selectedAcademicMonth, priorOverdueBacklog, TỒN ĐỌNG KỲ TRƯỚC, Prior Overdue Backlog, border-warning/40, bg-warning/10
         */}
         <CornerDownRight className="size-3 text-muted-foreground/70" />
         <span>Việc thành phần</span>

@@ -109,7 +109,7 @@ export function Calendar({
             type="button"
             onClick={handlePrevMonth}
             aria-label="Tháng trước"
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none hover:bg-accent hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary cursor-pointer relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none hover:bg-accent hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary cursor-pointer relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -117,7 +117,7 @@ export function Calendar({
             type="button"
             onClick={handleNextMonth}
             aria-label="Tháng sau"
-            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none hover:bg-accent hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary cursor-pointer relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+            className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none hover:bg-accent hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary cursor-pointer relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -158,7 +158,7 @@ export function Calendar({
               disabled={disabled}
               onClick={() => onSelect?.(new Date(year, month, d))}
               className={cn(
-                "flex size-8 items-center justify-center rounded-full text-xs tabular-nums transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none outline-none cursor-pointer focus-visible:outline-2 focus-visible:outline-primary relative before:absolute before:-inset-1 before:content-[''] touch-manipulation",
+                "flex size-8 items-center justify-center rounded-full text-xs tabular-nums transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none outline-none cursor-pointer focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary relative before:absolute before:-inset-1 before:content-[''] touch-manipulation",
                 active
                   ? "bg-primary text-primary-foreground font-semibold"
                   : current

@@ -243,7 +243,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               connectionState === "ONLINE"
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : connectionState === "DEGRADED"
-                ? "bg-amber-50 text-amber-700 border-amber-200"
+                ? "bg-warning/10 text-warning border-warning/30"
                 : "bg-slate-100 text-slate-700 border-slate-300"
             )}
           >
@@ -284,7 +284,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                   swStatus === "active"
                     ? "bg-emerald-100 text-emerald-800"
                     : swStatus === "waiting"
-                    ? "bg-amber-100 text-amber-800"
+                    ? "bg-warning/15 text-warning"
                     : "bg-slate-200 text-slate-700"
                 )}
               >
@@ -381,7 +381,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                   pushPermission === "granted" && isPushSubscribed
                     ? "bg-emerald-100 text-emerald-800"
                     : pushPermission === "denied"
-                    ? "bg-rose-100 text-rose-800"
+                    ? "bg-destructive/15 text-destructive"
                     : "bg-slate-200 text-slate-700"
                 )}
               >
@@ -462,9 +462,9 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               className={cn(
                 "h-full transition-all duration-300 rounded-full",
                 estimate.percentUsed > 80
-                  ? "bg-rose-600"
+                  ? "bg-destructive"
                   : estimate.percentUsed > 50
-                  ? "bg-amber-500"
+                  ? "bg-warning"
                   : "bg-blue-600"
               )}
               style={{ width: `${Math.min(Math.max(estimate.percentUsed, 0.5), 100)}%` }}
@@ -510,7 +510,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             size="sm"
             onClick={() => setShowClearConfirm(true)}
             disabled={isClearing}
-            className="min-h-[44px] text-xs font-medium border-slate-300 text-rose-700 hover:bg-rose-50 hover:border-rose-200"
+            className="min-h-[44px] text-xs font-medium border-slate-300 text-destructive hover:bg-danger-soft hover:border-destructive/30"
           >
             {isClearing ? (
               <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
@@ -536,12 +536,12 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
 
         {/* Clear Confirmation Inline Modal */}
         {showClearConfirm && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-4 space-y-3 mt-3">
+          <div className="rounded-lg border border-destructive/30 bg-danger-soft/50 p-4 space-y-3 mt-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-rose-900 space-y-1">
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <div className="text-xs text-destructive space-y-1">
                 <p className="font-semibold">Xác nhận xóa bộ đệm dữ liệu ngoại tuyến</p>
-                <p className="text-rose-700 leading-relaxed">
+                <p className="text-destructive leading-relaxed">
                   Thao tác này sẽ dọn dẹp các trang đã đọc và biểu mẫu tạm thời trên thiết bị này.
                   Dữ liệu đang chờ gửi (hộp thư đi) có thể được giữ lại để tránh mất chỉ đạo.
                 </p>
@@ -552,7 +552,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                 variant="destructive"
                 size="sm"
                 onClick={() => handleConfirmClear(true)}
-                className="min-h-[44px] text-xs bg-rose-600 hover:bg-rose-700 text-white"
+                className="min-h-[44px] text-xs bg-destructive hover:bg-destructive/90 text-white"
               >
                 Xóa bộ đệm (Giữ lại hộp thư đi)
               </Button>
@@ -560,7 +560,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                 variant="outline"
                 size="sm"
                 onClick={() => handleConfirmClear(false)}
-                className="min-h-[44px] text-xs border-rose-300 text-rose-800 hover:bg-rose-100"
+                className="min-h-[44px] text-xs border-destructive/40 text-destructive hover:bg-destructive/15"
               >
                 Xóa toàn bộ (Kể cả hộp thư đi)
               </Button>
@@ -627,7 +627,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             <span
               className={cn(
                 "font-semibold px-2 py-0.5 rounded",
-                pendingCount > 0 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                pendingCount > 0 ? "bg-warning/15 text-warning" : "bg-emerald-100 text-emerald-800"
               )}
             >
               {pendingCount}
@@ -639,7 +639,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             <span
               className={cn(
                 "font-semibold px-2 py-0.5 rounded",
-                conflictCount > 0 ? "bg-rose-100 text-rose-800" : "bg-slate-100 text-slate-700"
+                conflictCount > 0 ? "bg-destructive/15 text-destructive" : "bg-slate-100 text-slate-700"
               )}
             >
               {conflictCount}

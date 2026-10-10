@@ -187,11 +187,11 @@ export function ExecutiveBriefingModal({
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/[0.04] space-y-1">
-                <div className="text-xs font-medium text-rose-600">
+              <div className="p-3.5 rounded-xl border border-destructive/30 bg-destructive/[0.04] space-y-1">
+                <div className="text-xs font-medium text-destructive">
                   Điểm nghẽn cần tháo gỡ
                 </div>
-                <div className="text-2xl font-bold text-rose-600 tabular-nums">
+                <div className="text-2xl font-bold text-destructive tabular-nums">
                   {metrics.bottlenecksCount}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -248,7 +248,7 @@ export function ExecutiveBriefingModal({
                         key={dept.departmentCode}
                         className={cn(
                           "hover:bg-muted/30 transition-colors",
-                          hasIssues && "bg-rose-500/[0.02]"
+                          hasIssues && "bg-destructive/[0.02]"
                         )}
                       >
                         <td className="py-2.5 px-3 font-mono font-semibold text-foreground">
@@ -268,7 +268,7 @@ export function ExecutiveBriefingModal({
                         </td>
                         <td className="py-2.5 px-3 text-center tabular-nums">
                           {dept.delayedTasks + dept.blockedTasks > 0 ? (
-                            <span className="font-semibold text-rose-600">
+                            <span className="font-semibold text-destructive">
                               {dept.delayedTasks + dept.blockedTasks}
                             </span>
                           ) : (
@@ -282,8 +282,8 @@ export function ExecutiveBriefingModal({
                               dept.completionRate >= 80
                                 ? "text-emerald-700"
                                 : dept.completionRate >= 50
-                                  ? "text-amber-700"
-                                  : "text-rose-600"
+                                  ? "text-warning"
+                                  : "text-destructive"
                             )}
                           >
                             {dept.completionRate}%
@@ -300,7 +300,7 @@ export function ExecutiveBriefingModal({
           {/* Section 3: Critical Bottlenecks */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-rose-600 flex items-center gap-2">
+              <h3 className="text-xs font-bold text-destructive flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 <span>III. Danh sách điểm nghẽn trọng yếu cần BGH chỉ đạo</span>
               </h3>
@@ -321,11 +321,11 @@ export function ExecutiveBriefingModal({
                 {bottlenecks.map((item, idx) => (
                   <div
                     key={item.id}
-                    className="p-3 rounded-xl border border-rose-500/30 bg-card text-xs space-y-1.5"
+                    className="p-3 rounded-xl border border-destructive/30 bg-card text-xs space-y-1.5"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-rose-600">
+                        <span className="font-semibold text-destructive">
                           #{idx + 1}
                         </span>
                         <Badge
@@ -340,7 +340,7 @@ export function ExecutiveBriefingModal({
                       </div>
                       <Badge
                         variant="destructive"
-                        className="text-xs bg-rose-600"
+                        className="text-xs bg-destructive"
                       >
                         {item.daysOverdue && item.daysOverdue > 0
                           ? `Trễ ${item.daysOverdue} ngày`
@@ -352,7 +352,7 @@ export function ExecutiveBriefingModal({
                       <span>Đơn vị: {item.departmentName}</span>
                       <span>Người phụ trách: {item.assigneeName || "Chưa giao"}</span>
                       {item.blockedReason && (
-                        <span className="text-rose-600 font-medium">
+                        <span className="text-destructive font-medium">
                           Lý do: {item.blockedReason}
                         </span>
                       )}

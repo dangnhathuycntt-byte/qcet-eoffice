@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { Pressable } from "@/components/ui/pressable";
 
 export function UserProfileModal() {
   const { user, updateProfile, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
@@ -148,14 +149,14 @@ export function UserProfileModal() {
             </div>
           </div>
 
-          <button
+          <Pressable
             type="button"
             onClick={() => setIsProfileModalOpen(false)}
             aria-label="Đóng"
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
           >
             <X className="size-4" strokeWidth={1.5} />
-          </button>
+          </Pressable>
         </div>
 
         {/* First Login Welcome Banner */}
@@ -347,7 +348,7 @@ export function UserProfileModal() {
 
           {/* Action Buttons: single focused save button, no redundant close/cancel clutter */}
           <div className="sticky bottom-0 z-10 mt-6 flex items-center justify-end border-t border-border/60 bg-card/95 backdrop-blur-md pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <button
+            <Pressable
               type="submit"
               disabled={isSaving}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto"
@@ -358,7 +359,7 @@ export function UserProfileModal() {
                 <Save className="size-3.5" strokeWidth={1.5} />
               )}
               <span>{isSaving ? "Đang lưu..." : "Lưu thay đổi"}</span>
-            </button>
+            </Pressable>
           </div>
         </form>
       </div>

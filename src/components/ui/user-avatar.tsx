@@ -9,9 +9,9 @@ import { cn, getInitials } from "@/lib/utils";
 export const PASTEL_PALETTE = [
   "bg-blue-500/10 text-blue-700",
   "bg-emerald-500/10 text-emerald-800",
-  "bg-amber-500/10 text-amber-800",
+  "bg-warning/10 text-warning",
   "bg-violet-500/10 text-violet-700",
-  "bg-rose-500/10 text-rose-700",
+  "bg-destructive/10 text-destructive",
   "bg-sky-500/10 text-sky-800",
 ];
 
@@ -32,8 +32,8 @@ const avatarVariants = cva(
   {
     variants: {
       size: {
-        xs: "size-4 text-[9px] font-semibold", // 16px (bảng phụ, deadlines)
-        sm: "size-5 text-[10px] font-semibold", // 20px (bảng chính, sidebar)
+        xs: "size-4 text-xs font-semibold", // 16px (bảng phụ, deadlines)
+        sm: "size-5 text-xs font-semibold", // 20px (bảng chính, sidebar)
         md: "size-6 text-xs font-semibold", // 24px (hoạt động, preview)
         lg: "size-8 text-sm font-semibold", // 32px (hồ sơ, topbar)
         xl: "size-[60px] text-2xl font-bold", // 60px (onboarding, profile hero)

@@ -165,8 +165,8 @@ export function DashboardSituationStrip({
             <span>Vận hành ổn định</span>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/20 text-xs font-medium">
-            <span className="size-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/10 text-warning border border-warning/20 text-xs font-medium">
+            <span className="size-1.5 rounded-full bg-warning animate-pulse shrink-0" />
             <span>Cần chú ý</span>
           </span>
         )}
@@ -177,7 +177,7 @@ export function DashboardSituationStrip({
           {totalTasks.toLocaleString("vi-VN")} nhiệm vụ
         </span>
         {overdueCount > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/25 text-xs font-mono tabular-nums font-semibold text-rose-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-destructive/10 border border-destructive/25 text-xs font-mono tabular-nums font-semibold text-destructive">
             {overdueCount} trễ hạn
           </span>
         )}
@@ -193,7 +193,7 @@ export function DashboardSituationStrip({
       className={cn(
         "relative overflow-hidden rounded-2xl p-4 sm:p-5 transition-all",
         "bg-gradient-to-r from-card via-card/95 to-muted/20 border border-border/50 shadow-xs",
-        situationState === "HAS_ISSUES" && "border-amber-500/25 bg-amber-500/[0.02]",
+        situationState === "HAS_ISSUES" && "border-warning/25 bg-warning/[0.02]",
         className
       )}
       aria-label={`Tình hình: ${ariaLabel}`}
@@ -211,8 +211,8 @@ export function DashboardSituationStrip({
                 <span>Vận hành ổn định</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/25 text-xs font-semibold">
-                <span className="size-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-warning/10 text-warning border border-warning/25 text-xs font-semibold">
+                <span className="size-1.5 rounded-full bg-warning animate-pulse shrink-0" />
                 <span>Cần chú ý</span>
               </span>
             )}
@@ -243,7 +243,7 @@ export function DashboardSituationStrip({
 
           {overdueCount > 0 && (
             <div
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-700 text-xs font-semibold border border-rose-500/20"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-destructive/10 text-destructive text-xs font-semibold border border-destructive/20"
               title={`${overdueCount} nhiệm vụ trễ hạn`}
             >
               <AlertTriangle className="size-3" strokeWidth={1.5} />
@@ -254,7 +254,7 @@ export function DashboardSituationStrip({
 
           {pendingCount > 0 && (
             <div
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-700 text-xs font-medium border border-amber-500/20"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-warning/10 text-warning text-xs font-medium border border-warning/20"
               title={`${pendingCount} hồ sơ đang chờ xét duyệt`}
             >
               <span className="font-mono tabular-nums font-semibold">{pendingCount}</span>
@@ -264,7 +264,7 @@ export function DashboardSituationStrip({
 
           {unitsNeedingAttention != null && unitsNeedingAttention > 0 && (
             <div
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-700 text-xs font-medium border border-amber-500/20"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-warning/10 text-warning text-xs font-medium border border-warning/20"
               title={`${unitsNeedingAttention} đơn vị có nhiệm vụ trễ hạn hoặc vướng mắc`}
             >
               <span className="font-mono tabular-nums font-semibold">{unitsNeedingAttention}</span>

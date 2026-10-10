@@ -56,25 +56,25 @@ export function AdministrativeHeader({
               {parentAgency}
             </span>
           ) : null}
-          <span className="text-[13px] font-semibold uppercase">
+          <span className="text-compact font-semibold uppercase">
             {agencyName}
           </span>
           <div className="my-1.5 h-[1px] w-1/3 bg-foreground/60" aria-hidden="true" />
-          <span className="text-[13px] font-normal">
+          <span className="text-compact font-normal">
             {documentNumber}
           </span>
         </div>
 
         {/* Cột phải: Quốc hiệu, Tiêu ngữ & Ngày tháng */}
         <div className="flex flex-col items-center text-center">
-          <span className="text-[13px] font-semibold uppercase">
+          <span className="text-compact font-semibold uppercase">
             CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
           </span>
-          <span className="text-[13px] font-semibold">
+          <span className="text-compact font-semibold">
             Độc lập - Tự do - Hạnh phúc
           </span>
           <div className="my-1.5 h-[1px] w-1/2 bg-foreground/60" aria-hidden="true" />
-          <span className="text-[13px] italic text-muted-foreground">
+          <span className="text-compact italic text-muted-foreground">
             {location}, {formattedDate}
           </span>
         </div>
@@ -143,14 +143,14 @@ export function DocumentFooter({
 
       {/* Cột phải: Thẩm quyền ký & Chữ ký */}
       <div className="flex flex-col items-center text-center">
-        <p className="text-[13px] font-semibold uppercase">{signerTitle}</p>
+        <p className="text-compact font-semibold uppercase">{signerTitle}</p>
         <div className="my-3 min-h-[56px] flex items-center justify-center">
           {signatureStamp ?? (
             <span className="text-xs italic text-muted-foreground">[Chữ ký số]</span>
           )}
         </div>
         {signerName ? (
-          <p className="text-[13px] font-semibold">{signerName}</p>
+          <p className="text-compact font-semibold">{signerName}</p>
         ) : null}
       </div>
     </footer>

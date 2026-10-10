@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { TaskPropertiesSidebar, type AuditLogItem } from "./task-properties-sidebar";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskPropertiesDrawerProps {
   isOpen: boolean;
@@ -70,14 +71,14 @@ export function TaskPropertiesDrawer({
               </VaulDrawer.Description>
             </div>
 
-            <button
+            <Pressable
               type="button"
               onClick={onClose}
               className="size-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
               aria-label="Đóng bảng thuộc tính (Esc)"
             >
               <X className="size-4" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           </div>
 
           {/* Drawer Content */}

@@ -20,6 +20,9 @@ const SRC_DIR = path.join(ROOT_DIR, "src");
 const SCRIPTS_DIR = path.join(ROOT_DIR, "scripts");
 const BASELINE_PATH = path.join(SCRIPTS_DIR, "design-lint-baseline.json");
 const UPDATE_BASELINE = process.argv.includes("--update-baseline");
+/** `--files a.tsx b.ts`: lint only these paths (editor/agent hooks). */
+const FILES_FLAG = process.argv.indexOf("--files");
+const ONLY_FILES = FILES_FLAG === -1 ? null : process.argv.slice(FILES_FLAG + 1).filter((a) => !a.startsWith("--"));
 
 let errorsFound = 0;
 let filesScanned = 0;
@@ -113,15 +116,45 @@ const DESIGN_RULES = [
       "Focus ring must be ring-2 (found ring-1). Every interactive element needs the standard focus indicator.",
     test: (line) => /focus-visible:ring-1\b/.test(line),
   },
+  {
+    id: "no-signal-palette",
+    message:
+      "Raw rose/amber palette. Signals use tokens: text-destructive / bg-danger-soft / bg-destructive/10 (late, urgent, error) and text-warning / bg-warning/10 (due soon).",
+    test: (line) =>
+      /(?<![\w-])(?:bg|text|border(?:-[trblxy])?|ring|divide|outline|from|to|via|fill|stroke)-(?:rose|amber)-\d{2,3}\b/.test(line),
+  },
+  {
+    id: "no-arbitrary-text-size",
+    message:
+      "Arbitrary font size. Use the type scale: text-xs 12 · text-compact 13 · text-sm 14 · text-base 16 · text-xl 20 · text-2xl 24 · text-hero 28.",
+    test: (line) => /(?<![\w-])text-\[\d+(?:\.\d+)?(?:px|rem)\]/.test(line),
+  },
+  {
+    id: "no-raw-control",
+    message:
+      "Raw form control. Use Button / Input / Textarea / Select / Checkbox from @/components/ui (they carry size, focus ring and touch target); a custom hit area (row, cell, card, tab) is Pressable. If neither fits, add `design-lint-ignore no-raw-control: <reason>`.",
+    appliesTo: (relPath) => !relPath.startsWith("src/components/ui/"),
+    test: (line) =>
+      /<(?:button|select|textarea)\b/.test(line) ||
+      (/<input\b/.test(line) && !/type=["'](?:hidden|file)["']/.test(line)),
+  },
 ];
+
+/** `design-lint-ignore <rule-id>: <reason>` on the same or previous line. */
+function isIgnored(ruleId, lineText, prevLine) {
+  const marker = `design-lint-ignore ${ruleId}`;
+  return lineText.includes(marker) || (prevLine ?? "").includes(marker);
+}
 
 /**
  * Findings subject to baseline suppression.
  * Key is `ruleId|file|trimmed source line`, which survives line-number shifts:
  * editing the line changes the key, so the finding re-surfaces as new drift.
+ * Keys are counted, so a second identical line (e.g. another bare `<button`)
+ * in the same file is still new drift.
  */
 const designFindings = [];
-const baselineKeys = new Set();
+const baselineCounts = new Map();
 
 function baselineKey(ruleId, relPath, lineText) {
   return `${ruleId}|${relPath}|${lineText.trim()}`;
@@ -145,7 +178,8 @@ function loadBaseline() {
     const entries = Array.isArray(raw?.entries) ? raw.entries : [];
     for (const entry of entries) {
       if (entry?.ruleId && entry?.file && typeof entry?.text === "string") {
-        baselineKeys.add(`${entry.ruleId}|${entry.file}|${entry.text}`);
+        const key = `${entry.ruleId}|${entry.file}|${entry.text}`;
+        baselineCounts.set(key, (baselineCounts.get(key) ?? 0) + 1);
       }
     }
   } catch (err) {
@@ -224,7 +258,9 @@ function lintFile(filePath) {
     // Rules 5+: design-system conformance, UI source only
     if (isDesignSource && !isCommentLine(lineText)) {
       for (const rule of DESIGN_RULES) {
-        if (rule.test(lineText)) reportDesign(rule, filePath, relPath, lineText);
+        if (rule.appliesTo && !rule.appliesTo(relPath)) continue;
+        if (!rule.test(lineText) || isIgnored(rule.id, lineText, lines[idx - 1])) continue;
+        reportDesign(rule, filePath, relPath, lineText);
       }
     }
   });
@@ -237,19 +273,36 @@ function lintFile(filePath) {
 loadBaseline();
 
 console.log("Starting QCET E-Office Source Quality Linter...");
-scanDirectory(SRC_DIR);
-scanDirectory(SCRIPTS_DIR);
+if (ONLY_FILES) {
+  for (const file of ONLY_FILES) {
+    const fullPath = path.resolve(ROOT_DIR, file);
+    if (fs.existsSync(fullPath) && /\.(ts|tsx|js|mjs|json)$/.test(fullPath)) lintFile(fullPath);
+  }
+} else {
+  scanDirectory(SRC_DIR);
+  scanDirectory(SCRIPTS_DIR);
+}
 
-const newFindings = designFindings.filter((f) => !baselineKeys.has(f.key));
+const remainingBaseline = new Map(baselineCounts);
+const newFindings = designFindings.filter((f) => {
+  const left = remainingBaseline.get(f.key) ?? 0;
+  if (left === 0) return true;
+  remainingBaseline.set(f.key, left - 1);
+  return false;
+});
 const knownFindings = designFindings.length - newFindings.length;
+
+if (UPDATE_BASELINE && ONLY_FILES) {
+  console.error("--update-baseline needs a full scan; drop --files.");
+  process.exit(1);
+}
 
 if (UPDATE_BASELINE) {
   const payload = {
     $comment:
       "Design-system debt accepted as of the last baseline update. CI fails on entries NOT listed here. Regenerate deliberately with `node scripts/lint.mjs --update-baseline`.",
-    entries: [
-      ...new Set(designFindings.map((f) => f.key)),
-    ]
+    entries: designFindings
+      .map((f) => f.key)
       .sort()
       .map((key) => {
         const [ruleId, file, ...rest] = key.split("|");

@@ -178,13 +178,13 @@ describe("DepartmentProgressMatrix", () => {
   test("getDepartmentCardData assigns amber color when progress 50-79%", () => {
     const cards = getDepartmentCardData(mockDepartments);
     // CNTT has 72% progress
-    assert.equal(cards[0].progressColor, "bg-amber-500");
+    assert.equal(cards[0].progressColor, "bg-warning");
   });
 
   test("getDepartmentCardData assigns rose color when progress < 50%", () => {
     const cards = getDepartmentCardData(mockDepartments);
     // HANH_CHINH has 38% progress
-    assert.equal(cards[2].progressColor, "bg-rose-500");
+    assert.equal(cards[2].progressColor, "bg-destructive");
   });
 
   test("getDepartmentCardData boundary: exactly 50% gets amber", () => {
@@ -202,7 +202,7 @@ describe("DepartmentProgressMatrix", () => {
       },
     ];
     const cards = getDepartmentCardData(boundary);
-    assert.equal(cards[0].progressColor, "bg-amber-500");
+    assert.equal(cards[0].progressColor, "bg-warning");
   });
 
   test("getDepartmentCardData boundary: exactly 80% gets emerald", () => {

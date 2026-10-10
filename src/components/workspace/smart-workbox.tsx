@@ -151,14 +151,14 @@ export function SmartWorkbox({
             ? "border-primary/40 bg-primary/5 text-primary"
             : item.colorVariant === "amber"
             ? item.count > 0
-              ? "border-amber-500/40 bg-amber-500/10 text-amber-900"
+              ? "border-warning/40 bg-warning/10 text-warning"
               : "border-border/60 bg-card text-foreground"
             : item.colorVariant === "blue"
             ? item.count > 0
               ? "border-blue-500/40 bg-blue-500/10 text-blue-900"
               : "border-border/60 bg-card text-foreground"
             : item.count > 0
-            ? "border-rose-500/40 bg-rose-500/10 text-rose-900"
+            ? "border-destructive/40 bg-destructive/10 text-destructive"
             : "border-border/60 bg-card text-foreground";
 
         return (
@@ -197,9 +197,9 @@ export function SmartWorkbox({
                 className={cn(
                   "text-2xl sm:text-3xl font-bold font-mono tabular-nums tracking-tight leading-none",
                   item.colorVariant === "rose" && item.count > 0
-                    ? "text-rose-600"
+                    ? "text-destructive"
                     : item.colorVariant === "amber" && item.count > 0
-                    ? "text-amber-700"
+                    ? "text-warning"
                     : item.colorVariant === "blue" && item.count > 0
                     ? "text-blue-700"
                     : "text-foreground"
@@ -217,9 +217,9 @@ export function SmartWorkbox({
                 className={cn(
                   "shrink-0",
                   item.colorVariant === "rose" && item.count > 0
-                    ? "text-rose-500"
+                    ? "text-destructive"
                     : item.colorVariant === "amber" && item.count > 0
-                    ? "text-amber-700"
+                    ? "text-warning"
                     : item.colorVariant === "blue" && item.count > 0
                     ? "text-blue-600"
                     : "text-muted-foreground"

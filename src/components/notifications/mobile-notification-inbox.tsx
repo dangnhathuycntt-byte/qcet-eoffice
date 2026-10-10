@@ -32,6 +32,7 @@ import {
   deriveNotificationsViewState,
   type MobileNotificationFilter,
 } from "@/lib/notification-triage";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface MobileNotificationInboxProps {
   notifications: QCETNotification[];
@@ -122,7 +123,7 @@ export function MobileNotificationInbox({
 
         <div className="flex items-center gap-1.5">
           {onRefresh && (
-            <button
+            <Pressable
               type="button"
               onClick={onRefresh}
               disabled={isLoading}
@@ -131,11 +132,11 @@ export function MobileNotificationInbox({
               aria-label="Làm mới"
             >
               <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
-            </button>
+            </Pressable>
           )}
 
           {unreadCount > 0 && onMarkAllAsRead && (
-            <button
+            <Pressable
               type="button"
               onClick={() => onMarkAllAsRead()}
               className="inline-flex items-center gap-1 min-h-[36px] px-2.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer shadow-2xs"
@@ -143,7 +144,7 @@ export function MobileNotificationInbox({
             >
               <CheckCheck size={14} strokeWidth={1.5} className="text-primary" />
               <span>Đã đọc hết</span>
-            </button>
+            </Pressable>
           )}
         </div>
       </div>
@@ -156,7 +157,7 @@ export function MobileNotificationInbox({
         role="tablist"
         aria-label="Bộ lọc thông báo"
       >
-        <button
+        <Pressable
           type="button"
           role="tab"
           aria-selected={filterTab === "all"}
@@ -173,9 +174,9 @@ export function MobileNotificationInbox({
           <span className="font-mono tabular-nums text-xs opacity-80">
             ({totalCount})
           </span>
-        </button>
+        </Pressable>
 
-        <button
+        <Pressable
           type="button"
           role="tab"
           aria-selected={filterTab === "unread"}
@@ -194,9 +195,9 @@ export function MobileNotificationInbox({
               {unreadCount}
             </span>
           )}
-        </button>
+        </Pressable>
 
-        <button
+        <Pressable
           type="button"
           role="tab"
           aria-selected={filterTab === "action_required"}
@@ -211,11 +212,11 @@ export function MobileNotificationInbox({
         >
           <span>Cần xử lý</span>
           {actionRequiredCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-xs font-mono tabular-nums font-bold bg-amber-500/15 text-amber-800">
+            <span className="px-1.5 py-0.2 rounded-full text-xs font-mono tabular-nums font-bold bg-warning/15 text-warning">
               {actionRequiredCount}
             </span>
           )}
-        </button>
+        </Pressable>
       </div>
 
       {/* =================================================================== */}
@@ -233,7 +234,7 @@ export function MobileNotificationInbox({
             {error ?? "Không thể kết nối tới máy chủ thông báo."}
           </p>
           {onRefresh && (
-            <button
+            <Pressable
               type="button"
               onClick={onRefresh}
               disabled={isLoading}
@@ -241,7 +242,7 @@ export function MobileNotificationInbox({
             >
               <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>
-            </button>
+            </Pressable>
           )}
         </div>
       ) : viewState === "loading" ? (
@@ -415,7 +416,7 @@ function MobileNotificationCard({
                 "inline-flex items-center px-1.5 py-0.2 rounded text-xs font-mono tabular-nums font-semibold",
                 entity.type === "task"
                   ? "bg-primary/10 text-primary border border-primary/25"
-                  : "bg-amber-500/10 text-amber-800 border border-amber-500/25"
+                  : "bg-warning/10 text-warning border border-warning/25"
               )}
               data-testid={`entity-badge-${entity.code}`}
             >

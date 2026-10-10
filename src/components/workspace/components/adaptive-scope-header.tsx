@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface AdaptiveScopeHeaderProps {
   user: AuthUser;
@@ -28,13 +29,13 @@ export interface AdaptiveScopeHeaderProps {
 }
 
 const scopeActiveStyles: Record<WorkspaceScope, string> = {
-  school: "text-amber-700 bg-amber-50/80 border-amber-300 font-bold",
+  school: "text-warning bg-warning/10 border-warning/40 font-bold",
   unit: "text-blue-700 bg-blue-50/80 border-blue-300 font-bold",
   my: "text-emerald-700 bg-emerald-50/80 border-emerald-300 font-bold",
 };
 
 const scopeBadgeActiveStyles: Record<WorkspaceScope, string> = {
-  school: "bg-amber-100 text-amber-800 border-amber-200",
+  school: "bg-warning/15 text-warning border-warning/30",
   unit: "bg-blue-100 text-blue-800 border-blue-200",
   my: "bg-emerald-100 text-emerald-800 border-emerald-200",
 };
@@ -151,7 +152,7 @@ export function AdaptiveScopeHeader({
         {(contextTitle || contextBadge) && (
           <div className="flex items-center gap-2 min-w-0 mr-1">
             {contextBadge && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-warning/15 text-warning border border-warning/40 shrink-0">
                 {contextBadge}
               </span>
             )}
@@ -242,7 +243,7 @@ export function AdaptiveScopeHeader({
             aria-label="Chế độ xem"
             className="flex items-center rounded-xl border border-border/70 bg-muted/40 p-0.5"
           >
-            <button
+            <Pressable
               type="button"
               onClick={() => onViewModeChange("table")}
               className={cn(
@@ -255,8 +256,8 @@ export function AdaptiveScopeHeader({
             >
               <List strokeWidth={1.5} className="size-3.5" />
               <span className="hidden md:inline">Bảng</span>
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => onViewModeChange("kanban")}
               className={cn(
@@ -269,7 +270,7 @@ export function AdaptiveScopeHeader({
             >
               <LayoutGrid strokeWidth={1.5} className="size-3.5" />
               <span className="hidden md:inline">Kanban</span>
-            </button>
+            </Pressable>
           </div>
         )}
         {onRefresh && (

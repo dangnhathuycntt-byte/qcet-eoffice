@@ -72,6 +72,7 @@ import {
   performCreateTaskSubmission,
 } from "@/domain/tasks/create-task-form-utils";
 import { CATEGORY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { Pressable } from "@/components/ui/pressable";
 
 export {
   type TaskLevel,
@@ -793,7 +794,7 @@ export function CreateTaskModal({
                 {/* Level switcher: Subtle text segmented control for Admin */}
                 {!isSubtaskMode && !isManager && !isStaff && (
                   <div className="hidden sm:inline-flex items-center rounded-md bg-muted/60 p-0.5 text-xs ml-2">
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => setFormData((p) => ({ ...p, level: "TRUONG", parentTaskId: undefined }))}
                       className={cn(
@@ -804,8 +805,8 @@ export function CreateTaskModal({
                       )}
                     >
                       Toàn trường
-                    </button>
-                    <button
+                    </Pressable>
+                    <Pressable
                       type="button"
                       onClick={() => setFormData((p) => ({ ...p, level: "DON_VI", coAssignees: [] }))}
                       className={cn(
@@ -816,20 +817,20 @@ export function CreateTaskModal({
                       )}
                     >
                       Đơn vị
-                    </button>
+                    </Pressable>
                   </div>
                 )}
               </div>
 
               {/* Close Button */}
-              <button
+              <Pressable
                 type="button"
                 onClick={handleRequestClose}
                 aria-label="Đóng"
                 className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
               >
                 <X className="size-4" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </header>
 
             {/* Form Content */}
@@ -856,7 +857,7 @@ export function CreateTaskModal({
                     onFocus={() => scrollActiveInputIntoView()}
                     className={cn(
                       "w-full bg-transparent text-lg sm:text-xl font-semibold text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-0 leading-snug py-0.5",
-                      errors.title && "text-destructive placeholder:text-rose-400"
+                      errors.title && "text-destructive placeholder:text-destructive"
                     )}
                   />
                   {errors.title && (
@@ -884,7 +885,7 @@ export function CreateTaskModal({
                     <label id="task-assignee-label" htmlFor="task-assignee-field" className="text-xs font-medium text-muted-foreground flex items-center justify-between">
                       <span>Phụ trách <span className="text-destructive">*</span></span>
                       {selectedAssigneeDept && (
-                        <span className="text-[11px] text-muted-foreground/70 truncate max-w-[140px]" title={selectedAssigneeDept.name}>
+                        <span className="text-xs text-muted-foreground/70 truncate max-w-[140px]" title={selectedAssigneeDept.name}>
                           {selectedAssigneeDept.name}
                         </span>
                       )}
@@ -991,7 +992,7 @@ export function CreateTaskModal({
 
                             {/* Department Filter Chips */}
                             <div className="flex items-center gap-1 mt-1.5 overflow-x-auto thin-scrollbar pb-0.5">
-                              <button
+                              <Pressable
                                 type="button"
                                 onClick={() => setDeptFilter("ALL")}
                                 className={cn(
@@ -1002,9 +1003,9 @@ export function CreateTaskModal({
                                 )}
                               >
                                 Tất cả
-                              </button>
+                              </Pressable>
                               {departmentGroups.map((g, idx) => (
-                                <button
+                                <Pressable
                                   key={`chip-${g.code}-${idx}`}
                                   type="button"
                                   onClick={() => setDeptFilter(g.code)}
@@ -1016,7 +1017,7 @@ export function CreateTaskModal({
                                   )}
                                 >
                                   {g.code}
-                                </button>
+                                </Pressable>
                               ))}
                             </div>
                           </div>
@@ -1031,7 +1032,7 @@ export function CreateTaskModal({
                             {searchedPersonnel.length > 0 ? (
                               searchedPersonnel.map((group, gIdx) => (
                                 <div key={`pop-grp-${group.code}-${gIdx}`} className="py-0.5">
-                                  <div className="px-2 py-0.5 text-[11px] font-bold text-muted-foreground sticky top-0 bg-card/95 backdrop-blur-xs">
+                                  <div className="px-2 py-0.5 text-xs font-bold text-muted-foreground sticky top-0 bg-card/95 backdrop-blur-xs">
                                     {group.department}
                                   </div>
                                   <div className="space-y-0.5">
@@ -1044,7 +1045,7 @@ export function CreateTaskModal({
                                       );
                                       const isActive = flatIndex === activeOptionIndex;
                                       return (
-                                        <button
+                                        <Pressable
                                           key={`pop-opt-${group.code}-${member.name}-${idx}`}
                                           type="button"
                                           role="option"
@@ -1072,11 +1073,11 @@ export function CreateTaskModal({
                                             </span>
                                             <div className="min-w-0">
                                               <p className="truncate font-medium">{member.title}</p>
-                                              <p className="text-muted-foreground truncate text-[10px]">{member.role}</p>
+                                              <p className="text-muted-foreground truncate text-xs">{member.role}</p>
                                             </div>
                                           </div>
                                           {isSelected && <Check className="size-3 text-primary shrink-0" strokeWidth={1.5} />}
-                                        </button>
+                                        </Pressable>
                                       );
                                     })}
                                   </div>
@@ -1104,23 +1105,23 @@ export function CreateTaskModal({
 
                     {/* Manager Cross-Department Guard */}
                     {isExternalDeptBlocked && selectedAssigneeDept && (
-                      <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 p-2 text-xs text-amber-800 mt-1.5 space-y-1">
+                      <div className="rounded-lg border border-warning/30 bg-warning/5 p-2 text-xs text-warning mt-1.5 space-y-1">
                         <p className="font-semibold">Không thể giao việc trực tiếp ngoài đơn vị</p>
                         <p className="opacity-90">
                           Theo quy chế, Trưởng phòng không được giao việc trực tiếp cho nhân sự thuộc {selectedAssigneeDept.name}.
                         </p>
                         {onOpenCollaborationRequest && (
-                          <button
+                          <Pressable
                             type="button"
                             onClick={() => {
                               onClose();
                               onOpenCollaborationRequest(selectedAssigneeDept.code);
                             }}
-                            className="inline-flex items-center gap-1 font-semibold text-amber-700 hover:underline cursor-pointer pt-0.5"
+                            className="inline-flex items-center gap-1 font-semibold text-warning hover:underline cursor-pointer pt-0.5"
                           >
                             <span>Tạo phiếu yêu cầu phối hợp</span>
                             <ArrowRight className="size-3" strokeWidth={1.5} />
-                          </button>
+                          </Pressable>
                         )}
                       </div>
                     )}
@@ -1138,7 +1139,7 @@ export function CreateTaskModal({
                     <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                       <span>Hạn hoàn thành <span className="text-destructive">*</span></span>
                       {effectiveParentDueDate && (
-                        <span className="text-[11px] text-muted-foreground/70">
+                        <span className="text-xs text-muted-foreground/70">
                           Tối đa: {formatDetailDateDisplay(effectiveParentDueDate)}
                         </span>
                       )}
@@ -1200,7 +1201,7 @@ export function CreateTaskModal({
                       <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
                       <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-40 p-1 space-y-0.5 shadow-xl rounded-xl border border-border/80 bg-card " aria-label="Chọn mức độ ưu tiên">
                         {PRIORITY_OPTIONS.map((opt) => (
-                          <button
+                          <Pressable
                             key={opt.value}
                             type="button"
                             onClick={() => {
@@ -1221,7 +1222,7 @@ export function CreateTaskModal({
                             {(formData.priority || "MEDIUM") === opt.value && (
                               <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
                             )}
-                          </button>
+                          </Pressable>
                         ))}
                       </Popover.Popup>
                       </Popover.Positioner>
@@ -1234,7 +1235,7 @@ export function CreateTaskModal({
 
                 {/* 4. Progressive Disclosure: Tùy chọn nâng cao */}
                 <div className="pt-2 border-t border-border/50">
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => setShowAdvanced((prev) => !prev)}
                     aria-expanded={showAdvanced}
@@ -1245,7 +1246,7 @@ export function CreateTaskModal({
                       strokeWidth={1.5}
                     />
                     <span>{showAdvanced ? "Ẩn tùy chọn nâng cao" : "Tùy chọn nâng cao"}</span>
-                  </button>
+                  </Pressable>
 
                   {/* Advanced Fields Drawer */}
                   {showAdvanced && (
@@ -1375,7 +1376,7 @@ export function CreateTaskModal({
                 {submissionStatus === "unknown" && submissionMessage && (
                   <div
                     role="status"
-                    className="rounded-lg border border-amber-500/30 bg-amber-50/50 p-2.5 text-xs text-amber-800 leading-relaxed"
+                    className="rounded-lg border border-warning/30 bg-warning/5 p-2.5 text-xs text-warning leading-relaxed"
                   >
                     {submissionMessage}
                   </div>
@@ -1395,29 +1396,29 @@ export function CreateTaskModal({
                   >
                     <p className="font-semibold">Vui lòng kiểm tra lại:</p>
                     {errors.title && (
-                      <button type="button" onClick={() => focusFieldWithError("task-title-input")} className="block text-left hover:underline cursor-pointer">
+                      <Pressable type="button" onClick={() => focusFieldWithError("task-title-input")} className="block text-left hover:underline cursor-pointer">
                         • {errors.title}
-                      </button>
+                      </Pressable>
                     )}
                     {errors.leadAssigneeName && (
-                      <button type="button" onClick={() => focusFieldWithError("task-assignee-field")} className="block text-left hover:underline cursor-pointer">
+                      <Pressable type="button" onClick={() => focusFieldWithError("task-assignee-field")} className="block text-left hover:underline cursor-pointer">
                         • {errors.leadAssigneeName}
-                      </button>
+                      </Pressable>
                     )}
                     {errors.dueDate && (
-                      <button type="button" onClick={() => focusFieldWithError("task-due-date-input")} className="block text-left hover:underline cursor-pointer">
+                      <Pressable type="button" onClick={() => focusFieldWithError("task-due-date-input")} className="block text-left hover:underline cursor-pointer">
                         • {errors.dueDate}
-                      </button>
+                      </Pressable>
                     )}
                     {errors.internalDueDate && (
-                      <button type="button" onClick={() => focusFieldWithError("task-internal-due-input", true)} className="block text-left hover:underline cursor-pointer">
+                      <Pressable type="button" onClick={() => focusFieldWithError("task-internal-due-input", true)} className="block text-left hover:underline cursor-pointer">
                         • {errors.internalDueDate}
-                      </button>
+                      </Pressable>
                     )}
                     {errors.requiredDeliverables && (
-                      <button type="button" onClick={() => focusFieldWithError("task-deliverables-input", true)} className="block text-left hover:underline cursor-pointer">
+                      <Pressable type="button" onClick={() => focusFieldWithError("task-deliverables-input", true)} className="block text-left hover:underline cursor-pointer">
                         • {errors.requiredDeliverables}
-                      </button>
+                      </Pressable>
                     )}
                     {errors.form && <p>• {errors.form}</p>}
                   </div>

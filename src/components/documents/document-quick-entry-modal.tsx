@@ -28,6 +28,7 @@ import {
   fetchDuplicateMatches,
 } from "@/lib/documents/duplicate-check-client";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentQuickEntryModalProps {
   isOpen: boolean;
@@ -401,14 +402,14 @@ export function DocumentQuickEntryModal({
                 </datalist>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {COMMON_AUTHORITIES.slice(0, 3).map((auth) => (
-                    <button
+                    <Pressable
                       key={auth}
                       type="button"
                       onClick={() => setIssuingAuthority(auth)}
                       className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       {auth}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </>
@@ -455,14 +456,14 @@ export function DocumentQuickEntryModal({
                 <Paperclip className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
                 <span className="min-w-0 truncate" title={attachmentFile.name}>{attachmentFile.name}</span>
                 <span className="shrink-0 text-muted-foreground">{Math.max(1, Math.round(attachmentFile.size / 1024))} KB</span>
-                <button
+                <Pressable
                   type="button"
                   aria-label="Bỏ tệp đính kèm"
                   onClick={() => setAttachmentFile(null)}
                   className="inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
                   <X className="size-3" strokeWidth={1.5} />
-                </button>
+                </Pressable>
               </span>
             ) : (
               <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={() => fileInputRef.current?.click()}>
@@ -521,14 +522,14 @@ export function DocumentQuickEntryModal({
                 />
                 <div className="flex gap-1">
                   {[3, 5, 7].map((days) => (
-                    <button
+                    <Pressable
                       key={days}
                       type="button"
                       onClick={() => handleAddDaysToDueDate(days)}
                       className="cursor-pointer rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80"
                     >
                       +{days} ngày
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>

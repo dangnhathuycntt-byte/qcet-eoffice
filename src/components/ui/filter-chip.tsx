@@ -27,7 +27,7 @@ export function FilterChip({ label, value, onRemove, className }: FilterChipProp
           type="button"
           aria-label={`Gỡ bộ lọc ${label}: ${value}`}
           onClick={onRemove}
-          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
         >
           <X className="size-3" />
         </button>

@@ -64,7 +64,7 @@ export interface StatusBadgeConfig {
 export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
   NEW: {
     label: "Mới",
-    className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
+    className: "border-destructive/20 bg-destructive/10 text-destructive",
     variant: "destructive",
     oklchColor: "oklch(0.63 0.22 25)",
     oklchBg: "oklch(0.96 0.04 25)",
@@ -78,14 +78,14 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
   },
   NEEDS_REVIEW: {
     label: "Cần chỉnh sửa",
-    className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+    className: "border-warning/20 bg-warning/10 text-warning",
     variant: "amber",
     oklchColor: "oklch(0.74 0.17 75)",
     oklchBg: "oklch(0.96 0.05 75)",
   },
   WAITING_APPROVAL: {
     label: "Chờ phê duyệt",
-    className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+    className: "border-warning/20 bg-warning/10 text-warning",
     variant: "amber",
     oklchColor: "oklch(0.74 0.17 75)",
     oklchBg: "oklch(0.96 0.05 75)",
@@ -106,7 +106,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
   },
   OVERDUE: {
     label: "Trễ hạn",
-    className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
+    className: "border-destructive/20 bg-destructive/10 text-destructive",
     variant: "rose",
     oklchColor: "oklch(0.63 0.22 25)",
     oklchBg: "oklch(0.96 0.04 25)",
@@ -127,7 +127,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
   },
   BLOCKED: {
     label: "Tạm dừng",
-    className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+    className: "border-warning/20 bg-warning/10 text-warning",
     variant: "amber",
     oklchColor: "oklch(0.74 0.17 75)",
     oklchBg: "oklch(0.96 0.05 75)",
@@ -324,8 +324,8 @@ export const TABLE_DENSITY_CONFIG = {
 export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; borderClass: string; oklchColor: string; oklchBg: string }> = {
   NEW: {
     label: "Mới",
-    badgeClass: "border-rose-500/20 bg-rose-500/10 text-rose-700",
-    borderClass: "border-rose-500/30",
+    badgeClass: "border-destructive/20 bg-destructive/10 text-destructive",
+    borderClass: "border-destructive/30",
     oklchColor: "oklch(0.63 0.22 25)",
     oklchBg: "oklch(0.96 0.04 25)",
   },
@@ -338,15 +338,15 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
   },
   NEEDS_REVIEW: {
     label: "Cần chỉnh sửa",
-    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-700",
-    borderClass: "border-amber-500/30",
+    badgeClass: "border-warning/20 bg-warning/10 text-warning",
+    borderClass: "border-warning/30",
     oklchColor: "oklch(0.74 0.17 75)",
     oklchBg: "oklch(0.96 0.05 75)",
   },
   WAITING_APPROVAL: {
     label: "Cần chỉnh sửa",
-    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-700",
-    borderClass: "border-amber-500/30",
+    badgeClass: "border-warning/20 bg-warning/10 text-warning",
+    borderClass: "border-warning/30",
     oklchColor: "oklch(0.74 0.17 75)",
     oklchBg: "oklch(0.96 0.05 75)",
   },
@@ -366,8 +366,8 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
   },
   OVERDUE: {
     label: "Trễ hạn",
-    badgeClass: "border-rose-500/20 bg-rose-500/10 text-rose-700",
-    borderClass: "border-rose-500/30",
+    badgeClass: "border-destructive/20 bg-destructive/10 text-destructive",
+    borderClass: "border-destructive/30",
     oklchColor: "oklch(0.63 0.22 25)",
     oklchBg: "oklch(0.96 0.04 25)",
   },

@@ -67,9 +67,9 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
   const common = cn("size-3 shrink-0", className);
   switch (state) {
     case "overdue":
-      return <AlertTriangle className={cn(common, "text-rose-600")} aria-hidden="true" />;
+      return <AlertTriangle className={cn(common, "text-destructive")} aria-hidden="true" />;
     case "waiting":
-      return <Clock3 className={cn(common, "text-amber-600")} aria-hidden="true" />;
+      return <Clock3 className={cn(common, "text-warning")} aria-hidden="true" />;
     case "due_today":
       return <Clock3 className={cn(common, "text-orange-600")} aria-hidden="true" />;
     case "in_progress":
@@ -85,9 +85,9 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
 function attentionBadgeClass(state: CalendarAttentionState): string {
   switch (state) {
     case "overdue":
-      return "border-rose-200 bg-rose-50 text-rose-700";
+      return "border-destructive/30 bg-danger-soft text-destructive";
     case "waiting":
-      return "border-amber-200 bg-amber-50 text-amber-700";
+      return "border-warning/30 bg-warning/10 text-warning";
     case "due_today":
       return "border-orange-200 bg-orange-50 text-orange-700";
     case "in_progress":

@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 
 import { formatDisplayName } from "@/components/layout/app-sidebar";
+import { Pressable } from "@/components/ui/pressable";
 
 export function getInitials(name?: string | null): string {
   const cleanName = formatDisplayName(name);
@@ -96,7 +97,7 @@ function DesktopHeaderTitle({ pathname }: { pathname: string }) {
                   index === breadcrumbItems.length - 1
                     ? "max-w-[min(52vw,680px)] font-semibold text-foreground"
                     : "text-muted-foreground/70",
-                  item.mono && "font-mono text-[11px]"
+                  item.mono && "font-mono text-xs"
                 )}
                 title={item.label}
               >
@@ -179,7 +180,7 @@ export function AppTopbar() {
       {/* Right: Quick actions for mobile */}
       <div className="flex items-center gap-1 shrink-0">
         {/* Search button */}
-        <button
+        <Pressable
           type="button"
           onClick={handleOpenSearch}
           className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
@@ -187,7 +188,7 @@ export function AppTopbar() {
           aria-label="Tìm kiếm"
         >
           <Search size={16} strokeWidth={1.5} />
-        </button>
+        </Pressable>
 
         {/* Inbox Link */}
         <Link
@@ -198,14 +199,14 @@ export function AppTopbar() {
         >
           <Inbox size={16} strokeWidth={1.5} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-primary text-[9px] font-mono font-bold text-primary-foreground flex items-center justify-center ring-1 ring-background tabular-nums">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-primary text-xs font-mono font-bold text-primary-foreground flex items-center justify-center ring-1 ring-background tabular-nums">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </Link>
 
         {/* Mobile Menu Drawer button */}
-        <button
+        <Pressable
           type="button"
           onClick={handleOpenMobileMenu}
           className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
@@ -213,7 +214,7 @@ export function AppTopbar() {
           aria-label="Menu tùy chọn"
         >
           <Menu size={16} strokeWidth={1.5} />
-        </button>
+        </Pressable>
       </div>
     </header>
   );

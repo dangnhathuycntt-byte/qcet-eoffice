@@ -36,6 +36,7 @@ import {
   getSystemReferenceDate,
   isTaskOverdue,
 } from "@/lib/academic-calendar";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface CalendarDayCell {
   date: Date;
@@ -123,7 +124,7 @@ export function getStatusDotClass(
   }
 
   if (isTaskOverdue(status, dueDate, referenceDate)) {
-    return "bg-rose-500";
+    return "bg-destructive";
   }
 
   if (status === "IN_PROGRESS") {
@@ -131,10 +132,10 @@ export function getStatusDotClass(
   }
 
   if (status === "NEEDS_REVIEW" || status === "PENDING_EXECUTIVE_APPROVAL") {
-    return "bg-amber-500";
+    return "bg-warning";
   }
 
-  return "bg-amber-500";
+  return "bg-warning";
 }
 
 /**
@@ -415,7 +416,7 @@ export function getCategoryDotClass(category?: TaskCategory): string {
     case "THU_VIEN":
       return "bg-emerald-500";
     case "BAO_CAO":
-      return "bg-amber-500";
+      return "bg-warning";
     default:
       return "bg-zinc-400";
   }
@@ -434,7 +435,7 @@ export function getCategoryChipClass(category?: TaskCategory): string {
     case "THU_VIEN":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700";
     case "BAO_CAO":
-      return "border-amber-500/30 bg-amber-500/10 text-amber-700";
+      return "border-warning/30 bg-warning/10 text-warning";
     default:
       return "border-border/60 bg-muted/60 text-muted-foreground";
   }
@@ -749,14 +750,14 @@ export function CalendarMonthView({
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs p-4 shadow-card">
         {/* Mobile Compact Month Selector Header: < Tháng M/YYYY > with min-44px touch targets */}
         <div className="flex sm:hidden items-center justify-between w-full rounded-xl border border-border/70 bg-card p-1 shadow-2xs">
-          <button
+          <Pressable
             type="button"
             onClick={handlePrevMonth}
             aria-label="Tháng trước"
             className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary/80 transition-colors cursor-pointer"
           >
             <ChevronLeft strokeWidth={1.5} className="size-5" />
-          </button>
+          </Pressable>
           <div className="flex flex-col items-center text-center">
             <span className="font-heading text-sm font-bold text-foreground font-mono tabular-nums tracking-tight">
               Tháng {period.monthNumber}/{calendarYear}
@@ -765,14 +766,14 @@ export function CalendarMonthView({
               {period.shortDateSpan}
             </span>
           </div>
-          <button
+          <Pressable
             type="button"
             onClick={handleNextMonth}
             aria-label="Tháng sau"
             className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary/80 transition-colors cursor-pointer"
           >
             <ChevronRight strokeWidth={1.5} className="size-5" />
-          </button>
+          </Pressable>
         </div>
 
         {/* Desktop Header: Academic Month Selector & Navigation Controls */}
@@ -783,31 +784,31 @@ export function CalendarMonthView({
             </h2>
 
             <div className="flex items-center gap-1 border-l border-border/60 pl-2">
-              <button
+              <Pressable
                 type="button"
                 onClick={handlePrevMonth}
                 aria-label="Tháng học trước"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
                 <ChevronLeft strokeWidth={1.5} className="size-4" />
-              </button>
-              <button
+              </Pressable>
+              <Pressable
                 type="button"
                 onClick={handleNextMonth}
                 aria-label="Tháng học sau"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
                 <ChevronRight strokeWidth={1.5} className="size-4" />
-              </button>
+              </Pressable>
 
-              <button
+              <Pressable
                 type="button"
                 onClick={handleCurrentMonth}
                 className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-secondary cursor-pointer shadow-xs"
                 title="Về tháng hiện tại"
               >
                 Tháng hiện tại
-              </button>
+              </Pressable>
             </div>
 
             <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-muted/60 text-foreground border border-border/80 px-2.5 py-0.5 text-xs font-medium font-mono tabular-nums">
@@ -819,30 +820,30 @@ export function CalendarMonthView({
           <div className="flex items-center gap-2">
             {/* Desktop View Mode Toggle */}
             <div className="hidden sm:inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs select-none">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setDesktopViewMode("grid")}
                 className={cn(
-                  "px-2.5 h-6 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                  "px-2.5 h-6 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                   desktopViewMode === "grid"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 )}
               >
                 Lưới tháng
-              </button>
-              <button
+              </Pressable>
+              <Pressable
                 type="button"
                 onClick={() => setDesktopViewMode("agenda")}
                 className={cn(
-                  "px-2.5 h-6 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                  "px-2.5 h-6 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                   desktopViewMode === "agenda"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 )}
               >
                 Nghị sự
-              </button>
+              </Pressable>
             </div>
 
             <div className="relative min-w-[200px] max-w-xs">
@@ -902,7 +903,7 @@ export function CalendarMonthView({
             {CATEGORY_TABS.map((tab) => {
               const isActive = activeCategory === tab.id;
               return (
-                <button
+                <Pressable
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveCategory(tab.id)}
@@ -914,14 +915,14 @@ export function CalendarMonthView({
                   )}
                 >
                   {tab.label}
-                </button>
+                </Pressable>
               );
             })}
           </div>
 
           {/* Level Switcher */}
           <div className="flex items-center gap-1">
-            <button
+            <Pressable
               type="button"
               onClick={() => setLevelFilter("ALL")}
               className={cn(
@@ -932,8 +933,8 @@ export function CalendarMonthView({
               )}
             >
               Tất cả
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => setLevelFilter("TRUONG")}
               className={cn(
@@ -945,8 +946,8 @@ export function CalendarMonthView({
             >
               <Building2 strokeWidth={1.5} className="size-3" />
               <span>Cấp Trường</span>
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => setLevelFilter("DON_VI")}
               className={cn(
@@ -958,7 +959,7 @@ export function CalendarMonthView({
             >
               <Briefcase strokeWidth={1.5} className="size-3" />
               <span>Đơn vị</span>
-            </button>
+            </Pressable>
           </div>
         </div>
       </div>
@@ -1221,7 +1222,7 @@ export function CalendarMonthView({
                     })}
 
                     {hasMore && (
-                      <button
+                      <Pressable
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1231,7 +1232,7 @@ export function CalendarMonthView({
                         title="Nhấn để xem toàn bộ danh sách nhiệm vụ của ngày này"
                       >
                         +{dayTasks.length - maxDisplay} nhiệm vụ
-                      </button>
+                      </Pressable>
                     )}
                   </div>
                 </div>
@@ -1254,11 +1255,11 @@ export function CalendarMonthView({
                 <span>Đang thực hiện</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-amber-500 ring-1 ring-background" />
+                <span className="size-1.5 rounded-full bg-warning ring-1 ring-background" />
                 <span>Chờ thực hiện</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-rose-500 ring-1 ring-background" />
+                <span className="size-1.5 rounded-full bg-destructive ring-1 ring-background" />
                 <span>Trễ hạn / Chậm tiến độ</span>
               </div>
             </div>

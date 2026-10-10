@@ -52,7 +52,7 @@ export function FileDropzone({
       }}
       data-dragging={dragging || undefined}
       className={cn(
-        "flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl bg-secondary px-6 py-8 text-center outline-none transition-colors duration-100 hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 data-[dragging]:bg-selected aria-disabled:cursor-not-allowed aria-disabled:opacity-50 motion-reduce:transition-none",
+        "flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl bg-secondary px-6 py-8 text-center outline-none transition-colors duration-100 hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 data-[dragging]:bg-selected aria-disabled:cursor-not-allowed aria-disabled:opacity-50 motion-reduce:transition-none",
         className,
       )}
     >
@@ -119,7 +119,7 @@ export function FileTile({
               onDownload();
             }
           }}
-          className="truncate font-normal text-foreground underline-offset-3 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
+          className="truncate font-normal text-foreground underline-offset-3 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1"
         >
           {name}
         </a>
@@ -138,7 +138,7 @@ export function FileTile({
           type="button"
           aria-label={`Tải xuống ${name}`}
           onClick={onDownload}
-          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground opacity-0 outline-none transition-opacity hover:text-foreground focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation group-hover/file:opacity-100"
+          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground opacity-0 outline-none transition-opacity hover:text-foreground focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation group-hover/file:opacity-100"
         >
           <Download className="size-3.5" />
         </button>
@@ -148,7 +148,7 @@ export function FileTile({
           type="button"
           aria-label={`Gỡ tệp ${name}`}
           onClick={onRemove}
-          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground opacity-0 outline-none transition-opacity hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation group-hover/file:opacity-100"
+          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground opacity-0 outline-none transition-opacity hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation group-hover/file:opacity-100"
         >
           <X className="size-3.5" />
         </button>

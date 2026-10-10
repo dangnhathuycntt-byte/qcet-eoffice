@@ -105,7 +105,7 @@ describe("isTaskPastDue — kanban delegate", () => {
 describe("getStatusDotClass — calendar presentation (referenceDate injected)", () => {
   test("due yesterday + IN_PROGRESS => rose (overdue) dot", () => {
     const cls = getStatusDotClass("IN_PROGRESS", DUE_YESTERDAY, REF);
-    assert.ok(cls.includes("rose"), `Expected rose class, got: ${cls}`);
+    assert.ok(cls.includes("destructive"), `Expected destructive class, got: ${cls}`);
   });
 
   test("due today + IN_PROGRESS => blue (active, not overdue) dot", () => {
@@ -121,12 +121,12 @@ describe("getStatusDotClass — calendar presentation (referenceDate injected)",
   test("due yesterday + COMPLETED => emerald (completed) dot, not rose", () => {
     const cls = getStatusDotClass("COMPLETED", DUE_YESTERDAY, REF);
     assert.ok(cls.includes("emerald"), `Expected emerald class, got: ${cls}`);
-    assert.ok(!cls.includes("rose"), `Must not include rose for completed task: ${cls}`);
+    assert.ok(!cls.includes("destructive"), `Must not include destructive for completed task: ${cls}`);
   });
 
   test("due yesterday + NEW => rose (overdue) dot", () => {
     const cls = getStatusDotClass("NEW", DUE_YESTERDAY, REF);
-    assert.ok(cls.includes("rose"), `Expected rose class, got: ${cls}`);
+    assert.ok(cls.includes("destructive"), `Expected destructive class, got: ${cls}`);
   });
 });
 

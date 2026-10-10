@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pressable } from "@/components/ui/pressable";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,8 +91,8 @@ const STATUS_STYLES: Record<DossierStatus, string> = {
   OPEN: "bg-muted/80 text-muted-foreground border-border/60",
   ACTIVE: "bg-blue-500/8 text-blue-700 border-blue-500/15",
   CLOSED: "bg-muted/60 text-muted-foreground border-border/40",
-  READY_FOR_ARCHIVE: "bg-amber-500/8 text-amber-700 border-amber-500/15",
-  SUBMITTED_TO_ARCHIVE: "bg-amber-500/12 text-amber-700 border-amber-500/20",
+  READY_FOR_ARCHIVE: "bg-warning/8 text-warning border-warning/15",
+  SUBMITTED_TO_ARCHIVE: "bg-warning/12 text-warning border-warning/20",
   ACCEPTED: "bg-emerald-500/8 text-emerald-700 border-emerald-500/15",
   ARCHIVED: "bg-emerald-500/12 text-emerald-700 border-emerald-500/20",
 };
@@ -110,7 +111,7 @@ const CLASSIFICATION_MAP: Record<
   },
   RESTRICTED: {
     label: "Hạn chế",
-    style: "bg-amber-500/8 text-amber-700 border-amber-500/15",
+    style: "bg-warning/8 text-warning border-warning/15",
   },
   PERSONAL_DATA: {
     label: "DLCN",
@@ -265,7 +266,7 @@ export function DossierRegistryView() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <button
+            <Pressable
               type="button"
               onClick={handleRefresh}
               disabled={isLoading}
@@ -276,15 +277,15 @@ export function DossierRegistryView() {
                 strokeWidth={1.5}
               />
               Làm mới
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => alert("Chức năng tạo hồ sơ mới đang phát triển")}
               className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 active:scale-[0.98] sm:min-h-9"
             >
               <Plus className="size-3.5" strokeWidth={1.5} />
               Tạo hồ sơ mới
-            </button>
+            </Pressable>
           </div>
         </div>
       </div>
@@ -309,7 +310,7 @@ export function DossierRegistryView() {
             label: "Chờ lưu trữ",
             value: stats.pending,
             icon: Calendar,
-            color: "text-amber-600",
+            color: "text-warning",
           },
           {
             label: "Đã lưu trữ",
@@ -498,7 +499,7 @@ export function DossierRegistryView() {
                       <td className="whitespace-nowrap px-4 py-2.5">
                         <span
                           className={cn(
-                            "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                            "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
                             STATUS_STYLES[item.status],
                           )}
                         >
@@ -510,7 +511,7 @@ export function DossierRegistryView() {
                       <td className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
                         <span
                           className={cn(
-                            "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                            "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
                             CLASSIFICATION_MAP[item.classification].style,
                           )}
                         >

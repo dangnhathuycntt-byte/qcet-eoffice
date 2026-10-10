@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export type { ExecutiveFilter, ExecutiveActionItem };
 
@@ -88,10 +89,10 @@ const ACTION_CARDS: ActionCardConfig[] = [
       return "Không có việc vướng hoặc trễ";
     },
     icon: AlertTriangle,
-    activeAccent: "border-rose-500 ring-2 ring-rose-500/20",
-    activeBg: "bg-rose-500/[0.04]",
-    hoverBorder: "hover:border-rose-500/40 hover:bg-rose-500/[0.02]",
-    dotColor: "bg-rose-500",
+    activeAccent: "border-destructive ring-2 ring-destructive/20",
+    activeBg: "bg-destructive/[0.04]",
+    hoverBorder: "hover:border-destructive/40 hover:bg-destructive/[0.02]",
+    dotColor: "bg-destructive",
   },
   {
     id: "strategic-active",
@@ -326,7 +327,7 @@ export function ExecutiveActionCenter({
 
         {errorMessage ? (
           <div
-            className="mx-1 mt-3 rounded-lg border border-rose-500/30 bg-rose-500/5 px-3.5 py-3 text-xs text-rose-800"
+            className="mx-1 mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-xs text-destructive"
             data-slot="action-queue-error"
             role="alert"
           >
@@ -385,8 +386,8 @@ export function ExecutiveActionCenter({
                               className={cn(
                                 "rounded px-1.5 py-0.5 text-xs font-semibold shrink-0",
                                 reason === "REVIEW"
-                                  ? "bg-amber-500/15 text-amber-800"
-                                  : "bg-rose-500/15 text-rose-800"
+                                  ? "bg-warning/15 text-warning"
+                                  : "bg-destructive/15 text-destructive"
                               )}
                               data-reason={reason}
                             >
@@ -444,7 +445,7 @@ export function ExecutiveActionCenter({
                                     e.stopPropagation();
                                     handleApprove(item);
                                   }}
-                                  className="h-6 px-2 text-[11px] bg-emerald-700 hover:bg-emerald-800 text-white rounded"
+                                  className="h-6 px-2 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded"
                                 >
                                   {isItemSubmitting ? "Đang gửi..." : "Đồng ý"}
                                 </Button>
@@ -456,7 +457,7 @@ export function ExecutiveActionCenter({
                                     e.stopPropagation();
                                     setConfirmApproveId(null);
                                   }}
-                                  className="h-6 px-1.5 text-[11px] text-muted-foreground rounded"
+                                  className="h-6 px-1.5 text-xs text-muted-foreground rounded"
                                 >
                                   Hủy
                                 </Button>
@@ -491,8 +492,8 @@ export function ExecutiveActionCenter({
                                   className={cn(
                                     "h-7 px-2.5 text-xs font-medium rounded-lg gap-1",
                                     isRevisionOpen
-                                      ? "bg-amber-500/15 text-amber-900 border-amber-500/30"
-                                      : "hover:bg-amber-500/10 hover:text-amber-900 text-muted-foreground"
+                                      ? "bg-warning/15 text-warning border-warning/30"
+                                      : "hover:bg-warning/10 hover:text-warning text-muted-foreground"
                                   )}
                                 >
                                   <RotateCcw size={12} strokeWidth={1.5} />
@@ -523,18 +524,18 @@ export function ExecutiveActionCenter({
                     {/* Inline Revision Input Drawer */}
                     {isRevisionOpen && (
                       <div
-                        className="w-full mt-2 p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.04] space-y-2 animate-fade-in"
+                        className="w-full mt-2 p-2.5 rounded-xl border border-warning/30 bg-warning/[0.04] space-y-2 animate-fade-in"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center justify-between text-xs text-amber-900 font-medium">
+                        <div className="flex items-center justify-between text-xs text-warning font-medium">
                           <span>Ghi chú yêu cầu đơn vị chỉnh sửa/bổ sung hồ sơ:</span>
-                          <button
+                          <Pressable
                             type="button"
                             onClick={() => setRevisionItemId(null)}
                             className="text-muted-foreground hover:text-foreground"
                           >
                             <X size={13} />
-                          </button>
+                          </Pressable>
                         </div>
                         <Input
                           type="text"
@@ -559,7 +560,7 @@ export function ExecutiveActionCenter({
                             size="sm"
                             disabled={isItemSubmitting}
                             onClick={() => handleRequestRevision(item)}
-                            className="h-6 px-3 text-xs bg-amber-700 hover:bg-amber-800 text-white rounded-lg"
+                            className="h-6 px-3 text-xs bg-warning hover:bg-warning/90 text-white rounded-lg"
                           >
                             {isItemSubmitting ? "Đang gửi..." : "Gửi yêu cầu sửa"}
                           </Button>

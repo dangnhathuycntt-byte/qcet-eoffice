@@ -553,8 +553,8 @@ describe("AdaptiveScopeHeader Component", () => {
         onScopeChange: () => {},
       })
     );
-    assert.ok(htmlSchool.includes("border-amber-300"), "School active tab should have amber border tint");
-    assert.ok(htmlSchool.includes("text-amber-700"), "School active tab should have amber text");
+    assert.ok(htmlSchool.includes("border-warning/40"), "School active tab should have amber border tint");
+    assert.ok(htmlSchool.includes("text-warning"), "School active tab should have amber text");
 
     const htmlUnit = renderToStaticMarkup(
       React.createElement(AdaptiveScopeHeader, {

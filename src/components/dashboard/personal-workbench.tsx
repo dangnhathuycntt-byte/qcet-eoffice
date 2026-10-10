@@ -47,6 +47,7 @@ import {
   useOptionalDashboardData,
   useOptionalDashboardActions,
 } from "@/components/dashboard/dashboard-context";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // Types & Contracts
@@ -527,7 +528,7 @@ function ManagerStaffWorkloadWidget({
                 <div className="flex items-center gap-1.5 shrink-0 tabular-nums font-mono">
                   <span className="text-muted-foreground">{staff.totalTasks} việc</span>
                   {staff.overdueTasks > 0 && (
-                    <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-800 font-medium">
+                    <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">
                       {staff.overdueTasks} trễ
                     </span>
                   )}
@@ -538,7 +539,7 @@ function ManagerStaffWorkloadWidget({
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
-                      staff.overdueTasks > 0 ? "bg-rose-500" : "bg-primary"
+                      staff.overdueTasks > 0 ? "bg-destructive" : "bg-primary"
                     )}
                     style={{ width: `${Math.min(100, staff.progressPercent)}%` }}
                   />
@@ -984,7 +985,7 @@ export function PersonalWorkbench({
                     <span>{tab.label}</span>
                     <span
                       className={cn(
-                        "text-[11px] font-mono tabular-nums px-1.5 py-0.2 rounded-full",
+                        "text-xs font-mono tabular-nums px-1.5 py-0.2 rounded-full",
                         isActive ? "bg-primary/10 text-primary font-semibold" : "bg-muted text-muted-foreground"
                       )}
                     >
@@ -1006,14 +1007,14 @@ export function PersonalWorkbench({
                 className="pl-8 pr-8 h-8 text-xs rounded-lg border-border/60 bg-muted/20 focus:bg-card"
               />
               {searchQuery && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label="Xóa tìm kiếm"
                 >
                   <X size={13} strokeWidth={1.5} />
-                </button>
+                </Pressable>
               )}
             </div>
 
@@ -1058,7 +1059,7 @@ export function PersonalWorkbench({
                       className={cn(
                         "p-3 sm:p-3.5 rounded-xl border bg-card transition-all space-y-2.5 relative",
                         item.isOverdue
-                          ? "border-rose-500/40 bg-rose-500/[0.02] hover:border-rose-500/60"
+                          ? "border-destructive/40 bg-destructive/[0.02] hover:border-destructive/60"
                           : "border-border/70 hover:border-primary/40 hover:bg-muted/10"
                       )}
                     >
@@ -1070,9 +1071,9 @@ export function PersonalWorkbench({
                             className={cn(
                               "text-xs font-sans font-medium px-2 py-0.5 rounded-md",
                               item.actionType === "APPROVAL"
-                                ? "bg-amber-500/15 text-amber-900 border-amber-500/30"
+                                ? "bg-warning/15 text-warning border-warning/30"
                                 : item.actionType === "OVERDUE"
-                                ? "bg-rose-500/15 text-rose-900 border-rose-500/30"
+                                ? "bg-destructive/15 text-destructive border-destructive/30"
                                 : item.actionType === "TODAY"
                                 ? "bg-blue-500/15 text-blue-900 border-blue-500/30"
                                 : ""
@@ -1101,7 +1102,7 @@ export function PersonalWorkbench({
                           <span
                             className={cn(
                               "text-xs font-mono tabular-nums shrink-0",
-                              item.isOverdue ? "text-rose-700 font-semibold" : "text-muted-foreground"
+                              item.isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
                             )}
                           >
                             Hạn: {item.dueDate}
@@ -1139,7 +1140,7 @@ export function PersonalWorkbench({
                             <div
                               className={cn(
                                 "h-full rounded-full transition-all duration-300",
-                                item.isOverdue ? "bg-rose-500" : "bg-primary"
+                                item.isOverdue ? "bg-destructive" : "bg-primary"
                               )}
                               style={{ width: `${Math.min(100, item.progressPercent)}%` }}
                             />
@@ -1152,14 +1153,14 @@ export function PersonalWorkbench({
                       <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-2 flex-wrap text-xs">
                         {/* Left action group: Progress Quick Adjust */}
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[11px] text-muted-foreground font-medium mr-0.5">Tiến độ:</span>
+                          <span className="text-xs text-muted-foreground font-medium mr-0.5">Tiến độ:</span>
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             disabled={isItemUpdating || item.status === "COMPLETED"}
                             onClick={() => handleQuickProgress(item, 10)}
-                            className="h-6 px-1.5 text-[11px] font-mono rounded hover:bg-primary/10 hover:text-primary"
+                            className="h-6 px-1.5 text-xs font-mono rounded hover:bg-primary/10 hover:text-primary"
                             title="Tăng 10% tiến độ"
                           >
                             +10%
@@ -1170,7 +1171,7 @@ export function PersonalWorkbench({
                             size="sm"
                             disabled={isItemUpdating || item.status === "COMPLETED"}
                             onClick={() => handleQuickProgress(item, 25)}
-                            className="h-6 px-1.5 text-[11px] font-mono rounded hover:bg-primary/10 hover:text-primary"
+                            className="h-6 px-1.5 text-xs font-mono rounded hover:bg-primary/10 hover:text-primary"
                             title="Tăng 25% tiến độ"
                           >
                             +25%
@@ -1182,7 +1183,7 @@ export function PersonalWorkbench({
                               size="sm"
                               disabled={isItemUpdating}
                               onClick={() => handleQuickComplete(item)}
-                              className="h-6 px-2 text-[11px] rounded text-emerald-800 hover:bg-emerald-500/10 hover:text-emerald-900"
+                              className="h-6 px-2 text-xs rounded text-emerald-800 hover:bg-emerald-500/10 hover:text-emerald-900"
                               title="Đánh dấu hoàn thành 100%"
                             >
                               <CheckCircle2 size={12} strokeWidth={1.5} className="mr-1" />
@@ -1200,7 +1201,7 @@ export function PersonalWorkbench({
                               size="sm"
                               disabled={isItemUpdating}
                               onClick={() => handleQuickApprove(item)}
-                              className="h-6 px-2 text-[11px] font-medium rounded-md bg-emerald-700 hover:bg-emerald-800 text-white gap-1"
+                              className="h-6 px-2 text-xs font-medium rounded-md bg-emerald-700 hover:bg-emerald-800 text-white gap-1"
                             >
                               <Check size={12} strokeWidth={1.5} />
                               <span>{effectiveRole === "EXECUTIVE" ? "Duyệt L2" : "Duyệt L1"}</span>
@@ -1215,10 +1216,10 @@ export function PersonalWorkbench({
                                 setRevisionText("");
                               }}
                               className={cn(
-                                "h-6 px-2 text-[11px] font-medium rounded-md gap-1",
+                                "h-6 px-2 text-xs font-medium rounded-md gap-1",
                                 isRevisionOpen
-                                  ? "bg-amber-500/15 text-amber-900 border-amber-500/30"
-                                  : "hover:bg-amber-500/10 hover:text-amber-900 text-muted-foreground"
+                                  ? "bg-warning/15 text-warning border-warning/30"
+                                  : "hover:bg-warning/10 hover:text-warning text-muted-foreground"
                               )}
                             >
                               <RotateCcw size={11} strokeWidth={1.5} />
@@ -1230,16 +1231,16 @@ export function PersonalWorkbench({
 
                       {/* Inline Revision Input Drawer */}
                       {isRevisionOpen && (
-                        <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.04] space-y-2 animate-fade-in">
-                          <div className="flex items-center justify-between text-xs text-amber-900 font-medium">
+                        <div className="p-2.5 rounded-lg border border-warning/30 bg-warning/[0.04] space-y-2 animate-fade-in">
+                          <div className="flex items-center justify-between text-xs text-warning font-medium">
                             <span>Ghi chú yêu cầu chỉnh sửa/bổ sung minh chứng:</span>
-                            <button
+                            <Pressable
                               type="button"
                               onClick={() => setRevisionTaskId(null)}
                               className="text-muted-foreground hover:text-foreground"
                             >
                               <X size={12} strokeWidth={1.5} />
-                            </button>
+                            </Pressable>
                           </div>
                           <Input
                             type="text"
@@ -1265,7 +1266,7 @@ export function PersonalWorkbench({
                               size="sm"
                               disabled={isItemUpdating}
                               onClick={() => handleQuickRequestRevision(item)}
-                              className="h-6 px-2.5 text-xs bg-amber-700 hover:bg-amber-800 text-white"
+                              className="h-6 px-2.5 text-xs bg-warning hover:bg-warning/90 text-white"
                             >
                               Gửi yêu cầu sửa
                             </Button>
@@ -1281,7 +1282,7 @@ export function PersonalWorkbench({
             {/* Expand / Collapse and Bottom link to Tasks */}
             <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 flex-wrap">
               {searchFilteredItems.length > MAX_VISIBLE_DEFAULT && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setShowAllItems(!showAllItems)}
                   className="text-xs text-muted-foreground hover:text-foreground font-medium underline underline-offset-2 cursor-pointer"
@@ -1289,7 +1290,7 @@ export function PersonalWorkbench({
                   {showAllItems
                     ? "Thu gọn"
                     : `Xem thêm ${searchFilteredItems.length - MAX_VISIBLE_DEFAULT} việc khác`}
-                </button>
+                </Pressable>
               )}
               <Link
                 href={viewAllTasksUrl}

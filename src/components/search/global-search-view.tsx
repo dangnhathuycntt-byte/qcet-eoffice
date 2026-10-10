@@ -136,7 +136,7 @@ function formatDate(raw: string | null | undefined): string {
 
 const PRIORITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-red-500/8 text-red-700 border-red-500/15",
-  HIGH: "bg-amber-500/8 text-amber-700 border-amber-500/15",
+  HIGH: "bg-warning/8 text-warning border-warning/15",
   MEDIUM: "bg-muted/60 text-muted-foreground border-border/40",
   LOW: "bg-muted/40 text-muted-foreground/70 border-border/30",
 };
@@ -481,7 +481,7 @@ export function GlobalSearchView() {
                     <span>{tab.label}</span>
                     <span
                       className={cn(
-                        "ml-0.5 rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums",
+                        "ml-0.5 rounded-full px-1.5 py-px text-xs font-semibold tabular-nums",
                         isActive
                           ? "bg-muted text-muted-foreground"
                           : "bg-muted/60 text-muted-foreground/70",
@@ -576,12 +576,12 @@ function TaskResults({
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-mono font-semibold text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded border border-border/30">
+                  <span className="text-xs font-mono font-semibold text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded border border-border/30">
                     {task.code}
                   </span>
                   <span
                     className={cn(
-                      "text-[10px] font-medium px-1.5 py-0.5 rounded border",
+                      "text-xs font-medium px-1.5 py-0.5 rounded border",
                       priorityStyle,
                     )}
                   >
@@ -592,17 +592,17 @@ function TaskResults({
                   {task.title}
                 </p>
                 <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-                  <span className="text-[10px] text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
+                  <span className="text-xs text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
                     {statusLabel}
                   </span>
                   {unitName && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Building2 size={10} strokeWidth={1.5} />
                       {unitName}
                     </span>
                   )}
                   {task.dueDate && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground tabular-nums">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
                       <CalendarDays size={10} strokeWidth={1.5} />
                       {formatDate(task.dueDate)}
                     </span>
@@ -671,7 +671,7 @@ function DocumentResults({
               {/* Content */}
               <div className="flex-1 min-w-0">
                 {number && (
-                  <span className="inline-block text-[10px] font-mono font-semibold text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded border border-border/30 mb-0.5">
+                  <span className="inline-block text-xs font-mono font-semibold text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded border border-border/30 mb-0.5">
                     {number}
                   </span>
                 )}
@@ -680,23 +680,23 @@ function DocumentResults({
                 </p>
                 <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
                   {doc.type && (
-                    <span className="text-[10px] text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
                       {doc.type}
                     </span>
                   )}
                   {statusLabel && (
-                    <span className="text-[10px] text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
                       {statusLabel}
                     </span>
                   )}
                   {doc.issuingAuthority && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Building2 size={10} strokeWidth={1.5} />
                       {doc.issuingAuthority}
                     </span>
                   )}
                   {doc.issuedDate && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground tabular-nums">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
                       <CalendarDays size={10} strokeWidth={1.5} />
                       {formatDate(doc.issuedDate)}
                     </span>
@@ -762,12 +762,12 @@ function UserResults({
                 </p>
                 <div className="flex items-center gap-2.5 mt-1 flex-wrap">
                   {user.title && (
-                    <span className="text-[10px] text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-muted-foreground/70 bg-muted/40 px-1.5 py-0.5 rounded">
                       {user.title}
                     </span>
                   )}
                   {user.department?.name && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Building2 size={10} strokeWidth={1.5} />
                       {user.department.shortName ?? user.department.name}
                     </span>
@@ -775,13 +775,13 @@ function UserResults({
                 </div>
                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                   {user.email && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Mail size={10} strokeWidth={1.5} />
                       {user.email}
                     </span>
                   )}
                   {user.phone && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground tabular-nums">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
                       <Phone size={10} strokeWidth={1.5} />
                       {user.phone}
                     </span>

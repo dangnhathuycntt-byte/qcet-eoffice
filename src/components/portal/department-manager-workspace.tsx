@@ -43,6 +43,7 @@ import {
 } from "./lecturer-focus-workspace";
 import { UnifiedAdaptiveWorkspace } from "@/components/workspace/unified-adaptive-workspace";
 import { DepartmentAttentionHub } from "@/components/workspace";
+import { Pressable } from "@/components/ui/pressable";
 export { DepartmentAttentionHub };
 
 // ============================================================================
@@ -646,7 +647,7 @@ export function LegacyDepartmentManagerWorkspace({
           className={cn(
             "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "UNIT_PROGRESS" && unitFilter === "ALL"
-              ? "border-amber-500/50 bg-amber-500/10 shadow-xs ring-1 ring-amber-500/30"
+              ? "border-warning/50 bg-warning/10 shadow-xs ring-1 ring-warning/30"
               : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
           )}
         >
@@ -654,7 +655,7 @@ export function LegacyDepartmentManagerWorkspace({
             <span className="text-xs font-bold text-muted-foreground">
               Đơn vị đang chạy
             </span>
-            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600">
+            <div className="p-1.5 rounded-lg bg-warning/20 text-warning">
               <Building2 className="w-4 h-4" />
             </div>
           </div>
@@ -719,7 +720,7 @@ export function LegacyDepartmentManagerWorkspace({
           aria-label="Xem tiến độ đơn vị và lọc các nhiệm vụ trễ hạn"
           className={cn(
             "flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
-            metrics.overdueCount > 0 && "cursor-pointer hover:border-rose-500/40 hover:bg-rose-500/5"
+            metrics.overdueCount > 0 && "cursor-pointer hover:border-destructive/40 hover:bg-destructive/5"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
@@ -737,7 +738,7 @@ export function LegacyDepartmentManagerWorkspace({
               </span>
               {metrics.overdueCount > 0 && (
                 <span
-                  className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 px-1.5 py-0.5 rounded-md"
                   title="Click để lọc các nhiệm vụ đang chậm tiến độ"
                 >
                   <AlertTriangle className="w-3 h-3 shrink-0" />
@@ -847,13 +848,13 @@ export function LegacyDepartmentManagerWorkspace({
             className="w-full min-h-[44px] sm:h-8 pl-8 pr-3 text-xs bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
           />
           {searchTerm && (
-            <button
+            <Pressable
               type="button"
               onClick={() => setSearchTerm("")}
               className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
             >
               <X className="w-3.5 h-3.5" />
-            </button>
+            </Pressable>
           )}
         </div>
       </div>
@@ -926,9 +927,9 @@ export function LegacyDepartmentManagerWorkspace({
                           className={cn(
                             "text-xs font-medium",
                             deadline.variant === "urgent" &&
-                              "bg-rose-500/10 text-rose-700 border-rose-500/30",
+                              "bg-destructive/10 text-destructive border-destructive/30",
                             deadline.variant === "warning" &&
-                              "bg-amber-500/10 text-amber-700 border-amber-500/30",
+                              "bg-warning/10 text-warning border-warning/30",
                             deadline.variant === "neutral" &&
                               "bg-muted text-muted-foreground border-border"
                           )}
@@ -944,9 +945,9 @@ export function LegacyDepartmentManagerWorkspace({
                               task.aiReview.status === "CLEAN" &&
                                 "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
                               task.aiReview.status === "NEEDS_ATTENTION" &&
-                                "bg-amber-500/10 text-amber-700 border-amber-500/30",
+                                "bg-warning/10 text-warning border-warning/30",
                               task.aiReview.status === "HIGH_RISK" &&
-                                "bg-rose-500/10 text-rose-700 border-rose-500/30"
+                                "bg-destructive/10 text-destructive border-destructive/30"
                             )}
                           >
                             <ShieldCheck className="w-3 h-3 mr-1 inline" />
@@ -1073,9 +1074,9 @@ export function LegacyDepartmentManagerWorkspace({
                             className={cn(
                               "text-xs",
                               deadline.variant === "urgent" &&
-                                "bg-rose-500/10 text-rose-700 border-rose-500/30",
+                                "bg-destructive/10 text-destructive border-destructive/30",
                               deadline.variant === "warning" &&
-                                "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                                "bg-warning/10 text-warning border-warning/30"
                             )}
                           >
                             <Clock className="w-3 h-3 mr-1 inline" />
@@ -1105,7 +1106,7 @@ export function LegacyDepartmentManagerWorkspace({
                                 st.progressPercent >= 80
                                   ? "bg-emerald-500"
                                   : st.progressPercent >= 50
-                                  ? "bg-amber-500"
+                                  ? "bg-warning"
                                   : "bg-blue-500"
                               )}
                               style={{ width: `${st.progressPercent}%` }}
@@ -1171,7 +1172,7 @@ export function LegacyDepartmentManagerWorkspace({
                   { id: "OVERDUE", label: "Trễ hạn" },
                   { id: "COMPLETED", label: "Hoàn thành" },
                 ].map((tab) => (
-                  <button
+                  <Pressable
                     key={tab.id}
                     type="button"
                     onClick={() => setUnitFilter(tab.id)}
@@ -1183,7 +1184,7 @@ export function LegacyDepartmentManagerWorkspace({
                     )}
                   >
                     {tab.label}
-                  </button>
+                  </Pressable>
                 ))}
               </div>
             </div>
@@ -1212,9 +1213,9 @@ export function LegacyDepartmentManagerWorkspace({
                             className={cn(
                               "text-xs",
                               deadline.variant === "urgent" &&
-                                "bg-rose-500/10 text-rose-700 border-rose-500/30",
+                                "bg-destructive/10 text-destructive border-destructive/30",
                               deadline.variant === "warning" &&
-                                "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                                "bg-warning/10 text-warning border-warning/30"
                             )}
                           >
                             {deadline.label}
@@ -1312,7 +1313,7 @@ export function LegacyDepartmentManagerWorkspace({
                 { id: "NEEDS_REVIEW", label: "Chờ thẩm định" },
                 { id: "COMPLETED", label: "Hoàn thành" },
               ].map((tab) => (
-                <button
+                <Pressable
                   key={tab.id}
                   type="button"
                   onClick={() => setMyTasksFilter(tab.id)}
@@ -1324,22 +1325,22 @@ export function LegacyDepartmentManagerWorkspace({
                   )}
                 >
                   {tab.label}
-                </button>
+                </Pressable>
               ))}
             </div>
           </div>
 
           {/* Revision Banner if any of manager's tasks require revision */}
           {revisionNeededTasks.length > 0 && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-amber-700 font-semibold text-xs">
+            <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-warning font-semibold text-xs">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>Yêu cầu chỉnh sửa từ Lãnh đạo cấp trên</span>
               </div>
               {revisionNeededTasks.map((t) => (
                 <div
                   key={t.id}
-                  className="text-xs text-foreground/90 pl-6 border-l-2 border-amber-500/50"
+                  className="text-xs text-foreground/90 pl-6 border-l-2 border-warning/50"
                 >
                   <p className="font-medium">{t.title}</p>
                   <p className="text-muted-foreground text-xs mt-0.5">
@@ -1382,9 +1383,9 @@ export function LegacyDepartmentManagerWorkspace({
                           className={cn(
                             "text-xs",
                             deadline.variant === "urgent" &&
-                              "bg-rose-500/10 text-rose-700 border-rose-500/30",
+                              "bg-destructive/10 text-destructive border-destructive/30",
                             deadline.variant === "warning" &&
-                              "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                              "bg-warning/10 text-warning border-warning/30"
                           )}
                         >
                           <Clock className="w-3 h-3 mr-1 inline" />

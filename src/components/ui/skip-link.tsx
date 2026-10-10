@@ -24,7 +24,7 @@ export function SkipLink({
       className={cn(
         "sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50",
         "inline-flex h-9 items-center justify-center rounded-xl bg-foreground px-4 text-xs sm:text-sm font-medium text-background",
-        "shadow-dialog border-0 outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 transition-colors duration-100 cursor-pointer",
+        "shadow-dialog border-0 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 transition-colors duration-100 cursor-pointer",
         className
       )}
       {...props}

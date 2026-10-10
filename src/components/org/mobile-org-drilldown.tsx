@@ -23,6 +23,7 @@ import {
   filterStaffMembers,
 } from "@/components/org/organization-tree";
 import { useOrgDepartments } from "@/hooks/use-org-departments";
+import { Pressable } from "@/components/ui/pressable";
 
 export type MobileOrgLevel = "root" | "group" | "dept";
 
@@ -256,14 +257,14 @@ export function MobileOrgDrillDown({
           className="w-full h-11 pl-10 pr-9 rounded-xl border border-border/80 bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-ring transition-colors shadow-2xs"
         />
         {isSearching && (
-          <button
+          <Pressable
             type="button"
             onClick={() => setSearchQuery("")}
             className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer"
             aria-label="Xóa tìm kiếm"
           >
             <X size={15} strokeWidth={1.5} />
-          </button>
+          </Pressable>
         )}
       </div>
 
@@ -272,13 +273,13 @@ export function MobileOrgDrillDown({
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
             <span>Kết quả tìm kiếm ({searchResults.length})</span>
-            <button
+            <Pressable
               type="button"
               onClick={() => setSearchQuery("")}
               className="text-primary hover:underline cursor-pointer"
             >
               Đóng tìm kiếm
-            </button>
+            </Pressable>
           </div>
           {searchResults.length === 0 ? (
             <div className="py-12 text-center rounded-2xl border border-dashed border-border/80 bg-card p-6">
@@ -309,7 +310,7 @@ export function MobileOrgDrillDown({
           {/* ================================================================= */}
           {currentLevel !== "root" && (
             <div className="flex items-center gap-2">
-              <button
+              <Pressable
                 type="button"
                 onClick={handleBack}
                 className="inline-flex items-center gap-2 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all touch-manipulation cursor-pointer shadow-2xs"
@@ -324,7 +325,7 @@ export function MobileOrgDrillDown({
                       : "Cơ cấu trường"}
                   </span>
                 </span>
-              </button>
+              </Pressable>
             </div>
           )}
 
@@ -343,7 +344,7 @@ export function MobileOrgDrillDown({
                 {orgGroups.map((grp) => {
                   const IconComp = grp.icon;
                   return (
-                    <button
+                    <Pressable
                       key={grp.category}
                       type="button"
                       onClick={() => handleSelectGroup(grp.category)}
@@ -366,7 +367,7 @@ export function MobileOrgDrillDown({
                       <div className="size-7 rounded-lg bg-muted/60 flex items-center justify-center text-muted-foreground shrink-0 group-hover:text-foreground">
                         <ChevronRight size={16} strokeWidth={1.5} />
                       </div>
-                    </button>
+                    </Pressable>
                   );
                 })}
               </div>
@@ -386,7 +387,7 @@ export function MobileOrgDrillDown({
 
               <div className="space-y-2">
                 {groupDepartments.map((dept) => (
-                  <button
+                  <Pressable
                     key={dept.id}
                     type="button"
                     onClick={() => handleSelectDepartment(dept)}
@@ -398,7 +399,7 @@ export function MobileOrgDrillDown({
                         <span className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                           {dept.name}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded-md text-[11px] font-mono tabular-nums font-semibold bg-muted text-muted-foreground border border-border/70">
+                        <span className="px-1.5 py-0.5 rounded-md text-xs font-mono tabular-nums font-semibold bg-muted text-muted-foreground border border-border/70">
                           {dept.code}
                         </span>
                       </div>
@@ -415,7 +416,7 @@ export function MobileOrgDrillDown({
                     <div className="size-7 rounded-lg bg-muted/60 flex items-center justify-center text-muted-foreground shrink-0 group-hover:text-foreground">
                       <ChevronRight size={16} strokeWidth={1.5} />
                     </div>
-                  </button>
+                  </Pressable>
                 ))}
               </div>
             </div>
@@ -528,14 +529,14 @@ export function MobileOrgDrillDown({
                   </div>
                 </div>
               </div>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setActiveStaffModal(null)}
                 className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer"
                 aria-label="Đóng"
               >
                 <X size={18} strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </div>
 
             {/* Attendance status */}
@@ -634,12 +635,12 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
                 {staff.titlePrefix} {staff.name}
               </span>
               {isLeader && (
-                <span className="px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold bg-muted text-foreground/90 border border-border/80">
+                <span className="px-1.5 py-0.5 rounded-md text-xs font-semibold bg-muted text-foreground/90 border border-border/80">
                   Trưởng đơn vị
                 </span>
               )}
               {isDeputy && (
-                <span className="px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold bg-muted text-foreground/80 border border-border/80">
+                <span className="px-1.5 py-0.5 rounded-md text-xs font-semibold bg-muted text-foreground/80 border border-border/80">
                   Phó đơn vị
                 </span>
               )}
@@ -661,7 +662,7 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
               staff.status === "ACTIVE"
                 ? "bg-emerald-500"
                 : staff.status === "ON_LEAVE"
-                ? "bg-amber-500"
+                ? "bg-warning"
                 : "bg-slate-400"
             )}
             title={staff.status}

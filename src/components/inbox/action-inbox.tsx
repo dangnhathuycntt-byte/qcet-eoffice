@@ -16,6 +16,7 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export type ResourceType = "TASK" | "DOCUMENT" | "REPORT";
 export type PriorityLevel = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
@@ -90,8 +91,8 @@ export function ActionInbox({
           </div>
 
           {urgentCount > 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 text-xs font-medium">
-              <AlertCircle size={16} strokeWidth={1.5} className="text-amber-600 shrink-0" />
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-warning/10 border border-warning/30 text-warning text-xs font-medium">
+              <AlertCircle size={16} strokeWidth={1.5} className="text-warning shrink-0" />
               <span>{urgentCount} việc ưu tiên cao cần xử lý</span>
             </div>
           )}
@@ -104,52 +105,52 @@ export function ActionInbox({
             aria-label="Lọc theo loại tài nguyên"
             className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
           >
-            <button
+            <Pressable
               type="button"
               onClick={() => setFilterType("ALL")}
               aria-pressed={filterType === "ALL"}
               className={cn(
-                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                 filterType === "ALL"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
               <span>Tất cả</span>
-              <span className="font-mono tabular-nums text-[10.5px] opacity-75">({items.length})</span>
-            </button>
-            <button
+              <span className="font-mono tabular-nums text-xs opacity-75">({items.length})</span>
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => setFilterType("TASK")}
               aria-pressed={filterType === "TASK"}
               className={cn(
-                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                 filterType === "TASK"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
               <span>Nhiệm vụ</span>
-              <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+              <span className="font-mono tabular-nums text-xs opacity-75">
                 ({items.filter((i) => i.resourceType === "TASK").length})
               </span>
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => setFilterType("DOCUMENT")}
               aria-pressed={filterType === "DOCUMENT"}
               className={cn(
-                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                 filterType === "DOCUMENT"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
               <span>Văn bản</span>
-              <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+              <span className="font-mono tabular-nums text-xs opacity-75">
                 ({items.filter((i) => i.resourceType === "DOCUMENT").length})
               </span>
-            </button>
+            </Pressable>
           </div>
 
           <div className="ml-auto relative w-full sm:w-60">
@@ -160,7 +161,7 @@ export function ActionInbox({
               aria-label="Tìm theo tiêu đề hoặc thẩm quyền"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-7 pl-8 pr-2.5 text-[11px] rounded-md border border-border/80 bg-background placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              className="w-full h-7 pl-8 pr-2.5 text-xs rounded-md border border-border/80 bg-background placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
             />
           </div>
         </div>
@@ -238,7 +239,7 @@ function ActionInboxRow({
             <span
               className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${
                 isUrgent
-                  ? "bg-rose-500/10 text-rose-700 border border-rose-500/30"
+                  ? "bg-destructive/10 text-destructive border border-destructive/30"
                   : "bg-muted text-muted-foreground"
               }`}
             >
@@ -271,7 +272,7 @@ function ActionInboxRow({
         <Link
           href={item.href}
           onClick={() => onSelect?.(item)}
-          className="h-7 px-3 inline-flex items-center justify-center gap-1.5 rounded-md text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-[0.98] shrink-0"
+          className="h-7 px-3 inline-flex items-center justify-center gap-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-[0.98] shrink-0"
         >
           <span>Xử lý ngay</span>
           <ArrowUpRight size={13} strokeWidth={1.5} />

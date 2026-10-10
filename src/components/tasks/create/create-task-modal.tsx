@@ -27,6 +27,7 @@ import {
   useCreateTaskForm,
   type CreateTaskPriority,
 } from "@/hooks/use-create-task-form";
+import { Pressable } from "@/components/ui/pressable";
 
 // Re-export types for downstream consumers
 export type { CreateTaskPriority } from "@/hooks/use-create-task-form";
@@ -266,7 +267,7 @@ export function CreateTaskModal({
                               aria-label="Chọn đơn vị phòng ban"
                             >
                               {form.availableDepartments.map((dept) => (
-                                <button
+                                <Pressable
                                   key={dept.code}
                                   type="button"
                                   onClick={() => {
@@ -285,7 +286,7 @@ export function CreateTaskModal({
                                   {form.formData.selectedDeptCode === dept.code && (
                                     <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
                                   )}
-                                </button>
+                                </Pressable>
                               ))}
                             </Popover.Popup>
                           </Popover.Positioner>
@@ -333,13 +334,13 @@ export function CreateTaskModal({
                     <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
                     <span>Đã tự động khôi phục bản nháp chưa lưu từ phiên làm việc trước.</span>
                   </div>
-                  <button
+                  <Pressable
                     type="button"
                     onClick={form.handleClearDraft}
                     className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2 cursor-pointer"
                   >
                     Xóa bản nháp
-                  </button>
+                  </Pressable>
                 </div>
               )}
 
@@ -474,7 +475,7 @@ export function CreateTaskModal({
                           aria-label="Chọn mức độ ưu tiên"
                         >
                           {PRIORITY_KEYS.map((p) => (
-                            <button
+                            <Pressable
                               key={p}
                               type="button"
                               onClick={() => {
@@ -495,7 +496,7 @@ export function CreateTaskModal({
                               {form.formData.priority === p && (
                                 <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
                               )}
-                            </button>
+                            </Pressable>
                           ))}
                         </Popover.Popup>
                       </Popover.Positioner>
@@ -575,7 +576,7 @@ export function CreateTaskModal({
                                   );
                                 }
                                 return list.map((person) => (
-                                  <button
+                                  <Pressable
                                     key={person.id}
                                     type="button"
                                     onClick={() => {
@@ -600,7 +601,7 @@ export function CreateTaskModal({
                                     {form.formData.leadAssigneeId === person.id && (
                                       <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
                                     )}
-                                  </button>
+                                  </Pressable>
                                 ));
                               })()
                             )}
@@ -653,7 +654,7 @@ export function CreateTaskModal({
               <footer className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-t border-border/60 bg-muted/20 shrink-0">
                 {/* Chỉ nút chính; đóng bằng Esc hoặc nhấn ra ngoài */}
                 <div className="flex items-center gap-2 ml-auto">
-                  <button
+                  <Pressable
                     type="button"
                     onClick={handleFormSubmit}
                     disabled={form.isSubmitting || !form.formData.title.trim()}
@@ -675,7 +676,7 @@ export function CreateTaskModal({
                         </kbd>
                       </>
                     )}
-                  </button>
+                  </Pressable>
 
                 </div>
               </footer>

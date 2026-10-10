@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZES } from "../constants";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskPaginationBarProps {
   currentPage: number;
@@ -187,7 +188,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
               {effectivePageSizeOptions.map((size) => {
                 const isSelected = size === pageSize;
                 return (
-                  <button
+                  <Pressable
                     key={size}
                     type="button"
                     role="option"
@@ -205,7 +206,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                   >
                     <span>{size} / trang</span>
                     {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={2} />}
-                  </button>
+                  </Pressable>
                 );
               })}
             </Popover.Popup>
@@ -236,7 +237,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
       {/* Right section: Page navigation buttons & optional shortcut trigger */}
       <div className="flex items-center gap-1">
         {/* First Page Button */}
-        <button
+        <Pressable
           type="button"
           onClick={handleFirst}
           disabled={disabled || safeCurrentPage <= 1}
@@ -245,10 +246,10 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           aria-label="Về trang đầu"
         >
           <ChevronsLeft className="size-3.5" strokeWidth={1.5} />
-        </button>
+        </Pressable>
 
         {/* Previous Page Button */}
-        <button
+        <Pressable
           type="button"
           onClick={handlePrevious}
           disabled={disabled || safeCurrentPage <= 1}
@@ -257,7 +258,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           aria-label="Sang trang trước"
         >
           <ChevronLeft className="size-3.5" strokeWidth={1.5} />
-        </button>
+        </Pressable>
 
         {/* Numeric Page Buttons */}
         <div className="flex items-center gap-1 mx-0.5">
@@ -276,7 +277,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
 
             const isCurrent = p === safeCurrentPage;
             return (
-              <button
+              <Pressable
                 key={p}
                 type="button"
                 onClick={() => !disabled && onPageChange(p)}
@@ -291,13 +292,13 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                 aria-label={`Trang ${p}`}
               >
                 {p}
-              </button>
+              </Pressable>
             );
           })}
         </div>
 
         {/* Next Page Button */}
-        <button
+        <Pressable
           type="button"
           onClick={handleNext}
           disabled={disabled || safeCurrentPage >= totalPages}
@@ -306,10 +307,10 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           aria-label="Sang trang sau"
         >
           <ChevronRight className="size-3.5" strokeWidth={1.5} />
-        </button>
+        </Pressable>
 
         {/* Last Page Button */}
-        <button
+        <Pressable
           type="button"
           onClick={handleLast}
           disabled={disabled || safeCurrentPage >= totalPages}
@@ -318,7 +319,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           aria-label="Về trang cuối"
         >
           <ChevronsRight className="size-3.5" strokeWidth={1.5} />
-        </button>
+        </Pressable>
       </div>
     </nav>
   );

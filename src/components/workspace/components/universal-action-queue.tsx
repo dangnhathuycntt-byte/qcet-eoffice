@@ -20,6 +20,7 @@ import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/type
 import type { UniversalActionQueueItems, WorkspaceScope } from "../types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface ActionQueueButtonMeta {
   label: string;
@@ -40,7 +41,7 @@ export function getActionQueueButtonMeta(
           icon: CheckCheck,
           variant: "outline",
           btnClass:
-            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
+            "border-warning/30 text-warning bg-warning/10 hover:bg-warning/20",
         };
       case "unit":
         return {
@@ -48,7 +49,7 @@ export function getActionQueueButtonMeta(
           icon: CheckCircle2,
           variant: "outline",
           btnClass:
-            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
+            "border-warning/30 text-warning bg-warning/10 hover:bg-warning/20",
         };
       case "my":
       default:
@@ -57,7 +58,7 @@ export function getActionQueueButtonMeta(
           icon: FileCheck,
           variant: "outline",
           btnClass:
-            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
+            "border-warning/30 text-warning bg-warning/10 hover:bg-warning/20",
         };
     }
   }
@@ -146,20 +147,20 @@ export function UniversalActionQueue({
         <div
           role="alert"
           aria-live="polite"
-          className="flex items-center justify-between text-xs text-rose-600 bg-rose-50/60 rounded px-2.5 py-1.5"
+          className="flex items-center justify-between text-xs text-destructive bg-danger-soft/60 rounded px-2.5 py-1.5"
         >
           <div className="flex items-center gap-1.5 font-medium">
-            <AlertTriangle className="size-3.5 shrink-0 text-rose-500" strokeWidth={1.5} />
+            <AlertTriangle className="size-3.5 shrink-0 text-destructive" strokeWidth={1.5} />
             <span>Có <span className="font-mono font-semibold tabular-nums">{totalOverdue}</span> tác vụ trễ hạn cần ưu tiên xử lý.</span>
           </div>
           {onFilterCanvas && (
-            <button
+            <Pressable
               type="button"
               onClick={() => onFilterCanvas("overdue")}
-              className="text-[11px] font-medium text-rose-700 hover:underline cursor-pointer"
+              className="text-xs font-medium text-destructive hover:underline cursor-pointer"
             >
               Xem trên bảng
-            </button>
+            </Pressable>
           )}
         </div>
       )}
@@ -179,13 +180,13 @@ export function UniversalActionQueue({
               </span>
             </span>
             {onFilterCanvas && (
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onFilterCanvas("approvals")}
-                className="text-[11px] text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 Lọc trên bảng
-              </button>
+              </Pressable>
             )}
           </div>
 
@@ -220,9 +221,9 @@ export function UniversalActionQueue({
                 >
                   <div className="min-w-0 flex-1 space-y-0.5">
                     {parentTitle && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 truncate">
+                      <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
                         <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
-                        <button
+                        <Pressable
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -235,20 +236,20 @@ export function UniversalActionQueue({
                           className="hover:text-slate-700 truncate text-left cursor-pointer"
                         >
                           {parentCode ? `[${parentCode}] ` : ""}{parentTitle}
-                        </button>
+                        </Pressable>
                       </div>
                     )}
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => onSelectTask(item.task)}
                       className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block cursor-pointer"
                     >
                       {item.task.title}
-                    </button>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 truncate">
+                    </Pressable>
+                    <div className="flex items-center gap-2 text-xs text-slate-400 truncate">
                       <span>{item.submittedBy || "Cán bộ chuyên trách"}</span>
                       {item.task.dueDate && (
-                        <span className={cn(isItemOverdue ? "text-rose-600 font-medium" : "text-slate-400")}>
+                        <span className={cn(isItemOverdue ? "text-destructive font-medium" : "text-slate-400")}>
                           • Hạn: {item.task.dueDate}
                         </span>
                       )}
@@ -259,11 +260,11 @@ export function UniversalActionQueue({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/60">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-warning/10 text-warning border border-warning/20">
                       Cần duyệt
                     </span>
                     {isItemOverdue && onRemindDRI && (
-                      <button
+                      <Pressable
                         type="button"
                         onClick={() =>
                           onRemindDRI(
@@ -271,27 +272,27 @@ export function UniversalActionQueue({
                             item.submittedBy || (item.task as any).assignedTo || ""
                           )
                         }
-                        className="min-h-[30px] h-7 px-2 text-[11px] font-medium rounded text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
+                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-destructive bg-danger-soft hover:bg-destructive/15 transition-colors cursor-pointer"
                         title="Đôn đốc tiến độ thực hiện nhiệm vụ"
                       >
                         Đôn đốc DRI
-                      </button>
+                      </Pressable>
                     )}
 
                     {scope === "unit" && onCreateSubtask && (
-                      <button
+                      <Pressable
                         type="button"
                         onClick={() => onCreateSubtask(item.task.id)}
-                        className="min-h-[30px] h-7 px-2 text-[11px] font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
                         title="Phân rã nhiệm vụ cho chuyên viên"
                       >
                         Phân công
-                      </button>
+                      </Pressable>
                     )}
 
-                    <button
+                    <Pressable
                       type="button"
-                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
+                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-warning bg-warning/10 hover:bg-warning/15 transition-colors cursor-pointer"
                       onClick={() => {
                         if (onOpenReview) {
                           onOpenReview(item.task);
@@ -301,7 +302,7 @@ export function UniversalActionQueue({
                       }}
                     >
                       {approvalConfig.label}
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
               );
@@ -309,16 +310,16 @@ export function UniversalActionQueue({
           </div>
 
           {pendingApprovals.length > 3 && (
-            <button
+            <Pressable
               type="button"
               aria-expanded={isApprovalsExpanded}
-              className="w-full py-1.5 text-[11px] text-slate-500 hover:text-slate-800 text-center cursor-pointer"
+              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center cursor-pointer"
               onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
             >
               {isApprovalsExpanded
                 ? "Thu gọn"
                 : `Xem thêm (${pendingApprovals.length - 3})`}
-            </button>
+            </Pressable>
           )}
         </div>
       )}
@@ -334,13 +335,13 @@ export function UniversalActionQueue({
               </span>
             </span>
             {onFilterCanvas && (
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onFilterCanvas("submissions")}
-                className="text-[11px] text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 Xem trên bảng
-              </button>
+              </Pressable>
             )}
           </div>
 
@@ -369,9 +370,9 @@ export function UniversalActionQueue({
                 >
                   <div className="min-w-0 flex-1 space-y-0.5">
                     {parentTitle && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 truncate">
+                      <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
                         <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
-                        <button
+                        <Pressable
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -384,19 +385,19 @@ export function UniversalActionQueue({
                           className="hover:text-slate-700 truncate text-left cursor-pointer"
                         >
                           {parentCode ? `[${parentCode}] ` : ""}{parentTitle}
-                        </button>
+                        </Pressable>
                       </div>
                     )}
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => onSelectTask(item.task)}
                       className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block cursor-pointer"
                     >
                       {item.task.title}
-                    </button>
-                    <div className="text-[11px] text-slate-400 truncate">
+                    </Pressable>
+                    <div className="text-xs text-slate-400 truncate">
                       {item.isOverdue ? (
-                        <span className="text-rose-600 font-medium">
+                        <span className="text-destructive font-medium">
                           Trễ hạn: {item.dueDate}
                         </span>
                       ) : (
@@ -406,10 +407,10 @@ export function UniversalActionQueue({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-800 border border-blue-200/60">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200/60">
                       Chờ nộp BC
                     </span>
-                    <button
+                    <Pressable
                       type="button"
                       className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
                       onClick={() => {
@@ -439,7 +440,7 @@ export function UniversalActionQueue({
                       }}
                     >
                       Nộp minh chứng
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
               );
@@ -447,16 +448,16 @@ export function UniversalActionQueue({
           </div>
 
           {myPendingSubmissions.length > 3 && (
-            <button
+            <Pressable
               type="button"
               aria-expanded={isSubmissionsExpanded}
-              className="w-full py-1.5 text-[11px] text-slate-500 hover:text-slate-800 text-center cursor-pointer"
+              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center cursor-pointer"
               onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
             >
               {isSubmissionsExpanded
                 ? "Thu gọn"
                 : `Xem thêm (${myPendingSubmissions.length - 3})`}
-            </button>
+            </Pressable>
           )}
         </div>
       )}

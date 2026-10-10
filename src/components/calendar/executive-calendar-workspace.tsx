@@ -33,6 +33,7 @@ import {
   type WorkItemType,
   type WorkCalendarFilters,
 } from "@/lib/work-calendar-adapter";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface CalendarTimeEvent {
   id: string;
@@ -186,7 +187,7 @@ export function getSemanticEventStyle(type?: string): string {
       return "bg-emerald-500/10 text-emerald-700 border-emerald-500/20";
     case "urgent_overdue":
     case "urgent":
-      return "bg-rose-500/10 text-rose-700 border-rose-500/20";
+      return "bg-destructive/10 text-destructive border-destructive/20";
     case "internal":
       return "bg-zinc-500/10 text-zinc-700 border-zinc-500/20";
     default:
@@ -311,7 +312,7 @@ export function WorkCalendarCard({
     badgeStyle = "bg-emerald-500/10 text-emerald-700 border-emerald-500/20";
   } else if (type === "urgent_overdue" || isOverdue) {
     badgeLabel = "Trễ hạn";
-    badgeStyle = "bg-rose-500/10 text-rose-700 border-rose-500/20";
+    badgeStyle = "bg-destructive/10 text-destructive border-destructive/20";
   } else if (type === "meeting") {
     badgeLabel = "Lịch họp BGH";
     badgeStyle = "bg-blue-500/10 text-blue-700 border-blue-500/20";
@@ -329,7 +330,7 @@ export function WorkCalendarCard({
         }}
         className={cn(
           "h-full rounded-lg border p-1.5 overflow-hidden cursor-pointer transition-all shadow-2xs hover:shadow-xs hover:border-primary/50 text-xs select-none bg-card flex flex-col justify-between",
-          isOverdue ? "border-rose-300 bg-rose-50/50" : "border-border/70",
+          isOverdue ? "border-destructive/40 bg-danger-soft/50" : "border-border/70",
           className
         )}
       >
@@ -375,7 +376,7 @@ export function WorkCalendarCard({
                   progressPercent === 100
                     ? "bg-emerald-500"
                     : isOverdue
-                    ? "bg-rose-500"
+                    ? "bg-destructive"
                     : "bg-primary"
                 )}
                 style={{ width: `${Math.min(100, Math.max(0, progressPercent ?? 0))}%` }}
@@ -395,7 +396,7 @@ export function WorkCalendarCard({
       }}
       className={cn(
         "rounded-xl border p-3.5 cursor-pointer transition-all shadow-2xs hover:shadow-xs hover:border-primary/40 bg-card space-y-2.5",
-        isOverdue ? "border-rose-200 bg-rose-50/20" : "border-border/70",
+        isOverdue ? "border-destructive/30 bg-danger-soft/20" : "border-border/70",
         className
       )}
     >
@@ -416,7 +417,7 @@ export function WorkCalendarCard({
           )}
         </div>
         {isOverdue && daysOverdue && daysOverdue > 0 && (
-          <span className="font-mono tabular-nums text-xs font-bold text-rose-700 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md">
+          <span className="font-mono tabular-nums text-xs font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-md">
             Trễ {daysOverdue} ngày
           </span>
         )}
@@ -452,7 +453,7 @@ export function WorkCalendarCard({
                 progressPercent === 100
                   ? "bg-emerald-500"
                   : isOverdue
-                  ? "bg-rose-500"
+                  ? "bg-destructive"
                   : "bg-primary"
               )}
               style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
@@ -487,19 +488,19 @@ export function PriorOverdueBacklogBanner({
   return (
     <div
       className={cn(
-        "rounded-xl border border-rose-200 bg-rose-50/70 p-3.5 text-rose-800 shadow-2xs space-y-2.5",
+        "rounded-xl border border-destructive/30 bg-danger-soft/70 p-3.5 text-destructive shadow-2xs space-y-2.5",
         className
       )}
       data-slot="prior-overdue-backlog-banner"
     >
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="size-4 text-rose-600 shrink-0" strokeWidth={1.5} />
+          <AlertTriangle className="size-4 text-destructive shrink-0" strokeWidth={1.5} />
           <span className="font-semibold text-xs sm:text-sm">
             Công việc trễ hạn tồn đọng ({overdueItems.length} nhiệm vụ cần xử lý gấp)
           </span>
         </div>
-        <span className="text-xs font-medium text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200">
+        <span className="text-xs font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-md border border-destructive/30">
           Ưu tiên xử lý
         </span>
       </div>
@@ -509,13 +510,13 @@ export function PriorOverdueBacklogBanner({
           <div
             key={item.id}
             onClick={() => handleSelect?.(item)}
-            className="flex items-center justify-between gap-2 rounded-lg border border-rose-200 bg-white/80 p-2 text-xs shadow-2xs hover:bg-white hover:border-rose-300 cursor-pointer transition-all"
+            className="flex items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-white/80 p-2 text-xs shadow-2xs hover:bg-white hover:border-destructive/40 cursor-pointer transition-all"
             title={`Xem nhiệm vụ: ${item.title}`}
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 {item.code && (
-                  <span className="font-mono text-xs font-bold text-rose-700 bg-rose-100/60 px-1.5 py-0.5 rounded">
+                  <span className="font-mono text-xs font-bold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
                     {item.code}
                   </span>
                 )}
@@ -528,14 +529,14 @@ export function PriorOverdueBacklogBanner({
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0 gap-1">
-              <span className="font-mono text-xs font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+              <span className="font-mono text-xs font-bold text-destructive bg-destructive/15 px-2 py-0.5 rounded-full whitespace-nowrap">
                 Trễ {item.daysOverdue || 1} ngày
               </span>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-5 px-2 text-xs text-rose-700 hover:bg-rose-100 rounded"
+                className="h-5 px-2 text-xs text-destructive hover:bg-destructive/15 rounded"
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectWorkItem?.(item);
@@ -838,13 +839,13 @@ export function ExecutiveCalendarWorkspace({
               { id: "week_grid", label: "Tuần", icon: LayoutGrid },
               { id: "agenda_list", label: "Lịch trình", icon: List },
             ].map(({ id, label, icon: Icon }) => (
-              <button
+              <Pressable
                 key={id}
                 type="button"
                 onClick={() => setViewMode(id as any)}
                 aria-pressed={viewMode === id}
                 className={cn(
-                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
                   viewMode === id
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -852,7 +853,7 @@ export function ExecutiveCalendarWorkspace({
               >
                 <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
                 <span>{label}</span>
-              </button>
+              </Pressable>
             ))}
           </div>
 
@@ -883,14 +884,14 @@ export function ExecutiveCalendarWorkspace({
             className="h-7 w-full rounded-md border border-border/80 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {searchQuery && (
-            <button
+            <Pressable
               type="button"
               onClick={() => setSearchQuery("")}
               className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
               aria-label="Xóa tìm kiếm"
             >
               <X className="size-3" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -918,7 +919,7 @@ export function ExecutiveCalendarWorkspace({
             { id: "deliverable", label: "Sản phẩm DACUM" },
             { id: "subtask", label: "Việc đơn vị" },
           ].map((typeOpt) => (
-            <button
+            <Pressable
               key={typeOpt.id}
               type="button"
               onClick={() => setSelectedItemType(typeOpt.id)}
@@ -930,7 +931,7 @@ export function ExecutiveCalendarWorkspace({
               )}
             >
               {typeOpt.label}
-            </button>
+            </Pressable>
           ))}
         </div>
 
@@ -942,7 +943,7 @@ export function ExecutiveCalendarWorkspace({
             { id: "OVERDUE", label: "Trễ hạn" },
             { id: "COMPLETED", label: "Hoàn thành" },
           ].map((st) => (
-            <button
+            <Pressable
               key={st.id}
               type="button"
               onClick={() => setSelectedStatus(st.id)}
@@ -954,7 +955,7 @@ export function ExecutiveCalendarWorkspace({
               )}
             >
               {st.label}
-            </button>
+            </Pressable>
           ))}
         </div>
       </div>
@@ -1039,8 +1040,8 @@ export function ExecutiveCalendarWorkspace({
                           className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
                           style={{ top: `${currentTimeIndicator}%` }}
                         >
-                          <div className="size-2 -ml-1 rounded-full bg-rose-500 ring-2 ring-rose-500/20" />
-                          <div className="h-[2px] w-full bg-rose-500" />
+                          <div className="size-2 -ml-1 rounded-full bg-destructive ring-2 ring-destructive/20" />
+                          <div className="h-[2px] w-full bg-destructive" />
                         </div>
                       )}
 
@@ -1057,7 +1058,7 @@ export function ExecutiveCalendarWorkspace({
                             }}
                             className={cn(
                               "absolute z-10 p-0.5 transition-all select-none",
-                              layout.hasCollision && "ring-1 ring-amber-500/40 rounded-lg"
+                              layout.hasCollision && "ring-1 ring-warning/40 rounded-lg"
                             )}
                             style={{
                               top: `${layout.topPercent}%`,
@@ -1189,14 +1190,14 @@ export function ExecutiveCalendarWorkspace({
                   {selectedPreviewItem.title}
                 </h3>
               </div>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setSelectedPreviewItem(null)}
                 aria-label="Đóng chi tiết công việc"
                 className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
               >
                 <X className="size-4" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </div>
 
             <div className="space-y-3 text-xs">
@@ -1210,7 +1211,7 @@ export function ExecutiveCalendarWorkspace({
                   </span>
                 </div>
                 {selectedPreviewItem.isOverdue && (
-                  <div className="flex items-center gap-2 text-rose-600 font-semibold font-mono">
+                  <div className="flex items-center gap-2 text-destructive font-semibold font-mono">
                     <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
                     <span>Đã trễ hạn {selectedPreviewItem.daysOverdue || 1} ngày</span>
                   </div>

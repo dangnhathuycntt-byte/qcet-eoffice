@@ -49,7 +49,7 @@ export function SegmentedControl({
           key={o.value}
           value={o.value}
           disabled={o.disabled}
-          className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[10px] px-3 text-sm font-medium text-muted-foreground outline-none transition-colors duration-100 hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 data-[pressed]:bg-card data-[pressed]:text-foreground data-[pressed]:font-semibold data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 sm:h-7 [&_svg]:size-4 motion-reduce:transition-none"
+          className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[10px] px-3 text-sm font-medium text-muted-foreground outline-none transition-colors duration-100 hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 data-[pressed]:bg-card data-[pressed]:text-foreground data-[pressed]:font-semibold data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 sm:h-7 [&_svg]:size-4 motion-reduce:transition-none"
         >
           {o.icon}
           {o.label}

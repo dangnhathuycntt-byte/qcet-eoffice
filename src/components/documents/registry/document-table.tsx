@@ -27,6 +27,7 @@ import {
   getUrgencyBadgeConfig,
   getStatusBadgeConfig,
 } from "../document-badges";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentTableProps {
   documents: OfficialDocument[];
@@ -245,7 +246,7 @@ export function DocumentTable({
         data-slot="document-table"
       >
         <AlertTriangle
-          className="size-8 mx-auto text-amber-500 opacity-80"
+          className="size-8 mx-auto text-warning opacity-80"
           strokeWidth={1.5}
         />
         <div className="space-y-1">
@@ -457,13 +458,13 @@ export function DocumentTable({
                       <ArrowRight className="size-2.5" strokeWidth={1.5} />
                     </Link>
                   ) : (
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => onLinkTask?.(doc)}
                       className="text-xs text-muted-foreground/60 hover:text-primary transition-colors italic cursor-pointer"
                     >
                       Chưa tạo việc
-                    </button>
+                    </Pressable>
                   )}
                 </td>
 
@@ -507,7 +508,7 @@ export function DocumentTable({
                             }}
                             className="w-48 select-none rounded-xl border border-border/80 bg-popover/95 p-1 text-xs text-popover-foreground shadow-lg shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-100"
                           >
-                            <button
+                            <Pressable
                               type="button"
                               role="menuitem"
                               onClick={() => onSelectDocument?.(doc)}
@@ -515,10 +516,10 @@ export function DocumentTable({
                             >
                               <Eye className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                               <span>Xem chi tiết</span>
-                            </button>
+                            </Pressable>
 
                             {doc.fileAttachment && (
-                              <button
+                              <Pressable
                                 type="button"
                                 role="menuitem"
                                 onClick={() => onViewPdf?.(doc)}
@@ -526,7 +527,7 @@ export function DocumentTable({
                               >
                                 <FileText className="size-3.5 text-primary" strokeWidth={1.5} />
                                 <span>Xem tệp PDF</span>
-                              </button>
+                              </Pressable>
                             )}
 
                             {doc.linkedTaskId ? (
@@ -538,7 +539,7 @@ export function DocumentTable({
                                 <span>Xem nhiệm vụ</span>
                               </Link>
                             ) : (
-                              <button
+                              <Pressable
                                 type="button"
                                 role="menuitem"
                                 onClick={() => onLinkTask?.(doc)}
@@ -546,12 +547,12 @@ export function DocumentTable({
                               >
                                 <ArrowRight className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                                 <span>Liên thông việc</span>
-                              </button>
+                              </Pressable>
                             )}
 
                             <div className="my-1 border-t border-border/40" />
 
-                            <button
+                            <Pressable
                               type="button"
                               role="menuitem"
                               onClick={() =>
@@ -569,7 +570,7 @@ export function DocumentTable({
                               {copiedId === `code-${doc.id}` && (
                                 <Check className="size-3 text-emerald-600" strokeWidth={2} />
                               )}
-                            </button>
+                            </Pressable>
                           </Menu.Popup>
                         </Menu.Positioner>
                       </Menu.Portal>

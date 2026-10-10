@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/bottom-sheet";
 import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface MobileTaskFilterSheetProps {
   isOpen: boolean;
@@ -86,13 +87,13 @@ export function MobileTaskFilterSheet({
             </BottomSheetDescription>
           </div>
           <BottomSheetClose asChild>
-            <button
+            <Pressable
               type="button"
               className="min-h-[44px] min-w-[44px] size-11 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-[0.98] touch-manipulation cursor-pointer"
               aria-label="Đóng bộ lọc"
             >
               <X className="h-5 w-5" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           </BottomSheetClose>
         </BottomSheetHeader>
 
@@ -103,7 +104,7 @@ export function MobileTaskFilterSheet({
               Trạng thái
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onStatusChange("ALL")}
                 className={cn(
@@ -117,9 +118,9 @@ export function MobileTaskFilterSheet({
                 {statusFilter === "ALL" && (
                   <Check className="h-4 w-4 shrink-0" strokeWidth={1.5} />
                 )}
-              </button>
+              </Pressable>
               {CORE_STATUS_OPTIONS.map((status) => (
-                <button
+                <Pressable
                   key={status.value}
                   type="button"
                   onClick={() => onStatusChange(status.value)}
@@ -134,7 +135,7 @@ export function MobileTaskFilterSheet({
                   {statusFilter === status.value && (
                     <Check className="h-4 w-4 shrink-0" strokeWidth={1.5} />
                   )}
-                </button>
+                </Pressable>
               ))}
             </div>
           </div>
@@ -148,7 +149,7 @@ export function MobileTaskFilterSheet({
               {MONTH_OPTIONS.map((month) => {
                 const isSelected = String(monthFilter) === String(month.value);
                 return (
-                  <button
+                  <Pressable
                     key={month.value}
                     type="button"
                     onClick={() => onMonthChange(month.value)}
@@ -163,7 +164,7 @@ export function MobileTaskFilterSheet({
                     {isSelected && (
                       <Check className="h-4 w-4 shrink-0" strokeWidth={1.5} />
                     )}
-                  </button>
+                  </Pressable>
                 );
               })}
             </div>
@@ -175,7 +176,7 @@ export function MobileTaskFilterSheet({
               Đơn vị thực hiện
             </label>
             <div className="space-y-1.5">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onDepartmentChange("ALL")}
                 className={cn(
@@ -189,11 +190,11 @@ export function MobileTaskFilterSheet({
                 {departmentFilter === "ALL" && (
                   <Check className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.5} />
                 )}
-              </button>
+              </Pressable>
               {availableDepartments.map((dept) => {
                 const isSelected = departmentFilter === dept.code;
                 return (
-                  <button
+                  <Pressable
                     key={dept.code}
                     type="button"
                     onClick={() => onDepartmentChange(dept.code)}
@@ -208,7 +209,7 @@ export function MobileTaskFilterSheet({
                     {isSelected && (
                       <Check className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.5} />
                     )}
-                  </button>
+                  </Pressable>
                 );
               })}
             </div>

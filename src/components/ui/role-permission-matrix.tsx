@@ -94,7 +94,7 @@ export function RolePermissionMatrix({
                           onClick={() => onToggle?.(perm.id, role.id)}
                           aria-label={`${perm.name} cho ${role.name}`}
                           className={cn(
-                            "inline-flex size-6 items-center justify-center rounded-md border-0 transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+                            "inline-flex size-6 items-center justify-center rounded-md border-0 transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary",
                             hasPerm
                               ? "bg-primary text-primary-foreground"
                               : "bg-secondary text-muted-foreground",

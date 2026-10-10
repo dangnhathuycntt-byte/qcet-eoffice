@@ -120,6 +120,7 @@ import {
   DEFAULT_DISPLAY_PROPERTIES,
   TaskTableViewOptionsPopover,
 } from "@/components/tasks/table/components/task-table-toolbar";
+import { Pressable } from "@/components/ui/pressable";
 
 // Export Saved Views Infrastructure
 export {
@@ -2582,7 +2583,7 @@ export function UnifiedTaskToolbar({
                 const isActive = normalizedScope === tab.id;
                 const showBadge = typeof tab.count === "number" && !isNaN(tab.count);
                 return (
-                  <button
+                  <Pressable
                     key={tab.id}
                     type="button"
                     role="tab"
@@ -2616,7 +2617,7 @@ export function UnifiedTaskToolbar({
                         {tab.count}
                       </span>
                     )}
-                  </button>
+                  </Pressable>
                 );
               })}
             </div>
@@ -2634,7 +2635,7 @@ export function UnifiedTaskToolbar({
 
           {/* Right: Primary Page Action Button (Tạo nhiệm vụ - Linear Understated Style) */}
           {canCreateTask && handlePrimaryAction && (
-            <button
+            <Pressable
               type="button"
               onClick={() => handlePrimaryAction()}
               title="Tạo nhiệm vụ"
@@ -2643,7 +2644,7 @@ export function UnifiedTaskToolbar({
             >
               <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
               <span>{createButtonLabel || (onCreateTask ? "Tạo nhiệm vụ" : primaryActionLabel)}</span>
-            </button>
+            </Pressable>
           )}
         </div>
       )}
@@ -2675,7 +2676,7 @@ export function UnifiedTaskToolbar({
       <MenuRoot open={isCollapsedFilterOpen} onOpenChange={(open) => { setIsCollapsedFilterOpen(open); if (!open) setMenuSearch(""); }}>
         <MenuTrigger
           render={
-            <button
+            <Pressable
               type="button"
               aria-label="Bộ lọc"
               aria-expanded={isCollapsedFilterOpen}
@@ -2684,7 +2685,7 @@ export function UnifiedTaskToolbar({
             >
               <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
               <ListToolbarCountBadge count={activeFilterCount} />
-            </button>
+            </Pressable>
           }
         />
         <MenuPortal>
@@ -2707,13 +2708,13 @@ export function UnifiedTaskToolbar({
                   className="h-5 w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
                 />
                 {menuSearch ? (
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => setMenuSearch("")}
                     className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer touch-manipulation"
                   >
                     <X className="size-3" strokeWidth={1.5} />
-                  </button>
+                  </Pressable>
                 ) : (
                   <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 font-mono text-xs leading-none text-muted-foreground bg-muted/80 border border-border/60 rounded select-none pointer-events-none">
                     F
@@ -2826,7 +2827,7 @@ export function UnifiedTaskToolbar({
 
       {/* 4. + Tạo việc CTA (Linear Understated Style) */}
       {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (
-        <button
+        <Pressable
           type="button"
           onClick={() => handlePrimaryAction()}
           title="Tạo việc mới"
@@ -2835,7 +2836,7 @@ export function UnifiedTaskToolbar({
         >
           <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
           <span>{primaryActionLabel}</span>
-        </button>
+        </Pressable>
       )}
     </div>
   );

@@ -117,7 +117,7 @@ export function ReviewDecisionPanel({
               type="button"
               onClick={() => setSelectedDecision(type)}
               className={cn(
-                "flex flex-col items-start gap-1.5 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+                "flex flex-col items-start gap-1.5 rounded-xl border-0 p-3 text-left transition-colors duration-100 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary",
                 isSelected
                   ? config.activeClass
                   : "bg-secondary text-foreground hover:bg-accent"

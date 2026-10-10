@@ -344,7 +344,7 @@ export function DirectInlineEditor({
 
           {/* Chỉ báo trạng thái lưu góc trên/dưới */}
           {showSaveIndicator && (
-            <div className="absolute right-0 top-0 -translate-y-5 flex items-center gap-1 text-[11px] font-normal transition-opacity duration-200 pointer-events-none select-none">
+            <div className="absolute right-0 top-0 -translate-y-5 flex items-center gap-1 text-xs font-normal transition-opacity duration-200 pointer-events-none select-none">
               {saveStatus === "saving" && (
                 <span className="inline-flex items-center gap-1 text-muted-foreground animate-pulse">
                   <Loader2 className="size-3 animate-spin" />
@@ -358,7 +358,7 @@ export function DirectInlineEditor({
                 </span>
               )}
               {saveStatus === "error" && (
-                <span className="inline-flex items-center gap-1 text-rose-600">
+                <span className="inline-flex items-center gap-1 text-destructive">
                   <AlertCircle className="size-3" />
                   <span>{errorMessage || "Lỗi lưu"}</span>
                 </span>

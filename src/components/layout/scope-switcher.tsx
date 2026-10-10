@@ -28,6 +28,7 @@ import { useOrgDepartments } from "@/hooks/use-org-departments";
 import { type DepartmentNode } from "@/components/org/organization-tree";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { popoverVariants } from "@/lib/motion/variants";
+import { Pressable } from "@/components/ui/pressable";
 
 export type ScopeType = "school" | "unit" | "my";
 
@@ -655,7 +656,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
           <div className="space-y-0.5 mt-0.5">
             {/* 1. Toàn trường - only visible to executive role */}
             {allowedScopes.includes("school") && (
-              <button
+              <Pressable
                 type="button"
                 onClick={() => handleSelectScope("school")}
                 className={cn(
@@ -683,11 +684,11 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 {isSchoolSelected && (
                   <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                 )}
-              </button>
+              </Pressable>
             )}
 
             {/* 2. Primary Unit (Đơn vị của tôi / Ban Giám hiệu) */}
-            <button
+            <Pressable
               type="button"
               onClick={() => handleSelectScope("unit", primaryUnitCode)}
               className={cn(
@@ -715,10 +716,10 @@ export function ScopeSwitcher({ className }: { className?: string }) {
               {isPrimaryUnitSelected && (
                 <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
               )}
-            </button>
+            </Pressable>
 
             {/* 3. Cá nhân (Của tôi) */}
-            <button
+            <Pressable
               type="button"
               onClick={() => handleSelectScope("my")}
               className={cn(
@@ -746,7 +747,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
               {isMySelected && (
                 <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
               )}
-            </button>
+            </Pressable>
           </div>
 
           {/* Divider */}
@@ -773,14 +774,14 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 className="w-full pl-8 pr-7 py-1.5 text-xs bg-muted/40 hover:bg-muted/70 focus:bg-background border border-border/60 rounded-lg placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
               />
               {searchQuery && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setSearchQuery("")}
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
                   aria-label="Xóa tìm kiếm"
                 >
                   <X className="w-3 h-3" strokeWidth={1.5} />
-                </button>
+                </Pressable>
               )}
             </div>
           </div>
@@ -803,7 +804,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                       currentScope.department?.code === dept.code);
 
                   return (
-                    <button
+                    <Pressable
                       key={dept.id}
                       type="button"
                       onClick={() => handleSelectScope("unit", dept.code)}
@@ -818,7 +819,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                       {isSelected && (
                         <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />
                       )}
-                    </button>
+                    </Pressable>
                   );
                 })}
               </div>
@@ -833,7 +834,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
 
           {/* Sticky Footer: Phân quyền & Ủy quyền phạm vi */}
           <div className="sticky bottom-0 pt-2 pb-0.5 mt-1 border-t border-border/60 bg-card/95 backdrop-blur-xs">
-            <button
+            <Pressable
               type="button"
               onClick={handleOpenDelegationModal}
               className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer min-h-[36px]"
@@ -843,7 +844,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 <span className="truncate font-medium">Phân quyền & Ủy quyền phạm vi</span>
               </div>
               <span className="size-2 rounded-full bg-emerald-500 shrink-0" title="Đang hiệu lực" />
-            </button>
+            </Pressable>
           </div>
         </m.div>
       )}
@@ -880,7 +881,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
               <div className="space-y-2">
                 {/* 1. Toàn trường - only visible to executive role */}
                 {allowedScopes.includes("school") && (
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => handleSelectScope("school")}
                     className={cn(
@@ -911,11 +912,11 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     {isSchoolSelected && (
                       <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                     )}
-                  </button>
+                  </Pressable>
                 )}
 
                 {/* 2. Primary Unit */}
-                <button
+                <Pressable
                   type="button"
                   onClick={() => handleSelectScope("unit", primaryUnitCode)}
                   className={cn(
@@ -946,10 +947,10 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   {isPrimaryUnitSelected && (
                     <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                   )}
-                </button>
+                </Pressable>
 
                 {/* 3. Cá nhân (Của tôi) */}
-                <button
+                <Pressable
                   type="button"
                   onClick={() => handleSelectScope("my")}
                   className={cn(
@@ -980,7 +981,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   {isMySelected && (
                     <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                   )}
-                </button>
+                </Pressable>
               </div>
             </div>
 
@@ -1005,14 +1006,14 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   className="w-full pl-9 pr-9 py-2.5 text-sm bg-muted/40 border border-border/60 rounded-xl placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-primary min-h-[44px]"
                 />
                 {searchQuery && (
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => setSearchQuery("")}
                     className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded"
                     aria-label="Xóa tìm kiếm"
                   >
                     <X className="w-4 h-4" strokeWidth={1.5} />
-                  </button>
+                  </Pressable>
                 )}
               </div>
 
@@ -1034,7 +1035,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                           currentScope.department?.code === dept.code);
 
                       return (
-                        <button
+                        <Pressable
                           key={dept.id}
                           type="button"
                           onClick={() => handleSelectScope("unit", dept.code)}
@@ -1049,7 +1050,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                           {isSelected && (
                             <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                           )}
-                        </button>
+                        </Pressable>
                       );
                     })}
                   </div>
@@ -1065,7 +1066,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
 
             {/* Sticky Footer: Phân quyền & Ủy quyền phạm vi */}
             <div className="sticky bottom-0 pt-3 pb-2 border-t border-border/50 bg-background/95 backdrop-blur-xs">
-              <button
+              <Pressable
                 type="button"
                 onClick={handleOpenDelegationModal}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-foreground bg-muted/40 hover:bg-muted/80 transition-colors cursor-pointer min-h-[48px] active:scale-[0.99] border border-border/40"
@@ -1078,7 +1079,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   <span className="text-xs text-muted-foreground">Hiệu lực</span>
                   <span className="size-2 rounded-full bg-emerald-500" />
                 </div>
-              </button>
+              </Pressable>
             </div>
           </div>
         </BottomSheetContent>

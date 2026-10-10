@@ -32,6 +32,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskSubtasksSectionProps {
   parentId: string;
@@ -266,7 +267,7 @@ export function TaskSubtasksSection({
         </div>
 
         {canEdit && (
-          <button
+          <Pressable
             type="button"
             onClick={handleOpenInline}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted border border-border/60 hover:border-border transition-colors cursor-pointer"
@@ -275,7 +276,7 @@ export function TaskSubtasksSection({
           >
             <Plus className="size-3.5" strokeWidth={1.5} />
             <span>Thêm chi tiết</span>
-          </button>
+          </Pressable>
         )}
       </div>
 
@@ -322,7 +323,7 @@ export function TaskSubtasksSection({
               <select
                 value={newAssigneeName}
                 onChange={(e) => setNewAssigneeName(e.target.value)}
-                className="h-7 pl-6 pr-6 rounded-md border border-border/60 bg-background text-[11px] font-medium text-foreground hover:border-border focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer max-w-[140px] sm:max-w-[170px] truncate"
+                className="h-7 pl-6 pr-6 rounded-md border border-border/60 bg-background text-xs font-medium text-foreground hover:border-border focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer max-w-[140px] sm:max-w-[170px] truncate"
                 aria-label="Người phụ trách việc con"
                 title={newAssigneeName ? `Phụ trách: ${newAssigneeName}` : "Chọn người phụ trách"}
               >
@@ -349,14 +350,14 @@ export function TaskSubtasksSection({
 
             {/* Action buttons */}
             <div className="flex items-center gap-1 shrink-0 ml-auto">
-              <button
+              <Pressable
                 type="submit"
                 disabled={isSaving || !newTitle.trim()}
                 className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-none transition-opacity"
               >
                 {isSaving ? "Đang lưu..." : "Thêm"}
-              </button>
-              <button
+              </Pressable>
+              <Pressable
                 type="button"
                 onClick={() => {
                   setIsAddingInline(false);
@@ -366,13 +367,13 @@ export function TaskSubtasksSection({
                 title="Hủy"
               >
                 <X className="size-3.5" />
-              </button>
+              </Pressable>
             </div>
           </form>
 
           {inlineError && (
-            <div className="p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-center gap-1.5">
-              <AlertCircle className="size-3.5 text-rose-600 shrink-0" />
+            <div className="p-2 rounded-md bg-danger-soft border border-destructive/30 text-destructive text-xs flex items-center gap-1.5">
+              <AlertCircle className="size-3.5 text-destructive shrink-0" />
               <span>{inlineError}</span>
             </div>
           )}
@@ -442,7 +443,7 @@ export function TaskSubtasksSection({
                     <div className="flex items-center gap-1.5 shrink-0">
                       {/* Hover action: Hiển thị icon edit / delete khi hover row */}
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
-                        <button
+                        <Pressable
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -453,20 +454,20 @@ export function TaskSubtasksSection({
                           aria-label="Chỉnh sửa việc con"
                         >
                           <Edit3 className="size-3" strokeWidth={1.5} />
-                        </button>
+                        </Pressable>
                         {onDeleteSubtask && (
-                          <button
+                          <Pressable
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               onDeleteSubtask(st);
                             }}
-                            className="p-1 rounded text-muted-foreground hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-danger-soft transition-colors cursor-pointer"
                             title="Xóa việc con"
                             aria-label="Xóa việc con"
                           >
                             <Trash2 className="size-3" strokeWidth={1.5} />
-                          </button>
+                          </Pressable>
                         )}
                       </div>
 
@@ -482,12 +483,12 @@ export function TaskSubtasksSection({
                   </div>
 
                   {/* Line 2: [Icon lịch] dd/mm/yyyy - Trạng thái */}
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Calendar
                       className={cn(
                         "size-3 shrink-0",
                         dueStatus.isOverdue
-                          ? "text-rose-600"
+                          ? "text-destructive"
                           : "text-muted-foreground"
                       )}
                       strokeWidth={1.5}
@@ -495,7 +496,7 @@ export function TaskSubtasksSection({
                     <span
                       className={cn(
                         "font-mono tabular-nums",
-                        dueStatus.isOverdue && "text-rose-600 font-semibold"
+                        dueStatus.isOverdue && "text-destructive font-semibold"
                       )}
                     >
                       {st.dueDate ? formatDisplayDate(st.dueDate) : "Chưa đặt hạn"}
@@ -503,7 +504,7 @@ export function TaskSubtasksSection({
                     <span className="text-muted-foreground/40">·</span>
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium border leading-tight",
+                        "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-xs font-medium border leading-tight",
                         statusObj.colorClass
                       )}
                     >

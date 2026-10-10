@@ -38,6 +38,7 @@ import {
   type PushTopic,
 } from "@/lib/pwa/push-preferences";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 const SNOOZE_KEY = "qcet-push-onboarding-dismissed";
 const SNOOZE_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
@@ -104,7 +105,7 @@ export function PermissionRecoveryGuide({
     <div className={cn("space-y-4", className)}>
       {/* Platform Switcher Tabs */}
       <div className="flex p-1 bg-secondary rounded-xl border-0">
-        <button
+        <Pressable
           type="button"
           onClick={() => setPlatform("chrome")}
           className={cn(
@@ -115,8 +116,8 @@ export function PermissionRecoveryGuide({
           )}
         >
           Google Chrome / Máy tính
-        </button>
-        <button
+        </Pressable>
+        <Pressable
           type="button"
           onClick={() => setPlatform("safari")}
           className={cn(
@@ -127,7 +128,7 @@ export function PermissionRecoveryGuide({
           )}
         >
           Safari / iOS (iPhone & iPad)
-        </button>
+        </Pressable>
       </div>
 
       {/* Info notice */}
@@ -265,22 +266,22 @@ export function PermissionRecoveryGuide({
 
       {/* Action CTA: Reload & Dismiss */}
       <div className="pt-2 space-y-2">
-        <button
+        <Pressable
           type="button"
           onClick={handleReload}
           className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5"
         >
           <RefreshCw className="w-5 h-5" />
           <span>Tải lại trang ngay</span>
-        </button>
+        </Pressable>
         {onDismiss && (
-          <button
+          <Pressable
             type="button"
             onClick={onDismiss}
             className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-muted-foreground font-medium text-base transition-colors cursor-pointer"
           >
             Để sau
-          </button>
+          </Pressable>
         )}
       </div>
     </div>
@@ -572,13 +573,13 @@ export function PushOnboardingSheet({
               </div>
 
               <div className="pt-2 flex flex-col gap-3">
-                <button
+                <Pressable
                   type="button"
                   onClick={handleDismiss}
                   className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
-                </button>
+                </Pressable>
               </div>
             </div>
           )}
@@ -606,21 +607,21 @@ export function PushOnboardingSheet({
               </div>
 
               <div className="pt-2 flex flex-col gap-3">
-                <button
+                <Pressable
                   type="button"
                   onClick={handleInstallClick}
                   className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5"
                 >
                   <Download className="w-5 h-5" />
                   <span>CÀI ĐẶT 1-CHẠM</span>
-                </button>
-                <button
+                </Pressable>
+                <Pressable
                   type="button"
                   onClick={handleDismiss}
                   className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
-                </button>
+                </Pressable>
               </div>
             </div>
           )}
@@ -649,7 +650,7 @@ export function PushOnboardingSheet({
 
               {/* Granular topic selection */}
               <div className="border-0 rounded-xl overflow-hidden">
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setShowPreferences((v) => !v)}
                   className="w-full px-4 py-3 bg-secondary hover:bg-secondary flex items-center justify-between text-left transition-colors min-h-[44px]"
@@ -663,7 +664,7 @@ export function PushOnboardingSheet({
                   ) : (
                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   )}
-                </button>
+                </Pressable>
 
                 {showPreferences && (
                   <div className="p-4 bg-card  space-y-3">
@@ -720,7 +721,7 @@ export function PushOnboardingSheet({
               </div>
 
               <div className="pt-2 flex flex-col gap-3">
-                <button
+                <Pressable
                   type="button"
                   onClick={handleSubscribeClick}
                   disabled={isLoading}
@@ -732,14 +733,14 @@ export function PushOnboardingSheet({
                     <Bell className="w-5 h-5" />
                   )}
                   <span>Bật thông báo trên thiết bị</span>
-                </button>
-                <button
+                </Pressable>
+                <Pressable
                   type="button"
                   onClick={handleDismiss}
                   className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
-                </button>
+                </Pressable>
               </div>
             </div>
           )}
@@ -758,13 +759,13 @@ export function PushOnboardingSheet({
                   Bạn sẽ nhận được chuông thông báo mỗi khi có chỉ đạo mới hoặc nhiệm vụ được phân công.
                 </p>
               </div>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => handleOpenChange(false)}
                 className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-none hover:bg-primary-hover transition-colors cursor-pointer mt-2"
               >
                 Hoàn tất
-              </button>
+              </Pressable>
             </div>
           )}
         </div>

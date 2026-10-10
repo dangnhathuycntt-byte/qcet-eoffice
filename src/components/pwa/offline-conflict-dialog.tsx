@@ -21,6 +21,7 @@ import {
   resolveConflict,
   subscribeOutbox,
 } from "@/lib/pwa/outbox-manager";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface OfflineConflictDialogProps {
   isOpen?: boolean;
@@ -182,9 +183,9 @@ export function OfflineConflictDialog({
         )}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-amber-50/60">
+        <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-warning/5">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-900 mt-0.5 shadow-xs">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning mt-0.5 shadow-xs">
               <AlertTriangle className="size-5" strokeWidth={1.5} />
             </div>
             <div className="min-w-0">
@@ -196,7 +197,7 @@ export function OfflineConflictDialog({
                   Xung đột dữ liệu ngoại tuyến
                 </h2>
                 {conflicts.length > 1 && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-200/80 text-amber-950">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-warning/15 text-warning">
                     {currentIndex + 1} / {conflicts.length}
                   </span>
                 )}
@@ -237,7 +238,7 @@ export function OfflineConflictDialog({
             </div>
 
             {activeItem.errorMessage && (
-              <p className="text-xs text-amber-800 bg-amber-100/50 p-2 rounded-lg border border-amber-200/50">
+              <p className="text-xs text-warning bg-warning/10 p-2 rounded-lg border border-warning/15">
                 {activeItem.errorMessage}
               </p>
             )}
@@ -296,7 +297,7 @@ export function OfflineConflictDialog({
 
           {/* Collapsible raw details */}
           <div>
-            <button
+            <Pressable
               type="button"
               onClick={() => setShowDetails((v) => !v)}
               className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium py-1.5 cursor-pointer"
@@ -307,7 +308,7 @@ export function OfflineConflictDialog({
               ) : (
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               )}
-            </button>
+            </Pressable>
 
             {showDetails && (
               <div className="mt-2 p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto space-y-1.5 animate-in fade-in duration-150">
@@ -355,7 +356,7 @@ export function OfflineConflictDialog({
             variant="outline"
             disabled={hookData.isResolving}
             onClick={() => handleAction("discard")}
-            className="min-h-[44px] px-4 text-xs font-semibold text-rose-700 hover:text-rose-800 hover:bg-rose-50 border-rose-200 cursor-pointer inline-flex items-center justify-center gap-2"
+            className="min-h-[44px] px-4 text-xs font-semibold text-destructive hover:text-destructive hover:bg-danger-soft border-destructive/30 cursor-pointer inline-flex items-center justify-center gap-2"
           >
             <Trash2 className="size-4" strokeWidth={1.5} />
             <span>Bỏ thay đổi của tôi</span>

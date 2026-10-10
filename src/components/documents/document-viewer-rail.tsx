@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useTrackOpenPopover } from "./popover-escape-guard";
 import { FileTypeIcon } from "./file-type-icon";
 import type { FilePreviewKind } from "@/lib/documents/file-viewer-state";
+import { Pressable } from "@/components/ui/pressable";
 
 // Nút thao tác (có trạng thái hover), không phải hộp bọc icon tĩnh
 const RAIL_BUTTON = cn(
@@ -35,9 +36,9 @@ export function RailButton({
         {render ? (
           React.cloneElement(render, { "aria-label": label, className: cn(RAIL_BUTTON, className) }, children)
         ) : (
-          <button type="button" aria-label={label} className={cn(RAIL_BUTTON, className)} {...props}>
+          <Pressable type="button" aria-label={label} className={cn(RAIL_BUTTON, className)} {...props}>
             {children}
-          </button>
+          </Pressable>
         )}
       </TooltipTrigger>
       <TooltipContent side="left" sideOffset={6}>
@@ -108,12 +109,12 @@ function SearchButton({ search }: { search: RailSearch }) {
           <span className="w-10 shrink-0 text-center text-xs tabular-nums text-muted-foreground" aria-live="polite">
             {searching ? (total > 0 ? `${active + 1}/${total}` : "0") : ""}
           </span>
-          <button type="button" aria-label="Kết quả trước" disabled={total === 0} onClick={() => step(-1)} className={cn(RAIL_BUTTON, "size-7")}>
+          <Pressable type="button" aria-label="Kết quả trước" disabled={total === 0} onClick={() => step(-1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronUp strokeWidth={1.5} />
-          </button>
-          <button type="button" aria-label="Kết quả sau" disabled={total === 0} onClick={() => step(1)} className={cn(RAIL_BUTTON, "size-7")}>
+          </Pressable>
+          <Pressable type="button" aria-label="Kết quả sau" disabled={total === 0} onClick={() => step(1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronDown strokeWidth={1.5} />
-          </button>
+          </Pressable>
         </div>
         {searching && total === 0 ? (
           <p className="px-1 pt-1.5 text-xs text-muted-foreground">
@@ -243,19 +244,19 @@ function ZoomMenu({ zoom, onZoomChange }: { zoom: number; onZoomChange: (zoom: n
       </Tooltip>
       <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
         <PopoverTitle className="px-2 pb-1 pt-1.5 text-xs font-normal text-muted-foreground">Tỷ lệ so với vừa chiều rộng</PopoverTitle>
-        <button type="button" className={MENU_ITEM} disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
+        <Pressable type="button" className={MENU_ITEM} disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
           <ZoomIn strokeWidth={1.5} />
           Phóng to
-        </button>
-        <button type="button" className={MENU_ITEM} disabled={zoom <= 50} onClick={() => onZoomChange(Math.max(zoom - 15, 50))}>
+        </Pressable>
+        <Pressable type="button" className={MENU_ITEM} disabled={zoom <= 50} onClick={() => onZoomChange(Math.max(zoom - 15, 50))}>
           <ZoomOut strokeWidth={1.5} />
           Thu nhỏ
-        </button>
-        <button type="button" className={MENU_ITEM} disabled={zoom === 100} onClick={() => onZoomChange(100)}>
+        </Pressable>
+        <Pressable type="button" className={MENU_ITEM} disabled={zoom === 100} onClick={() => onZoomChange(100)}>
           <MoveHorizontal strokeWidth={1.5} />
           Vừa chiều rộng
           {zoom === 100 ? <Check className="ml-auto" strokeWidth={1.5} aria-hidden /> : null}
-        </button>
+        </Pressable>
       </PopoverContent>
     </PopoverRoot>
   );
@@ -282,15 +283,15 @@ function ViewToolsMenu({ pages }: { pages: RailPages }) {
       <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1.5">
         <PopoverTitle className="px-0.5 pb-1.5 text-xs font-normal text-muted-foreground">Trang</PopoverTitle>
         <div className="flex items-center gap-1">
-          <button type="button" aria-label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)} className={cn(RAIL_BUTTON, "size-7")}>
+          <Pressable type="button" aria-label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronUp strokeWidth={1.5} />
-          </button>
+          </Pressable>
           <div className="min-w-0 flex-1">
             <PageJumpForm key={current} pages={pages} onDone={() => setOpen(false)} />
           </div>
-          <button type="button" aria-label="Trang sau" disabled={current >= total} onClick={() => go(current + 1)} className={cn(RAIL_BUTTON, "size-7")}>
+          <Pressable type="button" aria-label="Trang sau" disabled={current >= total} onClick={() => go(current + 1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronDown strokeWidth={1.5} />
-          </button>
+          </Pressable>
         </div>
       </PopoverContent>
     </PopoverRoot>
@@ -316,7 +317,7 @@ function DownloadMenu({ fileUrl, onDownload }: { fileUrl: string; onDownload: ()
       </Tooltip>
       <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
         <PopoverTitle className="sr-only">Tải về hoặc mở tệp</PopoverTitle>
-        <button
+        <Pressable
           type="button"
           className={item}
           onClick={() => {
@@ -326,7 +327,7 @@ function DownloadMenu({ fileUrl, onDownload }: { fileUrl: string; onDownload: ()
         >
           <Download strokeWidth={1.5} />
           Tải về
-        </button>
+        </Pressable>
         <a href={fileUrl} target="_blank" rel="noopener noreferrer" className={item} onClick={() => setOpen(false)}>
           <ExternalLink strokeWidth={1.5} />
           Mở trong tab mới

@@ -77,6 +77,7 @@ import type {
   TaskActorContract,
   TaskEntityContract,
 } from "@/domain/tasks/contract";
+import { Pressable } from "@/components/ui/pressable";
 
 /** Lifecycle targets the bulk bar may offer, before capability filtering. */
 const BULK_LIFECYCLE_CANDIDATES: TaskStatus[] = [
@@ -1307,44 +1308,44 @@ export function ModularCascadingTaskTable({
         priorOverdueBacklog.length > 0 && (
           <section
             aria-label="Prior Overdue Backlog - Nhiệm vụ tồn đọng kỳ trước"
-            className="border-b border-amber-300 bg-amber-50 text-xs transition-all select-none"
+            className="border-b border-warning/40 bg-warning/10 text-xs transition-all select-none"
           >
             {/* Sleek Hairline Section Header */}
             <div
               onClick={() => setIsBacklogExpanded(!isBacklogExpanded)}
-              className="flex items-center justify-between py-2 px-3 hover:bg-amber-100/40 cursor-pointer transition-colors"
+              className="flex items-center justify-between py-2 px-3 hover:bg-warning/5 cursor-pointer transition-colors"
             >
               <div className="flex items-center gap-2">
                 <ChevronDown
                   className={cn(
-                    "size-3.5 text-amber-700 transition-transform duration-200",
+                    "size-3.5 text-warning transition-transform duration-200",
                     !isBacklogExpanded && "-rotate-90"
                   )}
                   strokeWidth={1.5}
                 />
-                <span className="font-semibold text-amber-950 tracking-wide">
+                <span className="font-semibold text-warning tracking-wide">
                   TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
                 </span>
-                <span className="inline-flex items-center justify-center rounded-full bg-amber-200/80 text-amber-900 px-1.5 py-0.2 font-mono text-xs font-bold">
+                <span className="inline-flex items-center justify-center rounded-full bg-warning/15 text-warning px-1.5 py-0.2 font-mono text-xs font-bold">
                   {priorOverdueBacklog.length}
                 </span>
-                <span className="text-xs text-amber-800/80 hidden sm:inline">
+                <span className="text-xs text-warning/80 hidden sm:inline">
                   (Prior Overdue Backlog - Cần ưu tiên xử lý dứt điểm)
                 </span>
               </div>
-              <span className="text-xs font-medium text-amber-800">
+              <span className="text-xs font-medium text-warning">
                 {isBacklogExpanded ? "Thu gọn" : "Xem chi tiết"}
               </span>
             </div>
 
             {/* Collapsible Flush Backlog Content */}
             {isBacklogExpanded && (
-              <div className="border-t border-amber-200/60 bg-white/70">
+              <div className="border-t border-warning/20 bg-white/70">
                 {/* Desktop Backlog Table */}
                 <div className="hidden md:block overflow-x-auto thin-scrollbar">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="h-8 border-b border-amber-200/50 bg-amber-100/30 text-xs font-medium text-amber-900/80 uppercase">
+                      <tr className="h-8 border-b border-warning/15 bg-warning/5 text-xs font-medium text-warning/80 uppercase">
                         <th className="w-24 px-3 py-1">Mã NV</th>
                         <th className="px-3 py-1">Nhiệm vụ tồn đọng</th>
                         <th className="px-3 py-1">Chủ trì</th>
@@ -1352,7 +1353,7 @@ export function ModularCascadingTaskTable({
                         <th className="w-48 px-3 py-1 text-right">Trạng thái &amp; Thao tác</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-amber-100/70">
+                    <tbody className="divide-y divide-warning/15">
                       {priorOverdueBacklog.map((task) => (
                         <tr
                           key={task.id}
@@ -1364,10 +1365,10 @@ export function ModularCascadingTaskTable({
                               handleEffectiveSelectTask(task);
                             }
                           }}
-                          className="group cursor-pointer hover:bg-amber-100/30 transition-colors h-10 text-xs"
+                          className="group cursor-pointer hover:bg-warning/5 transition-colors h-10 text-xs"
                           data-backlog-task-id={task.id}
                         >
-                          <td className="px-3 py-1.5 font-mono font-bold text-amber-900 tabular-nums">
+                          <td className="px-3 py-1.5 font-mono font-bold text-warning tabular-nums">
                             {task.taskCode || "NV-QCET"}
                           </td>
                           <td className="px-3 py-1.5">
@@ -1384,14 +1385,14 @@ export function ModularCascadingTaskTable({
                             {task.leadAssigneeName}
                           </td>
                           <td className="px-3 py-1.5">
-                            <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs tabular-nums">
+                            <span className="font-mono font-semibold text-destructive bg-danger-soft px-1.5 py-0.5 rounded border border-destructive/30 text-xs tabular-nums">
                               {task.dueDate ? formatTableDate(task.dueDate) : "Trễ hạn"}
                             </span>
                           </td>
                           <td className="px-3 py-1.5 text-right">
                             <div className="flex items-center justify-end gap-2">
                               {onStatusChange && (
-                                <button
+                                <Pressable
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1405,7 +1406,7 @@ export function ModularCascadingTaskTable({
                                   className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-medium cursor-pointer transition-colors"
                                 >
                                   Duyệt nhanh
-                                </button>
+                                </Pressable>
                               )}
                               <Badge
                                 variant="rose"
@@ -1427,10 +1428,10 @@ export function ModularCascadingTaskTable({
                     <div
                       key={task.id}
                       onClick={() => handleEffectiveSelectTask(task)}
-                      className="rounded-lg border border-amber-200/80 bg-white/90 p-2.5 space-y-1.5 cursor-pointer active:bg-amber-50"
+                      className="rounded-lg border border-warning/25 bg-white/90 p-2.5 space-y-1.5 cursor-pointer active:bg-warning/10"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-bold text-amber-900 tabular-nums">
+                        <span className="font-mono text-xs font-bold text-warning tabular-nums">
                           {task.taskCode || "NV-QCET"}
                         </span>
                         <Badge variant="rose" className="text-xs font-semibold">
@@ -1440,9 +1441,9 @@ export function ModularCascadingTaskTable({
                       <h4 className="text-xs font-semibold text-foreground line-clamp-2">
                         {task.title}
                       </h4>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-amber-100">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-warning/20">
                         <span>{task.leadAssigneeName}</span>
-                        <span className="font-mono font-semibold text-rose-700 tabular-nums">
+                        <span className="font-mono font-semibold text-destructive tabular-nums">
                           {task.dueDate ? formatTableDate(task.dueDate) : "Trễ hạn"}
                         </span>
                       </div>
@@ -1555,7 +1556,7 @@ export function ModularCascadingTaskTable({
                             <td colSpan={totalColumns} className="px-4 py-2">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <button
+                                  <Pressable
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1568,7 +1569,7 @@ export function ModularCascadingTaskTable({
                                       className={cn("size-3.5 transition-transform duration-200", isCollapsed && "-rotate-90")}
                                       strokeWidth={1.5}
                                     />
-                                  </button>
+                                  </Pressable>
                                   <div className="shrink-0 flex items-center">
                                     {group.icon}
                                   </div>
@@ -1580,7 +1581,7 @@ export function ModularCascadingTaskTable({
                                   </span>
                                 </div>
                                 {onAddTask && (
-                                  <button
+                                  <Pressable
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1591,7 +1592,7 @@ export function ModularCascadingTaskTable({
                                     aria-label={`Thêm nhiệm vụ vào ${group.label}`}
                                   >
                                     <Plus className="size-3" strokeWidth={1.5} />
-                                  </button>
+                                  </Pressable>
                                 )}
                               </div>
                             </td>
@@ -1686,7 +1687,7 @@ export function ModularCascadingTaskTable({
                 const isCollapsed = collapsedGroupKeys.has(group.key);
                 return (
                   <div key={group.key} className="space-y-2">
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => toggleGroupCollapse(group.key)}
                       className="w-full flex items-center justify-between py-1.5 px-3 rounded-lg bg-muted/40 border border-border/50 text-xs font-semibold text-foreground cursor-pointer"
@@ -1702,7 +1703,7 @@ export function ModularCascadingTaskTable({
                           {group.tasks.length}
                         </span>
                       </div>
-                    </button>
+                    </Pressable>
                     {!isCollapsed && (
                       <div className="space-y-2 pl-1">
                         {group.tasks.map((task) => (

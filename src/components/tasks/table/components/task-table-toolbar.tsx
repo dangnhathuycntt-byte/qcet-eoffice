@@ -88,6 +88,7 @@ import {
   ACADEMIC_MONTH_ORDER,
   getAcademicMonthInfo,
 } from "@/lib/academic-calendar";
+import { Pressable } from "@/components/ui/pressable";
 
 /**
  * Kiểm tra xem phím tắt có phải là shortcut tìm kiếm (/ hoặc Cmd+K / Ctrl+K) hay không
@@ -292,7 +293,7 @@ export function TaskTableViewOptionsPopover({
                     aria-label="Chế độ xem không gian làm việc"
                     className="grid grid-cols-2 gap-1.5 px-3 pt-3 pb-2.5"
                   >
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => onViewModeChange("table")}
                       className={cn(
@@ -304,8 +305,8 @@ export function TaskTableViewOptionsPopover({
                     >
                       <List className="size-3.5" strokeWidth={1.5} />
                       <span>Danh sách</span>
-                    </button>
-                    <button
+                    </Pressable>
+                    <Pressable
                       type="button"
                       onClick={() => onViewModeChange("kanban")}
                       className={cn(
@@ -317,7 +318,7 @@ export function TaskTableViewOptionsPopover({
                     >
                       <Kanban className="size-3.5" strokeWidth={1.5} />
                       <span>Bảng Kanban</span>
-                    </button>
+                    </Pressable>
                   </div>
                 )}
 
@@ -329,7 +330,7 @@ export function TaskTableViewOptionsPopover({
                   >
                     <span className="text-muted-foreground font-medium">Mật độ dòng</span>
                     <div className="flex items-center gap-1">
-                      <button
+                      <Pressable
                         type="button"
                         aria-label="Chế độ hiển thị gọn"
                         onClick={() => onDensityChange("compact")}
@@ -341,8 +342,8 @@ export function TaskTableViewOptionsPopover({
                         )}
                       >
                         Gọn
-                      </button>
-                      <button
+                      </Pressable>
+                      <Pressable
                         type="button"
                         aria-label="Chế độ hiển thị thoải mái"
                         onClick={() => onDensityChange("comfortable")}
@@ -354,7 +355,7 @@ export function TaskTableViewOptionsPopover({
                         )}
                       >
                         Vừa
-                      </button>
+                      </Pressable>
                     </div>
                   </div>
                 )}
@@ -377,7 +378,7 @@ export function TaskTableViewOptionsPopover({
                     <span className="text-muted-foreground font-medium">Sắp xếp</span>
                     <div className="flex items-center gap-1.5">
                       {onSort && (
-                        <button
+                        <Pressable
                           type="button"
                           onClick={() => {
                             if (sortField) {
@@ -389,7 +390,7 @@ export function TaskTableViewOptionsPopover({
                           aria-label="Đổi chiều sắp xếp"
                         >
                           <ArrowUpDown className="size-3.5" strokeWidth={1.5} />
-                        </button>
+                        </Pressable>
                       )}
                       <CustomSelectMenu
                         value={sortField || "dueDate"}
@@ -431,13 +432,13 @@ export function TaskTableViewOptionsPopover({
 
                 {/* 4. Footer: Reset & Default */}
                 <div className="flex items-center justify-end px-3 py-2.5 border-t border-border/50 text-xs">
-                  <button
+                  <Pressable
                     type="button"
                     onClick={onReset}
                     className="text-foreground/80 hover:text-foreground transition-colors cursor-pointer"
                   >
                     Đặt lại
-                  </button>
+                  </Pressable>
                 </div>
       </div>
     </ListToolbarPopover>
@@ -479,7 +480,7 @@ function CustomSelectMenu<T extends string>({
             {options.map((opt) => {
               const isSelected = opt.value === value;
               return (
-                <button
+                <Pressable
                   key={opt.value}
                   type="button"
                   onClick={() => {
@@ -495,7 +496,7 @@ function CustomSelectMenu<T extends string>({
                 >
                   <span>{opt.label}</span>
                   {isSelected && <Check className="size-3.5 text-primary shrink-0" />}
-                </button>
+                </Pressable>
               );
             })}
           </Popover.Popup>
@@ -712,14 +713,14 @@ export function TaskTableToolbar({
             className="w-full min-h-[44px] h-11 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-60 shadow-2xs"
           />
           {localQuery && (
-            <button
+            <Pressable
               type="button"
               onClick={handleClearSearch}
               aria-label="Xóa từ khóa tìm kiếm"
               className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
             >
               <X className="size-4" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -730,7 +731,7 @@ export function TaskTableToolbar({
           className="flex items-center gap-2 overflow-x-auto scrollbar-none overscroll-x-contain py-1 -mx-1 px-1 touch-pan-x"
         >
           {/* Chip Tất cả */}
-          <button
+          <Pressable
             type="button"
             role="tab"
             aria-selected={activeTab === "all"}
@@ -746,10 +747,10 @@ export function TaskTableToolbar({
             <span className="font-mono tabular-nums text-xs opacity-90">
               ({computedPillCounts?.all ?? 0})
             </span>
-          </button>
+          </Pressable>
 
           {/* Chip Của tôi */}
-          <button
+          <Pressable
             type="button"
             role="tab"
             aria-selected={activeTab === "my_tasks"}
@@ -765,10 +766,10 @@ export function TaskTableToolbar({
             <span className="font-mono tabular-nums text-xs opacity-90">
               ({computedPillCounts?.my_tasks ?? 0})
             </span>
-          </button>
+          </Pressable>
 
           {/* Chip Chờ duyệt */}
-          <button
+          <Pressable
             type="button"
             role="tab"
             aria-selected={activeTab === "review"}
@@ -784,11 +785,11 @@ export function TaskTableToolbar({
             <span className="font-mono tabular-nums text-xs opacity-90">
               ({computedPillCounts?.review ?? 0})
             </span>
-          </button>
+          </Pressable>
 
           {/* Chip Trễ hạn nếu có */}
           {(computedPillCounts?.overdue ?? 0) > 0 && (
-            <button
+            <Pressable
               type="button"
               role="tab"
               aria-selected={activeTab === "overdue"}
@@ -804,7 +805,7 @@ export function TaskTableToolbar({
               <span className="font-mono tabular-nums text-xs font-bold">
                 ({computedPillCounts?.overdue ?? 0})
               </span>
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -812,7 +813,7 @@ export function TaskTableToolbar({
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex items-center gap-1.5">
             {/* Nút Bộ lọc mở Bottom Sheet */}
-            <button
+            <Pressable
               type="button"
               onClick={() => setIsMobileFilterOpen(true)}
               className={cn(
@@ -830,7 +831,7 @@ export function TaskTableToolbar({
                   {activeAdvancedFilterCount}
                 </span>
               )}
-            </button>
+            </Pressable>
 
             {/* Nút Tùy chọn hiển thị di động (kề bên nút Bộ lọc theo phong cách Linear) */}
             <TaskTableViewOptionsPopover
@@ -853,7 +854,7 @@ export function TaskTableToolbar({
 
             {/* Nút Sắp xếp nhanh di động */}
             {onSort && (
-              <button
+              <Pressable
                 type="button"
                 onClick={() => {
                   const nextSort =
@@ -878,14 +879,14 @@ export function TaskTableToolbar({
                 <span className="font-mono text-xs text-muted-foreground">
                   {sortDirection === "asc" ? "▲" : "▼"}
                 </span>
-              </button>
+              </Pressable>
             )}
           </div>
 
           <div className="flex items-center gap-1.5">
             {/* Nút Tạo việc mới (Linear style: thanh lịch, tối giản) */}
             {canCreateTask && onAddTask && (
-              <button
+              <Pressable
                 type="button"
                 onClick={onAddTask}
                 className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-colors hover:bg-muted touch-manipulation cursor-pointer"
@@ -893,7 +894,7 @@ export function TaskTableToolbar({
               >
                 <Plus className="size-4 text-muted-foreground" strokeWidth={1.5} />
                 <span>Tạo việc</span>
-              </button>
+              </Pressable>
             )}
           </div>
         </div>
@@ -924,14 +925,14 @@ export function TaskTableToolbar({
                   <SlidersHorizontal className="size-4.5 text-primary" strokeWidth={1.5} />
                   <h3 className="text-base font-semibold text-foreground">Bộ lọc công việc</h3>
                 </div>
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
                   className="inline-flex size-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                   aria-label="Đóng bảng bộ lọc"
                 >
                   <X className="size-5" strokeWidth={1.5} />
-                </button>
+                </Pressable>
               </div>
 
               {/* Filter: Trạng thái nhiệm vụ */}
@@ -941,7 +942,7 @@ export function TaskTableToolbar({
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {availableTabs.map((tab) => (
-                    <button
+                    <Pressable
                       key={tab.id}
                       type="button"
                       onClick={() => onTabChange(tab.id)}
@@ -958,7 +959,7 @@ export function TaskTableToolbar({
                           {computedPillCounts[tab.id]}
                         </span>
                       )}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -1046,21 +1047,21 @@ export function TaskTableToolbar({
 
               {/* Footer Actions */}
               <div className="flex items-center gap-2 pt-2 border-t border-border/60">
-                <button
+                <Pressable
                   type="button"
                   onClick={handleResetMobileFilters}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-[0.98]"
                 >
                   <RotateCcw className="size-3.5 text-muted-foreground" />
                   <span>Đặt lại bộ lọc</span>
-                </button>
-                <button
+                </Pressable>
+                <Pressable
                   type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
                   className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/95 transition-colors cursor-pointer active:scale-[0.98]"
                 >
                   <span>Áp dụng</span>
-                </button>
+                </Pressable>
               </div>
             </div>
           </div>
@@ -1109,14 +1110,14 @@ export function TaskTableToolbar({
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {localQuery ? (
-                <button
+                <Pressable
                   type="button"
                   onClick={handleClearSearch}
                   aria-label="Xóa từ khóa tìm kiếm"
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
                 >
                   <X className="size-3.5" strokeWidth={1.5} />
-                </button>
+                </Pressable>
               ) : (
                 <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/70 select-none">
                   /
@@ -1268,7 +1269,7 @@ export function TaskTableToolbar({
 
           {/* Nút Tạo việc mới (Phong cách Linear: nhẹ nhàng, thanh lịch) */}
           {onAddTask && canCreateTask && (
-            <button
+            <Pressable
               type="button"
               onClick={onAddTask}
               className="inline-flex items-center gap-1.5 h-8.5 px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer active:scale-[0.98]"
@@ -1277,7 +1278,7 @@ export function TaskTableToolbar({
               <Plus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
               <span>Tạo việc</span>
               <span className="sr-only">Tạo nhiệm vụ</span>
-            </button>
+            </Pressable>
           )}
         </div>
       </div>
@@ -1295,7 +1296,7 @@ export function TaskTableToolbar({
           const isOverdueTab = tab.id === "overdue" && (count ?? 0) > 0;
 
           return (
-            <button
+            <Pressable
               key={tab.id}
               type="button"
               role="tab"
@@ -1330,7 +1331,7 @@ export function TaskTableToolbar({
                   {count}
                 </span>
               )}
-            </button>
+            </Pressable>
           );
         })}
       </div>

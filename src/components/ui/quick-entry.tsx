@@ -91,7 +91,7 @@ export function QuickEntry({
               disabled={isSubmitting}
               aria-label="Lưu (Enter)"
               title="Lưu (Enter)"
-              className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary-hover transition-colors cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+              className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary-hover transition-colors cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
             >
               <Check className="size-3.5" />
             </button>
@@ -103,7 +103,7 @@ export function QuickEntry({
               }}
               aria-label="Hủy (Esc)"
               title="Hủy (Esc)"
-              className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+              className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
             >
               <X className="size-3.5" />
             </button>

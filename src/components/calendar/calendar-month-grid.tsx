@@ -68,9 +68,9 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
   const common = cn("size-3 shrink-0", className);
   switch (state) {
     case "overdue":
-      return <AlertTriangle className={cn(common, "text-rose-600")} aria-hidden="true" />;
+      return <AlertTriangle className={cn(common, "text-destructive")} aria-hidden="true" />;
     case "waiting":
-      return <CircleDot className={cn(common, "text-amber-600")} aria-hidden="true" />;
+      return <CircleDot className={cn(common, "text-warning")} aria-hidden="true" />;
     case "due_today":
       return <CircleDot className={cn(common, "text-orange-600")} aria-hidden="true" />;
     case "in_progress":
@@ -387,14 +387,14 @@ export function CalendarMonthGrid({
                     <div className="flex items-center gap-1">
                       {overdueCount > 0 && (
                         <span className="inline-flex items-center gap-0.5" title={`${overdueCount} trễ hạn`}>
-                          <span className="size-1.5 rounded-full bg-rose-500" />
-                          <span className="text-xs font-semibold text-rose-600 tabular-nums">{overdueCount}</span>
+                          <span className="size-1.5 rounded-full bg-destructive" />
+                          <span className="text-xs font-semibold text-destructive tabular-nums">{overdueCount}</span>
                         </span>
                       )}
                       {waitingCount > 0 && (
                         <span className="inline-flex items-center gap-0.5" title={`${waitingCount} chờ duyệt`}>
-                          <span className="size-1.5 rounded-full bg-amber-500" />
-                          <span className="text-xs font-semibold text-amber-600 tabular-nums">{waitingCount}</span>
+                          <span className="size-1.5 rounded-full bg-warning" />
+                          <span className="text-xs font-semibold text-warning tabular-nums">{waitingCount}</span>
                         </span>
                       )}
                     </div>
@@ -475,7 +475,7 @@ export function CalendarMonthGrid({
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-2 border-t border-border/50 bg-muted/20 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1"><CheckCircle2 className="size-3 text-emerald-700" aria-hidden="true" />Hoàn thành</span>
           <span className="inline-flex items-center gap-1"><CircleDot className="size-3 text-blue-600" aria-hidden="true" />Đang thực hiện</span>
-          <span className="inline-flex items-center gap-1"><AlertTriangle className="size-3 text-rose-600" aria-hidden="true" />Trễ hạn</span>
+          <span className="inline-flex items-center gap-1"><AlertTriangle className="size-3 text-destructive" aria-hidden="true" />Trễ hạn</span>
           <span className="inline-flex items-center gap-1"><CalendarIcon className="size-3 text-sky-600" aria-hidden="true" />Sự kiện</span>
         </div>
       </div>

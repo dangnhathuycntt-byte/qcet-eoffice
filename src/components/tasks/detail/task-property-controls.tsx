@@ -74,6 +74,7 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
 
 export type { PersonnelOption as TaskPersonnelOption } from "@/hooks/use-personnel-list";
 import type { PersonnelOption } from "@/hooks/use-personnel-list";
+import { Pressable } from "@/components/ui/pressable";
 
 export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, onSelect }: {
   items: PersonnelOption[];
@@ -161,8 +162,8 @@ export function TaskDateRange({
   const nearDue = !dueInfo.isOverdue && dueDateIso && (
     dueInfo.text === "Hôm nay" || dueInfo.text === "Ngày mai" || dueInfo.text === "Còn 2 ngày"
   );
-  const urgencyClass = dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-600" : "";
-  const iconClass = dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground";
+  const urgencyClass = dueInfo.isOverdue ? "text-destructive" : nearDue ? "text-warning" : "";
+  const iconClass = dueInfo.isOverdue ? "text-destructive" : nearDue ? "text-warning" : "text-muted-foreground";
 
   const startLabel = startDateIso ? formatDisplayDate(startDateIso) : "-";
   const dueLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn";
@@ -201,7 +202,7 @@ export function TaskDateRange({
         <span className={cn("tabular-nums text-xs font-normal", urgencyClass || "text-muted-foreground")}>{dueLabel}</span>
       )}
       {canEdit && onClearDates && (startDateIso || dueDateIso) && (
-        <button
+        <Pressable
           type="button"
           onClick={(e) => { e.stopPropagation(); onClearDates(); }}
           className="opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all motion-reduce:transition-none"
@@ -209,7 +210,7 @@ export function TaskDateRange({
           title="Xóa ngày"
         >
           <X className="size-3" strokeWidth={1.5} />
-        </button>
+        </Pressable>
       )}
     </div>
   );
@@ -226,7 +227,7 @@ const PRIORITY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 
 // Cùng quy tắc màu với PrioritySignalBars: khẩn cấp đỏ, cao đậm, còn lại mờ
 const PRIORITY_ICON_COLOR: Record<string, string> = {
-  URGENT: "text-rose-600",
+  URGENT: "text-destructive",
   HIGH: "text-foreground/70",
   NORMAL: "text-muted-foreground",
   LOW: "text-muted-foreground",

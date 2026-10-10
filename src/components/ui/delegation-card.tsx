@@ -152,7 +152,7 @@ export function DelegationCard({
             type="button"
             onClick={onRevoke}
             aria-label="Thu hồi quyền ủy quyền"
-            className="rounded-lg px-2 py-1 text-xs font-medium text-destructive hover:bg-danger-soft transition-colors cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-destructive focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+            className="rounded-lg px-2 py-1 text-xs font-medium text-destructive hover:bg-danger-soft transition-colors cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-destructive focus-visible:outline-offset-1 relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
           >
             Thu hồi quyền
           </button>

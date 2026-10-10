@@ -62,6 +62,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // 1. Types & Interfaces
@@ -1046,7 +1047,7 @@ export function LegacyExecutiveCockpitWorkspace({
               className={cn(
                 "font-semibold",
                 activeBottlenecks.length > 0
-                  ? "text-rose-600"
+                  ? "text-destructive"
                   : "text-emerald-600"
               )}
             >
@@ -1145,14 +1146,14 @@ export function LegacyExecutiveCockpitWorkspace({
             >
               Hoàn tác (5s)
             </Button>
-            <button
+            <Pressable
               type="button"
               onClick={() => setUndoState(null)}
               className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
               aria-label="Đóng thông báo"
             >
               <X className="w-4 h-4" />
-            </button>
+            </Pressable>
           </div>
         </div>
       )}
@@ -1170,14 +1171,14 @@ export function LegacyExecutiveCockpitWorkspace({
             />
             <span>{reminderNotice}</span>
           </div>
-          <button
+          <Pressable
             type="button"
             onClick={() => setReminderNotice(null)}
             className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
             aria-label="Đóng thông báo"
           >
             <X className="w-3.5 h-3.5" />
-          </button>
+          </Pressable>
         </div>
       )}
 
@@ -1194,8 +1195,8 @@ export function LegacyExecutiveCockpitWorkspace({
             "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             metrics.bottlenecksCount > 0
               ? activeTab === "BOTTLENECKS"
-                ? "border-rose-500/60 bg-rose-500/[0.06] ring-1 ring-rose-500/20 text-rose-600 shadow-xs"
-                : "border-rose-500/40 bg-rose-500/[0.03] hover:border-rose-500/60 text-rose-600"
+                ? "border-destructive/60 bg-destructive/[0.06] ring-1 ring-destructive/20 text-destructive shadow-xs"
+                : "border-destructive/40 bg-destructive/[0.03] hover:border-destructive/60 text-destructive"
               : activeTab === "BOTTLENECKS"
                 ? "border-emerald-500/40 bg-emerald-500/[0.06] ring-1 ring-emerald-500/20 text-emerald-600 shadow-xs"
                 : "border-emerald-500/30 bg-emerald-500/[0.03] hover:border-emerald-500/50 text-emerald-600"
@@ -1209,7 +1210,7 @@ export function LegacyExecutiveCockpitWorkspace({
               className={cn(
                 "p-1.5 rounded-lg",
                 metrics.bottlenecksCount > 0
-                  ? "bg-rose-500/15 text-rose-600"
+                  ? "bg-destructive/15 text-destructive"
                   : "bg-emerald-500/15 text-emerald-600"
               )}
             >
@@ -1226,7 +1227,7 @@ export function LegacyExecutiveCockpitWorkspace({
               className={cn(
                 "text-3xl font-bold tracking-tight tabular-nums",
                 metrics.bottlenecksCount > 0
-                  ? "text-rose-600"
+                  ? "text-destructive"
                   : "text-emerald-600"
               )}
             >
@@ -1236,7 +1237,7 @@ export function LegacyExecutiveCockpitWorkspace({
               className={cn(
                 "text-xs font-medium",
                 metrics.bottlenecksCount > 0
-                  ? "text-rose-600/80"
+                  ? "text-destructive/80"
                   : "text-emerald-600/80"
               )}
             >
@@ -1247,8 +1248,8 @@ export function LegacyExecutiveCockpitWorkspace({
           <div className="flex items-center gap-1.5 text-xs font-medium">
             {metrics.bottlenecksCount > 0 ? (
               <>
-                <span className="inline-block w-2 h-2 rounded-full bg-rose-600 animate-pulse shrink-0" />
-                <span className="text-rose-600 truncate">
+                <span className="inline-block w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
+                <span className="text-destructive truncate">
                   {affectedUnitsCount} đơn vị bị ảnh hưởng
                 </span>
               </>
@@ -1424,7 +1425,7 @@ export function LegacyExecutiveCockpitWorkspace({
           {metrics.bottlenecksCount > 0 && (
             <Badge
               variant="destructive"
-              className="text-xs px-1.5 py-0 h-4 bg-rose-500 tabular-nums"
+              className="text-xs px-1.5 py-0 h-4 bg-destructive tabular-nums"
             >
               {metrics.bottlenecksCount}
             </Badge>
@@ -1518,9 +1519,9 @@ export function LegacyExecutiveCockpitWorkspace({
           data-slot="bottlenecks-section"
         >
           {activeBottlenecks.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-rose-500/25 bg-rose-500/[0.04]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-destructive/25 bg-destructive/[0.04]">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-rose-500/10 text-rose-600 shrink-0">
+                <div className="p-2 rounded-lg bg-destructive/10 text-destructive shrink-0">
                   <AlertTriangle className="w-4 h-4" />
                 </div>
                 <div className="text-xs">
@@ -1538,7 +1539,7 @@ export function LegacyExecutiveCockpitWorkspace({
                 variant="outline"
                 size="sm"
                 onClick={handleRemindAll}
-                className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1.5 border-rose-500/30 text-rose-700 hover:bg-rose-500/10 shrink-0 whitespace-nowrap cursor-pointer"
+                className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0 whitespace-nowrap cursor-pointer"
               >
                 <Send className="w-3 h-3" />
                 <span>Đôn đốc tất cả ({affectedUnitsCount} đơn vị)</span>
@@ -1566,7 +1567,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   <div>
                     <h2 className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-2">
                       <AlertTriangle
-                        className="w-4 h-4 text-rose-600 shrink-0"
+                        className="w-4 h-4 text-destructive shrink-0"
                         strokeWidth={1.5}
                       />
                       <span>Dòng tác vụ điểm nghẽn cần tháo gỡ</span>
@@ -1578,7 +1579,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   {activeBottlenecks.length > 0 && (
                     <Badge
                       variant="destructive"
-                      className="self-start text-xs font-semibold bg-rose-600 tabular-nums"
+                      className="self-start text-xs font-semibold bg-destructive tabular-nums"
                     >
                       {displayedBottlenecks.length}/{activeBottlenecks.length} điểm nghẽn
                     </Badge>
@@ -1594,17 +1595,17 @@ export function LegacyExecutiveCockpitWorkspace({
                       value={bottleneckSearch}
                       onChange={(e) => setBottleneckSearch(e.target.value)}
                       placeholder="Tìm theo tên nhiệm vụ, cán bộ, đơn vị..."
-                      className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-rose-500/30"
+                      className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-destructive/30"
                     />
                     {bottleneckSearch && (
-                      <button
+                      <Pressable
                         type="button"
                         onClick={() => setBottleneckSearch("")}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         aria-label="Xóa tìm kiếm"
                       >
                         <X className="w-3 h-3" />
-                      </button>
+                      </Pressable>
                     )}
                   </div>
 
@@ -1623,7 +1624,7 @@ export function LegacyExecutiveCockpitWorkspace({
                         className={cn(
                           "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2.5 whitespace-nowrap",
                           bottleneckFilter === btn.id &&
-                            "bg-rose-600 hover:bg-rose-700 text-white border-rose-600"
+                            "bg-destructive hover:bg-destructive/90 text-white border-destructive"
                         )}
                       >
                         {btn.label}
@@ -1672,12 +1673,12 @@ export function LegacyExecutiveCockpitWorkspace({
                       <div key={item.id} className="space-y-2">
                         {/* Mobile Optimized Single-Column Card (md:hidden) */}
                         <div
-                          className="md:hidden flex flex-col justify-between gap-3 rounded-xl border border-rose-500/30 bg-card p-3.5 shadow-2xs"
+                          className="md:hidden flex flex-col justify-between gap-3 rounded-xl border border-destructive/30 bg-card p-3.5 shadow-2xs"
                           data-slot="mobile-bottleneck-card"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-700 border border-rose-500/20">
-                              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive border border-destructive/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
                               <span className="tabular-nums tracking-wide">
                                 {typeof item.daysOverdue === "number" && item.daysOverdue > 0
                                   ? `Trễ hạn ${item.daysOverdue} ngày`
@@ -1702,7 +1703,7 @@ export function LegacyExecutiveCockpitWorkspace({
                               {item.title}
                             </h4>
                             {item.blockedReason && (
-                              <p className="mt-1 text-xs text-rose-600/90 line-clamp-1 italic flex items-center gap-1">
+                              <p className="mt-1 text-xs text-destructive/90 line-clamp-1 italic flex items-center gap-1">
                                 <AlertTriangle className="w-3 h-3 shrink-0" />
                                 <span>Vướng mắc: {item.blockedReason}</span>
                               </p>
@@ -1736,7 +1737,7 @@ export function LegacyExecutiveCockpitWorkspace({
                             <Button
                               type="button"
                               onClick={() => handleExtend(item, 3)}
-                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
+                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-semibold bg-destructive hover:bg-destructive/90 text-white shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
                               title="Gia hạn tiến độ thêm 3 ngày và gỡ nghẽn tức thì"
                             >
                               <Clock className="w-3.5 h-3.5" />
@@ -1821,14 +1822,14 @@ export function LegacyExecutiveCockpitWorkspace({
                 className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               />
               {approvalSearch && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setApprovalSearch("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                   aria-label="Xóa tìm kiếm"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Pressable>
               )}
             </div>
 
@@ -2087,9 +2088,9 @@ export function LegacyExecutiveCockpitWorkspace({
 
                 const healthBadgeClass =
                   dept.healthStatus === "RED"
-                    ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
+                    ? "bg-destructive/10 text-destructive border-destructive/30"
                     : dept.healthStatus === "YELLOW"
-                      ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                      ? "bg-warning/10 text-warning border-warning/30"
                       : "bg-emerald-500/10 text-emerald-700 border-emerald-500/30";
 
                 const healthText =
@@ -2107,7 +2108,7 @@ export function LegacyExecutiveCockpitWorkspace({
                       isSelected
                         ? "border-primary ring-2 ring-primary/20 shadow-xs"
                         : "border-border/70 hover:border-border hover:shadow-2xs",
-                      dept.healthStatus === "RED" && "bg-rose-500/[0.02]"
+                      dept.healthStatus === "RED" && "bg-destructive/[0.02]"
                     )}
                   >
                     <div className="space-y-2">
@@ -2151,8 +2152,8 @@ export function LegacyExecutiveCockpitWorkspace({
                               dept.completionRate >= 80
                                 ? "bg-emerald-500"
                                 : dept.completionRate >= 50
-                                  ? "bg-amber-500"
-                                  : "bg-rose-500"
+                                  ? "bg-warning"
+                                  : "bg-destructive"
                             )}
                             style={{ width: `${Math.min(100, Math.max(0, dept.completionRate))}%` }}
                           />
@@ -2181,7 +2182,7 @@ export function LegacyExecutiveCockpitWorkspace({
                           className={cn(
                             "p-1.5 rounded",
                             dept.delayedTasks + dept.blockedTasks > 0
-                              ? "bg-rose-500/10 text-rose-600 font-semibold"
+                              ? "bg-destructive/10 text-destructive font-semibold"
                               : "bg-muted/40 text-muted-foreground"
                           )}
                         >
@@ -2218,7 +2219,7 @@ export function LegacyExecutiveCockpitWorkspace({
                               "Đôn đốc tiến độ"
                             )
                           }
-                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1 hover:bg-rose-500/10 hover:text-rose-700"
+                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1 hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Send className="w-3 h-3" />
                           <span>Đôn đốc</span>
@@ -2261,13 +2262,13 @@ export function LegacyExecutiveCockpitWorkspace({
                 className="self-start sm:self-auto gap-1 text-xs py-1 px-2.5"
               >
                 <span>Đang lọc đơn vị: {selectedDepartment}</span>
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setSelectedDepartment("ALL")}
                   className="ml-1 hover:text-destructive cursor-pointer"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Pressable>
               </Badge>
             )}
           </div>
@@ -2284,13 +2285,13 @@ export function LegacyExecutiveCockpitWorkspace({
                 className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
               {searchTerm && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setSearchTerm("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-3.5 h-3.5" />
-                </button>
+                </Pressable>
               )}
             </div>
 
@@ -2369,7 +2370,7 @@ export function LegacyExecutiveCockpitWorkspace({
                         {isOverdue && (
                           <Badge
                             variant="destructive"
-                            className="text-xs bg-rose-500"
+                            className="text-xs bg-destructive"
                           >
                             Trễ hạn
                           </Badge>
@@ -2426,7 +2427,7 @@ export function LegacyExecutiveCockpitWorkspace({
                               task.progressPercent >= 80
                                 ? "bg-emerald-500"
                                 : task.progressPercent >= 50
-                                  ? "bg-amber-500"
+                                  ? "bg-warning"
                                   : "bg-primary"
                             )}
                             style={{ width: `${Math.min(100, Math.max(0, task.progressPercent))}%` }}

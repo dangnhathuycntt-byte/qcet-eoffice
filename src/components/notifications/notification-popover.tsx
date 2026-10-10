@@ -28,6 +28,7 @@ import {
   beginOptimisticRead,
   settleOptimisticRead,
 } from "@/lib/notification-triage";
+import { Pressable } from "@/components/ui/pressable";
 
 // Re-export for backward compatibility
 export type { QCETNotification };
@@ -183,7 +184,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
 
           <div className="flex items-center gap-1 shrink-0">
             {unreadCount > 0 && (
-              <button
+              <Pressable
                 type="button"
                 onClick={markAllAsRead}
                 className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
@@ -191,7 +192,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               >
                 <CheckCheck size={13} strokeWidth={1.5} className="text-primary" />
                 <span>Đã đọc</span>
-              </button>
+              </Pressable>
             )}
           </div>
         </div>
@@ -199,7 +200,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
         {/* Filter Segmented Control */}
         <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/40">
           <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/80 border border-border/40 text-xs">
-            <button
+            <Pressable
               type="button"
               onClick={() => setFilter("all")}
               className={cn(
@@ -210,8 +211,8 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               )}
             >
               Tất cả ({notifications.length})
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => setFilter("unread")}
               className={cn(
@@ -231,7 +232,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
                   0
                 </span>
               )}
-            </button>
+            </Pressable>
           </div>
 
           <span className="text-xs font-mono tabular-nums text-muted-foreground">
@@ -251,7 +252,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             <p className="text-xs text-muted-foreground mt-0.5">
               {error ?? "Không thể kết nối tới máy chủ thông báo."}
             </p>
-            <button
+            <Pressable
               type="button"
               onClick={fetchNotifications}
               disabled={isLoading}
@@ -259,7 +260,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             >
               <RefreshCw size={12} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>
-            </button>
+            </Pressable>
           </div>
         ) : viewState === "loading" ? (
           <div className="py-3 px-3 space-y-2" data-testid="notification-loading-state" aria-label="Đang tải thông báo...">
@@ -416,7 +417,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
             {item.category}
           </span>
           {formatted.extraBadge && (
-            <span className="px-1 py-0.2 rounded text-xs font-mono font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+            <span className="px-1 py-0.2 rounded text-xs font-mono font-medium bg-warning/10 text-warning border border-warning/20">
               {formatted.extraBadge}
             </span>
           )}
@@ -430,7 +431,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
       {/* Unread Indicator or Quick Mark Read Button on hover */}
       {!item.isRead ? (
         <div className="self-center shrink-0 flex items-center gap-1 pr-1">
-          <button
+          <Pressable
             type="button"
             onClick={(e) => {
               e.preventDefault();
@@ -441,7 +442,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
             title="Đánh dấu là đã đọc"
           >
             <Check size={14} strokeWidth={1.5} />
-          </button>
+          </Pressable>
           <span className="size-2 rounded-full bg-primary ring-2 ring-primary/20 group-hover:hidden" />
         </div>
       ) : null}

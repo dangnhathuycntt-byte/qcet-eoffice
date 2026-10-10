@@ -41,6 +41,7 @@ import {
   groupNotificationsByTarget,
   type NotificationGroup,
 } from "@/lib/notification-inbox";
+import { Pressable } from "@/components/ui/pressable";
 
 /** Phần nhiệm vụ lấy từ GET /api/tasks/{id} mà hộp thư cần hiển thị. */
 interface InboxTask {
@@ -638,14 +639,14 @@ export function InboxView() {
                 className="h-7 w-full rounded-md bg-secondary pl-7 pr-7 text-xs text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
               {queryInput && (
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setQueryInput("")}
                   aria-label="Xóa từ khóa"
                   className="absolute right-3 top-0 flex size-7 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   <X className="size-3.5" strokeWidth={1.5} />
-                </button>
+                </Pressable>
               )}
             </div>
           )}
@@ -1000,14 +1001,14 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
   return (
     <span className="inline-flex h-6 items-center gap-1 rounded-md border border-border/70 pl-2 text-xs text-foreground">
       {label}
-      <button
+      <Pressable
         type="button"
         onClick={onRemove}
         aria-label={`Bỏ lọc ${label}`}
         className="flex size-6 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
       >
         <X className="size-3" strokeWidth={1.5} />
-      </button>
+      </Pressable>
     </span>
   );
 }

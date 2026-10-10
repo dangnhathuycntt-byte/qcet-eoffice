@@ -22,6 +22,7 @@ import {
 import QRCode from "qrcode";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface MobileAppInstallModalProps {
   isOpen?: boolean;
@@ -227,14 +228,14 @@ export function MobileAppInstallModal({
               </p>
             </div>
           </div>
-          <button
+          <Pressable
             type="button"
             onClick={handleClose}
             className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />
-          </button>
+          </Pressable>
         </div>
 
         {/* Modal Body */}
@@ -260,7 +261,7 @@ export function MobileAppInstallModal({
                 </div>
 
                 {isInstallable && !isStandalone && (
-                  <button
+                  <Pressable
                     type="button"
                     onClick={async () => {
                       await installApp();
@@ -270,7 +271,7 @@ export function MobileAppInstallModal({
                   >
                     <Download size={14} />
                     <span>Cài đặt ứng dụng</span>
-                  </button>
+                  </Pressable>
                 )}
               </div>
 
@@ -282,7 +283,7 @@ export function MobileAppInstallModal({
                   value={activeUrl}
                   className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all truncate"
                 />
-                <button
+                <Pressable
                   type="button"
                   onClick={handleCopyLink}
                   className={cn(
@@ -294,7 +295,7 @@ export function MobileAppInstallModal({
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   <span>{copied ? "Đã chép" : "Chép liên kết"}</span>
-                </button>
+                </Pressable>
               </div>
             </div>
           ) : (
@@ -332,7 +333,7 @@ export function MobileAppInstallModal({
                 <div className="mt-1.5 space-y-1.5">
                   {/* Tailscale Option */}
                   {networkInfo?.tailscaleUrl && (
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => setSelectedUrlType("tailscale")}
                       className={cn(
@@ -373,12 +374,12 @@ export function MobileAppInstallModal({
                       {selectedUrlType === "tailscale" && (
                         <CheckCircle2 size={14} className="shrink-0 ml-2" />
                       )}
-                    </button>
+                    </Pressable>
                   )}
 
                   {/* LAN Wi-Fi Option */}
                   {networkInfo?.lanUrl && (
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => setSelectedUrlType("lan")}
                       className={cn(
@@ -409,11 +410,11 @@ export function MobileAppInstallModal({
                       {selectedUrlType === "lan" && (
                         <CheckCircle2 size={14} className="shrink-0 ml-2" />
                       )}
-                    </button>
+                    </Pressable>
                   )}
 
                   {/* Current / Localhost Option */}
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => setSelectedUrlType("current")}
                     className={cn(
@@ -442,7 +443,7 @@ export function MobileAppInstallModal({
                     {selectedUrlType === "current" && (
                       <CheckCircle2 size={14} className="shrink-0 ml-2" />
                     )}
-                  </button>
+                  </Pressable>
                 </div>
               </div>
 
@@ -454,7 +455,7 @@ export function MobileAppInstallModal({
                   value={activeUrl}
                   className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all"
                 />
-                <button
+                <Pressable
                   type="button"
                   onClick={handleCopyLink}
                   className={cn(
@@ -466,7 +467,7 @@ export function MobileAppInstallModal({
                 >
                   {copied ? <Check size={13} /> : <Copy size={13} />}
                   <span>{copied ? "Đã chép" : "Chép link"}</span>
-                </button>
+                </Pressable>
               </div>
             </div>
           </div>
@@ -475,7 +476,7 @@ export function MobileAppInstallModal({
           {/* Platform Installation Guide Tabs */}
           <div>
             <div className="flex items-center gap-1.5 border-0 pb-2 overflow-x-auto">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setActiveTab("ios")}
                 className={cn(
@@ -486,8 +487,8 @@ export function MobileAppInstallModal({
                 )}
               >
                 <span>iPhone / iPad (iOS)</span>
-              </button>
-              <button
+              </Pressable>
+              <Pressable
                 type="button"
                 onClick={() => setActiveTab("android")}
                 className={cn(
@@ -498,8 +499,8 @@ export function MobileAppInstallModal({
                 )}
               >
                 <span>Điện thoại Android</span>
-              </button>
-              <button
+              </Pressable>
+              <Pressable
                 type="button"
                 onClick={() => setActiveTab("desktop")}
                 className={cn(
@@ -510,7 +511,7 @@ export function MobileAppInstallModal({
                 )}
               >
                 <span>Máy tính (Desktop App)</span>
-              </button>
+              </Pressable>
             </div>
 
             {/* iOS Guide */}
@@ -614,7 +615,7 @@ export function MobileAppInstallModal({
                       <p className="text-foreground leading-relaxed">
                         Trình duyệt hiện tại sẵn sàng cài đặt ứng dụng QCET E-Office trực tiếp lên máy tính của bạn:
                       </p>
-                      <button
+                      <Pressable
                         type="button"
                         onClick={async () => {
                           await installApp();
@@ -624,7 +625,7 @@ export function MobileAppInstallModal({
                       >
                         <Laptop size={15} />
                         <span>Cài đặt ngay lên máy tính này</span>
-                      </button>
+                      </Pressable>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
@@ -648,13 +649,13 @@ export function MobileAppInstallModal({
             <Sparkles size={13} className="text-primary" />
             <span>Đồng bộ thời gian thực qua Tailscale &amp; Web Push</span>
           </div>
-          <button
+          <Pressable
             type="button"
             onClick={handleClose}
             className="px-4 py-2 min-h-[44px] rounded-lg border-0 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors cursor-pointer flex items-center justify-center"
           >
             Đóng
-          </button>
+          </Pressable>
         </div>
       </div>
     </div>

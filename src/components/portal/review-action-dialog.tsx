@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // 1. Constants & Validation Helpers
@@ -328,7 +329,7 @@ export function ReviewActionDialog({
               id="decision-group-label"
               className="text-xs font-semibold text-muted-foreground"
             >
-              Quyết định thẩm định <span className="text-rose-500">*</span>
+              Quyết định thẩm định <span className="text-destructive">*</span>
             </label>
             <div
               role="radiogroup"
@@ -355,8 +356,8 @@ export function ReviewActionDialog({
                         ? opt.accentColor === "emerald"
                           ? "border-emerald-600 bg-emerald-500/10 text-emerald-950 shadow-xs"
                           : opt.accentColor === "amber"
-                          ? "border-amber-600 bg-amber-500/10 text-amber-950 shadow-xs"
-                          : "border-rose-600 bg-rose-500/10 text-rose-950 shadow-xs"
+                          ? "border-warning bg-warning/10 text-warning shadow-xs"
+                          : "border-destructive bg-destructive/10 text-destructive shadow-xs"
                         : "border-border/80 bg-background hover:bg-muted/40 text-foreground"
                     )}
                   >
@@ -368,8 +369,8 @@ export function ReviewActionDialog({
                             ? opt.accentColor === "emerald"
                               ? "bg-emerald-600 text-white"
                               : opt.accentColor === "amber"
-                              ? "bg-amber-600 text-white"
-                              : "bg-rose-600 text-white"
+                              ? "bg-warning text-white"
+                              : "bg-destructive text-white"
                             : "bg-muted text-muted-foreground"
                         )}
                       >
@@ -382,8 +383,8 @@ export function ReviewActionDialog({
                             ? opt.accentColor === "emerald"
                               ? "bg-emerald-600/20 text-emerald-800"
                               : opt.accentColor === "amber"
-                              ? "bg-amber-600/20 text-amber-800"
-                              : "bg-rose-600/20 text-rose-800"
+                              ? "bg-warning/20 text-warning"
+                              : "bg-destructive/20 text-destructive"
                             : "bg-muted/80 text-muted-foreground"
                         )}
                       >
@@ -412,7 +413,7 @@ export function ReviewActionDialog({
                 <MessageSquare className="h-3.5 w-3.5" />
                 <span>Ý kiến thẩm định & Hướng dẫn</span>
                 {isCommentRequired ? (
-                  <span className="text-rose-500 font-bold">* (Bắt buộc)</span>
+                  <span className="text-destructive font-bold">* (Bắt buộc)</span>
                 ) : (
                   <span className="text-muted-foreground/80 font-normal">
                     (Không bắt buộc)
@@ -423,7 +424,7 @@ export function ReviewActionDialog({
                 className={cn(
                   "text-xs",
                   isCommentRequired && commentCharCount < 5
-                    ? "text-amber-600 font-medium"
+                    ? "text-warning font-medium"
                     : "text-muted-foreground"
                 )}
               >
@@ -449,9 +450,9 @@ export function ReviewActionDialog({
                 "w-full min-h-[96px] rounded-xl border bg-background px-3.5 py-2.5 text-base sm:text-sm transition-colors",
                 "placeholder:text-muted-foreground/60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 leading-relaxed",
                 validationError
-                  ? "border-rose-500 focus:border-rose-500"
+                  ? "border-destructive focus:border-destructive"
                   : isCommentRequired && commentCharCount === 0
-                  ? "border-amber-500/70 focus:border-amber-500"
+                  ? "border-warning/70 focus:border-warning"
                   : "border-border/80 focus:border-primary"
               )}
             />
@@ -461,7 +462,7 @@ export function ReviewActionDialog({
               <div
                 role="alert"
                 aria-live="polite"
-                className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-600 flex items-start gap-2 animate-in fade-in duration-150"
+                className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive flex items-start gap-2 animate-in fade-in duration-150"
               >
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{validationError}</span>
@@ -475,7 +476,7 @@ export function ReviewActionDialog({
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {QUICK_COMMENT_TEMPLATES.map((tmpl, idx) => (
-                  <button
+                  <Pressable
                     key={idx}
                     type="button"
                     disabled={isProcessing}
@@ -483,7 +484,7 @@ export function ReviewActionDialog({
                     className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 sm:py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left min-h-[36px] sm:min-h-0 cursor-pointer active:scale-[0.98]"
                   >
                     <span>{tmpl}</span>
-                  </button>
+                  </Pressable>
                 ))}
               </div>
             </div>
@@ -512,9 +513,9 @@ export function ReviewActionDialog({
                 activeDecisionConfig.accentColor === "emerald" &&
                   "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800",
                 activeDecisionConfig.accentColor === "amber" &&
-                  "bg-amber-600 hover:bg-amber-700 active:bg-amber-800",
+                  "bg-warning hover:bg-warning/90 active:bg-warning/80",
                 activeDecisionConfig.accentColor === "rose" &&
-                  "bg-rose-600 hover:bg-rose-700 active:bg-rose-800"
+                  "bg-destructive hover:bg-destructive/90 active:bg-destructive/80"
               )}
             >
               {isProcessing ? (

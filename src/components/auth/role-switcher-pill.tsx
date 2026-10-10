@@ -5,6 +5,7 @@ import { UserRole } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { clientEnv } from "@/config/env.client";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface RoleConfigItem {
   role: UserRole;
@@ -22,7 +23,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfigItem> = {
     shortLabel: "BGH",
     description: "Ban Giám hiệu (Toàn quyền)",
     icon: Landmark,
-    color: "text-amber-700 bg-amber-500/10 border-amber-500/30",
+    color: "text-warning bg-warning/10 border-warning/30",
   },
   MANAGER: {
     role: "MANAGER",
@@ -82,7 +83,7 @@ function RoleSwitcherPillInner({ className }: { className?: string }) {
           const Icon = config.icon;
           const isActive = user.role === role;
           return (
-            <button
+            <Pressable
               key={role}
               type="button"
               onClick={() => switchRole(role)}
@@ -96,7 +97,7 @@ function RoleSwitcherPillInner({ className }: { className?: string }) {
             >
               <Icon size={13} strokeWidth={1.5} className="shrink-0" />
               <span className="hidden sm:inline">{config.shortLabel}</span>
-            </button>
+            </Pressable>
           );
         })}
       </div>

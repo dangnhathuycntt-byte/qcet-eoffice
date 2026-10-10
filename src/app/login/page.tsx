@@ -12,6 +12,7 @@ import {
   sanitizeRedirectUrl,
   shouldShowLoginSkeleton,
 } from "@/lib/login-helpers";
+import { Pressable } from "@/components/ui/pressable";
 
 /* ─── Layout constants ─── */
 const PAGE = "flex min-h-[100dvh] w-full items-start justify-center bg-white px-6 pt-24 pb-10 outline-none min-[600px]:items-center min-[600px]:py-10 relative overflow-hidden font-sans text-foreground";
@@ -233,7 +234,7 @@ function LoginFormContent() {
           <h1 className="mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]" style={{ color: C.fg }}>Mở bằng trình duyệt</h1>
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Google không cho đăng nhập trong ứng dụng này.</p>
           <div className="mt-7 w-full">
-            <button
+            <Pressable
               type="button"
               onClick={async () => {
                 try {
@@ -255,7 +256,7 @@ function LoginFormContent() {
                   <span>Sao chép liên kết</span>
                 </>
               )}
-            </button>
+            </Pressable>
           </div>
           <p className="mt-3.5 text-xs text-center" style={{ color: C.sub }}>
             Bấm <strong style={{ color: C.fg }}>⋯</strong> rồi chọn Mở bằng trình duyệt.
@@ -280,7 +281,7 @@ function LoginFormContent() {
             {emailParam || "Tài khoản của bạn"} chưa có quyền dùng QCET E-Office.
           </p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
-            <button
+            <Pressable
               type="button"
               disabled={isSubmittingRequest}
               onClick={handleRequestAccess}
@@ -288,7 +289,7 @@ function LoginFormContent() {
             >
               <Send className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <span>{isSubmittingRequest ? "Đang gửi..." : "Gửi yêu cầu cấp quyền"}</span>
-            </button>
+            </Pressable>
             <a
               href="/login?startGoogle=1&prompt=select_account"
               className="text-sm font-medium underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -315,7 +316,7 @@ function LoginFormContent() {
           <h1 className="mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]" style={{ color: C.fg }}>Đã gửi yêu cầu</h1>
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Quản trị viên sẽ xem và báo qua email.</p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
-            <button
+            <Pressable
               type="button"
               onClick={() => {
                 setHasSubmittedRequest(false);
@@ -324,7 +325,7 @@ function LoginFormContent() {
               className={BTN_OUTLINE}
             >
               Quay lại đăng nhập
-            </button>
+            </Pressable>
             <p className="text-xs text-center" style={{ color: C.sub }}>Bạn sẽ nhận email khi được cấp quyền.</p>
           </div>
           <p className="mt-4 text-xs leading-relaxed text-center" style={{ color: C.sub }}>QCET E-Office chỉ nhận tên và email của bạn.</p>
@@ -345,13 +346,13 @@ function LoginFormContent() {
           <h1 className="mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]" style={{ color: C.fg }}>Tài khoản đã bị khóa</h1>
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Tài khoản này không còn dùng được QCET E-Office.</p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
-            <button
+            <Pressable
               type="button"
               onClick={() => router.push("/login?startGoogle=1&prompt=select_account")}
               className={BTN_OUTLINE}
             >
               Dùng tài khoản khác
-            </button>
+            </Pressable>
             <p className="text-xs text-center" style={{ color: C.sub }}>
               Nếu đây là nhầm lẫn,{" "}
               <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.fg }}>liên hệ hỗ trợ</a>.
@@ -375,14 +376,14 @@ function LoginFormContent() {
           <h1 className="mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]" style={{ color: C.fg }}>Chưa kết nối được Google</h1>
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Kiểm tra mạng rồi thử lại.</p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
-            <button
+            <Pressable
               type="button"
               disabled={isRetryingAtPlace}
               onClick={handleRetryAtPlace}
               className={BTN_OUTLINE}
             >
               {isRetryingAtPlace ? "Đang kết nối lại..." : "Thử lại"}
-            </button>
+            </Pressable>
             <p className="text-xs text-center" style={{ color: C.sub }}>
               Vẫn lỗi?{" "}
               <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.fg }}>liên hệ hỗ trợ</a>.

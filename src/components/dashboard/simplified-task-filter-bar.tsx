@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAcademicMonthsForYear } from "@/lib/academic-calendar";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // 1. Interfaces & Types
@@ -221,14 +222,14 @@ export function SimplifiedTaskFilterBar({
             className="w-full pl-9 pr-9 py-1.5 text-xs bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
           />
           {searchQuery && (
-            <button
+            <Pressable
               type="button"
               onClick={() => onSearchChange("")}
               aria-label="Xóa tìm kiếm"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground rounded-md transition-colors"
             >
               <X className="w-3.5 h-3.5" strokeWidth={1.5} />
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -241,7 +242,7 @@ export function SimplifiedTaskFilterBar({
           {CORE_STATUS_PILLS.map((pill) => {
             const isActive = activeStatus === pill.id;
             return (
-              <button
+              <Pressable
                 key={pill.id}
                 type="button"
                 onClick={() => onStatusChange(pill.id)}
@@ -254,7 +255,7 @@ export function SimplifiedTaskFilterBar({
                 )}
               >
                 {pill.label}
-              </button>
+              </Pressable>
             );
           })}
         </div>
@@ -270,7 +271,7 @@ export function SimplifiedTaskFilterBar({
 
         {/* Advanced Filters Popover Container */}
         <div className="relative" ref={popoverRef}>
-          <button
+          <Pressable
             type="button"
             ref={buttonRef}
             onClick={() => setIsOpen((prev) => !prev)}
@@ -300,7 +301,7 @@ export function SimplifiedTaskFilterBar({
               )}
               strokeWidth={1.5}
             />
-          </button>
+          </Pressable>
 
           {/* Popover Sheet */}
           <div
@@ -323,14 +324,14 @@ export function SimplifiedTaskFilterBar({
                   </span>
                 )}
               </div>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
                 aria-label="Đóng bộ lọc"
               >
                 <X className="w-3.5 h-3.5" strokeWidth={1.5} />
-              </button>
+              </Pressable>
             </div>
 
             {/* Filter Fields */}

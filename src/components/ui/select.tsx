@@ -125,7 +125,7 @@ export function Select({
           "flex w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-secondary outline-none select-none",
           compact ? "h-11 px-2 text-compact sm:h-7" : "h-12 px-3 text-base sm:h-9 sm:text-sm",
           "transition-colors duration-100 motion-reduce:transition-none",
-          "hover:bg-accent focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 data-[popup-open]:bg-selected",
+          "hover:bg-accent focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 data-[popup-open]:bg-selected",
           "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
           "aria-invalid:bg-danger-soft aria-invalid:text-destructive",
           className,

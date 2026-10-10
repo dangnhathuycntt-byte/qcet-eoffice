@@ -28,6 +28,7 @@ import type {
 import { computeExecutiveDepartmentSummaries } from "@/lib/tasks/executive-department-aggregator";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface ExecutiveDepartmentCommandCenterProps {
   tasks: SchoolTask[];
@@ -91,16 +92,16 @@ export function getRAGBadgeConfig(status: ExecutiveRAGStatus): {
       return {
         label: "Báo động trễ",
         className:
-          "bg-rose-50 text-rose-700 border-rose-200",
-        dotColor: "bg-rose-500",
+          "bg-danger-soft text-destructive border-destructive/30",
+        dotColor: "bg-destructive",
         pulse: true,
       };
     case "AMBER":
       return {
         label: "Cần chú ý",
         className:
-          "bg-amber-50 text-amber-700 border-amber-200",
-        dotColor: "bg-amber-500",
+          "bg-warning/10 text-warning border-warning/30",
+        dotColor: "bg-warning",
         pulse: false,
       };
     case "GREEN":
@@ -127,13 +128,13 @@ export function getPriorityBadgeConfig(priority: "HIGH" | "MEDIUM" | "LOW"): {
       return {
         label: "Ưu tiên cao",
         className:
-          "bg-rose-50 text-rose-700 border-rose-200",
+          "bg-danger-soft text-destructive border-destructive/30",
       };
     case "MEDIUM":
       return {
         label: "Trung bình",
         className:
-          "bg-amber-50 text-amber-700 border-amber-200",
+          "bg-warning/10 text-warning border-warning/30",
       };
     case "LOW":
     default:
@@ -175,7 +176,7 @@ export function getTaskStatusConfig(status: string): {
       return {
         label: "Bị nghẽn",
         className:
-          "bg-rose-50 text-rose-700 border-rose-200",
+          "bg-danger-soft text-destructive border-destructive/30",
       };
     case "NEW":
       return {
@@ -338,8 +339,8 @@ export function DepartmentCommandCard({
         "group relative flex flex-col justify-between rounded-xl border bg-card p-4 transition-all duration-200 cursor-pointer",
         "border-border/40 hover:border-border/80 hover:shadow-md hover:-translate-y-0.5",
         "focus-within:ring-2 focus-within:ring-primary/20",
-        summary.ragStatus === "RED" && "border-rose-300/60",
-        summary.ragStatus === "AMBER" && "border-amber-300/60",
+        summary.ragStatus === "RED" && "border-destructive/25",
+        summary.ragStatus === "AMBER" && "border-warning/25",
         isSelected && "ring-2 ring-primary/40 border-primary/60 shadow-md bg-accent/15"
       )}
     >
@@ -473,8 +474,8 @@ export function DepartmentCommandCard({
                 summary.metrics.completionRate >= 80
                   ? "bg-emerald-500"
                   : summary.metrics.completionRate >= 50
-                  ? "bg-amber-500"
-                  : "bg-rose-500"
+                  ? "bg-warning"
+                  : "bg-destructive"
               )}
               style={{
                 width: `${Math.min(
@@ -500,7 +501,7 @@ export function DepartmentCommandCard({
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
                 summary.metrics.dueSoon > 0
-                  ? "text-amber-600 font-bold"
+                  ? "text-warning font-bold"
                   : "text-foreground"
               )}
             >
@@ -513,7 +514,7 @@ export function DepartmentCommandCard({
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
                 summary.metrics.overdue > 0
-                  ? "text-rose-600 font-bold"
+                  ? "text-destructive font-bold"
                   : "text-foreground"
               )}
             >
@@ -660,14 +661,14 @@ export function DepartmentDrillDownPanel({
           </Button>
 
           {/* Quick close X button */}
-          <button
+          <Pressable
             type="button"
             onClick={onClose}
             aria-label="Đóng bảng chi tiết"
             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
           >
             <X size={16} strokeWidth={1.5} />
-          </button>
+          </Pressable>
         </div>
       </div>
 
@@ -691,13 +692,13 @@ export function DepartmentDrillDownPanel({
             {summary.metrics.completed}
           </span>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs border border-amber-200 text-amber-800">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-warning/10 px-2.5 py-1 text-xs border border-warning/30 text-warning">
           <span>Sắp hạn:</span>
           <span className="font-mono tabular-nums font-bold">
             {summary.metrics.dueSoon}
           </span>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2.5 py-1 text-xs border border-rose-200 text-rose-800">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-danger-soft px-2.5 py-1 text-xs border border-destructive/30 text-destructive">
           <span>Trễ hạn:</span>
           <span className="font-mono tabular-nums font-bold">
             {summary.metrics.overdue}
@@ -722,7 +723,7 @@ export function DepartmentDrillDownPanel({
       {/* 3. Two sub-sections / tabs: Cấp Trường vs Nội bộ */}
       <div className="space-y-3 pt-2">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-border/40 pb-2">
-          <button
+          <Pressable
             type="button"
             onClick={() => setActiveTab("SCHOOL")}
             className={cn(
@@ -737,9 +738,9 @@ export function DepartmentDrillDownPanel({
             <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {schoolTasks.length}
             </span>
-          </button>
+          </Pressable>
 
-          <button
+          <Pressable
             type="button"
             onClick={() => setActiveTab("UNIT")}
             className={cn(
@@ -754,7 +755,7 @@ export function DepartmentDrillDownPanel({
             <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {unitTasks.length}
             </span>
-          </button>
+          </Pressable>
         </div>
 
         {/* Task list rows */}
@@ -820,8 +821,8 @@ export function DepartmentDrillDownPanel({
                             progress >= 80
                               ? "bg-emerald-500"
                               : progress >= 50
-                              ? "bg-amber-500"
-                              : "bg-rose-500"
+                              ? "bg-warning"
+                              : "bg-destructive"
                           )}
                           style={{
                             width: `${Math.min(100, Math.max(0, progress))}%`,
@@ -964,7 +965,7 @@ export function ExecutiveDepartmentCommandCenter({
       <div className="flex flex-col gap-3 rounded-xl border border-border/50 bg-card p-3 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
         {/* 3 filter tabs: Tất cả đơn vị, Điểm nghẽn cần BGH chỉ đạo, Chờ BGH ký duyệt */}
         <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-muted/60 border border-border/40">
-          <button
+          <Pressable
             type="button"
             onClick={() => setActiveFilter("ALL")}
             className={cn(
@@ -979,15 +980,15 @@ export function ExecutiveDepartmentCommandCenter({
             <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {triageCounts.all}
             </span>
-          </button>
+          </Pressable>
 
-          <button
+          <Pressable
             type="button"
             onClick={() => setActiveFilter("BOTTLENECKS")}
             className={cn(
               "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
               activeFilter === "BOTTLENECKS"
-                ? "bg-background text-rose-700 shadow-xs border border-rose-200"
+                ? "bg-background text-destructive shadow-xs border border-destructive/30"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -996,7 +997,7 @@ export function ExecutiveDepartmentCommandCenter({
               strokeWidth={1.5}
               className={
                 triageCounts.bottlenecks > 0
-                  ? "text-rose-600"
+                  ? "text-destructive"
                   : "text-muted-foreground"
               }
             />
@@ -1005,15 +1006,15 @@ export function ExecutiveDepartmentCommandCenter({
               className={cn(
                 "rounded-full px-1.5 py-0.2 font-mono text-xs tabular-nums border",
                 triageCounts.bottlenecks > 0
-                  ? "bg-rose-100/80 text-rose-800 border-rose-300"
+                  ? "bg-destructive/10 text-destructive border-destructive/40"
                   : "bg-muted text-muted-foreground border-border/40"
               )}
             >
               {triageCounts.bottlenecks}
             </span>
-          </button>
+          </Pressable>
 
-          <button
+          <Pressable
             type="button"
             onClick={() => setActiveFilter("PENDING_APPROVAL")}
             className={cn(
@@ -1043,7 +1044,7 @@ export function ExecutiveDepartmentCommandCenter({
             >
               {triageCounts.pendingApproval}
             </span>
-          </button>
+          </Pressable>
         </div>
 
         {/* Quick Search inside command center */}

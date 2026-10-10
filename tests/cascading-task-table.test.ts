@@ -45,7 +45,7 @@ describe("CascadingTaskTable Helpers", () => {
     const sNew = getStatusBadgeConfig("NEW");
     assert.equal(sNew.label, "Mới");
     assert.ok(
-      sNew.className.includes("text-red-") || sNew.className.includes("text-rose-")
+      sNew.className.includes("text-red-") || sNew.className.includes("text-destructive")
     );
 
     const sInProgress = getStatusBadgeConfig("IN_PROGRESS");
@@ -54,7 +54,7 @@ describe("CascadingTaskTable Helpers", () => {
 
     const sReview = getStatusBadgeConfig("NEEDS_REVIEW");
     assert.equal(sReview.label, "Cần chỉnh sửa");
-    assert.ok(sReview.className.includes("text-amber-700"));
+    assert.ok(sReview.className.includes("text-warning"));
 
     const sDone = getStatusBadgeConfig("COMPLETED");
     assert.equal(sDone.label, "Hoàn thành");
@@ -62,7 +62,7 @@ describe("CascadingTaskTable Helpers", () => {
 
     const sOverdue = getStatusBadgeConfig("OVERDUE");
     assert.equal(sOverdue.label, "Trễ hạn");
-    assert.ok(sOverdue.className.includes("text-rose-700"));
+    assert.ok(sOverdue.className.includes("text-destructive"));
   });
 
   test("CATEGORY_TABS labels contain zero emojis", () => {

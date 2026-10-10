@@ -72,7 +72,7 @@ export function AdaptiveMetricStrip({
             icon: AlertCircle,
             iconColor:
               safeMetrics.urgentOverdueCount > 0
-                ? "text-rose-700 bg-rose-500/10 border-rose-500/20"
+                ? "text-destructive bg-destructive/10 border-destructive/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
           {
@@ -87,7 +87,7 @@ export function AdaptiveMetricStrip({
             icon: Clock,
             iconColor:
               safeMetrics.waitingApprovalCount > 0
-                ? "text-amber-700 bg-amber-500/10 border-amber-500/20"
+                ? "text-warning bg-warning/10 border-warning/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
           {
@@ -124,7 +124,7 @@ export function AdaptiveMetricStrip({
             icon: AlertCircle,
             iconColor:
               safeMetrics.urgentOverdueCount > 0
-                ? "text-rose-700 bg-rose-500/10 border-rose-500/20"
+                ? "text-destructive bg-destructive/10 border-destructive/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
           {
@@ -139,7 +139,7 @@ export function AdaptiveMetricStrip({
             icon: Clock,
             iconColor:
               safeMetrics.waitingApprovalCount > 0
-                ? "text-amber-700 bg-amber-500/10 border-amber-500/20"
+                ? "text-warning bg-warning/10 border-warning/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
           {
@@ -177,7 +177,7 @@ export function AdaptiveMetricStrip({
             icon: AlertCircle,
             iconColor:
               safeMetrics.urgentOverdueCount > 0
-                ? "text-rose-700 bg-rose-500/10 border-rose-500/20"
+                ? "text-destructive bg-destructive/10 border-destructive/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
           {
@@ -192,7 +192,7 @@ export function AdaptiveMetricStrip({
             icon: Clock,
             iconColor:
               safeMetrics.waitingApprovalCount > 0
-                ? "text-amber-700 bg-amber-500/10 border-amber-500/20"
+                ? "text-warning bg-warning/10 border-warning/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
           {

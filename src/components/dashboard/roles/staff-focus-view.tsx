@@ -23,6 +23,7 @@ import type {
 import type { AuthUser } from "@/types/auth";
 import { matchesUser } from "@/lib/role-task-filter";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 // -- Types & Exported Interfaces ---------------------------------------------
 
@@ -202,7 +203,7 @@ const CATEGORY_STYLES: Record<string, { label: string; badgeClass: string }> = {
   },
   ATTT: {
     label: "An toàn thông tin",
-    badgeClass: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+    badgeClass: "bg-warning/10 text-warning border-warning/20",
   },
   THU_VIEN: {
     label: "Thư viện",
@@ -365,7 +366,7 @@ export function StaffFocusView({
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors",
                   stats.urgentTodayCount > 0
-                    ? "border-rose-500/30 bg-rose-500/10 text-rose-600 font-semibold"
+                    ? "border-destructive/30 bg-destructive/10 text-destructive font-semibold"
                     : "border-border bg-muted/30 text-muted-foreground"
                 )}
               >
@@ -381,7 +382,7 @@ export function StaffFocusView({
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors",
                   stats.awaitingReviewCount > 0
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-600 font-semibold"
+                    ? "border-warning/30 bg-warning/10 text-warning font-semibold"
                     : "border-border bg-muted/30 text-muted-foreground"
                 )}
               >
@@ -421,7 +422,7 @@ export function StaffFocusView({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Filter Tabs */}
         <div className="inline-flex rounded-lg border border-border bg-card p-1 text-xs font-medium">
-          <button
+          <Pressable
             type="button"
             onClick={() => setActiveTab("ALL")}
             className={cn(
@@ -433,8 +434,8 @@ export function StaffFocusView({
           >
             Tất cả (
             <span className="font-mono tabular-nums">{staffTasks.length}</span>)
-          </button>
-          <button
+          </Pressable>
+          <Pressable
             type="button"
             onClick={() => setActiveTab("URGENT")}
             className={cn(
@@ -446,8 +447,8 @@ export function StaffFocusView({
           >
             Cần xử lý (
             <span className="font-mono tabular-nums">{stats.urgentTodayCount}</span>)
-          </button>
-          <button
+          </Pressable>
+          <Pressable
             type="button"
             onClick={() => setActiveTab("IN_PROGRESS")}
             className={cn(
@@ -459,8 +460,8 @@ export function StaffFocusView({
           >
             Sắp tới hạn (
             <span className="font-mono tabular-nums">{categorized.thisWeek.length}</span>)
-          </button>
-          <button
+          </Pressable>
+          <Pressable
             type="button"
             onClick={() => setActiveTab("REVIEW")}
             className={cn(
@@ -472,8 +473,8 @@ export function StaffFocusView({
           >
             Chờ duyệt (
             <span className="font-mono tabular-nums">{stats.awaitingReviewCount}</span>)
-          </button>
-          <button
+          </Pressable>
+          <Pressable
             type="button"
             onClick={() => setActiveTab("COMPLETED")}
             className={cn(
@@ -485,7 +486,7 @@ export function StaffFocusView({
           >
             Đã xong (
             <span className="font-mono tabular-nums">{stats.completedCount}</span>)
-          </button>
+          </Pressable>
         </div>
 
         {/* Search Input */}
@@ -508,13 +509,13 @@ export function StaffFocusView({
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-1 border-b border-border">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/10 text-rose-600">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive/10 text-destructive">
                   <AlertCircle className="h-4 w-4" strokeWidth={1.5} />
                 </span>
                 <h2 className="font-heading font-bold text-base text-foreground tracking-tight">
                   Khẩn cấp &amp; Hôm nay (Cần xử lý ngay)
                 </h2>
-                <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-mono tabular-nums font-bold text-rose-600">
+                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-mono tabular-nums font-bold text-destructive">
                   {filteredUrgent.length}
                 </span>
               </div>
@@ -589,13 +590,13 @@ export function StaffFocusView({
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-1 border-b border-border">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-warning/10 text-warning">
                   <FileCheck className="h-4 w-4" strokeWidth={1.5} />
                 </span>
                 <h2 className="font-heading font-bold text-base text-foreground tracking-tight">
                   Đang chờ duyệt (Đã nộp chờ duyệt)
                 </h2>
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-mono tabular-nums font-bold text-amber-600">
+                <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-mono tabular-nums font-bold text-warning">
                   {filteredReview.length}
                 </span>
               </div>
@@ -688,9 +689,9 @@ function TaskActionCard({
       className={cn(
         "group relative rounded-xl border p-4 transition-all duration-150",
         tier === "URGENT"
-          ? "border-rose-500/40 bg-rose-500/[0.02] hover:border-rose-500 hover:bg-rose-500/[0.04]"
+          ? "border-destructive/40 bg-destructive/[0.02] hover:border-destructive hover:bg-destructive/[0.04]"
           : tier === "REVIEW"
-          ? "border-amber-500/30 bg-amber-500/[0.02] hover:border-amber-500 hover:bg-amber-500/[0.04]"
+          ? "border-warning/30 bg-warning/[0.02] hover:border-warning hover:bg-warning/[0.04]"
           : tier === "COMPLETED"
           ? "border-emerald-500/30 bg-card/60 opacity-80 hover:opacity-100"
           : "border-border bg-card hover:border-primary/50"
@@ -730,9 +731,9 @@ function TaskActionCard({
               className={cn(
                 "inline-flex items-center gap-1.5 font-mono tabular-nums",
                 isOverdue && tier !== "COMPLETED"
-                  ? "text-rose-600 font-semibold"
+                  ? "text-destructive font-semibold"
                   : isDueToday && tier !== "COMPLETED"
-                  ? "text-amber-600 font-semibold"
+                  ? "text-warning font-semibold"
                   : "text-muted-foreground"
               )}
             >
@@ -766,7 +767,7 @@ function TaskActionCard({
 
             {/* In Review badge */}
             {task.status === "NEEDS_REVIEW" && (
-              <span className="inline-flex items-center gap-1 text-amber-600 font-medium font-mono tabular-nums">
+              <span className="inline-flex items-center gap-1 text-warning font-medium font-mono tabular-nums">
                 <Clock className="h-3.5 w-3.5" strokeWidth={1.5} />
                 Đang chờ duyệt
               </span>
@@ -785,33 +786,33 @@ function TaskActionCard({
         {/* Right Side: Action Buttons */}
         <div className="flex items-center gap-2 pt-2 md:pt-0 shrink-0">
           {tier !== "COMPLETED" && tier !== "REVIEW" && (
-            <button
+            <Pressable
               type="button"
               onClick={() => onQuickSubmit(task)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors shadow-2xs",
                 tier === "URGENT"
-                  ? "bg-rose-600 text-white hover:bg-rose-700 font-semibold"
+                  ? "bg-destructive text-white hover:bg-destructive/90 font-semibold"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
               )}
             >
               <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span>Nộp minh chứng</span>
-            </button>
+            </Pressable>
           )}
 
           {tier === "REVIEW" && (
-            <button
+            <Pressable
               type="button"
               onClick={() => onSelectTask(task)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-500/20 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning/20 transition-colors"
             >
               <FileCheck className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span>Xem minh chứng</span>
-            </button>
+            </Pressable>
           )}
 
-          <button
+          <Pressable
             type="button"
             onClick={() => onSelectTask(task)}
             className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -819,7 +820,7 @@ function TaskActionCard({
           >
             <span>Chi tiết</span>
             <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
-          </button>
+          </Pressable>
         </div>
       </div>
     </div>

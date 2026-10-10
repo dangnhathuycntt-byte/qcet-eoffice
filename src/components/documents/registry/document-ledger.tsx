@@ -32,6 +32,7 @@ import {
   isLedgerDone,
   todayInVietnam,
 } from "@/lib/documents/document-ledger-format";
+import { Pressable } from "@/components/ui/pressable";
 
 const URGENCY_OPTIONS = [
   { value: "ALL", label: "Tất cả mức khẩn" },
@@ -365,19 +366,19 @@ export function DocumentLedgerToolbar({
               ))}
             </div>
             <div className="flex justify-end border-t border-border/60 pt-1.5">
-              <button
+              <Pressable
                 type="button"
                 onClick={() => onVisibleColumnsChange(DEFAULT_LEDGER_COLUMNS)}
                 className="h-7 cursor-pointer rounded-md px-2 text-xs text-foreground/80 hover:bg-accent hover:text-foreground"
               >
                 Đặt lại
-              </button>
+              </Pressable>
             </div>
           </div>
         </ListToolbarPopover>
         </>
       )}
-      <button
+      <Pressable
         type="button"
         onClick={onPrimaryAction}
         aria-label={primaryActionLabel}
@@ -386,7 +387,7 @@ export function DocumentLedgerToolbar({
       >
         <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
         <span>{primaryActionLabel}</span>
-      </button>
+      </Pressable>
     </div>
   );
 }
