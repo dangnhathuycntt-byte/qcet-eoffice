@@ -34,6 +34,7 @@ interface TaskNotice {
   type: string;
   pushEvent: TaskPushEventType;
   note?: string | null;
+  dueDateStr?: string;
 }
 
 function payloadOf(event: OutboxEvent): Record<string, unknown> {
@@ -92,6 +93,7 @@ export async function deliverTaskNotice(db: DbClient, notice: TaskNotice): Promi
     taskTitle: task.title,
     actorName,
     directiveNote: notice.note ?? undefined,
+    dueDateStr: notice.dueDateStr,
   });
 
   // Ghi thông báo trong ứng dụng trước, một lệnh duy nhất: nếu lỗi thì chưa có bản

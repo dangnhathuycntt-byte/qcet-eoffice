@@ -249,6 +249,7 @@ model Task {
   criteria            TaskAcceptanceCriterion[]
   extensionRequests   TaskExtensionRequest[]
   declineNotices      TaskDeclineNotice[]
+  reminderLogs        TaskReminderLog[]
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -1222,6 +1223,21 @@ model TaskDeclineNotice {
 
   @@index([taskId, createdAt])
   @@map("task_decline_notices")
+}
+
+// Nhật ký nhắc hạn tự động (T-06). Ràng buộc duy nhất (task, kind, dueKey) bảo đảm mỗi
+// nhắc nhở chỉ gửi một lần cho một mốc, kể cả khi bộ quét chạy lại hay chạy song song.
+model TaskReminderLog {
+  id     String   @id @default(cuid())
+  taskId String   @map("task_id")
+  task   Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  kind   String   @db.VarChar(40)
+  dueKey String   @map("due_key") @db.VarChar(64)
+  sentAt DateTime @default(now()) @map("sent_at")
+
+  @@unique([taskId, kind, dueKey])
+  @@index([sentAt])
+  @@map("task_reminder_logs")
 }
 
 enum ExtensionRequestStatus {

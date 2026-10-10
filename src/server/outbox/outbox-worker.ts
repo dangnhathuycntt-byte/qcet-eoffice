@@ -9,6 +9,7 @@ import { processOutboxBatch, type DbClient, type ProcessOutboxBatchResult } from
 import { prisma } from "@/lib/prisma";
 import { registerShutdownHook } from "@/server/lifecycle/shutdown";
 import { logger } from "@/server/observability/logger";
+import { scanTaskReminders } from "@/server/tasks/task-reminder-scanner";
 import { TASK_NOTIFICATION_HANDLERS } from "./task-notification-handlers";
 import { DOCUMENT_NOTIFICATION_HANDLERS } from "./document-notification-handlers";
 
@@ -20,6 +21,10 @@ const MAX_RETRIES = 5;
 
 let timer: NodeJS.Timeout | null = null;
 let currentCycle: Promise<unknown> | null = null;
+
+/** Quét nhắc hạn nhiệm vụ thưa hơn vòng outbox: mỗi 10 phút là đủ vì có khóa chống gửi trùng. */
+const REMINDER_SCAN_INTERVAL_MS = 10 * 60_000;
+let lastReminderScanAt = 0;
 
 export async function runOutboxCycle(
   client: DbClient = prisma,
@@ -47,6 +52,13 @@ async function cycle() {
           },
         });
       }
+    })
+    .then(async () => {
+      if (Date.now() - lastReminderScanAt < REMINDER_SCAN_INTERVAL_MS) return;
+      lastReminderScanAt = Date.now();
+      const scan = await scanTaskReminders();
+      const sent = Object.values(scan.sent).reduce((a, b) => a + b, 0);
+      if (sent > 0) logger.info("task.reminder.scan", { metadata: { ...scan.sent, skippedDuplicate: scan.skippedDuplicate, skippedOptOut: scan.skippedOptOut } });
     })
     .catch((error) => logger.error("outbox.worker.cycle_error", undefined, error))
     .finally(() => {

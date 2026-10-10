@@ -14,6 +14,9 @@ export type TaskPushEventType =
   | "TASK_REMINDER"
   | "TASK_CANCELLED"
   | "TASK_MENTION"
+  | "TASK_OVERDUE"
+  | "TASK_REVIEW_PENDING"
+  | "TASK_ESCALATION"
   | "TASK_DECLINED"
   | "TASK_EXTENSION_REQUEST"
   | "TASK_EXTENSION_DECISION";
@@ -218,6 +221,24 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
       eventShort = "remind";
       rawTitle = `[NHẮC VIỆC] ${taskTitle}`;
       rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc thực hiện nhiệm vụ`;
+      break;
+    }
+    case "TASK_OVERDUE": {
+      eventShort = "overdue";
+      rawTitle = `[TRỄ HẠN] ${taskTitle}`;
+      rawBody = directiveNote || "Nhiệm vụ đã quá hạn hoàn thành";
+      break;
+    }
+    case "TASK_REVIEW_PENDING": {
+      eventShort = "review-pending";
+      rawTitle = `[CHỜ DUYỆT] ${taskTitle}`;
+      rawBody = directiveNote || "Kết quả đang chờ bạn duyệt";
+      break;
+    }
+    case "TASK_ESCALATION": {
+      eventShort = "escalation";
+      rawTitle = `[CẦN XỬ LÝ] ${taskTitle}`;
+      rawBody = directiveNote || "Việc này đã chờ xử lý quá lâu";
       break;
     }
     case "TASK_DECLINED": {

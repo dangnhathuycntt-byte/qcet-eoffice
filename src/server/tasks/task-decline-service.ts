@@ -30,7 +30,8 @@ export interface DeclineState {
   version: number;
 }
 
-async function activeDecline(taskId: string) {
+/** Thông báo từ chối còn hiệu lực của nhiệm vụ (do chủ trì hiện tại gửi sau lần bổ nhiệm gần nhất). */
+export async function findActiveDecline(taskId: string) {
   const dri = await prisma.taskActor.findFirst({
     where: { taskId, role: TaskActorRole.DRI, userId: { not: null } },
     orderBy: [{ isPrimaryDRI: "desc" }, { appointedAt: "desc" }],
@@ -46,7 +47,7 @@ async function activeDecline(taskId: string) {
 
 export async function getDeclineState(session: SessionPayload, taskId: string): Promise<DeclineState> {
   const task = await authorizeOnTask(session, taskId, "task.read");
-  const notice = await activeDecline(taskId);
+  const notice = await findActiveDecline(taskId);
   const canDeclineCap = (await can(session, "task.decline", task)).allowed;
   return {
     declined: notice
@@ -73,7 +74,7 @@ export async function declineTask(
       `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
     );
   }
-  if (await activeDecline(taskId)) {
+  if (await findActiveDecline(taskId)) {
     throw new ConflictError("Bạn đã từ chối nhận việc này; đang chờ người giao giao lại", "TASK_ALREADY_DECLINED");
   }
 

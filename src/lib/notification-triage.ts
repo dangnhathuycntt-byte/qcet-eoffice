@@ -129,6 +129,8 @@ const APPROVAL_TYPES = new Set([
   "deliverable_revision",
   "extension_requested",
   "declined",
+  "review_pending",
+  "escalation",
 ]);
 
 /**
@@ -141,6 +143,7 @@ const REMINDER_TYPES = new Set([
   "deadline_warning_24h",
   "document_overdue",
   "document_expiring_soon",
+  "overdue",
 ]);
 
 export const NOTIFICATION_TRIAGE_TABS: readonly NotificationTriageTab[] = [
