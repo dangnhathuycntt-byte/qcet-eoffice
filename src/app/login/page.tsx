@@ -235,7 +235,6 @@ function LoginFormContent() {
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Google không cho đăng nhập trong ứng dụng này.</p>
           <div className="mt-7 w-full">
             <Pressable
-              type="button"
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(window.location.href);
@@ -282,7 +281,6 @@ function LoginFormContent() {
           </p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
             <Pressable
-              type="button"
               disabled={isSubmittingRequest}
               onClick={handleRequestAccess}
               className={BTN_PRIMARY}
@@ -317,7 +315,6 @@ function LoginFormContent() {
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Quản trị viên sẽ xem và báo qua email.</p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
             <Pressable
-              type="button"
               onClick={() => {
                 setHasSubmittedRequest(false);
                 router.push("/login");
@@ -347,7 +344,6 @@ function LoginFormContent() {
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Tài khoản này không còn dùng được QCET E-Office.</p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
             <Pressable
-              type="button"
               onClick={() => router.push("/login?startGoogle=1&prompt=select_account")}
               className={BTN_OUTLINE}
             >
@@ -377,7 +373,6 @@ function LoginFormContent() {
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Kiểm tra mạng rồi thử lại.</p>
           <div className="mt-7 w-full flex flex-col items-center gap-3">
             <Pressable
-              type="button"
               disabled={isRetryingAtPlace}
               onClick={handleRetryAtPlace}
               className={BTN_OUTLINE}

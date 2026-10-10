@@ -181,9 +181,8 @@ export function AppTopbar() {
       <div className="flex items-center gap-1 shrink-0">
         {/* Search button */}
         <Pressable
-          type="button"
           onClick={handleOpenSearch}
-          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
           title="Tìm kiếm (⌘K)"
           aria-label="Tìm kiếm"
         >
@@ -207,9 +206,8 @@ export function AppTopbar() {
 
         {/* Mobile Menu Drawer button */}
         <Pressable
-          type="button"
           onClick={handleOpenMobileMenu}
-          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
           title="Menu tùy chọn"
           aria-label="Menu tùy chọn"
         >

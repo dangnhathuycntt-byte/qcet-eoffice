@@ -306,13 +306,12 @@ export function ExecutiveResolutionDrawer({
                             </span>
                             <div className="flex items-center gap-2">
                               <Pressable
-                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setExtensionDays(3);
                                 }}
                                 className={cn(
-                                  "px-3 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer active:scale-[0.98]",
+                                  "px-3 py-1 rounded-md text-xs font-semibold border transition-all active:scale-[0.98]",
                                   extensionDays === 3
                                     ? "bg-primary text-primary-foreground border-primary shadow-xs"
                                     : "bg-card text-foreground border-border hover:bg-muted"
@@ -321,13 +320,12 @@ export function ExecutiveResolutionDrawer({
                                 +3 ngày (Mặc định)
                               </Pressable>
                               <Pressable
-                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setExtensionDays(7);
                                 }}
                                 className={cn(
-                                  "px-3 py-1 rounded-md text-xs font-semibold border transition-all cursor-pointer active:scale-[0.98]",
+                                  "px-3 py-1 rounded-md text-xs font-semibold border transition-all active:scale-[0.98]",
                                   extensionDays === 7
                                     ? "bg-primary text-primary-foreground border-primary shadow-xs"
                                     : "bg-card text-foreground border-border hover:bg-muted"
@@ -523,13 +521,12 @@ export function ExecutiveResolutionDrawer({
                                 ].map((preset) => (
                                   <Pressable
                                     key={preset}
-                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setDirectiveNote(preset);
                                       if (error) setError(null);
                                     }}
-                                    className="text-xs px-2 py-1 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 transition-colors text-left active:scale-[0.98] cursor-pointer"
+                                    className="text-xs px-2 py-1 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 transition-colors text-left active:scale-[0.98]"
                                   >
                                     {preset}
                                   </Pressable>
@@ -570,20 +567,18 @@ export function ExecutiveResolutionDrawer({
 
             <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="text-xs cursor-pointer active:scale-[0.98]"
+                className="text-xs active:scale-[0.98]"
               >
                 Hủy
               </Button>
               <Button
-                type="button"
                 variant="default"
                 size="sm"
                 onClick={handleSubmit}
-                className="bg-destructive hover:bg-destructive/90 text-white font-medium text-xs gap-1.5 shadow-xs cursor-pointer active:scale-[0.98]"
+                className="bg-destructive hover:bg-destructive/90 text-white font-medium text-xs gap-1.5 shadow-xs active:scale-[0.98]"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>Xác nhận chỉ đạo tháo gỡ</span>

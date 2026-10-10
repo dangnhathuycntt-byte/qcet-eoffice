@@ -311,7 +311,6 @@ export function DocumentQuickEntryModal({
               {TYPE_CHOICES.map(({ value, label, Icon }) => (
                 <Button
                   key={value}
-                  type="button"
                   size="sm"
                   variant={docType === value ? "secondary" : "ghost"}
                   aria-pressed={docType === value}
@@ -404,9 +403,8 @@ export function DocumentQuickEntryModal({
                   {COMMON_AUTHORITIES.slice(0, 3).map((auth) => (
                     <Pressable
                       key={auth}
-                      type="button"
                       onClick={() => setIssuingAuthority(auth)}
-                      className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       {auth}
                     </Pressable>
@@ -457,16 +455,15 @@ export function DocumentQuickEntryModal({
                 <span className="min-w-0 truncate" title={attachmentFile.name}>{attachmentFile.name}</span>
                 <span className="shrink-0 text-muted-foreground">{Math.max(1, Math.round(attachmentFile.size / 1024))} KB</span>
                 <Pressable
-                  type="button"
                   aria-label="Bỏ tệp đính kèm"
                   onClick={() => setAttachmentFile(null)}
-                  className="inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                  className="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
                   <X className="size-3" strokeWidth={1.5} />
                 </Pressable>
               </span>
             ) : (
-              <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={() => fileInputRef.current?.click()}>
+              <Button size="sm" variant="ghost" className="-ml-2" onClick={() => fileInputRef.current?.click()}>
                 <Paperclip strokeWidth={1.5} />
                 Đính kèm tệp
               </Button>
@@ -524,9 +521,8 @@ export function DocumentQuickEntryModal({
                   {[3, 5, 7].map((days) => (
                     <Pressable
                       key={days}
-                      type="button"
                       onClick={() => handleAddDaysToDueDate(days)}
-                      className="cursor-pointer rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80"
+                      className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80"
                     >
                       +{days} ngày
                     </Pressable>
@@ -569,7 +565,7 @@ export function DocumentQuickEntryModal({
 
         <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-3">
           {!savedWithoutFile && (
-            <Button type="button" variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
+            <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
               Hủy
             </Button>
           )}

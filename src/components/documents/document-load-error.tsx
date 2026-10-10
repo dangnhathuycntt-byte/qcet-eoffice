@@ -32,7 +32,7 @@ export function DocumentLoadError({ title, message, digest, onRetry, children, c
         onRetry || children ? (
           <div className="flex items-center justify-center gap-2">
             {onRetry ? (
-              <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              <Button variant="outline" size="sm" onClick={onRetry}>
                 <RefreshCw strokeWidth={1.5} />
                 Thử lại
               </Button>

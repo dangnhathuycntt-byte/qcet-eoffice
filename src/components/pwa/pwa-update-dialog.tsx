@@ -73,9 +73,8 @@ export function PWAUpdateDialog({
                   : "Có phiên bản QCET E-Office mới"}
               </h3>
               <Pressable
-                type="button"
                 onClick={onDismiss}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 aria-label="Đóng thông báo cập nhật"
               >
                 <X className="size-4" strokeWidth={1.5} />
@@ -92,7 +91,6 @@ export function PWAUpdateDialog({
               {hasUnsavedChanges ? (
                 <>
                   <Button
-                    type="button"
                     size="sm"
                     variant="outline"
                     onClick={onDismiss}
@@ -101,7 +99,6 @@ export function PWAUpdateDialog({
                     Để sau
                   </Button>
                   <Button
-                    type="button"
                     size="sm"
                     variant="default"
                     onClick={onUpdate}
@@ -124,7 +121,6 @@ export function PWAUpdateDialog({
               ) : (
                 <>
                   <Button
-                    type="button"
                     size="sm"
                     variant="default"
                     onClick={onUpdate}
@@ -144,7 +140,6 @@ export function PWAUpdateDialog({
                     )}
                   </Button>
                   <Button
-                    type="button"
                     size="sm"
                     variant="outline"
                     onClick={onDismiss}

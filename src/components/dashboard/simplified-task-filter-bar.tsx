@@ -223,7 +223,6 @@ export function SimplifiedTaskFilterBar({
           />
           {searchQuery && (
             <Pressable
-              type="button"
               onClick={() => onSearchChange("")}
               aria-label="Xóa tìm kiếm"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground rounded-md transition-colors"
@@ -244,7 +243,6 @@ export function SimplifiedTaskFilterBar({
             return (
               <Pressable
                 key={pill.id}
-                type="button"
                 onClick={() => onStatusChange(pill.id)}
                 aria-pressed={isActive}
                 className={cn(
@@ -272,7 +270,6 @@ export function SimplifiedTaskFilterBar({
         {/* Advanced Filters Popover Container */}
         <div className="relative" ref={popoverRef}>
           <Pressable
-            type="button"
             ref={buttonRef}
             onClick={() => setIsOpen((prev) => !prev)}
             aria-expanded={isOpen}
@@ -325,7 +322,6 @@ export function SimplifiedTaskFilterBar({
                 )}
               </div>
               <Pressable
-                type="button"
                 onClick={() => setIsOpen(false)}
                 className="p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
                 aria-label="Đóng bộ lọc"

@@ -320,15 +320,14 @@ export function SavedViewsSelector({
               />
               <Pressable
                 type="submit"
-                className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+                className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent"
                 title="Xác nhận đổi tên"
               >
                 <Check className="size-3" strokeWidth={1.5} />
               </Pressable>
               <Pressable
-                type="button"
                 onClick={() => setEditingViewId(null)}
-                className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+                className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent"
                 title="Hủy"
               >
                 <X className="size-3" strokeWidth={1.5} />
@@ -340,12 +339,11 @@ export function SavedViewsSelector({
         return (
           <div key={view.id} className="relative group inline-flex items-center">
             <Pressable
-              type="button"
               role="tab"
               aria-selected={isActive}
               onClick={() => handleSelect(view)}
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
                 isActive
                   ? "bg-muted text-foreground font-semibold shadow-2xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -357,14 +355,13 @@ export function SavedViewsSelector({
 
             {/* Context action trigger */}
             <Pressable
-              type="button"
               aria-label={`Tùy chọn bộ lọc ${view.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveMenuId(activeMenuId === view.id ? null : view.id);
               }}
               className={cn(
-                "size-5 -ml-1 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-opacity",
+                "size-5 -ml-1 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-opacity",
                 isActive || activeMenuId === view.id
                   ? "opacity-100"
                   : "opacity-0 group-hover:opacity-100"
@@ -380,17 +377,15 @@ export function SavedViewsSelector({
                 className="absolute left-0 top-full mt-1 w-32 rounded-md border border-border bg-popover py-1 shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
               >
                 <Pressable
-                  type="button"
                   onClick={(e) => handleStartRename(view, e)}
-                  className="w-full flex items-center gap-2 px-2.5 py-1 text-foreground hover:bg-accent text-left cursor-pointer"
+                  className="w-full flex items-center gap-2 px-2.5 py-1 text-foreground hover:bg-accent text-left"
                 >
                   <Pencil className="size-3 text-muted-foreground" strokeWidth={1.5} />
                   <span>Đổi tên</span>
                 </Pressable>
                 <Pressable
-                  type="button"
                   onClick={(e) => handleDelete(view.id, e)}
-                  className="w-full flex items-center gap-2 px-2.5 py-1 text-destructive hover:bg-danger-soft text-left cursor-pointer"
+                  className="w-full flex items-center gap-2 px-2.5 py-1 text-destructive hover:bg-danger-soft text-left"
                 >
                   <Trash2 className="size-3 text-destructive" strokeWidth={1.5} />
                   <span>Xóa bộ lọc</span>
@@ -405,9 +400,8 @@ export function SavedViewsSelector({
       {overflowViews.length > 0 && (
         <div className="relative inline-block" ref={overflowRef}>
           <Pressable
-            type="button"
             onClick={() => setIsOverflowOpen((prev) => !prev)}
-            className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+            className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent"
             aria-label="Xem thêm bộ lọc đã lưu"
           >
             <span>+{overflowViews.length}</span>
@@ -429,9 +423,8 @@ export function SavedViewsSelector({
                   >
                     <span className="truncate flex-1">{cleanViewName(view.name)}</span>
                     <Pressable
-                      type="button"
                       onClick={(e) => handleDelete(view.id, e)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-0.5 rounded cursor-pointer"
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-0.5 rounded"
                       title="Xóa bộ lọc"
                     >
                       <Trash2 className="size-3" strokeWidth={1.5} />
@@ -448,12 +441,11 @@ export function SavedViewsSelector({
       {hasActiveFilters && (
         <div className="relative inline-block" ref={createPopoverRef}>
           <Pressable
-            type="button"
             onClick={handleOpenCreate}
             aria-label="Lưu cấu hình bộ lọc hiện tại"
             title="Lưu các điều kiện lọc đang chọn thành bộ lọc nhanh"
             className={cn(
-              "h-7 flex items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 shadow-2xs",
+              "h-7 flex items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 shadow-2xs",
               isCreateOpen && "bg-primary/20"
             )}
           >
@@ -473,9 +465,8 @@ export function SavedViewsSelector({
                   <span>Lưu bộ lọc hiện tại</span>
                 </div>
                 <Pressable
-                  type="button"
                   onClick={() => setIsCreateOpen(false)}
-                  className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+                  className="text-muted-foreground hover:text-foreground p-0.5 rounded"
                   aria-label="Đóng"
                 >
                   <X className="size-3.5" strokeWidth={1.5} />
@@ -522,16 +513,15 @@ export function SavedViewsSelector({
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
                   <Pressable
-                    type="button"
                     onClick={() => setIsCreateOpen(false)}
-                    className="h-7 px-3 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-accent cursor-pointer transition-colors"
+                    className="h-7 px-3 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-accent transition-colors"
                   >
                     Hủy
                   </Pressable>
                   <Pressable
                     type="submit"
                     disabled={!newViewName.trim()}
-                    className="h-7 px-3.5 text-xs font-medium rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 cursor-pointer transition-colors shadow-2xs"
+                    className="h-7 px-3.5 text-xs font-medium rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-2xs"
                   >
                     Lưu bộ lọc
                   </Pressable>

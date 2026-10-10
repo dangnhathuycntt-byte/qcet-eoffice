@@ -351,10 +351,9 @@ export function DelegationManagementModal({
                           .map((member) => (
                             <Pressable
                               key={member.id}
-                              type="button"
                               onClick={() => handleSelectMember(member.name, member.role)}
                               className={cn(
-                                "text-xs rounded px-2 py-0.5 border border-border/60 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 text-foreground transition-colors cursor-pointer active:scale-[0.98]",
+                                "text-xs rounded px-2 py-0.5 border border-border/60 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 text-foreground transition-colors active:scale-[0.98]",
                                 granteeName === member.name && "bg-primary/15 border-primary text-primary font-medium"
                               )}
                             >
@@ -373,10 +372,9 @@ export function DelegationManagementModal({
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <Pressable
-                      type="button"
                       onClick={() => setGranteeRole("STAFF")}
                       className={cn(
-                        "rounded-lg border px-3 py-2 text-center font-medium transition-all cursor-pointer active:scale-[0.98]",
+                        "rounded-lg border px-3 py-2 text-center font-medium transition-all active:scale-[0.98]",
                         granteeRole === "STAFF"
                           ? "border-primary bg-primary/10 text-primary font-semibold"
                           : "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
@@ -385,10 +383,9 @@ export function DelegationManagementModal({
                       STAFF (Viên chức)
                     </Pressable>
                     <Pressable
-                      type="button"
                       onClick={() => setGranteeRole("MANAGER")}
                       className={cn(
-                        "rounded-lg border px-3 py-2 text-center font-medium transition-all cursor-pointer active:scale-[0.98]",
+                        "rounded-lg border px-3 py-2 text-center font-medium transition-all active:scale-[0.98]",
                         granteeRole === "MANAGER"
                           ? "border-primary bg-primary/10 text-primary font-semibold"
                           : "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
@@ -519,7 +516,7 @@ export function DelegationManagementModal({
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full font-medium active:scale-[0.98] cursor-pointer"
+                  className="w-full font-medium active:scale-[0.98]"
                 >
                   <UserCheck className="size-4" strokeWidth={1.5} />
                   <span>Ký & Kích hoạt ủy quyền</span>
@@ -614,11 +611,10 @@ export function DelegationManagementModal({
                           {/* Revoke button */}
                           {isActive && (
                             <Button
-                              type="button"
                               variant="destructive"
                               size="xs"
                               onClick={() => onRevokeDelegation(del.id)}
-                              className="active:scale-[0.98] text-xs gap-1 cursor-pointer shrink-0"
+                              className="active:scale-[0.98] text-xs gap-1 shrink-0"
                             >
                               <Trash2 className="size-3" strokeWidth={1.5} />
                               <span>Thu hồi</span>
@@ -675,11 +671,10 @@ export function DelegationManagementModal({
             Hệ thống phân quyền ủy quyền chuẩn Stanford / QCET E-Office
           </span>
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="cursor-pointer active:scale-[0.98]"
+            className="active:scale-[0.98]"
           >
             Đóng
           </Button>

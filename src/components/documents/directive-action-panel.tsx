@@ -18,6 +18,7 @@ import type { DocumentItem } from "@/types/document";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
 
 export interface QuickDirectivePreset {
   id: string;
@@ -93,16 +94,6 @@ export interface AppliedDirectivePreset {
   priority?: "NORMAL" | "HIGH" | "URGENT";
 }
 
-/** Bỏ dấu tiếng Việt để so khớp từ khóa đơn vị không phân biệt dấu. */
-function normalizeUnitLabel(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/gi, "d")
-    .toLowerCase()
-    .trim();
-}
-
 /**
  * Chọn `OrganizationalUnit.id` canonical cho một preset từ danh sách đơn vị đã tải.
  * Không hardcode mã đơn vị: mã legacy ("DT", "TCHC") không phải id hợp lệ trong
@@ -114,9 +105,9 @@ export function resolvePresetLeadUnit(
 ): string {
   if (departments.length === 0) return "";
   for (const keyword of preset.unitKeywords) {
-    const needle = normalizeUnitLabel(keyword);
+    const needle = foldVietnamese(keyword);
     const match = departments.find((dept) => {
-      const haystack = normalizeUnitLabel(`${dept.name} ${dept.shortName ?? ""}`);
+      const haystack = foldVietnamese(`${dept.name} ${dept.shortName ?? ""}`);
       return haystack.includes(needle);
     });
     if (match) return match.id;
@@ -294,9 +285,8 @@ export function DirectiveActionPanel({
 
         {onCancel && (
           <Pressable
-            type="button"
             onClick={onCancel}
-            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
+            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all"
             aria-label="Đóng"
           >
             <X className="size-4" strokeWidth={1.5} />
@@ -332,10 +322,9 @@ export function DirectiveActionPanel({
             return (
               <Pressable
                 key={preset.id}
-                type="button"
                 onClick={() => handleSelectPreset(preset)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-[0.98] cursor-pointer",
+                  "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-[0.98]",
                   isSelected
                     ? "border-primary/40 bg-primary/10 text-primary font-semibold shadow-2xs"
                     : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -421,9 +410,8 @@ export function DirectiveActionPanel({
               ].map((item) => (
                 <Pressable
                   key={item.days}
-                  type="button"
                   onClick={() => handleAddDaysToDeadline(item.days)}
-                  className="min-h-[44px] sm:min-h-[28px] h-auto sm:h-7 rounded-lg border border-border/70 bg-muted/50 px-2.5 py-1 text-xs font-mono tabular-nums text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all cursor-pointer"
+                  className="min-h-[44px] sm:min-h-[28px] h-auto sm:h-7 rounded-lg border border-border/70 bg-muted/50 px-2.5 py-1 text-xs font-mono tabular-nums text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all"
                 >
                   {item.label}
                 </Pressable>
@@ -446,10 +434,9 @@ export function DirectiveActionPanel({
                 return (
                   <Pressable
                     key={dept.id}
-                    type="button"
                     onClick={() => handleToggleCollaborator(dept.id)}
                     className={cn(
-                      "inline-flex min-h-[44px] sm:min-h-[28px] h-auto sm:h-7 items-center gap-1 rounded-lg border px-2.5 py-1 text-xs transition-all active:scale-[0.98] cursor-pointer",
+                      "inline-flex min-h-[44px] sm:min-h-[28px] h-auto sm:h-7 items-center gap-1 rounded-lg border px-2.5 py-1 text-xs transition-all active:scale-[0.98]",
                       isChecked
                         ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 font-medium"
                         : "border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -482,9 +469,8 @@ export function DirectiveActionPanel({
         <div className="flex items-center justify-end gap-3 pt-2">
           {onCancel && (
             <Pressable
-              type="button"
               onClick={onCancel}
-              className="min-h-[44px] sm:min-h-7 sm:h-7 rounded-xl border border-border/70 bg-card px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
+              className="min-h-[44px] sm:min-h-7 sm:h-7 rounded-xl border border-border/70 bg-card px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted active:scale-[0.98] transition-all"
             >
               Hủy bỏ
             </Pressable>
@@ -493,7 +479,7 @@ export function DirectiveActionPanel({
           <Pressable
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex min-h-[44px] sm:min-h-7 sm:h-7 items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            className="inline-flex min-h-[44px] sm:min-h-7 sm:h-7 items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
           >
             {isSubmitting ? (
               <>

@@ -244,9 +244,8 @@ export function NotificationCenter() {
             <p className="text-sm font-medium text-foreground mb-1">Lỗi kết nối</p>
             <p className="text-xs text-muted-foreground mb-4 max-w-xs">{error}</p>
             <Pressable
-              type="button"
               onClick={fetchNotifications}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-muted/60 text-foreground hover:bg-muted transition-colors cursor-pointer active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-muted/60 text-foreground hover:bg-muted transition-colors active:scale-[0.98]"
             >
               <RefreshCw size={14} strokeWidth={1.5} />
               Thử lại

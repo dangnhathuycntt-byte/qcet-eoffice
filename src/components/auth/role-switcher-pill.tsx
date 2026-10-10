@@ -85,11 +85,10 @@ function RoleSwitcherPillInner({ className }: { className?: string }) {
           return (
             <Pressable
               key={role}
-              type="button"
               onClick={() => switchRole(role)}
               title={config.description}
               className={cn(
-                "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-all cursor-pointer active:scale-[0.97]",
+                "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-all active:scale-[0.97]",
                 isActive
                   ? cn(config.color, "ring-1 ring-current/20 shadow-xs font-semibold")
                   : "text-muted-foreground bg-transparent border-transparent hover:bg-secondary hover:border-border/50"

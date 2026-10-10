@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 /**
  * Vùng bấm không mang kiểu nút: hàng danh sách, ô lịch, thẻ, tab tự dựng, mục chọn.
@@ -7,7 +8,7 @@ import { cn } from "@/lib/utils";
  * kích thước, nền, bố cục do nơi dùng quyết định. Cần nút có kiểu thì dùng Button.
  */
 export const pressableClass =
-  "cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 disabled:cursor-not-allowed";
+  `cursor-pointer outline-none ${focusRingClass} disabled:cursor-not-allowed`;
 
 export type PressableProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 

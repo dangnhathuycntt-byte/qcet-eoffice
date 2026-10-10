@@ -244,10 +244,9 @@ export function AdaptiveScopeHeader({
             className="flex items-center rounded-xl border border-border/70 bg-muted/40 p-0.5"
           >
             <Pressable
-              type="button"
               onClick={() => onViewModeChange("table")}
               className={cn(
-                "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
                 viewMode === "table"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -258,10 +257,9 @@ export function AdaptiveScopeHeader({
               <span className="hidden md:inline">Bảng</span>
             </Pressable>
             <Pressable
-              type="button"
               onClick={() => onViewModeChange("kanban")}
               className={cn(
-                "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
                 viewMode === "kanban"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -279,7 +277,7 @@ export function AdaptiveScopeHeader({
             size="sm"
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="hidden sm:inline-flex h-8 px-2.5 rounded-xl border-border/80 text-xs font-medium cursor-pointer"
+            className="hidden sm:inline-flex h-8 px-2.5 rounded-xl border-border/80 text-xs font-medium"
             aria-label="Làm mới dữ liệu"
           >
             <RefreshCw
@@ -295,7 +293,7 @@ export function AdaptiveScopeHeader({
             size="sm"
             onClick={onCreateTask}
             aria-label="Tạo nhiệm vụ mới"
-            className="hidden sm:inline-flex h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs hover:bg-primary/90 hover:brightness-105 active:scale-[0.98] cursor-pointer"
+            className="hidden sm:inline-flex h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs hover:bg-primary/90 hover:brightness-105 active:scale-[0.98]"
           >
             <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
             <span>{isExecutive ? "Giao nhiệm vụ" : "Tạo nhiệm vụ"}</span>

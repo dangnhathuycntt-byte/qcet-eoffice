@@ -262,9 +262,8 @@ export function UpcomingDeadlinesWidget({
         </Link>
         {windowTotal > initialLimit && (
           <Pressable
-            type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             aria-expanded={isExpanded}
           >
             {isExpanded ? (

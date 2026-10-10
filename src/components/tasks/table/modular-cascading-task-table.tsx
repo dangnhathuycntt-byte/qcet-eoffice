@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Plus,
   RotateCcw,
-  X,
 } from "lucide-react";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
@@ -23,12 +22,10 @@ import { useDisplayDensity } from "@/components/density-provider";
 import {
   getAcademicMonthPeriod,
   getSystemReferenceDate,
-  filterTasksByAcademicMonthStrict,
 } from "@/lib/academic-calendar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { DashboardModalContext } from "@/components/dashboard/dashboard-context";
 
 import type {
@@ -58,8 +55,7 @@ import { TaskTableHeader } from "./components/task-table-header";
 import { TaskRow } from "./components/task-row";
 import { TaskContextMenu } from "./task-context-menu";
 import { TaskPeekPreviewModal } from "@/components/tasks/preview/task-peek-preview-modal";
-import { shouldIgnoreSpaceKey, isInteractiveInput } from "@/lib/shortcuts/guards";
-import { SubtaskRowGroup } from "./components/subtask-row-group";
+import { isInteractiveInput } from "@/lib/shortcuts/guards";
 import { TaskPaginationBar } from "./components/task-pagination-bar";
 import { TaskEmptyState, type TaskEmptyStateProps } from "./components/task-empty-state";
 import { MobileTaskCard } from "./components/mobile-task-card";
@@ -68,7 +64,7 @@ import {
   aggregateFilterCounts,
   DEFAULT_DISPLAY_PROPERTIES,
 } from "./components/task-table-toolbar";
-import { BatchActionBar, TaskBulkActionBar } from "./components/batch-action-bar";
+import { TaskBulkActionBar } from "./components/batch-action-bar";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   filterBulkTransitionTargets,
@@ -266,19 +262,6 @@ export function ModularCascadingTaskTable({
 
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const lastClickedIndexRef = React.useRef<number | null>(null);
-
-  const activeColSpan = React.useMemo(() => {
-    let span = 5; // Title + Lead + Due + Actions base
-    if (effectiveVisibleColumns.department !== false) span++;
-    if (effectiveVisibleColumns.priority !== false) span++;
-    if (effectiveVisibleColumns.subtasks !== false) span++;
-    if (effectiveVisibleColumns.coAssignees === true) span++;
-    if (effectiveVisibleColumns.status === true) span++;
-    if (effectiveVisibleColumns.category === true) span++;
-    if (effectiveVisibleColumns.createdAt === true) span++;
-    if (effectiveVisibleColumns.startDate === true) span++;
-    return span;
-  }, [effectiveVisibleColumns]);
 
   const effectiveMonthInput =
     selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
@@ -531,15 +514,16 @@ export function ModularCascadingTaskTable({
     activeMonth,
   ]);
 
-  // 6. Smart Tab Counts
+  // 6. Smart Tab Counts (chỉ toolbar của bảng dùng; ẩn toolbar thì không duyệt danh sách)
   const tabCounts = React.useMemo(() => {
+    if (hideToolbar) return undefined;
     return aggregateFilterCounts(tasks, {
       currentUserId: user?.id,
       currentUserName: user?.name,
       referenceDate,
       month: activeMonth,
     });
-  }, [tasks, user?.id, user?.name, referenceDate, activeMonth]);
+  }, [hideToolbar, tasks, user?.id, user?.name, referenceDate, activeMonth]);
 
   // 7. Auto-expansion in personal scope
   const isPersonalScope =
@@ -581,15 +565,18 @@ export function ModularCascadingTaskTable({
     initialExpandedIds: autoExpandedParentIds,
   });
 
+  // tableState là object mới mỗi lần render; lấy riêng các callback ổn định để deps không đổi vô cớ.
+  const { clearSelection, toggleSelect, selectMultiple } = tableState;
+
   // Clear selection when filters/scope change to prevent bulk ops on hidden tasks
   const filteredTaskIdsRef = React.useRef<string>("");
   React.useEffect(() => {
     const key = filteredTasks.map((t) => t.id).join(",");
     if (filteredTaskIdsRef.current && filteredTaskIdsRef.current !== key) {
-      tableState.clearSelection();
+      clearSelection();
     }
     filteredTaskIdsRef.current = key;
-  }, [filteredTasks, tableState]);
+  }, [filteredTasks, clearSelection]);
 
   const handlePageChange = React.useCallback(
     (newPage: number) => {
@@ -836,14 +823,15 @@ export function ModularCascadingTaskTable({
   // 10. Table Container Ref, Task Selection & URL Deep Linking
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const setUrlTaskId = urlSync.setTaskId;
   const handleEffectiveSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
       if (syncWithUrl) {
-        urlSync.setTaskId(task.id);
+        setUrlTaskId(task.id);
       }
       onSelectTask?.(task);
     },
-    [syncWithUrl, urlSync, onSelectTask]
+    [syncWithUrl, setUrlTaskId, onSelectTask]
   );
 
   // Shift+Click range selection handler
@@ -851,7 +839,7 @@ export function ModularCascadingTaskTable({
     (taskId: string, e?: React.MouseEvent | React.ChangeEvent) => {
       const currentIndex = paginatedResult.items.findIndex((t) => t.id === taskId);
       if (currentIndex === -1) {
-        tableState.toggleSelect(taskId);
+        toggleSelect(taskId);
         return;
       }
 
@@ -860,13 +848,13 @@ export function ModularCascadingTaskTable({
         const start = Math.min(lastClickedIndexRef.current, currentIndex);
         const end = Math.max(lastClickedIndexRef.current, currentIndex);
         const rangeIds = paginatedResult.items.slice(start, end + 1).map((t) => t.id);
-        tableState.selectMultiple(rangeIds);
+        selectMultiple(rangeIds);
       } else {
-        tableState.toggleSelect(taskId);
+        toggleSelect(taskId);
       }
       lastClickedIndexRef.current = currentIndex;
     },
-    [paginatedResult.items, tableState]
+    [paginatedResult.items, toggleSelect, selectMultiple]
   );
 
   // Sync selected task from URL search params on mount or param update
@@ -949,11 +937,6 @@ export function ModularCascadingTaskTable({
       activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   }, [keyboardNav.activeId]);
-
-  // 11. Pull to refresh for mobile
-  const pullToRefresh = usePullToRefresh({
-    onRefresh: onRefresh ? async () => { await onRefresh(); } : undefined,
-  });
 
   // 11b. Mouse-Hover & Keyboard Space Peek Preview (REQ-09 / REQ-10)
   const hoveredTaskIdRef = React.useRef<string | null>(null);
@@ -1393,7 +1376,6 @@ export function ModularCascadingTaskTable({
                             <div className="flex items-center justify-end gap-2">
                               {onStatusChange && (
                                 <Pressable
-                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     onStatusChange(
@@ -1403,7 +1385,7 @@ export function ModularCascadingTaskTable({
                                         : "COMPLETED"
                                     );
                                   }}
-                                  className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-medium cursor-pointer transition-colors"
+                                  className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-medium transition-colors"
                                 >
                                   Duyệt nhanh
                                 </Pressable>
@@ -1557,12 +1539,11 @@ export function ModularCascadingTaskTable({
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <Pressable
-                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       toggleGroupCollapse(group.key);
                                     }}
-                                    className="size-5 flex items-center justify-center rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                                    className="size-5 flex items-center justify-center rounded hover:bg-muted text-muted-foreground transition-colors"
                                     aria-label={isCollapsed ? `Mở rộng nhóm ${group.label}` : `Thu gọn nhóm ${group.label}`}
                                   >
                                     <ChevronDown
@@ -1582,12 +1563,11 @@ export function ModularCascadingTaskTable({
                                 </div>
                                 {onAddTask && (
                                   <Pressable
-                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       onAddTask();
                                     }}
-                                    className="size-5 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer opacity-0 group-hover/gh:opacity-100"
+                                    className="size-5 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/gh:opacity-100"
                                     title={`Thêm nhiệm vụ vào ${group.label}`}
                                     aria-label={`Thêm nhiệm vụ vào ${group.label}`}
                                   >
@@ -1624,7 +1604,7 @@ export function ModularCascadingTaskTable({
                                   activeCategory={activeCategory}
                                   canAssign={canAssignUnit}
                                   onAddSubTask={effectiveOnAddSubTask}
-                                  onToggleSelect={(id, e) => handleRowToggleSelect(task.id, e)}
+                                  onToggleSelect={handleRowToggleSelect}
                                   onClick={handleEffectiveSelectTask}
                                   isContextMenuTarget={contextMenu.isOpen && contextMenu.task?.id === task.id}
                           onContextMenu={handleRowContextMenu}
@@ -1638,15 +1618,11 @@ export function ModularCascadingTaskTable({
                     })
                   ) : (
                     paginatedResult.items.map((task, index) => {
-                      const isExpanded = tableState.isExpanded(task.id);
                       const isSelected = tableState.isSelected(task.id);
                       const isRowActive =
                         keyboardNav.activeIndex === index ||
                         task.id === selectedTaskId ||
                         Boolean(task.code && task.code === selectedTaskId);
-                      const hasSubtasks = Boolean(
-                        task.subTasks && task.subTasks.length > 0
-                      );
 
                       return (
                         <TaskRow
@@ -1665,7 +1641,7 @@ export function ModularCascadingTaskTable({
                           activeCategory={activeCategory}
                           canAssign={canAssignUnit}
                           onAddSubTask={effectiveOnAddSubTask}
-                          onToggleSelect={(id, e) => handleRowToggleSelect(task.id, e)}
+                          onToggleSelect={handleRowToggleSelect}
                           onClick={handleEffectiveSelectTask}
                           isContextMenuTarget={contextMenu.isOpen && contextMenu.task?.id === task.id}
                           onContextMenu={handleRowContextMenu}
@@ -1688,9 +1664,8 @@ export function ModularCascadingTaskTable({
                 return (
                   <div key={group.key} className="space-y-2">
                     <Pressable
-                      type="button"
                       onClick={() => toggleGroupCollapse(group.key)}
-                      className="w-full flex items-center justify-between py-1.5 px-3 rounded-lg bg-muted/40 border border-border/50 text-xs font-semibold text-foreground cursor-pointer"
+                      className="w-full flex items-center justify-between py-1.5 px-3 rounded-lg bg-muted/40 border border-border/50 text-xs font-semibold text-foreground"
                     >
                       <div className="flex items-center gap-2">
                         <ChevronDown

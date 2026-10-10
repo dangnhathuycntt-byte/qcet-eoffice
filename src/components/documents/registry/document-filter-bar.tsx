@@ -210,9 +210,8 @@ export function DocumentFilterBar({
             />
             {searchQuery.trim().length > 0 && (
               <Pressable
-                type="button"
                 onClick={() => onSearchChange("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 size-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 size-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-[0.98] transition-all"
                 aria-label="Xóa nội dung tìm kiếm"
               >
                 <X className="size-3.5" strokeWidth={1.5} />
@@ -266,9 +265,8 @@ export function DocumentFilterBar({
                     </div>
                     {hasActiveFilters && (
                       <Pressable
-                        type="button"
                         onClick={handleReset}
-                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer active:scale-[0.98] transition-all"
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 active:scale-[0.98] transition-all"
                       >
                         <RotateCcw className="size-3" strokeWidth={1.5} />
                         <span>Đặt lại</span>
@@ -288,10 +286,9 @@ export function DocumentFilterBar({
                         return (
                           <Pressable
                             key={opt.value}
-                            type="button"
                             onClick={() => onStatusChange(opt.value)}
                             className={cn(
-                              "min-h-[28px] px-2.5 py-1 text-xs rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98]",
+                              "min-h-[28px] px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1.5 active:scale-[0.98]",
                               isSelected
                                 ? "bg-foreground/85 text-background border-foreground/85 font-medium shadow-2xs"
                                 : "bg-muted/40 text-muted-foreground border-border/60 hover:bg-muted/80 hover:text-foreground"
@@ -324,10 +321,9 @@ export function DocumentFilterBar({
                         return (
                           <Pressable
                             key={opt.value}
-                            type="button"
                             onClick={() => onUrgencyChange(opt.value)}
                             className={cn(
-                              "min-h-[28px] px-2.5 py-1 text-xs rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98]",
+                              "min-h-[28px] px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1.5 active:scale-[0.98]",
                               isSelected
                                 ? "bg-foreground/85 text-background border-foreground/85 font-medium shadow-2xs"
                                 : "bg-muted/40 text-muted-foreground border-border/60 hover:bg-muted/80 hover:text-foreground"
@@ -376,10 +372,9 @@ export function DocumentFilterBar({
                           return (
                             <Pressable
                               key={opt.value}
-                              type="button"
                               onClick={() => onYearChange(opt.value)}
                               className={cn(
-                                "min-h-[28px] px-2.5 py-1 text-xs rounded-lg border transition-all cursor-pointer font-mono tabular-nums active:scale-[0.98]",
+                                "min-h-[28px] px-2.5 py-1 text-xs rounded-lg border transition-all font-mono tabular-nums active:scale-[0.98]",
                                 isSelected
                                   ? "bg-foreground/85 text-background border-foreground/85 font-medium shadow-2xs"
                                   : "bg-muted/40 text-muted-foreground border-border/60 hover:bg-muted/80 hover:text-foreground"
@@ -402,11 +397,10 @@ export function DocumentFilterBar({
         <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
           {hasActiveFilters && (
             <Button
-              type="button"
               variant="ghost"
               size="sm"
               onClick={handleReset}
-              className="min-h-[44px] sm:min-h-7 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-xl gap-1.5 cursor-pointer active:scale-[0.98]"
+              className="min-h-[44px] sm:min-h-7 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-xl gap-1.5 active:scale-[0.98]"
               aria-label="Xóa tất cả bộ lọc đang áp dụng"
               title="Xóa bộ lọc"
             >
@@ -424,12 +418,11 @@ export function DocumentFilterBar({
 
           {onExportExcel && (
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={onExportExcel}
               disabled={isExporting}
-              className="min-h-[44px] sm:min-h-7 sm:h-7 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 text-foreground cursor-pointer shrink-0 gap-1.5 active:scale-[0.98]"
+              className="min-h-[44px] sm:min-h-7 sm:h-7 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 text-foreground shrink-0 gap-1.5 active:scale-[0.98]"
               aria-label="Xuất sổ văn bản ra tệp Excel"
               title="Xuất danh sách văn bản sang định dạng Excel"
             >
@@ -455,9 +448,8 @@ export function DocumentFilterBar({
               <span className="text-muted-foreground text-xs whitespace-nowrap">Tìm:</span>
               <span className="font-medium text-xs truncate max-w-[200px]">&quot;{searchQuery}&quot;</span>
               <Pressable
-                type="button"
                 onClick={() => onSearchChange("")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa từ khóa tìm kiếm"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -473,9 +465,8 @@ export function DocumentFilterBar({
                 {selectedStatusObj.label.replace("Trạng thái: ", "")}
               </span>
               <Pressable
-                type="button"
                 onClick={() => onStatusChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc trạng thái"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -491,9 +482,8 @@ export function DocumentFilterBar({
                 {selectedUrgencyObj.label.replace("Độ khẩn: ", "")}
               </span>
               <Pressable
-                type="button"
                 onClick={() => onUrgencyChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc độ khẩn"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -509,9 +499,8 @@ export function DocumentFilterBar({
                 {selectedDeptObj.label.replace("Đơn vị: ", "")}
               </span>
               <Pressable
-                type="button"
                 onClick={() => onDepartmentChange && onDepartmentChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc đơn vị"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -527,9 +516,8 @@ export function DocumentFilterBar({
                 {selectedYearObj.label.replace("Năm ban hành: ", "")}
               </span>
               <Pressable
-                type="button"
                 onClick={() => onYearChange && onYearChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc năm"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -538,9 +526,8 @@ export function DocumentFilterBar({
           )}
 
           <Pressable
-            type="button"
             onClick={handleReset}
-            className="text-xs text-primary hover:underline ml-1 cursor-pointer flex items-center gap-1 active:scale-[0.98] transition-all"
+            className="text-xs text-primary hover:underline ml-1 flex items-center gap-1 active:scale-[0.98] transition-all"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa tất cả</span>

@@ -98,10 +98,9 @@ function CalendarZoneComponent() {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
           {/* Option: Cả năm */}
           <Pressable
-            type="button"
             onClick={() => handleAcademicMonthChange("ALL")}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer border",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all border",
               selectedAcademicMonth === "ALL"
                 ? "bg-primary text-primary-foreground font-semibold border-primary shadow-xs"
                 : "bg-background text-muted-foreground hover:bg-secondary hover:text-foreground border-border/70"
@@ -129,11 +128,10 @@ function CalendarZoneComponent() {
             return (
               <Pressable
                 key={m}
-                type="button"
                 onClick={() => handleAcademicMonthChange(m)}
                 title={`Kỳ vận hành Tháng ${m}: ${period.startDate} đến ${period.endDate}`}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer border",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all border",
                   isSelected
                     ? "bg-primary text-primary-foreground font-semibold border-primary shadow-xs"
                     : "bg-background text-muted-foreground hover:bg-secondary hover:text-foreground border-border/70"

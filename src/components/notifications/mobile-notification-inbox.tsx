@@ -124,10 +124,9 @@ export function MobileNotificationInbox({
         <div className="flex items-center gap-1.5">
           {onRefresh && (
             <Pressable
-              type="button"
               onClick={onRefresh}
               disabled={isLoading}
-              className="size-9 rounded-lg border border-border/80 bg-card flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer disabled:opacity-50 shadow-2xs"
+              className="size-9 rounded-lg border border-border/80 bg-card flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation disabled:opacity-50 shadow-2xs"
               title="Làm mới"
               aria-label="Làm mới"
             >
@@ -137,9 +136,8 @@ export function MobileNotificationInbox({
 
           {unreadCount > 0 && onMarkAllAsRead && (
             <Pressable
-              type="button"
               onClick={() => onMarkAllAsRead()}
-              className="inline-flex items-center gap-1 min-h-[36px] px-2.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1 min-h-[36px] px-2.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation shadow-2xs"
               title="Đã đọc tất cả"
             >
               <CheckCheck size={14} strokeWidth={1.5} className="text-primary" />
@@ -158,12 +156,11 @@ export function MobileNotificationInbox({
         aria-label="Bộ lọc thông báo"
       >
         <Pressable
-          type="button"
           role="tab"
           aria-selected={filterTab === "all"}
           onClick={() => setFilterTab("all")}
           className={cn(
-            "flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg text-xs font-semibold transition-all touch-manipulation cursor-pointer",
+            "flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg text-xs font-semibold transition-all touch-manipulation",
             filterTab === "all"
               ? "bg-card text-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground"
@@ -177,12 +174,11 @@ export function MobileNotificationInbox({
         </Pressable>
 
         <Pressable
-          type="button"
           role="tab"
           aria-selected={filterTab === "unread"}
           onClick={() => setFilterTab("unread")}
           className={cn(
-            "flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg text-xs font-semibold transition-all touch-manipulation cursor-pointer",
+            "flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg text-xs font-semibold transition-all touch-manipulation",
             filterTab === "unread"
               ? "bg-card text-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground"
@@ -198,12 +194,11 @@ export function MobileNotificationInbox({
         </Pressable>
 
         <Pressable
-          type="button"
           role="tab"
           aria-selected={filterTab === "action_required"}
           onClick={() => setFilterTab("action_required")}
           className={cn(
-            "flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg text-xs font-semibold transition-all touch-manipulation cursor-pointer",
+            "flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg text-xs font-semibold transition-all touch-manipulation",
             filterTab === "action_required"
               ? "bg-card text-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground"
@@ -235,10 +230,9 @@ export function MobileNotificationInbox({
           </p>
           {onRefresh && (
             <Pressable
-              type="button"
               onClick={onRefresh}
               disabled={isLoading}
-              className="mt-3 inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer disabled:opacity-50"
+              className="mt-3 inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation disabled:opacity-50"
             >
               <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>

@@ -229,12 +229,11 @@ export function DashboardZone() {
 
           <div className="flex items-center gap-2">
             <Pressable
-              type="button"
               onClick={handleManualRefresh}
               disabled={isRefreshing}
               title="Làm mới dữ liệu"
               aria-label="Làm mới dữ liệu"
-              className="size-8 flex items-center justify-center rounded-md border border-slate-200/80 text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+              className="size-8 flex items-center justify-center rounded-md border border-slate-200/80 text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
             >
               <RefreshCw
                 size={13}
@@ -247,7 +246,7 @@ export function DashboardZone() {
               <Button
                 size="sm"
                 onClick={handleOpenCreateTask}
-                className="h-8 gap-1.5 px-3 text-xs font-medium rounded-md bg-slate-900 text-white hover:bg-slate-800 shadow-2xs transition-colors cursor-pointer"
+                className="h-8 gap-1.5 px-3 text-xs font-medium rounded-md bg-slate-900 text-white hover:bg-slate-800 shadow-2xs transition-colors"
               >
                 <Plus size={14} strokeWidth={2} />
                 <span>Tạo nhiệm vụ</span>
@@ -270,12 +269,11 @@ export function DashboardZone() {
                   return (
                     <Pressable
                       key={item.id}
-                      type="button"
                       role="tab"
                       aria-selected={isSelected}
                       onClick={() => handleScopeChange(item.id)}
                       className={cn(
-                        "h-6.5 px-2.5 rounded text-xs font-medium transition-colors cursor-pointer",
+                        "h-6.5 px-2.5 rounded text-xs font-medium transition-colors",
                         isSelected
                           ? "bg-white text-slate-900 shadow-2xs font-semibold"
                           : "text-slate-500 hover:text-slate-900"

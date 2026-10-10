@@ -3,13 +3,11 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { Inbox, AlertTriangle, Loader2, Layers, X, ChevronRight, CircleAlert, Clock } from "lucide-react";
-import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode, UniversalActionQueueItems } from "./types";
+import { AlertTriangle, Loader2, Layers, X } from "lucide-react";
+import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode } from "./types";
 import {
   deriveAdaptiveWorkspaceData,
-  countScopeTasks,
 } from "./hooks/use-adaptive-workspace-data";
-import { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
 import {
   UnifiedTaskToolbar,
   filterTasksByScope,
@@ -27,10 +25,7 @@ import { matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
   getSystemReferenceDate,
-  getCurrentAcademicPeriod,
-  isTaskPastDue,
 } from "@/lib/academic-calendar";
-import { formatDisplayDate } from "@/lib/format/date";
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActionQueueShell } from "./action-queue-shell";
@@ -40,20 +35,7 @@ import type { SortDirection, TableColumnVisibility, TaskSortField } from "@/comp
 import { getNextSortDirection } from "@/components/tasks/table/hooks/use-task-table-state";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/components/tasks/table/components/task-table-toolbar";
 import { TaskEmptyState } from "@/components/tasks/table/components/task-empty-state";
-const TaskKanbanBoard = dynamic(
-  () => import("@/components/tasks/task-kanban-board").then((m) => ({ default: m.TaskKanbanBoard })),
-  { ssr: false }
-);
 import { resolveCreateTaskPolicy } from "@/domain/tasks/create-task-policy";
-import { isSchoolTask } from "@/types/dashboard";
-const TaskDetailView = dynamic(
-  () => import("@/components/tasks/detail/task-detail-view").then((m) => ({ default: m.TaskDetailView })),
-  { ssr: false }
-);
-const TaskPeekPreviewModal = dynamic(
-  () => import("@/components/tasks/preview/task-peek-preview-modal").then((m) => ({ default: m.TaskPeekPreviewModal })),
-  { ssr: false }
-);
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { Button } from "@/components/ui/button";
@@ -62,6 +44,26 @@ import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { useTaskShortcuts } from "@/hooks/use-task-shortcuts";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
+import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
+import { updateTaskStatus } from "@/lib/tasks/task-actions";
+import { cn } from "@/lib/utils";
+import {
+  filterTasksByTime,
+  NO_TASK_TIME_FILTER,
+  type TaskTimeFilter,
+} from "@/lib/task-time-filter";
+const TaskKanbanBoard = dynamic(
+  () => import("@/components/tasks/task-kanban-board").then((m) => ({ default: m.TaskKanbanBoard })),
+  { ssr: false }
+);
+const TaskDetailView = dynamic(
+  () => import("@/components/tasks/detail/task-detail-view").then((m) => ({ default: m.TaskDetailView })),
+  { ssr: false }
+);
+const TaskPeekPreviewModal = dynamic(
+  () => import("@/components/tasks/preview/task-peek-preview-modal").then((m) => ({ default: m.TaskPeekPreviewModal })),
+  { ssr: false }
+);
 
 const CreateTaskModal = dynamic(
   () => import("@/components/tasks/create/create-task-modal").then((mod) => mod.CreateTaskModal),
@@ -77,26 +79,18 @@ const SubmitDeliverableModal = dynamic(
   () => import("@/components/portal/submit-deliverable-modal").then((mod) => mod.SubmitDeliverableModal),
   { ssr: false }
 );
-import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
-import { updateTaskStatus } from "@/lib/tasks/task-actions";
-import { cn } from "@/lib/utils";
-import {
-  filterTasksByTime,
-  NO_TASK_TIME_FILTER,
-  type TaskTimeFilter,
-} from "@/lib/task-time-filter";
 
 export { type WorkspaceScope, type ViewMode, matchesUser };
 
-import {
-  isTaskWaitingApproval,
-  isActiveTaskStatus,
-  isTaskOverdueOrHasOverdueSubtask,
-  isTaskAssignedToUser,
-  isTaskAssignedToUserOrUnit,
-  computeWorkspaceTabCounts,
-} from "@/lib/workspace-metrics-aggregator";
-import { Pressable } from "@/components/ui/pressable";
+  import {
+    isTaskWaitingApproval,
+    isActiveTaskStatus,
+    isTaskOverdueOrHasOverdueSubtask,
+    isTaskAssignedToUser,
+    isTaskAssignedToUserOrUnit,
+    computeWorkspaceTabCounts,
+  } from "@/lib/workspace-metrics-aggregator";
+  import { Pressable } from "@/components/ui/pressable";
 
 export {
   isTaskWaitingApproval,
@@ -406,329 +400,6 @@ export function filterDisplayedTasks({
   return Array.from(new Map(result.map((task) => [task.id, task])).values());
 }
 
-/* ---------------------------------------------------------------------------
- * Executive Dashboard Inline Sections
- * Renders ONLY when scope="school" AND user is BGH (executive).
- * Placed between toolbar and task table in full-width layout.
- * --------------------------------------------------------------------------- */
-
-interface ExecutiveDashboardSectionsProps {
-  metrics: {
-    totalTasks: number;
-    completedCount: number;
-    completedRate: number;
-    urgentOverdueCount: number;
-    waitingApprovalCount: number;
-  };
-  actionQueue: UniversalActionQueueItems;
-  displayedTasks: SchoolTask[];
-  onSelectTask: (task: SchoolTask | StaffTask) => void;
-  onReview?: (task: SchoolTask | StaffTask) => void;
-  onViewAllApprovals?: () => void;
-  onViewAllOverdue?: () => void;
-}
-
-function ExecutiveDashboardSections({
-  metrics,
-  actionQueue,
-  displayedTasks,
-  onSelectTask,
-  onReview,
-  onViewAllApprovals,
-  onViewAllOverdue,
-}: ExecutiveDashboardSectionsProps) {
-  const refDate = getSystemReferenceDate();
-  const MAX_ROWS = 5;
-
-  // Attention tasks: overdue and upcoming (due within 7 days)
-  const { overdueTasks, upcomingTasks } = React.useMemo(() => {
-    const now = new Date(refDate);
-    const sevenDaysLater = new Date(now);
-    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-
-    const overdue: SchoolTask[] = [];
-    const upcoming: SchoolTask[] = [];
-
-    for (const t of displayedTasks) {
-      if (t.status === "COMPLETED" || t.status === "CANCELLED") continue;
-      if (!t.dueDate) continue;
-
-      if (isTaskPastDue(t.dueDate, refDate)) {
-        overdue.push(t);
-      } else {
-        const due = new Date(t.dueDate);
-        if (due <= sevenDaysLater) {
-          upcoming.push(t);
-        }
-      }
-    }
-
-    return { overdueTasks: overdue, upcomingTasks: upcoming };
-  }, [displayedTasks, refDate]);
-
-  const pendingApprovals = actionQueue.pendingApprovals;
-  const visibleApprovals = pendingApprovals.slice(0, MAX_ROWS);
-  const hasMoreApprovals = pendingApprovals.length > MAX_ROWS;
-
-  const statusLabel = (status: string) => {
-    const map: Record<string, string> = {
-      NOT_STARTED: "Chưa bắt đầu",
-      IN_PROGRESS: "Đang thực hiện",
-      NEEDS_REVIEW: "Chờ duyệt",
-      WAITING_APPROVAL: "Chờ phê duyệt",
-      COMPLETED: "Hoàn thành",
-      CANCELLED: "Đã hủy",
-      OVERDUE: "Trễ hạn",
-    };
-    return map[status] || status;
-  };
-
-  return (
-    <>
-      {/* A. Compact Metric Strip */}
-      <div
-        data-slot="executive-summary-strip"
-        className="flex flex-wrap items-center gap-x-0 gap-y-2 rounded-xl border border-border/60 bg-card px-4 py-2.5 text-sm"
-      >
-        <div className="flex items-center gap-1.5 px-3 py-1">
-          <span className="text-muted-foreground">Tổng nhiệm vụ:</span>
-          <span className="font-mono font-semibold tabular-nums text-foreground">
-            {metrics.totalTasks}
-          </span>
-        </div>
-        <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" aria-hidden="true" />
-        <div className="flex items-center gap-1.5 px-3 py-1">
-          <span className="text-muted-foreground">Đã hoàn thành:</span>
-          <span className="font-mono font-semibold tabular-nums text-emerald-700">
-            {metrics.completedCount}/{metrics.totalTasks}
-          </span>
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">
-            ({metrics.completedRate}%)
-          </span>
-        </div>
-        <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" aria-hidden="true" />
-        <div className="flex items-center gap-1.5 px-3 py-1">
-          <span className="text-muted-foreground">Trễ hạn:</span>
-          <span
-            className={cn(
-              "font-mono font-semibold tabular-nums",
-              metrics.urgentOverdueCount > 0 ? "text-destructive" : "text-foreground"
-            )}
-          >
-            {metrics.urgentOverdueCount}
-          </span>
-        </div>
-        <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" aria-hidden="true" />
-        <div className="flex items-center gap-1.5 px-3 py-1">
-          <span className="text-muted-foreground">Chờ bạn duyệt:</span>
-          <span className="font-mono font-semibold tabular-nums text-foreground">
-            {metrics.waitingApprovalCount}
-          </span>
-        </div>
-      </div>
-
-      {/* B. Cần bạn xử lý — Pending Approval Table */}
-      <section data-slot="executive-action-table" className="space-y-3">
-        <h2 className="text-sm font-bold text-foreground">Cần bạn xử lý</h2>
-        {pendingApprovals.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4">
-            Không có nhiệm vụ nào cần bạn xử lý
-          </p>
-        ) : (
-          <>
-            {/* Table header — hidden on mobile, shown as grid on sm+ */}
-            <div className="hidden sm:grid sm:grid-cols-[1fr_160px_120px_100px] gap-3 px-3 pb-1.5 text-xs font-medium text-muted-foreground border-b border-border/40">
-              <span>Nhiệm vụ</span>
-              <span>Đơn vị chủ trì</span>
-              <span>Hạn xử lý</span>
-              <span className="text-right">Thao tác</span>
-            </div>
-            <div className="divide-y divide-border/40">
-              {visibleApprovals.map((item) => {
-                const t = item.task;
-                const dept =
-                  ("leadDepartment" in t ? t.leadDepartment : undefined) ||
-                  ("department" in t ? t.department : undefined) ||
-                  "";
-                const dueDate = "dueDate" in t ? t.dueDate : undefined;
-
-                return (
-                  <div
-                    key={t.id}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_100px] gap-1 sm:gap-3 items-center px-3 py-2.5"
-                  >
-                    {/* Task title + submitter */}
-                    <div className="min-w-0">
-                      <Pressable
-                        type="button"
-                        onClick={() => onSelectTask(t)}
-                        className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 block max-w-full min-h-[44px] sm:min-h-0 flex items-center"
-                      >
-                        {t.title}
-                      </Pressable>
-                      {item.submittedBy && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {item.submittedBy}
-                        </p>
-                      )}
-                    </div>
-                    {/* Department */}
-                    <span className="text-xs text-muted-foreground truncate">
-                      {dept || "-"}
-                    </span>
-                    {/* Due date */}
-                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                      {formatDisplayDate(dueDate)}
-                    </span>
-                    {/* Review button */}
-                    <div className="sm:text-right">
-                      <Pressable
-                        type="button"
-                        onClick={() => {
-                          if (onReview) {
-                            onReview(t);
-                          } else {
-                            onSelectTask(t);
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer min-h-[44px] sm:min-h-0"
-                      >
-                        Xem xét
-                        <ChevronRight className="size-3.5" strokeWidth={1.5} />
-                      </Pressable>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {hasMoreApprovals && (
-              <Pressable
-                type="button"
-                onClick={() => onViewAllApprovals?.()}
-                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer px-3 py-2 min-h-[44px] sm:min-h-0"
-              >
-                Xem tất cả {pendingApprovals.length} nhiệm vụ
-                <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
-              </Pressable>
-            )}
-          </>
-        )}
-      </section>
-
-      {/* C. Nhiệm vụ cần chú ý — Overdue + Upcoming */}
-      {(overdueTasks.length > 0 || upcomingTasks.length > 0) && (
-        <section data-slot="executive-attention-section" className="space-y-4">
-          <h2 className="text-sm font-bold text-foreground">Nhiệm vụ cần chú ý</h2>
-
-          {/* Trễ hạn */}
-          {overdueTasks.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 px-1">
-                <CircleAlert className="size-3.5 text-destructive" strokeWidth={1.5} />
-                <h3 className="text-xs font-semibold text-destructive">
-                  Trễ hạn ({overdueTasks.length})
-                </h3>
-              </div>
-              {/* Column headers */}
-              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_120px_120px] gap-3 px-3 pb-1 text-xs font-medium text-muted-foreground border-b border-border/40">
-                <span>Nhiệm vụ</span>
-                <span>Đơn vị</span>
-                <span>Hạn</span>
-                <span>Trạng thái</span>
-              </div>
-              <div className="divide-y divide-border/40">
-                {overdueTasks.slice(0, MAX_ROWS).map((t) => (
-                  <div
-                    key={t.id}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_120px] gap-1 sm:gap-3 items-center px-3 py-2"
-                  >
-                    <Pressable
-                      type="button"
-                      onClick={() => onSelectTask(t)}
-                      className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 min-h-[44px] sm:min-h-0 flex items-center"
-                    >
-                      {t.title}
-                    </Pressable>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {t.leadDepartment || t.department || "-"}
-                    </span>
-                    <span className="font-mono text-xs tabular-nums text-destructive">
-                      {formatDisplayDate(t.dueDate)}
-                    </span>
-                    <span className="text-xs text-destructive">{statusLabel(t.status)}</span>
-                  </div>
-                ))}
-              </div>
-              {overdueTasks.length > MAX_ROWS && (
-                <Pressable
-                  type="button"
-                  onClick={() => onViewAllOverdue?.()}
-                  className="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer px-3 py-1 min-h-[44px] sm:min-h-0"
-                >
-                  Xem tất cả {overdueTasks.length} nhiệm vụ trễ hạn
-                  <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
-                </Pressable>
-              )}
-            </div>
-          )}
-
-          {/* Sắp đến hạn */}
-          {upcomingTasks.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 px-1">
-                <Clock className="size-3.5 text-warning" strokeWidth={1.5} />
-                <h3 className="text-xs font-semibold text-warning">
-                  Sắp đến hạn ({upcomingTasks.length})
-                </h3>
-              </div>
-              {/* Column headers */}
-              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_120px_120px] gap-3 px-3 pb-1 text-xs font-medium text-muted-foreground border-b border-border/40">
-                <span>Nhiệm vụ</span>
-                <span>Đơn vị</span>
-                <span>Hạn</span>
-                <span>Trạng thái</span>
-              </div>
-              <div className="divide-y divide-border/40">
-                {upcomingTasks.slice(0, MAX_ROWS).map((t) => (
-                  <div
-                    key={t.id}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_120px] gap-1 sm:gap-3 items-center px-3 py-2"
-                  >
-                    <Pressable
-                      type="button"
-                      onClick={() => onSelectTask(t)}
-                      className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 min-h-[44px] sm:min-h-0 flex items-center"
-                    >
-                      {t.title}
-                    </Pressable>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {t.leadDepartment || t.department || "-"}
-                    </span>
-                    <span className="font-mono text-xs tabular-nums text-warning">
-                      {formatDisplayDate(t.dueDate)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{statusLabel(t.status)}</span>
-                  </div>
-                ))}
-              </div>
-              {upcomingTasks.length > MAX_ROWS && (
-                <Pressable
-                  type="button"
-                  onClick={() => onViewAllOverdue?.()}
-                  className="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer px-3 py-1 min-h-[44px] sm:min-h-0"
-                >
-                  Xem tất cả {upcomingTasks.length} nhiệm vụ sắp đến hạn
-                  <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
-                </Pressable>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-    </>
-  );
-}
-
 export function normalizeTasksFromApi(rawTasks: any[]): SchoolTask[] {
   if (!Array.isArray(rawTasks)) return [];
   return rawTasks.map((t) => {
@@ -943,8 +614,6 @@ function UnifiedAdaptiveWorkspaceInner({
 
   const createPolicy = React.useMemo(() => resolveCreateTaskPolicy(user), [user]);
 
-  const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
-
   // workspaceQuery được truyền vào từ wrapper UnifiedAdaptiveWorkspace — không gọi hook ở đây.
 
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
@@ -959,8 +628,6 @@ function UnifiedAdaptiveWorkspaceInner({
       setActiveScope(initialScope);
     }
   }, [forcedScope, propScope, initialScope]);
-
-  const isManager = isManagerUser(user) || isExecutive;
 
   const handleScopeChange = React.useCallback(
     (newScope: WorkspaceScope) => {
@@ -1098,12 +765,6 @@ function UnifiedAdaptiveWorkspaceInner({
     },
     [onSelectTask, workspaceQuery, router, saveScrollAndParams]
   );
-
-  const handleCloseDetail = React.useCallback(() => {
-    setIsDetailOpen(false);
-    setInternalSelectedTask(null);
-    workspaceQuery?.setSelectedTask(null, { replace: true });
-  }, [workspaceQuery]);
 
   // Peek preview modal state
   const [peekTask, setPeekTask] = React.useState<SchoolTask | StaffTask | null>(null);
@@ -1916,40 +1577,6 @@ function UnifiedAdaptiveWorkspaceInner({
     workspaceQuery,
   ]);
 
-  const handleRemoveDept = React.useCallback(() => {
-    setInternalDept(undefined);
-    if (onDepartmentChange) onDepartmentChange("ALL");
-    workspaceQuery?.setDept(undefined, { replace: true });
-  }, [onDepartmentChange, workspaceQuery]);
-
-  const handleRemoveStatus = React.useCallback(() => {
-    setInternalStatus(undefined);
-    if (onStatusFilterChange) onStatusFilterChange(undefined);
-    workspaceQuery?.setStatus("ALL", { replace: true });
-  }, [onStatusFilterChange, workspaceQuery]);
-
-  const handleRemoveSearch = React.useCallback(() => {
-    setInternalSearch(undefined);
-    if (onSearchChange) onSearchChange("");
-    workspaceQuery?.setSearchQuery("", { replace: true });
-  }, [onSearchChange, workspaceQuery]);
-
-  const handleRemoveOverdue = React.useCallback(() => {
-    setInternalOverdue(false);
-    if (onOverdueFilterChange) onOverdueFilterChange(false);
-    if (workspaceQuery?.queryState.attention === "overdue") {
-      workspaceQuery?.setAttention(null, { replace: true });
-    }
-  }, [onOverdueFilterChange, workspaceQuery]);
-
-  const handleRemoveWorkbox = React.useCallback(() => {
-    setInternalWorkbox("ALL");
-    if (onWorkboxChange) onWorkboxChange("ALL");
-    if (workspaceQuery?.queryState.attention) {
-      workspaceQuery?.setAttention(null, { replace: true });
-    }
-  }, [onWorkboxChange, workspaceQuery]);
-
   // Current active filter criteria for saved views
   const currentCriteria: TaskViewCriteria = React.useMemo(() => {
     return {
@@ -2521,10 +2148,9 @@ function UnifiedAdaptiveWorkspaceInner({
             {actionQueueTotal > 0 && (
               <div className="flex items-center justify-end pb-1">
                 <Pressable
-                  type="button"
                   data-slot="action-queue-trigger"
                   onClick={() => setIsActionQueueOpen(true)}
-                  className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold cursor-pointer transition-colors shrink-0"
+                  className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold transition-colors shrink-0"
                   aria-label="Mở hàng đợi xử lý công việc"
                   title="Mở Hộp việc khẩn cấp (Smart Workbox)"
                 >
@@ -2777,9 +2403,8 @@ function UnifiedAdaptiveWorkspaceInner({
                 Hàng đợi xử lý công việc
               </h3>
               <Pressable
-                type="button"
                 onClick={() => setIsActionQueueOpen(false)}
-                className="size-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                className="size-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 aria-label="Đóng hàng đợi"
               >
                 <X className="size-4" strokeWidth={1.5} />
@@ -2911,7 +2536,6 @@ function UnifiedAdaptiveWorkspaceInner({
  * Đây là entry point backward-compatible cho mọi nơi dùng UAW trực tiếp.
  */
 export function UnifiedAdaptiveWorkspace(props: Omit<UnifiedAdaptiveWorkspaceProps, "workspaceQuery">) {
-  const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
 
   const defaultScope: WorkspaceScope = React.useMemo(() => {
     if (props.forcedScope) return props.forcedScope;

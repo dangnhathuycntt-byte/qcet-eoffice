@@ -203,7 +203,6 @@ export function TaskDateRange({
       )}
       {canEdit && onClearDates && (startDateIso || dueDateIso) && (
         <Pressable
-          type="button"
           onClick={(e) => { e.stopPropagation(); onClearDates(); }}
           className="opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all motion-reduce:transition-none"
           aria-label="Xóa ngày"

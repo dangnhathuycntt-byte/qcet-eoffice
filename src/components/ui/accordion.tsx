@@ -4,6 +4,7 @@ import * as React from "react";
 import { Accordion as BaseAccordion } from "@base-ui/react/accordion";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface AccordionItemData {
   value: string;
@@ -54,7 +55,7 @@ export function Accordion({
             <BaseAccordion.Trigger
               className={cn(
                 "flex flex-1 cursor-pointer items-center justify-between py-3.5 text-left text-sm font-medium text-foreground outline-none select-none",
-                "transition-colors duration-[var(--motion-duration-micro)] hover:text-primary focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1",
+                `transition-colors duration-[var(--motion-duration-micro)] hover:text-primary ${focusRingClass}`,
                 "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
               )}
             >

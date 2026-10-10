@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ChevronRight, Folder, FolderOpen, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface TreeNode {
   id: string;
@@ -74,7 +75,7 @@ function TreeItem({
         onKeyDown={handleKeyDown}
         style={{ paddingLeft: `${8 + level * 20}px` }}
         className={cn(
-          "group flex h-8 items-center gap-1.5 rounded-lg pr-2 text-xs sm:text-sm font-medium select-none transition-colors duration-100 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 motion-reduce:transition-none",
+          `group flex h-8 items-center gap-1.5 rounded-lg pr-2 text-xs sm:text-sm font-medium select-none transition-colors duration-100 cursor-pointer outline-none ${focusRingClass} motion-reduce:transition-none`,
           isSelected
             ? "bg-selected text-foreground font-semibold"
             : "text-foreground hover:bg-accent",

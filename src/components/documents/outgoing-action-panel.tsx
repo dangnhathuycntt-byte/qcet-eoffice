@@ -173,7 +173,6 @@ export function OutgoingActionPanel({
           return (
             <Button
               key={actionDef.action}
-              type="button"
               size="sm"
               variant={actionDef.variant === "primary" ? "default" : "ghost"}
               disabled={!!pending}
@@ -235,11 +234,10 @@ export function OutgoingActionPanel({
             )}
 
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" size="sm" onClick={() => { setConfirmAction(null); setNote(""); }}>
+              <Button variant="outline" size="sm" onClick={() => { setConfirmAction(null); setNote(""); }}>
                 Hủy
               </Button>
               <Button
-                type="button"
                 size="sm"
                 variant={confirmAction.variant === "danger" ? "destructive" : "default"}
                 disabled={(confirmAction.requiresNote && !note.trim()) || !!pending}

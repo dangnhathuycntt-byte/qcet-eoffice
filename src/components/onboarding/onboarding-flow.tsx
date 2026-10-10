@@ -220,7 +220,6 @@ export function OnboardingFlow() {
             {/* Mobile swipe hint */}
             <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
               <Pressable
-                type="button"
                 onClick={handleNext}
                 className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
@@ -281,7 +280,6 @@ export function OnboardingFlow() {
             {/* Mobile swipe hint */}
             <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
               <Pressable
-                type="button"
                 onClick={handleNext}
                 className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
@@ -347,7 +345,6 @@ export function OnboardingFlow() {
             {/* Mobile swipe hint */}
             <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
               <Pressable
-                type="button"
                 onClick={handleNext}
                 className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >

@@ -266,7 +266,6 @@ export function DocumentBulkToolbar({
 
               {/* [Nút Giao đơn vị] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => openModal("assign-unit")}
@@ -280,7 +279,6 @@ export function DocumentBulkToolbar({
 
               {/* [Nút Hoàn tất] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => openModal("resolve")}
@@ -294,7 +292,6 @@ export function DocumentBulkToolbar({
 
               {/* [Nút Lưu hồ sơ] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => openModal("file")}
@@ -313,7 +310,6 @@ export function DocumentBulkToolbar({
 
               {/* [Nút Bỏ chọn (ESC)] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={onClearSelection}
@@ -460,7 +456,7 @@ export function DocumentBulkToolbar({
 
           {/* Footer hành động của Dialog */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
-            <Button type="button" variant="outline" size="sm" onClick={closeModal} disabled={isSubmitting}>
+            <Button variant="outline" size="sm" onClick={closeModal} disabled={isSubmitting}>
               Hủy bỏ
             </Button>
 

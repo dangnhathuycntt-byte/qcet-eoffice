@@ -442,9 +442,8 @@ export function HelpGuideModal() {
     >
       <div className="space-y-2 pt-1">
         <Pressable
-          type="button"
           onClick={() => handleSelectGuide("inbox-sign", "/documents")}
-          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
+          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -459,9 +458,8 @@ export function HelpGuideModal() {
         </Pressable>
 
         <Pressable
-          type="button"
           onClick={() => handleSelectGuide("tasks-sort", "/tasks")}
-          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
+          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
@@ -476,9 +474,8 @@ export function HelpGuideModal() {
         </Pressable>
 
         <Pressable
-          type="button"
           onClick={() => handleSelectGuide("delegation-create", "/delegations")}
-          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
+          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
@@ -494,9 +491,8 @@ export function HelpGuideModal() {
 
         <div className="pt-3 border-t border-border/50 flex justify-end">
           <Pressable
-            type="button"
             onClick={handleResetAll}
-            className="text-xs font-medium text-primary hover:underline cursor-pointer px-2 py-1"
+            className="text-xs font-medium text-primary hover:underline px-2 py-1"
           >
             Xem lại tất cả từ đầu
           </Pressable>

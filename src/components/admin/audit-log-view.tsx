@@ -153,7 +153,6 @@ export function AuditLogView() {
           <div className="flex-1 space-y-2">
             <p className="text-sm font-medium text-red-800">{error}</p>
             <Pressable
-              type="button"
               onClick={fetchEntries}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700 hover:text-red-900 min-h-[44px] sm:min-h-0 transition-colors"
             >

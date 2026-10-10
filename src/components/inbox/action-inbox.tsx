@@ -106,11 +106,10 @@ export function ActionInbox({
             className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
           >
             <Pressable
-              type="button"
               onClick={() => setFilterType("ALL")}
               aria-pressed={filterType === "ALL"}
               className={cn(
-                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
                 filterType === "ALL"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -120,11 +119,10 @@ export function ActionInbox({
               <span className="font-mono tabular-nums text-xs opacity-75">({items.length})</span>
             </Pressable>
             <Pressable
-              type="button"
               onClick={() => setFilterType("TASK")}
               aria-pressed={filterType === "TASK"}
               className={cn(
-                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
                 filterType === "TASK"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -136,11 +134,10 @@ export function ActionInbox({
               </span>
             </Pressable>
             <Pressable
-              type="button"
               onClick={() => setFilterType("DOCUMENT")}
               aria-pressed={filterType === "DOCUMENT"}
               className={cn(
-                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
                 filterType === "DOCUMENT"
                   ? "bg-background text-foreground shadow-2xs font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"

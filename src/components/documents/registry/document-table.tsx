@@ -459,9 +459,8 @@ export function DocumentTable({
                     </Link>
                   ) : (
                     <Pressable
-                      type="button"
                       onClick={() => onLinkTask?.(doc)}
-                      className="text-xs text-muted-foreground/60 hover:text-primary transition-colors italic cursor-pointer"
+                      className="text-xs text-muted-foreground/60 hover:text-primary transition-colors italic"
                     >
                       Chưa tạo việc
                     </Pressable>
@@ -478,7 +477,7 @@ export function DocumentTable({
                       variant="ghost"
                       size="icon"
                       onClick={() => onSelectDocument?.(doc)}
-                      className="size-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted cursor-pointer active:scale-[0.98]"
+                      className="size-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted active:scale-[0.98]"
                       aria-label={`Xem chi tiết văn bản ${doc.documentNumber || doc.summary}`}
                     >
                       <Eye className="size-3.5" strokeWidth={1.5} />
@@ -509,10 +508,9 @@ export function DocumentTable({
                             className="w-48 select-none rounded-xl border border-border/80 bg-popover/95 p-1 text-xs text-popover-foreground shadow-lg shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-100"
                           >
                             <Pressable
-                              type="button"
                               role="menuitem"
                               onClick={() => onSelectDocument?.(doc)}
-                              className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                              className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                             >
                               <Eye className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                               <span>Xem chi tiết</span>
@@ -520,10 +518,9 @@ export function DocumentTable({
 
                             {doc.fileAttachment && (
                               <Pressable
-                                type="button"
                                 role="menuitem"
                                 onClick={() => onViewPdf?.(doc)}
-                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                               >
                                 <FileText className="size-3.5 text-primary" strokeWidth={1.5} />
                                 <span>Xem tệp PDF</span>
@@ -540,10 +537,9 @@ export function DocumentTable({
                               </Link>
                             ) : (
                               <Pressable
-                                type="button"
                                 role="menuitem"
                                 onClick={() => onLinkTask?.(doc)}
-                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                               >
                                 <ArrowRight className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                                 <span>Liên thông việc</span>
@@ -553,7 +549,6 @@ export function DocumentTable({
                             <div className="my-1 border-t border-border/40" />
 
                             <Pressable
-                              type="button"
                               role="menuitem"
                               onClick={() =>
                                 handleCopy(
@@ -561,7 +556,7 @@ export function DocumentTable({
                                   `code-${doc.id}`
                                 )
                               }
-                              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                             >
                               <span className="flex items-center gap-2">
                                 <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />

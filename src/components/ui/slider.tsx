@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Slider as BaseSlider } from "@base-ui/react/slider";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface SliderProps {
   value?: number | number[];
@@ -76,15 +77,15 @@ export function Slider({
           <>
             <BaseSlider.Thumb
               index={0}
-              className="block size-4 cursor-grab rounded-full border-2 border-primary bg-background focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50"
+              className={`block size-4 cursor-grab rounded-full border-2 border-primary bg-background ${focusRingClass} active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50`}
             />
             <BaseSlider.Thumb
               index={1}
-              className="block size-4 cursor-grab rounded-full border-2 border-primary bg-background focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50"
+              className={`block size-4 cursor-grab rounded-full border-2 border-primary bg-background ${focusRingClass} active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50`}
             />
           </>
         ) : (
-          <BaseSlider.Thumb className="block size-4 cursor-grab rounded-full border-2 border-primary bg-background focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50" />
+          <BaseSlider.Thumb className={`block size-4 cursor-grab rounded-full border-2 border-primary bg-background ${focusRingClass} active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50`} />
         )}
       </BaseSlider.Control>
     </BaseSlider.Root>

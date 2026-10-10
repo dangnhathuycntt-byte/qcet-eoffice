@@ -551,9 +551,8 @@ export function AppSidebar() {
                   {/* Group Section Header (Văn bản, Đơn vị) */}
                   {group.label && !isCollapsed ? (
                     <Pressable
-                      type="button"
                       onClick={() => toggleGroup(group.id)}
-                      className="w-full flex items-center gap-1 px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground select-none hover:text-foreground transition-colors text-left cursor-pointer group/gh"
+                      className="w-full flex items-center gap-1 px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground select-none hover:text-foreground transition-colors text-left group/gh"
                     >
                       <span>{group.label}</span>
                       <ChevronDown
@@ -664,13 +663,12 @@ export function AppSidebar() {
                           </Tooltip>
                           {children && !isCollapsed ? (
                             <Pressable
-                              type="button"
                               aria-label={isExpanded ? `Thu gọn ${item.label}` : `Mở rộng ${item.label}`}
                               aria-expanded={isExpanded}
                               onClick={() =>
                                 setExpandedItems((prev) => ({ ...prev, [item.id]: !isExpanded }))
                               }
-                              className="absolute right-1 top-1/2 -translate-y-1/2 flex size-6 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 flex size-6 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
                             >
                               <ChevronDown
                                 size={12}
@@ -798,12 +796,11 @@ export function AppSidebar() {
                         {/* Menu Items */}
                         <div className="space-y-0.5">
                           <Pressable
-                            type="button"
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               setIsProfileModalOpen(true);
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
                             <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
                             <span>Hồ sơ cá nhân</span>
@@ -819,28 +816,26 @@ export function AppSidebar() {
                           </Link>
 
                           <Pressable
-                            type="button"
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               if (typeof window !== "undefined") {
                                 window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
                               }
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
                             <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
                             <span>Cài đặt ứng dụng di động</span>
                           </Pressable>
 
                           <Pressable
-                            type="button"
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               if (typeof window !== "undefined") {
                                 window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
                               }
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
                             <HelpCircle size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
                             <span>Trợ giúp &amp; Hướng dẫn</span>
@@ -850,12 +845,11 @@ export function AppSidebar() {
                         {/* Logout */}
                         <div className="border-t border-border/60 pt-1 mt-1">
                           <Pressable
-                            type="button"
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               logout();
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors text-left"
                           >
                             <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
                             <span>Đăng xuất</span>

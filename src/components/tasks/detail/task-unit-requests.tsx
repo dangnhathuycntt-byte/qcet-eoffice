@@ -114,7 +114,6 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
       <Textarea compact countOnlyNearLimit value={note} maxLength={1000} aria-label="Nội dung đề nghị" placeholder="Việc cần hỗ trợ (không bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
       <TaskPanelActions onCancel={() => setAdding(false)}>
         <Button variant="outline"
-          type="button"
           size="xs"
           disabled={busy || !unitId}
           onClick={() => void send(`/api/tasks/${taskId}/unit-requests`, { targetUnitId: unitId, respondInDays: Number(respondInDays), ...(note.trim() ? { note: note.trim() } : {}) }, "Không gửi được đề nghị")}
@@ -149,7 +148,6 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
                 {STATUS_LABEL[r.status]}
                 {r.canCancel ? (
                   <Button
-                    type="button"
                     size="xs"
                     variant="ghost"
                     disabled={busy}
@@ -165,7 +163,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
       )}
 
       {state.canRequest && !adding && (
-        <Button type="button" size="xs" variant="ghost" onClick={() => setAdding(true)}>
+        <Button size="xs" variant="ghost" onClick={() => setAdding(true)}>
           Đề nghị đơn vị khác phối hợp
         </Button>
       )}

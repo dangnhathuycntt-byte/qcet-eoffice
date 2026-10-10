@@ -389,10 +389,9 @@ export function Navigation() {
 
           {/* Quick Create Task Button */}
           <Button
-            type="button"
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all active:scale-[0.98]"
             title={user?.role === "STAFF" ? "Tạo việc cá nhân mới (phím ⌘K hoặc N)" : "Tạo việc / Giao việc mới (phím ⌘K hoặc N)"}
           >
             <Plus size={14} strokeWidth={1.5} className="shrink-0" />

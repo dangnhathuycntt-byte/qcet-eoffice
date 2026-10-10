@@ -123,7 +123,7 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
           <Select compact positionerClassName="z-50" aria-label={`Người duyệt bước ${index + 1}`} placeholder="— Người duyệt —" options={options} value={s.reviewerUserId} onValueChange={(v) => patchStep(index, { reviewerUserId: v || null })} />
           <Select compact positionerClassName="z-50" aria-label={`Người dự phòng bước ${index + 1}`} placeholder="— Người dự phòng (không bắt buộc) —" options={options} value={s.backupReviewerUserId} onValueChange={(v) => patchStep(index, { backupReviewerUserId: v || null })} />
           {draft.length > 1 ? (
-            <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => prev.filter((_, i) => i !== index))}>
+            <Button size="xs" variant="ghost" onClick={() => setDraft((prev) => prev.filter((_, i) => i !== index))}>
               Bỏ bước này
             </Button>
           ) : null}
@@ -133,13 +133,13 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
         onCancel={() => setEditing(false)}
         leading={
           draft.length < MAX_STEPS ? (
-            <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => [...prev, emptyStep(prev.length)])}>
+            <Button size="xs" variant="ghost" onClick={() => setDraft((prev) => [...prev, emptyStep(prev.length)])}>
               Thêm bước
             </Button>
           ) : null
         }
       >
-        <Button type="button" size="xs" variant="outline" disabled={busy || !valid} onClick={() => void save()}>
+        <Button size="xs" variant="outline" disabled={busy || !valid} onClick={() => void save()}>
           Lập luồng
         </Button>
       </TaskPanelActions>
@@ -177,7 +177,7 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
       )}
 
       {view.canDefine && !editing ? (
-        <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(true)}>
+        <Button size="xs" variant="ghost" onClick={() => setEditing(true)}>
           Lập luồng duyệt
         </Button>
       ) : null}

@@ -88,7 +88,7 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
         className="min-h-16"
       />
       <TaskPanelActions onCancel={() => { setOpen(false); setReason(""); setError(null); }}>
-        <Button variant="outline" type="button" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
+        <Button variant="outline" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
           Gửi từ chối
         </Button>
       </TaskPanelActions>
@@ -120,7 +120,7 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
       ) : open ? (
         declineForm
       ) : (
-        <Button type="button" size="xs" variant="ghost" onClick={() => setOpen(true)}>
+        <Button size="xs" variant="ghost" onClick={() => setOpen(true)}>
           Từ chối nhận việc
         </Button>
       )}

@@ -217,10 +217,9 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
         {/* Quick Shortcuts */}
         <div className="grid grid-cols-2 gap-1.5 py-2.5 border-b border-border/50">
           <Pressable
-            type="button"
             onClick={() => handleSelectMonth(currentActualMonth)}
             className={cn(
-              "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer border",
+              "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors border",
               selectedMonth === currentActualMonth
                 ? "bg-primary/10 text-primary border-primary/30 font-semibold shadow-2xs"
                 : "bg-muted/40 hover:bg-muted/80 text-foreground border-border/40"
@@ -236,10 +235,9 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => handleSelectMonth("ALL")}
             className={cn(
-              "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer border",
+              "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors border",
               selectedMonth === "ALL"
                 ? "bg-primary/10 text-primary border-primary/30 font-semibold shadow-2xs"
                 : "bg-muted/40 hover:bg-muted/80 text-foreground border-border/40"
@@ -267,10 +265,9 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
               return (
                 <Pressable
                   key={m}
-                  type="button"
                   onClick={() => handleSelectMonth(m)}
                   className={cn(
-                    "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all cursor-pointer border min-h-[42px]",
+                    "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all border min-h-[42px]",
                     isSelected
                       ? "bg-primary/10 text-primary border-primary/40 font-semibold shadow-2xs ring-1 ring-primary/20"
                       : "bg-muted/30 hover:bg-muted/70 text-foreground border-border/40"

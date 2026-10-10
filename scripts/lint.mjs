@@ -117,6 +117,12 @@ const DESIGN_RULES = [
     test: (line) => /focus-visible:ring-1\b/.test(line),
   },
   {
+    id: "focus-outline-style",
+    message:
+      "focus-visible:outline-2 without focus-visible:outline-solid renders no ring (Tailwind v4 outline-none sets --tw-outline-style: none). Use focusRingClass from @/components/ui/focus-ring.",
+    test: (line) => /focus-visible:outline-2\b/.test(line) && !/focus-visible:outline-solid\b/.test(line),
+  },
+  {
     id: "no-signal-palette",
     message:
       "Raw rose/amber palette. Signals use tokens: text-destructive / bg-danger-soft / bg-destructive/10 (late, urgent, error) and text-warning / bg-warning/10 (due soon).",

@@ -794,7 +794,7 @@ export function DesignShowcase() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="gap-1.5 cursor-pointer"
+                    className="gap-1.5"
                     onClick={() => setFilterOpen((p) => !p)}
                   >
                     <Filter className="size-3.5" />
@@ -819,46 +819,42 @@ export function DesignShowcase() {
                         <div className="flex items-center justify-between text-xs font-semibold text-foreground border-b border-border/40 pb-2 px-1">
                           <span>Tiêu chí lọc 2 cấp</span>
                           <Pressable
-                            type="button"
                             onClick={() => setFilterOpen(false)}
-                            className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
+                            className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
                           >
                             <X className="size-3.5" />
                           </Pressable>
                         </div>
                         <div className="space-y-1 text-xs">
                           <Pressable
-                            type="button"
                             onClick={() => {
                               if (!filterChips.some((c) => c.id === "time")) {
                                 setFilterChips((p) => [...p, { id: "time", label: "Thời gian: Tháng 10" }]);
                               }
                             }}
-                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left cursor-pointer"
+                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left"
                           >
                             <span className="text-foreground font-medium">Thời gian</span>
                             <span className="text-primary font-medium text-xs">Tháng 10 ›</span>
                           </Pressable>
                           <Pressable
-                            type="button"
                             onClick={() => {
                               if (!filterChips.some((c) => c.id === "priority")) {
                                 setFilterChips((p) => [...p, { id: "priority", label: "Ưu tiên: Khẩn cấp, Cao" }]);
                               }
                             }}
-                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left cursor-pointer"
+                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left"
                           >
                             <span className="text-foreground font-medium">Ưu tiên</span>
                             <span className="text-muted-foreground text-xs">Khẩn cấp, Cao ›</span>
                           </Pressable>
                           <Pressable
-                            type="button"
                             onClick={() => {
                               if (!filterChips.some((c) => c.id === "status")) {
                                 setFilterChips((p) => [...p, { id: "status", label: "Trạng thái: Chờ duyệt" }]);
                               }
                             }}
-                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left cursor-pointer"
+                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left"
                           >
                             <span className="text-foreground font-medium">Trạng thái</span>
                             <span className="text-muted-foreground text-xs">Chờ duyệt ›</span>
@@ -886,9 +882,8 @@ export function DesignShowcase() {
                     >
                       <span>{chip.label}</span>
                       <Pressable
-                        type="button"
                         onClick={() => removeChip(chip.id)}
-                        className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+                        className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                         title="Xóa bộ lọc này"
                       >
                         <X className="size-3" />
@@ -899,9 +894,8 @@ export function DesignShowcase() {
 
                 {filterChips.length > 0 ? (
                   <Pressable
-                    type="button"
                     onClick={clearAllChips}
-                    className="text-xs text-muted-foreground hover:text-foreground hover:underline ml-2 cursor-pointer"
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline ml-2"
                   >
                     Xóa tất cả
                   </Pressable>
@@ -1249,32 +1243,28 @@ export function DesignShowcase() {
                     <div className="h-4 w-[1px] bg-border/60 mx-1" />
 
                     <Pressable
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Calendar className="size-3.5 text-muted-foreground" />
                       <span>Đổi hạn</span>
                     </Pressable>
 
                     <Pressable
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <User className="size-3.5 text-muted-foreground" />
                       <span>Giao người</span>
                     </Pressable>
 
                     <Pressable
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Clock className="size-3.5 text-muted-foreground" />
                       <span>Trạng thái</span>
                     </Pressable>
 
                     <Pressable
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-destructive/10 hover:bg-destructive/15 text-destructive px-3.5 text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-destructive/10 hover:bg-destructive/15 text-destructive px-3.5 text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Trash2 className="size-3.5 text-destructive" />
                       <span>Hủy việc</span>
@@ -1283,8 +1273,7 @@ export function DesignShowcase() {
                     <div className="h-4 w-[1px] bg-border/60 mx-1" />
 
                     <Pressable
-                      type="button"
-                      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+                      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                       title="Bỏ chọn"
                     >
                       <X className="size-4" />
@@ -1369,16 +1358,16 @@ export function DesignShowcase() {
                 <div className="flex items-center justify-between border-b border-border/40 pb-3 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">Việc con 1 trên 2</span>
                   <div className="flex items-center gap-3">
-                    <Pressable type="button" className="hover:text-foreground" title="Toàn trang">
+                    <Pressable className="hover:text-foreground" title="Toàn trang">
                       <Maximize2 className="size-3.5" />
                     </Pressable>
-                    <Pressable type="button" className="hover:text-foreground" title="Việc trước">
+                    <Pressable className="hover:text-foreground" title="Việc trước">
                       <MoveUp className="size-3.5" />
                     </Pressable>
-                    <Pressable type="button" className="hover:text-foreground" title="Việc kế">
+                    <Pressable className="hover:text-foreground" title="Việc kế">
                       <MoveDown className="size-3.5" />
                     </Pressable>
-                    <Pressable type="button" className="hover:text-foreground" title="Đóng">
+                    <Pressable className="hover:text-foreground" title="Đóng">
                       <X className="size-3.5" />
                     </Pressable>
                   </div>
@@ -1446,8 +1435,7 @@ export function DesignShowcase() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Pressable
-                    type="button"
-                    className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground px-4 text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                    className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground px-4 text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
                   >
                     <Plus className="size-3.5 stroke-[2.5]" />
                     <span>Giao việc mới</span>
@@ -1473,8 +1461,7 @@ export function DesignShowcase() {
 
                   {/* Filter Button Pill */}
                   <Pressable
-                    type="button"
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all cursor-pointer"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all"
                   >
                     <Filter className="size-3.5 text-muted-foreground" />
                     <span>Bộ lọc</span>
@@ -1486,7 +1473,7 @@ export function DesignShowcase() {
                   {/* Filter Chip Pill */}
                   <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-medium text-foreground border border-border/40">
                     <span>Thời gian: Tháng 10</span>
-                    <Pressable type="button" className="rounded-full p-0.5 text-muted-foreground hover:text-foreground">
+                    <Pressable className="rounded-full p-0.5 text-muted-foreground hover:text-foreground">
                       <X className="size-3" />
                     </Pressable>
                   </span>
@@ -1495,10 +1482,9 @@ export function DesignShowcase() {
                 {/* View Switcher: Bảng | Kanban Segmented Pill */}
                 <div className="relative inline-flex h-8 items-center rounded-full bg-secondary p-1 text-xs">
                   <Pressable
-                    type="button"
                     onClick={() => setActiveTab("table")}
                     className={cn(
-                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors cursor-pointer select-none",
+                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors select-none",
                       activeTab === "table"
                         ? "text-foreground font-semibold"
                         : "text-muted-foreground hover:text-foreground"
@@ -1515,10 +1501,9 @@ export function DesignShowcase() {
                     <span className="relative z-10">Bảng</span>
                   </Pressable>
                   <Pressable
-                    type="button"
                     onClick={() => setActiveTab("kanban")}
                     className={cn(
-                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors cursor-pointer select-none",
+                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors select-none",
                       activeTab === "kanban"
                         ? "text-foreground font-semibold"
                         : "text-muted-foreground hover:text-foreground"
@@ -1570,9 +1555,8 @@ export function DesignShowcase() {
                   {/* Group 1: Chờ duyệt (3 việc) */}
                   <div className="space-y-1">
                     <Pressable
-                      type="button"
                       onClick={() => setGroupCollapse((p) => ({ ...p, waiting: !p.waiting }))}
-                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors cursor-pointer select-none"
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors select-none"
                     >
                       <m.span
                         animate={{ rotate: groupCollapse.waiting ? 0 : 90 }}
@@ -1639,9 +1623,8 @@ export function DesignShowcase() {
                   {/* Group 2: Đang thực hiện (5 việc, gồm selection gộp khối) */}
                   <div className="space-y-1">
                     <Pressable
-                      type="button"
                       onClick={() => setGroupCollapse((p) => ({ ...p, doing: !p.doing }))}
-                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors cursor-pointer select-none"
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors select-none"
                     >
                       <m.span
                         animate={{ rotate: groupCollapse.doing ? 0 : 90 }}
@@ -1763,9 +1746,8 @@ export function DesignShowcase() {
                   {/* Group 3: Mới (3 việc) */}
                   <div className="space-y-1">
                     <Pressable
-                      type="button"
                       onClick={() => setGroupCollapse((p) => ({ ...p, new: !p.new }))}
-                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors cursor-pointer select-none"
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors select-none"
                     >
                       <m.span
                         animate={{ rotate: groupCollapse.new ? 0 : 90 }}
@@ -1990,17 +1972,16 @@ export function DesignShowcase() {
             <div className="flex items-center justify-between border-b border-border/40 pb-3 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">Việc con 1 trên 2</span>
               <div className="flex items-center gap-3">
-                <Pressable type="button" className="hover:text-foreground" title="Toàn trang">
+                <Pressable className="hover:text-foreground" title="Toàn trang">
                   <Maximize2 className="size-3.5" />
                 </Pressable>
-                <Pressable type="button" className="hover:text-foreground" title="Việc trước">
+                <Pressable className="hover:text-foreground" title="Việc trước">
                   <MoveUp className="size-3.5" />
                 </Pressable>
-                <Pressable type="button" className="hover:text-foreground" title="Việc kế">
+                <Pressable className="hover:text-foreground" title="Việc kế">
                   <MoveDown className="size-3.5" />
                 </Pressable>
                 <Pressable
-                  type="button"
                   onClick={() => setDrawerOpen(false)}
                   className="rounded p-1 hover:bg-accent text-foreground"
                   title="Đóng (Esc)"

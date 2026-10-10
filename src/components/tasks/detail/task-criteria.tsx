@@ -137,7 +137,6 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
             ref={i === drafts.length - 1 ? addRef : undefined}
           />
           <Button
-            type="button"
             variant="ghost"
             size="icon-xs"
             aria-label={`Bỏ tiêu chí ${i + 1}`}
@@ -149,7 +148,6 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
       ))}
       <div className="flex items-center gap-1.5">
         <Button
-          type="button"
           variant="ghost"
           size="xs"
           disabled={drafts.length >= MAX_CRITERIA}
@@ -165,10 +163,10 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
           {drafts.length}/{MAX_CRITERIA}
         </span>
         <span className="ml-auto flex items-center gap-1.5">
-          <Button type="button" size="xs" variant="ghost" onClick={() => { setEditing(false); setError(null); }}>
+          <Button size="xs" variant="ghost" onClick={() => { setEditing(false); setError(null); }}>
             Hủy
           </Button>
-          <Button type="button" size="xs" variant="outline" onClick={() => void save()} disabled={saving}>
+          <Button size="xs" variant="outline" onClick={() => void save()} disabled={saving}>
             {saving ? "Đang lưu…" : "Lưu"}
           </Button>
         </span>
@@ -196,7 +194,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
           </span>
         )}
         {view.canEdit && !editing && (
-          <Button type="button" variant="ghost" size="xs" className="ml-auto" onClick={startEdit}>
+          <Button variant="ghost" size="xs" className="ml-auto" onClick={startEdit}>
             {total === 0 ? "Thêm tiêu chí" : "Sửa"}
           </Button>
         )}

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { UserAvatar } from "./user-avatar";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface PersonOption {
   id: string;
@@ -206,7 +207,7 @@ export function PersonPicker({
                 <button
                   type="button"
                   onClick={(e) => handleRemovePerson(person.id, e)}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation"
+                  className={`rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer outline-none ${focusRingClass} relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation`}
                   aria-label={`Bỏ chọn ${person.name}`}
                 >
                   <X className="size-3" />
@@ -238,7 +239,7 @@ export function PersonPicker({
             <button
               type="button"
               onClick={handleClearAll}
-              className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation"
+              className={`flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer outline-none ${focusRingClass} relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation`}
               aria-label="Xóa tất cả người đã chọn"
             >
               <X className="size-3.5" />

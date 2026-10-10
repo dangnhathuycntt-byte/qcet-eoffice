@@ -71,7 +71,6 @@ export function DestructiveConfirmDialog({
                 {cancelLabel}
               </AlertDialog.Close>
               <Button
-                type="button"
                 variant="destructive"
                 size="default"
                 onClick={handleConfirm}

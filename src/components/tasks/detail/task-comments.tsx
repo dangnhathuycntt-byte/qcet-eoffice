@@ -208,7 +208,7 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
       {status === "error" && (
         <p role="alert" className="px-2 text-xs text-destructive">
           {error}{" "}
-          <Pressable type="button" className="underline underline-offset-2" onClick={() => { setStatus("loading"); setError(null); void load(); }}>
+          <Pressable className="underline underline-offset-2" onClick={() => { setStatus("loading"); setError(null); void load(); }}>
             Thử lại
           </Pressable>
         </p>
@@ -233,7 +233,6 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
                   {c.canEdit && editingId !== c.id && (
                     <span className="ml-auto flex items-center gap-0.5">
                       <Button
-                        type="button"
                         variant="ghost"
                         size="icon-xs"
                         aria-label="Sửa bình luận"
@@ -241,7 +240,7 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
                       >
                         <Pencil strokeWidth={1.5} />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon-xs" aria-label="Xóa bình luận" onClick={() => void remove(c.id)}>
+                      <Button variant="ghost" size="icon-xs" aria-label="Xóa bình luận" onClick={() => void remove(c.id)}>
                         <Trash2 strokeWidth={1.5} />
                       </Button>
                     </span>
@@ -261,10 +260,10 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
                       className="min-h-16"
                     />
                     <div className="flex gap-1.5">
-                      <Button type="button" size="xs" onClick={() => void saveEdit(c.id)} disabled={!editDraft.trim()}>
+                      <Button size="xs" onClick={() => void saveEdit(c.id)} disabled={!editDraft.trim()}>
                         Lưu
                       </Button>
-                      <Button type="button" size="xs" variant="ghost" onClick={() => setEditingId(null)}>
+                      <Button size="xs" variant="ghost" onClick={() => setEditingId(null)}>
                         Hủy
                       </Button>
                     </div>
@@ -311,7 +310,6 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
               {suggestions.map((s, i) => (
                 <li key={s.id} role="option" aria-selected={i === highlight}>
                   <Pressable
-                    type="button"
                     tabIndex={-1}
                     onMouseDown={(e) => { e.preventDefault(); pick(s); }}
                     className={cn(
@@ -327,7 +325,7 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
             </ul>
           )}
           <div className="mt-1.5 flex justify-end">
-            <Button type="button" size="xs" onClick={() => void send()} disabled={!draft.trim() || sending}>
+            <Button size="xs" onClick={() => void send()} disabled={!draft.trim() || sending}>
               {sending ? "Đang gửi…" : "Gửi"}
             </Button>
           </div>

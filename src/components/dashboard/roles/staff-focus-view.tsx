@@ -423,7 +423,6 @@ export function StaffFocusView({
         {/* Filter Tabs */}
         <div className="inline-flex rounded-lg border border-border bg-card p-1 text-xs font-medium">
           <Pressable
-            type="button"
             onClick={() => setActiveTab("ALL")}
             className={cn(
               "px-3 py-1.5 rounded-md transition-colors",
@@ -436,7 +435,6 @@ export function StaffFocusView({
             <span className="font-mono tabular-nums">{staffTasks.length}</span>)
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => setActiveTab("URGENT")}
             className={cn(
               "px-3 py-1.5 rounded-md transition-colors",
@@ -449,7 +447,6 @@ export function StaffFocusView({
             <span className="font-mono tabular-nums">{stats.urgentTodayCount}</span>)
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => setActiveTab("IN_PROGRESS")}
             className={cn(
               "px-3 py-1.5 rounded-md transition-colors",
@@ -462,7 +459,6 @@ export function StaffFocusView({
             <span className="font-mono tabular-nums">{categorized.thisWeek.length}</span>)
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => setActiveTab("REVIEW")}
             className={cn(
               "px-3 py-1.5 rounded-md transition-colors",
@@ -475,7 +471,6 @@ export function StaffFocusView({
             <span className="font-mono tabular-nums">{stats.awaitingReviewCount}</span>)
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => setActiveTab("COMPLETED")}
             className={cn(
               "px-3 py-1.5 rounded-md transition-colors",
@@ -787,7 +782,6 @@ function TaskActionCard({
         <div className="flex items-center gap-2 pt-2 md:pt-0 shrink-0">
           {tier !== "COMPLETED" && tier !== "REVIEW" && (
             <Pressable
-              type="button"
               onClick={() => onQuickSubmit(task)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors shadow-2xs",
@@ -803,7 +797,6 @@ function TaskActionCard({
 
           {tier === "REVIEW" && (
             <Pressable
-              type="button"
               onClick={() => onSelectTask(task)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning/20 transition-colors"
             >
@@ -813,7 +806,6 @@ function TaskActionCard({
           )}
 
           <Pressable
-            type="button"
             onClick={() => onSelectTask(task)}
             className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             title="Xem chi tiết nhiệm vụ"

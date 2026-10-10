@@ -2,30 +2,17 @@
 
 import * as React from "react";
 import {
-  AlertTriangle,
   Check,
-  ChevronDown,
-  ChevronRight,
-  Circle,
-  Clock,
-  MoreHorizontal,
   Calendar,
   CalendarCheck,
   CalendarClock,
   CalendarDays,
   CalendarPlus,
   CalendarX2,
-  Signal,
-  SignalHigh,
-  SignalMedium,
-  SignalLow,
-  Eye,
-  MessageSquare,
-  Paperclip,
 } from "lucide-react";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import type { SchoolTask, TaskPriority, TaskStatus } from "@/types/dashboard";
+import type { SchoolTask, TaskStatus } from "@/types/dashboard";
 import type { TableDensity, TableColumnVisibility } from "../types";
 import {
   formatTableDate,
@@ -33,20 +20,12 @@ import {
   getSlaBadgeStatus,
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
-import { isTaskLifecycleComplete } from "@/domain/tasks/canonical-semantics";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
 import { getCategoryBadgeConfig } from "../constants";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { TaskIconStatusOverdue } from "@/lib/icons/task-icons";
-import {
-  StatusSubNew,
-  StatusSubInProgress,
-  StatusSubReview,
-  StatusSubCompleted,
-  HealthSubOverdue,
-} from "@/components/dashboard/task-filter-icons";
 
 function formatShortTableDate(dateStr?: string | Date | null): string {
   if (!dateStr) return "-";
@@ -147,101 +126,6 @@ export function parseLeadAssignee(
     primaryName,
     subtext: subtextParts.join(" · "),
   };
-}
-
-/**
- * Priority Indicator
- * Khẩn cấp    → strongest semantic emphasis (icon + red)
- * Cao         → noticeable (icon + amber)
- * Bình thường → quiet neutral metadata (plain muted text, no icon)
- * Thấp        → quietest (plain muted text, no icon)
- */
-function PriorityIndicator({ priority }: { priority?: TaskPriority | string }) {
-  const p = (priority || "NORMAL").toUpperCase();
-
-  if (p === "URGENT") {
-    return (
-      <div className="inline-flex items-center gap-1 text-destructive" title="Độ ưu tiên: Khẩn cấp">
-        <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
-        <span className="text-xs font-medium hidden lg:inline">Khẩn cấp</span>
-      </div>
-    );
-  }
-  if (p === "HIGH") {
-    return (
-      <div className="inline-flex items-center gap-1 text-warning" title="Độ ưu tiên: Cao">
-        <SignalHigh className="size-3.5 shrink-0" strokeWidth={1.5} />
-        <span className="text-xs font-medium hidden lg:inline">Cao</span>
-      </div>
-    );
-  }
-  if (p === "LOW") {
-    return (
-      <div className="inline-flex items-center text-slate-400" title="Độ ưu tiên: Thấp">
-        <span className="text-xs hidden lg:inline">Thấp</span>
-      </div>
-    );
-  }
-  return (
-    <div className="inline-flex items-center text-slate-500" title="Độ ưu tiên: Bình thường">
-      <span className="text-xs hidden lg:inline">Bình thường</span>
-    </div>
-  );
-}
-
-/**
- * Health Badge Indicator (Linear Health style: On track / At risk / Off track)
- * Refined: restrained dot indicator with lowered saturation to avoid competing with task title
- */
-function HealthIndicator({
-  status,
-  isOverdue,
-  isWaitingApproval,
-}: {
-  status: TaskStatus;
-  isOverdue: boolean;
-  isWaitingApproval: boolean;
-}) {
-  if (status === "COMPLETED") {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-xs text-foreground/80 font-medium">
-        <StatusSubCompleted className="size-3.5 text-foreground/80 shrink-0" />
-        <span>Hoàn thành</span>
-      </div>
-    );
-  }
-  if (isOverdue) {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-xs text-foreground/90 font-medium">
-        <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
-        <span>Trễ hạn</span>
-      </div>
-    );
-  }
-  if (isWaitingApproval || status === "WAITING_APPROVAL" || (status as string) === "NEEDS_REVIEW") {
-    const label = (status as string) === "NEEDS_REVIEW" ? "Cần chỉnh sửa" : "Chờ duyệt";
-    return (
-      <div className="inline-flex items-center gap-1.5 text-xs text-foreground/80 font-medium">
-        <StatusSubReview className="size-3.5 text-foreground/80 shrink-0" />
-        <span>{label}</span>
-      </div>
-    );
-  }
-  if (status === "IN_PROGRESS") {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-xs text-foreground font-medium">
-        <StatusSubInProgress className="size-3.5 text-foreground/80 shrink-0" />
-        <span>Đang thực hiện</span>
-      </div>
-    );
-  }
-  // Mới
-  return (
-    <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
-      <StatusSubNew className="size-3.5 text-muted-foreground/60 shrink-0" />
-      <span>Mới</span>
-    </div>
-  );
 }
 
 /** Ô ngày dùng chung cho cột Ngày tạo và Hạn (cùng padding, căn trái) */
@@ -432,11 +316,6 @@ export const TaskRow = React.memo(function TaskRow({
     onToggleSelect?.(task.id, e);
   };
 
-  const handleExpandClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggleExpand?.(task.id, e);
-  };
-
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     onContextMenu?.(task, e);
@@ -444,7 +323,11 @@ export const TaskRow = React.memo(function TaskRow({
 
   const rawCode = task.code || task.taskCode || `NV-${task.id.slice(0, 4)}`;
   const taskCode = rawCode.replace(/[–—–—]/g, "-");
-  const descriptionPreview = getTaskContentPreview(task.description).replace(/\s*\n\s*/g, " ");
+  // Mô tả là JSON khối; chỉ parse lại khi mô tả đổi, không phải mỗi lần hàng render.
+  const descriptionPreview = React.useMemo(
+    () => getTaskContentPreview(task.description).replace(/\s*\n\s*/g, " "),
+    [task.description]
+  );
   const statusLabel =
     task.status === "COMPLETED"
       ? "Hoàn thành"

@@ -80,7 +80,7 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
         onValueChange={(v) => setUserId(v || null)}
       />
       <TaskPanelActions onCancel={() => setEditing(false)}>
-        <Button variant="outline" type="button" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
+        <Button variant="outline" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
           Lưu
         </Button>
       </TaskPanelActions>
@@ -109,11 +109,11 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
 
       {view.canEdit && !editing ? (
         <div className="flex gap-1.5">
-          <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(true)}>
+          <Button size="xs" variant="ghost" onClick={() => setEditing(true)}>
             {view.backup ? "Đổi" : "Chỉ định"}
           </Button>
           {view.backup ? (
-            <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void save(null)}>
+            <Button size="xs" variant="ghost" disabled={busy} onClick={() => void save(null)}>
               Gỡ
             </Button>
           ) : null}

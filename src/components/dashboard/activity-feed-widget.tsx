@@ -234,9 +234,8 @@ export function ActivityFeedWidget({
       {uniqueActivities.length > initialLimit && (
         <div className="pt-2 mt-1 border-t border-border/40 text-center">
           <Pressable
-            type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
             aria-expanded={isExpanded}
           >
             {isExpanded ? (

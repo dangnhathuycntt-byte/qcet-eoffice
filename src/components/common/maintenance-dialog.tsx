@@ -87,7 +87,6 @@ export function MaintenanceDialog({
 
           <div className="flex items-center gap-2">
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={onClose}

@@ -269,14 +269,13 @@ export function CreateTaskModal({
                               {form.availableDepartments.map((dept) => (
                                 <Pressable
                                   key={dept.code}
-                                  type="button"
                                   onClick={() => {
                                     form.setField("selectedDeptCode", dept.code);
                                     form.setField("leadAssigneeId", "");
                                     setOpenDropdown(null);
                                   }}
                                   className={cn(
-                                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
+                                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99]",
                                     form.formData.selectedDeptCode === dept.code
                                       ? "font-semibold text-foreground bg-accent"
                                       : "text-foreground hover:bg-accent/70",
@@ -335,9 +334,8 @@ export function CreateTaskModal({
                     <span>Đã tự động khôi phục bản nháp chưa lưu từ phiên làm việc trước.</span>
                   </div>
                   <Pressable
-                    type="button"
                     onClick={form.handleClearDraft}
-                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2 cursor-pointer"
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
                   >
                     Xóa bản nháp
                   </Pressable>
@@ -477,13 +475,12 @@ export function CreateTaskModal({
                           {PRIORITY_KEYS.map((p) => (
                             <Pressable
                               key={p}
-                              type="button"
                               onClick={() => {
                                 form.setField("priority", p);
                                 setOpenDropdown(null);
                               }}
                               className={cn(
-                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
+                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99]",
                                 form.formData.priority === p
                                   ? "font-medium text-foreground hover:bg-accent"
                                   : "text-foreground hover:bg-accent",
@@ -578,7 +575,6 @@ export function CreateTaskModal({
                                 return list.map((person) => (
                                   <Pressable
                                     key={person.id}
-                                    type="button"
                                     onClick={() => {
                                       form.setField("leadAssigneeId", person.id);
                                       if (form.fieldErrors.lead) {
@@ -588,7 +584,7 @@ export function CreateTaskModal({
                                       setOpenDropdown(null);
                                     }}
                                     className={cn(
-                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 cursor-pointer transition-colors",
+                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 transition-colors",
                                       form.formData.leadAssigneeId === person.id
                                         ? "bg-accent"
                                         : "hover:bg-accent/70",
@@ -655,12 +651,11 @@ export function CreateTaskModal({
                 {/* Chỉ nút chính; đóng bằng Esc hoặc nhấn ra ngoài */}
                 <div className="flex items-center gap-2 ml-auto">
                   <Pressable
-                    type="button"
                     onClick={handleFormSubmit}
                     disabled={form.isSubmitting || !form.formData.title.trim()}
                     aria-keyshortcuts="Meta+Enter Control+Enter"
                     title={`${modKey} + Enter`}
-                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 inline-flex items-center gap-1.5"
                   >
                     {form.isSubmitting ? (
                       <>

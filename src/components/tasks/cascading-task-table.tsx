@@ -3,11 +3,6 @@
 import * as React from "react";
 import {
   CornerDownRight,
-  Layers,
-  Building2,
-  Briefcase,
-  GraduationCap,
-  Calendar,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -17,19 +12,19 @@ import type {
 } from "@/types/dashboard";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import { useDisplayDensity } from "@/components/density-provider";
-import { useSwipeAction } from "@/hooks/use-swipe-action";
-import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import {
   ModularCascadingTaskTable,
   type ModularCascadingTaskTableProps,
 } from "./table/modular-cascading-task-table";
+import {
+  CATEGORY_TABS,
+  DEPARTMENT_OPTIONS,
+  getCategoryBadgeConfig,
+  type CategoryBadgeConfig,
+} from "./table/constants";
+import type { CategoryTab } from "./table/types";
 
 export type { ModularCascadingTaskTableProps };
-
-export interface CategoryBadgeConfig {
-  label: string;
-  className: string;
-}
 
 export interface StatusBadgeConfig {
   label: string;
@@ -48,81 +43,6 @@ export interface StatusBadgeConfig {
     | "amber"
     | "rose"
     | "violet";
-}
-
-export interface CategoryTab {
-  id: TaskCategory | "ALL";
-  label: string;
-  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-}
-
-export const CATEGORY_TABS: CategoryTab[] = [
-  { id: "ALL", label: "Tất cả", icon: Layers },
-  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số", icon: Building2 },
-  { id: "TRUYEN_THONG", label: "Truyền thông", icon: Briefcase },
-  { id: "CNTT", label: "CNTT", icon: Layers },
-  { id: "ATTT", label: "An toàn thông tin", icon: Briefcase },
-  { id: "THU_VIEN", label: "Thư viện", icon: GraduationCap },
-  { id: "BAO_CAO", label: "Báo cáo", icon: Calendar },
-];
-
-export const DEPARTMENT_OPTIONS = [
-  { id: "ALL", label: "Tất cả đơn vị (Toàn trường)" },
-  { id: "BGH", label: "Ban Giám hiệu" },
-  { id: "CNTT", label: "Khoa Công nghệ thông tin" },
-  { id: "DAO_TAO", label: "Phòng Đào tạo & QLKH" },
-  { id: "TRUYEN_THONG", label: "TT Truyền thông & Số hóa" },
-  { id: "HANH_CHINH", label: "Phòng Hành chính - Quản trị" },
-  { id: "KHAO_THI", label: "Phòng Khảo thí & ĐBCL" },
-  { id: "THU_VIEN", label: "TT Ngoại ngữ - TH & Thư viện" },
-  { id: "KINH_TE", label: "Khoa Kinh tế - Quản trị" },
-  { id: "KY_THUAT", label: "Khoa Kỹ thuật - Công nghệ" },
-  { id: "TAI_CHINH", label: "Phòng Kế hoạch - Tài chính" },
-  { id: "CTHSSV", label: "Phòng Công tác HSSV" },
-];
-
-export function getCategoryBadgeConfig(
-  category: TaskCategory | string
-): CategoryBadgeConfig {
-  switch (category) {
-    case "CHUYEN_DOI_SO":
-      return {
-        label: "Chuyển đổi số",
-        className: "bg-secondary text-muted-foreground border-transparent",
-      };
-    case "TRUYEN_THONG":
-      return {
-        label: "Truyền thông",
-        className: "bg-secondary text-muted-foreground border-transparent",
-      };
-    case "CNTT":
-      return {
-        label: "CNTT",
-        className: "bg-secondary text-muted-foreground border-transparent",
-      };
-    case "ATTT":
-      return {
-        label: "An toàn thông tin",
-        className: "bg-secondary text-muted-foreground border-transparent",
-      };
-    case "THU_VIEN":
-      return {
-        label: "Thư viện",
-        className: "bg-secondary text-muted-foreground border-transparent",
-      };
-    case "BAO_CAO":
-      return {
-        label: "Báo cáo",
-        className: "bg-secondary text-muted-foreground border-transparent",
-      };
-    case "KHAC":
-    case "OTHER":
-    default:
-      return {
-        label: "Khác",
-        className: "bg-secondary text-muted-foreground border-transparent",
-      };
-  }
 }
 
 export function getStatusBadgeConfig(
@@ -459,12 +379,6 @@ export function CascadingTaskTable(props: CascadingTaskTableProps) {
   const densityCtx = useDisplayDensity();
   const density = props.initialDensity || densityCtx?.density || "comfortable";
 
-  // Touch gesture hooks integration for mobile ergonomics
-  const swipe = useSwipeAction({ threshold: 72 });
-  const pullToRefresh = usePullToRefresh({
-    onRefresh: props.onRefresh ? async () => { await props.onRefresh?.(); } : undefined,
-  });
-
   // Table keyboard shortcut: "/" for quick in-table search focus
   const handleTableKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "/" && !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
@@ -488,7 +402,7 @@ export function CascadingTaskTable(props: CascadingTaskTableProps) {
           - Heights: h-[38px] compact, h-[48px] comfortable
           - Code: font-mono text-xs sm:text-compact tabular-nums text-muted-foreground
           - Header: h-11 px-4 text-xs font-semibold text-muted-foreground
-          - Mobile: hidden md:block, md:hidden, Duyệt nhanh, useSwipeAction, usePullToRefresh
+          - Mobile: hidden md:block, md:hidden, Duyệt nhanh
           - Flattening: flattenPersonalTasks, parentSchoolTaskTitle, parentSchoolTaskCode, Việc thành phần
           - Monthly: selectedAcademicMonth, priorOverdueBacklog, TỒN ĐỌNG KỲ TRƯỚC, Prior Overdue Backlog, border-warning/40, bg-warning/10
         */}
@@ -506,3 +420,6 @@ export function CascadingTaskTable(props: CascadingTaskTableProps) {
 
 export { ModularCascadingTaskTable };
 export default CascadingTaskTable;
+
+export { CATEGORY_TABS, DEPARTMENT_OPTIONS, getCategoryBadgeConfig };
+export type { CategoryBadgeConfig, CategoryTab };

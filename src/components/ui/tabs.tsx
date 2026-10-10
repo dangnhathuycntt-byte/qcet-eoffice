@@ -5,6 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
 import { motionTransition } from "@/lib/motion/tokens";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 interface TabsContextValue {
   value?: string;
@@ -223,7 +224,7 @@ function TabsTrigger({
         }
       }}
       className={cn(
-        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border-0 px-2.5 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer",
+        `relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border-0 px-2.5 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer`,
         motionIndicator
           ? "data-active:text-foreground"
           : "data-active:bg-selected data-active:text-foreground",

@@ -197,7 +197,6 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                       return (
                         <Pressable
                           key={size}
-                          type="button"
                           role="option"
                           aria-selected={isSelected}
                           onClick={() => {
@@ -205,7 +204,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                             setIsSizeMenuOpen(false);
                           }}
                           className={cn(
-                            "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer font-mono tabular-nums",
+                            "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left font-mono tabular-nums",
                             isSelected
                               ? "bg-primary/10 text-primary font-semibold"
                               : "text-foreground hover:bg-muted/70"

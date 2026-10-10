@@ -466,11 +466,10 @@ export function OrganizationTree({
           className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none self-start"
         >
           <Pressable
-            type="button"
             onClick={() => setActiveTab("directory")}
             aria-pressed={activeTab === "directory"}
             className={cn(
-              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
               activeTab === "directory"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -483,11 +482,10 @@ export function OrganizationTree({
             </span>
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => setActiveTab("bento")}
             aria-pressed={activeTab === "bento"}
             className={cn(
-              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
               activeTab === "bento"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -504,18 +502,16 @@ export function OrganizationTree({
         {/* Utilities: Export CSV & Print */}
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <Pressable
-            type="button"
             onClick={() => exportDirectoryToCSV(departments)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all"
             title="Xuất file CSV danh bạ"
           >
             <Download className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
             <span>Xuất CSV</span>
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all"
             title="In trang danh bạ"
           >
             <Printer className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
@@ -535,10 +531,9 @@ export function OrganizationTree({
               Nhóm đơn vị:
             </span>
             <Pressable
-              type="button"
               onClick={() => setSelectedDeptCode("ALL")}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors select-none",
                 selectedDeptCode === "ALL"
                   ? "bg-neutral-800 text-white border-neutral-800 font-semibold shadow-2xs"
                   : "bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -555,10 +550,9 @@ export function OrganizationTree({
               return (
                 <Pressable
                   key={cat.category}
-                  type="button"
                   onClick={() => setSelectedDeptCode(cat.departments[0]?.code || "ALL")}
                   className={cn(
-                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer select-none",
+                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors select-none",
                     isSelected
                       ? "bg-neutral-800 text-white border-neutral-800 font-semibold shadow-2xs"
                       : "bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -702,9 +696,8 @@ export function OrganizationTree({
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
                 {searchQuery ? (
                   <Pressable
-                    type="button"
                     onClick={() => setSearchQuery("")}
-                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-3" strokeWidth={1.5} />
                   </Pressable>
@@ -731,11 +724,10 @@ export function OrganizationTree({
                 ].map((r) => (
                   <Pressable
                     key={r.id}
-                    type="button"
                     onClick={() => setRoleFilter(r.id as any)}
                     aria-pressed={roleFilter === r.id}
                     className={cn(
-                      "px-2 h-6 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+                      "px-2 h-6 rounded-[4px] text-xs font-medium transition-colors select-none",
                       roleFilter === r.id
                         ? "bg-background text-foreground shadow-2xs font-semibold"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -754,11 +746,10 @@ export function OrganizationTree({
                 className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs select-none"
               >
                 <Pressable
-                  type="button"
                   onClick={() => setViewMode("grid")}
                   aria-pressed={viewMode === "grid"}
                   className={cn(
-                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors cursor-pointer",
+                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors",
                     viewMode === "grid"
                       ? "bg-background text-foreground shadow-2xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -768,11 +759,10 @@ export function OrganizationTree({
                   <LayoutGrid className="size-3.5" strokeWidth={1.5} />
                 </Pressable>
                 <Pressable
-                  type="button"
                   onClick={() => setViewMode("list")}
                   aria-pressed={viewMode === "list"}
                   className={cn(
-                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors cursor-pointer",
+                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors",
                     viewMode === "list"
                       ? "bg-background text-foreground shadow-2xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -810,13 +800,12 @@ export function OrganizationTree({
                 {/* "Tất cả đơn vị" option */}
                 <div className="mb-2">
                   <Pressable
-                    type="button"
                     onClick={() => {
                       setSelectedDeptCode("ALL");
                       setSearchQuery("");
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors",
                       selectedDeptCode === "ALL"
                         ? "bg-accent text-foreground font-medium"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -849,9 +838,8 @@ export function OrganizationTree({
                       <div key={catGroup.category} className="space-y-1">
                         {/* Category Header toggle */}
                         <Pressable
-                          type="button"
                           onClick={() => toggleCategory(catGroup.category)}
-                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all cursor-pointer"
+                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
                         >
                           <div className="flex items-center gap-2">
                             <Icon className="size-3.5 text-primary/80" strokeWidth={1.5} />
@@ -881,13 +869,12 @@ export function OrganizationTree({
                               return (
                                 <Pressable
                                   key={dept.id}
-                                  type="button"
                                   onClick={() => {
                                     setSelectedDeptCode(dept.code);
                                     setSearchQuery("");
                                   }}
                                   className={cn(
-                                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left cursor-pointer",
+                                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left",
                                     isDeptSelected
                                       ? "bg-accent text-foreground font-medium"
                                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -1015,7 +1002,6 @@ export function OrganizationTree({
 
                         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <Pressable
-                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.dispatchEvent(
@@ -1028,7 +1014,7 @@ export function OrganizationTree({
                                 })
                               );
                             }}
-                            className="inline-flex h-6 items-center gap-1 px-2 rounded-md border border-border/80 bg-background text-foreground text-xs font-medium hover:bg-accent transition-colors cursor-pointer"
+                            className="inline-flex h-6 items-center gap-1 px-2 rounded-md border border-border/80 bg-background text-foreground text-xs font-medium hover:bg-accent transition-colors"
                             title={`Giao việc trực tiếp cho ${staff.name}`}
                           >
                             <UserCheck className="size-3 text-muted-foreground" strokeWidth={1.5} />
@@ -1170,9 +1156,8 @@ export function OrganizationTree({
                 </div>
               </div>
               <Pressable
-                type="button"
                 onClick={() => setActiveProfileStaff(null)}
-                className="size-8 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer"
+                className="size-8 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50"
               >
                 <X className="size-4" strokeWidth={1.5} />
               </Pressable>

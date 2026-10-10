@@ -533,7 +533,6 @@ export function PriorOverdueBacklogBanner({
                 Trễ {item.daysOverdue || 1} ngày
               </span>
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 className="h-5 px-2 text-xs text-destructive hover:bg-destructive/15 rounded"
@@ -841,11 +840,10 @@ export function ExecutiveCalendarWorkspace({
             ].map(({ id, label, icon: Icon }) => (
               <Pressable
                 key={id}
-                type="button"
                 onClick={() => setViewMode(id as any)}
                 aria-pressed={viewMode === id}
                 className={cn(
-                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
                   viewMode === id
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -862,7 +860,7 @@ export function ExecutiveCalendarWorkspace({
             <Button
               size="sm"
               onClick={() => handleAddSlotClick()}
-              className="gap-1.5 text-xs font-semibold rounded-lg h-7 px-2.5 cursor-pointer shrink-0"
+              className="gap-1.5 text-xs font-semibold rounded-lg h-7 px-2.5 shrink-0"
             >
               <Plus className="size-3.5" strokeWidth={1.5} />
               <span className="hidden sm:inline">Thêm nhiệm vụ</span>
@@ -885,9 +883,8 @@ export function ExecutiveCalendarWorkspace({
           />
           {searchQuery && (
             <Pressable
-              type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
               aria-label="Xóa tìm kiếm"
             >
               <X className="size-3" strokeWidth={1.5} />
@@ -921,10 +918,9 @@ export function ExecutiveCalendarWorkspace({
           ].map((typeOpt) => (
             <Pressable
               key={typeOpt.id}
-              type="button"
               onClick={() => setSelectedItemType(typeOpt.id)}
               className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
+                "px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors",
                 selectedItemType === typeOpt.id
                   ? "bg-foreground/85 text-background font-semibold shadow-2xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -945,10 +941,9 @@ export function ExecutiveCalendarWorkspace({
           ].map((st) => (
             <Pressable
               key={st.id}
-              type="button"
               onClick={() => setSelectedStatus(st.id)}
               className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
+                "px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors",
                 selectedStatus === st.id
                   ? "bg-foreground/85 text-background font-semibold shadow-2xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -1137,7 +1132,6 @@ export function ExecutiveCalendarWorkspace({
                       </span>
                       {isExecutive && (
                         <Button
-                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleAddSlotClick(d.dateString)}
@@ -1191,7 +1185,6 @@ export function ExecutiveCalendarWorkspace({
                 </h3>
               </div>
               <Pressable
-                type="button"
                 onClick={() => setSelectedPreviewItem(null)}
                 aria-label="Đóng chi tiết công việc"
                 className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"

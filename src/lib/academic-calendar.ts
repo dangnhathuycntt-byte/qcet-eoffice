@@ -16,6 +16,19 @@
 
 import type { SchoolTask } from "@/types/dashboard";
 
+let ictIsoDateFormat: Intl.DateTimeFormat | null = null;
+
+/** Định dạng `yyyy-MM-dd` theo giờ ICT; dựng một lần vì tạo Intl.DateTimeFormat tốn kém mà hàm này chạy theo từng nhiệm vụ. */
+function getIctIsoDateFormat(): Intl.DateTimeFormat {
+  ictIsoDateFormat ??= new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return ictIsoDateFormat;
+}
+
 export interface AcademicMonthPeriod {
   monthNumber: number; // 1 to 12
   monthIndexInYear: number; // 0 for Month 1, 11 for Month 12
@@ -104,12 +117,7 @@ export function getSystemReferenceDate(): string {
   }
   // Fallback: ngày thực tế theo ICT thay vì hardcoded
   try {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
+    return getIctIsoDateFormat().format(new Date());
   } catch {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -126,12 +134,7 @@ export function getTodayIctDate(): string {
     return process.env.NEXT_PUBLIC_REFERENCE_DATE;
   }
   try {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
+    return getIctIsoDateFormat().format(new Date());
   } catch {
     const d = new Date();
     const y = d.getFullYear();
@@ -157,12 +160,7 @@ export function isTaskPastDue(
     clean = dateStr.length > 10 ? dateStr.slice(0, 10) : dateStr;
   } else if (dateStr instanceof Date) {
     if (isNaN(dateStr.getTime())) return false;
-    clean = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(dateStr);
+    clean = getIctIsoDateFormat().format(dateStr);
   } else {
     return false;
   }
@@ -209,12 +207,7 @@ export function parseDateParts(dateInput: unknown): { year: number; month: numbe
   }
   if (dateInput instanceof Date) {
     if (isNaN(dateInput.getTime())) return null;
-    const formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    const formatter = getIctIsoDateFormat();
     const parts = formatter.formatToParts(dateInput);
     const y = parts.find((p) => p.type === "year")?.value;
     const m = parts.find((p) => p.type === "month")?.value;
@@ -620,22 +613,12 @@ function extractDateString(val: unknown): string | null {
     if (match) return match[1];
     const dt = new Date(val);
     if (!isNaN(dt.getTime())) {
-      return new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Ho_Chi_Minh",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).format(dt);
+      return getIctIsoDateFormat().format(dt);
     }
     return null;
   }
   if (val instanceof Date && !isNaN(val.getTime())) {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(val);
+    return getIctIsoDateFormat().format(val);
   }
   return null;
 }
@@ -835,12 +818,7 @@ export function parseStrictDateOnly(input: unknown): string | null {
     candidate = input.trim().slice(0, 10);
   } else if (input instanceof Date) {
     if (isNaN(input.getTime())) return null;
-    candidate = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(input);
+    candidate = getIctIsoDateFormat().format(input);
   } else {
     return null;
   }

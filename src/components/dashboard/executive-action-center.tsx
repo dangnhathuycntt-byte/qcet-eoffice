@@ -438,7 +438,6 @@ export function ExecutiveActionCenter({
                               <div className="flex items-center gap-1.5 p-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs animate-fade-in">
                                 <span className="text-emerald-900 font-medium px-1">Duyệt L2?</span>
                                 <Button
-                                  type="button"
                                   size="sm"
                                   disabled={isItemSubmitting}
                                   onClick={(e) => {
@@ -450,7 +449,6 @@ export function ExecutiveActionCenter({
                                   {isItemSubmitting ? "Đang gửi..." : "Đồng ý"}
                                 </Button>
                                 <Button
-                                  type="button"
                                   size="sm"
                                   variant="ghost"
                                   onClick={(e) => {
@@ -465,7 +463,6 @@ export function ExecutiveActionCenter({
                             ) : (
                               <>
                                 <Button
-                                  type="button"
                                   size="sm"
                                   disabled={isItemSubmitting}
                                   onClick={(e) => {
@@ -479,7 +476,6 @@ export function ExecutiveActionCenter({
                                   <span>Duyệt L2</span>
                                 </Button>
                                 <Button
-                                  type="button"
                                   size="sm"
                                   variant="outline"
                                   disabled={isItemSubmitting}
@@ -505,7 +501,6 @@ export function ExecutiveActionCenter({
                         )}
 
                         <Button
-                          type="button"
                           size="sm"
                           variant="ghost"
                           className="min-h-[44px] sm:min-h-[36px] h-7 shrink-0 gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground group-hover/item:text-primary group-hover/item:bg-primary/10 transition-all"
@@ -530,7 +525,6 @@ export function ExecutiveActionCenter({
                         <div className="flex items-center justify-between text-xs text-warning font-medium">
                           <span>Ghi chú yêu cầu đơn vị chỉnh sửa/bổ sung hồ sơ:</span>
                           <Pressable
-                            type="button"
                             onClick={() => setRevisionItemId(null)}
                             className="text-muted-foreground hover:text-foreground"
                           >
@@ -547,7 +541,6 @@ export function ExecutiveActionCenter({
                         />
                         <div className="flex items-center justify-end gap-2">
                           <Button
-                            type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => setRevisionItemId(null)}
@@ -556,7 +549,6 @@ export function ExecutiveActionCenter({
                             Hủy
                           </Button>
                           <Button
-                            type="button"
                             size="sm"
                             disabled={isItemSubmitting}
                             onClick={() => handleRequestRevision(item)}

@@ -478,10 +478,9 @@ export function ReviewActionDialog({
                 {QUICK_COMMENT_TEMPLATES.map((tmpl, idx) => (
                   <Pressable
                     key={idx}
-                    type="button"
                     disabled={isProcessing}
                     onClick={() => handleQuickTemplateSelect(tmpl)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 sm:py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left min-h-[36px] sm:min-h-0 cursor-pointer active:scale-[0.98]"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 sm:py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left min-h-[36px] sm:min-h-0 active:scale-[0.98]"
                   >
                     <span>{tmpl}</span>
                   </Pressable>
@@ -494,22 +493,20 @@ export function ReviewActionDialog({
         {/* Footer Actions */}
         <div className="shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-border/80 px-4 py-3 sm:px-6 sm:py-4 bg-muted/20 gap-2.5">
           <Button
-            type="button"
             variant="ghost"
             onClick={onClose}
             disabled={isProcessing}
-            className="w-full sm:w-auto min-h-[44px] text-muted-foreground hover:text-foreground cursor-pointer rounded-xl font-medium text-xs sm:text-sm"
+            className="w-full sm:w-auto min-h-[44px] text-muted-foreground hover:text-foreground rounded-xl font-medium text-xs sm:text-sm"
           >
             Đóng
           </Button>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
-              type="button"
               onClick={handleSubmit}
               disabled={isProcessing}
               className={cn(
-                "w-full sm:w-auto min-h-[44px] min-w-36 font-semibold text-white shadow-xs transition-all cursor-pointer rounded-xl text-xs sm:text-sm",
+                "w-full sm:w-auto min-h-[44px] min-w-36 font-semibold text-white shadow-xs transition-all rounded-xl text-xs sm:text-sm",
                 activeDecisionConfig.accentColor === "emerald" &&
                   "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800",
                 activeDecisionConfig.accentColor === "amber" &&

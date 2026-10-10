@@ -152,7 +152,6 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
       />
       <TaskPanelActions onCancel={reset}>
         <Button variant="outline"
-          type="button"
           size="xs"
           disabled={busy || !date || text.trim().length < 3}
           onClick={() => void send("request-extension", { requestedDueDate: date, reason: text.trim(), expectedVersion: version }, "Không gửi được yêu cầu gia hạn")}
@@ -178,7 +177,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
           <span className="text-xs text-warning">Đã gia hạn {view.appliedCount} lần</span>
         )}
         {!active && view.canRequest && mode === "idle" && (
-          <Button type="button" variant="ghost" size="xs" className="ml-auto" onClick={() => setMode("request")}>
+          <Button variant="ghost" size="xs" className="ml-auto" onClick={() => setMode("request")}>
             Xin gia hạn
           </Button>
         )}
@@ -205,13 +204,13 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
 
           {view.canDecide && mode === "idle" && (
             <div className="flex flex-wrap gap-1.5">
-              <Button type="button" size="xs" disabled={busy} onClick={() => void decide("APPROVE")}>
+              <Button size="xs" disabled={busy} onClick={() => void decide("APPROVE")}>
                 Đồng ý
               </Button>
-              <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => setMode("counter")}>
+              <Button size="xs" variant="ghost" disabled={busy} onClick={() => setMode("counter")}>
                 Đề xuất hạn khác
               </Button>
-              <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => setMode("reject")}>
+              <Button size="xs" variant="ghost" disabled={busy} onClick={() => setMode("reject")}>
                 Từ chối
               </Button>
             </div>
@@ -219,10 +218,10 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
 
           {view.canRespond && (
             <div className="flex flex-wrap gap-1.5">
-              <Button type="button" size="xs" disabled={busy} onClick={() => void decide("ACCEPT")}>
+              <Button size="xs" disabled={busy} onClick={() => void decide("ACCEPT")}>
                 Nhận hạn {active.counterDueDate ? fmt(active.counterDueDate) : ""}
               </Button>
-              <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void decide("DECLINE")}>
+              <Button size="xs" variant="ghost" disabled={busy} onClick={() => void decide("DECLINE")}>
                 Không nhận
               </Button>
             </div>
@@ -244,7 +243,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
             className="min-h-16"
           />
           <TaskPanelActions onCancel={reset}>
-            <Button variant="outline" type="button" size="xs" disabled={busy || text.trim().length < 3} onClick={() => void decide("REJECT", { note: text.trim() })}>
+            <Button variant="outline" size="xs" disabled={busy || text.trim().length < 3} onClick={() => void decide("REJECT", { note: text.trim() })}>
               Từ chối gia hạn
             </Button>
           </TaskPanelActions>
@@ -264,7 +263,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
             className="min-h-12"
           />
           <TaskPanelActions onCancel={reset}>
-            <Button variant="outline" type="button" size="xs" disabled={busy || !date} onClick={() => void decide("COUNTER", { newDueDate: date, note: text.trim() || undefined })}>
+            <Button variant="outline" size="xs" disabled={busy || !date} onClick={() => void decide("COUNTER", { newDueDate: date, note: text.trim() || undefined })}>
               Gửi đề xuất
             </Button>
           </TaskPanelActions>

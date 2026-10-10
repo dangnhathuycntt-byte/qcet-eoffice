@@ -150,10 +150,9 @@ function TasksExpandedViewsComponent() {
                 return (
                   <Pressable
                     key={b.id}
-                    type="button"
                     onClick={() => handleViewModeChange(b.id as TaskViewMode)}
                     className={cn(
-                      "px-3 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
+                      "px-3 py-1 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5",
                       isActive
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "bg-card hover:bg-muted text-muted-foreground border border-border"
@@ -168,7 +167,6 @@ function TasksExpandedViewsComponent() {
 
             <div className="flex items-center gap-2">
               <Pressable
-                type="button"
                 onClick={() => {
                   if (isExecutive) {
                     handleViewModeChange("executive");
@@ -177,16 +175,15 @@ function TasksExpandedViewsComponent() {
                     setActiveWorkbox("NEEDS_REVIEW");
                   }
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20 transition-colors"
               >
                 <FileCheck size={13} strokeWidth={1.5} />
                 <span>Hàng đợi phê duyệt</span>
               </Pressable>
 
               <Pressable
-                type="button"
                 onClick={() => setUseAdvancedToolbar(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors"
                 title="Mở thanh công cụ đầy đủ"
               >
                 <SlidersHorizontal size={13} strokeWidth={1.5} />
@@ -225,9 +222,8 @@ function TasksExpandedViewsComponent() {
           {(user?.role === "ADMIN" || user?.role === "MANAGER") && useAdvancedToolbar && (
             <div className="flex justify-end mb-1">
               <Pressable
-                type="button"
                 onClick={() => setUseAdvancedToolbar(false)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors"
               >
                 <SlidersHorizontal size={13} strokeWidth={1.5} />
                 <span>Quay lại Bộ lọc tinh giản</span>
@@ -266,9 +262,8 @@ function TasksExpandedViewsComponent() {
                 </span>
               </div>
               <Pressable
-                type="button"
                 onClick={() => handleAcademicMonthChange("ALL")}
-                className="shrink-0 text-xs font-medium text-primary hover:underline cursor-pointer"
+                className="shrink-0 text-xs font-medium text-primary hover:underline"
               >
                 Hiển thị cả năm
               </Pressable>

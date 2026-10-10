@@ -6,6 +6,7 @@ import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MenuItemData } from "./cascading-menu";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface MenubarSection {
   id: string;
@@ -118,7 +119,7 @@ export function Menubar({ sections, className }: MenubarProps) {
           <BaseMenu.Trigger
             className={cn(
               "inline-flex h-8 cursor-pointer items-center rounded-md px-2.5 text-sm font-medium text-muted-foreground outline-none",
-              "transition-colors duration-100 hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1",
+              `transition-colors duration-100 hover:bg-accent hover:text-foreground ${focusRingClass}`,
               "data-[popup-open]:bg-accent data-[popup-open]:text-foreground motion-reduce:transition-none",
             )}
           >

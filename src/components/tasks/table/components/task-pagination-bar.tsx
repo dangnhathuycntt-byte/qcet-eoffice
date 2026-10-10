@@ -190,7 +190,6 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                 return (
                   <Pressable
                     key={size}
-                    type="button"
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => {
@@ -198,7 +197,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                       setIsSizeMenuOpen(false);
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer font-mono tabular-nums",
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left font-mono tabular-nums",
                       isSelected
                         ? "bg-primary/10 text-primary font-semibold"
                         : "text-foreground hover:bg-muted/70 hover:text-foreground"
@@ -238,10 +237,9 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
       <div className="flex items-center gap-1">
         {/* First Page Button */}
         <Pressable
-          type="button"
           onClick={handleFirst}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang đầu"
           aria-label="Về trang đầu"
         >
@@ -250,10 +248,9 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
 
         {/* Previous Page Button */}
         <Pressable
-          type="button"
           onClick={handlePrevious}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang trước"
           aria-label="Sang trang trước"
         >
@@ -279,12 +276,11 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
             return (
               <Pressable
                 key={p}
-                type="button"
                 onClick={() => !disabled && onPageChange(p)}
                 disabled={disabled}
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-all shadow-2xs cursor-pointer active:scale-[0.98]",
+                  "inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-all shadow-2xs active:scale-[0.98]",
                   isCurrent
                     ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                     : "border border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -299,10 +295,9 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
 
         {/* Next Page Button */}
         <Pressable
-          type="button"
           onClick={handleNext}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang sau"
           aria-label="Sang trang sau"
         >
@@ -311,10 +306,9 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
 
         {/* Last Page Button */}
         <Pressable
-          type="button"
           onClick={handleLast}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang cuối"
           aria-label="Về trang cuối"
         >

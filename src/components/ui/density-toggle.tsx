@@ -47,12 +47,11 @@ export function DensityToggle({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            type="button"
             variant={variant}
             data-density-toggle="true"
             onClick={toggleDensity}
             className={cn(
-              "h-11 sm:h-7 px-3 min-w-7 gap-2 text-xs font-medium cursor-pointer transition-colors relative",
+              "h-11 sm:h-7 px-3 min-w-7 gap-2 text-xs font-medium transition-colors relative",
               isCompact && "bg-secondary/80 text-foreground",
               className
             )}

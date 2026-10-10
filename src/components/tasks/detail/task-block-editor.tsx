@@ -3,23 +3,6 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import type { RenderElementProps } from "@platejs/core";
-
-/** Props chung cho mọi element renderer trong QCET Plate editor */
-type ElProps = RenderElementProps & {
-  element: RenderElementProps["element"] & {
-    indent?: number;
-    listStyleType?: string;
-    listStart?: number;
-    checked?: boolean;
-    textAlign?: React.CSSProperties["textAlign"];
-    url?: string;
-    value?: string;
-    trigger?: string;
-    title?: string;
-    emoji?: string;
-    children?: Array<{ text?: string; [key: string]: unknown }>;
-  };
-};
 import {
   Plate,
   PlateContent,
@@ -123,13 +106,11 @@ import {
   Quote,
   Info,
   Minus,
-  Paperclip,
   Link2,
   Trash2,
   ExternalLink,
   ChevronRight,
   ChevronDown,
-  Search,
   CheckCircle2,
   Circle,
   Image as ImageIcon,
@@ -141,7 +122,6 @@ import {
   Highlighter,
   Table as TableIcon,
   AtSign,
-  Tv,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -158,7 +138,6 @@ import {
   type PlateElement as PlateElemT,
   type PlateValue,
   parseToPlateValue,
-  serializePlateValue,
   plateToBlocks,
   blocksToPlate,
   parseContentToBlocks,
@@ -167,6 +146,24 @@ import {
   PLATE_NODE_TYPES as PT,
 } from "./plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
+
+/** Props chung cho mọi element renderer trong QCET Plate editor */
+type ElProps = RenderElementProps & {
+  element: RenderElementProps["element"] & {
+    indent?: number;
+    listStyleType?: string;
+    listStart?: number;
+    checked?: boolean;
+    textAlign?: React.CSSProperties["textAlign"];
+    url?: string;
+    value?: string;
+    trigger?: string;
+    title?: string;
+    emoji?: string;
+    children?: Array<{ text?: string; [key: string]: unknown }>;
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Re-exports (public API unchanged)
@@ -432,7 +429,7 @@ function ParagraphEl({ attributes, children, element }: RenderElementProps<any>)
       };
       return (
         <div {...attributes} style={alignStyle} className="flex items-start gap-2.5 py-0.5 text-sm leading-relaxed">
-          <Pressable type="button" contentEditable={false} onClick={toggleChecked} className="mt-0.5 shrink-0 select-none cursor-pointer" aria-label={checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}>
+          <Pressable contentEditable={false} onClick={toggleChecked} className="mt-0.5 shrink-0 select-none" aria-label={checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}>
             {checked ? (
               <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
             ) : (
@@ -553,10 +550,9 @@ function ToggleEl({ attributes, children, element }: RenderElementProps<any>) {
     <div {...attributes} className="my-1.5 rounded-lg border border-border/40 bg-muted/10 p-1 transition-colors">
       <div className="flex items-start gap-1.5">
         <Pressable
-          type="button"
           contentEditable={false}
           onClick={handleToggle}
-          className="mt-0.5 size-5 flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-transform"
+          className="mt-0.5 size-5 flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-transform"
           aria-label={isOpen ? "Thu gọn" : "Mở rộng"}
         >
           <ChevronRight className={cn("size-3.5 transition-transform duration-150", isOpen && "rotate-90")} />
@@ -625,9 +621,8 @@ function MentionInputElement({ attributes, children, element }: RenderElementPro
           {filtered.map((staff) => (
             <Pressable
               key={staff.id}
-              type="button"
               onMouseDown={(e) => { e.preventDefault(); selectStaff(staff); }}
-              className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted text-xs text-left cursor-pointer"
+              className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted text-xs text-left"
             >
               <div>
                 <div className="font-medium text-foreground">{staff.name}</div>
@@ -691,9 +686,8 @@ function MediaEmbedEl({ attributes, children, element }: any) {
                 className="h-7 min-w-0 flex-1 rounded-md bg-muted/60 px-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:bg-muted"
               />
               <Pressable
-                type="button"
                 onClick={applyUrl}
-                className="h-7 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                className="h-7 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Nhúng
               </Pressable>
@@ -846,9 +840,8 @@ function ImageEl({ attributes, children, element }: any) {
                   {!editor.api.isReadOnly() && (
                     <div className="flex items-center gap-2 mt-3">
                       <Pressable
-                        type="button"
                         onClick={() => setImageLoadError(false)}
-                        className="px-2.5 py-1 text-xs rounded-md bg-background border border-border hover:bg-muted text-foreground cursor-pointer transition-colors"
+                        className="px-2.5 py-1 text-xs rounded-md bg-background border border-border hover:bg-muted text-foreground transition-colors"
                       >
                         Thử lại
                       </Pressable>
@@ -882,12 +875,11 @@ function ImageEl({ attributes, children, element }: any) {
                   {[25, 50, 75, 100].map((w) => (
                     <Pressable
                       key={w}
-                      type="button"
                       onClick={() => {
                         const p = editor.api.findPath(element);
                         if (p) editor.tf.setNodes({ imageWidth: w } as any, { at: p });
                       }}
-                      className={"px-1.5 py-0.5 text-xs rounded cursor-pointer " + (imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}
+                      className={"px-1.5 py-0.5 text-xs rounded" + (imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}
                     >
                       {w}%
                     </Pressable>
@@ -896,14 +888,13 @@ function ImageEl({ attributes, children, element }: any) {
               )}
               <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
                 <Pressable
-                  type="button"
                   onClick={() => {
                     if (!editor.api.isReadOnly()) {
                       const p = editor.api.findPath(element);
                       if (p) editor.tf.removeNodes({ at: p });
                     }
                   }}
-                  className="p-1 rounded hover:bg-danger-soft text-muted-foreground hover:text-destructive cursor-pointer"
+                  className="p-1 rounded hover:bg-danger-soft text-muted-foreground hover:text-destructive"
                   title="Xóa"
                 >
                   <Trash2 className="size-3.5" />
@@ -1087,7 +1078,7 @@ function LinkBlockEl({ attributes, children, element }: any) {
           <div className="flex items-center gap-2 p-2 my-1 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
             <Link2 className="size-4 text-muted-foreground shrink-0" />
             <input type="text" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setLinkUrl(draftUrl); }} placeholder="Dán đường dẫn liên kết (nhấn Enter)..." className="flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs" />
-            <Pressable type="button" onClick={() => { if (draftUrl.trim()) setLinkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer">Lưu</Pressable>
+            <Pressable onClick={() => { if (draftUrl.trim()) setLinkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Lưu</Pressable>
           </div>
         )}
       </div>
@@ -1132,7 +1123,7 @@ function BookmarkEl({ attributes, children, element }: any) {
           <div className="flex items-center gap-2 p-2 my-1 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
             <Bookmark className="size-4 text-muted-foreground shrink-0" />
             <input type="text" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setBookmarkUrl(draftUrl); }} placeholder="Dán link web để tạo thẻ dấu trang (nhấn Enter)..." className="flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs" />
-            <Pressable type="button" onClick={() => { if (draftUrl.trim()) setBookmarkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer">Tạo thẻ</Pressable>
+            <Pressable onClick={() => { if (draftUrl.trim()) setBookmarkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Tạo thẻ</Pressable>
           </div>
         )}
       </div>
@@ -1229,9 +1220,8 @@ function DropdownItem({
 }) {
   return (
     <Pressable
-      type="button"
       onMouseDown={(e) => { e.preventDefault(); onAction(); }}
-      className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-xs text-left hover:bg-muted transition-colors cursor-pointer"
+      className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-xs text-left hover:bg-muted transition-colors"
     >
       <Icon className="size-3.5 text-muted-foreground shrink-0" />
       <span>{label}</span>
@@ -1305,7 +1295,7 @@ function FixedToolbar({ editor }: { editor: any }) {
       {/* ── Text style dropdown (H1/H2/H3/Paragraph) ── */}
       <ToolbarDropdown
         trigger={
-          <Pressable type="button" title="Văn bản" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
+          <Pressable title="Văn bản" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
             <Type className="size-3.5" />
             <ChevronDown className="size-2.5 opacity-60" />
           </Pressable>
@@ -1320,23 +1310,23 @@ function FixedToolbar({ editor }: { editor: any }) {
       <div className="w-px h-4 bg-border/60 mx-0.5" />
 
       {/* ── Inline marks: Bold / Italic / Underline / Highlight ── */}
-      <Pressable type="button" title="In đậm (⌘B)" onMouseDown={(e) => { e.preventDefault(); toggleMark("bold"); }} className={cn(tbBtn, isMarkActive("bold") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+      <Pressable title="In đậm (⌘B)" onMouseDown={(e) => { e.preventDefault(); toggleMark("bold"); }} className={cn(tbBtn, isMarkActive("bold") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
         <Bold className="size-3.5" />
       </Pressable>
-      <Pressable type="button" title="In nghiêng (⌘I)" onMouseDown={(e) => { e.preventDefault(); toggleMark("italic"); }} className={cn(tbBtn, isMarkActive("italic") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+      <Pressable title="In nghiêng (⌘I)" onMouseDown={(e) => { e.preventDefault(); toggleMark("italic"); }} className={cn(tbBtn, isMarkActive("italic") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
         <Italic className="size-3.5" />
       </Pressable>
-      <Pressable type="button" title="Gạch chân (⌘U)" onMouseDown={(e) => { e.preventDefault(); toggleMark("underline"); }} className={cn(tbBtn, isMarkActive("underline") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+      <Pressable title="Gạch chân (⌘U)" onMouseDown={(e) => { e.preventDefault(); toggleMark("underline"); }} className={cn(tbBtn, isMarkActive("underline") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
         <Underline className="size-3.5" />
       </Pressable>
-      <Pressable type="button" title="Đánh dấu nổi bật (⌘⇧H)" onMouseDown={(e) => { e.preventDefault(); toggleMark("highlight"); }} className={cn(tbBtn, isMarkActive("highlight") ? "bg-warning/15 text-warning" : tbBtnIdle)}>
+      <Pressable title="Đánh dấu nổi bật (⌘⇧H)" onMouseDown={(e) => { e.preventDefault(); toggleMark("highlight"); }} className={cn(tbBtn, isMarkActive("highlight") ? "bg-warning/15 text-warning" : tbBtnIdle)}>
         <Highlighter className="size-3.5" />
       </Pressable>
 
       <div className="w-px h-4 bg-border/60 mx-0.5" />
 
       {/* ── Link ── */}
-      <Pressable type="button" title="Chèn liên kết (⌘K)" onMouseDown={(e) => { e.preventDefault(); triggerFloatingLinkInsert(editor, { focused: true }); }} className={cn(tbBtn, tbBtnIdle)}>
+      <Pressable title="Chèn liên kết (⌘K)" onMouseDown={(e) => { e.preventDefault(); triggerFloatingLinkInsert(editor, { focused: true }); }} className={cn(tbBtn, tbBtnIdle)}>
         <Link className="size-3.5" />
       </Pressable>
 
@@ -1345,7 +1335,7 @@ function FixedToolbar({ editor }: { editor: any }) {
       {/* ── List dropdown ── */}
       <ToolbarDropdown
         trigger={
-          <Pressable type="button" title="Danh sách" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
+          <Pressable title="Danh sách" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
             <List className="size-3.5" />
             <ChevronDown className="size-2.5 opacity-60" />
           </Pressable>
@@ -1359,7 +1349,7 @@ function FixedToolbar({ editor }: { editor: any }) {
       {/* ── Alignment dropdown ── */}
       <ToolbarDropdown
         trigger={
-          <Pressable type="button" title="Căn chỉnh" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
+          <Pressable title="Căn chỉnh" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
             <AlignLeft className="size-3.5" />
             <ChevronDown className="size-2.5 opacity-60" />
           </Pressable>
@@ -1374,14 +1364,14 @@ function FixedToolbar({ editor }: { editor: any }) {
       <div className="w-px h-4 bg-border/60 mx-0.5" />
 
       {/* ── Table ── */}
-      <Pressable type="button" title="Chèn bảng biểu" onMouseDown={(e) => { e.preventDefault(); handleInsertTable(); }} className={cn(tbBtn, tbBtnIdle)}>
+      <Pressable title="Chèn bảng biểu" onMouseDown={(e) => { e.preventDefault(); handleInsertTable(); }} className={cn(tbBtn, tbBtnIdle)}>
         <TableIcon className="size-3.5" />
       </Pressable>
 
       {/* ── More / Overflow (Quote, Callout, Toggle, Divider) ── */}
       <ToolbarDropdown
         trigger={
-          <Pressable type="button" title="Thêm" className={cn(tbBtn, tbBtnIdle)}>
+          <Pressable title="Thêm" className={cn(tbBtn, tbBtnIdle)}>
             <MoreHorizontal className="size-3.5" />
           </Pressable>
         }
@@ -1486,11 +1476,10 @@ function FloatingToolbar({ editor }: { editor: any }) {
       {marks.map(({ key, icon: Icon, label }) => (
         <Pressable
           key={key}
-          type="button"
           title={label}
           onMouseDown={(e) => { e.preventDefault(); toggleMark(key); }}
           className={cn(
-            "size-7 flex items-center justify-center rounded-md text-xs transition-colors cursor-pointer",
+            "size-7 flex items-center justify-center rounded-md text-xs transition-colors",
             isMarkActive(key) ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
@@ -1499,13 +1488,12 @@ function FloatingToolbar({ editor }: { editor: any }) {
       ))}
       <div className="w-px h-4 bg-border/60 mx-0.5" />
       <Pressable
-        type="button"
         title="Chèn liên kết (⌘K)"
         onMouseDown={(e) => {
           e.preventDefault();
           triggerFloatingLinkInsert(editor, { focused: true });
         }}
-        className="size-7 flex items-center justify-center rounded-md text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+        className="size-7 flex items-center justify-center rounded-md text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
       >
         <Link className="size-3.5" strokeWidth={1.5} />
       </Pressable>
@@ -1597,9 +1585,8 @@ function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; ele
       contextMode ? "relative" : "absolute left-0 top-full mt-1 z-50"
     )}>
       <Pressable
-        type="button"
         onClick={() => setShowTurnInto(!showTurnInto)}
-        className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left"
+        className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
       >
         <span className="flex items-center gap-2"><ArrowRight className="size-3.5 text-muted-foreground" /> Chuyển thành</span>
         <ChevronRight className="size-3 text-muted-foreground" strokeWidth={1.5} />
@@ -1611,9 +1598,8 @@ function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; ele
             return (
               <Pressable
                 key={`${opt.type}-${(opt as any).level || ""}`}
-                type="button"
                 onClick={() => turnInto(opt)}
-                className="flex w-full items-center gap-2 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer text-left text-xs"
+                className="flex w-full items-center gap-2 px-2 py-1 rounded-md hover:bg-muted transition-colors text-left text-xs"
               >
                 <Icon className="size-3.5 text-muted-foreground" /> {opt.label}
               </Pressable>
@@ -1622,29 +1608,27 @@ function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; ele
         </div>
       )}
       <Pressable
-        type="button"
         onClick={() => {
           plateIndent(editor as any);
           onClose();
         }}
-        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left"
+        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
       >
         <IndentIncrease className="size-3.5 text-muted-foreground" /> Thụt vào
       </Pressable>
       <Pressable
-        type="button"
         onClick={() => {
           plateOutdent(editor as any);
           onClose();
         }}
-        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left"
+        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
       >
         <IndentDecrease className="size-3.5 text-muted-foreground" /> Giảm thụt
       </Pressable>
-      <Pressable type="button" onClick={duplicateBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
+      <Pressable onClick={duplicateBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left">
         <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
       </Pressable>
-      <Pressable type="button" onClick={deleteBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-destructive hover:bg-danger-soft transition-colors cursor-pointer text-left">
+      <Pressable onClick={deleteBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-destructive hover:bg-danger-soft transition-colors text-left">
         <Trash2 className="size-3.5" /> {isMulti ? `Xóa ${selectedIds?.size} blocks` : "Xóa block"}
       </Pressable>
     </div>
@@ -1752,10 +1736,6 @@ function PlateDndContainer({ children }: { children: React.ReactNode }) {
 const SlashSelectContext = React.createContext<((option: MenuItemOption) => void) | null>(null);
 
 /** Bỏ dấu + chữ thường để gõ "hinh anh" vẫn khớp "Hình ảnh" */
-function foldText(text: string): string {
-  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
-}
-
 /**
  * Phần tử nhập lệnh "/": là node void nên văn bản gõ vào KHÔNG nằm trong Slate.
  * Cần một <input> thật giữ focus để người dùng gõ tiếp (ví dụ "/image") và lọc menu.
@@ -1767,11 +1747,11 @@ function SlashInputElement({ attributes, children, element }: any) {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const filteredOptions = React.useMemo(() => {
-    const q = foldText(query.trim().replace(/^\//, ""));
+    const q = foldVietnamese(query.trim().replace(/^\//, ""));
     if (!q) return MENU_OPTIONS;
     return MENU_OPTIONS.filter((opt) =>
-      foldText(opt.title).includes(q) || foldText(opt.description).includes(q) ||
-      foldText(opt.group).includes(q) || (opt.shortcut ? foldText(opt.shortcut).includes(q) : false)
+      foldVietnamese(opt.title).includes(q) || foldVietnamese(opt.description).includes(q) ||
+      foldVietnamese(opt.group).includes(q) || (opt.shortcut ? foldVietnamese(opt.shortcut).includes(q) : false)
     );
   }, [query]);
 
@@ -1969,14 +1949,13 @@ function SlashMenu({
               )}
               <Pressable
                 ref={(el) => { if (el) menuItemRefs.current.set(idx, el); else menuItemRefs.current.delete(idx); }}
-                type="button"
                 role="option"
                 aria-selected={isSelected}
                 title={opt.description}
                 onMouseEnter={() => setActiveIndex(idx)}
                 onClick={() => onSelect(opt)}
                 className={cn(
-                  "flex h-7 w-full items-center gap-2 px-2 rounded-md text-left transition-colors cursor-pointer",
+                  "flex h-7 w-full items-center gap-2 px-2 rounded-md text-left transition-colors",
                   isSelected ? "bg-accent text-foreground" : "text-foreground"
                 )}
               >
@@ -2016,9 +1995,6 @@ export function TaskBlockEditor({
   onOpenCreateSubtask,
   className,
 }: TaskBlockEditorProps) {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => { setMounted(true); }, []);
-
   // Global file drop state
   const [isGlobalDragging, setIsGlobalDragging] = React.useState(false);
   const dragCounterRef = React.useRef(0);
@@ -2148,20 +2124,6 @@ export function TaskBlockEditor({
 
   // URL Paste Chooser
   const [urlPastePopover, setUrlPastePopover] = React.useState<{ url: string; blockPath: number[] } | null>(null);
-  const handleUrlPasteChoice = React.useCallback((choice: "link" | "bookmark", info: { url: string; blockPath: number[] }) => {
-    if (editor.api.isReadOnly()) return;
-    const meta = resolveUrlMetadata(info.url);
-    const nodeId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const newNode: PlateElemT = {
-      id: nodeId,
-      type: choice === "link" ? PT.link : PT.bookmark,
-      children: [{ text: meta.url }],
-      url: meta.url,
-      description: meta.description,
-    } as PlateElemT;
-    editor.tf.insertNodes([newNode] as any, { at: [info.blockPath[0] + 1] });
-    setUrlPastePopover(null);
-  }, [editor]);
 
   // Upload a file to /api/upload, return server URL
   const uploadFileToServer = React.useCallback(async (file: File): Promise<{fileUrl: string; fileName: string} | null> => {

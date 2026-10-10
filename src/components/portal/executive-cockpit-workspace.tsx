@@ -1064,7 +1064,6 @@ export function LegacyExecutiveCockpitWorkspace({
 
         <div className="flex items-center gap-2 flex-wrap">
           <Button
-            type="button"
             onClick={() => {
               if (onCreateDirective) {
                 onCreateDirective();
@@ -1073,7 +1072,7 @@ export function LegacyExecutiveCockpitWorkspace({
               }
             }}
             size="sm"
-            className="min-h-[44px] sm:h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs font-semibold rounded-lg cursor-pointer active:scale-[0.98]"
+            className="min-h-[44px] sm:h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs font-semibold rounded-lg active:scale-[0.98]"
             title="Giao chỉ đạo nhiệm vụ BGH trọng tâm cấp trường"
           >
             <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1081,11 +1080,10 @@ export function LegacyExecutiveCockpitWorkspace({
           </Button>
 
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={() => setShowBriefingModal(true)}
-            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
+            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted"
             title="Xem báo cáo giao ban điều hành BGH"
           >
             <FileText className="w-3.5 h-3.5 shrink-0 text-indigo-600" strokeWidth={1.5} />
@@ -1105,11 +1103,10 @@ export function LegacyExecutiveCockpitWorkspace({
           </Button>
 
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
+            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted"
             title="Làm mới dữ liệu điều hành"
           >
             <RefreshCw
@@ -1138,18 +1135,16 @@ export function LegacyExecutiveCockpitWorkspace({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Button
-              type="button"
               size="sm"
               variant="outline"
               onClick={handleUndo}
-              className="min-h-[36px] px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 border-transparent shadow-xs cursor-pointer"
+              className="min-h-[36px] px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 border-transparent shadow-xs"
             >
               Hoàn tác (5s)
             </Button>
             <Pressable
-              type="button"
               onClick={() => setUndoState(null)}
-              className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
+              className="text-muted-foreground hover:text-foreground p-1"
               aria-label="Đóng thông báo"
             >
               <X className="w-4 h-4" />
@@ -1172,9 +1167,8 @@ export function LegacyExecutiveCockpitWorkspace({
             <span>{reminderNotice}</span>
           </div>
           <Pressable
-            type="button"
             onClick={() => setReminderNotice(null)}
-            className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
+            className="text-muted-foreground hover:text-foreground p-1"
             aria-label="Đóng thông báo"
           >
             <X className="w-3.5 h-3.5" />
@@ -1535,11 +1529,10 @@ export function LegacyExecutiveCockpitWorkspace({
               </div>
 
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleRemindAll}
-                className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0 whitespace-nowrap cursor-pointer"
+                className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0 whitespace-nowrap"
               >
                 <Send className="w-3 h-3" />
                 <span>Đôn đốc tất cả ({affectedUnitsCount} đơn vị)</span>
@@ -1599,9 +1592,8 @@ export function LegacyExecutiveCockpitWorkspace({
                     />
                     {bottleneckSearch && (
                       <Pressable
-                        type="button"
                         onClick={() => setBottleneckSearch("")}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         aria-label="Xóa tìm kiếm"
                       >
                         <X className="w-3 h-3" />
@@ -1617,7 +1609,6 @@ export function LegacyExecutiveCockpitWorkspace({
                     ].map((btn) => (
                       <Button
                         key={btn.id}
-                        type="button"
                         variant={bottleneckFilter === btn.id ? "default" : "outline"}
                         size="sm"
                         onClick={() => setBottleneckFilter(btn.id as any)}
@@ -1644,11 +1635,10 @@ export function LegacyExecutiveCockpitWorkspace({
                       ({displayedBottlenecks.length} điểm nghẽn)
                     </span>
                     <Button
-                      type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedDepartment("ALL")}
-                      className="h-6 text-xs gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                      className="h-6 text-xs gap-1 text-muted-foreground hover:text-foreground"
                     >
                       <X className="w-3 h-3" />
                       <span>Bỏ lọc</span>
@@ -1725,19 +1715,17 @@ export function LegacyExecutiveCockpitWorkspace({
                           {/* 1-tap mobile triage action buttons (min-h-[40px] px-3.5) */}
                           <div className="grid grid-cols-2 gap-2 pt-1">
                             <Button
-                              type="button"
                               variant="outline"
                               onClick={() => handleTriggerReminder(item.departmentCode, item.title)}
-                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-medium hover:bg-muted border-border/70 gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
+                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-medium hover:bg-muted border-border/70 gap-1.5 active:scale-[0.98] transition-all"
                               title="Gửi thông báo đôn đốc tức thì tới đơn vị"
                             >
                               <Bell className="w-3.5 h-3.5 text-muted-foreground" />
                               <span>Đôn đốc</span>
                             </Button>
                             <Button
-                              type="button"
                               onClick={() => handleExtend(item, 3)}
-                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-semibold bg-destructive hover:bg-destructive/90 text-white shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
+                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-semibold bg-destructive hover:bg-destructive/90 text-white shadow-xs gap-1.5 active:scale-[0.98] transition-all"
                               title="Gia hạn tiến độ thêm 3 ngày và gỡ nghẽn tức thì"
                             >
                               <Clock className="w-3.5 h-3.5" />
@@ -1823,9 +1811,8 @@ export function LegacyExecutiveCockpitWorkspace({
               />
               {approvalSearch && (
                 <Pressable
-                  type="button"
                   onClick={() => setApprovalSearch("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label="Xóa tìm kiếm"
                 >
                   <X className="w-3 h-3" />
@@ -1842,7 +1829,6 @@ export function LegacyExecutiveCockpitWorkspace({
               ].map((c) => (
                 <Button
                   key={c.id}
-                  type="button"
                   variant={approvalCategory === c.id ? "default" : "outline"}
                   size="sm"
                   onClick={() => setApprovalCategory(c.id)}
@@ -1940,11 +1926,10 @@ export function LegacyExecutiveCockpitWorkspace({
                   <div className="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
                     {onSelectTask && (
                       <Button
-                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => onSelectTask(item.originalTask)}
-                        className="text-xs min-h-[44px] h-11 sm:min-h-[36px] sm:h-9 px-3.5 sm:px-3 gap-1 cursor-pointer"
+                        className="text-xs min-h-[44px] h-11 sm:min-h-[36px] sm:h-9 px-3.5 sm:px-3 gap-1"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Xem chi tiết</span>
@@ -1952,10 +1937,9 @@ export function LegacyExecutiveCockpitWorkspace({
                     )}
 
                     <Button
-                      type="button"
                       size="sm"
                       onClick={() => setReviewingTask(item.originalTask)}
-                      className="text-xs min-h-[44px] h-11 sm:min-h-[36px] sm:h-9 px-3.5 sm:px-3 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer"
+                      className="text-xs min-h-[44px] h-11 sm:min-h-[36px] sm:h-9 px-3.5 sm:px-3 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Ký duyệt ban hành</span>
@@ -1993,7 +1977,6 @@ export function LegacyExecutiveCockpitWorkspace({
               </div>
               {selectedDepartment !== "ALL" && (
                 <Button
-                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedDepartment("ALL")}
@@ -2038,7 +2021,6 @@ export function LegacyExecutiveCockpitWorkspace({
                 ].map((btn) => (
                   <Button
                     key={btn.id}
-                    type="button"
                     variant={unitCategoryFilter === btn.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => setUnitCategoryFilter(btn.id as any)}
@@ -2065,12 +2047,11 @@ export function LegacyExecutiveCockpitWorkspace({
                 ].map((s) => (
                   <Button
                     key={s.id}
-                    type="button"
                     variant={unitSortBy === s.id ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setUnitSortBy(s.id as any)}
                     className={cn(
-                      "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 border cursor-pointer",
+                      "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 border",
                       unitSortBy === s.id
                         ? "bg-muted font-semibold border-border"
                         : "text-muted-foreground border-transparent hover:border-border"
@@ -2194,7 +2175,6 @@ export function LegacyExecutiveCockpitWorkspace({
 
                     <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
                       <Button
-                        type="button"
                         variant={isSelected ? "default" : "outline"}
                         size="sm"
                         onClick={() =>
@@ -2210,7 +2190,6 @@ export function LegacyExecutiveCockpitWorkspace({
                       {(dept.healthStatus === "RED" ||
                         dept.healthStatus === "YELLOW") && (
                         <Button
-                          type="button"
                           variant="outline"
                           size="sm"
                           onClick={() =>
@@ -2263,9 +2242,8 @@ export function LegacyExecutiveCockpitWorkspace({
               >
                 <span>Đang lọc đơn vị: {selectedDepartment}</span>
                 <Pressable
-                  type="button"
                   onClick={() => setSelectedDepartment("ALL")}
-                  className="ml-1 hover:text-destructive cursor-pointer"
+                  className="ml-1 hover:text-destructive"
                 >
                   <X className="w-3 h-3" />
                 </Pressable>
@@ -2286,7 +2264,6 @@ export function LegacyExecutiveCockpitWorkspace({
               />
               {searchTerm && (
                 <Pressable
-                  type="button"
                   onClick={() => setSearchTerm("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
@@ -2305,7 +2282,6 @@ export function LegacyExecutiveCockpitWorkspace({
               ].map((f) => (
                 <Button
                   key={f.id}
-                  type="button"
                   variant={
                     strategicStatusFilter === f.id ? "default" : "outline"
                   }
@@ -2439,7 +2415,6 @@ export function LegacyExecutiveCockpitWorkspace({
                     <div className="flex items-center gap-2 self-end md:self-center shrink-0">
                       {isPendingApproval && (
                         <Button
-                          type="button"
                           size="sm"
                           onClick={() => setReviewingTask(task)}
                           className="text-xs min-h-[44px] sm:h-8 gap-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
@@ -2451,7 +2426,6 @@ export function LegacyExecutiveCockpitWorkspace({
 
                       {onSelectTask && (
                         <Button
-                          type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => onSelectTask(task)}

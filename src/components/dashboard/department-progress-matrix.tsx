@@ -224,12 +224,11 @@ export function DepartmentProgressMatrix({
                 Đang lọc: {getDeptName(selectedDeptObj)}
               </span>
               <Pressable
-                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectDepartment("ALL");
                 }}
-                className="p-0.5 hover:bg-indigo-100 rounded-full transition-colors cursor-pointer text-indigo-600 hover:text-indigo-900"
+                className="p-0.5 hover:bg-indigo-100 rounded-full transition-colors text-indigo-600 hover:text-indigo-900"
                 aria-label="Bỏ chọn đơn vị"
                 title="Xem toàn trường"
               >
@@ -241,7 +240,6 @@ export function DepartmentProgressMatrix({
 
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5 shrink-0">
           <Pressable
-            type="button"
             aria-label="Chế độ xếp hạng"
             title="Chế độ xếp hạng tiến độ (Ranking Bar Chart)"
             onClick={() => handleViewModeChange("ranking")}
@@ -258,7 +256,6 @@ export function DepartmentProgressMatrix({
             <span className="hidden sm:inline">Xếp hạng</span>
           </Pressable>
           <Pressable
-            type="button"
             aria-label="Chế độ thẻ"
             title="Chế độ thẻ (Cards View)"
             onClick={() => handleViewModeChange("cards")}
@@ -275,7 +272,6 @@ export function DepartmentProgressMatrix({
             <span className="hidden sm:inline">Thẻ</span>
           </Pressable>
           <Pressable
-            type="button"
             aria-label="Chế độ bảng tinh gọn"
             title="Chế độ bảng tinh gọn (Compact Table View)"
             onClick={() => handleViewModeChange("compact_table")}
@@ -304,10 +300,9 @@ export function DepartmentProgressMatrix({
             </span>
             <div className="flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 p-0.5">
               <Pressable
-                type="button"
                 onClick={() => setRankingSortBy("progress")}
                 className={cn(
-                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer",
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors",
                   rankingSortBy === "progress"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
@@ -316,10 +311,9 @@ export function DepartmentProgressMatrix({
                 Tiến độ
               </Pressable>
               <Pressable
-                type="button"
                 onClick={() => setRankingSortBy("overdue")}
                 className={cn(
-                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer",
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors",
                   rankingSortBy === "overdue"
                     ? "bg-background text-destructive shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"

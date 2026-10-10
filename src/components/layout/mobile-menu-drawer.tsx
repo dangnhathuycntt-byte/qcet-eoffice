@@ -206,7 +206,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
             {/* Profile Quick Link */}
             <Pressable
-              type="button"
               onClick={() => {
                 triggerHaptic("light");
                 onOpenChange(false);
@@ -216,7 +215,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   window.dispatchEvent(new CustomEvent("qcet:open-profile-modal"));
                 }
               }}
-              className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
+              className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] touch-manipulation"
             >
               <div className="flex items-center gap-3">
                 <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -260,7 +259,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               {/* Push Toggle Button */}
               {isSupported && (
                 <Pressable
-                  type="button"
                   disabled={isLoading}
                   onClick={async () => {
                     triggerHaptic("selection");
@@ -271,7 +269,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     }
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border cursor-pointer touch-manipulation active:scale-[0.98]",
+                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border touch-manipulation active:scale-[0.98]",
                     isSubscribed
                       ? "bg-muted/40 hover:bg-muted/60 border-border/50 text-foreground"
                       : "bg-primary/10 hover:bg-primary/15 border-primary/30 text-primary font-semibold"
@@ -296,7 +294,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               {/* Test Ring Button */}
               {isSupported && isSubscribed && (
                 <Pressable
-                  type="button"
                   disabled={isTestingPush || isLoading}
                   onClick={async () => {
                     triggerHaptic("selection");
@@ -314,7 +311,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       setIsTestingPush(false);
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40 touch-manipulation active:scale-[0.98]"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors border border-border/40 touch-manipulation active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-3">
                     {isTestingPush ? (
@@ -342,13 +339,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               {/* Install App Button if installable */}
               {isInstallable && (
                 <Pressable
-                  type="button"
                   onClick={async () => {
                     triggerHaptic("medium");
                     await installApp();
                     onOpenChange(false);
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-xs touch-manipulation active:scale-[0.98]"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors shadow-xs touch-manipulation active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-3">
                     <Download size={17} />
@@ -360,7 +356,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               {/* iOS Safari Guide Button if iOS & not standalone */}
               {isIOS && !isStandalone && (
                 <Pressable
-                  type="button"
                   onClick={() => {
                     triggerHaptic("light");
                     onOpenChange(false);
@@ -368,7 +363,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer touch-manipulation active:scale-[0.98]"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors touch-manipulation active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-3">
                     <Smartphone size={17} />
@@ -380,7 +375,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
               {/* Feature Guide Help Button */}
               <Pressable
-                type="button"
                 onClick={() => {
                   triggerHaptic("light");
                   onOpenChange(false);
@@ -388,7 +382,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
                   }
                 }}
-                className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl hover:bg-muted text-foreground border border-border/60 font-medium text-xs transition-colors cursor-pointer touch-manipulation active:scale-[0.98]"
+                className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl hover:bg-muted text-foreground border border-border/60 font-medium text-xs transition-colors touch-manipulation active:scale-[0.98]"
               >
                 <div className="flex items-center gap-3">
                   <HelpCircle size={17} className="text-muted-foreground" />
@@ -402,13 +396,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
           {/* Preferences & Actions */}
           <div className="space-y-2 pt-2 border-t border-border/40">
             <Pressable
-              type="button"
               onClick={() => {
                 triggerHaptic("warning");
                 logout();
                 onOpenChange(false);
               }}
-              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors cursor-pointer touch-manipulation active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors touch-manipulation active:scale-[0.98]"
             >
               <LogOut size={16} />
               <span>Đăng xuất</span>

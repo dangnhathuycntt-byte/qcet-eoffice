@@ -5,6 +5,7 @@ import { Dialog as BaseDialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 // Namespace primitives re-export
 export const Dialog = BaseDialog;
@@ -78,13 +79,13 @@ export function StandardDialog({
                 {showCloseButton && (
                   compact ? (
                     <BaseDialog.Close
-                      render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Đóng" />}
+                      render={<Button variant="ghost" size="icon-sm" aria-label="Đóng" />}
                     >
                       <X className="size-4" strokeWidth={1.5} />
                     </BaseDialog.Close>
                   ) : (
                     <BaseDialog.Close
-                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1"
+                      className={`rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRingClass}`}
                       aria-label="Đóng"
                     >
                       <X className="h-4 w-4" />

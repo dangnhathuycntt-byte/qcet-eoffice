@@ -1,6 +1,7 @@
 import * as React from "react";
 import { AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface InlineAlertProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "error" | "warning" | "info";
@@ -50,7 +51,7 @@ export function InlineAlert({
           type="button"
           onClick={onAction}
           aria-label={actionLabel}
-          className="ml-1 shrink-0 font-medium underline underline-offset-2 hover:opacity-80 active:opacity-100 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 rounded-xs relative before:absolute before:-inset-2 before:content-[''] touch-manipulation"
+          className={`ml-1 shrink-0 font-medium underline underline-offset-2 hover:opacity-80 active:opacity-100 cursor-pointer outline-none ${focusRingClass} rounded-xs relative before:absolute before:-inset-2 before:content-[''] touch-manipulation`}
         >
           {actionLabel}
         </button>

@@ -380,7 +380,6 @@ export function DepartmentGroupedTaskView({
                         </span>
                       )}
                       <Button
-                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={(e) => {
@@ -398,7 +397,6 @@ export function DepartmentGroupedTaskView({
 
                   {onAddTask && (
                     <Button
-                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => onAddTask(group.departmentCode)}
@@ -515,7 +513,6 @@ export function DepartmentGroupedTaskView({
                       </span>
                       <div className="flex items-center gap-2">
                         <Button
-                          type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => handleLoadMore(group.departmentId, group.departmentCode)}
@@ -524,7 +521,6 @@ export function DepartmentGroupedTaskView({
                           Xem thêm {Math.min(DEFAULT_PAGE_SIZE, remaining)} công việc (còn {remaining})
                         </Button>
                         <Button
-                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleShowAll(group.departmentId, group.allTasks.length)}

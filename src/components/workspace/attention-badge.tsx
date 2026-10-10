@@ -49,7 +49,7 @@ const levelConfigs: Record<
   warning: {
     icon: AlertTriangle,
     classes:
-      "bg-warning/10 text-warning border-warning/40 hover:bg-warning/10",
+      "bg-warning/10 text-warning border-warning/40 hover:bg-warning/15",
     iconColor: "text-warning",
   },
   info: {
@@ -172,7 +172,6 @@ export const AttentionBadge = React.forwardRef<HTMLElement, AttentionBadgeProps>
       return (
         <Pressable
           ref={ref as React.ForwardedRef<HTMLButtonElement>}
-          type="button"
           onClick={onClick}
           className={baseClasses}
           {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}

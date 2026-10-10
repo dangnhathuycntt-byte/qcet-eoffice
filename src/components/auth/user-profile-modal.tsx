@@ -150,10 +150,9 @@ export function UserProfileModal() {
           </div>
 
           <Pressable
-            type="button"
             onClick={() => setIsProfileModalOpen(false)}
             aria-label="Đóng"
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
           >
             <X className="size-4" strokeWidth={1.5} />
           </Pressable>
@@ -351,7 +350,7 @@ export function UserProfileModal() {
             <Pressable
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.99] w-full sm:w-auto"
             >
               {isSaving ? (
                 <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />

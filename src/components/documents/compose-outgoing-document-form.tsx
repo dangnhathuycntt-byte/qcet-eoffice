@@ -110,7 +110,7 @@ export function ComposeOutgoingDocumentForm({
     >
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-        <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/documents")}>
+        <Button variant="ghost" size="sm" onClick={() => router.push("/documents")}>
           <ArrowLeft className="size-3.5" strokeWidth={1.5} />
           Quay lại
         </Button>

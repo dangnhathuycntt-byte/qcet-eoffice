@@ -14,7 +14,6 @@ import {
   Plus,
   Layers,
   Clock,
-  Tag,
   Building2,
   Briefcase,
   AlertTriangle,
@@ -40,15 +39,10 @@ import { isSafeUrl } from "@/lib/url-utils";
 import {
   type SchoolTask,
   type StaffTask,
-  type TaskCategory,
   type TaskStatus,
   type DeliverableItem,
-  type AIReviewSummary,
-  type EscalationMeta,
   isSchoolTask,
 } from "@/types/dashboard";
-
-export { isSchoolTask };
 import type { AuthUser } from "@/types/auth";
 import type { DelegationRule } from "@/types/delegation";
 import { canUserApproveTask } from "@/lib/delegation-authority-engine";
@@ -61,8 +55,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { cn, getInitials } from "@/lib/utils";
-import { getCategoryBadgeConfig } from "./cascading-task-table";
+import { cn } from "@/lib/utils";
 import { getSystemReferenceDate, isTaskOverdue } from "@/lib/academic-calendar";
 import {
   evaluateTaskCapabilityMatrix,
@@ -76,6 +69,14 @@ import {
   type TaskLifecycleStatus,
 } from "@/domain/tasks/canonical-semantics";
 import { Pressable } from "@/components/ui/pressable";
+import {
+  formatDetailDate,
+  getRelativeDueTime,
+  getTaskLevelBadge,
+  TASK_LEVEL_CONFIG,
+} from "@/lib/task-detail-helpers";
+
+export { isSchoolTask };
 
 /**
  * Stable empty delegation list shared across renders. A fresh `[]` default would
@@ -103,71 +104,6 @@ function restoreLogicalFocus(el: HTMLElement | null): void {
     }
   }
 }
-
-export function formatDetailDate(dateStr?: string): string {
-  if (!dateStr) return "Chưa đặt";
-  try {
-    const clean = dateStr.split("T")[0];
-    const parts = clean.split("-");
-    if (parts.length === 3) {
-      const [year, month, day] = parts;
-      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
-    }
-    return dateStr;
-  } catch {
-    return dateStr;
-  }
-}
-
-export function getRelativeDueTime(
-  dueDate?: string | Date
-): { text: string; color: string } | null {
-  if (!dueDate) return null;
-  const target = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
-  if (isNaN(target.getTime())) return null;
-
-  const now = new Date();
-  const diffMs = target.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays < 0) {
-    return {
-      text: `Trễ hạn ${Math.abs(diffDays)} ngày`,
-      color: "border-red-500/30 bg-red-500/10 text-red-700",
-    };
-  }
-  if (diffDays === 0) {
-    return {
-      text: "Hạn hôm nay",
-      color: "border-warning/30 bg-warning/10 text-warning",
-    };
-  }
-  if (diffDays === 1) {
-    return {
-      text: "Còn 1 ngày",
-      color: "border-warning/30 bg-warning/10 text-warning",
-    };
-  }
-  return {
-    text: `Còn ${diffDays} ngày`,
-    color: "border-border/60 bg-muted/40 text-muted-foreground",
-  };
-}
-
-export const TASK_LEVEL_CONFIG = {
-  TRUONG: {
-    label: "Nhiệm vụ cấp Trường",
-    variant: "secondary" as const,
-    className:
-      "border-blue-500/20 bg-blue-500/10 text-blue-700 font-semibold px-2.5 py-0.5",
-  },
-  DON_VI: {
-    label: "Công việc Đơn vị",
-    variant: "outline" as const,
-    className:
-      "border-border/60 bg-muted/40 text-muted-foreground font-semibold px-2.5 py-0.5",
-  },
-};
 
 export const TASK_STATUS_CONFIG: Record<
   TaskStatus,
@@ -232,10 +168,6 @@ export const TASK_STATUS_CONFIG: Record<
     variant: "outline",
   },
 };
-
-export function getTaskLevelBadge(isSchool: boolean) {
-  return isSchool ? TASK_LEVEL_CONFIG.TRUONG : TASK_LEVEL_CONFIG.DON_VI;
-}
 
 export function getDetailStatusConfig(status: TaskStatus | string) {
   if (status === "PENDING_EXECUTIVE_APPROVAL") {
@@ -1032,9 +964,8 @@ export function TaskDetailSideSheet({
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-2">
           {/* Mobile Back Button (< 768px) */}
           <Pressable
-            type="button"
             onClick={onClose}
-            className="md:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-[0.98] shrink-0"
+            className="md:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors active:scale-[0.98] shrink-0"
             aria-label="Quay lại danh sách nhiệm vụ"
           >
             <ArrowLeft className="size-5" strokeWidth={1.5} />
@@ -1073,9 +1004,8 @@ export function TaskDetailSideSheet({
           {/* Close Button (lifecycle changes flow only through capability-driven actions) */}
           <div className="flex items-center gap-2 shrink-0">
             <Pressable
-              type="button"
               onClick={onClose}
-              className="inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-[0.98]"
+              className="inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors active:scale-[0.98]"
               aria-label="Đóng bảng chi tiết"
             >
               <X className="size-4" strokeWidth={1.5} />
@@ -1091,7 +1021,6 @@ export function TaskDetailSideSheet({
               <Link2 className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
               <span>Nhiệm vụ cha:</span>
               <Pressable
-                type="button"
                 onClick={() => {
                   const targetId =
                     (task as StaffTask).parentSchoolTaskId ||
@@ -1100,7 +1029,7 @@ export function TaskDetailSideSheet({
                     (onSelectSubTask as (v: any) => void)(targetId);
                   }
                 }}
-                className="font-semibold text-primary hover:underline cursor-pointer truncate max-w-[320px] text-left"
+                className="font-semibold text-primary hover:underline truncate max-w-[320px] text-left"
               >
                 {(task as StaffTask).parentSchoolTaskTitle ||
                   (task as StaffTask).parentTask?.title ||
@@ -1448,7 +1377,7 @@ export function TaskDetailSideSheet({
                         (!deliverableUrl.trim() && !deliverableNotes.trim()) ||
                         isSubmittingDeliverable
                       }
-                      className="h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg gap-1.5 disabled:opacity-50"
                     >
                       <FileCheck className="size-3.5" strokeWidth={1.5} />
                       <span>Nộp minh chứng & Trình duyệt</span>
@@ -1574,9 +1503,8 @@ export function TaskDetailSideSheet({
               {/* NEW: accept/start the assignment */}
               {task.status === "NEW" && onStatusChange && (actorIsAssignee || actorHasApprovalAuthority) && (
                 <Button
-                  type="button"
                   onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                  className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                  className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                 >
                   <Play className="size-3.5" strokeWidth={1.5} />
                   <span>Tiếp nhận công việc</span>
@@ -1589,23 +1517,21 @@ export function TaskDetailSideSheet({
                   {canSubmitDeliverable ? (
                     requiresReview ? (
                       <Button
-                        type="button"
                         onClick={() => {
                           const formElem = document.getElementById("deliverable-form");
                           formElem?.scrollIntoView({ behavior: "smooth" });
                           const nameInput = document.getElementById("deliverable-name");
                           nameInput?.focus();
                         }}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
                         <FileCheck className="size-3.5" strokeWidth={1.5} />
                         <span>Nộp minh chứng nghiệm thu</span>
                       </Button>
                     ) : (
                       <Button
-                        type="button"
                         onClick={() => onStatusChange?.(task.id, "COMPLETED")}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
                         <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                         <span>Hoàn thành nhiệm vụ</span>
@@ -1618,9 +1544,8 @@ export function TaskDetailSideSheet({
                     </div>
                   ) : actorHasApprovalAuthority && onStatusChange ? (
                     <Button
-                      type="button"
                       onClick={() => onStatusChange(task.id, "COMPLETED")}
-                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                     >
                       <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                       <span>Nghiệm thu hoàn thành</span>
@@ -1635,18 +1560,16 @@ export function TaskDetailSideSheet({
                   <div className="flex items-center gap-2 w-full">
                     {aiReview?.suggestedAction === "QUICK_APPROVE" ? (
                       <Button
-                        type="button"
                         onClick={handleManagerApprove}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
                         <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                         <span>Duyệt nhanh (Đạt chuẩn)</span>
                       </Button>
                     ) : (
                       <Button
-                        type="button"
                         onClick={handleManagerApprove}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
                         <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                         <span>Nghiệm thu Đạt (Hoàn thành)</span>
@@ -1654,10 +1577,9 @@ export function TaskDetailSideSheet({
                     )}
                     {canRejectReview && (
                       <Button
-                        type="button"
                         variant="outline"
                         onClick={() => setIsRejectionModalOpen(true)}
-                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
                       >
                         <RotateCcw className="size-3.5" strokeWidth={1.5} />
                         <span>Trả lại Yêu cầu Sửa</span>
@@ -1677,7 +1599,6 @@ export function TaskDetailSideSheet({
                     </div>
                     <div className="flex items-center gap-2 w-full">
                       <Button
-                        type="button"
                         disabled
                         className="flex-1 h-8.5 text-xs font-semibold bg-muted text-muted-foreground rounded-lg cursor-not-allowed opacity-50 gap-1.5"
                       >
@@ -1685,7 +1606,6 @@ export function TaskDetailSideSheet({
                         <span>Nghiệm thu Đạt (Vô hiệu hóa)</span>
                       </Button>
                       <Button
-                        type="button"
                         disabled
                         variant="outline"
                         className="h-8.5 px-3 text-xs font-medium border-muted bg-muted/40 text-muted-foreground rounded-lg cursor-not-allowed opacity-50 inline-flex items-center gap-1.5"
@@ -1805,9 +1725,8 @@ export function TaskDetailSideSheet({
                   <div className="flex items-center gap-2 pt-1">
                     {aiReview.suggestedAction === "QUICK_APPROVE" && (
                       <Button
-                        type="button"
                         onClick={handleManagerApprove}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
                         <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                         <span>Duyệt nhanh theo đề xuất AI</span>
@@ -1815,7 +1734,6 @@ export function TaskDetailSideSheet({
                     )}
                     {canRejectReview && (
                       <Button
-                        type="button"
                         variant="outline"
                         onClick={() => {
                           if (aiReview.suggestedFeedback) {
@@ -1823,7 +1741,7 @@ export function TaskDetailSideSheet({
                           }
                           setIsRejectionModalOpen(true);
                         }}
-                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
                       >
                         <AlertTriangle className="size-3.5" strokeWidth={1.5} />
                         <span>Yêu cầu chỉnh sửa</span>
@@ -1876,9 +1794,8 @@ export function TaskDetailSideSheet({
 
                 {canCloseSchool ? (
                   <Button
-                    type="button"
                     onClick={handleExecutiveClose}
-                    className="w-full h-8.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
+                    className="w-full h-8.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all"
                   >
                     <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                     <span>Đóng Nhiệm vụ cấp Trường</span>
@@ -1919,11 +1836,10 @@ export function TaskDetailSideSheet({
                     through the canonical create path (effectiveOnAddSubTask). */}
                 {effectiveOnAddSubTask && (
                   <Button
-                    type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => effectiveOnAddSubTask(task.id)}
-                    className="h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
+                    className="h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg"
                     title="Tạo việc con trực thuộc nhiệm vụ này"
                   >
                     <Plus className="size-3.5" strokeWidth={1.5} />
@@ -1940,11 +1856,10 @@ export function TaskDetailSideSheet({
                     <p>Chưa có nhiệm vụ con trực thuộc</p>
                     {effectiveOnAddSubTask && (
                       <Button
-                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => effectiveOnAddSubTask(task.id)}
-                        className="mt-1 h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
+                        className="mt-1 h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg"
                         title="Tạo việc con trực thuộc nhiệm vụ này"
                       >
                         <Plus className="size-3.5" strokeWidth={1.5} />
@@ -2152,18 +2067,16 @@ export function TaskDetailSideSheet({
             (isSchool && task.status === "PENDING_EXECUTIVE_APPROVAL" && canCloseSchool) ? (
               <div className="flex items-center gap-2 flex-1">
                 <Button
-                  type="button"
                   variant="outline"
                   onClick={() => setIsRejectionModalOpen(true)}
-                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold border-warning/30 bg-warning/10 text-warning hover:bg-warning/15 rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold border-warning/30 bg-warning/10 text-warning hover:bg-warning/15 rounded-xl inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
                 >
                   <AlertTriangle className="size-4 text-warning" strokeWidth={1.5} />
                   <span>Yêu cầu sửa</span>
                 </Button>
                 <Button
-                  type="button"
                   onClick={isSchool ? handleExecutiveClose : handleManagerApprove}
-                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
                 >
                   <CheckCircle2 className="size-4" strokeWidth={1.5} />
                   <span>Phê duyệt</span>
@@ -2172,7 +2085,6 @@ export function TaskDetailSideSheet({
             ) : canSubmitDeliverable ? (
               /* Condition 2: submitter reporting — scrolls to the evidence form */
               <Button
-                type="button"
                 onClick={() => {
                   const form = document.getElementById("deliverable-form");
                   if (form) {
@@ -2180,7 +2092,7 @@ export function TaskDetailSideSheet({
                     document.getElementById("deliverable-name")?.focus();
                   }
                 }}
-                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
                 <FileCheck className="size-4" strokeWidth={1.5} />
                 <span>Nộp báo cáo</span>
@@ -2188,9 +2100,8 @@ export function TaskDetailSideSheet({
             ) : task.status === "NEW" && onStatusChange && (actorIsAssignee || actorHasApprovalAuthority) ? (
               /* Condition 3: accept the new assignment (canonical lifecycle start) */
               <Button
-                type="button"
                 onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
                 <Play className="size-4" strokeWidth={1.5} />
                 <span>Tiếp nhận công việc</span>
@@ -2198,13 +2109,12 @@ export function TaskDetailSideSheet({
             ) : (
               /* Condition 4: no mobile primary action — deep-links into the context action block (no status bypass) */
               <Button
-                type="button"
                 onClick={() => {
                   document
                     .getElementById("task-detail-context-actions")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
                 <Play className="size-4" strokeWidth={1.5} />
                 <span>Xem thao tác xử lý</span>
@@ -2214,10 +2124,9 @@ export function TaskDetailSideSheet({
             {/* Secondary Action Menu / Overflow "..." */}
             <div className="relative">
               <Button
-                type="button"
                 variant="outline"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 rounded-xl border-border/70 hover:bg-muted cursor-pointer inline-flex items-center justify-center shrink-0 touch-manipulation active:scale-[0.98]"
+                className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 rounded-xl border-border/70 hover:bg-muted inline-flex items-center justify-center shrink-0 touch-manipulation active:scale-[0.98]"
                 aria-label="Thao tác khác"
               >
                 <MoreHorizontal className="size-5 text-muted-foreground" strokeWidth={1.5} />
@@ -2233,7 +2142,6 @@ export function TaskDetailSideSheet({
                   />
                   <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border/70 bg-card p-1.5 shadow-xl z-40 space-y-0.5 animate-in fade-in slide-in-from-bottom-2 duration-150 text-xs">
                     <Pressable
-                      type="button"
                       onClick={() => {
                         const code = isSchool ? (task as SchoolTask).taskCode : (task as StaffTask).code;
                         if (code && typeof navigator !== "undefined" && navigator.clipboard) {
@@ -2241,13 +2149,12 @@ export function TaskDetailSideSheet({
                         }
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left cursor-pointer min-h-[36px]"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left min-h-[36px]"
                     >
                       <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Sao chép mã NV</span>
                     </Pressable>
                     <Pressable
-                      type="button"
                       onClick={() => {
                         if (typeof window !== "undefined" && navigator.clipboard) {
                           const url = new URL(window.location.href);
@@ -2256,19 +2163,18 @@ export function TaskDetailSideSheet({
                         }
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left cursor-pointer min-h-[36px]"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left min-h-[36px]"
                     >
                       <Share2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Chia sẻ liên kết</span>
                     </Pressable>
                     {onStatusChange && task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
                       <Pressable
-                        type="button"
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           onStatusChange(task.id, "BLOCKED");
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-danger-soft font-medium transition-colors text-left cursor-pointer min-h-[36px]"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-danger-soft font-medium transition-colors text-left min-h-[36px]"
                       >
                         <AlertTriangle className="size-3.5 text-destructive" strokeWidth={1.5} />
                         <span>Báo bị nghẽn (BLOCKED)</span>
@@ -2301,12 +2207,11 @@ export function TaskDetailSideSheet({
                     </h3>
                   </div>
                   <Pressable
-                    type="button"
                     onClick={() => {
                       setIsRejectionModalOpen(false);
                       setRejectionError(null);
                     }}
-                    className="size-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
+                    className="size-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground"
                     aria-label="Đóng hộp thoại"
                   >
                     <X className="size-4" strokeWidth={1.5} />
@@ -2347,14 +2252,13 @@ export function TaskDetailSideSheet({
 
                   <div className="flex items-center justify-end gap-2 pt-2">
                     <Button
-                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => {
                         setIsRejectionModalOpen(false);
                         setRejectionError(null);
                       }}
-                      className="h-8 text-xs cursor-pointer"
+                      className="h-8 text-xs"
                     >
                       Hủy
                     </Button>
@@ -2362,7 +2266,7 @@ export function TaskDetailSideSheet({
                       type="submit"
                       size="sm"
                       disabled={!rejectionReasonInput.trim()}
-                      className="h-8 text-xs bg-warning hover:bg-warning/90 text-white cursor-pointer disabled:opacity-50"
+                      className="h-8 text-xs bg-warning hover:bg-warning/90 text-white disabled:opacity-50"
                     >
                       Xác nhận trả lại
                     </Button>
@@ -2385,3 +2289,5 @@ export function TaskDetailSideSheet({
 }
 
 export default TaskDetailSideSheet;
+
+export { formatDetailDate, getRelativeDueTime, getTaskLevelBadge, TASK_LEVEL_CONFIG };

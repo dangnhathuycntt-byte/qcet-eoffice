@@ -55,8 +55,8 @@ export function ConfirmHost() {
               ) : null}
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
-              <Button type="button" variant="secondary" onClick={() => settle(false)}>{current?.cancelLabel ?? "Hủy"}</Button>
-              <Button type="button" onClick={() => settle(true)}>{current?.confirmLabel ?? "Đồng ý"}</Button>
+              <Button variant="secondary" onClick={() => settle(false)}>{current?.cancelLabel ?? "Hủy"}</Button>
+              <Button onClick={() => settle(true)}>{current?.confirmLabel ?? "Đồng ý"}</Button>
             </div>
           </div>
         </AlertDialog.Popup>

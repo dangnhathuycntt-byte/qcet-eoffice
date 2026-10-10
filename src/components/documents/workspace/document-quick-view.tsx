@@ -45,7 +45,7 @@ function MoreActionsMenu({
   return (
     <MenuRoot open={open} onOpenChange={setOpen} modal={false}>
       <MenuTrigger asChild>
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Thao tác khác" title="Thao tác khác" className="text-muted-foreground hover:text-foreground data-[popup-open]:bg-muted">
+        <Button variant="ghost" size="icon-sm" aria-label="Thao tác khác" title="Thao tác khác" className="text-muted-foreground hover:text-foreground data-[popup-open]:bg-muted">
           <Ellipsis className="size-4" strokeWidth={1.5} />
         </Button>
       </MenuTrigger>
@@ -200,7 +200,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
           onEdit={canEdit ? () => setEditing(true) : undefined}
           onAddFiles={canEdit && !upload.busy ? upload.open : undefined}
         />
-        <Button ref={closeRef} type="button" variant="ghost" size="icon-sm" onClick={onClose} aria-label="Đóng" title="Đóng" className="text-muted-foreground hover:text-foreground">
+        <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Đóng" title="Đóng" className="text-muted-foreground hover:text-foreground">
           <X className="size-4" strokeWidth={1.5} />
         </Button>
       </div>

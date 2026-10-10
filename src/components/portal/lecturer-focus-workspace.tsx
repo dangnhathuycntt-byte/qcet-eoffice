@@ -739,12 +739,11 @@ export function LegacyLecturerFocusWorkspace({
         {onRefresh && (
           <div className="flex items-center gap-2 self-start md:self-auto flex-wrap shrink-0">
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="text-xs min-h-[44px] sm:h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
+              className="text-xs min-h-[44px] sm:h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80"
               title="Làm mới dữ liệu cá nhân"
             >
               <RefreshCw
@@ -845,9 +844,8 @@ export function LegacyLecturerFocusWorkspace({
               />
               {searchTerm && (
                 <Pressable
-                  type="button"
                   onClick={() => setSearchTerm("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded-md"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md"
                 >
                   <X className="size-3.5" strokeWidth={1.5} />
                 </Pressable>
@@ -856,10 +854,9 @@ export function LegacyLecturerFocusWorkspace({
 
             {/* Bulk Toggle Button */}
             <Pressable
-              type="button"
               onClick={handleToggleAllVisible}
               disabled={paginatedGroupedTasks.length === 0}
-              className="inline-flex items-center gap-1.5 min-h-[44px] sm:h-8 px-2.5 rounded-xl border border-border/70 bg-card hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 min-h-[44px] sm:h-8 px-2.5 rounded-xl border border-border/70 bg-card hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
               title={
                 allVisibleCollapsed
                   ? "Mở rộng tất cả nhiệm vụ trên trang này"
@@ -897,10 +894,9 @@ export function LegacyLecturerFocusWorkspace({
           </span>
 
           <Pressable
-            type="button"
             onClick={() => handlePillClick(activeFilter === "TODAY" ? "ALL" : "TODAY")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
               activeFilter === "TODAY"
                 ? "bg-destructive text-white font-semibold shadow-xs"
                 : "bg-destructive/10 text-destructive hover:bg-destructive/20"
@@ -913,10 +909,9 @@ export function LegacyLecturerFocusWorkspace({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => handlePillClick(activeFilter === "THIS_WEEK" ? "ALL" : "THIS_WEEK")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
               activeFilter === "THIS_WEEK"
                 ? "bg-blue-600 text-white font-semibold shadow-xs"
                 : "bg-blue-500/10 text-blue-700 hover:bg-blue-500/20"
@@ -929,10 +924,9 @@ export function LegacyLecturerFocusWorkspace({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => handlePillClick(activeFilter === "IN_PROGRESS" ? "ALL" : "IN_PROGRESS")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
               activeFilter === "IN_PROGRESS"
                 ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                 : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -945,10 +939,9 @@ export function LegacyLecturerFocusWorkspace({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => handlePillClick(activeFilter === "NEEDS_REVIEW" ? "ALL" : "NEEDS_REVIEW")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
               activeFilter === "NEEDS_REVIEW"
                 ? "bg-purple-600 text-white font-semibold shadow-xs"
                 : "bg-purple-500/10 text-purple-700 hover:bg-purple-500/20"
@@ -961,10 +954,9 @@ export function LegacyLecturerFocusWorkspace({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => handlePillClick(activeFilter === "REVISION" ? "ALL" : "REVISION")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
               activeFilter === "REVISION"
                 ? "bg-warning text-white font-semibold shadow-xs"
                 : "bg-warning/10 text-warning hover:bg-warning/20"
@@ -977,10 +969,9 @@ export function LegacyLecturerFocusWorkspace({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => handlePillClick(activeFilter === "COMPLETED" ? "ALL" : "COMPLETED")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5",
               activeFilter === "COMPLETED"
                 ? "bg-emerald-600 text-white font-semibold shadow-xs"
                 : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
@@ -994,9 +985,8 @@ export function LegacyLecturerFocusWorkspace({
 
           {activeFilter !== "ALL" && (
             <Pressable
-              type="button"
               onClick={() => setActiveFilter("ALL")}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted border border-border/60 cursor-pointer transition-colors ml-1"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted border border-border/60 transition-colors ml-1"
               title="Xóa lọc trạng thái"
             >
               <X className="size-3" strokeWidth={1.5} />
@@ -1060,7 +1050,7 @@ export function LegacyLecturerFocusWorkspace({
                   setActiveFilter("ALL");
                   setSearchTerm("");
                 }}
-                className="text-xs min-h-[44px] sm:h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
+                className="text-xs min-h-[44px] sm:h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80"
               >
                 <span>Xóa bộ lọc &amp; tìm kiếm</span>
               </Button>
@@ -1154,11 +1144,10 @@ export function LegacyLecturerFocusWorkspace({
 
                       {/* Collapse / Expand Toggle Button */}
                       <Button
-                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleCollapse(group.parentTask.id, isCollapsed)}
-                        className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 gap-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+                        className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 gap-1 rounded-lg text-muted-foreground hover:text-foreground"
                         title={
                           isCollapsed
                             ? "Mở rộng danh sách đầu việc"
@@ -1453,11 +1442,10 @@ export function LegacyLecturerFocusWorkspace({
                                 <div className="flex items-center gap-2">
                                   {onSelectTask && (
                                     <Button
-                                      type="button"
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => onSelectTask(subTask)}
-                                      className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 rounded-xl gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                                      className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 rounded-xl gap-1 text-muted-foreground hover:text-foreground"
                                     >
                                       <Eye
                                         className="size-3.5"
@@ -1468,13 +1456,12 @@ export function LegacyLecturerFocusWorkspace({
                                   )}
 
                                   <Button
-                                    type="button"
                                     size="sm"
                                     id={subIdx === 0 ? "tour-deliverable-action" : undefined}
                                     variant={subTask.status === "COMPLETED" ? "outline" : "default"}
                                     onClick={() => handleOpenSubmitModal(subTask)}
                                     className={cn(
-                                      "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 rounded-xl gap-1.5 cursor-pointer transition-all",
+                                      "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 rounded-xl gap-1.5 transition-all",
                                       subTask.status === "COMPLETED"
                                         ? "border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
                                         : "font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
@@ -1528,10 +1515,9 @@ export function LegacyLecturerFocusWorkspace({
 
               <div className="flex items-center gap-1.5 self-center sm:self-auto">
                 <Pressable
-                  type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Trước
                 </Pressable>
@@ -1544,10 +1530,9 @@ export function LegacyLecturerFocusWorkspace({
                   ) : (
                     <Pressable
                       key={`page-${p}`}
-                      type="button"
                       onClick={() => setCurrentPage(Number(p))}
                       className={cn(
-                        "size-11 sm:size-8 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                        "size-11 sm:size-8 rounded-lg text-xs font-medium transition-all",
                         currentPage === p
                           ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                           : "border border-border/70 bg-card hover:bg-muted text-foreground"
@@ -1559,10 +1544,9 @@ export function LegacyLecturerFocusWorkspace({
                 )}
 
                 <Pressable
-                  type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Sau
                 </Pressable>

@@ -4,9 +4,10 @@ import * as React from "react";
 import { Toggle as BaseToggle } from "@base-ui/react/toggle";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export const toggleVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-0 text-xs sm:text-sm font-medium transition-colors duration-100 outline-none select-none cursor-pointer focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 motion-reduce:transition-none",
+  `inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-0 text-xs sm:text-sm font-medium transition-colors duration-100 outline-none select-none cursor-pointer ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 motion-reduce:transition-none`,
   {
     variants: {
       variant: {

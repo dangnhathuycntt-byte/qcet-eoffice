@@ -10,8 +10,6 @@ import { ArrowHint, EmptyState, type ArrowHintVariant, type IllustrationName } f
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import {
-  LIST_TOOLBAR_SEARCH_COLLAPSED,
-  LIST_TOOLBAR_SEARCH_EXPANDED,
   ListToolbarFilterPopover,
   ListToolbarPopover,
   ListToolbarSearch,
@@ -333,8 +331,6 @@ export function DocumentLedgerToolbar({
         wrapperClassName="min-w-24 shrink"
         aria-label="Tìm văn bản"
         title="Tìm theo số, ký hiệu, trích yếu"
-        collapsedWidthClassName={LIST_TOOLBAR_SEARCH_COLLAPSED}
-        expandedWidthClassName={LIST_TOOLBAR_SEARCH_EXPANDED}
       />
       <ListToolbarFilterPopover
         open={isFilterOpen}
@@ -367,9 +363,8 @@ export function DocumentLedgerToolbar({
             </div>
             <div className="flex justify-end border-t border-border/60 pt-1.5">
               <Pressable
-                type="button"
                 onClick={() => onVisibleColumnsChange(DEFAULT_LEDGER_COLUMNS)}
-                className="h-7 cursor-pointer rounded-md px-2 text-xs text-foreground/80 hover:bg-accent hover:text-foreground"
+                className="h-7 rounded-md px-2 text-xs text-foreground/80 hover:bg-accent hover:text-foreground"
               >
                 Đặt lại
               </Pressable>
@@ -379,7 +374,6 @@ export function DocumentLedgerToolbar({
         </>
       )}
       <Pressable
-        type="button"
         onClick={onPrimaryAction}
         aria-label={primaryActionLabel}
         title={primaryActionLabel}

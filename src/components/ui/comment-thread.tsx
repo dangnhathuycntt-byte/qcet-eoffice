@@ -5,6 +5,7 @@ import { Send, Paperclip, CornerDownRight, MoreHorizontal } from "lucide-react";
 import { UserAvatar } from "./user-avatar";
 import { FileTile } from "./file-dropzone";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface CommentAttachment {
   id: string;
@@ -126,7 +127,7 @@ export function CommentThread({
                   type="button"
                   aria-label="Đính kèm tệp"
                   title="Đính kèm tệp"
-                  className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-card hover:text-foreground transition-colors outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-1.5 before:content-[''] cursor-pointer"
+                  className={`flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-card hover:text-foreground transition-colors outline-none ${focusRingClass} relative before:absolute before:-inset-1.5 before:content-[''] cursor-pointer`}
                 >
                   <Paperclip className="size-3.5" />
                 </button>
@@ -135,7 +136,7 @@ export function CommentThread({
               <button
                 type="submit"
                 disabled={!draft.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-all hover:opacity-90 disabled:opacity-40 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1"
+                className={`inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-all hover:opacity-90 disabled:opacity-40 cursor-pointer outline-none ${focusRingClass}`}
               >
                 <Send className="size-3.5" />
                 <span>Gửi</span>

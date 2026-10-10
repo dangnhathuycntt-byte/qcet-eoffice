@@ -436,12 +436,11 @@ export function CalendarDaySheet({
               <div className="p-8 text-center text-xs text-muted-foreground space-y-1">
                 <p>Không có mục nào khớp bộ lọc.</p>
                 <Pressable
-                  type="button"
                   onClick={() => {
                     setFilter("all");
                     setQuery("");
                   }}
-                  className="font-medium text-primary hover:underline cursor-pointer"
+                  className="font-medium text-primary hover:underline"
                 >
                   Xem tất cả ({summary.total})
                 </Pressable>

@@ -38,10 +38,8 @@ export default async function IncomingDocumentDetailPage({ params }: PageParams)
     redirect(`/login?returnTo=${encodeURIComponent(`/documents/incoming/${id}`)}`);
   }
 
-  const document = await getDocumentById(id);
+  const [document, authContext] = await Promise.all([getDocumentById(id), loadAuthorizationContext(userId)]);
   if (!document || getDocumentKind(document.type) !== "incoming") notFound();
-
-  const authContext = await loadAuthorizationContext(userId);
   const readDecision = authorize(authContext, "document.read", buildDocumentResource(document));
   if (!readDecision.allowed || !canReadDocument(authContext, document)) notFound();
 

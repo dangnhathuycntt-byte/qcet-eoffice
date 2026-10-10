@@ -109,7 +109,6 @@ function SubmenuRow({
   return (
     <div className="relative" data-submenu={name} onMouseLeave={onLeave}>
       <Pressable
-        type="button"
         role="menuitem"
         aria-haspopup="true"
         aria-expanded={expanded}
@@ -158,7 +157,6 @@ function OptionRow({
 }) {
   return (
     <Pressable
-      type="button"
       role="menuitem"
       aria-current={selected ? "true" : undefined}
       onClick={onClick}
@@ -581,7 +579,6 @@ export function TaskContextMenu({
         ))}
         <div className="pt-1 mt-1 border-t border-border/40 relative">
           <Pressable
-            type="button"
             role="menuitem"
             aria-haspopup="dialog"
             aria-expanded={calendarOpen}

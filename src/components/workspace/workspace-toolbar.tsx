@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface WorkspaceToolbarAction {
   label: string;
@@ -102,7 +103,7 @@ export function WorkspaceToolbar({
                 aria-label="Tìm kiếm trong không gian làm việc"
                 className={cn(
                   "w-full rounded-control pl-10 pr-10 py-2 text-sm bg-secondary border-0 text-foreground placeholder:text-muted-foreground min-h-[40px] sm:min-h-[36px] transition-colors",
-                  "hover:bg-accent focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1"
+                  `hover:bg-accent focus-visible:bg-selected ${focusRingClass}`
                 )}
               />
               {searchQuery && (

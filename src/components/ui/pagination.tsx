@@ -1,6 +1,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface PaginationProps {
   page: number;
@@ -34,7 +35,7 @@ export function getPaginationRange(
 }
 
 const cell =
-  "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-xs tabular-nums outline-none transition-colors duration-100 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none sm:size-8";
+  `inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-xs tabular-nums outline-none transition-colors duration-100 ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none sm:size-8`;
 
 /** Điều hướng giữa các trang kết quả. Trang hiện tại có `aria-current="page"`. */
 export function Pagination({

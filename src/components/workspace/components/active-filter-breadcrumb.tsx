@@ -283,10 +283,9 @@ export function FilterSegmentChip({
       <span className="font-medium text-xs truncate max-w-[240px]">{value}</span>
       {onRemove && (
         <Pressable
-          type="button"
           onClick={onRemove}
           aria-label={removeAriaLabel || `Xóa lọc ${label}`}
-          className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+          className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
         >
           <X className="size-2.5" strokeWidth={1.5} />
         </Pressable>
@@ -587,11 +586,10 @@ export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCoun
       <div className="flex items-center gap-2.5 shrink-0 ml-auto">
         {onClearAll && (
           <Pressable
-            type="button"
             data-slot="clear-all-filters"
             onClick={onClearAll}
             aria-label="Xóa tất cả bộ lọc"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground/80 hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/60"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground/80 hover:text-foreground transition-colors rounded px-1.5 py-0.5 hover:bg-muted/60"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>

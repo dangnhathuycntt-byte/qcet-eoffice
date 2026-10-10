@@ -112,7 +112,6 @@ export function TaskOptionalSections({ children, className }: { children: React.
                     return (
                       <Pressable
                         key={key}
-                        type="button"
                         role="menuitem"
                         onClick={() => {
                           setMenuOpen(false);
@@ -224,7 +223,7 @@ export function TaskAddChip({
 
   if (!panel) {
     return (
-      <Pressable type="button" data-slot="task-add-chip" title={title} onClick={onClick} className={CHIP_CLASS}>
+      <Pressable data-slot="task-add-chip" title={title} onClick={onClick} className={CHIP_CLASS}>
         {content}
       </Pressable>
     );

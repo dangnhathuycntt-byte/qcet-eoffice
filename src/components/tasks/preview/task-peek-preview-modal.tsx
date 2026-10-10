@@ -233,11 +233,10 @@ export function TaskPeekPreviewModal({
         <div className="flex items-center gap-0.5 shrink-0 text-muted-foreground/50">
           {onNavigatePrev && (
             <Pressable
-              type="button"
               onClick={onNavigatePrev}
               disabled={!hasPrev}
               title="Nhiệm vụ trước (↑)"
-              className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+              className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
               aria-label="Nhiệm vụ trước"
             >
               <ChevronUp className="size-3.5" strokeWidth={1.5} />
@@ -245,21 +244,19 @@ export function TaskPeekPreviewModal({
           )}
           {onNavigateNext && (
             <Pressable
-              type="button"
               onClick={onNavigateNext}
               disabled={!hasNext}
               title="Nhiệm vụ kế tiếp (↓)"
-              className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+              className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
               aria-label="Nhiệm vụ kế tiếp"
             >
               <ChevronDown className="size-3.5" strokeWidth={1.5} />
             </Pressable>
           )}
           <Pressable
-            type="button"
             onClick={onClose}
             title="Đóng (Esc)"
-            className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer ml-1"
+            className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors ml-1"
             aria-label="Đóng"
           >
             <X className="size-3.5" strokeWidth={1.5} />
@@ -380,9 +377,8 @@ export function TaskPeekPreviewModal({
         </div>
 
         <Pressable
-          type="button"
           onClick={() => onOpenDetail(task)}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer font-normal"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors font-normal"
         >
           <span>Mở chi tiết</span>
           <ArrowRight className="size-3" strokeWidth={1.5} />

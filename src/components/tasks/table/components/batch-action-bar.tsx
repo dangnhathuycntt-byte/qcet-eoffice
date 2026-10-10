@@ -307,7 +307,6 @@ export function BatchActionBar({
         {/* Hoàn thành nhanh (P0-07: chỉ khi cả lựa chọn đủ quyền) */}
         {onBulkStatusChange && isTargetAllowed("COMPLETED") && (
           <Pressable
-            type="button"
             onClick={() => onBulkStatusChange("COMPLETED")}
             disabled={isLoading}
             className={btn}
@@ -353,7 +352,6 @@ export function BatchActionBar({
         {/* Giao lại */}
         {onBulkReassign && (
           <Pressable
-            type="button"
             onClick={() => onBulkReassign("")}
             disabled={isLoading}
             className={btn}
@@ -431,7 +429,6 @@ export function BatchActionBar({
           <>
             {divider}
             <Pressable
-              type="button"
               onClick={onExportExcel}
               disabled={isLoading}
               className={btn}

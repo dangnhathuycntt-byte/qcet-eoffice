@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Collapsible as BaseCollapsible } from "@base-ui/react/collapsible";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 // Namespace re-export
 export const Collapsible = BaseCollapsible;
@@ -83,7 +84,7 @@ export function StandardCollapsible({
     >
       <BaseCollapsible.Trigger
         className={cn(
-          "w-full text-left cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1",
+          `w-full text-left cursor-pointer outline-none ${focusRingClass}`,
           triggerClassName
         )}
       >

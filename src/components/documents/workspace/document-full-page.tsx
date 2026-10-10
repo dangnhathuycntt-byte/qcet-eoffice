@@ -65,7 +65,6 @@ export function DocumentFullPage({ docId, breadcrumb, header, actions, files, pa
 
   const panelToggle = (
     <Button
-      type="button"
       variant="ghost"
       size="sm"
       onClick={togglePanel}

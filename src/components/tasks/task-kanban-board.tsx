@@ -506,8 +506,11 @@ export function groupTasksByStatus(
   categoryFilter: TaskCategory | "ALL" = "ALL",
   searchQuery = ""
 ): Record<TaskStatus, KanbanItem[]> {
-  const filtered = filterKanbanItems(tasks, levelFilter, categoryFilter, searchQuery);
+  return groupKanbanItemsByStatus(filterKanbanItems(tasks, levelFilter, categoryFilter, searchQuery));
+}
 
+/** Chia các mục đã lọc vào cột theo trạng thái. */
+export function groupKanbanItemsByStatus(filtered: KanbanItem[]): Record<TaskStatus, KanbanItem[]> {
   const grouped: Record<TaskStatus, KanbanItem[]> = {
     NEW: [],
     NOT_STARTED: [],
@@ -795,11 +798,10 @@ function KanbanCard({
                 className="w-44 rounded-lg border border-border/80 bg-popover shadow-md py-1 animate-in fade-in-0 zoom-in-95 duration-75 text-xs text-popover-foreground"
               >
                 <Pressable
-                  type="button"
                   role="menuitem"
                   autoFocus
                   onClick={handleOpenDetail}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors text-left"
                 >
                   Mở chi tiết
                 </Pressable>
@@ -807,7 +809,6 @@ function KanbanCard({
                 <div className="h-px bg-border/40 mx-2 my-0.5" />
 
                 <Pressable
-                  type="button"
                   role="menuitem"
                   aria-label="Chuyển trạng thái"
                   aria-expanded={statusSubmenuOpen}
@@ -815,7 +816,7 @@ function KanbanCard({
                     e.stopPropagation();
                     setStatusSubmenuOpen((prev) => !prev);
                   }}
-                  className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors"
                 >
                   <span>Chuyển trạng thái</span>
                   <ChevronRight
@@ -834,7 +835,6 @@ function KanbanCard({
                       return (
                         <Pressable
                           key={col.id}
-                          type="button"
                           role="menuitem"
                           disabled={isCurrent || isPending}
                           onClick={(e) => {
@@ -842,7 +842,7 @@ function KanbanCard({
                             handleStatusChange(col.id);
                           }}
                           className={cn(
-                            "w-full flex items-center gap-2 px-2.5 py-1 text-xs rounded transition-colors cursor-pointer text-left",
+                            "w-full flex items-center gap-2 px-2.5 py-1 text-xs rounded transition-colors text-left",
                             isCurrent
                               ? "text-primary font-medium cursor-default bg-primary/10"
                               : "text-foreground hover:bg-muted/60"
@@ -860,7 +860,6 @@ function KanbanCard({
                 <div className="h-px bg-border/40 mx-2 my-0.5" />
 
                 <Pressable
-                  type="button"
                   role="menuitem"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -868,7 +867,7 @@ function KanbanCard({
                     setStatusSubmenuOpen(false);
                     triggerRef.current?.focus();
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 transition-colors text-left"
                 >
                   <X strokeWidth={1.5} className="size-3" />
                   Đóng
@@ -901,12 +900,11 @@ function KanbanCard({
           <span className="truncate flex-1">{errorMessage}</span>
           {lastAttemptedStatus && (
             <Pressable
-              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onStatusChange?.(item.id, lastAttemptedStatus);
               }}
-              className="shrink-0 underline underline-offset-2 hover:no-underline cursor-pointer"
+              className="shrink-0 underline underline-offset-2 hover:no-underline"
             >
               Thử lại
             </Pressable>
@@ -1057,11 +1055,10 @@ function DroppableColumn({
         <div className="flex items-center gap-0.5 opacity-0 group-hover/col:opacity-100 transition-opacity">
           {onAddTask && (
             <Pressable
-              type="button"
               onClick={() => onAddTask()}
               title={`Thêm công việc vào ${col.label || col.title}`}
               aria-label={`Thêm công việc vào ${col.label || col.title}`}
-              className="size-6 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              className="size-6 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <Plus strokeWidth={1.5} className="size-3.5" />
             </Pressable>
@@ -1097,9 +1094,8 @@ function DroppableColumn({
         {/* Load More Affordance */}
         {tasks.length > colLimit && (
           <Pressable
-            type="button"
             onClick={onIncreaseLimit}
-            className="w-full py-1.5 px-2 text-xs font-medium font-mono tabular-nums rounded border border-border/50 bg-card hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-center"
+            className="w-full py-1.5 px-2 text-xs font-medium font-mono tabular-nums rounded border border-border/50 bg-card hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors text-center"
           >
             + {Math.min(30, tasks.length - colLimit)} việc nữa ({tasks.length - colLimit})
           </Pressable>
@@ -1152,13 +1148,12 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
   return (
     <div ref={containerRef} className="relative inline-block">
       <Pressable
-        type="button"
         title="Tùy chọn hiển thị thẻ"
         aria-label="Tùy chọn hiển thị thẻ"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-colors cursor-pointer",
+          "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-colors",
           isOpen
             ? "bg-accent text-foreground border-border"
             : "bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted"
@@ -1183,9 +1178,8 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
               return (
                 <Pressable
                   key={opt.key}
-                  type="button"
                   onClick={() => onToggle(opt.key)}
-                  className="w-full flex items-center justify-between px-2 py-1.5 text-xs rounded hover:bg-accent/60 transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-xs rounded hover:bg-accent/60 transition-colors text-left"
                 >
                   <span className={cn(active ? "text-foreground font-medium" : "text-muted-foreground")}>
                     {opt.label}
@@ -1329,15 +1323,6 @@ export function TaskKanbanBoard({
     }
   };
 
-  const groupedTasks = React.useMemo(() => {
-    return groupTasksByStatus(
-      effectiveTasks,
-      levelFilter,
-      categoryFilter,
-      deferredSearchQuery
-    );
-  }, [effectiveTasks, levelFilter, categoryFilter, deferredSearchQuery]);
-
   const allFilteredItems = React.useMemo(() => {
     return filterKanbanItems(
       effectiveTasks,
@@ -1346,6 +1331,11 @@ export function TaskKanbanBoard({
       deferredSearchQuery
     );
   }, [effectiveTasks, levelFilter, categoryFilter, deferredSearchQuery]);
+
+  const groupedTasks = React.useMemo(
+    () => groupKanbanItemsByStatus(allFilteredItems),
+    [allFilteredItems]
+  );
 
   const handleStatusChangeInternal = React.useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
@@ -1515,10 +1505,9 @@ export function TaskKanbanBoard({
         {KANBAN_COLUMNS.map((col, idx) => (
           <Pressable
             key={col.id}
-            type="button"
             onClick={() => scrollToColumn(idx)}
             className={cn(
-              "h-8 px-2.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5",
+              "h-8 px-2.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5",
               activeColumnIndex === idx
                 ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
                 : "bg-muted/40 text-muted-foreground hover:bg-muted"

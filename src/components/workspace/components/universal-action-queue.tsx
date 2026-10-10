@@ -155,9 +155,8 @@ export function UniversalActionQueue({
           </div>
           {onFilterCanvas && (
             <Pressable
-              type="button"
               onClick={() => onFilterCanvas("overdue")}
-              className="text-xs font-medium text-destructive hover:underline cursor-pointer"
+              className="text-xs font-medium text-destructive hover:underline"
             >
               Xem trên bảng
             </Pressable>
@@ -181,9 +180,8 @@ export function UniversalActionQueue({
             </span>
             {onFilterCanvas && (
               <Pressable
-                type="button"
                 onClick={() => onFilterCanvas("approvals")}
-                className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="text-xs text-slate-400 hover:text-slate-700"
               >
                 Lọc trên bảng
               </Pressable>
@@ -224,7 +222,6 @@ export function UniversalActionQueue({
                       <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
                         <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
                         <Pressable
-                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelectTask({
@@ -233,16 +230,15 @@ export function UniversalActionQueue({
                               taskCode: parentCode,
                             } as SchoolTask);
                           }}
-                          className="hover:text-slate-700 truncate text-left cursor-pointer"
+                          className="hover:text-slate-700 truncate text-left"
                         >
                           {parentCode ? `[${parentCode}] ` : ""}{parentTitle}
                         </Pressable>
                       </div>
                     )}
                     <Pressable
-                      type="button"
                       onClick={() => onSelectTask(item.task)}
-                      className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block cursor-pointer"
+                      className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block"
                     >
                       {item.task.title}
                     </Pressable>
@@ -265,14 +261,13 @@ export function UniversalActionQueue({
                     </span>
                     {isItemOverdue && onRemindDRI && (
                       <Pressable
-                        type="button"
                         onClick={() =>
                           onRemindDRI(
                             item.task.id,
                             item.submittedBy || (item.task as any).assignedTo || ""
                           )
                         }
-                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-destructive bg-danger-soft hover:bg-destructive/15 transition-colors cursor-pointer"
+                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-destructive bg-danger-soft hover:bg-destructive/15 transition-colors"
                         title="Đôn đốc tiến độ thực hiện nhiệm vụ"
                       >
                         Đôn đốc DRI
@@ -281,9 +276,8 @@ export function UniversalActionQueue({
 
                     {scope === "unit" && onCreateSubtask && (
                       <Pressable
-                        type="button"
                         onClick={() => onCreateSubtask(item.task.id)}
-                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
                         title="Phân rã nhiệm vụ cho chuyên viên"
                       >
                         Phân công
@@ -291,8 +285,7 @@ export function UniversalActionQueue({
                     )}
 
                     <Pressable
-                      type="button"
-                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-warning bg-warning/10 hover:bg-warning/15 transition-colors cursor-pointer"
+                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-warning bg-warning/10 hover:bg-warning/15 transition-colors"
                       onClick={() => {
                         if (onOpenReview) {
                           onOpenReview(item.task);
@@ -311,9 +304,8 @@ export function UniversalActionQueue({
 
           {pendingApprovals.length > 3 && (
             <Pressable
-              type="button"
               aria-expanded={isApprovalsExpanded}
-              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center cursor-pointer"
+              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center"
               onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
             >
               {isApprovalsExpanded
@@ -336,9 +328,8 @@ export function UniversalActionQueue({
             </span>
             {onFilterCanvas && (
               <Pressable
-                type="button"
                 onClick={() => onFilterCanvas("submissions")}
-                className="text-xs text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="text-xs text-slate-400 hover:text-slate-700"
               >
                 Xem trên bảng
               </Pressable>
@@ -373,7 +364,6 @@ export function UniversalActionQueue({
                       <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
                         <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
                         <Pressable
-                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelectTask({
@@ -382,16 +372,15 @@ export function UniversalActionQueue({
                               taskCode: parentCode,
                             } as SchoolTask);
                           }}
-                          className="hover:text-slate-700 truncate text-left cursor-pointer"
+                          className="hover:text-slate-700 truncate text-left"
                         >
                           {parentCode ? `[${parentCode}] ` : ""}{parentTitle}
                         </Pressable>
                       </div>
                     )}
                     <Pressable
-                      type="button"
                       onClick={() => onSelectTask(item.task)}
-                      className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block cursor-pointer"
+                      className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block"
                     >
                       {item.task.title}
                     </Pressable>
@@ -411,8 +400,7 @@ export function UniversalActionQueue({
                       Chờ nộp BC
                     </span>
                     <Pressable
-                      type="button"
-                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
                       onClick={() => {
                         if (onOpenSubmit) {
                           const staffTask: StaffTask = ("assigneeName" in item.task)
@@ -449,9 +437,8 @@ export function UniversalActionQueue({
 
           {myPendingSubmissions.length > 3 && (
             <Pressable
-              type="button"
               aria-expanded={isSubmissionsExpanded}
-              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center cursor-pointer"
+              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center"
               onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
             >
               {isSubmissionsExpanded

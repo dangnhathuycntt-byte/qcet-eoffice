@@ -38,21 +38,19 @@ export default function OrgError({
         </div>
         <div className="flex items-center justify-center gap-2 pt-2">
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={reset}
-            className="gap-1.5 text-xs font-medium cursor-pointer"
+            className="gap-1.5 text-xs font-medium"
           >
             <RefreshCw className="size-3.5" strokeWidth={1.5} />
             <span>Thử lại</span>
           </Button>
           <Button
-            type="button"
             variant="secondary"
             size="sm"
             asChild
-            className="gap-1.5 text-xs font-medium cursor-pointer"
+            className="gap-1.5 text-xs font-medium"
           >
             <Link href="/dashboard">
               <ArrowLeft className="size-3.5" strokeWidth={1.5} />

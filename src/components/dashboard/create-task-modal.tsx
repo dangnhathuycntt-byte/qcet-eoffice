@@ -3,24 +3,10 @@
 import * as React from "react";
 import {
   X,
-  User,
-  Users,
   Building2,
-  Calendar,
-  CalendarClock,
   ChevronRight,
-  Loader2,
-  Tag,
-  Link2,
-  CheckCircle2,
-  AlertCircle,
   ChevronDown,
-  Sparkles,
-  Briefcase,
-  FileCheck,
-  Clock,
   ArrowRight,
-  ShieldAlert,
   Search,
   Check,
   Flag,
@@ -51,21 +37,13 @@ import {
 } from "@/domain/tasks/create-task-policy";
 import {
   type CreateTaskFormData,
-  type CreateTaskPersonnelRef,
-  type CreateTaskIdentityResult,
   type CreateTaskSubmissionStatus,
-  type CreateTaskSubmissionOutcome,
   getInitialTaskFormData,
-  ADVANCED_METADATA_PERSISTENCE_NOTICE,
   PRIORITY_OPTIONS,
   findDeptForMember,
-  canRoleSelectAssignee,
   resolveCreateTaskIdentity,
   formatDetailDateDisplay,
-  validateSubtaskDueDate,
-  validateSubtaskAssignment,
   validateTaskForm,
-  takeFormSnapshot,
   isFormDirty,
   resolveComboboxNavigation,
   canSelectOnEnter,
@@ -73,6 +51,7 @@ import {
 } from "@/domain/tasks/create-task-form-utils";
 import { CATEGORY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 import { Pressable } from "@/components/ui/pressable";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
 
 export {
   type TaskLevel,
@@ -132,8 +111,6 @@ interface DepartmentGroupLocal {
   aliases?: string[];
 }
 
-
-
 export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -150,15 +127,6 @@ export interface CreateTaskModalProps {
   initialLeadAssigneeName?: string;
 }
 
-function normalizeVietnameseText(str: string): string {
-  return str
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase()
-    .trim();
-}
 
 export function CreateTaskModal({
   isOpen,
@@ -323,16 +291,16 @@ export function CreateTaskModal({
 
   // Search filtered personnel list for Combobox
   const searchedPersonnel = React.useMemo(() => {
-    const query = normalizeVietnameseText(assigneeSearchQuery);
+    const query = foldVietnamese(assigneeSearchQuery);
     return filteredGroups
       .map((g) => {
         const matchingMembers = g.members.filter((m) => {
           if (!query) return true;
-          const nameMatch = normalizeVietnameseText(m.name).includes(query);
-          const titleMatch = normalizeVietnameseText(m.title).includes(query);
-          const roleMatch = normalizeVietnameseText(m.role).includes(query);
-          const deptMatch = normalizeVietnameseText(g.department).includes(query);
-          const codeMatch = normalizeVietnameseText(g.code).includes(query);
+          const nameMatch = foldVietnamese(m.name).includes(query);
+          const titleMatch = foldVietnamese(m.title).includes(query);
+          const roleMatch = foldVietnamese(m.role).includes(query);
+          const deptMatch = foldVietnamese(g.department).includes(query);
+          const codeMatch = foldVietnamese(g.code).includes(query);
           return nameMatch || titleMatch || roleMatch || deptMatch || codeMatch;
         });
         return {
@@ -693,32 +661,6 @@ export function CreateTaskModal({
     }
   };
 
-  const handleDatePreset = (days: number) => {
-    const base = new Date();
-    let dateStr: string;
-    if (days === -1) {
-      const endOfMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-      dateStr = endOfMonth.toISOString().split("T")[0];
-    } else {
-      base.setDate(base.getDate() + days);
-      dateStr = base.toISOString().split("T")[0];
-    }
-    if (effectiveParentDueDate) {
-      const pDate = effectiveParentDueDate.split("T")[0];
-      if (dateStr > pDate) {
-        dateStr = pDate;
-      }
-    }
-    setFormData((prev) => ({ ...prev, dueDate: dateStr }));
-    if (errors.dueDate) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next.dueDate;
-        return next;
-      });
-    }
-  };
-
   const clearError = (field: string) => {
     setErrors((prev) => {
       const next = { ...prev };
@@ -795,10 +737,9 @@ export function CreateTaskModal({
                 {!isSubtaskMode && !isManager && !isStaff && (
                   <div className="hidden sm:inline-flex items-center rounded-md bg-muted/60 p-0.5 text-xs ml-2">
                     <Pressable
-                      type="button"
                       onClick={() => setFormData((p) => ({ ...p, level: "TRUONG", parentTaskId: undefined }))}
                       className={cn(
-                        "rounded px-2 py-0.5 font-medium transition-colors cursor-pointer",
+                        "rounded px-2 py-0.5 font-medium transition-colors",
                         formData.level === "TRUONG"
                           ? "bg-card text-foreground shadow-2xs font-semibold"
                           : "text-muted-foreground hover:text-foreground"
@@ -807,10 +748,9 @@ export function CreateTaskModal({
                       Toàn trường
                     </Pressable>
                     <Pressable
-                      type="button"
                       onClick={() => setFormData((p) => ({ ...p, level: "DON_VI", coAssignees: [] }))}
                       className={cn(
-                        "rounded px-2 py-0.5 font-medium transition-colors cursor-pointer",
+                        "rounded px-2 py-0.5 font-medium transition-colors",
                         formData.level === "DON_VI"
                           ? "bg-card text-foreground shadow-2xs font-semibold"
                           : "text-muted-foreground hover:text-foreground"
@@ -824,10 +764,9 @@ export function CreateTaskModal({
 
               {/* Close Button */}
               <Pressable
-                type="button"
                 onClick={handleRequestClose}
                 aria-label="Đóng"
-                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
               >
                 <X className="size-4" strokeWidth={1.5} />
               </Pressable>
@@ -993,10 +932,9 @@ export function CreateTaskModal({
                             {/* Department Filter Chips */}
                             <div className="flex items-center gap-1 mt-1.5 overflow-x-auto thin-scrollbar pb-0.5">
                               <Pressable
-                                type="button"
                                 onClick={() => setDeptFilter("ALL")}
                                 className={cn(
-                                  "rounded px-2 py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
+                                  "rounded px-2 py-0.5 text-xs font-medium shrink-0 transition-colors",
                                   deptFilter === "ALL"
                                     ? "bg-primary text-primary-foreground font-semibold"
                                     : "bg-background text-muted-foreground hover:text-foreground border border-border/50"
@@ -1007,10 +945,9 @@ export function CreateTaskModal({
                               {departmentGroups.map((g, idx) => (
                                 <Pressable
                                   key={`chip-${g.code}-${idx}`}
-                                  type="button"
                                   onClick={() => setDeptFilter(g.code)}
                                   className={cn(
-                                    "rounded px-2 py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
+                                    "rounded px-2 py-0.5 text-xs font-medium shrink-0 transition-colors",
                                     deptFilter === g.code
                                       ? "bg-primary text-primary-foreground font-semibold"
                                       : "bg-background text-muted-foreground hover:text-foreground border border-border/50"
@@ -1047,7 +984,6 @@ export function CreateTaskModal({
                                       return (
                                         <Pressable
                                           key={`pop-opt-${group.code}-${member.name}-${idx}`}
-                                          type="button"
                                           role="option"
                                           id={`assignee-option-${group.code}-${member.name.replace(/\s+/g, "-")}`}
                                           aria-selected={isSelected}
@@ -1059,7 +995,7 @@ export function CreateTaskModal({
                                             if (flatIndex >= 0) setActiveOptionIndex(flatIndex);
                                           }}
                                           className={cn(
-                                            "w-full px-2 py-1.5 rounded-md text-left flex items-center justify-between gap-2 transition-colors cursor-pointer text-xs",
+                                            "w-full px-2 py-1.5 rounded-md text-left flex items-center justify-between gap-2 transition-colors text-xs",
                                             isSelected
                                               ? "bg-primary/10 text-primary font-semibold"
                                               : isActive
@@ -1112,12 +1048,11 @@ export function CreateTaskModal({
                         </p>
                         {onOpenCollaborationRequest && (
                           <Pressable
-                            type="button"
                             onClick={() => {
                               onClose();
                               onOpenCollaborationRequest(selectedAssigneeDept.code);
                             }}
-                            className="inline-flex items-center gap-1 font-semibold text-warning hover:underline cursor-pointer pt-0.5"
+                            className="inline-flex items-center gap-1 font-semibold text-warning hover:underline pt-0.5"
                           >
                             <span>Tạo phiếu yêu cầu phối hợp</span>
                             <ArrowRight className="size-3" strokeWidth={1.5} />
@@ -1203,13 +1138,12 @@ export function CreateTaskModal({
                         {PRIORITY_OPTIONS.map((opt) => (
                           <Pressable
                             key={opt.value}
-                            type="button"
                             onClick={() => {
                               setFormData((p) => ({ ...p, priority: opt.value }));
                               setIsPriorityOpen(false);
                             }}
                             className={cn(
-                              "w-full text-left px-2.5 py-1.5 rounded-md text-xs flex items-center justify-between cursor-pointer transition-colors",
+                              "w-full text-left px-2.5 py-1.5 rounded-md text-xs flex items-center justify-between transition-colors",
                               (formData.priority || "MEDIUM") === opt.value
                                 ? "bg-accent font-semibold text-foreground"
                                 : "text-foreground hover:bg-accent/70"
@@ -1236,10 +1170,9 @@ export function CreateTaskModal({
                 {/* 4. Progressive Disclosure: Tùy chọn nâng cao */}
                 <div className="pt-2 border-t border-border/50">
                   <Pressable
-                    type="button"
                     onClick={() => setShowAdvanced((prev) => !prev)}
                     aria-expanded={showAdvanced}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer py-1"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors py-1"
                   >
                     <ChevronDown
                       className={cn("size-3.5 transition-transform", !showAdvanced && "-rotate-90")}
@@ -1396,27 +1329,27 @@ export function CreateTaskModal({
                   >
                     <p className="font-semibold">Vui lòng kiểm tra lại:</p>
                     {errors.title && (
-                      <Pressable type="button" onClick={() => focusFieldWithError("task-title-input")} className="block text-left hover:underline cursor-pointer">
+                      <Pressable onClick={() => focusFieldWithError("task-title-input")} className="block text-left hover:underline">
                         • {errors.title}
                       </Pressable>
                     )}
                     {errors.leadAssigneeName && (
-                      <Pressable type="button" onClick={() => focusFieldWithError("task-assignee-field")} className="block text-left hover:underline cursor-pointer">
+                      <Pressable onClick={() => focusFieldWithError("task-assignee-field")} className="block text-left hover:underline">
                         • {errors.leadAssigneeName}
                       </Pressable>
                     )}
                     {errors.dueDate && (
-                      <Pressable type="button" onClick={() => focusFieldWithError("task-due-date-input")} className="block text-left hover:underline cursor-pointer">
+                      <Pressable onClick={() => focusFieldWithError("task-due-date-input")} className="block text-left hover:underline">
                         • {errors.dueDate}
                       </Pressable>
                     )}
                     {errors.internalDueDate && (
-                      <Pressable type="button" onClick={() => focusFieldWithError("task-internal-due-input", true)} className="block text-left hover:underline cursor-pointer">
+                      <Pressable onClick={() => focusFieldWithError("task-internal-due-input", true)} className="block text-left hover:underline">
                         • {errors.internalDueDate}
                       </Pressable>
                     )}
                     {errors.requiredDeliverables && (
-                      <Pressable type="button" onClick={() => focusFieldWithError("task-deliverables-input", true)} className="block text-left hover:underline cursor-pointer">
+                      <Pressable onClick={() => focusFieldWithError("task-deliverables-input", true)} className="block text-left hover:underline">
                         • {errors.requiredDeliverables}
                       </Pressable>
                     )}
@@ -1442,12 +1375,11 @@ export function CreateTaskModal({
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 ml-auto w-full sm:w-auto justify-end">
                   <Button
-                    type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleRequestClose}
                     disabled={isSubmitting}
-                    className="h-8 rounded-lg px-3 text-xs font-medium cursor-pointer"
+                    className="h-8 rounded-lg px-3 text-xs font-medium"
                   >
                     Hủy
                   </Button>
@@ -1456,7 +1388,7 @@ export function CreateTaskModal({
                     size="sm"
                     disabled={!createPolicy.canCreate || isExternalDeptBlocked || isSubmitting}
                     className={cn(
-                      "h-8 rounded-lg px-4 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer",
+                      "h-8 rounded-lg px-4 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90",
                       (!createPolicy.canCreate || isExternalDeptBlocked || isSubmitting) && "opacity-50 cursor-not-allowed"
                     )}
                   >
@@ -1501,14 +1433,13 @@ export function CreateTaskModal({
               </div>
               <div className="flex items-center justify-end gap-2 pt-1">
                 <Button
-                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     setShowDiscardConfirm(false);
                     forceClose();
                   }}
-                  className="text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                  className="text-xs h-8 text-destructive hover:bg-destructive/10"
                 >
                   Bỏ thay đổi
                 </Button>
@@ -1518,7 +1449,7 @@ export function CreateTaskModal({
                       ref={continueButtonRef}
                       size="sm"
                       autoFocus
-                      className="text-xs h-8 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                      className="text-xs h-8 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
                     />
                   }
                 >

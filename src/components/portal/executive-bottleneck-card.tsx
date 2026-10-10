@@ -122,7 +122,6 @@ export function ExecutiveBottleneckCard({
 
         <div className="flex items-center gap-1.5 shrink-0">
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={(e) => {
@@ -137,7 +136,6 @@ export function ExecutiveBottleneckCard({
           </Button>
 
           <Button
-            type="button"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();

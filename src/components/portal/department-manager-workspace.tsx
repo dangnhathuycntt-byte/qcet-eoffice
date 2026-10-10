@@ -546,12 +546,11 @@ export function LegacyDepartmentManagerWorkspace({
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <Button
-            type="button"
             size="sm"
             onClick={() => {
               window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-[0.98] whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs active:scale-[0.98] whitespace-nowrap"
             title="Khởi tạo nhiệm vụ mới hoặc phân công cho nhân sự trong đơn vị"
           >
             <Plus className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
@@ -573,7 +572,6 @@ export function LegacyDepartmentManagerWorkspace({
 
           {onRefresh && (
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={onRefresh}
@@ -849,7 +847,6 @@ export function LegacyDepartmentManagerWorkspace({
           />
           {searchTerm && (
             <Pressable
-              type="button"
               onClick={() => setSearchTerm("")}
               className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
             >
@@ -1174,10 +1171,9 @@ export function LegacyDepartmentManagerWorkspace({
                 ].map((tab) => (
                   <Pressable
                     key={tab.id}
-                    type="button"
                     onClick={() => setUnitFilter(tab.id)}
                     className={cn(
-                      "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                      "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
                       unitFilter === tab.id
                         ? "bg-background text-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground"
@@ -1263,7 +1259,7 @@ export function LegacyDepartmentManagerWorkspace({
                           <Button
                             size="sm"
                             onClick={() => handleOpenReview(task)}
-                            className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                            className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 bg-purple-600 hover:bg-purple-700 text-white"
                           >
                             <span>Thẩm định ngay</span>
                           </Button>
@@ -1272,7 +1268,7 @@ export function LegacyDepartmentManagerWorkspace({
                           variant="ghost"
                           size="sm"
                           onClick={() => onSelectTask?.(task)}
-                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 text-muted-foreground hover:text-foreground"
                         >
                           <span>Chi tiết</span>
                         </Button>
@@ -1315,10 +1311,9 @@ export function LegacyDepartmentManagerWorkspace({
               ].map((tab) => (
                 <Pressable
                   key={tab.id}
-                  type="button"
                   onClick={() => setMyTasksFilter(tab.id)}
                   className={cn(
-                    "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                    "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
                     myTasksFilter === tab.id
                       ? "bg-background text-foreground shadow-xs"
                       : "text-muted-foreground hover:text-foreground"
@@ -1418,7 +1413,7 @@ export function LegacyDepartmentManagerWorkspace({
                         <Button
                           size="sm"
                           onClick={() => handleOpenSubmit(task)}
-                          className="text-xs min-h-[44px] sm:h-8 bg-primary text-primary-foreground gap-1.5 cursor-pointer"
+                          className="text-xs min-h-[44px] sm:h-8 bg-primary text-primary-foreground gap-1.5"
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>Nộp minh chứng</span>

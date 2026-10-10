@@ -267,10 +267,9 @@ export function DossierRegistryView() {
           </div>
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <Pressable
-              type="button"
               onClick={handleRefresh}
               disabled={isLoading}
-              className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium shadow-2xs transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50 sm:min-h-9"
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium shadow-2xs transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50 sm:min-h-9"
             >
               <RefreshCw
                 className={cn("size-3.5", isLoading && "animate-spin")}
@@ -279,9 +278,8 @@ export function DossierRegistryView() {
               Làm mới
             </Pressable>
             <Pressable
-              type="button"
               onClick={() => alert("Chức năng tạo hồ sơ mới đang phát triển")}
-              className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 active:scale-[0.98] sm:min-h-9"
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 active:scale-[0.98] sm:min-h-9"
             >
               <Plus className="size-3.5" strokeWidth={1.5} />
               Tạo hồ sơ mới

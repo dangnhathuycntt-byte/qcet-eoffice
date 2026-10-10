@@ -262,7 +262,6 @@ export function DocumentCardList({
             >
               {doc.fileAttachment && (
                 <Button
-                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => onViewPdf?.(doc)}
@@ -275,7 +274,6 @@ export function DocumentCardList({
               )}
 
               <Button
-                type="button"
                 variant="secondary"
                 size="sm"
                 onClick={() => onSelectDocument?.(doc)}

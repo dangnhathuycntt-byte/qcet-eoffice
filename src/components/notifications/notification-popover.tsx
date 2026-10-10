@@ -185,9 +185,8 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
           <div className="flex items-center gap-1 shrink-0">
             {unreadCount > 0 && (
               <Pressable
-                type="button"
                 onClick={markAllAsRead}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
                 title="Đánh dấu tất cả là đã đọc"
               >
                 <CheckCheck size={13} strokeWidth={1.5} className="text-primary" />
@@ -201,10 +200,9 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
         <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/40">
           <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/80 border border-border/40 text-xs">
             <Pressable
-              type="button"
               onClick={() => setFilter("all")}
               className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer",
+                "px-2.5 py-1 rounded-md text-xs font-semibold transition-all",
                 filter === "all"
                   ? "bg-card text-foreground shadow-2xs border border-border/60"
                   : "text-muted-foreground hover:text-foreground"
@@ -213,10 +211,9 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               Tất cả ({notifications.length})
             </Pressable>
             <Pressable
-              type="button"
               onClick={() => setFilter("unread")}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all",
                 filter === "unread"
                   ? "bg-card text-foreground shadow-2xs border border-border/60"
                   : "text-muted-foreground hover:text-foreground"
@@ -253,10 +250,9 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               {error ?? "Không thể kết nối tới máy chủ thông báo."}
             </p>
             <Pressable
-              type="button"
               onClick={fetchNotifications}
               disabled={isLoading}
-              className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50"
+              className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
             >
               <RefreshCw size={12} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>
@@ -432,13 +428,12 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
       {!item.isRead ? (
         <div className="self-center shrink-0 flex items-center gap-1 pr-1">
           <Pressable
-            type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onRead();
             }}
-            className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-card hover:shadow-xs text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+            className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-card hover:shadow-xs text-muted-foreground hover:text-foreground transition-all"
             title="Đánh dấu là đã đọc"
           >
             <Check size={14} strokeWidth={1.5} />

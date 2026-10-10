@@ -124,11 +124,10 @@ export function ExecutiveUnitRadar({
           </div>
 
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={() => setShowConfirmModal(true)}
-            className="h-7 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground border-border hover:bg-muted/80 transition-colors shrink-0 cursor-pointer"
+            className="h-7 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground border-border hover:bg-muted/80 transition-colors shrink-0"
             title="Gửi thông báo đôn đốc toàn diện tới tất cả các đơn vị có vấn đề"
           >
             <Bell className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
@@ -149,9 +148,8 @@ export function ExecutiveUnitRadar({
               </strong>
             </span>
             <Pressable
-              type="button"
               onClick={() => onSelectDepartment("")}
-              className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 shrink-0 ml-1 cursor-pointer"
+              className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 shrink-0 ml-1"
             >
               <FilterX className="w-3 h-3" />
               Xem tất cả
@@ -169,12 +167,11 @@ export function ExecutiveUnitRadar({
             return (
               <Pressable
                 key={item.departmentCode}
-                type="button"
                 onClick={() =>
                   onSelectDepartment(isSelected ? "" : item.departmentCode)
                 }
                 className={cn(
-                  "group flex items-center justify-between py-1.5 px-2.5 rounded-lg text-left transition-colors cursor-pointer border",
+                  "group flex items-center justify-between py-1.5 px-2.5 rounded-lg text-left transition-colors border",
                   isSelected
                     ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/25 border-primary/30"
                     : color === "RED"
@@ -256,9 +253,8 @@ export function ExecutiveUnitRadar({
                 </h3>
               </div>
               <Pressable
-                type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md"
                 aria-label="Đóng"
               >
                 <X className="w-4 h-4" />
@@ -273,19 +269,17 @@ export function ExecutiveUnitRadar({
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowConfirmModal(false)}
-                className="text-xs h-8 cursor-pointer"
+                className="text-xs h-8"
               >
                 Hủy bỏ
               </Button>
               <Button
-                type="button"
                 size="sm"
                 onClick={handleConfirmRemind}
-                className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold cursor-pointer"
+                className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
               >
                 Xác nhận đôn đốc
               </Button>

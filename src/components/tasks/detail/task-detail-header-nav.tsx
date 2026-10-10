@@ -68,9 +68,8 @@ export function TaskDetailHeaderNav({
         {/* Cập nhật tiến độ */}
         {onOpenProgressModal && (
           <Pressable
-            type="button"
             onClick={onOpenProgressModal}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors"
             title="Cập nhật tiến độ nhiệm vụ"
           >
             <span className="text-xs">Cập nhật tiến độ</span>

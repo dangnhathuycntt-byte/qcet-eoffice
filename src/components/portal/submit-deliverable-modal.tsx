@@ -398,9 +398,8 @@ export function SubmitDeliverableModal({
                   <span>Đã khôi phục nội dung bản nháp lưu tạm trước đó.</span>
                 </div>
                 <Pressable
-                  type="button"
                   onClick={handleClearDraft}
-                  className="font-medium underline hover:text-blue-900 cursor-pointer shrink-0"
+                  className="font-medium underline hover:text-blue-900 shrink-0"
                 >
                   Xóa nháp
                 </Pressable>
@@ -478,14 +477,13 @@ export function SubmitDeliverableModal({
                     </span>
                   </div>
                   <Pressable
-                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRemoveFile();
                     }}
                     title="Xóa tệp đính kèm"
                     aria-label="Xóa tệp đính kèm"
-                    className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                    className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                   >
                     <Trash2 className="size-3.5" strokeWidth={1.5} />
                   </Pressable>
@@ -602,12 +600,11 @@ export function SubmitDeliverableModal({
           {/* Footer Actions */}
           <div className="shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border/60 px-4 py-3 sm:px-6 sm:py-3.5 bg-muted/20 mt-auto">
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={onClose}
               disabled={submittingNow}
-              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-medium rounded-xl cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-medium rounded-xl"
             >
               Hủy bỏ
             </Button>
@@ -615,7 +612,7 @@ export function SubmitDeliverableModal({
               type="submit"
               size="sm"
               disabled={submittingNow}
-              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 active:scale-[0.99]"
+              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-xs disabled:opacity-50 active:scale-[0.99]"
             >
               {submittingNow ? (
                 <>

@@ -114,7 +114,6 @@ export function PriorOverdueBacklogBanner({
 
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
           <Button
-            type="button"
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
@@ -126,7 +125,6 @@ export function PriorOverdueBacklogBanner({
           </Button>
 
           <Button
-            type="button"
             size="sm"
             onClick={handleViewAndResolve}
             className="bg-warning hover:bg-warning/90 active:bg-warning/80 active:scale-[0.97] text-white text-xs font-semibold gap-1.5 h-8 px-3 rounded-xl shadow-xs transition-all"

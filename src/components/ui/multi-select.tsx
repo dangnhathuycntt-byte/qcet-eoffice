@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface MultiSelectOption {
   value: string;
@@ -184,7 +185,7 @@ export function MultiSelect({
                 <button
                   type="button"
                   onClick={(e) => handleRemoveValue(val, e)}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation"
+                  className={`rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer outline-none ${focusRingClass} relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation`}
                   aria-label={`Xóa ${labelText}`}
                 >
                   <X className="size-3" />
@@ -229,7 +230,7 @@ export function MultiSelect({
             <button
               type="button"
               onClick={handleClearAll}
-              className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation"
+              className={`flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer outline-none ${focusRingClass} relative before:absolute before:-inset-1.5 before:content-[''] touch-manipulation`}
               aria-label="Xóa tất cả"
             >
               <X className="size-3.5" />

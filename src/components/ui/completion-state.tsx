@@ -56,7 +56,6 @@ export function CompletionState({
           </Button>
         ) : (
           <Button
-            type="button"
             variant="default"
             size="default"
             onClick={primaryAction.onClick}
@@ -72,7 +71,6 @@ export function CompletionState({
             </Button>
           ) : (
             <Button
-              type="button"
               variant="secondary"
               size="default"
               onClick={secondaryAction.onClick}

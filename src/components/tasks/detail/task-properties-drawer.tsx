@@ -72,9 +72,8 @@ export function TaskPropertiesDrawer({
             </div>
 
             <Pressable
-              type="button"
               onClick={onClose}
-              className="size-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="size-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               aria-label="Đóng bảng thuộc tính (Esc)"
             >
               <X className="size-4" strokeWidth={1.5} />

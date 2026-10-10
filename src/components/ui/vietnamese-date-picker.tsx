@@ -15,6 +15,7 @@ import {
   toIctDateTimeParts,
 } from "@/lib/format/date";
 import { Popover } from "@base-ui/react/popover";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export type DateGranularity = "day" | "month" | "quarter" | "half-year" | "year";
 
@@ -317,7 +318,7 @@ export function VietnameseDatePicker({
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-xs font-medium transition-colors duration-100 cursor-pointer select-none whitespace-nowrap outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1",
+            `group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-xs font-medium transition-colors duration-100 cursor-pointer select-none whitespace-nowrap outline-none ${focusRingClass}`,
             error
               ? "border-0 bg-danger-soft text-destructive"
               : isOpen
@@ -344,7 +345,7 @@ export function VietnameseDatePicker({
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "w-full flex items-center justify-between h-9 px-3 rounded-xl border-0 bg-secondary text-xs text-foreground font-mono tabular-nums transition-colors duration-100 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 focus-visible:bg-selected",
+            `w-full flex items-center justify-between h-9 px-3 rounded-xl border-0 bg-secondary text-xs text-foreground font-mono tabular-nums transition-colors duration-100 cursor-pointer outline-none ${focusRingClass} focus-visible:bg-selected`,
             isOpen && "bg-selected",
             disabled && "opacity-50 cursor-not-allowed",
             triggerClassName

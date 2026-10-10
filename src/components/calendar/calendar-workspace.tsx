@@ -196,9 +196,8 @@ export function CalendarEventDetailModal({
             </h3>
           </div>
           <Pressable
-            type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label="Đóng chi tiết sự kiện"
           >
             <X className="size-4" strokeWidth={1.5} />
@@ -275,7 +274,7 @@ export function CalendarEventDetailModal({
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="text-xs rounded-xl h-9 min-h-[44px] md:min-h-0 cursor-pointer"
+            className="text-xs rounded-xl h-9 min-h-[44px] md:min-h-0"
           >
             Đóng
           </Button>
@@ -666,11 +665,10 @@ export function CalendarWorkspace({
             ].map(({ id, label, icon: Icon }) => (
               <Pressable
                 key={id}
-                type="button"
                 onClick={() => setViewMode(id as CalendarViewMode)}
                 aria-pressed={viewMode === id}
                 className={cn(
-                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
                   viewMode === id
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -687,7 +685,7 @@ export function CalendarWorkspace({
             <Button
               size="sm"
               onClick={() => handleAddSlotClick(activeDateStr)}
-              className="gap-1.5 text-xs font-semibold rounded-lg h-7 px-2.5 cursor-pointer shrink-0"
+              className="gap-1.5 text-xs font-semibold rounded-lg h-7 px-2.5 shrink-0"
             >
               <Plus className="size-3.5" strokeWidth={1.5} />
               <span className="hidden sm:inline">Thêm nhiệm vụ</span>
@@ -710,9 +708,8 @@ export function CalendarWorkspace({
           />
           {searchQuery && (
             <Pressable
-              type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
               aria-label="Xóa tìm kiếm"
             >
               <X className="size-3" strokeWidth={1.5} />
@@ -783,9 +780,8 @@ export function CalendarWorkspace({
                 {QCET_DEPARTMENT_FILTER_OPTIONS.find((d) => d.id === selectedDepartment)?.label}
               </span>
               <Pressable
-                type="button"
                 onClick={() => setSelectedDepartment("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc đơn vị"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -800,9 +796,8 @@ export function CalendarWorkspace({
                 {QCET_ITEM_TYPE_OPTIONS.find((t) => t.id === selectedItemType)?.label}
               </span>
               <Pressable
-                type="button"
                 onClick={() => setSelectedItemType("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc loại hình"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -817,9 +812,8 @@ export function CalendarWorkspace({
                 {QCET_STATUS_FILTER_OPTIONS.find((s) => s.id === selectedStatus)?.label}
               </span>
               <Pressable
-                type="button"
                 onClick={() => setSelectedStatus("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc trạng thái"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -830,14 +824,13 @@ export function CalendarWorkspace({
             {filteredWorkItems.length} kết quả / {combinedWorkItems.length}
           </span>
           <Pressable
-            type="button"
             onClick={() => {
               setSelectedDepartment("ALL");
               setSelectedItemType("ALL");
               setSelectedStatus("ALL");
               setSearchQuery("");
             }}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>

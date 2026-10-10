@@ -423,11 +423,10 @@ export function ExecutiveBriefingModal({
 
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={handleCopySummary}
-              className="text-xs h-8 gap-1.5 cursor-pointer"
+              className="text-xs h-8 gap-1.5"
             >
               {copied ? (
                 <>
@@ -443,32 +442,29 @@ export function ExecutiveBriefingModal({
             </Button>
 
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={handleExportMarkdown}
-              className="text-xs h-8 gap-1.5 cursor-pointer"
+              className="text-xs h-8 gap-1.5"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Xuất Markdown</span>
             </Button>
 
             <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="text-xs h-8 gap-1.5 cursor-pointer"
+              className="text-xs h-8 gap-1.5"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>In báo cáo</span>
             </Button>
 
             <Button
-              type="button"
               size="sm"
               onClick={onClose}
-              className="text-xs h-8 px-4 cursor-pointer"
+              className="text-xs h-8 px-4"
             >
               Đóng
             </Button>

@@ -88,8 +88,7 @@ export function MobileTaskFilterSheet({
           </div>
           <BottomSheetClose asChild>
             <Pressable
-              type="button"
-              className="min-h-[44px] min-w-[44px] size-11 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-[0.98] touch-manipulation cursor-pointer"
+              className="min-h-[44px] min-w-[44px] size-11 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-[0.98] touch-manipulation"
               aria-label="Đóng bộ lọc"
             >
               <X className="h-5 w-5" strokeWidth={1.5} />
@@ -105,10 +104,9 @@ export function MobileTaskFilterSheet({
             </label>
             <div className="grid grid-cols-2 gap-2">
               <Pressable
-                type="button"
                 onClick={() => onStatusChange("ALL")}
                 className={cn(
-                  "min-h-[44px] px-3 py-2 text-xs rounded-xl border flex items-center justify-between font-medium transition-all touch-manipulation cursor-pointer active:scale-[0.98]",
+                  "min-h-[44px] px-3 py-2 text-xs rounded-xl border flex items-center justify-between font-medium transition-all touch-manipulation active:scale-[0.98]",
                   statusFilter === "ALL"
                     ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
                     : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
@@ -122,10 +120,9 @@ export function MobileTaskFilterSheet({
               {CORE_STATUS_OPTIONS.map((status) => (
                 <Pressable
                   key={status.value}
-                  type="button"
                   onClick={() => onStatusChange(status.value)}
                   className={cn(
-                    "min-h-[44px] px-3 py-2 text-xs rounded-xl border flex items-center justify-between font-medium transition-all touch-manipulation cursor-pointer active:scale-[0.98]",
+                    "min-h-[44px] px-3 py-2 text-xs rounded-xl border flex items-center justify-between font-medium transition-all touch-manipulation active:scale-[0.98]",
                     statusFilter === status.value
                       ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
                       : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
@@ -151,10 +148,9 @@ export function MobileTaskFilterSheet({
                 return (
                   <Pressable
                     key={month.value}
-                    type="button"
                     onClick={() => onMonthChange(month.value)}
                     className={cn(
-                      "min-h-[44px] px-3 py-2 text-xs rounded-xl border flex items-center justify-between font-medium transition-all touch-manipulation cursor-pointer active:scale-[0.98]",
+                      "min-h-[44px] px-3 py-2 text-xs rounded-xl border flex items-center justify-between font-medium transition-all touch-manipulation active:scale-[0.98]",
                       isSelected
                         ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
                         : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
@@ -177,10 +173,9 @@ export function MobileTaskFilterSheet({
             </label>
             <div className="space-y-1.5">
               <Pressable
-                type="button"
                 onClick={() => onDepartmentChange("ALL")}
                 className={cn(
-                  "w-full text-left px-3.5 py-2 text-sm rounded-xl min-h-[44px] flex items-center justify-between border transition-all touch-manipulation cursor-pointer active:scale-[0.98]",
+                  "w-full text-left px-3.5 py-2 text-sm rounded-xl min-h-[44px] flex items-center justify-between border transition-all touch-manipulation active:scale-[0.98]",
                   departmentFilter === "ALL"
                     ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
                     : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
@@ -196,10 +191,9 @@ export function MobileTaskFilterSheet({
                 return (
                   <Pressable
                     key={dept.code}
-                    type="button"
                     onClick={() => onDepartmentChange(dept.code)}
                     className={cn(
-                      "w-full text-left px-3.5 py-2 text-sm rounded-xl min-h-[44px] flex items-center justify-between border transition-all touch-manipulation cursor-pointer active:scale-[0.98]",
+                      "w-full text-left px-3.5 py-2 text-sm rounded-xl min-h-[44px] flex items-center justify-between border transition-all touch-manipulation active:scale-[0.98]",
                       isSelected
                         ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
                         : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
@@ -218,19 +212,17 @@ export function MobileTaskFilterSheet({
 
         <BottomSheetFooter className="flex flex-row items-center gap-2 border-t border-border">
           <Button
-            type="button"
             variant="outline"
             onClick={onReset}
-            className="flex-1 min-h-[44px] gap-1.5 active:scale-[0.98] touch-manipulation cursor-pointer"
+            className="flex-1 min-h-[44px] gap-1.5 active:scale-[0.98] touch-manipulation"
           >
             <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
             Thiết lập lại
           </Button>
           <BottomSheetClose asChild>
             <Button
-              type="button"
               onClick={onClose}
-              className="flex-1 min-h-[44px] active:scale-[0.98] touch-manipulation cursor-pointer"
+              className="flex-1 min-h-[44px] active:scale-[0.98] touch-manipulation"
             >
               Áp dụng
             </Button>

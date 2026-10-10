@@ -242,8 +242,8 @@ export function SubmissionApprovalPanel({
         <span className="mr-auto min-w-0 text-xs text-muted-foreground">
           {unitStepCount > 1 ? `${unitStepCount} đơn vị cùng duyệt → Lãnh đạo` : unitStepCount === 1 ? "1 đơn vị duyệt → Lãnh đạo" : "Chuyển thẳng lãnh đạo"}
         </span>
-        <Button type="button" size="sm" variant="outline" onClick={closeSubmit}>Hủy</Button>
-        <Button type="button" size="sm" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
+        <Button size="sm" variant="outline" onClick={closeSubmit}>Hủy</Button>
+        <Button size="sm" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
           {submitLabel}
         </Button>
       </div>
@@ -255,24 +255,23 @@ export function SubmissionApprovalPanel({
   const actions = (
     <>
       {state.canSubmit ? (
-        <Button type="button" size="sm" variant="outline" onClick={() => setMode("submit")}>
+        <Button size="sm" variant="outline" onClick={() => setMode("submit")}>
           {submitLabel}
         </Button>
       ) : null}
       {state.canRequestReturn && (
-        <Button type="button" size="sm" variant="ghost" onClick={() => setMode("return")}>
+        <Button size="sm" variant="ghost" onClick={() => setMode("return")}>
           Xin trả lại
         </Button>
       )}
       {state.canWithdraw && (
-        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void call("withdraw-approval", {}, "Không rút lại được")}>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => void call("withdraw-approval", {}, "Không rút lại được")}>
           Rút lại
         </Button>
       )}
       {state.myStep?.decisions.map((d) => (
         <Button
           key={d}
-          type="button"
           size="sm"
           variant={d === "APPROVE" ? "default" : "ghost"}
           className={cn(d === "REJECT" && "text-destructive hover:text-destructive")}
@@ -283,7 +282,7 @@ export function SubmissionApprovalPanel({
         </Button>
       ))}
       {state.canAskConsultation && (
-        <Button type="button" size="sm" variant="ghost" onClick={() => setMode("consult")}>
+        <Button size="sm" variant="ghost" onClick={() => setMode("consult")}>
           Xin ý kiến
         </Button>
       )}
@@ -331,7 +330,7 @@ export function SubmissionApprovalPanel({
               <span className={cn("flex shrink-0 items-center gap-1", s.status === "PENDING" ? "text-muted-foreground" : "text-foreground", "text-xs")}>
                 {STEP_STATUS_LABEL[s.status]}
                 {s.status === "PENDING" && state.reassignableStepIds?.includes(s.id) ? (
-                  <Button type="button" size="xs" variant="ghost" onClick={() => { setReassignStepId(s.id); setMode("reassign"); }}>
+                  <Button size="xs" variant="ghost" onClick={() => { setReassignStepId(s.id); setMode("reassign"); }}>
                     Thay người
                   </Button>
                 ) : null}
@@ -353,10 +352,10 @@ export function SubmissionApprovalPanel({
           Người trình xin trả lại tờ trình{state.returnRequest.note ? `: ${state.returnRequest.note}` : ""}
           {state.canDecideReturn && mode === "idle" ? (
             <span className="mt-1.5 flex gap-1.5">
-              <Button type="button" size="xs" disabled={busy} onClick={() => void call("decide-return-approval", { accept: true }, "Không ghi nhận được")}>
+              <Button size="xs" disabled={busy} onClick={() => void call("decide-return-approval", { accept: true }, "Không ghi nhận được")}>
                 Đồng ý trả lại
               </Button>
-              <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void call("decide-return-approval", { accept: false }, "Không ghi nhận được")}>
+              <Button size="xs" variant="ghost" disabled={busy} onClick={() => void call("decide-return-approval", { accept: false }, "Không ghi nhận được")}>
                 Từ chối
               </Button>
             </span>
@@ -383,14 +382,13 @@ export function SubmissionApprovalPanel({
           <Textarea compact value={note} maxLength={1000} aria-label={`Lý do ${DECISION_LABEL[decision].toLowerCase()}`} placeholder="Lý do (bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-16" />
           <div className="flex gap-1.5">
             <Button
-              type="button"
               size="xs"
               disabled={busy || (mustNote && note.trim().length < 3)}
               onClick={() => void call("decide-approval", { stepId: state.myStep!.id, decision, note: note.trim() }, "Không ghi được quyết định")}
             >
               {DECISION_LABEL[decision]}
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => { setMode("idle"); setDecision(null); setNote(""); }}>Hủy</Button>
+            <Button size="xs" variant="ghost" onClick={() => { setMode("idle"); setDecision(null); setNote(""); }}>Hủy</Button>
           </div>
         </div>
       )}
@@ -400,10 +398,10 @@ export function SubmissionApprovalPanel({
           <p className="text-xs text-muted-foreground">Tờ trình đã có người mở nên cần người đang chờ duyệt đồng ý mới trả về Nháp.</p>
           <Textarea compact value={note} maxLength={1000} aria-label="Lý do xin trả lại" placeholder="Lý do (bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
           <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || note.trim().length < 3} onClick={() => void call("request-return-approval", { note: note.trim() }, "Không gửi được đề nghị")}>
+            <Button size="xs" disabled={busy || note.trim().length < 3} onClick={() => void call("request-return-approval", { note: note.trim() }, "Không gửi được đề nghị")}>
               Gửi đề nghị
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => { setMode("idle"); setNote(""); }}>Hủy</Button>
+            <Button size="xs" variant="ghost" onClick={() => { setMode("idle"); setNote(""); }}>Hủy</Button>
           </div>
         </div>
       )}
@@ -423,14 +421,13 @@ export function SubmissionApprovalPanel({
           <Textarea compact value={reassignReason} maxLength={1000} aria-label="Lý do thay người" placeholder="Lý do (bắt buộc)" onChange={(e) => setReassignReason(e.target.value)} className="min-h-12" />
           <div className="flex gap-1.5">
             <Button
-              type="button"
               size="xs"
               disabled={busy || !reassignTo || reassignReason.trim().length < 3}
               onClick={() => void call("reassign-approval-step", { stepId: reassignStepId, approverUserId: reassignTo, reason: reassignReason.trim() }, "Không thay được người xử lý")}
             >
               Thay người
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
+            <Button size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
           </div>
         </div>
       )}
@@ -448,10 +445,10 @@ export function SubmissionApprovalPanel({
           />
           <Textarea compact value={question} maxLength={1000} aria-label="Nội dung xin ý kiến" placeholder="Nội dung cần xin ý kiến" onChange={(e) => setQuestion(e.target.value)} className="min-h-16" />
           <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || !consultantId || question.trim().length < 3} onClick={() => void call("ask-consultation", { consultantId, question: question.trim() }, "Không gửi được phiếu xin ý kiến")}>
+            <Button size="xs" disabled={busy || !consultantId || question.trim().length < 3} onClick={() => void call("ask-consultation", { consultantId, question: question.trim() }, "Không gửi được phiếu xin ý kiến")}>
               Gửi
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
+            <Button size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
           </div>
         </div>
       )}
@@ -468,7 +465,7 @@ export function SubmissionApprovalPanel({
               ) : c.canAnswer ? (
                 <div className="mt-1 space-y-1">
                   <Textarea compact value={answers[c.id] ?? ""} maxLength={2000} aria-label="Ý kiến trả lời" placeholder="Ý kiến của bạn" onChange={(e) => setAnswers((p) => ({ ...p, [c.id]: e.target.value }))} className="min-h-12" />
-                  <Button type="button" size="xs" disabled={busy || !(answers[c.id] ?? "").trim()} onClick={() => void call("answer-consultation", { consultationId: c.id, answer: answers[c.id].trim() }, "Không gửi được ý kiến")}>
+                  <Button size="xs" disabled={busy || !(answers[c.id] ?? "").trim()} onClick={() => void call("answer-consultation", { consultationId: c.id, answer: answers[c.id].trim() }, "Không gửi được ý kiến")}>
                     Trả lời
                   </Button>
                 </div>

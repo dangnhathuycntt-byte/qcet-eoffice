@@ -106,10 +106,9 @@ export function PermissionRecoveryGuide({
       {/* Platform Switcher Tabs */}
       <div className="flex p-1 bg-secondary rounded-xl border-0">
         <Pressable
-          type="button"
           onClick={() => setPlatform("chrome")}
           className={cn(
-            "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center",
+            "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center",
             platform === "chrome"
               ? "bg-card text-foreground shadow-none border-0"
               : "text-muted-foreground hover:text-foreground"
@@ -118,10 +117,9 @@ export function PermissionRecoveryGuide({
           Google Chrome / Máy tính
         </Pressable>
         <Pressable
-          type="button"
           onClick={() => setPlatform("safari")}
           className={cn(
-            "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center",
+            "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center",
             platform === "safari"
               ? "bg-card text-foreground shadow-none border-0"
               : "text-muted-foreground hover:text-foreground"
@@ -267,18 +265,16 @@ export function PermissionRecoveryGuide({
       {/* Action CTA: Reload & Dismiss */}
       <div className="pt-2 space-y-2">
         <Pressable
-          type="button"
           onClick={handleReload}
-          className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5"
+          className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all flex items-center justify-center gap-2.5"
         >
           <RefreshCw className="w-5 h-5" />
           <span>Tải lại trang ngay</span>
         </Pressable>
         {onDismiss && (
           <Pressable
-            type="button"
             onClick={onDismiss}
-            className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-muted-foreground font-medium text-base transition-colors cursor-pointer"
+            className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-muted-foreground font-medium text-base transition-colors"
           >
             Để sau
           </Pressable>
@@ -574,9 +570,8 @@ export function PushOnboardingSheet({
 
               <div className="pt-2 flex flex-col gap-3">
                 <Pressable
-                  type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors"
                 >
                   Để sau
                 </Pressable>
@@ -608,17 +603,15 @@ export function PushOnboardingSheet({
 
               <div className="pt-2 flex flex-col gap-3">
                 <Pressable
-                  type="button"
                   onClick={handleInstallClick}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all flex items-center justify-center gap-2.5"
                 >
                   <Download className="w-5 h-5" />
                   <span>CÀI ĐẶT 1-CHẠM</span>
                 </Pressable>
                 <Pressable
-                  type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors"
                 >
                   Để sau
                 </Pressable>
@@ -651,7 +644,6 @@ export function PushOnboardingSheet({
               {/* Granular topic selection */}
               <div className="border-0 rounded-xl overflow-hidden">
                 <Pressable
-                  type="button"
                   onClick={() => setShowPreferences((v) => !v)}
                   className="w-full px-4 py-3 bg-secondary hover:bg-secondary flex items-center justify-between text-left transition-colors min-h-[44px]"
                 >
@@ -722,10 +714,9 @@ export function PushOnboardingSheet({
 
               <div className="pt-2 flex flex-col gap-3">
                 <Pressable
-                  type="button"
                   onClick={handleSubscribeClick}
                   disabled={isLoading}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -735,9 +726,8 @@ export function PushOnboardingSheet({
                   <span>Bật thông báo trên thiết bị</span>
                 </Pressable>
                 <Pressable
-                  type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors"
                 >
                   Để sau
                 </Pressable>
@@ -760,9 +750,8 @@ export function PushOnboardingSheet({
                 </p>
               </div>
               <Pressable
-                type="button"
                 onClick={() => handleOpenChange(false)}
-                className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-none hover:bg-primary-hover transition-colors cursor-pointer mt-2"
+                className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-none hover:bg-primary-hover transition-colors mt-2"
               >
                 Hoàn tất
               </Pressable>

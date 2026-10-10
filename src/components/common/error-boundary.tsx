@@ -127,7 +127,6 @@ export function SectionErrorFallback({
         </p>
         <div className="flex items-center gap-2 pt-1">
           <Button
-            type="button"
             variant="outline"
             size="xs"
             onClick={resetErrorBoundary}
@@ -161,7 +160,6 @@ export function SectionErrorFallback({
 
       <div className="flex flex-wrap items-center justify-center gap-2.5">
         <Button
-          type="button"
           variant="default"
           size="sm"
           onClick={resetErrorBoundary}
@@ -173,7 +171,6 @@ export function SectionErrorFallback({
 
         {showReload && (
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={handleReloadPage}
@@ -186,7 +183,6 @@ export function SectionErrorFallback({
 
         {error?.message && (
           <Button
-            type="button"
             variant="ghost"
             size="sm"
             onClick={() => setShowDetails((prev) => !prev)}

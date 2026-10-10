@@ -99,7 +99,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
         onValueChange={(v) => setRole(v === "FOLLOWER" ? "FOLLOWER" : "COLLABORATOR")}
       />
       <TaskPanelActions onCancel={() => setAdding(false)}>
-        <Button variant="outline" type="button" size="xs" disabled={busy || !userId} onClick={() => void call("POST", { userId, role }, "Không thêm được người")}>
+        <Button variant="outline" size="xs" disabled={busy || !userId} onClick={() => void call("POST", { userId, role }, "Không thêm được người")}>
           Thêm
         </Button>
       </TaskPanelActions>
@@ -121,7 +121,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
             <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
               {p.roleLabel}
               {view.canManage && p.removable ? (
-                <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void call("DELETE", { userId: p.userId }, "Không bớt được người")}>
+                <Button size="xs" variant="ghost" disabled={busy} onClick={() => void call("DELETE", { userId: p.userId }, "Không bớt được người")}>
                   Bớt
                 </Button>
               ) : null}
@@ -131,7 +131,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
       </ul>
 
       {view.canManage && !adding && (
-        <Button type="button" size="xs" variant="ghost" onClick={() => setAdding(true)}>
+        <Button size="xs" variant="ghost" onClick={() => setAdding(true)}>
           Thêm người
         </Button>
       )}

@@ -70,7 +70,7 @@ export function OutgoingInitialSign({ documentId, className }: { documentId: str
         </ul>
       )}
       {state.canInitialSign && (
-        <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void sign()}>
+        <Button size="xs" variant="ghost" disabled={busy} onClick={() => void sign()}>
           Ký nháy
         </Button>
       )}

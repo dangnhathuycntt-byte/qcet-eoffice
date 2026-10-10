@@ -526,7 +526,6 @@ export function DepartmentCommandCard({
         {/* 4. Action footer: Button "Soi chi tiết việc đơn vị" with ChevronRight (strokeWidth={1.5}) */}
         <div className="pt-1">
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={(e) => {
@@ -650,11 +649,10 @@ export function DepartmentDrillDownPanel({
 
           {/* Button: "Thu gọn / Quay lại toàn trường" */}
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="h-8 gap-1.5 text-xs font-medium cursor-pointer border-border/60 hover:bg-accent hover:text-foreground"
+            className="h-8 gap-1.5 text-xs font-medium border-border/60 hover:bg-accent hover:text-foreground"
           >
             <ChevronUp size={14} strokeWidth={1.5} />
             <span>Thu gọn / Quay lại toàn trường</span>
@@ -662,10 +660,9 @@ export function DepartmentDrillDownPanel({
 
           {/* Quick close X button */}
           <Pressable
-            type="button"
             onClick={onClose}
             aria-label="Đóng bảng chi tiết"
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <X size={16} strokeWidth={1.5} />
           </Pressable>
@@ -724,10 +721,9 @@ export function DepartmentDrillDownPanel({
       <div className="space-y-3 pt-2">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-border/40 pb-2">
           <Pressable
-            type="button"
             onClick={() => setActiveTab("SCHOOL")}
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+              "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
               activeTab === "SCHOOL"
                 ? "bg-background text-foreground shadow-xs border border-border/80"
                 : "text-muted-foreground hover:text-foreground"
@@ -741,10 +737,9 @@ export function DepartmentDrillDownPanel({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => setActiveTab("UNIT")}
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+              "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
               activeTab === "UNIT"
                 ? "bg-background text-foreground shadow-xs border border-border/80"
                 : "text-muted-foreground hover:text-foreground"
@@ -835,14 +830,13 @@ export function DepartmentDrillDownPanel({
                     </div>
 
                     <Button
-                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectTask?.(task);
                       }}
-                      className="h-7 px-2.5 text-xs font-medium cursor-pointer border-border/60 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shrink-0"
+                      className="h-7 px-2.5 text-xs font-medium border-border/60 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shrink-0"
                     >
                       <span>Chi tiết</span>
                       <ArrowUpRight
@@ -966,10 +960,9 @@ export function ExecutiveDepartmentCommandCenter({
         {/* 3 filter tabs: Tất cả đơn vị, Điểm nghẽn cần BGH chỉ đạo, Chờ BGH ký duyệt */}
         <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-muted/60 border border-border/40">
           <Pressable
-            type="button"
             onClick={() => setActiveFilter("ALL")}
             className={cn(
-              "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+              "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all",
               activeFilter === "ALL"
                 ? "bg-background text-foreground shadow-xs border border-border/60"
                 : "text-muted-foreground hover:text-foreground"
@@ -983,10 +976,9 @@ export function ExecutiveDepartmentCommandCenter({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => setActiveFilter("BOTTLENECKS")}
             className={cn(
-              "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+              "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all",
               activeFilter === "BOTTLENECKS"
                 ? "bg-background text-destructive shadow-xs border border-destructive/30"
                 : "text-muted-foreground hover:text-foreground"
@@ -1015,10 +1007,9 @@ export function ExecutiveDepartmentCommandCenter({
           </Pressable>
 
           <Pressable
-            type="button"
             onClick={() => setActiveFilter("PENDING_APPROVAL")}
             className={cn(
-              "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+              "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all",
               activeFilter === "PENDING_APPROVAL"
                 ? "bg-background text-purple-700 shadow-xs border border-purple-200"
                 : "text-muted-foreground hover:text-foreground"
@@ -1094,7 +1085,6 @@ export function ExecutiveDepartmentCommandCenter({
             về lăng kính "Tất cả đơn vị" hoặc xóa từ khóa tìm kiếm.
           </p>
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={() => {

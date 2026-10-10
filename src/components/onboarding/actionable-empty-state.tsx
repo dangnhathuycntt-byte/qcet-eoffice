@@ -16,8 +16,8 @@ export function ActionableEmptyState({ onCreateTask, onOpenDocs }: ActionableEmp
       <h3 id="onboarding-empty-title" className="text-base font-semibold text-foreground">Chưa có nhiệm vụ nào</h3>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Nhiệm vụ bạn được giao sẽ hiện ở đây. Bạn có thể tra cứu văn bản của nhà trường để bắt đầu.</p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        {onCreateTask && <Button type="button" onClick={onCreateTask}><Plus aria-hidden="true" strokeWidth={1.5} />Tạo nhiệm vụ</Button>}
-        {onOpenDocs && <Button type="button" onClick={onOpenDocs} variant={onCreateTask ? "ghost" : "default"}><BookOpen aria-hidden="true" strokeWidth={1.5} />Tra cứu văn bản</Button>}
+        {onCreateTask && <Button onClick={onCreateTask}><Plus aria-hidden="true" strokeWidth={1.5} />Tạo nhiệm vụ</Button>}
+        {onOpenDocs && <Button onClick={onOpenDocs} variant={onCreateTask ? "ghost" : "default"}><BookOpen aria-hidden="true" strokeWidth={1.5} />Tra cứu văn bản</Button>}
       </div>
     </section>
   );

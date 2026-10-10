@@ -105,10 +105,10 @@ describe("Menu '/' — giao diện", () => {
   });
 
   it("ô nhập lệnh '/' có <input> thật giữ focus để gõ tiếp (node slash_input là void)", () => {
-    const el = src.slice(src.indexOf("function foldText"), src.indexOf("function SlashMenu({"));
+    const el = src.slice(src.indexOf("function SlashInputElement"), src.indexOf("function SlashMenu({"));
     assert.ok(el.includes("<input") && el.includes("inputRef.current?.focus()"), "phải tự lấy focus để gõ tiếp");
     assert.ok(el.includes("editor.tf.focus()"), "đóng/chọn xong phải trả focus về trình soạn thảo");
-    assert.ok(el.includes('normalize("NFD")'), "lọc không phân biệt dấu để gõ 'hinh anh' vẫn khớp");
+    assert.ok(el.includes("foldVietnamese("), "lọc không phân biệt dấu để gõ 'hinh anh' vẫn khớp");
   });
 
   it("khối nhúng không còn URL mặc định có sẵn", () => {

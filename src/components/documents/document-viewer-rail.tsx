@@ -36,7 +36,7 @@ export function RailButton({
         {render ? (
           React.cloneElement(render, { "aria-label": label, className: cn(RAIL_BUTTON, className) }, children)
         ) : (
-          <Pressable type="button" aria-label={label} className={cn(RAIL_BUTTON, className)} {...props}>
+          <Pressable aria-label={label} className={cn(RAIL_BUTTON, className)} {...props}>
             {children}
           </Pressable>
         )}
@@ -109,10 +109,10 @@ function SearchButton({ search }: { search: RailSearch }) {
           <span className="w-10 shrink-0 text-center text-xs tabular-nums text-muted-foreground" aria-live="polite">
             {searching ? (total > 0 ? `${active + 1}/${total}` : "0") : ""}
           </span>
-          <Pressable type="button" aria-label="Kết quả trước" disabled={total === 0} onClick={() => step(-1)} className={cn(RAIL_BUTTON, "size-7")}>
+          <Pressable aria-label="Kết quả trước" disabled={total === 0} onClick={() => step(-1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronUp strokeWidth={1.5} />
           </Pressable>
-          <Pressable type="button" aria-label="Kết quả sau" disabled={total === 0} onClick={() => step(1)} className={cn(RAIL_BUTTON, "size-7")}>
+          <Pressable aria-label="Kết quả sau" disabled={total === 0} onClick={() => step(1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronDown strokeWidth={1.5} />
           </Pressable>
         </div>
@@ -244,15 +244,15 @@ function ZoomMenu({ zoom, onZoomChange }: { zoom: number; onZoomChange: (zoom: n
       </Tooltip>
       <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
         <PopoverTitle className="px-2 pb-1 pt-1.5 text-xs font-normal text-muted-foreground">Tỷ lệ so với vừa chiều rộng</PopoverTitle>
-        <Pressable type="button" className={MENU_ITEM} disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
+        <Pressable className={MENU_ITEM} disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
           <ZoomIn strokeWidth={1.5} />
           Phóng to
         </Pressable>
-        <Pressable type="button" className={MENU_ITEM} disabled={zoom <= 50} onClick={() => onZoomChange(Math.max(zoom - 15, 50))}>
+        <Pressable className={MENU_ITEM} disabled={zoom <= 50} onClick={() => onZoomChange(Math.max(zoom - 15, 50))}>
           <ZoomOut strokeWidth={1.5} />
           Thu nhỏ
         </Pressable>
-        <Pressable type="button" className={MENU_ITEM} disabled={zoom === 100} onClick={() => onZoomChange(100)}>
+        <Pressable className={MENU_ITEM} disabled={zoom === 100} onClick={() => onZoomChange(100)}>
           <MoveHorizontal strokeWidth={1.5} />
           Vừa chiều rộng
           {zoom === 100 ? <Check className="ml-auto" strokeWidth={1.5} aria-hidden /> : null}
@@ -283,13 +283,13 @@ function ViewToolsMenu({ pages }: { pages: RailPages }) {
       <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1.5">
         <PopoverTitle className="px-0.5 pb-1.5 text-xs font-normal text-muted-foreground">Trang</PopoverTitle>
         <div className="flex items-center gap-1">
-          <Pressable type="button" aria-label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)} className={cn(RAIL_BUTTON, "size-7")}>
+          <Pressable aria-label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronUp strokeWidth={1.5} />
           </Pressable>
           <div className="min-w-0 flex-1">
             <PageJumpForm key={current} pages={pages} onDone={() => setOpen(false)} />
           </div>
-          <Pressable type="button" aria-label="Trang sau" disabled={current >= total} onClick={() => go(current + 1)} className={cn(RAIL_BUTTON, "size-7")}>
+          <Pressable aria-label="Trang sau" disabled={current >= total} onClick={() => go(current + 1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronDown strokeWidth={1.5} />
           </Pressable>
         </div>
@@ -318,7 +318,6 @@ function DownloadMenu({ fileUrl, onDownload }: { fileUrl: string; onDownload: ()
       <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
         <PopoverTitle className="sr-only">Tải về hoặc mở tệp</PopoverTitle>
         <Pressable
-          type="button"
           className={item}
           onClick={() => {
             onDownload();

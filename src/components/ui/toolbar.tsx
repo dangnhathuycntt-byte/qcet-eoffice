@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Toolbar as BaseToolbar } from "@base-ui/react/toolbar";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 /** Thanh công cụ: mũi tên trái/phải di chuyển giữa các điều khiển (roving focus). Chỉ đặt tối đa một ô nhập và để ở cuối. */
 export function Toolbar({ className, ...props }: React.ComponentPropsWithoutRef<typeof BaseToolbar.Root>) {
@@ -26,7 +27,7 @@ export function ToolbarButton({ className, ...props }: React.ComponentPropsWitho
   return (
     <BaseToolbar.Button
       className={cn(
-        "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors duration-100 hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 [&_svg]:size-4 motion-reduce:transition-none",
+        `inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors duration-100 hover:bg-accent hover:text-foreground ${focusRingClass} data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 [&_svg]:size-4 motion-reduce:transition-none`,
         className,
       )}
       {...props}

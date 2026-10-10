@@ -82,9 +82,8 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                 </div>
                 {canAssign && onAddSubTask && (
                   <Pressable
-                    type="button"
                     onClick={() => onAddSubTask(parentTask.id)}
-                    className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-[0.98] transition-colors"
+                    className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold active:scale-[0.98] transition-colors"
                   >
                     <Plus className="size-3" strokeWidth={1.5} />
                     <span>Thêm việc con</span>
@@ -130,9 +129,8 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                 {canAssign && onAddSubTask && (
                   <div className="pt-1 flex items-center">
                     <Pressable
-                      type="button"
                       onClick={() => onAddSubTask(parentTask.id)}
-                      className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium transition-colors"
                     >
                       <Plus className="size-3 text-primary" strokeWidth={1.5} />
                       <span>Thêm việc con cho nhiệm vụ này</span>

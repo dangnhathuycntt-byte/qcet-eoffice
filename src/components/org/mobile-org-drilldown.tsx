@@ -258,9 +258,8 @@ export function MobileOrgDrillDown({
         />
         {isSearching && (
           <Pressable
-            type="button"
             onClick={() => setSearchQuery("")}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground touch-manipulation"
             aria-label="Xóa tìm kiếm"
           >
             <X size={15} strokeWidth={1.5} />
@@ -274,9 +273,8 @@ export function MobileOrgDrillDown({
           <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
             <span>Kết quả tìm kiếm ({searchResults.length})</span>
             <Pressable
-              type="button"
               onClick={() => setSearchQuery("")}
-              className="text-primary hover:underline cursor-pointer"
+              className="text-primary hover:underline"
             >
               Đóng tìm kiếm
             </Pressable>
@@ -311,9 +309,8 @@ export function MobileOrgDrillDown({
           {currentLevel !== "root" && (
             <div className="flex items-center gap-2">
               <Pressable
-                type="button"
                 onClick={handleBack}
-                className="inline-flex items-center gap-2 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all touch-manipulation cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-2 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all touch-manipulation shadow-2xs"
                 data-testid="mobile-org-back-button"
               >
                 <ArrowLeft size={16} strokeWidth={1.5} className="text-foreground/80 shrink-0" />
@@ -346,9 +343,8 @@ export function MobileOrgDrillDown({
                   return (
                     <Pressable
                       key={grp.category}
-                      type="button"
                       onClick={() => handleSelectGroup(grp.category)}
-                      className="w-full flex items-center justify-between gap-3 p-3.5 min-h-[48px] rounded-xl border border-border/80 bg-card hover:bg-muted/40 active:bg-muted/60 transition-all text-left touch-manipulation cursor-pointer shadow-2xs group"
+                      className="w-full flex items-center justify-between gap-3 p-3.5 min-h-[48px] rounded-xl border border-border/80 bg-card hover:bg-muted/40 active:bg-muted/60 transition-all text-left touch-manipulation shadow-2xs group"
                       data-testid={`org-group-${grp.category.toLowerCase()}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -389,9 +385,8 @@ export function MobileOrgDrillDown({
                 {groupDepartments.map((dept) => (
                   <Pressable
                     key={dept.id}
-                    type="button"
                     onClick={() => handleSelectDepartment(dept)}
-                    className="w-full flex items-center justify-between gap-3 p-3.5 min-h-[48px] rounded-xl border border-border/80 bg-card hover:bg-muted/40 active:bg-muted/60 transition-all text-left touch-manipulation cursor-pointer shadow-2xs group"
+                    className="w-full flex items-center justify-between gap-3 p-3.5 min-h-[48px] rounded-xl border border-border/80 bg-card hover:bg-muted/40 active:bg-muted/60 transition-all text-left touch-manipulation shadow-2xs group"
                     data-testid={`dept-card-${dept.code.toLowerCase()}`}
                   >
                     <div className="min-w-0 flex-1">
@@ -530,9 +525,8 @@ export function MobileOrgDrillDown({
                 </div>
               </div>
               <Pressable
-                type="button"
                 onClick={() => setActiveStaffModal(null)}
-                className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer"
+                className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation"
                 aria-label="Đóng"
               >
                 <X size={18} strokeWidth={1.5} />

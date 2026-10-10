@@ -229,9 +229,8 @@ export function MobileAppInstallModal({
             </div>
           </div>
           <Pressable
-            type="button"
             onClick={handleClose}
-            className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
             aria-label="Đóng"
           >
             <X size={18} />
@@ -262,12 +261,11 @@ export function MobileAppInstallModal({
 
                 {isInstallable && !isStandalone && (
                   <Pressable
-                    type="button"
                     onClick={async () => {
                       await installApp();
                       handleClose();
                     }}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-none hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-none hover:bg-primary-hover active:scale-[0.98] transition-all shrink-0"
                   >
                     <Download size={14} />
                     <span>Cài đặt ứng dụng</span>
@@ -284,10 +282,9 @@ export function MobileAppInstallModal({
                   className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all truncate"
                 />
                 <Pressable
-                  type="button"
                   onClick={handleCopyLink}
                   className={cn(
-                    "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0",
+                    "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all shrink-0",
                     copied
                       ? "bg-emerald-600 text-white"
                       : "bg-card hover:bg-muted border-0 text-foreground"
@@ -334,10 +331,9 @@ export function MobileAppInstallModal({
                   {/* Tailscale Option */}
                   {networkInfo?.tailscaleUrl && (
                     <Pressable
-                      type="button"
                       onClick={() => setSelectedUrlType("tailscale")}
                       className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left cursor-pointer",
+                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
                         selectedUrlType === "tailscale"
                           ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
                           : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
@@ -380,10 +376,9 @@ export function MobileAppInstallModal({
                   {/* LAN Wi-Fi Option */}
                   {networkInfo?.lanUrl && (
                     <Pressable
-                      type="button"
                       onClick={() => setSelectedUrlType("lan")}
                       className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left cursor-pointer",
+                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
                         selectedUrlType === "lan"
                           ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
                           : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
@@ -415,10 +410,9 @@ export function MobileAppInstallModal({
 
                   {/* Current / Localhost Option */}
                   <Pressable
-                    type="button"
                     onClick={() => setSelectedUrlType("current")}
                     className={cn(
-                      "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left cursor-pointer",
+                      "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
                       selectedUrlType === "current"
                         ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
                         : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
@@ -456,10 +450,9 @@ export function MobileAppInstallModal({
                   className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all"
                 />
                 <Pressable
-                  type="button"
                   onClick={handleCopyLink}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                     copied
                       ? "bg-emerald-600 text-white"
                       : "bg-secondary text-foreground hover:bg-secondary/80 border-0"
@@ -477,10 +470,9 @@ export function MobileAppInstallModal({
           <div>
             <div className="flex items-center gap-1.5 border-0 pb-2 overflow-x-auto">
               <Pressable
-                type="button"
                 onClick={() => setActiveTab("ios")}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
                   activeTab === "ios"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -489,10 +481,9 @@ export function MobileAppInstallModal({
                 <span>iPhone / iPad (iOS)</span>
               </Pressable>
               <Pressable
-                type="button"
                 onClick={() => setActiveTab("android")}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
                   activeTab === "android"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -501,10 +492,9 @@ export function MobileAppInstallModal({
                 <span>Điện thoại Android</span>
               </Pressable>
               <Pressable
-                type="button"
                 onClick={() => setActiveTab("desktop")}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
                   activeTab === "desktop"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -616,12 +606,11 @@ export function MobileAppInstallModal({
                         Trình duyệt hiện tại sẵn sàng cài đặt ứng dụng QCET E-Office trực tiếp lên máy tính của bạn:
                       </p>
                       <Pressable
-                        type="button"
                         onClick={async () => {
                           await installApp();
                           handleClose();
                         }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary-hover transition-all cursor-pointer shadow-none active:scale-[0.98]"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary-hover transition-all shadow-none active:scale-[0.98]"
                       >
                         <Laptop size={15} />
                         <span>Cài đặt ngay lên máy tính này</span>
@@ -650,9 +639,8 @@ export function MobileAppInstallModal({
             <span>Đồng bộ thời gian thực qua Tailscale &amp; Web Push</span>
           </div>
           <Pressable
-            type="button"
             onClick={handleClose}
-            className="px-4 py-2 min-h-[44px] rounded-lg border-0 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors cursor-pointer flex items-center justify-center"
+            className="px-4 py-2 min-h-[44px] rounded-lg border-0 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors flex items-center justify-center"
           >
             Đóng
           </Pressable>

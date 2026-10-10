@@ -298,9 +298,8 @@ export function OfflineConflictDialog({
           {/* Collapsible raw details */}
           <div>
             <Pressable
-              type="button"
               onClick={() => setShowDetails((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium py-1.5 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium py-1.5"
             >
               <span>{showDetails ? "Thu gọn chi tiết kỹ thuật" : "Xem chi tiết kỹ thuật"}</span>
               {showDetails ? (
@@ -323,12 +322,11 @@ export function OfflineConflictDialog({
           {conflicts.length > 1 && (
             <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-600">
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-                className="min-h-[44px] px-3 font-medium cursor-pointer"
+                className="min-h-[44px] px-3 font-medium"
               >
                 Xung đột trước
               </Button>
@@ -336,12 +334,11 @@ export function OfflineConflictDialog({
                 Mục {currentIndex + 1} trên {conflicts.length}
               </span>
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
                 disabled={currentIndex >= conflicts.length - 1}
                 onClick={() => setCurrentIndex((i) => Math.min(conflicts.length - 1, i + 1))}
-                className="min-h-[44px] px-3 font-medium cursor-pointer"
+                className="min-h-[44px] px-3 font-medium"
               >
                 Xung đột kế tiếp
               </Button>
@@ -352,22 +349,20 @@ export function OfflineConflictDialog({
         {/* Footer Actions */}
         <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50/90 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
           <Button
-            type="button"
             variant="outline"
             disabled={hookData.isResolving}
             onClick={() => handleAction("discard")}
-            className="min-h-[44px] px-4 text-xs font-semibold text-destructive hover:text-destructive hover:bg-danger-soft border-destructive/30 cursor-pointer inline-flex items-center justify-center gap-2"
+            className="min-h-[44px] px-4 text-xs font-semibold text-destructive hover:bg-danger-soft border-destructive/30 inline-flex items-center justify-center gap-2"
           >
             <Trash2 className="size-4" strokeWidth={1.5} />
             <span>Bỏ thay đổi của tôi</span>
           </Button>
 
           <Button
-            type="button"
             variant="default"
             disabled={hookData.isResolving}
             onClick={() => handleAction("override")}
-            className="min-h-[44px] px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer inline-flex items-center justify-center gap-2"
+            className="min-h-[44px] px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs inline-flex items-center justify-center gap-2"
           >
             <RotateCcw className="size-4" strokeWidth={1.5} />
             <span>Áp dụng lại (Ghi đè)</span>

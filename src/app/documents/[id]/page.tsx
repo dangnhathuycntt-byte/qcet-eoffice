@@ -41,10 +41,8 @@ export default async function DocumentDetailPage({ params, searchParams }: PageP
     redirect(`/login?returnTo=${encodeURIComponent(`/documents/${id}`)}`);
   }
 
-  const document = await getDocumentById(id);
+  const [document, authContext] = await Promise.all([getDocumentById(id), loadAuthorizationContext(userId)]);
   if (!document) notFound();
-
-  const authContext = await loadAuthorizationContext(userId);
   const readDecision = authorize(authContext, "document.read", buildDocumentResource(document));
   if (!readDecision.allowed || !canReadDocument(authContext, document)) notFound();
 

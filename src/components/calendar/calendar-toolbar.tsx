@@ -202,11 +202,10 @@ export function CalendarToolbar({
           </h2>
 
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={onToday}
-            className="min-h-[44px] sm:min-h-8 h-8 px-2.5 text-xs font-semibold rounded-lg border-border/70 hover:bg-secondary cursor-pointer"
+            className="min-h-[44px] sm:min-h-8 h-8 px-2.5 text-xs font-semibold rounded-lg border-border/70 hover:bg-secondary"
             aria-label={todayLabel(viewMode)}
           >
             {todayLabel(viewMode)}
@@ -226,12 +225,11 @@ export function CalendarToolbar({
               return (
                 <Pressable
                   key={option.id}
-                  type="button"
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => onViewChange(option.id)}
                   className={cn(
-                    "inline-flex items-center justify-center h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors cursor-pointer select-none",
+                    "inline-flex items-center justify-center h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
                     isActive
                       ? "bg-background text-foreground shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -251,9 +249,8 @@ export function CalendarToolbar({
               sideOffset={6}
               trigger={
                 <Button
-                  type="button"
                   size="sm"
-                  className="min-h-[44px] sm:min-h-8 h-8 px-3 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 gap-1 cursor-pointer"
+                  className="min-h-[44px] sm:min-h-8 h-8 px-3 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 gap-1"
                   aria-label="Tạo mới"
                 >
                   <Plus className="size-3.5" strokeWidth={1.5} />
@@ -358,11 +355,10 @@ export function CalendarToolbar({
             <PopoverTrigger
               render={
                 <Button
-                  type="button"
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-7 px-2.5 text-xs font-medium rounded-md border border-border/80 bg-background hover:bg-accent gap-1.5 cursor-pointer text-foreground",
+                    "h-7 px-2.5 text-xs font-medium rounded-md border border-border/80 bg-background hover:bg-accent gap-1.5 text-foreground",
                     hasActiveFilters && "border-foreground/40 bg-muted/60 text-foreground font-semibold"
                   )}
                   aria-label="Bộ lọc nhiệm vụ và sự kiện"
@@ -407,10 +403,9 @@ export function CalendarToolbar({
                     {ITEM_TYPE_OPTIONS.map((opt) => (
                       <Pressable
                         key={opt.id}
-                        type="button"
                         onClick={() => onItemTypeFilterChange(opt.id)}
                         className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                           itemTypeFilter === opt.id
                             ? "bg-secondary text-foreground font-bold"
                             : "hover:bg-muted/40 text-muted-foreground"
@@ -431,10 +426,9 @@ export function CalendarToolbar({
                   {LEVEL_OPTIONS.map((opt) => (
                     <Pressable
                       key={opt.id}
-                      type="button"
                       onClick={() => onLevelFilterChange(opt.id)}
                       className={cn(
-                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                         levelFilter === opt.id
                           ? "bg-secondary text-foreground font-bold"
                           : "hover:bg-muted/40 text-muted-foreground"
@@ -454,10 +448,9 @@ export function CalendarToolbar({
                   {STATUS_OPTIONS.map((opt) => (
                     <Pressable
                       key={opt.id}
-                      type="button"
                       onClick={() => onStatusFilterChange(opt.id)}
                       className={cn(
-                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                         statusFilter === opt.id
                           ? "bg-secondary text-foreground font-bold"
                           : "hover:bg-muted/40 text-muted-foreground"
@@ -500,13 +493,12 @@ export function CalendarToolbar({
                     {availableAcademicYears.map((yr) => (
                       <Pressable
                         key={yr}
-                        type="button"
                         onClick={() => {
                           onAcademicYearChange(yr);
                           setIsDisplayOpen(false);
                         }}
                         className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                           academicYear === yr
                             ? "bg-secondary text-foreground font-bold"
                             : "hover:bg-muted/40 text-muted-foreground"
@@ -603,9 +595,8 @@ export function CalendarToolbar({
                 {ITEM_TYPE_OPTIONS.find((o) => o.id === itemTypeFilter)?.label}
               </span>
               <Pressable
-                type="button"
                 onClick={() => onItemTypeFilterChange?.("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc loại"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -619,9 +610,8 @@ export function CalendarToolbar({
                 {LEVEL_OPTIONS.find((o) => o.id === levelFilter)?.label}
               </span>
               <Pressable
-                type="button"
                 onClick={() => onLevelFilterChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc cấp"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -635,9 +625,8 @@ export function CalendarToolbar({
                 {STATUS_OPTIONS.find((o) => o.id === statusFilter)?.label}
               </span>
               <Pressable
-                type="button"
                 onClick={() => onStatusFilterChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc trạng thái"
               >
                 <X className="size-2.5" strokeWidth={1.5} />
@@ -645,9 +634,8 @@ export function CalendarToolbar({
             </span>
           )}
           <Pressable
-            type="button"
             onClick={onResetFilters}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>

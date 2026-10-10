@@ -1008,7 +1008,6 @@ export function PersonalWorkbench({
               />
               {searchQuery && (
                 <Pressable
-                  type="button"
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label="Xóa tìm kiếm"
@@ -1155,7 +1154,6 @@ export function PersonalWorkbench({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs text-muted-foreground font-medium mr-0.5">Tiến độ:</span>
                           <Button
-                            type="button"
                             variant="outline"
                             size="sm"
                             disabled={isItemUpdating || item.status === "COMPLETED"}
@@ -1166,7 +1164,6 @@ export function PersonalWorkbench({
                             +10%
                           </Button>
                           <Button
-                            type="button"
                             variant="outline"
                             size="sm"
                             disabled={isItemUpdating || item.status === "COMPLETED"}
@@ -1178,7 +1175,6 @@ export function PersonalWorkbench({
                           </Button>
                           {item.status !== "COMPLETED" && (
                             <Button
-                              type="button"
                               variant="ghost"
                               size="sm"
                               disabled={isItemUpdating}
@@ -1196,7 +1192,6 @@ export function PersonalWorkbench({
                         {canReview && (
                           <div className="flex items-center gap-1.5">
                             <Button
-                              type="button"
                               variant="default"
                               size="sm"
                               disabled={isItemUpdating}
@@ -1207,7 +1202,6 @@ export function PersonalWorkbench({
                               <span>{effectiveRole === "EXECUTIVE" ? "Duyệt L2" : "Duyệt L1"}</span>
                             </Button>
                             <Button
-                              type="button"
                               variant="outline"
                               size="sm"
                               disabled={isItemUpdating}
@@ -1235,7 +1229,6 @@ export function PersonalWorkbench({
                           <div className="flex items-center justify-between text-xs text-warning font-medium">
                             <span>Ghi chú yêu cầu chỉnh sửa/bổ sung minh chứng:</span>
                             <Pressable
-                              type="button"
                               onClick={() => setRevisionTaskId(null)}
                               className="text-muted-foreground hover:text-foreground"
                             >
@@ -1252,7 +1245,6 @@ export function PersonalWorkbench({
                           />
                           <div className="flex items-center justify-end gap-2">
                             <Button
-                              type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => setRevisionTaskId(null)}
@@ -1261,7 +1253,6 @@ export function PersonalWorkbench({
                               Hủy
                             </Button>
                             <Button
-                              type="button"
                               variant="default"
                               size="sm"
                               disabled={isItemUpdating}
@@ -1283,9 +1274,8 @@ export function PersonalWorkbench({
             <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 flex-wrap">
               {searchFilteredItems.length > MAX_VISIBLE_DEFAULT && (
                 <Pressable
-                  type="button"
                   onClick={() => setShowAllItems(!showAllItems)}
-                  className="text-xs text-muted-foreground hover:text-foreground font-medium underline underline-offset-2 cursor-pointer"
+                  className="text-xs text-muted-foreground hover:text-foreground font-medium underline underline-offset-2"
                 >
                   {showAllItems
                     ? "Thu gọn"

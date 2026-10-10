@@ -640,10 +640,9 @@ export function InboxView() {
               />
               {queryInput && (
                 <Pressable
-                  type="button"
                   onClick={() => setQueryInput("")}
                   aria-label="Xóa từ khóa"
-                  className="absolute right-3 top-0 flex size-7 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-0 flex size-7 items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   <X className="size-3.5" strokeWidth={1.5} />
                 </Pressable>
@@ -1002,10 +1001,9 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
     <span className="inline-flex h-6 items-center gap-1 rounded-md border border-border/70 pl-2 text-xs text-foreground">
       {label}
       <Pressable
-        type="button"
         onClick={onRemove}
         aria-label={`Bỏ lọc ${label}`}
-        className="flex size-6 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
+        className="flex size-6 items-center justify-center text-muted-foreground hover:text-foreground"
       >
         <X className="size-3" strokeWidth={1.5} />
       </Pressable>

@@ -822,21 +822,19 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {isLoading && <Loader2 className="w-4 h-4 text-neutral-400 animate-spin shrink-0" />}
           {query && !isLoading && (
             <Pressable
-              type="button"
               onClick={() => {
                 setQuery("");
                 inputRef.current?.focus();
               }}
-              className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
               aria-label="Xóa nội dung tìm kiếm"
             >
               <X className="w-4 h-4" />
             </Pressable>
           )}
           <Pressable
-            type="button"
             onClick={handleClose}
-            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors cursor-pointer"
+            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
           >
             ESC
           </Pressable>
@@ -848,7 +846,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           className="flex items-center gap-1.5 px-4 py-2 bg-neutral-50/70 border-b border-neutral-100 text-xs overflow-x-auto"
         >
           <Pressable
-            type="button"
             onClick={() => {
               setActiveTab("all");
               setSelectedIndex(0);
@@ -863,7 +860,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             Tất cả
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => {
               setActiveTab("navigation");
               setSelectedIndex(0);
@@ -879,7 +875,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             Đi tới
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => {
               setActiveTab("tasks");
               setSelectedIndex(0);
@@ -895,7 +890,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             Nhiệm vụ {tasks.length > 0 && `(${tasks.length})`}
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => {
               setActiveTab("documents");
               setSelectedIndex(0);
@@ -911,7 +905,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             Văn bản {documents.length > 0 && `(${documents.length})`}
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => {
               setActiveTab("commands");
               setSelectedIndex(0);
@@ -927,7 +920,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             Hành động
           </Pressable>
           <Pressable
-            type="button"
             onClick={() => {
               setActiveTab("people");
               setSelectedIndex(0);
@@ -972,7 +964,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                   {COMMAND_INTENT_LABELS.recent}
                 </span>
                 <Pressable
-                  type="button"
                   onClick={clearRecentSearches}
                   className="text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1 transition-colors"
                 >

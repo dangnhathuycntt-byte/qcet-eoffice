@@ -317,12 +317,11 @@ export function CreateEventModal({
         {/* Modal Footer */}
         <div className="flex items-center justify-end gap-2 p-3.5 sm:p-4 border-t border-border/60 bg-muted/20 shrink-0 px-6">
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={() => handleOpenChange(false)}
             disabled={submitting}
-            className="min-h-[44px] sm:min-h-9 text-xs rounded-xl px-4 cursor-pointer"
+            className="min-h-[44px] sm:min-h-9 text-xs rounded-xl px-4"
           >
             Hủy
           </Button>
@@ -331,7 +330,7 @@ export function CreateEventModal({
             form="create-event-form"
             size="sm"
             disabled={submitting}
-            className="min-h-[44px] sm:min-h-9 text-xs font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+            className="min-h-[44px] sm:min-h-9 text-xs font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {submitting ? (
               <>

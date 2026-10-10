@@ -268,9 +268,8 @@ export function TaskSubtasksSection({
 
         {canEdit && (
           <Pressable
-            type="button"
             onClick={handleOpenInline}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted border border-border/60 hover:border-border transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted border border-border/60 hover:border-border transition-colors"
             title="Thêm chi tiết việc con"
             aria-label="Thêm chi tiết việc con"
           >
@@ -353,17 +352,16 @@ export function TaskSubtasksSection({
               <Pressable
                 type="submit"
                 disabled={isSaving || !newTitle.trim()}
-                className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-none transition-opacity"
+                className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 shadow-none transition-opacity"
               >
                 {isSaving ? "Đang lưu..." : "Thêm"}
               </Pressable>
               <Pressable
-                type="button"
                 onClick={() => {
                   setIsAddingInline(false);
                   setInlineError(null);
                 }}
-                className="p-1 rounded text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
                 title="Hủy"
               >
                 <X className="size-3.5" />
@@ -444,12 +442,11 @@ export function TaskSubtasksSection({
                       {/* Hover action: Hiển thị icon edit / delete khi hover row */}
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
                         <Pressable
-                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelectSubtask?.(st);
                           }}
-                          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                           title="Chỉnh sửa việc con"
                           aria-label="Chỉnh sửa việc con"
                         >
@@ -457,12 +454,11 @@ export function TaskSubtasksSection({
                         </Pressable>
                         {onDeleteSubtask && (
                           <Pressable
-                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               onDeleteSubtask(st);
                             }}
-                            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-danger-soft transition-colors cursor-pointer"
+                            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-danger-soft transition-colors"
                             title="Xóa việc con"
                             aria-label="Xóa việc con"
                           >

@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
 import { cva } from "class-variance-authority";
 import { motionDuration, motionEase } from "@/lib/motion/tokens";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export const propertyTriggerVariants = cva(
-  "inline-flex h-7 max-w-full items-center gap-1.5 rounded-md px-1.5 text-xs font-normal whitespace-nowrap select-none cursor-pointer outline-none transition-[background-color,color] duration-[var(--property-press-duration)] ease-[var(--property-ease)] hover:bg-accent data-[popup-open]:bg-accent data-[state=open]:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-1 disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:transform-none",
+  `inline-flex h-7 max-w-full items-center gap-1.5 rounded-md px-1.5 text-xs font-normal whitespace-nowrap select-none cursor-pointer outline-none transition-[background-color,color] duration-[var(--property-press-duration)] ease-[var(--property-ease)] hover:bg-accent data-[popup-open]:bg-accent data-[state=open]:bg-accent ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:transform-none`,
   {
     variants: {
       variant: {

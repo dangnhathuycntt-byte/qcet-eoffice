@@ -55,7 +55,7 @@ export interface ListToolbarSearchProps extends Omit<React.InputHTMLAttributes<H
   onClear?: () => void;
   loading?: boolean;
   wrapperClassName?: string;
-  /** Chiều rộng khi chưa focus và khi focus; ô tự mở rộng bằng transition */
+  /** Chiều rộng khi chưa focus và khi focus (mặc định chuẩn trang danh sách); ô tự mở rộng bằng transition */
   collapsedWidthClassName?: string;
   expandedWidthClassName?: string;
 }
@@ -68,8 +68,8 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
     onClear,
     loading,
     wrapperClassName,
-    collapsedWidthClassName,
-    expandedWidthClassName,
+    collapsedWidthClassName = LIST_TOOLBAR_SEARCH_COLLAPSED,
+    expandedWidthClassName = LIST_TOOLBAR_SEARCH_EXPANDED,
     className,
     onFocus,
     onBlur,

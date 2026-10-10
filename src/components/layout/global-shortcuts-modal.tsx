@@ -139,9 +139,8 @@ export function GlobalShortcutsModal() {
             </p>
           </div>
           <Pressable
-            type="button"
             onClick={() => setIsOpen(false)}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98] cursor-pointer"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]"
             aria-label="Đóng"
           >
             <X className="size-4" strokeWidth={1.5} />
@@ -161,9 +160,8 @@ export function GlobalShortcutsModal() {
           />
           {searchQuery && (
             <Pressable
-              type="button"
               onClick={() => setSearchQuery("")}
-              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              className="text-xs text-muted-foreground hover:text-foreground"
             >
               Xóa
             </Pressable>
@@ -232,14 +230,13 @@ export function GlobalShortcutsModal() {
           </span>
           <div className="flex items-center gap-3">
             <Pressable
-              type="button"
               onClick={() => {
                 setIsOpen(false);
                 if (typeof window !== "undefined") {
                   window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
                 }
               }}
-              className="text-primary hover:underline font-medium cursor-pointer"
+              className="text-primary hover:underline font-medium"
             >
               Hướng dẫn sử dụng
             </Pressable>
