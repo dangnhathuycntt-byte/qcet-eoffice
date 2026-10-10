@@ -124,8 +124,67 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
 
   // Không có tiêu chí và không ai thêm được thì không chiếm chỗ trên trang.
   if (view.criteria.length === 0 && !view.canEdit && !editing) return null;
-  if (view.criteria.length === 0 && !editing) {
-    return <TaskAddChip onClick={startEdit}>Tiêu chí hoàn thành</TaskAddChip>;
+  const editForm = (
+    <div className="space-y-1.5">
+      {drafts.map((d, i) => (
+        <div key={d.id ?? `new-${i}`} className="flex items-center gap-1.5">
+          <Input
+            compact
+            value={d.text}
+            maxLength={300}
+            aria-label={`Tiêu chí ${i + 1}`}
+            onChange={(e) => setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+            ref={i === drafts.length - 1 ? addRef : undefined}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Bỏ tiêu chí ${i + 1}`}
+            onClick={() => setDrafts((prev) => prev.filter((_, j) => j !== i))}
+          >
+            <X strokeWidth={1.5} />
+          </Button>
+        </div>
+      ))}
+      <div className="flex items-center gap-1.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          disabled={drafts.length >= MAX_CRITERIA}
+          onClick={() => {
+            setDrafts((prev) => [...prev, { text: "" }]);
+            requestAnimationFrame(() => addRef.current?.focus());
+          }}
+        >
+          <Plus strokeWidth={1.5} />
+          Thêm tiêu chí
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {drafts.length}/{MAX_CRITERIA}
+        </span>
+        <span className="ml-auto flex gap-1.5">
+          <Button type="button" size="xs" onClick={() => void save()} disabled={saving}>
+            {saving ? "Đang lưu…" : "Lưu"}
+          </Button>
+          <Button type="button" size="xs" variant="ghost" onClick={() => { setEditing(false); setError(null); }}>
+            Hủy
+          </Button>
+        </span>
+      </div>
+    </div>
+  );
+  if (view.criteria.length === 0) {
+    return (
+      <TaskAddChip
+        open={editing}
+        onOpenChange={(next) => (next ? startEdit() : (setEditing(false), setError(null)))}
+        panel={<>{editForm}{error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}</>}
+      >
+        Tiêu chí hoàn thành
+      </TaskAddChip>
+    );
   }
 
   const total = view.criteria.length;
@@ -150,55 +209,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
       </div>
 
       {editing ? (
-        <div className="space-y-1.5">
-          {drafts.map((d, i) => (
-            <div key={d.id ?? `new-${i}`} className="flex items-center gap-1.5">
-              <Input
-                compact
-                value={d.text}
-                maxLength={300}
-                aria-label={`Tiêu chí ${i + 1}`}
-                onChange={(e) => setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
-                ref={i === drafts.length - 1 ? addRef : undefined}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Bỏ tiêu chí ${i + 1}`}
-                onClick={() => setDrafts((prev) => prev.filter((_, j) => j !== i))}
-              >
-                <X strokeWidth={1.5} />
-              </Button>
-            </div>
-          ))}
-          <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              disabled={drafts.length >= MAX_CRITERIA}
-              onClick={() => {
-                setDrafts((prev) => [...prev, { text: "" }]);
-                requestAnimationFrame(() => addRef.current?.focus());
-              }}
-            >
-              <Plus strokeWidth={1.5} />
-              Thêm tiêu chí
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              {drafts.length}/{MAX_CRITERIA}
-            </span>
-            <span className="ml-auto flex gap-1.5">
-              <Button type="button" size="xs" onClick={() => void save()} disabled={saving}>
-                {saving ? "Đang lưu…" : "Lưu"}
-              </Button>
-              <Button type="button" size="xs" variant="ghost" onClick={() => { setEditing(false); setError(null); }}>
-                Hủy
-              </Button>
-            </span>
-          </div>
-        </div>
+        editForm
       ) : (
         <ul className="space-y-1">
           {view.criteria.map((c) => (

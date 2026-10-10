@@ -13,11 +13,11 @@ const read = (rel: string) => fs.readFileSync(path.join(__dirname, "..", rel), "
 
 describe("TaskAddChip", () => {
   test("chip cao 28px, chữ 12px, dồn về cuối hàng; có hoặc không có dấu +", () => {
-    const withIcon = renderToStaticMarkup(React.createElement(TaskAddChip, { onClick: () => {} }, "Xin gia hạn"));
+    const withIcon = renderToStaticMarkup(React.createElement(TaskAddChip, { onClick: () => {}, children: "Xin gia hạn" }));
     assert.ok(withIcon.includes('data-slot="task-add-chip"'));
     assert.ok(withIcon.includes("order-last") && withIcon.includes("h-7") && withIcon.includes("text-xs"));
     assert.ok(withIcon.includes("<svg"), "mặc định có dấu +");
-    const noIcon = renderToStaticMarkup(React.createElement(TaskAddChip, { onClick: () => {}, icon: false }, "Từ chối nhận việc"));
+    const noIcon = renderToStaticMarkup(React.createElement(TaskAddChip, { onClick: () => {}, icon: false, children: "Từ chối nhận việc" }));
     assert.ok(!noIcon.includes("<svg"), "thao tác không phải thêm thì không có dấu +");
   });
 

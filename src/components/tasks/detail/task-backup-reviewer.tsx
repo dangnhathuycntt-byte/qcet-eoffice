@@ -68,9 +68,35 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
   };
 
   if (!view || (!view.backup && !view.canEdit)) return null;
-  if (!view.backup && !editing) {
+  const editForm = (
+    <div className="space-y-1.5">
+      <Select
+        compact
+        positionerClassName="z-50"
+        aria-label="Người duyệt dự phòng"
+        placeholder="— Chọn người —"
+        options={personnel.map((p) => ({ value: p.id, label: p.name }))}
+        value={userId}
+        onValueChange={(v) => setUserId(v || null)}
+      />
+      <div className="flex gap-1.5">
+        <Button type="button" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
+          Lưu
+        </Button>
+        <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(false)}>
+          Hủy
+        </Button>
+      </div>
+    </div>
+  );
+  if (!view.backup) {
     return (
-      <TaskAddChip title="Người dự phòng nhận việc duyệt khi chờ duyệt quá 4 ngày" onClick={() => setEditing(true)}>
+      <TaskAddChip
+        title="Người dự phòng nhận việc duyệt khi chờ duyệt quá 4 ngày"
+        open={editing}
+        onOpenChange={setEditing}
+        panel={<>{editForm}{error ? <InlineAlert variant="error">{error}</InlineAlert> : null}</>}
+      >
         Người duyệt dự phòng
       </TaskAddChip>
     );
@@ -104,27 +130,7 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
         </div>
       ) : null}
 
-      {editing ? (
-        <div className="space-y-1.5">
-          <Select
-            compact
-            positionerClassName="z-50"
-            aria-label="Người duyệt dự phòng"
-            placeholder="— Chọn người —"
-            options={personnel.map((p) => ({ value: p.id, label: p.name }))}
-            value={userId}
-            onValueChange={(v) => setUserId(v || null)}
-          />
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
-              Lưu
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(false)}>
-              Hủy
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      {editing ? editForm : null}
 
       {error ? <InlineAlert variant="error">{error}</InlineAlert> : null}
     </section>

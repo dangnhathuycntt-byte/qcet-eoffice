@@ -75,9 +75,38 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
 
   if (!state) return null;
   if (!state.declined && !state.canDecline) return null;
-  if (!state.declined && !open) {
+  const declineForm = (
+    <div className="space-y-1.5">
+      <Textarea
+        compact
+        value={reason}
+        maxLength={1000}
+        aria-label="Lý do từ chối nhận việc"
+        placeholder="Lý do từ chối nhận việc (bắt buộc)"
+        onChange={(e) => setReason(e.target.value)}
+        className="min-h-16"
+      />
+      <div className="flex gap-1.5">
+        <Button type="button" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
+          Từ chối nhận việc
+        </Button>
+        <Button type="button" size="xs" variant="ghost" onClick={() => { setOpen(false); setReason(""); setError(null); }}>
+          Hủy
+        </Button>
+      </div>
+    </div>
+  );
+  if (!state.declined) {
     return (
-      <TaskAddChip icon={false} onClick={() => setOpen(true)}>
+      <TaskAddChip
+        icon={false}
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) { setReason(""); setError(null); }
+        }}
+        panel={<>{declineForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>}
+      >
         Từ chối nhận việc
       </TaskAddChip>
     );
@@ -90,25 +119,7 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
           {state.declined.by.name} đã từ chối nhận việc: {state.declined.reason}. Chờ người giao giao lại.
         </InlineAlert>
       ) : open ? (
-        <div className="space-y-1.5">
-          <Textarea
-            compact
-            value={reason}
-            maxLength={1000}
-            aria-label="Lý do từ chối nhận việc"
-            placeholder="Lý do từ chối nhận việc (bắt buộc)"
-            onChange={(e) => setReason(e.target.value)}
-            className="min-h-16"
-          />
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
-              Từ chối nhận việc
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => { setOpen(false); setReason(""); setError(null); }}>
-              Hủy
-            </Button>
-          </div>
-        </div>
+        declineForm
       ) : (
         <Button type="button" size="xs" variant="ghost" onClick={() => setOpen(true)}>
           Từ chối nhận việc

@@ -131,9 +131,52 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
   const decide = (decision: string, extra: Record<string, unknown> = {}) =>
     send("decide-extension", { requestId: active?.id, decision, expectedVersion: version, ...extra }, "Không xử lý được yêu cầu gia hạn");
 
-  // Chưa có yêu cầu nào: chỉ còn chip, bấm mới mở form xin gia hạn
-  if (!active && mode === "idle" && view.appliedCount < 3) {
-    return <TaskAddChip onClick={() => setMode("request")}>Xin gia hạn</TaskAddChip>;
+  const requestForm = (
+    <div className="space-y-1.5">
+      <VietnameseDatePicker
+        value={date}
+        onChange={setDate}
+        variant="chip"
+        label="Hạn mới:"
+        placeholder="dd/mm/yyyy"
+        minDate={minDate}
+      />
+      <Textarea
+        compact
+        value={text}
+        maxLength={1000}
+        aria-label="Lý do xin gia hạn"
+        placeholder="Lý do xin gia hạn"
+        onChange={(e) => setText(e.target.value)}
+        className="min-h-16"
+      />
+      <div className="flex gap-1.5">
+        <Button
+          type="button"
+          size="xs"
+          disabled={busy || !date || text.trim().length < 3}
+          onClick={() => void send("request-extension", { requestedDueDate: date, reason: text.trim(), expectedVersion: version }, "Không gửi được yêu cầu gia hạn")}
+        >
+          Gửi
+        </Button>
+        <Button type="button" size="xs" variant="ghost" onClick={reset}>
+          Hủy
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Chưa có yêu cầu nào: chỉ còn chip, form xin gia hạn mở trong popover
+  if (!active && (mode === "idle" || mode === "request") && view.appliedCount < 3) {
+    return (
+      <TaskAddChip
+        open={mode === "request"}
+        onOpenChange={(next) => (next ? setMode("request") : reset())}
+        panel={<>{requestForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>}
+      >
+        Xin gia hạn
+      </TaskAddChip>
+    );
   }
 
   return (
@@ -196,40 +239,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
         </div>
       )}
 
-      {mode === "request" && (
-        <div className="space-y-1.5">
-          <VietnameseDatePicker
-            value={date}
-            onChange={setDate}
-            variant="chip"
-            label="Hạn mới:"
-            placeholder="dd/mm/yyyy"
-            minDate={minDate}
-          />
-          <Textarea
-            compact
-            value={text}
-            maxLength={1000}
-            aria-label="Lý do xin gia hạn"
-            placeholder="Lý do xin gia hạn"
-            onChange={(e) => setText(e.target.value)}
-            className="min-h-16"
-          />
-          <div className="flex gap-1.5">
-            <Button
-              type="button"
-              size="xs"
-              disabled={busy || !date || text.trim().length < 3}
-              onClick={() => void send("request-extension", { requestedDueDate: date, reason: text.trim(), expectedVersion: version }, "Không gửi được yêu cầu gia hạn")}
-            >
-              Gửi
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={reset}>
-              Hủy
-            </Button>
-          </div>
-        </div>
-      )}
+      {mode === "request" && requestForm}
 
       {mode === "reject" && (
         <div className="space-y-1.5">
