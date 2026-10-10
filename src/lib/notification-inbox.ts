@@ -84,6 +84,8 @@ const EVENT_LABELS: Record<string, string> = {
   cancelled: "Đã hủy",
   mention: "Nhắc tên",
   declined: "Từ chối nhận việc",
+  document_returned: "Văn bản bị trả lại",
+  document_rerouted: "Văn bản chuyển đơn vị",
   extension_requested: "Xin gia hạn",
   extension_decided: "Phản hồi gia hạn",
   progress: "Cập nhật",

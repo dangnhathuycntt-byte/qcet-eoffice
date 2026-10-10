@@ -10,8 +10,9 @@ import { prisma } from "@/lib/prisma";
 import { registerShutdownHook } from "@/server/lifecycle/shutdown";
 import { logger } from "@/server/observability/logger";
 import { TASK_NOTIFICATION_HANDLERS } from "./task-notification-handlers";
+import { DOCUMENT_NOTIFICATION_HANDLERS } from "./document-notification-handlers";
 
-export const OUTBOX_HANDLERS = { ...TASK_NOTIFICATION_HANDLERS };
+export const OUTBOX_HANDLERS = { ...TASK_NOTIFICATION_HANDLERS, ...DOCUMENT_NOTIFICATION_HANDLERS };
 
 const POLL_INTERVAL_MS = 60_000;
 const BATCH_LIMIT = 50;

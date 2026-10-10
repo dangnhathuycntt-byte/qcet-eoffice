@@ -84,6 +84,8 @@ export const DOCUMENT_INCOMING_CAPABILITIES = [
   'document.incoming.execute',
   'document.incoming.file',
   'document.file',
+  'document.incoming.return',
+  'document.incoming.reroute',
 ] as const;
 
 export type DocumentIncomingCapabilityAction = (typeof DOCUMENT_INCOMING_CAPABILITIES)[number];
@@ -373,6 +375,8 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'document.incoming.assign_person': 'Phân công cán bộ thụ lý văn bản đến',
   'document.incoming.execute': 'Thực thi xử lý văn bản đến',
   'document.incoming.file': 'Lập hồ sơ lưu văn bản đến',
+  'document.incoming.return': 'Trả lại văn bản đến (chuyển nhầm đơn vị)',
+  'document.incoming.reroute': 'Chuyển văn bản đến cho đơn vị khác',
   'document.file': 'Lập hồ sơ lưu văn bản',
   // Document Outgoing
   'document.outgoing.draft': 'Soạn thảo dự thảo văn bản đi',

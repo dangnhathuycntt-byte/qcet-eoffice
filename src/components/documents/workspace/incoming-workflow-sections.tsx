@@ -3,6 +3,9 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useDepartmentList } from "@/hooks/use-department-list";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import type { DocumentItem } from "@/types/document";
@@ -23,14 +26,20 @@ export function IncomingWorkflowActions({
   const { user } = useAuth();
   const role = (user as { role?: string } | null)?.role;
   const [pending, setPending] = React.useState<string | null>(null);
+  const [form, setForm] = React.useState<{ key: string; input: "reason" | "unit" } | null>(null);
+  const [reason, setReason] = React.useState("");
+  const [unitId, setUnitId] = React.useState<string | null>(null);
+  const [note, setNote] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const { departments, isLoading: isDepartmentsLoading } = useDepartmentList({ enabled: form?.input === "unit" });
   const actions = getIncomingActions(status, role);
   if (actions.length === 0) return null;
 
   const primaryIndex = actions.findIndex((a) => !a.destructive);
 
-  async function run(key: string, body: Record<string, unknown>, confirmMsg: string) {
-    if (!window.confirm(confirmMsg)) return;
+  async function post(key: string, body: Record<string, unknown>): Promise<boolean> {
     setPending(key);
+    setError(null);
     try {
       const res = await fetch(`/api/documents/${documentId}/actions/${key}`, {
         method: "POST",
@@ -39,33 +48,111 @@ export function IncomingWorkflowActions({
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Lỗi không xác định" }));
-        window.alert(err.error ?? "Thao tác thất bại");
-        return;
+        const err = await res.json().catch(() => null);
+        setError(err?.detail || err?.error || "Thao tác thất bại");
+        return false;
       }
       onDone?.();
+      return true;
     } catch {
-      window.alert("Lỗi kết nối. Vui lòng thử lại.");
+      setError("Lỗi kết nối. Vui lòng thử lại.");
+      return false;
     } finally {
       setPending(null);
     }
   }
 
+  async function run(action: (typeof actions)[number]) {
+    if (action.input) {
+      setForm({ key: action.key, input: action.input });
+      setError(null);
+      return;
+    }
+    if (!window.confirm(action.confirmMsg)) return;
+    await post(action.key, action.body);
+  }
+
+  async function submitForm() {
+    if (!form) return;
+    const body = form.input === "reason" ? { reason: reason.trim() } : { leadUnitId: unitId, note: note.trim() || undefined };
+    if (await post(form.key, body)) {
+      setForm(null);
+      setReason("");
+      setUnitId(null);
+      setNote("");
+    }
+  }
+
+  const formReady = form?.input === "reason" ? reason.trim().length >= 3 : Boolean(unitId);
+
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Thao tác xử lý văn bản">
-      {actions.map((action, i) => (
-        <Button
-          key={action.key}
-          size="sm"
-          variant={i === primaryIndex ? "default" : "ghost"}
-          className={cn(action.destructive && "text-destructive hover:text-destructive")}
-          disabled={pending !== null}
-          onClick={() => run(action.key, action.body, action.confirmMsg)}
-        >
-          {pending === action.key ? <Loader2 className="size-3 animate-spin" strokeWidth={1.5} /> : null}
-          {action.label}
-        </Button>
-      ))}
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Thao tác xử lý văn bản">
+        {actions.map((action, i) => (
+          <Button
+            key={action.key}
+            size="sm"
+            variant={i === primaryIndex ? "default" : "ghost"}
+            className={cn(action.destructive && "text-destructive hover:text-destructive")}
+            disabled={pending !== null}
+            onClick={() => void run(action)}
+          >
+            {pending === action.key ? <Loader2 className="size-3 animate-spin" strokeWidth={1.5} /> : null}
+            {action.label}
+          </Button>
+        ))}
+      </div>
+
+      {form?.input === "reason" && (
+        <div className="space-y-1.5">
+          <Textarea
+            compact
+            value={reason}
+            maxLength={1000}
+            aria-label="Lý do trả lại"
+            placeholder="Lý do trả lại (bắt buộc)"
+            onChange={(e) => setReason(e.target.value)}
+            className="min-h-16"
+          />
+        </div>
+      )}
+      {form?.input === "unit" && (
+        <div className="space-y-1.5">
+          <Select
+            compact
+            positionerClassName="z-50"
+            aria-label="Đơn vị nhận văn bản"
+            placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị..." : "— Chọn đơn vị nhận —"}
+            options={departments.map((d) => ({ value: d.id, label: d.name }))}
+            value={unitId}
+            onValueChange={(val) => setUnitId(val || null)}
+          />
+          <Textarea
+            compact
+            value={note}
+            maxLength={1000}
+            aria-label="Ghi chú chuyển đơn vị"
+            placeholder="Ghi chú (không bắt buộc)"
+            onChange={(e) => setNote(e.target.value)}
+            className="min-h-12"
+          />
+        </div>
+      )}
+      {form && (
+        <div className="flex gap-1.5">
+          <Button size="xs" disabled={pending !== null || !formReady} onClick={() => void submitForm()}>
+            {form.input === "reason" ? "Trả lại văn bản" : "Chuyển văn bản"}
+          </Button>
+          <Button size="xs" variant="ghost" onClick={() => { setForm(null); setError(null); }}>
+            Hủy
+          </Button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

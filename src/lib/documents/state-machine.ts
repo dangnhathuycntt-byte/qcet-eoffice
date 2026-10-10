@@ -54,10 +54,14 @@ export const INCOMING_DOCUMENT_TRANSITIONS: Record<
   ASSIGNED_TO_LEAD_UNIT: [
     IncomingDocumentStatus.UNIT_ASSIGNED_PERSON,
     IncomingDocumentStatus.IN_PROGRESS,
+    // Đơn vị chủ trì trả lại khi chuyển nhầm (V-01); chờ Văn thư chuyển cho đơn vị khác.
+    IncomingDocumentStatus.DIRECTED,
   ],
   UNIT_ASSIGNED_PERSON: [
     IncomingDocumentStatus.IN_PROGRESS,
     IncomingDocumentStatus.RESOLVED,
+    // Trả lại sau khi đã giao người thụ lý nhưng chưa sinh nhiệm vụ (V-01).
+    IncomingDocumentStatus.DIRECTED,
   ],
   IN_PROGRESS: [IncomingDocumentStatus.RESOLVED],
   RESOLVED: [IncomingDocumentStatus.FILED, IncomingDocumentStatus.ARCHIVED],

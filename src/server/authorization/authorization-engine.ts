@@ -756,6 +756,7 @@ export function authorize(
         action === 'task.cancel' ||
         action === 'task.archive' ||
         action === 'document.incoming.assign_person' ||
+        action === 'document.incoming.return' ||
         action === 'document.incoming.execute' ||
         action === 'document.incoming.file' ||
         action === 'document.file' ||
@@ -838,6 +839,7 @@ export function authorize(
         action === 'document.register' ||
         action === 'document.incoming.register' ||
         action === 'document.incoming.present' ||
+        action === 'document.incoming.reroute' ||
         action === 'document.incoming.file' ||
         action === 'document.file' ||
         action === 'document.review_format' ||

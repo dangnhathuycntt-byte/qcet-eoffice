@@ -124,6 +124,8 @@ model User {
   extensionsRequested   TaskExtensionRequest[] @relation("ExtensionRequester")
   extensionsDecided     TaskExtensionRequest[] @relation("ExtensionDecider")
   taskDeclines          TaskDeclineNotice[]   @relation("TaskDecliner")
+  documentReturns       DocumentUnitReturn[]  @relation("DocReturnedBy")
+  documentReroutes      DocumentUnitReturn[]  @relation("DocReroutedBy")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -369,6 +371,7 @@ model Document {
   attachments        DocumentAttachment[]
   directives         DocumentDirective[]
   incomingWorkflow   DocumentIncomingWorkflow?
+  unitReturns        DocumentUnitReturn[]
   outgoingWorkflow   DocumentOutgoingWorkflow?
   signatures         SignatureRecord[]
 
@@ -521,6 +524,31 @@ model DocumentIncomingWorkflow {
   @@index([leadUnitId])
   @@index([leaderId])
   @@map("document_incoming_workflows")
+}
+
+// Đơn vị chủ trì trả lại văn bản đến (chuyển nhầm đơn vị) và Văn thư chuyển lại (V-01).
+// Mỗi lần trả lại là một bản ghi: lịch sử không bị xóa. Bản ghi còn mở (resolvedAt rỗng)
+// nghĩa là văn bản đang chờ Văn thư chuyển cho đơn vị khác.
+model DocumentUnitReturn {
+  id           String              @id @default(cuid())
+  documentId   String              @map("document_id")
+  document     Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fromUnitId   String              @map("from_unit_id")
+  fromUnit     OrganizationalUnit  @relation("DocReturnFromUnit", fields: [fromUnitId], references: [id], onDelete: Restrict)
+  returnedById String              @map("returned_by_id")
+  returnedBy   User                @relation("DocReturnedBy", fields: [returnedById], references: [id], onDelete: Restrict)
+  reason       String              @db.VarChar(1000)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  resolvedAt   DateTime?           @map("resolved_at")
+  toUnitId     String?             @map("to_unit_id")
+  toUnit       OrganizationalUnit? @relation("DocReturnToUnit", fields: [toUnitId], references: [id], onDelete: SetNull)
+  reroutedById String?             @map("rerouted_by_id")
+  reroutedBy   User?               @relation("DocReroutedBy", fields: [reroutedById], references: [id], onDelete: SetNull)
+  rerouteNote  String?             @map("reroute_note") @db.VarChar(1000)
+
+  @@index([documentId, resolvedAt])
+  @@index([fromUnitId])
+  @@map("document_unit_returns")
 }
 
 model UnitWorkAssignment {
@@ -883,6 +911,8 @@ model OrganizationalUnit {
   taskActors          TaskActor[]
   leadWorkflows       DocumentIncomingWorkflow[] @relation("DocWorkflowLeadUnit")
   unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
+  documentReturnsFrom DocumentUnitReturn[]       @relation("DocReturnFromUnit")
+  documentReturnsTo   DocumentUnitReturn[]       @relation("DocReturnToUnit")
   workDossiers        WorkDossier[]
   meetings            Meeting[]
   meetingResolutions  MeetingResolution[]        @relation("UnitMeetingResolutions")

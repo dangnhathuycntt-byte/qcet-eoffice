@@ -11,11 +11,14 @@ export interface IncomingActionDef {
   confirmMsg: string;
   body: Record<string, unknown>;
   destructive?: boolean;
+  /** Thao tác cần nhập thêm: lý do (trả lại) hoặc chọn đơn vị (chuyển lại). */
+  input?: "reason" | "unit";
 }
 
 export const INCOMING_STATUS_LABEL: Record<string, string> = {
   REGISTERED: "Đã vào sổ",
   PRESENTED: "Đã trình lãnh đạo",
+  ASSIGNED_TO_LEAD_UNIT: "Đã giao đơn vị chủ trì",
   DIRECTED: "Đã có bút phê",
   UNIT_ASSIGNED_PERSON: "Đã phân công",
   RESOLVED: "Đã giải quyết",
@@ -39,6 +42,21 @@ export function getIncomingActions(status: string, role: string | null | undefin
   }
   if (status === "RESOLVED" && role === "VAN_THU") {
     actions.push({ key: "file", label: "Lập hồ sơ", confirmMsg: "Lập hồ sơ cho văn bản này?", body: {} });
+  }
+  // Trả lại khi chuyển nhầm đơn vị (V-01): trưởng đơn vị chủ trì, trước khi sinh nhiệm vụ.
+  if (role === "TRUONG_PHONG" && ["ASSIGNED_TO_LEAD_UNIT", "UNIT_ASSIGNED_PERSON"].includes(status)) {
+    actions.push({
+      key: "return",
+      label: "Trả lại",
+      confirmMsg: "",
+      body: {},
+      destructive: true,
+      input: "reason",
+    });
+  }
+  // Văn bản bị trả lại về DIRECTED chờ Văn thư chuyển cho đơn vị khác.
+  if (role === "VAN_THU" && status === "DIRECTED") {
+    actions.push({ key: "reroute", label: "Chuyển đơn vị khác", confirmMsg: "", body: {}, input: "unit" });
   }
   if (role === "BAN_GIAM_HIEU" && ["DIRECTED", "UNIT_ASSIGNED_PERSON"].includes(status)) {
     actions.push({ key: "approve-content", label: "Duyệt nội dung", confirmMsg: "Phê duyệt nội dung văn bản này?", body: {} });
