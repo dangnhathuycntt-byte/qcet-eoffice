@@ -823,13 +823,21 @@ export async function getApprovalReport(session: SessionPayload, query: { from?:
 }
 
 /** CSV (UTF-8 có BOM) mở được trực tiếp bằng Excel. */
-export function approvalReportToCsv(report: ApprovalReport): string {
-  const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-  const lines = [["Nhóm", "Tên", "Bước", "Số quyết định", "Giờ trung bình", `Đúng hạn (≤${report.targetHours} giờ) %`].map(esc).join(",")];
-  const emit = (group: string, rows: ApprovalReportRow[]) =>
-    rows.forEach((r) => lines.push([group, r.label, r.stage === "LEADER" ? "Lãnh đạo" : r.stage === "UNIT_HEAD" ? "Trưởng đơn vị" : "", r.decided, r.avgHours, r.onTimePercent].map(esc).join(",")));
-  lines.push(["Tổng", "Tất cả", "", report.total.decided, report.total.avgHours, report.total.onTimePercent].map(esc).join(","));
+const STAGE_LABEL = { LEADER: "Lãnh đạo", UNIT_HEAD: "Trưởng đơn vị" } as const;
+
+/** Bảng phẳng dùng chung cho CSV và XLSX: hàng đầu là tiêu đề. */
+export function approvalReportRows(report: ApprovalReport): Array<Array<string | number>> {
+  const rows: Array<Array<string | number>> = [["Nhóm", "Tên", "Bước", "Số quyết định", "Giờ trung bình", `Đúng hạn (≤${report.targetHours} giờ) %`]];
+  rows.push(["Tổng", "Tất cả", "", report.total.decided, report.total.avgHours, report.total.onTimePercent]);
+  const emit = (group: string, list: ApprovalReportRow[]) =>
+    list.forEach((r) => rows.push([group, r.label, r.stage === "ALL" ? "" : STAGE_LABEL[r.stage], r.decided, r.avgHours, r.onTimePercent]));
   emit("Theo đơn vị", report.byUnit);
   emit("Theo người", report.byApprover);
-  return `﻿${lines.join("\r\n")}\r\n`;
+  return rows;
+}
+
+export function approvalReportToCsv(report: ApprovalReport): string {
+  const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = approvalReportRows(report).map((row) => row.map(esc).join(","));
+  return `\uFEFF${lines.join("\r\n")}\r\n`;
 }
