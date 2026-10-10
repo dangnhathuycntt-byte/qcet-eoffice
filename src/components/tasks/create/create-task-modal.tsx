@@ -21,6 +21,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { Popover } from "@base-ui/react/popover";
 import { Dialog } from "@base-ui/react/dialog";
 import { getCategoryOptions } from "@/domain/tasks/display-config";
+import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import type { CreateTaskLevel } from "@/lib/adapters/create-task-mapper";
 import {
   useCreateTaskForm,
@@ -124,6 +125,9 @@ export function CreateTaskModal({
   // ── Local UI state ──────────────────────────────────────────
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
   const [personQuery, setPersonQuery] = React.useState("");
+  // Đọc nền tảng sau khi mount để không lệch HTML giữa server và client
+  const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
+  React.useEffect(() => setModKey(getPlatformModifierKey()), []);
 
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const summaryInputRef = React.useRef<HTMLInputElement>(null);
@@ -647,24 +651,14 @@ export function CreateTaskModal({
 
               {/* ── Modal Bottom Footer ──────────────────────── */}
               <footer className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-t border-border/60 bg-muted/20 shrink-0">
-                {/* Shortcut Hint */}
-                <div className="text-xs text-muted-foreground select-none hidden sm:inline-flex items-center gap-1">
-                  <kbd className="font-mono bg-background border border-border px-1 py-0.2 rounded text-xs text-foreground shadow-2xs">
-                    ⌘ / Ctrl
-                  </kbd>
-                  <span>+</span>
-                  <kbd className="font-mono bg-background border border-border px-1 py-0.2 rounded text-xs text-foreground shadow-2xs">
-                    Enter
-                  </kbd>
-                  <span>{initialParentTaskId ? "để giao việc" : "để tạo"}</span>
-                </div>
-
                 {/* Chỉ nút chính; đóng bằng Esc hoặc nhấn ra ngoài */}
                 <div className="flex items-center gap-2 ml-auto">
                   <button
                     type="button"
                     onClick={handleFormSubmit}
                     disabled={form.isSubmitting || !form.formData.title.trim()}
+                    aria-keyshortcuts="Meta+Enter Control+Enter"
+                    title={`${modKey} + Enter`}
                     className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
                   >
                     {form.isSubmitting ? (
@@ -673,7 +667,13 @@ export function CreateTaskModal({
                         <span>{initialParentTaskId ? "Đang giao việc..." : "Đang tạo..."}</span>
                       </>
                     ) : (
-                      <span>{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
+                      <>
+                        <span>{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
+                        {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
+                        <kbd className="hidden sm:inline font-sans text-xs text-primary-foreground/60" aria-hidden="true">
+                          {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
+                        </kbd>
+                      </>
                     )}
                   </button>
 
