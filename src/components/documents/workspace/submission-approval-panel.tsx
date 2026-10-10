@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -157,15 +158,18 @@ export function SubmissionApprovalPanel({
     .filter((d) => !query || d.name.toLowerCase().includes(query))
     .sort((a, b) => Number(units.includes(b.id)) - Number(units.includes(a.id)));
 
+  // Nội dung hộp thoại "Trình duyệt": ô tìm, danh sách đơn vị tràn mép (không lồng khung trong khung), chân có đường kẻ như các modal văn bản khác
   const submitForm = (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Đơn vị của bạn luôn phải duyệt. Chọn thêm đơn vị liên quan để duyệt song song.</p>
-      <Input compact value={unitQuery} onChange={(e) => setUnitQuery(e.target.value)} placeholder="Tìm đơn vị" aria-label="Tìm đơn vị" autoFocus />
-      {/* Danh sách đơn vị: khung viền, cuộn bên trong; hàng 28px, cả hàng là vùng bấm; đã chọn lên đầu */}
-      <ul role="group" aria-label="Đơn vị liên quan" className="max-h-64 overflow-y-auto rounded-lg border border-border p-1">
+    <div className="-mx-4 -mb-4 flex min-h-0 flex-col sm:-mx-6 sm:-mb-6">
+      <div className="relative px-4 pb-2 sm:px-6">
+        <Search className="pointer-events-none absolute left-6 top-1/2 size-3.5 -translate-y-[calc(50%+4px)] text-muted-foreground sm:left-8" strokeWidth={1.5} aria-hidden />
+        <Input compact value={unitQuery} onChange={(e) => setUnitQuery(e.target.value)} placeholder="Tìm đơn vị" aria-label="Tìm đơn vị" className="pl-7" autoFocus />
+      </div>
+      {/* Hàng 32px, cả hàng là vùng bấm; đơn vị đã chọn lên đầu */}
+      <ul role="group" aria-label="Đơn vị liên quan" className="max-h-72 overflow-y-auto px-2 pb-2 sm:px-4">
         {visibleDepartments.map((d) => (
           <li key={d.id}>
-            <label className="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-2 text-compact transition-colors hover:bg-accent">
+            <label className="flex h-8 cursor-pointer items-center gap-2.5 rounded-sm px-2 text-compact transition-colors hover:bg-accent">
               <Checkbox
                 checked={units.includes(d.id)}
                 onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
@@ -174,14 +178,14 @@ export function SubmissionApprovalPanel({
             </label>
           </li>
         ))}
-        {visibleDepartments.length === 0 ? <li className="px-2 py-1.5 text-xs text-muted-foreground">Không có đơn vị phù hợp</li> : null}
+        {visibleDepartments.length === 0 ? <li className="px-2 py-2 text-xs text-muted-foreground">Không có đơn vị phù hợp</li> : null}
       </ul>
-      <div className="flex items-center gap-1.5 pt-1">
+      <div className="flex items-center gap-2 border-t border-border px-4 py-3 sm:px-6">
         <span className="mr-auto text-xs text-muted-foreground">
           {units.length > 0 ? `Đã chọn ${units.length} đơn vị` : "Chưa chọn thêm đơn vị"}
         </span>
-        <Button type="button" size="sm" variant="ghost" onClick={closeSubmit}>Hủy</Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
+        <Button type="button" size="sm" variant="outline" onClick={closeSubmit}>Hủy</Button>
+        <Button type="button" size="sm" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
           {submitLabel}
         </Button>
       </div>
@@ -309,6 +313,7 @@ export function SubmissionApprovalPanel({
         open={mode === "submit"}
         onOpenChange={(open) => (open ? setMode("submit") : closeSubmit())}
         title={state.workflow?.status === "NEEDS_REVISION" ? "Trình lại tờ trình" : "Trình duyệt tờ trình"}
+        description="Đơn vị của bạn luôn duyệt. Chọn thêm đơn vị cùng duyệt song song."
         size="sm"
         className="sm:max-w-md"
       >
