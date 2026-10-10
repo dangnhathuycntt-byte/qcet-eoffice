@@ -770,6 +770,7 @@ export function authorize(
         action === 'task.archive' ||
         action === 'document.incoming.assign_person' ||
         action === 'document.incoming.return' ||
+        action === 'document.outgoing.initial_sign' ||
         action === 'document.submission.review_unit' ||
         action === 'document.incoming.execute' ||
         action === 'document.incoming.file' ||

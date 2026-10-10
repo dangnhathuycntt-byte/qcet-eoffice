@@ -721,6 +721,7 @@ enum SignatureType {
   PERSONAL_DIGITAL
   ORGANIZATION_DIGITAL
   PHYSICAL
+  INITIAL // ký nháy (V-09): xác nhận nháp trước khi lãnh đạo ký, tùy chọn
 }
 
 enum SignatureVerificationStatus {

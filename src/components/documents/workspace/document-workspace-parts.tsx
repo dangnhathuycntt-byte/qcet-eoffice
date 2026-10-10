@@ -13,6 +13,7 @@ import { DocumentAuditTimeline } from "../document-audit-timeline";
 import { OutgoingActionPanel } from "../outgoing-action-panel";
 import { OutgoingRecipientsPanel } from "../outgoing-recipients-panel";
 import { IncomingSignatureStatus } from "../incoming-signature-status";
+import { OutgoingInitialSign } from "../outgoing-initial-sign";
 import { IncomingDirectives, IncomingWorkflowActions, IncomingWorkflowDetails, getIncomingAttributes } from "./incoming-workflow-sections";
 import { SubmissionApprovalPanel } from "./submission-approval-panel";
 import { DocumentEditActions } from "./document-edit";
@@ -277,6 +278,9 @@ export function DocumentInfoSections({
           />
         ) : null}
         {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+
+      {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={vm.id} documentId={vm.id} /> : null}
+        {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={vm.id} documentId={vm.id} /> : null}
         {/* Chỉ thao tác theo bước ở thân; sửa thông tin/bổ sung tệp nằm trong menu "Thao tác khác" của header */}
         {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
         {isIncoming && incomingStatus ? (
