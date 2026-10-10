@@ -6,6 +6,7 @@ import { AssignmentStatus } from "@prisma/client";
 import { OutboxEventType, type DbClient, type OutboxHandlerMap } from "@/lib/db/outbox";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
+import { recipientsForPendingSteps } from "@/server/documents/submission-approval-service";
 import type { OutboxEvent } from "@prisma/client";
 
 function payloadOf(event: OutboxEvent): Record<string, unknown> {
@@ -56,7 +57,77 @@ function docLabel(doc: { registrationNumber: number; documentYear: number; summa
   return `Số đến ${doc.registrationNumber}/${doc.documentYear}: ${summary}`;
 }
 
+function submissionLabel(doc: { registrationNumber: number; documentYear: number; summary: string }): string {
+  const summary = doc.summary.length > 60 ? `${doc.summary.slice(0, 57)}...` : doc.summary;
+  return `Tờ trình số ${doc.registrationNumber}/${doc.documentYear}: ${summary}`;
+}
+
+const DECISION_TEXT: Record<string, string> = {
+  APPROVE: "đồng ý",
+  REVISION: "yêu cầu bổ sung",
+  REJECT: "không phê duyệt",
+};
+
 export const DOCUMENT_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
+  // Tờ trình cần duyệt: báo những người đang có bước chờ (kể cả người vừa được chỉ định thay).
+  [OutboxEventType.DOCUMENT_APPROVAL_REQUESTED_NOTIFICATION]: async (event, context) => {
+    const db = context?.client as DbClient;
+    const p = payloadOf(event);
+    const documentId = str(p, "documentId") ?? event.aggregateId;
+    const workflowId = str(p, "workflowId");
+    const doc = await db.document.findUnique({ where: { id: documentId } });
+    const workflow = workflowId ? await db.documentApprovalWorkflow.findUnique({ where: { id: workflowId } }) : null;
+    if (!doc || !workflow || (workflow.status !== "WAITING_UNIT_HEAD" && workflow.status !== "WAITING_LEADER")) {
+      return { skipped: "not_waiting" };
+    }
+    const recipients = await recipientsForPendingSteps(db, workflow.id);
+    return notifyUsers(db, doc.id, recipients, workflow.submittedById, {
+      type: "submission_requested",
+      title: "Tờ trình chờ bạn duyệt",
+      body: submissionLabel(doc),
+    });
+  },
+
+  // Có quyết định: báo người trình.
+  [OutboxEventType.DOCUMENT_APPROVAL_DECIDED_NOTIFICATION]: async (event, context) => {
+    const db = context?.client as DbClient;
+    const p = payloadOf(event);
+    const documentId = str(p, "documentId") ?? event.aggregateId;
+    const workflowId = str(p, "workflowId");
+    const doc = await db.document.findUnique({ where: { id: documentId } });
+    const workflow = workflowId ? await db.documentApprovalWorkflow.findUnique({ where: { id: workflowId } }) : null;
+    if (!doc || !workflow?.submittedById) return { skipped: "document_missing" };
+    const outcome = str(p, "outcome");
+    const decision = str(p, "decision") ?? "";
+    const note = str(p, "note");
+    const headline =
+      outcome === "APPROVED" ? "Tờ trình đã được phê duyệt"
+      : outcome === "REJECTED" ? "Tờ trình không được phê duyệt"
+      : outcome === "NEEDS_REVISION" ? "Tờ trình cần bổ sung"
+      : `Có người ${DECISION_TEXT[decision] ?? "xử lý"} tờ trình`;
+    return notifyUsers(db, doc.id, [workflow.submittedById], str(p, "deciderId"), {
+      type: "submission_decided",
+      title: headline,
+      body: `${submissionLabel(doc)}${note ? `. Ghi chú: ${note}` : ""}`,
+    });
+  },
+
+  // Xin ý kiến: báo người được hỏi; trả lời thì báo người hỏi.
+  [OutboxEventType.DOCUMENT_CONSULTATION_NOTIFICATION]: async (event, context) => {
+    const db = context?.client as DbClient;
+    const p = payloadOf(event);
+    const consultationId = str(p, "consultationId");
+    const row = consultationId ? await db.documentConsultation.findUnique({ where: { id: consultationId } }) : null;
+    const doc = await db.document.findUnique({ where: { id: str(p, "documentId") ?? event.aggregateId } });
+    if (!row || !doc) return { skipped: "missing" };
+    const asked = str(p, "kind") === "ASKED";
+    return notifyUsers(db, doc.id, [asked ? row.consultantId : row.askedById], str(p, "actorId"), {
+      type: asked ? "submission_consult" : "submission_consult_answered",
+      title: asked ? "Bạn được xin ý kiến về một tờ trình" : "Có ý kiến trả lời về tờ trình",
+      body: `${submissionLabel(doc)}`,
+    });
+  },
+
   // Đơn vị trả lại văn bản: báo Văn thư đã vào sổ và lãnh đạo đã bút phê.
   [OutboxEventType.DOCUMENT_RETURNED_NOTIFICATION]: async (event, context) => {
     const db = context?.client as DbClient;

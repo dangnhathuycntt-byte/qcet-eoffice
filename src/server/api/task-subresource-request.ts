@@ -18,7 +18,7 @@ export interface TaskSubresourceContext {
 export async function resolveTaskSubresourceRequest<T = undefined>(
   request: NextRequest,
   context: TaskSubresourceContext,
-  options: { mutate: boolean; schema?: ZodType<T>; subIdKey?: string }
+  options: { mutate: boolean; schema?: ZodType<T>; subIdKey?: string; subjectLabel?: string }
 ): Promise<{ session: SessionPayload; taskId: string; subId?: string; body: T; requestId: string }> {
   if (options.mutate) {
     assertCsrf(request);
@@ -33,7 +33,7 @@ export async function resolveTaskSubresourceRequest<T = undefined>(
   await assertRateLimit(user.id, options.mutate ? "MUTATIONS_SENSITIVE" : "DEFAULT_API");
 
   const params = await Promise.resolve(context.params);
-  if (!params.id?.trim()) throw new ValidationError("Mã nhiệm vụ (id) không hợp lệ");
+  if (!params.id?.trim()) throw new ValidationError(`Mã ${options.subjectLabel ?? "nhiệm vụ"} (id) không hợp lệ`);
 
   const body = options.schema ? await parseAndValidateJson(request, options.schema) : (undefined as T);
   return {

@@ -131,6 +131,8 @@ const APPROVAL_TYPES = new Set([
   "declined",
   "review_pending",
   "escalation",
+  "submission_requested",
+  "submission_consult",
 ]);
 
 /**

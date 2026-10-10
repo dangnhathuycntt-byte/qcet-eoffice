@@ -622,6 +622,12 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_DOCUMENT_DRAFT';
     }
+  } else if (action === 'document.submission.submit') {
+    // Người tạo (người đăng ký) tờ trình được trình; server kiểm thêm người trình không tự duyệt.
+    if (isDrafter) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_SUBMISSION_SUBMITTER';
+    }
   } else if (action === 'document.sign') {
     if (isSigner) {
       candidateAllowed = true;
@@ -757,6 +763,7 @@ export function authorize(
         action === 'task.archive' ||
         action === 'document.incoming.assign_person' ||
         action === 'document.incoming.return' ||
+        action === 'document.submission.review_unit' ||
         action === 'document.incoming.execute' ||
         action === 'document.incoming.file' ||
         action === 'document.file' ||

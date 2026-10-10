@@ -111,8 +111,18 @@ export const DOCUMENT_OUTGOING_CAPABILITIES = [
 
 export type DocumentOutgoingCapabilityAction = (typeof DOCUMENT_OUTGOING_CAPABILITIES)[number];
 
+// Tờ trình nội bộ (V-06): người trình, trưởng đơn vị duyệt, lãnh đạo phê duyệt.
+export const DOCUMENT_SUBMISSION_CAPABILITIES = [
+  'document.submission.submit',
+  'document.submission.review_unit',
+  'document.submission.approve',
+] as const;
+
+export type DocumentSubmissionCapabilityAction = (typeof DOCUMENT_SUBMISSION_CAPABILITIES)[number];
+
 export const DOCUMENT_CAPABILITIES = [
   ...DOCUMENT_CANONICAL_CAPABILITIES,
+  ...DOCUMENT_SUBMISSION_CAPABILITIES,
   ...DOCUMENT_INCOMING_CAPABILITIES,
   ...DOCUMENT_OUTGOING_CAPABILITIES,
 ] as const;
@@ -375,6 +385,9 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'document.incoming.assign_person': 'Phân công cán bộ thụ lý văn bản đến',
   'document.incoming.execute': 'Thực thi xử lý văn bản đến',
   'document.incoming.file': 'Lập hồ sơ lưu văn bản đến',
+  'document.submission.submit': 'Trình tờ trình nội bộ',
+  'document.submission.review_unit': 'Trưởng đơn vị duyệt tờ trình',
+  'document.submission.approve': 'Lãnh đạo phê duyệt tờ trình',
   'document.incoming.return': 'Trả lại văn bản đến (chuyển nhầm đơn vị)',
   'document.incoming.reroute': 'Chuyển văn bản đến cho đơn vị khác',
   'document.file': 'Lập hồ sơ lưu văn bản',

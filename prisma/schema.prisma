@@ -126,6 +126,12 @@ model User {
   taskDeclines          TaskDeclineNotice[]   @relation("TaskDecliner")
   documentReturns       DocumentUnitReturn[]  @relation("DocReturnedBy")
   documentReroutes      DocumentUnitReturn[]  @relation("DocReroutedBy")
+  approvalSubmitted     DocumentApprovalWorkflow[] @relation("ApprovalSubmitter")
+  approvalDecided       DocumentApprovalWorkflow[] @relation("ApprovalFinalDecider")
+  approvalStepsAssigned DocumentApprovalStep[]    @relation("ApprovalStepApprover")
+  approvalStepsDecided  DocumentApprovalStep[]    @relation("ApprovalStepDecider")
+  consultationsAsked    DocumentConsultation[]     @relation("ConsultationAsker")
+  consultationsGiven    DocumentConsultation[]     @relation("ConsultationConsultant")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -373,6 +379,7 @@ model Document {
   directives         DocumentDirective[]
   incomingWorkflow   DocumentIncomingWorkflow?
   unitReturns        DocumentUnitReturn[]
+  approvalWorkflow   DocumentApprovalWorkflow?
   outgoingWorkflow   DocumentOutgoingWorkflow?
   signatures         SignatureRecord[]
 
@@ -550,6 +557,95 @@ model DocumentUnitReturn {
   @@index([documentId, resolvedAt])
   @@index([fromUnitId])
   @@map("document_unit_returns")
+}
+
+// Luồng duyệt tờ trình nội bộ (V-06). Tờ trình không phát hành ra ngoài nên không dùng
+// DocumentOutgoingWorkflow (cấp số, ký số cơ quan, phát hành); số tờ trình có dãy riêng.
+enum ApprovalWorkflowStatus {
+  DRAFT             // Nháp, hoặc đã rút lại khi chưa ai mở
+  WAITING_UNIT_HEAD // Chờ các trưởng đơn vị liên quan duyệt song song
+  WAITING_LEADER    // Đủ đồng ý của các đơn vị, chờ lãnh đạo
+  APPROVED          // Đã phê duyệt
+  NEEDS_REVISION    // Cần bổ sung, trả người trình sửa rồi trình lại
+  REJECTED          // Không phê duyệt (lý do bắt buộc)
+}
+
+enum ApprovalStepStage {
+  UNIT_HEAD
+  LEADER
+}
+
+enum DocumentApprovalStepStatus {
+  PENDING
+  APPROVED
+  REVISION_REQUIRED
+  REJECTED
+  SKIPPED // Bị bỏ qua khi một bước khác trả về, rút lại hoặc người trình là trưởng đơn vị
+}
+
+model DocumentApprovalWorkflow {
+  id            String                  @id @default(cuid())
+  documentId    String                  @unique @map("document_id")
+  document      Document                @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status        ApprovalWorkflowStatus  @default(DRAFT)
+  round         Int                     @default(0)
+  submittedById String?                 @map("submitted_by_id")
+  submittedBy   User?                   @relation("ApprovalSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  submittedAt   DateTime?               @map("submitted_at")
+  openedAt      DateTime?               @map("opened_at")
+  decidedById   String?                 @map("decided_by_id")
+  decidedBy     User?                   @relation("ApprovalFinalDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt     DateTime?               @map("decided_at")
+  decisionNote  String?                 @map("decision_note") @db.VarChar(1000)
+  steps         DocumentApprovalStep[]
+  consultations DocumentConsultation[]
+  createdAt     DateTime                @default(now()) @map("created_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("document_approval_workflows")
+}
+
+model DocumentApprovalStep {
+  id             String                     @id @default(cuid())
+  workflowId     String                     @map("workflow_id")
+  workflow       DocumentApprovalWorkflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  round          Int
+  stage          ApprovalStepStage
+  unitId         String?                    @map("unit_id")
+  unit           OrganizationalUnit?        @relation("ApprovalStepUnit", fields: [unitId], references: [id], onDelete: SetNull)
+  approverUserId String?                    @map("approver_user_id")
+  approver       User?                      @relation("ApprovalStepApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  status         DocumentApprovalStepStatus @default(PENDING)
+  decidedById    String?                    @map("decided_by_id")
+  decidedBy      User?                      @relation("ApprovalStepDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt      DateTime?                  @map("decided_at")
+  note           String?                    @db.VarChar(1000)
+  openedAt       DateTime?                  @map("opened_at")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+
+  @@index([workflowId, round, status])
+  @@index([unitId, status])
+  @@map("document_approval_steps")
+}
+
+// Xin ý kiến tham khảo: người xử lý chuyển phiếu cho người khác cho ý kiến mà không đổi người duyệt.
+model DocumentConsultation {
+  id           String                   @id @default(cuid())
+  workflowId   String                   @map("workflow_id")
+  workflow     DocumentApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  askedById    String                   @map("asked_by_id")
+  askedBy      User                     @relation("ConsultationAsker", fields: [askedById], references: [id], onDelete: Restrict)
+  consultantId String                   @map("consultant_id")
+  consultant   User                     @relation("ConsultationConsultant", fields: [consultantId], references: [id], onDelete: Restrict)
+  question     String                   @db.VarChar(1000)
+  answer       String?                  @db.VarChar(2000)
+  answeredAt   DateTime?                @map("answered_at")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+
+  @@index([workflowId, createdAt])
+  @@index([consultantId, answeredAt])
+  @@map("document_consultations")
 }
 
 model UnitWorkAssignment {
@@ -914,6 +1010,7 @@ model OrganizationalUnit {
   unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
   documentReturnsFrom DocumentUnitReturn[]       @relation("DocReturnFromUnit")
   documentReturnsTo   DocumentUnitReturn[]       @relation("DocReturnToUnit")
+  approvalSteps       DocumentApprovalStep[]     @relation("ApprovalStepUnit")
   workDossiers        WorkDossier[]
   meetings            Meeting[]
   meetingResolutions  MeetingResolution[]        @relation("UnitMeetingResolutions")

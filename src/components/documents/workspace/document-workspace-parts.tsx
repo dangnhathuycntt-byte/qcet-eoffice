@@ -12,6 +12,7 @@ import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { DocumentAuditTimeline } from "../document-audit-timeline";
 import { OutgoingActionPanel } from "../outgoing-action-panel";
 import { IncomingDirectives, IncomingWorkflowActions, IncomingWorkflowDetails, getIncomingAttributes } from "./incoming-workflow-sections";
+import { SubmissionApprovalPanel } from "./submission-approval-panel";
 import { DocumentEditActions } from "./document-edit";
 import { OutgoingWorkflowStepper } from "../outgoing-workflow-stepper";
 import { CollapsibleSection, DetailsPopover, DocumentTitleBlock, InspectorRow, LinkedTaskSection, MetaInline, SectionHeading } from "../document-detail-parts";
@@ -263,6 +264,7 @@ export function DocumentInfoSections({
       <>
         {/* Nhiệm vụ liên kết là dòng cuối của lưới thuộc tính (cùng cột nhãn) */}
         <LinkedTaskCreateSection vm={vm} onLinked={onWorkflowUpdate} inline />
+        {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
         {vm.kind === "outgoing" && item ? (
           <OutgoingActionPanel
             documentId={vm.id}
@@ -283,6 +285,8 @@ export function DocumentInfoSections({
 
   return (
     <>
+      {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+
       {vm.kind === "outgoing" && item ? (
         <OutgoingActionPanel
           documentId={vm.id}
