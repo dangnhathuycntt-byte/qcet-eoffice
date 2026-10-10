@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { StandardDialog } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
@@ -77,6 +79,7 @@ export function SubmissionApprovalPanel({
   const [decision, setDecision] = React.useState<Decision | null>(null);
   const [note, setNote] = React.useState("");
   const [units, setUnits] = React.useState<string[]>([]);
+  const [unitQuery, setUnitQuery] = React.useState("");
   const [consultantId, setConsultantId] = React.useState<string | null>(null);
   const [question, setQuestion] = React.useState("");
   const [answers, setAnswers] = React.useState<Record<string, string>>({});
@@ -144,6 +147,87 @@ export function SubmissionApprovalPanel({
   const statusLabel = state.workflow ? WORKFLOW_STATUS_LABEL[state.workflow.status] : "Nháp";
   const mustNote = decision !== null && decision !== "APPROVE";
 
+  const submitLabel = state.workflow?.status === "NEEDS_REVISION" ? "Trình lại" : "Trình duyệt";
+  const closeSubmit = () => {
+    setMode("idle");
+    setUnitQuery("");
+  };
+  const query = unitQuery.trim().toLowerCase();
+  const visibleDepartments = departments
+    .filter((d) => !query || d.name.toLowerCase().includes(query))
+    .sort((a, b) => Number(units.includes(b.id)) - Number(units.includes(a.id)));
+
+  const submitForm = (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">Đơn vị của bạn luôn phải duyệt. Chọn thêm đơn vị liên quan để duyệt song song.</p>
+      <Input compact value={unitQuery} onChange={(e) => setUnitQuery(e.target.value)} placeholder="Tìm đơn vị" aria-label="Tìm đơn vị" autoFocus />
+      {/* Danh sách đơn vị: khung viền, cuộn bên trong; hàng 28px, cả hàng là vùng bấm; đã chọn lên đầu */}
+      <ul role="group" aria-label="Đơn vị liên quan" className="max-h-64 overflow-y-auto rounded-lg border border-border p-1">
+        {visibleDepartments.map((d) => (
+          <li key={d.id}>
+            <label className="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-2 text-compact transition-colors hover:bg-accent">
+              <Checkbox
+                checked={units.includes(d.id)}
+                onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
+              />
+              <span className="min-w-0 truncate" title={d.name}>{d.name}</span>
+            </label>
+          </li>
+        ))}
+        {visibleDepartments.length === 0 ? <li className="px-2 py-1.5 text-xs text-muted-foreground">Không có đơn vị phù hợp</li> : null}
+      </ul>
+      <div className="flex items-center gap-1.5 pt-1">
+        <span className="mr-auto text-xs text-muted-foreground">
+          {units.length > 0 ? `Đã chọn ${units.length} đơn vị` : "Chưa chọn thêm đơn vị"}
+        </span>
+        <Button type="button" size="sm" variant="ghost" onClick={closeSubmit}>Hủy</Button>
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
+          {submitLabel}
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Thao tác theo bước. Ở Quick View đi liền sau trạng thái trên hàng "Phê duyệt", không thành một hàng nút lơ lửng;
+  // "Trình duyệt" mở hộp thoại chọn đơn vị, trang chi tiết không bị đẩy xuống.
+  const actions = (
+    <>
+      {state.canSubmit ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => setMode("submit")}>
+          {submitLabel}
+        </Button>
+      ) : null}
+      {state.canRequestReturn && (
+        <Button type="button" size="sm" variant="ghost" onClick={() => setMode("return")}>
+          Xin trả lại
+        </Button>
+      )}
+      {state.canWithdraw && (
+        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void call("withdraw-approval", {}, "Không rút lại được")}>
+          Rút lại
+        </Button>
+      )}
+      {state.myStep?.decisions.map((d) => (
+        <Button
+          key={d}
+          type="button"
+          size="sm"
+          variant={d === "APPROVE" ? "default" : "ghost"}
+          className={cn(d === "REJECT" && "text-destructive hover:text-destructive")}
+          disabled={busy}
+          onClick={() => (d === "APPROVE" ? void call("decide-approval", { stepId: state.myStep!.id, decision: d }, "Không ghi được quyết định") : (setDecision(d), setMode("decide")))}
+        >
+          {DECISION_LABEL[d]}
+        </Button>
+      ))}
+      {state.canAskConsultation && (
+        <Button type="button" size="sm" variant="ghost" onClick={() => setMode("consult")}>
+          Xin ý kiến
+        </Button>
+      )}
+    </>
+  );
+
   return (
     <section
       aria-label="Luồng duyệt tờ trình"
@@ -151,15 +235,17 @@ export function SubmissionApprovalPanel({
     >
       {row ? (
         <>
-          <h3 className="flex h-6 items-center whitespace-nowrap text-xs font-normal text-muted-foreground">Phê duyệt</h3>
-          <p className="flex min-h-6 min-w-0 flex-wrap items-center gap-x-1.5 text-compact text-foreground">
+          <h3 className="flex h-7 items-center whitespace-nowrap text-xs font-normal text-muted-foreground">Phê duyệt</h3>
+          <div className="flex min-h-7 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-compact text-foreground">
             {statusLabel}
             {round > 1 ? <span className="text-xs text-muted-foreground">lần trình {round}</span> : null}
             {/* Nháp: nói trước đường đi để người trình biết nút "Trình duyệt" sẽ gửi tới ai */}
             {current.length === 0 && state.canSubmit ? (
               <span className="text-xs text-muted-foreground">· Trưởng đơn vị → Lãnh đạo</span>
             ) : null}
-          </p>
+            {/* Nút đi liền sau trạng thái (không đẩy về mép phải): đọc thành "trạng thái → việc tiếp theo" */}
+            {mode === "idle" || mode === "submit" ? <span className="ml-2 flex flex-wrap items-center gap-1.5">{actions}</span> : null}
+          </div>
         </>
       ) : (
         <div className="flex items-center gap-2">
@@ -216,72 +302,18 @@ export function SubmissionApprovalPanel({
         </InlineAlert>
       )}
 
-      {mode === "idle" && (
-        <div className={cn("flex flex-wrap gap-1.5", !state.canSubmit && "-ml-2.5")}>
-          {state.canSubmit && (
-            <Button type="button" size="sm" variant="outline" onClick={() => setMode("submit")}>
-              {state.workflow?.status === "NEEDS_REVISION" ? "Trình lại" : "Trình duyệt"}
-            </Button>
-          )}
-          {state.canRequestReturn && (
-            <Button type="button" size="sm" variant="ghost" onClick={() => setMode("return")}>
-              Xin trả lại
-            </Button>
-          )}
-          {state.canWithdraw && (
-            <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void call("withdraw-approval", {}, "Không rút lại được")}>
-              Rút lại
-            </Button>
-          )}
-          {state.myStep?.decisions.map((d) => (
-            <Button
-              key={d}
-              type="button"
-              size="sm"
-              variant={d === "APPROVE" ? "default" : "ghost"}
-              className={cn(d === "REJECT" && "text-destructive hover:text-destructive")}
-              disabled={busy}
-              onClick={() => (d === "APPROVE" ? void call("decide-approval", { stepId: state.myStep!.id, decision: d }, "Không ghi được quyết định") : (setDecision(d), setMode("decide")))}
-            >
-              {DECISION_LABEL[d]}
-            </Button>
-          ))}
-          {state.canAskConsultation && (
-            <Button type="button" size="sm" variant="ghost" onClick={() => setMode("consult")}>
-              Xin ý kiến
-            </Button>
-          )}
-        </div>
-      )}
+      {!row && mode === "idle" && <div className={cn("flex flex-wrap gap-1.5", !state.canSubmit && "-ml-2.5")}>{actions}</div>}
 
-      {mode === "submit" && (
-        <div className="max-w-md space-y-2">
-          <p className="text-xs text-muted-foreground">Đơn vị của bạn luôn phải duyệt. Chọn thêm đơn vị liên quan để duyệt song song.</p>
-          {/* Danh sách đơn vị: khung viền, cuộn bên trong; hàng 28px, cả hàng là vùng bấm */}
-          <ul role="group" aria-label="Đơn vị liên quan" className="max-h-48 overflow-y-auto rounded-lg border border-border p-1">
-            {departments.map((d) => (
-              <li key={d.id}>
-                <label className="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-2 text-compact transition-colors hover:bg-accent">
-                  <Checkbox
-                    checked={units.includes(d.id)}
-                    onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
-                  />
-                  <span className="min-w-0 truncate" title={d.name}>{d.name}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <div className="flex items-center gap-1.5">
-            <span className="mr-auto text-xs text-muted-foreground">
-              {units.length > 0 ? `Đã chọn ${units.length} đơn vị` : "Chưa chọn đơn vị liên quan"}
-            </span>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
-            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
-              Trình duyệt
-            </Button>
-          </div>
-        </div>
-      )}
+      <StandardDialog
+        compact
+        open={mode === "submit"}
+        onOpenChange={(open) => (open ? setMode("submit") : closeSubmit())}
+        title={state.workflow?.status === "NEEDS_REVISION" ? "Trình lại tờ trình" : "Trình duyệt tờ trình"}
+        size="sm"
+        className="sm:max-w-md"
+      >
+        {submitForm}
+      </StandardDialog>
 
       {mode === "decide" && decision && state.myStep && (
         <div className="space-y-1.5">
