@@ -23,6 +23,7 @@ import {
   type TaskPushEventType,
 } from "@/lib/push-service";
 import { logger } from "@/server/observability/logger";
+import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 
 /** Sự kiện cũ hơn mốc này khi được xử lý lần đầu thì bỏ qua, không gửi dồn tồn đọng. */
 export const STALE_EVENT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -35,6 +36,8 @@ interface TaskNotice {
   pushEvent: TaskPushEventType;
   note?: string | null;
   dueDateStr?: string;
+  /** Đường dẫn khi bấm thông báo; mặc định mở nhiệm vụ. */
+  linkHref?: string;
 }
 
 function payloadOf(event: OutboxEvent): Record<string, unknown> {
@@ -94,6 +97,7 @@ export async function deliverTaskNotice(db: DbClient, notice: TaskNotice): Promi
     actorName,
     directiveNote: notice.note ?? undefined,
     dueDateStr: notice.dueDateStr,
+    linkHref: notice.linkHref,
   });
 
   // Ghi thông báo trong ứng dụng trước, một lệnh duy nhất: nếu lỗi thì chưa có bản
@@ -287,6 +291,55 @@ export const TASK_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
       type: "extension_decided",
       pushEvent: "TASK_EXTENSION_DECISION",
       note: str(p, "message"),
+    });
+  }),
+
+  // Yêu cầu phối hợp liên đơn vị: báo trưởng đơn vị được yêu cầu (T-12).
+  [OutboxEventType.TASK_UNIT_REQUESTED_NOTIFICATION]: guarded(async (event, db) => {
+    const p = payloadOf(event);
+    const taskId = requireTaskId(event);
+    const requestId = str(p, "requestId");
+    const request = requestId
+      ? await db.taskUnitRequest.findUnique({ where: { id: requestId }, select: { status: true, note: true, targetUnitId: true } })
+      : null;
+    if (!request || request.status !== "PENDING") return { skipped: "request_closed" };
+    const now = new Date();
+    const rows = await db.positionAssignment.findMany({
+      where: { unitId: request.targetUnitId, status: "ACTIVE", effectiveFrom: { lte: now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] },
+      include: { positionDefinition: { select: { code: true } } },
+    });
+    const heads = rows.filter((r) => isUnitLeaderPosition(r.positionDefinition.code)).map((r) => r.userId);
+    return deliverTaskNotice(db, {
+      taskId,
+      recipientIds: heads,
+      actorId: str(p, "requestedById"),
+      type: "unit_request",
+      pushEvent: "TASK_UNIT_REQUEST",
+      // Trưởng đơn vị được yêu cầu chưa đọc được nhiệm vụ nên mở hộp thư yêu cầu.
+      linkHref: "/tasks/unit-requests",
+      note: request.note && request.note.length > 80 ? `${request.note.slice(0, 77)}...` : request.note,
+    });
+  }),
+
+  // Trưởng đơn vị trả lời yêu cầu phối hợp: báo người gửi (T-12).
+  [OutboxEventType.TASK_UNIT_REQUEST_DECIDED_NOTIFICATION]: guarded(async (event, db) => {
+    const p = payloadOf(event);
+    const requestId = str(p, "requestId");
+    const request = requestId
+      ? await db.taskUnitRequest.findUnique({ where: { id: requestId }, select: { requestedById: true, status: true, decisionNote: true, targetUnit: { select: { name: true } }, assignee: { select: { name: true } } } })
+      : null;
+    if (!request) return { skipped: "request_missing" };
+    const message =
+      request.status === "ASSIGNED"
+        ? `${request.targetUnit.name} cử ${request.assignee?.name ?? "người phối hợp"}`
+        : `${request.targetUnit.name} từ chối${request.decisionNote ? `: ${request.decisionNote}` : ""}`;
+    return deliverTaskNotice(db, {
+      taskId: requireTaskId(event),
+      recipientIds: [request.requestedById],
+      actorId: str(p, "decidedById"),
+      type: "unit_request_decided",
+      pushEvent: "TASK_UNIT_REQUEST_DECISION",
+      note: message.length > 120 ? `${message.slice(0, 117)}...` : message,
     });
   }),
 

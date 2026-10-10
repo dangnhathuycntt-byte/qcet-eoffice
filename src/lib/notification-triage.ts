@@ -128,6 +128,7 @@ const APPROVAL_TYPES = new Set([
   "dacum_step1_review",
   "deliverable_revision",
   "extension_requested",
+  "unit_request",
   "declined",
   "review_pending",
   "escalation",

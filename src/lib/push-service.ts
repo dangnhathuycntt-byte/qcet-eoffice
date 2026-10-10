@@ -19,7 +19,9 @@ export type TaskPushEventType =
   | "TASK_ESCALATION"
   | "TASK_DECLINED"
   | "TASK_EXTENSION_REQUEST"
-  | "TASK_EXTENSION_DECISION";
+  | "TASK_EXTENSION_DECISION"
+  | "TASK_UNIT_REQUEST"
+  | "TASK_UNIT_REQUEST_DECISION";
 
 export interface TaskPushInput {
   event: TaskPushEventType;
@@ -257,6 +259,18 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
       eventShort = "extension-decision";
       rawTitle = `[GIA HẠN] ${taskTitle}`;
       rawBody = directiveNote ? `${actorName}: ${directiveNote}` : `${actorName} đã phản hồi yêu cầu gia hạn`;
+      break;
+    }
+    case "TASK_UNIT_REQUEST": {
+      eventShort = "unit-request";
+      rawTitle = `[YÊU CẦU PHỐI HỢP] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} đề nghị đơn vị bạn phối hợp: "${directiveNote}"` : `${actorName} đề nghị đơn vị bạn cử người phối hợp`;
+      break;
+    }
+    case "TASK_UNIT_REQUEST_DECISION": {
+      eventShort = "unit-request-decision";
+      rawTitle = `[PHỐI HỢP LIÊN ĐƠN VỊ] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: ${directiveNote}` : `${actorName} đã phản hồi yêu cầu phối hợp`;
       break;
     }
     case "TASK_MENTION": {

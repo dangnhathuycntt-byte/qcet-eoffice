@@ -27,6 +27,7 @@ import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
 import { TaskDecline } from "@/components/tasks/detail/task-decline";
 import { TaskExtension } from "@/components/tasks/detail/task-extension";
 import { TaskBackupReviewer } from "@/components/tasks/detail/task-backup-reviewer";
+import { TaskUnitRequests } from "@/components/tasks/detail/task-unit-requests";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
@@ -901,6 +902,8 @@ export function TaskDetailPage({
               />
 
               <TaskBackupReviewer taskId={task.id} />
+
+              <TaskUnitRequests taskId={task.id} />
 
               <TaskCriteria
                 taskId={task.id}

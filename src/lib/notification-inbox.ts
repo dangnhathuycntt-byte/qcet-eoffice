@@ -99,6 +99,8 @@ const EVENT_LABELS: Record<string, string> = {
   document_rerouted: "Văn bản chuyển đơn vị",
   extension_requested: "Xin gia hạn",
   extension_decided: "Phản hồi gia hạn",
+  unit_request: "Yêu cầu phối hợp",
+  unit_request_decided: "Phản hồi phối hợp",
   progress: "Cập nhật",
   upload: "Tệp mới",
   created: "Tạo mới",

@@ -764,6 +764,7 @@ export function authorize(
         action === 'task.remind' ||
         action === 'task.comment' ||
         action === 'task.decide_extension' ||
+        action === 'task.fulfill_unit_request' ||
         action === 'task.close' ||
         action === 'task.cancel' ||
         action === 'task.archive' ||

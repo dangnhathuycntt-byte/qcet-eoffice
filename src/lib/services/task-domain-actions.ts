@@ -47,6 +47,7 @@ import {
 } from "@/server/api/errors";
 import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
 import { partitionTaskActorUserIds } from "@/domain/tasks/task-actor-roles";
+import { assertCollaboratorInLeadUnit } from "@/server/tasks/task-unit-request-service";
 import { countUnmetCriteria } from "@/server/tasks/task-criteria-service";
 import {
   taskStateMachine,
@@ -1741,6 +1742,10 @@ export class TaskDomainActionService {
     if (!targetUser.isActive) throw new ValidationError("Tài khoản này đã ngừng hoạt động");
 
     const role = validated.role === "COLLABORATOR" ? TaskActorRole.COLLABORATOR : TaskActorRole.FOLLOWER;
+    // Giao việc cho người khác đơn vị phải qua trưởng đơn vị đó (T-12, D06); theo dõi thì không cần.
+    if (role === TaskActorRole.COLLABORATOR) {
+      await assertCollaboratorInLeadUnit(session, task, validated.userId);
+    }
     const existing = await prisma.taskActor.findMany({ where: { taskId, userId: validated.userId } });
     const protectedRole = existing.find((a) => !PEOPLE_MANAGED_ROLES.has(a.role));
     if (protectedRole) {

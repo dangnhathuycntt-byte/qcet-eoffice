@@ -65,6 +65,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   TASK_EXTENSION_REPEATED: "Gia hạn nhiều lần",
   TASK_CRITERIA_UPDATED: "Cập nhật tiêu chí hoàn thành",
   TASK_CRITERION_CHECKED: "Đánh dấu tiêu chí hoàn thành",
+  TASK_UNIT_REQUESTED: "Đề nghị đơn vị khác phối hợp",
+  TASK_UNIT_REQUEST_DECIDED: "Phản hồi đề nghị phối hợp liên đơn vị",
   TASK_PERSON_ADDED: "Thêm người tham gia",
   TASK_PERSON_REMOVED: "Bớt người tham gia",
   UPDATE_DESCRIPTION: "Cập nhật nội dung mô tả",

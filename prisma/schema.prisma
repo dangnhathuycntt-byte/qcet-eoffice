@@ -126,6 +126,9 @@ model User {
   backupReviewerFor     TaskBackupReviewer[]  @relation("TaskBackupReviewerUser")
   backupReviewersSet    TaskBackupReviewer[]  @relation("TaskBackupReviewerDesignator")
   taskTemplatesCreated  TaskTemplate[]        @relation("TaskTemplateCreator")
+  unitRequestsMade      TaskUnitRequest[]     @relation("TaskUnitRequestRequester")
+  unitRequestsAssigned  TaskUnitRequest[]     @relation("TaskUnitRequestAssignee")
+  unitRequestsDecided   TaskUnitRequest[]     @relation("TaskUnitRequestDecider")
   taskRecurrencesCreated TaskRecurrence[]     @relation("TaskRecurrenceCreator")
   taskRecurrencesAsDri  TaskRecurrence[]      @relation("TaskRecurrenceDri")
   taskRecurrencesToReview TaskRecurrence[]    @relation("TaskRecurrenceReviewer")
@@ -267,6 +270,7 @@ model Task {
   declineNotices      TaskDeclineNotice[]
   reminderLogs        TaskReminderLog[]
   backupReviewer      TaskBackupReviewer?
+  unitRequests        TaskUnitRequest[]
   recurrenceRuns      TaskRecurrenceRun[] @relation("TaskRecurrenceRunTask")
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
@@ -1058,6 +1062,7 @@ model OrganizationalUnit {
   documentReturnsTo   DocumentUnitReturn[]       @relation("DocReturnToUnit")
   outgoingRecipients  OutgoingDocumentRecipient[]   @relation("OutgoingRecipientUnit")
   taskTemplates       TaskTemplate[]                @relation("TaskTemplateUnit")
+  taskUnitRequests    TaskUnitRequest[]             @relation("TaskUnitRequestTarget")
   approvalSteps       DocumentApprovalStep[]     @relation("ApprovalStepUnit")
   workDossiers        WorkDossier[]
   meetings            Meeting[]
@@ -1437,6 +1442,38 @@ model TaskRecurrenceRun {
   @@unique([recurrenceId, periodKey])
   @@index([taskId])
   @@map("task_recurrence_runs")
+}
+
+// Giao việc sang đơn vị khác phải qua trưởng đơn vị đó (T-12, D06): người giao gửi yêu cầu cho đơn vị,
+// trưởng đơn vị chọn người của đơn vị mình làm người phối hợp hoặc từ chối.
+enum TaskUnitRequestStatus {
+  PENDING   // chờ trưởng đơn vị nhận
+  ASSIGNED  // đã cử người phối hợp
+  DECLINED  // trưởng đơn vị từ chối
+  CANCELLED // người giao rút lại
+}
+
+model TaskUnitRequest {
+  id             String                @id @default(cuid())
+  taskId         String                @map("task_id")
+  task           Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  targetUnitId   String                @map("target_unit_id")
+  targetUnit     OrganizationalUnit    @relation("TaskUnitRequestTarget", fields: [targetUnitId], references: [id], onDelete: Restrict)
+  requestedById  String                @map("requested_by_id")
+  requestedBy    User                  @relation("TaskUnitRequestRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  note           String?               @db.VarChar(1000)
+  status         TaskUnitRequestStatus @default(PENDING)
+  assigneeUserId String?               @map("assignee_user_id")
+  assignee       User?                 @relation("TaskUnitRequestAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  decidedById    String?               @map("decided_by_id")
+  decidedBy      User?                 @relation("TaskUnitRequestDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt      DateTime?             @map("decided_at")
+  decisionNote   String?               @map("decision_note") @db.VarChar(1000)
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  @@index([taskId, status])
+  @@index([targetUnitId, status])
+  @@map("task_unit_requests")
 }
 
 // Người duyệt dự phòng (T-05, D12). Chỉ trở thành người duyệt khi nhiệm vụ chờ duyệt đủ 96 giờ:
