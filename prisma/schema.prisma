@@ -160,7 +160,8 @@ model User {
   bodyMemberships       BodyMembership[]
   taskActors            TaskActor[]
   assignedActors        TaskActor[]           @relation("ActorAssignedBy")
-  taskApprovalSteps     TaskApprovalStep[]
+  taskApprovalSteps     TaskApprovalStep[]    @relation("TaskApprovalStepReviewer")
+  backupApprovalSteps   TaskApprovalStep[]    @relation("TaskApprovalStepBackupReviewer")
   taskResultsSubmitted  TaskResult[]          @relation("TaskResultSubmitter")
   taskResultsVerified   TaskResult[]          @relation("TaskResultVerifier")
   workflowsPresented    DocumentIncomingWorkflow[] @relation("DocWorkflowPresentedBy")
@@ -1342,12 +1343,16 @@ model TaskApprovalStep {
   reviewerAssignmentId String?             @map("reviewer_assignment_id")
   reviewerAssignment   PositionAssignment? @relation(fields: [reviewerAssignmentId], references: [id], onDelete: SetNull)
   reviewerUserId       String?             @map("reviewer_user_id")
-  reviewerUser         User?               @relation(fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  reviewerUser         User?               @relation("TaskApprovalStepReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  // Người duyệt dự phòng của bước (T-05, D12): chỉ được duyệt khi bước chờ quá 96 giờ, vẫn chịu N4.
+  backupReviewerUserId String?             @map("backup_reviewer_user_id")
+  backupReviewerUser   User?               @relation("TaskApprovalStepBackupReviewer", fields: [backupReviewerUserId], references: [id], onDelete: SetNull)
   status               ApprovalStepStatus  @default(PENDING)
   decisionNote         String?             @map("decision_note") @db.Text
   decidedAt            DateTime?           @map("decided_at")
 
   @@index([processId, stepOrder])
+  @@index([backupReviewerUserId])
   @@map("task_approval_steps")
 }
 

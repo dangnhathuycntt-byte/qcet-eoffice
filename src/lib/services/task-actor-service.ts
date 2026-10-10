@@ -15,6 +15,7 @@ import {
   // Phase 9: AssigneeRole removed — TaskAssignee table dropped.
   AssignmentStatus,
 } from "@prisma/client";
+import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/domain/tasks/backup-reviewer-rules";
 
 export interface TaskActorContext {
   requestedById: string;
@@ -464,6 +465,8 @@ export async function initiateApprovalProcess(
     title: string;
     reviewerUserId?: string;
     reviewerAssignmentId?: string;
+    /** Người duyệt dự phòng của bước (T-05): chỉ được duyệt khi bước chờ quá 96 giờ. */
+    backupReviewerUserId?: string;
   }>
 ): Promise<TaskApprovalProcess & { steps: TaskApprovalStep[] }> {
   if (!steps || steps.length === 0) {
@@ -472,10 +475,17 @@ export async function initiateApprovalProcess(
 
   const task = await prisma.task.findUnique({
     where: { id: taskId },
+    include: stepBackupFactsInclude,
   });
 
   if (!task) {
     throw new Error(`Task with id '${taskId}' not found.`);
+  }
+
+  for (const stepData of steps) {
+    if (stepData.backupReviewerUserId) {
+      assertStepBackupEligible(task, stepData.backupReviewerUserId, stepData.reviewerUserId ?? null);
+    }
   }
 
   return await prisma.$transaction(async (tx) => {
@@ -498,6 +508,7 @@ export async function initiateApprovalProcess(
           title: stepData.title,
           reviewerUserId: stepData.reviewerUserId ?? null,
           reviewerAssignmentId: stepData.reviewerAssignmentId ?? null,
+          backupReviewerUserId: stepData.backupReviewerUserId ?? null,
           status: ApprovalStepStatus.PENDING,
         },
       });
@@ -516,16 +527,55 @@ export async function initiateApprovalProcess(
   });
 }
 
+const stepBackupFactsInclude = {
+  actors: true,
+  taskResults: { select: { submittedByUserId: true } },
+  deliverables: { select: { uploadedById: true } },
+} satisfies Prisma.TaskInclude;
+
+type TaskWithBackupFacts = Prisma.TaskGetPayload<{ include: typeof stepBackupFactsInclude }>;
+
+/** N4 cho người dự phòng của bước: không phải người tạo, người thực hiện, người nộp, người duyệt chính của bước. */
+function assertStepBackupEligible(task: TaskWithBackupFacts, candidateId: string, primaryReviewerId: string | null) {
+  const rejected = checkBackupCandidate({
+    candidateId,
+    creatorId: task.createdById,
+    executorIds: task.actors
+      .filter((a) => a.role === TaskActorRole.DRI || a.role === TaskActorRole.COLLABORATOR)
+      .map((a) => a.userId)
+      .filter((id): id is string => Boolean(id)),
+    submitterIds: [
+      ...task.taskResults.map((r) => r.submittedByUserId),
+      ...task.deliverables.map((d) => d.uploadedById),
+    ].filter((id): id is string => Boolean(id)),
+    reviewerIds: primaryReviewerId ? [primaryReviewerId] : [],
+  });
+  if (rejected) throw new SegregationOfDutiesError(BACKUP_REJECTION_MESSAGE[rejected]);
+}
+
+/** Bước bắt đầu chờ khi bước liền trước được quyết; bước đầu tiên chờ từ lúc lập luồng duyệt. */
+function stepWaitingSince(
+  step: Pick<TaskApprovalStep, "stepOrder">,
+  steps: Array<Pick<TaskApprovalStep, "stepOrder" | "decidedAt">>,
+  processCreatedAt: Date
+): Date {
+  const prior = steps
+    .filter((s) => s.stepOrder < step.stepOrder && s.decidedAt)
+    .map((s) => (s.decidedAt as Date).getTime());
+  return prior.length > 0 ? new Date(Math.max(...prior)) : processCreatedAt;
+}
+
 /**
  * Executes a single review/approval step.
  * Enforces Segregation of Duties (SoD): Task Creator and DRI cannot approve their own task.
+ * Người duyệt dự phòng của bước chỉ được duyệt khi bước chờ quá 96 giờ (trừ khi là lãnh đạo), vẫn chịu N4.
  */
 export async function executeApprovalStep(
   stepId: string,
   reviewerUserId: string,
   decision: "APPROVED" | "REJECTED",
   note?: string,
-  options?: { allowBypass?: boolean },
+  options?: { allowBypass?: boolean; now?: Date },
   txClient?: Prisma.TransactionClient
 ): Promise<TaskApprovalStep> {
   const client = txClient || prisma;
@@ -535,9 +585,7 @@ export async function executeApprovalStep(
       process: {
         include: {
           task: {
-            include: {
-              actors: true,
-            },
+            include: stepBackupFactsInclude,
           },
           steps: {
             orderBy: { stepOrder: "asc" },
@@ -574,8 +622,25 @@ export async function executeApprovalStep(
     );
   }
 
-  // 2. Designated Reviewer validation (if assigned)
-  if (step.reviewerUserId && step.reviewerUserId !== reviewerUserId) {
+  // 2. Backup reviewer of this step (T-05): only after the step has waited 96 hours, still bound by N4.
+  const isStepBackup =
+    Boolean(step.backupReviewerUserId) &&
+    step.backupReviewerUserId === reviewerUserId &&
+    step.reviewerUserId !== reviewerUserId;
+  if (isStepBackup) {
+    assertStepBackupEligible(task, reviewerUserId, step.reviewerUserId);
+    const waitingSince = stepWaitingSince(step, step.process.steps, step.process.createdAt);
+    if (!isBackupDue(waitingSince, options?.now ?? new Date())) {
+      const reviewer = await client.user.findUnique({ where: { id: reviewerUserId } });
+      const isExecutive = reviewer?.role === UserRole.BAN_GIAM_HIEU || reviewer?.role === UserRole.ADMIN;
+      if (!isExecutive) {
+        throw new TaskActorAuthorizationError(
+          "Người duyệt dự phòng chỉ được duyệt khi bước này đã chờ quá 96 giờ."
+        );
+      }
+    }
+  } else if (step.reviewerUserId && step.reviewerUserId !== reviewerUserId) {
+    // Designated Reviewer validation (if assigned)
     const reviewer = await client.user.findUnique({
       where: { id: reviewerUserId },
     });
