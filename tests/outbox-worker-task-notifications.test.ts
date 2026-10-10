@@ -100,6 +100,16 @@ describe('H-1 outbox worker: thông báo nhiệm vụ', () => {
     assert.equal((await noticesFor(ids.dri)).length, before + 1);
   });
 
+  test('nộp kết quả liên tiếp trong 5 phút chỉ báo người duyệt một lần (gộp thông báo)', async () => {
+    const before = (await noticesFor(ids.reviewer)).filter((n) => n.type === 'deliverable_submitted').length;
+    const first = await publish(OutboxEventType.DELIVERABLE_SUBMITTED_NOTIFICATION, { submittedById: ids.dri });
+    await runOutboxCycle(prisma, { ids: [first] });
+    const second = await publish(OutboxEventType.DELIVERABLE_SUBMITTED_NOTIFICATION, { submittedById: ids.dri });
+    await runOutboxCycle(prisma, { ids: [second] });
+    const after = (await noticesFor(ids.reviewer)).filter((n) => n.type === 'deliverable_submitted').length;
+    assert.ok(after - before <= 1, 'lần gửi thứ hai trong cửa sổ 5 phút bị gộp');
+  });
+
   test('nộp duyệt báo người duyệt được chỉ định, không báo người theo dõi', async () => {
     const id = await publish(OutboxEventType.DELIVERABLE_SUBMITTED_NOTIFICATION, { submittedById: ids.dri });
     await runOutboxCycle(prisma, { ids: [id] });

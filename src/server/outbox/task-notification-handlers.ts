@@ -26,6 +26,11 @@ import { logger } from "@/server/observability/logger";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 
 /** Sự kiện cũ hơn mốc này khi được xử lý lần đầu thì bỏ qua, không gửi dồn tồn đọng. */
+/** Cửa sổ gộp thông báo cùng loại, cùng nhiệm vụ. */
+export const COALESCE_WINDOW_MS = 5 * 60 * 1000;
+/** Chỉ gộp loại hay dồn dập (nộp, trả lại kết quả liên tiếp); nhắc việc, nhắc tên, phản hồi thì luôn báo. */
+const COALESCED_TYPES: ReadonlySet<string> = new Set(["deliverable_submitted", "deliverable_revision"]);
+
 export const STALE_EVENT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 interface TaskNotice {
@@ -79,11 +84,21 @@ async function reviewerIds(db: DbClient, taskId: string): Promise<string[]> {
 }
 
 export async function deliverTaskNotice(db: DbClient, notice: TaskNotice): Promise<string[]> {
-  const recipients = [...new Set(notice.recipientIds)].filter((id) => id && id !== notice.actorId);
-  if (recipients.length === 0) return [];
+  const candidates = [...new Set(notice.recipientIds)].filter((id) => id && id !== notice.actorId);
+  if (candidates.length === 0) return [];
 
   const task = await db.task.findUnique({ where: { id: notice.taskId }, select: { id: true, title: true } });
   if (!task) return [];
+
+  // Gộp thông báo (Quy trình 11): cùng loại, cùng nhiệm vụ trong 5 phút chỉ báo một lần cho mỗi người.
+  const linkHref = notice.linkHref ?? `/tasks?taskId=${encodeURIComponent(task.id)}`;
+  const recent = !COALESCED_TYPES.has(notice.type) ? [] : await db.notification.findMany({
+    where: { userId: { in: candidates }, type: notice.type, linkHref, createdAt: { gte: new Date(Date.now() - COALESCE_WINDOW_MS) } },
+    select: { userId: true },
+  });
+  const alreadyNotified = new Set(recent.map((r) => r.userId));
+  const recipients = candidates.filter((id) => !alreadyNotified.has(id));
+  if (recipients.length === 0) return [];
 
   const actor = notice.actorId
     ? await db.user.findUnique({ where: { id: notice.actorId }, select: { name: true } })
