@@ -11,6 +11,7 @@ import {
   User,
   Check,
   CalendarClock,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -218,7 +219,7 @@ export function CreateTaskModal({
               data-slot="create-task-modal"
               className={cn(
                 "pointer-events-auto relative flex flex-col bg-card rounded-2xl shadow-2xl border-0 overflow-hidden",
-                "w-full max-w-[680px] h-[540px] max-h-[85vh]",
+                "w-full max-w-[680px] min-h-[360px] max-h-[85vh]",
                 "animate-in fade-in zoom-in-95",
               )}
             >
@@ -310,6 +311,15 @@ export function CreateTaskModal({
                   </Dialog.Title>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={handleRequestClose}
+                  aria-label="Đóng"
+                  title="Đóng (Esc)"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="size-4" strokeWidth={1.5} />
+                </button>
               </header>
 
               {/* ── Restored Draft Banner ────────────────────── */}
@@ -371,9 +381,9 @@ export function CreateTaskModal({
                         summaryInputRef.current?.focus();
                       }
                     }}
-                    placeholder={initialParentTaskId ? "Tên việc con... *" : "Tên nhiệm vụ... *"}
+                    placeholder={initialParentTaskId ? "Tên việc con" : "Tên nhiệm vụ"}
                     className={cn(
-                      "w-full text-lg sm:text-xl font-semibold text-foreground placeholder:text-muted-foreground bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug",
+                      "w-full text-lg font-semibold text-foreground placeholder:text-muted-foreground/60 bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug",
                       form.fieldErrors.title && "placeholder:text-destructive/60 text-destructive",
                     )}
                   />
@@ -403,221 +413,13 @@ export function CreateTaskModal({
                         descriptionTextareaRef.current?.focus();
                       }
                     }}
-                    placeholder="Thêm mô tả ngắn hoặc kết quả kỳ vọng..."
+                    placeholder="Thêm mô tả ngắn hoặc kết quả kỳ vọng"
                     className="w-full text-xs text-muted-foreground placeholder:text-muted-foreground/70 bg-transparent border-0 p-0 focus:outline-none focus:ring-0"
                   />
                 </div>
 
-                {/* 3. Compact Properties Chips Bar */}
-                <div className="flex flex-wrap items-center gap-1.5 py-2 my-0.5 border-y border-border/60 shrink-0">
-                  {/* 3.1 Priority Chip */}
-                  <Popover.Root
-                    open={openDropdown === "priority"}
-                    onOpenChange={(open) => setOpenDropdown(open ? "priority" : null)}
-                  >
-                    <div className="relative">
-                      <Popover.Trigger
-                        type="button"
-                        className={cn(
-                          "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
-                          openDropdown === "priority"
-                            ? "border-border bg-accent text-foreground shadow-2xs"
-                            : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
-                        )}
-                      >
-                        <PrioritySignalBars priority={toSignalPriority(form.formData.priority)} className="shrink-0" />
-                        <span>{PRIORITY_CONFIG[form.formData.priority].label}</span>
-                        <ChevronDown
-                          className={cn(
-                            "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
-                            openDropdown === "priority" && "rotate-180 text-foreground",
-                          )}
-                        />
-                      </Popover.Trigger>
-
-                      <Popover.Portal>
-                        <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
-                          <Popover.Popup
-                            style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                            className="w-40 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl"
-                            aria-label="Chọn mức độ ưu tiên"
-                          >
-                            {PRIORITY_KEYS.map((p) => (
-                              <button
-                                key={p}
-                                type="button"
-                                onClick={() => {
-                                  form.setField("priority", p);
-                                  setOpenDropdown(null);
-                                }}
-                                className={cn(
-                                  "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
-                                  form.formData.priority === p
-                                    ? "font-medium text-foreground hover:bg-accent"
-                                    : "text-foreground hover:bg-accent",
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <PrioritySignalBars priority={toSignalPriority(p)} className="shrink-0" />
-                                  <span>{PRIORITY_CONFIG[p].label}</span>
-                                </div>
-                                {form.formData.priority === p && (
-                                  <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
-                                )}
-                              </button>
-                            ))}
-                          </Popover.Popup>
-                        </Popover.Positioner>
-                      </Popover.Portal>
-                    </div>
-                  </Popover.Root>
-
-                  {/* 3.2 Lead Assignee (DRI) Chip (P0 Field) */}
-                  <Popover.Root
-                    open={openDropdown === "dri"}
-                    onOpenChange={(open) => {
-                      setOpenDropdown(open ? "dri" : null);
-                      if (!open) setPersonQuery("");
-                    }}
-                  >
-                    <div className="relative">
-                      <Popover.Trigger
-                        type="button"
-                        aria-required="true"
-                        className={cn(
-                          "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
-                          form.fieldErrors.lead
-                            ? "bg-danger-soft text-destructive border-destructive/30"
-                            : openDropdown === "dri"
-                              ? "border-border bg-accent text-foreground shadow-2xs"
-                              : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
-                        )}
-                      >
-                        {leadAssigneeDisplayName ? (
-                          <UserAvatar name={leadAssigneeDisplayName} avatarUrl={leadAssigneeAvatarUrl} size="xs" />
-                        ) : (
-                          <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
-                        )}
-                        <span className="max-w-[110px] truncate" title={leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : undefined}>
-                          {leadAssigneeDisplayName || "Chủ trì"}
-                        </span>
-                        <ChevronDown
-                          className={cn(
-                            "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
-                            openDropdown === "dri" && "rotate-180 text-foreground",
-                          )}
-                        />
-                      </Popover.Trigger>
-
-                      <Popover.Portal>
-                        <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
-                          <Popover.Popup
-                            style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                            className="w-60 p-1 rounded-xl border border-border bg-popover shadow-2xl"
-                            aria-label="Chọn người chủ trì"
-                          >
-                            <input
-                              value={personQuery}
-                              onChange={(e) => setPersonQuery(e.target.value)}
-                              placeholder="Tìm người..."
-                              aria-label="Tìm người chủ trì"
-                              className="mb-1 h-7 w-full rounded-md bg-muted/60 px-2 text-xs outline-none placeholder:text-muted-foreground focus:bg-muted"
-                            />
-                            <div className="max-h-56 space-y-0.5 overflow-y-auto overscroll-contain">
-                              {form.availablePersonnel.length === 0 ? (
-                                <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                                  Chưa có nhân sự trong đơn vị này
-                                </div>
-                              ) : (
-                                (() => {
-                                  const q = personQuery.trim().toLocaleLowerCase("vi");
-                                  const list = q
-                                    ? form.availablePersonnel.filter((p) =>
-                                        [p.name, p.email].some((t) => t?.toLocaleLowerCase("vi").includes(q)),
-                                      )
-                                    : form.availablePersonnel;
-                                  if (list.length === 0) {
-                                    return (
-                                      <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                                        Không tìm thấy người phù hợp
-                                      </div>
-                                    );
-                                  }
-                                  return list.map((person) => (
-                                    <button
-                                      key={person.id}
-                                      type="button"
-                                      onClick={() => {
-                                        form.setField("leadAssigneeId", person.id);
-                                        if (form.fieldErrors.lead) {
-                                          form.setFieldErrors((prev) => ({ ...prev, lead: undefined }));
-                                        }
-                                        setPersonQuery("");
-                                        setOpenDropdown(null);
-                                      }}
-                                      className={cn(
-                                        "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 cursor-pointer transition-colors",
-                                        form.formData.leadAssigneeId === person.id
-                                          ? "bg-accent"
-                                          : "hover:bg-accent/70",
-                                      )}
-                                    >
-                                      <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
-                                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                                        {person.name}
-                                      </span>
-                                      {form.formData.leadAssigneeId === person.id && (
-                                        <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
-                                      )}
-                                    </button>
-                                  ));
-                                })()
-                              )}
-                            </div>
-                          </Popover.Popup>
-                        </Popover.Positioner>
-                      </Popover.Portal>
-                    </div>
-                  </Popover.Root>
-
-                  {/* 3.3 Start Date Chip */}
-                  <VietnameseDatePicker
-                    value={form.formData.startDate}
-                    onChange={(val) => form.setField("startDate", val)}
-                    label="Bắt đầu:"
-                    variant="chip"
-                    icon={<Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />}
-                    placeholder="dd/mm/yyyy"
-                  />
-
-                  {/* 3.4 Target Due Date Chip (P0 Field) */}
-                  <VietnameseDatePicker
-                    value={form.formData.dueDate}
-                    required
-                    onChange={(val) => {
-                      form.setField("dueDate", val);
-                      if (form.fieldErrors.dueDate) {
-                        form.setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
-                      }
-                    }}
-                    label="Hạn:"
-                    variant="chip"
-                    error={Boolean(form.fieldErrors.dueDate)}
-                    icon={
-                      <CalendarClock
-                        className={cn(
-                          "size-3",
-                          form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground",
-                        )}
-                        strokeWidth={1.5}
-                      />
-                    }
-                    placeholder="dd/mm/yyyy"
-                  />
-                </div>
-
                 {/* 4. Detailed Description / Canvas */}
-                <div className="pt-0.5 flex-1 flex flex-col min-h-[120px]">
+                <div className="pt-1 flex-1 flex flex-col min-h-[160px]">
                   <label htmlFor="create-task-description" className="sr-only">
                     Mô tả chi tiết nhiệm vụ
                   </label>
@@ -626,11 +428,221 @@ export function CreateTaskModal({
                     ref={descriptionTextareaRef}
                     value={form.formData.description}
                     onChange={(e) => form.setField("description", e.target.value)}
-                    placeholder="Mô tả nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu..."
+                    placeholder="Nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu"
                     rows={4}
-                    className="w-full flex-1 min-h-[100px] resize-none bg-transparent border-0 p-0 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 leading-relaxed"
+                    className="w-full flex-1 min-h-[140px] resize-none bg-transparent border-0 p-0 text-compact text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 leading-relaxed"
                   />
                 </div>
+              </div>
+
+              {/* 3. Thuộc tính: dưới phần soạn, luôn thấy kể cả khi mô tả dài */}
+              <div className="flex flex-wrap items-center gap-1.5 px-5 sm:px-6 pb-3 shrink-0">
+                {/* 3.1 Priority Chip */}
+                <Popover.Root
+                  open={openDropdown === "priority"}
+                  onOpenChange={(open) => setOpenDropdown(open ? "priority" : null)}
+                >
+                  <div className="relative">
+                    <Popover.Trigger
+                      type="button"
+                      className={cn(
+                        "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
+                        openDropdown === "priority"
+                          ? "border-border bg-accent text-foreground shadow-2xs"
+                          : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
+                      )}
+                    >
+                      <PrioritySignalBars priority={toSignalPriority(form.formData.priority)} className="shrink-0" />
+                      <span>{PRIORITY_CONFIG[form.formData.priority].label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                          openDropdown === "priority" && "rotate-180 text-foreground",
+                        )}
+                      />
+                    </Popover.Trigger>
+
+                    <Popover.Portal>
+                      <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                        <Popover.Popup
+                          style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+                          className="w-40 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl"
+                          aria-label="Chọn mức độ ưu tiên"
+                        >
+                          {PRIORITY_KEYS.map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => {
+                                form.setField("priority", p);
+                                setOpenDropdown(null);
+                              }}
+                              className={cn(
+                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
+                                form.formData.priority === p
+                                  ? "font-medium text-foreground hover:bg-accent"
+                                  : "text-foreground hover:bg-accent",
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <PrioritySignalBars priority={toSignalPriority(p)} className="shrink-0" />
+                                <span>{PRIORITY_CONFIG[p].label}</span>
+                              </div>
+                              {form.formData.priority === p && (
+                                <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                              )}
+                            </button>
+                          ))}
+                        </Popover.Popup>
+                      </Popover.Positioner>
+                    </Popover.Portal>
+                  </div>
+                </Popover.Root>
+
+                {/* 3.2 Lead Assignee (DRI) Chip (P0 Field) */}
+                <Popover.Root
+                  open={openDropdown === "dri"}
+                  onOpenChange={(open) => {
+                    setOpenDropdown(open ? "dri" : null);
+                    if (!open) setPersonQuery("");
+                  }}
+                >
+                  <div className="relative">
+                    <Popover.Trigger
+                      type="button"
+                      aria-required="true"
+                      className={cn(
+                        "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
+                        form.fieldErrors.lead
+                          ? "bg-danger-soft text-destructive border-destructive/30"
+                          : openDropdown === "dri"
+                            ? "border-border bg-accent text-foreground shadow-2xs"
+                            : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
+                      )}
+                    >
+                      {leadAssigneeDisplayName ? (
+                        <UserAvatar name={leadAssigneeDisplayName} avatarUrl={leadAssigneeAvatarUrl} size="xs" />
+                      ) : (
+                        <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                      )}
+                      <span className="max-w-[110px] truncate" title={leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : undefined}>
+                        {leadAssigneeDisplayName || "Chủ trì"}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                          openDropdown === "dri" && "rotate-180 text-foreground",
+                        )}
+                      />
+                    </Popover.Trigger>
+
+                    <Popover.Portal>
+                      <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                        <Popover.Popup
+                          style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+                          className="w-60 p-1 rounded-xl border border-border bg-popover shadow-2xl"
+                          aria-label="Chọn người chủ trì"
+                        >
+                          <input
+                            value={personQuery}
+                            onChange={(e) => setPersonQuery(e.target.value)}
+                            placeholder="Tìm người..."
+                            aria-label="Tìm người chủ trì"
+                            className="mb-1 h-7 w-full rounded-md bg-muted/60 px-2 text-xs outline-none placeholder:text-muted-foreground focus:bg-muted"
+                          />
+                          <div className="max-h-56 space-y-0.5 overflow-y-auto overscroll-contain">
+                            {form.availablePersonnel.length === 0 ? (
+                              <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+                                Chưa có nhân sự trong đơn vị này
+                              </div>
+                            ) : (
+                              (() => {
+                                const q = personQuery.trim().toLocaleLowerCase("vi");
+                                const list = q
+                                  ? form.availablePersonnel.filter((p) =>
+                                      [p.name, p.email].some((t) => t?.toLocaleLowerCase("vi").includes(q)),
+                                    )
+                                  : form.availablePersonnel;
+                                if (list.length === 0) {
+                                  return (
+                                    <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+                                      Không tìm thấy người phù hợp
+                                    </div>
+                                  );
+                                }
+                                return list.map((person) => (
+                                  <button
+                                    key={person.id}
+                                    type="button"
+                                    onClick={() => {
+                                      form.setField("leadAssigneeId", person.id);
+                                      if (form.fieldErrors.lead) {
+                                        form.setFieldErrors((prev) => ({ ...prev, lead: undefined }));
+                                      }
+                                      setPersonQuery("");
+                                      setOpenDropdown(null);
+                                    }}
+                                    className={cn(
+                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 cursor-pointer transition-colors",
+                                      form.formData.leadAssigneeId === person.id
+                                        ? "bg-accent"
+                                        : "hover:bg-accent/70",
+                                    )}
+                                  >
+                                    <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
+                                    <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                                      {person.name}
+                                    </span>
+                                    {form.formData.leadAssigneeId === person.id && (
+                                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                                    )}
+                                  </button>
+                                ));
+                              })()
+                            )}
+                          </div>
+                        </Popover.Popup>
+                      </Popover.Positioner>
+                    </Popover.Portal>
+                  </div>
+                </Popover.Root>
+
+                {/* 3.3 Start Date Chip */}
+                <VietnameseDatePicker
+                  value={form.formData.startDate}
+                  onChange={(val) => form.setField("startDate", val)}
+                  label={form.formData.startDate ? "Bắt đầu:" : undefined}
+                  variant="chip"
+                  triggerClassName="h-7"
+                  icon={<Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />}
+                  placeholder="Bắt đầu"
+                />
+
+                {/* 3.4 Target Due Date Chip (P0 Field) */}
+                <VietnameseDatePicker
+                  value={form.formData.dueDate}
+                  required
+                  onChange={(val) => {
+                    form.setField("dueDate", val);
+                    if (form.fieldErrors.dueDate) {
+                      form.setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
+                    }
+                  }}
+                  label={form.formData.dueDate ? "Hạn:" : undefined}
+                  variant="chip"
+                  triggerClassName="h-7"
+                  error={Boolean(form.fieldErrors.dueDate)}
+                  icon={
+                    <CalendarClock
+                      className={cn(
+                        "size-3",
+                        form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground",
+                      )}
+                      strokeWidth={1.5}
+                    />
+                  }
+                  placeholder="Hạn hoàn thành"
+                />
               </div>
 
               {/* ── Modal Bottom Footer ──────────────────────── */}
@@ -653,7 +665,7 @@ export function CreateTaskModal({
                     type="button"
                     onClick={handleFormSubmit}
                     disabled={form.isSubmitting || !form.formData.title.trim()}
-                    className="h-7.5 px-3.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
                   >
                     {form.isSubmitting ? (
                       <>

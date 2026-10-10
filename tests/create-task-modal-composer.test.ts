@@ -2,7 +2,7 @@
  * tests/create-task-modal-composer.test.ts
  *
  * Kiểm thử toàn diện Compact Task Composer & Modal UX/UI:
- * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Property Chips -> Description Canvas -> Footer
+ * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Description Canvas -> Property Chips -> Footer
  * 2. Visual density & restraint: No redundant sections, compact properties bar (wrap max 2 rows)
  * 3. Scope integrity: No fake AI Agent or "+ Thêm đầu việc" in create modal (subtasks created at task detail)
  * 4. Footer contract: Sticky footer with Cancel + "Tạo nhiệm vụ" action & shortcut hint
@@ -90,16 +90,16 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("Dialog.Portal"), "Source must use Base UI Dialog.Portal");
 
     // Dimensions
-    assert.ok(source.includes("h-[540px]"), "Source must define 540px fixed desktop height");
+    assert.ok(source.includes("min-h-[360px] max-h-[85vh]"), "Source must let the composer grow between 360px and 85vh");
     assert.ok(source.includes("max-w-[680px]"), "Source must define max-w-[680px] compact composer width");
 
     // Title & Summary Inputs (title uses ternary for subtask vs task placeholder)
-    assert.ok(source.includes('Tên nhiệm vụ... *'), "Source must have task title placeholder");
-    assert.ok(source.includes('Thêm mô tả ngắn hoặc kết quả kỳ vọng...'), "Source must have summary input");
+    assert.ok(source.includes('"Tên nhiệm vụ"'), "Source must have task title placeholder");
+    assert.ok(source.includes('Thêm mô tả ngắn hoặc kết quả kỳ vọng'), "Source must have summary input");
 
     // Description Canvas
     assert.ok(
-      source.includes('Mô tả nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu...'),
+      source.includes('Nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu'),
       "Source must have description textarea canvas"
     );
 
@@ -112,6 +112,9 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("Chủ trì"), "Source must have DRI (Chủ trì) property chip");
     assert.ok(source.includes("Bắt đầu:"), "Source must have Start date property chip");
     assert.ok(source.includes("Hạn:"), "Source must have Due date property chip");
+    // Thuộc tính nằm dưới phần mô tả (kiểu Linear), không chen giữa tiêu đề và nội dung
+    assert.ok(source.indexOf('id="create-task-description"') < source.indexOf('aria-label="Chọn mức độ ưu tiên"'), "Property chips must follow the description");
+    assert.ok(source.includes('aria-label="Đóng"'), "Header must expose a visible close button");
   });
 
   test("When closed (isOpen=false), modal renders nothing (null)", () => {
@@ -130,7 +133,7 @@ describe("Compact Composer Modal - Production Specification", () => {
       "Closed modal must NOT render the dialog content"
     );
     assert.ok(
-      !html.includes('placeholder="Tên nhiệm vụ... *"'),
+      !html.includes('placeholder="Tên nhiệm vụ"'),
       "Closed modal must NOT render the title input"
     );
   });
