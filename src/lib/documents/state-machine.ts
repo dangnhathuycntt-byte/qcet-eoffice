@@ -140,10 +140,13 @@ export const OUTGOING_DOCUMENT_TRANSITIONS: Record<
     OutgoingDocumentStatus.DELIVERED,
     OutgoingDocumentStatus.FILED,
     OutgoingDocumentStatus.ARCHIVED,
+    OutgoingDocumentStatus.RECALLED,
   ],
-  DELIVERED: [OutgoingDocumentStatus.FILED, OutgoingDocumentStatus.ARCHIVED],
+  DELIVERED: [OutgoingDocumentStatus.FILED, OutgoingDocumentStatus.ARCHIVED, OutgoingDocumentStatus.RECALLED],
   FILED: [OutgoingDocumentStatus.ARCHIVED],
   ARCHIVED: [],
+  // Đã thu hồi là trạng thái cuối; muốn phát hành lại phải soạn văn bản thay thế có số mới (V-05).
+  RECALLED: [],
 };
 
 export class OutgoingDocumentStateMachine {
@@ -232,6 +235,7 @@ export class OutgoingDocumentStateMachine {
       OutgoingDocumentStatus.DELIVERED,
       OutgoingDocumentStatus.FILED,
       OutgoingDocumentStatus.ARCHIVED,
+      OutgoingDocumentStatus.RECALLED,
     ];
     return signedStatuses.includes(status);
   }
@@ -250,6 +254,7 @@ export class OutgoingDocumentStateMachine {
  * - IN_PROGRESS -> DANG_XU_LY
  * - RESOLVED -> DA_HOAN_THANH
  * - FILED, ARCHIVED -> LUU_THEO_DOI
+ * - RECALLED -> LUU_THEO_DOI (văn bản đã thu hồi vẫn lưu vết, không còn hiệu lực)
  */
 export function mapIncomingWorkflowStatusToDocumentStatus(
   status: IncomingDocumentStatus | string
@@ -331,8 +336,10 @@ export function mapOutgoingWorkflowStatusToDocumentStatus(
 
     case OutgoingDocumentStatus.FILED:
     case OutgoingDocumentStatus.ARCHIVED:
+    case OutgoingDocumentStatus.RECALLED:
     case "FILED":
     case "ARCHIVED":
+    case "RECALLED":
       return DocumentStatus.LUU_THEO_DOI;
 
     default:

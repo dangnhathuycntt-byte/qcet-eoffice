@@ -107,6 +107,8 @@ export const DOCUMENT_OUTGOING_CAPABILITIES = [
   'document.outgoing.assign_number',
   'document.outgoing.organization_sign',
   'document.outgoing.issue',
+  'document.outgoing.recall',
+  'document.outgoing.confirm_receipt',
 ] as const;
 
 export type DocumentOutgoingCapabilityAction = (typeof DOCUMENT_OUTGOING_CAPABILITIES)[number];
@@ -411,6 +413,8 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'document.outgoing.assign_number': 'Cấp số văn bản đi',
   'document.outgoing.organization_sign': 'Đóng dấu / Ký số cơ quan văn bản đi',
   'document.outgoing.issue': 'Phát hành văn bản đi',
+  'document.outgoing.recall': 'Thu hồi văn bản đi',
+  'document.outgoing.confirm_receipt': 'Ghi nhận nơi nhận đã tiếp nhận văn bản đi',
   // Task
   'task.read': 'Xem thông tin nhiệm vụ',
   'task.view': 'Xem nhiệm vụ (tương thích ngược)',

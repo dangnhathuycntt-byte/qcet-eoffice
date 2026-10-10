@@ -126,6 +126,7 @@ model User {
   taskDeclines          TaskDeclineNotice[]   @relation("TaskDecliner")
   documentReturns       DocumentUnitReturn[]  @relation("DocReturnedBy")
   documentReroutes      DocumentUnitReturn[]  @relation("DocReroutedBy")
+  outgoingReceipts      OutgoingDocumentRecipient[] @relation("OutgoingRecipientReceivedBy")
   approvalSubmitted     DocumentApprovalWorkflow[] @relation("ApprovalSubmitter")
   approvalDecided       DocumentApprovalWorkflow[] @relation("ApprovalFinalDecider")
   approvalStepsAssigned DocumentApprovalStep[]    @relation("ApprovalStepApprover")
@@ -382,6 +383,7 @@ model Document {
   directives         DocumentDirective[]
   incomingWorkflow   DocumentIncomingWorkflow?
   unitReturns        DocumentUnitReturn[]
+  outgoingRecipients OutgoingDocumentRecipient[]
   approvalWorkflow   DocumentApprovalWorkflow?
   outgoingWorkflow   DocumentOutgoingWorkflow?
   signatures         SignatureRecord[]
@@ -695,6 +697,7 @@ enum OutgoingDocumentStatus {
   DELIVERED
   FILED
   ARCHIVED
+  RECALLED
 }
 
 enum SignatureType {
@@ -767,14 +770,46 @@ model DocumentOutgoingWorkflow {
   archivedById              String?                @map("archived_by_id")
   archivedBy                User?                  @relation("DocWorkflowOutgoingArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
 
+  // Thu hồi (V-05): chỉ khi chưa bên nhận nào xác nhận tiếp nhận. Số đã cấp không tái sử dụng.
+  recalledAt                DateTime?              @map("recalled_at")
+  recalledById              String?                @map("recalled_by_id")
+  recallReason              String?                @map("recall_reason") @db.VarChar(1000)
+  // Văn bản này thay thế văn bản nào (đã thu hồi, hoặc đã có bên nhận tiếp nhận).
+  replacesDocumentId        String?                @map("replaces_document_id")
+
   createdAt                 DateTime               @default(now()) @map("created_at")
   updatedAt                 DateTime               @updatedAt @map("updated_at")
 
   @@index([status])
+  @@index([replacesDocumentId])
   @@index([authorizedSignerId])
   @@index([contentReviewerId])
   @@index([formatReviewerId])
   @@map("document_outgoing_workflows")
+}
+
+enum OutgoingRecipientKind {
+  INTERNAL_UNIT // đơn vị trong trường
+  EXTERNAL      // cơ quan, tổ chức ngoài trường
+}
+
+// Nơi nhận có định danh của văn bản đi (V-05a). `recipientList` văn bản tự do vẫn giữ để hiển thị.
+model OutgoingDocumentRecipient {
+  id           String                    @id @default(cuid())
+  documentId   String                    @map("document_id")
+  document     Document                  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  kind         OutgoingRecipientKind
+  unitId       String?                   @map("unit_id")
+  unit         OrganizationalUnit?       @relation("OutgoingRecipientUnit", fields: [unitId], references: [id], onDelete: SetNull)
+  name         String                    @db.VarChar(300)
+  receivedAt   DateTime?                 @map("received_at")
+  receivedById String?                   @map("received_by_id")
+  receivedBy   User?                     @relation("OutgoingRecipientReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime                  @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@index([unitId])
+  @@map("outgoing_document_recipients")
 }
 
 model SignatureRecord {
@@ -1013,6 +1048,7 @@ model OrganizationalUnit {
   unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
   documentReturnsFrom DocumentUnitReturn[]       @relation("DocReturnFromUnit")
   documentReturnsTo   DocumentUnitReturn[]       @relation("DocReturnToUnit")
+  outgoingRecipients  OutgoingDocumentRecipient[]   @relation("OutgoingRecipientUnit")
   approvalSteps       DocumentApprovalStep[]     @relation("ApprovalStepUnit")
   workDossiers        WorkDossier[]
   meetings            Meeting[]

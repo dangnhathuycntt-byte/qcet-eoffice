@@ -78,6 +78,7 @@ export const OutgoingDocumentStatusSchema = z.enum([
   'CANCELLED',
   'FILED',
   'ARCHIVED',
+  'RECALLED',
 ]);
 export type OutgoingDocumentStatus = z.infer<typeof OutgoingDocumentStatusSchema>;
 

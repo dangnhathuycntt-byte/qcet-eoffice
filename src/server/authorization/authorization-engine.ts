@@ -666,6 +666,8 @@ export function authorize(
         action === 'document.assign_number' ||
         action === 'document.organization_sign' ||
         action === 'document.issue' ||
+        action === 'document.outgoing.recall' ||
+        action === 'document.outgoing.confirm_receipt' ||
         action === 'document.archive' ||
         action === 'dossier.accept_archive'
       ) {
@@ -721,6 +723,8 @@ export function authorize(
         action === 'document.assign_number' ||
         action === 'document.organization_sign' ||
         action === 'document.issue' ||
+        action === 'document.outgoing.recall' ||
+        action === 'document.outgoing.confirm_receipt' ||
         action === 'document.archive' ||
         action === 'dossier.accept_archive'
       ) {
@@ -860,6 +864,8 @@ export function authorize(
         action === 'document.outgoing.organization_sign' ||
         action === 'document.issue' ||
         action === 'document.outgoing.issue' ||
+        action === 'document.outgoing.recall' ||
+        action === 'document.outgoing.confirm_receipt' ||
         action === 'document.archive' ||
         action === 'dossier.open' ||
         action === 'dossier.add_item' ||

@@ -112,9 +112,19 @@ describe("Trạng thái kết thúc (finalized)", () => {
     assert.equal(archivedTransitions.length, 0, "ARCHIVED phải là terminal state");
   });
 
-  it("Mọi trạng thái khác ARCHIVED đều có ít nhất một transition", () => {
+  it("RECALLED là terminal state và chỉ vào được từ ISSUED hoặc DELIVERED", () => {
+    assert.equal(OUTGOING_DOCUMENT_TRANSITIONS.RECALLED.length, 0);
+    const into = Object.entries(OUTGOING_DOCUMENT_TRANSITIONS)
+      .filter(([, targets]) => targets.includes("RECALLED" as never))
+      .map(([from]) => from)
+      .sort();
+    assert.deepEqual(into, ["DELIVERED", "ISSUED"]);
+  });
+
+  it("Mọi trạng thái khác ARCHIVED và RECALLED đều có ít nhất một transition", () => {
     for (const [status, targets] of Object.entries(OUTGOING_DOCUMENT_TRANSITIONS)) {
-      if (status === "ARCHIVED") continue;
+      // RECALLED là trạng thái cuối (V-05, Q10): muốn phát hành lại phải soạn văn bản thay thế có số mới.
+      if (status === "ARCHIVED" || status === "RECALLED") continue;
       assert.ok(targets.length > 0, `${status} phải có ít nhất một transition`);
     }
   });
