@@ -11,6 +11,7 @@ import { DossierService } from '../src/lib/services/dossier-service';
 import {
   decideDisposal,
   getDisposalState,
+  listDisposedDossiers,
   proposeDisposal,
   purgeDossier,
 } from '../src/server/dossiers/dossier-disposal-service';
@@ -170,9 +171,15 @@ describe('V-07 xét hủy và gia hạn bảo quản hồ sơ', () => {
     await assert.rejects(purgeDossier({ ...session('admin'), role: 'ADMIN' }, id, NOW), ConflictError, 'chưa có quyết định hủy');
     await decideDisposal(session('rector'), id, { proposalId, decision: 'DISPOSE' }, NOW);
 
+    // Danh sách chờ xóa hẳn: chỉ quản trị hệ thống xem được, kèm số biên bản.
+    await assert.rejects(listDisposedDossiers(session('rector'), NOW), forbidden);
+    const listed = (await listDisposedDossiers({ ...session('admin'), role: 'ADMIN' }, NOW)).items.find((d) => d.id === id);
+    assert.equal(listed?.minutesReference, 'BB-20/2026');
+
     const res = await purgeDossier({ ...session('admin'), role: 'ADMIN' }, id, NOW);
     assert.equal(res.purged, true);
     assert.equal(await prisma.workDossier.count({ where: { id } }), 0);
+    assert.equal((await listDisposedDossiers({ ...session('admin'), role: 'ADMIN' }, NOW)).items.some((d) => d.id === id), false);
     const audit = await prisma.auditEvent.findFirstOrThrow({ where: { entityId: id, action: 'DOSSIER_PURGED' } });
     assert.equal((audit.beforeData as { minutesReference: string }).minutesReference, 'BB-20/2026', 'nhật ký giữ số biên bản');
   });
