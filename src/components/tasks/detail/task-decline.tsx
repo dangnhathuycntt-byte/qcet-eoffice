@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { TaskAddChip } from "./task-add-chip";
 
 interface DeclineState {
   declined: { by: { id: string; name: string }; reason: string; at: string } | null;
@@ -74,6 +75,13 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
 
   if (!state) return null;
   if (!state.declined && !state.canDecline) return null;
+  if (!state.declined && !open) {
+    return (
+      <TaskAddChip icon={false} onClick={() => setOpen(true)}>
+        Từ chối nhận việc
+      </TaskAddChip>
+    );
+  }
 
   return (
     <section aria-label="Nhận việc" className={cn("space-y-2 px-4", className)}>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
+import { TaskAddChip } from "./task-add-chip";
 
 interface StepView {
   id: string;
@@ -111,6 +112,9 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
   };
 
   if (!view || (!view.process && !view.canDefine)) return null;
+  if (!view.process && !editing) {
+    return <TaskAddChip onClick={() => setEditing(true)}>Luồng duyệt nhiều bước</TaskAddChip>;
+  }
   const options = personnel.map((p) => ({ value: p.id, label: p.name }));
   const valid = draft.length > 0 && draft.every((s) => s.title.trim() && s.reviewerUserId);
 

@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { cn } from "@/lib/utils";
+import { TaskAddChip } from "./task-add-chip";
 
 interface RequestView {
   id: string;
@@ -91,6 +92,9 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
   };
 
   if (!state || (!state.canRequest && state.requests.length === 0)) return null;
+  if (state.requests.length === 0 && !adding) {
+    return <TaskAddChip onClick={() => setAdding(true)}>Phối hợp liên đơn vị</TaskAddChip>;
+  }
 
   return (
     <section aria-label="Phối hợp liên đơn vị" className={cn("space-y-1.5", className)}>

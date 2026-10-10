@@ -6,6 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
+import { TaskAddChip } from "./task-add-chip";
 
 interface ExtensionRequestView {
   id: string;
@@ -129,6 +130,11 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
   const minDate = ictDay(view.dueDate);
   const decide = (decision: string, extra: Record<string, unknown> = {}) =>
     send("decide-extension", { requestId: active?.id, decision, expectedVersion: version, ...extra }, "Không xử lý được yêu cầu gia hạn");
+
+  // Chưa có yêu cầu nào: chỉ còn chip, bấm mới mở form xin gia hạn
+  if (!active && mode === "idle" && view.appliedCount < 3) {
+    return <TaskAddChip onClick={() => setMode("request")}>Xin gia hạn</TaskAddChip>;
+  }
 
   return (
     <section aria-label="Xin gia hạn" className={cn("space-y-2 px-4", className)}>

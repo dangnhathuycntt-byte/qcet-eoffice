@@ -6,6 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
+import { TaskAddChip } from "./task-add-chip";
 
 interface BackupView {
   backup: { userId: string; name: string; active: boolean } | null;
@@ -67,6 +68,13 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
   };
 
   if (!view || (!view.backup && !view.canEdit)) return null;
+  if (!view.backup && !editing) {
+    return (
+      <TaskAddChip title="Người dự phòng nhận việc duyệt khi chờ duyệt quá 4 ngày" onClick={() => setEditing(true)}>
+        Người duyệt dự phòng
+      </TaskAddChip>
+    );
+  }
 
   return (
     <section aria-label="Người duyệt dự phòng" className={cn("space-y-1.5", className)}>

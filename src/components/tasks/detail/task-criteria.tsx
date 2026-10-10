@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { cn } from "@/lib/utils";
+import { TaskAddChip } from "./task-add-chip";
 
 interface CriterionView {
   id: string;
@@ -69,8 +70,11 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
   }, [load, status]);
 
   const startEdit = () => {
-    setDrafts((view?.criteria ?? []).map((c) => ({ id: c.id, text: c.text })));
+    const current = (view?.criteria ?? []).map((c) => ({ id: c.id, text: c.text }));
+    // Chưa có tiêu chí: mở sẵn một ô trống để gõ ngay
+    setDrafts(current.length > 0 ? current : [{ text: "" }]);
     setEditing(true);
+    if (current.length === 0) requestAnimationFrame(() => addRef.current?.focus());
   };
 
   const save = async () => {
@@ -120,6 +124,9 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
 
   // Không có tiêu chí và không ai thêm được thì không chiếm chỗ trên trang.
   if (view.criteria.length === 0 && !view.canEdit && !editing) return null;
+  if (view.criteria.length === 0 && !editing) {
+    return <TaskAddChip onClick={startEdit}>Tiêu chí hoàn thành</TaskAddChip>;
+  }
 
   const total = view.criteria.length;
   const met = total - view.unmet;

@@ -6,6 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
+import { TaskAddChip } from "./task-add-chip";
 
 interface PeopleView {
   version: number;
@@ -74,6 +75,10 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
 
   if (!view || (view.people.length === 0 && !view.canManage)) return null;
   const existing = new Set(view.people.map((p) => p.userId));
+  // Chỉ có người chủ trì/giao (đã hiện ở cột thuộc tính): thu thành chip thay vì lặp lại danh sách
+  if (!adding && !view.people.some((p) => p.removable)) {
+    return view.canManage ? <TaskAddChip onClick={() => setAdding(true)}>Người tham gia</TaskAddChip> : null;
+  }
 
   return (
     <section aria-label="Người tham gia" className={cn("space-y-1.5", className)}>
