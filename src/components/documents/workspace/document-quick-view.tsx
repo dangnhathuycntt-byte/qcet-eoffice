@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/ui/empty-state";
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
@@ -261,18 +262,14 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
           onActiveFileChange={onFileChange}
         />
       ) : (
-        <div className="flex items-center gap-2 border-t border-border/50 px-4 py-3 text-xs text-muted-foreground">
-          <Paperclip className="size-3.5 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden />
-          <span>Chưa có tệp đính kèm</span>
-          {item?.canEdit ? (
-            <AddDocumentFileButton
-              documentId={vm.id}
-              className="ml-auto"
-              onAdded={afterChange}
-            >
-              Thêm tệp
-            </AddDocumentFileButton>
-          ) : null}
+        <div className="flex min-h-0 flex-1 items-start justify-center border-t border-border/50 px-4 pt-10">
+          <EmptyState
+            density="compact"
+            illustration={vm.kind === "outgoing" ? "doc-out" : vm.kind === "submission" ? "submission" : "doc-in"}
+            title="Chưa có tệp đính kèm"
+            description={item?.canEdit ? "Thêm tệp để xem nội dung văn bản tại đây." : "Văn bản này chưa có tệp để xem."}
+            action={item?.canEdit ? <AddDocumentFileButton documentId={vm.id} onAdded={afterChange}>Thêm tệp</AddDocumentFileButton> : undefined}
+          />
         </div>
       )}
     </>
@@ -281,7 +278,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
   const content = (
     <>
       {header}
-      <div data-slot="document-quick-body" className="@container/doc min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div data-slot="document-quick-body" className="@container/doc flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         {body}
       </div>
     </>

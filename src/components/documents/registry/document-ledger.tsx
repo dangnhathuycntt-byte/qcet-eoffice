@@ -318,8 +318,9 @@ export function DocumentLedgerToolbar({
     // Cùng thanh công cụ trang Nhiệm vụ: tiêu đề bên trái; tìm · lọc · hiển thị · hành động chính bên phải.
     // Xóa bộ lọc nằm ở hàng chip bên dưới ("Xóa lọc"), không lặp lại cạnh nút Lọc.
     <div data-slot="document-ledger-toolbar" className="flex items-center gap-1.5">
-      <div className="flex min-w-0 flex-1 items-center pr-4">
-        <h1 className="truncate text-compact font-semibold text-foreground select-none">{title}</h1>
+      {/* Tiêu đề không bị cắt: pane hẹp thì ô tìm co lại trước (min 96px), không phải tiêu đề */}
+      <div className="flex min-w-fit flex-1 items-center pr-3">
+        <h1 className="whitespace-nowrap text-compact font-semibold text-foreground select-none">{title}</h1>
       </div>
       {!quiet && (
         <>
@@ -328,6 +329,7 @@ export function DocumentLedgerToolbar({
         value={searchValue}
         onChange={onSearchChange}
         placeholder="Tìm văn bản… /"
+        wrapperClassName="min-w-24 shrink"
         aria-label="Tìm văn bản"
         title="Tìm theo số, ký hiệu, trích yếu"
         collapsedWidthClassName={LIST_TOOLBAR_SEARCH_COLLAPSED}
