@@ -255,26 +255,30 @@ export function SubmissionApprovalPanel({
       )}
 
       {mode === "submit" && (
-        <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">Đơn vị của bạn mặc định phải duyệt. Chọn thêm đơn vị liên quan (duyệt song song):</p>
-          <ul className="max-h-40 space-y-1 overflow-y-auto">
+        <div className="max-w-md space-y-2">
+          <p className="text-xs text-muted-foreground">Đơn vị của bạn luôn phải duyệt. Chọn thêm đơn vị liên quan để duyệt song song.</p>
+          {/* Danh sách đơn vị: khung viền, cuộn bên trong; hàng 28px, cả hàng là vùng bấm */}
+          <ul role="group" aria-label="Đơn vị liên quan" className="max-h-48 overflow-y-auto rounded-lg border border-border p-1">
             {departments.map((d) => (
               <li key={d.id}>
-                <label className="flex cursor-pointer items-center gap-2 text-compact">
+                <label className="flex h-7 cursor-pointer items-center gap-2 rounded-sm px-2 text-compact transition-colors hover:bg-accent">
                   <Checkbox
                     checked={units.includes(d.id)}
                     onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
                   />
-                  <span>{d.name}</span>
+                  <span className="min-w-0 truncate" title={d.name}>{d.name}</span>
                 </label>
               </li>
             ))}
           </ul>
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
-              Trình
+          <div className="flex items-center gap-1.5">
+            <span className="mr-auto text-xs text-muted-foreground">
+              {units.length > 0 ? `Đã chọn ${units.length} đơn vị` : "Chưa chọn đơn vị liên quan"}
+            </span>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
+              Trình duyệt
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
           </div>
         </div>
       )}
