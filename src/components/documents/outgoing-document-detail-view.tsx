@@ -6,6 +6,8 @@ import { getLedgerStepLabel } from "@/lib/documents/document-ledger-format";
 import { OutgoingWorkflowStepper } from "./outgoing-workflow-stepper";
 import { OutgoingActionPanel } from "./outgoing-action-panel";
 import { OutgoingRecipientList } from "./outgoing-recipient-list";
+import { OutgoingRecipientsPanel } from "./outgoing-recipients-panel";
+import { OutgoingInitialSign } from "./outgoing-initial-sign";
 import {
   CollapsibleSection,
   DocumentTitleBlock,
@@ -177,6 +179,8 @@ export function OutgoingDocumentDetailView({
           </InspectorCard>
 
           <OutgoingRecipientList recipientList={workflow.recipientList} status={workflow.status} issuedAt={workflow.issuedAt} />
+          <OutgoingRecipientsPanel documentId={workflow.documentId} className="rounded-[10px] border border-border bg-card p-3" />
+          <OutgoingInitialSign documentId={workflow.documentId} className="rounded-[10px] border border-border bg-card p-3" />
 
           <CollapsibleSection title="Quy trình xử lý" summary={step.label}>
             <OutgoingWorkflowStepper workflow={workflow} className="border-0 bg-transparent p-0 [&>h3]:sr-only" />

@@ -29,6 +29,7 @@ import {
   mapPrismaTaskToStaffTask,
 } from '@/lib/adapters/task-db-adapter';
 import type { StaffTask } from '@/types/dashboard';
+import { canReadTask, readsViaStaffBase, type ReadScope } from './staff-read-scope';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,6 +76,7 @@ export async function resolveCanonicalParent(
   startTaskId: string,
   authCtx: AuthorizationContext,
   fetchTask: FetchTaskById,
+  readScope?: ReadScope,
 ): Promise<{ root: RawTaskEntity; chain: RawTaskEntity[] } | null> {
   const chain: RawTaskEntity[] = [];
   const visited = new Set<string>();
@@ -91,8 +93,7 @@ export async function resolveCanonicalParent(
     if (!task) return null;
 
     // Authorize reading this task
-    const resource = buildTaskResource(task);
-    if (!authorize(authCtx, 'task.read', resource).allowed) {
+    if (!(await canReadTask(authCtx, task as { id: string }, readScope))) {
       return null;
     }
 
@@ -177,6 +178,7 @@ export async function resolveTaskDetailContext(
   queryString: string,
   authCtx: AuthorizationContext,
   fetchTask: FetchTaskById,
+  readScope?: ReadScope,
 ): Promise<TaskDetailRouteResult> {
   // 1. Fetch and authorize the route task
   const routeTask = await fetchTask(routeTaskId);
@@ -185,7 +187,7 @@ export async function resolveTaskDetailContext(
   }
 
   const routeResource = buildTaskResource(routeTask);
-  if (!authorize(authCtx, 'task.read', routeResource).allowed) {
+  if (!(await canReadTask(authCtx, routeTask as { id: string }, readScope))) {
     return { outcome: 'notFound' };
   }
 
@@ -193,7 +195,7 @@ export async function resolveTaskDetailContext(
   const routeParentId = (routeTask as any).parentTaskId as string | null | undefined;
   if (routeParentId) {
     // Walk up to root, authorizing every ancestor
-    const resolution = await resolveCanonicalParent(routeParentId, authCtx, fetchTask);
+    const resolution = await resolveCanonicalParent(routeParentId, authCtx, fetchTask, readScope);
     if (!resolution) {
       // Canonical parent denied or missing → notFound (no standalone child fallback)
       return { outcome: 'notFound' };
@@ -216,7 +218,14 @@ export async function resolveTaskDetailContext(
   //    then filter to only authorized children for peekTasks.
   const rawSubTasks: any[] = (routeTask as any).subTasks || [];
   const { totalSubTasks, completedSubTasks } = computeRawSubTaskAggregates(rawSubTasks);
-  const peekTasks = authorizeSubTasks(rawSubTasks, authCtx);
+  let peekTasks = authorizeSubTasks(rawSubTasks, authCtx);
+  if (readScope) {
+    // D07: việc con chỉ hiện nếu người xem tham gia phần đó (hoặc là người của việc cha), không hiện cả anh em cùng đơn vị.
+    const viaBase = rawSubTasks.filter((st) => st && readsViaStaffBase(authCtx, st)).map((st) => st.id as string);
+    const allowed = await readScope(viaBase);
+    const blocked = new Set(viaBase.filter((id) => !allowed.has(id)));
+    peekTasks = peekTasks.filter((t) => !blocked.has(t.id));
+  }
 
   // 5. Validate subtaskId if provided: must be among authorized peek tasks
   //    If invalid/denied, we still render the parent — just no child data.

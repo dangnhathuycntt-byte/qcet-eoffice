@@ -10,7 +10,18 @@ export type TaskPushEventType =
   | "DELIVERABLE_APPROVED"
   | "DELIVERABLE_REVISION"
   | "DEADLINE_WARNING_24H"
-  | "EXECUTIVE_DIRECTIVE";
+  | "EXECUTIVE_DIRECTIVE"
+  | "TASK_REMINDER"
+  | "TASK_CANCELLED"
+  | "TASK_MENTION"
+  | "TASK_OVERDUE"
+  | "TASK_REVIEW_PENDING"
+  | "TASK_ESCALATION"
+  | "TASK_DECLINED"
+  | "TASK_EXTENSION_REQUEST"
+  | "TASK_EXTENSION_DECISION"
+  | "TASK_UNIT_REQUEST"
+  | "TASK_UNIT_REQUEST_DECISION";
 
 export interface TaskPushInput {
   event: TaskPushEventType;
@@ -187,7 +198,9 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
     case "DELIVERABLE_REVISION": {
       eventShort = "revision";
       rawTitle = `[YÊU CẦU SỬA] ${taskTitle}`;
-      rawBody = `${actorName} yêu cầu chỉnh sửa/bổ sung sản phẩm`;
+      rawBody = directiveNote
+        ? `${actorName} yêu cầu chỉnh sửa: "${directiveNote}"`
+        : `${actorName} yêu cầu chỉnh sửa/bổ sung sản phẩm`;
       break;
     }
     case "DEADLINE_WARNING_24H": {
@@ -204,6 +217,72 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
       rawBody = directiveNote
         ? `${actorName}: "${directiveNote}"`
         : `${actorName} đã ban hành chỉ đạo điều hành`;
+      break;
+    }
+    case "TASK_REMINDER": {
+      eventShort = "remind";
+      rawTitle = `[NHẮC VIỆC] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc thực hiện nhiệm vụ`;
+      break;
+    }
+    case "TASK_OVERDUE": {
+      eventShort = "overdue";
+      rawTitle = `[TRỄ HẠN] ${taskTitle}`;
+      rawBody = directiveNote || "Nhiệm vụ đã quá hạn hoàn thành";
+      break;
+    }
+    case "TASK_REVIEW_PENDING": {
+      eventShort = "review-pending";
+      rawTitle = `[CHỜ DUYỆT] ${taskTitle}`;
+      rawBody = directiveNote || "Kết quả đang chờ bạn duyệt";
+      break;
+    }
+    case "TASK_ESCALATION": {
+      eventShort = "escalation";
+      rawTitle = `[CẦN XỬ LÝ] ${taskTitle}`;
+      rawBody = directiveNote || "Việc này đã chờ xử lý quá lâu";
+      break;
+    }
+    case "TASK_DECLINED": {
+      eventShort = "declined";
+      rawTitle = `[TỪ CHỐI NHẬN VIỆC] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} từ chối nhận việc: "${directiveNote}"` : `${actorName} từ chối nhận việc`;
+      break;
+    }
+    case "TASK_EXTENSION_REQUEST": {
+      eventShort = "extension-request";
+      rawTitle = `[XIN GIA HẠN] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} xin gia hạn: "${directiveNote}"` : `${actorName} xin gia hạn nhiệm vụ`;
+      break;
+    }
+    case "TASK_EXTENSION_DECISION": {
+      eventShort = "extension-decision";
+      rawTitle = `[GIA HẠN] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: ${directiveNote}` : `${actorName} đã phản hồi yêu cầu gia hạn`;
+      break;
+    }
+    case "TASK_UNIT_REQUEST": {
+      eventShort = "unit-request";
+      rawTitle = `[YÊU CẦU PHỐI HỢP] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} đề nghị đơn vị bạn phối hợp: "${directiveNote}"` : `${actorName} đề nghị đơn vị bạn cử người phối hợp`;
+      break;
+    }
+    case "TASK_UNIT_REQUEST_DECISION": {
+      eventShort = "unit-request-decision";
+      rawTitle = `[PHỐI HỢP LIÊN ĐƠN VỊ] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: ${directiveNote}` : `${actorName} đã phản hồi yêu cầu phối hợp`;
+      break;
+    }
+    case "TASK_MENTION": {
+      eventShort = "mention";
+      rawTitle = `[NHẮC TÊN] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc bạn trong bình luận`;
+      break;
+    }
+    case "TASK_CANCELLED": {
+      eventShort = "cancel";
+      rawTitle = `[ĐÃ HỦY] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} đã hủy nhiệm vụ: "${directiveNote}"` : `${actorName} đã hủy nhiệm vụ`;
       break;
     }
     default: {

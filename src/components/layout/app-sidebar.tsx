@@ -179,7 +179,7 @@ export interface SidebarNavChild {
   id: string;
   label: string;
   href: string;
-  badgeKey: string;
+  badgeKey?: string;
 }
 
 export interface SidebarNavGroup {
@@ -221,6 +221,10 @@ const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
         icon: IconSidebarTasks,
         badgeKey: "taskAttention",
         aliases: ["/unit-tasks"],
+        children: [
+          { id: "tasks-unit-requests", label: "Yêu cầu phối hợp", href: "/tasks/unit-requests" },
+          { id: "tasks-templates", label: "Mẫu và lặp lại", href: "/tasks/templates" },
+        ],
       },
       {
         id: "calendar",
@@ -267,6 +271,7 @@ const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
         href: "/documents?tab=submission",
         icon: IconSidebarDocLines,
         aliases: ["/documents/internal", "/documents?tab=submission", "/documents?tab=pending", "/documents?type=submission"],
+        children: [{ id: "docs-approval-report", label: "Báo cáo thời gian duyệt", href: "/documents/approval-report" }],
       },
       {
         id: "docs-dossiers",
@@ -469,7 +474,7 @@ export function AppSidebar() {
 
   const getChildBadge = React.useCallback(
     (child: SidebarNavChild): string | null => {
-      const val = badgeCounts?.[child.badgeKey];
+      const val = child.badgeKey ? badgeCounts?.[child.badgeKey] : undefined;
       return val === undefined || val === null || val === "" || val === 0 || val === "0"
         ? null
         : String(val);
@@ -572,7 +577,9 @@ export function AppSidebar() {
                         const isExpanded = expandedItems[item.id] ?? true;
                         const badgeText = children
                           ? (() => {
-                              const pending = badgeCounts?.[children[0].badgeKey];
+                              const first = children[0].badgeKey;
+                              const pending = first ? badgeCounts?.[first] : undefined;
+
                               return pending ? String(pending) : null;
                             })()
                           : getBadgeNumber(item);

@@ -25,6 +25,7 @@ import {
   type DocumentClassificationTarget,
 } from '@/server/authorization/document-classification';
 import { isDocumentImmutable } from '@/lib/documents/state-machine';
+import { isUnitLeaderPosition } from '@/server/authorization/authorization-engine';
 
 export interface DocumentEntity extends DocumentClassificationTarget {
   id: string;
@@ -246,7 +247,27 @@ export function buildDocumentReadWhere(
     // `canAccessClassification` cũng cho phép mở chi tiết.
     // Directives issued by user
     { directives: { some: { leaderId: userId } } },
+    // Người tham gia luồng duyệt tờ trình: người trình, người được chỉ định duyệt, người được xin ý kiến.
+    {
+      approvalWorkflow: {
+        is: {
+          OR: [
+            { submittedById: userId },
+            { steps: { some: { approverUserId: userId } } },
+            { consultations: { some: { OR: [{ consultantId: userId }, { askedById: userId }] } } },
+          ],
+        },
+      },
+    },
   ];
+
+  // Trưởng đơn vị đọc được tờ trình có bước duyệt thuộc đơn vị mình phụ trách (không phải mọi thành viên đơn vị).
+  const headedUnitIds = (((userOrContext as any)?.positions ?? []) as Array<{ positionCode: string; unitId: string }>)
+    .filter((p) => isUnitLeaderPosition(p.positionCode))
+    .map((p) => p.unitId);
+  if (headedUnitIds.length > 0) {
+    orConditions.push({ approvalWorkflow: { is: { steps: { some: { unitId: { in: headedUnitIds } } } } } });
+  }
 
   if (departmentId) {
     orConditions.push(

@@ -14,6 +14,12 @@ import { FormField } from "@/components/ui/form-field";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { formatIsoDate } from "@/lib/format";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import {
+  DUPLICATE_SUSPECT_CODE,
+  describeDuplicates,
+  fetchDuplicateMatches,
+} from "@/lib/documents/duplicate-check-client";
 
 interface CreateDocumentModalProps {
   isOpen: boolean;
@@ -99,6 +105,10 @@ export function CreateDocumentModal({
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  // Cảnh báo trùng số ký hiệu: gắn với cặp số/cơ quan đã kiểm; sửa một trong hai thì cảnh báo ẩn.
+  const [duplicate, setDuplicate] = React.useState<{ key: string; message: string } | null>(null);
+  const duplicateKey = `${documentNumber.trim()}|${issuingAuthority.trim()}`;
+  const duplicateAcknowledged = docType === "inbox" && duplicate?.key === duplicateKey;
   const [fieldErrors, setFieldErrors] = React.useState<{ documentNumber?: string; summary?: string }>({});
   const documentNumberRef = React.useRef<HTMLInputElement>(null);
   const summaryRef = React.useRef<HTMLTextAreaElement>(null);
@@ -134,6 +144,7 @@ export function CreateDocumentModal({
     if (isOpen) {
       setSubmitError(null);
       setFieldErrors({});
+      setDuplicate(null);
       const timer = setTimeout(() => (documentNumberRef.current ?? summaryRef.current)?.focus(), 50);
       return () => clearTimeout(timer);
     }
@@ -207,6 +218,7 @@ export function CreateDocumentModal({
           summary: summary.trim(),
           urgency: apiUrgency,
           leadUnitId: docType === "inbox" && leadUnitId ? leadUnitId : undefined,
+          acknowledgeDuplicate: duplicateAcknowledged || undefined,
         };
 
         const res = await fetch("/api/documents", {
@@ -217,6 +229,11 @@ export function CreateDocumentModal({
 
         const json = await res.json().catch(() => null);
         if (!res.ok) {
+          if (json?.code === DUPLICATE_SUSPECT_CODE) {
+            const matches = await fetchDuplicateMatches(String(body.originalNumber), String(body.issuingAuthority));
+            setDuplicate({ key: duplicateKey, message: describeDuplicates(matches) });
+            return;
+          }
           throw new Error(json?.error || "Không thể đăng ký văn bản. Vui lòng thử lại.");
         }
 
@@ -492,6 +509,10 @@ export function CreateDocumentModal({
               required
             />
           </FormField>
+
+          {duplicateAcknowledged && duplicate && (
+            <InlineAlert variant="warning">{duplicate.message}</InlineAlert>
+          )}
 
           {/* Error message */}
           {submitError && (

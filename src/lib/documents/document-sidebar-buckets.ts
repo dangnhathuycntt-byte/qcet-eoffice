@@ -20,7 +20,7 @@ const INCOMING_DONE = ["DA_HOAN_THANH", "LUU_THEO_DOI"] as const;
 const INCOMING_WF_DONE = ["RESOLVED", "FILED", "ARCHIVED"] as const;
 const OUTGOING_PENDING = ["DRAFT", "CONTENT_REVIEW", "FORMAT_CHECK", "AUTHORIZED_SIGN"] as const;
 const OUTGOING_DONE = ["NUMBERED", "ORGANIZATION_SIGNED"] as const;
-const OUTGOING_ISSUED = ["ISSUED", "DELIVERED", "FILED", "ARCHIVED"] as const;
+const OUTGOING_ISSUED = ["ISSUED", "DELIVERED", "FILED", "ARCHIVED", "RECALLED"] as const;
 
 export function buildDocumentBucketWhere(
   type: "VAN_BAN_DEN" | "VAN_BAN_DI",

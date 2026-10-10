@@ -49,6 +49,7 @@ import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@/config/institution";
 import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
@@ -128,6 +129,10 @@ export interface OrganizationSignInput {
 export interface IssueDocumentInput {
   documentId: string;
   recipientList?: string;
+  /** Nơi nhận có định danh (V-05a). Nếu có mà không gửi `recipientList` thì danh sách văn bản được dựng từ tên. */
+  recipients?: RecipientInput[];
+  /** Văn bản này thay thế văn bản đã thu hồi hoặc đã có nơi nhận tiếp nhận (V-05, Q10). */
+  replacesDocumentId?: string;
   deliveryMethod?: string;
   notes?: string;
 }
@@ -1207,7 +1212,15 @@ export class OutgoingDocumentService {
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
-      const recipientList = input.recipientList || existing.document.recipientList || "Nội bộ và các đơn vị liên quan";
+      const recipientRows = input.recipients?.length ? await resolveRecipientRows(tx, input.recipients) : [];
+      const replaced = input.replacesDocumentId
+        ? await assertReplacementAllowed(tx, input.replacesDocumentId, input.documentId)
+        : null;
+      const recipientList =
+        input.recipientList ||
+        (recipientRows.length ? recipientRows.map((r) => r.name).join("; ") : "") ||
+        existing.document.recipientList ||
+        "Nội bộ và các đơn vị liên quan";
       const deliveryMethod = input.deliveryMethod || "TRUC_TUYEN_VA_VAN_BAN_GIAY";
 
       // 1. Update workflow
@@ -1219,8 +1232,15 @@ export class OutgoingDocumentService {
           issuerId: user.id,
           recipientList,
           deliveryMethod,
+          ...(input.replacesDocumentId ? { replacesDocumentId: input.replacesDocumentId } : {}),
         },
       });
+
+      if (recipientRows.length) {
+        // Phát hành lại danh sách: thay toàn bộ dòng nơi nhận (chưa ai tiếp nhận vì văn bản chưa phát hành).
+        await tx.outgoingDocumentRecipient.deleteMany({ where: { documentId: input.documentId } });
+        await tx.outgoingDocumentRecipient.createMany({ data: recipientRows.map((r) => ({ ...r, documentId: input.documentId })) });
+      }
 
       // 2. Update canonical Document status
       await tx.document.update({
@@ -1244,6 +1264,8 @@ export class OutgoingDocumentService {
           issuedAt: now,
           issuerId: user.id,
           recipientList,
+          recipientCount: recipientRows.length || undefined,
+          ...(replaced ? { replacesDocumentId: input.replacesDocumentId, replacesNumberStr: replaced.numberStr } : {}),
         },
       });
 

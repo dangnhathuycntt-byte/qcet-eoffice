@@ -50,6 +50,7 @@ import {
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import { verifySignatureSafely } from "@/server/documents/signature-verifier";
 import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
 import {
   IncomingDocumentStateMachine,
@@ -403,6 +404,9 @@ export async function registerIncomingDocument(
   const receivedDate = input.receivedDate ? new Date(input.receivedDate) : new Date();
   const documentYear = receivedDate.getFullYear();
 
+  // Kiểm chữ ký số của bên gửi (V-03) trước giao dịch: không gọi dịch vụ ngoài khi đang giữ giao dịch.
+  const signature = await verifySignatureSafely({ fileUrl: input.fileUrl, fileName: input.fileName, mimeType: input.fileType });
+
   return prisma.$transaction(async (tx) => {
     // Determine next sequential registration number for incoming docs in this year
     let regNumber: number;
@@ -455,6 +459,9 @@ export async function registerIncomingDocument(
         documentId: document.id,
         status: IncomingDocumentStatus.REGISTERED,
         filingNotes: input.storageLocation,
+        signatureStatus: signature.status,
+        signatureDetail: signature.detail,
+        signatureCheckedAt: new Date(),
       },
     });
 

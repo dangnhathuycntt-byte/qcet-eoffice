@@ -20,6 +20,7 @@ import {
   type ListDocumentsFilter,
 } from "@/lib/documents/document-service";
 import { validateDocumentCreatePayload } from "@/lib/documents/document-validator";
+import { assertNoSuspectedDuplicate } from "@/lib/documents/duplicate-check";
 import { AuthorizationError, ValidationError } from "@/server/api/errors";
 import type { DocumentType } from "@/types/document";
 
@@ -175,6 +176,14 @@ export async function POST(request: NextRequest) {
           requestId: context.requestId,
         }
       );
+    }
+
+    if (docType === "VAN_BAN_DEN") {
+      await assertNoSuspectedDuplicate(authUser, {
+        originalNumber: validated.originalNumber || validated.documentNumber,
+        issuingAuthority: validated.issuingAuthority,
+        acknowledgeDuplicate: validated.acknowledgeDuplicate,
+      });
     }
 
     const payload: CreateDocumentPayload = {

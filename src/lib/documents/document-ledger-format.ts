@@ -95,6 +95,7 @@ const OUTGOING_STEPS: Record<string, Step> = {
   DELIVERED: { label: "Đã phát hành", tone: "muted", kind: "done" },
   FILED: { label: "Đã lưu hồ sơ", tone: "muted", kind: "done" },
   ARCHIVED: { label: "Đã lưu trữ", tone: "muted", kind: "done" },
+  RECALLED: { label: "Đã thu hồi", tone: "muted", kind: "done" },
 };
 
 /** Nhãn "Bước": ưu tiên trạng thái workflow, thiếu thì suy ra từ `Document.status`. */

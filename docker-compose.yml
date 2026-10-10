@@ -75,6 +75,7 @@ services:
       CLAMAV_HOST: clamav
       CLAMAV_PORT: 3310
       FILE_SCAN_WORKER_ENABLED: "true"
+      OUTBOX_WORKER_ENABLED: ${OUTBOX_WORKER_ENABLED:-true}
       TZ: Asia/Ho_Chi_Minh
     ports:
       - "127.0.0.1:${PORT:-3001}:3000"

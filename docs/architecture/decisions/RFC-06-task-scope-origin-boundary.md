@@ -3,6 +3,7 @@
 
 - **Trạng thái**: PROPOSED (Đề xuất thẩm định tại Architecture Review Gate — Phase 4 / WI-4.2, Issue #64)
 - **Ngày lập**: 2026-09-22
+- **Sửa đổi**: 2026-10-10 — thu hẹp phạm vi đọc của `DEPARTMENT` theo quyết định D07 (xem [mục 3.4](#34-sửa-đổi-2026-10-10-phạm-vi-đọc-của-department-theo-d07))
 - **Tác giả**: Technical Architecture Working Group & Core Domain Modeling Team
 - **Người thẩm định**: Owner & Tech Lead (Architecture Review Gate)
 - **Tài liệu tham chiếu**:
@@ -139,7 +140,7 @@ PERS.  │  [Cá nhân - Chia sẻ chung]    [Cá nhân - Báo cáo Đơn vị] 
 | Giá trị (`TaskScope`) | Ý nghĩa Hành chính & Phạm vi Tiếp cận | Cơ chế Kiểm soát Truy cập (ReBAC Read Guard) |
 |---|---|---|
 | **`SCHOOL`** | **Công khai Toàn trường (School-Wide Public)**:<br>Mọi cán bộ, giảng viên, nhân viên đang công tác tại trường đều có thể tìm kiếm, theo dõi trên Lịch công tác trường hoặc Bàn làm việc chung. | `true` (Cho phép mọi Authenticated User có trạng thái công tác `ACTIVE`). |
-| **`DEPARTMENT`** | **Giới hạn Đơn vị (Unit-Confined)**:<br>Chỉ lưu hành và hiển thị cho cán bộ, viên chức trực thuộc Đơn vị chủ trì (`leadUnitId`) và các Đơn vị phối hợp (`coordinatingUnitIds`). Không hiển thị cho cán bộ khoa/phòng khác. | `actor.unitId IN (task.leadUnitId, task.coordinatingUnitIds)` HOẶC Ban Giám hiệu / Thanh tra trường. |
+| **`DEPARTMENT`** | **Giới hạn Đơn vị (Unit-Confined)**, sửa đổi theo D07 (mục 3.4):<br>Người thường chỉ thấy nhiệm vụ mình tham gia (có vai trò trên nhiệm vụ hoặc là người tạo), cộng việc cha của việc con mình tham gia và việc con của việc mình tham gia. Trưởng đơn vị thấy việc chung của đơn vị mình phụ trách. Lãnh đạo trường thấy toàn trường. Không còn hiển thị cho mọi cán bộ thuộc đơn vị chủ trì hay đơn vị phối hợp. | `task.actors.userId = actor.userId` HOẶC `task.createdById = actor.userId` HOẶC việc cha/việc con thỏa một trong hai điều kiện đó HOẶC `task.leadUnitId IN` đơn vị actor đang giữ chức vụ trưởng HOẶC lãnh đạo trường. |
 | **`INDIVIDUAL`** | **Giới hạn Thành viên Thực hiện (Actor-Confined / Private)**:<br>Chỉ hiển thị cho các cá nhân được giao việc trực tiếp (DRI, Collaborators, Assigners, Observers). Ngay cả đồng nghiệp trong cùng bộ môn cũng không thấy nếu không được gắn quyền. | `actor.userId IN (task.actors.userId)` HOẶC Trưởng đơn vị trực tiếp quản lý DRI. |
 
 ### 3.2 Chiều kích 2: `Task.originLevel` — Nguồn Gốc Thẩm Quyền (Provenance & Authority Source)
@@ -164,6 +165,27 @@ Cần phân định rõ ràng giữa thuộc tính của Dữ liệu (`Task.scop
   - `view = unit`: Hiển thị các nhiệm vụ thuộc đơn vị tôi (bất kể `scope` là `SCHOOL` hay `DEPARTMENT`, miễn là đơn vị tôi chủ trì hoặc phối hợp).
   - `view = all`: Hiển thị toàn cảnh dữ liệu trong phạm vi quyền đọc tối đa của vai trò tôi (Hiệu trưởng thấy toàn trường, Trưởng khoa thấy toàn khoa).
   - `view = approval`: Hiển thị danh sách nhiệm vụ đang chờ tôi duyệt ký nghiệm thu.
+
+### 3.4 Sửa đổi 2026-10-10: phạm vi đọc của `DEPARTMENT` theo D07
+
+Đây là **thay đổi có chủ đích**, không phải lệch giữa tài liệu và mã. Bản gốc của mục 3.1 cho mọi cán bộ, viên chức thuộc đơn vị chủ trì (và đơn vị phối hợp) đọc nhiệm vụ `DEPARTMENT`. Quyết định D07 ([spec task-document-gap](../../product/specs/task-document-gap-spec.md), mục 3 và hạng mục T-11) thu hẹp lại: người thường chỉ thấy phần mình tham gia.
+
+Phạm vi đọc hiện hành:
+
+| Người dùng | Thấy nhiệm vụ nào |
+|---|---|
+| Người thường (chuyên viên, giảng viên, nhân viên) | Nhiệm vụ mình có vai trò (`TaskActor` bất kỳ: chủ trì, phối hợp, người giao, người duyệt, theo dõi) hoặc do mình tạo; việc cha của việc con mình tham gia; việc con (chưa lưu trữ) của việc mình tham gia. |
+| Trưởng đơn vị (chức vụ lãnh đạo đơn vị còn hiệu lực) | Như người thường, cộng mọi nhiệm vụ không phải `INDIVIDUAL` có đơn vị chủ trì là đơn vị mình phụ trách, và nhiệm vụ `INDIVIDUAL` có người chủ trì thuộc đơn vị mình. |
+| Lãnh đạo trường | Mọi nhiệm vụ không phải `INDIVIDUAL`, cộng nhiệm vụ mình tham gia hoặc tạo và nhiệm vụ `INDIVIDUAL` có người chủ trì thuộc đơn vị mình trực tiếp phụ trách. |
+
+Hệ quả: `view=unit` của người thường chỉ còn những nhiệm vụ trong tập trên; đơn vị phối hợp không còn tự mở quyền đọc cho mọi cán bộ của đơn vị đó (người được cử phối hợp vẫn thấy vì có vai trò trên nhiệm vụ). `SCHOOL` và `INDIVIDUAL` giữ nguyên như mục 3.1, trừ việc `SCHOOL` với người thường cũng đi qua cùng bộ lọc này (bộ lọc không phân nhánh theo `scope` cho người thường).
+
+Cài đặt:
+
+- Danh sách và đếm: `buildTaskReadWhere` trong `src/server/tasks/task-query-service.ts`.
+- Đọc theo mã (trang chi tiết, API theo `id`): `src/server/tasks/staff-read-scope.ts`. Engine phân quyền vẫn cho viên chức đọc nhiệm vụ cùng đơn vị qua quyền cơ bản `STEP_5_STAFF_BASE_AUTHORITY`; với riêng các ca được mở bởi quyền cơ bản đó, `canReadTask` áp lại đúng điều kiện của `buildTaskReadWhere`. Ủy quyền, người duyệt chỉ định và truy cập qua văn bản liên kết không bị ảnh hưởng.
+
+D07 còn ghi trưởng đơn vị xem việc chung "ở chế độ chỉ đọc". Sửa đổi này chỉ thay đổi phạm vi đọc; quyền thao tác của trưởng đơn vị trong engine (giao, duyệt, đóng trong đơn vị) giữ nguyên.
 
 ---
 

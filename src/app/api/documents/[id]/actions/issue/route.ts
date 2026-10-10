@@ -10,10 +10,13 @@ import {
   MAX_JSON_BODY_SIZE,
   parseAndValidateJson,
 } from "@/server/api/validation";
+import { RecipientsSchema } from "@/server/documents/outgoing-recipients";
 import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
 
 const IssueDocumentSchema = z.object({
   recipientList: z.string().trim().max(2000).optional().nullable(),
+  recipients: RecipientsSchema.optional(),
+  replacesDocumentId: z.string().trim().min(1).optional(),
   deliveryMethod: z.string().trim().max(100).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
 });
@@ -41,6 +44,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
       {
         documentId: id,
         recipientList: body.recipientList ?? undefined,
+        recipients: body.recipients,
+        replacesDocumentId: body.replacesDocumentId,
         deliveryMethod: body.deliveryMethod ?? undefined,
         notes: body.notes ?? undefined,
       },

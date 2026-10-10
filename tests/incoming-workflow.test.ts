@@ -25,6 +25,20 @@ describe("incoming workflow actions", () => {
     assert.deepEqual(getIncomingActions("REGISTERED", undefined), []);
   });
 
+  it("V-01: trưởng đơn vị trả lại ở bước đã giao đơn vị; Văn thư chuyển lại ở bước DIRECTED", () => {
+    assert.deepEqual(keys("ASSIGNED_TO_LEAD_UNIT", "TRUONG_PHONG"), ["return"]);
+    assert.deepEqual(keys("UNIT_ASSIGNED_PERSON", "TRUONG_PHONG"), ["return"]);
+    assert.deepEqual(keys("DIRECTED", "VAN_THU"), ["reroute"]);
+    const ret = getIncomingActions("ASSIGNED_TO_LEAD_UNIT", "TRUONG_PHONG")[0];
+    assert.equal(ret.input, "reason");
+    assert.equal(ret.destructive, true);
+    assert.equal(getIncomingActions("DIRECTED", "VAN_THU")[0].input, "unit");
+    // Sai vai trò hoặc sai bước thì không có.
+    assert.deepEqual(keys("ASSIGNED_TO_LEAD_UNIT", "CHUYEN_VIEN"), []);
+    assert.deepEqual(keys("IN_PROGRESS", "TRUONG_PHONG"), []);
+    assert.deepEqual(keys("REGISTERED", "TRUONG_PHONG"), []);
+  });
+
   it("BGH duyệt/từ chối nội dung ở bước đã bút phê hoặc đã phân công; từ chối là thao tác phá hủy", () => {
     const directed = getIncomingActions("DIRECTED", "BAN_GIAM_HIEU");
     assert.deepEqual(directed.map((a) => a.key), ["approve-content", "reject-content"]);

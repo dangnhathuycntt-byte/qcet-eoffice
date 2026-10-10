@@ -177,6 +177,9 @@
 }
 .content > * + * { margin-top: 16px; }
 .content > [data-slot='task-block-editor'] { margin-top: 12px; }
+/* Mô tả đứng ngay dưới tiêu đề, các khối nghiệp vụ theo sau: không giãn hết chiều cao, vùng bấm cuối thu lại */
+.content > [data-slot='task-block-editor']:not(:last-child) { flex: none; }
+.content > [data-slot='task-block-editor']:not(:last-child) [data-slate-editor] { flex: none; padding-bottom: 16px; }
 
 /* ── Inspector sidebar (properties) ───────────────────────────── */
 .workspace [data-slot='task-properties-sidebar'] {

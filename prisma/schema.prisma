@@ -119,6 +119,32 @@ model User {
   accounts              Account[]
   sessions              Session[]
   tasksCreated          Task[]                @relation("TaskCreatedBy")
+  taskComments          TaskComment[]         @relation("TaskCommentAuthor")
+  checkedCriteria       TaskAcceptanceCriterion[] @relation("CriterionCheckedBy")
+  extensionsRequested   TaskExtensionRequest[] @relation("ExtensionRequester")
+  extensionsDecided     TaskExtensionRequest[] @relation("ExtensionDecider")
+  backupReviewerFor     TaskBackupReviewer[]  @relation("TaskBackupReviewerUser")
+  backupReviewersSet    TaskBackupReviewer[]  @relation("TaskBackupReviewerDesignator")
+  taskTemplatesCreated  TaskTemplate[]        @relation("TaskTemplateCreator")
+  unitRequestsMade      TaskUnitRequest[]     @relation("TaskUnitRequestRequester")
+  unitRequestsAssigned  TaskUnitRequest[]     @relation("TaskUnitRequestAssignee")
+  unitRequestsDecided   TaskUnitRequest[]     @relation("TaskUnitRequestDecider")
+  taskRecurrencesCreated TaskRecurrence[]     @relation("TaskRecurrenceCreator")
+  taskRecurrencesAsDri  TaskRecurrence[]      @relation("TaskRecurrenceDri")
+  taskRecurrencesToReview TaskRecurrence[]    @relation("TaskRecurrenceReviewer")
+  taskDeclines          TaskDeclineNotice[]   @relation("TaskDecliner")
+  documentReturns       DocumentUnitReturn[]  @relation("DocReturnedBy")
+  documentReroutes      DocumentUnitReturn[]  @relation("DocReroutedBy")
+  outgoingReceipts      OutgoingDocumentRecipient[] @relation("OutgoingRecipientReceivedBy")
+  approvalSubmitted     DocumentApprovalWorkflow[] @relation("ApprovalSubmitter")
+  approvalDecided       DocumentApprovalWorkflow[] @relation("ApprovalFinalDecider")
+  approvalStepsAssigned DocumentApprovalStep[]    @relation("ApprovalStepApprover")
+  approvalStepsDecided  DocumentApprovalStep[]    @relation("ApprovalStepDecider")
+  consultationsAsked    DocumentConsultation[]     @relation("ConsultationAsker")
+  consultationsGiven    DocumentConsultation[]     @relation("ConsultationConsultant")
+  dossiersDisposed      WorkDossier[]              @relation("DossierDisposedBy")
+  disposalProposed      DossierDisposalProposal[]  @relation("DisposalProposer")
+  disposalDecided       DossierDisposalProposal[]  @relation("DisposalDecider")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -134,7 +160,8 @@ model User {
   bodyMemberships       BodyMembership[]
   taskActors            TaskActor[]
   assignedActors        TaskActor[]           @relation("ActorAssignedBy")
-  taskApprovalSteps     TaskApprovalStep[]
+  taskApprovalSteps     TaskApprovalStep[]    @relation("TaskApprovalStepReviewer")
+  backupApprovalSteps   TaskApprovalStep[]    @relation("TaskApprovalStepBackupReviewer")
   taskResultsSubmitted  TaskResult[]          @relation("TaskResultSubmitter")
   taskResultsVerified   TaskResult[]          @relation("TaskResultVerifier")
   workflowsPresented    DocumentIncomingWorkflow[] @relation("DocWorkflowPresentedBy")
@@ -238,6 +265,14 @@ model Task {
   primaryAssignmentId String?               @map("primary_assignment_id")
   primaryAssignment   PositionAssignment?   @relation("TaskPrimaryAssignment", fields: [primaryAssignmentId], references: [id], onDelete: SetNull)
   actors              TaskActor[]
+  comments            TaskComment[]
+  criteria            TaskAcceptanceCriterion[]
+  extensionRequests   TaskExtensionRequest[]
+  declineNotices      TaskDeclineNotice[]
+  reminderLogs        TaskReminderLog[]
+  backupReviewer      TaskBackupReviewer?
+  unitRequests        TaskUnitRequest[]
+  recurrenceRuns      TaskRecurrenceRun[] @relation("TaskRecurrenceRunTask")
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -360,6 +395,9 @@ model Document {
   attachments        DocumentAttachment[]
   directives         DocumentDirective[]
   incomingWorkflow   DocumentIncomingWorkflow?
+  unitReturns        DocumentUnitReturn[]
+  outgoingRecipients OutgoingDocumentRecipient[]
+  approvalWorkflow   DocumentApprovalWorkflow?
   outgoingWorkflow   DocumentOutgoingWorkflow?
   signatures         SignatureRecord[]
 
@@ -505,6 +543,11 @@ model DocumentIncomingWorkflow {
   archivedById          String?                @map("archived_by_id")
   archivedBy            User?                  @relation("DocWorkflowArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
 
+  // Kiểm chữ ký số của bên gửi khi nhận (V-03). UNVERIFIED chưa bao giờ được coi là hợp lệ.
+  signatureStatus       SignatureVerificationStatus @default(UNVERIFIED) @map("signature_status")
+  signatureCheckedAt    DateTime?              @map("signature_checked_at")
+  signatureDetail       String?                @map("signature_detail") @db.VarChar(300)
+
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
 
@@ -512,6 +555,123 @@ model DocumentIncomingWorkflow {
   @@index([leadUnitId])
   @@index([leaderId])
   @@map("document_incoming_workflows")
+}
+
+// Đơn vị chủ trì trả lại văn bản đến (chuyển nhầm đơn vị) và Văn thư chuyển lại (V-01).
+// Mỗi lần trả lại là một bản ghi: lịch sử không bị xóa. Bản ghi còn mở (resolvedAt rỗng)
+// nghĩa là văn bản đang chờ Văn thư chuyển cho đơn vị khác.
+model DocumentUnitReturn {
+  id           String              @id @default(cuid())
+  documentId   String              @map("document_id")
+  document     Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fromUnitId   String              @map("from_unit_id")
+  fromUnit     OrganizationalUnit  @relation("DocReturnFromUnit", fields: [fromUnitId], references: [id], onDelete: Restrict)
+  returnedById String              @map("returned_by_id")
+  returnedBy   User                @relation("DocReturnedBy", fields: [returnedById], references: [id], onDelete: Restrict)
+  reason       String              @db.VarChar(1000)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  resolvedAt   DateTime?           @map("resolved_at")
+  toUnitId     String?             @map("to_unit_id")
+  toUnit       OrganizationalUnit? @relation("DocReturnToUnit", fields: [toUnitId], references: [id], onDelete: SetNull)
+  reroutedById String?             @map("rerouted_by_id")
+  reroutedBy   User?               @relation("DocReroutedBy", fields: [reroutedById], references: [id], onDelete: SetNull)
+  rerouteNote  String?             @map("reroute_note") @db.VarChar(1000)
+
+  @@index([documentId, resolvedAt])
+  @@index([fromUnitId])
+  @@map("document_unit_returns")
+}
+
+// Luồng duyệt tờ trình nội bộ (V-06). Tờ trình không phát hành ra ngoài nên không dùng
+// DocumentOutgoingWorkflow (cấp số, ký số cơ quan, phát hành); số tờ trình có dãy riêng.
+enum ApprovalWorkflowStatus {
+  DRAFT             // Nháp, hoặc đã rút lại khi chưa ai mở
+  WAITING_UNIT_HEAD // Chờ các trưởng đơn vị liên quan duyệt song song
+  WAITING_LEADER    // Đủ đồng ý của các đơn vị, chờ lãnh đạo
+  APPROVED          // Đã phê duyệt
+  NEEDS_REVISION    // Cần bổ sung, trả người trình sửa rồi trình lại
+  REJECTED          // Không phê duyệt (lý do bắt buộc)
+}
+
+enum ApprovalStepStage {
+  UNIT_HEAD
+  LEADER
+}
+
+enum DocumentApprovalStepStatus {
+  PENDING
+  APPROVED
+  REVISION_REQUIRED
+  REJECTED
+  SKIPPED // Bị bỏ qua khi một bước khác trả về, rút lại hoặc người trình là trưởng đơn vị
+}
+
+model DocumentApprovalWorkflow {
+  id            String                  @id @default(cuid())
+  documentId    String                  @unique @map("document_id")
+  document      Document                @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status        ApprovalWorkflowStatus  @default(DRAFT)
+  round         Int                     @default(0)
+  submittedById String?                 @map("submitted_by_id")
+  submittedBy   User?                   @relation("ApprovalSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  submittedAt   DateTime?               @map("submitted_at")
+  openedAt      DateTime?               @map("opened_at")
+  decidedById   String?                 @map("decided_by_id")
+  decidedBy     User?                   @relation("ApprovalFinalDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt     DateTime?               @map("decided_at")
+  decisionNote  String?                 @map("decision_note") @db.VarChar(1000)
+  // Đề nghị trả lại của người trình khi tờ trình đã có người mở (không rút lại được nữa).
+  returnRequestedAt   DateTime?         @map("return_requested_at")
+  returnRequestNote   String?           @map("return_request_note") @db.VarChar(1000)
+  steps         DocumentApprovalStep[]
+  consultations DocumentConsultation[]
+  createdAt     DateTime                @default(now()) @map("created_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("document_approval_workflows")
+}
+
+model DocumentApprovalStep {
+  id             String                     @id @default(cuid())
+  workflowId     String                     @map("workflow_id")
+  workflow       DocumentApprovalWorkflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  round          Int
+  stage          ApprovalStepStage
+  unitId         String?                    @map("unit_id")
+  unit           OrganizationalUnit?        @relation("ApprovalStepUnit", fields: [unitId], references: [id], onDelete: SetNull)
+  approverUserId String?                    @map("approver_user_id")
+  approver       User?                      @relation("ApprovalStepApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  status         DocumentApprovalStepStatus @default(PENDING)
+  decidedById    String?                    @map("decided_by_id")
+  decidedBy      User?                      @relation("ApprovalStepDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt      DateTime?                  @map("decided_at")
+  note           String?                    @db.VarChar(1000)
+  openedAt       DateTime?                  @map("opened_at")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+
+  @@index([workflowId, round, status])
+  @@index([unitId, status])
+  @@map("document_approval_steps")
+}
+
+// Xin ý kiến tham khảo: người xử lý chuyển phiếu cho người khác cho ý kiến mà không đổi người duyệt.
+model DocumentConsultation {
+  id           String                   @id @default(cuid())
+  workflowId   String                   @map("workflow_id")
+  workflow     DocumentApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  askedById    String                   @map("asked_by_id")
+  askedBy      User                     @relation("ConsultationAsker", fields: [askedById], references: [id], onDelete: Restrict)
+  consultantId String                   @map("consultant_id")
+  consultant   User                     @relation("ConsultationConsultant", fields: [consultantId], references: [id], onDelete: Restrict)
+  question     String                   @db.VarChar(1000)
+  answer       String?                  @db.VarChar(2000)
+  answeredAt   DateTime?                @map("answered_at")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+
+  @@index([workflowId, createdAt])
+  @@index([consultantId, answeredAt])
+  @@map("document_consultations")
 }
 
 model UnitWorkAssignment {
@@ -558,12 +718,14 @@ enum OutgoingDocumentStatus {
   DELIVERED
   FILED
   ARCHIVED
+  RECALLED
 }
 
 enum SignatureType {
   PERSONAL_DIGITAL
   ORGANIZATION_DIGITAL
   PHYSICAL
+  INITIAL // ký nháy (V-09): xác nhận nháp trước khi lãnh đạo ký, tùy chọn
 }
 
 enum SignatureVerificationStatus {
@@ -630,14 +792,46 @@ model DocumentOutgoingWorkflow {
   archivedById              String?                @map("archived_by_id")
   archivedBy                User?                  @relation("DocWorkflowOutgoingArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
 
+  // Thu hồi (V-05): chỉ khi chưa bên nhận nào xác nhận tiếp nhận. Số đã cấp không tái sử dụng.
+  recalledAt                DateTime?              @map("recalled_at")
+  recalledById              String?                @map("recalled_by_id")
+  recallReason              String?                @map("recall_reason") @db.VarChar(1000)
+  // Văn bản này thay thế văn bản nào (đã thu hồi, hoặc đã có bên nhận tiếp nhận).
+  replacesDocumentId        String?                @map("replaces_document_id")
+
   createdAt                 DateTime               @default(now()) @map("created_at")
   updatedAt                 DateTime               @updatedAt @map("updated_at")
 
   @@index([status])
+  @@index([replacesDocumentId])
   @@index([authorizedSignerId])
   @@index([contentReviewerId])
   @@index([formatReviewerId])
   @@map("document_outgoing_workflows")
+}
+
+enum OutgoingRecipientKind {
+  INTERNAL_UNIT // đơn vị trong trường
+  EXTERNAL      // cơ quan, tổ chức ngoài trường
+}
+
+// Nơi nhận có định danh của văn bản đi (V-05a). `recipientList` văn bản tự do vẫn giữ để hiển thị.
+model OutgoingDocumentRecipient {
+  id           String                    @id @default(cuid())
+  documentId   String                    @map("document_id")
+  document     Document                  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  kind         OutgoingRecipientKind
+  unitId       String?                   @map("unit_id")
+  unit         OrganizationalUnit?       @relation("OutgoingRecipientUnit", fields: [unitId], references: [id], onDelete: SetNull)
+  name         String                    @db.VarChar(300)
+  receivedAt   DateTime?                 @map("received_at")
+  receivedById String?                   @map("received_by_id")
+  receivedBy   User?                     @relation("OutgoingRecipientReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime                  @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@index([unitId])
+  @@map("outgoing_document_recipients")
 }
 
 model SignatureRecord {
@@ -874,6 +1068,12 @@ model OrganizationalUnit {
   taskActors          TaskActor[]
   leadWorkflows       DocumentIncomingWorkflow[] @relation("DocWorkflowLeadUnit")
   unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
+  documentReturnsFrom DocumentUnitReturn[]       @relation("DocReturnFromUnit")
+  documentReturnsTo   DocumentUnitReturn[]       @relation("DocReturnToUnit")
+  outgoingRecipients  OutgoingDocumentRecipient[]   @relation("OutgoingRecipientUnit")
+  taskTemplates       TaskTemplate[]                @relation("TaskTemplateUnit")
+  taskUnitRequests    TaskUnitRequest[]             @relation("TaskUnitRequestTarget")
+  approvalSteps       DocumentApprovalStep[]     @relation("ApprovalStepUnit")
   workDossiers        WorkDossier[]
   meetings            Meeting[]
   meetingResolutions  MeetingResolution[]        @relation("UnitMeetingResolutions")
@@ -1143,12 +1343,16 @@ model TaskApprovalStep {
   reviewerAssignmentId String?             @map("reviewer_assignment_id")
   reviewerAssignment   PositionAssignment? @relation(fields: [reviewerAssignmentId], references: [id], onDelete: SetNull)
   reviewerUserId       String?             @map("reviewer_user_id")
-  reviewerUser         User?               @relation(fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  reviewerUser         User?               @relation("TaskApprovalStepReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  // Người duyệt dự phòng của bước (T-05, D12): chỉ được duyệt khi bước chờ quá 96 giờ, vẫn chịu N4.
+  backupReviewerUserId String?             @map("backup_reviewer_user_id")
+  backupReviewerUser   User?               @relation("TaskApprovalStepBackupReviewer", fields: [backupReviewerUserId], references: [id], onDelete: SetNull)
   status               ApprovalStepStatus  @default(PENDING)
   decisionNote         String?             @map("decision_note") @db.Text
   decidedAt            DateTime?           @map("decided_at")
 
   @@index([processId, stepOrder])
+  @@index([backupReviewerUserId])
   @@map("task_approval_steps")
 }
 
@@ -1167,6 +1371,226 @@ model TaskResult {
 
   @@index([taskId])
   @@map("task_results")
+}
+
+// Người thực hiện chính từ chối nhận việc (T-02). Không thêm trạng thái nhiệm vụ (ADR-003):
+// người chủ trì giữ nguyên cho đến khi người giao giao lại. Thông báo còn hiệu lực chỉ khi
+// được tạo sau lần bổ nhiệm gần nhất của chính người đó, nên giao lại là tự hết hiệu lực.
+model TaskDeclineNotice {
+  id        String   @id @default(cuid())
+  taskId    String   @map("task_id")
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation("TaskDecliner", fields: [userId], references: [id], onDelete: Restrict)
+  reason    String   @db.VarChar(1000)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskId, createdAt])
+  @@map("task_decline_notices")
+}
+
+// Nhật ký nhắc hạn tự động (T-06). Ràng buộc duy nhất (task, kind, dueKey) bảo đảm mỗi
+// nhắc nhở chỉ gửi một lần cho một mốc, kể cả khi bộ quét chạy lại hay chạy song song.
+// Mẫu nhiệm vụ và nhiệm vụ lặp lại (T-09, Q9). Chu kỳ theo tháng; bộ quét tạo nhiệm vụ của tháng hiện tại
+// đúng một lần cho mỗi (recurrence_id, period_key) nhờ ràng buộc duy nhất.
+model TaskTemplate {
+  id          String           @id @default(cuid())
+  name        String           @db.VarChar(200)
+  unitId      String           @map("unit_id")
+  unit        OrganizationalUnit @relation("TaskTemplateUnit", fields: [unitId], references: [id], onDelete: Restrict)
+  title       String           @db.VarChar(500)
+  description String?          @db.Text
+  priority    TaskPriority     @default(NORMAL)
+  // Ngày trong tháng làm hạn chót (1-28, tránh tháng ngắn).
+  dueDay      Int              @default(28) @map("due_day")
+  criteria    Json             @default("[]")
+  subtasks    Json             @default("[]")
+  isActive    Boolean          @default(true) @map("is_active")
+  createdById String           @map("created_by_id")
+  createdBy   User             @relation("TaskTemplateCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  recurrences TaskRecurrence[]
+
+  @@index([unitId, isActive])
+  @@map("task_templates")
+}
+
+model TaskRecurrence {
+  id               String              @id @default(cuid())
+  templateId       String              @map("template_id")
+  template         TaskTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  // Người giao: nhiệm vụ sinh ra mang tên người này và chịu đúng quyền của họ khi tạo.
+  createdById      String              @map("created_by_id")
+  createdBy        User                @relation("TaskRecurrenceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  driUserId        String              @map("dri_user_id")
+  dri              User                @relation("TaskRecurrenceDri", fields: [driUserId], references: [id], onDelete: Restrict)
+  collaboratorIds  String[]            @default([]) @map("collaborator_ids")
+  reviewerUserId   String?             @map("reviewer_user_id")
+  reviewer         User?               @relation("TaskRecurrenceReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  // Cứ mỗi everyMonths tháng tạo một nhiệm vụ, tính từ startPeriod (YYYY-MM).
+  everyMonths      Int                 @default(1) @map("every_months")
+  startPeriod      String              @map("start_period") @db.VarChar(7)
+  endPeriod        String?             @map("end_period") @db.VarChar(7)
+  isActive         Boolean             @default(true) @map("is_active")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  runs             TaskRecurrenceRun[]
+
+  @@index([isActive])
+  @@index([templateId])
+  @@map("task_recurrences")
+}
+
+model TaskRecurrenceRun {
+  id           String         @id @default(cuid())
+  recurrenceId String         @map("recurrence_id")
+  recurrence   TaskRecurrence @relation(fields: [recurrenceId], references: [id], onDelete: Cascade)
+  periodKey    String         @map("period_key") @db.VarChar(7)
+  // Null trong lúc đang tạo; dòng treo quá lâu không có taskId được dọn để thử lại.
+  taskId       String?        @map("task_id")
+  task         Task?          @relation("TaskRecurrenceRunTask", fields: [taskId], references: [id], onDelete: SetNull)
+  claimedAt    DateTime       @default(now()) @map("claimed_at")
+  error        String?        @db.VarChar(500)
+
+  @@unique([recurrenceId, periodKey])
+  @@index([taskId])
+  @@map("task_recurrence_runs")
+}
+
+// Giao việc sang đơn vị khác phải qua trưởng đơn vị đó (T-12, D06): người giao gửi yêu cầu cho đơn vị,
+// trưởng đơn vị chọn người của đơn vị mình làm người phối hợp hoặc từ chối.
+enum TaskUnitRequestStatus {
+  PENDING   // chờ trưởng đơn vị nhận
+  ASSIGNED  // đã cử người phối hợp
+  DECLINED  // trưởng đơn vị từ chối
+  CANCELLED // người giao rút lại
+}
+
+model TaskUnitRequest {
+  id             String                @id @default(cuid())
+  taskId         String                @map("task_id")
+  task           Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  targetUnitId   String                @map("target_unit_id")
+  targetUnit     OrganizationalUnit    @relation("TaskUnitRequestTarget", fields: [targetUnitId], references: [id], onDelete: Restrict)
+  requestedById  String                @map("requested_by_id")
+  requestedBy    User                  @relation("TaskUnitRequestRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  note           String?               @db.VarChar(1000)
+  status         TaskUnitRequestStatus @default(PENDING)
+  assigneeUserId String?               @map("assignee_user_id")
+  assignee       User?                 @relation("TaskUnitRequestAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  decidedById    String?               @map("decided_by_id")
+  decidedBy      User?                 @relation("TaskUnitRequestDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt      DateTime?             @map("decided_at")
+  decisionNote   String?               @map("decision_note") @db.VarChar(1000)
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  @@index([taskId, status])
+  @@index([targetUnitId, status])
+  @@map("task_unit_requests")
+}
+
+// Người duyệt dự phòng (T-05, D12). Chỉ trở thành người duyệt khi nhiệm vụ chờ duyệt đủ 96 giờ:
+// bộ quét nhắc hạn thêm một TaskActor REVIEWER cho người này (actorId) và gỡ khi hết đợt chờ duyệt.
+model TaskBackupReviewer {
+  id                String    @id @default(cuid())
+  taskId            String    @unique @map("task_id")
+  task              Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  backupUserId      String    @map("backup_user_id")
+  backupUser        User      @relation("TaskBackupReviewerUser", fields: [backupUserId], references: [id], onDelete: Cascade)
+  designatedById    String    @map("designated_by_id")
+  designatedBy      User      @relation("TaskBackupReviewerDesignator", fields: [designatedById], references: [id], onDelete: Restrict)
+  actorId           String?   @map("actor_id")
+  activatedAt       DateTime? @map("activated_at")
+  // Thời điểm bắt đầu đợt chờ duyệt mà lần kích hoạt này thuộc về; đổi (nộp lại) thì phải gỡ.
+  activatedForSince DateTime? @map("activated_for_since")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([backupUserId])
+  @@map("task_backup_reviewers")
+}
+
+model TaskReminderLog {
+  id     String   @id @default(cuid())
+  taskId String   @map("task_id")
+  task   Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  kind   String   @db.VarChar(40)
+  dueKey String   @map("due_key") @db.VarChar(64)
+  sentAt DateTime @default(now()) @map("sent_at")
+
+  @@unique([taskId, kind, dueKey])
+  @@index([sentAt])
+  @@map("task_reminder_logs")
+}
+
+enum ExtensionRequestStatus {
+  PENDING   // chờ người giao quyết định
+  APPROVED  // người giao đồng ý, hạn đã đổi
+  REJECTED  // người giao từ chối, hạn giữ nguyên
+  COUNTERED // người giao đề xuất hạn khác, chờ người thực hiện trả lời
+  ACCEPTED  // người thực hiện nhận hạn đề xuất, hạn đã đổi
+  DECLINED  // người thực hiện không nhận hạn đề xuất, hạn giữ nguyên
+}
+
+// Yêu cầu gia hạn nhiệm vụ (T-01). Hạn của nhiệm vụ chỉ đổi khi người giao đồng ý.
+// Mỗi nhiệm vụ có tối đa một yêu cầu đang mở (PENDING hoặc COUNTERED); việc này được giữ
+// bằng khóa phiên bản của nhiệm vụ khi tạo yêu cầu.
+model TaskExtensionRequest {
+  id                 String                     @id @default(cuid())
+  taskId             String                     @map("task_id")
+  task               Task                       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  requestedById      String                     @map("requested_by_id")
+  requestedBy        User                       @relation("ExtensionRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  previousDueDate    DateTime                   @map("previous_due_date")
+  requestedDueDate   DateTime                   @map("requested_due_date")
+  reason             String                     @db.VarChar(1000)
+  status             ExtensionRequestStatus     @default(PENDING)
+  counterDueDate     DateTime?                  @map("counter_due_date")
+  decidedById        String?                    @map("decided_by_id")
+  decidedBy          User?                      @relation("ExtensionDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt          DateTime?                  @map("decided_at")
+  decisionNote       String?                    @map("decision_note") @db.VarChar(1000)
+  respondedAt        DateTime?                  @map("responded_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+
+  @@index([taskId, status])
+  @@index([requestedById])
+  @@map("task_extension_requests")
+}
+
+// Tiêu chí hoàn thành của nhiệm vụ (T-04). Người giao ghi khi tạo; người duyệt đánh dấu từng tiêu chí.
+model TaskAcceptanceCriterion {
+  id          String    @id @default(cuid())
+  taskId      String    @map("task_id")
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  position    Int
+  text        String    @db.VarChar(300)
+  checked     Boolean   @default(false)
+  checkedById String?   @map("checked_by_id")
+  checkedBy   User?     @relation("CriterionCheckedBy", fields: [checkedById], references: [id], onDelete: SetNull)
+  checkedAt   DateTime? @map("checked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([taskId, position])
+  @@map("task_acceptance_criteria")
+}
+
+// Bình luận nhiệm vụ (T-03). Xóa mềm: giữ bản ghi và dấu vết, không trả nội dung.
+model TaskComment {
+  id        String    @id @default(cuid())
+  taskId    String    @map("task_id")
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String    @map("author_id")
+  author    User      @relation("TaskCommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  body      String    @db.VarChar(2000)
+  createdAt DateTime  @default(now()) @map("created_at")
+  editedAt  DateTime? @map("edited_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([taskId, createdAt])
+  @@index([authorId])
+  @@map("task_comments")
 }
 
 model TaskRelation {
@@ -1317,6 +1741,12 @@ model WorkDossier {
   archivedAt          DateTime?          @map("archived_at")
   archivedById        String?            @map("archived_by_id")
   archivedBy          User?              @relation("DossierArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  retentionExtraYears Int                @default(0) @map("retention_extra_years")
+  disposedAt          DateTime?          @map("disposed_at")
+  disposedById        String?            @map("disposed_by_id")
+  disposedBy          User?              @relation("DossierDisposedBy", fields: [disposedById], references: [id], onDelete: SetNull)
+  disposalProposals   DossierDisposalProposal[]
+  reminderLogs        DossierReminderLog[]
   notes               String?            @db.Text
   items               DossierItem[]
   createdAt           DateTime           @default(now()) @map("created_at")
@@ -1328,6 +1758,47 @@ model WorkDossier {
   @@index([status])
   @@index([classification])
   @@map("work_dossiers")
+}
+
+enum DisposalProposalStatus {
+  PROPOSED // Văn thư đã lập đề nghị, chờ lãnh đạo quyết định
+  DISPOSE  // Lãnh đạo quyết định hủy
+  EXTEND   // Lãnh đạo quyết định gia hạn bảo quản
+}
+
+// Đề nghị xét hủy hồ sơ hết hạn bảo quản (V-07). Văn thư đề nghị kèm biên bản, lãnh đạo quyết
+// định hủy hoặc gia hạn. Hủy là xóa mềm; chỉ quản trị hệ thống xóa hẳn, sau khi có biên bản.
+model DossierDisposalProposal {
+  id                String                    @id @default(cuid())
+  dossierId         String                    @map("dossier_id")
+  dossier           WorkDossier               @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  proposedById      String                    @map("proposed_by_id")
+  proposedBy        User                      @relation("DisposalProposer", fields: [proposedById], references: [id], onDelete: Restrict)
+  minutesReference  String                    @map("minutes_reference") @db.VarChar(100)
+  reason            String                    @db.VarChar(1000)
+  status            DisposalProposalStatus    @default(PROPOSED)
+  decidedById       String?                   @map("decided_by_id")
+  decidedBy         User?                     @relation("DisposalDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt         DateTime?                 @map("decided_at")
+  decisionNote      String?                   @map("decision_note") @db.VarChar(1000)
+  extendYears       Int?                      @map("extend_years")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+
+  @@index([dossierId, status])
+  @@map("dossier_disposal_proposals")
+}
+
+// Nhật ký nhắc hồ sơ (V-07): nhắc nộp lưu trước hạn 30 ngày, báo hết hạn bảo quản. Duy nhất theo (hồ sơ, loại, mốc).
+model DossierReminderLog {
+  id        String      @id @default(cuid())
+  dossierId String      @map("dossier_id")
+  dossier   WorkDossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  kind      String      @db.VarChar(40)
+  dueKey    String      @map("due_key") @db.VarChar(64)
+  sentAt    DateTime    @default(now()) @map("sent_at")
+
+  @@unique([dossierId, kind, dueKey])
+  @@map("dossier_reminder_logs")
 }
 
 model DossierItem {

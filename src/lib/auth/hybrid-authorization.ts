@@ -1512,6 +1512,10 @@ function evaluateCapabilityMatrix(
       return { allowed: true, policyMatched: "UNIT_LEADER_ASSIGN_PERSON" };
     }
 
+    if (action === "document.incoming.return") {
+      return { allowed: true, policyMatched: "UNIT_LEADER_RETURN_DOC" };
+    }
+
     if (action === "document.incoming.execute") {
       return { allowed: true, policyMatched: "UNIT_LEADER_EXECUTE_DOC" };
     }
@@ -1791,6 +1795,7 @@ function evaluateCapabilityMatrix(
     if (
       action === "document.incoming.register" ||
       action === "document.incoming.present" ||
+      action === "document.incoming.reroute" ||
       action === "document.incoming.file" ||
       action === "document.file" ||
       effAction === "document.outgoing.review_format" ||

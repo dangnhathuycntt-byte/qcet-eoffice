@@ -404,6 +404,17 @@ export function useTaskMutations(
         setErrorMessage("Không có phiên bản nhiệm vụ hiện tại để gửi quyết định. Hãy tải lại dữ liệu rồi thử lại.");
         return;
       }
+      // T-04 (Q3): duyệt không bị chặn khi còn tiêu chí chưa đạt, nhưng người duyệt phải xác nhận.
+      if ((payload.decision === "approved" || payload.decision === undefined) && isOnline() && typeof window !== "undefined") {
+        try {
+          const res = await fetch(`/api/tasks/${payload.taskId}/criteria`, { cache: "no-store" });
+          const view = res.ok ? await res.json() : null;
+          const unmet = Number(view?.unmet ?? 0);
+          if (unmet > 0 && !window.confirm(`Còn ${unmet} tiêu chí chưa đạt. Vẫn phê duyệt nhiệm vụ này?`)) return;
+        } catch {
+          // Không đọc được tiêu chí thì không chặn việc duyệt.
+        }
+      }
       const todayStr = getSystemReferenceDateStr();
       let statusToSet: TaskStatus = "IN_PROGRESS";
       if (payload.decision === "approved") {

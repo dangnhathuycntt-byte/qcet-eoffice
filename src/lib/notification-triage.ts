@@ -127,6 +127,15 @@ const APPROVAL_TYPES = new Set([
   "deliverable_submitted",
   "dacum_step1_review",
   "deliverable_revision",
+  "extension_requested",
+  "unit_request",
+  "declined",
+  "review_pending",
+  "escalation",
+  "submission_requested",
+  "submission_return_requested",
+  "submission_consult",
+  "dossier_disposal_proposed",
 ]);
 
 /**
@@ -139,6 +148,7 @@ const REMINDER_TYPES = new Set([
   "deadline_warning_24h",
   "document_overdue",
   "document_expiring_soon",
+  "overdue",
 ]);
 
 export const NOTIFICATION_TRIAGE_TABS: readonly NotificationTriageTab[] = [

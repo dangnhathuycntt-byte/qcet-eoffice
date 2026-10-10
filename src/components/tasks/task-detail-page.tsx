@@ -22,6 +22,13 @@ import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-edit
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "@/components/tasks/detail/block-selection-canvas";
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
+import { TaskComments } from "@/components/tasks/detail/task-comments";
+import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
+import { TaskDecline } from "@/components/tasks/detail/task-decline";
+import { TaskExtension } from "@/components/tasks/detail/task-extension";
+import { TaskPeople } from "@/components/tasks/detail/task-people";
+import { TaskBackupReviewer } from "@/components/tasks/detail/task-backup-reviewer";
+import { TaskUnitRequests } from "@/components/tasks/detail/task-unit-requests";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
@@ -829,6 +836,7 @@ export function TaskDetailPage({
                 task={task}
                 currentUser={currentUser}
                 canEdit={canEdit}
+                canChangeDueDate={!Array.isArray((task as any).availableActions) || (task as any).availableActions.includes('task.assign')}
                 onStatusChange={handleStatusChange}
                 onPriorityChange={handlePriorityChange}
                 onDueDateChange={handleDueDateChange}
@@ -879,6 +887,13 @@ export function TaskDetailPage({
                 </div>
               )}
 
+              <TaskDecline
+                taskId={task.id}
+                version={Number((task as any).version ?? 0)}
+                status={String((task as any).status ?? "")}
+                onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
+              />
+
               <TaskBlockEditor
                 selectionContainerSelector="body"
                 globalFileDrop={!activeSubtask}
@@ -889,11 +904,34 @@ export function TaskDetailPage({
                 onSaveContent={handleSaveDescription}
                 onSelectSubtask={handleOpenSubtaskDrawer}
               />
+
+              <TaskExtension
+                taskId={task.id}
+                version={Number((task as any).version ?? 0)}
+                status={String((task as any).status ?? "")}
+                onTaskChange={({ version, dueDate }) =>
+                  setTask((prev) => ({ ...prev, version, ...(dueDate ? { dueDate } : {}) }) as any)
+                }
+              />
+
+              <TaskPeople taskId={task.id} onVersionChange={(version) => setTask((prev) => ((prev as any).version === version ? prev : ({ ...prev, version } as any)))} />
+
+              <TaskBackupReviewer taskId={task.id} />
+
+              <TaskUnitRequests taskId={task.id} />
+
+              <TaskCriteria
+                taskId={task.id}
+                version={Number((task as any).version ?? 0)}
+                status={String((task as any).status ?? "")}
+                onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
+              />
             </>
           )}
 
           {activeTab === "activity" && (
             <div className="space-y-4">
+              <TaskComments taskId={task.id} className="max-w-3xl" />
               <section className="max-w-3xl space-y-3">
                 <div className="px-2">
                   <h2 className="text-compact font-semibold text-foreground tracking-tight">

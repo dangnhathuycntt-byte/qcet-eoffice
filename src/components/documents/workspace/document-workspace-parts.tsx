@@ -11,7 +11,12 @@ import { type DocumentViewModel } from "@/lib/documents/document-view-model";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { DocumentAuditTimeline } from "../document-audit-timeline";
 import { OutgoingActionPanel } from "../outgoing-action-panel";
+import { OutgoingRecipientsPanel } from "../outgoing-recipients-panel";
+import { IncomingSignatureStatus } from "../incoming-signature-status";
+import { IncomingReturnHistory } from "../incoming-return-history";
+import { OutgoingInitialSign } from "../outgoing-initial-sign";
 import { IncomingDirectives, IncomingWorkflowActions, IncomingWorkflowDetails, getIncomingAttributes } from "./incoming-workflow-sections";
+import { SubmissionApprovalPanel } from "./submission-approval-panel";
 import { DocumentEditActions } from "./document-edit";
 import { OutgoingWorkflowStepper } from "../outgoing-workflow-stepper";
 import { CollapsibleSection, DetailsPopover, DocumentTitleBlock, InspectorRow, LinkedTaskSection, MetaInline, SectionHeading } from "../document-detail-parts";
@@ -263,6 +268,7 @@ export function DocumentInfoSections({
       <>
         {/* Nhiệm vụ liên kết là dòng cuối của lưới thuộc tính (cùng cột nhãn) */}
         <LinkedTaskCreateSection vm={vm} onLinked={onWorkflowUpdate} inline />
+        {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
         {vm.kind === "outgoing" && item ? (
           <OutgoingActionPanel
             documentId={vm.id}
@@ -272,7 +278,13 @@ export function DocumentInfoSections({
             onActionSuccess={onWorkflowUpdate}
           />
         ) : null}
+        {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+
+        {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={`initial-sign-${vm.id}`} documentId={vm.id} /> : null}
         {/* Chỉ thao tác theo bước ở thân; sửa thông tin/bổ sung tệp nằm trong menu "Thao tác khác" của header */}
+        {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
+
+        {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
         {isIncoming && incomingStatus ? (
           <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />
         ) : null}
@@ -283,6 +295,8 @@ export function DocumentInfoSections({
 
   return (
     <>
+      {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+
       {vm.kind === "outgoing" && item ? (
         <OutgoingActionPanel
           documentId={vm.id}
@@ -292,6 +306,14 @@ export function DocumentInfoSections({
           onActionSuccess={onWorkflowUpdate}
         />
       ) : null}
+
+      {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+
+      {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={`initial-sign-${vm.id}`} documentId={vm.id} /> : null}
+
+      {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
+
+      {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
 
       {isIncoming && incomingStatus ? (
         <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />

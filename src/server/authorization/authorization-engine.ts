@@ -352,6 +352,7 @@ export function authorize(
       action.startsWith('org.') ||
       action.startsWith('position.') ||
       action.startsWith('audit.') ||
+      action === 'dossier.purge' ||
       action === 'task.monitor';
 
     if (!isTechnicalAction) {
@@ -392,6 +393,7 @@ export function authorize(
       action === 'org.manage' ||
       action === 'position.manage' ||
       action === 'system.configure' ||
+      action === 'dossier.purge' ||
       action.startsWith('system.system.'))
   ) {
     return {
@@ -465,6 +467,11 @@ export function authorize(
   const isFollower = resource?.followerIds?.includes(userId);
   const isAssignee = resource?.assigneeIds?.includes(userId);
   const isObserver = resource?.observerIds?.includes(userId);
+  // Người duyệt được chỉ định trên nhiệm vụ (TaskActor REVIEWER/APPROVER).
+  const isDesignatedReviewer = Boolean(
+    resource?.type === 'task' &&
+      (resource?.reviewerIds?.includes(userId) || resource?.approverIds?.includes(userId))
+  );
 
   // Single DRI Rule: Collaborator cannot reassign DRI
   if (action === 'task.reassign' || action === 'task.assign') {
@@ -559,9 +566,14 @@ export function authorize(
       candidatePolicy = 'STEP_4_MEETING_ORGANIZER_OR_CHAIR';
     }
   } else if (action === 'task.read') {
-    if (isDRI || isCollaborator || isAssigner || isFollower || isObserver || isAssignee) {
+    if (isDRI || isCollaborator || isAssigner || isFollower || isObserver || isAssignee || isDesignatedReviewer) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_DIRECT_RELATION';
+    }
+  } else if (action === 'task.review' || action === 'task.approve') {
+    if (isDesignatedReviewer) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_DESIGNATED_REVIEWER';
     }
   } else if (
     action === 'task.update_metadata' ||
@@ -572,6 +584,36 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_EXECUTION';
     }
+  } else if (action === 'task.request_extension') {
+    // Chỉ người thực hiện chính (chủ trì) xin gia hạn; người phối hợp thì không.
+    if (isDRI) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_EXTENSION_REQUEST_DRI';
+    }
+  } else if (action === 'task.decline') {
+    // Chỉ người thực hiện chính từ chối nhận việc.
+    if (isDRI) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_DECLINE_DRI';
+    }
+  } else if (action === 'task.decide_extension') {
+    // Người giao quyết định gia hạn; SoD với người xin do dịch vụ gia hạn giữ.
+    if (isAssigner) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_EXTENSION_DECIDE_ASSIGNER';
+    }
+  } else if (action === 'task.comment') {
+    // Người có quan hệ với nhiệm vụ được bình luận; người quan sát (OBSERVER) chỉ đọc.
+    if (isDRI || isCollaborator || isAssigner || isFollower || isDesignatedReviewer) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_COMMENT_PARTICIPANT';
+    }
+  } else if (action === 'task.assign') {
+    // Người giao (người tạo) được thêm, bớt người phối hợp và người theo dõi trên nhiệm vụ của mình.
+    if (isAssigner) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_ASSIGNER_ASSIGN';
+    }
   } else if (action === 'task.cancel' || action === 'task.archive') {
     if (isAssigner) {
       candidateAllowed = true;
@@ -581,6 +623,12 @@ export function authorize(
     if (isDrafter || isAssigner) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_DOCUMENT_DRAFT';
+    }
+  } else if (action === 'document.submission.submit') {
+    // Người tạo (người đăng ký) tờ trình được trình; server kiểm thêm người trình không tự duyệt.
+    if (isDrafter) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_SUBMISSION_SUBMITTER';
     }
   } else if (action === 'document.sign') {
     if (isSigner) {
@@ -618,6 +666,8 @@ export function authorize(
         action === 'document.assign_number' ||
         action === 'document.organization_sign' ||
         action === 'document.issue' ||
+        action === 'document.outgoing.recall' ||
+        action === 'document.outgoing.confirm_receipt' ||
         action === 'document.archive' ||
         action === 'dossier.accept_archive'
       ) {
@@ -673,6 +723,8 @@ export function authorize(
         action === 'document.assign_number' ||
         action === 'document.organization_sign' ||
         action === 'document.issue' ||
+        action === 'document.outgoing.recall' ||
+        action === 'document.outgoing.confirm_receipt' ||
         action === 'document.archive' ||
         action === 'dossier.accept_archive'
       ) {
@@ -710,10 +762,16 @@ export function authorize(
         action === 'task.approve' ||
         action === 'task.monitor' ||
         action === 'task.remind' ||
+        action === 'task.comment' ||
+        action === 'task.decide_extension' ||
+        action === 'task.fulfill_unit_request' ||
         action === 'task.close' ||
         action === 'task.cancel' ||
         action === 'task.archive' ||
         action === 'document.incoming.assign_person' ||
+        action === 'document.incoming.return' ||
+        action === 'document.outgoing.initial_sign' ||
+        action === 'document.submission.review_unit' ||
         action === 'document.incoming.execute' ||
         action === 'document.incoming.file' ||
         action === 'document.file' ||
@@ -744,6 +802,7 @@ export function authorize(
         action === 'task.create' ||
         action === 'task.monitor' ||
         action === 'task.remind' ||
+        action === 'task.comment' ||
         action === 'document.incoming.execute' ||
         action === 'document.outgoing.draft' ||
         action === 'dossier.open'
@@ -795,6 +854,7 @@ export function authorize(
         action === 'document.register' ||
         action === 'document.incoming.register' ||
         action === 'document.incoming.present' ||
+        action === 'document.incoming.reroute' ||
         action === 'document.incoming.file' ||
         action === 'document.file' ||
         action === 'document.review_format' ||
@@ -806,12 +866,15 @@ export function authorize(
         action === 'document.outgoing.organization_sign' ||
         action === 'document.issue' ||
         action === 'document.outgoing.issue' ||
+        action === 'document.outgoing.recall' ||
+        action === 'document.outgoing.confirm_receipt' ||
         action === 'document.archive' ||
         action === 'dossier.open' ||
         action === 'dossier.add_item' ||
         action === 'dossier.close' ||
         action === 'dossier.transfer_archive' ||
         action === 'dossier.accept_archive' ||
+        action === 'dossier.propose_disposal' ||
         action === 'task.read'
       ) {
         candidateAllowed = true;
@@ -931,7 +994,8 @@ export function authorize(
       isAssignee ||
       isCollaborator ||
       isFollower ||
-      isObserver;
+      isObserver ||
+      isDesignatedReviewer;
 
     const rawScope = (resource?.scope || '').toString().toUpperCase();
     const isIndividualScope = rawScope === 'INDIVIDUAL' || rawScope === 'MY';
@@ -985,7 +1049,8 @@ export function authorize(
       isOrganizer ||
       isParticipant ||
       isSecretary ||
-      isBodyMember;
+      isBodyMember ||
+      isDesignatedReviewer;
 
     if (
       !isOwnUnit &&
@@ -998,6 +1063,8 @@ export function authorize(
         action === 'task.review' ||
         action === 'task.cancel' ||
         action === 'task.archive' ||
+        action === 'task.comment' ||
+        action === 'task.decide_extension' ||
         action === 'task.close')
     ) {
       scopeDenied = true;

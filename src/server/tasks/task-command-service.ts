@@ -153,6 +153,21 @@ async function requireTaskAuthorization(
 }
 
 /**
+ * Đổi hạn trực tiếp cần quyền phân công (task.assign): người giao, trưởng đơn vị, lãnh đạo.
+ * Người thực hiện không có quyền này nên phải đi qua xin gia hạn.
+ */
+async function requireDeadlineChangeAuthority(userId: string, task: Record<string, unknown>) {
+  const authorizationContext = await loadAuthorizationContext(userId);
+  const decision = authorize(authorizationContext, 'task.assign', buildTaskResource(task));
+  if (!decision.allowed) {
+    throw new AuthorizationError(
+      'Hạn nhiệm vụ chỉ đổi khi người giao đồng ý. Dùng Xin gia hạn để gửi đề nghị cho người giao.',
+      'DEADLINE_CHANGE_REQUIRES_ASSIGNER'
+    );
+  }
+}
+
+/**
  * Tính toán và đồng bộ lại tiến độ tổng hợp cùng trạng thái của nhiệm vụ cha
  * khi các việc thành phần (subtasks) hoàn thành, mở lại, tạo mới, hủy hoặc chuyển cha.
  * Tuân thủ quy chuẩn:
@@ -910,6 +925,11 @@ export class TaskCommandService {
     }
     if (dueDate) {
       scalarUpdateData.dueDate = new Date(dueDate);
+      // Hạn là cam kết: đổi trực tiếp chỉ dành cho người giao, trưởng đơn vị, lãnh đạo.
+      // Người thực hiện phải xin gia hạn để người giao đồng ý (T-01).
+      if (existing.dueDate && new Date(dueDate).getTime() !== new Date(existing.dueDate).getTime()) {
+        await requireDeadlineChangeAuthority(user.id, existing);
+      }
     }
     if (academicMonth !== undefined) {
       scalarUpdateData.academicMonth = Number(academicMonth);

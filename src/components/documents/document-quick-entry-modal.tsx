@@ -29,6 +29,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { formatIsoDate } from "@/lib/format";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import {
+  DUPLICATE_SUSPECT_CODE,
+  describeDuplicates,
+  fetchDuplicateMatches,
+} from "@/lib/documents/duplicate-check-client";
 import { cn } from "@/lib/utils";
 
 export interface DocumentQuickEntryModalProps {
@@ -114,6 +120,10 @@ export function DocumentQuickEntryModal({
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+  // Cảnh báo trùng số ký hiệu: gắn với cặp số/cơ quan đã kiểm; sửa một trong hai thì cảnh báo ẩn.
+  const [duplicate, setDuplicate] = React.useState<{ key: string; message: string } | null>(null);
+  const duplicateKey = `${originalNumber.trim()}|${issuingAuthority.trim()}`;
+  const duplicateAcknowledged = docType === "VAN_BAN_DEN" && duplicate?.key === duplicateKey;
 
   const firstInputRef = React.useRef<HTMLInputElement>(null);
   const issuingAuthorityRef = React.useRef<HTMLInputElement>(null);
@@ -154,6 +164,7 @@ export function DocumentQuickEntryModal({
       setErrorMessage(null);
       setSuccessMessage(null);
       setFieldErrors({});
+      setDuplicate(null);
       const timer = setTimeout(() => {
         firstInputRef.current?.focus();
       }, 50);
@@ -215,6 +226,7 @@ export function DocumentQuickEntryModal({
         securityLevel,
         leadUnitId: docType === "VAN_BAN_DEN" ? leadUnitId || undefined : undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        acknowledgeDuplicate: duplicateAcknowledged || undefined,
       };
 
       if (docType === "VAN_BAN_DI") {
@@ -231,6 +243,11 @@ export function DocumentQuickEntryModal({
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
+        if (errJson.code === DUPLICATE_SUSPECT_CODE) {
+          const matches = await fetchDuplicateMatches(originalNumber.trim(), issuingAuthority.trim());
+          setDuplicate({ key: duplicateKey, message: describeDuplicates(matches) });
+          return;
+        }
         throw new Error(errJson.error || "Không thể lưu văn bản vào hệ thống");
       }
 
@@ -580,6 +597,10 @@ export function DocumentQuickEntryModal({
           </div>
 
           {/* Feedback messages */}
+          {duplicateAcknowledged && duplicate && (
+            <InlineAlert variant="warning">{duplicate.message}</InlineAlert>
+          )}
+
           {errorMessage && (
             <div role="alert" className="flex items-center gap-2 rounded-lg bg-danger-soft border border-destructive/20 p-3 text-xs text-destructive">
               <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} />

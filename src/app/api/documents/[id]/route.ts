@@ -42,6 +42,8 @@ import {
   buildDocumentResource,
   authorize,
 } from "@/server/authorization";
+import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
+import { isApprovalParticipant } from "@/server/documents/submission-approval-service";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -67,7 +69,11 @@ export async function GET(
     const authContext = await loadAuthorizationContext(authUser.id);
     const docResource = buildDocumentResource(document);
     const readDecision = authorize(authContext, 'document.read', docResource);
-    if (!readDecision.allowed || !canReadDocument(authContext, document)) {
+    // Người tham gia luồng duyệt tờ trình được đọc tờ trình đó dù không liên quan theo chính sách chung.
+    const headedUnitIds = authContext.positions.filter((p) => isUnitLeaderPosition(p.positionCode)).map((p) => p.unitId);
+    const isParticipant =
+      document.type === 'TO_TRINH_NOI_BO' && (await isApprovalParticipant(authUser.id, headedUnitIds, id));
+    if (!isParticipant && (!readDecision.allowed || !canReadDocument(authContext, document))) {
       throw new ForbiddenError(
         readDecision.reason || "Bạn không có quyền truy cập văn bản này (Forbidden)"
       );

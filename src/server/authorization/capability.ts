@@ -84,6 +84,8 @@ export const DOCUMENT_INCOMING_CAPABILITIES = [
   'document.incoming.execute',
   'document.incoming.file',
   'document.file',
+  'document.incoming.return',
+  'document.incoming.reroute',
 ] as const;
 
 export type DocumentIncomingCapabilityAction = (typeof DOCUMENT_INCOMING_CAPABILITIES)[number];
@@ -105,12 +107,25 @@ export const DOCUMENT_OUTGOING_CAPABILITIES = [
   'document.outgoing.assign_number',
   'document.outgoing.organization_sign',
   'document.outgoing.issue',
+  'document.outgoing.recall',
+  'document.outgoing.confirm_receipt',
+  'document.outgoing.initial_sign',
 ] as const;
 
 export type DocumentOutgoingCapabilityAction = (typeof DOCUMENT_OUTGOING_CAPABILITIES)[number];
 
+// Tờ trình nội bộ (V-06): người trình, trưởng đơn vị duyệt, lãnh đạo phê duyệt.
+export const DOCUMENT_SUBMISSION_CAPABILITIES = [
+  'document.submission.submit',
+  'document.submission.review_unit',
+  'document.submission.approve',
+] as const;
+
+export type DocumentSubmissionCapabilityAction = (typeof DOCUMENT_SUBMISSION_CAPABILITIES)[number];
+
 export const DOCUMENT_CAPABILITIES = [
   ...DOCUMENT_CANONICAL_CAPABILITIES,
+  ...DOCUMENT_SUBMISSION_CAPABILITIES,
   ...DOCUMENT_INCOMING_CAPABILITIES,
   ...DOCUMENT_OUTGOING_CAPABILITIES,
 ] as const;
@@ -137,6 +152,11 @@ export const TASK_CAPABILITIES = [
   'task.close',
   'task.cancel',
   'task.archive',
+  'task.comment',
+  'task.request_extension',
+  'task.decide_extension',
+  'task.decline',
+  'task.fulfill_unit_request',
 ] as const;
 
 export type TaskCapabilityAction = (typeof TASK_CAPABILITIES)[number];
@@ -172,6 +192,9 @@ export const DOSSIER_CAPABILITIES = [
   'dossier.transfer_archive',
   'dossier.submit_archive',
   'dossier.accept_archive',
+  'dossier.propose_disposal',
+  'dossier.dispose',
+  'dossier.purge',
   'document.archive',
 ] as const;
 
@@ -369,6 +392,11 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'document.incoming.assign_person': 'Phân công cán bộ thụ lý văn bản đến',
   'document.incoming.execute': 'Thực thi xử lý văn bản đến',
   'document.incoming.file': 'Lập hồ sơ lưu văn bản đến',
+  'document.submission.submit': 'Trình tờ trình nội bộ',
+  'document.submission.review_unit': 'Trưởng đơn vị duyệt tờ trình',
+  'document.submission.approve': 'Lãnh đạo phê duyệt tờ trình',
+  'document.incoming.return': 'Trả lại văn bản đến (chuyển nhầm đơn vị)',
+  'document.incoming.reroute': 'Chuyển văn bản đến cho đơn vị khác',
   'document.file': 'Lập hồ sơ lưu văn bản',
   // Document Outgoing
   'document.outgoing.draft': 'Soạn thảo dự thảo văn bản đi',
@@ -387,6 +415,9 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'document.outgoing.assign_number': 'Cấp số văn bản đi',
   'document.outgoing.organization_sign': 'Đóng dấu / Ký số cơ quan văn bản đi',
   'document.outgoing.issue': 'Phát hành văn bản đi',
+  'document.outgoing.recall': 'Thu hồi văn bản đi',
+  'document.outgoing.confirm_receipt': 'Ghi nhận nơi nhận đã tiếp nhận văn bản đi',
+  'document.outgoing.initial_sign': 'Ký nháy văn bản đi',
   // Task
   'task.read': 'Xem thông tin nhiệm vụ',
   'task.view': 'Xem nhiệm vụ (tương thích ngược)',
@@ -403,6 +434,11 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'task.close': 'Đóng hoàn tất nhiệm vụ',
   'task.cancel': 'Hủy bỏ nhiệm vụ',
   'task.archive': 'Lưu trữ nhiệm vụ',
+  'task.comment': 'Bình luận trong nhiệm vụ',
+  'task.request_extension': 'Xin gia hạn nhiệm vụ',
+  'task.decide_extension': 'Quyết định gia hạn nhiệm vụ',
+  'task.fulfill_unit_request': 'Cử người của đơn vị phối hợp nhiệm vụ của đơn vị khác',
+  'task.decline': 'Từ chối nhận nhiệm vụ',
   // System
   'account.manage': 'Quản trị tài khoản người dùng',
   'org.manage': 'Quản lý cơ cấu tổ chức & phòng ban',
@@ -422,6 +458,9 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'dossier.transfer_archive': 'Nộp lưu hồ sơ vào lưu trữ cơ quan',
   'dossier.submit_archive': 'Trình nộp lưu hồ sơ',
   'dossier.accept_archive': 'Tiếp nhận hồ sơ vào lưu trữ lịch sử',
+  'dossier.propose_disposal': 'Đề nghị xét hủy hồ sơ hết hạn bảo quản',
+  'dossier.dispose': 'Quyết định hủy hoặc gia hạn bảo quản hồ sơ',
+  'dossier.purge': 'Xóa hẳn hồ sơ đã hủy (quản trị hệ thống)',
   // HR & Governance
   'hr.view': 'Xem hồ sơ nhân sự',
   'payroll.view': 'Xem thông tin lương',
