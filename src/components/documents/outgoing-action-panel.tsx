@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { StandardDialog } from "@/components/ui/dialog";
 import type { OutgoingDocumentStatus } from "@/contracts/documents";
+import { OUTGOING_STEP_ACTIONS } from "@/lib/documents/outgoing-step-actions";
 
 interface ActionDef {
   label: string;
@@ -30,82 +31,58 @@ interface ActionDef {
   requiresNote?: boolean;
 }
 
-const STATUS_ACTIONS: Partial<Record<OutgoingDocumentStatus, ActionDef[]>> = {
-  DRAFT: [
-    {
-      label: "Trình phê duyệt nội dung",
-      description: "Gửi dự thảo lên Trưởng đơn vị để phê duyệt nội dung",
-      action: "submit-content-review",
-      variant: "primary",
-      icon: ClipboardCheck,
-    },
-  ],
-  CONTENT_REVIEW: [
-    {
-      label: "Phê duyệt nội dung",
-      description: "Xác nhận nội dung văn bản đạt yêu cầu",
-      action: "approve-content",
-      variant: "primary",
-      icon: CheckCircle2,
-    },
-    {
-      label: "Yêu cầu chỉnh sửa",
-      description: "Trả lại dự thảo để chỉnh sửa nội dung",
-      action: "revision",
-      variant: "danger",
-      icon: RotateCcw,
-      requiresNote: true,
-    },
-  ],
-  FORMAT_CHECK: [
-    {
-      label: "Xác nhận thể thức đạt",
-      description: "Kiểm tra thể thức, kỹ thuật trình bày theo NĐ 30/2020",
-      action: "approve-format",
-      variant: "primary",
-      icon: FileCheck,
-    },
-    {
-      label: "Yêu cầu chỉnh sửa",
-      description: "Trả lại để bổ sung, chỉnh sửa thể thức",
-      action: "revision",
-      variant: "danger",
-      icon: RotateCcw,
-      requiresNote: true,
-    },
-  ],
-  AUTHORIZED_SIGN: [
-    {
-      label: "Ký chức danh",
-      description: "Ký số xác nhận thẩm quyền ban hành",
-      action: "sign",
-      variant: "primary",
-      icon: PenLine,
-    },
-  ],
-  NUMBERED: [
-    {
-      label: "Cấp số & ngày ban hành",
-      description: "Cấp số văn bản đi liên tục và xác nhận ngày ban hành",
-      action: "assign-number",
-      variant: "primary",
-      icon: Hash,
-    },
-  ],
-  ORGANIZATION_SIGNED: [
-    {
-      label: "Đóng dấu cơ quan",
-      description: "Ký số tổ chức (dấu cơ quan điện tử) vào văn bản",
-      action: "organization-sign",
-      variant: "primary",
-      icon: Stamp,
-    },
-  ],
-  ISSUED: [],
+const ACTION_UI: Record<string, Omit<ActionDef, "action" | "requiresNote">> = {
+  "submit-content-review": {
+    label: "Trình phê duyệt nội dung",
+    description: "Gửi dự thảo lên Trưởng đơn vị để phê duyệt nội dung",
+    variant: "primary",
+    icon: ClipboardCheck,
+  },
+  "approve-content": {
+    label: "Phê duyệt nội dung",
+    description: "Xác nhận nội dung văn bản đạt yêu cầu",
+    variant: "primary",
+    icon: CheckCircle2,
+  },
+  "reject-content": {
+    label: "Yêu cầu chỉnh sửa",
+    description: "Trả lại dự thảo để chỉnh sửa nội dung",
+    variant: "danger",
+    icon: RotateCcw,
+  },
+  "approve-format": {
+    label: "Xác nhận thể thức đạt",
+    description: "Kiểm tra thể thức, kỹ thuật trình bày theo NĐ 30/2020",
+    variant: "primary",
+    icon: FileCheck,
+  },
+  sign: {
+    label: "Ký chức danh",
+    description: "Ký số xác nhận thẩm quyền ban hành",
+    variant: "primary",
+    icon: PenLine,
+  },
+  "assign-number": {
+    label: "Cấp số & ngày ban hành",
+    description: "Cấp số văn bản đi liên tục và xác nhận ngày ban hành",
+    variant: "secondary",
+    icon: Hash,
+  },
+  "organization-sign": {
+    label: "Đóng dấu cơ quan",
+    description: "Ký số tổ chức (dấu cơ quan điện tử) vào văn bản",
+    variant: "primary",
+    icon: Stamp,
+  },
 };
 
-// Alias: organization-sign triggers from NUMBERED status in service
-// After NUMBERED, next step is ORGANIZATION_SIGNED, then ISSUED
+/** Nút theo trạng thái, lấy từ bảng thao tác chung để khớp với route và máy trạng thái. */
+const STATUS_ACTIONS: Partial<Record<OutgoingDocumentStatus, ActionDef[]>> = Object.fromEntries(
+  Object.entries(OUTGOING_STEP_ACTIONS).map(([status, list]) => [
+    status,
+    (list ?? []).map((step) => ({ ...ACTION_UI[step.action], action: step.action, requiresNote: step.requiresNote })),
+  ])
+);
 
 export interface OutgoingActionPanelProps {
   documentId: string;

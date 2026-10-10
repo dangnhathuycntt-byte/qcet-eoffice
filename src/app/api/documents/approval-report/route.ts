@@ -3,13 +3,14 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import type { SessionPayload } from "@/lib/jwt-session";
-import { approvalReportToCsv, getApprovalReport } from "@/server/documents/submission-approval-service";
+import { buildXlsx, XLSX_CONTENT_TYPE } from "@/lib/export/xlsx-writer";
+import { approvalReportRows, approvalReportToCsv, getApprovalReport } from "@/server/documents/submission-approval-service";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/documents/approval-report?from=&to=&format=csv — báo cáo thời gian duyệt tờ trình (V-06).
- * Lãnh đạo xem toàn bộ, trưởng đơn vị xem đơn vị mình. `format=csv` tải tệp mở được bằng Excel.
+ * GET /api/documents/approval-report?from=&to=&format=csv|xlsx — báo cáo thời gian duyệt tờ trình (V-06).
+ * Lãnh đạo xem toàn bộ, trưởng đơn vị xem đơn vị mình. `format=csv` hoặc `format=xlsx` tải tệp Excel.
  */
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -30,6 +31,15 @@ export async function GET(request: NextRequest) {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
           "Content-Disposition": 'attachment; filename="bao-cao-thoi-gian-duyet-to-trinh.csv"',
+          "Cache-Control": "private, no-store",
+        },
+      });
+    }
+    if (params.get("format") === "xlsx") {
+      return new Response(new Uint8Array(buildXlsx("Thời gian duyệt", approvalReportRows(report))), {
+        headers: {
+          "Content-Type": XLSX_CONTENT_TYPE,
+          "Content-Disposition": 'attachment; filename="bao-cao-thoi-gian-duyet-to-trinh.xlsx"',
           "Cache-Control": "private, no-store",
         },
       });

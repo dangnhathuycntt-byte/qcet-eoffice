@@ -6,6 +6,7 @@ import { apiSuccess, apiError } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { buildDocumentBucketWhere } from "@/lib/documents/document-sidebar-buckets";
+import { canViewApprovalReport } from "@/server/documents/submission-approval-service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -55,6 +56,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       outgoingPending,
       outgoingDone,
       outgoingIssued,
+      canSeeApprovalReport,
     ] = await Promise.all([
       prisma.document.count({ where: baseFilter }),
       prisma.document.count({ where: { ...baseFilter, type: "VAN_BAN_DEN" } }),
@@ -97,6 +99,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       countBucket("VAN_BAN_DI", "pending"),
       countBucket("VAN_BAN_DI", "done"),
       countBucket("VAN_BAN_DI", "issued"),
+      canViewApprovalReport(authUser),
     ]);
 
     return apiSuccess(
@@ -114,6 +117,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           overdue,
           linkedTasks,
           buckets: { incomingPending, incomingDone, outgoingPending, outgoingDone, outgoingIssued },
+          canViewApprovalReport: canSeeApprovalReport,
         },
       },
       { headers: { "Cache-Control": "private, no-store" }, requestId }

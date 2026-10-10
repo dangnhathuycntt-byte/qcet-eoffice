@@ -17,7 +17,7 @@
  * người thực hiện. Người dùng tắt được nhắc trước hạn và nhắc người duyệt sau 2 ngày
  * (cài đặt push); báo trễ và các mốc 4 ngày thì không tắt được.
  */
-import { AssignmentStatus, ExtensionRequestStatus, TaskStatus, type Prisma } from "@prisma/client";
+import { ApprovalProcessStatus, AssignmentStatus, ExtensionRequestStatus, TaskStatus, TaskUnitRequestStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
@@ -34,6 +34,7 @@ import {
 } from "@/domain/tasks/reminder-rules";
 import { deliverTaskNotice } from "@/server/outbox/task-notification-handlers";
 import { findActiveDecline } from "./task-decline-service";
+import { syncStepReviewerActors } from "./task-approval-process-service";
 import { reconcileBackupReviewer, revokeStaleBackupReviewers } from "./task-backup-reviewer-service";
 
 type Db = Prisma.TransactionClient | typeof prisma;
@@ -88,6 +89,7 @@ interface Candidate {
   pushEvent: Parameters<typeof deliverTaskNotice>[1]["pushEvent"];
   note: string;
   dueDateStr?: string;
+  linkHref?: string;
 }
 
 async function send(db: Db, c: Candidate, result: ReminderScanResult) {
@@ -113,6 +115,7 @@ async function send(db: Db, c: Candidate, result: ReminderScanResult) {
       pushEvent: c.pushEvent,
       note: c.note,
       dueDateStr: c.dueDateStr,
+      linkHref: c.linkHref,
     });
     result.sent[c.kind] = (result.sent[c.kind] ?? 0) + 1;
   } catch (error) {
@@ -265,6 +268,41 @@ export async function scanTaskReminders(
       await send(db, {
         taskId: notice.task.id, kind: "DECLINE_PENDING_4D", dueKey: notice.id, recipientIds: await unitLeaderIds(db, notice.task.leadUnitId), pref: null,
         type: "escalation", pushEvent: "TASK_ESCALATION", note: `Nhiệm vụ chưa giao lại sau ${days} ngày kể từ khi bị từ chối nhận`,
+      }, result);
+    }
+  }
+
+  // 5. Yêu cầu phối hợp liên đơn vị quá hạn trả lời (T-12): nhắc trưởng đơn vị được yêu cầu và báo người giao.
+  const overdueRequests = await db.taskUnitRequest.findMany({
+    where: { status: TaskUnitRequestStatus.PENDING, respondBy: { lte: now }, task: { ...scope, archivedAt: null, status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] } } },
+    include: { task: { select: { id: true, title: true } }, targetUnit: { select: { name: true } } },
+  });
+  result.considered += overdueRequests.length;
+  for (const req of overdueRequests) {
+    const days = Math.max(1, Math.floor((now.getTime() - (req.respondBy as Date).getTime()) / 86_400_000));
+    await send(db, {
+      taskId: req.taskId, kind: "UNIT_REQUEST_OVERDUE", dueKey: req.id, recipientIds: await unitLeaderIds(db, req.targetUnitId), pref: null,
+      type: "unit_request", pushEvent: "TASK_UNIT_REQUEST", linkHref: "/tasks/unit-requests",
+      note: `Yêu cầu phối hợp đã quá hạn trả lời (hạn ${fmtDay(req.respondBy as Date)})`,
+    }, result);
+    await send(db, {
+      taskId: req.taskId, kind: "UNIT_REQUEST_OVERDUE_ASSIGNER", dueKey: req.id, recipientIds: [req.requestedById], pref: null,
+      type: "escalation", pushEvent: "TASK_ESCALATION",
+      note: `${req.targetUnit.name} chưa trả lời yêu cầu phối hợp, quá hạn ${days} ngày`,
+    }, result);
+  }
+
+  // 6. Luồng duyệt nhiều bước (T-05): cấp quyền cho người dự phòng của bước đã chờ đủ 96 giờ và báo họ.
+  const running = await db.taskApprovalProcess.findMany({
+    where: { status: ApprovalProcessStatus.IN_REVIEW, task: { ...scope, archivedAt: null, status: TaskStatus.WAITING_APPROVAL } },
+    select: { taskId: true },
+  });
+  for (const { taskId } of running) {
+    const outcome = await syncStepReviewerActors(db, taskId, now);
+    if (outcome.backupActivated) {
+      await send(db, {
+        taskId, kind: "BACKUP_REVIEWER_ACTIVATED", dueKey: `step:${outcome.backupActivated.stepId}`, recipientIds: [outcome.backupActivated.userId], pref: null,
+        type: "escalation", pushEvent: "TASK_REVIEW_PENDING", note: "Bước duyệt đã chờ quá 96 giờ, bạn là người duyệt dự phòng",
       }, result);
     }
   }

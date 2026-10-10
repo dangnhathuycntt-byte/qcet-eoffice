@@ -22,6 +22,9 @@ const PushPreferencesSchema = z.object({
   taskReview: z.boolean().optional(),
   deadlineReminder: z.boolean().optional(),
   documentDirective: z.boolean().optional(),
+  taskExtension: z.boolean().optional(),
+  taskDecline: z.boolean().optional(),
+  unitRequest: z.boolean().optional(),
 });
 
 const PushPostSchema = z.object({
@@ -130,11 +133,16 @@ export async function POST(request: NextRequest) {
           ? (existingUser.onboardingData as Record<string, unknown>)
           : {};
 
+      const stored = (currentData.pushPreferences as Partial<PushPreferences> | undefined) ?? {};
       const updatedPrefs: PushPreferences = {
         taskAssigned: Boolean(body.preferences.taskAssigned ?? true),
         taskReview: Boolean(body.preferences.taskReview ?? true),
         deadlineReminder: Boolean(body.preferences.deadlineReminder ?? true),
         documentDirective: Boolean(body.preferences.documentDirective ?? true),
+        // Máy khách cũ không gửi các khóa mới: giữ giá trị đã lưu thay vì đặt lại về bật.
+        taskExtension: Boolean(body.preferences.taskExtension ?? stored.taskExtension ?? true),
+        taskDecline: Boolean(body.preferences.taskDecline ?? stored.taskDecline ?? true),
+        unitRequest: Boolean(body.preferences.unitRequest ?? stored.unitRequest ?? true),
       };
 
       await prisma.user.update({

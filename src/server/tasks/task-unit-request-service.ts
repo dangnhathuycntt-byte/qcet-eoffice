@@ -19,8 +19,16 @@ import { buildTaskResource } from "@/server/authorization/available-actions";
 import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { authorizeOnTask, loadTaskWithActors } from "./authorize-on-task";
 
+/** Mặc định đơn vị được yêu cầu có 3 ngày để trả lời. */
+export const DEFAULT_RESPOND_IN_DAYS = 3;
+
 export const CreateUnitRequestSchema = z
-  .object({ targetUnitId: z.string().trim().min(1), note: z.string().trim().max(1000).optional() })
+  .object({
+    targetUnitId: z.string().trim().min(1),
+    note: z.string().trim().max(1000).optional(),
+    /** Số ngày đơn vị được yêu cầu có để trả lời; quá hạn thì nhắc trưởng đơn vị và báo người giao. */
+    respondInDays: z.number().int().min(1).max(30).optional(),
+  })
   .strict();
 
 export const DecideUnitRequestSchema = z
@@ -114,6 +122,9 @@ export interface UnitRequestDTO {
   assignee: { id: string; name: string } | null;
   decisionNote: string | null;
   createdAt: string;
+  /** Hạn trả lời (ISO) và đã quá hạn chưa; chỉ có ý nghĩa khi yêu cầu còn chờ. */
+  respondBy: string | null;
+  overdue: boolean;
   /** Người xem là trưởng đơn vị được yêu cầu và yêu cầu còn chờ. */
   canFulfill: boolean;
   /** Người xem là người giao của yêu cầu còn chờ. */
@@ -140,6 +151,8 @@ function toDTO(row: Row, ctx: AuthorizationContext, task: Parameters<typeof buil
     assignee: row.assignee,
     decisionNote: row.decisionNote,
     createdAt: row.createdAt.toISOString(),
+    respondBy: row.respondBy?.toISOString() ?? null,
+    overdue: pending && row.respondBy !== null && row.respondBy.getTime() < Date.now(),
     canFulfill: pending && canFulfillFor(ctx, task, row.targetUnitId),
     canCancel: pending && row.requestedById === viewerId,
   };
@@ -173,6 +186,8 @@ export async function listUnitRequestInbox(session: SessionPayload) {
     requestedBy: r.requestedBy,
     note: r.note,
     createdAt: r.createdAt.toISOString(),
+    respondBy: r.respondBy?.toISOString() ?? null,
+    overdue: r.respondBy !== null && r.respondBy.getTime() < Date.now(),
   }));
 }
 
@@ -189,7 +204,7 @@ export async function createTaskUnitRequest(session: SessionPayload, taskId: str
     await tx.$queryRaw`SELECT id FROM tasks WHERE id = ${taskId} FOR UPDATE`;
     const pending = await tx.taskUnitRequest.findFirst({ where: { taskId, targetUnitId: body.targetUnitId, status: TaskUnitRequestStatus.PENDING }, select: { id: true } });
     if (pending) throw new ConflictError("Đã có yêu cầu phối hợp đang chờ đơn vị này trả lời", "UNIT_REQUEST_PENDING");
-    const created = await tx.taskUnitRequest.create({ data: { taskId, targetUnitId: body.targetUnitId, requestedById: session.id, note: body.note ?? null }, include });
+    const created = await tx.taskUnitRequest.create({ data: { taskId, targetUnitId: body.targetUnitId, requestedById: session.id, note: body.note ?? null, respondBy: new Date(Date.now() + (body.respondInDays ?? DEFAULT_RESPOND_IN_DAYS) * 86_400_000) }, include });
     await auditService.logEvent(tx, {
       actorId: session.id,
       action: AuditAction.TASK_UNIT_REQUESTED,

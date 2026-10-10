@@ -180,6 +180,8 @@ export interface SidebarNavChild {
   label: string;
   href: string;
   badgeKey?: string;
+  /** Chỉ hiện khi máy chủ báo người dùng có quyền xem mục này. */
+  requiresApprovalReport?: boolean;
 }
 
 export interface SidebarNavGroup {
@@ -263,6 +265,7 @@ const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
           { id: "docs-outgoing-pending", label: "Chờ xử lý", href: "/documents?type=outbox&bucket=pending", badgeKey: "docsOutgoingPending" },
           { id: "docs-outgoing-done", label: "Đã xử lý", href: "/documents?type=outbox&bucket=done", badgeKey: "docsOutgoingDone" },
           { id: "docs-outgoing-issued", label: "Đã phát hành", href: "/documents?type=outbox&bucket=issued", badgeKey: "docsOutgoingIssued" },
+          { id: "docs-outgoing-recalled", label: "Đã thu hồi", href: "/documents?type=outbox&bucket=recalled" },
         ],
       },
       {
@@ -271,7 +274,7 @@ const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
         href: "/documents?tab=submission",
         icon: IconSidebarDocLines,
         aliases: ["/documents/internal", "/documents?tab=submission", "/documents?tab=pending", "/documents?type=submission"],
-        children: [{ id: "docs-approval-report", label: "Báo cáo thời gian duyệt", href: "/documents/approval-report" }],
+        children: [{ id: "docs-approval-report", label: "Báo cáo thời gian duyệt", href: "/documents/approval-report", requiresApprovalReport: true }],
       },
       {
         id: "docs-dossiers",
@@ -338,6 +341,7 @@ export function AppSidebar() {
 
   // Số đếm thật cho menu con "Văn bản" (theo quyền đọc của người dùng).
   const docsUserId = user?.id;
+  const [canViewApprovalReport, setCanViewApprovalReport] = React.useState(false);
   React.useEffect(() => {
     if (!docsUserId) return;
     const ctrl = new AbortController();
@@ -346,6 +350,7 @@ export function AppSidebar() {
         const res = await fetch("/api/documents/stats", { signal: ctrl.signal });
         if (!res.ok) return;
         const json = await res.json();
+        setCanViewApprovalReport(json?.data?.canViewApprovalReport === true);
         const b = json?.data?.buckets;
         if (!b) return;
         setBadgeCounts((prev) => ({
@@ -570,10 +575,11 @@ export function AppSidebar() {
                   {(!group.label || !isGroupCollapsed) && (
                     <div className="space-y-0.5">
                       {group.items.map((item) => {
-                        const hasActiveChild = Boolean(item.children?.some(isChildActive));
+                        const visibleChildren = item.children?.filter((c) => !c.requiresApprovalReport || canViewApprovalReport);
+                        const hasActiveChild = Boolean(visibleChildren?.some(isChildActive));
                         const active = isItemActive(item) && !hasActiveChild;
                         const Icon = item.icon;
-                        const children = item.children;
+                        const children = visibleChildren?.length ? visibleChildren : undefined;
                         const isExpanded = expandedItems[item.id] ?? true;
                         const badgeText = children
                           ? (() => {

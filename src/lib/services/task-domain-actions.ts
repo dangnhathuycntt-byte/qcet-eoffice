@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { closeActiveProcessOnRevision, onApprovalStepAdvanced } from "@/server/tasks/task-approval-process-service";
 import { prisma } from "@/lib/prisma";
 import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
 import {
@@ -1054,6 +1055,7 @@ export class TaskDomainActionService {
           undefined,
           tx
         );
+        await onApprovalStepAdvanced(tx, taskId, session.id);
       }
 
       let newStatus = task.status;
@@ -1168,6 +1170,7 @@ export class TaskDomainActionService {
     const noteText = validated.note?.trim() || reasonText;
 
     return await prisma.$transaction(async (tx) => {
+      await closeActiveProcessOnRevision(tx, taskId, session.id, reasonText);
       const updatedTask = await tx.task.update({
         where: { id: taskId },
         data: {
@@ -1364,6 +1367,7 @@ export class TaskDomainActionService {
           { allowBypass: false },
           tx
         );
+        await onApprovalStepAdvanced(tx, taskId, session.id);
         const remainingSteps = await tx.taskApprovalStep.count({
           where: {
             processId: { in: activeProcesses.map((process) => process.id) },

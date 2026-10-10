@@ -205,6 +205,31 @@ export async function decideDisposal(session: SessionPayload, dossierId: string,
  * quyết định hủy kèm số biên bản. Không đọc nội dung hồ sơ; nhật ký giữ số biên bản và mã hồ sơ.
  * Lưu ý: chỉ xóa bản ghi cơ sở dữ liệu của hồ sơ; tệp vật lý do quy trình dọn tệp xử lý riêng.
  */
+/** Hồ sơ đã có quyết định hủy, chờ quản trị hệ thống xóa hẳn. Chỉ trả mã, tiêu đề và biên bản, không đọc nội dung. */
+export async function listDisposedDossiers(session: SessionPayload, now = new Date()) {
+  const ctx = await loadAuthorizationContext(session.id, now, { useCache: true, ttlMs: 10_000 });
+  assertCan(ctx, "dossier.purge", { id: "list", status: "ARCHIVED", responsiblePersonId: "" });
+  const rows = await prisma.workDossier.findMany({
+    where: { disposedAt: { not: null } },
+    orderBy: { disposedAt: "desc" },
+    take: 200,
+    select: {
+      id: true, code: true, title: true, disposedAt: true,
+      _count: { select: { items: true } },
+      disposalProposals: { where: { status: "DISPOSE" }, orderBy: { decidedAt: "desc" }, take: 1, select: { minutesReference: true } },
+    },
+  });
+  const items = rows.map((d) => ({
+    id: d.id,
+    code: d.code,
+    title: d.title,
+    disposedAt: d.disposedAt?.toISOString() ?? null,
+    itemCount: d._count.items,
+    minutesReference: d.disposalProposals[0]?.minutesReference ?? null,
+  }));
+  return { items };
+}
+
 export async function purgeDossier(session: SessionPayload, dossierId: string, now = new Date()) {
   const dossier = await loadDossier(dossierId, { includeDisposed: true });
   const ctx = await loadAuthorizationContext(session.id, now, { useCache: true, ttlMs: 10_000 });

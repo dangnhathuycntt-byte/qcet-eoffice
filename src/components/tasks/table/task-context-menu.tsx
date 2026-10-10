@@ -266,6 +266,10 @@ export function TaskContextMenu({
     if (activeSubmenu !== "dueDate") setCalendarOpen(false);
   }, [activeSubmenu]);
 
+  // Đổi hạn trực tiếp cần task.assign; người thực hiện dùng Xin gia hạn (T-01).
+  const actions = (task as { availableActions?: unknown } | null)?.availableActions;
+  const canChangeDueDate = !Array.isArray(actions) || actions.includes("task.assign");
+
   // ponytail: click-outside + Escape + focus trap → Base UI Popover
   React.useEffect(() => {
     if (!isOpen || !task) return;
@@ -274,13 +278,13 @@ export function TaskContextMenu({
       if (key === "s") { e.preventDefault(); toggleSubmenu("status"); }
       else if (key === "p") { e.preventDefault(); toggleSubmenu("priority"); }
       else if (key === "a") { e.preventDefault(); toggleSubmenu("assignee"); }
-      else if (key === "d") { e.preventDefault(); toggleSubmenu("dueDate"); }
+      else if (key === "d" && canChangeDueDate) { e.preventDefault(); toggleSubmenu("dueDate"); }
       else if (/^[1-9]$/.test(e.key) && digitSelectRef.current) { digitSelectRef.current(Number(e.key)); }
       else if (e.key === "Enter") { e.preventDefault(); onClose(); onOpenDetail?.(task); }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, task, onOpenDetail, toggleSubmenu]);
+  }, [isOpen, onClose, task, onOpenDetail, toggleSubmenu, canChangeDueDate]);
 
   if (!isOpen || !task) {
     return null;
@@ -546,6 +550,7 @@ export function TaskContextMenu({
         )}
       </SubmenuRow>
 
+      {canChangeDueDate ? (
       <SubmenuRow
         name="dueDate"
         icon={<TaskIconDeadline className="size-4 text-muted-foreground" />}
@@ -606,6 +611,7 @@ export function TaskContextMenu({
           ) : null}
         </div>
       </SubmenuRow>
+      ) : null}
 
       <div className="my-1 border-t border-border/40" />
 

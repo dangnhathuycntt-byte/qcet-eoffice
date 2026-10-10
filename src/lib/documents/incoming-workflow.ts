@@ -11,8 +11,8 @@ export interface IncomingActionDef {
   confirmMsg: string;
   body: Record<string, unknown>;
   destructive?: boolean;
-  /** Thao tác cần nhập thêm: lý do (trả lại) hoặc chọn đơn vị (chuyển lại). */
-  input?: "reason" | "unit";
+  /** Thao tác cần nhập thêm: lý do (trả lại), chọn đơn vị (chuyển lại) hoặc chọn người xử lý (phân công). */
+  input?: "reason" | "unit" | "person";
 }
 
 export const INCOMING_STATUS_LABEL: Record<string, string> = {
@@ -34,8 +34,9 @@ export function getIncomingActions(status: string, role: string | null | undefin
   if (status === "PRESENTED" && role === "BAN_GIAM_HIEU") {
     actions.push({ key: "direct", label: "Bút phê", confirmMsg: "Xác nhận bút phê cho văn bản này?", body: { instruction: "" } });
   }
-  if (status === "DIRECTED" && role === "TRUONG_PHONG") {
-    actions.push({ key: "assign-unit", label: "Phân công", confirmMsg: "Phân công xử lý văn bản này?", body: {} });
+  // Trưởng đơn vị phân công người xử lý: cần chọn người nên mở biểu mẫu thay vì xác nhận suông (V-01).
+  if (["DIRECTED", "ASSIGNED_TO_LEAD_UNIT"].includes(status) && role === "TRUONG_PHONG") {
+    actions.push({ key: "assign-unit", label: "Phân công", confirmMsg: "", body: {}, input: "person" });
   }
   if (status === "UNIT_ASSIGNED_PERSON" && role === "CHUYEN_VIEN") {
     actions.push({ key: "resolve", label: "Báo cáo kết quả", confirmMsg: "Xác nhận đã giải quyết văn bản này?", body: { summary: "" } });

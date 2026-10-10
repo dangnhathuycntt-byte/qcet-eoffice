@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { confirmAction } from "@/components/ui/confirm-host";
 import type {
   SchoolTask,
   StaffTask,
@@ -62,6 +63,19 @@ export interface TaskMutationsReturn {
   handleManualRefresh: () => Promise<void>;
   handleSaveDelegation: (ruleData: Omit<DelegationRule, "id" | "createdAt">) => void;
   handleRevokeDelegation: (ruleId: string) => void;
+}
+
+/** Bước đang chờ của luồng duyệt nhiều bước (nếu có), để gửi kèm quyết định duyệt. */
+async function currentApprovalStepId(taskId: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/approval-process`, { cache: "no-store" });
+    if (!res.ok) return undefined;
+    const view = await res.json();
+    if (view?.process?.status !== "IN_REVIEW") return undefined;
+    return (view.process.steps as Array<{ id: string; current: boolean }>).find((step) => step.current)?.id;
+  } catch {
+    return undefined;
+  }
 }
 
 export function useTaskMutations(
@@ -410,7 +424,14 @@ export function useTaskMutations(
           const res = await fetch(`/api/tasks/${payload.taskId}/criteria`, { cache: "no-store" });
           const view = res.ok ? await res.json() : null;
           const unmet = Number(view?.unmet ?? 0);
-          if (unmet > 0 && !window.confirm(`Còn ${unmet} tiêu chí chưa đạt. Vẫn phê duyệt nhiệm vụ này?`)) return;
+          if (unmet > 0) {
+            const proceed = await confirmAction({
+              title: "Vẫn phê duyệt nhiệm vụ?",
+              description: `Còn ${unmet} tiêu chí chưa đạt. Có thể chọn Yêu cầu chỉnh sửa thay vì phê duyệt.`,
+              confirmLabel: "Vẫn phê duyệt",
+            });
+            if (!proceed) return;
+          }
         } catch {
           // Không đọc được tiêu chí thì không chặn việc duyệt.
         }
@@ -463,9 +484,13 @@ export function useTaskMutations(
       let actionBody: Record<string, unknown>;
       let actionDesc: string;
 
+      // Có luồng duyệt nhiều bước đang chạy (T-05): quyết định phải nêu bước hiện tại.
+      const stepId =
+        payload.decision !== "revision_requested" && isOnline() ? await currentApprovalStepId(payload.taskId) : undefined;
+
       if (payload.decision === "approved") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
-        actionBody = { note: payload.comment, expectedVersion };
+        actionBody = { note: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
         actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
       } else if (payload.decision === "revision_requested") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/request-revision`;
@@ -473,11 +498,11 @@ export function useTaskMutations(
         actionDesc = `Yêu cầu chỉnh sửa nhiệm vụ ${payload.taskId}`;
       } else if (payload.decision === "rejected") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/review`;
-        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment, expectedVersion };
+        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
         actionDesc = `Từ chối nhiệm vụ ${payload.taskId}`;
       } else {
         actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
-        actionBody = { note: payload.comment, expectedVersion };
+        actionBody = { note: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
         actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
       }
 

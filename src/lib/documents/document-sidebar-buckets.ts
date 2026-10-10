@@ -6,9 +6,9 @@ import type { Prisma } from "@prisma/client";
  * - Văn bản đi: dựa trên `DocumentOutgoingWorkflow.status` (văn bản chưa có workflow
  *   được suy ra từ `Document.status`).
  */
-export type DocumentBucket = "pending" | "done" | "issued";
+export type DocumentBucket = "pending" | "done" | "issued" | "recalled";
 
-export const DOCUMENT_BUCKETS: readonly DocumentBucket[] = ["pending", "done", "issued"];
+export const DOCUMENT_BUCKETS: readonly DocumentBucket[] = ["pending", "done", "issued", "recalled"];
 
 export function parseDocumentBucket(value: string | null | undefined): DocumentBucket | "" {
   const v = (value ?? "").trim().toLowerCase();
@@ -26,6 +26,10 @@ export function buildDocumentBucketWhere(
   type: "VAN_BAN_DEN" | "VAN_BAN_DI",
   bucket: DocumentBucket
 ): Prisma.DocumentWhereInput | null {
+  if (bucket === "recalled") {
+    // Chỉ văn bản đi mới có thu hồi; văn bản đến không khớp nhóm này.
+    return type === "VAN_BAN_DI" ? { outgoingWorkflow: { is: { status: "RECALLED" } } } : { id: { in: [] } };
+  }
   if (type === "VAN_BAN_DEN") {
     const noIncomingWf: Prisma.DocumentWhereInput = { incomingWorkflow: { is: null } };
     if (bucket === "pending") {

@@ -234,6 +234,10 @@ describe("Task 7: Push Pre-Prompt, Subscription Lifecycle, Deep Linking & Notifi
       assert.equal(mapNotificationTypeToTopic("DEADLINE_WARNING_24H"), "deadline_reminder");
       assert.equal(mapNotificationTypeToTopic("EXECUTIVE_DIRECTIVE"), "document_directive");
       assert.equal(mapNotificationTypeToTopic("DOCUMENT_DIRECTIVE"), "document_directive");
+      assert.equal(mapNotificationTypeToTopic("TASK_EXTENSION_REQUEST"), "task_extension");
+      assert.equal(mapNotificationTypeToTopic("TASK_DECLINED"), "task_decline");
+      assert.equal(mapNotificationTypeToTopic("TASK_UNIT_REQUEST"), "unit_request");
+      assert.equal(DEFAULT_PUSH_PREFERENCES.taskExtension && DEFAULT_PUSH_PREFERENCES.taskDecline && DEFAULT_PUSH_PREFERENCES.unitRequest, true, "mặc định bật");
     });
 
     test("evaluates topic enabled status accurately based on preferences", () => {
@@ -242,9 +246,17 @@ describe("Task 7: Push Pre-Prompt, Subscription Lifecycle, Deep Linking & Notifi
         taskReview: false,
         deadlineReminder: true,
         documentDirective: false,
+        taskExtension: false,
+        taskDecline: true,
+        unitRequest: false,
       };
 
       assert.equal(isTopicEnabled(customizedPrefs, "TASK_ASSIGNED"), true);
+      assert.equal(isTopicEnabled(customizedPrefs, "TASK_EXTENSION_REQUEST"), false);
+      assert.equal(isTopicEnabled(customizedPrefs, "extension_decided"), false);
+      assert.equal(isTopicEnabled(customizedPrefs, "TASK_DECLINED"), true);
+      assert.equal(isTopicEnabled(customizedPrefs, "TASK_UNIT_REQUEST"), false);
+      assert.equal(isTopicEnabled(customizedPrefs, "unit_request_decided"), false);
       assert.equal(isTopicEnabled(customizedPrefs, "DELIVERABLE_SUBMITTED"), false);
       assert.equal(isTopicEnabled(customizedPrefs, "DEADLINE_WARNING_24H"), true);
       assert.equal(isTopicEnabled(customizedPrefs, "EXECUTIVE_DIRECTIVE"), false);

@@ -83,8 +83,33 @@ async function reviewerIds(db: DbClient, taskId: string): Promise<string[]> {
   return task ? [task.createdById] : [];
 }
 
+/** Loại thông báo cho phép người nhận tắt riêng trong cài đặt thông báo (T-06). Các loại khác luôn gửi. */
+const OPT_OUT_PREF: Record<string, "taskExtension" | "taskDecline" | "unitRequest"> = {
+  extension_requested: "taskExtension",
+  extension_decided: "taskExtension",
+  declined: "taskDecline",
+  unit_request: "unitRequest",
+  unit_request_decided: "unitRequest",
+};
+
+async function withoutOptedOut(db: DbClient, userIds: string[], noticeType: string): Promise<string[]> {
+  const pref = OPT_OUT_PREF[noticeType];
+  if (!pref || userIds.length === 0) return userIds;
+  const users = await db.user.findMany({ where: { id: { in: userIds } }, select: { id: true, onboardingData: true } });
+  const off = new Set(
+    users
+      .filter((u) => (u.onboardingData as { pushPreferences?: Partial<Record<string, boolean>> } | null)?.pushPreferences?.[pref] === false)
+      .map((u) => u.id)
+  );
+  return userIds.filter((id) => !off.has(id));
+}
+
 export async function deliverTaskNotice(db: DbClient, notice: TaskNotice): Promise<string[]> {
-  const candidates = [...new Set(notice.recipientIds)].filter((id) => id && id !== notice.actorId);
+  const candidates = await withoutOptedOut(
+    db,
+    [...new Set(notice.recipientIds)].filter((id) => id && id !== notice.actorId),
+    notice.type
+  );
   if (candidates.length === 0) return [];
 
   const task = await db.task.findUnique({ where: { id: notice.taskId }, select: { id: true, title: true } });

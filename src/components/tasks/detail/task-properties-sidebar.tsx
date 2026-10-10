@@ -150,7 +150,7 @@ export function TaskPropertiesSidebar({
   auditEvents = [],
   isMobileAccordion = false,
   canEdit = true,
-  canChangeDueDate = true,
+  canChangeDueDate: canChangeDueDateProp,
   showRelatedSections = true,
   className,
   subTasks,
@@ -288,6 +288,9 @@ export function TaskPropertiesSidebar({
   const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
   const startDateIso = extractDateIso(rawStartDate);
   const dueDateIso = extractDateIso(task.dueDate);
+  // Đổi hạn trực tiếp cần task.assign; người thực hiện dùng Xin gia hạn (T-01).
+  const taskActions = (task as { availableActions?: unknown }).availableActions;
+  const canChangeDueDate = canChangeDueDateProp ?? (!Array.isArray(taskActions) || taskActions.includes("task.assign"));
   const dueStatus = computeDueStatus(task.dueDate);
 
   // Allowed transitions validation via domain State Machine
