@@ -14,6 +14,7 @@ export type TaskPushEventType =
   | "TASK_REMINDER"
   | "TASK_CANCELLED"
   | "TASK_MENTION"
+  | "TASK_DECLINED"
   | "TASK_EXTENSION_REQUEST"
   | "TASK_EXTENSION_DECISION";
 
@@ -217,6 +218,12 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
       eventShort = "remind";
       rawTitle = `[NHẮC VIỆC] ${taskTitle}`;
       rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc thực hiện nhiệm vụ`;
+      break;
+    }
+    case "TASK_DECLINED": {
+      eventShort = "declined";
+      rawTitle = `[TỪ CHỐI NHẬN VIỆC] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} từ chối nhận việc: "${directiveNote}"` : `${actorName} từ chối nhận việc`;
       break;
     }
     case "TASK_EXTENSION_REQUEST": {

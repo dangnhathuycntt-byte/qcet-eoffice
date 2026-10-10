@@ -588,6 +588,12 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_EXTENSION_REQUEST_DRI';
     }
+  } else if (action === 'task.decline') {
+    // Chỉ người thực hiện chính từ chối nhận việc.
+    if (isDRI) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_DECLINE_DRI';
+    }
   } else if (action === 'task.decide_extension') {
     // Người giao quyết định gia hạn; SoD với người xin do dịch vụ gia hạn giữ.
     if (isAssigner) {

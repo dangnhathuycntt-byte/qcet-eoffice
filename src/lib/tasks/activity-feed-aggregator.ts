@@ -59,6 +59,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   TASK_REVISION_REQUESTED: "Yêu cầu điều chỉnh",
   REVISION_REQUESTED: "Yêu cầu điều chỉnh",
   TASK_REMINDED: "Gửi thông báo nhắc việc",
+  TASK_DECLINED: "Từ chối nhận việc",
   TASK_EXTENSION_REQUESTED: "Xin gia hạn nhiệm vụ",
   TASK_EXTENSION_DECIDED: "Phản hồi yêu cầu gia hạn",
   TASK_EXTENSION_REPEATED: "Gia hạn nhiều lần",

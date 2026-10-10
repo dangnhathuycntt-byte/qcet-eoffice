@@ -237,6 +237,23 @@ export const TASK_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
     });
   }),
 
+  // Người chủ trì từ chối nhận việc: báo người giao để giao lại.
+  [OutboxEventType.TASK_DECLINED_NOTIFICATION]: guarded(async (event, db) => {
+    const p = payloadOf(event);
+    const taskId = requireTaskId(event);
+    const task = await db.task.findUnique({ where: { id: taskId }, select: { createdById: true } });
+    const reason = str(p, "reason");
+    if (!task) return { skipped: "task_missing" };
+    return deliverTaskNotice(db, {
+      taskId,
+      recipientIds: [task.createdById],
+      actorId: str(p, "declinedById"),
+      type: "declined",
+      pushEvent: "TASK_DECLINED",
+      note: reason && reason.length > 80 ? `${reason.slice(0, 77)}...` : reason,
+    });
+  }),
+
   // Xin gia hạn: báo người giao (người tạo nhiệm vụ) và người được ủy làm người duyệt.
   [OutboxEventType.TASK_EXTENSION_REQUESTED_NOTIFICATION]: guarded(async (event, db) => {
     const p = payloadOf(event);

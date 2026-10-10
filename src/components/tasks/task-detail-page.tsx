@@ -24,6 +24,7 @@ import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
 import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
+import { TaskDecline } from "@/components/tasks/detail/task-decline";
 import { TaskExtension } from "@/components/tasks/detail/task-extension";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
@@ -881,6 +882,13 @@ export function TaskDetailPage({
                   />
                 </div>
               )}
+
+              <TaskDecline
+                taskId={task.id}
+                version={Number((task as any).version ?? 0)}
+                status={String((task as any).status ?? "")}
+                onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
+              />
 
               <TaskExtension
                 taskId={task.id}

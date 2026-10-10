@@ -123,6 +123,7 @@ model User {
   checkedCriteria       TaskAcceptanceCriterion[] @relation("CriterionCheckedBy")
   extensionsRequested   TaskExtensionRequest[] @relation("ExtensionRequester")
   extensionsDecided     TaskExtensionRequest[] @relation("ExtensionDecider")
+  taskDeclines          TaskDeclineNotice[]   @relation("TaskDecliner")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -245,6 +246,7 @@ model Task {
   comments            TaskComment[]
   criteria            TaskAcceptanceCriterion[]
   extensionRequests   TaskExtensionRequest[]
+  declineNotices      TaskDeclineNotice[]
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -1174,6 +1176,22 @@ model TaskResult {
 
   @@index([taskId])
   @@map("task_results")
+}
+
+// Người thực hiện chính từ chối nhận việc (T-02). Không thêm trạng thái nhiệm vụ (ADR-003):
+// người chủ trì giữ nguyên cho đến khi người giao giao lại. Thông báo còn hiệu lực chỉ khi
+// được tạo sau lần bổ nhiệm gần nhất của chính người đó, nên giao lại là tự hết hiệu lực.
+model TaskDeclineNotice {
+  id        String   @id @default(cuid())
+  taskId    String   @map("task_id")
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation("TaskDecliner", fields: [userId], references: [id], onDelete: Restrict)
+  reason    String   @db.VarChar(1000)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskId, createdAt])
+  @@map("task_decline_notices")
 }
 
 enum ExtensionRequestStatus {

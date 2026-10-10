@@ -140,6 +140,7 @@ export const TASK_CAPABILITIES = [
   'task.comment',
   'task.request_extension',
   'task.decide_extension',
+  'task.decline',
 ] as const;
 
 export type TaskCapabilityAction = (typeof TASK_CAPABILITIES)[number];
@@ -409,6 +410,7 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'task.comment': 'Bình luận trong nhiệm vụ',
   'task.request_extension': 'Xin gia hạn nhiệm vụ',
   'task.decide_extension': 'Quyết định gia hạn nhiệm vụ',
+  'task.decline': 'Từ chối nhận nhiệm vụ',
   // System
   'account.manage': 'Quản trị tài khoản người dùng',
   'org.manage': 'Quản lý cơ cấu tổ chức & phòng ban',
