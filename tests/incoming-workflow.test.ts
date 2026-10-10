@@ -26,11 +26,12 @@ describe("incoming workflow actions", () => {
   });
 
   it("V-01: trưởng đơn vị trả lại ở bước đã giao đơn vị; Văn thư chuyển lại ở bước DIRECTED", () => {
-    assert.deepEqual(keys("ASSIGNED_TO_LEAD_UNIT", "TRUONG_PHONG"), ["return"]);
+    assert.deepEqual(keys("ASSIGNED_TO_LEAD_UNIT", "TRUONG_PHONG"), ["assign-unit", "return"]);
     assert.deepEqual(keys("UNIT_ASSIGNED_PERSON", "TRUONG_PHONG"), ["return"]);
     assert.deepEqual(keys("DIRECTED", "VAN_THU"), ["reroute"]);
-    const ret = getIncomingActions("ASSIGNED_TO_LEAD_UNIT", "TRUONG_PHONG")[0];
+    const ret = getIncomingActions("ASSIGNED_TO_LEAD_UNIT", "TRUONG_PHONG")[1];
     assert.equal(ret.input, "reason");
+    assert.equal(getIncomingActions("ASSIGNED_TO_LEAD_UNIT", "TRUONG_PHONG")[0].input, "person", "phân công cần chọn người xử lý");
     assert.equal(ret.destructive, true);
     assert.equal(getIncomingActions("DIRECTED", "VAN_THU")[0].input, "unit");
     // Sai vai trò hoặc sai bước thì không có.

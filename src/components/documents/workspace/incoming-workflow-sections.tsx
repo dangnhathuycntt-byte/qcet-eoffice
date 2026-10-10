@@ -5,7 +5,9 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { confirmAction } from "@/components/ui/confirm-host";
 import { useDepartmentList } from "@/hooks/use-department-list";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import type { DocumentItem } from "@/types/document";
@@ -26,12 +28,14 @@ export function IncomingWorkflowActions({
   const { user } = useAuth();
   const role = (user as { role?: string } | null)?.role;
   const [pending, setPending] = React.useState<string | null>(null);
-  const [form, setForm] = React.useState<{ key: string; input: "reason" | "unit" } | null>(null);
+  const [form, setForm] = React.useState<{ key: string; input: "reason" | "unit" | "person" } | null>(null);
   const [reason, setReason] = React.useState("");
   const [unitId, setUnitId] = React.useState<string | null>(null);
   const [note, setNote] = React.useState("");
+  const [driUserId, setDriUserId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const { departments, isLoading: isDepartmentsLoading } = useDepartmentList({ enabled: form?.input === "unit" });
+  const { personnel, isLoading: isPersonnelLoading } = usePersonnelList({ enabled: form?.input === "person" });
   const actions = getIncomingActions(status, role);
   if (actions.length === 0) return null;
 
@@ -68,22 +72,28 @@ export function IncomingWorkflowActions({
       setError(null);
       return;
     }
-    if (!window.confirm(action.confirmMsg)) return;
+    if (!(await confirmAction({ title: action.confirmMsg, confirmLabel: action.label }))) return;
     await post(action.key, action.body);
   }
 
   async function submitForm() {
     if (!form) return;
-    const body = form.input === "reason" ? { reason: reason.trim() } : { leadUnitId: unitId, note: note.trim() || undefined };
+    const body =
+      form.input === "reason"
+        ? { reason: reason.trim() }
+        : form.input === "person"
+          ? { driUserId, instruction: note.trim() || undefined }
+          : { leadUnitId: unitId, note: note.trim() || undefined };
     if (await post(form.key, body)) {
       setForm(null);
       setReason("");
       setUnitId(null);
+      setDriUserId(null);
       setNote("");
     }
   }
 
-  const formReady = form?.input === "reason" ? reason.trim().length >= 3 : Boolean(unitId);
+  const formReady = form?.input === "reason" ? reason.trim().length >= 3 : form?.input === "person" ? Boolean(driUserId) : Boolean(unitId);
 
   return (
     <div className="space-y-2">
@@ -138,10 +148,32 @@ export function IncomingWorkflowActions({
           />
         </div>
       )}
+      {form?.input === "person" && (
+        <div className="space-y-1.5">
+          <Select
+            compact
+            positionerClassName="z-50"
+            aria-label="Người xử lý văn bản"
+            placeholder={isPersonnelLoading ? "Đang tải danh sách..." : "— Chọn người xử lý —"}
+            options={personnel.map((p) => ({ value: p.id, label: p.name }))}
+            value={driUserId}
+            onValueChange={(val) => setDriUserId(val || null)}
+          />
+          <Textarea
+            compact
+            value={note}
+            maxLength={1000}
+            aria-label="Ý kiến phân công"
+            placeholder="Ý kiến phân công (không bắt buộc)"
+            onChange={(e) => setNote(e.target.value)}
+            className="min-h-12"
+          />
+        </div>
+      )}
       {form && (
         <div className="flex gap-1.5">
           <Button size="xs" disabled={pending !== null || !formReady} onClick={() => void submitForm()}>
-            {form.input === "reason" ? "Trả lại văn bản" : "Chuyển văn bản"}
+            {form.input === "reason" ? "Trả lại văn bản" : form.input === "person" ? "Phân công" : "Chuyển văn bản"}
           </Button>
           <Button size="xs" variant="ghost" onClick={() => { setForm(null); setError(null); }}>
             Hủy
