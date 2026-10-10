@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as m from "motion/react-m";
 import { useReducedMotion } from "motion/react";
-import { ClipboardList, Plus, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
@@ -210,11 +210,19 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
         className
       )}
     >
-      {/* Minh họa: phễu lọc khi có bộ lọc; biểu tượng tĩnh khi chưa có nhiệm vụ (không dựng dữ liệu giả) */}
+      {/* Minh họa: phễu lọc khi có bộ lọc; tranh nét mực khi chưa có nhiệm vụ (không dựng dữ liệu giả) */}
       {hasFilterActive ? (
         <FilterEmptyIllustration reducedMotion={reducedMotion} />
       ) : (
-        <ClipboardList className="mb-3 size-8 text-muted-foreground/60" strokeWidth={1.5} aria-hidden="true" />
+        <span
+          data-slot="empty-state-illustration"
+          aria-hidden="true"
+          className="mb-4 block h-[104px] w-28 bg-foreground/75"
+          style={{
+            WebkitMask: "url(/design/empty-tasks.png) center / contain no-repeat",
+            mask: "url(/design/empty-tasks.png) center / contain no-repeat",
+          }}
+        />
       )}
 
       {/* Title */}
