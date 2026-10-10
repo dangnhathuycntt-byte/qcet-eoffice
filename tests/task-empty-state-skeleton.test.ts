@@ -4,7 +4,7 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { TaskEmptyState } from "../src/components/tasks/table/components/task-empty-state";
 
-describe("TaskEmptyState Ghost Table Preview", () => {
+describe("TaskEmptyState", () => {
   it("renders contextual empty state title and description", () => {
     const html = renderToString(
       React.createElement(TaskEmptyState, {
@@ -49,14 +49,28 @@ describe("TaskEmptyState Ghost Table Preview", () => {
     assert.ok(html.includes("Tạo nhiệm vụ mới"));
   });
 
-  it("renders mock task rows inside ghost table container", () => {
-    const html = renderToString(
-      React.createElement(TaskEmptyState, {})
-    );
+  it("chưa có nhiệm vụ nào: nói rõ bảng dùng để làm gì, không dựng dữ liệu giả, không dùng thuật ngữ kỹ thuật", () => {
+    const html = renderToString(React.createElement(TaskEmptyState, { canAddTask: true, onAddTask: () => {} }));
 
-    // Verify mock tasks are rendered for the hover reveal layer
-    assert.ok(html.includes("Hoàn thiện kế hoạch kiểm định chất lượng HK1"));
-    assert.ok(html.includes("Rà soát đề cương chi tiết học phần CNTT"));
-    assert.ok(html.includes("Người phụ trách A"));
+    assert.ok(html.includes("Chưa có nhiệm vụ nào"));
+    assert.ok(html.includes("sẽ hiện ở đây"));
+    assert.ok(!html.includes("cơ sở dữ liệu"));
+    assert.ok(!html.includes("máy chủ"));
+    assert.ok(!html.includes("Hoàn thiện kế hoạch kiểm định chất lượng HK1"), "không hiển thị nhiệm vụ mẫu");
+    assert.ok(!html.includes("Người phụ trách A"));
+  });
+
+  it("người không có quyền tạo việc không thấy nút tạo và lời mời tạo", () => {
+    const html = renderToString(React.createElement(TaskEmptyState, {}));
+    assert.ok(!html.includes("Tạo nhiệm vụ mới"));
+    assert.ok(!html.includes("tạo nhiệm vụ đầu tiên"));
+  });
+
+  it("khi lọc loại hết kết quả: nêu bộ lọc đang áp dụng và ưu tiên nút Xóa bộ lọc", () => {
+    const html = renderToString(
+      React.createElement(TaskEmptyState, { academicMonth: 9, department: "CNTT", priority: "HIGH", onResetFilters: () => {}, canAddTask: true, onAddTask: () => {} })
+    );
+    assert.ok(html.includes("Đang áp dụng tháng 9, 2 bộ lọc khác."));
+    assert.ok(html.indexOf("Xóa bộ lọc") < html.indexOf("Tạo nhiệm vụ mới"));
   });
 });
