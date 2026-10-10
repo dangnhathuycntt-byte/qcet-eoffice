@@ -658,7 +658,19 @@ export function ModularCascadingTaskTable({
     return undefined;
   }, [onBulkStatusChange, onStatusChange, tableState]);
 
+  // Đổi hạn trực tiếp cần task.assign (T-01): chỉ hiện "Gia hạn" khi mọi nhiệm vụ đã chọn cho phép.
+  const canBulkChangeDueDate = React.useMemo(() => {
+    const ids = tableState.selectedIds;
+    return filteredTasks
+      .filter((task) => ids.has(task.id))
+      .every((task) => {
+        const actions = (task as { availableActions?: unknown }).availableActions;
+        return !Array.isArray(actions) || actions.includes("task.assign");
+      });
+  }, [tableState.selectedIds, filteredTasks]);
+
   const effectiveOnBulkExtendDeadline = React.useMemo(() => {
+    if (!canBulkChangeDueDate) return undefined;
     if (onBulkExtendDeadline) return onBulkExtendDeadline;
     if (handleContextMenuDueDateChange) {
       return async (newDueDate: string) => {
@@ -668,7 +680,7 @@ export function ModularCascadingTaskTable({
       };
     }
     return undefined;
-  }, [onBulkExtendDeadline, handleContextMenuDueDateChange, tableState]);
+  }, [canBulkChangeDueDate, onBulkExtendDeadline, handleContextMenuDueDateChange, tableState]);
 
   // Đổi ưu tiên hàng loạt (T-08): một lệnh có Idempotency-Key, máy chủ kiểm quyền, version và trạng thái từng dòng.
   const feedback = useFeedback();

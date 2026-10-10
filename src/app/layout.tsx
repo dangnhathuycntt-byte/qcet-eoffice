@@ -5,6 +5,7 @@ import { MotionProvider } from "@/components/motion/motion-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { DisplayDensityProvider } from "@/components/density-provider";
 import { FeedbackProvider } from "@/components/ui/feedback-layer";
+import { ConfirmHost } from "@/components/ui/confirm-host";
 import { AppShell } from "@/components/layout/app-shell";
 import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
 import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
@@ -92,6 +93,7 @@ export default function RootLayout({
                 <AppShell>{children}</AppShell>
                 <PWAServiceWorkerManager />
                 <WebVitalsReporter />
+                <ConfirmHost />
               </FeedbackProvider>
             </DisplayDensityProvider>
           </AuthProvider>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { confirmAction } from "@/components/ui/confirm-host";
 import type {
   SchoolTask,
   StaffTask,
@@ -410,7 +411,14 @@ export function useTaskMutations(
           const res = await fetch(`/api/tasks/${payload.taskId}/criteria`, { cache: "no-store" });
           const view = res.ok ? await res.json() : null;
           const unmet = Number(view?.unmet ?? 0);
-          if (unmet > 0 && !window.confirm(`Còn ${unmet} tiêu chí chưa đạt. Vẫn phê duyệt nhiệm vụ này?`)) return;
+          if (unmet > 0) {
+            const proceed = await confirmAction({
+              title: "Vẫn phê duyệt nhiệm vụ?",
+              description: `Còn ${unmet} tiêu chí chưa đạt. Có thể chọn Yêu cầu chỉnh sửa thay vì phê duyệt.`,
+              confirmLabel: "Vẫn phê duyệt",
+            });
+            if (!proceed) return;
+          }
         } catch {
           // Không đọc được tiêu chí thì không chặn việc duyệt.
         }
