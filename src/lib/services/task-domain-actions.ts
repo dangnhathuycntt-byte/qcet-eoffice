@@ -167,6 +167,21 @@ export const RemindInputSchema = z.object({
 
 export type RemindInput = z.infer<typeof RemindInputSchema>;
 
+export const AddPersonInputSchema = z.object({
+  userId: z.string().trim().min(1, "Mã người dùng là bắt buộc"),
+  role: z.enum(["COLLABORATOR", "FOLLOWER"]),
+  expectedVersion: z.number().int().min(0),
+}).strict();
+
+export type AddPersonInput = z.infer<typeof AddPersonInputSchema>;
+
+export const RemovePersonInputSchema = z.object({
+  userId: z.string().trim().min(1, "Mã người dùng là bắt buộc"),
+  expectedVersion: z.number().int().min(0),
+}).strict();
+
+export type RemovePersonInput = z.infer<typeof RemovePersonInputSchema>;
+
 // ============================================================================
 // Context Builders & Helpers
 // ============================================================================
@@ -290,6 +305,28 @@ export async function loadTaskAndBuildResource(
   };
 
   return { task, resource, targetDeliverable, targetResult, primaryOwnerId };
+}
+
+/** Vai trò do thao tác thêm, bớt người quản lý; các vai trò khác phải đi qua lệnh riêng. */
+const PEOPLE_MANAGED_ROLES: ReadonlySet<TaskActorRole> = new Set([
+  TaskActorRole.COLLABORATOR,
+  TaskActorRole.FOLLOWER,
+  TaskActorRole.OBSERVER,
+]);
+
+const PROTECTED_ROLE_LABEL: Partial<Record<TaskActorRole, string>> = {
+  DRI: "chủ trì",
+  ASSIGNER: "người giao",
+  LEAD_UNIT: "đơn vị chủ trì",
+  COORDINATING_UNIT: "đơn vị phối hợp",
+  REVIEWER: "người thẩm tra",
+  APPROVER: "người duyệt",
+};
+
+function assertTaskOpenForPeople(task: { status: TaskStatus; archivedAt: Date | null }) {
+  if (task.status === TaskStatus.COMPLETED || task.status === TaskStatus.CANCELLED || task.archivedAt) {
+    throw new InvalidTransitionError("Nhiệm vụ đã kết thúc hoặc đã lưu trữ nên không đổi người tham gia");
+  }
 }
 
 function assertAuthAllowed(
@@ -1666,6 +1703,161 @@ export class TaskDomainActionService {
       message: messageText,
       version: validated.expectedVersion + 1,
     };
+  }
+
+  /**
+   * Action 7: add-person
+   * POST /api/tasks/[id]/people
+   * Thêm người phối hợp hoặc người theo dõi. Người phối hợp được báo; người theo dõi chỉ xem.
+   * Không thêm người đang giữ vai trò khác (chủ trì, người giao, người duyệt) để tránh
+   * hạ vai trò hoặc lẫn người làm với người duyệt (ADR-001).
+   */
+  async addPerson(session: SessionPayload, taskId: string, input: AddPersonInput) {
+    const validated = AddPersonInputSchema.parse(input);
+    const userContext = await buildUserContext(session);
+    const { task, resource } = await loadTaskAndBuildResource(taskId);
+
+    const authResult = await authorize(userContext, "task.assign", resource);
+    assertAuthAllowed(authResult, "task.assign", taskId);
+
+    assertTaskOpenForPeople(task);
+    if (task.version !== validated.expectedVersion) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: validated.userId },
+      select: { id: true, isActive: true },
+    });
+    if (!targetUser) throw new NotFoundError("Không tìm thấy người dùng được thêm");
+    if (!targetUser.isActive) throw new ValidationError("Tài khoản này đã ngừng hoạt động");
+
+    const role = validated.role === "COLLABORATOR" ? TaskActorRole.COLLABORATOR : TaskActorRole.FOLLOWER;
+    const existing = await prisma.taskActor.findMany({ where: { taskId, userId: validated.userId } });
+    const protectedRole = existing.find((a) => !PEOPLE_MANAGED_ROLES.has(a.role));
+    if (protectedRole) {
+      throw new ValidationError(
+        `Người này đang giữ vai trò ${PROTECTED_ROLE_LABEL[protectedRole.role] ?? "khác"} trên nhiệm vụ nên không thể thêm làm người ${validated.role === "COLLABORATOR" ? "phối hợp" : "theo dõi"}`
+      );
+    }
+    if (existing.some((a) => a.role === role)) {
+      return { taskId, userId: validated.userId, role, changed: false, version: task.version };
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const bumped = await tx.task.updateMany({
+        where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
+        data: { version: { increment: 1 } },
+      });
+      if (bumped.count !== 1) {
+        throw new PreconditionFailedError(
+          `Task aggregate version conflict: expected version ${validated.expectedVersion}`
+        );
+      }
+
+      const previousRole = existing[0]?.role ?? null;
+      if (existing.length > 0) {
+        await tx.taskActor.update({
+          where: { id: existing[0].id },
+          data: { role, isPrimaryDRI: false, assignedById: session.id },
+        });
+      } else {
+        await tx.taskActor.create({
+          data: {
+            taskId,
+            userId: validated.userId,
+            role,
+            isPrimaryDRI: false,
+            assignedById: session.id,
+            appointedAt: new Date(),
+          },
+        });
+      }
+
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_PERSON_ADDED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: { userId: validated.userId, role: previousRole },
+        afterData: { userId: validated.userId, role },
+      });
+
+      if (role === TaskActorRole.COLLABORATOR) {
+        await publishOutboxEvent(tx, {
+          eventType: OutboxEventType.TASK_ASSIGNED_NOTIFICATION,
+          aggregateType: OutboxAggregateType.TASK,
+          aggregateId: taskId,
+          payload: {
+            taskId,
+            assignedById: session.id,
+            newAssigneeId: validated.userId,
+            role: "COLLABORATOR",
+          },
+        });
+      }
+
+      return { taskId, userId: validated.userId, role, changed: true, version: validated.expectedVersion + 1 };
+    });
+  }
+
+  /**
+   * Action 8: remove-person
+   * DELETE /api/tasks/[id]/people
+   * Bớt người phối hợp hoặc người theo dõi. Không bớt chủ trì, người giao, người duyệt.
+   */
+  async removePerson(session: SessionPayload, taskId: string, input: RemovePersonInput) {
+    const validated = RemovePersonInputSchema.parse(input);
+    const userContext = await buildUserContext(session);
+    const { task, resource } = await loadTaskAndBuildResource(taskId);
+
+    const authResult = await authorize(userContext, "task.assign", resource);
+    assertAuthAllowed(authResult, "task.assign", taskId);
+
+    assertTaskOpenForPeople(task);
+    if (task.version !== validated.expectedVersion) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
+
+    const existing = await prisma.taskActor.findMany({ where: { taskId, userId: validated.userId } });
+    if (existing.length === 0) throw new NotFoundError("Người này không tham gia nhiệm vụ");
+    const protectedRole = existing.find((a) => !PEOPLE_MANAGED_ROLES.has(a.role));
+    if (protectedRole) {
+      throw new ValidationError(
+        `Không thể bớt người đang giữ vai trò ${PROTECTED_ROLE_LABEL[protectedRole.role] ?? "khác"}; dùng thao tác giao lại hoặc đổi người duyệt`
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const bumped = await tx.task.updateMany({
+        where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
+        data: { version: { increment: 1 } },
+      });
+      if (bumped.count !== 1) {
+        throw new PreconditionFailedError(
+          `Task aggregate version conflict: expected version ${validated.expectedVersion}`
+        );
+      }
+
+      await tx.taskActor.deleteMany({
+        where: { taskId, userId: validated.userId, role: { in: [...PEOPLE_MANAGED_ROLES] } },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_PERSON_REMOVED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: { userId: validated.userId, role: existing[0].role },
+        afterData: null,
+      });
+
+      return { taskId, userId: validated.userId, removed: true, version: validated.expectedVersion + 1 };
+    });
   }
 }
 

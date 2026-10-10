@@ -582,6 +582,12 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_EXECUTION';
     }
+  } else if (action === 'task.assign') {
+    // Người giao (người tạo) được thêm, bớt người phối hợp và người theo dõi trên nhiệm vụ của mình.
+    if (isAssigner) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_ASSIGNER_ASSIGN';
+    }
   } else if (action === 'task.cancel' || action === 'task.archive') {
     if (isAssigner) {
       candidateAllowed = true;
