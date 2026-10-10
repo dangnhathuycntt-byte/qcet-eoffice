@@ -6,7 +6,7 @@ import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check
 import type { OfficialDocument } from "@/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
-import { EmptyState } from "@/components/ui/empty-state";
+import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import {
@@ -166,7 +166,16 @@ const EMPTY_TYPE_COPY: Record<string, { title: string; description: string }> = 
  * Nội dung trạng thái rỗng theo đúng ngữ cảnh (NN/g: nói rõ vì sao trống, nơi này sẽ hiện gì, lối đi tiếp):
  * có từ khóa hoặc bộ lọc thì nói không khớp; đang xem một nhóm ở sidebar thì nói nhóm đó trống; còn lại là sổ chưa có văn bản.
  */
-export function getLedgerEmptyCopy(ctx: LedgerEmptyContext): { title: string; description: string } {
+export interface LedgerEmptyCopy {
+  title: string;
+  description: string;
+  /** Tranh cho sổ chưa có dữ liệu; kết quả lọc rỗng không có tranh. */
+  illustration?: IllustrationName;
+}
+
+const EMPTY_TYPE_ILLUSTRATION: Record<string, IllustrationName> = { inbox: "doc-in", outbox: "doc-out", submission: "submission" };
+
+export function getLedgerEmptyCopy(ctx: LedgerEmptyContext): LedgerEmptyCopy {
   if (ctx.isResultFiltered) {
     const search = ctx.search?.trim();
     return search
@@ -174,8 +183,11 @@ export function getLedgerEmptyCopy(ctx: LedgerEmptyContext): { title: string; de
       : { title: "Không có văn bản khớp bộ lọc", description: "Thử bỏ bớt bộ lọc đang chọn." };
   }
   const scoped = ctx.type && ctx.bucket ? EMPTY_SCOPE_COPY[ctx.type]?.[ctx.bucket] : undefined;
-  if (scoped) return scoped;
-  return (ctx.type && EMPTY_TYPE_COPY[ctx.type]) || { title: "Chưa có văn bản nào", description: "Vào sổ hoặc soạn văn bản mới để bắt đầu." };
+  // Nhóm "chờ xử lý" trống nghĩa là đã xử lý hết: dùng tranh nghỉ ngơi thay vì tranh của sổ
+  if (scoped) return { ...scoped, illustration: ctx.bucket === "pending" ? "all-done" : EMPTY_TYPE_ILLUSTRATION[ctx.type!] };
+  const byType = ctx.type ? EMPTY_TYPE_COPY[ctx.type] : undefined;
+  if (byType) return { ...byType, illustration: EMPTY_TYPE_ILLUSTRATION[ctx.type!] };
+  return { title: "Chưa có văn bản nào", description: "Vào sổ hoặc soạn văn bản mới để bắt đầu.", illustration: "doc-in" };
 }
 
 export interface LedgerFilterOption {
@@ -550,7 +562,7 @@ export interface DocumentLedgerTableProps {
   /** Có bộ lọc hoặc từ khóa đang áp dụng: phân biệt "không khớp" với "sổ chưa có văn bản". */
   isFiltered?: boolean;
   /** Nội dung trạng thái rỗng theo ngữ cảnh (`getLedgerEmptyCopy`); bỏ trống thì suy từ `isFiltered`. */
-  emptyCopy?: { title: string; description: string };
+  emptyCopy?: LedgerEmptyCopy;
   emptyAction?: React.ReactNode;
   isLoading?: boolean;
   error?: string | null;
@@ -766,6 +778,7 @@ export function DocumentLedgerTable({
           role="status"
           density="compact"
           icon={isFiltered ? <SearchX strokeWidth={1.5} /> : <Inbox strokeWidth={1.5} />}
+          illustration={copy.illustration}
           title={copy.title}
           description={copy.description}
           action={emptyAction}

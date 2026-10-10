@@ -470,7 +470,7 @@ export function DocumentRegistryView() {
                   <div className="block sm:hidden">
                     <DocumentCardList
                       documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
-                      emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description}
+                      emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description} emptyIllustration={emptyCopy.illustration}
                       emptyAction={emptyAction}
                       onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={handleOpenDetail}
                       isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable

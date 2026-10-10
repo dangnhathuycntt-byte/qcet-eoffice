@@ -24,6 +24,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { getStatusLabel } from "@/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
+import { InkIllustration, type IllustrationName } from "@/components/ui/empty-state";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
   getTypeBadge,
@@ -685,15 +686,16 @@ export function InboxView() {
             ) : status === "error" ? (
               <QuietState
                 title="Không tải được hộp thư"
+                illustration="load-error"
                 action={{ label: "Thử lại", onClick: () => void loadList("reset") }}
               />
             ) : visibleGroups.length === 0 ? (
               hasCondition ? (
                 <QuietState title="Không có kết quả" action={{ label: "Xóa bộ lọc", onClick: clearConditions }} />
               ) : readFilter === "unread" ? (
-                <QuietState title="Đã đọc hết" action={{ label: "Xem tất cả", onClick: () => navigate({ filter: "all" }) }} />
+                <QuietState title="Đã đọc hết" illustration="all-done" action={{ label: "Xem tất cả", onClick: () => navigate({ filter: "all" }) }} />
               ) : (
-                <QuietState title="Không có thông báo" />
+                <QuietState title="Không có thông báo" illustration="inbox" />
               )
             ) : (
               <>
@@ -1010,9 +1012,18 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
-function QuietState({ title, action }: { title: string; action?: { label: string; onClick: () => void } }) {
+function QuietState({
+  title,
+  illustration,
+  action,
+}: {
+  title: string;
+  illustration?: IllustrationName;
+  action?: { label: string; onClick: () => void };
+}) {
   return (
     <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+      {illustration ? <InkIllustration name={illustration} className="mb-2" /> : null}
       <p className="text-xs text-muted-foreground">{title}</p>
       {action && (
         <Button variant="ghost" size="xs" onClick={action.onClick}>

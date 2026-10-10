@@ -5,6 +5,7 @@ import * as m from "motion/react-m";
 import { useReducedMotion } from "motion/react";
 import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { InkIllustration } from "@/components/ui/empty-state";
 import { motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
 
@@ -214,15 +215,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       {hasFilterActive ? (
         <FilterEmptyIllustration reducedMotion={reducedMotion} />
       ) : (
-        <span
-          data-slot="empty-state-illustration"
-          aria-hidden="true"
-          className="mb-4 block h-[104px] w-28 bg-foreground/75"
-          style={{
-            WebkitMask: "url(/design/empty-tasks.png) center / contain no-repeat",
-            mask: "url(/design/empty-tasks.png) center / contain no-repeat",
-          }}
-        />
+        <InkIllustration name="tasks" className="mb-4" />
       )}
 
       {/* Title */}

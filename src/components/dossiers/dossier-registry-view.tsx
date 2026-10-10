@@ -16,6 +16,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -168,9 +169,10 @@ export function DossierRegistryView() {
           return;
         }
         const json = await res.json();
-        if (json.success && json.data) {
-          setItems(json.data.items ?? []);
-          setTotal(json.data.total ?? 0);
+        // API trả thẳng { items, total } (apiSuccess không bọc success/data)
+        if (Array.isArray(json?.items)) {
+          setItems(json.items);
+          setTotal(json.total ?? 0);
         } else {
           setFetchError("Phản hồi không hợp lệ từ máy chủ");
         }
@@ -530,18 +532,23 @@ export function DossierRegistryView() {
 
           {/* Empty state */}
           {!isLoading && items.length === 0 && (
-            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-              <FolderOpen
-                className="size-10 text-muted-foreground/40"
-                strokeWidth={1.5}
+            searchQuery || statusFilter || classificationFilter ? (
+              <EmptyState
+                role="status"
+                density="compact"
+                icon={<FolderOpen strokeWidth={1.5} />}
+                title="Không tìm thấy hồ sơ nào"
+                description="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."
               />
-              <p className="text-sm font-medium text-muted-foreground">
-                Không tìm thấy hồ sơ nào
-              </p>
-              <p className="text-xs text-muted-foreground/60">
-                Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
-              </p>
-            </div>
+            ) : (
+              <EmptyState
+                role="status"
+                density="compact"
+                illustration="dossier"
+                title="Chưa có hồ sơ công việc"
+                description="Hồ sơ công việc đã lập sẽ hiện ở đây."
+              />
+            )
           )}
         </div>
       )}

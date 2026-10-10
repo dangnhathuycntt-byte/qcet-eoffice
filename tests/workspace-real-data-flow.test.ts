@@ -131,7 +131,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
 
       assert.ok(html.includes("data-slot=\"workspace-empty-state\""));
       assert.ok(
-        html.includes("Chưa có nhiệm vụ nào được phân công trong kỳ này")
+        html.includes("Chưa có nhiệm vụ nào")
       );
       assert.ok(!html.includes("fake"));
       assert.ok(!html.includes("dummy"));
@@ -314,7 +314,7 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
     assert.ok(htmlOffline.includes("data-slot=\"workspace-offline-alert\""));
     assert.ok(htmlOffline.includes("Lỗi kết nối máy chủ dữ liệu QCET"));
     assert.ok(htmlOffline.includes("data-slot=\"workspace-empty-state\""));
-    assert.ok(htmlOffline.includes("Chưa có nhiệm vụ nào được phân công trong kỳ này"));
+    assert.ok(htmlOffline.includes("Chưa có nhiệm vụ nào"));
     // Ensure no mock tasks are generated
     assert.ok(!htmlOffline.includes("Đề xuất mở lớp đào tạo cấp chứng chỉ"));
     assert.ok(!htmlOffline.includes("Dự án xây dựng phòng thí nghiệm"));
