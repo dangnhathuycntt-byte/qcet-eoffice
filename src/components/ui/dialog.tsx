@@ -19,7 +19,8 @@ export const DialogTrigger = BaseDialog.Trigger;
 
 export interface StandardDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  /** `eventDetails.reason` (Base UI): "outside-press", "escape-key", "close-press"… */
+  onOpenChange: (open: boolean, eventDetails?: { reason?: string }) => void;
   title: string;
   description?: string;
   children: React.ReactNode;

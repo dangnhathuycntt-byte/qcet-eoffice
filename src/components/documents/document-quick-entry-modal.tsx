@@ -4,17 +4,9 @@ import * as React from "react";
 import { StandardDialog } from "@/components/ui/dialog";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import { Select } from "@/components/ui/select";
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  FileText,
-  Clock,
-  AlertCircle,
-  CheckCircle2,
-  UploadCloud,
-  File,
-  Send,
-} from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, FileText, AlertCircle, CheckCircle2, Paperclip, X } from "lucide-react";
+import { Collapsible } from "@base-ui/react/collapsible";
+import { attachFileToDocument } from "./workspace/document-edit";
 import type {
   DocumentType,
   DocumentUrgency,
@@ -42,6 +34,8 @@ export interface DocumentQuickEntryModalProps {
   onClose: () => void;
   onSuccess?: (newDoc: DocumentItem) => void;
   defaultType?: DocumentType;
+  /** Mở từ một sổ cụ thể (đến / đi / tờ trình): ẩn bộ chọn loại, loại đã rõ theo trang. */
+  lockType?: boolean;
   departments?: Array<{ id: string; name: string; shortName?: string; code?: string }>;
 }
 
@@ -80,6 +74,7 @@ export function DocumentQuickEntryModal({
   onClose,
   onSuccess,
   defaultType = "VAN_BAN_DEN",
+  lockType = false,
   departments: propDepartments = [],
 }: DocumentQuickEntryModalProps) {
   const { user } = useAuth();
@@ -102,7 +97,7 @@ export function DocumentQuickEntryModal({
   const [summary, setSummary] = React.useState<string>("");
   const [urgency, setUrgency] = React.useState<DocumentUrgency>("THUONG");
   const [securityLevel, setSecurityLevel] = React.useState<DocumentSecurityLevel>("THUONG");
-  const [leadUnitId, setLeadUnitId] = React.useState<string>(departmentList[0]?.id || "");
+  const [leadUnitId, setLeadUnitId] = React.useState<string>("");
   const [dueDate, setDueDate] = React.useState<string>("");
 
   // Outgoing specific
@@ -110,12 +105,10 @@ export function DocumentQuickEntryModal({
   const [signerTitle, setSignerTitle] = React.useState<string>("Hiệu trưởng");
   const [recipientList, setRecipientList] = React.useState<string>("");
 
-  // Attachment mock state
-  const [attachmentFile, setAttachmentFile] = React.useState<{
-    name: string;
-    size: number;
-    url: string;
-  } | null>(null);
+  const [attachmentFile, setAttachmentFile] = React.useState<File | null>(null);
+  // Văn bản đã vào sổ nhưng tệp chưa đính kèm được: modal giữ lại để báo, nút chính thành "Đóng"
+  const [savedWithoutFile, setSavedWithoutFile] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -150,11 +143,11 @@ export function DocumentQuickEntryModal({
     onConfirmClose: onClose,
   });
 
-  // Chọn sẵn đơn vị đầu tiên; đổi sang đơn vị hợp lệ khi giá trị hiện tại không có trong danh sách
-  // (danh sách dự phòng lúc đang tải dùng id khác danh sách thật, nếu giữ nguyên ô sẽ hiện mã thô).
+  // Không chọn sẵn đơn vị chủ trì (quyết định nghiệp vụ). Giá trị không còn trong danh sách thật
+  // (danh sách dự phòng lúc đang tải dùng id khác) thì đưa về "Chưa phân công", tránh hiện mã thô.
   React.useEffect(() => {
-    if (isOpen && departmentList.length > 0 && !departmentList.some((d) => d.id === leadUnitId)) {
-      setLeadUnitId(departmentList[0].id);
+    if (isOpen && leadUnitId && departmentList.length > 0 && !departmentList.some((d) => d.id === leadUnitId)) {
+      setLeadUnitId("");
     }
   }, [isOpen, departmentList, leadUnitId]);
 
@@ -166,6 +159,7 @@ export function DocumentQuickEntryModal({
       setSuccessMessage(null);
       setFieldErrors({});
       setDuplicate(null);
+      setSavedWithoutFile(false);
       const timer = setTimeout(() => {
         firstInputRef.current?.focus();
       }, 50);
@@ -180,20 +174,18 @@ export function DocumentQuickEntryModal({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      setAttachmentFile({
-        name: file.name,
-        size: file.size,
-        url: URL.createObjectURL(file),
-      });
-    }
+    const file = e.target.files?.[0];
+    if (file) setAttachmentFile(file);
+    e.target.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+    if (savedWithoutFile) {
+      onClose();
+      return;
+    }
 
     // Kiểm tra theo đúng thứ tự cũ; báo lỗi cạnh từng trường và đưa focus về trường đầu tiên còn thiếu
     const errors: QuickEntryFieldErrors = {};
@@ -253,7 +245,21 @@ export function DocumentQuickEntryModal({
       }
 
       const data = await res.json();
-      setSuccessMessage("Đã vào sổ văn bản thành công!");
+
+      // Tệp đính kèm (nếu có) được lưu cùng văn bản vừa tạo
+      if (attachmentFile && data.document?.id) {
+        try {
+          await attachFileToDocument(data.document.id, attachmentFile);
+        } catch (err) {
+          onSuccess?.(data.document);
+          setSavedWithoutFile(true);
+          setErrorMessage(
+            `Văn bản đã được lưu nhưng chưa đính kèm được tệp: ${err instanceof Error ? err.message : "lỗi không xác định"}. Mở văn bản và dùng "Thêm tệp".`
+          );
+          return;
+        }
+      }
+      setSuccessMessage("Đã lưu văn bản.");
 
       setTimeout(() => {
         if (onSuccess && data.document) {
@@ -268,88 +274,75 @@ export function DocumentQuickEntryModal({
     }
   };
 
-  const selectedUrgencyObj = URGENCY_CHOICES.find((u) => u.value === urgency);
-  const selectedDeptObj = departmentList.find((d) => d.id === leadUnitId);
+  const TYPE_TITLE: Record<string, string> = {
+    VAN_BAN_DEN: "Vào sổ văn bản đến",
+    VAN_BAN_DI: "Tạo văn bản đi",
+    TO_TRINH_NOI_BO: "Tạo tờ trình nội bộ",
+  };
+  const SUBMIT_LABEL: Record<string, string> = {
+    VAN_BAN_DEN: "Vào sổ",
+    VAN_BAN_DI: "Tạo văn bản",
+    TO_TRINH_NOI_BO: "Tạo tờ trình",
+  };
+  const TYPE_CHOICES: { value: DocumentType; label: string; Icon: React.ComponentType<{ strokeWidth?: number }> }[] = [
+    { value: "VAN_BAN_DEN", label: "Văn bản đến", Icon: ArrowDownLeft },
+    { value: "VAN_BAN_DI", label: "Văn bản đi", Icon: ArrowUpRight },
+    { value: "TO_TRINH_NOI_BO", label: "Tờ trình nội bộ", Icon: FileText },
+  ];
+  const LABEL_CLASS = "text-xs font-medium text-foreground";
+  const OPTIONAL_HINT = <span className="ml-1.5 font-normal text-muted-foreground">(không bắt buộc)</span>;
+  const dateTriggerClass = "h-11 w-full rounded-md px-2 font-sans sm:h-7";
 
   return (
     <StandardDialog
       compact
       open={isOpen}
       onOpenChange={handleOpenChange}
-      title="Vào sổ văn bản cấp tốc (<60s)"
-      description="Chuẩn hóa quy trình đăng ký văn bản theo Nghị định 30/2020/NĐ-CP"
+      title={TYPE_TITLE[docType]}
       size="lg"
-      className="max-h-[90vh] flex flex-col overflow-hidden sm:max-w-2xl"
+      className="max-h-[90vh] flex flex-col overflow-hidden sm:max-w-xl"
     >
       <form onSubmit={handleSubmit} noValidate className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
-        {/* Modal Scrollable Body */}
         <div className="overflow-y-auto px-6 py-4 space-y-4 flex-1">
-          {/* Document Type Toggle */}
-          <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">
-              Loại sổ văn bản
-            </label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Button
-                type="button"
-                size="sm"
-                variant={docType === "VAN_BAN_DEN" ? "secondary" : "ghost"}
-                aria-pressed={docType === "VAN_BAN_DEN"}
-                onClick={() => setDocType("VAN_BAN_DEN")}
-                className={cn(docType === "VAN_BAN_DEN" ? "bg-selected text-foreground" : "text-muted-foreground")}
-              >
-                <ArrowDownLeft strokeWidth={1.5} />
-                <span>Văn bản đến</span>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={docType === "VAN_BAN_DI" ? "secondary" : "ghost"}
-                aria-pressed={docType === "VAN_BAN_DI"}
-                onClick={() => setDocType("VAN_BAN_DI")}
-                className={cn(docType === "VAN_BAN_DI" ? "bg-selected text-foreground" : "text-muted-foreground")}
-              >
-                <ArrowUpRight strokeWidth={1.5} />
-                <span>Văn bản đi</span>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={docType === "TO_TRINH_NOI_BO" ? "secondary" : "ghost"}
-                aria-pressed={docType === "TO_TRINH_NOI_BO"}
-                onClick={() => setDocType("TO_TRINH_NOI_BO")}
-                className={cn('col-span-2 sm:col-span-1', docType === "TO_TRINH_NOI_BO" ? "bg-selected text-foreground" : "text-muted-foreground")}
-              >
-                <FileText strokeWidth={1.5} />
-                <span>Tờ trình nội bộ</span>
-              </Button>
+          {/* Chỉ hiện khi mở từ "Tất cả": mở từ sổ cụ thể thì loại đã rõ theo trang */}
+          {!lockType && (
+            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Loại văn bản">
+              {TYPE_CHOICES.map(({ value, label, Icon }) => (
+                <Button
+                  key={value}
+                  type="button"
+                  size="sm"
+                  variant={docType === value ? "secondary" : "ghost"}
+                  aria-pressed={docType === value}
+                  onClick={() => setDocType(value)}
+                  className={cn(docType === value ? "bg-selected text-foreground" : "text-muted-foreground")}
+                >
+                  <Icon strokeWidth={1.5} />
+                  <span>{label}</span>
+                </Button>
+              ))}
             </div>
-          </div>
+          )}
 
-          {/* Core Row 1: Original Number & Issued Date */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <FormField label="Số ký hiệu văn bản gốc" error={fieldErrors.originalNumber}>
-                <Input
-                  compact
-                  ref={firstInputRef}
-                  type="text"
-                  value={originalNumber}
-                  onChange={(e) => {
-                    setOriginalNumber(e.target.value);
-                    clearFieldError("originalNumber");
-                  }}
-                  placeholder="VD: 125/TCGDNN-VP hoặc 89/CĐKTCN-ĐT"
-                  className="mt-1.5 w-full"
-                  required
-                />
-              </FormField>
-            </div>
+            <FormField label="Số, ký hiệu" error={fieldErrors.originalNumber}>
+              <Input
+                compact
+                ref={firstInputRef}
+                type="text"
+                value={originalNumber}
+                onChange={(e) => {
+                  setOriginalNumber(e.target.value);
+                  clearFieldError("originalNumber");
+                }}
+                placeholder="VD: 125/TCGDNN-VP"
+                className="w-full"
+                required
+              />
+            </FormField>
 
-            <div>
-              <label htmlFor="qe-issued-date" className="block text-xs font-medium text-foreground mb-1.5">
-                Ngày ban hành <span className="text-destructive">*</span>
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="qe-issued-date" className={LABEL_CLASS}>Ngày ban hành</label>
               <VietnameseDatePicker
                 id="qe-issued-date"
                 clearable={false}
@@ -357,283 +350,230 @@ export function DocumentQuickEntryModal({
                 onChange={(val) => setIssuedDate(val)}
                 required
                 variant="input"
-                triggerClassName="h-11 sm:h-7 rounded-md px-2"
+                triggerClassName={dateTriggerClass}
                 className="w-full"
               />
             </div>
           </div>
 
-          {/* Issuing Authority with Quick Presets */}
           <div>
-            <FormField label="Cơ quan ban hành" error={fieldErrors.issuingAuthority} className="gap-1.5">
-              <Input
-                compact
-                ref={issuingAuthorityRef}
-                type="text"
-                value={issuingAuthority}
-                onChange={(e) => {
-                  setIssuingAuthority(e.target.value);
-                  clearFieldError("issuingAuthority");
-                }}
-                placeholder="Nhập hoặc chọn cơ quan ban hành..."
-                list="common-authorities-list"
-                required
-              />
-            </FormField>
-                        <datalist id="common-authorities-list">
-              {COMMON_AUTHORITIES.map((auth) => (
-                <option key={auth} value={auth} />
-              ))}
-            </datalist>
-
-            {/* Quick chips */}
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {COMMON_AUTHORITIES.slice(0, 3).map((auth) => (
-                <button
-                  key={auth}
-                  type="button"
-                  onClick={() => setIssuingAuthority(auth)}
-                  className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
-                >
-                  {auth}
-                </button>
-              ))}
-            </div>
+            {docType === "TO_TRINH_NOI_BO" ? (
+              <div className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>Đơn vị đề xuất</span>
+                <Select
+                  compact
+                  positionerClassName="z-50"
+                  aria-label="Đơn vị đề xuất"
+                  placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị…" : "Chọn đơn vị đề xuất"}
+                  options={departmentList.map((d) => ({ value: d.name, label: d.name }))}
+                  value={issuingAuthority || null}
+                  onValueChange={(val) => {
+                    if (val) {
+                      setIssuingAuthority(val);
+                      clearFieldError("issuingAuthority");
+                    }
+                  }}
+                  disabled={isDepartmentsLoading}
+                />
+                {fieldErrors.issuingAuthority ? <p role="alert" className="text-xs text-destructive">{fieldErrors.issuingAuthority}</p> : null}
+              </div>
+            ) : (
+              <>
+                <FormField label="Cơ quan ban hành" error={fieldErrors.issuingAuthority}>
+                  <Input
+                    compact
+                    ref={issuingAuthorityRef}
+                    type="text"
+                    value={issuingAuthority}
+                    onChange={(e) => {
+                      setIssuingAuthority(e.target.value);
+                      clearFieldError("issuingAuthority");
+                    }}
+                    placeholder="Nhập hoặc chọn cơ quan ban hành"
+                    list="common-authorities-list"
+                    required
+                  />
+                </FormField>
+                <datalist id="common-authorities-list">
+                  {COMMON_AUTHORITIES.map((auth) => (
+                    <option key={auth} value={auth} />
+                  ))}
+                </datalist>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {COMMON_AUTHORITIES.slice(0, 3).map((auth) => (
+                    <button
+                      key={auth}
+                      type="button"
+                      onClick={() => setIssuingAuthority(auth)}
+                      className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      {auth}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Category & Urgency */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                Loại văn bản (Thể loại)
-              </label>
+          <FormField label="Trích yếu nội dung" error={fieldErrors.summary}>
+            <Textarea
+              compact
+              ref={summaryRef}
+              rows={2}
+              value={summary}
+              onChange={(e) => {
+                setSummary(e.target.value);
+                clearFieldError("summary");
+              }}
+              placeholder="VD: Về việc hướng dẫn kiểm định chất lượng chương trình đào tạo nghề"
+              required
+            />
+          </FormField>
+
+          {/* Đơn vị chủ trì chỉ áp dụng cho văn bản đến (API chỉ nhận ở loại này); không chọn sẵn */}
+          {docType === "VAN_BAN_DEN" && (
+            <div className="flex flex-col gap-1.5">
+              <span className={LABEL_CLASS}>Đơn vị chủ trì xử lý{OPTIONAL_HINT}</span>
               <Select
                 compact
                 positionerClassName="z-50"
-                aria-label="Loại văn bản"
-                placeholder="Chọn thể loại"
-                options={COMMON_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
-                value={category || null}
-                onValueChange={(val) => {
-                  if (val) setCategory(val);
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                Mức độ khẩn
-              </label>
-              <Select
-                compact
-                positionerClassName="z-50"
-                aria-label="Mức độ khẩn"
-                options={URGENCY_CHOICES.map((opt) => ({ value: opt.value, label: opt.label }))}
-                value={urgency}
-                onValueChange={(val) => {
-                  if (val) setUrgency(val as DocumentUrgency);
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Summary Input */}
-          <div>
-            <FormField label="Trích yếu nội dung" error={fieldErrors.summary}>
-              <Textarea
-                compact
-                ref={summaryRef}
-                rows={2}
-                value={summary}
-                onChange={(e) => {
-                  setSummary(e.target.value);
-                  clearFieldError("summary");
-                }}
-                placeholder="VD: Về việc hướng dẫn kiểm định chất lượng chương trình đào tạo nghề..."
-                className="mt-1.5"
-                required
-              />
-            </FormField>
-          </div>
-
-          {/* Department & Due Date */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                {docType === "VAN_BAN_DI" ? "Đơn vị soạn thảo" : "Đơn vị xử lý / chủ trì"}
-              </label>
-              <Select
-                compact
-                positionerClassName="z-50"
-                aria-label="Đơn vị xử lý / chủ trì"
-                placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị..." : "— Chọn đơn vị —"}
-                options={[{ value: "", label: "— Chọn đơn vị —" }, ...departmentList.map((dept) => ({ value: dept.id, label: dept.name }))]}
+                aria-label="Đơn vị chủ trì xử lý"
+                placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị…" : "Chưa phân công"}
+                options={[{ value: "", label: "Chưa phân công" }, ...departmentList.map((dept) => ({ value: dept.id, label: dept.name }))]}
                 value={leadUnitId}
                 onValueChange={(val) => setLeadUnitId(val || "")}
                 disabled={isDepartmentsLoading}
               />
-              {isDepartmentsLoading && (
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 animate-pulse">
-                  <span className="size-1.5 rounded-full bg-muted-foreground/40 animate-ping" />
-                  <span>Đang tải danh sách đơn vị từ hệ thống...</span>
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                Hạn giải quyết (nếu có)
-              </label>
-              <VietnameseDatePicker
-                value={dueDate}
-                onChange={(val) => setDueDate(val)}
-                variant="input"
-                triggerClassName="h-11 sm:h-7 rounded-md px-2"
-                className="w-full"
-              />
-              {/* Quick Due Date buttons */}
-              <div className="mt-1 flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleAddDaysToDueDate(3)}
-                  className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  +3d
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddDaysToDueDate(5)}
-                  className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  +5d
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddDaysToDueDate(7)}
-                  className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80 cursor-pointer"
-                >
-                  +7d
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Outgoing specific fields */}
-          {docType === "VAN_BAN_DI" && (
-            <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:grid-cols-3">
-              <div>
-                <label className="block text-xs font-medium text-foreground">
-                  Người ký
-                </label>
-                <Input compact
-                  type="text"
-                  value={signerName}
-                  onChange={(e) => setSignerName(e.target.value)}
-                  placeholder="TS. Lê Doãn Cường"
-                  className="mt-1 w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-foreground">
-                  Chức vụ người ký
-                </label>
-                <Input compact
-                  type="text"
-                  value={signerTitle}
-                  onChange={(e) => setSignerTitle(e.target.value)}
-                  placeholder="Hiệu trưởng"
-                  className="mt-1 w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-foreground">
-                  Nơi nhận
-                </label>
-                <Input compact
-                  type="text"
-                  value={recipientList}
-                  onChange={(e) => setRecipientList(e.target.value)}
-                  placeholder="Tổng cục GDNN; UBND Tỉnh..."
-                  className="mt-1 w-full"
-                />
-              </div>
             </div>
           )}
 
-          {/* Attachment Scan File Dropzone */}
-          <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">
-              Tệp quét PDF đính kèm (Scan có dấu đỏ)
-            </label>
-            <div className="relative rounded-lg border border-dashed border-border p-3 text-center hover:border-primary/60 transition-colors">
-              <input
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={handleFileChange}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                aria-label="Tải lên tệp PDF"
-              />
-              {attachmentFile ? (
-                <div className="flex items-center justify-center gap-2 text-xs text-foreground">
-                  <File className="h-5 w-5" strokeWidth={1.5} />
-                  <span className="font-medium">{attachmentFile.name}</span>
-                  <span className="text-muted-foreground">
-                    ({(attachmentFile.size / 1024).toFixed(0)} KB)
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground">
-                  <UploadCloud className="size-5 text-muted-foreground" strokeWidth={1.5} />
-                  <span className="text-xs font-medium">
-                    Bấm để chọn tệp PDF quét
-                  </span>
-                  <span className="text-xs text-muted-foreground">Chỉ nhận tệp PDF</span>
-                </div>
-              )}
-            </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">Tệp đã chọn chỉ dùng để xem trước, chưa được lưu cùng văn bản.</p>
+          {/* Tệp đính kèm lưu cùng văn bản sau khi tạo */}
+          <div className="flex flex-wrap items-center gap-2">
+            <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,application/pdf" onChange={handleFileChange} className="sr-only" aria-label="Chọn tệp đính kèm" tabIndex={-1} />
+            {attachmentFile ? (
+              <span className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md bg-secondary pl-2 pr-1 text-xs text-foreground">
+                <Paperclip className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                <span className="min-w-0 truncate" title={attachmentFile.name}>{attachmentFile.name}</span>
+                <span className="shrink-0 text-muted-foreground">{Math.max(1, Math.round(attachmentFile.size / 1024))} KB</span>
+                <button
+                  type="button"
+                  aria-label="Bỏ tệp đính kèm"
+                  onClick={() => setAttachmentFile(null)}
+                  className="inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <X className="size-3" strokeWidth={1.5} />
+                </button>
+              </span>
+            ) : (
+              <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip strokeWidth={1.5} />
+                Đính kèm tệp
+              </Button>
+            )}
+            {!attachmentFile ? <span className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB</span> : null}
           </div>
 
-          {/* Feedback messages */}
-          {duplicateAcknowledged && duplicate && (
-            <InlineAlert variant="warning">{duplicate.message}</InlineAlert>
-          )}
+          {/* Thông tin ít dùng: thu gọn mặc định để modal gọn, không phải cuộn */}
+          <Collapsible.Root className="group/more">
+            <Collapsible.Trigger className="-ml-2 flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+              <ChevronRight className="size-3.5 transition-transform group-data-[open]/more:rotate-90" strokeWidth={1.5} aria-hidden />
+              Thêm thông tin
+            </Collapsible.Trigger>
+            <Collapsible.Panel className="space-y-4 pt-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <span className={LABEL_CLASS}>Thể loại{OPTIONAL_HINT}</span>
+                  <Select
+                    compact
+                    positionerClassName="z-50"
+                    aria-label="Thể loại"
+                    placeholder="Chọn thể loại"
+                    options={COMMON_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+                    value={category || null}
+                    onValueChange={(val) => {
+                      if (val) setCategory(val);
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className={LABEL_CLASS}>Mức khẩn{OPTIONAL_HINT}</span>
+                  <Select
+                    compact
+                    positionerClassName="z-50"
+                    aria-label="Mức khẩn"
+                    options={URGENCY_CHOICES.map((opt) => ({ value: opt.value, label: opt.label }))}
+                    value={urgency}
+                    onValueChange={(val) => {
+                      if (val) setUrgency(val as DocumentUrgency);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>Hạn giải quyết{OPTIONAL_HINT}</span>
+                <VietnameseDatePicker
+                  value={dueDate}
+                  onChange={(val) => setDueDate(val)}
+                  variant="input"
+                  triggerClassName={dateTriggerClass}
+                  className="w-full"
+                />
+                <div className="flex gap-1">
+                  {[3, 5, 7].map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      onClick={() => handleAddDaysToDueDate(days)}
+                      className="cursor-pointer rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80"
+                    >
+                      +{days} ngày
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {docType === "VAN_BAN_DI" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField label="Người ký" optional>
+                    <Input compact type="text" value={signerName} onChange={(e) => setSignerName(e.target.value)} placeholder="Họ tên người ký" />
+                  </FormField>
+                  <FormField label="Chức vụ người ký" optional>
+                    <Input compact type="text" value={signerTitle} onChange={(e) => setSignerTitle(e.target.value)} placeholder="Hiệu trưởng" />
+                  </FormField>
+                  <FormField label="Nơi nhận" optional className="sm:col-span-2">
+                    <Input compact type="text" value={recipientList} onChange={(e) => setRecipientList(e.target.value)} placeholder="Ngăn cách bằng dấu chấm phẩy" />
+                  </FormField>
+                </div>
+              )}
+            </Collapsible.Panel>
+          </Collapsible.Root>
+
+          {duplicateAcknowledged && duplicate && <InlineAlert variant="warning">{duplicate.message}</InlineAlert>}
 
           {errorMessage && (
-            <div role="alert" className="flex items-center gap-2 rounded-lg bg-danger-soft border border-destructive/20 p-3 text-xs text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            <div role="alert" className="flex items-start gap-2 rounded-lg bg-danger-soft p-3 text-xs text-destructive">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div role="status" className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-700">
-              <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            <div role="status" className="flex items-center gap-2 rounded-lg bg-secondary p-3 text-xs text-foreground">
+              <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
               <span>{successMessage}</span>
             </div>
           )}
         </div>
 
-        {/* Modal Action Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-3 bg-muted/20">
-          <Button type="button" variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
-            Hủy
-          </Button>
-
+        <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-3">
+          {!savedWithoutFile && (
+            <Button type="button" variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
+              Hủy
+            </Button>
+          )}
           <Button type="submit" size="sm" disabled={isSubmitting} aria-busy={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Clock strokeWidth={1.5} />
-                <span>Đang lưu văn bản...</span>
-              </>
-            ) : (
-              <>
-                <Send strokeWidth={1.5} />
-                <span>Đăng ký vào sổ</span>
-              </>
-            )}
+            {savedWithoutFile ? "Đóng" : isSubmitting ? "Đang lưu…" : SUBMIT_LABEL[docType]}
           </Button>
         </div>
       </form>

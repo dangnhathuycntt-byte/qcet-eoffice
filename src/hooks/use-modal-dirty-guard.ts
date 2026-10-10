@@ -10,23 +10,28 @@ export interface UseModalDirtyGuardOptions {
 }
 
 /**
- * Điểm đóng modal dùng chung. Không còn hộp thoại xác nhận của trình duyệt (`window.confirm`):
- * đóng modal là đóng ngay. Giữ nguyên chữ ký hook để các modal gọi như cũ.
+ * Điểm đóng modal dùng chung. Không dùng hộp thoại xác nhận của trình duyệt (`window.confirm`):
+ * nút Hủy, nút × và phím Esc đóng ngay; riêng khi form đã có dữ liệu thì bấm ra ngoài lớp nền
+ * không đóng modal, tránh mất dữ liệu vì một cú bấm nhầm.
  */
 export function useModalDirtyGuard(
   optionsOrDirty: boolean | UseModalDirtyGuardOptions,
   onConfirmCloseCallback?: () => void
 ) {
   const isOptionsObject = typeof optionsOrDirty === "object" && optionsOrDirty !== null;
+  const isDirty = isOptionsObject ? optionsOrDirty.isDirty : Boolean(optionsOrDirty);
   const onConfirmClose = isOptionsObject
     ? (optionsOrDirty.onConfirmClose ?? optionsOrDirty.onClose ?? (() => {}))
     : (onConfirmCloseCallback ?? (() => {}));
 
   const handleOpenChange = React.useCallback(
-    (open: boolean) => {
-      if (!open) onConfirmClose();
+    (open: boolean, eventDetails?: { reason?: string }) => {
+      if (!open) {
+        if (isDirty && eventDetails?.reason === "outside-press") return;
+        onConfirmClose();
+      }
     },
-    [onConfirmClose]
+    [isDirty, onConfirmClose]
   );
 
   return { handleOpenChange };

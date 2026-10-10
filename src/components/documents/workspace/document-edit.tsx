@@ -176,6 +176,27 @@ export function DocumentEditDialog({
   );
 }
 
+/** Tải một tệp lên rồi gắn vào văn bản. Ném lỗi có thông điệp tiếng Việt khi thất bại. */
+export async function attachFileToDocument(documentId: string, file: File): Promise<void> {
+  if (file.size > MAX_UPLOAD_BYTES) throw new Error(`"${file.name}" vượt quá 10MB.`);
+  const form = new FormData();
+  form.append("file", file);
+  const uploaded = await fetch("/api/upload", { method: "POST", body: form, credentials: "include" });
+  const uploadedJson = await uploaded.json().catch(() => null);
+  if (!uploaded.ok) throw new Error(errorMessageOf(uploadedJson) ?? `Không tải lên được "${file.name}".`);
+  const fileId = (uploadedJson as { fileId?: string } | null)?.fileId;
+  if (!fileId) throw new Error(`Không tải lên được "${file.name}".`);
+  const attached = await fetch(`/api/documents/${documentId}/attachments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ fileId }),
+  });
+  if (!attached.ok) {
+    throw new Error(errorMessageOf(await attached.json().catch(() => null)) ?? `Không gắn được "${file.name}" vào văn bản.`);
+  }
+}
+
 /**
  * Bổ sung tệp: tải lên `POST /api/upload` rồi gắn vào văn bản qua `POST /api/documents/[id]/attachments`.
  * Trả về ô chọn tệp ẩn (phải được dựng), hàm mở hộp chọn tệp và trạng thái; dùng cho nút và mục menu.
@@ -191,23 +212,7 @@ export function useAddDocumentFiles(documentId: string, onAdded?: () => void) {
     let added = 0;
     try {
       for (const file of files) {
-        if (file.size > MAX_UPLOAD_BYTES) throw new Error(`"${file.name}" vượt quá 10MB.`);
-        const form = new FormData();
-        form.append("file", file);
-        const uploaded = await fetch("/api/upload", { method: "POST", body: form, credentials: "include" });
-        const uploadedJson = await uploaded.json().catch(() => null);
-        if (!uploaded.ok) throw new Error(errorMessageOf(uploadedJson) ?? `Không tải lên được "${file.name}".`);
-        const fileId = (uploadedJson as { fileId?: string } | null)?.fileId;
-        if (!fileId) throw new Error(`Không tải lên được "${file.name}".`);
-        const attached = await fetch(`/api/documents/${documentId}/attachments`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ fileId }),
-        });
-        if (!attached.ok) {
-          throw new Error(errorMessageOf(await attached.json().catch(() => null)) ?? `Không gắn được "${file.name}" vào văn bản.`);
-        }
+        await attachFileToDocument(documentId, file);
         added += 1;
       }
     } catch (e) {
