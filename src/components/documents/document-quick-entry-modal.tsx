@@ -150,9 +150,10 @@ export function DocumentQuickEntryModal({
     onConfirmClose: onClose,
   });
 
-  // Auto-select initial department when list becomes available
+  // Chọn sẵn đơn vị đầu tiên; đổi sang đơn vị hợp lệ khi giá trị hiện tại không có trong danh sách
+  // (danh sách dự phòng lúc đang tải dùng id khác danh sách thật, nếu giữ nguyên ô sẽ hiện mã thô).
   React.useEffect(() => {
-    if (isOpen && departmentList.length > 0 && !leadUnitId) {
+    if (isOpen && departmentList.length > 0 && !departmentList.some((d) => d.id === leadUnitId)) {
       setLeadUnitId(departmentList[0].id);
     }
   }, [isOpen, departmentList, leadUnitId]);
