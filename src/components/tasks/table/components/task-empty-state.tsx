@@ -185,7 +185,22 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
     }
   }
 
+  // Chưa có gì và được phép tạo việc: mũi tên chỉ lên nút "Tạo việc" ở thanh công cụ (chỉ từ md trở lên, nơi nút ở góc phải).
+  const pointsToCreate = !hasFilterActive && canAddTask && Boolean(onAddTask);
+
   return (
+    <div className="relative w-full">
+    {pointsToCreate ? (
+      <span
+        data-slot="empty-state-arrow"
+        aria-hidden="true"
+        className="pointer-events-none absolute right-10 top-0 hidden h-[70px] w-20 bg-muted-foreground/40 md:block"
+        style={{
+          WebkitMask: "url(/design/empty-arrow.png) center / contain no-repeat",
+          mask: "url(/design/empty-arrow.png) center / contain no-repeat",
+        }}
+      />
+    ) : null}
     <div
       data-slot="workspace-empty-state"
       role="status"
@@ -233,6 +248,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
             type="button"
             onClick={onAddTask}
             className={cn(
+              pointsToCreate && "md:hidden",
               "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium cursor-pointer active:scale-[0.98] transition-colors",
               hasFilterActive && onResetFilters
                 ? "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -244,6 +260,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           </button>
         )}
       </div>
+    </div>
     </div>
   );
 });
