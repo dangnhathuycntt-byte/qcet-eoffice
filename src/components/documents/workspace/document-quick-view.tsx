@@ -253,7 +253,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
 
       {vm.files.length > 0 ? (
         <DocumentFileViewer
-          key={vm.id}
+          key={`files-${vm.id}`}
           files={vm.files}
           gutterClassName="px-4"
           stickyHeader

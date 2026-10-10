@@ -189,7 +189,7 @@ export function DocumentSummaryBlock({ vm, titleAs, variant = "full" }: { vm: Do
     return (
       <header className="space-y-2">
         {/* Đổi văn bản đưa tiêu đề về trạng thái thu gọn */}
-        <QuickTitle key={vm.id} title={vm.title} />
+        <QuickTitle key={`title-${vm.id}`} title={vm.title} />
         <QuickProperties vm={vm} />
       </header>
     );
@@ -268,7 +268,7 @@ export function DocumentInfoSections({
       <>
         {/* Nhiệm vụ liên kết là dòng cuối của lưới thuộc tính (cùng cột nhãn) */}
         <LinkedTaskCreateSection vm={vm} onLinked={onWorkflowUpdate} inline />
-        {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+        {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={`submission-approval-${vm.id}`} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
         {vm.kind === "outgoing" && item ? (
           <OutgoingActionPanel
             documentId={vm.id}
@@ -278,24 +278,24 @@ export function DocumentInfoSections({
             onActionSuccess={onWorkflowUpdate}
           />
         ) : null}
-        {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+        {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={`outgoing-recipients-${vm.id}`} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
 
         {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={`initial-sign-${vm.id}`} documentId={vm.id} /> : null}
         {/* Chỉ thao tác theo bước ở thân; sửa thông tin/bổ sung tệp nằm trong menu "Thao tác khác" của header */}
-        {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
+        {isIncoming && incomingStatus ? <IncomingSignatureStatus key={`incoming-signature-${vm.id}`} documentId={vm.id} /> : null}
 
         {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
         {isIncoming && incomingStatus ? (
           <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />
         ) : null}
-        <QuickInfoSection key={vm.id} vm={vm} item={item} outgoingStatus={outgoingStatus} />
+        <QuickInfoSection key={`quick-info-${vm.id}`} vm={vm} item={item} outgoingStatus={outgoingStatus} />
       </>
     );
   }
 
   return (
     <>
-      {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+      {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={`submission-approval-${vm.id}`} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
 
       {vm.kind === "outgoing" && item ? (
         <OutgoingActionPanel
@@ -307,11 +307,11 @@ export function DocumentInfoSections({
         />
       ) : null}
 
-      {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+      {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={`outgoing-recipients-${vm.id}`} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
 
       {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={`initial-sign-${vm.id}`} documentId={vm.id} /> : null}
 
-      {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
+      {isIncoming && incomingStatus ? <IncomingSignatureStatus key={`incoming-signature-${vm.id}`} documentId={vm.id} /> : null}
 
       {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
 
