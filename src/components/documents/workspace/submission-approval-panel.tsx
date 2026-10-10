@@ -62,10 +62,13 @@ export function SubmissionApprovalPanel({
   documentId,
   onChanged,
   className,
+  row,
 }: {
   documentId: string;
   onChanged?: () => void;
   className?: string;
+  /** Quick View: nhãn "Phê duyệt" ở cột nhãn 112px, nội dung thẳng cột giá trị như lưới thuộc tính phía trên. */
+  row?: boolean;
 }) {
   const [state, setState] = React.useState<State | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -136,19 +139,37 @@ export function SubmissionApprovalPanel({
   }
 
   const round = state.workflow?.round ?? 0;
-  const current = state.steps.filter((s) => s.round === round);
+  // Nháp (kể cả sau khi rút lại): các bước của lần trình cũ đã bị bỏ qua, không hiện lại như đang chạy
+  const current = state.workflow?.status === "DRAFT" ? [] : state.steps.filter((s) => s.round === round);
   const statusLabel = state.workflow ? WORKFLOW_STATUS_LABEL[state.workflow.status] : "Nháp";
   const mustNote = decision !== null && decision !== "APPROVE";
 
   return (
-    <section aria-label="Luồng duyệt tờ trình" className={cn("space-y-1.5", className)}>
-      <div className="flex items-center gap-2">
-        <h3 className="text-xs font-medium text-muted-foreground">Duyệt tờ trình</h3>
-        <span className="text-xs text-foreground">
-          · {statusLabel}
-          {round > 1 ? ` · lần trình ${round}` : ""}
-        </span>
-      </div>
+    <section
+      aria-label="Luồng duyệt tờ trình"
+      className={cn(row ? "grid grid-cols-[112px_minmax(0,1fr)] gap-x-2 gap-y-1.5 [&>:not(:first-child)]:col-start-2" : "space-y-1.5", className)}
+    >
+      {row ? (
+        <>
+          <h3 className="flex h-6 items-center whitespace-nowrap text-xs font-normal text-muted-foreground">Phê duyệt</h3>
+          <p className="flex min-h-6 min-w-0 flex-wrap items-center gap-x-1.5 text-compact text-foreground">
+            {statusLabel}
+            {round > 1 ? <span className="text-xs text-muted-foreground">lần trình {round}</span> : null}
+            {/* Nháp: nói trước đường đi để người trình biết nút "Trình duyệt" sẽ gửi tới ai */}
+            {current.length === 0 && state.canSubmit ? (
+              <span className="text-xs text-muted-foreground">· Trưởng đơn vị → Lãnh đạo</span>
+            ) : null}
+          </p>
+        </>
+      ) : (
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-medium text-muted-foreground">Duyệt tờ trình</h3>
+          <span className="text-xs text-foreground">
+            · {statusLabel}
+            {round > 1 ? ` · lần trình ${round}` : ""}
+          </span>
+        </div>
+      )}
 
       {current.length > 0 && (
         <ul className="max-w-md">
@@ -196,9 +217,9 @@ export function SubmissionApprovalPanel({
       )}
 
       {mode === "idle" && (
-        <div className={cn("flex flex-wrap gap-1.5", !state.canSubmit && "-ml-2")}>
+        <div className={cn("flex flex-wrap gap-1.5", !state.canSubmit && "-ml-2.5")}>
           {state.canSubmit && (
-            <Button type="button" size="sm" onClick={() => setMode("submit")}>
+            <Button type="button" size="sm" variant="outline" onClick={() => setMode("submit")}>
               {state.workflow?.status === "NEEDS_REVISION" ? "Trình lại" : "Trình duyệt"}
             </Button>
           )}

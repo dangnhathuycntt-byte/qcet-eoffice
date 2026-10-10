@@ -13,7 +13,6 @@ import { PANE_DEFAULT, PANE_MAX, PANE_MIN, nextWidthForKey, parseStoredPaneWidth
 import { DocumentLedgerToolbar, DocumentActiveFilters, DocumentLedgerTable, DocumentCardList, DocumentBulkToolbar, DEFAULT_LEDGER_COLUMNS, getLedgerEmptyCopy, type LedgerColumnVisibility } from "./registry";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { DocumentQuickView } from "./workspace/document-quick-view";
-import { CreateDocumentModal } from "./create-document-modal";
 import { DocumentQuickEntryModal } from "./document-quick-entry-modal";
 import { DigitalSignatureDialog } from "./digital-signature-dialog";
 import { TaskPaginationBar } from "@/components/tasks/table/components/task-pagination-bar";
@@ -113,7 +112,6 @@ export function DocumentRegistryView() {
 
 
   // Modals & Dialogs
-  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [isQuickEntryOpen, setIsQuickEntryOpen] = React.useState(false);
   const [signatureDoc, setSignatureDoc] = React.useState<OfficialDocument | null>(null);
   const [isSignatureOpen, setIsSignatureOpen] = React.useState(false);
@@ -352,7 +350,7 @@ export function DocumentRegistryView() {
     ? { label: "Soạn văn bản đi", run: () => router.push("/documents/outgoing/compose") }
     : filters.type === "inbox"
     ? { label: "Vào sổ văn bản đến", run: () => setIsQuickEntryOpen(true) }
-    : { label: filters.type === "submission" ? "Soạn tờ trình" : "Soạn văn bản", run: () => setIsCreateOpen(true) };
+    : { label: filters.type === "submission" ? "Soạn tờ trình" : "Soạn văn bản", run: () => setIsQuickEntryOpen(true) };
 
   const leadUnitName = filters.leadUnitId
     ? departments.find((d) => d.id === filters.leadUnitId)?.name ?? (isDepartmentsLoading ? "Đang tải…" : "Không rõ đơn vị")
@@ -520,15 +518,11 @@ export function DocumentRegistryView() {
         onSuccess={() => { setSelectedIds(new Set()); fetchDocuments(); }}
       />
 
-      <CreateDocumentModal
-        isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)}
-        onSubmit={async (newDoc) => { pane.open(newDoc.id); fetchDocuments(); }}
-      />
-
       <DocumentQuickEntryModal
         isOpen={isQuickEntryOpen} onClose={() => setIsQuickEntryOpen(false)}
-        onSuccess={(_newDoc) => { setIsQuickEntryOpen(false); fetchDocuments(); }}
+        onSuccess={(newDoc) => { setIsQuickEntryOpen(false); fetchDocuments(); if (newDoc?.id) pane.open(newDoc.id); }}
         defaultType={filters.type === "outbox" ? "VAN_BAN_DI" : filters.type === "submission" ? "TO_TRINH_NOI_BO" : "VAN_BAN_DEN"}
+        lockType={filters.type !== "all"}
       />
 
       <DigitalSignatureDialog

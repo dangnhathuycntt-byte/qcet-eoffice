@@ -109,7 +109,8 @@ function QuickProperties({ vm }: { vm: DocumentViewModel }) {
   const issued = vm.detailRows.find((row) => row.label === "Ngày ban hành")?.value;
   const cells: [string, React.ReactNode][] = [
     [
-      "Trạng thái",
+      // Tờ trình: trạng thái là hàng "Phê duyệt" bên dưới, không lặp bằng nhãn bước của văn bản
+      vm.kind === "submission" ? "" : "Trạng thái",
       <span key="status" className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5">
         <TaskStatusCircle status={STEP_STATUS[vm.step.kind]} />
         {vm.step.label}
@@ -117,6 +118,12 @@ function QuickProperties({ vm }: { vm: DocumentViewModel }) {
           <span className={cn("text-xs font-medium", vm.urgency.tone === "danger" ? "text-destructive" : "text-warning")}>{vm.urgency.label}</span>
         ) : null}
       </span>,
+    ],
+    [
+      "Mức khẩn",
+      vm.kind === "submission" && vm.urgency ? (
+        <span key="urgency" className={cn("font-medium", vm.urgency.tone === "danger" ? "text-destructive" : "text-warning")}>{vm.urgency.label}</span>
+      ) : null,
     ],
     ["Hạn xử lý", vm.dueDate ? <DueValue key="due" vm={vm} /> : null],
     ["Số, ký hiệu", vm.documentNumber ? <span key="number" className="tabular-nums">{vm.documentNumber}</span> : null],
@@ -126,7 +133,7 @@ function QuickProperties({ vm }: { vm: DocumentViewModel }) {
   return (
     <div role="group" aria-label="Thuộc tính chính" className="grid grid-cols-1 gap-x-6 @[560px]/doc:grid-cols-2" data-slot="quick-properties">
       {cells
-        .filter(([, value]) => value !== null && value !== undefined && value !== "")
+        .filter(([label, value]) => label !== "" && value !== null && value !== undefined && value !== "")
         .map(([label, value]) => (
           <InspectorRow key={label} label={label} wide>
             {value}
@@ -268,7 +275,7 @@ export function DocumentInfoSections({
       <>
         {/* Nhiệm vụ liên kết là dòng cuối của lưới thuộc tính (cùng cột nhãn) */}
         <LinkedTaskCreateSection vm={vm} onLinked={onWorkflowUpdate} inline />
-        {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={`submission-approval-${vm.id}`} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+        {vm.kind === "submission" && item ? <SubmissionApprovalPanel key={`submission-approval-${vm.id}`} documentId={vm.id} onChanged={onWorkflowUpdate} row /> : null}
         {vm.kind === "outgoing" && item ? (
           <OutgoingActionPanel
             documentId={vm.id}
