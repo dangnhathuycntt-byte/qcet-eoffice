@@ -2336,9 +2336,13 @@ export function TaskBlockEditor({
     }
   }, [handleProcessDroppedFiles]);
 
+  // Cờ riêng cho "khung soạn đã xử lý lần thả này": không dựa vào defaultPrevented vì thư viện kéo thả của Plate
+  // cũng preventDefault ở window, làm tệp thả ngoài khung soạn bị bỏ qua.
+  const containerHandledDropRef = React.useRef(false);
   const handleContainerDrop = React.useCallback((e: React.DragEvent) => {
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
       e.preventDefault();
+      containerHandledDropRef.current = true;
       handleProcessDroppedFiles(e.dataTransfer.files, e.clientY);
     }
   }, [handleProcessDroppedFiles]);
@@ -2369,8 +2373,9 @@ export function TaskBlockEditor({
       }
     };
     const handleWindowDrop = (e: DragEvent) => {
-      if (e.defaultPrevented) {
-        // Already handled by container onDrop — avoid duplicate insert
+      if (containerHandledDropRef.current) {
+        // Khung soạn đã chèn tệp ở onDrop — tránh chèn trùng
+        containerHandledDropRef.current = false;
         resetGlobalDrag();
         return;
       }

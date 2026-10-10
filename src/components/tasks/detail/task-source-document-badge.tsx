@@ -47,20 +47,20 @@ export function TaskSourceDocumentBadge({
                 {...props}
                 href={docHref}
                 className={cn(
-                  "inline-flex items-center gap-1 max-w-full min-w-0 group",
-                  "text-xs font-medium text-primary/80 hover:text-primary",
-                  "rounded px-1.5 py-0.5 bg-primary/8 hover:bg-primary/12",
-                  "transition-colors ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  // Cùng kiểu giá trị các dòng thuộc tính khác: icon muted + chữ, không nền; chỉ gạch chân khi rê chuột
+                  "inline-flex items-center gap-1.5 max-w-full min-w-0 group rounded-md px-1.5 h-7",
+                  "text-xs font-normal text-foreground hover:underline underline-offset-2",
+                  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   className
                 )}
                 aria-label={`Mở văn bản gốc: ${sourceDocument.originalNumber}`}
               >
-                <FileText className="size-3 shrink-0" strokeWidth={1.5} />
+                <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                 <span className="truncate">
                   {sourceDocument.originalNumber || `#${sourceDocument.registrationNumber}`}
                 </span>
                 <ExternalLink
-                  className="size-2.5 shrink-0 opacity-50 group-hover:opacity-100"
+                  className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
                   strokeWidth={1.5}
                 />
               </a>
