@@ -17,7 +17,7 @@
  * người thực hiện. Người dùng tắt được nhắc trước hạn và nhắc người duyệt sau 2 ngày
  * (cài đặt push); báo trễ và các mốc 4 ngày thì không tắt được.
  */
-import { AssignmentStatus, ExtensionRequestStatus, TaskStatus, TaskUnitRequestStatus, type Prisma } from "@prisma/client";
+import { ApprovalProcessStatus, AssignmentStatus, ExtensionRequestStatus, TaskStatus, TaskUnitRequestStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
@@ -34,6 +34,7 @@ import {
 } from "@/domain/tasks/reminder-rules";
 import { deliverTaskNotice } from "@/server/outbox/task-notification-handlers";
 import { findActiveDecline } from "./task-decline-service";
+import { syncStepReviewerActors } from "./task-approval-process-service";
 import { reconcileBackupReviewer, revokeStaleBackupReviewers } from "./task-backup-reviewer-service";
 
 type Db = Prisma.TransactionClient | typeof prisma;
@@ -289,6 +290,21 @@ export async function scanTaskReminders(
       type: "escalation", pushEvent: "TASK_ESCALATION",
       note: `${req.targetUnit.name} chưa trả lời yêu cầu phối hợp, quá hạn ${days} ngày`,
     }, result);
+  }
+
+  // 6. Luồng duyệt nhiều bước (T-05): cấp quyền cho người dự phòng của bước đã chờ đủ 96 giờ và báo họ.
+  const running = await db.taskApprovalProcess.findMany({
+    where: { status: ApprovalProcessStatus.IN_REVIEW, task: { ...scope, archivedAt: null, status: TaskStatus.WAITING_APPROVAL } },
+    select: { taskId: true },
+  });
+  for (const { taskId } of running) {
+    const outcome = await syncStepReviewerActors(db, taskId, now);
+    if (outcome.backupActivated) {
+      await send(db, {
+        taskId, kind: "BACKUP_REVIEWER_ACTIVATED", dueKey: `step:${outcome.backupActivated.stepId}`, recipientIds: [outcome.backupActivated.userId], pref: null,
+        type: "escalation", pushEvent: "TASK_REVIEW_PENDING", note: "Bước duyệt đã chờ quá 96 giờ, bạn là người duyệt dự phòng",
+      }, result);
+    }
   }
 
   return result;

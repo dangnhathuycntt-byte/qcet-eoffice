@@ -554,7 +554,7 @@ function assertStepBackupEligible(task: TaskWithBackupFacts, candidateId: string
 }
 
 /** Bước bắt đầu chờ khi bước liền trước được quyết; bước đầu tiên chờ từ lúc lập luồng duyệt. */
-function stepWaitingSince(
+export function stepWaitingSince(
   step: Pick<TaskApprovalStep, "stepOrder">,
   steps: Array<Pick<TaskApprovalStep, "stepOrder" | "decidedAt">>,
   processCreatedAt: Date

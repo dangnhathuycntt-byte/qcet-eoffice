@@ -28,6 +28,7 @@ import { TaskDecline } from "@/components/tasks/detail/task-decline";
 import { TaskExtension } from "@/components/tasks/detail/task-extension";
 import { TaskPeople } from "@/components/tasks/detail/task-people";
 import { TaskBackupReviewer } from "@/components/tasks/detail/task-backup-reviewer";
+import { TaskApprovalProcess } from "@/components/tasks/detail/task-approval-process";
 import { TaskUnitRequests } from "@/components/tasks/detail/task-unit-requests";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
@@ -916,6 +917,7 @@ export function TaskDetailPage({
 
               <TaskPeople taskId={task.id} onVersionChange={(version) => setTask((prev) => ((prev as any).version === version ? prev : ({ ...prev, version } as any)))} />
 
+              <TaskApprovalProcess taskId={task.id} />
               <TaskBackupReviewer taskId={task.id} />
 
               <TaskUnitRequests taskId={task.id} />
