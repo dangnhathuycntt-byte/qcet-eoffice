@@ -301,15 +301,18 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       assert.deepEqual(conditions[2], { createdById: leadershipUser.id });
     });
 
-    test('AuthenticatedUser Staff returns unit and direct-participation filter', () => {
+    test('AuthenticatedUser Staff returns direct-participation and parent/child context filter (D07)', () => {
       const staffWithDept = { ...staffAUser, departmentId: deptAId };
       const filter = buildTaskReadWhere(staffWithDept);
       assert.ok(Array.isArray((filter as any).OR));
       const conditions = (filter as any).OR;
-      assert.equal(conditions.length, 3);
+      // D07: người thường không có điều kiện theo đơn vị; chỉ phần mình tham gia và việc cha, con của nó.
+      assert.equal(conditions.length, 4);
       assert.deepEqual(conditions[0], { actors: { some: { userId: staffAUser.id } } });
       assert.deepEqual(conditions[1], { createdById: staffAUser.id });
-      assert.deepEqual(conditions[2], { leadUnitId: deptAId, scope: { notIn: [TaskScope.INDIVIDUAL] } });
+      assert.deepEqual(conditions[2], { subTasks: { some: { archivedAt: null, actors: { some: { userId: staffAUser.id } } } } });
+      assert.deepEqual(conditions[3], { parentTask: { is: { actors: { some: { userId: staffAUser.id } } } } });
+      assert.equal(conditions.some((c: any) => 'leadUnitId' in c), false, 'nhân viên không đọc theo đơn vị');
     });
 
     test('AuthorizationContext System Admin returns deny filter (security restriction)', () => {
@@ -430,10 +433,10 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       const conditions = (filter as any).OR;
       assert.deepEqual(conditions[0], { actors: { some: { userId: staffAUser.id } } });
       assert.deepEqual(conditions[1], { createdById: staffAUser.id });
-      assert.deepEqual(conditions[2], { leadUnitId: deptAId, scope: { notIn: [TaskScope.INDIVIDUAL] } });
+      assert.equal(conditions.some((c: any) => 'leadUnitId' in c), false, 'quyền lãnh đạo hết hạn thì về phạm vi người thường, không đọc theo đơn vị');
     });
 
-    test('AuthorizationContext multi-unit manager builds in filter across assigned units', () => {
+    test('AuthorizationContext multi-unit user without leadership gets no unit clause (D07)', () => {
       const ctx = new AuthorizationContextModel({
         userId: staffAUser.id,
         user: { id: staffAUser.id, email: staffAUser.email, name: staffAUser.name, isActive: true },
@@ -449,7 +452,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       const filter = buildTaskReadWhere(ctx);
       assert.ok(Array.isArray((filter as any).OR));
       const conditions = (filter as any).OR;
-      assert.deepEqual(conditions[2], { leadUnitId: { in: [deptAId, deptBId] }, scope: { notIn: [TaskScope.INDIVIDUAL] } });
+      assert.equal(conditions.some((c: any) => 'leadUnitId' in c), false);
     });
   });
 

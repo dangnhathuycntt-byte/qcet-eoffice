@@ -794,14 +794,16 @@ export function buildTaskReadWhere(
     { createdById: userId },
   ];
 
-  if (unitIds.length === 1) {
+  // D07 (spec task-document-gap-spec.md): người thường chỉ thấy phần của mình; chỉ trưởng đơn vị thấy
+  // việc chung của đơn vị mình phụ trách. Người thường thêm ngữ cảnh cha, con của việc mình tham gia
+  // để không mồ côi (làm việc con thì thấy việc cha, làm việc cha thì thấy việc con).
+  authConditions.push(
+    { subTasks: { some: { archivedAt: null, actors: { some: { userId } } } } },
+    { parentTask: { is: { actors: { some: { userId } } } } }
+  );
+  if (leaderUnitIds.length > 0) {
     authConditions.push({
-      leadUnitId: unitIds[0],
-      scope: { notIn: [TaskScope.INDIVIDUAL] },
-    });
-  } else if (unitIds.length > 1) {
-    authConditions.push({
-      leadUnitId: { in: unitIds },
+      leadUnitId: leaderUnitIds.length === 1 ? leaderUnitIds[0] : { in: leaderUnitIds },
       scope: { notIn: [TaskScope.INDIVIDUAL] },
     });
   }

@@ -344,11 +344,13 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
     // view=all must be unconstrained {} because authorization engine already bounds visible tasks
     assert.deepEqual(viewWhere, {}, 'buildTaskViewWhere("all") must return unconstrained view filter within auth bounds');
 
-    // Verify read authorization restricts staff to unit_cntt and direct participation
+    // Verify read authorization restricts staff to direct participation (D07)
     const authOr = (readWhere as any).OR;
     assert.ok(Array.isArray(authOr), 'Staff auth filter must have OR conditions');
-    const hasDeptFilter = authOr.some((c: any) => c.leadUnitId === 'unit_cntt' || c.departmentId === 'unit_cntt');
-    assert.ok(hasDeptFilter, 'Staff auth filter must restrict to own unit_cntt');
+    // D07: người thường chỉ thấy phần mình tham gia, không có điều kiện đọc theo đơn vị (kể cả đơn vị mình).
+    const hasDeptFilter = authOr.some((c: any) => c.leadUnitId || c.departmentId);
+    assert.equal(hasDeptFilter, false, 'Staff auth filter must not read the whole unit');
+    assert.ok(authOr.some((c: any) => c.actors), 'Staff auth filter must include direct participation');
   });
 
   it('4. view=approval: Approver/Delegate chỉ thấy task mà current approval step đang đến lượt mình', () => {

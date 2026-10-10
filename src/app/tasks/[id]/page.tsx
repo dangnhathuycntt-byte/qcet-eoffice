@@ -10,6 +10,7 @@ import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { taskQueryService } from "@/server/tasks";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { dbReadScope } from "@/server/tasks/staff-read-scope";
 import { resolveTaskDetailContext } from "@/server/tasks/task-detail-context";
 
 // Always fetch fresh from DB — task detail contains user-edited content
@@ -137,6 +138,7 @@ export default async function Page({ params, searchParams }: TaskDetailPageParam
     queryString,
     authorizationContext,
     (taskId) => taskQueryService.getTaskEntityForInternalUse(taskId),
+    dbReadScope(authorizationContext),
   );
 
   if (result.outcome === "notFound") {

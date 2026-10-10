@@ -1,3 +1,4 @@
+import { canReadTask, dbReadScope } from '@/server/tasks/staff-read-scope';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import {
@@ -51,6 +52,10 @@ export async function GET(req: Request, routeContext: RouteContext) {
     const readDecision = authorize(authContext, 'task.read', taskResource);
     if (!readDecision.allowed) {
       throw new ForbiddenError(readDecision.reason || 'Bạn không có quyền xem nhiệm vụ này');
+    }
+    // D07: người thường chỉ đọc phần mình tham gia, cùng điều kiện với danh sách.
+    if (!(await canReadTask(authContext, rawTask as { id: string }, dbReadScope(authContext)))) {
+      throw new ForbiddenError('Bạn chỉ xem được phần nhiệm vụ mình tham gia');
     }
 
     const taskDto = toTaskDetailDTO(rawTask);

@@ -1023,10 +1023,11 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
 
       // Verify the auth where strictly limits to staff's actors, createdById, or departmentId
       assert.ok(authWhere.OR);
-      assert.equal(authWhere.OR!.length, 3);
+      // D07: người thường chỉ có điều kiện theo người tham gia, người tạo và việc cha, con của phần mình.
+      assert.equal(authWhere.OR!.length, 4);
       assert.deepEqual(authWhere.OR![0], { actors: { some: { userId: staffUser.id } } });
       assert.deepEqual(authWhere.OR![1], { createdById: staffUser.id });
-      assert.deepEqual(authWhere.OR![2], { leadUnitId: "DEPT_CNTT", scope: { notIn: [TaskScope.INDIVIDUAL] } });
+      assert.equal(authWhere.OR!.some((c: any) => "leadUnitId" in c), false);
 
       // Combining with client view scope=school still enforces server auth restriction
       const combinedWhere = {
@@ -1059,13 +1060,10 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       // Server auth remains strictly bound to DEPT_CNTT (the user's real department),
       // regardless of the client-requested DEPT_TAICHINH
       assert.ok(authWhere.OR);
-      assert.equal(authWhere.OR!.length, 3);
+      assert.equal(authWhere.OR!.length, 4);
       assert.deepEqual(authWhere.OR![0], { actors: { some: { userId: staffUser.id } } });
       assert.deepEqual(authWhere.OR![1], { createdById: staffUser.id });
-      assert.deepEqual(authWhere.OR![2], {
-        leadUnitId: "DEPT_CNTT",
-        scope: { notIn: [TaskScope.INDIVIDUAL] },
-      });
+      assert.equal(authWhere.OR!.some((c: any) => "leadUnitId" in c), false);
 
       // Client-specified dept=DEPT_TAICHINH is a VIEW filter, NOT an auth override.
       // When combined, the AND intersection of authWhere (DEPT_CNTT) and view filter
@@ -1079,11 +1077,8 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
 
       // The view filter requests DEPT_TAICHINH...
       assert.equal((combinedWhere.AND[1] as any).leadUnitId, "DEPT_TAICHINH");
-      // ...but authWhere remains strictly bound to DEPT_CNTT
-      assert.deepEqual((authWhere.OR![2] as any), {
-        leadUnitId: "DEPT_CNTT",
-        scope: { notIn: [TaskScope.INDIVIDUAL] },
-      });
+      // ...và authWhere của người thường không mở theo đơn vị nào (D07), chỉ theo phần mình tham gia
+      assert.equal(authWhere.OR!.some((c: any) => "leadUnitId" in c), false);
     });
 
     test("Anonymous / unauthenticated requests cannot access any records regardless of URL parameters (returns deny-all condition)", () => {
@@ -1170,15 +1165,12 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       assert.deepEqual(auth1, auth2);
       assert.deepEqual(auth2, auth3);
 
-      // Auth is bound to user's own department (KHOA_CNTT) via leadUnitId
+      // Auth của người thường chỉ theo phần mình tham gia (D07), không mở theo đơn vị
       assert.ok(auth1.OR);
-      assert.equal(auth1.OR!.length, 3);
+      assert.equal(auth1.OR!.length, 4);
       assert.deepEqual(auth1.OR![0], { actors: { some: { userId: lecturerUser.id } } });
       assert.deepEqual(auth1.OR![1], { createdById: lecturerUser.id });
-      assert.deepEqual(auth1.OR![2], {
-        leadUnitId: "KHOA_CNTT",
-        scope: { notIn: [TaskScope.INDIVIDUAL] },
-      });
+      assert.equal(auth1.OR!.some((c: any) => "leadUnitId" in c), false);
     });
   });
 
