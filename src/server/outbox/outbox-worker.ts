@@ -14,6 +14,7 @@ import { TASK_NOTIFICATION_HANDLERS } from "./task-notification-handlers";
 import { DOCUMENT_NOTIFICATION_HANDLERS } from "./document-notification-handlers";
 import { DOSSIER_NOTIFICATION_HANDLERS } from "./dossier-notification-handlers";
 import { scanDossierReminders } from "@/server/dossiers/dossier-reminder-scanner";
+import { runTaskRecurrences } from "@/server/tasks/task-recurrence-service";
 
 export const OUTBOX_HANDLERS = { ...TASK_NOTIFICATION_HANDLERS, ...DOCUMENT_NOTIFICATION_HANDLERS, ...DOSSIER_NOTIFICATION_HANDLERS };
 
@@ -60,6 +61,8 @@ async function cycle() {
       lastReminderScanAt = Date.now();
       const scan = await scanTaskReminders();
       await scanDossierReminders();
+      const recurrences = await runTaskRecurrences();
+      if (recurrences.created > 0 || recurrences.failed > 0) logger.info("task.recurrence.scan", { metadata: { ...recurrences } });
       const sent = Object.values(scan.sent).reduce((a, b) => a + b, 0);
       if (sent > 0) logger.info("task.reminder.scan", { metadata: { ...scan.sent, skippedDuplicate: scan.skippedDuplicate, skippedOptOut: scan.skippedOptOut } });
     })

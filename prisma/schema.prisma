@@ -125,6 +125,10 @@ model User {
   extensionsDecided     TaskExtensionRequest[] @relation("ExtensionDecider")
   backupReviewerFor     TaskBackupReviewer[]  @relation("TaskBackupReviewerUser")
   backupReviewersSet    TaskBackupReviewer[]  @relation("TaskBackupReviewerDesignator")
+  taskTemplatesCreated  TaskTemplate[]        @relation("TaskTemplateCreator")
+  taskRecurrencesCreated TaskRecurrence[]     @relation("TaskRecurrenceCreator")
+  taskRecurrencesAsDri  TaskRecurrence[]      @relation("TaskRecurrenceDri")
+  taskRecurrencesToReview TaskRecurrence[]    @relation("TaskRecurrenceReviewer")
   taskDeclines          TaskDeclineNotice[]   @relation("TaskDecliner")
   documentReturns       DocumentUnitReturn[]  @relation("DocReturnedBy")
   documentReroutes      DocumentUnitReturn[]  @relation("DocReroutedBy")
@@ -263,6 +267,7 @@ model Task {
   declineNotices      TaskDeclineNotice[]
   reminderLogs        TaskReminderLog[]
   backupReviewer      TaskBackupReviewer?
+  recurrenceRuns      TaskRecurrenceRun[] @relation("TaskRecurrenceRunTask")
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -1052,6 +1057,7 @@ model OrganizationalUnit {
   documentReturnsFrom DocumentUnitReturn[]       @relation("DocReturnFromUnit")
   documentReturnsTo   DocumentUnitReturn[]       @relation("DocReturnToUnit")
   outgoingRecipients  OutgoingDocumentRecipient[]   @relation("OutgoingRecipientUnit")
+  taskTemplates       TaskTemplate[]                @relation("TaskTemplateUnit")
   approvalSteps       DocumentApprovalStep[]     @relation("ApprovalStepUnit")
   workDossiers        WorkDossier[]
   meetings            Meeting[]
@@ -1366,6 +1372,73 @@ model TaskDeclineNotice {
 
 // Nhật ký nhắc hạn tự động (T-06). Ràng buộc duy nhất (task, kind, dueKey) bảo đảm mỗi
 // nhắc nhở chỉ gửi một lần cho một mốc, kể cả khi bộ quét chạy lại hay chạy song song.
+// Mẫu nhiệm vụ và nhiệm vụ lặp lại (T-09, Q9). Chu kỳ theo tháng; bộ quét tạo nhiệm vụ của tháng hiện tại
+// đúng một lần cho mỗi (recurrence_id, period_key) nhờ ràng buộc duy nhất.
+model TaskTemplate {
+  id          String           @id @default(cuid())
+  name        String           @db.VarChar(200)
+  unitId      String           @map("unit_id")
+  unit        OrganizationalUnit @relation("TaskTemplateUnit", fields: [unitId], references: [id], onDelete: Restrict)
+  title       String           @db.VarChar(500)
+  description String?          @db.Text
+  priority    TaskPriority     @default(NORMAL)
+  // Ngày trong tháng làm hạn chót (1-28, tránh tháng ngắn).
+  dueDay      Int              @default(28) @map("due_day")
+  criteria    Json             @default("[]")
+  subtasks    Json             @default("[]")
+  isActive    Boolean          @default(true) @map("is_active")
+  createdById String           @map("created_by_id")
+  createdBy   User             @relation("TaskTemplateCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  recurrences TaskRecurrence[]
+
+  @@index([unitId, isActive])
+  @@map("task_templates")
+}
+
+model TaskRecurrence {
+  id               String              @id @default(cuid())
+  templateId       String              @map("template_id")
+  template         TaskTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  // Người giao: nhiệm vụ sinh ra mang tên người này và chịu đúng quyền của họ khi tạo.
+  createdById      String              @map("created_by_id")
+  createdBy        User                @relation("TaskRecurrenceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  driUserId        String              @map("dri_user_id")
+  dri              User                @relation("TaskRecurrenceDri", fields: [driUserId], references: [id], onDelete: Restrict)
+  collaboratorIds  String[]            @default([]) @map("collaborator_ids")
+  reviewerUserId   String?             @map("reviewer_user_id")
+  reviewer         User?               @relation("TaskRecurrenceReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  // Cứ mỗi everyMonths tháng tạo một nhiệm vụ, tính từ startPeriod (YYYY-MM).
+  everyMonths      Int                 @default(1) @map("every_months")
+  startPeriod      String              @map("start_period") @db.VarChar(7)
+  endPeriod        String?             @map("end_period") @db.VarChar(7)
+  isActive         Boolean             @default(true) @map("is_active")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  runs             TaskRecurrenceRun[]
+
+  @@index([isActive])
+  @@index([templateId])
+  @@map("task_recurrences")
+}
+
+model TaskRecurrenceRun {
+  id           String         @id @default(cuid())
+  recurrenceId String         @map("recurrence_id")
+  recurrence   TaskRecurrence @relation(fields: [recurrenceId], references: [id], onDelete: Cascade)
+  periodKey    String         @map("period_key") @db.VarChar(7)
+  // Null trong lúc đang tạo; dòng treo quá lâu không có taskId được dọn để thử lại.
+  taskId       String?        @map("task_id")
+  task         Task?          @relation("TaskRecurrenceRunTask", fields: [taskId], references: [id], onDelete: SetNull)
+  claimedAt    DateTime       @default(now()) @map("claimed_at")
+  error        String?        @db.VarChar(500)
+
+  @@unique([recurrenceId, periodKey])
+  @@index([taskId])
+  @@map("task_recurrence_runs")
+}
+
 // Người duyệt dự phòng (T-05, D12). Chỉ trở thành người duyệt khi nhiệm vụ chờ duyệt đủ 96 giờ:
 // bộ quét nhắc hạn thêm một TaskActor REVIEWER cho người này (actorId) và gỡ khi hết đợt chờ duyệt.
 model TaskBackupReviewer {
