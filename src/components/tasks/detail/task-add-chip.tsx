@@ -194,6 +194,7 @@ export function TaskAddChip({
   icon = true,
   title,
   panel,
+  panelTitle,
   open,
   onOpenChange,
 }: {
@@ -204,6 +205,8 @@ export function TaskAddChip({
   title?: string;
   /** Form hiện trong popover; mở/đóng theo `open`/`onOpenChange` của khối. */
   panel?: React.ReactNode;
+  /** Tiêu đề popover khi khác nhãn chip (tránh lặp đúng nhãn chip và nhãn nút). */
+  panelTitle?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -230,7 +233,7 @@ export function TaskAddChip({
       <Popover.Portal>
         <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
           <Popover.Popup data-slot="task-add-chip-panel" style={{ maxHeight: "var(--available-height)" }} className={PANEL_CLASS}>
-            <p className={PANEL_TITLE_CLASS}>{children}</p>
+            <p className={PANEL_TITLE_CLASS}>{panelTitle ?? children}</p>
             {panel}
           </Popover.Popup>
         </Popover.Positioner>

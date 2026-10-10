@@ -238,7 +238,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
       {mode === "reject" && (
         <div className="space-y-1.5">
           <Textarea
-            compact
+            compact countOnlyNearLimit
             value={text}
             maxLength={1000}
             aria-label="Lý do từ chối"
@@ -261,7 +261,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
         <div className="space-y-1.5">
           <VietnameseDatePicker value={date} onChange={setDate} variant="chip" label="Hạn đề xuất:" placeholder="dd/mm/yyyy" minDate={minDate} />
           <Textarea
-            compact
+            compact countOnlyNearLimit
             value={text}
             maxLength={1000}
             aria-label="Ghi chú cho người xin"

@@ -10,6 +10,8 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   showCount?: boolean;
   /** Maximum character limit for counter (defaults to maxLength attribute if omitted) */
   maxCharacters?: number;
+  /** Chỉ hiện bộ đếm khi còn ≤ 20 ký tự (form gọn trong popover); mặc định luôn hiện khi có giới hạn. */
+  countOnlyNearLimit?: boolean;
   /** compact: chữ 13px, đệm gọn, không đặt chiều cao tối thiểu 96px. Mặc định giữ nguyên. */
   compact?: boolean;
 }
@@ -21,6 +23,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       autoResize = false,
       showCount = false,
       maxCharacters,
+      countOnlyNearLimit = false,
       compact = false,
       maxLength,
       value,
@@ -78,7 +81,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       />
     );
 
-    if (!showCount && limit === undefined) {
+    if ((!showCount && limit === undefined) || (countOnlyNearLimit && !isNearLimit)) {
       return textareaElement;
     }
 

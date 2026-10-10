@@ -111,7 +111,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
         value={respondInDays}
         onValueChange={(v) => setRespondInDays(v || "3")}
       />
-      <Textarea compact value={note} maxLength={1000} aria-label="Nội dung đề nghị" placeholder="Cần đơn vị hỗ trợ việc gì (không bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
+      <Textarea compact countOnlyNearLimit value={note} maxLength={1000} aria-label="Nội dung đề nghị" placeholder="Việc cần hỗ trợ (không bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
       <div className="flex gap-1.5">
         <Button
           type="button"

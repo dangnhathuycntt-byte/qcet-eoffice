@@ -82,13 +82,14 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
         value={reason}
         maxLength={1000}
         aria-label="Lý do từ chối nhận việc"
-        placeholder="Lý do từ chối nhận việc (bắt buộc)"
+        placeholder="Nêu lý do (bắt buộc)"
+        countOnlyNearLimit
         onChange={(e) => setReason(e.target.value)}
         className="min-h-16"
       />
       <div className="flex gap-1.5">
-        <Button type="button" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
-          Từ chối nhận việc
+        <Button type="button" size="xs" variant="destructive" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
+          Gửi từ chối
         </Button>
         <Button type="button" size="xs" variant="ghost" onClick={() => { setOpen(false); setReason(""); setError(null); }}>
           Hủy
@@ -100,6 +101,7 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
     return (
       <TaskAddChip
         icon={false}
+        panelTitle="Lý do không nhận việc"
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
