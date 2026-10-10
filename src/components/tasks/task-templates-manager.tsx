@@ -31,6 +31,7 @@ interface Recurrence {
   collaboratorIds: string[];
   reviewerUserId: string | null;
   everyMonths: number;
+  catchUpPeriods?: number;
   startPeriod: string;
   endPeriod: string | null;
   isActive: boolean;
@@ -83,6 +84,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
   const [every, setEvery] = React.useState("1");
   const [start, setStart] = React.useState(currentPeriod());
   const [end, setEnd] = React.useState("");
+  const [catchUp, setCatchUp] = React.useState("0");
 
   const load = React.useCallback(async () => {
     try {
@@ -136,7 +138,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
     run(async () => {
       await api("/api/task-recurrences", {
         method: "POST",
-        body: JSON.stringify({ templateId, driUserId: dri, reviewerUserId: reviewer, everyMonths: Number(every), startPeriod: start, endPeriod: end || null }),
+        body: JSON.stringify({ templateId, driUserId: dri, reviewerUserId: reviewer, everyMonths: Number(every), startPeriod: start, endPeriod: end || null, catchUpPeriods: Number(catchUp) }),
       });
       setRecFor(null);
       setDri(null);
@@ -225,7 +227,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
                   {recs.map((r) => (
                     <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
                       <span className="min-w-0 truncate text-foreground">
-                        {personName(r.driUserId)} · mỗi {r.everyMonths} tháng từ {r.startPeriod}{r.endPeriod ? ` đến ${r.endPeriod}` : ""}
+                        {personName(r.driUserId)} · mỗi {r.everyMonths} tháng từ {r.startPeriod}{r.endPeriod ? ` đến ${r.endPeriod}` : ""}{r.catchUpPeriods ? ` · bù ${r.catchUpPeriods} tháng` : ""}
                         {!r.isActive ? " · tạm dừng" : ""}
                         {r.lastRun ? (
                           <span className={cn("ml-1", r.lastRun.error ? "text-destructive" : "text-muted-foreground")} title={r.lastRun.error ?? undefined}>
@@ -260,6 +262,19 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
                     <Input compact value={start} aria-label="Kỳ bắt đầu" placeholder="Bắt đầu YYYY-MM" onChange={(e) => setStart(e.target.value)} />
                     <Input compact value={end} aria-label="Kỳ kết thúc" placeholder="Kết thúc YYYY-MM" onChange={(e) => setEnd(e.target.value)} />
                   </div>
+                  <Select
+                    compact
+                    positionerClassName="z-50"
+                    aria-label="Bù kỳ đã qua"
+                    options={[
+                      { value: "0", label: "Không bù kỳ đã qua" },
+                      { value: "1", label: "Bù tối đa 1 tháng đã qua" },
+                      { value: "2", label: "Bù tối đa 2 tháng đã qua" },
+                      { value: "3", label: "Bù tối đa 3 tháng đã qua" },
+                    ]}
+                    value={catchUp}
+                    onValueChange={(v) => setCatchUp(v || "0")}
+                  />
                   <div className="flex gap-1.5">
                     <Button type="button" size="xs" disabled={busy || !recValid} onClick={() => void saveRecurrence(t.id)}>Lưu lịch</Button>
                     <Button type="button" size="xs" variant="ghost" onClick={() => setRecFor(null)}>Hủy</Button>

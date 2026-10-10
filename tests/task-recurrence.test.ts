@@ -17,7 +17,7 @@ import {
   updateRecurrence,
   updateTemplate,
 } from '../src/server/tasks/task-recurrence-service';
-import { dueDateForPeriod, isPeriodDue, periodKeyOf, renderTitle } from '../src/domain/tasks/recurrence-rules';
+import { dueDateForPeriod, duePeriods, isPeriodDue, periodKeyOf, renderTitle } from '../src/domain/tasks/recurrence-rules';
 import { ApiError } from '../src/server/api/errors';
 
 const runId = `t09_${Date.now()}`;
@@ -242,6 +242,31 @@ describe('T-09 mẫu và nhiệm vụ lặp lại', () => {
     await updateRecurrence(session('head'), rec.id, { retryFailed: true }, at('2026-10-11T08:00:00+07:00'));
     assert.equal((await scan(rec.id, '2026-10-11T09:00:00+07:00')).created, 1);
     assert.equal((await listRecurrences(session('head'), t.id)).find((r) => r.id === rec.id)?.lastRun?.status, 'CREATED');
+  });
+
+  test('duePeriods: qua năm, theo bước everyMonths, chặn ở kỳ bắt đầu và kỳ kết thúc, giới hạn số tháng bù', () => {
+    const monthly = { startPeriod: '2026-01', endPeriod: null, everyMonths: 1 };
+    assert.deepEqual(duePeriods(monthly, '2027-01', 2), ['2026-11', '2026-12', '2027-01']);
+    assert.deepEqual(duePeriods(monthly, '2027-01', 0), ['2027-01']);
+    assert.deepEqual(duePeriods({ ...monthly, startPeriod: '2026-12' }, '2027-01', 3), ['2026-12', '2027-01'], 'không bù trước kỳ bắt đầu');
+    assert.deepEqual(duePeriods({ ...monthly, endPeriod: '2026-12' }, '2027-02', 3), ['2026-11', '2026-12'], 'không vượt kỳ kết thúc');
+    assert.deepEqual(duePeriods({ startPeriod: '2026-01', endPeriod: null, everyMonths: 3 }, '2026-07', 3), ['2026-04', '2026-07']);
+    assert.equal(duePeriods(monthly, '2026-12', 99).length, 4, 'tối đa 3 tháng bù cộng kỳ hiện tại');
+  });
+
+  test('bù kỳ đã qua: sinh các kỳ còn trong phạm vi bù, mỗi kỳ một nhiệm vụ, chạy lại không tạo thêm (T-09)', async () => {
+    const t = await makeTemplate({ subtasks: [], criteria: [] });
+    const rec = await makeRecurrence(t.id, { reviewerUserId: null, startPeriod: '2026-08', catchUpPeriods: 2 });
+    const first = await scan(rec.id, '2026-10-10T08:00:00+07:00');
+    assert.equal(first.created, 3, 'tháng 8, 9 và 10');
+    assert.deepEqual((await tasksOf(rec.id)).map((r) => r.periodKey).sort(), ['2026-08', '2026-09', '2026-10']);
+    assert.equal((await scan(rec.id, '2026-10-11T08:00:00+07:00')).created, 0, 'chạy lại không tạo thêm');
+
+    const limited = await makeRecurrence(t.id, { reviewerUserId: null, startPeriod: '2026-06', catchUpPeriods: 1 });
+    assert.equal((await scan(limited.id, '2026-10-10T08:00:00+07:00')).created, 2, 'chỉ tháng 9 và 10, không bù tháng 6 và 7');
+    const none = await makeRecurrence(t.id, { reviewerUserId: null, startPeriod: '2026-06' });
+    assert.equal((await scan(none.id, '2026-10-10T08:00:00+07:00')).created, 1, 'mặc định chỉ kỳ hiện tại');
+    await assert.rejects(createRecurrence(session('head'), { templateId: t.id, driUserId: u.dri, startPeriod: '2026-06', catchUpPeriods: 9 }));
   });
 
   test('dòng giữ chỗ treo quá hạn được dọn để thử lại', async () => {

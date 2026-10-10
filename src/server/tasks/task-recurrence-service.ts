@@ -24,7 +24,8 @@ import {
   RecurrenceBodySchema,
   TemplateBodySchema,
   dueDateForPeriod,
-  isPeriodDue,
+  duePeriods,
+  MAX_CATCH_UP_MONTHS,
   periodKeyOf,
   renderTitle,
 } from "@/domain/tasks/recurrence-rules";
@@ -39,6 +40,7 @@ export const RecurrencePatchSchema = z
     driUserId: z.string().trim().min(1).optional(),
     collaboratorIds: z.array(z.string().trim().min(1)).max(50).optional(),
     reviewerUserId: z.string().trim().min(1).nullable().optional(),
+    catchUpPeriods: z.number().int().min(0).max(MAX_CATCH_UP_MONTHS).optional(),
     retryFailed: z.boolean().optional(),
   })
   .strict();
@@ -147,7 +149,7 @@ async function assertPeople(db: Db, args: { creatorId: string; driUserId: string
   }
 }
 
-function recurrenceDTO(r: { id: string; templateId: string; createdById: string; driUserId: string; collaboratorIds: string[]; reviewerUserId: string | null; everyMonths: number; startPeriod: string; endPeriod: string | null; isActive: boolean }, runs: Array<{ periodKey: string; taskId: string | null; error: string | null }> = []) {
+function recurrenceDTO(r: { id: string; templateId: string; createdById: string; driUserId: string; collaboratorIds: string[]; reviewerUserId: string | null; everyMonths: number; startPeriod: string; endPeriod: string | null; catchUpPeriods: number; isActive: boolean }, runs: Array<{ periodKey: string; taskId: string | null; error: string | null }> = []) {
   const last = runs[0] ?? null;
   return {
     id: r.id,
@@ -159,6 +161,7 @@ function recurrenceDTO(r: { id: string; templateId: string; createdById: string;
     everyMonths: r.everyMonths,
     startPeriod: r.startPeriod,
     endPeriod: r.endPeriod,
+    catchUpPeriods: r.catchUpPeriods,
     isActive: r.isActive,
     lastRun: last ? { periodKey: last.periodKey, taskId: last.taskId, error: last.error, status: last.taskId ? (last.error ? "PARTIAL" : "CREATED") : last.error ? "FAILED" : "CREATING" } : null,
   };
@@ -181,6 +184,7 @@ export async function createRecurrence(session: SessionPayload, input: unknown) 
       everyMonths: body.everyMonths,
       startPeriod: body.startPeriod,
       endPeriod: body.endPeriod ?? null,
+      catchUpPeriods: body.catchUpPeriods,
     },
   });
   await audit(session.id, AuditAction.TASK_RECURRENCE_CHANGED, "TaskRecurrence", row.id, null, { templateId: row.templateId, startPeriod: row.startPeriod, everyMonths: row.everyMonths });
@@ -222,11 +226,12 @@ export async function updateRecurrence(session: SessionPayload, id: string, inpu
   await prisma.$transaction(async (tx) => {
     await tx.taskRecurrence.update({
       where: { id },
-      data: { ...next, isActive: patch.isActive, endPeriod: patch.endPeriod === undefined ? undefined : patch.endPeriod },
+      data: { ...next, isActive: patch.isActive, catchUpPeriods: patch.catchUpPeriods, endPeriod: patch.endPeriod === undefined ? undefined : patch.endPeriod },
     });
     if (patch.retryFailed) {
-      // Xóa dòng lỗi của kỳ hiện tại để bộ quét tạo lại.
-      await tx.taskRecurrenceRun.deleteMany({ where: { recurrenceId: id, periodKey: periodKeyOf(now), taskId: null, error: { not: null } } });
+      // Xóa dòng lỗi của kỳ hiện tại (và các kỳ còn trong phạm vi bù) để bộ quét tạo lại.
+      const keys = duePeriods(existing, periodKeyOf(now), patch.catchUpPeriods ?? existing.catchUpPeriods);
+      await tx.taskRecurrenceRun.deleteMany({ where: { recurrenceId: id, periodKey: { in: keys }, taskId: null, error: { not: null } } });
     }
   });
   await audit(session.id, AuditAction.TASK_RECURRENCE_CHANGED, "TaskRecurrence", id, { isActive: existing.isActive }, { ...patch });
@@ -273,7 +278,7 @@ async function notifyRecurrenceProblem(
 
 export async function runTaskRecurrences(options: { now?: Date; recurrenceIds?: string[] } = {}): Promise<RecurrenceScanResult> {
   const now = options.now ?? new Date();
-  const periodKey = periodKeyOf(now);
+  const currentKey = periodKeyOf(now);
   const result: RecurrenceScanResult = { considered: 0, created: 0, failed: 0, skippedExisting: 0 };
 
   await prisma.taskRecurrenceRun.deleteMany({
@@ -286,23 +291,24 @@ export async function runTaskRecurrences(options: { now?: Date; recurrenceIds?: 
   });
 
   for (const rec of recurrences) {
-    if (!isPeriodDue(rec, periodKey)) continue;
-    result.considered++;
-    const claim = await prisma.taskRecurrenceRun.createMany({ data: [{ recurrenceId: rec.id, periodKey, claimedAt: now }], skipDuplicates: true });
-    if (claim.count === 0) {
-      result.skippedExisting++;
-      continue;
-    }
-    try {
-      const taskId = await generateTask(rec, periodKey, (detail) => notifyRecurrenceProblem(rec, periodKey, detail));
-      await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { taskId } });
-      result.created++;
-    } catch (error) {
-      const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
-      await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { error: message } });
-      result.failed++;
-      await notifyRecurrenceProblem(rec, periodKey, message);
-      logger.error("task.recurrence.generate_failed", { metadata: { recurrenceId: rec.id, periodKey } }, error);
+    for (const periodKey of duePeriods(rec, currentKey, rec.catchUpPeriods)) {
+      result.considered++;
+      const claim = await prisma.taskRecurrenceRun.createMany({ data: [{ recurrenceId: rec.id, periodKey, claimedAt: now }], skipDuplicates: true });
+      if (claim.count === 0) {
+        result.skippedExisting++;
+        continue;
+      }
+      try {
+        const taskId = await generateTask(rec, periodKey, (detail) => notifyRecurrenceProblem(rec, periodKey, detail));
+        await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { taskId } });
+        result.created++;
+      } catch (error) {
+        const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+        await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { error: message } });
+        result.failed++;
+        await notifyRecurrenceProblem(rec, periodKey, message);
+        logger.error("task.recurrence.generate_failed", { metadata: { recurrenceId: rec.id, periodKey } }, error);
+      }
     }
   }
   return result;
