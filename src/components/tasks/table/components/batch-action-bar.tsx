@@ -24,7 +24,7 @@ import {
 import type { TaskStatus } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
-import { CORE_STATUS_OPTIONS, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 
 /**
  * Tính ngày gia hạn hạn chót an toàn theo chuẩn UTC
@@ -78,6 +78,8 @@ export function getBatchReassignPayload(
   };
 }
 
+export type BulkPriority = "URGENT" | "HIGH" | "NORMAL" | "LOW";
+
 export interface BatchActionBarProps {
   selectedCount: number;
   selectedIds: string[];
@@ -86,6 +88,8 @@ export interface BatchActionBarProps {
   onBulkStatusChange?: (status: TaskStatus) => Promise<void> | void;
   onBulkExtendDeadline?: (newDueDate: string) => Promise<void> | void;
   onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
+  /** Đổi ưu tiên hàng loạt (T-08): quyền và version kiểm riêng từng dòng ở máy chủ. */
+  onBulkPriorityChange?: (priority: BulkPriority) => Promise<void> | void;
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onExportExcel?: () => void;
   isLoading?: boolean;
@@ -210,6 +214,7 @@ export function BatchActionBar({
   onBulkStatusChange,
   onBulkExtendDeadline,
   onBulkReassign,
+  onBulkPriorityChange,
   onBulkDelete,
   onExportExcel,
   isLoading = false,
@@ -234,6 +239,7 @@ export function BatchActionBar({
   const hasAnyAction = Boolean(
     (onBulkStatusChange && (isTargetAllowed("COMPLETED") || permittedStatusOptions.length > 0)) ||
     onBulkReassign ||
+    onBulkPriorityChange ||
     onBulkExtendDeadline ||
     onExportExcel ||
     onBulkDelete
@@ -356,6 +362,31 @@ export function BatchActionBar({
             <span className="hidden sm:inline">Giao lại</span>
             <span className="sr-only">Phân công lại</span>
           </button>
+        )}
+
+        {/* Ưu tiên (T-08) */}
+        {onBulkPriorityChange && (
+          <BulkMenu
+            ariaLabel="Đổi ưu tiên hàng loạt"
+            icon={<TaskIconStatus className={icon} />}
+            label="Ưu tiên"
+            header="Đổi ưu tiên cho các mục đã chọn"
+            disabled={isLoading}
+            triggerClassName={btn}
+            onDigit={(digit) => {
+              const option = PRIORITY_DISPLAY_CONFIG[digit - 1];
+              if (!option) return false;
+              onBulkPriorityChange(option.value as BulkPriority);
+              return true;
+            }}
+          >
+            {PRIORITY_DISPLAY_CONFIG.map((option, index) => (
+              <MenuItem key={option.value} className={menuItemCls} onClick={() => onBulkPriorityChange(option.value as BulkPriority)}>
+                <span>{option.label}</span>
+                <kbd className="font-sans text-xs tabular-nums text-muted-foreground">{index + 1}</kbd>
+              </MenuItem>
+            ))}
+          </BulkMenu>
         )}
 
         {/* Gia hạn: hiển thị luôn ngày hạn mới để biết trước kết quả */}

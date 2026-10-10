@@ -69,6 +69,7 @@ import {
   DEFAULT_DISPLAY_PROPERTIES,
 } from "./components/task-table-toolbar";
 import { BatchActionBar, TaskBulkActionBar } from "./components/batch-action-bar";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   filterBulkTransitionTargets,
 } from "@/domain/tasks/bulk-lifecycle-capability";
@@ -134,6 +135,7 @@ export interface ModularCascadingTaskTableProps {
   onBulkStatusChange?: (status: TaskStatus) => Promise<void> | void;
   onBulkExtendDeadline?: (newDueDate: string) => Promise<void> | void;
   onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
+  onBulkPriorityChange?: (priority: "URGENT" | "HIGH" | "NORMAL" | "LOW") => Promise<void> | void;
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
@@ -183,6 +185,7 @@ export function ModularCascadingTaskTable({
   onBulkStatusChange,
   onBulkExtendDeadline,
   onBulkReassign,
+  onBulkPriorityChange,
   onBulkDelete,
   onPriorityChange,
   onDueDateChange,
@@ -666,6 +669,40 @@ export function ModularCascadingTaskTable({
     }
     return undefined;
   }, [onBulkExtendDeadline, handleContextMenuDueDateChange, tableState]);
+
+  // Đổi ưu tiên hàng loạt (T-08): một lệnh có Idempotency-Key, máy chủ kiểm quyền, version và trạng thái từng dòng.
+  const feedback = useFeedback();
+  const effectiveOnBulkPriorityChange = React.useMemo(() => {
+    if (onBulkPriorityChange) return onBulkPriorityChange;
+    return async (priority: "URGENT" | "HIGH" | "NORMAL" | "LOW") => {
+      const ids = Array.from(tableState.selectedIds);
+      const items = ids.map((id) => ({ id, expectedVersion: Number(tasks.find((t) => t.id === id)?.version ?? 0) }));
+      try {
+        const res = await fetch("/api/tasks/actions/bulk-update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+          body: JSON.stringify({ items, priority }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) throw new Error((json && (json.detail || json.error || json.title)) || "Không đổi được ưu tiên");
+        const results: Array<{ id: string; ok: boolean; message?: string }> = json?.data?.results ?? [];
+        const okIds = new Set(results.filter((r) => r.ok).map((r) => r.id));
+        for (const task of tasks) {
+          if (okIds.has(task.id)) task.priority = priority;
+        }
+        const failed = results.filter((r) => !r.ok);
+        if (okIds.size > 0 && typeof window !== "undefined") {
+          for (const id of okIds) window.dispatchEvent(new CustomEvent("qcet:task-priority-changed", { detail: { taskId: id, priority } }));
+        }
+        if (failed.length === 0) feedback.notifySuccess(`Đã đổi ưu tiên ${okIds.size} nhiệm vụ`);
+        else feedback.notifyWarning(`Đã đổi ${okIds.size}, ${failed.length} nhiệm vụ không đổi được${failed[0]?.message ? `: ${failed[0].message}` : ""}`);
+        tableState.clearSelection();
+        onRefresh?.();
+      } catch (error) {
+        feedback.notifyError(error instanceof Error ? error.message : "Không đổi được ưu tiên");
+      }
+    };
+  }, [onBulkPriorityChange, tableState, tasks, feedback, onRefresh]);
 
   const effectiveOnBulkDelete = React.useMemo(() => {
     if (onBulkDelete) return onBulkDelete;
@@ -1724,6 +1761,7 @@ export function ModularCascadingTaskTable({
         onBulkStatusChange={effectiveOnBulkStatusChange}
         onBulkExtendDeadline={effectiveOnBulkExtendDeadline}
         onBulkReassign={onBulkReassign}
+        onBulkPriorityChange={effectiveOnBulkPriorityChange}
         onBulkDelete={effectiveOnBulkDelete}
         onExportExcel={effectiveOnExportExcel}
         allowedLifecycleTargets={allowedLifecycleTargets}
