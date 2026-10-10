@@ -26,6 +26,7 @@ export const REMINDER_KINDS = [
   "EXTENSION_PENDING_4D",
   "DECLINE_PENDING_2D",
   "DECLINE_PENDING_4D",
+  "BACKUP_REVIEWER_ACTIVATED",
 ] as const;
 
 export type ReminderKind = (typeof REMINDER_KINDS)[number];

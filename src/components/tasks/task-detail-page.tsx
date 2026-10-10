@@ -26,6 +26,7 @@ import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
 import { TaskDecline } from "@/components/tasks/detail/task-decline";
 import { TaskExtension } from "@/components/tasks/detail/task-extension";
+import { TaskBackupReviewer } from "@/components/tasks/detail/task-backup-reviewer";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
@@ -898,6 +899,8 @@ export function TaskDetailPage({
                   setTask((prev) => ({ ...prev, version, ...(dueDate ? { dueDate } : {}) }) as any)
                 }
               />
+
+              <TaskBackupReviewer taskId={task.id} />
 
               <TaskCriteria
                 taskId={task.id}

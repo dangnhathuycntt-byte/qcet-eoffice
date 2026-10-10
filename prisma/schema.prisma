@@ -123,6 +123,8 @@ model User {
   checkedCriteria       TaskAcceptanceCriterion[] @relation("CriterionCheckedBy")
   extensionsRequested   TaskExtensionRequest[] @relation("ExtensionRequester")
   extensionsDecided     TaskExtensionRequest[] @relation("ExtensionDecider")
+  backupReviewerFor     TaskBackupReviewer[]  @relation("TaskBackupReviewerUser")
+  backupReviewersSet    TaskBackupReviewer[]  @relation("TaskBackupReviewerDesignator")
   taskDeclines          TaskDeclineNotice[]   @relation("TaskDecliner")
   documentReturns       DocumentUnitReturn[]  @relation("DocReturnedBy")
   documentReroutes      DocumentUnitReturn[]  @relation("DocReroutedBy")
@@ -260,6 +262,7 @@ model Task {
   extensionRequests   TaskExtensionRequest[]
   declineNotices      TaskDeclineNotice[]
   reminderLogs        TaskReminderLog[]
+  backupReviewer      TaskBackupReviewer?
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -1363,6 +1366,27 @@ model TaskDeclineNotice {
 
 // Nhật ký nhắc hạn tự động (T-06). Ràng buộc duy nhất (task, kind, dueKey) bảo đảm mỗi
 // nhắc nhở chỉ gửi một lần cho một mốc, kể cả khi bộ quét chạy lại hay chạy song song.
+// Người duyệt dự phòng (T-05, D12). Chỉ trở thành người duyệt khi nhiệm vụ chờ duyệt đủ 96 giờ:
+// bộ quét nhắc hạn thêm một TaskActor REVIEWER cho người này (actorId) và gỡ khi hết đợt chờ duyệt.
+model TaskBackupReviewer {
+  id                String    @id @default(cuid())
+  taskId            String    @unique @map("task_id")
+  task              Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  backupUserId      String    @map("backup_user_id")
+  backupUser        User      @relation("TaskBackupReviewerUser", fields: [backupUserId], references: [id], onDelete: Cascade)
+  designatedById    String    @map("designated_by_id")
+  designatedBy      User      @relation("TaskBackupReviewerDesignator", fields: [designatedById], references: [id], onDelete: Restrict)
+  actorId           String?   @map("actor_id")
+  activatedAt       DateTime? @map("activated_at")
+  // Thời điểm bắt đầu đợt chờ duyệt mà lần kích hoạt này thuộc về; đổi (nộp lại) thì phải gỡ.
+  activatedForSince DateTime? @map("activated_for_since")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([backupUserId])
+  @@map("task_backup_reviewers")
+}
+
 model TaskReminderLog {
   id     String   @id @default(cuid())
   taskId String   @map("task_id")

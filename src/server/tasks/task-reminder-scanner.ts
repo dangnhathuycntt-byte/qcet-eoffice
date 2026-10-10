@@ -11,6 +11,7 @@
  * | REVIEW_PENDING_2D/4D  | chờ duyệt từ 48/96 giờ                            | người duyệt / người giao           |
  * | EXTENSION_PENDING_2D/4D | yêu cầu gia hạn chưa quyết định 48/96 giờ       | người giao / trưởng đơn vị chủ trì |
  * | DECLINE_PENDING_2D/4D | từ chối nhận việc chưa giao lại 48/96 giờ         | người giao / trưởng đơn vị chủ trì |
+ * | BACKUP_REVIEWER_ACTIVATED | chờ duyệt đủ 96 giờ, có người dự phòng (T-05)  | người duyệt dự phòng               |
  *
  * Trễ ngừng đếm khi đã nộp duyệt (Quy trình 4), nên nhiệm vụ chờ duyệt không báo trễ cho
  * người thực hiện. Người dùng tắt được nhắc trước hạn và nhắc người duyệt sau 2 ngày
@@ -33,6 +34,7 @@ import {
 } from "@/domain/tasks/reminder-rules";
 import { deliverTaskNotice } from "@/server/outbox/task-notification-handlers";
 import { findActiveDecline } from "./task-decline-service";
+import { reconcileBackupReviewer, revokeStaleBackupReviewers } from "./task-backup-reviewer-service";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -194,9 +196,11 @@ export async function scanTaskReminders(
   for (const task of waiting) {
     const since = task.taskResults[0]?.submittedAt ?? task.updatedAt;
     const stage = escalationStage(since, now);
-    if (stage === "NONE") continue;
     const dueKey = since.toISOString();
     const days = Math.floor((now.getTime() - since.getTime()) / 86_400_000);
+    // Người duyệt dự phòng (T-05): nhận quyền đúng mốc 96 giờ, gỡ nếu đây là đợt chờ duyệt mới.
+    const backup = await reconcileBackupReviewer(db, task.id, since, now);
+    if (stage === "NONE") continue;
     const reviewers = task.actors.length > 0 ? task.actors.map((a) => a.userId as string) : [task.createdById];
     if (stage === "FIRST" || stage === "SECOND") {
       await send(db, {
@@ -210,7 +214,15 @@ export async function scanTaskReminders(
         type: "escalation", pushEvent: "TASK_ESCALATION", note: `Kết quả đã chờ duyệt ${days} ngày chưa có người duyệt`,
       }, result);
     }
+    if (backup.outcome === "ACTIVATED" && backup.userId) {
+      await send(db, {
+        taskId: task.id, kind: "BACKUP_REVIEWER_ACTIVATED", dueKey, recipientIds: [backup.userId], pref: null,
+        type: "review_pending", pushEvent: "TASK_REVIEW_PENDING", note: `Bạn là người duyệt dự phòng; kết quả đã chờ duyệt ${days} ngày`,
+      }, result);
+    }
   }
+  // Hết đợt chờ duyệt thì gỡ quyền người dự phòng đã kích hoạt.
+  await revokeStaleBackupReviewers(db, options.taskIds);
 
   // 3. Yêu cầu gia hạn chưa được quyết định.
   const stale = new Date(now.getTime() - 48 * 3_600_000);
