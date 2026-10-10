@@ -280,12 +280,10 @@ export function DocumentInfoSections({
         ) : null}
         {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
 
-      {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={vm.id} documentId={vm.id} /> : null}
-        {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={vm.id} documentId={vm.id} /> : null}
+        {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={`initial-sign-${vm.id}`} documentId={vm.id} /> : null}
         {/* Chỉ thao tác theo bước ở thân; sửa thông tin/bổ sung tệp nằm trong menu "Thao tác khác" của header */}
         {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
 
-      {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
         {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
         {isIncoming && incomingStatus ? (
           <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />
@@ -311,7 +309,11 @@ export function DocumentInfoSections({
 
       {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
 
+      {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={`initial-sign-${vm.id}`} documentId={vm.id} /> : null}
+
       {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
+
+      {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
 
       {isIncoming && incomingStatus ? (
         <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />

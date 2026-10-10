@@ -15,6 +15,7 @@ import {
   TaskIconChecklist,
   TaskIconComplete,
   TaskIconStatus,
+  TaskIconPriority,
   TaskIconDeadline,
   TaskIconAssignee,
   TaskIconExport,
@@ -189,7 +190,7 @@ function BulkMenu({
       <MenuPortal>
         <MenuPositioner side="top" align="start" sideOffset={8} className="z-50">
           <MenuPopup
-            className="min-w-48 rounded-lg border border-border bg-popover p-1 text-xs text-popover-foreground shadow-lg outline-none animate-in fade-in-0 zoom-in-95 duration-100"
+            className="min-w-56 rounded-lg border border-border bg-popover p-1 text-xs text-popover-foreground shadow-lg outline-none animate-in fade-in-0 zoom-in-95 duration-100"
             onKeyDown={(e) => {
               if (onDigit && /^[1-9]$/.test(e.key) && onDigit(Number(e.key))) {
                 e.preventDefault();
@@ -368,7 +369,7 @@ export function BatchActionBar({
         {onBulkPriorityChange && (
           <BulkMenu
             ariaLabel="Đổi ưu tiên hàng loạt"
-            icon={<TaskIconStatus className={icon} />}
+            icon={<TaskIconPriority className={icon} />}
             label="Ưu tiên"
             header="Đổi ưu tiên cho các mục đã chọn"
             disabled={isLoading}

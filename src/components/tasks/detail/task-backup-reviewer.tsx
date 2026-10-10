@@ -71,7 +71,7 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
   return (
     <section aria-label="Người duyệt dự phòng" className={cn("space-y-1.5", className)}>
       <div className="flex items-center gap-2">
-        <h3 className="text-compact font-semibold text-foreground">Người duyệt dự phòng</h3>
+        <h2 className="text-compact font-semibold text-foreground tracking-tight">Người duyệt dự phòng</h2>
         {view.backup?.active ? <span className="text-xs text-warning">Đang duyệt thay</span> : null}
       </div>
 

@@ -82,7 +82,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
 
   return (
     <section aria-label="Phối hợp liên đơn vị" className={cn("space-y-1.5", className)}>
-      <h3 className="text-compact font-semibold text-foreground">Phối hợp liên đơn vị</h3>
+      <h2 className="text-compact font-semibold text-foreground tracking-tight">Phối hợp liên đơn vị</h2>
       {state.requests.length > 0 && (
         <ul className="space-y-0.5">
           {state.requests.map((r) => (

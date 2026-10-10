@@ -894,6 +894,17 @@ export function TaskDetailPage({
                 onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
               />
 
+              <TaskBlockEditor
+                selectionContainerSelector="body"
+                globalFileDrop={!activeSubtask}
+                taskId={task.id}
+                initialDescription={currentDescription}
+                subTasks={subTasks}
+                canEdit={canEdit}
+                onSaveContent={handleSaveDescription}
+                onSelectSubtask={handleOpenSubtaskDrawer}
+              />
+
               <TaskExtension
                 taskId={task.id}
                 version={Number((task as any).version ?? 0)}
@@ -914,17 +925,6 @@ export function TaskDetailPage({
                 version={Number((task as any).version ?? 0)}
                 status={String((task as any).status ?? "")}
                 onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
-              />
-
-              <TaskBlockEditor
-                selectionContainerSelector="body"
-                globalFileDrop={!activeSubtask}
-                taskId={task.id}
-                initialDescription={currentDescription}
-                subTasks={subTasks}
-                canEdit={canEdit}
-                onSaveContent={handleSaveDescription}
-                onSelectSubtask={handleOpenSubtaskDrawer}
               />
             </>
           )}

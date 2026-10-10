@@ -77,7 +77,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
 
   return (
     <section aria-label="Người tham gia" className={cn("space-y-1.5", className)}>
-      <h3 className="text-compact font-semibold text-foreground">Người tham gia</h3>
+      <h2 className="text-compact font-semibold text-foreground tracking-tight">Người tham gia</h2>
       <ul className="space-y-0.5">
         {view.people.map((p) => (
           <li key={`${p.userId}-${p.role}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
