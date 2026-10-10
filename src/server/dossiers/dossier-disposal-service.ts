@@ -20,6 +20,7 @@ import { loadAuthorizationContext } from "@/server/authorization/authorization-c
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import type { CapabilityAction } from "@/server/authorization/capability";
 import { isPermanent, isRetentionExpired, retentionEnd, validateExtendYears } from "@/domain/dossiers/disposal-rules";
+import { requestFileObjectPurges } from "@/server/files/file-object-purge";
 
 export const ProposeDisposalSchema = z
   .object({
@@ -218,7 +219,10 @@ export async function purgeDossier(session: SessionPayload, dossierId: string, n
     throw new ConflictError("Thiếu biên bản xét hủy nên không xóa hẳn được", "DISPOSAL_MINUTES_MISSING");
   }
 
+  // Chỉ xóa hồ sơ, các mục và tệp gắn trực tiếp vào mục. Văn bản, nhiệm vụ mà mục trỏ tới là bản ghi riêng
+  // (sổ đăng ký, số, nhật ký) nên giữ nguyên; tệp chỉ bị xóa khi không còn bản ghi nào khác dùng (xét ở handler).
   return prisma.$transaction(async (tx) => {
+    const items = await tx.dossierItem.findMany({ where: { dossierId, fileObjectId: { not: null } }, select: { fileObjectId: true } });
     await auditService.logEvent(tx, {
       actorId: session.id,
       action: AuditAction.DOSSIER_PURGED,
@@ -228,6 +232,11 @@ export async function purgeDossier(session: SessionPayload, dossierId: string, n
       afterData: null,
     });
     await tx.workDossier.delete({ where: { id: dossierId } });
-    return { dossierId, purged: true as const, minutesReference: decision.minutesReference };
+    const fileObjectIds = await requestFileObjectPurges(
+      tx,
+      items.map((i) => i.fileObjectId as string),
+      { requestedById: session.id, reason: "DOSSIER_PURGED", dossierId }
+    );
+    return { dossierId, purged: true as const, minutesReference: decision.minutesReference, filePurgesRequested: fileObjectIds.length };
   });
 }

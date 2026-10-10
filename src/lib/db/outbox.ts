@@ -90,6 +90,9 @@ export const OutboxEventType = {
   DOSSIER_ACCEPTED_ARCHIVE_NOTIFICATION: "DOSSIER_ACCEPTED_ARCHIVE_NOTIFICATION",
   DOSSIER_DISPOSAL_PROPOSED_NOTIFICATION: "DOSSIER_DISPOSAL_PROPOSED_NOTIFICATION",
   DOSSIER_DISPOSAL_DECIDED_NOTIFICATION: "DOSSIER_DISPOSAL_DECIDED_NOTIFICATION",
+
+  // File storage
+  FILE_OBJECT_PURGE_REQUESTED: "FILE_OBJECT_PURGE_REQUESTED",
 } as const;
 
 export type OutboxEventTypeValue =
@@ -111,6 +114,7 @@ export const OutboxAggregateType = {
   DEPARTMENT: "Department",
   WORK_DOSSIER: "WorkDossier",
   DOSSIER_ITEM: "DossierItem",
+  FILE_OBJECT: "FileObject",
 } as const;
 
 export type OutboxAggregateTypeValue =

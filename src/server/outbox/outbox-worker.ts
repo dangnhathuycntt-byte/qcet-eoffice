@@ -13,10 +13,11 @@ import { scanTaskReminders } from "@/server/tasks/task-reminder-scanner";
 import { TASK_NOTIFICATION_HANDLERS } from "./task-notification-handlers";
 import { DOCUMENT_NOTIFICATION_HANDLERS } from "./document-notification-handlers";
 import { DOSSIER_NOTIFICATION_HANDLERS } from "./dossier-notification-handlers";
+import { FILE_PURGE_HANDLERS } from "@/server/files/file-object-purge";
 import { scanDossierReminders } from "@/server/dossiers/dossier-reminder-scanner";
 import { runTaskRecurrences } from "@/server/tasks/task-recurrence-service";
 
-export const OUTBOX_HANDLERS = { ...TASK_NOTIFICATION_HANDLERS, ...DOCUMENT_NOTIFICATION_HANDLERS, ...DOSSIER_NOTIFICATION_HANDLERS };
+export const OUTBOX_HANDLERS = { ...TASK_NOTIFICATION_HANDLERS, ...DOCUMENT_NOTIFICATION_HANDLERS, ...DOSSIER_NOTIFICATION_HANDLERS, ...FILE_PURGE_HANDLERS };
 
 const POLL_INTERVAL_MS = 60_000;
 const BATCH_LIMIT = 50;
