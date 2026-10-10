@@ -359,6 +359,98 @@ export async function withdrawApproval(session: SessionPayload, documentId: stri
 }
 
 // ---------------------------------------------------------------------------
+// Xin trả lại khi đã có người mở (V-06)
+// ---------------------------------------------------------------------------
+
+export const RequestReturnSchema = z.object({ note: z.string().trim().min(3, "Cần nêu lý do xin trả lại").max(1000) }).strict();
+export const DecideReturnSchema = z.object({ accept: z.boolean(), note: z.string().trim().max(1000).optional() }).strict();
+
+/**
+ * Người trình xin trả lại khi tờ trình đã có người mở hoặc xử lý (không còn rút lại được). Một người duyệt đang
+ * có bước chờ đồng ý thì tờ trình về Nháp để sửa; từ chối thì giữ nguyên luồng.
+ */
+export async function requestApprovalReturn(session: SessionPayload, documentId: string, input: unknown) {
+  const { note } = RequestReturnSchema.parse(input);
+  const doc = await loadSubmissionDocument(documentId);
+  const workflow = doc.approvalWorkflow;
+  if (!workflow) throw new ConflictError("Tờ trình chưa được trình duyệt", "APPROVAL_NOT_STARTED");
+  if (workflow.submittedById !== session.id) throw new ForbiddenError("Chỉ người trình được xin trả lại tờ trình");
+  if (workflow.status !== "WAITING_UNIT_HEAD" && workflow.status !== "WAITING_LEADER") {
+    throw new ConflictError("Tờ trình không còn ở bước chờ duyệt", "APPROVAL_NOT_WAITING");
+  }
+  const decided = workflow.steps.filter((s) => s.round === workflow.round && s.status !== "PENDING" && s.status !== "SKIPPED").length;
+  if (canWithdraw(workflow.status, workflow.openedAt, decided)) {
+    throw new ConflictError("Chưa ai mở tờ trình nên dùng Rút lại", "APPROVAL_CAN_WITHDRAW");
+  }
+  if (workflow.returnRequestedAt) throw new ConflictError("Đã có đề nghị trả lại đang chờ", "RETURN_ALREADY_REQUESTED");
+
+  return prisma.$transaction(async (tx) => {
+    const claim = await tx.documentApprovalWorkflow.updateMany({
+      where: { id: workflow.id, returnRequestedAt: null, status: workflow.status },
+      data: { returnRequestedAt: new Date(), returnRequestNote: note },
+    });
+    if (claim.count !== 1) throw new ConflictError("Đã có đề nghị trả lại đang chờ", "RETURN_ALREADY_REQUESTED");
+    await auditService.logEvent(tx, {
+      actorId: session.id,
+      action: AuditAction.DOCUMENT_APPROVAL_RETURN_REQUESTED,
+      entityType: AuditEntityType.DOCUMENT,
+      entityId: doc.id,
+      beforeData: null,
+      afterData: { round: workflow.round, note },
+    });
+    await publishOutboxEvent(tx, {
+      eventType: OutboxEventType.DOCUMENT_APPROVAL_RETURN_NOTIFICATION,
+      aggregateType: OutboxAggregateType.DOCUMENT,
+      aggregateId: doc.id,
+      payload: { documentId: doc.id, workflowId: workflow.id, kind: "REQUESTED", actorId: session.id },
+    });
+    return { documentId: doc.id, requested: true };
+  }, READ_COMMITTED);
+}
+
+export async function decideApprovalReturn(session: SessionPayload, documentId: string, input: unknown) {
+  const body = DecideReturnSchema.parse(input);
+  const doc = await loadSubmissionDocument(documentId);
+  const workflow = doc.approvalWorkflow;
+  if (!workflow || !workflow.returnRequestedAt) throw new ConflictError("Không có đề nghị trả lại nào đang chờ", "RETURN_NOT_REQUESTED");
+  const ctx = await loadContext(session);
+  const pending = workflow.steps.filter((s) => s.round === workflow.round && s.status === "PENDING");
+  if (session.id === workflow.submittedById || !pending.some((s) => canActOnStep(ctx, s, doc))) {
+    throw new ForbiddenError("Chỉ người đang có bước chờ duyệt mới trả lời đề nghị trả lại");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const claim = await tx.documentApprovalWorkflow.updateMany({
+      where: { id: workflow.id, returnRequestedAt: { not: null }, status: workflow.status },
+      data: { returnRequestedAt: null, returnRequestNote: null, ...(body.accept ? { status: "DRAFT" } : {}) },
+    });
+    if (claim.count !== 1) throw new ConflictError("Đề nghị trả lại đã được xử lý", "RETURN_NOT_REQUESTED");
+    if (body.accept) {
+      await tx.documentApprovalStep.updateMany({
+        where: { workflowId: workflow.id, round: workflow.round, status: "PENDING" },
+        data: { status: "SKIPPED", note: "Trả lại theo đề nghị của người trình", decidedAt: new Date() },
+      });
+      await tx.document.update({ where: { id: doc.id }, data: { status: documentStatusFor("DRAFT") } });
+    }
+    await auditService.logEvent(tx, {
+      actorId: session.id,
+      action: AuditAction.DOCUMENT_APPROVAL_RETURN_DECIDED,
+      entityType: AuditEntityType.DOCUMENT,
+      entityId: doc.id,
+      beforeData: { returnRequestNote: workflow.returnRequestNote },
+      afterData: { accept: body.accept, note: body.note ?? null, status: body.accept ? "DRAFT" : workflow.status },
+    });
+    await publishOutboxEvent(tx, {
+      eventType: OutboxEventType.DOCUMENT_APPROVAL_RETURN_NOTIFICATION,
+      aggregateType: OutboxAggregateType.DOCUMENT,
+      aggregateId: doc.id,
+      payload: { documentId: doc.id, workflowId: workflow.id, kind: "DECIDED", accept: body.accept, note: body.note ?? null, actorId: session.id },
+    });
+    return { documentId: doc.id, accepted: body.accept, status: body.accept ? ("DRAFT" as const) : workflow.status };
+  }, READ_COMMITTED);
+}
+
+// ---------------------------------------------------------------------------
 // Thay người xử lý (người nghỉ giữa chừng)
 // ---------------------------------------------------------------------------
 
@@ -516,6 +608,14 @@ export interface ApprovalState {
   /** Bước chờ mà người xem duyệt được, cùng các lựa chọn cho phép. */
   myStep: { id: string; decisions: ApprovalDecision[] } | null;
   canAskConsultation: boolean;
+  /** Các bước chờ của vòng hiện tại mà người xem được thay người xử lý (lãnh đạo, hoặc trưởng đơn vị của bước). */
+  reassignableStepIds: string[];
+  /** Đề nghị trả lại đang chờ của người trình (V-06). */
+  returnRequest: { note: string | null; requestedAt: string } | null;
+  /** Người trình xin trả lại được lúc này (đã có người mở nên không rút lại được). */
+  canRequestReturn: boolean;
+  /** Người xem trả lời được đề nghị trả lại đang chờ. */
+  canDecideReturn: boolean;
 }
 
 /** Người tham gia luồng: người trình, người duyệt, người được xin ý kiến. Họ được đọc tờ trình. */
@@ -591,6 +691,23 @@ export async function getApprovalState(session: SessionPayload, documentId: stri
     canWithdraw: Boolean(workflow) && workflow!.submittedById === session.id && canWithdraw(workflow!.status, workflow!.openedAt, decided),
     myStep: mine ? { id: mine.id, decisions: allowedDecisions(mine.stage) } : null,
     canAskConsultation: Boolean(mine),
+    returnRequest: workflow?.returnRequestedAt ? { note: workflow.returnRequestNote, requestedAt: workflow.returnRequestedAt.toISOString() } : null,
+    canRequestReturn:
+      Boolean(workflow) &&
+      workflow!.submittedById === session.id &&
+      (workflow!.status === "WAITING_UNIT_HEAD" || workflow!.status === "WAITING_LEADER") &&
+      !workflow!.returnRequestedAt &&
+      !canWithdraw(workflow!.status, workflow!.openedAt, decided),
+    canDecideReturn:
+      Boolean(workflow?.returnRequestedAt) &&
+      session.id !== workflow!.submittedById &&
+      currentRoundPending.some((s) => canActOnStep(ctx, s, doc)),
+    reassignableStepIds:
+      workflow && (workflow.status === "WAITING_UNIT_HEAD" || workflow.status === "WAITING_LEADER")
+        ? currentRoundPending
+            .filter((s) => canDo(ctx, "document.submission.approve", doc) || (s.stage === "UNIT_HEAD" && Boolean(s.unitId) && unitsHeadedBy(ctx).has(s.unitId as string)))
+            .map((s) => s.id)
+        : [],
   };
 }
 

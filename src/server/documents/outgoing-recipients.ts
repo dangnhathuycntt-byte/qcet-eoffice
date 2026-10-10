@@ -7,6 +7,7 @@ import { OutgoingDocumentStatus, OutgoingRecipientKind, DocumentStatus, type Pri
 import { prisma } from "@/lib/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { loadContext, canDo, assertCan } from "@/server/documents/authorize-on-document";
@@ -209,6 +210,12 @@ export async function recallOutgoing(session: SessionPayload, documentId: string
       entityId: documentId,
       beforeData: { status: wf.status },
       afterData: { status: OutgoingDocumentStatus.RECALLED, reason, outgoingNumberStr: wf.outgoingNumberStr },
+    });
+    await publishOutboxEvent(tx, {
+      eventType: OutboxEventType.DOCUMENT_RECALLED_NOTIFICATION,
+      aggregateType: OutboxAggregateType.DOCUMENT,
+      aggregateId: documentId,
+      payload: { documentId, recalledById: session.id },
     });
     return { documentId, status: OutgoingDocumentStatus.RECALLED, outgoingNumberStr: wf.outgoingNumberStr };
   });

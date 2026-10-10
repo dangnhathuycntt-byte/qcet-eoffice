@@ -26,6 +26,7 @@ import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
 import { TaskDecline } from "@/components/tasks/detail/task-decline";
 import { TaskExtension } from "@/components/tasks/detail/task-extension";
+import { TaskPeople } from "@/components/tasks/detail/task-people";
 import { TaskBackupReviewer } from "@/components/tasks/detail/task-backup-reviewer";
 import { TaskUnitRequests } from "@/components/tasks/detail/task-unit-requests";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
@@ -835,6 +836,7 @@ export function TaskDetailPage({
                 task={task}
                 currentUser={currentUser}
                 canEdit={canEdit}
+                canChangeDueDate={!Array.isArray((task as any).availableActions) || (task as any).availableActions.includes('task.assign')}
                 onStatusChange={handleStatusChange}
                 onPriorityChange={handlePriorityChange}
                 onDueDateChange={handleDueDateChange}
@@ -900,6 +902,8 @@ export function TaskDetailPage({
                   setTask((prev) => ({ ...prev, version, ...(dueDate ? { dueDate } : {}) }) as any)
                 }
               />
+
+              <TaskPeople taskId={task.id} onVersionChange={(version) => setTask((prev) => ((prev as any).version === version ? prev : ({ ...prev, version } as any)))} />
 
               <TaskBackupReviewer taskId={task.id} />
 

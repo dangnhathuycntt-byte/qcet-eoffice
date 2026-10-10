@@ -8,6 +8,7 @@ import { AssignmentStatus, DocumentType, JobCatalogGroup, OutgoingDocumentStatus
 import { ZodError } from 'zod';
 import { prisma } from '../src/lib/prisma';
 import { OutgoingDocumentService } from '../src/lib/services/outgoing-document-service';
+import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { confirmReceipt, getRecipientsState, recallOutgoing } from '../src/server/documents/outgoing-recipients';
 import { ApiError, ConflictError } from '../src/server/api/errors';
 import { evaluateRecall, evaluateReplacementTarget } from '../src/domain/documents/recall-rules';
@@ -57,7 +58,7 @@ async function makeDoc(key: string, status: OutgoingDocumentStatus, opts: { reci
 
 describe('V-05 thu hồi văn bản đi', () => {
   before(async () => {
-    for (const [key, role] of [['owner', 'CHUYEN_VIEN'], ['clerk', 'VAN_THU'], ['rector', 'BAN_GIAM_HIEU'], ['staff', 'CHUYEN_VIEN']] as const) {
+    for (const [key, role] of [['owner', 'CHUYEN_VIEN'], ['clerk', 'VAN_THU'], ['rector', 'BAN_GIAM_HIEU'], ['staff', 'CHUYEN_VIEN'], ['unitHead', 'TRUONG_PHONG']] as const) {
       const user = await prisma.user.create({ data: { email: `${runId}_${key}@cdktcnqn.edu.vn`, name: `${runId} ${key}`, role: role as UserRole } });
       u[key] = user.id;
     }
@@ -66,11 +67,14 @@ describe('V-05 thu hồi văn bản đi', () => {
     const rectorPos = await ensurePosition('HIEU_TRUONG', JobCatalogGroup.LDPU);
     const from = new Date('2020-01-01T00:00:00Z');
     await prisma.positionAssignment.create({ data: { userId: u.clerk, positionDefinitionId: clerkPos, unitId, status: AssignmentStatus.ACTIVE, effectiveFrom: from } });
+    const headPos = await ensurePosition('TRUONG_DON_VI', JobCatalogGroup.LDPU);
+    await prisma.positionAssignment.create({ data: { userId: u.unitHead, positionDefinitionId: headPos, unitId, status: AssignmentStatus.ACTIVE, effectiveFrom: from } });
     await prisma.positionAssignment.create({ data: { userId: u.rector, positionDefinitionId: rectorPos, unitId, status: AssignmentStatus.ACTIVE, effectiveFrom: from } });
   });
 
   after(async () => {
     const ids = Object.values(u);
+    await prisma.notification.deleteMany({ where: { userId: { in: ids } } });
     await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: docs } } });
     await prisma.auditEvent.deleteMany({ where: { entityId: { in: docs } } });
     await prisma.documentOutgoingWorkflow.deleteMany({ where: { documentId: { in: docs } } });
@@ -216,5 +220,17 @@ describe('V-05 thu hồi văn bản đi', () => {
     const receipt = await prisma.outgoingDocumentRecipient.findUniqueOrThrow({ where: { id: recipientId } });
     assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
     assert.ok(!(wf.status === OutgoingDocumentStatus.RECALLED && receipt.receivedAt), 'không được cùng lúc đã thu hồi và đã tiếp nhận');
+  });
+
+  test('thu hồi báo trưởng đơn vị trong trường đã được ghi là nơi nhận', async () => {
+    const doc = await makeDoc('notify', OutgoingDocumentStatus.ISSUED);
+    await prisma.outgoingDocumentRecipient.create({ data: { documentId: doc.id, kind: 'INTERNAL_UNIT', unitId, name: 'Đơn vị nhận' } });
+    await recallOutgoing(session('clerk'), doc.id, { reason: 'Sai nội dung' });
+    const event = await prisma.outboxEvent.findFirstOrThrow({ where: { aggregateId: doc.id, eventType: 'DOCUMENT_RECALLED_NOTIFICATION' } });
+    await runOutboxCycle(prisma, { ids: [event.id] });
+    const notices = await prisma.notification.findMany({ where: { userId: u.unitHead, type: 'document_recalled' } });
+    assert.equal(notices.length, 1);
+    assert.match(notices[0].body, /Sai nội dung/);
+    assert.equal(await prisma.notification.count({ where: { userId: u.staff, type: 'document_recalled' } }), 0);
   });
 });

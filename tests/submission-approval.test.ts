@@ -14,7 +14,10 @@ import {
   decideApproval,
   getApprovalReport,
   getApprovalState,
+  decideApprovalReturn,
+  markApprovalOpened,
   reassignApprovalStep,
+  requestApprovalReturn,
   submitForApproval,
   withdrawApproval,
 } from '../src/server/documents/submission-approval-service';
@@ -219,6 +222,55 @@ describe('V-06 luồng duyệt tờ trình nội bộ', () => {
       withdrawApproval(session('staff'), id),
       (err: unknown) => err instanceof ConflictError && err.code === 'APPROVAL_ALREADY_OPENED'
     );
+  });
+
+  test('xin trả lại khi đã có người mở: người đang chờ duyệt đồng ý thì về Nháp, từ chối thì giữ luồng (V-06)', async () => {
+    const id = await makeDoc();
+    await submitForApproval(session('staff'), id, {});
+    // Chưa ai mở thì dùng Rút lại, không xin trả lại.
+    await assert.rejects(requestApprovalReturn(session('staff'), id, { note: 'Sai số liệu' }), (e: unknown) => e instanceof ConflictError && e.code === 'APPROVAL_CAN_WITHDRAW');
+    await markApprovalOpened(session('headA'), id);
+    await assert.rejects(requestApprovalReturn(session('headA'), id, { note: 'Sai số liệu' }), forbidden, 'chỉ người trình');
+    await assert.rejects(requestApprovalReturn(session('staff'), id, { note: '' }), ZodError);
+    assert.equal((await stateOf('staff', id)).canRequestReturn, true);
+
+    await requestApprovalReturn(session('staff'), id, { note: 'Sai số liệu ở mục 2' });
+    await assert.rejects(requestApprovalReturn(session('staff'), id, { note: 'Lần hai' }), (e: unknown) => e instanceof ConflictError && e.code === 'RETURN_ALREADY_REQUESTED');
+    const asHead = await stateOf('headA', id);
+    assert.equal(asHead.returnRequest?.note, 'Sai số liệu ở mục 2');
+    assert.equal(asHead.canDecideReturn, true);
+    assert.equal((await stateOf('staff', id)).canDecideReturn, false, 'người trình không tự trả lời');
+    await assert.rejects(decideApprovalReturn(session('staff'), id, { accept: true }), forbidden);
+    await assert.rejects(decideApprovalReturn(session('stranger'), id, { accept: true }), forbidden);
+
+    // Từ chối: luồng giữ nguyên, có thể xin lại.
+    await decideApprovalReturn(session('headA'), id, { accept: false, note: 'Chưa cần sửa' });
+    assert.equal((await stateOf('headA', id)).returnRequest, null);
+    assert.equal((await prisma.documentApprovalWorkflow.findUniqueOrThrow({ where: { documentId: id } })).status, 'WAITING_UNIT_HEAD');
+
+    // Đồng ý: về Nháp, các bước chờ bị bỏ qua, trình lại được.
+    await requestApprovalReturn(session('staff'), id, { note: 'Xin trả lại để sửa' });
+    const done = await decideApprovalReturn(session('headA'), id, { accept: true });
+    assert.equal(done.status, 'DRAFT');
+    assert.equal((await prisma.document.findUniqueOrThrow({ where: { id } })).status, 'CHO_PHAN_CONG');
+    assert.equal(await prisma.documentApprovalStep.count({ where: { workflow: { documentId: id }, status: 'PENDING' } }), 0);
+    assert.equal((await stateOf('staff', id)).canSubmit, true);
+    await assert.rejects(decideApprovalReturn(session('headA'), id, { accept: true }), (e: unknown) => e instanceof ConflictError && e.code === 'RETURN_NOT_REQUESTED');
+    assert.ok(await prisma.auditEvent.findFirst({ where: { entityId: id, action: 'DOCUMENT_APPROVAL_RETURN_DECIDED' } }));
+  });
+
+  test('thông báo xin trả lại: người đang chờ duyệt nhận đề nghị, người trình nhận phản hồi', async () => {
+    const id = await makeDoc();
+    await submitForApproval(session('staff'), id, {});
+    await markApprovalOpened(session('headA'), id);
+    await requestApprovalReturn(session('staff'), id, { note: 'Cần sửa' });
+    const requested = await prisma.outboxEvent.findFirstOrThrow({ where: { aggregateId: id, eventType: 'DOCUMENT_APPROVAL_RETURN_NOTIFICATION' } });
+    await runOutboxCycle(prisma, { ids: [requested.id] });
+    assert.equal(await prisma.notification.count({ where: { userId: u.headA, type: 'submission_return_requested' } }), 1);
+    await decideApprovalReturn(session('headA'), id, { accept: true });
+    const decided = await prisma.outboxEvent.findMany({ where: { aggregateId: id, eventType: 'DOCUMENT_APPROVAL_RETURN_NOTIFICATION' }, orderBy: { createdAt: 'desc' } });
+    await runOutboxCycle(prisma, { ids: decided.map((d) => d.id) });
+    assert.equal(await prisma.notification.count({ where: { userId: u.staff, type: 'submission_return_decided' } }), 1);
   });
 
   test('người trình mở tờ trình không được tính là đã có người mở', async () => {

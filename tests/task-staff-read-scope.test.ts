@@ -104,17 +104,17 @@ describe('T-11 / D07 người thường chỉ thấy phần của mình', () => 
   test('đọc theo mã áp cùng phạm vi cho quyền cơ bản của viên chức; trưởng đơn vị và người tham gia không bị ảnh hưởng', async () => {
     const ctxC = await loadAuthorizationContext(u.c);
     const scopeC = dbReadScope(ctxC);
-    assert.equal(await canReadTask(ctxC, { id: t.solo, ...(await rawTask('solo')) } as never, scopeC), true);
-    assert.equal(await canReadTask(ctxC, { id: t.parent, ...(await rawTask('parent')) } as never, scopeC), false, 'đồng nghiệp không đọc được việc cha của người khác');
-    assert.equal(await canReadTask(ctxC, { id: t.parent, ...(await rawTask('parent')) } as never), true, 'không có bộ kiểm phạm vi thì chỉ theo engine');
+    assert.equal(await canReadTask(ctxC, (await rawTask('solo')) as never, scopeC), true);
+    assert.equal(await canReadTask(ctxC, (await rawTask('parent')) as never, scopeC), false, 'đồng nghiệp không đọc được việc cha của người khác');
+    assert.equal(await canReadTask(ctxC, (await rawTask('parent')) as never), true, 'không có bộ kiểm phạm vi thì chỉ theo engine');
 
     const ctxB = await loadAuthorizationContext(u.b);
     const scopeB = dbReadScope(ctxB);
-    assert.equal(await canReadTask(ctxB, { id: t.parent, ...(await rawTask('parent')) } as never, scopeB), true, 'làm việc con thì đọc được việc cha');
-    assert.equal(await canReadTask(ctxB, { id: t.childA, ...(await rawTask('childA')) } as never, scopeB), false);
+    assert.equal(await canReadTask(ctxB, (await rawTask('parent')) as never, scopeB), true, 'làm việc con thì đọc được việc cha');
+    assert.equal(await canReadTask(ctxB, (await rawTask('childA')) as never, scopeB), false);
 
     const ctxHead = await loadAuthorizationContext(u.head);
-    assert.equal(await canReadTask(ctxHead, { id: t.childA, ...(await rawTask('childA')) } as never, dbReadScope(ctxHead)), true);
+    assert.equal(await canReadTask(ctxHead, (await rawTask('childA')) as never, dbReadScope(ctxHead)), true);
   });
 });
 

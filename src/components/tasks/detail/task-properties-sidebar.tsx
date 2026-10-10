@@ -65,6 +65,8 @@ export interface TaskPropertiesSidebarProps {
   auditEvents?: AuditLogItem[];
   isMobileAccordion?: boolean;
   canEdit?: boolean;
+  /** Đổi hạn trực tiếp chỉ dành cho người giao (T-01); người thực hiện dùng Xin gia hạn. Mặc định cho phép. */
+  canChangeDueDate?: boolean;
   showRelatedSections?: boolean;
   className?: string;
   subTasks?: StaffTask[];
@@ -148,6 +150,7 @@ export function TaskPropertiesSidebar({
   auditEvents = [],
   isMobileAccordion = false,
   canEdit = true,
+  canChangeDueDate = true,
   showRelatedSections = true,
   className,
   subTasks,
@@ -492,7 +495,7 @@ export function TaskPropertiesSidebar({
           {/* Row 6: Due Date / Target Date */}
           <PropertyRow label="Hạn hoàn thành" interactive>
             <div className="flex items-center text-xs shrink-0 min-w-0">
-              {canEdit && onDueDateChange ? (
+              {canEdit && canChangeDueDate && onDueDateChange ? (
                 <VietnameseDatePicker
                   value={dueDateIso}
                   onChange={handleDueDateChangeInternal}

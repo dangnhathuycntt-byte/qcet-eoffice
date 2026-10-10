@@ -619,6 +619,9 @@ model DocumentApprovalWorkflow {
   decidedBy     User?                   @relation("ApprovalFinalDecider", fields: [decidedById], references: [id], onDelete: SetNull)
   decidedAt     DateTime?               @map("decided_at")
   decisionNote  String?                 @map("decision_note") @db.VarChar(1000)
+  // Đề nghị trả lại của người trình khi tờ trình đã có người mở (không rút lại được nữa).
+  returnRequestedAt   DateTime?         @map("return_requested_at")
+  returnRequestNote   String?           @map("return_request_note") @db.VarChar(1000)
   steps         DocumentApprovalStep[]
   consultations DocumentConsultation[]
   createdAt     DateTime                @default(now()) @map("created_at")

@@ -436,6 +436,7 @@ describe('Task 10: Canonical Available Actions Computation', () => {
         'task.submit_result',
         'task.review',
         'task.approve',
+        'task.assign',
         'task.reassign',
         'task.remind',
         'task.cancel',

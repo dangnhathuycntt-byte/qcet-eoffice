@@ -41,6 +41,10 @@ interface State {
   canWithdraw: boolean;
   myStep: { id: string; decisions: Decision[] } | null;
   canAskConsultation: boolean;
+  reassignableStepIds?: string[];
+  returnRequest?: { note: string | null; requestedAt: string } | null;
+  canRequestReturn?: boolean;
+  canDecideReturn?: boolean;
 }
 
 const DECISION_LABEL: Record<Decision, string> = { APPROVE: "Đồng ý", REVISION: "Cần bổ sung", REJECT: "Không phê duyệt" };
@@ -66,16 +70,19 @@ export function SubmissionApprovalPanel({
   const [state, setState] = React.useState<State | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const [mode, setMode] = React.useState<"idle" | "submit" | "decide" | "consult">("idle");
+  const [mode, setMode] = React.useState<"idle" | "submit" | "decide" | "consult" | "reassign" | "return">("idle");
   const [decision, setDecision] = React.useState<Decision | null>(null);
   const [note, setNote] = React.useState("");
   const [units, setUnits] = React.useState<string[]>([]);
   const [consultantId, setConsultantId] = React.useState<string | null>(null);
   const [question, setQuestion] = React.useState("");
   const [answers, setAnswers] = React.useState<Record<string, string>>({});
+  const [reassignStepId, setReassignStepId] = React.useState<string | null>(null);
+  const [reassignTo, setReassignTo] = React.useState<string | null>(null);
+  const [reassignReason, setReassignReason] = React.useState("");
 
   const { departments } = useDepartmentList({ enabled: mode === "submit" });
-  const { personnel } = usePersonnelList({ enabled: mode === "consult" });
+  const { personnel } = usePersonnelList({ enabled: mode === "consult" || mode === "reassign" });
 
   const load = React.useCallback(async () => {
     try {
@@ -112,6 +119,9 @@ export function SubmissionApprovalPanel({
       setUnits([]);
       setConsultantId(null);
       setQuestion("");
+      setReassignStepId(null);
+      setReassignTo(null);
+      setReassignReason("");
       await load();
       onChanged?.();
     } catch (e) {
@@ -149,8 +159,13 @@ export function SubmissionApprovalPanel({
                 {s.approver ? <span className="text-muted-foreground"> · {s.approver.name}</span> : null}
                 {s.note ? <span className="text-muted-foreground"> · {s.note}</span> : null}
               </span>
-              <span className={cn("shrink-0", s.status === "PENDING" ? "text-muted-foreground" : "text-foreground")}>
+              <span className={cn("flex shrink-0 items-center gap-1", s.status === "PENDING" ? "text-muted-foreground" : "text-foreground")}>
                 {STEP_STATUS_LABEL[s.status]}
+                {s.status === "PENDING" && state.reassignableStepIds?.includes(s.id) ? (
+                  <Button type="button" size="xs" variant="ghost" onClick={() => { setReassignStepId(s.id); setMode("reassign"); }}>
+                    Thay người
+                  </Button>
+                ) : null}
               </span>
             </li>
           ))}
@@ -164,11 +179,32 @@ export function SubmissionApprovalPanel({
         <InlineAlert variant="error">Không phê duyệt: {state.workflow.decisionNote}</InlineAlert>
       )}
 
+      {state.returnRequest && (
+        <InlineAlert variant="warning">
+          Người trình xin trả lại tờ trình{state.returnRequest.note ? `: ${state.returnRequest.note}` : ""}
+          {state.canDecideReturn && mode === "idle" ? (
+            <span className="mt-1.5 flex gap-1.5">
+              <Button type="button" size="xs" disabled={busy} onClick={() => void call("decide-return-approval", { accept: true }, "Không ghi nhận được")}>
+                Đồng ý trả lại
+              </Button>
+              <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void call("decide-return-approval", { accept: false }, "Không ghi nhận được")}>
+                Từ chối
+              </Button>
+            </span>
+          ) : null}
+        </InlineAlert>
+      )}
+
       {mode === "idle" && (
         <div className="flex flex-wrap gap-1.5">
           {state.canSubmit && (
             <Button type="button" size="sm" onClick={() => setMode("submit")}>
               {state.workflow?.status === "NEEDS_REVISION" ? "Trình lại" : "Trình duyệt"}
+            </Button>
+          )}
+          {state.canRequestReturn && (
+            <Button type="button" size="sm" variant="ghost" onClick={() => setMode("return")}>
+              Xin trả lại
             </Button>
           )}
           {state.canWithdraw && (
@@ -235,6 +271,46 @@ export function SubmissionApprovalPanel({
               {DECISION_LABEL[decision]}
             </Button>
             <Button type="button" size="xs" variant="ghost" onClick={() => { setMode("idle"); setDecision(null); setNote(""); }}>Hủy</Button>
+          </div>
+        </div>
+      )}
+
+      {mode === "return" && (
+        <div className="space-y-1.5">
+          <p className="text-xs text-muted-foreground">Tờ trình đã có người mở nên cần người đang chờ duyệt đồng ý mới trả về Nháp.</p>
+          <Textarea compact value={note} maxLength={1000} aria-label="Lý do xin trả lại" placeholder="Lý do (bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
+          <div className="flex gap-1.5">
+            <Button type="button" size="xs" disabled={busy || note.trim().length < 3} onClick={() => void call("request-return-approval", { note: note.trim() }, "Không gửi được đề nghị")}>
+              Gửi đề nghị
+            </Button>
+            <Button type="button" size="xs" variant="ghost" onClick={() => { setMode("idle"); setNote(""); }}>Hủy</Button>
+          </div>
+        </div>
+      )}
+
+      {mode === "reassign" && reassignStepId && (
+        <div className="space-y-1.5">
+          <p className="text-xs text-muted-foreground">Thay người xử lý ở bước đang chờ (người nghỉ, vắng). Có ghi dấu vết, không làm lại từ đầu.</p>
+          <Select
+            compact
+            positionerClassName="z-50"
+            aria-label="Người xử lý mới"
+            placeholder="— Chọn người —"
+            options={personnel.map((p) => ({ value: p.id, label: p.name }))}
+            value={reassignTo}
+            onValueChange={(v) => setReassignTo(v || null)}
+          />
+          <Textarea compact value={reassignReason} maxLength={1000} aria-label="Lý do thay người" placeholder="Lý do (bắt buộc)" onChange={(e) => setReassignReason(e.target.value)} className="min-h-12" />
+          <div className="flex gap-1.5">
+            <Button
+              type="button"
+              size="xs"
+              disabled={busy || !reassignTo || reassignReason.trim().length < 3}
+              onClick={() => void call("reassign-approval-step", { stepId: reassignStepId, approverUserId: reassignTo, reason: reassignReason.trim() }, "Không thay được người xử lý")}
+            >
+              Thay người
+            </Button>
+            <Button type="button" size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
           </div>
         </div>
       )}

@@ -112,6 +112,34 @@ export const DOCUMENT_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
     });
   },
 
+  // Xin trả lại tờ trình đã có người mở: báo người đang chờ duyệt; có phản hồi thì báo người trình (V-06).
+  [OutboxEventType.DOCUMENT_APPROVAL_RETURN_NOTIFICATION]: async (event, context) => {
+    const db = context?.client as DbClient;
+    const p = payloadOf(event);
+    const documentId = str(p, "documentId") ?? event.aggregateId;
+    const workflowId = str(p, "workflowId");
+    const doc = await db.document.findUnique({ where: { id: documentId } });
+    const workflow = workflowId ? await db.documentApprovalWorkflow.findUnique({ where: { id: workflowId } }) : null;
+    if (!doc || !workflow) return { skipped: "missing" };
+    if (str(p, "kind") === "REQUESTED") {
+      if (!workflow.returnRequestedAt) return { skipped: "request_closed" };
+      const recipients = await recipientsForPendingSteps(db, workflow.id);
+      return notifyUsers(db, doc.id, recipients, str(p, "actorId"), {
+        type: "submission_return_requested",
+        title: "Người trình xin trả lại tờ trình",
+        body: `${submissionLabel(doc)}. Lý do: ${workflow.returnRequestNote ?? "—"}`,
+      });
+    }
+    if (!workflow.submittedById) return { skipped: "no_submitter" };
+    const accept = p["accept"] === true;
+    const note = str(p, "note");
+    return notifyUsers(db, doc.id, [workflow.submittedById], str(p, "actorId"), {
+      type: "submission_return_decided",
+      title: accept ? "Tờ trình đã được trả lại để sửa" : "Đề nghị trả lại bị từ chối",
+      body: `${submissionLabel(doc)}${note ? `. Ghi chú: ${note}` : ""}`,
+    });
+  },
+
   // Xin ý kiến: báo người được hỏi; trả lời thì báo người hỏi.
   [OutboxEventType.DOCUMENT_CONSULTATION_NOTIFICATION]: async (event, context) => {
     const db = context?.client as DbClient;
@@ -143,6 +171,25 @@ export const DOCUMENT_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
       type: "document_returned",
       title: "Văn bản bị trả lại",
       body: `${docLabel(doc)}. Lý do: ${reason ?? "không nêu"}. Cần chuyển cho đơn vị khác.`,
+    });
+  },
+
+  // Văn bản đi bị thu hồi (V-05): báo trưởng các đơn vị trong trường đã được ghi là nơi nhận.
+  [OutboxEventType.DOCUMENT_RECALLED_NOTIFICATION]: async (event, context) => {
+    const db = context?.client as DbClient;
+    const p = payloadOf(event);
+    const documentId = str(p, "documentId") ?? event.aggregateId;
+    const doc = await db.document.findUnique({ where: { id: documentId }, include: { outgoingRecipients: { where: { kind: "INTERNAL_UNIT", unitId: { not: null } } } } });
+    if (!doc) return { skipped: "document_missing" };
+    const leaders: string[] = [];
+    for (const r of doc.outgoingRecipients) if (r.unitId) leaders.push(...(await unitLeaderIds(db, r.unitId)));
+    if (leaders.length === 0) return { skipped: "no_internal_recipient_leader" };
+    const wf = await db.documentOutgoingWorkflow.findUnique({ where: { documentId }, select: { outgoingNumberStr: true, recallReason: true } });
+    const summary = doc.summary.length > 60 ? `${doc.summary.slice(0, 57)}...` : doc.summary;
+    return notifyUsers(db, doc.id, leaders, str(p, "recalledById"), {
+      type: "document_recalled",
+      title: "Văn bản đã bị thu hồi",
+      body: `Văn bản số ${wf?.outgoingNumberStr ?? "—"}: ${summary}. Lý do: ${wf?.recallReason ?? "—"}. Không thực hiện theo văn bản này.`,
     });
   },
 
