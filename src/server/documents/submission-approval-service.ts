@@ -604,6 +604,11 @@ export interface ApprovalState {
     canAnswer: boolean;
   }>;
   canSubmit: boolean;
+  /**
+   * Đơn vị của người trình, luôn có trong lần trình (chỉ trả khi người xem trình được).
+   * `skipped`: người trình là trưởng đơn vị đó nên bước này bỏ qua (không tự duyệt).
+   */
+  ownUnits: Array<{ id: string; name: string; skipped: boolean }>;
   canWithdraw: boolean;
   /** Bước chờ mà người xem duyệt được, cùng các lựa chọn cho phép. */
   myStep: { id: string; decisions: ApprovalDecision[] } | null;
@@ -663,6 +668,17 @@ export async function getApprovalState(session: SessionPayload, documentId: stri
     : undefined;
   const decided = workflow ? workflow.steps.filter((s) => s.round === workflow.round && s.status !== "PENDING" && s.status !== "SKIPPED").length : 0;
 
+  const canSubmit = doc.registeredById === session.id && canSubmitFrom(workflow?.status ?? null);
+  const headed = unitsHeadedBy(ctx);
+  const ownIds = canSubmit ? ownUnitIds(ctx) : [];
+  const ownUnits = ownIds.length
+    ? (await prisma.organizationalUnit.findMany({
+        where: { id: { in: ownIds }, status: UnitStatus.ACTIVE },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })).map((unit) => ({ id: unit.id, name: unit.name, skipped: headed.has(unit.id) }))
+    : [];
+
   return {
     workflow: workflow
       ? { status: workflow.status, round: workflow.round, submittedAt: workflow.submittedAt?.toISOString() ?? null, decisionNote: workflow.decisionNote }
@@ -687,7 +703,8 @@ export async function getApprovalState(session: SessionPayload, documentId: stri
       answeredAt: c.answeredAt?.toISOString() ?? null,
       canAnswer: c.consultantId === session.id && !c.answeredAt,
     })),
-    canSubmit: doc.registeredById === session.id && canSubmitFrom(workflow?.status ?? null),
+    canSubmit,
+    ownUnits,
     canWithdraw: Boolean(workflow) && workflow!.submittedById === session.id && canWithdraw(workflow!.status, workflow!.openedAt, decided),
     myStep: mine ? { id: mine.id, decisions: allowedDecisions(mine.stage) } : null,
     canAskConsultation: Boolean(mine),

@@ -41,6 +41,8 @@ interface State {
   steps: Step[];
   consultations: Consultation[];
   canSubmit: boolean;
+  /** Đơn vị của người trình, luôn có trong lần trình; `skipped`: người trình là trưởng đơn vị nên bước đó bỏ qua. */
+  ownUnits?: Array<{ id: string; name: string; skipped: boolean }>;
   canWithdraw: boolean;
   myStep: { id: string; decisions: Decision[] } | null;
   canAskConsultation: boolean;
@@ -154,35 +156,67 @@ export function SubmissionApprovalPanel({
     setUnitQuery("");
   };
   const query = unitQuery.trim().toLowerCase();
+  const ownUnits = state.ownUnits ?? [];
+  const ownIds = new Set(ownUnits.map((u) => u.id));
   const visibleDepartments = departments
-    .filter((d) => !query || d.name.toLowerCase().includes(query))
+    .filter((d) => !ownIds.has(d.id) && (!query || d.name.toLowerCase().includes(query)))
     .sort((a, b) => Number(units.includes(b.id)) - Number(units.includes(a.id)));
+  // Số bước trưởng đơn vị của lần trình này (đơn vị của mình mà mình là trưởng thì bỏ qua)
+  const unitStepCount = ownUnits.filter((u) => !u.skipped).length + units.filter((id) => !ownIds.has(id)).length;
+  const SECTION_LABEL = "px-2 pb-1 pt-2 text-xs text-muted-foreground";
+  const ROW = "flex h-8 items-center gap-2.5 rounded-sm px-2 text-compact";
 
-  // Nội dung hộp thoại "Trình duyệt": ô tìm, danh sách đơn vị tràn mép (không lồng khung trong khung), chân có đường kẻ như các modal văn bản khác
+  // Nội dung hộp thoại "Trình duyệt": ô tìm, đơn vị của mình cố định ở đầu, đơn vị liên quan chọn thêm;
+  // chân nói trước đường đi (bao nhiêu đơn vị duyệt song song rồi tới lãnh đạo)
   const submitForm = (
     <div className="-mx-4 -mb-4 flex min-h-0 flex-col sm:-mx-6 sm:-mb-6">
-      <div className="relative px-4 pb-2 sm:px-6">
-        <Search className="pointer-events-none absolute left-6 top-1/2 size-3.5 -translate-y-[calc(50%+4px)] text-muted-foreground sm:left-8" strokeWidth={1.5} aria-hidden />
-        <Input compact value={unitQuery} onChange={(e) => setUnitQuery(e.target.value)} placeholder="Tìm đơn vị" aria-label="Tìm đơn vị" className="pl-7" autoFocus />
+      <div className="relative px-4 pb-1 sm:px-6">
+        <Search className="pointer-events-none absolute left-6 top-1/2 size-3.5 -translate-y-[calc(50%+2px)] text-muted-foreground sm:left-8" strokeWidth={1.5} aria-hidden />
+        <Input
+          compact
+          value={unitQuery}
+          onChange={(e) => setUnitQuery(e.target.value)}
+          placeholder="Tìm đơn vị liên quan"
+          aria-label="Tìm đơn vị liên quan"
+          // Ô tìm yên: giữ nền xám khi focus, viền focus mảnh (không tô xanh cả ô)
+          className="pl-7 focus-visible:bg-secondary focus-visible:outline-1 focus-visible:outline-foreground/20"
+          autoFocus
+        />
       </div>
-      {/* Hàng 32px, cả hàng là vùng bấm; đơn vị đã chọn lên đầu */}
-      <ul role="group" aria-label="Đơn vị liên quan" className="max-h-72 overflow-y-auto px-2 pb-2 sm:px-4">
-        {visibleDepartments.map((d) => (
-          <li key={d.id}>
-            <label className="flex h-8 cursor-pointer items-center gap-2.5 rounded-sm px-2 text-compact transition-colors hover:bg-accent">
-              <Checkbox
-                checked={units.includes(d.id)}
-                onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
-              />
-              <span className="min-w-0 truncate" title={d.name}>{d.name}</span>
-            </label>
-          </li>
-        ))}
-        {visibleDepartments.length === 0 ? <li className="px-2 py-2 text-xs text-muted-foreground">Không có đơn vị phù hợp</li> : null}
-      </ul>
+      <div className="max-h-80 overflow-y-auto px-2 pb-2 sm:px-4">
+        {ownUnits.length > 0 && !query ? (
+          <div role="group" aria-label="Đơn vị của bạn">
+            <p className={SECTION_LABEL}>Đơn vị của bạn</p>
+            {ownUnits.map((u) => (
+              <div key={u.id} className={ROW}>
+                <Checkbox checked disabled aria-label={`${u.name} (luôn có)`} />
+                <span className="min-w-0 flex-1 truncate" title={u.name}>{u.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{u.skipped ? "Bỏ qua, bạn là trưởng đơn vị" : "Luôn duyệt"}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div role="group" aria-label="Đơn vị liên quan">
+          {ownUnits.length > 0 && !query ? <p className={SECTION_LABEL}>Đơn vị liên quan</p> : null}
+          <ul>
+            {visibleDepartments.map((d) => (
+              <li key={d.id}>
+                <label className={cn(ROW, "cursor-pointer transition-colors hover:bg-accent")}>
+                  <Checkbox
+                    checked={units.includes(d.id)}
+                    onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
+                  />
+                  <span className="min-w-0 truncate" title={d.name}>{d.name}</span>
+                </label>
+              </li>
+            ))}
+            {visibleDepartments.length === 0 ? <li className="px-2 py-2 text-xs text-muted-foreground">Không có đơn vị phù hợp</li> : null}
+          </ul>
+        </div>
+      </div>
       <div className="flex items-center gap-2 border-t border-border px-4 py-3 sm:px-6">
-        <span className="mr-auto text-xs text-muted-foreground">
-          {units.length > 0 ? `Đã chọn ${units.length} đơn vị` : "Chưa chọn thêm đơn vị"}
+        <span className="mr-auto min-w-0 truncate text-xs text-muted-foreground">
+          {unitStepCount > 1 ? `Trưởng ${unitStepCount} đơn vị duyệt song song → Lãnh đạo` : unitStepCount === 1 ? "Trưởng đơn vị duyệt → Lãnh đạo" : "Chuyển thẳng lãnh đạo"}
         </span>
         <Button type="button" size="sm" variant="outline" onClick={closeSubmit}>Hủy</Button>
         <Button type="button" size="sm" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
@@ -313,7 +347,7 @@ export function SubmissionApprovalPanel({
         open={mode === "submit"}
         onOpenChange={(open) => (open ? setMode("submit") : closeSubmit())}
         title={state.workflow?.status === "NEEDS_REVISION" ? "Trình lại tờ trình" : "Trình duyệt tờ trình"}
-        description="Đơn vị của bạn luôn duyệt. Chọn thêm đơn vị cùng duyệt song song."
+        description="Gửi tới trưởng các đơn vị dưới đây (duyệt song song), sau đó tới lãnh đạo."
         size="sm"
         className="sm:max-w-md"
       >

@@ -131,6 +131,20 @@ describe('V-06 luồng duyệt tờ trình nội bộ', () => {
     assert.equal(await prisma.notification.count({ where: { userId: u.staff } }), 0);
   });
 
+  test('trạng thái luồng trả đơn vị của người trình (luôn duyệt) chỉ cho người trình được; trưởng đơn vị thì bước đó bỏ qua', async () => {
+    const id = await makeDoc();
+    const own = await stateOf('staff', id);
+    assert.deepEqual(own.ownUnits, [{ id: unit.A, name: 'Đơn vị A', skipped: false }]);
+
+    const headDoc = await makeDoc('headA');
+    const head = await stateOf('headA', headDoc);
+    assert.deepEqual(head.ownUnits, [{ id: unit.A, name: 'Đơn vị A', skipped: true }]);
+
+    // Người không trình được (không phải người lập) không nhận danh sách này.
+    await submitForApproval(session('staff'), id, {});
+    assert.deepEqual((await stateOf('staff', id)).ownUnits, []);
+  });
+
   test('duyệt song song: đủ đồng ý của các đơn vị mới lên lãnh đạo, rồi lãnh đạo phê duyệt (AC-V06-1)', async () => {
     const id = await makeDoc();
     await submitForApproval(session('staff'), id, { involvedUnitIds: [unit.B] });
