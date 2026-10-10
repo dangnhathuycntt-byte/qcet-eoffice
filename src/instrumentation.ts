@@ -33,6 +33,11 @@ export async function register(): Promise<void> {
         const { startFileScanWorker } = await import('@/server/files/file-scan-worker');
         startFileScanWorker();
       }
+
+      if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.OUTBOX_WORKER_ENABLED === 'true') {
+        const { startOutboxWorker } = await import('@/server/outbox/outbox-worker');
+        startOutboxWorker();
+      }
     } catch (error) {
       // Fail-safe: runtime boot must proceed even if telemetry environment encounters issues
       try {

@@ -10,7 +10,9 @@ export type TaskPushEventType =
   | "DELIVERABLE_APPROVED"
   | "DELIVERABLE_REVISION"
   | "DEADLINE_WARNING_24H"
-  | "EXECUTIVE_DIRECTIVE";
+  | "EXECUTIVE_DIRECTIVE"
+  | "TASK_REMINDER"
+  | "TASK_CANCELLED";
 
 export interface TaskPushInput {
   event: TaskPushEventType;
@@ -187,7 +189,9 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
     case "DELIVERABLE_REVISION": {
       eventShort = "revision";
       rawTitle = `[YÊU CẦU SỬA] ${taskTitle}`;
-      rawBody = `${actorName} yêu cầu chỉnh sửa/bổ sung sản phẩm`;
+      rawBody = directiveNote
+        ? `${actorName} yêu cầu chỉnh sửa: "${directiveNote}"`
+        : `${actorName} yêu cầu chỉnh sửa/bổ sung sản phẩm`;
       break;
     }
     case "DEADLINE_WARNING_24H": {
@@ -204,6 +208,18 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
       rawBody = directiveNote
         ? `${actorName}: "${directiveNote}"`
         : `${actorName} đã ban hành chỉ đạo điều hành`;
+      break;
+    }
+    case "TASK_REMINDER": {
+      eventShort = "remind";
+      rawTitle = `[NHẮC VIỆC] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc thực hiện nhiệm vụ`;
+      break;
+    }
+    case "TASK_CANCELLED": {
+      eventShort = "cancel";
+      rawTitle = `[ĐÃ HỦY] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} đã hủy nhiệm vụ: "${directiveNote}"` : `${actorName} đã hủy nhiệm vụ`;
       break;
     }
     default: {

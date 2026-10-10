@@ -81,6 +81,7 @@ const EVENT_LABELS: Record<string, string> = {
   document_overdue: "Văn bản trễ hạn",
   document_expiring_soon: "Văn bản sắp đến hạn",
   completed: "Hoàn thành",
+  cancelled: "Đã hủy",
   progress: "Cập nhật",
   upload: "Tệp mới",
   created: "Tạo mới",

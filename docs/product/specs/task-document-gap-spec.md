@@ -83,7 +83,7 @@ Gồm hai loại: **Q-mục** là câu hỏi của spec (đã chọn, có thể 
 ### H-1 Outbox worker
 
 - **Hiện trạng [ĐÃ KIỂM]:** `processOutboxBatch` được định nghĩa trong `src/lib/db/outbox.ts` nhưng không có nơi nào gọi. `vercel.json` chỉ có một cron hằng ngày (`document-deadline-check`). Production chạy bằng `docker-compose.yml` trên máy chủ (có `qcet-app` và `cloudflared`), không phải Vercel. Vì vậy các sự kiện `TASK_REMINDER_NOTIFICATION` và `DOCUMENT_*` đã ghi vào `outbox_events` nhưng không được gửi.
-- **Quyết định (Q7):** thêm service `qcet-worker` trong `docker-compose.yml`, dùng cùng image `qcet-eoffice-app`, chạy một script worker lặp mỗi 60 giây và gọi `processOutboxBatch` với handler theo `eventType`. Không dùng Vercel cron cho outbox.
+- **Quyết định (Q7, sửa khi triển khai):** worker chạy trong tiến trình app qua `src/instrumentation.ts`, cùng mẫu với `file-scan-worker`, bật bằng `OUTBOX_WORKER_ENABLED` (mặc định `true` trong `docker-compose.yml`), lặp mỗi 60 giây. Lý do đổi so với service riêng: image production chỉ chứa bản build Next.js, không có mã TypeScript hay `tsx`; một service riêng cần thêm bước đóng gói. Chạy nhiều bản vẫn an toàn vì sự kiện được nhận bằng cập nhật nguyên tử `PENDING → PROCESSING`. Không dùng Vercel cron cho outbox.
 - **Yêu cầu:**
   - Idempotent: cùng một sự kiện không gửi hai lần khi retry. Dedupe theo `outbox_events.id` ở phía người nhận.
   - Retry theo backoff có sẵn; quá `maxRetries` chuyển `FAILED` kèm `lastError`.
@@ -94,7 +94,8 @@ Gồm hai loại: **Q-mục** là câu hỏi của spec (đã chọn, có thể 
   - AC-H1-1: sự kiện `PENDING` được xử lý trong tối đa 2 phút kể từ `availableAt`.
   - AC-H1-2: sự kiện lỗi lặp lại đúng số lần, sau đó `FAILED` và có `lastError`.
   - AC-H1-3: chạy worker hai lần liên tiếp không tạo thông báo thứ hai.
-  - AC-H1-4: `docker compose stop qcet-worker` không làm mất sự kiện đang xử lý dở.
+  - AC-H1-4: khi app nhận `SIGTERM`, hook tắt chờ batch đang chạy xong rồi mới đóng kết nối DB.
+  - AC-H1-5: sự kiện tồn đọng quá 24 giờ khi xử lý lần đầu được đánh dấu xong mà không gửi, tránh gửi dồn thông báo cũ khi bật worker.
 
 ### H-2 Capability mới
 
@@ -420,7 +421,7 @@ Capability liên quan hành động nhạy cảm (hủy, thu hồi, hủy hồ s
 | Q4 | Trùng số ký hiệu: chặn hay cảnh báo? | Cảnh báo, cho xác nhận | Bản đồ ghi "cảnh báo"; số có thể bị nhập sai hoặc trùng hợp |
 | Q5 | "Không phê duyệt" có áp dụng cho tờ trình không? | Có, lý do bắt buộc | D05 chỉ áp dụng nhiệm vụ; tờ trình là quy trình khác |
 | Q6 | Danh sách trường đổi hàng loạt | Chỉ ưu tiên | Hạn và đơn vị liên quan đến đồng ý và trách nhiệm (T-01, T-12); trạng thái không đổi hàng loạt |
-| Q7 | Nền tảng và tần suất chạy outbox worker | Service `qcet-worker` trong `docker-compose.yml`, cùng image, lặp 60 giây | Production chạy Docker trên máy chủ, không dùng Vercel |
+| Q7 | Nền tảng và tần suất chạy outbox worker | Chạy trong tiến trình app qua `instrumentation.ts`, bật bằng `OUTBOX_WORKER_ENABLED`, lặp 60 giây (sửa khi triển khai) | Production chạy Docker; image không có mã TS nên service riêng cần thêm bước đóng gói; repo đã có mẫu `file-scan-worker` |
 | Q8 | Mốc 01/11/2026 của liên thông trục | Không đưa V-08 vào P0–P2; ADR trước; xác minh mốc với pháp chế | Spec không xác nhận nội dung pháp luật; tránh lập kế hoạch dựa trên mốc chưa kiểm |
 | Q9 | Chu kỳ mẫu lặp lại | Theo `academicMonth` (năm học) | Khớp N10 và cách lọc nhiệm vụ hiện tại |
 | Q10 | Thu hồi sau khi bên nhận đã tiếp nhận? | Không; chỉ thay thế bằng số mới | Khớp bản đồ Quy trình 7 |
@@ -445,7 +446,7 @@ Capability liên quan hành động nhạy cảm (hủy, thu hồi, hủy hồ s
 
 | Giai đoạn | Hạng mục | Điều kiện |
 |---|---|---|
-| **P0 — Nền** | H-1 outbox worker (qcet-worker); H-2 capability; T-00 đường duyệt REVIEWER/APPROVER | Không còn quyết định mở |
+| **P0 — Nền** | H-1 outbox worker; H-2 capability; T-00 đường duyệt REVIEWER/APPROVER | Không còn quyết định mở |
 | **P1 — Làm ngay** | T-01 xin gia hạn; T-02 từ chối nhận; T-03 bình luận; T-04 tiêu chí; T-06 nhắc trước hạn, trễ hạn, chờ duyệt; T-07 người phối hợp qua API; V-01 trả lại và chuyển nhầm; V-02 cảnh báo trùng số; V-10 cập nhật bản đồ; ADR liên thông (V-08, Q11) | H-1 cho T-06 |
 | **P2 — Sau P1** | T-08 đổi hàng loạt (ưu tiên); V-06 tờ trình (gồm duyệt song song, rút lại, xin ý kiến, báo cáo thời gian duyệt); V-07 xét hủy hồ sơ; V-05a rồi V-05 thu hồi | V-05a phải có trước V-05 |
 | **P3 — Cần ADR hoặc quyết định ngoài** | T-05 người dự phòng (D12 đã quyết); T-09 mẫu và lặp lại; T-11, T-12 (D07, D06 đã quyết); V-03 kiểm chữ ký (adapter, chưa chọn dịch vụ); V-08 liên thông (ADR, xác minh pháp lý); V-09 ký nháy (D01 đã quyết); quy trình tùy chỉnh của tờ trình | ADR, xác nhận D-mục, xác minh pháp lý |
@@ -467,7 +468,7 @@ Phụ thuộc chính:
   - `node scripts/run-tests.mjs --files tests/<file>.test.ts`
 - Luồng UI chính (T-01, V-01, V-06) cần E2E Playwright với DB test riêng.
 - Không báo "đã kiểm" cho hạng mục chưa chạy test. Thiếu môi trường DB test thì báo phần chưa kiểm chứng.
-- H-1: kiểm bằng chạy `qcet-worker` trên môi trường test với Docker Compose; không kiểm trên production.
+- H-1: kiểm bằng test DB (`tests/outbox-worker-task-notifications.test.ts`); không kiểm trên production.
 
 ---
 
@@ -493,7 +494,7 @@ Phụ thuộc chính:
   - `src/lib/services/incoming-document-service.ts`, `src/lib/services/outgoing-document-service.ts`
   - `src/lib/documents/document-deadline-scanner.ts`, `src/app/api/cron/document-deadline-check/route.ts`
   - `src/lib/db/outbox.ts`, `src/server/authorization/capability.ts`, `src/server/authorization/authorization-engine.ts`
-  - `docker-compose.yml` (thêm service `qcet-worker`), `vercel.json` (không dùng cho outbox)
+  - `src/instrumentation.ts`, `src/server/outbox/` (worker và handler), `docker-compose.yml` (`OUTBOX_WORKER_ENABLED`), `vercel.json` (không dùng cho outbox)
 - Schema: `prisma/schema.prisma` (các model `Task`, `TaskApprovalStep`, `Document`, `DocumentIncomingWorkflow`, `UnitWorkAssignment`, `DocumentOutgoingWorkflow`, `SignatureRecord`, `OutboxEvent`, `WorkDossier`).
 - Bản đồ: artifact `YMQ1BCru8M22gGEWYzhcF3`, các trang Quy trình 2–8, 10, 11; API 2; R02, R03; T3Audit; T3Flow.
 
@@ -506,3 +507,4 @@ Nhánh `feat/task-document-gaps`. Cập nhật sau mỗi hạng mục.
 | Hạng mục | Trạng thái | Kiểm chứng | Ghi chú |
 |---|---|---|---|
 | T-00 | Xong | `tests/security/task-designated-reviewer-authz.test.ts` 11/11; 26 file test quyền 497/498 (1 lỗi do chạy song song DB, đạt khi chạy riêng) | Nguyên nhân gốc: `assigneeIds` gom mọi TaskActor nên REVIEWER/APPROVER bị bước 10 chặn "tự duyệt"; FOLLOWER/OBSERVER có quyền cập nhật tiến độ. Thêm `partitionTaskActorUserIds` dùng chung cho server và `availableActions`. |
+| H-1 | Xong | `tests/outbox-worker-task-notifications.test.ts` 7/7; 20 file test push/outbox/notification 277/278 (`mobile-pwa-push-e2e` lỗi sẵn trên code gốc) | Handler: nhắc việc, giao lại, nộp duyệt, Đạt, yêu cầu chỉnh sửa (kèm lý do), hủy. Đánh dấu xong không gửi: `TASK_COMPLETED`, trễ hạn văn bản (cron đã gửi). Sự kiện văn bản đến, văn bản đi, hồ sơ, ủy quyền chưa có handler, giữ `PENDING` để làm ở các hạng mục V. |
