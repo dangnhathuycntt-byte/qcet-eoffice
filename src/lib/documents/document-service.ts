@@ -141,6 +141,7 @@ const defaultInclude = {
     select: {
       id: true,
       code: true,
+      archivedAt: true,
       title: true,
       status: true,
       progressPercent: true,
@@ -163,7 +164,10 @@ const defaultInclude = {
   signatures: true,
 };
 
-export function mapPrismaDocumentToItem(record: any): DocumentItem {
+export function mapPrismaDocumentToItem(rawRecord: any): DocumentItem {
+  // Nhiệm vụ đã lưu trữ ("xóa" trên giao diện) coi như không còn liên kết: không hiện ở dòng Nhiệm vụ, không trả linkedTaskId treo.
+  const archivedLink = Boolean(rawRecord.linkedTask?.archivedAt);
+  const record = archivedLink ? { ...rawRecord, linkedTask: null, linkedTaskId: null } : rawRecord;
   return {
     id: record.id,
     type: record.type,
