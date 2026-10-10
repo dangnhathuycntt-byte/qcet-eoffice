@@ -542,6 +542,11 @@ model DocumentIncomingWorkflow {
   archivedById          String?                @map("archived_by_id")
   archivedBy            User?                  @relation("DocWorkflowArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
 
+  // Kiểm chữ ký số của bên gửi khi nhận (V-03). UNVERIFIED chưa bao giờ được coi là hợp lệ.
+  signatureStatus       SignatureVerificationStatus @default(UNVERIFIED) @map("signature_status")
+  signatureCheckedAt    DateTime?              @map("signature_checked_at")
+  signatureDetail       String?                @map("signature_detail") @db.VarChar(300)
+
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
 

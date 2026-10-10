@@ -12,6 +12,7 @@ import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { DocumentAuditTimeline } from "../document-audit-timeline";
 import { OutgoingActionPanel } from "../outgoing-action-panel";
 import { OutgoingRecipientsPanel } from "../outgoing-recipients-panel";
+import { IncomingSignatureStatus } from "../incoming-signature-status";
 import { IncomingDirectives, IncomingWorkflowActions, IncomingWorkflowDetails, getIncomingAttributes } from "./incoming-workflow-sections";
 import { SubmissionApprovalPanel } from "./submission-approval-panel";
 import { DocumentEditActions } from "./document-edit";
@@ -277,6 +278,7 @@ export function DocumentInfoSections({
         ) : null}
         {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
         {/* Chỉ thao tác theo bước ở thân; sửa thông tin/bổ sung tệp nằm trong menu "Thao tác khác" của header */}
+        {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
         {isIncoming && incomingStatus ? (
           <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />
         ) : null}
@@ -300,6 +302,8 @@ export function DocumentInfoSections({
       ) : null}
 
       {vm.kind === "outgoing" && item ? <OutgoingRecipientsPanel key={vm.id} documentId={vm.id} onChanged={onWorkflowUpdate} /> : null}
+
+      {isIncoming && incomingStatus ? <IncomingSignatureStatus key={vm.id} documentId={vm.id} /> : null}
 
       {isIncoming && incomingStatus ? (
         <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />
