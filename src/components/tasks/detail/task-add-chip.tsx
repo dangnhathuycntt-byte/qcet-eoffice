@@ -11,7 +11,12 @@ const CHIP_CLASS = cn(
   "data-[popup-open]:bg-accent data-[popup-open]:text-foreground",
 );
 
-const PANEL_CLASS = "w-64 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl outline-none";
+// Bo góc lồng nhau: vỏ rounded-lg (14px) − đệm 6px = bo mục 8px (rounded-sm). Bóng dùng token menu, không dùng shadow-2xl.
+const MENU_CLASS = "w-60 rounded-lg border border-border bg-popover p-1.5 shadow-menu outline-none";
+const PANEL_CLASS = "w-64 overflow-y-auto rounded-lg border border-border bg-popover p-3 shadow-menu outline-none";
+const PANEL_TITLE_CLASS = "mb-2 text-xs font-medium text-foreground";
+const MENU_ITEM_CLASS =
+  "flex h-7 w-full cursor-pointer items-center gap-2.5 rounded-sm px-2 text-left text-xs text-foreground transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none";
 
 /** Các khối tùy chọn có thể gom vào menu "+ Thêm" của chi tiết nhiệm vụ. */
 export type TaskOptionalKey = "extension" | "people" | "backup" | "unit-request" | "criteria" | "approval";
@@ -84,21 +89,33 @@ export function TaskOptionalSections({ children, className }: { children: React.
               <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
                 <Popover.Popup
                   aria-label="Thêm thông tin cho nhiệm vụ"
-                  className="w-56 rounded-xl border border-border bg-popover p-1 shadow-2xl outline-none"
+                  role="menu"
+                  className={MENU_CLASS}
+                  onKeyDown={(e) => {
+                    // Mũi tên lên/xuống đổi mục như menu thật
+                    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+                    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+                    const at = items.indexOf(document.activeElement as HTMLElement);
+                    const next = e.key === "ArrowDown" ? (at + 1) % items.length : (at - 1 + items.length) % items.length;
+                    e.preventDefault();
+                    items[next]?.focus();
+                  }}
                 >
+                  <p className="px-2 pb-1 pt-0.5 text-xs text-muted-foreground">Thêm vào nhiệm vụ</p>
                   {available.map((key) => {
                     const Icon = ENTRY_ICON[key];
                     return (
                       <button
                         key={key}
                         type="button"
+                        role="menuitem"
                         onClick={() => {
                           setMenuOpen(false);
                           entries[key]?.open();
                         }}
-                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-foreground hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                        className={MENU_ITEM_CLASS}
                       >
-                        <Icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                        <Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                         {entries[key]?.label}
                       </button>
                     );
@@ -158,7 +175,7 @@ export function TaskAddPanel({
       <Popover.Portal>
         <Popover.Positioner anchor={ctx.anchor} className="z-50" align="start" sideOffset={4} collisionPadding={12}>
           <Popover.Popup data-slot="task-add-chip-panel" style={{ maxHeight: "var(--available-height)" }} className={PANEL_CLASS}>
-            <p className="mb-1.5 px-0.5 text-xs font-medium text-foreground">{label}</p>
+            <p className={PANEL_TITLE_CLASS}>{label}</p>
             {panel}
           </Popover.Popup>
         </Popover.Positioner>
@@ -213,7 +230,7 @@ export function TaskAddChip({
       <Popover.Portal>
         <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
           <Popover.Popup data-slot="task-add-chip-panel" style={{ maxHeight: "var(--available-height)" }} className={PANEL_CLASS}>
-            <p className="mb-1.5 px-0.5 text-xs font-medium text-foreground">{children}</p>
+            <p className={PANEL_TITLE_CLASS}>{children}</p>
             {panel}
           </Popover.Popup>
         </Popover.Positioner>
