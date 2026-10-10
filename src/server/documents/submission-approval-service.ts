@@ -770,11 +770,18 @@ function toRow(key: string, label: string, stage: ApprovalReportRow["stage"], ho
  * Thống kê thời gian từ lúc bước duyệt được giao đến lúc có quyết định, theo đơn vị và theo người.
  * Lãnh đạo xem toàn bộ; trưởng đơn vị chỉ xem bước của đơn vị mình phụ trách.
  */
+const REPORT_PROBE = { id: "report", securityLevel: "THUONG", status: "CHO_PHE_DUYET", registeredById: "" };
+
+/** Lãnh đạo hoặc trưởng đơn vị mới xem được báo cáo; thanh bên dùng cùng điều kiện để ẩn mục. */
+export async function canViewApprovalReport(session: SessionPayload): Promise<boolean> {
+  const ctx = await loadContext(session);
+  return canDo(ctx, "document.submission.approve", REPORT_PROBE) || unitsHeadedBy(ctx).size > 0;
+}
+
 export async function getApprovalReport(session: SessionPayload, query: { from?: string; to?: string } = {}): Promise<ApprovalReport> {
   const q = ApprovalReportQuerySchema.parse(query);
   const ctx = await loadContext(session);
-  const probe = { id: "report", securityLevel: "THUONG", status: "CHO_PHE_DUYET", registeredById: "" };
-  const all = canDo(ctx, "document.submission.approve", probe);
+  const all = canDo(ctx, "document.submission.approve", REPORT_PROBE);
   const headed = [...unitsHeadedBy(ctx)];
   if (!all && headed.length === 0) throw new ForbiddenError("Chỉ lãnh đạo và trưởng đơn vị xem báo cáo thời gian duyệt");
 

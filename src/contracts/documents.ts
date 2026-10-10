@@ -101,7 +101,7 @@ export const DocumentQuerySchema = PaginationQuerySchema.extend({
     ])
     .optional(),
   status: DocumentStatusSchema.optional(),
-  bucket: z.enum(['pending', 'done', 'issued']).optional(),
+  bucket: z.enum(['pending', 'done', 'issued', 'recalled']).optional(),
   /**
    * Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`).
    * `departmentId` giữ lại như alias tương thích cho client cũ.
