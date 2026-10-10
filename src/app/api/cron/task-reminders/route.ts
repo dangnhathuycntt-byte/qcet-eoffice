@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { isCronAuthorized } from "@/server/security/cron-auth";
 import { scanTaskReminders } from "@/server/tasks/task-reminder-scanner";
+import { scanDossierReminders } from "@/server/dossiers/dossier-reminder-scanner";
 import { logger } from "@/server/observability/logger";
 
 export const runtime = "nodejs";
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest): Promise<Response> {
   const start = Date.now();
   try {
     const result = await scanTaskReminders();
-    return Response.json({ success: true, durationMs: Date.now() - start, ...result });
+    const dossiers = await scanDossierReminders();
+    return Response.json({ success: true, durationMs: Date.now() - start, ...result, dossiers });
   } catch (error) {
     logger.error("task.reminder.cron_failed", undefined, error);
     return Response.json({ success: false, error: "Scan failed" }, { status: 500 });

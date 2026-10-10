@@ -133,6 +133,7 @@ const APPROVAL_TYPES = new Set([
   "escalation",
   "submission_requested",
   "submission_consult",
+  "dossier_disposal_proposed",
 ]);
 
 /**

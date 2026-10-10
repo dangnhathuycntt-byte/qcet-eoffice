@@ -132,6 +132,9 @@ model User {
   approvalStepsDecided  DocumentApprovalStep[]    @relation("ApprovalStepDecider")
   consultationsAsked    DocumentConsultation[]     @relation("ConsultationAsker")
   consultationsGiven    DocumentConsultation[]     @relation("ConsultationConsultant")
+  dossiersDisposed      WorkDossier[]              @relation("DossierDisposedBy")
+  disposalProposed      DossierDisposalProposal[]  @relation("DisposalProposer")
+  disposalDecided       DossierDisposalProposal[]  @relation("DisposalDecider")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -1554,6 +1557,12 @@ model WorkDossier {
   archivedAt          DateTime?          @map("archived_at")
   archivedById        String?            @map("archived_by_id")
   archivedBy          User?              @relation("DossierArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  retentionExtraYears Int                @default(0) @map("retention_extra_years")
+  disposedAt          DateTime?          @map("disposed_at")
+  disposedById        String?            @map("disposed_by_id")
+  disposedBy          User?              @relation("DossierDisposedBy", fields: [disposedById], references: [id], onDelete: SetNull)
+  disposalProposals   DossierDisposalProposal[]
+  reminderLogs        DossierReminderLog[]
   notes               String?            @db.Text
   items               DossierItem[]
   createdAt           DateTime           @default(now()) @map("created_at")
@@ -1565,6 +1574,47 @@ model WorkDossier {
   @@index([status])
   @@index([classification])
   @@map("work_dossiers")
+}
+
+enum DisposalProposalStatus {
+  PROPOSED // Văn thư đã lập đề nghị, chờ lãnh đạo quyết định
+  DISPOSE  // Lãnh đạo quyết định hủy
+  EXTEND   // Lãnh đạo quyết định gia hạn bảo quản
+}
+
+// Đề nghị xét hủy hồ sơ hết hạn bảo quản (V-07). Văn thư đề nghị kèm biên bản, lãnh đạo quyết
+// định hủy hoặc gia hạn. Hủy là xóa mềm; chỉ quản trị hệ thống xóa hẳn, sau khi có biên bản.
+model DossierDisposalProposal {
+  id                String                    @id @default(cuid())
+  dossierId         String                    @map("dossier_id")
+  dossier           WorkDossier               @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  proposedById      String                    @map("proposed_by_id")
+  proposedBy        User                      @relation("DisposalProposer", fields: [proposedById], references: [id], onDelete: Restrict)
+  minutesReference  String                    @map("minutes_reference") @db.VarChar(100)
+  reason            String                    @db.VarChar(1000)
+  status            DisposalProposalStatus    @default(PROPOSED)
+  decidedById       String?                   @map("decided_by_id")
+  decidedBy         User?                     @relation("DisposalDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt         DateTime?                 @map("decided_at")
+  decisionNote      String?                   @map("decision_note") @db.VarChar(1000)
+  extendYears       Int?                      @map("extend_years")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+
+  @@index([dossierId, status])
+  @@map("dossier_disposal_proposals")
+}
+
+// Nhật ký nhắc hồ sơ (V-07): nhắc nộp lưu trước hạn 30 ngày, báo hết hạn bảo quản. Duy nhất theo (hồ sơ, loại, mốc).
+model DossierReminderLog {
+  id        String      @id @default(cuid())
+  dossierId String      @map("dossier_id")
+  dossier   WorkDossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  kind      String      @db.VarChar(40)
+  dueKey    String      @map("due_key") @db.VarChar(64)
+  sentAt    DateTime    @default(now()) @map("sent_at")
+
+  @@unique([dossierId, kind, dueKey])
+  @@map("dossier_reminder_logs")
 }
 
 model DossierItem {

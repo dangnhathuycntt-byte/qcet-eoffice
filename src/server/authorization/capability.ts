@@ -188,6 +188,9 @@ export const DOSSIER_CAPABILITIES = [
   'dossier.transfer_archive',
   'dossier.submit_archive',
   'dossier.accept_archive',
+  'dossier.propose_disposal',
+  'dossier.dispose',
+  'dossier.purge',
   'document.archive',
 ] as const;
 
@@ -447,6 +450,9 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'dossier.transfer_archive': 'Nộp lưu hồ sơ vào lưu trữ cơ quan',
   'dossier.submit_archive': 'Trình nộp lưu hồ sơ',
   'dossier.accept_archive': 'Tiếp nhận hồ sơ vào lưu trữ lịch sử',
+  'dossier.propose_disposal': 'Đề nghị xét hủy hồ sơ hết hạn bảo quản',
+  'dossier.dispose': 'Quyết định hủy hoặc gia hạn bảo quản hồ sơ',
+  'dossier.purge': 'Xóa hẳn hồ sơ đã hủy (quản trị hệ thống)',
   // HR & Governance
   'hr.view': 'Xem hồ sơ nhân sự',
   'payroll.view': 'Xem thông tin lương',

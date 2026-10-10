@@ -1183,7 +1183,8 @@ export class DossierService {
     const limit = Math.min(Math.max(filter.limit || 20, 1), 100);
     const offset = Math.max(filter.offset || 0, 0);
 
-    const where: Prisma.WorkDossierWhereInput = {};
+    // Hồ sơ đã hủy (xóa mềm) không hiện trong tra cứu thường (V-07).
+    const where: Prisma.WorkDossierWhereInput = { disposedAt: null };
 
     // Scoping enforcement (RFC-09 Option B):
     if (hasSchoolWideArchivalAccess(user)) {
@@ -1295,7 +1296,7 @@ export class DossierService {
       },
     });
 
-    if (!dossier) {
+    if (!dossier || dossier.disposedAt) {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
     }
 

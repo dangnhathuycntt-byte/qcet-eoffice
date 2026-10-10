@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { fadeVariants } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
+import { DossierDisposalPanel } from "./dossier-disposal-panel";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -637,6 +638,8 @@ export function DossierDetailView({
                 </div>
               </SectionCard>
             )}
+
+            <DossierDisposalPanel dossierId={dossier.id} />
 
             {/* Archive lifecycle */}
             <SectionCard title="Vòng đời lưu trữ">

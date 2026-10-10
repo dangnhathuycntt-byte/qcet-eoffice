@@ -352,6 +352,7 @@ export function authorize(
       action.startsWith('org.') ||
       action.startsWith('position.') ||
       action.startsWith('audit.') ||
+      action === 'dossier.purge' ||
       action === 'task.monitor';
 
     if (!isTechnicalAction) {
@@ -392,6 +393,7 @@ export function authorize(
       action === 'org.manage' ||
       action === 'position.manage' ||
       action === 'system.configure' ||
+      action === 'dossier.purge' ||
       action.startsWith('system.system.'))
   ) {
     return {
@@ -864,6 +866,7 @@ export function authorize(
         action === 'dossier.close' ||
         action === 'dossier.transfer_archive' ||
         action === 'dossier.accept_archive' ||
+        action === 'dossier.propose_disposal' ||
         action === 'task.read'
       ) {
         candidateAllowed = true;
