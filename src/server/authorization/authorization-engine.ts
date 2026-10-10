@@ -465,6 +465,11 @@ export function authorize(
   const isFollower = resource?.followerIds?.includes(userId);
   const isAssignee = resource?.assigneeIds?.includes(userId);
   const isObserver = resource?.observerIds?.includes(userId);
+  // Người duyệt được chỉ định trên nhiệm vụ (TaskActor REVIEWER/APPROVER).
+  const isDesignatedReviewer = Boolean(
+    resource?.type === 'task' &&
+      (resource?.reviewerIds?.includes(userId) || resource?.approverIds?.includes(userId))
+  );
 
   // Single DRI Rule: Collaborator cannot reassign DRI
   if (action === 'task.reassign' || action === 'task.assign') {
@@ -559,9 +564,14 @@ export function authorize(
       candidatePolicy = 'STEP_4_MEETING_ORGANIZER_OR_CHAIR';
     }
   } else if (action === 'task.read') {
-    if (isDRI || isCollaborator || isAssigner || isFollower || isObserver || isAssignee) {
+    if (isDRI || isCollaborator || isAssigner || isFollower || isObserver || isAssignee || isDesignatedReviewer) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_DIRECT_RELATION';
+    }
+  } else if (action === 'task.review' || action === 'task.approve') {
+    if (isDesignatedReviewer) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_DESIGNATED_REVIEWER';
     }
   } else if (
     action === 'task.update_metadata' ||
@@ -931,7 +941,8 @@ export function authorize(
       isAssignee ||
       isCollaborator ||
       isFollower ||
-      isObserver;
+      isObserver ||
+      isDesignatedReviewer;
 
     const rawScope = (resource?.scope || '').toString().toUpperCase();
     const isIndividualScope = rawScope === 'INDIVIDUAL' || rawScope === 'MY';
@@ -985,7 +996,8 @@ export function authorize(
       isOrganizer ||
       isParticipant ||
       isSecretary ||
-      isBodyMember;
+      isBodyMember ||
+      isDesignatedReviewer;
 
     if (
       !isOwnUnit &&

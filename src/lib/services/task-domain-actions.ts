@@ -46,6 +46,7 @@ import {
   PreconditionFailedError,
 } from "@/server/api/errors";
 import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
+import { partitionTaskActorUserIds } from "@/domain/tasks/task-actor-roles";
 import {
   taskStateMachine,
   buildActorContext,
@@ -216,27 +217,8 @@ export async function loadTaskAndBuildResource(
     task.actors.find((a) => a.role === TaskActorRole.DRI);
   const primaryOwnerId = primaryOwnerActor?.userId || undefined;
 
-  const collaboratorIds = Array.from(
-    new Set(
-      task.actors
-        .filter((a) => a.role === TaskActorRole.COLLABORATOR && a.userId)
-        .map((a) => a.userId as string)
-    )
-  );
-
-  const reviewerIds = task.actors
-    .filter((a) => a.role === TaskActorRole.REVIEWER && a.userId)
-    .map((a) => a.userId as string);
-
-  const approverIds = task.actors
-    .filter((a) => a.role === TaskActorRole.APPROVER && a.userId)
-    .map((a) => a.userId as string);
-
-  const assigneeIds = Array.from(
-    new Set(
-      task.actors.map((a) => a.userId).filter(Boolean) as string[]
-    )
-  );
+  const { collaboratorIds, reviewerIds, approverIds, followerIds, observerIds, assigneeIds } =
+    partitionTaskActorUserIds(task.actors);
 
   let targetDeliverable = extra?.deliverableId
     ? task.deliverables.find((d) => d.id === extra.deliverableId)
@@ -300,6 +282,8 @@ export async function loadTaskAndBuildResource(
     collaboratorIds,
     reviewerIds,
     approverIds,
+    followerIds,
+    observerIds,
     assigneeIds,
     submittedByUserId,
     uploadedById: targetDeliverable?.uploadedById ?? undefined,

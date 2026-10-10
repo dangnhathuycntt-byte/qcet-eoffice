@@ -13,6 +13,7 @@ import type { AuthorizationContext } from './authorization-context';
 import type { CapabilityAction } from './capability';
 import type { AuthorizationResource } from './resource';
 import { authorize } from './authorization-engine';
+import { partitionTaskActorUserIds } from '@/domain/tasks/task-actor-roles';
 
 // ============================================================================
 // CANONICAL CANDIDATE ACTION LISTS
@@ -187,22 +188,9 @@ export function buildTaskResource(task: any): AuthorizationResource {
     task.leadAssignee?.userId ||
     undefined;
 
-  const collaboratorIds: string[] = [];
-  const assigneeIds: string[] = [];
-  const reviewerIds: string[] = [];
-
-  if (Array.isArray(task.actors)) {
-    for (const a of task.actors) {
-      const uid = a.userId;
-      if (!uid) continue;
-      if (a.role === 'REVIEWER') {
-        reviewerIds.push(uid);
-        continue;
-      }
-      assigneeIds.push(uid);
-      if (a.role === 'COLLABORATOR') collaboratorIds.push(uid);
-    }
-  }
+  const actorSets = partitionTaskActorUserIds(Array.isArray(task.actors) ? task.actors : []);
+  const collaboratorIds: string[] = [...actorSets.collaboratorIds];
+  const assigneeIds: string[] = [...actorSets.assigneeIds];
 
   if (Array.isArray(task.collaboratorIds)) {
     collaboratorIds.push(...task.collaboratorIds);
@@ -256,7 +244,10 @@ export function buildTaskResource(task: any): AuthorizationResource {
     assignerId: creatorId,
     primaryOwnerId,
     collaboratorIds: Array.from(new Set(collaboratorIds)),
-    reviewerIds: Array.from(new Set(reviewerIds)),
+    reviewerIds: actorSets.reviewerIds,
+    approverIds: actorSets.approverIds,
+    followerIds: actorSets.followerIds,
+    observerIds: actorSets.observerIds,
     assigneeIds: Array.from(new Set(assigneeIds)),
     submittedByUserId,
     uploadedById: deliverableUploadedByIds.at(-1),

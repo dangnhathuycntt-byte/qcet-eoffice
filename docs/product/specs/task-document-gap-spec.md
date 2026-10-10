@@ -496,3 +496,13 @@ Phụ thuộc chính:
   - `docker-compose.yml` (thêm service `qcet-worker`), `vercel.json` (không dùng cho outbox)
 - Schema: `prisma/schema.prisma` (các model `Task`, `TaskApprovalStep`, `Document`, `DocumentIncomingWorkflow`, `UnitWorkAssignment`, `DocumentOutgoingWorkflow`, `SignatureRecord`, `OutboxEvent`, `WorkDossier`).
 - Bản đồ: artifact `YMQ1BCru8M22gGEWYzhcF3`, các trang Quy trình 2–8, 10, 11; API 2; R02, R03; T3Audit; T3Flow.
+
+---
+
+## 13. Trạng thái triển khai
+
+Nhánh `feat/task-document-gaps`. Cập nhật sau mỗi hạng mục.
+
+| Hạng mục | Trạng thái | Kiểm chứng | Ghi chú |
+|---|---|---|---|
+| T-00 | Xong | `tests/security/task-designated-reviewer-authz.test.ts` 11/11; 26 file test quyền 497/498 (1 lỗi do chạy song song DB, đạt khi chạy riêng) | Nguyên nhân gốc: `assigneeIds` gom mọi TaskActor nên REVIEWER/APPROVER bị bước 10 chặn "tự duyệt"; FOLLOWER/OBSERVER có quyền cập nhật tiến độ. Thêm `partitionTaskActorUserIds` dùng chung cho server và `availableActions`. |
