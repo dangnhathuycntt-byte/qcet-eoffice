@@ -170,5 +170,11 @@ describe("trạng thái rỗng theo ngữ cảnh", () => {
     assert.equal(getLedgerEmptyCopy({ isResultFiltered: true, type: "inbox", bucket: "done" }).title, "Không có văn bản khớp bộ lọc");
     assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "inbox" }).title, "Chưa có văn bản đến");
     assert.equal(getLedgerEmptyCopy({ isResultFiltered: false }).title, "Chưa có văn bản nào");
+    // Tranh chỉ cho sổ chưa có dữ liệu; lọc rỗng dùng icon. Nhóm chờ xử lý trống = đã xử lý hết.
+    assert.equal(getLedgerEmptyCopy({ isResultFiltered: true, type: "inbox" }).illustration, undefined);
+    assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "inbox" }).illustration, "doc-in");
+    assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "outbox", bucket: "issued" }).illustration, "doc-out");
+    assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "outbox", bucket: "pending" }).illustration, "all-done");
+    assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "submission" }).illustration, "submission");
   });
 });

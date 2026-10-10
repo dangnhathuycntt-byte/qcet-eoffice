@@ -6,6 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface BackupView {
   backup: { userId: string; name: string; active: boolean } | null;
@@ -67,6 +68,29 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
   };
 
   if (!view || (!view.backup && !view.canEdit)) return null;
+  const editForm = (
+    <div className="space-y-1.5">
+      <Select
+        compact
+        positionerClassName="z-50"
+        aria-label="Người duyệt dự phòng"
+        placeholder="— Chọn người —"
+        options={personnel.map((p) => ({ value: p.id, label: p.name }))}
+        value={userId}
+        onValueChange={(v) => setUserId(v || null)}
+      />
+      <TaskPanelActions onCancel={() => setEditing(false)}>
+        <Button variant="outline" type="button" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
+          Lưu
+        </Button>
+      </TaskPanelActions>
+    </div>
+  );
+  if (!view.backup) {
+    return (
+      <TaskAddPanel entry="backup" label="Người duyệt dự phòng" open={editing} onOpenChange={setEditing} panel={<>{editForm}{error ? <InlineAlert variant="error">{error}</InlineAlert> : null}</>} />
+    );
+  }
 
   return (
     <section aria-label="Người duyệt dự phòng" className={cn("space-y-1.5", className)}>
@@ -96,27 +120,7 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
         </div>
       ) : null}
 
-      {editing ? (
-        <div className="space-y-1.5">
-          <Select
-            compact
-            positionerClassName="z-50"
-            aria-label="Người duyệt dự phòng"
-            placeholder="— Chọn người —"
-            options={personnel.map((p) => ({ value: p.id, label: p.name }))}
-            value={userId}
-            onValueChange={(v) => setUserId(v || null)}
-          />
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
-              Lưu
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(false)}>
-              Hủy
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      {editing ? editForm : null}
 
       {error ? <InlineAlert variant="error">{error}</InlineAlert> : null}
     </section>

@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 
 export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   icon?: React.ReactNode;
+  /** Tranh nét mực trong `public/design/illustrations/` (vd. "dossier"), dùng khi chưa có dữ liệu. Có tranh thì bỏ qua `icon`. */
+  illustration?: IllustrationName;
   title: React.ReactNode;
   description?: React.ReactNode;
   /** Nút hành động tiếp theo, ví dụ "Tạo nhiệm vụ" hoặc "Xóa bộ lọc". */
@@ -11,8 +13,59 @@ export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   density?: "default" | "compact";
 }
 
+export type IllustrationName =
+  | "tasks"
+  | "doc-in"
+  | "doc-out"
+  | "submission"
+  | "dossier"
+  | "inbox"
+  | "unit-request"
+  | "templates"
+  | "calendar"
+  | "all-done"
+  | "load-error"
+  | "meetings"
+  | "approvals-done"
+  | "directory"
+  | "reports";
+
+/**
+ * Tranh nét mực tô bằng CSS mask: ảnh PNG chỉ giữ kênh alpha nên màu nét theo `bg-*` và đổi theo theme.
+ * Chỉ dùng cho trạng thái chưa có dữ liệu; kết quả lọc/tìm kiếm rỗng dùng icon.
+ */
+export function InkIllustration({ name, className }: { name: IllustrationName; className?: string }) {
+  const mask = `url(/design/illustrations/${name}.png) center / contain no-repeat`;
+  return (
+    <span
+      data-slot="empty-state-illustration"
+      aria-hidden="true"
+      className={cn("block h-[104px] w-28 shrink-0 bg-foreground/75", className)}
+      style={{ WebkitMask: mask, mask }}
+    />
+  );
+}
+
+export type ArrowHintVariant = "loop" | "curve" | "squiggle" | "zigzag" | "spiral";
+
+/**
+ * Mũi tên nét mực chỉ lên nút tạo mới ở thanh công cụ khi danh sách chưa có dữ liệu.
+ * Người gọi tự đặt vị trí (`right-*`, `top-*`) để đầu mũi tên nằm dưới nút; chỉ hiện từ md, nơi nút ở góc phải.
+ */
+export function ArrowHint({ variant = "loop", className }: { variant?: ArrowHintVariant; className?: string }) {
+  const mask = `url(/design/illustrations/arrow-${variant}.png) center / contain no-repeat`;
+  return (
+    <span
+      data-slot="empty-state-arrow"
+      aria-hidden="true"
+      className={cn("pointer-events-none absolute hidden h-[70px] w-20 bg-muted-foreground/40 md:block", className)}
+      style={{ WebkitMask: mask, mask }}
+    />
+  );
+}
+
 /** Trạng thái không có dữ liệu: nói rõ vì sao trống và việc nên làm tiếp. */
-export function EmptyState({ icon, title, description, action, density = "default", className, ...props }: EmptyStateProps) {
+export function EmptyState({ icon, illustration, title, description, action, density = "default", className, ...props }: EmptyStateProps) {
   const compact = density === "compact";
   return (
     <div
@@ -23,7 +76,9 @@ export function EmptyState({ icon, title, description, action, density = "defaul
       )}
       {...props}
     >
-      {icon ? (
+      {illustration ? (
+        <InkIllustration name={illustration} className="mb-1" />
+      ) : icon ? (
         <div className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-muted-foreground [&_svg]:size-6">
           {icon}
         </div>

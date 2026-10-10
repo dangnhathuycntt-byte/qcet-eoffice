@@ -450,4 +450,46 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
     });
     assert.equal(deletedTask, null);
   });
+
+  test('8. archiveTask (nút Xóa trên UI) gỡ liên kết văn bản: văn bản không còn trỏ tới nhiệm vụ đã lưu trữ', async () => {
+    const { task, document } = await createFixture({
+      taskStatus: TaskStatus.IN_PROGRESS,
+      docStatus: DocumentStatus.DANG_XU_LY,
+      workflowStatus: IncomingDocumentStatus.IN_PROGRESS,
+    });
+
+    const context = {
+      user: {
+        id: adminUser.id,
+        role: adminUser.role,
+        email: adminUser.email,
+        name: adminUser.name,
+      },
+    };
+
+    const current = await prisma.task.findUniqueOrThrow({ where: { id: task.id }, select: { version: true } });
+    const result = await taskCommandService.archiveTask(context as any, task.id, {
+      reason: 'Xóa nhiệm vụ',
+      expectedVersion: current.version,
+    });
+    assert.equal(result.success, true);
+
+    const updatedDoc = await prisma.document.findUnique({
+      where: { id: document.id },
+      include: { incomingWorkflow: true },
+    });
+    assert.equal(updatedDoc?.linkedTaskId, null);
+    assert.equal(updatedDoc?.status, DocumentStatus.CHO_PHAN_CONG);
+    assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.DIRECTED);
+  });
+
+  test('9. mapPrismaDocumentToItem ẩn nhiệm vụ đã lưu trữ (dữ liệu cũ vẫn còn linkedTaskId)', async () => {
+    const { mapPrismaDocumentToItem } = await import('@/lib/documents/document-service');
+    const base = { id: 'd1', linkedTaskId: 't1', linkedTask: { id: 't1', code: 'NV-1', title: 'Văn bản ngày thường', archivedAt: null } };
+    const live = mapPrismaDocumentToItem({ ...base } as any);
+    assert.equal(live.linkedTaskId, 't1');
+    const archived = mapPrismaDocumentToItem({ ...base, linkedTask: { ...base.linkedTask, archivedAt: new Date() } } as any);
+    assert.equal(archived.linkedTaskId, null);
+    assert.equal(archived.linkedTask, null);
+  });
 });

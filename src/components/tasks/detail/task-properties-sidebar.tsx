@@ -13,7 +13,6 @@ import {
   UserPlus,
   CircleDashed,
   Loader2,
-  FileText,
 } from "lucide-react";
 import { TaskIconDeadline, TaskIconDepartment } from "@/lib/icons/task-icons";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
@@ -583,7 +582,7 @@ export function TaskPropertiesSidebar({
 
           {/* Row 8: Source Document */}
           {isSchoolTask(task) && task.sourceDocument && (
-            <PropertyRow label="Văn bản gốc" icon={<FileText className="size-3" strokeWidth={1.5} />}>
+            <PropertyRow label="Văn bản gốc" interactive valueClassName="justify-start">
               <TaskSourceDocumentBadge
                 sourceDocument={task.sourceDocument}
                 compact

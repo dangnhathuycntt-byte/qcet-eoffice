@@ -16,6 +16,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -138,6 +139,9 @@ export function DossierRegistryView() {
   const [statusFilter, setStatusFilter] = React.useState("");
   const [classificationFilter, setClassificationFilter] = React.useState("");
   const [page, setPage] = React.useState(0);
+  // Chưa có hồ sơ nào và không lọc: chỉ giữ tiêu đề, nút và trạng thái trống
+  const isColdStartEmpty =
+    !isLoading && !fetchError && items.length === 0 && !searchInput && !searchQuery && !statusFilter && !classificationFilter;
 
   // Debounced search
   React.useEffect(() => {
@@ -168,9 +172,10 @@ export function DossierRegistryView() {
           return;
         }
         const json = await res.json();
-        if (json.success && json.data) {
-          setItems(json.data.items ?? []);
-          setTotal(json.data.total ?? 0);
+        // API trả thẳng { items, total } (apiSuccess không bọc success/data)
+        if (Array.isArray(json?.items)) {
+          setItems(json.items);
+          setTotal(json.total ?? 0);
         } else {
           setFetchError("Phản hồi không hợp lệ từ máy chủ");
         }
@@ -284,7 +289,8 @@ export function DossierRegistryView() {
         </div>
       </div>
 
-      {/* Stats Summary */}
+      {/* Stats Summary — ẩn khi chưa có hồ sơ nào (toàn số 0, không có gì để lọc) */}
+      {!isColdStartEmpty && (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {([
           {
@@ -326,8 +332,10 @@ export function DossierRegistryView() {
           </div>
         ))}
       </div>
+      )}
 
       {/* Filter Bar */}
+      {!isColdStartEmpty && (
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         {/* Search */}
         <div className="relative flex-1 sm:max-w-xs">
@@ -379,6 +387,7 @@ export function DossierRegistryView() {
           <option value="PERSONAL_DATA">Dữ liệu cá nhân</option>
         </select>
       </div>
+      )}
 
       {/* Error State */}
       {fetchError && (
@@ -399,7 +408,7 @@ export function DossierRegistryView() {
       {!fetchError && (
         <div className="overflow-x-auto rounded-xl border border-border/50 bg-card shadow-2xs">
           <table className="w-full text-sm">
-            <thead>
+            <thead className={cn(isColdStartEmpty && "hidden")}>
               <tr className="border-b border-border/40 text-left text-xs font-medium text-muted-foreground">
                 <th className="whitespace-nowrap px-4 py-2.5">Mã hồ sơ</th>
                 <th className="px-4 py-2.5">Tiêu đề</th>
@@ -530,18 +539,23 @@ export function DossierRegistryView() {
 
           {/* Empty state */}
           {!isLoading && items.length === 0 && (
-            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-              <FolderOpen
-                className="size-10 text-muted-foreground/40"
-                strokeWidth={1.5}
+            searchQuery || statusFilter || classificationFilter ? (
+              <EmptyState
+                role="status"
+                density="compact"
+                icon={<FolderOpen strokeWidth={1.5} />}
+                title="Không tìm thấy hồ sơ nào"
+                description="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."
               />
-              <p className="text-sm font-medium text-muted-foreground">
-                Không tìm thấy hồ sơ nào
-              </p>
-              <p className="text-xs text-muted-foreground/60">
-                Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
-              </p>
-            </div>
+            ) : (
+              <EmptyState
+                role="status"
+                density="compact"
+                illustration="dossier"
+                title="Chưa có hồ sơ công việc"
+                description="Hồ sơ công việc đã lập sẽ hiện ở đây."
+              />
+            )
           )}
         </div>
       )}

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { OfficialDocument, DocumentType } from "@/types/document";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { cn } from "@/lib/utils";
 import { formatLedgerDate, getLedgerStepLabel } from "@/lib/documents/document-ledger-format";
@@ -34,6 +34,8 @@ export interface DocumentCardListProps {
   onRetry?: () => void;
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Tranh khi sổ chưa có dữ liệu (không truyền khi đang lọc). */
+  emptyIllustration?: IllustrationName;
   emptyAction?: React.ReactNode;
   className?: string;
   selectable?: boolean;
@@ -67,6 +69,7 @@ export function DocumentCardList({
   onRetry,
   emptyTitle = "Chưa có văn bản nào",
   emptyDescription = "Vào sổ văn bản mới để bắt đầu.",
+  emptyIllustration,
   emptyAction,
   className,
   selectable = false,
@@ -121,6 +124,7 @@ export function DocumentCardList({
         <EmptyState
           density="compact"
           icon={<FileText strokeWidth={1.5} />}
+          illustration={emptyIllustration}
           title={emptyTitle}
           description={emptyDescription}
           action={emptyAction}

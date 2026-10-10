@@ -6,6 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface PeopleView {
   version: number;
@@ -74,6 +75,41 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
 
   if (!view || (view.people.length === 0 && !view.canManage)) return null;
   const existing = new Set(view.people.map((p) => p.userId));
+  // Chỉ có người chủ trì/giao (đã hiện ở cột thuộc tính): thu thành chip thay vì lặp lại danh sách
+  const addForm = (
+    <div className="space-y-1.5">
+      <Select
+        compact
+        positionerClassName="z-50"
+        aria-label="Người được thêm"
+        placeholder="— Chọn người —"
+        options={personnel.filter((p) => !existing.has(p.id)).map((p) => ({ value: p.id, label: p.name }))}
+        value={userId}
+        onValueChange={(v) => setUserId(v || null)}
+      />
+      <Select
+        compact
+        positionerClassName="z-50"
+        aria-label="Vai trò"
+        options={[
+          { value: "COLLABORATOR", label: "Phối hợp (cùng đơn vị chủ trì)" },
+          { value: "FOLLOWER", label: "Theo dõi" },
+        ]}
+        value={role}
+        onValueChange={(v) => setRole(v === "FOLLOWER" ? "FOLLOWER" : "COLLABORATOR")}
+      />
+      <TaskPanelActions onCancel={() => setAdding(false)}>
+        <Button variant="outline" type="button" size="xs" disabled={busy || !userId} onClick={() => void call("POST", { userId, role }, "Không thêm được người")}>
+          Thêm
+        </Button>
+      </TaskPanelActions>
+    </div>
+  );
+  if (!view.people.some((p) => p.removable)) {
+    return view.canManage ? (
+      <TaskAddPanel entry="people" label="Người tham gia" open={adding} onOpenChange={setAdding} panel={<>{addForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>} />
+    ) : null;
+  }
 
   return (
     <section aria-label="Người tham gia" className={cn("space-y-1.5", className)}>
@@ -99,38 +135,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
           Thêm người
         </Button>
       )}
-      {adding && (
-        <div className="space-y-1.5">
-          <Select
-            compact
-            positionerClassName="z-50"
-            aria-label="Người được thêm"
-            placeholder="— Chọn người —"
-            options={personnel.filter((p) => !existing.has(p.id)).map((p) => ({ value: p.id, label: p.name }))}
-            value={userId}
-            onValueChange={(v) => setUserId(v || null)}
-          />
-          <Select
-            compact
-            positionerClassName="z-50"
-            aria-label="Vai trò"
-            options={[
-              { value: "COLLABORATOR", label: "Phối hợp (cùng đơn vị chủ trì)" },
-              { value: "FOLLOWER", label: "Theo dõi" },
-            ]}
-            value={role}
-            onValueChange={(v) => setRole(v === "FOLLOWER" ? "FOLLOWER" : "COLLABORATOR")}
-          />
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || !userId} onClick={() => void call("POST", { userId, role }, "Không thêm được người")}>
-              Thêm
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setAdding(false)}>
-              Hủy
-            </Button>
-          </div>
-        </div>
-      )}
+      {adding && addForm}
       {error && <InlineAlert variant="error">{error}</InlineAlert>}
     </section>
   );

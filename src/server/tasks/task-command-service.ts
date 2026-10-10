@@ -272,6 +272,68 @@ export async function recalculateParentTaskProgress(
   return { updated: true, newProgress, newStatus: nextStatus };
 }
 
+/**
+ * Gỡ liên kết các văn bản đang trỏ tới nhiệm vụ (và việc con) sắp bị xóa hoặc lưu trữ.
+ * Văn bản đang xử lý có luồng đến chưa kết thúc thì hoàn về "Chờ phân công" để phân công lại;
+ * các trường hợp khác chỉ bỏ liên kết (không đổi trạng thái văn bản).
+ */
+async function releaseLinkedDocuments(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  taskIds: string[],
+  requestId?: string,
+) {
+  const linkedDocs = await tx.document.findMany({
+    where: { linkedTaskId: { in: taskIds } },
+    select: {
+      id: true,
+      status: true,
+      linkedTaskId: true,
+      incomingWorkflow: { select: { id: true, status: true } },
+    },
+  });
+  const nonTerminalStatuses = ['DIRECTED', 'ASSIGNED_TO_LEAD_UNIT', 'UNIT_ASSIGNED_PERSON', 'IN_PROGRESS'];
+
+  for (const linkedDoc of linkedDocs) {
+    const wf = linkedDoc.incomingWorkflow;
+    const shouldReset =
+      linkedDoc.status === DocumentStatus.DANG_XU_LY && wf && nonTerminalStatuses.includes(wf.status as string);
+    if (!shouldReset) {
+      await tx.document.update({ where: { id: linkedDoc.id }, data: { linkedTaskId: null } });
+      continue;
+    }
+    await tx.documentIncomingWorkflow.update({
+      where: { id: wf.id },
+      data: { status: IncomingDocumentStatus.DIRECTED },
+    });
+    await tx.document.update({
+      where: { id: linkedDoc.id },
+      data: { status: DocumentStatus.CHO_PHAN_CONG, linkedTaskId: null },
+    });
+    await logAuditEvent(tx, {
+      actorId: userId,
+      action: AuditAction.TASK_DELETED_DOCUMENT_RESET,
+      entityType: AuditEntityType.DOCUMENT,
+      entityId: linkedDoc.id,
+      requestId,
+      beforeData: {
+        documentStatus: linkedDoc.status,
+        workflowStatus: wf.status,
+        linkedTaskId: linkedDoc.linkedTaskId,
+      },
+      afterData: {
+        documentStatus: DocumentStatus.CHO_PHAN_CONG,
+        workflowStatus: IncomingDocumentStatus.DIRECTED,
+        linkedTaskId: null,
+      },
+      metadata: {
+        deletedTaskId: linkedDoc.linkedTaskId,
+        triggerReason: `Tự động hoàn tác trạng thái văn bản khi nhiệm vụ ${linkedDoc.linkedTaskId} bị xóa hoặc lưu trữ`,
+      },
+    });
+  }
+}
+
 export class TaskCommandService {
   /**
    * Canonical creation of a Task derived from a Meeting Resolution (Invariant 5.5).
@@ -1328,76 +1390,9 @@ export class TaskCommandService {
       }
 
       // 1. Hook deleteTask: reset các văn bản liên kết trước khi xóa nhiệm vụ hoặc việc con
-      const allTaskIdsToDelete = [taskId, ...allSubtaskIds];
-      const linkedDocs = await tx.document.findMany({
-        where: { linkedTaskId: { in: allTaskIdsToDelete } },
-        select: {
-          id: true,
-          status: true,
-          linkedTaskId: true,
-          incomingWorkflow: { select: { id: true, status: true } },
-        },
-      });
-
-      for (const linkedDoc of linkedDocs) {
-        const isResettable = linkedDoc.status === DocumentStatus.DANG_XU_LY;
-        if (isResettable && linkedDoc.incomingWorkflow) {
-          const wf = linkedDoc.incomingWorkflow;
-          const nonTerminalStatuses = [
-            'DIRECTED',
-            'ASSIGNED_TO_LEAD_UNIT',
-            'UNIT_ASSIGNED_PERSON',
-            'IN_PROGRESS',
-          ];
-          if (nonTerminalStatuses.includes(wf.status as string)) {
-            await tx.documentIncomingWorkflow.update({
-              where: { id: wf.id },
-              data: { status: IncomingDocumentStatus.DIRECTED },
-            });
-            await tx.document.update({
-              where: { id: linkedDoc.id },
-              data: { status: DocumentStatus.CHO_PHAN_CONG, linkedTaskId: null },
-            });
-
-            const requestId =
-              ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
-                ? ctx.requestId
-                : undefined;
-
-            await logAuditEvent(tx, {
-              actorId: user.id,
-              action: AuditAction.TASK_DELETED_DOCUMENT_RESET,
-              entityType: AuditEntityType.DOCUMENT,
-              entityId: linkedDoc.id,
-              requestId,
-              beforeData: {
-                documentStatus: linkedDoc.status,
-                workflowStatus: wf.status,
-                linkedTaskId: linkedDoc.linkedTaskId,
-              },
-              afterData: {
-                documentStatus: DocumentStatus.CHO_PHAN_CONG,
-                workflowStatus: IncomingDocumentStatus.DIRECTED,
-                linkedTaskId: null,
-              },
-              metadata: {
-                deletedTaskId: linkedDoc.linkedTaskId,
-                triggerReason: `Tự động hoàn tác trạng thái văn bản khi nhiệm vụ ${linkedDoc.linkedTaskId} bị xóa`,
-              },
-            });
-          } else {
-            await tx.document.update({
-              where: { id: linkedDoc.id },
-              data: { linkedTaskId: null },
-            });
-          }
-        } else {
-          await tx.document.update({
-            where: { id: linkedDoc.id },
-            data: { linkedTaskId: null },
-          });
-        }
-      }
+      const requestIdForDocs =
+        ctx && 'requestId' in ctx && typeof ctx.requestId === 'string' ? ctx.requestId : undefined;
+      await releaseLinkedDocuments(tx, user.id, [taskId, ...allSubtaskIds], requestIdForDocs);
 
       // 2. Cascade delete các việc con
       if (allSubtaskIds.length > 0) {
@@ -1489,6 +1484,18 @@ export class TaskCommandService {
         aggregateId: taskId,
         payload: { taskId, actorId: user.id, reason },
       });
+
+      // Văn bản đang trỏ tới nhiệm vụ này (và việc con) không còn liên kết với nhiệm vụ đã lưu trữ
+      const descendantIds: string[] = [];
+      let parentIds = [taskId];
+      while (parentIds.length > 0) {
+        const children = await tx.task.findMany({ where: { parentTaskId: { in: parentIds } }, select: { id: true } });
+        if (children.length === 0) break;
+        const ids = children.map((c) => c.id);
+        descendantIds.push(...ids);
+        parentIds = ids;
+      }
+      await releaseLinkedDocuments(tx, user.id, [taskId, ...descendantIds], requestId);
 
       return { success: true, message: 'Đã lưu trữ nhiệm vụ thành công', version: input.expectedVersion + 1 };
     });

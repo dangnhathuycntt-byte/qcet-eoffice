@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { cn } from "@/lib/utils";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface RequestView {
   id: string;
@@ -91,6 +92,43 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
   };
 
   if (!state || (!state.canRequest && state.requests.length === 0)) return null;
+  const addForm = (
+    <div className="space-y-1.5">
+      <Select
+        compact
+        positionerClassName="z-50"
+        aria-label="Đơn vị được đề nghị"
+        placeholder="— Chọn đơn vị —"
+        options={departments.map((d) => ({ value: d.id, label: d.name }))}
+        value={unitId}
+        onValueChange={(v) => setUnitId(v || null)}
+      />
+      <Select
+        compact
+        positionerClassName="z-50"
+        aria-label="Hạn trả lời"
+        options={RESPOND_OPTIONS}
+        value={respondInDays}
+        onValueChange={(v) => setRespondInDays(v || "3")}
+      />
+      <Textarea compact countOnlyNearLimit value={note} maxLength={1000} aria-label="Nội dung đề nghị" placeholder="Việc cần hỗ trợ (không bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
+      <TaskPanelActions onCancel={() => setAdding(false)}>
+        <Button variant="outline"
+          type="button"
+          size="xs"
+          disabled={busy || !unitId}
+          onClick={() => void send(`/api/tasks/${taskId}/unit-requests`, { targetUnitId: unitId, respondInDays: Number(respondInDays), ...(note.trim() ? { note: note.trim() } : {}) }, "Không gửi được đề nghị")}
+        >
+          Gửi đề nghị
+        </Button>
+      </TaskPanelActions>
+    </div>
+  );
+  if (state.requests.length === 0) {
+    return (
+      <TaskAddPanel entry="unit-request" label="Phối hợp liên đơn vị" open={adding} onOpenChange={setAdding} panel={<>{addForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>} />
+    );
+  }
 
   return (
     <section aria-label="Phối hợp liên đơn vị" className={cn("space-y-1.5", className)}>
@@ -131,41 +169,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
           Đề nghị đơn vị khác phối hợp
         </Button>
       )}
-      {adding && (
-        <div className="space-y-1.5">
-          <Select
-            compact
-            positionerClassName="z-50"
-            aria-label="Đơn vị được đề nghị"
-            placeholder="— Chọn đơn vị —"
-            options={departments.map((d) => ({ value: d.id, label: d.name }))}
-            value={unitId}
-            onValueChange={(v) => setUnitId(v || null)}
-          />
-          <Select
-            compact
-            positionerClassName="z-50"
-            aria-label="Hạn trả lời"
-            options={RESPOND_OPTIONS}
-            value={respondInDays}
-            onValueChange={(v) => setRespondInDays(v || "3")}
-          />
-          <Textarea compact value={note} maxLength={1000} aria-label="Nội dung đề nghị" placeholder="Cần đơn vị hỗ trợ việc gì (không bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
-          <div className="flex gap-1.5">
-            <Button
-              type="button"
-              size="xs"
-              disabled={busy || !unitId}
-              onClick={() => void send(`/api/tasks/${taskId}/unit-requests`, { targetUnitId: unitId, respondInDays: Number(respondInDays), ...(note.trim() ? { note: note.trim() } : {}) }, "Không gửi được đề nghị")}
-            >
-              Gửi đề nghị
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setAdding(false)}>
-              Hủy
-            </Button>
-          </div>
-        </div>
-      )}
+      {adding && addForm}
       {error && <InlineAlert variant="error">{error}</InlineAlert>}
     </section>
   );

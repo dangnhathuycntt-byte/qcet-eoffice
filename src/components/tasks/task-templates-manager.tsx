@@ -10,6 +10,7 @@ import { useDepartmentList } from "@/hooks/use-department-list";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Template {
   id: string;
@@ -200,7 +201,15 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
         </div>
       )}
 
-      {templates && templates.length === 0 && !form && <p className="text-compact text-muted-foreground">Chưa có mẫu nào trong các đơn vị bạn quản lý.</p>}
+      {templates && templates.length === 0 && !form && (
+        <EmptyState
+          role="status"
+          density="compact"
+          illustration="templates"
+          title="Chưa có mẫu nào"
+          description="Mẫu nhiệm vụ của các đơn vị bạn quản lý sẽ hiện ở đây."
+        />
+      )}
 
       <ul className="space-y-2">
         {(templates ?? []).map((t) => {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { TaskAddChip, TaskPanelActions } from "./task-add-chip";
 
 interface DeclineState {
   declined: { by: { id: string; name: string }; reason: string; at: string } | null;
@@ -74,6 +75,41 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
 
   if (!state) return null;
   if (!state.declined && !state.canDecline) return null;
+  const declineForm = (
+    <div className="space-y-1.5">
+      <Textarea
+        compact
+        value={reason}
+        maxLength={1000}
+        aria-label="Lý do từ chối nhận việc"
+        placeholder="Nêu lý do (bắt buộc)"
+        countOnlyNearLimit
+        onChange={(e) => setReason(e.target.value)}
+        className="min-h-16"
+      />
+      <TaskPanelActions onCancel={() => { setOpen(false); setReason(""); setError(null); }}>
+        <Button variant="outline" type="button" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
+          Gửi từ chối
+        </Button>
+      </TaskPanelActions>
+    </div>
+  );
+  if (!state.declined) {
+    return (
+      <TaskAddChip
+        icon={false}
+        panelTitle="Lý do không nhận việc"
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) { setReason(""); setError(null); }
+        }}
+        panel={<>{declineForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>}
+      >
+        Từ chối nhận việc
+      </TaskAddChip>
+    );
+  }
 
   return (
     <section aria-label="Nhận việc" className={cn("space-y-2 px-4", className)}>
@@ -82,25 +118,7 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
           {state.declined.by.name} đã từ chối nhận việc: {state.declined.reason}. Chờ người giao giao lại.
         </InlineAlert>
       ) : open ? (
-        <div className="space-y-1.5">
-          <Textarea
-            compact
-            value={reason}
-            maxLength={1000}
-            aria-label="Lý do từ chối nhận việc"
-            placeholder="Lý do từ chối nhận việc (bắt buộc)"
-            onChange={(e) => setReason(e.target.value)}
-            className="min-h-16"
-          />
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
-              Từ chối nhận việc
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => { setOpen(false); setReason(""); setError(null); }}>
-              Hủy
-            </Button>
-          </div>
-        </div>
+        declineForm
       ) : (
         <Button type="button" size="xs" variant="ghost" onClick={() => setOpen(true)}>
           Từ chối nhận việc

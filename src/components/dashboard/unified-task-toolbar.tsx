@@ -174,6 +174,8 @@ export interface SmartFilterPill {
 }
 
 export interface UnifiedTaskToolbarProps {
+  /** Chưa có nhiệm vụ nào: chỉ giữ tiêu đề và nút tạo việc, ẩn tìm kiếm, bộ lọc và tùy chọn hiển thị. */
+  quiet?: boolean;
   // Scope (supports both "school" | "unit" | "my" and "SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS")
   scope: WorkspaceScope | TaskScope | string;
   onScopeChange: (scope: any) => void;
@@ -528,6 +530,7 @@ export function resetTaskToolbarFilters(callbacks: Pick<UnifiedTaskToolbarProps,
 }
 
 export function UnifiedTaskToolbar({
+  quiet = false,
   scope,
   onScopeChange,
   user,
@@ -2652,6 +2655,8 @@ export function UnifiedTaskToolbar({
         </div>
       )}
 
+      {!quiet && (
+        <>
       {/* 1. Search */}
       <ListToolbarSearch
         ref={searchInputRef}
@@ -2815,6 +2820,9 @@ export function UnifiedTaskToolbar({
         onReset={handleResetDisplayProperties}
         triggerClassName="inline-flex h-7 w-7 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-border/80 bg-background text-foreground hover:bg-accent text-xs font-medium transition-colors touch-manipulation"
       />
+
+        </>
+      )}
 
       {/* 4. + Tạo việc CTA (Linear Understated Style) */}
       {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (

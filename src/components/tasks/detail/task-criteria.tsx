@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { cn } from "@/lib/utils";
+import { TaskAddPanel } from "./task-add-chip";
 
 interface CriterionView {
   id: string;
@@ -69,8 +70,11 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
   }, [load, status]);
 
   const startEdit = () => {
-    setDrafts((view?.criteria ?? []).map((c) => ({ id: c.id, text: c.text })));
+    const current = (view?.criteria ?? []).map((c) => ({ id: c.id, text: c.text }));
+    // Chưa có tiêu chí: mở sẵn một ô trống để gõ ngay
+    setDrafts(current.length > 0 ? current : [{ text: "" }]);
     setEditing(true);
+    if (current.length === 0) requestAnimationFrame(() => addRef.current?.focus());
   };
 
   const save = async () => {
@@ -120,6 +124,62 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
 
   // Không có tiêu chí và không ai thêm được thì không chiếm chỗ trên trang.
   if (view.criteria.length === 0 && !view.canEdit && !editing) return null;
+  const editForm = (
+    <div className="space-y-1.5">
+      {drafts.map((d, i) => (
+        <div key={d.id ?? `new-${i}`} className="flex items-center gap-1.5">
+          <Input
+            compact
+            value={d.text}
+            maxLength={300}
+            aria-label={`Tiêu chí ${i + 1}`}
+            onChange={(e) => setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+            ref={i === drafts.length - 1 ? addRef : undefined}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`Bỏ tiêu chí ${i + 1}`}
+            onClick={() => setDrafts((prev) => prev.filter((_, j) => j !== i))}
+          >
+            <X strokeWidth={1.5} />
+          </Button>
+        </div>
+      ))}
+      <div className="flex items-center gap-1.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          disabled={drafts.length >= MAX_CRITERIA}
+          onClick={() => {
+            setDrafts((prev) => [...prev, { text: "" }]);
+            requestAnimationFrame(() => addRef.current?.focus());
+          }}
+        >
+          <Plus strokeWidth={1.5} />
+          Thêm tiêu chí
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {drafts.length}/{MAX_CRITERIA}
+        </span>
+        <span className="ml-auto flex items-center gap-1.5">
+          <Button type="button" size="xs" variant="ghost" onClick={() => { setEditing(false); setError(null); }}>
+            Hủy
+          </Button>
+          <Button type="button" size="xs" variant="outline" onClick={() => void save()} disabled={saving}>
+            {saving ? "Đang lưu…" : "Lưu"}
+          </Button>
+        </span>
+      </div>
+    </div>
+  );
+  if (view.criteria.length === 0) {
+    return (
+      <TaskAddPanel entry="criteria" label="Tiêu chí hoàn thành" open={editing} onOpenChange={(next) => (next ? startEdit() : (setEditing(false), setError(null)))} panel={<>{editForm}{error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}</>} />
+    );
+  }
 
   const total = view.criteria.length;
   const met = total - view.unmet;
@@ -143,55 +203,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
       </div>
 
       {editing ? (
-        <div className="space-y-1.5">
-          {drafts.map((d, i) => (
-            <div key={d.id ?? `new-${i}`} className="flex items-center gap-1.5">
-              <Input
-                compact
-                value={d.text}
-                maxLength={300}
-                aria-label={`Tiêu chí ${i + 1}`}
-                onChange={(e) => setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
-                ref={i === drafts.length - 1 ? addRef : undefined}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Bỏ tiêu chí ${i + 1}`}
-                onClick={() => setDrafts((prev) => prev.filter((_, j) => j !== i))}
-              >
-                <X strokeWidth={1.5} />
-              </Button>
-            </div>
-          ))}
-          <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              disabled={drafts.length >= MAX_CRITERIA}
-              onClick={() => {
-                setDrafts((prev) => [...prev, { text: "" }]);
-                requestAnimationFrame(() => addRef.current?.focus());
-              }}
-            >
-              <Plus strokeWidth={1.5} />
-              Thêm tiêu chí
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              {drafts.length}/{MAX_CRITERIA}
-            </span>
-            <span className="ml-auto flex gap-1.5">
-              <Button type="button" size="xs" onClick={() => void save()} disabled={saving}>
-                {saving ? "Đang lưu…" : "Lưu"}
-              </Button>
-              <Button type="button" size="xs" variant="ghost" onClick={() => { setEditing(false); setError(null); }}>
-                Hủy
-              </Button>
-            </span>
-          </div>
-        </div>
+        editForm
       ) : (
         <ul className="space-y-1">
           {view.criteria.map((c) => (

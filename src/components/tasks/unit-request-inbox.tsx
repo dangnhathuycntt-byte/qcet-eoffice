@@ -6,6 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface InboxRow {
   id: string;
@@ -105,7 +106,15 @@ export function UnitRequestInbox({ className }: { className?: string }) {
   return (
     <section aria-label="Yêu cầu phối hợp" className={cn("space-y-2", className)}>
       {error && <InlineAlert variant="error">{error}</InlineAlert>}
-      {rows && rows.length === 0 && <p className="text-compact text-muted-foreground">Không có yêu cầu nào đang chờ.</p>}
+      {rows && rows.length === 0 && (
+        <EmptyState
+          role="status"
+          density="compact"
+          illustration="unit-request"
+          title="Không có yêu cầu nào đang chờ"
+          description="Yêu cầu phối hợp gửi đến đơn vị sẽ hiện ở đây."
+        />
+      )}
       <ul className="space-y-2">
         {(rows ?? []).map((row) => (
           <li key={row.id} className="rounded-lg border border-border bg-card p-3">

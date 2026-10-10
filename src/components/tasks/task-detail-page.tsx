@@ -24,6 +24,7 @@ import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
 import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
+import { TaskOptionalSections } from "@/components/tasks/detail/task-add-chip";
 import { TaskDecline } from "@/components/tasks/detail/task-decline";
 import { TaskExtension } from "@/components/tasks/detail/task-extension";
 import { TaskPeople } from "@/components/tasks/detail/task-people";
@@ -35,7 +36,6 @@ import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/sub
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
 import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
-import { TaskSourceDocumentBadge } from "@/components/tasks/detail/task-source-document-badge";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
@@ -880,20 +880,6 @@ export function TaskDetailPage({
               />
 
 
-              {isSchoolTask(task) && (task as any).sourceDocument && (
-                <div className="px-4 pb-3">
-                  <TaskSourceDocumentBadge
-                    sourceDocument={(task as any).sourceDocument}
-                  />
-                </div>
-              )}
-
-              <TaskDecline
-                taskId={task.id}
-                version={Number((task as any).version ?? 0)}
-                status={String((task as any).status ?? "")}
-                onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
-              />
 
               <TaskBlockEditor
                 selectionContainerSelector="body"
@@ -906,6 +892,8 @@ export function TaskDetailPage({
                 onSelectSubtask={handleOpenSubtaskDrawer}
               />
 
+              {/* Khối tùy chọn: khối có dữ liệu chiếm cả hàng; khối trống thu thành chip dồn về một hàng cuối */}
+              <TaskOptionalSections>
               <TaskExtension
                 taskId={task.id}
                 version={Number((task as any).version ?? 0)}
@@ -928,6 +916,15 @@ export function TaskDetailPage({
                 status={String((task as any).status ?? "")}
                 onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
               />
+
+              {/* Thao tác ngược (không phải "thêm") đứng cuối hàng chip */}
+              <TaskDecline
+                taskId={task.id}
+                version={Number((task as any).version ?? 0)}
+                status={String((task as any).status ?? "")}
+                onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
+              />
+              </TaskOptionalSections>
             </>
           )}
 

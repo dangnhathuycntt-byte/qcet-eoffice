@@ -1859,6 +1859,21 @@ function UnifiedAdaptiveWorkspaceInner({
     };
   }, [displayedTasks]);
 
+  // Chưa có nhiệm vụ nào và không bộ lọc nào đang áp dụng: trang trống yên tĩnh, thanh công cụ chỉ còn nút tạo việc.
+  const isNoFilterValue = (v: unknown) => v === undefined || v === null || v === "" || v === "ALL" || v === "all";
+  const isColdStartEmpty =
+    tasks.length === 0 &&
+    !initialLoading &&
+    !isLoading &&
+    !isInternalLoading &&
+    !(currentSearch && String(currentSearch).trim()) &&
+    isNoFilterValue(currentStatus) &&
+    isNoFilterValue(currentDept) &&
+    isNoFilterValue(currentCategory) &&
+    isNoFilterValue(currentPriority) &&
+    isNoFilterValue(currentMonth) &&
+    isNoFilterValue(effectiveActiveTab);
+
   const handleResetFilters = React.useCallback(() => {
     setActiveViewId(null);
     setInternalDept(undefined);
@@ -2339,6 +2354,7 @@ function UnifiedAdaptiveWorkspaceInner({
           {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
           {!hideScopeSwitcher && (
             <UnifiedTaskToolbar
+          quiet={isColdStartEmpty}
           // Tiêu đề trang ở góc trái; cũng đẩy nhóm điều khiển sang phải (không hiện tab phạm vi ở hàng này)
           leftContent={
             <h1 data-slot="task-page-title" className="text-compact font-semibold text-foreground select-none">
@@ -2527,7 +2543,14 @@ function UnifiedAdaptiveWorkspaceInner({
               <TaskEmptyState
                 onAddTask={handleCreateTaskClick}
                 canAddTask={createPolicy.canCreate}
-                onResetFilters={handleRefresh}
+                onResetFilters={handleResetFilters}
+                searchQuery={currentSearch || ""}
+                status={currentStatus}
+                department={currentDept}
+                category={currentCategory}
+                priority={currentPriority}
+                academicMonth={currentMonth}
+                activeTab={effectiveActiveTab}
               />
             ) : (
               <div className="pt-0.5">
@@ -2654,7 +2677,14 @@ function UnifiedAdaptiveWorkspaceInner({
               <TaskEmptyState
                 onAddTask={handleCreateTaskClick}
                 canAddTask={createPolicy.canCreate}
-                onResetFilters={handleRefresh}
+                onResetFilters={handleResetFilters}
+                searchQuery={currentSearch || ""}
+                status={currentStatus}
+                department={currentDept}
+                category={currentCategory}
+                priority={currentPriority}
+                academicMonth={currentMonth}
+                activeTab={effectiveActiveTab}
               />
           ) : (
             <div>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface StepView {
   id: string;
@@ -114,6 +115,42 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
   const options = personnel.map((p) => ({ value: p.id, label: p.name }));
   const valid = draft.length > 0 && draft.every((s) => s.title.trim() && s.reviewerUserId);
 
+  const editForm = (
+    <div className="space-y-2">
+      {draft.map((s, index) => (
+        <div key={index} className="space-y-1.5 rounded-md border border-border p-2">
+          <Input compact value={s.title} maxLength={255} aria-label={`Tên bước ${index + 1}`} onChange={(e) => patchStep(index, { title: e.target.value })} />
+          <Select compact positionerClassName="z-50" aria-label={`Người duyệt bước ${index + 1}`} placeholder="— Người duyệt —" options={options} value={s.reviewerUserId} onValueChange={(v) => patchStep(index, { reviewerUserId: v || null })} />
+          <Select compact positionerClassName="z-50" aria-label={`Người dự phòng bước ${index + 1}`} placeholder="— Người dự phòng (không bắt buộc) —" options={options} value={s.backupReviewerUserId} onValueChange={(v) => patchStep(index, { backupReviewerUserId: v || null })} />
+          {draft.length > 1 ? (
+            <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => prev.filter((_, i) => i !== index))}>
+              Bỏ bước này
+            </Button>
+          ) : null}
+        </div>
+      ))}
+      <TaskPanelActions
+        onCancel={() => setEditing(false)}
+        leading={
+          draft.length < MAX_STEPS ? (
+            <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => [...prev, emptyStep(prev.length)])}>
+              Thêm bước
+            </Button>
+          ) : null
+        }
+      >
+        <Button type="button" size="xs" variant="outline" disabled={busy || !valid} onClick={() => void save()}>
+          Lập luồng
+        </Button>
+      </TaskPanelActions>
+    </div>
+  );
+  if (!view.process) {
+    return (
+      <TaskAddPanel entry="approval" label="Luồng duyệt nhiều bước" open={editing} onOpenChange={setEditing} panel={<>{editForm}{error ? <InlineAlert variant="error">{error}</InlineAlert> : null}</>} />
+    );
+  }
+
   return (
     <section aria-label="Luồng duyệt nhiều bước" className={cn("space-y-1.5", className)}>
       <div className="flex items-center gap-2">
@@ -145,35 +182,7 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
         </Button>
       ) : null}
 
-      {editing ? (
-        <div className="space-y-2">
-          {draft.map((s, index) => (
-            <div key={index} className="space-y-1.5 rounded-md border border-border p-2">
-              <Input compact value={s.title} maxLength={255} aria-label={`Tên bước ${index + 1}`} onChange={(e) => patchStep(index, { title: e.target.value })} />
-              <Select compact positionerClassName="z-50" aria-label={`Người duyệt bước ${index + 1}`} placeholder="— Người duyệt —" options={options} value={s.reviewerUserId} onValueChange={(v) => patchStep(index, { reviewerUserId: v || null })} />
-              <Select compact positionerClassName="z-50" aria-label={`Người dự phòng bước ${index + 1}`} placeholder="— Người dự phòng (không bắt buộc) —" options={options} value={s.backupReviewerUserId} onValueChange={(v) => patchStep(index, { backupReviewerUserId: v || null })} />
-              {draft.length > 1 ? (
-                <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => prev.filter((_, i) => i !== index))}>
-                  Bỏ bước này
-                </Button>
-              ) : null}
-            </div>
-          ))}
-          <div className="flex flex-wrap gap-1.5">
-            {draft.length < MAX_STEPS ? (
-              <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => [...prev, emptyStep(prev.length)])}>
-                Thêm bước
-              </Button>
-            ) : null}
-            <Button type="button" size="xs" disabled={busy || !valid} onClick={() => void save()}>
-              Lập luồng
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(false)}>
-              Hủy
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      {editing ? editForm : null}
 
       {error ? <InlineAlert variant="error">{error}</InlineAlert> : null}
     </section>
