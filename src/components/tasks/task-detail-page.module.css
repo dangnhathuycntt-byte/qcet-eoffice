@@ -177,6 +177,9 @@
 }
 .content > * + * { margin-top: 16px; }
 .content > [data-slot='task-block-editor'] { margin-top: 12px; }
+/* Bỏ khe 36px bên trái của trình soạn: tay nắm kéo khối vốn lùi ra ngoài khối (-ml-7) nên nằm ở lề canvas,
+   chữ mô tả thẳng hàng tiêu đề (kiểu Notion). Lề canvas nhỏ nhất 24px vẫn chứa đủ tay nắm 24px. */
+.content > [data-slot='task-block-editor'] [data-slate-editor] { padding-left: 0; }
 /* Mô tả đứng ngay dưới tiêu đề, các khối nghiệp vụ theo sau: không giãn hết chiều cao, vùng bấm cuối thu lại */
 .content > [data-slot='task-block-editor']:not(:last-child) { flex: none; }
 .content > [data-slot='task-block-editor']:not(:last-child) [data-slate-editor] { flex: none; padding-bottom: 16px; }

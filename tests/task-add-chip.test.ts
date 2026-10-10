@@ -21,16 +21,24 @@ describe("TaskAddChip", () => {
     assert.ok(!noIcon.includes("<svg"), "thao tác không phải thêm thì không có dấu +");
   });
 
-  test("mọi khối tùy chọn dùng chip khi trống và nằm trong vùng task-optional-sections", () => {
-    for (const file of ["task-extension", "task-people", "task-backup-reviewer", "task-unit-requests", "task-criteria", "task-approval-process", "task-decline"]) {
-      assert.ok(read(`src/components/tasks/detail/${file}.tsx`).includes("<TaskAddChip"), file);
+  test("khối tùy chọn trống là mục của menu \"+ Thêm\" (TaskAddPanel); từ chối nhận việc là chip riêng", () => {
+    for (const file of ["task-extension", "task-people", "task-backup-reviewer", "task-unit-requests", "task-criteria", "task-approval-process"]) {
+      const src = read(`src/components/tasks/detail/${file}.tsx`);
+      assert.ok(src.includes("<TaskAddPanel"), file);
+      assert.ok(!src.includes("<TaskAddChip"), file);
     }
+    assert.ok(read("src/components/tasks/detail/task-decline.tsx").includes("<TaskAddChip"));
+
     const page = read("src/components/tasks/task-detail-page.tsx");
-    const start = page.indexOf('data-slot="task-optional-sections"');
-    assert.ok(start > 0);
-    const region = page.slice(start, page.indexOf("</div>", page.indexOf("<TaskDecline", start)));
+    const region = page.slice(page.indexOf("<TaskOptionalSections>"), page.indexOf("</TaskOptionalSections>"));
     for (const name of ["<TaskExtension", "<TaskPeople", "<TaskApprovalProcess", "<TaskBackupReviewer", "<TaskUnitRequests", "<TaskCriteria", "<TaskDecline"]) {
       assert.ok(region.includes(name), name);
     }
+  });
+
+  test("văn bản gốc chỉ hiện một lần: cột Thuộc tính, hoặc dưới tiêu đề khi cột đó ẩn", () => {
+    assert.ok(!read("src/components/tasks/task-detail-page.tsx").includes("<TaskSourceDocumentBadge"));
+    const identity = read("src/components/tasks/detail/task-identity-block.tsx");
+    assert.ok(/showInlineProperties && isSchoolTask\(task\) && task\.sourceDocument/.test(identity));
   });
 });

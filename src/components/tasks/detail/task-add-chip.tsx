@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus } from "lucide-react";
+import { Building2, CalendarClock, ClipboardCheck, GitBranch, Plus, ShieldCheck, Users } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import { cn } from "@/lib/utils";
 
@@ -11,10 +11,165 @@ const CHIP_CLASS = cn(
   "data-[popup-open]:bg-accent data-[popup-open]:text-foreground",
 );
 
+const PANEL_CLASS = "w-64 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl outline-none";
+
+/** Các khối tùy chọn có thể gom vào menu "+ Thêm" của chi tiết nhiệm vụ. */
+export type TaskOptionalKey = "extension" | "people" | "backup" | "unit-request" | "criteria" | "approval";
+const ENTRY_ORDER: TaskOptionalKey[] = ["criteria", "people", "unit-request", "backup", "approval", "extension"];
+const ENTRY_ICON: Record<TaskOptionalKey, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
+  criteria: ClipboardCheck,
+  people: Users,
+  "unit-request": Building2,
+  backup: ShieldCheck,
+  approval: GitBranch,
+  extension: CalendarClock,
+};
+
+interface Entry {
+  label: string;
+  open: () => void;
+}
+
+interface OptionalMenuContextValue {
+  register: (key: TaskOptionalKey, entry: Entry) => void;
+  unregister: (key: TaskOptionalKey) => void;
+  anchor: HTMLElement | null;
+}
+
+const OptionalMenuContext = React.createContext<OptionalMenuContextValue | null>(null);
+
 /**
- * Khối tùy chọn của chi tiết nhiệm vụ khi còn trống: chỉ hiện một chip (progressive disclosure).
- * Có `panel` thì bấm chip mở form trong popover neo tại chip, trang không giãn ra; khối chỉ xuất hiện khi đã có dữ liệu.
- * `order-last` để các chip dồn về một hàng sau những khối đã có dữ liệu trong `data-slot="task-optional-sections"`.
+ * Gom các khối tùy chọn còn trống của chi tiết nhiệm vụ vào một nút "+ Thêm" (progressive disclosure, kiểu "+ Add property").
+ * Khối có dữ liệu tự hiện trên trang; khối trống chỉ là một mục trong menu, chọn mục thì form mở trong popover neo tại nút.
+ */
+export function TaskOptionalSections({ children, className }: { children: React.ReactNode; className?: string }) {
+  const [entries, setEntries] = React.useState<Partial<Record<TaskOptionalKey, Entry>>>({});
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
+
+  const register = React.useCallback((key: TaskOptionalKey, entry: Entry) => {
+    setEntries((prev) => (prev[key]?.label === entry.label && prev[key]?.open === entry.open ? prev : { ...prev, [key]: entry }));
+  }, []);
+  const unregister = React.useCallback((key: TaskOptionalKey) => {
+    setEntries((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+  const value = React.useMemo(() => ({ register, unregister, anchor }), [register, unregister, anchor]);
+  const available = ENTRY_ORDER.filter((key) => entries[key]);
+
+  return (
+    <OptionalMenuContext.Provider value={value}>
+      <div
+        data-slot="task-optional-sections"
+        className={cn("flex flex-wrap items-center gap-x-1 gap-y-4 [&>section]:basis-full [&>p]:basis-full", className)}
+      >
+        {children}
+        {available.length > 0 ? (
+          <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+            <Popover.Trigger
+              ref={setAnchor}
+              type="button"
+              data-slot="task-optional-menu"
+              title="Thêm tiêu chí, người tham gia, phối hợp…"
+              className={cn(CHIP_CLASS, "order-1")}
+            >
+              <Plus className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+              Thêm
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                <Popover.Popup
+                  aria-label="Thêm thông tin cho nhiệm vụ"
+                  className="w-56 rounded-xl border border-border bg-popover p-1 shadow-2xl outline-none"
+                >
+                  {available.map((key) => {
+                    const Icon = ENTRY_ICON[key];
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          entries[key]?.open();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-foreground hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                      >
+                        <Icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                        {entries[key]?.label}
+                      </button>
+                    );
+                  })}
+                </Popover.Popup>
+              </Popover.Positioner>
+            </Popover.Portal>
+          </Popover.Root>
+        ) : null}
+      </div>
+    </OptionalMenuContext.Provider>
+  );
+}
+
+/**
+ * Khối tùy chọn còn trống: đăng ký một mục vào menu "+ Thêm"; form mở trong popover neo tại nút đó.
+ * Dùng ngoài `TaskOptionalSections` thì tự hiện thành chip riêng.
+ */
+export function TaskAddPanel({
+  entry,
+  label,
+  open,
+  onOpenChange,
+  panel,
+}: {
+  entry: TaskOptionalKey;
+  label: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  panel: React.ReactNode;
+}) {
+  const ctx = React.useContext(OptionalMenuContext);
+  const onOpenChangeRef = React.useRef(onOpenChange);
+  React.useEffect(() => {
+    onOpenChangeRef.current = onOpenChange;
+  });
+  const openEntry = React.useCallback(() => onOpenChangeRef.current(true), []);
+  const register = ctx?.register;
+  const unregister = ctx?.unregister;
+
+  React.useEffect(() => {
+    if (!register || !unregister) return;
+    register(entry, { label, open: openEntry });
+    return () => unregister(entry);
+  }, [register, unregister, entry, label, openEntry]);
+
+  if (!ctx) {
+    return (
+      <TaskAddChip open={open} onOpenChange={onOpenChange} panel={panel}>
+        {label}
+      </TaskAddChip>
+    );
+  }
+
+  return (
+    <Popover.Root open={open && Boolean(ctx.anchor)} onOpenChange={(next) => onOpenChange(next)}>
+      <Popover.Portal>
+        <Popover.Positioner anchor={ctx.anchor} className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+          <Popover.Popup data-slot="task-add-chip-panel" style={{ maxHeight: "var(--available-height)" }} className={PANEL_CLASS}>
+            <p className="mb-1.5 px-0.5 text-xs font-medium text-foreground">{label}</p>
+            {panel}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/**
+ * Chip đứng riêng (vd. "Từ chối nhận việc"). Có `panel` thì bấm chip mở form trong popover neo tại chip.
+ * `order-last` để chip dồn về hàng cuối, sau những khối đã có dữ liệu.
  */
 export function TaskAddChip({
   children,
@@ -57,11 +212,7 @@ export function TaskAddChip({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
-          <Popover.Popup
-            data-slot="task-add-chip-panel"
-            style={{ maxHeight: "var(--available-height)" }}
-            className="w-64 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-2xl outline-none"
-          >
+          <Popover.Popup data-slot="task-add-chip-panel" style={{ maxHeight: "var(--available-height)" }} className={PANEL_CLASS}>
             <p className="mb-1.5 px-0.5 text-xs font-medium text-foreground">{children}</p>
             {panel}
           </Popover.Popup>

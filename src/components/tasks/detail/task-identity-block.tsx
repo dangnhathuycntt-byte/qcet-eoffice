@@ -119,13 +119,6 @@ export function TaskIdentityBlock({
 
   return (
     <section data-slot="task-identity-block" className={cn("space-y-3 relative z-30", className)}>
-      {/* 0. Linked Official Source Document (nếu có) */}
-      {isSchoolTask(task) && task.sourceDocument && (
-        <div className="pb-1">
-          <TaskSourceDocumentBadge sourceDocument={task.sourceDocument} />
-        </div>
-      )}
-
       {/* 1. Title Area */}
       <div className="w-full min-w-0 space-y-1">
           {/* Direct Inline Editable Title with exact caret positioning */}
@@ -149,6 +142,11 @@ export function TaskIdentityBlock({
             />
           </div>
         </div>
+
+      {/* Văn bản gốc: cột Thuộc tính đã có dòng "Văn bản gốc"; chỉ hiện ở đây khi cột đó ẩn (màn hẹp) */}
+      {showInlineProperties && isSchoolTask(task) && task.sourceDocument && (
+        <TaskSourceDocumentBadge sourceDocument={task.sourceDocument} compact />
+      )}
 
       {showInlineProperties && (
       /* 2. Compact Properties Summary khi Sidebar đóng (Trạng thái · Người phụ trách · Hạn hoàn thành) */

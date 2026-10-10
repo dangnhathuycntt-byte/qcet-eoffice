@@ -6,7 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
-import { TaskAddChip } from "./task-add-chip";
+import { TaskAddPanel } from "./task-add-chip";
 
 interface ExtensionRequestView {
   id: string;
@@ -169,13 +169,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
   // Chưa có yêu cầu nào: chỉ còn chip, form xin gia hạn mở trong popover
   if (!active && (mode === "idle" || mode === "request") && view.appliedCount < 3) {
     return (
-      <TaskAddChip
-        open={mode === "request"}
-        onOpenChange={(next) => (next ? setMode("request") : reset())}
-        panel={<>{requestForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>}
-      >
-        Xin gia hạn
-      </TaskAddChip>
+      <TaskAddPanel entry="extension" label="Xin gia hạn" open={mode === "request"} onOpenChange={(next) => (next ? setMode("request") : reset())} panel={<>{requestForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>} />
     );
   }
 

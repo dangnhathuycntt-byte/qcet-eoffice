@@ -6,7 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
-import { TaskAddChip } from "./task-add-chip";
+import { TaskAddPanel } from "./task-add-chip";
 
 interface BackupView {
   backup: { userId: string; name: string; active: boolean } | null;
@@ -91,14 +91,7 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
   );
   if (!view.backup) {
     return (
-      <TaskAddChip
-        title="Người dự phòng nhận việc duyệt khi chờ duyệt quá 4 ngày"
-        open={editing}
-        onOpenChange={setEditing}
-        panel={<>{editForm}{error ? <InlineAlert variant="error">{error}</InlineAlert> : null}</>}
-      >
-        Người duyệt dự phòng
-      </TaskAddChip>
+      <TaskAddPanel entry="backup" label="Người duyệt dự phòng" open={editing} onOpenChange={setEditing} panel={<>{editForm}{error ? <InlineAlert variant="error">{error}</InlineAlert> : null}</>} />
     );
   }
 

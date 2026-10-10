@@ -6,7 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
-import { TaskAddChip } from "./task-add-chip";
+import { TaskAddPanel } from "./task-add-chip";
 
 interface PeopleView {
   version: number;
@@ -110,9 +110,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
   );
   if (!view.people.some((p) => p.removable)) {
     return view.canManage ? (
-      <TaskAddChip open={adding} onOpenChange={setAdding} panel={<>{addForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>}>
-        Người tham gia
-      </TaskAddChip>
+      <TaskAddPanel entry="people" label="Người tham gia" open={adding} onOpenChange={setAdding} panel={<>{addForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>} />
     ) : null;
   }
 

@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { cn } from "@/lib/utils";
-import { TaskAddChip } from "./task-add-chip";
+import { TaskAddPanel } from "./task-add-chip";
 
 interface RequestView {
   id: string;
@@ -129,9 +129,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
   );
   if (state.requests.length === 0) {
     return (
-      <TaskAddChip open={adding} onOpenChange={setAdding} panel={<>{addForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>}>
-        Phối hợp liên đơn vị
-      </TaskAddChip>
+      <TaskAddPanel entry="unit-request" label="Phối hợp liên đơn vị" open={adding} onOpenChange={setAdding} panel={<>{addForm}{error && <InlineAlert variant="error">{error}</InlineAlert>}</>} />
     );
   }
 

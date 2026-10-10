@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { cn } from "@/lib/utils";
-import { TaskAddChip } from "./task-add-chip";
+import { TaskAddPanel } from "./task-add-chip";
 
 interface CriterionView {
   id: string;
@@ -177,13 +177,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
   );
   if (view.criteria.length === 0) {
     return (
-      <TaskAddChip
-        open={editing}
-        onOpenChange={(next) => (next ? startEdit() : (setEditing(false), setError(null)))}
-        panel={<>{editForm}{error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}</>}
-      >
-        Tiêu chí hoàn thành
-      </TaskAddChip>
+      <TaskAddPanel entry="criteria" label="Tiêu chí hoàn thành" open={editing} onOpenChange={(next) => (next ? startEdit() : (setEditing(false), setError(null)))} panel={<>{editForm}{error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}</>} />
     );
   }
 

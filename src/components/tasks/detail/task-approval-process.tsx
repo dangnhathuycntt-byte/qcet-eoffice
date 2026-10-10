@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
-import { TaskAddChip } from "./task-add-chip";
+import { TaskAddPanel } from "./task-add-chip";
 
 interface StepView {
   id: string;
@@ -146,9 +146,7 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
   );
   if (!view.process) {
     return (
-      <TaskAddChip open={editing} onOpenChange={setEditing} panel={<>{editForm}{error ? <InlineAlert variant="error">{error}</InlineAlert> : null}</>}>
-        Luồng duyệt nhiều bước
-      </TaskAddChip>
+      <TaskAddPanel entry="approval" label="Luồng duyệt nhiều bước" open={editing} onOpenChange={setEditing} panel={<>{editForm}{error ? <InlineAlert variant="error">{error}</InlineAlert> : null}</>} />
     );
   }
 
