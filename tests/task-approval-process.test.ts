@@ -10,6 +10,10 @@ import { taskDomainActionService } from '../src/lib/services/task-domain-actions
 import { scanTaskReminders } from '../src/server/tasks/task-reminder-scanner';
 import { authorizeOnTask } from '../src/server/tasks/authorize-on-task';
 import { defineApprovalProcess, getApprovalProcess } from '../src/server/tasks/task-approval-process-service';
+import { NextRequest } from 'next/server';
+import { taskQueryService } from '../src/server/tasks';
+import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { POST as approveRoute } from '../src/app/api/tasks/[id]/actions/approve/route';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { ApiError } from '../src/server/api/errors';
 
@@ -21,6 +25,7 @@ const HOUR = 3_600_000;
 const session = (key: string) => ({ id: u[key], email: `${key}@x`, name: key, role: 'CHUYEN_VIEN' });
 const forbidden = (err: unknown) => err instanceof ApiError && err.statusCode === 403;
 const code = (c: string) => (err: unknown) => err instanceof ApiError && err.code === c;
+const stepOf = async (taskId: string) => (await getApprovalProcess(session('creator'), taskId)).process?.steps.find((s) => s.current)?.id;
 const canReview = (key: string, taskId: string) => authorizeOnTask(session(key), taskId, 'task.review').then(() => true, () => false);
 const markedActors = (taskId: string) => prisma.taskActor.findMany({ where: { taskId, notes: { startsWith: 'Bước duyệt:' } } });
 
@@ -116,15 +121,15 @@ describe('T-05 luồng duyệt nhiều bước', () => {
     const id = await makeWaitingTask('flow');
     await defineApprovalProcess(session('creator'), id, { steps: twoSteps() });
 
-    await assert.rejects(taskDomainActionService.review(session('exec'), id, { decision: 'APPROVED' }), forbidden, 'bước 2 chưa tới lượt');
+    await assert.rejects(taskDomainActionService.review(session('exec'), id, { stepId: await stepOf(id), decision: 'APPROVED' }), forbidden, 'bước 2 chưa tới lượt');
 
-    await taskDomainActionService.review(session('head'), id, { decision: 'APPROVED', note: 'Đồng ý' });
+    await taskDomainActionService.review(session('head'), id, { stepId: await stepOf(id), decision: 'APPROVED', note: 'Đồng ý' });
     assert.equal((await prisma.task.findUniqueOrThrow({ where: { id } })).status, TaskStatus.WAITING_APPROVAL, 'còn bước 2');
     assert.equal(await canReview('head', id), false, 'bước 1 qua thì gỡ quyền');
     assert.equal(await canReview('exec', id), true, 'đến lượt bước 2');
     assert.deepEqual((await markedActors(id)).map((a) => a.userId), [u.exec]);
 
-    await taskDomainActionService.review(session('exec'), id, { decision: 'APPROVED' });
+    await taskDomainActionService.review(session('exec'), id, { stepId: await stepOf(id), decision: 'APPROVED' });
     const task = await prisma.task.findUniqueOrThrow({ where: { id } });
     assert.equal(task.status, TaskStatus.COMPLETED);
     const process = await prisma.taskApprovalProcess.findFirstOrThrow({ where: { taskId: id }, include: { steps: true } });
@@ -133,10 +138,38 @@ describe('T-05 luồng duyệt nhiều bước', () => {
     assert.equal((await markedActors(id)).length, 0, 'hết luồng thì không còn dấu quyền');
   });
 
+  test('người duyệt của bước duyệt được qua route approve: cổng route nhận ra vai trò REVIEWER và SoD không coi họ là người thực hiện', async () => {
+    const id = await makeWaitingTask('sod');
+    await defineApprovalProcess(session('creator'), id, { steps: twoSteps() });
+    await taskDomainActionService.review(session('head'), id, { stepId: await stepOf(id), decision: 'APPROVED' });
+
+    const dto = await taskQueryService.getTaskById(id);
+    assert.equal((dto?.task as { assignees?: Array<{ id: string }> }).assignees?.some((a) => a.id === u.exec), false, 'DTO không liệt kê người duyệt là người thực hiện');
+
+    const version = (await prisma.task.findUniqueOrThrow({ where: { id } })).version;
+    const call = (key: string, stepId?: string) =>
+      approveRoute(
+        new NextRequest(`http://localhost:3000/api/tasks/${id}/actions/approve`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            origin: 'http://localhost:3000',
+            cookie: `${SESSION_COOKIE_NAME}=${signSessionToken({ id: u[key], email: `${key}@x`, name: key, role: 'CHUYEN_VIEN' })}`,
+          },
+          body: JSON.stringify({ expectedVersion: version, ...(stepId ? { stepId } : {}) }),
+        }),
+        { params: Promise.resolve({ id }) }
+      );
+    assert.equal((await call('stranger', await stepOf(id))).status, 403, 'người ngoài luồng bị chặn ở cổng route');
+    const res = await call('exec', await stepOf(id));
+    assert.equal(res.status, 200, JSON.stringify(await res.clone().json()));
+    assert.equal((await prisma.task.findUniqueOrThrow({ where: { id } })).status, TaskStatus.COMPLETED);
+  });
+
   test('từ chối hoặc yêu cầu làm lại ở một bước đóng luồng và trả nhiệm vụ về đang thực hiện', async () => {
     const rejected = await makeWaitingTask('reject');
     await defineApprovalProcess(session('creator'), rejected, { steps: twoSteps() });
-    await taskDomainActionService.review(session('head'), rejected, { decision: 'REJECTED', note: 'Chưa đạt' });
+    await taskDomainActionService.review(session('head'), rejected, { stepId: await stepOf(rejected), decision: 'REJECTED', note: 'Chưa đạt' });
     assert.equal((await prisma.task.findUniqueOrThrow({ where: { id: rejected } })).status, TaskStatus.IN_PROGRESS);
     assert.equal((await prisma.taskApprovalProcess.findFirstOrThrow({ where: { taskId: rejected } })).status, ApprovalProcessStatus.REJECTED);
     assert.equal((await markedActors(rejected)).length, 0);
@@ -157,7 +190,7 @@ describe('T-05 luồng duyệt nhiều bước', () => {
     const id = await makeWaitingTask('backup');
     // Bước 1 duyệt xong thì bước 2 (có người dự phòng) bắt đầu chờ.
     await defineApprovalProcess(session('creator'), id, { steps: twoSteps() });
-    await taskDomainActionService.review(session('head'), id, { decision: 'APPROVED' });
+    await taskDomainActionService.review(session('head'), id, { stepId: await stepOf(id), decision: 'APPROVED' });
     const decidedAt = new Date(Date.now() - 100 * HOUR);
     await prisma.taskApprovalStep.updateMany({ where: { process: { taskId: id }, stepOrder: 1 }, data: { decidedAt } });
 
@@ -174,7 +207,7 @@ describe('T-05 luồng duyệt nhiều bước', () => {
     assert.equal(again.sent.BACKUP_REVIEWER_ACTIVATED ?? 0, 0);
     assert.equal((await markedActors(id)).filter((a) => a.userId === u.backup).length, 1);
 
-    await taskDomainActionService.review(session('backup'), id, { decision: 'APPROVED', note: 'Duyệt thay' });
+    await taskDomainActionService.review(session('backup'), id, { stepId: await stepOf(id), decision: 'APPROVED', note: 'Duyệt thay' });
     const step2 = await prisma.taskApprovalStep.findFirstOrThrow({ where: { process: { taskId: id }, stepOrder: 2 } });
     assert.equal(step2.status, ApprovalStepStatus.APPROVED);
     assert.equal(step2.reviewerUserId, u.backup, 'ghi người thực sự duyệt');

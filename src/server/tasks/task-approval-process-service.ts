@@ -6,7 +6,8 @@
  * - Quyền duyệt đi qua các lệnh có sẵn (`review`, `approve`, `requestRevision`) vốn cần TaskActor REVIEWER.
  *   `syncStepReviewerActors` giữ đúng một dấu REVIEWER cho người của bước hiện tại (và người dự phòng khi đã tới
  *   hạn), đánh dấu bằng `notes` để gỡ khi bước qua đi hoặc luồng kết thúc, không đụng tới REVIEWER thủ công.
- * - Khi luồng đang chạy, lệnh duyệt không gửi `stepId` được tự gắn vào bước hiện tại.
+ * - Lệnh duyệt phải gửi `stepId` của bước hiện tại (lấy từ `GET approval-process`); không gửi thì vẫn bị chặn
+ *   `APPROVAL_STEPS_PENDING` như trước, để không ai duyệt vượt bước.
  */
 import { z } from "zod";
 import { ApprovalProcessStatus, ApprovalStepStatus, TaskActorRole, TaskStatus, type Prisma } from "@prisma/client";
@@ -71,16 +72,6 @@ const stepInclude = {
 
 function currentStepOf<T extends { stepOrder: number; status: ApprovalStepStatus }>(steps: T[]): T | null {
   return [...steps].sort((a, b) => a.stepOrder - b.stepOrder).find((s) => s.status === ApprovalStepStatus.PENDING) ?? null;
-}
-
-/** Bước đang chờ của luồng đang chạy, để các lệnh duyệt không gửi `stepId` vẫn đi đúng bước. */
-export async function resolveActiveStepId(db: Db, taskId: string): Promise<string | null> {
-  const process = await db.taskApprovalProcess.findFirst({
-    where: { taskId, status: ApprovalProcessStatus.IN_REVIEW },
-    orderBy: { createdAt: "desc" },
-    include: { steps: true },
-  });
-  return process ? currentStepOf(process.steps)?.id ?? null : null;
 }
 
 export async function getApprovalProcess(session: SessionPayload, taskId: string, now = new Date()): Promise<ApprovalProcessView> {

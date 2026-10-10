@@ -226,11 +226,15 @@ function extractUserFromAssignee(item: any): UserSummaryDTO | null {
   return null;
 }
 
+const NON_EXECUTION_ACTOR_ROLES = new Set(['FOLLOWER', 'OBSERVER', 'REVIEWER', 'APPROVER']);
+
 function extractAssignees(raw: Record<string, any>): UserSummaryDTO[] {
   // Check V2 actors first
   if (Array.isArray(raw.actors) && raw.actors.length > 0) {
+    // Người duyệt, theo dõi, quan sát không phải người thực hiện (ADR-001): nếu lọt vào đây thì bước SoD coi
+    // họ là người làm và chặn họ phê duyệt.
     const actorUsers = raw.actors
-      .filter((a: any) => a && (a.user || a.userId))
+      .filter((a: any) => a && (a.user || a.userId) && !NON_EXECUTION_ACTOR_ROLES.has(String(a.role ?? '').toUpperCase()))
       .map((a: any) => {
         if (a.user) return toUserSummaryDTO(a.user);
         return toUserSummaryDTO({

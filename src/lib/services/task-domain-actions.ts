@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { closeActiveProcessOnRevision, onApprovalStepAdvanced, resolveActiveStepId } from "@/server/tasks/task-approval-process-service";
+import { closeActiveProcessOnRevision, onApprovalStepAdvanced } from "@/server/tasks/task-approval-process-service";
 import { prisma } from "@/lib/prisma";
 import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
 import {
@@ -941,8 +941,6 @@ export class TaskDomainActionService {
    */
   async review(session: SessionPayload, taskId: string, input: ReviewInput) {
     const validated = ReviewInputSchema.parse(input);
-    // Duyệt cả nhiệm vụ khi có luồng nhiều bước đang chạy thì đi vào bước hiện tại; duyệt riêng một tệp hay kết quả thì không.
-    if (!validated.deliverableId && !validated.resultId) validated.stepId ??= (await resolveActiveStepId(prisma, taskId)) ?? undefined;
     const userContext = await buildUserContext(session);
     const { task, resource, targetDeliverable, targetResult, primaryOwnerId } =
       await loadTaskAndBuildResource(taskId, {
@@ -1302,7 +1300,6 @@ export class TaskDomainActionService {
    */
   async approve(session: SessionPayload, taskId: string, input: ApproveInput) {
     const validated = ApproveInputSchema.parse(input);
-    validated.stepId ??= (await resolveActiveStepId(prisma, taskId)) ?? undefined;
     const userContext = await buildUserContext(session);
     const { task, resource, primaryOwnerId } = await loadTaskAndBuildResource(taskId, {
       stepId: validated.stepId,

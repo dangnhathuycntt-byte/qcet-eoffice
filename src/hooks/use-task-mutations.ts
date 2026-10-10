@@ -65,6 +65,19 @@ export interface TaskMutationsReturn {
   handleRevokeDelegation: (ruleId: string) => void;
 }
 
+/** Bước đang chờ của luồng duyệt nhiều bước (nếu có), để gửi kèm quyết định duyệt. */
+async function currentApprovalStepId(taskId: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/approval-process`, { cache: "no-store" });
+    if (!res.ok) return undefined;
+    const view = await res.json();
+    if (view?.process?.status !== "IN_REVIEW") return undefined;
+    return (view.process.steps as Array<{ id: string; current: boolean }>).find((step) => step.current)?.id;
+  } catch {
+    return undefined;
+  }
+}
+
 export function useTaskMutations(
   user?: AuthUser | null,
   onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void,
@@ -471,9 +484,13 @@ export function useTaskMutations(
       let actionBody: Record<string, unknown>;
       let actionDesc: string;
 
+      // Có luồng duyệt nhiều bước đang chạy (T-05): quyết định phải nêu bước hiện tại.
+      const stepId =
+        payload.decision !== "revision_requested" && isOnline() ? await currentApprovalStepId(payload.taskId) : undefined;
+
       if (payload.decision === "approved") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
-        actionBody = { note: payload.comment, expectedVersion };
+        actionBody = { note: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
         actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
       } else if (payload.decision === "revision_requested") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/request-revision`;
@@ -481,11 +498,11 @@ export function useTaskMutations(
         actionDesc = `Yêu cầu chỉnh sửa nhiệm vụ ${payload.taskId}`;
       } else if (payload.decision === "rejected") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/review`;
-        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment, expectedVersion };
+        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
         actionDesc = `Từ chối nhiệm vụ ${payload.taskId}`;
       } else {
         actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
-        actionBody = { note: payload.comment, expectedVersion };
+        actionBody = { note: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
         actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
       }
 
