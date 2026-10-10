@@ -17,7 +17,7 @@
  * người thực hiện. Người dùng tắt được nhắc trước hạn và nhắc người duyệt sau 2 ngày
  * (cài đặt push); báo trễ và các mốc 4 ngày thì không tắt được.
  */
-import { AssignmentStatus, ExtensionRequestStatus, TaskStatus, type Prisma } from "@prisma/client";
+import { AssignmentStatus, ExtensionRequestStatus, TaskStatus, TaskUnitRequestStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
@@ -88,6 +88,7 @@ interface Candidate {
   pushEvent: Parameters<typeof deliverTaskNotice>[1]["pushEvent"];
   note: string;
   dueDateStr?: string;
+  linkHref?: string;
 }
 
 async function send(db: Db, c: Candidate, result: ReminderScanResult) {
@@ -113,6 +114,7 @@ async function send(db: Db, c: Candidate, result: ReminderScanResult) {
       pushEvent: c.pushEvent,
       note: c.note,
       dueDateStr: c.dueDateStr,
+      linkHref: c.linkHref,
     });
     result.sent[c.kind] = (result.sent[c.kind] ?? 0) + 1;
   } catch (error) {
@@ -267,6 +269,26 @@ export async function scanTaskReminders(
         type: "escalation", pushEvent: "TASK_ESCALATION", note: `Nhiệm vụ chưa giao lại sau ${days} ngày kể từ khi bị từ chối nhận`,
       }, result);
     }
+  }
+
+  // 5. Yêu cầu phối hợp liên đơn vị quá hạn trả lời (T-12): nhắc trưởng đơn vị được yêu cầu và báo người giao.
+  const overdueRequests = await db.taskUnitRequest.findMany({
+    where: { status: TaskUnitRequestStatus.PENDING, respondBy: { lte: now }, task: { ...scope, archivedAt: null, status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] } } },
+    include: { task: { select: { id: true, title: true } }, targetUnit: { select: { name: true } } },
+  });
+  result.considered += overdueRequests.length;
+  for (const req of overdueRequests) {
+    const days = Math.max(1, Math.floor((now.getTime() - (req.respondBy as Date).getTime()) / 86_400_000));
+    await send(db, {
+      taskId: req.taskId, kind: "UNIT_REQUEST_OVERDUE", dueKey: req.id, recipientIds: await unitLeaderIds(db, req.targetUnitId), pref: null,
+      type: "unit_request", pushEvent: "TASK_UNIT_REQUEST", linkHref: "/tasks/unit-requests",
+      note: `Yêu cầu phối hợp đã quá hạn trả lời (hạn ${fmtDay(req.respondBy as Date)})`,
+    }, result);
+    await send(db, {
+      taskId: req.taskId, kind: "UNIT_REQUEST_OVERDUE_ASSIGNER", dueKey: req.id, recipientIds: [req.requestedById], pref: null,
+      type: "escalation", pushEvent: "TASK_ESCALATION",
+      note: `${req.targetUnit.name} chưa trả lời yêu cầu phối hợp, quá hạn ${days} ngày`,
+    }, result);
   }
 
   return result;

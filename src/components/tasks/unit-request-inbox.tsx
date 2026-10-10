@@ -15,6 +15,8 @@ interface InboxRow {
   requestedBy: { id: string; name: string };
   note: string | null;
   createdAt: string;
+  respondBy: string | null;
+  overdue: boolean;
 }
 
 interface Member {
@@ -110,6 +112,7 @@ export function UnitRequestInbox({ className }: { className?: string }) {
             <p className="text-compact font-medium text-foreground">{row.task.title}</p>
             <p className="text-xs text-muted-foreground">
               {row.task.code} · hạn {fmt(row.task.dueDate)} · chủ trì {row.task.leadUnitName ?? "—"} · {row.requestedBy.name} đề nghị {fmt(row.createdAt)}
+              {row.respondBy ? <span className={row.overdue ? "text-destructive" : undefined}> · {row.overdue ? "quá hạn trả lời" : "hạn trả lời"} {fmt(row.respondBy)}</span> : null}
             </p>
             {row.note && <p className="mt-1 text-compact text-foreground">{row.note}</p>}
 

@@ -1483,10 +1483,12 @@ model TaskUnitRequest {
   decidedBy      User?                 @relation("TaskUnitRequestDecider", fields: [decidedById], references: [id], onDelete: SetNull)
   decidedAt      DateTime?             @map("decided_at")
   decisionNote   String?               @map("decision_note") @db.VarChar(1000)
+  respondBy      DateTime?             @map("respond_by")
   createdAt      DateTime              @default(now()) @map("created_at")
 
   @@index([taskId, status])
   @@index([targetUnitId, status])
+  @@index([status, respondBy])
   @@map("task_unit_requests")
 }
 

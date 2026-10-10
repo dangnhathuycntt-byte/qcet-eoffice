@@ -15,6 +15,8 @@ interface RequestView {
   status: "PENDING" | "ASSIGNED" | "DECLINED" | "CANCELLED";
   assignee: { id: string; name: string } | null;
   decisionNote: string | null;
+  respondBy: string | null;
+  overdue: boolean;
   canCancel: boolean;
 }
 
@@ -24,6 +26,15 @@ const STATUS_LABEL: Record<RequestView["status"], string> = {
   DECLINED: "Bị từ chối",
   CANCELLED: "Đã rút lại",
 };
+
+const RESPOND_OPTIONS = [
+  { value: "1", label: "Trả lời trong 1 ngày" },
+  { value: "3", label: "Trả lời trong 3 ngày" },
+  { value: "5", label: "Trả lời trong 5 ngày" },
+  { value: "7", label: "Trả lời trong 7 ngày" },
+];
+
+const formatDay = (iso: string) => new Date(iso).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 
 async function readError(res: Response, fallback: string): Promise<string> {
   const json = await res.json().catch(() => null);
@@ -41,6 +52,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
   const [adding, setAdding] = React.useState(false);
   const [unitId, setUnitId] = React.useState<string | null>(null);
   const [note, setNote] = React.useState("");
+  const [respondInDays, setRespondInDays] = React.useState("3");
   const { departments } = useDepartmentList({ enabled: adding });
 
   const load = React.useCallback(async () => {
@@ -93,6 +105,9 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
                 {r.decisionNote ? <span className="text-muted-foreground"> · {r.decisionNote}</span> : null}
               </span>
               <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
+                {r.status === "PENDING" && r.respondBy ? (
+                  <span className={r.overdue ? "text-destructive" : undefined}>{r.overdue ? "Quá hạn trả lời" : "Hạn trả lời"} {formatDay(r.respondBy)}</span>
+                ) : null}
                 {STATUS_LABEL[r.status]}
                 {r.canCancel ? (
                   <Button
@@ -127,13 +142,21 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
             value={unitId}
             onValueChange={(v) => setUnitId(v || null)}
           />
+          <Select
+            compact
+            positionerClassName="z-50"
+            aria-label="Hạn trả lời"
+            options={RESPOND_OPTIONS}
+            value={respondInDays}
+            onValueChange={(v) => setRespondInDays(v || "3")}
+          />
           <Textarea compact value={note} maxLength={1000} aria-label="Nội dung đề nghị" placeholder="Cần đơn vị hỗ trợ việc gì (không bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
           <div className="flex gap-1.5">
             <Button
               type="button"
               size="xs"
               disabled={busy || !unitId}
-              onClick={() => void send(`/api/tasks/${taskId}/unit-requests`, { targetUnitId: unitId, ...(note.trim() ? { note: note.trim() } : {}) }, "Không gửi được đề nghị")}
+              onClick={() => void send(`/api/tasks/${taskId}/unit-requests`, { targetUnitId: unitId, respondInDays: Number(respondInDays), ...(note.trim() ? { note: note.trim() } : {}) }, "Không gửi được đề nghị")}
             >
               Gửi đề nghị
             </Button>

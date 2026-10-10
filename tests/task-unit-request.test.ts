@@ -15,6 +15,7 @@ import {
   listUnitRequestInbox,
 } from '../src/server/tasks/task-unit-request-service';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
+import { scanTaskReminders } from '../src/server/tasks/task-reminder-scanner';
 import { ApiError, ConflictError } from '../src/server/api/errors';
 
 const runId = `t12_${Date.now()}`;
@@ -191,12 +192,40 @@ describe('T-12 giao việc liên đơn vị qua trưởng đơn vị', () => {
     assert.equal(asDri.canRequest, false);
   });
 
+  test('hạn trả lời: mặc định 3 ngày; quá hạn thì nhắc trưởng đơn vị và báo người giao, đúng một lần (T-12)', async () => {
+    const id = await makeTask('respond');
+    const req = await createTaskUnitRequest(session('assigner'), id, { targetUnitId: unit.B });
+    const days = (new Date(req.respondBy as string).getTime() - Date.now()) / 86_400_000;
+    assert.ok(days > 2.99 && days <= 3, `hạn mặc định 3 ngày, got ${days}`);
+    assert.equal(req.overdue, false);
+    const custom = await createTaskUnitRequest(session('assigner'), await makeTask('respond2'), { targetUnitId: unit.B, respondInDays: 7 });
+    assert.ok((new Date(custom.respondBy as string).getTime() - Date.now()) / 86_400_000 > 6.99);
+
+    const early = await scanTaskReminders({ now: new Date(Date.now() + 2 * 86_400_000), taskIds: [id] });
+    assert.equal(early.sent.UNIT_REQUEST_OVERDUE ?? 0, 0, 'chưa tới hạn thì chưa nhắc');
+
+    const late = new Date(Date.now() + 4 * 86_400_000);
+    const first = await scanTaskReminders({ now: late, taskIds: [id] });
+    assert.equal(first.sent.UNIT_REQUEST_OVERDUE, 1);
+    assert.equal(first.sent.UNIT_REQUEST_OVERDUE_ASSIGNER, 1);
+    assert.equal(await prisma.notification.count({ where: { userId: u.headB, type: 'unit_request', linkHref: '/tasks/unit-requests' } }) >= 1, true);
+    assert.equal(await prisma.notification.count({ where: { userId: u.assigner, type: 'escalation' } }) >= 1, true);
+
+    const again = await scanTaskReminders({ now: late, taskIds: [id] });
+    assert.equal(again.sent.UNIT_REQUEST_OVERDUE ?? 0, 0, 'không nhắc lặp');
+
+    await decideTaskUnitRequest(session('headB'), id, { requestId: req.id, decision: 'ASSIGN', assigneeUserId: u.staffB });
+    const afterAnswer = await scanTaskReminders({ now: new Date(late.getTime() + 86_400_000), taskIds: [id] });
+    assert.equal(afterAnswer.sent.UNIT_REQUEST_OVERDUE ?? 0, 0, 'đã trả lời thì không nhắc');
+  });
+
   test('thông báo qua outbox: trưởng đơn vị nhận yêu cầu, người gửi nhận phản hồi', async () => {
     const id = await makeTask('notify');
+    const headBBefore = await prisma.notification.count({ where: { userId: u.headB, type: 'unit_request' } });
     const req = await createTaskUnitRequest(session('assigner'), id, { targetUnitId: unit.B, note: 'Hỗ trợ số liệu' });
     const requested = await prisma.outboxEvent.findFirstOrThrow({ where: { aggregateId: id, eventType: 'TASK_UNIT_REQUESTED_NOTIFICATION' } });
     await runOutboxCycle(prisma, { ids: [requested.id] });
-    assert.equal(await prisma.notification.count({ where: { userId: u.headB, type: 'unit_request' } }), 1);
+    assert.equal(await prisma.notification.count({ where: { userId: u.headB, type: 'unit_request' } }), headBBefore + 1);
     assert.equal(await prisma.notification.count({ where: { userId: u.headC, type: 'unit_request' } }), 0);
 
     await decideTaskUnitRequest(session('headB'), id, { requestId: req.id, decision: 'ASSIGN', assigneeUserId: u.staffB });
