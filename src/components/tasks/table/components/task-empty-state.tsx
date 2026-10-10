@@ -180,7 +180,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       // Chưa từng có dữ liệu (không bộ lọc): nói bảng này dùng để làm gì và bước tiếp theo, không dùng thuật ngữ kỹ thuật.
       displayTitle = "Chưa có nhiệm vụ nào";
       displayDescription = canAddTask
-        ? "Nhiệm vụ được giao cho Thầy/Cô hoặc do Thầy/Cô giao sẽ hiện ở đây. Bắt đầu bằng việc tạo nhiệm vụ đầu tiên."
+        ? "Nhiệm vụ Thầy/Cô giao hoặc được giao sẽ hiện ở đây."
         : "Nhiệm vụ được giao cho Thầy/Cô sẽ hiện ở đây khi có người giao việc.";
     }
   }
@@ -194,7 +194,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       <span
         data-slot="empty-state-arrow"
         aria-hidden="true"
-        className="pointer-events-none absolute right-10 top-0 hidden h-[70px] w-20 bg-muted-foreground/40 md:block"
+        className="pointer-events-none absolute -top-2 right-10 hidden h-[70px] w-20 bg-muted-foreground/40 md:block"
         style={{
           WebkitMask: "url(/design/empty-arrow.png) center / contain no-repeat",
           mask: "url(/design/empty-arrow.png) center / contain no-repeat",
@@ -218,12 +218,12 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       )}
 
       {/* Title */}
-      <h3 className="text-compact font-semibold text-foreground tracking-tight max-w-md">
+      <h3 className="text-compact font-semibold text-foreground tracking-tight max-w-md text-balance">
         {displayTitle}
       </h3>
 
       {/* Description */}
-      <p className="mt-1 text-xs text-muted-foreground max-w-md leading-relaxed">
+      <p className="mt-1 text-xs text-muted-foreground max-w-md leading-relaxed text-balance">
         {displayDescription}
       </p>
       {filterNote ? <p className="mt-1 text-xs text-muted-foreground max-w-md">{filterNote}</p> : null}
