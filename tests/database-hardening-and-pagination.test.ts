@@ -349,6 +349,24 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
   });
 
   describe('2. Server-Side Offset Pagination (Phase 13)', () => {
+    test('việc con của việc cha đã lưu trữ không hiện trong danh sách (trang chi tiết của chúng 404)', async () => {
+      const base = { createdById: bghUser.id, leadUnitId: 'UNIT_SCHOOL_BGH_HARDEN', academicMonth: 10, academicYear: '2026-2027', dueDate: new Date('2026-12-31') };
+      const tag = `arch_${Date.now()}`;
+      const parent = await prisma.task.create({ data: { ...base, code: `${tag}_P`, title: 'Cha đã lưu trữ', archivedAt: new Date(), archiveReason: 'Kiểm thử' } });
+      const child = await prisma.task.create({ data: { ...base, code: `${tag}_C`, title: 'Con của cha đã lưu trữ', parentTaskId: parent.id } });
+      const liveParent = await prisma.task.create({ data: { ...base, code: `${tag}_L`, title: 'Cha còn hoạt động' } });
+      const liveChild = await prisma.task.create({ data: { ...base, code: `${tag}_LC`, title: 'Con của cha hoạt động', parentTaskId: liveParent.id } });
+      try {
+        const result = await taskQueryService.queryTasks({ user: bghUser }, { parentTaskId: 'all', search: tag, limit: 50 });
+        const ids = new Set(result.tasks.map((t: { id: string }) => t.id));
+        assert.equal(ids.has(child.id), false, 'con của cha đã lưu trữ phải ẩn');
+        assert.equal(ids.has(liveParent.id), true, 'cha còn hoạt động vẫn hiện');
+        assert.equal(ids.has(liveChild.id), true, 'con của cha còn hoạt động vẫn hiện');
+      } finally {
+        await prisma.task.deleteMany({ where: { id: { in: [liveChild.id, liveParent.id, child.id, parent.id] } } });
+      }
+    });
+
     test('calculates correct pagination metadata (page, limit, totalPages, hasMore)', async () => {
       const result = await taskQueryService.queryTasks(
         { user: bghUser },

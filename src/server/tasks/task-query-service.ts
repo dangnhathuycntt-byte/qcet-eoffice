@@ -864,7 +864,8 @@ export class TaskQueryService {
     const assignedTo = filters.assignedTo;
     const parentTaskId = filters.parentTaskId;
 
-    const where: Prisma.TaskWhereInput = { archivedAt: null };
+    // Việc con của việc cha đã lưu trữ ẩn theo cha: trang chi tiết của chúng trả 404.
+    const where: Prisma.TaskWhereInput = { archivedAt: null, NOT: { parentTask: { is: { archivedAt: { not: null } } } } };
 
     if (month !== undefined && String(month) !== 'all') {
       where.academicMonth = parseInt(String(month), 10);
@@ -1157,7 +1158,8 @@ export class TaskQueryService {
     const assignedTo = filters.assignedTo;
     const parentTaskId = filters.parentTaskId;
 
-    const where: Prisma.TaskWhereInput = { archivedAt: null };
+    // Việc con của việc cha đã lưu trữ ẩn theo cha: trang chi tiết của chúng trả 404.
+    const where: Prisma.TaskWhereInput = { archivedAt: null, NOT: { parentTask: { is: { archivedAt: { not: null } } } } };
 
     if (month !== undefined && String(month) !== 'all') {
       where.academicMonth = parseInt(String(month), 10);
