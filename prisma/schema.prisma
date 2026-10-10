@@ -119,6 +119,7 @@ model User {
   accounts              Account[]
   sessions              Session[]
   tasksCreated          Task[]                @relation("TaskCreatedBy")
+  taskComments          TaskComment[]         @relation("TaskCommentAuthor")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -238,6 +239,7 @@ model Task {
   primaryAssignmentId String?               @map("primary_assignment_id")
   primaryAssignment   PositionAssignment?   @relation("TaskPrimaryAssignment", fields: [primaryAssignmentId], references: [id], onDelete: SetNull)
   actors              TaskActor[]
+  comments            TaskComment[]
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -1167,6 +1169,23 @@ model TaskResult {
 
   @@index([taskId])
   @@map("task_results")
+}
+
+// Bình luận nhiệm vụ (T-03). Xóa mềm: giữ bản ghi và dấu vết, không trả nội dung.
+model TaskComment {
+  id        String    @id @default(cuid())
+  taskId    String    @map("task_id")
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String    @map("author_id")
+  author    User      @relation("TaskCommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  body      String    @db.VarChar(2000)
+  createdAt DateTime  @default(now()) @map("created_at")
+  editedAt  DateTime? @map("edited_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([taskId, createdAt])
+  @@index([authorId])
+  @@map("task_comments")
 }
 
 model TaskRelation {

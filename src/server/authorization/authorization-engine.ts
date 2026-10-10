@@ -582,6 +582,12 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_EXECUTION';
     }
+  } else if (action === 'task.comment') {
+    // Người có quan hệ với nhiệm vụ được bình luận; người quan sát (OBSERVER) chỉ đọc.
+    if (isDRI || isCollaborator || isAssigner || isFollower || isDesignatedReviewer) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_COMMENT_PARTICIPANT';
+    }
   } else if (action === 'task.assign') {
     // Người giao (người tạo) được thêm, bớt người phối hợp và người theo dõi trên nhiệm vụ của mình.
     if (isAssigner) {
@@ -726,6 +732,7 @@ export function authorize(
         action === 'task.approve' ||
         action === 'task.monitor' ||
         action === 'task.remind' ||
+        action === 'task.comment' ||
         action === 'task.close' ||
         action === 'task.cancel' ||
         action === 'task.archive' ||
@@ -760,6 +767,7 @@ export function authorize(
         action === 'task.create' ||
         action === 'task.monitor' ||
         action === 'task.remind' ||
+        action === 'task.comment' ||
         action === 'document.incoming.execute' ||
         action === 'document.outgoing.draft' ||
         action === 'dossier.open'
@@ -1016,6 +1024,7 @@ export function authorize(
         action === 'task.review' ||
         action === 'task.cancel' ||
         action === 'task.archive' ||
+        action === 'task.comment' ||
         action === 'task.close')
     ) {
       scopeDenied = true;

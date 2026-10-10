@@ -137,6 +137,7 @@ export const TASK_CAPABILITIES = [
   'task.close',
   'task.cancel',
   'task.archive',
+  'task.comment',
 ] as const;
 
 export type TaskCapabilityAction = (typeof TASK_CAPABILITIES)[number];
@@ -403,6 +404,7 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'task.close': 'Đóng hoàn tất nhiệm vụ',
   'task.cancel': 'Hủy bỏ nhiệm vụ',
   'task.archive': 'Lưu trữ nhiệm vụ',
+  'task.comment': 'Bình luận trong nhiệm vụ',
   // System
   'account.manage': 'Quản trị tài khoản người dùng',
   'org.manage': 'Quản lý cơ cấu tổ chức & phòng ban',

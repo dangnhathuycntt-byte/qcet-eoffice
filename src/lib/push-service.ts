@@ -12,7 +12,8 @@ export type TaskPushEventType =
   | "DEADLINE_WARNING_24H"
   | "EXECUTIVE_DIRECTIVE"
   | "TASK_REMINDER"
-  | "TASK_CANCELLED";
+  | "TASK_CANCELLED"
+  | "TASK_MENTION";
 
 export interface TaskPushInput {
   event: TaskPushEventType;
@@ -214,6 +215,12 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
       eventShort = "remind";
       rawTitle = `[NHẮC VIỆC] ${taskTitle}`;
       rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc thực hiện nhiệm vụ`;
+      break;
+    }
+    case "TASK_MENTION": {
+      eventShort = "mention";
+      rawTitle = `[NHẮC TÊN] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc bạn trong bình luận`;
       break;
     }
     case "TASK_CANCELLED": {

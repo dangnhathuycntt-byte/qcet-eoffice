@@ -216,6 +216,27 @@ export const TASK_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
     });
   }),
 
+  // Nhắc tên trong bình luận: đọc lại bình luận lúc gửi, bình luận đã xóa thì bỏ qua.
+  [OutboxEventType.TASK_COMMENT_MENTION_NOTIFICATION]: guarded(async (event, db) => {
+    const p = payloadOf(event);
+    const commentId = str(p, "commentId");
+    const comment = commentId
+      ? await db.taskComment.findUnique({ where: { id: commentId }, select: { body: true, deletedAt: true } })
+      : null;
+    if (!comment || comment.deletedAt) return { skipped: "comment_removed" };
+    const mentioned = Array.isArray(p.mentionedUserIds)
+      ? p.mentionedUserIds.filter((id): id is string => typeof id === "string")
+      : [];
+    return deliverTaskNotice(db, {
+      taskId: requireTaskId(event),
+      recipientIds: mentioned,
+      actorId: str(p, "authorId"),
+      type: "mention",
+      pushEvent: "TASK_MENTION",
+      note: comment.body.length > 80 ? `${comment.body.slice(0, 77)}...` : comment.body,
+    });
+  }),
+
   [OutboxEventType.TASK_COMPLETED]: acknowledge,
   [OutboxEventType.DOCUMENT_OVERDUE_NOTIFICATION]: acknowledge,
   [OutboxEventType.DOCUMENT_EXPIRING_SOON_NOTIFICATION]: acknowledge,

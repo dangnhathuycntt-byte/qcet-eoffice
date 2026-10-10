@@ -76,6 +76,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   DELETE_DELIVERABLE: "Xóa tài liệu minh chứng",
   TASK_DELIVERABLE_DELETED: "Xóa tài liệu minh chứng",
   COMMENT: "Thêm ý kiến trao đổi",
+  COMMENT_EDITED: "Sửa ý kiến trao đổi",
+  COMMENT_DELETED: "Xóa ý kiến trao đổi",
   DIRECTIVE: "Ý kiến chỉ đạo",
 };
 

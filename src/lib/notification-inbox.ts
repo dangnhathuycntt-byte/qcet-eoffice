@@ -82,6 +82,7 @@ const EVENT_LABELS: Record<string, string> = {
   document_expiring_soon: "Văn bản sắp đến hạn",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
+  mention: "Nhắc tên",
   progress: "Cập nhật",
   upload: "Tệp mới",
   created: "Tạo mới",

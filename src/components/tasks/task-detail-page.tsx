@@ -22,6 +22,7 @@ import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-edit
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "@/components/tasks/detail/block-selection-canvas";
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
+import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
@@ -894,6 +895,7 @@ export function TaskDetailPage({
 
           {activeTab === "activity" && (
             <div className="space-y-4">
+              <TaskComments taskId={task.id} className="max-w-3xl" />
               <section className="max-w-3xl space-y-3">
                 <div className="px-2">
                   <h2 className="text-compact font-semibold text-foreground tracking-tight">
