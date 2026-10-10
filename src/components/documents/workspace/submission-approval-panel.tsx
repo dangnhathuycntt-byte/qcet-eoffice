@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
@@ -158,65 +156,91 @@ export function SubmissionApprovalPanel({
   const query = unitQuery.trim().toLowerCase();
   const ownUnits = state.ownUnits ?? [];
   const ownIds = new Set(ownUnits.map((u) => u.id));
-  const visibleDepartments = departments
-    .filter((d) => !ownIds.has(d.id) && (!query || d.name.toLowerCase().includes(query)))
-    .sort((a, b) => Number(units.includes(b.id)) - Number(units.includes(a.id)));
+  // Giữ nguyên thứ tự khi tích: đưa mục đã chọn lên đầu ngay lúc bấm làm hàng nhảy khỏi con trỏ
+  const visibleDepartments = departments.filter((d) => !ownIds.has(d.id) && (!query || d.name.toLowerCase().includes(query)));
   // Số bước trưởng đơn vị của lần trình này (đơn vị của mình mà mình là trưởng thì bỏ qua)
   const unitStepCount = ownUnits.filter((u) => !u.skipped).length + units.filter((id) => !ownIds.has(id)).length;
-  const SECTION_LABEL = "px-2 pb-1 pt-2 text-xs text-muted-foreground";
+  const SECTION_LABEL = "px-2 pb-1 pt-3 text-xs text-muted-foreground";
   const ROW = "flex h-8 items-center gap-2.5 rounded-sm px-2 text-compact";
+  // Ô tích nhỏ kiểu menu (14px, nét 1px, bo 4px) thay ô tích mặc định dày: danh sách đọc như một menu chọn nhiều
+  const checkMark = (checked: boolean, muted = false) => (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border transition-colors",
+        checked
+          ? muted
+            ? "border-transparent bg-muted-foreground/30 text-background"
+            : "border-primary bg-primary text-primary-foreground"
+          : "border-control-edge bg-card",
+        "peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1",
+      )}
+    >
+      {checked ? <Check className="size-3" strokeWidth={1.5} /> : null}
+    </span>
+  );
 
-  // Nội dung hộp thoại "Trình duyệt": ô tìm, đơn vị của mình cố định ở đầu, đơn vị liên quan chọn thêm;
-  // chân nói trước đường đi (bao nhiêu đơn vị duyệt song song rồi tới lãnh đạo)
+  // Nội dung hộp thoại "Trình duyệt" (kiểu bảng lệnh): ô tìm tràn mép không nền, đơn vị của mình cố định ở đầu,
+  // đơn vị liên quan chọn thêm; chân nói trước đường đi (bao nhiêu đơn vị duyệt rồi tới lãnh đạo)
   const submitForm = (
     <div className="-mx-4 -mb-4 flex min-h-0 flex-col sm:-mx-6 sm:-mb-6">
-      <div className="relative px-4 pb-1 sm:px-6">
-        <Search className="pointer-events-none absolute left-6 top-1/2 size-3.5 -translate-y-[calc(50%+2px)] text-muted-foreground sm:left-8" strokeWidth={1.5} aria-hidden />
-        <Input
-          compact
+      <label className="flex h-10 items-center gap-2 border-y border-border px-4 sm:px-6">
+        <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+        <input
           value={unitQuery}
           onChange={(e) => setUnitQuery(e.target.value)}
           placeholder="Tìm đơn vị liên quan"
           aria-label="Tìm đơn vị liên quan"
-          // Ô tìm yên: giữ nền xám khi focus, viền focus mảnh (không tô xanh cả ô)
-          className="pl-7 focus-visible:bg-secondary focus-visible:outline-1 focus-visible:outline-foreground/20"
+          className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-muted-foreground"
           autoFocus
         />
-      </div>
+      </label>
       <div className="max-h-80 overflow-y-auto px-2 pb-2 sm:px-4">
         {ownUnits.length > 0 && !query ? (
           <div role="group" aria-label="Đơn vị của bạn">
             <p className={SECTION_LABEL}>Đơn vị của bạn</p>
             {ownUnits.map((u) => (
               <div key={u.id} className={ROW}>
-                <Checkbox checked disabled aria-label={`${u.name} (luôn có)`} />
+                {checkMark(true, true)}
                 <span className="min-w-0 flex-1 truncate" title={u.name}>{u.name}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">{u.skipped ? "Bỏ qua, bạn là trưởng đơn vị" : "Luôn duyệt"}</span>
+                <span className="shrink-0 rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground">
+                  {u.skipped ? "Bỏ qua, bạn là trưởng đơn vị" : "Luôn duyệt"}
+                </span>
               </div>
             ))}
           </div>
         ) : null}
         <div role="group" aria-label="Đơn vị liên quan">
-          {ownUnits.length > 0 && !query ? <p className={SECTION_LABEL}>Đơn vị liên quan</p> : null}
-          <ul>
-            {visibleDepartments.map((d) => (
-              <li key={d.id}>
-                <label className={cn(ROW, "cursor-pointer transition-colors hover:bg-accent")}>
-                  <Checkbox
-                    checked={units.includes(d.id)}
-                    onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
-                  />
-                  <span className="min-w-0 truncate" title={d.name}>{d.name}</span>
-                </label>
-              </li>
-            ))}
+          {ownUnits.length > 0 && !query ? (
+            <p className={SECTION_LABEL}>
+              Đơn vị liên quan{units.length > 0 ? <span className="text-foreground"> · đã chọn {units.length}</span> : null}
+            </p>
+          ) : null}
+          <ul className={cn(!(ownUnits.length > 0 && !query) && "pt-2")}>
+            {visibleDepartments.map((d) => {
+              const checked = units.includes(d.id);
+              return (
+                <li key={d.id}>
+                  <label className={cn(ROW, "cursor-pointer transition-colors hover:bg-accent")}>
+                    <input
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={checked}
+                      onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))}
+                    />
+                    {checkMark(checked)}
+                    <span className="min-w-0 truncate" title={d.name}>{d.name}</span>
+                  </label>
+                </li>
+              );
+            })}
             {visibleDepartments.length === 0 ? <li className="px-2 py-2 text-xs text-muted-foreground">Không có đơn vị phù hợp</li> : null}
           </ul>
         </div>
       </div>
       <div className="flex items-center gap-2 border-t border-border px-4 py-3 sm:px-6">
-        <span className="mr-auto min-w-0 truncate text-xs text-muted-foreground">
-          {unitStepCount > 1 ? `Trưởng ${unitStepCount} đơn vị duyệt song song → Lãnh đạo` : unitStepCount === 1 ? "Trưởng đơn vị duyệt → Lãnh đạo" : "Chuyển thẳng lãnh đạo"}
+        <span className="mr-auto min-w-0 text-xs text-muted-foreground">
+          {unitStepCount > 1 ? `${unitStepCount} đơn vị cùng duyệt → Lãnh đạo` : unitStepCount === 1 ? "1 đơn vị duyệt → Lãnh đạo" : "Chuyển thẳng lãnh đạo"}
         </span>
         <Button type="button" size="sm" variant="outline" onClick={closeSubmit}>Hủy</Button>
         <Button type="button" size="sm" disabled={busy} onClick={() => void call("submit-approval", { involvedUnitIds: units }, "Không trình được tờ trình")}>
@@ -347,7 +371,7 @@ export function SubmissionApprovalPanel({
         open={mode === "submit"}
         onOpenChange={(open) => (open ? setMode("submit") : closeSubmit())}
         title={state.workflow?.status === "NEEDS_REVISION" ? "Trình lại tờ trình" : "Trình duyệt tờ trình"}
-        description="Gửi tới trưởng các đơn vị dưới đây (duyệt song song), sau đó tới lãnh đạo."
+        description="Trưởng các đơn vị được chọn duyệt song song, rồi tới lãnh đạo."
         size="sm"
         className="sm:max-w-md"
       >
