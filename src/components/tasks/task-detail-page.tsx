@@ -23,6 +23,7 @@ import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-co
 import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "@/components/tasks/detail/block-selection-canvas";
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
 import { TaskComments } from "@/components/tasks/detail/task-comments";
+import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
@@ -879,6 +880,13 @@ export function TaskDetailPage({
                   />
                 </div>
               )}
+
+              <TaskCriteria
+                taskId={task.id}
+                version={Number((task as any).version ?? 0)}
+                status={String((task as any).status ?? "")}
+                onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
+              />
 
               <TaskBlockEditor
                 selectionContainerSelector="body"

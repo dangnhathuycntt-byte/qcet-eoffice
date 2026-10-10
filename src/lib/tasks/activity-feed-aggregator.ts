@@ -59,6 +59,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   TASK_REVISION_REQUESTED: "Yêu cầu điều chỉnh",
   REVISION_REQUESTED: "Yêu cầu điều chỉnh",
   TASK_REMINDED: "Gửi thông báo nhắc việc",
+  TASK_CRITERIA_UPDATED: "Cập nhật tiêu chí hoàn thành",
+  TASK_CRITERION_CHECKED: "Đánh dấu tiêu chí hoàn thành",
   TASK_PERSON_ADDED: "Thêm người tham gia",
   TASK_PERSON_REMOVED: "Bớt người tham gia",
   UPDATE_DESCRIPTION: "Cập nhật nội dung mô tả",

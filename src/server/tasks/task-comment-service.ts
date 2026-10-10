@@ -13,11 +13,8 @@ import { prisma } from "@/lib/prisma";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
-import { authorize } from "@/server/authorization/authorization-engine";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
-import { buildTaskResource } from "@/server/authorization/available-actions";
-import type { CapabilityAction } from "@/server/authorization/capability";
 import { ForbiddenError, InvalidTransitionError, NotFoundError } from "@/server/api/errors";
+import { authorizeOnTask } from "./authorize-on-task";
 
 const COMMENT_BODY = z
   .string()
@@ -72,17 +69,6 @@ function toDTO(row: CommentRow, viewerId: string): TaskCommentDTO {
     editedAt: row.editedAt ? row.editedAt.toISOString() : null,
     canEdit: !deleted && row.authorId === viewerId,
   };
-}
-
-async function authorizeOnTask(session: SessionPayload, taskId: string, action: CapabilityAction) {
-  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { actors: true } });
-  if (!task) throw new NotFoundError("Không tìm thấy nhiệm vụ");
-  const context = await loadAuthorizationContext(session.id, new Date(), { useCache: true, ttlMs: 10_000 });
-  const decision = authorize(context, action, buildTaskResource(task));
-  if (!decision.allowed) {
-    throw new ForbiddenError(decision.reason || "Bạn không có quyền thực hiện thao tác này");
-  }
-  return task;
 }
 
 const AUTHOR_SELECT = { select: { id: true, name: true } } as const;

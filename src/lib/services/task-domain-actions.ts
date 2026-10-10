@@ -47,6 +47,7 @@ import {
 } from "@/server/api/errors";
 import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
 import { partitionTaskActorUserIds } from "@/domain/tasks/task-actor-roles";
+import { countUnmetCriteria } from "@/server/tasks/task-criteria-service";
 import {
   taskStateMachine,
   buildActorContext,
@@ -1420,6 +1421,9 @@ export class TaskDomainActionService {
         );
       }
 
+      // Duyệt không bị chặn khi còn tiêu chí chưa đạt (Q3); chỉ ghi số tiêu chí chưa đạt.
+      const unmetCriteria = await countUnmetCriteria(tx, taskId);
+
       await auditService.logEvent(tx, {
         actorId: session.id,
         action: AuditAction.TASK_APPROVED,
@@ -1430,6 +1434,7 @@ export class TaskDomainActionService {
           status: canComplete ? TaskStatus.COMPLETED : task.status,
           progressPercent: canComplete ? 100 : task.progressPercent,
           note: noteText,
+          unmetCriteria,
         },
       });
 
@@ -1465,6 +1470,7 @@ export class TaskDomainActionService {
         completed: canComplete,
         version: task.version + 1,
         stepResult,
+        unmetCriteria,
       };
     });
   }

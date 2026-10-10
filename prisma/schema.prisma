@@ -120,6 +120,7 @@ model User {
   sessions              Session[]
   tasksCreated          Task[]                @relation("TaskCreatedBy")
   taskComments          TaskComment[]         @relation("TaskCommentAuthor")
+  checkedCriteria       TaskAcceptanceCriterion[] @relation("CriterionCheckedBy")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -240,6 +241,7 @@ model Task {
   primaryAssignment   PositionAssignment?   @relation("TaskPrimaryAssignment", fields: [primaryAssignmentId], references: [id], onDelete: SetNull)
   actors              TaskActor[]
   comments            TaskComment[]
+  criteria            TaskAcceptanceCriterion[]
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -1169,6 +1171,23 @@ model TaskResult {
 
   @@index([taskId])
   @@map("task_results")
+}
+
+// Tiêu chí hoàn thành của nhiệm vụ (T-04). Người giao ghi khi tạo; người duyệt đánh dấu từng tiêu chí.
+model TaskAcceptanceCriterion {
+  id          String    @id @default(cuid())
+  taskId      String    @map("task_id")
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  position    Int
+  text        String    @db.VarChar(300)
+  checked     Boolean   @default(false)
+  checkedById String?   @map("checked_by_id")
+  checkedBy   User?     @relation("CriterionCheckedBy", fields: [checkedById], references: [id], onDelete: SetNull)
+  checkedAt   DateTime? @map("checked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([taskId, position])
+  @@map("task_acceptance_criteria")
 }
 
 // Bình luận nhiệm vụ (T-03). Xóa mềm: giữ bản ghi và dấu vết, không trả nội dung.
