@@ -582,6 +582,18 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_EXECUTION';
     }
+  } else if (action === 'task.request_extension') {
+    // Chỉ người thực hiện chính (chủ trì) xin gia hạn; người phối hợp thì không.
+    if (isDRI) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_EXTENSION_REQUEST_DRI';
+    }
+  } else if (action === 'task.decide_extension') {
+    // Người giao quyết định gia hạn; SoD với người xin do dịch vụ gia hạn giữ.
+    if (isAssigner) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_EXTENSION_DECIDE_ASSIGNER';
+    }
   } else if (action === 'task.comment') {
     // Người có quan hệ với nhiệm vụ được bình luận; người quan sát (OBSERVER) chỉ đọc.
     if (isDRI || isCollaborator || isAssigner || isFollower || isDesignatedReviewer) {
@@ -733,6 +745,7 @@ export function authorize(
         action === 'task.monitor' ||
         action === 'task.remind' ||
         action === 'task.comment' ||
+        action === 'task.decide_extension' ||
         action === 'task.close' ||
         action === 'task.cancel' ||
         action === 'task.archive' ||
@@ -1025,6 +1038,7 @@ export function authorize(
         action === 'task.cancel' ||
         action === 'task.archive' ||
         action === 'task.comment' ||
+        action === 'task.decide_extension' ||
         action === 'task.close')
     ) {
       scopeDenied = true;

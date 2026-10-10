@@ -237,6 +237,40 @@ export const TASK_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
     });
   }),
 
+  // Xin gia hạn: báo người giao (người tạo nhiệm vụ) và người được ủy làm người duyệt.
+  [OutboxEventType.TASK_EXTENSION_REQUESTED_NOTIFICATION]: guarded(async (event, db) => {
+    const p = payloadOf(event);
+    const taskId = requireTaskId(event);
+    const task = await db.task.findUnique({ where: { id: taskId }, select: { createdById: true } });
+    const requestId = str(p, "requestId");
+    const request = requestId
+      ? await db.taskExtensionRequest.findUnique({ where: { id: requestId }, select: { status: true, reason: true } })
+      : null;
+    if (!task || !request || request.status !== "PENDING") return { skipped: "request_closed" };
+    return deliverTaskNotice(db, {
+      taskId,
+      recipientIds: [task.createdById],
+      actorId: str(p, "requestedById"),
+      type: "extension_requested",
+      pushEvent: "TASK_EXTENSION_REQUEST",
+      note: request.reason.length > 80 ? `${request.reason.slice(0, 77)}...` : request.reason,
+    });
+  }),
+
+  // Phản hồi gia hạn: báo người còn lại trong cặp người xin và người giao.
+  [OutboxEventType.TASK_EXTENSION_DECIDED_NOTIFICATION]: guarded(async (event, db) => {
+    const p = payloadOf(event);
+    const notifyUserId = str(p, "notifyUserId");
+    return deliverTaskNotice(db, {
+      taskId: requireTaskId(event),
+      recipientIds: notifyUserId ? [notifyUserId] : [],
+      actorId: str(p, "actorId"),
+      type: "extension_decided",
+      pushEvent: "TASK_EXTENSION_DECISION",
+      note: str(p, "message"),
+    });
+  }),
+
   [OutboxEventType.TASK_COMPLETED]: acknowledge,
   [OutboxEventType.DOCUMENT_OVERDUE_NOTIFICATION]: acknowledge,
   [OutboxEventType.DOCUMENT_EXPIRING_SOON_NOTIFICATION]: acknowledge,

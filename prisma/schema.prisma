@@ -121,6 +121,8 @@ model User {
   tasksCreated          Task[]                @relation("TaskCreatedBy")
   taskComments          TaskComment[]         @relation("TaskCommentAuthor")
   checkedCriteria       TaskAcceptanceCriterion[] @relation("CriterionCheckedBy")
+  extensionsRequested   TaskExtensionRequest[] @relation("ExtensionRequester")
+  extensionsDecided     TaskExtensionRequest[] @relation("ExtensionDecider")
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -242,6 +244,7 @@ model Task {
   actors              TaskActor[]
   comments            TaskComment[]
   criteria            TaskAcceptanceCriterion[]
+  extensionRequests   TaskExtensionRequest[]
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
@@ -1171,6 +1174,41 @@ model TaskResult {
 
   @@index([taskId])
   @@map("task_results")
+}
+
+enum ExtensionRequestStatus {
+  PENDING   // chờ người giao quyết định
+  APPROVED  // người giao đồng ý, hạn đã đổi
+  REJECTED  // người giao từ chối, hạn giữ nguyên
+  COUNTERED // người giao đề xuất hạn khác, chờ người thực hiện trả lời
+  ACCEPTED  // người thực hiện nhận hạn đề xuất, hạn đã đổi
+  DECLINED  // người thực hiện không nhận hạn đề xuất, hạn giữ nguyên
+}
+
+// Yêu cầu gia hạn nhiệm vụ (T-01). Hạn của nhiệm vụ chỉ đổi khi người giao đồng ý.
+// Mỗi nhiệm vụ có tối đa một yêu cầu đang mở (PENDING hoặc COUNTERED); việc này được giữ
+// bằng khóa phiên bản của nhiệm vụ khi tạo yêu cầu.
+model TaskExtensionRequest {
+  id                 String                     @id @default(cuid())
+  taskId             String                     @map("task_id")
+  task               Task                       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  requestedById      String                     @map("requested_by_id")
+  requestedBy        User                       @relation("ExtensionRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  previousDueDate    DateTime                   @map("previous_due_date")
+  requestedDueDate   DateTime                   @map("requested_due_date")
+  reason             String                     @db.VarChar(1000)
+  status             ExtensionRequestStatus     @default(PENDING)
+  counterDueDate     DateTime?                  @map("counter_due_date")
+  decidedById        String?                    @map("decided_by_id")
+  decidedBy          User?                      @relation("ExtensionDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt          DateTime?                  @map("decided_at")
+  decisionNote       String?                    @map("decision_note") @db.VarChar(1000)
+  respondedAt        DateTime?                  @map("responded_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+
+  @@index([taskId, status])
+  @@index([requestedById])
+  @@map("task_extension_requests")
 }
 
 // Tiêu chí hoàn thành của nhiệm vụ (T-04). Người giao ghi khi tạo; người duyệt đánh dấu từng tiêu chí.

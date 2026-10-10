@@ -127,6 +127,7 @@ const APPROVAL_TYPES = new Set([
   "deliverable_submitted",
   "dacum_step1_review",
   "deliverable_revision",
+  "extension_requested",
 ]);
 
 /**

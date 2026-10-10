@@ -13,7 +13,9 @@ export type TaskPushEventType =
   | "EXECUTIVE_DIRECTIVE"
   | "TASK_REMINDER"
   | "TASK_CANCELLED"
-  | "TASK_MENTION";
+  | "TASK_MENTION"
+  | "TASK_EXTENSION_REQUEST"
+  | "TASK_EXTENSION_DECISION";
 
 export interface TaskPushInput {
   event: TaskPushEventType;
@@ -215,6 +217,18 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
       eventShort = "remind";
       rawTitle = `[NHẮC VIỆC] ${taskTitle}`;
       rawBody = directiveNote ? `${actorName}: "${directiveNote}"` : `${actorName} nhắc thực hiện nhiệm vụ`;
+      break;
+    }
+    case "TASK_EXTENSION_REQUEST": {
+      eventShort = "extension-request";
+      rawTitle = `[XIN GIA HẠN] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName} xin gia hạn: "${directiveNote}"` : `${actorName} xin gia hạn nhiệm vụ`;
+      break;
+    }
+    case "TASK_EXTENSION_DECISION": {
+      eventShort = "extension-decision";
+      rawTitle = `[GIA HẠN] ${taskTitle}`;
+      rawBody = directiveNote ? `${actorName}: ${directiveNote}` : `${actorName} đã phản hồi yêu cầu gia hạn`;
       break;
     }
     case "TASK_MENTION": {
