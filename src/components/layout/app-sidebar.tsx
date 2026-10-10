@@ -604,7 +604,7 @@ export function AppSidebar() {
                                     : "gap-2.5 px-2 h-8 rounded-md text-[13px]",
                                   !isCollapsed && children && "pr-7",
                                   active
-                                    ? "bg-[#EAEDF1] text-foreground font-medium"
+                                    ? "bg-bg-hover text-foreground font-medium"
                                     : "text-foreground/80 hover:text-foreground hover:bg-muted/50 font-medium"
                                 )}
                               >

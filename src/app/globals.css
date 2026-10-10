@@ -197,6 +197,14 @@
 }
 
 :root {
+  /* Nút "Đăng nhập bằng Google" (màu theo hướng dẫn thương hiệu Google, giao diện tối) */
+  --google-btn-bg: #131314;
+  --google-btn-bg-hover: #1F1F20;
+  --google-btn-bg-active: #2B2B2C;
+  --google-btn-text: #E3E3E3;
+  --google-btn-edge: #8E918F;
+  /* Nền avatar chữ cái đầu ở trang đăng nhập */
+  --avatar-initial-bg: #B9C7D6;
   --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Tinos', 'Times New Roman', Cambria, Georgia, serif;
   --font-heading: var(--font-sans);

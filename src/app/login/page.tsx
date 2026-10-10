@@ -15,9 +15,9 @@ import {
 
 /* ─── Layout constants ─── */
 const PAGE = "flex min-h-[100dvh] w-full items-start justify-center bg-white px-6 pt-24 pb-10 outline-none min-[600px]:items-center min-[600px]:py-10 relative overflow-hidden font-sans text-foreground";
-const CARD = "flex w-full max-w-[420px] flex-col items-center rounded-none px-0 pb-8 text-center min-[600px]:rounded-[24px] min-[600px]:px-10 min-[600px]:pt-11 min-[600px]:pb-8 min-[600px]:shadow-[0_0_0_1px_#EAEDF1,0_16px_48px_rgba(26,29,35,0.08)] bg-white relative z-10";
-const BTN_PRIMARY = "flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] bg-[#131314] shadow-[inset_0_0_0_1px_#8E918F] px-4 text-sm font-medium text-[#E3E3E3] hover:bg-[#1f1f20] active:bg-[#2b2b2c] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
-const BTN_OUTLINE = "flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] border border-[#EAEDF1] bg-white px-4 text-sm font-medium text-[#1A1D23] hover:bg-[#FAFBFC] active:bg-[#F2F4F7] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
+const CARD = "flex w-full max-w-[420px] flex-col items-center rounded-none px-0 pb-8 text-center min-[600px]:rounded-[24px] min-[600px]:px-10 min-[600px]:pt-11 min-[600px]:pb-8 min-[600px]:shadow-[0_0_0_1px_var(--border),0_16px_48px_rgba(26,29,35,0.08)] bg-white relative z-10";
+const BTN_PRIMARY = "flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] bg-[var(--google-btn-bg)] shadow-[inset_0_0_0_1px_var(--google-btn-edge)] px-4 text-sm font-medium text-[var(--google-btn-text)] hover:bg-[var(--google-btn-bg-hover)] active:bg-[var(--google-btn-bg-active)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
+const BTN_OUTLINE = "flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] border border-border bg-white px-4 text-sm font-medium text-foreground hover:bg-background active:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
 
 const C = { fg: "#1A1D23", sub: "#5F6671", err: "#B91C1C", border: "#EAEDF1" } as const;
 
@@ -57,7 +57,7 @@ function SupportFooter() {
   return (
     <div className="mt-8 pt-5 w-full text-center text-[13px]" style={{ borderTop: `1px solid ${C.border}`, color: C.sub }}>
       Gặp sự cố?{" "}
-      <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]" style={{ color: C.fg }}>hotro@cdktcnqn.edu.vn</a>
+      <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.fg }}>hotro@cdktcnqn.edu.vn</a>
     </div>
   );
 }
@@ -70,11 +70,11 @@ function CampusChrome() {
       </div>
       <div className="absolute inset-x-0 bottom-0 pb-7 text-center text-xs min-[600px]:hidden" style={{ color: C.sub }}>
         Gặp sự cố?{" "}
-        <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]" style={{ color: C.fg }}>hotro@cdktcnqn.edu.vn</a>
+        <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.fg }}>hotro@cdktcnqn.edu.vn</a>
       </div>
       <div className="absolute right-8 bottom-[52px] hidden min-[600px]:block text-[13px] z-10" style={{ color: C.sub }}>
         Gặp sự cố?{" "}
-        <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]" style={{ color: C.fg }}>hotro@cdktcnqn.edu.vn</a>
+        <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.fg }}>hotro@cdktcnqn.edu.vn</a>
       </div>
     </>
   );
@@ -291,7 +291,7 @@ function LoginFormContent() {
             </button>
             <a
               href="/login?startGoogle=1&prompt=select_account"
-              className="text-sm font-medium underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]"
+              className="text-sm font-medium underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               style={{ color: C.fg }}
             >
               Dùng tài khoản khác
@@ -354,7 +354,7 @@ function LoginFormContent() {
             </button>
             <p className="text-xs text-center" style={{ color: C.sub }}>
               Nếu đây là nhầm lẫn,{" "}
-              <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]" style={{ color: C.fg }}>liên hệ hỗ trợ</a>.
+              <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.fg }}>liên hệ hỗ trợ</a>.
             </p>
           </div>
           <p className="mt-4 text-xs leading-relaxed text-center" style={{ color: C.sub }}>QCET E-Office chỉ nhận tên và email của bạn.</p>
@@ -385,7 +385,7 @@ function LoginFormContent() {
             </button>
             <p className="text-xs text-center" style={{ color: C.sub }}>
               Vẫn lỗi?{" "}
-              <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]" style={{ color: C.fg }}>liên hệ hỗ trợ</a>.
+              <a href="mailto:hotro@cdktcnqn.edu.vn" className="underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.fg }}>liên hệ hỗ trợ</a>.
             </p>
           </div>
           <p className="mt-4 text-xs leading-relaxed text-center" style={{ color: C.sub }}>QCET E-Office chỉ nhận tên và email của bạn.</p>
@@ -420,18 +420,18 @@ function LoginFormContent() {
                     setIsQuickLogging(true);
                     signIn("google", { callbackUrl: targetUrl }, { login_hint: acc.email }).catch(() => setIsQuickLogging(false));
                   }}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-[#F2F4F7] p-3 text-left transition-all duration-150 active:scale-[0.98] hover:bg-[#EAEDF1] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]"
+                  className="flex w-full items-center gap-3 rounded-2xl bg-muted p-3 text-left transition-all duration-150 active:scale-[0.98] hover:bg-bg-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {acc.avatar ? (
                     <img src={acc.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-[#1A1D23]" style={{ background: bgColor }}>
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-foreground" style={{ background: bgColor }}>
                       {initial}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold leading-5 text-[#1A1D23]">{acc.name}</div>
-                    <div className="truncate text-xs leading-[18px] text-[#5F6671]">{acc.email}</div>
+                    <div className="truncate text-sm font-semibold leading-5 text-foreground">{acc.name}</div>
+                    <div className="truncate text-xs leading-[18px] text-muted-foreground">{acc.email}</div>
                   </div>
                 </button>
               );
@@ -445,7 +445,7 @@ function LoginFormContent() {
                 setChooseOther(true);
                 router.push("/login?startGoogle=1&prompt=select_account");
               }}
-              className="text-[13.5px] font-medium underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] h-10 flex items-center"
+              className="text-[13.5px] font-medium underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 flex items-center"
               style={{ color: C.fg }}
             >
               Dùng tài khoản khác
@@ -479,12 +479,12 @@ function LoginFormContent() {
             type="button"
             disabled={isQuickLogging}
             onClick={handleQuickLogin}
-            className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-[#E4E7EC] bg-white p-3 text-left shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-150 active:scale-[0.98] hover:border-[#C9D1DB] hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)] cursor-pointer disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]"
+            className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-border bg-white p-3 text-left shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-150 active:scale-[0.98] hover:border-[var(--gray-7)] hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)] cursor-pointer disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {lastUser.avatar ? (
               <img src={lastUser.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-[#1A1D23] bg-[#B9C7D6]">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-foreground bg-[var(--avatar-initial-bg)]">
                 {initial}
               </div>
             )}
@@ -503,7 +503,7 @@ function LoginFormContent() {
             <button
               type="button"
               onClick={() => setChooseOther(true)}
-              className="text-sm font-medium underline underline-offset-[3px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] h-10 flex items-center"
+              className="text-sm font-medium underline underline-offset-[3px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 flex items-center"
               style={{ color: C.fg }}
             >
               Dùng tài khoản khác
@@ -557,7 +557,7 @@ function LoginFormContent() {
 
         {/* Khối Vào từ liên kết (Board 1 · card 8) */}
         {deepLinkLabel && !fromExpired && !fromLogout && (
-          <div className="mt-5 w-full rounded-[14px] bg-[#F2F4F7] p-3 text-center text-[13.5px] leading-relaxed text-[#1A1D23]">
+          <div className="mt-5 w-full rounded-[14px] bg-muted p-3 text-center text-[13.5px] leading-relaxed text-foreground">
             Đăng nhập để mở nhiệm vụ<br />
             <span className="font-semibold">{deepLinkLabel}</span>
           </div>

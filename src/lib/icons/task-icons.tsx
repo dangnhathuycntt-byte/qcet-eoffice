@@ -197,8 +197,8 @@ export function TaskIconPriorityUrgent(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
       <rect x="2" y="2" width="15" height="15" rx="4" fill="currentColor" stroke="none" />
-      <path d="M9.5 5.7V10" stroke="white" strokeWidth={1.8} />
-      <path d="M9.5 12.8H9.51" stroke="white" strokeWidth={1.8} />
+      <path d="M9.5 5.7V10" stroke="white" strokeWidth={1.5} />
+      <path d="M9.5 12.8H9.51" stroke="white" strokeWidth={1.5} />
     </TaskActionSvg>
   );
 }

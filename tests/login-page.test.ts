@@ -309,7 +309,9 @@ describe("Login Specification & Multi-State Compliance (Boards Login & Login2)",
 
     // 4. Returning user / quick login
     assert.ok(loginPageSource.includes("Chào mừng quay lại"));
-    assert.ok(loginPageSource.includes("Tiếp tục với tên"));
+    // Thẻ tài khoản bấm được (thay nút "Tiếp tục với tên ...")
+    assert.ok(loginPageSource.includes("{lastUser.name}"));
+    assert.ok(loginPageSource.includes("{lastUser.email}"));
     assert.ok(loginPageSource.includes("Dùng tài khoản khác"));
 
     // 5. Shared machine (select_account)
@@ -333,8 +335,8 @@ describe("Login Specification & Multi-State Compliance (Boards Login & Login2)",
   test("handles accessible error tab titles and keyboard focus ring", () => {
     // Tab title prefix for errors
     assert.ok(loginPageSource.includes('document.title = "Lỗi: Đăng nhập · QCET E-Office"'));
-    // Focus ring 2px, offset 3px, institutional color #0058A0
-    assert.ok(loginPageSource.includes("focus-visible:ring-[#0058A0]"));
+    // Focus ring 2px, offset 3px, màu thể chế qua token primary (#0058A0)
+    assert.ok(loginPageSource.includes("focus-visible:ring-primary"));
     assert.ok(loginPageSource.includes("focus-visible:ring-offset-[3px]"));
   });
 });

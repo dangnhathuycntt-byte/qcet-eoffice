@@ -80,12 +80,12 @@ export function resetAllFeatureGuides(): void {
 
 export function InboundDocumentPreview() {
   return (
-    <div className="w-[230px] rounded-[10px] bg-white p-3.5 shadow-[0_0_0_1px_#EAEDF1] dark:bg-zinc-900 dark:shadow-[0_0_0_1px_zinc-800]">
-      <div className="text-[11px] text-[#5F6671] dark:text-zinc-400">Công văn đến · 214/CV-ĐT</div>
-      <div className="mt-2 h-[7px] w-[90%] rounded bg-[#EAEDF1] dark:bg-zinc-800" />
-      <div className="mt-1.5 h-[7px] w-[70%] rounded bg-[#EAEDF1] dark:bg-zinc-800" />
-      <div className="mt-3 flex h-11 items-center rounded-lg border-[1.5px] border-dashed border-[#C9CDD3] px-3 dark:border-zinc-700">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#1A1D23] dark:text-zinc-200">
+    <div className="w-[230px] rounded-[10px] bg-white p-3.5 shadow-[0_0_0_1px_var(--border)]">
+      <div className="text-[11px] text-muted-foreground">Công văn đến · 214/CV-ĐT</div>
+      <div className="mt-2 h-[7px] w-[90%] rounded bg-bg-hover" />
+      <div className="mt-1.5 h-[7px] w-[70%] rounded bg-bg-hover" />
+      <div className="mt-3 flex h-11 items-center rounded-lg border-[1.5px] border-dashed border-[var(--gray-7)] px-3">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
           <path d="M3 17c3-6 4-6 5-2s2 3 4-1 3-3 5 1" />
         </svg>
       </div>
@@ -95,18 +95,18 @@ export function InboundDocumentPreview() {
 
 export function TaskSortPreview() {
   return (
-    <div className="w-[260px] overflow-hidden rounded-[10px] bg-white shadow-[0_0_0_1px_#EAEDF1] dark:bg-zinc-900 dark:shadow-[0_0_0_1px_zinc-800]">
-      <div className="flex h-8 items-center justify-between border-b border-[#F2F4F7] px-3 text-xs dark:border-zinc-800 text-[#1A1D23] dark:text-zinc-200">
+    <div className="w-[260px] overflow-hidden rounded-[10px] bg-white shadow-[0_0_0_1px_var(--border)]">
+      <div className="flex h-8 items-center justify-between border-b border-muted px-3 text-xs text-foreground">
         <span className="truncate">Duyệt hồ sơ xét tuyển</span>
-        <span className="text-[#B91C1C] shrink-0 font-medium">Trễ 1 ngày</span>
+        <span className="text-destructive shrink-0 font-medium">Trễ 1 ngày</span>
       </div>
-      <div className="flex h-8 items-center justify-between border-b border-[#F2F4F7] px-3 text-xs dark:border-zinc-800 text-[#1A1D23] dark:text-zinc-200">
+      <div className="flex h-8 items-center justify-between border-b border-muted px-3 text-xs text-foreground">
         <span className="truncate">Chuẩn bị họp giao ban</span>
-        <span className="text-[#5F6671] shrink-0 dark:text-zinc-400">Hôm nay</span>
+        <span className="text-muted-foreground shrink-0">Hôm nay</span>
       </div>
-      <div className="flex h-8 items-center justify-between px-3 text-xs text-[#1A1D23] dark:text-zinc-200">
+      <div className="flex h-8 items-center justify-between px-3 text-xs text-foreground">
         <span className="truncate">Báo cáo tuần</span>
-        <span className="text-[#5F6671] shrink-0 dark:text-zinc-400">3 ngày nữa</span>
+        <span className="text-muted-foreground shrink-0">3 ngày nữa</span>
       </div>
     </div>
   );
@@ -114,17 +114,17 @@ export function TaskSortPreview() {
 
 export function DelegationPreview() {
   return (
-    <div className="flex items-center gap-3.5 rounded-[10px] bg-white px-5 py-4 shadow-[0_0_0_1px_#EAEDF1] dark:bg-zinc-900 dark:shadow-[0_0_0_1px_zinc-800]">
-      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#DEE2E8] text-sm font-semibold text-[#1A1D23] dark:bg-zinc-700 dark:text-zinc-200">
+    <div className="flex items-center gap-3.5 rounded-[10px] bg-white px-5 py-4 shadow-[0_0_0_1px_var(--border)]">
+      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--gray-5)] text-sm font-semibold text-foreground">
         A
       </span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#5F6671] shrink-0 dark:text-zinc-400">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground shrink-0">
         <path d="M5 12h14m-5-5 5 5-5 5" />
       </svg>
-      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#C0D0F4] text-sm font-semibold text-[#1A1D23] dark:bg-blue-900 dark:text-blue-200">
+      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-bg-selected text-sm font-semibold text-foreground">
         B
       </span>
-      <span className="ml-1.5 text-xs text-[#5F6671] shrink-0 dark:text-zinc-400">15–20/10</span>
+      <span className="ml-1.5 text-xs text-muted-foreground shrink-0">15–20/10</span>
     </div>
   );
 }
@@ -245,14 +245,14 @@ export function FeatureGuideCard({
           >
             <div
               ref={cardRef}
-              className="w-full max-w-[374px] mx-auto rounded-2xl bg-white shadow-[0_0_0_1px_#EAEDF1,0_12px_32px_rgba(26,29,35,0.12)] overflow-hidden dark:bg-zinc-900 dark:shadow-[0_0_0_1px_zinc-800,0_12px_32px_rgba(0,0,0,0.5)] border border-border/40"
+              className="w-full max-w-[374px] mx-auto rounded-2xl bg-white shadow-[0_0_0_1px_var(--border),0_12px_32px_rgba(26,29,35,0.12)] overflow-hidden border border-border/40"
             >
-              <div className="relative m-2 rounded-[10px] bg-[#F2F4F7] h-[150px] flex items-center justify-center dark:bg-zinc-800/60">
+              <div className="relative m-2 rounded-[10px] bg-muted h-[150px] flex items-center justify-center">
                 <button
                   type="button"
                   onClick={handleDismiss}
                   aria-label="Đóng hướng dẫn"
-                  className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-[#5F6671] hover:bg-black/5 hover:text-[#1A1D23] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer dark:text-zinc-400 dark:hover:text-zinc-100"
+                  className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
                   <X className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                 </button>
@@ -260,22 +260,22 @@ export function FeatureGuideCard({
               </div>
 
               <div className="px-4 pt-2">
-                <div className="text-base font-semibold leading-6 tracking-[-0.005em] text-[#1A1D23] dark:text-zinc-100">
+                <div className="text-base font-semibold leading-6 tracking-[-0.005em] text-foreground">
                   {title}
                 </div>
-                <div className="mt-1.5 text-sm leading-5 text-[#5F6671] dark:text-zinc-400">
+                <div className="mt-1.5 text-sm leading-5 text-muted-foreground">
                   {description}
                 </div>
               </div>
 
               <div className="flex h-[52px] items-center justify-between px-4 text-sm mt-1">
-                <span className="flex items-center gap-2 text-[#5F6671] dark:text-zinc-400 select-none">
+                <span className="flex items-center gap-2 text-muted-foreground select-none">
                   ‹ {step} ›
                 </span>
                 <button
                   type="button"
                   onClick={handleNextClick}
-                  className="font-medium text-[#1A1D23] dark:text-zinc-100 px-3 py-1.5 rounded-lg hover:bg-[#F2F4F7] dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer"
+                  className="font-medium text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
                   {nextLabel}
                 </button>
@@ -296,14 +296,14 @@ export function FeatureGuideCard({
             )}
           >
             <div
-              className="w-[340px] rounded-2xl bg-white shadow-[0_0_0_1px_#EAEDF1,0_12px_32px_rgba(26,29,35,0.10)] overflow-hidden dark:bg-zinc-900 dark:shadow-[0_0_0_1px_zinc-800,0_12px_32px_rgba(0,0,0,0.5)] border border-border/40"
+              className="w-[340px] rounded-2xl bg-white shadow-[0_0_0_1px_var(--border),0_12px_32px_rgba(26,29,35,0.10)] overflow-hidden border border-border/40"
             >
-              <div className="relative m-2 rounded-[10px] bg-[#F2F4F7] h-[150px] flex items-center justify-center dark:bg-zinc-800/60">
+              <div className="relative m-2 rounded-[10px] bg-muted h-[150px] flex items-center justify-center">
                 <button
                   type="button"
                   onClick={handleDismiss}
                   aria-label="Đóng hướng dẫn"
-                  className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-[#5F6671] hover:bg-black/5 hover:text-[#1A1D23] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer dark:text-zinc-400 dark:hover:text-zinc-100"
+                  className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
                   <X className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                 </button>
@@ -311,22 +311,22 @@ export function FeatureGuideCard({
               </div>
 
               <div className="px-4 pt-2">
-                <div className="text-base font-semibold leading-6 tracking-[-0.005em] text-[#1A1D23] dark:text-zinc-100">
+                <div className="text-base font-semibold leading-6 tracking-[-0.005em] text-foreground">
                   {title}
                 </div>
-                <div className="mt-1.5 text-sm leading-5 text-[#5F6671] dark:text-zinc-400">
+                <div className="mt-1.5 text-sm leading-5 text-muted-foreground">
                   {description}
                 </div>
               </div>
 
               <div className="flex h-[52px] items-center justify-between px-4 text-sm mt-1">
-                <span className="flex items-center gap-2 text-[#5F6671] dark:text-zinc-400 select-none">
+                <span className="flex items-center gap-2 text-muted-foreground select-none">
                   ‹ {step} ›
                 </span>
                 <button
                   type="button"
                   onClick={handleNextClick}
-                  className="font-medium text-[#1A1D23] dark:text-zinc-100 px-3 py-1.5 rounded-lg hover:bg-[#F2F4F7] dark:hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer"
+                  className="font-medium text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
                   {nextLabel}
                 </button>
