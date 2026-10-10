@@ -6,7 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
-import { TaskAddPanel } from "./task-add-chip";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface BackupView {
   backup: { userId: string; name: string; active: boolean } | null;
@@ -79,14 +79,11 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
         value={userId}
         onValueChange={(v) => setUserId(v || null)}
       />
-      <div className="flex gap-1.5">
-        <Button type="button" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
+      <TaskPanelActions onCancel={() => setEditing(false)}>
+        <Button variant="outline" type="button" size="xs" disabled={busy || !userId} onClick={() => void save(userId)}>
           Lưu
         </Button>
-        <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(false)}>
-          Hủy
-        </Button>
-      </div>
+      </TaskPanelActions>
     </div>
   );
   if (!view.backup) {

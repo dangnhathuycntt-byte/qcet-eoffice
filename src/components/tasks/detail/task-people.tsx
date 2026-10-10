@@ -6,7 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
-import { TaskAddPanel } from "./task-add-chip";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface PeopleView {
   version: number;
@@ -98,14 +98,11 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
         value={role}
         onValueChange={(v) => setRole(v === "FOLLOWER" ? "FOLLOWER" : "COLLABORATOR")}
       />
-      <div className="flex gap-1.5">
-        <Button type="button" size="xs" disabled={busy || !userId} onClick={() => void call("POST", { userId, role }, "Không thêm được người")}>
+      <TaskPanelActions onCancel={() => setAdding(false)}>
+        <Button variant="outline" type="button" size="xs" disabled={busy || !userId} onClick={() => void call("POST", { userId, role }, "Không thêm được người")}>
           Thêm
         </Button>
-        <Button type="button" size="xs" variant="ghost" onClick={() => setAdding(false)}>
-          Hủy
-        </Button>
-      </div>
+      </TaskPanelActions>
     </div>
   );
   if (!view.people.some((p) => p.removable)) {

@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { cn } from "@/lib/utils";
-import { TaskAddPanel } from "./task-add-chip";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface RequestView {
   id: string;
@@ -112,8 +112,8 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
         onValueChange={(v) => setRespondInDays(v || "3")}
       />
       <Textarea compact countOnlyNearLimit value={note} maxLength={1000} aria-label="Nội dung đề nghị" placeholder="Việc cần hỗ trợ (không bắt buộc)" onChange={(e) => setNote(e.target.value)} className="min-h-14" />
-      <div className="flex gap-1.5">
-        <Button
+      <TaskPanelActions onCancel={() => setAdding(false)}>
+        <Button variant="outline"
           type="button"
           size="xs"
           disabled={busy || !unitId}
@@ -121,10 +121,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
         >
           Gửi đề nghị
         </Button>
-        <Button type="button" size="xs" variant="ghost" onClick={() => setAdding(false)}>
-          Hủy
-        </Button>
-      </div>
+      </TaskPanelActions>
     </div>
   );
   if (state.requests.length === 0) {

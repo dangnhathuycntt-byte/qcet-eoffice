@@ -13,7 +13,11 @@ const CHIP_CLASS = cn(
 
 // Bo góc lồng nhau: vỏ rounded-lg (14px) − đệm 6px = bo mục 8px (rounded-sm). Bóng dùng token menu, không dùng shadow-2xl.
 const MENU_CLASS = "w-60 rounded-lg border border-border bg-popover p-1.5 shadow-menu outline-none";
-const PANEL_CLASS = "w-64 overflow-y-auto rounded-lg border border-border bg-popover p-3 shadow-menu outline-none";
+// Ô nhập trong popover giữ nền xám trung tính khi focus (không chuyển xanh), viền focus mảnh: popover yên, ít màu.
+const PANEL_CLASS = cn(
+  "w-64 overflow-y-auto rounded-lg border border-border bg-popover p-3 shadow-menu outline-none",
+  "[&_:is(textarea,input,button[aria-haspopup]):focus-visible]:bg-secondary [&_[data-popup-open]]:bg-secondary",
+);
 const PANEL_TITLE_CLASS = "mb-2 text-xs font-medium text-foreground";
 const MENU_ITEM_CLASS =
   "flex h-7 w-full cursor-pointer items-center gap-2.5 rounded-sm px-2 text-left text-xs text-foreground transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none";
@@ -239,5 +243,33 @@ export function TaskAddChip({
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+/**
+ * Hàng nút của form trong popover: căn phải, "Hủy" trước, hành động chính sau cùng (nút xám nhạt, không màu).
+ * `leading` là phần bên trái (vd. "Thêm bước"), đẩy sang mép trái.
+ */
+export function TaskPanelActions({
+  onCancel,
+  leading,
+  children,
+}: {
+  onCancel: () => void;
+  leading?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1.5 pt-1">
+      {leading ? <div className="mr-auto">{leading}</div> : null}
+      <button
+        type="button"
+        onClick={onCancel}
+        className="inline-flex h-7 cursor-pointer items-center rounded-sm px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Hủy
+      </button>
+      {children}
+    </div>
   );
 }

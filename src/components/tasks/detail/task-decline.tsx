@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { TaskAddChip } from "./task-add-chip";
+import { TaskAddChip, TaskPanelActions } from "./task-add-chip";
 
 interface DeclineState {
   declined: { by: { id: string; name: string }; reason: string; at: string } | null;
@@ -87,14 +87,11 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
         onChange={(e) => setReason(e.target.value)}
         className="min-h-16"
       />
-      <div className="flex gap-1.5">
-        <Button type="button" size="xs" variant="destructive" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
+      <TaskPanelActions onCancel={() => { setOpen(false); setReason(""); setError(null); }}>
+        <Button variant="outline" type="button" size="xs" disabled={busy || reason.trim().length < 3} onClick={() => void submit()}>
           Gửi từ chối
         </Button>
-        <Button type="button" size="xs" variant="ghost" onClick={() => { setOpen(false); setReason(""); setError(null); }}>
-          Hủy
-        </Button>
-      </div>
+      </TaskPanelActions>
     </div>
   );
   if (!state.declined) {

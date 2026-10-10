@@ -6,7 +6,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
-import { TaskAddPanel } from "./task-add-chip";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface ExtensionRequestView {
   id: string;
@@ -150,8 +150,8 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
         onChange={(e) => setText(e.target.value)}
         className="min-h-16"
       />
-      <div className="flex gap-1.5">
-        <Button
+      <TaskPanelActions onCancel={reset}>
+        <Button variant="outline"
           type="button"
           size="xs"
           disabled={busy || !date || text.trim().length < 3}
@@ -159,10 +159,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
         >
           Gửi
         </Button>
-        <Button type="button" size="xs" variant="ghost" onClick={reset}>
-          Hủy
-        </Button>
-      </div>
+      </TaskPanelActions>
     </div>
   );
 
@@ -246,14 +243,11 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
             onChange={(e) => setText(e.target.value)}
             className="min-h-16"
           />
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || text.trim().length < 3} onClick={() => void decide("REJECT", { note: text.trim() })}>
+          <TaskPanelActions onCancel={reset}>
+            <Button variant="outline" type="button" size="xs" disabled={busy || text.trim().length < 3} onClick={() => void decide("REJECT", { note: text.trim() })}>
               Từ chối gia hạn
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={reset}>
-              Hủy
-            </Button>
-          </div>
+          </TaskPanelActions>
         </div>
       )}
 
@@ -269,14 +263,11 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
             onChange={(e) => setText(e.target.value)}
             className="min-h-12"
           />
-          <div className="flex gap-1.5">
-            <Button type="button" size="xs" disabled={busy || !date} onClick={() => void decide("COUNTER", { newDueDate: date, note: text.trim() || undefined })}>
+          <TaskPanelActions onCancel={reset}>
+            <Button variant="outline" type="button" size="xs" disabled={busy || !date} onClick={() => void decide("COUNTER", { newDueDate: date, note: text.trim() || undefined })}>
               Gửi đề xuất
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={reset}>
-              Hủy
-            </Button>
-          </div>
+          </TaskPanelActions>
         </div>
       )}
 

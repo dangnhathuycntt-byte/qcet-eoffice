@@ -164,12 +164,12 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
         <span className="text-xs text-muted-foreground">
           {drafts.length}/{MAX_CRITERIA}
         </span>
-        <span className="ml-auto flex gap-1.5">
-          <Button type="button" size="xs" onClick={() => void save()} disabled={saving}>
-            {saving ? "Đang lưu…" : "Lưu"}
-          </Button>
+        <span className="ml-auto flex items-center gap-1.5">
           <Button type="button" size="xs" variant="ghost" onClick={() => { setEditing(false); setError(null); }}>
             Hủy
+          </Button>
+          <Button type="button" size="xs" variant="outline" onClick={() => void save()} disabled={saving}>
+            {saving ? "Đang lưu…" : "Lưu"}
           </Button>
         </span>
       </div>

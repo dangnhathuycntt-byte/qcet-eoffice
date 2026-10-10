@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
-import { TaskAddPanel } from "./task-add-chip";
+import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 
 interface StepView {
   id: string;
@@ -129,19 +129,20 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
           ) : null}
         </div>
       ))}
-      <div className="flex flex-wrap gap-1.5">
-        {draft.length < MAX_STEPS ? (
-          <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => [...prev, emptyStep(prev.length)])}>
-            Thêm bước
-          </Button>
-        ) : null}
-        <Button type="button" size="xs" disabled={busy || !valid} onClick={() => void save()}>
+      <TaskPanelActions
+        onCancel={() => setEditing(false)}
+        leading={
+          draft.length < MAX_STEPS ? (
+            <Button type="button" size="xs" variant="ghost" onClick={() => setDraft((prev) => [...prev, emptyStep(prev.length)])}>
+              Thêm bước
+            </Button>
+          ) : null
+        }
+      >
+        <Button type="button" size="xs" variant="outline" disabled={busy || !valid} onClick={() => void save()}>
           Lập luồng
         </Button>
-        <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(false)}>
-          Hủy
-        </Button>
-      </div>
+      </TaskPanelActions>
     </div>
   );
   if (!view.process) {
