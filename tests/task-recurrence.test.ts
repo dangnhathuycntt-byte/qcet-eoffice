@@ -232,6 +232,9 @@ describe('T-09 mẫu và nhiệm vụ lặp lại', () => {
     assert.match(failed.error ?? '', /cùng đơn vị/);
     const listed = (await listRecurrences(session('head'), t.id)).find((r) => r.id === rec.id);
     assert.equal(listed?.lastRun?.status, 'FAILED');
+    const notices = await prisma.notification.findMany({ where: { userId: u.head, type: 'task_recurrence_failed' } });
+    assert.equal(notices.length >= 1, true, 'người giao nhận thông báo lỗi sinh nhiệm vụ');
+    assert.match(notices[notices.length - 1].body, /cùng đơn vị/);
 
     assert.equal((await scan(rec.id, '2026-10-11T08:00:00+07:00')).skippedExisting, 1, 'không tự thử lại');
 

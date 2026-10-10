@@ -248,6 +248,29 @@ export interface RecurrenceScanResult {
   skippedExisting: number;
 }
 
+/** Báo người giao khi lịch lặp lại không sinh được nhiệm vụ (hoặc thiếu việc con), để họ sửa và bấm thử lại. */
+async function notifyRecurrenceProblem(
+  rec: { id: string; createdById: string; template: { title: string } },
+  periodKey: string,
+  detail: string
+) {
+  try {
+    await prisma.notification.create({
+      data: {
+        userId: rec.createdById,
+        actorName: "Hệ thống",
+        title: `Lịch lặp lại kỳ ${periodKey} chưa tạo đủ nhiệm vụ`,
+        body: `${renderTitle(rec.template.title, periodKey)}: ${detail}`.slice(0, 500),
+        category: "task",
+        type: "task_recurrence_failed",
+        linkHref: "/tasks/templates",
+      },
+    });
+  } catch (error) {
+    logger.error("task.recurrence.notify_failed", { metadata: { recurrenceId: rec.id, periodKey } }, error);
+  }
+}
+
 export async function runTaskRecurrences(options: { now?: Date; recurrenceIds?: string[] } = {}): Promise<RecurrenceScanResult> {
   const now = options.now ?? new Date();
   const periodKey = periodKeyOf(now);
@@ -271,13 +294,14 @@ export async function runTaskRecurrences(options: { now?: Date; recurrenceIds?: 
       continue;
     }
     try {
-      const taskId = await generateTask(rec, periodKey);
+      const taskId = await generateTask(rec, periodKey, (detail) => notifyRecurrenceProblem(rec, periodKey, detail));
       await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { taskId } });
       result.created++;
     } catch (error) {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
       await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { error: message } });
       result.failed++;
+      await notifyRecurrenceProblem(rec, periodKey, message);
       logger.error("task.recurrence.generate_failed", { metadata: { recurrenceId: rec.id, periodKey } }, error);
     }
   }
@@ -286,7 +310,8 @@ export async function runTaskRecurrences(options: { now?: Date; recurrenceIds?: 
 
 async function generateTask(
   rec: Awaited<ReturnType<typeof prisma.taskRecurrence.findMany<{ include: { template: true } }>>>[number],
-  periodKey: string
+  periodKey: string,
+  onPartialFailure: (detail: string) => Promise<void>
 ): Promise<string> {
   const creator = await prisma.user.findUnique({ where: { id: rec.createdById }, select: { id: true, email: true, name: true, role: true, isActive: true } });
   if (!creator || !creator.isActive) throw new Error("Người giao của lịch lặp lại không còn hoạt động");
@@ -335,7 +360,9 @@ async function generateTask(
   }
   if (failures.length) {
     // Nhiệm vụ cha đã tạo; ghi lỗi để người giao thấy và bổ sung tay, không tạo lại cha.
-    await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { error: `Chưa tạo được ${failures.length} việc con: ${failures.join("; ")}`.slice(0, 500) } });
+    const detail = `Chưa tạo được ${failures.length} việc con: ${failures.join("; ")}`.slice(0, 500);
+    await prisma.taskRecurrenceRun.updateMany({ where: { recurrenceId: rec.id, periodKey }, data: { error: detail } });
+    await onPartialFailure(detail);
   }
   return parent.id;
 }
