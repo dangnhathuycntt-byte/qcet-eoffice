@@ -253,6 +253,8 @@ export const CreateDocumentSchema = z
       .max(64)
       .optional()
       .nullable(),
+    /** Xác nhận vẫn vào sổ khi có văn bản đến trùng số ký hiệu và cơ quan ban hành. */
+    acknowledgeDuplicate: z.boolean().optional(),
   })
   .strict()
   .refine(
@@ -304,6 +306,7 @@ export const RegisterIncomingDocumentSchema = z
     storageLocation: z.string().trim().max(255).optional(),
     notes: z.string().trim().max(2000).optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
+    acknowledgeDuplicate: z.boolean().optional(),
   })
   .strict()
   .refine((input) => Boolean(input.summary || input.title.trim()), {
