@@ -401,6 +401,15 @@ export function PushOnboardingSheet({
         case "document_directive":
           key = "documentDirective";
           break;
+        case "task_extension":
+          key = "taskExtension";
+          break;
+        case "task_decline":
+          key = "taskDecline";
+          break;
+        case "unit_request":
+          key = "unitRequest";
+          break;
         default:
           return prev;
       }
@@ -672,6 +681,15 @@ export function PushOnboardingSheet({
                           break;
                         case "document_directive":
                           isChecked = preferences.documentDirective;
+                          break;
+                        case "task_extension":
+                          isChecked = preferences.taskExtension;
+                          break;
+                        case "task_decline":
+                          isChecked = preferences.taskDecline;
+                          break;
+                        case "unit_request":
+                          isChecked = preferences.unitRequest;
                           break;
                       }
 

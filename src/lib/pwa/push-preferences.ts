@@ -8,13 +8,22 @@ export interface PushPreferences {
   taskReview: boolean;
   deadlineReminder: boolean;
   documentDirective: boolean;
+  /** Yêu cầu gia hạn và kết quả xử lý (T-06). */
+  taskExtension: boolean;
+  /** Từ chối nhận việc (T-06). */
+  taskDecline: boolean;
+  /** Yêu cầu phối hợp liên đơn vị và kết quả (T-06). */
+  unitRequest: boolean;
 }
 
 export type PushTopic =
   | "task_assigned"
   | "task_review"
   | "deadline_reminder"
-  | "document_directive";
+  | "document_directive"
+  | "task_extension"
+  | "task_decline"
+  | "unit_request";
 
 export interface PushTopicMeta {
   id: PushTopic;
@@ -43,6 +52,21 @@ export const PUSH_TOPICS: readonly PushTopicMeta[] = [
     title: "Ý kiến chỉ đạo văn bản",
     description: "Nhận thông báo khi Ban Giám hiệu hoặc Lãnh đạo đơn vị ban hành ý kiến chỉ đạo, giao việc xử lý văn bản.",
   },
+  {
+    id: "task_extension",
+    title: "Yêu cầu gia hạn nhiệm vụ",
+    description: "Nhận thông báo khi có yêu cầu gia hạn cần bạn quyết định hoặc khi yêu cầu của bạn được trả lời.",
+  },
+  {
+    id: "task_decline",
+    title: "Từ chối nhận việc",
+    description: "Nhận thông báo khi người thực hiện từ chối nhận nhiệm vụ bạn đã giao.",
+  },
+  {
+    id: "unit_request",
+    title: "Phối hợp liên đơn vị",
+    description: "Nhận thông báo khi có đề nghị đơn vị bạn cử người phối hợp, hoặc khi đề nghị của bạn được trả lời.",
+  },
 ] as const;
 
 export const DEFAULT_PUSH_PREFERENCES: PushPreferences = {
@@ -50,6 +74,9 @@ export const DEFAULT_PUSH_PREFERENCES: PushPreferences = {
   taskReview: true,
   deadlineReminder: true,
   documentDirective: true,
+  taskExtension: true,
+  taskDecline: true,
+  unitRequest: true,
 };
 
 export const PUSH_PREFS_STORAGE_PREFIX = "qcet_push_prefs_v1";
@@ -76,6 +103,9 @@ export function loadLocalPushPreferences(userId?: string | null): PushPreference
       taskReview: typeof parsed.taskReview === "boolean" ? parsed.taskReview : true,
       deadlineReminder: typeof parsed.deadlineReminder === "boolean" ? parsed.deadlineReminder : true,
       documentDirective: typeof parsed.documentDirective === "boolean" ? parsed.documentDirective : true,
+      taskExtension: typeof parsed.taskExtension === "boolean" ? parsed.taskExtension : true,
+      taskDecline: typeof parsed.taskDecline === "boolean" ? parsed.taskDecline : true,
+      unitRequest: typeof parsed.unitRequest === "boolean" ? parsed.unitRequest : true,
     };
   } catch {
     return getDefaultPushPreferences();
@@ -100,6 +130,10 @@ export function saveLocalPushPreferences(
 
 export function mapNotificationTypeToTopic(typeOrEvent: string): PushTopic | null {
   const normalized = typeOrEvent.toUpperCase();
+  // Loại thông báo riêng của nhiệm vụ (T-06) xét trước vì tên có thể chứa "ASSIGN"/"REVIEW".
+  if (normalized.includes("EXTENSION")) return "task_extension";
+  if (normalized.includes("DECLINE")) return "task_decline";
+  if (normalized.includes("UNIT_REQUEST")) return "unit_request";
   if (normalized === "TASK_ASSIGNED" || normalized.includes("ASSIGN")) {
     return "task_assigned";
   }
@@ -150,6 +184,12 @@ export function isTopicEnabled(
       return preferences.deadlineReminder;
     case "document_directive":
       return preferences.documentDirective;
+    case "task_extension":
+      return preferences.taskExtension;
+    case "task_decline":
+      return preferences.taskDecline;
+    case "unit_request":
+      return preferences.unitRequest;
     default:
       return true;
   }
@@ -169,6 +209,9 @@ export async function fetchServerPushPreferences(): Promise<PushPreferences | nu
         taskReview: Boolean(data.preferences.taskReview ?? true),
         deadlineReminder: Boolean(data.preferences.deadlineReminder ?? true),
         documentDirective: Boolean(data.preferences.documentDirective ?? true),
+        taskExtension: Boolean(data.preferences.taskExtension ?? true),
+        taskDecline: Boolean(data.preferences.taskDecline ?? true),
+        unitRequest: Boolean(data.preferences.unitRequest ?? true),
       };
     }
     return null;

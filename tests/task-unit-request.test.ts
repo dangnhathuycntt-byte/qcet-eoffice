@@ -219,6 +219,20 @@ describe('T-12 giao việc liên đơn vị qua trưởng đơn vị', () => {
     assert.equal(afterAnswer.sent.UNIT_REQUEST_OVERDUE ?? 0, 0, 'đã trả lời thì không nhắc');
   });
 
+  test('người nhận tắt loại "Phối hợp liên đơn vị" thì không nhận thông báo loại này; loại khác vẫn nhận (T-06)', async () => {
+    const id = await makeTask('optout');
+    await prisma.user.update({ where: { id: u.headB }, data: { onboardingData: { pushPreferences: { unitRequest: false } } } });
+    try {
+      const before = await prisma.notification.count({ where: { userId: u.headB } });
+      await createTaskUnitRequest(session('assigner'), id, { targetUnitId: unit.B });
+      const ev = await prisma.outboxEvent.findFirstOrThrow({ where: { aggregateId: id, eventType: 'TASK_UNIT_REQUESTED_NOTIFICATION' } });
+      await runOutboxCycle(prisma, { ids: [ev.id] });
+      assert.equal(await prisma.notification.count({ where: { userId: u.headB } }), before, 'đã tắt thì không có thông báo');
+    } finally {
+      await prisma.user.update({ where: { id: u.headB }, data: { onboardingData: {} } });
+    }
+  });
+
   test('thông báo qua outbox: trưởng đơn vị nhận yêu cầu, người gửi nhận phản hồi', async () => {
     const id = await makeTask('notify');
     const headBBefore = await prisma.notification.count({ where: { userId: u.headB, type: 'unit_request' } });
