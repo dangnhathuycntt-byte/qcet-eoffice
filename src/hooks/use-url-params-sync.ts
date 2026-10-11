@@ -11,7 +11,6 @@ import {
   scopeToParam,
   parseViewModeParam,
 } from "@/lib/unified-task-hub";
-import { getAcademicMonthInfo } from "@/lib/academic-calendar";
 import type { UserRole } from "@/types/auth";
 
 export interface UrlParamsSyncReturn {

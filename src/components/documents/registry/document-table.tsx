@@ -8,17 +8,11 @@ import {
   FileText,
   CheckCircle2,
   ArrowRight,
-  Download,
   MoreHorizontal,
   Copy,
-  ExternalLink,
   AlertTriangle,
   RefreshCw,
   Check,
-  Printer,
-  Inbox,
-  Send,
-  FileCheck,
 } from "lucide-react";
 import { OfficialDocument, DocumentType } from "@/types/document";
 import { Button } from "@/components/ui/button";

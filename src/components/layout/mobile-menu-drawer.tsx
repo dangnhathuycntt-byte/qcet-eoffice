@@ -93,7 +93,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
   const {
     isInstallable,
-    isInstalled,
     isIOS,
     isStandalone,
     installApp,

@@ -12,7 +12,7 @@ import { StandardDialog } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { formatDetailDate, getRelativeDueTime } from "@/lib/task-detail-helpers";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { getTaskContentPreview } from "@/lib/task-content-preview";

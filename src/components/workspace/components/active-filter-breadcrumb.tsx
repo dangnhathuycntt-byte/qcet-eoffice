@@ -23,7 +23,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   getTaskTimeFilterLabel,
-  NO_TASK_TIME_FILTER,
   type TaskTimeFilter,
 } from "@/lib/task-time-filter";
 import { Pressable } from "@/components/ui/pressable";

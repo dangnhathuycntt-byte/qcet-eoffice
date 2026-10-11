@@ -7,9 +7,6 @@ import {
   ChevronRight,
   CheckCircle2,
   ArrowRight,
-  Building2,
-  Calendar,
-  User,
 } from "lucide-react";
 import { OfficialDocument, DocumentType } from "@/types/document";
 import { Button } from "@/components/ui/button";

@@ -26,7 +26,6 @@ export function UserProfileModal() {
   const { departments } = useDepartmentList();
 
   const [name, setName] = React.useState(user?.name || "");
-  const [department, setDepartment] = React.useState(user?.department || "");
   const [departmentCode, setDepartmentCode] = React.useState(user?.departmentCode || "QCET");
   const [title, setTitle] = React.useState(user?.title || "Viên chức");
   const [phone, setPhone] = React.useState(user?.phone || "");
@@ -49,7 +48,6 @@ export function UserProfileModal() {
   React.useEffect(() => {
     if (isProfileModalOpen && user) {
       setName(user.name || "");
-      setDepartment(user.department || "");
       setDepartmentCode(user.departmentCode || "QCET");
       setTitle(user.title || "Viên chức");
       setPhone(user.phone || "");
@@ -65,10 +63,6 @@ export function UserProfileModal() {
 
   const handleDepartmentChange = (code: string) => {
     setDepartmentCode(code);
-    const found = departments.find((g) => g.code === code);
-    if (found) {
-      setDepartment(found.name || "");
-    }
   };
 
   const handleSave = async (e: React.FormEvent) => {

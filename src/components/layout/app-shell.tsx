@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   SidebarProvider,
@@ -78,7 +78,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isWorkspaceShell = isTaskDetail || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
   const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isInbox || pathname === "/documents";
-  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isRedirectingRef = React.useRef(false);

@@ -19,7 +19,6 @@
 
 import * as React from "react";
 import {
-  Wifi,
   WifiOff,
   RefreshCw,
   CheckCircle2,
@@ -32,7 +31,6 @@ import { cn } from "@/lib/utils";
 import {
   ConnectionState,
   useConnectivity,
-  pwaConnectivityManager,
 } from "@/lib/pwa/connectivity";
 import {
   OfflineOutboxItem,
@@ -46,7 +44,7 @@ import {
   offlineStateForDisplay,
   OFFLINE_STATE_LABELS,
 } from "@/lib/pwa/offline-state";
-import { OfflineConflictDialog, useOfflineConflicts } from "./offline-conflict-dialog";
+import { OfflineConflictDialog } from "./offline-conflict-dialog";
 
 export interface PWASyncStatusProps {
   className?: string;
@@ -327,7 +325,7 @@ export function PWASyncStatusBar({
  * Compact Sync Status Badge for Topbar or Page Headers.
  */
 export function PWASyncStatusBadge({ className }: { className?: string }) {
-  const { connectionState, isOnline, isDegraded, isOffline } = useConnectivity();
+  const { isDegraded, isOffline } = useConnectivity();
   const [queue, setQueue] = React.useState<OfflineOutboxItem[]>([]);
   const [mounted, setMounted] = React.useState(false);
 

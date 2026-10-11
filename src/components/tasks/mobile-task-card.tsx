@@ -4,7 +4,7 @@ import * as React from "react";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { FlattenedPersonalTask } from "./table/types";
 import { getStatusBadgeConfig } from "./table/constants";

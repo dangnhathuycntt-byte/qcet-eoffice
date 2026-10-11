@@ -21,7 +21,7 @@ import {
   resolveComboboxNavigation,
   canSelectOnEnter,
   type CreateTaskFormData,
-} from "../src/components/dashboard/create-task-modal";
+} from "../src/domain/tasks/create-task-form-utils";
 
 // ─────────────────────────────────────────────────────────
 // 1. Baseline snapshot: chỉ tạo một lần, không gọi lại mỗi render

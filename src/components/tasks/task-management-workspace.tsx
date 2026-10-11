@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { SchoolTask, TaskStatus } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
+import type { SchoolTask } from "@/types/dashboard";
 import {
   UnifiedAdaptiveWorkspace,
   UnifiedAdaptiveWorkspaceControlled,
@@ -11,8 +10,7 @@ import {
 } from "@/components/workspace/unified-adaptive-workspace";
 import type { UnifiedAdaptiveWorkspaceProps } from "@/components/workspace/types";
 import type { UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
-import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
-import { useAuth } from "@/lib/auth-context";
+import type { CreateTaskFormData } from "@/domain/tasks/create-task-form-utils";
 import {
   filterTasksByScope,
   applyOptimisticStatusChange,
@@ -65,7 +63,6 @@ export function TaskManagementWorkspace(props: TaskManagementWorkspaceProps) {
     workspaceQuery,
     ...rest
   } = props;
-  const { setIsProfileModalOpen } = useAuth();
   const effectiveScope = scope || forcedScope;
   const sharedProps = {
     initialScope: initialScope || effectiveScope || "school" as WorkspaceScope,

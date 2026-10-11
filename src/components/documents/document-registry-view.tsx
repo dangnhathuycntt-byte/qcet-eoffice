@@ -96,7 +96,7 @@ export function DocumentRegistryView() {
   const pane = useDocumentPane();
 
   // URL state management
-  const { filters, isResultFiltered, setFilter, setFilters, resetFilters, searchInputValue, setSearchInputValue } = useDocumentUrlFilters();
+  const { filters, isResultFiltered, setFilter, setFilters, searchInputValue, setSearchInputValue } = useDocumentUrlFilters();
   // Đơn vị chủ trì: cùng nguồn danh sách đơn vị đang dùng ở form vào sổ (mọi người dùng đã đăng nhập đọc được)
   const { departments, isLoading: isDepartmentsLoading } = useDepartmentList();
 
@@ -105,7 +105,6 @@ export function DocumentRegistryView() {
   const [totalCount, setTotalCount] = React.useState<number>(0);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
-  const [isExporting, setIsExporting] = React.useState<boolean>(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   // Cột tùy chọn chỉ là trình bày, không đi vào query; giữ theo vòng đời trang
   const [visibleColumns, setVisibleColumns] = React.useState<LedgerColumnVisibility>(DEFAULT_LEDGER_COLUMNS);
@@ -306,38 +305,6 @@ export function DocumentRegistryView() {
   const handleNavigate = React.useCallback((doc: OfficialDocument) => {
     if (pane.docId) pane.switchDocument(doc.id);
   }, [pane]);
-
-  // Excel / CSV Export handler (NĐ 30/2020)
-  const handleExportExcel = React.useCallback(async () => {
-    try {
-      setIsExporting(true);
-      const p = new URLSearchParams();
-      if (filters.type === "inbox") p.set("type", "VAN_BAN_DEN");
-      else if (filters.type === "outbox") p.set("type", "VAN_BAN_DI");
-      else if (filters.type === "submission") p.set("type", "TO_TRINH_NOI_BO");
-      if (filters.status !== "ALL" && filters.status !== "") p.set("status", filters.status);
-      if (filters.urgency !== "ALL" && filters.urgency !== "") p.set("urgency", filters.urgency);
-      if (filters.leadUnitId && filters.leadUnitId !== "ALL") p.set("leadUnitId", filters.leadUnitId);
-      if (filters.documentYear) p.set("documentYear", String(filters.documentYear));
-      if (filters.search) p.set("search", filters.search);
-
-      const res = await fetch(`/api/documents/export-excel?${p.toString()}`);
-      if (!res.ok) throw new Error("Không thể xuất sổ văn bản");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `so-van-ban-${filters.type}-${new Date().toISOString().split("T")[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Export error:", err);
-    } finally {
-      setIsExporting(false);
-    }
-  }, [filters]);
 
   const typeTitle: Record<string, string> = { all: "Sổ văn bản", inbox: "Văn bản đến", outbox: "Văn bản đi", submission: "Tờ trình nội bộ" };
   const bucketLabels: Record<string, string> = filters.type === "outbox"

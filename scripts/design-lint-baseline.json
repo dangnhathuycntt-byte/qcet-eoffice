@@ -613,41 +613,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/create-task-modal.tsx",
-      "text": "<select"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/create-task-modal.tsx",
-      "text": "<textarea"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "src/components/dashboard/executive-stat-strip.tsx",
       "text": "<button"
     },

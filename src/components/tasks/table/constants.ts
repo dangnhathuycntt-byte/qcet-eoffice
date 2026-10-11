@@ -1,4 +1,4 @@
-import type * as React from "react";
+
 import {
   Layers,
   Building2,

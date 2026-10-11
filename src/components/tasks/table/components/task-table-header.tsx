@@ -5,7 +5,6 @@ import {
   ArrowUpDown,
   Check,
   ChevronDown,
-  ChevronRight,
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

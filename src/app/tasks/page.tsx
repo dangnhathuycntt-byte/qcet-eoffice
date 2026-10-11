@@ -2,7 +2,7 @@ import * as React from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { TasksPageClient } from "./tasks-page-client";
-import { TaskManagementWorkspace, type WorkspaceScope, type ViewMode } from "@/components/tasks/task-management-workspace";
+import { type WorkspaceScope, type ViewMode } from "@/components/tasks/task-management-workspace";
 import { getSessionFromRequest } from "@/lib/jwt-session";
 import { taskQueryService } from "@/server/tasks";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";

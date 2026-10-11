@@ -7,26 +7,18 @@ import {
   Filter,
   Trash2,
   Check,
-  ChevronDown,
   ChevronRight,
   X,
-  ExternalLink,
-  ArrowRight,
   Maximize2,
   MoveUp,
   MoveDown,
   Clock,
-  Layers,
   Calendar,
   AlertTriangle,
-  Info,
-  CheckCircle2,
   RotateCw,
-  SlidersHorizontal,
   Table as TableIcon,
   Kanban as KanbanIcon,
   User,
-  Building,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,13 +28,12 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { DrawerRoot, DrawerContent, DrawerOverlay, DrawerPortal } from "@/components/ui/drawer";
 import * as m from "motion/react-m";
 import { AnimatePresence } from "motion/react";
-import { motionEase, motionTransition, motionSpring } from "@/lib/motion/tokens";
+import { motionEase, motionSpring } from "@/lib/motion/tokens";
 import { popoverVariants } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";

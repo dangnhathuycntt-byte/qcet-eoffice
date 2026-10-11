@@ -2,9 +2,8 @@
  * Canonical create-task policy (T06 / D5 / §9).
  *
  * Single source of truth for role classification and task-creation capability.
- * Extracted from dashboard/create-task-modal.tsx so that both the dashboard
- * modal and other UI surfaces (workspace toolbar, tasks/create modal) share
- * the same gate.
+ * Shared by every UI surface that gates task creation (workspace toolbar,
+ * tasks/create modal, calendar).
  */
 import type { UserRole, AuthUser } from "@/types/auth";
 

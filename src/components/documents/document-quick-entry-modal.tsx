@@ -13,7 +13,6 @@ import type {
   DocumentSecurityLevel,
   DocumentItem,
 } from "@/types/document";
-import { useAuth } from "@/lib/auth-context";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { Input } from "@/components/ui/input";
@@ -78,7 +77,6 @@ export function DocumentQuickEntryModal({
   lockType = false,
   departments: propDepartments = [],
 }: DocumentQuickEntryModalProps) {
-  const { user } = useAuth();
   const { departments: fetchedDepartments, isLoading: isDepartmentsLoading } = useDepartmentList({
     enabled: isOpen,
   });
@@ -97,7 +95,7 @@ export function DocumentQuickEntryModal({
   const [category, setCategory] = React.useState<string>("Công văn");
   const [summary, setSummary] = React.useState<string>("");
   const [urgency, setUrgency] = React.useState<DocumentUrgency>("THUONG");
-  const [securityLevel, setSecurityLevel] = React.useState<DocumentSecurityLevel>("THUONG");
+  const securityLevel: DocumentSecurityLevel = "THUONG";
   const [leadUnitId, setLeadUnitId] = React.useState<string>("");
   const [dueDate, setDueDate] = React.useState<string>("");
 

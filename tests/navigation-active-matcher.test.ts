@@ -14,7 +14,6 @@ import {
   getMobileDrawerItems,
   getMobileBottomBarItems,
 } from "../src/lib/navigation/canonical-navigation-registry";
-import { NAV_ITEMS } from "../src/lib/navigation/nav-config";
 
 describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   test("isRouteActive: matches exact pathnames correctly", () => {
@@ -144,13 +143,6 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
     assert.deepStrictEqual(resolveBreadcrumb("/settings"), ["QCET E-Office", label("/settings")]);
   });
 
-  test("NAV_ITEMS: defines clean canonical items without duplicates", () => {
-    const hrefs = NAV_ITEMS.map((item) => item.href);
-    const uniqueHrefs = new Set(hrefs);
-    assert.strictEqual(hrefs.length, uniqueHrefs.size, "NAV_ITEMS must contain zero duplicate hrefs");
-    assert.ok(NAV_ITEMS.length >= 5, "Must have comprehensive navigation set");
-  });
-
   describe("Canonical Navigation Registry (single source of truth)", () => {
     test("defines exactly 7 canonical routes with zero duplicates", () => {
       assert.equal(CANONICAL_ROUTES.length, 7);
@@ -226,27 +218,6 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
       const [root, page] = resolveBreadcrumb("/tasks/task-123");
       assert.equal(root, "QCET E-Office");
       assert.equal(page, getRouteByPath("/tasks")!.label);
-    });
-
-    test("every NAV_ITEMS badgeKey exists in the canonical registry", () => {
-      const registryBadgeKeys = new Set(
-        CANONICAL_ROUTES.map((r) => r.badgeKey).filter(Boolean)
-      );
-      for (const item of NAV_ITEMS) {
-        if (item.badgeKey === undefined) continue;
-        assert.ok(
-          registryBadgeKeys.has(item.badgeKey as never),
-          `nav-config badgeKey "${item.badgeKey}" (${item.id}) must exist in the registry`
-        );
-      }
-    });
-
-    test("every NAV_ITEMS entry maps to a canonical route with identical href and label", () => {
-      for (const item of NAV_ITEMS) {
-        const route = CANONICAL_ROUTES.find((r) => r.href === item.href);
-        assert.ok(route, `nav-config item "${item.id}" must map to a canonical route`);
-        assert.equal(item.label, route.label);
-      }
     });
   });
 });

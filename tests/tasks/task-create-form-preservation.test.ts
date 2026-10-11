@@ -4,9 +4,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import fs from "node:fs";
 import path from "node:path";
+import { CreateTaskModal } from "../../src/components/tasks/create/create-task-modal";
 import {
-  CreateTaskModal,
-  resolveCreateTaskPolicy,
   resolveCreateTaskIdentity,
   performCreateTaskSubmission,
   getInitialTaskFormData,
@@ -15,7 +14,8 @@ import {
   validateTaskForm,
   ADVANCED_METADATA_PERSISTENCE_NOTICE,
   type CreateTaskFormData,
-} from "../../src/components/dashboard/create-task-modal";
+} from "../../src/domain/tasks/create-task-form-utils";
+import { resolveCreateTaskPolicy } from "../../src/domain/tasks/create-task-policy";
 import type { AuthUser } from "../../src/types/auth";
 import type { SchoolTask, StaffTask } from "../../src/types/dashboard";
 
@@ -326,7 +326,7 @@ describe("CreateTaskModal rendered form (T21 / T23 / SK-03 / SK-04)", () => {
   // ARIA attributes and form fields are set client-side via JS hydration inside the portal.
   // Therefore, we verify via source-level inspection (same pattern as create-task-modal-composer.test.ts).
   const modalSource = fs.readFileSync(
-    path.resolve(__dirname, "..", "..", "src", "components", "dashboard", "create-task-modal.tsx"),
+    path.resolve(__dirname, "..", "..", "src", "components", "tasks", "create", "create-task-modal.tsx"),
     "utf-8"
   );
 
@@ -335,27 +335,20 @@ describe("CreateTaskModal rendered form (T21 / T23 / SK-03 / SK-04)", () => {
       React.createElement(CreateTaskModal, {
         isOpen: true,
         onClose: () => {},
-        onSubmit: () => {},
       })
     );
   }
 
-  test("primary fields render and institutional metadata stays behind progressive disclosure (T22/T23)", () => {
+  test("primary fields render (T22/T23)", () => {
     // SSR renders without error
     const html = renderModal();
     assert.ok(typeof html === "string", "Component must render without error");
 
-    // Source must contain the primary field IDs (they live inside Dialog.Portal,
-    // which is invisible to renderToStaticMarkup but renders on client hydration).
-    assert.ok(modalSource.includes('id="task-title-input"'), "primary title field must render");
-    assert.ok(modalSource.includes('id="task-assignee-field"'), "primary assignee field must render");
-    assert.ok(modalSource.includes('id="task-due-date-input"'), "primary due-date field must render");
-    // Advanced (institutional) metadata IDs must exist but behind progressive disclosure.
-    // Verify they are NOT unconditionally rendered (they appear only when showAdvancedFields is true).
-    assert.ok(modalSource.includes('id="task-internal-due-input"'), "advanced internal-due field must exist in source");
-    assert.ok(modalSource.includes('id="task-deliverables-input"'), "advanced deliverables field must exist in source");
-    // Confirm progressive disclosure guard exists in source
-    assert.ok(modalSource.includes("showAdvanced"), "advanced fields must be gated by showAdvanced");
+    // Primary fields live inside Dialog.Portal, which is invisible to
+    // renderToStaticMarkup but renders on client hydration.
+    assert.ok(modalSource.includes('id="create-task-title"'), "primary title field must render");
+    assert.ok(modalSource.includes('aria-label="Chọn người chủ trì"'), "primary assignee picker must render");
+    assert.ok(modalSource.includes('placeholder="Hạn hoàn thành"'), "primary due-date field must render");
   });
 
   test("no free-text custom assignee affordance (identity by ID, SK-03/T24)", () => {

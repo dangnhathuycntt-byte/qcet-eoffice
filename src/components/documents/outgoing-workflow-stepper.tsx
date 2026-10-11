@@ -14,7 +14,6 @@ import {
   Circle,
 } from "lucide-react";
 import * as m from "motion/react-m";
-import { AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { staggerContainerVariants, listItemVariants } from "@/lib/motion/variants";
 import type { OutgoingDocumentStatus } from "@/contracts/documents";

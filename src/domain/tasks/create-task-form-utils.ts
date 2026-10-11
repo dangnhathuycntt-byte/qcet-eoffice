@@ -1,9 +1,9 @@
 /**
- * Create-task form utilities — extracted from dashboard/create-task-modal.tsx
+ * Create-task form utilities — pure functions for form validation, identity
+ * resolution, submission orchestration, and dirty-checking.
  *
- * Pure functions for form validation, identity resolution, submission
- * orchestration, and dirty-checking. Shared between dashboard and tasks
- * create modals.
+ * The create modal (`tasks/create/create-task-modal`) submits through
+ * `useCreateTaskForm`; production code here only imports `CreateTaskFormData`.
  */
 
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";

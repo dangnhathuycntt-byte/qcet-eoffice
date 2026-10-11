@@ -4,12 +4,8 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import {
   Plus,
-  Calendar,
-  CheckCircle2,
   Clock,
   AlertCircle,
-  AlertTriangle,
-  Circle,
   FolderTree,
   MoreHorizontal,
   ChevronRight,
@@ -42,18 +38,14 @@ import type {
   TaskCategory,
   TaskStatus,
 } from "@/types/dashboard";
-import type {
-  KanbanColumnId,
-  DetailedKanbanProjection,
-} from "@/contracts/workspace-semantic";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
-import { PrioritySignalBars } from "./priority-signal-bars";
 import { TaskStatusCircle } from "./task-status-circle";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { parseLeadAssignee } from "./table/components/task-row";
 import { Pressable } from "@/components/ui/pressable";
+import { useDismissOnOutside } from "@/hooks/use-dismiss-on-outside";
 
 // ============================================================================
 // Types & Display Settings
@@ -182,21 +174,6 @@ export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
     iconColor: "text-emerald-500",
   },
 ];
-
-const COLUMN_ICONS: Record<
-  TaskStatus,
-  React.ComponentType<{ className?: string; strokeWidth?: number }>
-> = {
-  NEW: Circle,
-  NOT_STARTED: Circle,
-  IN_PROGRESS: Clock,
-  WAITING_APPROVAL: Clock,
-  PENDING_EXECUTIVE_APPROVAL: Clock,
-  NEEDS_REVIEW: AlertCircle,
-  BLOCKED: AlertTriangle,
-  COMPLETED: CheckCircle2,
-  CANCELLED: AlertTriangle,
-};
 
 export interface KanbanItem {
   id: string;
@@ -623,7 +600,6 @@ function KanbanCard({
 
   const overdue = isOverdue(item.dueDate, item.status) || (item.rawTask as SchoolTask).isOverdue === true;
   const lateDays = getOverdueDays(item.dueDate, item.status);
-  const taskCode = (item.rawTask as SchoolTask).code || (item.rawTask as SchoolTask).taskCode || `NV-${item.id.slice(0, 4)}`;
 
   const updateCoords = React.useCallback(() => {
     if (!triggerRef.current || typeof window === "undefined") return;
@@ -648,34 +624,11 @@ function KanbanCard({
     };
   }, [menuOpen, updateCoords]);
 
-  React.useEffect(() => {
-    if (!menuOpen) return;
-    function handleOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(target) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(target)
-      ) {
-        setMenuOpen(false);
-        setStatusSubmenuOpen(false);
-      }
-    }
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setMenuOpen(false);
-        setStatusSubmenuOpen(false);
-        triggerRef.current?.focus();
-      }
-    }
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [menuOpen]);
+  useDismissOnOutside(menuOpen, [menuRef, triggerRef], (reason) => {
+    setMenuOpen(false);
+    setStatusSubmenuOpen(false);
+    if (reason === "escape") triggerRef.current?.focus();
+  });
 
   function handleCardClick() {
     onSelectTask?.(item.rawTask);
@@ -1020,8 +973,6 @@ function DroppableColumn({
       status: col.id,
     },
   });
-
-  const IconComponent = COLUMN_ICONS[col.id] || Circle;
   const count = tasks.length;
   const displayedTasks = tasks.slice(0, colLimit);
   const taskIds = React.useMemo(() => tasks.map((t) => t.id), [tasks]);
@@ -1117,25 +1068,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
   const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen]);
+  useDismissOnOutside(isOpen, [containerRef], () => setIsOpen(false));
 
   const toggleOptions: { key: keyof KanbanDisplaySettings; label: string }[] = [
     { key: "showAssignee", label: "Người phụ trách" },

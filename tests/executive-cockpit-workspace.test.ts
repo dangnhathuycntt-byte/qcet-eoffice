@@ -4,53 +4,6 @@ import assert from "node:assert/strict";
 // Pin reference date to 2026-09-25 for deterministic testing per invariants.md
 process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-25";
 import type { SchoolBottleneckItem } from "../src/types/workspace";
-import { applyExecutiveResolution } from "../src/lib/executive-resolution-state";
-
-describe("Executive Cockpit Workspace Invariants", () => {
-  it("xác nhận luồng cập nhật lạc quan (optimistic resolution flow) tháo gỡ điểm nghẽn ngay lập tức", () => {
-    const initialBottlenecks: SchoolBottleneckItem[] = [
-      {
-        id: "task-bn-1",
-        title: "Báo cáo kiểm định chất lượng",
-        departmentCode: "DAO_TAO",
-        departmentName: "Phòng Đào tạo & QLKH",
-        assigneeName: "Trần Văn A",
-        dueDate: "2026-09-05",
-        daysOverdue: 2,
-        isOverdue: true,
-        isBlocked: false,
-        priority: "CAO",
-        status: "CHUA_HOAN_THANH",
-        originalTask: {} as any,
-      },
-      {
-        id: "task-bn-2",
-        title: "Bảo trì phòng máy thực hành",
-        departmentCode: "CNTT",
-        departmentName: "Khoa CNTT",
-        assigneeName: "Lê Văn B",
-        dueDate: "2026-09-06",
-        daysOverdue: 1,
-        isOverdue: true,
-        isBlocked: false,
-        priority: "TRUNG_BINH",
-        status: "CHUA_HOAN_THANH",
-        originalTask: {} as any,
-      },
-    ];
-
-    const res = applyExecutiveResolution(initialBottlenecks, {
-      taskId: "task-bn-1",
-      type: "EXTEND_DEADLINE",
-      extensionDays: 3,
-    });
-
-    assert.equal(res.updatedBottlenecks.length, 1);
-    assert.equal(res.updatedBottlenecks[0].id, "task-bn-2");
-    assert.equal(res.resolvedItem?.id, "task-bn-1");
-    assert.ok(res.actionSummary.includes("Gia hạn tiến độ thêm 3 ngày"));
-  });
-});
 
 describe("Executive Unit Radar Dot Calculation", () => {
   it("phân loại đúng màu chấm theo số lượng tắc nghẽn và cảnh báo", () => {

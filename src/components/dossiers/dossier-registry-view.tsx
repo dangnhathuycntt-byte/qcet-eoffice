@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FolderOpen,
@@ -126,7 +125,6 @@ const PAGE_SIZE = 20;
 // ---------------------------------------------------------------------------
 
 export function DossierRegistryView() {
-  const router = useRouter();
 
   // Data
   const [items, setItems] = React.useState<DossierItem[]>([]);

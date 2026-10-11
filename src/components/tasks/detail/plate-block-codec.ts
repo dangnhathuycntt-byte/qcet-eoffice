@@ -16,7 +16,7 @@ function nextBlockId(suffix?: string): string {
   return `b-auto-${_blockIdCounter}${suffix ? `-${suffix}` : ""}`;
 }
 
-import type { ContentBlockItem, ContentBlockType } from "./task-block-editor";
+import type { ContentBlockItem } from "./task-block-editor";
 
 // ---------------------------------------------------------------------------
 // Constants

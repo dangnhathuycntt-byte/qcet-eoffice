@@ -7,11 +7,10 @@ import {
   validateSubtaskDueDate,
   validateSubtaskAssignment,
   resolveCreateTaskIdentity,
-  getAllowedTaskLevelsForRole,
-  getDefaultTaskLevelForRole,
   type CreateTaskFormData,
   type CreateTaskPersonnelRef,
-} from "../src/components/dashboard/create-task-modal";
+} from "../src/domain/tasks/create-task-form-utils";
+import { getAllowedTaskLevelsForRole, getDefaultTaskLevelForRole } from "../src/domain/tasks/create-task-policy";
 import {
   executeKanbanStatusTransition,
   applyOptimisticOverrides,

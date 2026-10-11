@@ -7,7 +7,6 @@ import {
   Info,
   CheckCircle2,
   Clock,
-  MinusCircle,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

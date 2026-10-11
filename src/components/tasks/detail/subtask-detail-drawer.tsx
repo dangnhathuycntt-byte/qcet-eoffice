@@ -6,18 +6,16 @@ import { X, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { TaskIconCollaborators } from "@/lib/icons/task-icons";
 import { SubtaskOutlineRail } from "./subtask-outline-rail";
 import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
-import { cn } from "@/lib/utils";
-import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
+import type { StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { STATUS_OPTIONS } from "@/domain/tasks/display-config";
 import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { formatDisplayDate } from "@/lib/format/date";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { markSelectionStartTarget } from "./block-selection-canvas";
 import { TaskBlockEditor } from "./task-block-editor";
-import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { updateTaskStatus, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
 import { ResizeGrip } from "@/components/ui/pane-resize-handle";
@@ -259,23 +257,6 @@ export function SubtaskDetailDrawer({
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
     notifySuccess("Đã cập nhật trạng thái việc thành phần");
-  };
-
-  const handlePriorityChange = async (newPriority: TaskPriority) => {
-    if (!subtask) return;
-    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
-    const res = await updateTaskPriority(subtask.id, newPriority, currentVersion);
-    if (!res.ok) {
-      notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
-      return;
-    }
-
-    const cleanPriority: TaskPriority = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
-    const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.version ?? (currentVersion ? currentVersion + 1 : 1);
-    const updated = { ...subtask, priority: cleanPriority, version: nextVersion };
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
-    notifySuccess("Đã cập nhật độ ưu tiên việc thành phần");
   };
 
   const handleAssigneeChange = async (person: { id: string; name: string }): Promise<void> => {

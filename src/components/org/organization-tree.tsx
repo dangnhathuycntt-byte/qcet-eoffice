@@ -33,7 +33,6 @@ import {
 import {
   useDepartmentList,
   type DepartmentOption,
-  type DepartmentPersonnel,
 } from "@/hooks/use-department-list";
 import { toCanonicalUnitCode } from "@/lib/departments";
 import { Pressable } from "@/components/ui/pressable";

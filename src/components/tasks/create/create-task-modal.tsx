@@ -14,13 +14,11 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Popover } from "@base-ui/react/popover";
 import { Dialog } from "@base-ui/react/dialog";
-import { getCategoryOptions } from "@/domain/tasks/display-config";
 import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import type { CreateTaskLevel } from "@/lib/adapters/create-task-mapper";
 import {
@@ -77,7 +75,6 @@ const PRIORITY_KEYS: CreateTaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 
 // Biểu mẫu dùng MEDIUM, bảng dùng NORMAL: chuẩn hóa để icon tín hiệu khớp với bảng danh sách
 const toSignalPriority = (p: CreateTaskPriority) => (p === "MEDIUM" ? "NORMAL" : p);
-const CATEGORY_OPTIONS = getCategoryOptions();
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface CreateTaskModalProps {

@@ -14,7 +14,6 @@ import {
 import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
 import { fadeVariants } from "@/lib/motion/variants";
-import { motionTransition } from "@/lib/motion/tokens";
 import { DelegationFeatureGuide } from "@/components/feature-guide/feature-guide";
 
 // ---------------------------------------------------------------------------

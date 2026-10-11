@@ -24,11 +24,11 @@ import {
 } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
 import { QCET_ORG_UNITS, type OrgUnitConfig } from "@/lib/org/org-structure";
-import { useOrgDepartments } from "@/hooks/use-org-departments";
 import { type DepartmentNode } from "@/components/org/organization-tree";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { popoverVariants } from "@/lib/motion/variants";
 import { Pressable } from "@/components/ui/pressable";
+import { useDismissOnOutside } from "@/hooks/use-dismiss-on-outside";
 import { foldVietnamese } from "@/lib/search/vietnamese-search";
 
 export type ScopeType = "school" | "unit" | "my";
@@ -523,33 +523,11 @@ export function ScopeSwitcher({ className }: { className?: string }) {
     ? allScopes
     : allScopes.filter((s) => s !== "school");
 
-  // Close popover on outside click or ESC key
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (isMobile) return;
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, isMobile]);
+  // Close popover on outside click (desktop only; mobile uses a sheet) or ESC key
+  useDismissOnOutside(isOpen, [containerRef], (reason) => {
+    if (reason === "outside" && isMobile) return;
+    setIsOpen(false);
+  });
 
   const handleSelectScope = (scope: ScopeType, deptCode?: string) => {
     let targetScope = scope;

@@ -8,13 +8,9 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle2,
-  Inbox,
-  Send,
-  FileCheck,
-  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motionDuration, motionEase, motionSpring } from "@/lib/motion/tokens";
+import { motionDuration, motionEase } from "@/lib/motion/tokens";
 
 export type DocumentKpiType = "all" | "pending" | "processing" | "urgent" | "completed";
 

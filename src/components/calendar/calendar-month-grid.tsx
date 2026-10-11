@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import {
   type AcademicMonthPeriod,
   generateAcademicMonthGrid,
-  getSystemReferenceDate,
   getTodayIctDate,
 } from "@/lib/academic-calendar";
 import {

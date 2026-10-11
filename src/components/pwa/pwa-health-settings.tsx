@@ -29,7 +29,6 @@ import {
   Wifi,
   WifiOff,
   Bell,
-  ArrowUpRight,
   Database,
   Lock,
   Loader2,
@@ -71,7 +70,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
   } = useStorageQuota({ userId: activeUserId, refreshIntervalMs: 30_000 });
 
   // 2. Connectivity State Machine (ONLINE | DEGRADED | OFFLINE)
-  const { connectionState, checkNow, isOnline, isDegraded } = useConnectivity();
+  const { connectionState, isOnline } = useConnectivity();
 
   // 3. PWA Installation & Standalone detection
   const { isInstallable, isInstalled, isStandalone, installApp } = usePWAInstall();

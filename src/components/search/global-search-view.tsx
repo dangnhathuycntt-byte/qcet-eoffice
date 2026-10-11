@@ -13,15 +13,12 @@ import {
   Loader2,
   AlertTriangle,
   Inbox,
-  Clock,
-  ArrowRight,
   ChevronRight,
   RefreshCw,
   Building2,
   Mail,
   Phone,
   CalendarDays,
-  Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -30,7 +27,6 @@ import {
   listItemVariants,
   staggerContainerVariants,
 } from "@/lib/motion/variants";
-import { motionTransition } from "@/lib/motion/tokens";
 
 // ---------------------------------------------------------------------------
 // Types (mirrors API response)

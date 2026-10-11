@@ -1,36 +1,19 @@
 "use client";
 
 import * as React from "react";
-import {
-  User,
-  Users,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Check,
-  Signal,
-  UserPlus,
-  CircleDashed,
-  Loader2,
-} from "lucide-react";
 import { TaskIconDeadline, TaskIconDepartment } from "@/lib/icons/task-icons";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
-import { cn, getInitials } from "@/lib/utils";
-import { getRelativeDueTime } from "@/lib/task-detail-helpers";
+import { cn } from "@/lib/utils";
 import {
   formatDisplayDate,
-  formatDateTime,
-  formatIsoDate,
   extractDateIso,
 } from "@/lib/format/date";
-import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { computeDueStatus } from "@/domain/tasks/deadlines";
 import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
-import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, getStatusDisplay, getPriorityDisplay } from "@/domain/tasks/display-config";
+import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { TaskStatusSelect, TaskAssigneePicker, TaskPrioritySelect } from "./task-property-controls";
 import { PropertyRow } from "@/components/ui/property-row";
@@ -118,25 +101,6 @@ function extractNameAndTitle(rawName?: string | null): { name: string; prefix?: 
   };
 }
 
-
-function StartDateIcon({ className }: { className?: string }) {
-  return (
-    <TaskIconDeadline className={cn("size-4 text-muted-foreground", className)} />
-  );
-}
-
-function TargetDateIcon({ className, isOverdue }: { className?: string; isOverdue?: boolean }) {
-  return (
-    <TaskIconDeadline
-      className={cn(
-        "size-4",
-        isOverdue ? "text-destructive" : "text-muted-foreground",
-        className
-      )}
-    />
-  );
-}
-
 export function TaskPropertiesSidebar({
   task,
   currentUser,
@@ -163,7 +127,6 @@ export function TaskPropertiesSidebar({
 
   // Reassign state (kept — used by handleSelectLead)
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const [reassignError, setReassignError] = React.useState<string | null>(null);
 
   // Shared personnel list via hook (replaces local useState + useEffect fetch)
   const { personnel: personnelList } = usePersonnelList();
@@ -338,17 +301,16 @@ export function TaskPropertiesSidebar({
   const handleSelectLead = async (personId: string, personName: string) => {
     if (!onReassignLead) return;
     setIsReassigning(true);
-    setReassignError(null);
     try {
       await onReassignLead(personId, personName);
     } catch (e: unknown) {
-      setReassignError(e instanceof Error ? e.message : "Lỗi kết nối khi chuyển giao người phụ trách");
+      notifyError(e instanceof Error ? e.message : "Lỗi kết nối khi chuyển giao người phụ trách", "Không chuyển giao được");
     } finally {
       setIsReassigning(false);
     }
   };
 
-  const { notifyWarning } = useFeedback();
+  const { notifyWarning, notifyError } = useFeedback();
 
   const handleStartDateChangeInternal = async (newDateIso: string) => {
     if (!newDateIso) {

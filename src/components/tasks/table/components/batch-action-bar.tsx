@@ -25,7 +25,7 @@ import {
 import type { TaskStatus } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
-import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 import { Pressable } from "@/components/ui/pressable";
 
 /**

@@ -2,12 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { NAV_ITEMS } from "../src/lib/tokens";
-import {
-  getInitialTaskFormData,
-  validateTaskForm,
-  CreateTaskFormData,
-} from "../src/components/dashboard/create-task-modal";
+import { getInitialTaskFormData, validateTaskForm, CreateTaskFormData } from "../src/domain/tasks/create-task-form-utils";
 import {
   computeSchoolTaskRollup,
   computeDashboardStats,
@@ -16,13 +11,6 @@ import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 
 describe("Sprint 2 Integration & Navigation", () => {
-  test("NAV_ITEMS routes match all implemented pages", () => {
-    const paths = NAV_ITEMS.map((item) => item.href);
-    assert.ok(paths.includes("/"), "contains root task management route");
-    assert.ok(paths.includes("/org"), "contains org hierarchy route");
-    assert.ok(paths.includes("/dashboard"), "contains dashboard route");
-    assert.ok(paths.includes("/notifications"), "contains notifications route");
-  });
 
   test("Route files exist in app router directory", () => {
     const rootDir = path.resolve(__dirname, "../src/app");

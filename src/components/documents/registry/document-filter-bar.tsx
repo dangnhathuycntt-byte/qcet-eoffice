@@ -6,7 +6,6 @@ import {
   Search,
   X,
   ChevronDown,
-  Check,
   Building2,
   Calendar,
   AlertCircle,

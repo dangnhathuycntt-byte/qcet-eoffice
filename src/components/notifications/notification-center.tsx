@@ -23,8 +23,6 @@ import {
   getActorInitials,
   getTypeBadge,
   mapDbNotification,
-  formatRelativeTime,
-  getTimeGroup,
   resolveActionableDeepLink,
   deriveNotificationsViewState,
   getNotificationEmptyCopy,
@@ -37,7 +35,6 @@ import {
   listItemVariants,
   staggerContainerVariants,
 } from "@/lib/motion/variants";
-import { motionTransition } from "@/lib/motion/tokens";
 import { Pressable } from "@/components/ui/pressable";
 
 const PAGE_SIZE = 20;

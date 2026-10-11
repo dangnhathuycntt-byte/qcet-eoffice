@@ -12,7 +12,6 @@ import {
   Smartphone,
   HelpCircle,
   LogOut,
-  type LucideIcon,
 } from "lucide-react";
 import {
   IconSidebarHome,
@@ -33,7 +32,6 @@ import {
 } from "@/lib/navigation/canonical-navigation-registry";
 import {
   useSidebar,
-  type NavigationSection,
 } from "@/components/layout/sidebar-context";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
 import { MaintenanceDialog } from "@/components/common/maintenance-dialog";
@@ -322,7 +320,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, logout, isProfileModalOpen, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
+  const { user, logout, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const accountTriggerRef = React.useRef<HTMLButtonElement>(null);

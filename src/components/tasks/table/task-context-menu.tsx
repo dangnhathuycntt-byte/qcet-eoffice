@@ -3,14 +3,7 @@
 import * as React from "react";
 import { Menu } from "@base-ui/react/menu";
 import {
-  CheckCircle2,
-  AlertTriangle,
-  ExternalLink,
   ChevronRight,
-  Sparkles,
-  SignalHigh,
-  SignalMedium,
-  SignalLow,
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

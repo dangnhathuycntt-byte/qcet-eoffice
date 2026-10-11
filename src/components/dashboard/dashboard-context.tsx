@@ -16,7 +16,7 @@ import type { AuthUser } from "@/types/auth";
 import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import type { ExecutiveFilter, ExecutiveActionStats, DepartmentHealthSummary, ExecutiveActionItem } from "@/lib/executive-matrix-aggregator";
 import type { DelegationRule } from "@/types/delegation";
-import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
+import type { CreateTaskFormData } from "@/domain/tasks/create-task-form-utils";
 import type { AcademicMonthInfo } from "@/lib/academic-calendar";
 import { useModalState } from "@/hooks/use-modal-state";
 import { useDashboardState } from "@/hooks/use-dashboard-state";

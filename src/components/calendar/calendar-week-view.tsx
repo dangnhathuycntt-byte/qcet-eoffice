@@ -9,19 +9,18 @@ import {
   CircleDot,
   Clock,
   Clock3,
-  MapPin,
   Plus,
   User,
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { getSystemReferenceDate, getTodayIctDate } from "@/lib/academic-calendar";
+import { getTodayIctDate } from "@/lib/academic-calendar";
 import {
   type CalendarAttentionState,
   getCalendarAttentionState,
   sortCalendarItemsByAttention,
 } from "@/lib/calendar/calendar-presentation";
-import { getWeekDays, type CalendarWeekDay } from "@/lib/calendar/calendar-week";
+import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { type DayTaskItem } from "./calendar-day-sheet";
 import type { CalendarScope } from "./calendar-toolbar";
 

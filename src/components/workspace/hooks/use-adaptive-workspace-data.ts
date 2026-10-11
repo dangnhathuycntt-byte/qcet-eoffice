@@ -80,8 +80,6 @@ export function isSubTaskAssignedToUser(st: StaffTask, user: AuthUser | null): b
   return false;
 }
 
-import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
-
 export function countScopeTasks(
   tasks: SchoolTask[] = [],
   user: AuthUser | null,

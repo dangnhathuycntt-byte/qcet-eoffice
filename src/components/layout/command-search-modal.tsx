@@ -11,7 +11,6 @@ import {
   Calendar,
   FileText,
   Building2,
-  Bell,
   Inbox,
   PlusCircle,
   ArrowRight,

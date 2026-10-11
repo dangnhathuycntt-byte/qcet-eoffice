@@ -12,8 +12,6 @@ import {
   X,
   Laptop,
   CheckCircle2,
-  ExternalLink,
-  ShieldAlert,
   Loader2,
   Wifi,
   Network,

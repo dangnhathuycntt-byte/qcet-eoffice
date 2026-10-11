@@ -4,7 +4,6 @@ import * as React from "react";
 import { StandardDialog } from "@/components/ui/dialog";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import {
-  Calendar as CalendarIcon,
   Clock,
   Loader2,
   MapPin,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { cn } from "@/lib/utils";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
 export interface CreateEventFormData {

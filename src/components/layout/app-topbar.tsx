@@ -4,7 +4,7 @@ import * as React from "react";
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Search,
   Inbox,
@@ -16,8 +16,6 @@ import {
   useSidebarLayout,
   resolveBreadcrumb,
 } from "@/components/layout/sidebar-context";
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 
 import { formatDisplayName } from "@/components/layout/app-sidebar";
@@ -31,7 +29,7 @@ export function getInitials(name?: string | null): string {
 
 function MobileHeaderTitle({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams();
-  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
+  const [, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
   const { breadcrumbItems } = useSidebarLayout();
   const currentTitle = breadcrumbItems?.at(-1)?.label ?? pageTitle;
 
@@ -55,7 +53,7 @@ function MobileHeaderTitle({ pathname }: { pathname: string }) {
 }
 
 function MobileHeaderTitleFallback({ pathname }: { pathname: string }) {
-  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
+  const [, pageTitle] = resolveBreadcrumb(pathname || "/");
   return (
     <div className="flex items-center min-w-0 gap-1.5">
       <Link href="/tasks" className="flex items-center gap-1.5 shrink-0" aria-label="Trang chủ">
@@ -153,9 +151,7 @@ export function DesktopTopbar() {
  */
 export function AppTopbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { badgeCounts } = useSidebar();
-  const { user } = useAuth();
 
   const unreadCount = Number(badgeCounts?.notifications) || 0;
 

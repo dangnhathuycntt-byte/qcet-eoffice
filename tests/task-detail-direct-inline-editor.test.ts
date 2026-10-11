@@ -168,14 +168,14 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "DirectInlineEditor must synchronize exact click caret / selection range"
     );
 
-    // 6. Both TaskIdentityBlock and TaskDetailPage must use DirectInlineEditor
+    // 6. Title edits inline via DirectInlineEditor; the page description uses the block editor
     assert.ok(
-      identityContent.includes("DirectInlineEditor"),
+      identityContent.includes("<DirectInlineEditor"),
       "TaskIdentityBlock must use DirectInlineEditor for task title"
     );
     assert.ok(
-      detailContent.includes("DirectInlineEditor"),
-      "TaskDetailPage must use DirectInlineEditor for task description"
+      detailContent.includes("<TaskBlockEditor"),
+      "TaskDetailPage must edit the task description with TaskBlockEditor"
     );
   });
 

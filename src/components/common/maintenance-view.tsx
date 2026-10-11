@@ -6,13 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Wrench,
   ArrowLeft,
-  LayoutDashboard,
   CheckSquare,
   FileText,
   Clock,
   ShieldAlert,
-  HelpCircle,
-  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

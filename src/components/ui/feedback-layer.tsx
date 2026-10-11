@@ -353,29 +353,6 @@ export function ToastContainer({
 }
 
 // ============================================================================
-// 3b. Viewport renderer (must be inside Toast.Provider)
-// ============================================================================
-
-function ToastViewportRenderer({ dismissToast }: { dismissToast: (id: string) => void }) {
-  const manager = Toast.useToastManager();
-  return (
-    <Toast.Viewport
-      aria-label="Thông báo hệ thống"
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none w-full max-w-[440px] px-4 sm:px-0"
-    >
-      {manager.toasts.map((t: any) => (
-        <FeedbackToast
-          key={t.id}
-          toast={{ id: t.id, variant: t.variant || "info", title: t.title, message: t.message || t.description || "", action: t.action }}
-          onDismiss={dismissToast}
-          rawToast={t}
-        />
-      ))}
-    </Toast.Viewport>
-  );
-}
-
-// ============================================================================
 // 4. Feedback Context & Provider — Powered by Sonner
 // ============================================================================
 

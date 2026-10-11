@@ -1,6 +1,7 @@
 /**
- * Chặn component/hook mồ côi: file trong `src/components/` hoặc `src/hooks/` mà
- * không route, layout hay script nào import tới (trực tiếp hoặc gián tiếp).
+ * Chặn file mồ côi: file trong `src/components/`, `src/hooks/`, `src/lib/` hoặc
+ * `src/types/` mà không route, layout hay script nào import tới (trực tiếp hoặc
+ * gián tiếp).
  *
  * File chỉ được test import vẫn tính là mồ côi: test không làm code sống lại,
  * và agent đọc thấy file cũ sẽ chép theo nó thay vì dùng bản đang chạy.
@@ -20,7 +21,7 @@ const ts = require("typescript");
 const ROOT = process.cwd();
 const BASELINE_PATH = path.join(ROOT, "scripts", "orphan-baseline.json");
 const UPDATE_BASELINE = process.argv.includes("--update-baseline");
-const CHECKED = /^src\/(components|hooks)\//;
+const CHECKED = /^src\/(components|hooks|lib|types)\//;
 const CODE = /\.(tsx?|mjs|cjs|js)$/;
 const IS_TEST = (f) => /^(tests|e2e)\//.test(f) || /(^|\/)__tests__\//.test(f) || /\.(test|spec)\.[^.]+$/.test(f);
 

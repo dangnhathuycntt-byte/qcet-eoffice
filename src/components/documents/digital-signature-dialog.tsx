@@ -9,7 +9,6 @@ import {
   Check,
   FileCheck2,
   Lock,
-  Building,
   Award,
   RefreshCw,
   Stamp,
@@ -32,7 +31,6 @@ import {
   createDocumentSignaturePayload,
   formatIctDate,
   formatIctDateTime,
-  computeDocumentSha256,
 } from "@/lib/crypto/digital-signature-service";
 
 export interface DigitalSignatureDialogProps {

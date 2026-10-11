@@ -1,4 +1,4 @@
-import type { SchoolTask } from "@/types/dashboard";
+
 import type {
   ColumnSortState,
   SortDirection,

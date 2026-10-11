@@ -30,16 +30,12 @@ import {
   CreateEventModal,
   type CreateEventFormData,
 } from "@/components/calendar/create-event-modal";
-import {
-  CreateTaskModal,
-  type CreateTaskFormData,
-  type TaskLevel,
-} from "@/components/dashboard/create-task-modal";
+import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
+import type { TaskLevel } from "@/domain/tasks/create-task-policy";
 import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
-import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { useAuth } from "@/lib/auth-context";
+import { useDismissOnOutside } from "@/hooks/use-dismiss-on-outside";
 import {
-  getSystemReferenceDate,
   getTodayIctDate,
   getAcademicYear,
   getAvailableAcademicYears,
@@ -160,9 +156,6 @@ function CalendarRouteContent({
 }) {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-
-  // ExecutiveCalendarWorkspace compatibility and zone URL routing
-  const zoneParam = searchParams?.get("zone") || "calendar";
   const dateParam = searchParams?.get("date") || undefined;
   const viewParam = searchParams?.get("view");
   const taskIdParam = searchParams?.get("taskId") || undefined;
@@ -193,10 +186,6 @@ function CalendarRouteContent({
   const currentPeriod = useMemo<AcademicMonthPeriod>(
     () => getAcademicMonthPeriod(selectedMonthNumber, selectedAcademicYear),
     [selectedMonthNumber, selectedAcademicYear]
-  );
-  const academicMonthsForYear = useMemo(
-    () => getAcademicMonthsForYear(selectedAcademicYear),
-    [selectedAcademicYear]
   );
 
   const [viewMode, setViewMode] = useState<"month" | "week">(() => {
@@ -239,44 +228,18 @@ function CalendarRouteContent({
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [createInitialDueDate, setCreateInitialDueDate] = useState<string | undefined>(undefined);
   const [createInitialLevel, setCreateInitialLevel] = useState<TaskLevel>("TRUONG");
-  const [showWeekends, setShowWeekends] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
+  const showWeekends = true;
+  const compactMode = false;
   const [createInitialStartTime, setCreateInitialStartTime] = useState("08:00");
-  const [createInitialEndTime, setCreateInitialEndTime] = useState("09:30");
+  const createInitialEndTime = "09:30";
 
   useEffect(() => {
     document.title = "Lịch Công Tác Học Vụ | QCET E-Office";
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setIsFilterOpen(false);
-      }
-    };
-    if (isFilterOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isFilterOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (secondaryRef.current && !secondaryRef.current.contains(event.target as Node)) {
-        setIsSecondaryOpen(false);
-      }
-    };
-    if (isSecondaryOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isSecondaryOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (createDropdownRef.current && !createDropdownRef.current.contains(event.target as Node)) {
-        setIsCreateDropdownOpen(false);
-      }
-    };
-    if (isCreateDropdownOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isCreateDropdownOpen]);
+  useDismissOnOutside(isFilterOpen, [filterDropdownRef], () => setIsFilterOpen(false));
+  useDismissOnOutside(isSecondaryOpen, [secondaryRef], () => setIsSecondaryOpen(false));
+  useDismissOnOutside(isCreateDropdownOpen, [createDropdownRef], () => setIsCreateDropdownOpen(false));
 
   const updateUrlParam = useCallback((key: string, value: string | null) => {
     if (typeof window === "undefined") return;
@@ -433,28 +396,16 @@ function CalendarRouteContent({
     setIsCreateEventModalOpen(true);
   }, [selectedDate]);
 
-  const handleCreateTaskSubmit = useCallback(
-    (_data: CreateTaskFormData, result?: CreateTaskSubmitResult) => {
-      setIsCreateTaskModalOpen(false);
-
-      // The create-task modal owns the canonical create: it POSTs through the
-      // create-task adapter and invokes this consumer only on a server-confirmed
-      // success. This handler must NEVER issue a second create request and must
-      // NEVER synthesize a local task from the form draft — fields such as
-      // status, progress, assignee identity and category label are server-derived
-      // and the raw `category` enum code is not part of the persisted contract
-      // (create-task-mapper.ts), so fabricating them here would render data the
-      // server never set (C1/T73, Server-Truth-Wins, Data-Dignity).
-      // Reconciliation is performed by re-loading canonical server truth, the
-      // same path confirmed event creation takes, so the created task carries
-      // exactly what the server persisted.
-      const serverTask = result?.ok ? result.task : undefined;
-      if (!serverTask) return;
-
-      void loadCalendarData();
-    },
-    [loadCalendarData]
-  );
+  // The create-task modal owns the canonical create: it POSTs through the
+  // create-task adapter, closes itself, and calls `onCreated` only with the
+  // server-confirmed task. This handler must NEVER issue a second create request
+  // and must NEVER synthesize a local task from the form draft — fields such as
+  // status, progress, assignee identity and category label are server-derived
+  // (C1/T73, Server-Truth-Wins, Data-Dignity). Reconciliation re-loads canonical
+  // server truth, the same path confirmed event creation takes.
+  const handleTaskCreated = useCallback(() => {
+    void loadCalendarData();
+  }, [loadCalendarData]);
 
   const handleCreateEventSubmit = useCallback(async (eventData: CreateEventFormData) => {
     if (eventData.endTime <= eventData.startTime) {
@@ -1092,8 +1043,7 @@ function CalendarRouteContent({
       <CreateTaskModal
         isOpen={isCreateTaskModalOpen}
         onClose={() => setIsCreateTaskModalOpen(false)}
-        onSubmit={handleCreateTaskSubmit}
-        schoolTasks={tasks}
+        onCreated={handleTaskCreated}
         initialLevel={createInitialLevel}
         initialDueDate={createInitialDueDate}
       />

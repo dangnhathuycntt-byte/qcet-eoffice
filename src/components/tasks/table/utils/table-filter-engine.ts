@@ -1,9 +1,7 @@
 import { getTaskContentPreview } from "@/lib/task-content-preview";
 import type {
   SchoolTask,
-  StaffTask,
   TaskCategory,
-  TaskStatus,
 } from "@/types/dashboard";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import { matchesUser } from "@/lib/role-task-filter";
@@ -18,7 +16,6 @@ import type {
   ColumnSortState,
   FlattenedPersonalTask,
   SmartFilterTab,
-  TaskSortField,
 } from "../types";
 
 export interface TaskFilterOptions {
