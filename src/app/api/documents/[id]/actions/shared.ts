@@ -18,12 +18,13 @@ export interface DocumentActionCall {
 
 /**
  * Route chuyển trạng thái văn bản: CSRF → xác thực → giới hạn tần suất → kiểm body bằng `schema`
- * → `run`. Kích thước và Content-Type do `parseAndValidateJson` kiểm. `allowEmpty` cho phép body rỗng.
+ * → `run`. Kích thước và Content-Type do `parseAndValidateJson` kiểm. `allowEmpty` cho phép body rỗng;
+ * `legacyErrors` giữ định dạng lỗi cũ (không RFC 9457) cho các route client còn phụ thuộc.
  */
 export function documentActionRoute<T>(
   schema: ZodType<T>,
   run: (user: AuthenticatedUser, body: T, call: DocumentActionCall) => Promise<unknown>,
-  options: { allowEmpty?: boolean } = {}
+  options: { allowEmpty?: boolean; legacyErrors?: boolean } = {}
 ) {
   return async function POST(req: NextRequest, context: RouteContext) {
     let requestId = crypto.randomUUID();
@@ -40,7 +41,11 @@ export function documentActionRoute<T>(
       const result = await run(authUser, body, { documentId: id, requestId, req });
       return apiSuccess(result, { requestId });
     } catch (error) {
-      return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
+      return apiError(
+        error,
+        requestId,
+        options.legacyErrors ? undefined : { rfc9457: true, instance: req.nextUrl.pathname }
+      );
     }
   };
 }
