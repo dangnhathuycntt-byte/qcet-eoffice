@@ -22,6 +22,7 @@ import {
 } from "@/lib/calendar/calendar-presentation";
 import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { type DayTaskItem } from "./calendar-day-sheet";
+import { groupDayTaskItemsByDate } from "./day-task-items";
 import type { CalendarScope } from "./calendar-toolbar";
 
 export interface CalendarWeekViewProps {
@@ -133,144 +134,19 @@ export function CalendarWeekView({
   }, [currentDate, showWeekends, referenceDate]);
 
   // Tasks & Events mapped by date
-  const { tasksByDate, eventsByDate } = React.useMemo(() => {
-    const taskMap = new Map<string, DayTaskItem[]>();
-    const eventMap = new Map<string, DayTaskItem[]>();
-
-    const matchesStatus = (status: string, dueDate?: string) => {
-      if (!statusFilter || statusFilter === "ALL") return true;
-      if (statusFilter === "OVERDUE") {
-        return (
-          getCalendarAttentionState(
-            { id: "filter", title: "filter", status, dueDate },
-            referenceDate
-          ) === "overdue"
-        );
-      }
-      return status === statusFilter;
-    };
-
-    const addTaskItem = (dateKey: string, item: DayTaskItem) => {
-      const list = taskMap.get(dateKey) || [];
-      list.push(item);
-      taskMap.set(dateKey, list);
-    };
-
-    const addEventItem = (dateKey: string, item: DayTaskItem) => {
-      const list = eventMap.get(dateKey) || [];
-      list.push(item);
-      eventMap.set(dateKey, list);
-    };
-
-    for (const st of tasks) {
-      const matchesSchoolLevel = !levelFilter || levelFilter === "ALL" || levelFilter === "TRUONG";
-      const isSchoolMatchScope =
-        scope === "school" ||
-        (scope === "my" &&
-          ((currentUserId && st.leadAssigneeId === currentUserId) ||
-            (currentUserName && st.leadAssigneeName === currentUserName)));
-
-      if (
-        isSchoolMatchScope &&
-        matchesSchoolLevel &&
-        st.dueDate &&
-        matchesStatus(st.status, st.dueDate)
-      ) {
-        const matchesQuery =
-          !deferredQuery ||
-          st.title.toLowerCase().includes(deferredQuery) ||
-          Boolean(st.leadAssigneeName?.toLowerCase().includes(deferredQuery));
-
-        if (matchesQuery) {
-          addTaskItem(st.dueDate.split("T")[0], {
-            id: st.id,
-            title: st.title,
-            level: "Trường",
-            category: st.category,
-            categoryLabel: st.categoryLabel,
-            assigneeName: st.leadAssigneeName,
-            assigneeAvatar: st.leadAssigneeAvatar,
-            dueDate: st.dueDate,
-            status: st.status,
-            progressPercent: st.progressPercent,
-            originalTask: st,
-          });
-        }
-      }
-
-      const matchesSubLevel = !levelFilter || levelFilter === "ALL" || levelFilter === "DON_VI";
-      if (!matchesSubLevel || !Array.isArray(st.subTasks)) continue;
-
-      for (const sub of st.subTasks) {
-        const isUnitMatchScope =
-          scope === "unit" ||
-          (scope === "my" &&
-            ((currentUserId && sub.assigneeId === currentUserId) ||
-              (currentUserName && sub.assigneeName === currentUserName)));
-
-        if (!isUnitMatchScope || !sub.dueDate || !matchesStatus(sub.status, sub.dueDate)) continue;
-
-        const matchesQuery =
-          !deferredQuery ||
-          sub.title.toLowerCase().includes(deferredQuery) ||
-          Boolean(sub.assigneeName?.toLowerCase().includes(deferredQuery));
-        if (!matchesQuery) continue;
-
-        addTaskItem(sub.dueDate.split("T")[0], {
-          id: sub.id,
-          title: sub.title,
-          level: "Đơn vị",
-          category: st.category,
-          categoryLabel: st.categoryLabel,
-          assigneeName: sub.assigneeName,
-          assigneeAvatar: sub.assigneeAvatar,
-          dueDate: sub.dueDate,
-          status: sub.status,
-          parentSchoolTaskId: st.id,
-          parentSchoolTaskTitle: st.title,
-          originalTask: sub,
-        });
-      }
-    }
-
-    if (statusFilter === "ALL") {
-      for (const event of events) {
-        const matchesLevel =
-          levelFilter === "ALL" ||
-          (levelFilter === "TRUONG" && event.level === "Trường") ||
-          (levelFilter === "DON_VI" && event.level === "Đơn vị");
-        const matchesScope =
-          scope === "my" ||
-          (scope === "school" && event.level === "Trường") ||
-          (scope === "unit" && event.level === "Đơn vị");
-        const matchesQuery =
-          !deferredQuery ||
-          [event.title, event.assigneeName, event.host, event.location]
-            .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(deferredQuery));
-
-        if (matchesLevel && matchesScope && matchesQuery && event.dueDate) {
-          addEventItem(event.dueDate.split("T")[0], event);
-        }
-      }
-    }
-
-    for (const [key, items] of taskMap) {
-      taskMap.set(key, sortCalendarItemsByAttention(items, referenceDate));
-    }
-
-    return { tasksByDate: taskMap, eventsByDate: eventMap };
-  }, [
-    tasks,
-    events,
-    scope,
-    currentUserId,
-    currentUserName,
-    deferredQuery,
-    statusFilter,
-    levelFilter,
-    referenceDate,
-  ]);
+  const { tasks: tasksByDate, events: eventsByDate } = React.useMemo(
+    () =>
+      groupDayTaskItemsByDate(tasks, events, {
+        scope,
+        currentUserId,
+        currentUserName,
+        query: deferredQuery,
+        statusFilter,
+        levelFilter,
+        referenceDate,
+      }),
+    [tasks, events, scope, currentUserId, currentUserName, deferredQuery, statusFilter, levelFilter, referenceDate]
+  );
 
   const numCols = weekDays.length; // 5 or 7
   const gridColClass = numCols === 5 ? "grid-cols-5" : "grid-cols-7";

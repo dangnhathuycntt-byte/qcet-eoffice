@@ -1,3 +1,5 @@
+import * as React from "react";
+
 /** Skeleton chung cho trang danh sách nhiệm vụ và nhiệm vụ đơn vị. */
 export function TaskBoardLoading({ label }: { label: string }) {
   return (
