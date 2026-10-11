@@ -968,7 +968,7 @@ export function TaskDetailSideSheet({
             className="md:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors active:scale-[0.98] shrink-0"
             aria-label="Quay lại danh sách nhiệm vụ"
           >
-            <ArrowLeft className="size-5" strokeWidth={1.5} />
+            <ArrowLeft className="size-5" />
           </Pressable>
 
           {/* Task Code & Compact Status Indicator Pill */}
@@ -1008,7 +1008,7 @@ export function TaskDetailSideSheet({
               className="inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors active:scale-[0.98]"
               aria-label="Đóng bảng chi tiết"
             >
-              <X className="size-4" strokeWidth={1.5} />
+              <X className="size-4" />
             </Pressable>
           </div>
         </div>
@@ -1018,7 +1018,7 @@ export function TaskDetailSideSheet({
           {/* Breadcrumb indicator leading back to parent task */}
           {!isSchool && ((task as StaffTask).parentSchoolTaskId || (task as StaffTask).parentTask) && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/60">
-              <Link2 className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+              <Link2 className="size-3.5 text-primary shrink-0" />
               <span>Nhiệm vụ cha:</span>
               <Pressable
                 onClick={() => {
@@ -1050,9 +1050,9 @@ export function TaskDetailSideSheet({
                 )}
               >
                 {isSchool ? (
-                  <Building2 className="size-3.5" strokeWidth={1.5} />
+                  <Building2 className="size-3.5" />
                 ) : (
-                  <Briefcase className="size-3.5" strokeWidth={1.5} />
+                  <Briefcase className="size-3.5" />
                 )}
                 <span>{levelBadge.label}</span>
               </span>
@@ -1080,7 +1080,7 @@ export function TaskDetailSideSheet({
             {/* Parent Task reference */}
             {!isSchool && parentSchoolTaskTitle && (
               <div className="mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 border border-border/40 rounded-xl px-3 py-2">
-                <Layers className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                <Layers className="size-3.5 text-primary shrink-0" />
                 <span className="shrink-0">Nhiệm vụ cấp trên:</span>
                 <span className="font-semibold text-foreground truncate">
                   {parentSchoolTaskTitle}
@@ -1094,7 +1094,7 @@ export function TaskDetailSideSheet({
               className="mt-3.5 flex flex-wrap items-center gap-2"
             >
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                <Calendar className="size-3.5 text-muted-foreground/70" />
                 <span>Hạn nộp:</span>
                 <span className="font-mono font-semibold text-foreground tabular-nums">
                   {formatDetailDate(task.dueDate)}
@@ -1123,7 +1123,7 @@ export function TaskDetailSideSheet({
             {/* Cell 1: Lead / Assignee */}
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <User className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                <User className="size-3.5 text-muted-foreground/70" />
                 Chủ trì nhiệm vụ
               </span>
               <div className="flex items-center gap-2">
@@ -1137,7 +1137,7 @@ export function TaskDetailSideSheet({
             {/* Cell 2: Delegator */}
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                <Building2 className="size-3.5 text-muted-foreground/70" />
                 Người giao nhiệm vụ
               </span>
               <span className="font-semibold text-foreground truncate">
@@ -1149,9 +1149,9 @@ export function TaskDetailSideSheet({
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 {isSchool ? (
-                  <TrendingUp className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <TrendingUp className="size-3.5 text-muted-foreground/70" />
                 ) : (
-                  <Clock className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <Clock className="size-3.5 text-muted-foreground/70" />
                 )}
                 {isSchool ? "Tiến độ thực hiện" : "Cập nhật lần cuối"}
               </span>
@@ -1170,7 +1170,7 @@ export function TaskDetailSideSheet({
             {schoolTask && schoolTask.coAssignees && schoolTask.coAssignees.length > 0 && (
               <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Users className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <Users className="size-3.5 text-muted-foreground/70" />
                   Đơn vị phối hợp
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -1190,7 +1190,7 @@ export function TaskDetailSideSheet({
           {/* Requirement / expected result (T16: owner & unit -> requirement -> evidence) */}
           <div data-slot="detail-requirement" className="space-y-2">
             <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-              <ListTodo className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+              <ListTodo className="size-3.5 text-muted-foreground/70" />
               Yêu cầu nhiệm vụ
             </h3>
             <div className="rounded-xl border border-border/50 bg-card/60 p-3 space-y-2 text-xs">
@@ -1228,7 +1228,7 @@ export function TaskDetailSideSheet({
             <div data-slot="detail-evidence" className="space-y-3.5 pt-2" id="deliverable-section">
               <div className="flex items-center justify-between">
                 <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                  <FileCheck className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <FileCheck className="size-3.5 text-muted-foreground/70" />
                   {(task as StaffTask).requiresReview
                     ? "Sản phẩm minh chứng (Bắt buộc nghiệm thu)"
                     : "Tài liệu đính kèm (Nhiệm vụ thường quy - Tùy chọn)"}
@@ -1249,7 +1249,7 @@ export function TaskDetailSideSheet({
                       className="flex items-center justify-between gap-3 p-3 text-xs hover:bg-secondary/30 transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <FileText className="size-4 shrink-0 text-primary" strokeWidth={1.5} />
+                        <FileText className="size-4 shrink-0 text-primary" />
                         <div className="min-w-0 flex-1">
                           <span className="font-medium text-foreground truncate block">
                             {item.name}
@@ -1268,9 +1268,9 @@ export function TaskDetailSideSheet({
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline shrink-0"
                         >
-                          <Link className="size-3" strokeWidth={1.5} />
+                          <Link className="size-3" />
                           <span>Xem tài liệu</span>
-                          <ExternalLink className="size-3 opacity-70" strokeWidth={1.5} />
+                          <ExternalLink className="size-3 opacity-70" />
                         </a>
                       )}
                     </div>
@@ -1292,7 +1292,7 @@ export function TaskDetailSideSheet({
                 >
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <FileCheck className="size-3.5 text-primary" strokeWidth={1.5} />
+                      <FileCheck className="size-3.5 text-primary" />
                       {(task as StaffTask).requiresReview
                         ? "Nộp sản phẩm minh chứng nghiệm thu"
                         : "Đính kèm tài liệu kết quả (tùy chọn)"}
@@ -1379,7 +1379,7 @@ export function TaskDetailSideSheet({
                       }
                       className="h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg gap-1.5 disabled:opacity-50"
                     >
-                      <FileCheck className="size-3.5" strokeWidth={1.5} />
+                      <FileCheck className="size-3.5" />
                       <span>Nộp minh chứng & Trình duyệt</span>
                     </Button>
                   </div>
@@ -1395,7 +1395,7 @@ export function TaskDetailSideSheet({
             className="space-y-3.5"
           >
             <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-              <Play className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+              <Play className="size-3.5 text-muted-foreground/70" />
               Thao tác xử lý
             </h3>
 
@@ -1403,7 +1403,7 @@ export function TaskDetailSideSheet({
             {task.status === "BLOCKED" && (
               <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-xs">
                 <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" strokeWidth={1.5} />
+                  <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" />
                   <div className="space-y-1">
                     <h4 className="font-semibold text-destructive">
                       Cảnh báo cản trở: Nhiệm vụ đang bị ách tắc / Cần phối hợp
@@ -1421,7 +1421,7 @@ export function TaskDetailSideSheet({
             {"rejectionReason" in task && task.rejectionReason && task.status === "IN_PROGRESS" && (
               <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-xs">
                 <div className="flex items-start gap-2.5">
-                  <RotateCcw className="size-4 shrink-0 text-warning mt-0.5" strokeWidth={1.5} />
+                  <RotateCcw className="size-4 shrink-0 text-warning mt-0.5" />
                   <div className="space-y-1">
                     <h4 className="font-semibold text-warning">
                       Yêu cầu chỉnh sửa từ Trưởng đơn vị
@@ -1437,7 +1437,7 @@ export function TaskDetailSideSheet({
             {/* Delegation notice if acting under delegated authority */}
             {approvalResult.isDelegated && (
               <div className="flex items-center gap-2 p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-purple-700 font-medium">
-                <ShieldCheck className="size-4 shrink-0 text-purple-600" strokeWidth={1.5} />
+                <ShieldCheck className="size-4 shrink-0 text-purple-600" />
                 <span>
                   Phê duyệt theo thẩm quyền ủy quyền của {approvalResult.rule?.grantorName || "Trưởng đơn vị"}
                 </span>
@@ -1448,7 +1448,7 @@ export function TaskDetailSideSheet({
             {!isSchool && task.status === "NEEDS_REVIEW" && canReview && aiReview && (
               <div className="w-full rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-2">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="size-4 text-indigo-600 shrink-0" strokeWidth={1.5} />
+                  <ShieldCheck className="size-4 text-indigo-600 shrink-0" />
                   <span className="text-xs font-semibold text-indigo-700">
                     Kết quả sàng lọc tự động
                   </span>
@@ -1477,7 +1477,7 @@ export function TaskDetailSideSheet({
                           ? "text-warning"
                           : "text-blue-600"
                       )}>
-                        <AlertTriangle className="size-3 shrink-0 mt-0.5" strokeWidth={1.5} />
+                        <AlertTriangle className="size-3 shrink-0 mt-0.5" />
                         <span>{flag.message}</span>
                       </li>
                     ))}
@@ -1485,13 +1485,13 @@ export function TaskDetailSideSheet({
                 )}
                 {aiReview.suggestedAction === "QUICK_APPROVE" && (
                   <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                    <CheckCircle2 className="size-3" strokeWidth={1.5} />
+                    <CheckCircle2 className="size-3" />
                     <span>Khuyến nghị: Duyệt nhanh</span>
                   </div>
                 )}
                 {aiReview.suggestedAction === "REQUEST_CHANGES" && (
                   <div className="flex items-center gap-1.5 text-xs text-warning font-medium">
-                    <RotateCcw className="size-3" strokeWidth={1.5} />
+                    <RotateCcw className="size-3" />
                     <span>Khuyến nghị: Yêu cầu bổ sung</span>
                   </div>
                 )}
@@ -1506,7 +1506,7 @@ export function TaskDetailSideSheet({
                   onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
                   className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                 >
-                  <Play className="size-3.5" strokeWidth={1.5} />
+                  <Play className="size-3.5" />
                   <span>Tiếp nhận công việc</span>
                 </Button>
               )}
@@ -1525,7 +1525,7 @@ export function TaskDetailSideSheet({
                         }}
                         className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
-                        <FileCheck className="size-3.5" strokeWidth={1.5} />
+                        <FileCheck className="size-3.5" />
                         <span>Nộp minh chứng nghiệm thu</span>
                       </Button>
                     ) : (
@@ -1533,13 +1533,13 @@ export function TaskDetailSideSheet({
                         onClick={() => onStatusChange?.(task.id, "COMPLETED")}
                         className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
-                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <CheckCircle2 className="size-3.5" />
                         <span>Hoàn thành nhiệm vụ</span>
                       </Button>
                     )
                   ) : requiresReview ? (
                     <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-warning/20 bg-warning/10 text-xs text-warning font-medium">
-                      <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
+                      <Clock className="size-3.5 shrink-0" />
                       <span>Đang thực hiện. Nghiệm thu chỉ khả dụng sau khi người phụ trách nộp minh chứng.</span>
                     </div>
                   ) : actorHasApprovalAuthority && onStatusChange ? (
@@ -1547,7 +1547,7 @@ export function TaskDetailSideSheet({
                       onClick={() => onStatusChange(task.id, "COMPLETED")}
                       className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                     >
-                      <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                      <CheckCircle2 className="size-3.5" />
                       <span>Nghiệm thu hoàn thành</span>
                     </Button>
                   ) : null}
@@ -1563,7 +1563,7 @@ export function TaskDetailSideSheet({
                         onClick={handleManagerApprove}
                         className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
-                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <CheckCircle2 className="size-3.5" />
                         <span>Duyệt nhanh (Đạt chuẩn)</span>
                       </Button>
                     ) : (
@@ -1571,7 +1571,7 @@ export function TaskDetailSideSheet({
                         onClick={handleManagerApprove}
                         className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
-                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <CheckCircle2 className="size-3.5" />
                         <span>Nghiệm thu Đạt (Hoàn thành)</span>
                       </Button>
                     )}
@@ -1581,7 +1581,7 @@ export function TaskDetailSideSheet({
                         onClick={() => setIsRejectionModalOpen(true)}
                         className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
                       >
-                        <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                        <RotateCcw className="size-3.5" />
                         <span>Trả lại Yêu cầu Sửa</span>
                       </Button>
                     )}
@@ -1589,7 +1589,7 @@ export function TaskDetailSideSheet({
                 ) : isSeparationOfDutiesBlocked ? (
                   <div className="space-y-2 w-full">
                     <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-destructive/30 bg-destructive/10 text-xs text-destructive font-medium">
-                      <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" strokeWidth={1.5} />
+                      <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" />
                       <div className="space-y-0.5">
                         <p className="font-semibold">Phân lập thẩm quyền công vụ</p>
                         <p className="text-xs text-destructive/90 leading-relaxed">
@@ -1602,7 +1602,7 @@ export function TaskDetailSideSheet({
                         disabled
                         className="flex-1 h-8.5 text-xs font-semibold bg-muted text-muted-foreground rounded-lg cursor-not-allowed opacity-50 gap-1.5"
                       >
-                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <CheckCircle2 className="size-3.5" />
                         <span>Nghiệm thu Đạt (Vô hiệu hóa)</span>
                       </Button>
                       <Button
@@ -1610,14 +1610,14 @@ export function TaskDetailSideSheet({
                         variant="outline"
                         className="h-8.5 px-3 text-xs font-medium border-muted bg-muted/40 text-muted-foreground rounded-lg cursor-not-allowed opacity-50 inline-flex items-center gap-1.5"
                       >
-                        <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                        <RotateCcw className="size-3.5" />
                         <span>Trả lại Yêu cầu Sửa</span>
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-warning/20 bg-warning/10 text-xs text-warning font-medium">
-                    <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
+                    <Clock className="size-3.5 shrink-0" />
                     <span>Đã nộp minh chứng. Đang chờ Trưởng đơn vị kiểm tra và nghiệm thu.</span>
                   </div>
                 )
@@ -1632,7 +1632,7 @@ export function TaskDetailSideSheet({
                   through a canonical reopen command, never a raw status write. */}
               {task.status === "COMPLETED" && (
                 <div className="flex items-center gap-2 w-full p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-700 font-medium">
-                  <CheckCircle2 className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  <CheckCircle2 className="size-3.5 shrink-0" />
                   <span>Nhiệm vụ đã được nghiệm thu hoàn thành</span>
                 </div>
               )}
@@ -1655,7 +1655,7 @@ export function TaskDetailSideSheet({
                 <div className="rounded-xl border border-border/50 bg-card p-4 text-xs space-y-3 shadow-xs" data-testid="ai-executive-brief">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-foreground flex items-center gap-1.5">
-                      <ShieldCheck className="size-4 text-primary" strokeWidth={1.5} />
+                      <ShieldCheck className="size-4 text-primary" />
                       Trạng thái thẩm định hồ sơ (AI Executive Brief)
                     </h4>
                     <span className={cn(
@@ -1728,7 +1728,7 @@ export function TaskDetailSideSheet({
                         onClick={handleManagerApprove}
                         className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
                       >
-                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <CheckCircle2 className="size-3.5" />
                         <span>Duyệt nhanh theo đề xuất AI</span>
                       </Button>
                     )}
@@ -1743,7 +1743,7 @@ export function TaskDetailSideSheet({
                         }}
                         className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
                       >
-                        <AlertTriangle className="size-3.5" strokeWidth={1.5} />
+                        <AlertTriangle className="size-3.5" />
                         <span>Yêu cầu chỉnh sửa</span>
                       </Button>
                     )}
@@ -1756,7 +1756,7 @@ export function TaskDetailSideSheet({
             {!isSchool && (task as StaffTask).escalation?.isEscalated && (
               <div className="rounded-xl border border-destructive/30 bg-danger-soft text-destructive p-4 text-xs" data-testid="escalation-notice">
                 <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={1.5} />
+                  <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <h4 className="font-semibold">
                       Thông báo leo thang: Vượt quá SLA 48h
@@ -1781,7 +1781,7 @@ export function TaskDetailSideSheet({
             {schoolTask && task.status === "PENDING_EXECUTIVE_APPROVAL" && (
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs space-y-3">
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="size-4 shrink-0 text-purple-600 mt-0.5" strokeWidth={1.5} />
+                  <CheckCircle2 className="size-4 shrink-0 text-purple-600 mt-0.5" />
                   <div className="space-y-1 flex-1">
                     <h4 className="font-semibold text-purple-700">
                       Nghiệm thu cấp 2: Chờ Ban Giám hiệu phê duyệt
@@ -1797,7 +1797,7 @@ export function TaskDetailSideSheet({
                     onClick={handleExecutiveClose}
                     className="w-full h-8.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all"
                   >
-                    <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                    <CheckCircle2 className="size-3.5" />
                     <span>Đóng Nhiệm vụ cấp Trường</span>
                   </Button>
                 ) : (
@@ -1842,7 +1842,7 @@ export function TaskDetailSideSheet({
                     className="h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg"
                     title="Tạo việc con trực thuộc nhiệm vụ này"
                   >
-                    <Plus className="size-3.5" strokeWidth={1.5} />
+                    <Plus className="size-3.5" />
                     <span>{ADD_SUBTASK_LABEL}</span>
                   </Button>
                 )}
@@ -1852,7 +1852,7 @@ export function TaskDetailSideSheet({
               <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
                 {schoolTask.subTasks.length === 0 ? (
                   <div className="py-6 flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
-                    <ListTodo className="size-5 text-muted-foreground/50" strokeWidth={1.5} />
+                    <ListTodo className="size-5 text-muted-foreground/50" />
                     <p>Chưa có nhiệm vụ con trực thuộc</p>
                     {effectiveOnAddSubTask && (
                       <Button
@@ -1862,7 +1862,7 @@ export function TaskDetailSideSheet({
                         className="mt-1 h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg"
                         title="Tạo việc con trực thuộc nhiệm vụ này"
                       >
-                        <Plus className="size-3.5" strokeWidth={1.5} />
+                        <Plus className="size-3.5" />
                         <span>{ADD_SUBTASK_LABEL}</span>
                       </Button>
                     )}
@@ -1895,9 +1895,9 @@ export function TaskDetailSideSheet({
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {subDone ? (
-                            <CheckCircle2 className="size-4 shrink-0 text-emerald-600" strokeWidth={1.5} />
+                            <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
                           ) : (
-                            <Circle className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
+                            <Circle className="size-4 shrink-0 text-muted-foreground/50" />
                           )}
                           <div className="flex items-center gap-2 min-w-0 truncate">
                             <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-1.5 py-0.5 rounded shrink-0">
@@ -1972,7 +1972,7 @@ export function TaskDetailSideSheet({
             <section data-slot="detail-history" className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                  <History className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <History className="size-3.5 text-muted-foreground/70" />
                   Lịch sử
                 </h3>
                 {auditEvents.length > 0 && (
@@ -2016,7 +2016,7 @@ export function TaskDetailSideSheet({
             <section data-slot="detail-derived-milestones" className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                  <TrendingUp className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <TrendingUp className="size-3.5 text-muted-foreground/70" />
                   Mốc thông tin
                 </h3>
                 <span className="text-xs font-mono text-muted-foreground tabular-nums">
@@ -2071,14 +2071,14 @@ export function TaskDetailSideSheet({
                   onClick={() => setIsRejectionModalOpen(true)}
                   className="flex-1 min-h-[44px] h-11 text-xs font-semibold border-warning/30 bg-warning/10 text-warning hover:bg-warning/15 rounded-xl inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
                 >
-                  <AlertTriangle className="size-4 text-warning" strokeWidth={1.5} />
+                  <AlertTriangle className="size-4 text-warning" />
                   <span>Yêu cầu sửa</span>
                 </Button>
                 <Button
                   onClick={isSchool ? handleExecutiveClose : handleManagerApprove}
                   className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
                 >
-                  <CheckCircle2 className="size-4" strokeWidth={1.5} />
+                  <CheckCircle2 className="size-4" />
                   <span>Phê duyệt</span>
                 </Button>
               </div>
@@ -2094,7 +2094,7 @@ export function TaskDetailSideSheet({
                 }}
                 className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
-                <FileCheck className="size-4" strokeWidth={1.5} />
+                <FileCheck className="size-4" />
                 <span>Nộp báo cáo</span>
               </Button>
             ) : task.status === "NEW" && onStatusChange && (actorIsAssignee || actorHasApprovalAuthority) ? (
@@ -2103,7 +2103,7 @@ export function TaskDetailSideSheet({
                 onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
                 className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
-                <Play className="size-4" strokeWidth={1.5} />
+                <Play className="size-4" />
                 <span>Tiếp nhận công việc</span>
               </Button>
             ) : (
@@ -2116,7 +2116,7 @@ export function TaskDetailSideSheet({
                 }}
                 className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
-                <Play className="size-4" strokeWidth={1.5} />
+                <Play className="size-4" />
                 <span>Xem thao tác xử lý</span>
               </Button>
             )}
@@ -2129,7 +2129,7 @@ export function TaskDetailSideSheet({
                 className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 rounded-xl border-border/70 hover:bg-muted inline-flex items-center justify-center shrink-0 touch-manipulation active:scale-[0.98]"
                 aria-label="Thao tác khác"
               >
-                <MoreHorizontal className="size-5 text-muted-foreground" strokeWidth={1.5} />
+                <MoreHorizontal className="size-5 text-muted-foreground" />
               </Button>
 
               {/* Overflow Dropdown */}
@@ -2151,7 +2151,7 @@ export function TaskDetailSideSheet({
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left min-h-[36px]"
                     >
-                      <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <Copy className="size-3.5 text-muted-foreground" />
                       <span>Sao chép mã NV</span>
                     </Pressable>
                     <Pressable
@@ -2165,7 +2165,7 @@ export function TaskDetailSideSheet({
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left min-h-[36px]"
                     >
-                      <Share2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <Share2 className="size-3.5 text-muted-foreground" />
                       <span>Chia sẻ liên kết</span>
                     </Pressable>
                     {onStatusChange && task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
@@ -2176,7 +2176,7 @@ export function TaskDetailSideSheet({
                         }}
                         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-danger-soft font-medium transition-colors text-left min-h-[36px]"
                       >
-                        <AlertTriangle className="size-3.5 text-destructive" strokeWidth={1.5} />
+                        <AlertTriangle className="size-3.5 text-destructive" />
                         <span>Báo bị nghẽn (BLOCKED)</span>
                       </Pressable>
                     )}
@@ -2201,7 +2201,7 @@ export function TaskDetailSideSheet({
               <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-xl space-y-4">
                 <div className="flex items-center justify-between border-b border-border/50 pb-3">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="size-4 text-warning" strokeWidth={1.5} />
+                    <AlertTriangle className="size-4 text-warning" />
                     <h3 id="rejection-dialog-title" className="text-sm font-semibold text-foreground">
                       Trả lại yêu cầu chỉnh sửa minh chứng
                     </h3>
@@ -2214,7 +2214,7 @@ export function TaskDetailSideSheet({
                     className="size-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground"
                     aria-label="Đóng hộp thoại"
                   >
-                    <X className="size-4" strokeWidth={1.5} />
+                    <X className="size-4" />
                   </Pressable>
                 </div>
 

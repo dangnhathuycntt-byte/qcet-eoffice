@@ -165,7 +165,7 @@ export function DigitalSignatureDialog({
           {/* Document Summary Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-compact">
             <div className="flex items-center gap-2 min-w-0">
-              <FileCheck2 className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+              <FileCheck2 className="size-3.5 text-primary shrink-0" />
               <span className="font-semibold text-foreground">{documentNumber}</span>
               <span className="text-muted-foreground">—</span>
               <span className="text-muted-foreground truncate max-w-[280px]">{documentTitle}</span>
@@ -175,23 +175,23 @@ export function DigitalSignatureDialog({
                 <Badge variant={isValid && !isTampered ? "emerald" : isTampered ? "destructive" : "secondary"}>
                   {isValid && !isTampered ? (
                     <>
-                      <CheckCircle2 strokeWidth={1.5} />
+                      <CheckCircle2 />
                       Chữ ký số hợp lệ
                     </>
                   ) : isTampered ? (
                     <>
-                      <XCircle strokeWidth={1.5} />
+                      <XCircle />
                       Dữ liệu đã bị sửa đổi
                     </>
                   ) : (
                     <>
-                      <Clock strokeWidth={1.5} />
+                      <Clock />
                       Chờ xác thực
                     </>
                   )}
                 </Badge>
               )}
-              <Clock className="size-3.5" strokeWidth={1.5} />
+              <Clock className="size-3.5" />
               <span>
                 {currentSignature?.signedAt
                   ? formatIctDateTime(currentSignature.signedAt)
@@ -204,15 +204,15 @@ export function DigitalSignatureDialog({
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="mt-3">
             <TabsList variant="line" className="border-b border-border/60">
               <TabsTrigger value="stamp">
-                <Stamp className="size-3.5" strokeWidth={1.5} />
+                <Stamp className="size-3.5" />
                 Dấu & chữ ký điện tử
               </TabsTrigger>
               <TabsTrigger value="certificate">
-                <Award className="size-3.5" strokeWidth={1.5} />
+                <Award className="size-3.5" />
                 Chứng thư số QCVN 102
               </TabsTrigger>
               <TabsTrigger value="integrity">
-                <Lock className="size-3.5" strokeWidth={1.5} />
+                <Lock className="size-3.5" />
                 Kiểm tra toàn vẹn
               </TabsTrigger>
             </TabsList>
@@ -227,7 +227,7 @@ export function DigitalSignatureDialog({
                   <div className="rounded-lg border border-border bg-card p-3">
                     <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
                       <span className="font-semibold text-foreground flex items-center gap-1.5">
-                        <Sparkles className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                        <Sparkles className="size-3.5 text-muted-foreground" />
                         Trực quan hóa chữ ký & Con dấu theo NĐ 30/2020/NĐ-CP
                       </span>
                       <span className="text-muted-foreground">Định dạng Vector SVG</span>
@@ -261,7 +261,7 @@ export function DigitalSignatureDialog({
                           </span>
 
                           <div className="mt-1 flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs font-mono text-foreground">
-                            <CheckCircle2 className="size-3 shrink-0" strokeWidth={1.5} />
+                            <CheckCircle2 className="size-3 shrink-0" />
                             <span>Ký số: {formatIctDateTime(currentSignature.signedAt)}</span>
                           </div>
                         </div>
@@ -283,7 +283,7 @@ export function DigitalSignatureDialog({
                 ) : (
                   <EmptyState
                     density="compact"
-                    icon={<Stamp strokeWidth={1.5} />}
+                    icon={<Stamp />}
                     title="Văn bản chưa được ký số"
                     description="Thực hiện ký số điện tử bằng chứng thư số chuyên dùng Chính phủ để ban hành văn bản chính thức."
                     className="rounded-lg border border-dashed border-border"
@@ -291,12 +291,12 @@ export function DigitalSignatureDialog({
                       <Button size="sm" onClick={handleSignDocument} disabled={isSigning}>
                         {isSigning ? (
                           <>
-                            <RefreshCw className="animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+                            <RefreshCw className="animate-spin motion-reduce:animate-none" />
                             Đang tạo chữ ký số...
                           </>
                         ) : (
                           <>
-                            <KeyRound strokeWidth={1.5} />
+                            <KeyRound />
                             Ký số & đóng dấu điện tử
                           </>
                         )}
@@ -370,7 +370,7 @@ export function DigitalSignatureDialog({
                 <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <Lock className="size-3.5 text-primary" strokeWidth={1.5} />
+                      <Lock className="size-3.5 text-primary" />
                       Mã băm toàn vẹn văn bản (SHA-256 Digest)
                     </span>
                     <Button
@@ -381,12 +381,12 @@ export function DigitalSignatureDialog({
                     >
                       {copiedHash ? (
                         <>
-                          <Check className="size-3 text-emerald-600" strokeWidth={1.5} />
+                          <Check className="size-3 text-emerald-600" />
                           Đã sao chép
                         </>
                       ) : (
                         <>
-                          <Copy className="size-3" strokeWidth={1.5} />
+                          <Copy className="size-3" />
                           Sao chép
                         </>
                       )}
@@ -434,7 +434,7 @@ export function DigitalSignatureDialog({
           {/* Footer Actions */}
           <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Info className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <Info className="size-3.5 text-muted-foreground" />
               <span>Ký số ICT (UTC+7)</span>
             </div>
 
@@ -447,7 +447,7 @@ export function DigitalSignatureDialog({
                   disabled={isVerifying}
                   className="gap-1.5"
                 >
-                  <RefreshCw className={cn("size-3.5", isVerifying && "animate-spin motion-reduce:animate-none")} strokeWidth={1.5} />
+                  <RefreshCw className={cn("size-3.5", isVerifying && "animate-spin motion-reduce:animate-none")} />
                   Xác minh lại
                 </Button>
               )}
@@ -460,7 +460,7 @@ export function DigitalSignatureDialog({
                   disabled={isSigning}
                   className="gap-1.5"
                 >
-                  <KeyRound className="size-3.5" strokeWidth={1.5} />
+                  <KeyRound className="size-3.5" />
                   Ký số ngay
                 </Button>
               )}
@@ -489,12 +489,12 @@ function CheckItem({ label, passed }: { label: string; passed: boolean }) {
       <span className="text-muted-foreground">{label}</span>
       {passed ? (
         <span className="flex items-center gap-1 text-emerald-600 font-medium text-xs">
-          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+          <CheckCircle2 className="size-3.5" />
           Đạt
         </span>
       ) : (
         <span className="flex items-center gap-1 text-destructive font-medium text-xs">
-          <XCircle className="size-3.5" strokeWidth={1.5} />
+          <XCircle className="size-3.5" />
           Không đạt
         </span>
       )}

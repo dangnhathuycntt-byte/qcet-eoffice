@@ -59,9 +59,9 @@ export function PWAUpdateDialog({
             )}
           >
             {hasUnsavedChanges ? (
-              <AlertTriangle className="size-5" strokeWidth={1.5} />
+              <AlertTriangle className="size-5" />
             ) : (
-              <Sparkles className="size-5" strokeWidth={1.5} />
+              <Sparkles className="size-5" />
             )}
           </div>
 
@@ -77,7 +77,7 @@ export function PWAUpdateDialog({
                 className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 aria-label="Đóng thông báo cập nhật"
               >
-                <X className="size-4" strokeWidth={1.5} />
+                <X className="size-4" />
               </Pressable>
             </div>
 
@@ -107,12 +107,12 @@ export function PWAUpdateDialog({
                   >
                     {isUpdating ? (
                       <>
-                        <RefreshCw className="size-3.5 animate-spin" strokeWidth={1.5} />
+                        <RefreshCw className="size-3.5 animate-spin" />
                         <span>Đang cập nhật...</span>
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="size-3.5" strokeWidth={1.5} />
+                        <RefreshCw className="size-3.5" />
                         <span>Kiểm tra & Cập nhật</span>
                       </>
                     )}
@@ -129,12 +129,12 @@ export function PWAUpdateDialog({
                   >
                     {isUpdating ? (
                       <>
-                        <RefreshCw className="size-3.5 animate-spin" strokeWidth={1.5} />
+                        <RefreshCw className="size-3.5 animate-spin" />
                         <span>Đang cập nhật...</span>
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="size-3.5" strokeWidth={1.5} />
+                        <RefreshCw className="size-3.5" />
                         <span>Cập nhật ngay</span>
                       </>
                     )}

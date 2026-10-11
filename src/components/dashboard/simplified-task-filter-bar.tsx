@@ -212,7 +212,6 @@ export function SimplifiedTaskFilterBar({
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
-            strokeWidth={1.5}
           />
           <input
             type="text"
@@ -227,7 +226,7 @@ export function SimplifiedTaskFilterBar({
               aria-label="Xóa tìm kiếm"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground rounded-md transition-colors"
             >
-              <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <X className="w-3.5 h-3.5" />
             </Pressable>
           )}
         </div>
@@ -281,7 +280,7 @@ export function SimplifiedTaskFilterBar({
                 : "bg-background border-input text-foreground hover:bg-muted/50 active:bg-muted"
             )}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>Bộ lọc nâng cao</span>
             {activeFilterCount > 0 && (
               <span
@@ -296,7 +295,6 @@ export function SimplifiedTaskFilterBar({
                 "w-3.5 h-3.5 text-muted-foreground transition-transform duration-200",
                 isOpen && "rotate-180 text-primary"
               )}
-              strokeWidth={1.5}
             />
           </Pressable>
 
@@ -326,7 +324,7 @@ export function SimplifiedTaskFilterBar({
                 className="p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
                 aria-label="Đóng bộ lọc"
               >
-                <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <X className="w-3.5 h-3.5" />
               </Pressable>
             </div>
 
@@ -335,7 +333,7 @@ export function SimplifiedTaskFilterBar({
               {/* Department */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Đơn vị chủ trì</span>
                 </label>
                 <select
@@ -354,7 +352,7 @@ export function SimplifiedTaskFilterBar({
               {/* Academic Month */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Tháng học trong năm</span>
                 </label>
                 <select
@@ -378,7 +376,7 @@ export function SimplifiedTaskFilterBar({
               {/* Priority */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Mức độ ưu tiên</span>
                 </label>
                 <select
@@ -402,7 +400,7 @@ export function SimplifiedTaskFilterBar({
                 onClick={handleReset}
                 className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground active:text-foreground/70 transition-colors rounded-md px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <RotateCcw className="w-3.5 h-3.5" />
                 <span>Đặt lại bộ lọc</span>
               </button>
 

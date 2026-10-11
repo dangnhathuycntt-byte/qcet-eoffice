@@ -1234,7 +1234,7 @@ export function ModularCascadingTaskTable({
         groups.push({
           key: `dept-${d}`,
           label: d,
-          icon: <Building2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />,
+          icon: <Building2 className="size-3.5 text-muted-foreground" />,
           tasks: tasksForDept,
         });
       }
@@ -1278,7 +1278,7 @@ export function ModularCascadingTaskTable({
               onClick={onRefresh}
               className="h-7 px-2 text-xs text-primary hover:bg-primary/10 transition-colors"
             >
-              <RotateCcw className="size-3.5 mr-1" strokeWidth={1.5} />
+              <RotateCcw className="size-3.5 mr-1" />
               Làm mới
             </Button>
           )}
@@ -1304,7 +1304,6 @@ export function ModularCascadingTaskTable({
                     "size-3.5 text-warning transition-transform duration-200",
                     !isBacklogExpanded && "-rotate-90"
                   )}
-                  strokeWidth={1.5}
                 />
                 <span className="font-semibold text-warning tracking-wide">
                   TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
@@ -1548,7 +1547,6 @@ export function ModularCascadingTaskTable({
                                   >
                                     <ChevronDown
                                       className={cn("size-3.5 transition-transform duration-200", isCollapsed && "-rotate-90")}
-                                      strokeWidth={1.5}
                                     />
                                   </Pressable>
                                   <div className="shrink-0 flex items-center">
@@ -1571,7 +1569,7 @@ export function ModularCascadingTaskTable({
                                     title={`Thêm nhiệm vụ vào ${group.label}`}
                                     aria-label={`Thêm nhiệm vụ vào ${group.label}`}
                                   >
-                                    <Plus className="size-3" strokeWidth={1.5} />
+                                    <Plus className="size-3" />
                                   </Pressable>
                                 )}
                               </div>
@@ -1670,7 +1668,6 @@ export function ModularCascadingTaskTable({
                       <div className="flex items-center gap-2">
                         <ChevronDown
                           className={cn("size-3.5 transition-transform duration-200", isCollapsed && "-rotate-90")}
-                          strokeWidth={1.5}
                         />
                         <div className="shrink-0 flex items-center">{group.icon}</div>
                         <span>{group.label}</span>

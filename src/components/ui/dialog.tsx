@@ -81,7 +81,7 @@ export function StandardDialog({
                     <BaseDialog.Close
                       render={<Button variant="ghost" size="icon-sm" aria-label="Đóng" />}
                     >
-                      <X className="size-4" strokeWidth={1.5} />
+                      <X className="size-4" />
                     </BaseDialog.Close>
                   ) : (
                     <BaseDialog.Close

@@ -1495,7 +1495,7 @@ function FloatingToolbar({ editor }: { editor: any }) {
         }}
         className="size-7 flex items-center justify-center rounded-md text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
       >
-        <Link className="size-3.5" strokeWidth={1.5} />
+        <Link className="size-3.5" />
       </Pressable>
     </div>,
     document.body,
@@ -1589,7 +1589,7 @@ function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; ele
         className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
       >
         <span className="flex items-center gap-2"><ArrowRight className="size-3.5 text-muted-foreground" /> Chuyển thành</span>
-        <ChevronRight className="size-3 text-muted-foreground" strokeWidth={1.5} />
+        <ChevronRight className="size-3 text-muted-foreground" />
       </Pressable>
       {showTurnInto && (
         <div className="ml-1 mt-0.5 space-y-0.5 border-l border-border/40 pl-1">
@@ -2121,9 +2121,6 @@ export function TaskBlockEditor({
   // Luôn gọi bản onSaveContent mới nhất (version/đóng gói state đổi theo mỗi lần render)
   const onSaveRef = React.useRef(onSaveContent);
   onSaveRef.current = onSaveContent;
-
-  // URL Paste Chooser
-  const [urlPastePopover, setUrlPastePopover] = React.useState<{ url: string; blockPath: number[] } | null>(null);
 
   // Upload a file to /api/upload, return server URL
   const uploadFileToServer = React.useCallback(async (file: File): Promise<{fileUrl: string; fileName: string} | null> => {

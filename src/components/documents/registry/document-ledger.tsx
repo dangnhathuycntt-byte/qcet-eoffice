@@ -346,7 +346,7 @@ export function DocumentLedgerToolbar({
           ariaLabel="Tùy chọn hiển thị và thuộc tính bảng"
           title="Hiển thị"
           width="w-64"
-          trigger={<SlidersHorizontal className="size-3.5" strokeWidth={1.5} />}
+          trigger={<SlidersHorizontal className="size-3.5" />}
         >
           <div className="flex flex-col gap-2 p-2">
             <p className="text-xs font-medium text-muted-foreground">Thuộc tính hiển thị</p>
@@ -379,7 +379,7 @@ export function DocumentLedgerToolbar({
         title={primaryActionLabel}
         className={listToolbarPrimaryButtonClass}
       >
-        <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+        <Plus className="size-3.5 shrink-0 text-muted-foreground" />
         <span>{primaryActionLabel}</span>
       </Pressable>
     </div>
@@ -467,7 +467,7 @@ function RowSelector({ checked, label, onToggle, always }: { checked: boolean; l
     >
       {checked ? (
         <span className="flex size-4 items-center justify-center rounded-[4px] bg-primary text-primary-foreground">
-          <Check className="size-3" strokeWidth={1.5} />
+          <Check className="size-3" />
         </span>
       ) : (
         <span
@@ -549,7 +549,7 @@ function IssuedDateCell({ doc, filterYear }: { doc: OfficialDocument; filterYear
   if (!doc.issuedDate) return <EmptyCell label="Chưa có ngày ban hành" />;
   return (
     <span className="inline-flex min-w-0 items-center gap-1 tabular-nums text-xs text-muted-foreground" title={`Ban hành ${formatLedgerDate(doc.issuedDate)}`}>
-      <CalendarPlus className="size-3.5 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
+      <CalendarPlus className="size-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
       <span className="truncate">{formatLedgerCellDate(doc.issuedDate, filterYear)}</span>
     </span>
   );
@@ -785,7 +785,7 @@ export function DocumentLedgerTable({
         <EmptyState
           role="status"
           density="compact"
-          icon={isFiltered ? <SearchX strokeWidth={1.5} /> : <Inbox strokeWidth={1.5} />}
+          icon={isFiltered ? <SearchX /> : <Inbox />}
           illustration={copy.illustration}
           title={copy.title}
           description={copy.description}

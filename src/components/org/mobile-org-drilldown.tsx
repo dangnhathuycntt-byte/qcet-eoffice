@@ -247,7 +247,7 @@ export function MobileOrgDrillDown({
       {/* Search Input Bar */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground">
-          <Search size={16} strokeWidth={1.5} />
+          <Search size={16} />
         </div>
         <input
           type="text"
@@ -262,7 +262,7 @@ export function MobileOrgDrillDown({
             className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground touch-manipulation"
             aria-label="Xóa tìm kiếm"
           >
-            <X size={15} strokeWidth={1.5} />
+            <X size={15} />
           </Pressable>
         )}
       </div>
@@ -313,7 +313,7 @@ export function MobileOrgDrillDown({
                 className="inline-flex items-center gap-2 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all touch-manipulation shadow-2xs"
                 data-testid="mobile-org-back-button"
               >
-                <ArrowLeft size={16} strokeWidth={1.5} className="text-foreground/80 shrink-0" />
+                <ArrowLeft size={16} className="text-foreground/80 shrink-0" />
                 <span>
                   Quay lại{" "}
                   <span className="font-semibold">
@@ -361,7 +361,7 @@ export function MobileOrgDrillDown({
                         </div>
                       </div>
                       <div className="size-7 rounded-lg bg-muted/60 flex items-center justify-center text-muted-foreground shrink-0 group-hover:text-foreground">
-                        <ChevronRight size={16} strokeWidth={1.5} />
+                        <ChevronRight size={16} />
                       </div>
                     </Pressable>
                   );
@@ -409,7 +409,7 @@ export function MobileOrgDrillDown({
                       </div>
                     </div>
                     <div className="size-7 rounded-lg bg-muted/60 flex items-center justify-center text-muted-foreground shrink-0 group-hover:text-foreground">
-                      <ChevronRight size={16} strokeWidth={1.5} />
+                      <ChevronRight size={16} />
                     </div>
                   </Pressable>
                 ))}
@@ -445,7 +445,7 @@ export function MobileOrgDrillDown({
                 {/* Contact strip with min-h-[44px] tap targets */}
                 <div className="pt-2 border-t border-border/60 flex flex-col gap-1.5">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin size={14} strokeWidth={1.5} className="shrink-0 text-primary" />
+                    <MapPin size={14} className="shrink-0 text-primary" />
                     <span>{selectedDept.location}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -453,14 +453,14 @@ export function MobileOrgDrillDown({
                       href={`tel:${selectedDept.phone.replace(/\s+/g, "")}`}
                       className="inline-flex items-center gap-1.5 min-h-[44px] px-2.5 py-1 rounded-lg bg-muted/50 hover:bg-muted text-xs font-mono tabular-nums text-foreground touch-manipulation cursor-pointer border border-border/60"
                     >
-                      <Phone size={13} strokeWidth={1.5} className="text-emerald-700" />
+                      <Phone size={13} className="text-emerald-700" />
                       <span>{selectedDept.phone}</span>
                     </a>
                     <a
                       href={`mailto:${selectedDept.email}`}
                       className="inline-flex items-center gap-1.5 min-h-[44px] px-2.5 py-1 rounded-lg bg-muted/50 hover:bg-muted text-xs text-foreground touch-manipulation cursor-pointer border border-border/60"
                     >
-                      <Mail size={13} strokeWidth={1.5} className="text-blue-700" />
+                      <Mail size={13} className="text-blue-700" />
                       <span>{selectedDept.email}</span>
                     </a>
                   </div>
@@ -529,7 +529,7 @@ export function MobileOrgDrillDown({
                 className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation"
                 aria-label="Đóng"
               >
-                <X size={18} strokeWidth={1.5} />
+                <X size={18} />
               </Pressable>
             </div>
 
@@ -551,7 +551,7 @@ export function MobileOrgDrillDown({
             {/* Room if present */}
             {activeStaffModal.room && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <MapPin size={14} strokeWidth={1.5} className="text-primary" />
+                <MapPin size={14} className="text-primary" />
                 <span>Phòng làm việc: {activeStaffModal.room}</span>
               </div>
             )}
@@ -563,7 +563,7 @@ export function MobileOrgDrillDown({
                   href={`tel:${activeStaffModal.phone.replace(/\s+/g, "")}`}
                   className="flex items-center justify-center gap-2 min-h-[48px] px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all touch-manipulation cursor-pointer font-mono tabular-nums shadow-xs"
                 >
-                  <Phone size={14} strokeWidth={1.5} />
+                  <Phone size={14} />
                   <span>{activeStaffModal.phone}</span>
                 </a>
               )}
@@ -571,7 +571,7 @@ export function MobileOrgDrillDown({
                 href={`mailto:${activeStaffModal.email}`}
                 className="flex items-center justify-center gap-2 min-h-[48px] px-3 rounded-xl border border-border/80 bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold active:scale-[0.98] transition-all touch-manipulation cursor-pointer shadow-xs"
               >
-                <Mail size={14} strokeWidth={1.5} />
+                <Mail size={14} />
                 <span>Gửi Email</span>
               </a>
             </div>
@@ -672,7 +672,7 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
             className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg bg-muted/50 hover:bg-muted text-xs font-mono tabular-nums text-foreground touch-manipulation cursor-pointer border border-border/60"
             data-testid={`phone-btn-${staff.id}`}
           >
-            <Phone size={13} strokeWidth={1.5} className="text-emerald-700" />
+            <Phone size={13} className="text-emerald-700" />
             <span>{staff.phone}</span>
           </a>
         )}
@@ -681,7 +681,7 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
           className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg bg-muted/50 hover:bg-muted text-xs text-foreground touch-manipulation cursor-pointer border border-border/60 truncate"
           data-testid={`email-btn-${staff.id}`}
         >
-          <Mail size={13} strokeWidth={1.5} className="text-blue-700 shrink-0" />
+          <Mail size={13} className="text-blue-700 shrink-0" />
           <span className="truncate">{staff.email}</span>
         </a>
       </div>

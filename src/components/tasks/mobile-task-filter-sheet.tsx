@@ -91,7 +91,7 @@ export function MobileTaskFilterSheet({
               className="min-h-[44px] min-w-[44px] size-11 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-[0.98] touch-manipulation"
               aria-label="Đóng bộ lọc"
             >
-              <X className="h-5 w-5" strokeWidth={1.5} />
+              <X className="h-5 w-5" />
             </Pressable>
           </BottomSheetClose>
         </BottomSheetHeader>
@@ -114,7 +114,7 @@ export function MobileTaskFilterSheet({
               >
                 <span>Tất cả trạng thái</span>
                 {statusFilter === "ALL" && (
-                  <Check className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                  <Check className="h-4 w-4 shrink-0" />
                 )}
               </Pressable>
               {CORE_STATUS_OPTIONS.map((status) => (
@@ -130,7 +130,7 @@ export function MobileTaskFilterSheet({
                 >
                   <span className="truncate">{status.label}</span>
                   {statusFilter === status.value && (
-                    <Check className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                    <Check className="h-4 w-4 shrink-0" />
                   )}
                 </Pressable>
               ))}
@@ -158,7 +158,7 @@ export function MobileTaskFilterSheet({
                   >
                     <span>{month.label}</span>
                     {isSelected && (
-                      <Check className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                      <Check className="h-4 w-4 shrink-0" />
                     )}
                   </Pressable>
                 );
@@ -183,7 +183,7 @@ export function MobileTaskFilterSheet({
               >
                 <span>Tất cả đơn vị</span>
                 {departmentFilter === "ALL" && (
-                  <Check className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.5} />
+                  <Check className="h-4 w-4 shrink-0 text-primary" />
                 )}
               </Pressable>
               {availableDepartments.map((dept) => {
@@ -201,7 +201,7 @@ export function MobileTaskFilterSheet({
                   >
                     <span className="truncate">{dept.name}</span>
                     {isSelected && (
-                      <Check className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.5} />
+                      <Check className="h-4 w-4 shrink-0 text-primary" />
                     )}
                   </Pressable>
                 );
@@ -216,7 +216,7 @@ export function MobileTaskFilterSheet({
             onClick={onReset}
             className="flex-1 min-h-[44px] gap-1.5 active:scale-[0.98] touch-manipulation"
           >
-            <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
+            <RotateCcw className="h-4 w-4" />
             Thiết lập lại
           </Button>
           <BottomSheetClose asChild>

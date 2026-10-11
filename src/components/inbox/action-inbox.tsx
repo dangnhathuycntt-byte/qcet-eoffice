@@ -78,7 +78,7 @@ export function ActionInbox({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <Inbox size={20} strokeWidth={1.5} className="shrink-0" />
+                <Inbox size={20} className="shrink-0" />
               </div>
               <h2 className="text-lg font-bold text-foreground">Hộp công việc cần xử lý</h2>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground">
@@ -92,7 +92,7 @@ export function ActionInbox({
 
           {urgentCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-warning/10 border border-warning/30 text-warning text-xs font-medium">
-              <AlertCircle size={16} strokeWidth={1.5} className="text-warning shrink-0" />
+              <AlertCircle size={16} className="text-warning shrink-0" />
               <span>{urgentCount} việc ưu tiên cao cần xử lý</span>
             </div>
           )}
@@ -151,7 +151,7 @@ export function ActionInbox({
           </div>
 
           <div className="ml-auto relative w-full sm:w-60">
-            <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
+            <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Tìm theo tiêu đề hoặc thẩm quyền..."
@@ -175,7 +175,7 @@ export function ActionInbox({
         ) : filteredItems.length === 0 ? (
           <div className="p-8 text-center space-y-2">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
-              <CheckCircle2 size={24} strokeWidth={1.5} />
+              <CheckCircle2 size={24} />
             </div>
             <p className="text-sm font-semibold text-foreground">Không có công việc nào tồn đọng</p>
             <p className="text-xs text-muted-foreground">
@@ -208,11 +208,11 @@ function ActionInboxRow({
   const renderIcon = () => {
     switch (item.resourceType) {
       case "TASK":
-        return <CheckSquare size={15} strokeWidth={1.5} className="text-muted-foreground" />;
+        return <CheckSquare size={15} className="text-muted-foreground" />;
       case "DOCUMENT":
-        return <FileText size={15} strokeWidth={1.5} className="text-muted-foreground" />;
+        return <FileText size={15} className="text-muted-foreground" />;
       case "REPORT":
-        return <FileCheck size={15} strokeWidth={1.5} className="text-muted-foreground" />;
+        return <FileCheck size={15} className="text-muted-foreground" />;
     }
   };
 
@@ -249,7 +249,7 @@ function ActionInboxRow({
 
             {formattedDeadline && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground ml-auto sm:ml-0 font-mono tabular-nums">
-                <Clock size={12} strokeWidth={1.5} />
+                <Clock size={12} />
                 <span>Hạn: {formattedDeadline}</span>
               </span>
             )}
@@ -272,7 +272,7 @@ function ActionInboxRow({
           className="h-7 px-3 inline-flex items-center justify-center gap-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-[0.98] shrink-0"
         >
           <span>Xử lý ngay</span>
-          <ArrowUpRight size={13} strokeWidth={1.5} />
+          <ArrowUpRight size={13} />
         </Link>
       </div>
     </div>

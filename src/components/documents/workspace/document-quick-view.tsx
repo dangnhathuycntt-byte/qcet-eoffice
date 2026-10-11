@@ -46,30 +46,30 @@ function MoreActionsMenu({
     <MenuRoot open={open} onOpenChange={setOpen} modal={false}>
       <MenuTrigger asChild>
         <Button variant="ghost" size="icon-sm" aria-label="Thao tác khác" title="Thao tác khác" className="text-muted-foreground hover:text-foreground data-[popup-open]:bg-muted">
-          <Ellipsis className="size-4" strokeWidth={1.5} />
+          <Ellipsis className="size-4" />
         </Button>
       </MenuTrigger>
       <MenuContent align="end" positionerClassName="z-[60]" className="z-[60] w-56 min-w-0">
         {onEdit ? (
           <MenuItem className={MENU_ITEM} onClick={onEdit}>
-            <Pencil strokeWidth={1.5} />
+            <Pencil />
             Sửa thông tin
           </MenuItem>
         ) : null}
         {onAddFiles ? (
           <MenuItem className={MENU_ITEM} onClick={onAddFiles}>
-            <Paperclip strokeWidth={1.5} />
+            <Paperclip />
             Thêm tệp
           </MenuItem>
         ) : null}
         {onEdit || onAddFiles ? <MenuSeparator className="my-1 h-px bg-border/60" /> : null}
         <MenuItem className={MENU_ITEM} onClick={onPrint}>
-          <Printer strokeWidth={1.5} />
+          <Printer />
           In phiếu văn bản
         </MenuItem>
         {onViewSignature ? (
           <MenuItem className={MENU_ITEM} onClick={onViewSignature}>
-            <Stamp strokeWidth={1.5} />
+            <Stamp />
             Xem chữ ký số
           </MenuItem>
         ) : null}
@@ -190,7 +190,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
         {vm ? (
           <Button asChild variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground">
             <Link href={getFullPageHref(vm.kind, vm.id, activeFileId || null)} aria-label="Mở trang đầy đủ" title="Mở trang đầy đủ">
-              <ArrowUpRight className="size-4" strokeWidth={1.5} />
+              <ArrowUpRight className="size-4" />
             </Link>
           </Button>
         ) : null}
@@ -201,7 +201,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
           onAddFiles={canEdit && !upload.busy ? upload.open : undefined}
         />
         <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Đóng" title="Đóng" className="text-muted-foreground hover:text-foreground">
-          <X className="size-4" strokeWidth={1.5} />
+          <X className="size-4" />
         </Button>
       </div>
     </header>
@@ -242,7 +242,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
         )}
         {upload.busy ? (
           <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} aria-hidden />
+            <Loader2 className="size-3.5 animate-spin" aria-hidden />
             Đang tải tệp lên…
           </p>
         ) : upload.error ? (

@@ -154,7 +154,6 @@ export function PeriodSelector({
         <span className="flex items-center gap-2 truncate">
           <Calendar
             className="size-4 text-blue-600 shrink-0"
-            strokeWidth={1.5}
             aria-hidden="true"
           />
           <span className="font-semibold truncate">{selectedLabel}</span>

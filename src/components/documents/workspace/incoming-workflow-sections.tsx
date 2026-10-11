@@ -107,7 +107,7 @@ export function IncomingWorkflowActions({
             disabled={pending !== null}
             onClick={() => void run(action)}
           >
-            {pending === action.key ? <Loader2 className="size-3 animate-spin" strokeWidth={1.5} /> : null}
+            {pending === action.key ? <Loader2 className="size-3 animate-spin" /> : null}
             {action.label}
           </Button>
         ))}

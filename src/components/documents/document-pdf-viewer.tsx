@@ -160,7 +160,7 @@ export function DocumentPdfViewer({
     return (
       <EmptyState
         density="compact"
-        icon={<FileQuestion strokeWidth={1.5} />}
+        icon={<FileQuestion />}
         title={!fileUrl ? "Chưa có bản scan PDF" : "Đường dẫn tệp không an toàn hoặc không hợp lệ"}
         description={
           !fileUrl
@@ -204,7 +204,7 @@ export function DocumentPdfViewer({
         <p className="text-xs text-muted-foreground">Tải về để mở bằng ứng dụng trên máy.</p>
         <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
           <Button variant="outline" size="sm" onClick={handleDefaultDownload}>
-            <Download strokeWidth={1.5} />
+            <Download />
             Tải về
           </Button>
           {unsupportedAction}

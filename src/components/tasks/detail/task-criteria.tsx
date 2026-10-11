@@ -142,7 +142,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
             aria-label={`Bỏ tiêu chí ${i + 1}`}
             onClick={() => setDrafts((prev) => prev.filter((_, j) => j !== i))}
           >
-            <X strokeWidth={1.5} />
+            <X />
           </Button>
         </div>
       ))}
@@ -156,7 +156,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
             requestAnimationFrame(() => addRef.current?.focus());
           }}
         >
-          <Plus strokeWidth={1.5} />
+          <Plus />
           Thêm tiêu chí
         </Button>
         <span className="text-xs text-muted-foreground">

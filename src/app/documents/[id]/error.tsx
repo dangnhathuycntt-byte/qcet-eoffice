@@ -27,7 +27,7 @@ export default function DocumentDetailError({
       >
         <Button variant="secondary" size="sm" asChild>
           <Link href="/documents">
-            <ArrowLeft strokeWidth={1.5} />
+            <ArrowLeft />
             Về danh sách văn bản
           </Link>
         </Button>

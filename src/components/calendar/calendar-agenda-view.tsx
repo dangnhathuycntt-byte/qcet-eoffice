@@ -162,7 +162,7 @@ function TaskRow({
 
       {/* Task type badge */}
       <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium border border-border/50 bg-muted/20 text-foreground shrink-0" aria-hidden="true">
-        <CheckSquare className="size-3 text-primary" strokeWidth={1.5} />
+        <CheckSquare className="size-3 text-primary" />
         <span className="hidden sm:inline">{item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}</span>
       </span>
 
@@ -187,7 +187,7 @@ function TaskRow({
       <div className="flex items-center gap-3 shrink-0">
         {item.assigneeName && (
           <span className="text-xs text-muted-foreground hidden md:inline-flex items-center gap-1 max-w-[120px] truncate">
-            <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+            <User className="size-3 shrink-0" aria-hidden="true" />
             <span className="truncate">{item.assigneeName}</span>
           </span>
         )}
@@ -228,13 +228,13 @@ function EventRow({
         className="inline-flex items-center gap-1 text-xs font-mono tabular-nums font-semibold text-sky-700 shrink-0 min-w-[48px]"
         aria-label={item.time ? `lúc ${item.time}` : "Cả ngày"}
       >
-        <Clock3 className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+        <Clock3 className="size-3 shrink-0" aria-hidden="true" />
         {item.time ?? "Cả ngày"}
       </span>
 
       {/* Event type tag */}
       <span className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 text-sky-700 px-1.5 py-0.5 text-xs font-semibold shrink-0" aria-hidden="true">
-        <CalendarIcon className="size-3" strokeWidth={1.5} />
+        <CalendarIcon className="size-3" />
         <span className="hidden sm:inline">Sự kiện</span>
       </span>
 
@@ -245,7 +245,7 @@ function EventRow({
         </h4>
         {item.location && (
           <p className="text-xs text-muted-foreground truncate" aria-hidden="true">
-            <MapPin className="size-3 inline mr-0.5" strokeWidth={1.5} />
+            <MapPin className="size-3 inline mr-0.5" />
             {item.location}
           </p>
         )}
@@ -254,7 +254,7 @@ function EventRow({
       {/* Host — trailing */}
       {(item.host || item.assigneeName) && (
         <span className="text-xs text-muted-foreground hidden md:inline-flex items-center gap-1 max-w-[120px] truncate">
-          <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+          <User className="size-3 shrink-0" aria-hidden="true" />
           <span className="truncate">{item.host ?? item.assigneeName}</span>
         </span>
       )}
@@ -466,7 +466,7 @@ export function CalendarAgendaView({
           aria-live="polite"
           aria-atomic="true"
         >
-          <CalendarIcon className="size-10 text-muted-foreground/40" strokeWidth={1.5} aria-hidden="true" />
+          <CalendarIcon className="size-10 text-muted-foreground/40" aria-hidden="true" />
           <div className="space-y-1 max-w-sm">
             <h3 className="text-sm font-bold text-foreground">
               {isFilterActive ? "Không tìm thấy kết quả phù hợp" : "Không có lịch công tác hoặc sự kiện"}
@@ -548,7 +548,7 @@ export function CalendarAgendaView({
                         className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label={`Thêm việc ngày ${dayHeaderVi}`}
                       >
-                        <Plus className="size-3" strokeWidth={1.5} />
+                        <Plus className="size-3" />
                         <span className="hidden sm:inline">Việc</span>
                       </button>
                     )}
@@ -559,7 +559,7 @@ export function CalendarAgendaView({
                         className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label={`Thêm sự kiện ngày ${dayHeaderVi}`}
                       >
-                        <Plus className="size-3" strokeWidth={1.5} />
+                        <Plus className="size-3" />
                         <span className="hidden sm:inline">Sự kiện</span>
                       </button>
                     )}
@@ -627,7 +627,6 @@ export function CalendarAgendaView({
                           "size-3 shrink-0 transition-transform duration-150",
                           isCompletedExpanded && "rotate-180"
                         )}
-                        strokeWidth={1.5}
                         aria-hidden="true"
                       />
                       <span className="font-mono tabular-nums">

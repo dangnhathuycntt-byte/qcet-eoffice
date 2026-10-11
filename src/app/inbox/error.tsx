@@ -20,7 +20,7 @@ export default function InboxError({
     <div className="max-w-[1440px] w-full mx-auto py-16 px-4" role="alert">
       <div className="rounded-xl border border-destructive/20 bg-card p-6 text-center max-w-md mx-auto space-y-4 shadow-sm">
         <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
-          <AlertCircle className="size-6" strokeWidth={1.5} />
+          <AlertCircle className="size-6" />
         </div>
         <div>
           <h2 className="text-base font-semibold text-foreground font-heading">
@@ -43,7 +43,7 @@ export default function InboxError({
             onClick={reset}
             className="gap-1.5 text-xs font-medium"
           >
-            <RefreshCw className="size-3.5" strokeWidth={1.5} />
+            <RefreshCw className="size-3.5" />
             <span>Thử lại</span>
           </Button>
           <Button
@@ -53,7 +53,7 @@ export default function InboxError({
             className="gap-1.5 text-xs font-medium"
           >
             <Link href="/dashboard">
-              <ArrowLeft className="size-3.5" strokeWidth={1.5} />
+              <ArrowLeft className="size-3.5" />
               <span>Bàn làm việc</span>
             </Link>
           </Button>

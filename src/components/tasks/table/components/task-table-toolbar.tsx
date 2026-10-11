@@ -280,7 +280,7 @@ export function TaskTableViewOptionsPopover({
       scrollable={false}
       trigger={
         <>
-          <SlidersHorizontal className="size-3.5 sm:size-4" strokeWidth={1.5} />
+          <SlidersHorizontal className="size-3.5 sm:size-4" />
           <span className="sr-only">Hiển thị</span>
           {isCustomized && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />}
         </>
@@ -302,7 +302,7 @@ export function TaskTableViewOptionsPopover({
                           : "bg-card text-muted-foreground border border-border/70 hover:text-foreground hover:bg-muted/50"
                       )}
                     >
-                      <List className="size-3.5" strokeWidth={1.5} />
+                      <List className="size-3.5" />
                       <span>Danh sách</span>
                     </Pressable>
                     <Pressable
@@ -314,7 +314,7 @@ export function TaskTableViewOptionsPopover({
                           : "bg-card text-muted-foreground border border-border/70 hover:text-foreground hover:bg-muted/50"
                       )}
                     >
-                      <Kanban className="size-3.5" strokeWidth={1.5} />
+                      <Kanban className="size-3.5" />
                       <span>Bảng Kanban</span>
                     </Pressable>
                   </div>
@@ -384,7 +384,7 @@ export function TaskTableViewOptionsPopover({
                           title={sortDirection === "asc" ? "Đang tăng dần (Bấm để đổi)" : "Đang giảm dần (Bấm để đổi)"}
                           aria-label="Đổi chiều sắp xếp"
                         >
-                          <ArrowUpDown className="size-3.5" strokeWidth={1.5} />
+                          <ArrowUpDown className="size-3.5" />
                         </Pressable>
                       )}
                       <CustomSelectMenu
@@ -466,7 +466,7 @@ function CustomSelectMenu<T extends string>({
         className="h-7 px-2.5 rounded-lg border border-border/70 bg-card text-xs font-medium text-foreground hover:bg-muted/70 transition-colors inline-flex items-center justify-between gap-1.5 cursor-pointer shadow-2xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-[105px]"
       >
         <span className="truncate">{selected.label}</span>
-        <ChevronDown className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+        <ChevronDown className="size-3 text-muted-foreground/70 shrink-0" />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner side="bottom" align="end" sideOffset={4} className="z-50">
@@ -688,12 +688,10 @@ export function TaskTableToolbar({
           {loading ? (
             <Loader2
               className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary animate-spin pointer-events-none"
-              strokeWidth={1.5}
             />
           ) : (
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-              strokeWidth={1.5}
             />
           )}
           <input
@@ -711,7 +709,7 @@ export function TaskTableToolbar({
               aria-label="Xóa từ khóa tìm kiếm"
               className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
             >
-              <X className="size-4" strokeWidth={1.5} />
+              <X className="size-4" />
             </Pressable>
           )}
         </div>
@@ -811,7 +809,7 @@ export function TaskTableToolbar({
               )}
               aria-label={`Mở bộ lọc nâng cao, hiện có ${activeAdvancedFilterCount} bộ lọc đang chọn`}
             >
-              <Filter className="size-4 text-muted-foreground" strokeWidth={1.5} />
+              <Filter className="size-4 text-muted-foreground" />
               <span>Bộ lọc</span>
               {activeAdvancedFilterCount > 0 && (
                 <span className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground font-mono text-xs font-bold">
@@ -854,7 +852,7 @@ export function TaskTableToolbar({
                 className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation active:scale-[0.98] shadow-2xs hover:bg-muted"
                 aria-label="Sắp xếp danh sách công việc"
               >
-                <ArrowUpDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                <ArrowUpDown className="size-4 text-muted-foreground" />
                 <span>
                   {sortField === "dueDate"
                     ? "Hạn"
@@ -877,7 +875,7 @@ export function TaskTableToolbar({
                 className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-colors hover:bg-muted touch-manipulation"
                 aria-label="Tạo việc mới"
               >
-                <Plus className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                <Plus className="size-4 text-muted-foreground" />
                 <span>Tạo việc</span>
               </Pressable>
             )}
@@ -907,7 +905,7 @@ export function TaskTableToolbar({
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="size-4.5 text-primary" strokeWidth={1.5} />
+                  <SlidersHorizontal className="size-4.5 text-primary" />
                   <h3 className="text-base font-semibold text-foreground">Bộ lọc công việc</h3>
                 </div>
                 <Pressable
@@ -915,7 +913,7 @@ export function TaskTableToolbar({
                   className="inline-flex size-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label="Đóng bảng bộ lọc"
                 >
-                  <X className="size-5" strokeWidth={1.5} />
+                  <X className="size-5" />
                 </Pressable>
               </div>
 
@@ -1060,13 +1058,11 @@ export function TaskTableToolbar({
             {loading ? (
               <Loader2
                 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary animate-spin pointer-events-none"
-                strokeWidth={1.5}
                 aria-label="Đang tải dữ liệu"
               />
             ) : (
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
               />
             )}
             <input
@@ -1096,7 +1092,7 @@ export function TaskTableToolbar({
                   aria-label="Xóa từ khóa tìm kiếm"
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} />
+                  <X className="size-3.5" />
                 </Pressable>
               ) : (
                 <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/70 select-none">
@@ -1122,7 +1118,7 @@ export function TaskTableToolbar({
                 isDesktopFilterOpen && "border-primary/50 bg-primary/5 text-primary"
               )}
             >
-              <Filter className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <Filter className="size-3.5 text-muted-foreground" />
               <span>Lọc</span>
               {activeAdvancedFilterCount > 0 && (
                 <span className="flex size-4.5 items-center justify-center rounded-full bg-primary text-primary-foreground font-mono text-xs font-bold">
@@ -1134,7 +1130,6 @@ export function TaskTableToolbar({
                   "size-3 text-muted-foreground transition-transform",
                   isDesktopFilterOpen && "rotate-180 text-primary"
                 )}
-                strokeWidth={1.5}
               />
             </Button>
 
@@ -1167,7 +1162,6 @@ export function TaskTableToolbar({
             <div className="relative inline-flex items-center">
               <Calendar
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
               />
               {/* Backward compatibility comment for aria-label="Lọc theo tháng học kỳ" */}
               <select
@@ -1191,7 +1185,6 @@ export function TaskTableToolbar({
               </select>
               <ChevronDown
                 className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
               />
             </div>
           )}
@@ -1201,7 +1194,6 @@ export function TaskTableToolbar({
             <div className="relative inline-flex items-center">
               <Building2
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
               />
               <select
                 value={selectedDepartment}
@@ -1217,7 +1209,6 @@ export function TaskTableToolbar({
               </select>
               <ChevronDown
                 className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
               />
             </div>
           )}
@@ -1239,7 +1230,6 @@ export function TaskTableToolbar({
             >
               <FileSpreadsheet
                 className="size-4 text-emerald-600"
-                strokeWidth={1.5}
               />
               <span className="hidden md:inline">Xuất Excel</span>
             </Button>
@@ -1252,7 +1242,7 @@ export function TaskTableToolbar({
               className="inline-flex items-center gap-1.5 h-8.5 px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs active:scale-[0.98]"
               aria-label="Tạo việc mới"
             >
-              <Plus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <Plus className="size-3.5 text-muted-foreground" />
               <span>Tạo việc</span>
               <span className="sr-only">Tạo nhiệm vụ</span>
             </Pressable>

@@ -402,7 +402,7 @@ export function DossierDetailView({
             href="/dossiers"
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
           >
-            <ArrowLeft className="size-3.5" strokeWidth={1.5} />
+            <ArrowLeft className="size-3.5" />
             Quay lại danh sách
           </Link>
         </div>
@@ -411,7 +411,7 @@ export function DossierDetailView({
         <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
-              <FolderArchive className="size-5" strokeWidth={1.5} />
+              <FolderArchive className="size-5" />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-base font-semibold text-foreground font-heading leading-snug">
@@ -421,7 +421,6 @@ export function DossierDetailView({
                 <span className="inline-flex items-center gap-1 text-xs text-foreground">
                   <Hash
                     className="size-3.5 text-muted-foreground"
-                    strokeWidth={1.5}
                   />
                   <span className="font-mono font-medium">
                     {dossier.code}
@@ -448,7 +447,7 @@ export function DossierDetailView({
                 </span>
 
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                  <Calendar className="size-3.5" strokeWidth={1.5} />
+                  <Calendar className="size-3.5" />
                   Mở: {formatDate(dossier.openedAt)}
                 </span>
               </div>
@@ -480,7 +479,7 @@ export function DossierDetailView({
                   style={{ transition: `opacity, transform ${motionTransition.micro.duration}s` }}
                 >
                   {isLoading ? (
-                    <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                    <Loader2 className="size-3.5 animate-spin" />
                   ) : (
                     <Icon className="size-3.5" strokeWidth={1.5} />
                   )}

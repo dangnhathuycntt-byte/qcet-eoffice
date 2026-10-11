@@ -49,7 +49,7 @@ export default function OrgPage() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-            <Network className="size-3" strokeWidth={1.5} />
+            <Network className="size-3" />
             <span>CƠ CẤU BỘ MÁY & DANH BẠ QCET</span>
           </span>
           <span className="text-xs text-muted-foreground font-medium">

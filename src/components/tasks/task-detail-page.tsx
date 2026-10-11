@@ -996,7 +996,7 @@ export function TaskDetailPage({
               className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Đóng"
             >
-              <X className="size-4" strokeWidth={1.5} />
+              <X className="size-4" />
             </ProgressDialog.Close>
           </div>
           <ProgressDialog.Description className="sr-only">Cập nhật tiến độ nhiệm vụ</ProgressDialog.Description>

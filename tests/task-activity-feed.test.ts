@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { LucideProvider } from "lucide-react";
 import { TaskActivityFeed } from "../src/components/tasks/detail/task-activity-feed";
 import type { ConsolidatedActivityItem } from "../src/lib/tasks/activity-feed-aggregator";
 
@@ -16,7 +17,10 @@ describe("TaskActivityFeed", () => {
     ev("3", "TASK_DEADLINE_CHANGED", "2026-10-07T10:00:00Z"),
     ev("4", "TASK_CREATED", "2026-10-01T10:00:00Z"),
   ];
-  const html = renderToStaticMarkup(React.createElement(TaskActivityFeed, { events, now }));
+  // Bọc như layout gốc: nét 1,5 đến từ LucideProvider.
+  const html = renderToStaticMarkup(
+    React.createElement(LucideProvider, { strokeWidth: 1.5, children: React.createElement(TaskActivityFeed, { events, now }) }),
+  );
 
   it("nhóm theo ngày: Hôm nay, Hôm qua, rồi ngày cụ thể", () => {
     assert.ok(html.includes("Hôm nay") && html.includes("Hôm qua") && html.includes("01/10/2026"));
@@ -35,6 +39,7 @@ describe("TaskActivityFeed", () => {
   });
 
   it("icon dùng nét 1,5", () => {
+    assert.ok(html.includes('stroke-width="1.5"'));
     assert.ok(!html.includes('stroke-width="2"'));
   });
 });

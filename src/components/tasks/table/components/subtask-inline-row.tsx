@@ -171,7 +171,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
               className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md border border-blue-500/20 bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums active:scale-[0.98] transition-colors"
               title="Nộp minh chứng hoàn thành"
             >
-              <UploadCloud className="size-3" strokeWidth={1.5} />
+              <UploadCloud className="size-3" />
               <span className="hidden sm:inline">Nộp minh chứng</span>
             </Pressable>
           )}
@@ -188,7 +188,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                   className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums border border-blue-500/20 active:scale-[0.98] transition-colors"
                   title="Tiếp nhận thực hiện"
                 >
-                  <ArrowRight className="size-3" strokeWidth={1.5} />
+                  <ArrowRight className="size-3" />
                   <span>Tiếp nhận</span>
                 </Pressable>
               )}
@@ -202,7 +202,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                   className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 text-xs font-semibold tabular-nums border border-emerald-500/20 active:scale-[0.98] transition-colors"
                   title="Báo cáo hoàn thành"
                 >
-                  <Check className="size-3" strokeWidth={1.5} />
+                  <Check className="size-3" />
                   <span>Hoàn thành</span>
                 </Pressable>
               )}
@@ -216,7 +216,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                   className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-warning/10 text-warning hover:bg-warning/20 text-xs font-semibold tabular-nums border border-warning/20 active:scale-[0.98] transition-colors"
                   title="Tiếp nhận chỉnh sửa"
                 >
-                  <RotateCcw className="size-3" strokeWidth={1.5} />
+                  <RotateCcw className="size-3" />
                   <span>Chỉnh sửa</span>
                 </Pressable>
               )}

@@ -61,7 +61,7 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
                     <TaskStatusCircle status={option.value} />
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Select.ItemIndicator>
+                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>
@@ -102,7 +102,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
         {/* Ô 16px cố định như các icon thuộc tính khác để chữ bắt đầu cùng một mép */}
         <span className="flex size-4 shrink-0 items-center justify-center">
           {pending ? (
-            <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+            <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" />
           ) : selected || assigneeName ? (
             <UserAvatar name={selected?.name ?? assigneeName} avatarUrl={selected?.avatarUrl ?? assigneeAvatarUrl} size="sm" />
           ) : (
@@ -130,7 +130,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
                       {person.departmentName && <span className="block truncate text-xs text-muted-foreground">{person.departmentName}</span>}
                     </span>
                   </span>
-                  <Combobox.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Combobox.ItemIndicator>
+                  <Combobox.ItemIndicator><Check className="size-3.5 text-foreground" /></Combobox.ItemIndicator>
                 </Combobox.Item>
               )}
             </Combobox.List>
@@ -208,7 +208,7 @@ export function TaskDateRange({
           aria-label="Xóa ngày"
           title="Xóa ngày"
         >
-          <X className="size-3" strokeWidth={1.5} />
+          <X className="size-3" />
         </Pressable>
       )}
     </div>
@@ -259,7 +259,7 @@ export function TaskPrioritySelect({ value, options, disabled, onValueChange }: 
                     {React.createElement(PRIORITY_ICONS[option.value] ?? TaskIconPriorityNormal, { className: cn("size-4", PRIORITY_ICON_COLOR[option.value] ?? "text-muted-foreground") })}
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Select.ItemIndicator>
+                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>

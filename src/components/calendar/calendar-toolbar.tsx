@@ -185,7 +185,7 @@ export function CalendarToolbar({
               className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-8 sm:min-w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
               aria-label={prevLabel(viewMode)}
             >
-              <ChevronLeft className="size-4" strokeWidth={1.5} />
+              <ChevronLeft className="size-4" />
             </button>
             <button
               type="button"
@@ -193,7 +193,7 @@ export function CalendarToolbar({
               className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-8 sm:min-w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
               aria-label={nextLabel(viewMode)}
             >
-              <ChevronRight className="size-4" strokeWidth={1.5} />
+              <ChevronRight className="size-4" />
             </button>
           </div>
 
@@ -253,9 +253,9 @@ export function CalendarToolbar({
                   className="min-h-[44px] sm:min-h-8 h-8 px-3 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 gap-1"
                   aria-label="Tạo mới"
                 >
-                  <Plus className="size-3.5" strokeWidth={1.5} />
+                  <Plus className="size-3.5" />
                   <span className="hidden sm:inline">Tạo mới</span>
-                  <ChevronDown className="size-3 opacity-80" strokeWidth={1.5} />
+                  <ChevronDown className="size-3 opacity-80" />
                 </Button>
               }
               items={[
@@ -336,7 +336,6 @@ export function CalendarToolbar({
             />
             <Search
               className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
-              strokeWidth={1.5}
             />
             {searchQuery && (
               <button
@@ -345,7 +344,7 @@ export function CalendarToolbar({
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded cursor-pointer"
                 aria-label="Xóa bộ lọc"
               >
-                <X className="size-3" strokeWidth={1.5} />
+                <X className="size-3" />
               </button>
             )}
           </div>
@@ -363,7 +362,7 @@ export function CalendarToolbar({
                   )}
                   aria-label="Bộ lọc nhiệm vụ và sự kiện"
                 >
-                  <Filter className="size-3.5" strokeWidth={1.5} />
+                  <Filter className="size-3.5" />
                   <span className="hidden sm:inline">Lọc</span>
                   {hasActiveFilters && (
                     <span className="size-1.5 rounded-full bg-foreground/80 inline-block" />
@@ -389,7 +388,7 @@ export function CalendarToolbar({
                     }}
                     className="text-xs text-foreground/85 hover:underline inline-flex items-center gap-1 font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded cursor-pointer"
                   >
-                    <RotateCcw className="size-3" strokeWidth={1.5} />
+                    <RotateCcw className="size-3" />
                     Đặt lại
                   </button>
                 )}
@@ -412,7 +411,7 @@ export function CalendarToolbar({
                         )}
                       >
                         <span>{opt.label}</span>
-                        {itemTypeFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
+                        {itemTypeFilter === opt.id && <Check className="size-3 text-foreground/85" />}
                       </Pressable>
                     ))}
                   </div>
@@ -435,7 +434,7 @@ export function CalendarToolbar({
                       )}
                     >
                       <span>{opt.label}</span>
-                      {levelFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
+                      {levelFilter === opt.id && <Check className="size-3 text-foreground/85" />}
                     </Pressable>
                   ))}
                 </div>
@@ -457,7 +456,7 @@ export function CalendarToolbar({
                       )}
                     >
                       <span>{opt.label}</span>
-                      {statusFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
+                      {statusFilter === opt.id && <Check className="size-3 text-foreground/85" />}
                     </Pressable>
                   ))}
                 </div>
@@ -474,7 +473,7 @@ export function CalendarToolbar({
                   className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-8 sm:min-w-8 items-center justify-center rounded-xl border border-border/70 bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                   aria-label="Tùy chọn hiển thị lịch"
                 >
-                  <MoreHorizontal className="size-4" strokeWidth={1.5} />
+                  <MoreHorizontal className="size-4" />
                 </button>
               }
             />
@@ -505,7 +504,7 @@ export function CalendarToolbar({
                         )}
                       >
                         <span className="font-mono tabular-nums">{yr}</span>
-                        {academicYear === yr && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
+                        {academicYear === yr && <Check className="size-3 text-foreground/85" />}
                       </Pressable>
                     ))}
                   </div>
@@ -599,7 +598,7 @@ export function CalendarToolbar({
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc loại"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
+                <X className="size-2.5" />
               </Pressable>
             </span>
           )}
@@ -614,7 +613,7 @@ export function CalendarToolbar({
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc cấp"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
+                <X className="size-2.5" />
               </Pressable>
             </span>
           )}
@@ -629,7 +628,7 @@ export function CalendarToolbar({
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc trạng thái"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
+                <X className="size-2.5" />
               </Pressable>
             </span>
           )}
@@ -637,7 +636,7 @@ export function CalendarToolbar({
             onClick={onResetFilters}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
           >
-            <RotateCcw className="size-3" strokeWidth={1.5} />
+            <RotateCcw className="size-3" />
             <span>Xóa lọc</span>
           </Pressable>
         </div>

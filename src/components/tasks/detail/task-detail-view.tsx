@@ -511,7 +511,7 @@ export function TaskDetailView({
           <section data-slot="task-description-section" className="space-y-2 cursor-text">
             <div className="flex items-center justify-between gap-2 cursor-default">
               <div className="flex items-center gap-2">
-                <FileText className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+                <FileText className="size-4 text-primary shrink-0" />
                 <h2 className="text-xs font-semibold text-foreground">
                   Mô tả nhiệm vụ
                 </h2>

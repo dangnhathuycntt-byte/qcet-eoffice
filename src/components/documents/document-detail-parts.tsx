@@ -192,7 +192,7 @@ export function AttachmentRow({
           title="Tải về"
           className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/att:opacity-100 [@media(hover:none)]:opacity-100"
         >
-          <Download className="size-3.5" strokeWidth={1.5} />
+          <Download className="size-3.5" />
         </a>
       ) : null}
     </div>
@@ -279,7 +279,6 @@ export function CollapsibleSection({
       <Collapsible.Trigger className="-mx-2 flex h-8 w-[calc(100%+1rem)] cursor-pointer items-center gap-1.5 rounded-md px-2 text-left text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
         <ChevronRight
           className="size-3.5 shrink-0 transition-transform duration-150 group-data-[open]/sec:rotate-90 motion-reduce:transition-none"
-          strokeWidth={1.5}
           aria-hidden
         />
         <span>{title}</span>
@@ -308,7 +307,7 @@ export function DetailsPopover({ rows, title = "Chi tiết văn bản" }: { rows
     <PopoverRoot open={open} onOpenChange={setOpen}>
       <PopoverTrigger className="-mx-1 inline-flex h-6 cursor-pointer items-center gap-0.5 rounded-md px-1.5 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[popup-open]:bg-muted data-[popup-open]:text-foreground">
         Chi tiết
-        <ChevronDown className="size-3" strokeWidth={1.5} aria-hidden />
+        <ChevronDown className="size-3" aria-hidden />
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={4} positionerClassName="z-[60]" className="z-[60] w-64 p-3">
         <PopoverTitle className="sr-only">{title}</PopoverTitle>

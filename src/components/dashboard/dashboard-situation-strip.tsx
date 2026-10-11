@@ -228,7 +228,7 @@ export function DashboardSituationStrip({
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-primary/10 text-primary text-xs font-medium"
             title={`Tiến độ trung bình: ${progressPercent}%`}
           >
-            <TrendingUp className="size-3.5" strokeWidth={1.5} />
+            <TrendingUp className="size-3.5" />
             <span className="font-mono font-semibold tabular-nums">{progressPercent}%</span>
             <span className="text-2xs opacity-80">tiến độ</span>
           </div>
@@ -246,7 +246,7 @@ export function DashboardSituationStrip({
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-destructive/10 text-destructive text-xs font-semibold border border-destructive/20"
               title={`${overdueCount} nhiệm vụ trễ hạn`}
             >
-              <AlertTriangle className="size-3" strokeWidth={1.5} />
+              <AlertTriangle className="size-3" />
               <span className="font-mono tabular-nums">{overdueCount}</span>
               <span className="text-2xs">trễ hạn</span>
             </div>

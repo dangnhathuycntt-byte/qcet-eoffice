@@ -249,7 +249,7 @@ export function OnboardingFlow() {
               </div>
               <div className="mt-8 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <PenTool className="size-4.5 text-foreground" strokeWidth={1.5} aria-hidden="true" />
+                  <PenTool className="size-4.5 text-foreground" aria-hidden="true" />
                   <span className="inline-flex h-7 items-center rounded-xl bg-secondary px-3 text-xs font-medium text-secondary-foreground">
                     Ký ngay
                   </span>

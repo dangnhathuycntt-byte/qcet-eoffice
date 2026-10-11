@@ -354,7 +354,7 @@ export function DepartmentCommandCard({
               </span>
               {summary.pendingApprovalCount > 0 && (
                 <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 text-xs font-mono font-semibold tabular-nums bg-purple-50 text-purple-700 border border-purple-200">
-                  <FileCheck size={10} strokeWidth={1.5} />
+                  <FileCheck size={10} />
                   {summary.pendingApprovalCount} chờ duyệt
                 </span>
               )}
@@ -412,7 +412,7 @@ export function DepartmentCommandCard({
         >
           <div className="flex items-center justify-between gap-1.5 mb-1">
             <div className="flex items-center gap-1 text-xs font-semibold text-primary">
-              <Target size={13} strokeWidth={1.5} />
+              <Target size={13} />
               <span>Trọng tâm điều hành</span>
             </div>
             {priorityConfig && (
@@ -437,7 +437,7 @@ export function DepartmentCommandCard({
               </p>
               <div className="flex items-center justify-between text-xs text-muted-foreground pt-0.5">
                 <span className="flex items-center gap-1">
-                  <Calendar size={11} strokeWidth={1.5} />
+                  <Calendar size={11} />
                   <span className="font-mono tabular-nums">
                     Hạn: {formatDeadlineDisplay(focus.dueDate)}
                   </span>
@@ -542,7 +542,6 @@ export function DepartmentCommandCard({
             <span>Soi chi tiết việc đơn vị</span>
             <ChevronRight
               size={14}
-              strokeWidth={1.5}
               className={cn(
                 "transition-all",
                 isSelected
@@ -603,7 +602,7 @@ export function DepartmentDrillDownPanel({
       <div className="flex flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 mt-0.5">
-            <Building2 size={20} strokeWidth={1.5} />
+            <Building2 size={20} />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -654,7 +653,7 @@ export function DepartmentDrillDownPanel({
             onClick={onClose}
             className="h-8 gap-1.5 text-xs font-medium border-border/60 hover:bg-accent hover:text-foreground"
           >
-            <ChevronUp size={14} strokeWidth={1.5} />
+            <ChevronUp size={14} />
             <span>Thu gọn / Quay lại toàn trường</span>
           </Button>
 
@@ -664,7 +663,7 @@ export function DepartmentDrillDownPanel({
             aria-label="Đóng bảng chi tiết"
             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
-            <X size={16} strokeWidth={1.5} />
+            <X size={16} />
           </Pressable>
         </div>
       </div>
@@ -729,7 +728,7 @@ export function DepartmentDrillDownPanel({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Building2 size={14} strokeWidth={1.5} className="text-primary" />
+            <Building2 size={14} className="text-primary" />
             <span>Nhiệm vụ Cấp Trường giao cho Đơn vị</span>
             <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {schoolTasks.length}
@@ -745,7 +744,7 @@ export function DepartmentDrillDownPanel({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Layers size={14} strokeWidth={1.5} className="text-primary" />
+            <Layers size={14} className="text-primary" />
             <span>Nhiệm vụ Nội bộ Đơn vị triển khai</span>
             <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {unitTasks.length}
@@ -790,7 +789,7 @@ export function DepartmentDrillDownPanel({
                         {statusConfig.label}
                       </span>
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar size={12} strokeWidth={1.5} />
+                        <Calendar size={12} />
                         <span className="font-mono tabular-nums">
                           Hạn: {formatDeadlineDisplay(task.dueDate)}
                         </span>
@@ -841,7 +840,6 @@ export function DepartmentDrillDownPanel({
                       <span>Chi tiết</span>
                       <ArrowUpRight
                         size={12}
-                        strokeWidth={1.5}
                         className="ml-1"
                       />
                     </Button>
@@ -854,7 +852,6 @@ export function DepartmentDrillDownPanel({
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 py-8 text-center bg-muted/20">
             <Building2
               size={24}
-              strokeWidth={1.5}
               className="text-muted-foreground/60 mb-2"
             />
             <p className="text-xs font-medium text-muted-foreground">
@@ -968,7 +965,7 @@ export function ExecutiveDepartmentCommandCenter({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Building2 size={14} strokeWidth={1.5} className="text-primary" />
+            <Building2 size={14} className="text-primary" />
             <span>Tất cả đơn vị</span>
             <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {triageCounts.all}
@@ -986,7 +983,6 @@ export function ExecutiveDepartmentCommandCenter({
           >
             <AlertTriangle
               size={14}
-              strokeWidth={1.5}
               className={
                 triageCounts.bottlenecks > 0
                   ? "text-destructive"
@@ -1017,7 +1013,6 @@ export function ExecutiveDepartmentCommandCenter({
           >
             <FileCheck
               size={14}
-              strokeWidth={1.5}
               className={
                 triageCounts.pendingApproval > 0
                   ? "text-purple-600"
@@ -1042,7 +1037,6 @@ export function ExecutiveDepartmentCommandCenter({
         <div className="relative min-w-[220px] max-w-xs">
           <Search
             size={14}
-            strokeWidth={1.5}
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <input
@@ -1074,7 +1068,6 @@ export function ExecutiveDepartmentCommandCenter({
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 py-12 text-center bg-card">
           <Building2
             size={32}
-            strokeWidth={1.5}
             className="text-muted-foreground/60 mb-2"
           />
           <h4 className="text-sm font-semibold text-foreground">

@@ -433,7 +433,7 @@ export function SubtaskDetailDrawer({
                   aria-label="Việc con trước"
                   title="Việc con trước (↑)"
                 >
-                  <ChevronLeft className="size-4" strokeWidth={1.5} />
+                  <ChevronLeft className="size-4" />
                 </button>
                 <button
                   type="button"
@@ -443,7 +443,7 @@ export function SubtaskDetailDrawer({
                   aria-label="Việc con tiếp theo"
                   title="Việc con tiếp theo (↓)"
                 >
-                  <ChevronRight className="size-4" strokeWidth={1.5} />
+                  <ChevronRight className="size-4" />
                 </button>
               </div>
             )}
@@ -464,7 +464,7 @@ export function SubtaskDetailDrawer({
                 title="Thêm việc con"
                 aria-label="Thêm việc con"
               >
-                <Plus className="size-4" strokeWidth={1.5} />
+                <Plus className="size-4" />
               </button>
             )}
             <button
@@ -474,7 +474,7 @@ export function SubtaskDetailDrawer({
               title="Đóng (Esc)"
               aria-label="Đóng chi tiết việc con"
             >
-              <X className="size-4" strokeWidth={1.5} />
+              <X className="size-4" />
             </button>
           </div>
         </div>

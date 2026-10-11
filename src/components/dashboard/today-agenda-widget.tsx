@@ -282,7 +282,7 @@ export function TodayAgendaWidget({
       {/* HEADER: Tiêu đề + Ngày hiện tại + Bộ đếm trạng thái */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/40">
         <div className="flex items-center gap-2.5 min-w-0">
-          <CalendarDays className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+          <CalendarDays className="size-4 text-primary shrink-0" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-heading font-semibold text-base sm:text-lg text-foreground tracking-tight leading-tight">
@@ -308,7 +308,7 @@ export function TodayAgendaWidget({
             title="Xem toàn bộ lịch công tác"
           >
             <span>Xem toàn bộ</span>
-            <ChevronRight size={13} strokeWidth={1.5} />
+            <ChevronRight size={13} />
           </Link>
         </div>
       </div>
@@ -319,7 +319,7 @@ export function TodayAgendaWidget({
           className="flex flex-col items-center justify-center py-8 px-4 text-center"
           data-slot="agenda-empty-state"
         >
-          <CalendarCheck2 className="size-6 text-muted-foreground mb-2" strokeWidth={1.5} />
+          <CalendarCheck2 className="size-6 text-muted-foreground mb-2" />
           <p className="text-sm font-medium text-foreground">
             Hôm nay không có lịch công tác nào
           </p>
@@ -436,9 +436,9 @@ export function TodayAgendaWidget({
                     {/* Địa điểm */}
                     <div className="flex items-center gap-1 truncate">
                       {event.isOnline ? (
-                        <Video size={12} strokeWidth={1.5} className="text-blue-500 shrink-0" />
+                        <Video size={12} className="text-blue-500 shrink-0" />
                       ) : (
-                        <MapPin size={12} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                        <MapPin size={12} className="shrink-0 text-muted-foreground" />
                       )}
                       <span className="truncate">{event.location}</span>
                     </div>
@@ -446,7 +446,7 @@ export function TodayAgendaWidget({
                     {/* Người chủ trì */}
                     {event.chairPerson && (
                       <div className="flex items-center gap-1 truncate">
-                        <UserCheck size={12} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                        <UserCheck size={12} className="shrink-0 text-muted-foreground" />
                         <span className="truncate">Chủ trì: {event.chairPerson}</span>
                       </div>
                     )}
@@ -462,9 +462,9 @@ export function TodayAgendaWidget({
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline py-0.5 px-1.5 rounded bg-blue-500/10 border border-blue-500/20"
                       >
-                        <Radio size={11} strokeWidth={1.5} className="animate-pulse text-blue-500" />
+                        <Radio size={11} className="animate-pulse text-blue-500" />
                         <span>Vào phòng họp trực tuyến</span>
-                        <ExternalLink size={10} strokeWidth={1.5} className="ml-0.5" />
+                        <ExternalLink size={10} className="ml-0.5" />
                       </a>
                     </div>
                   )}
@@ -488,7 +488,7 @@ export function TodayAgendaWidget({
         >
           <Link href={viewAllHref}>
             <span>Mở Lịch công tác</span>
-            <ChevronRight size={12} strokeWidth={1.5} />
+            <ChevronRight size={12} />
           </Link>
         </Button>
       </div>

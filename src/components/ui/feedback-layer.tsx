@@ -114,14 +114,14 @@ const VARIANT_STYLES: Record<
 function renderVariantIcon(variant: FeedbackVariant) {
   switch (variant) {
     case "success":
-      return <CheckCircle2 className="size-4 shrink-0 text-foreground" strokeWidth={1.5} />;
+      return <CheckCircle2 className="size-4 shrink-0 text-foreground" />;
     case "warning":
-      return <AlertTriangle className="size-4 shrink-0 text-foreground" strokeWidth={1.5} />;
+      return <AlertTriangle className="size-4 shrink-0 text-foreground" />;
     case "error":
-      return <AlertOctagon className="size-4 shrink-0 text-destructive" strokeWidth={1.5} />;
+      return <AlertOctagon className="size-4 shrink-0 text-destructive" />;
     case "info":
     default:
-      return <Info className="size-4 shrink-0 text-primary" strokeWidth={1.5} />;
+      return <Info className="size-4 shrink-0 text-primary" />;
   }
 }
 
@@ -183,7 +183,7 @@ export function InlineAlertBanner({
             aria-label="Đóng thông báo"
             className="size-7 rounded-lg inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
           >
-            <X className="size-3.5" strokeWidth={1.5} />
+            <X className="size-3.5" />
           </button>
         )}
       </div>
@@ -216,7 +216,7 @@ export function FormValidationSummary({
     >
       <div className="flex items-center justify-between gap-2 pb-2">
         <div className="flex items-center gap-2 font-semibold text-destructive text-xs">
-          <XCircle className="size-4 text-destructive shrink-0" strokeWidth={1.5} />
+          <XCircle className="size-4 text-destructive shrink-0" />
           <span>{title}</span>
           <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-destructive text-white tabular-nums">
             {errors.length}
@@ -229,7 +229,7 @@ export function FormValidationSummary({
             aria-label="Đóng cảnh báo lỗi form"
             className="size-6 rounded-md inline-flex items-center justify-center text-destructive hover:bg-black/5 cursor-pointer transition-colors"
           >
-            <X className="size-3.5" strokeWidth={1.5} />
+            <X className="size-3.5" />
           </button>
         )}
       </div>
@@ -334,7 +334,7 @@ export function FeedbackToast({ toast, onDismiss: _onDismiss, rawToast }: Feedba
         aria-label="Đóng thông báo nổi"
         className="size-6 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0 -mr-1 -mt-0.5"
       >
-        <X className="size-3.5" strokeWidth={1.5} />
+        <X className="size-3.5" />
       </Toast.Close>
     </Toast.Root>
   );

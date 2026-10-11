@@ -354,11 +354,11 @@ export function WorkCalendarCard({
             {title}
           </div>
           <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground truncate">
-            <Building2 className="size-3 shrink-0" strokeWidth={1.5} />
+            <Building2 className="size-3 shrink-0" />
             <span className="truncate">{department}</span>
           </div>
           <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground truncate">
-            <Users className="size-3 shrink-0" strokeWidth={1.5} />
+            <Users className="size-3 shrink-0" />
             <span className="truncate">{assignee}</span>
           </div>
         </div>
@@ -431,11 +431,11 @@ export function WorkCalendarCard({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5 truncate">
-          <Building2 className="size-3.5 shrink-0 text-muted-foreground/80" strokeWidth={1.5} />
+          <Building2 className="size-3.5 shrink-0 text-muted-foreground/80" />
           <span className="truncate">{department}</span>
         </div>
         <div className="flex items-center gap-1.5 truncate">
-          <Users className="size-3.5 shrink-0 text-muted-foreground/80" strokeWidth={1.5} />
+          <Users className="size-3.5 shrink-0 text-muted-foreground/80" />
           <span className="truncate">{assignee}</span>
         </div>
       </div>
@@ -495,7 +495,7 @@ export function PriorOverdueBacklogBanner({
     >
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="size-4 text-destructive shrink-0" strokeWidth={1.5} />
+          <AlertTriangle className="size-4 text-destructive shrink-0" />
           <span className="font-semibold text-xs sm:text-sm">
             Công việc trễ hạn tồn đọng ({overdueItems.length} nhiệm vụ cần xử lý gấp)
           </span>
@@ -798,7 +798,7 @@ export function ExecutiveCalendarWorkspace({
               className="min-h-[44px] min-w-[44px] sm:h-8 sm:w-8 p-0 rounded-lg hover:bg-muted"
               aria-label="Tuần trước"
             >
-              <ChevronLeft className="size-4" strokeWidth={1.5} />
+              <ChevronLeft className="size-4" />
             </Button>
             <Button
               variant="ghost"
@@ -815,12 +815,12 @@ export function ExecutiveCalendarWorkspace({
               className="min-h-[44px] min-w-[44px] sm:h-8 sm:w-8 p-0 rounded-lg hover:bg-muted"
               aria-label="Tuần sau"
             >
-              <ChevronRight className="size-4" strokeWidth={1.5} />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
 
           <div className="flex items-center gap-2">
-            <CalendarIcon className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+            <CalendarIcon className="size-4 text-primary shrink-0" />
             <h2 className="font-heading text-base sm:text-lg font-bold text-foreground font-mono tabular-nums tracking-tight">
               {weekSpanText}
             </h2>
@@ -862,7 +862,7 @@ export function ExecutiveCalendarWorkspace({
               onClick={() => handleAddSlotClick()}
               className="gap-1.5 text-xs font-semibold rounded-lg h-7 px-2.5 shrink-0"
             >
-              <Plus className="size-3.5" strokeWidth={1.5} />
+              <Plus className="size-3.5" />
               <span className="hidden sm:inline">Thêm nhiệm vụ</span>
             </Button>
           )}
@@ -873,7 +873,7 @@ export function ExecutiveCalendarWorkspace({
       <div className="flex flex-wrap items-center gap-2 py-1 text-xs">
         {/* Search Query Input */}
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" strokeWidth={1.5} />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Tìm kiếm công việc, đơn vị, DRI... /"
@@ -887,14 +887,14 @@ export function ExecutiveCalendarWorkspace({
               className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
               aria-label="Xóa tìm kiếm"
             >
-              <X className="size-3" strokeWidth={1.5} />
+              <X className="size-3" />
             </Pressable>
           )}
         </div>
 
         {/* Department Selector */}
         <div className="flex items-center gap-1.5">
-          <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+          <Building2 className="size-3.5 text-muted-foreground shrink-0" />
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -1082,7 +1082,7 @@ export function ExecutiveCalendarWorkspace({
         <div className="space-y-4">
           {filteredWorkItems.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/80 p-8 text-center bg-muted/10 space-y-2">
-              <CalendarDays className="size-8 mx-auto text-muted-foreground/50" strokeWidth={1.5} />
+              <CalendarDays className="size-8 mx-auto text-muted-foreground/50" />
               <h3 className="text-sm font-semibold text-foreground">
                 Không có công việc hoặc sự kiện
               </h3>
@@ -1096,7 +1096,7 @@ export function ExecutiveCalendarWorkspace({
                   onClick={() => handleAddSlotClick()}
                   className="mt-2 text-xs rounded-xl"
                 >
-                  <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
+                  <Plus className="size-3.5 mr-1" />
                   Tạo nhiệm vụ mới
                 </Button>
               )}
@@ -1137,7 +1137,7 @@ export function ExecutiveCalendarWorkspace({
                           onClick={() => handleAddSlotClick(d.dateString)}
                           className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
                         >
-                          <Plus className="size-3 mr-0.5" strokeWidth={1.5} />
+                          <Plus className="size-3 mr-0.5" />
                           Thêm việc
                         </Button>
                       )}
@@ -1189,7 +1189,7 @@ export function ExecutiveCalendarWorkspace({
                 aria-label="Đóng chi tiết công việc"
                 className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
               >
-                <X className="size-4" strokeWidth={1.5} />
+                <X className="size-4" />
               </Pressable>
             </div>
 
@@ -1198,14 +1198,14 @@ export function ExecutiveCalendarWorkspace({
 
               <div className="space-y-2 rounded-xl bg-muted/30 p-3">
                 <div className="flex items-center gap-2 text-foreground font-mono">
-                  <Clock className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                  <Clock className="size-3.5 text-primary shrink-0" />
                   <span>
                     Hạn chót: {selectedPreviewItem.dueTime || "17:00"}, ngày {selectedPreviewItem.dueDate}
                   </span>
                 </div>
                 {selectedPreviewItem.isOverdue && (
                   <div className="flex items-center gap-2 text-destructive font-semibold font-mono">
-                    <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
+                    <AlertTriangle className="size-3.5 shrink-0" />
                     <span>Đã trễ hạn {selectedPreviewItem.daysOverdue || 1} ngày</span>
                   </div>
                 )}

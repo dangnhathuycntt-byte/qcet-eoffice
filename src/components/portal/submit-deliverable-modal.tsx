@@ -394,7 +394,7 @@ export function SubmitDeliverableModal({
             {hasDraftRestored && (
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-700 flex items-center justify-between gap-2 animate-in fade-in">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-blue-600 shrink-0" strokeWidth={1.5} />
+                  <CheckCircle2 className="size-4 text-blue-600 shrink-0" />
                   <span>Đã khôi phục nội dung bản nháp lưu tạm trước đó.</span>
                 </div>
                 <Pressable
@@ -413,7 +413,7 @@ export function SubmitDeliverableModal({
                 aria-live="polite"
                 className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive flex items-center gap-2 animate-in fade-in"
               >
-                <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
+                <AlertCircle className="size-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
@@ -456,7 +456,7 @@ export function SubmitDeliverableModal({
                 />
 
                 <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-2">
-                  <UploadCloud className="size-5" strokeWidth={1.5} />
+                  <UploadCloud className="size-5" />
                 </div>
                 <p className="text-xs font-medium text-foreground">
                   Kéo thả tệp minh chứng vào đây hoặc <span className="text-primary underline">bấm để chọn</span>
@@ -470,7 +470,7 @@ export function SubmitDeliverableModal({
               {selectedFile && (
                 <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-border/80 bg-muted/30 text-xs mt-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Paperclip className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                    <Paperclip className="size-3.5 text-primary shrink-0" />
                     <span className="font-medium text-foreground truncate">{selectedFile.name}</span>
                     <span className="text-muted-foreground text-xs shrink-0 font-mono">
                       ({formatFileSize(selectedFile.size)})
@@ -485,7 +485,7 @@ export function SubmitDeliverableModal({
                     aria-label="Xóa tệp đính kèm"
                     className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                   >
-                    <Trash2 className="size-3.5" strokeWidth={1.5} />
+                    <Trash2 className="size-3.5" />
                   </Pressable>
                 </div>
               )}
@@ -522,7 +522,7 @@ export function SubmitDeliverableModal({
               />
               {errorMessage && !deliverableName.trim() && (
                 <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                  <AlertCircle className="size-3" strokeWidth={1.5} />
+                  <AlertCircle className="size-3" />
                   <span>Vui lòng nhập tên minh chứng hoặc tải lên tệp đính kèm.</span>
                 </p>
               )}
@@ -559,7 +559,7 @@ export function SubmitDeliverableModal({
                   className="text-xs font-semibold text-foreground flex items-center justify-between"
                 >
                   <span className="flex items-center gap-1.5">
-                    <LinkIcon className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                    <LinkIcon className="size-3 text-muted-foreground" />
                     <span>Đường dẫn minh chứng</span>
                   </span>
                   <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
@@ -616,12 +616,12 @@ export function SubmitDeliverableModal({
             >
               {submittingNow ? (
                 <>
-                  <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                  <Loader2 className="size-3.5 animate-spin" />
                   <span>Đang nộp minh chứng...</span>
                 </>
               ) : (
                 <>
-                  <Send className="size-3.5" strokeWidth={1.5} />
+                  <Send className="size-3.5" />
                   <span>Gửi hồ sơ thẩm định</span>
                 </>
               )}

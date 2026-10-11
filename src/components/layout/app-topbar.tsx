@@ -186,7 +186,7 @@ export function AppTopbar() {
           title="Tìm kiếm (⌘K)"
           aria-label="Tìm kiếm"
         >
-          <Search size={16} strokeWidth={1.5} />
+          <Search size={16} />
         </Pressable>
 
         {/* Inbox Link */}
@@ -196,7 +196,7 @@ export function AppTopbar() {
           title="Hộp thư"
           aria-label="Hộp thư"
         >
-          <Inbox size={16} strokeWidth={1.5} />
+          <Inbox size={16} />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-primary text-xs font-mono font-bold text-primary-foreground flex items-center justify-center ring-1 ring-background tabular-nums">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -211,7 +211,7 @@ export function AppTopbar() {
           title="Menu tùy chọn"
           aria-label="Menu tùy chọn"
         >
-          <Menu size={16} strokeWidth={1.5} />
+          <Menu size={16} />
         </Pressable>
       </div>
     </header>

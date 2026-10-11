@@ -288,7 +288,7 @@ export function GlobalSearchView() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-xl bg-muted/60">
-          <Search size={20} strokeWidth={1.5} className="text-foreground" />
+          <Search size={20} className="text-foreground" />
         </div>
         <div>
           <h1 className="text-lg font-bold text-foreground tracking-tight">
@@ -304,7 +304,6 @@ export function GlobalSearchView() {
       <div className="relative">
         <Search
           size={16}
-          strokeWidth={1.5}
           className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 pointer-events-none"
         />
         <input
@@ -318,7 +317,6 @@ export function GlobalSearchView() {
         {isLoading && (
           <Loader2
             size={16}
-            strokeWidth={1.5}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground/60"
           />
         )}
@@ -361,7 +359,6 @@ export function GlobalSearchView() {
           >
             <AlertTriangle
               size={28}
-              strokeWidth={1.5}
               className="mx-auto mb-3 text-red-600/70"
             />
             <p className="text-sm font-medium text-red-700">{error}</p>
@@ -370,7 +367,7 @@ export function GlobalSearchView() {
               onClick={() => setQuery(inputValue.trim())}
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[44px] sm:min-h-0"
             >
-              <RefreshCw size={13} strokeWidth={1.5} />
+              <RefreshCw size={13} />
               Thử lại
             </button>
           </m.div>
@@ -385,7 +382,6 @@ export function GlobalSearchView() {
           >
             <Search
               size={32}
-              strokeWidth={1.5}
               className="mx-auto mb-3 text-muted-foreground/30"
             />
             <p className="text-sm text-muted-foreground">
@@ -427,7 +423,6 @@ export function GlobalSearchView() {
           >
             <Inbox
               size={32}
-              strokeWidth={1.5}
               className="mx-auto mb-3 text-muted-foreground/30"
             />
             <p className="text-sm font-medium text-foreground/80">
@@ -568,7 +563,6 @@ function TaskResults({
               <div className="mt-0.5 shrink-0 p-1.5 rounded-lg bg-muted/50">
                 <ListChecks
                   size={14}
-                  strokeWidth={1.5}
                   className="text-muted-foreground"
                 />
               </div>
@@ -597,13 +591,13 @@ function TaskResults({
                   </span>
                   {unitName && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Building2 size={10} strokeWidth={1.5} />
+                      <Building2 size={10} />
                       {unitName}
                     </span>
                   )}
                   {task.dueDate && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-                      <CalendarDays size={10} strokeWidth={1.5} />
+                      <CalendarDays size={10} />
                       {formatDate(task.dueDate)}
                     </span>
                   )}
@@ -613,7 +607,6 @@ function TaskResults({
               {/* Arrow */}
               <ChevronRight
                 size={14}
-                strokeWidth={1.5}
                 className="mt-2 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
               />
             </Link>
@@ -663,7 +656,6 @@ function DocumentResults({
               <div className="mt-0.5 shrink-0 p-1.5 rounded-lg bg-muted/50">
                 <FileText
                   size={14}
-                  strokeWidth={1.5}
                   className="text-muted-foreground"
                 />
               </div>
@@ -691,13 +683,13 @@ function DocumentResults({
                   )}
                   {doc.issuingAuthority && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Building2 size={10} strokeWidth={1.5} />
+                      <Building2 size={10} />
                       {doc.issuingAuthority}
                     </span>
                   )}
                   {doc.issuedDate && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-                      <CalendarDays size={10} strokeWidth={1.5} />
+                      <CalendarDays size={10} />
                       {formatDate(doc.issuedDate)}
                     </span>
                   )}
@@ -707,7 +699,6 @@ function DocumentResults({
               {/* Arrow */}
               <ChevronRight
                 size={14}
-                strokeWidth={1.5}
                 className="mt-2 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
               />
             </Link>
@@ -768,7 +759,7 @@ function UserResults({
                   )}
                   {user.department?.name && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Building2 size={10} strokeWidth={1.5} />
+                      <Building2 size={10} />
                       {user.department.shortName ?? user.department.name}
                     </span>
                   )}
@@ -776,13 +767,13 @@ function UserResults({
                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                   {user.email && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Mail size={10} strokeWidth={1.5} />
+                      <Mail size={10} />
                       {user.email}
                     </span>
                   )}
                   {user.phone && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-                      <Phone size={10} strokeWidth={1.5} />
+                      <Phone size={10} />
                       {user.phone}
                     </span>
                   )}
@@ -811,7 +802,6 @@ function EmptyTabState({ label }: { label: string }) {
     >
       <Inbox
         size={24}
-        strokeWidth={1.5}
         className="mx-auto mb-2 text-muted-foreground/30"
       />
       <p className="text-xs text-muted-foreground">

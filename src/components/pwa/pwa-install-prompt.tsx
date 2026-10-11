@@ -78,7 +78,7 @@ export function PWAInstallPrompt({
       >
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0">
-            <CheckCircle2 size={20} strokeWidth={1.5} />
+            <CheckCircle2 size={20} />
           </div>
           <div>
             <h4 className="text-sm font-semibold text-emerald-900">
@@ -103,9 +103,9 @@ export function PWAInstallPrompt({
         <div className="flex items-start gap-3.5">
           <div className="flex size-10 items-center justify-center rounded-xl bg-transparent text-muted-foreground border-0 shrink-0">
             {isIOS ? (
-              <Smartphone size={20} strokeWidth={1.5} />
+              <Smartphone size={20} />
             ) : (
-              <Download size={20} strokeWidth={1.5} />
+              <Download size={20} />
             )}
           </div>
           <div className="space-y-1">
@@ -145,7 +145,7 @@ export function PWAInstallPrompt({
           disabled={isProcessing}
           className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs sm:text-sm shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
-          <Download size={16} strokeWidth={1.5} />
+          <Download size={16} />
           <span>{isProcessing ? "Đang xử lý..." : "Cài đặt ngay"}</span>
         </button>
       </div>

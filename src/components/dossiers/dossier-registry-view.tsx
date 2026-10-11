@@ -244,7 +244,6 @@ export function DossierRegistryView() {
           </Link>
           <ChevronRight
             className="size-3 text-muted-foreground/60"
-            strokeWidth={1.5}
           />
           <span className="font-medium text-foreground">
             Hồ sơ công việc
@@ -254,7 +253,7 @@ export function DossierRegistryView() {
           <div>
             <div className="mb-1 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
-                <Archive className="size-3" strokeWidth={1.5} /> Nghị định
+                <Archive className="size-3" /> Nghị định
                 30/2020/NĐ-CP
               </span>
             </div>
@@ -273,7 +272,6 @@ export function DossierRegistryView() {
             >
               <RefreshCw
                 className={cn("size-3.5", isLoading && "animate-spin")}
-                strokeWidth={1.5}
               />
               Làm mới
             </Pressable>
@@ -281,7 +279,7 @@ export function DossierRegistryView() {
               onClick={() => alert("Chức năng tạo hồ sơ mới đang phát triển")}
               className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 active:scale-[0.98] sm:min-h-9"
             >
-              <Plus className="size-3.5" strokeWidth={1.5} />
+              <Plus className="size-3.5" />
               Tạo hồ sơ mới
             </Pressable>
           </div>
@@ -340,7 +338,6 @@ export function DossierRegistryView() {
         <div className="relative flex-1 sm:max-w-xs">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/60"
-            strokeWidth={1.5}
           />
           <input
             type="text"
@@ -397,7 +394,7 @@ export function DossierRegistryView() {
             onClick={handleRefresh}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/60 bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <RefreshCw className="size-3" strokeWidth={1.5} />
+            <RefreshCw className="size-3" />
             Thử lại
           </button>
         </div>
@@ -480,7 +477,7 @@ export function DossierRegistryView() {
                       {/* Owning unit */}
                       <td className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Building2 className="size-3" strokeWidth={1.5} />
+                          <Building2 className="size-3" />
                           {item.owningUnit.name}
                         </span>
                       </td>
@@ -488,7 +485,7 @@ export function DossierRegistryView() {
                       {/* Responsible person */}
                       <td className="hidden whitespace-nowrap px-4 py-2.5 lg:table-cell">
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <User className="size-3" strokeWidth={1.5} />
+                          <User className="size-3" />
                           {item.responsiblePerson.name}
                         </span>
                       </td>
@@ -527,7 +524,7 @@ export function DossierRegistryView() {
                       {/* Opened date */}
                       <td className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="size-3" strokeWidth={1.5} />
+                          <Calendar className="size-3" />
                           {formatDate(item.openedAt)}
                         </span>
                       </td>
@@ -542,7 +539,7 @@ export function DossierRegistryView() {
               <EmptyState
                 role="status"
                 density="compact"
-                icon={<FolderOpen strokeWidth={1.5} />}
+                icon={<FolderOpen />}
                 title="Không tìm thấy hồ sơ nào"
                 description="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."
               />

@@ -97,15 +97,15 @@ export function SectionErrorFallback({
   const getSectionIcon = () => {
     switch (section) {
       case "document-viewer":
-        return <FileWarning className="size-5 text-warning" strokeWidth={1.5} />;
+        return <FileWarning className="size-5 text-warning" />;
       case "dashboard":
-        return <LayoutDashboard className="size-5 text-warning" strokeWidth={1.5} />;
+        return <LayoutDashboard className="size-5 text-warning" />;
       case "calendar":
-        return <CalendarX className="size-5 text-warning" strokeWidth={1.5} />;
+        return <CalendarX className="size-5 text-warning" />;
       case "workspace":
-        return <Layers className="size-5 text-warning" strokeWidth={1.5} />;
+        return <Layers className="size-5 text-warning" />;
       default:
-        return <AlertTriangle className="size-5 text-warning" strokeWidth={1.5} />;
+        return <AlertTriangle className="size-5 text-warning" />;
     }
   };
 
@@ -132,7 +132,7 @@ export function SectionErrorFallback({
             onClick={resetErrorBoundary}
             className="border-warning/40 bg-card hover:bg-warning/10 text-foreground"
           >
-            <RotateCcw className="size-3.5 text-muted-foreground mr-1" strokeWidth={1.5} />
+            <RotateCcw className="size-3.5 text-muted-foreground mr-1" />
             Thử lại
           </Button>
         </div>
@@ -165,7 +165,7 @@ export function SectionErrorFallback({
           onClick={resetErrorBoundary}
           className="shadow-xs font-medium"
         >
-          <RotateCcw className="size-3.5 mr-1.5" strokeWidth={1.5} />
+          <RotateCcw className="size-3.5 mr-1.5" />
           Thử lại
         </Button>
 
@@ -176,7 +176,7 @@ export function SectionErrorFallback({
             onClick={handleReloadPage}
             className="text-muted-foreground hover:text-foreground"
           >
-            <RefreshCw className="size-3.5 mr-1.5" strokeWidth={1.5} />
+            <RefreshCw className="size-3.5 mr-1.5" />
             Tải lại trang
           </Button>
         )}

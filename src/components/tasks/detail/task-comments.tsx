@@ -238,10 +238,10 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
                         aria-label="Sửa bình luận"
                         onClick={() => { setEditingId(c.id); setEditDraft(c.body ?? ""); }}
                       >
-                        <Pencil strokeWidth={1.5} />
+                        <Pencil />
                       </Button>
                       <Button variant="ghost" size="icon-xs" aria-label="Xóa bình luận" onClick={() => void remove(c.id)}>
-                        <Trash2 strokeWidth={1.5} />
+                        <Trash2 />
                       </Button>
                     </span>
                   )}

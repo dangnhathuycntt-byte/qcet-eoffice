@@ -173,14 +173,13 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
               className
             )}
           >
-            <Calendar size={13} strokeWidth={1.5} className="text-primary shrink-0" />
+            <Calendar size={13} className="text-primary shrink-0" />
             <span className="truncate max-w-[120px] sm:max-w-[200px] md:max-w-[240px]">
               <span className="hidden sm:inline">{triggerDesktopLabel}</span>
               <span className="sm:hidden">{triggerMobileLabel}</span>
             </span>
             <ChevronDown
               size={12}
-              strokeWidth={1.5}
               className={cn(
                 "text-muted-foreground transition-transform duration-150 group-hover:text-foreground shrink-0 ml-0.5",
                 isOpen && "rotate-180"

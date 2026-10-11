@@ -323,7 +323,7 @@ export function StaffFocusView({
         {/* Positive Empty State */}
         <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 mb-4">
-            <CheckCircle2 className="h-7 w-7" strokeWidth={1.5} />
+            <CheckCircle2 className="h-7 w-7" />
           </div>
           <h3 className="font-heading font-bold text-lg text-foreground mb-1">
             Chưa có nhiệm vụ được phân công
@@ -370,7 +370,7 @@ export function StaffFocusView({
                     : "border-border bg-muted/30 text-muted-foreground"
                 )}
               >
-                <AlertCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <AlertCircle className="h-3.5 w-3.5" />
                 <span>Trễ hạn &amp; Hôm nay:</span>
                 <span className="font-mono tabular-nums font-bold">
                   {stats.urgentTodayCount}
@@ -386,7 +386,7 @@ export function StaffFocusView({
                     : "border-border bg-muted/30 text-muted-foreground"
                 )}
               >
-                <Clock className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <Clock className="h-3.5 w-3.5" />
                 <span>Đang chờ duyệt:</span>
                 <span className="font-mono tabular-nums font-bold">
                   {stats.awaitingReviewCount}
@@ -395,7 +395,7 @@ export function StaffFocusView({
 
               {/* Completed Pill */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
-                <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>Hoàn thành:</span>
                 <span className="font-mono tabular-nums font-bold">
                   {stats.completedCount}
@@ -411,7 +411,7 @@ export function StaffFocusView({
               onClick={handlePrimaryHeroAction}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2"
             >
-              <Upload className="h-4 w-4" strokeWidth={1.5} />
+              <Upload className="h-4 w-4" />
               <span>Báo cáo tiến độ / Nộp minh chứng</span>
             </button>
           </div>
@@ -486,7 +486,7 @@ export function StaffFocusView({
 
         {/* Search Input */}
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Tìm theo tên việc, minh chứng..."
@@ -505,7 +505,7 @@ export function StaffFocusView({
             <div className="flex items-center justify-between pb-1 border-b border-border">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-                  <AlertCircle className="h-4 w-4" strokeWidth={1.5} />
+                  <AlertCircle className="h-4 w-4" />
                 </span>
                 <h2 className="font-heading font-bold text-base text-foreground tracking-tight">
                   Khẩn cấp &amp; Hôm nay (Cần xử lý ngay)
@@ -518,7 +518,7 @@ export function StaffFocusView({
 
             {filteredUrgent.length === 0 ? (
               <div className="rounded-lg border border-border bg-card/60 p-5 text-center flex items-center justify-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" strokeWidth={1.5} />
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
                 <span className="text-sm text-muted-foreground">
                   Tuyệt vời! Không có nhiệm vụ nào trễ hạn hoặc cần làm gấp hôm nay.
                 </span>
@@ -547,7 +547,7 @@ export function StaffFocusView({
             <div className="flex items-center justify-between pb-1 border-b border-border">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
-                  <Clock className="h-4 w-4" strokeWidth={1.5} />
+                  <Clock className="h-4 w-4" />
                 </span>
                 <h2 className="font-heading font-bold text-base text-foreground tracking-tight">
                   Sắp tới hạn (Trong tuần này)
@@ -586,7 +586,7 @@ export function StaffFocusView({
             <div className="flex items-center justify-between pb-1 border-b border-border">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-warning/10 text-warning">
-                  <FileCheck className="h-4 w-4" strokeWidth={1.5} />
+                  <FileCheck className="h-4 w-4" />
                 </span>
                 <h2 className="font-heading font-bold text-base text-foreground tracking-tight">
                   Đang chờ duyệt (Đã nộp chờ duyệt)
@@ -625,7 +625,7 @@ export function StaffFocusView({
             <div className="flex items-center justify-between pb-1 border-b border-border">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                  <CheckCircle className="h-4 w-4" strokeWidth={1.5} />
+                  <CheckCircle className="h-4 w-4" />
                 </span>
                 <h2 className="font-heading font-bold text-base text-foreground tracking-tight">
                   Đã hoàn thành gần đây
@@ -732,7 +732,7 @@ function TaskActionCard({
                   : "text-muted-foreground"
               )}
             >
-              <Calendar className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <Calendar className="h-3.5 w-3.5" />
               <span>
                 {isOverdue && tier !== "COMPLETED"
                   ? "Trễ hạn: "
@@ -746,7 +746,7 @@ function TaskActionCard({
             {/* Deliverables summary */}
             {task.deliverables && task.deliverables.length > 0 && (
               <div className="inline-flex items-center gap-1 font-mono tabular-nums text-primary">
-                <FileText className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <FileText className="h-3.5 w-3.5" />
                 <span>
                   {task.deliverables.length} minh chứng
                 </span>
@@ -763,7 +763,7 @@ function TaskActionCard({
             {/* In Review badge */}
             {task.status === "NEEDS_REVIEW" && (
               <span className="inline-flex items-center gap-1 text-warning font-medium font-mono tabular-nums">
-                <Clock className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <Clock className="h-3.5 w-3.5" />
                 Đang chờ duyệt
               </span>
             )}
@@ -771,7 +771,7 @@ function TaskActionCard({
             {/* Completed badge */}
             {task.status === "COMPLETED" && (
               <span className="inline-flex items-center gap-1 text-emerald-600 font-medium font-mono tabular-nums">
-                <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 Đã hoàn tất
               </span>
             )}
@@ -790,7 +790,7 @@ function TaskActionCard({
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
               )}
             >
-              <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <Upload className="h-3.5 w-3.5" />
               <span>Nộp minh chứng</span>
             </Pressable>
           )}
@@ -800,7 +800,7 @@ function TaskActionCard({
               onClick={() => onSelectTask(task)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning/20 transition-colors"
             >
-              <FileCheck className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <FileCheck className="h-3.5 w-3.5" />
               <span>Xem minh chứng</span>
             </Pressable>
           )}
@@ -811,7 +811,7 @@ function TaskActionCard({
             title="Xem chi tiết nhiệm vụ"
           >
             <span>Chi tiết</span>
-            <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <ArrowRight className="h-3.5 w-3.5" />
           </Pressable>
         </div>
       </div>

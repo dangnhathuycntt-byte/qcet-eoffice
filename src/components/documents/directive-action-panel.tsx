@@ -271,7 +271,7 @@ export function DirectiveActionPanel({
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <PenTool className="size-4" strokeWidth={1.5} />
+            <PenTool className="size-4" />
           </div>
           <div>
             <h3 className="text-compact font-semibold text-foreground">
@@ -289,7 +289,7 @@ export function DirectiveActionPanel({
             className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98] transition-all"
             aria-label="Đóng"
           >
-            <X className="size-4" strokeWidth={1.5} />
+            <X className="size-4" />
           </Pressable>
         )}
       </div>
@@ -313,7 +313,7 @@ export function DirectiveActionPanel({
       {/* 1-Touch Preset Chips */}
       <div className="mt-4">
         <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          <Sparkles className="size-3.5 text-warning" strokeWidth={1.5} />
+          <Sparkles className="size-3.5 text-warning" />
           <span>Mẫu bút phê chỉ đạo nhanh 1-chạm (Quick Presets):</span>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -366,7 +366,7 @@ export function DirectiveActionPanel({
           {/* Main Department */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Building2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <Building2 className="size-3.5 text-muted-foreground" />
               <span>Đơn vị chủ trì thực hiện</span>
               <span className="text-destructive">*</span>
             </label>
@@ -391,7 +391,7 @@ export function DirectiveActionPanel({
           {/* Deadline & Quick Buttons */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
-              <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <Calendar className="size-3.5 text-muted-foreground" />
               <span>Hạn xử lý / Báo cáo hoàn thành</span>
             </label>
             <VietnameseDatePicker
@@ -423,7 +423,7 @@ export function DirectiveActionPanel({
         {/* Collaborating Departments Checkboxes */}
         <div>
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Users className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <Users className="size-3.5 text-muted-foreground" />
             <span>Đơn vị phối hợp thực hiện (tùy chọn)</span>
           </label>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -443,7 +443,7 @@ export function DirectiveActionPanel({
                     )}
                   >
                     <span>{dept.shortName || dept.name}</span>
-                    {isChecked && <CheckCircle2 className="size-3" strokeWidth={1.5} />}
+                    {isChecked && <CheckCircle2 className="size-3" />}
                   </Pressable>
                 );
               })}
@@ -453,14 +453,14 @@ export function DirectiveActionPanel({
         {/* Status Alerts */}
         {errorMessage && (
           <div className="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
-            <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
+            <AlertCircle className="size-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {successMessage && (
           <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-700">
-            <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} />
+            <CheckCircle2 className="size-4 shrink-0" />
             <span>{successMessage}</span>
           </div>
         )}
@@ -483,12 +483,12 @@ export function DirectiveActionPanel({
           >
             {isSubmitting ? (
               <>
-                <Clock className="size-4 animate-spin" strokeWidth={1.5} />
+                <Clock className="size-4 animate-spin" />
                 <span>Đang lưu bút phê...</span>
               </>
             ) : (
               <>
-                <Send className="size-4" strokeWidth={1.5} />
+                <Send className="size-4" />
                 <span>Ban hành bút phê &amp; phân tuyến</span>
               </>
             )}

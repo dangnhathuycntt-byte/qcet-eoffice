@@ -20,7 +20,7 @@ export function DocumentLoadError({ title, message, digest, onRetry, children, c
     <EmptyState
       role="alert"
       density="compact"
-      icon={<AlertCircle strokeWidth={1.5} />}
+      icon={<AlertCircle />}
       title={title}
       description={
         <>
@@ -33,7 +33,7 @@ export function DocumentLoadError({ title, message, digest, onRetry, children, c
           <div className="flex items-center justify-center gap-2">
             {onRetry ? (
               <Button variant="outline" size="sm" onClick={onRetry}>
-                <RefreshCw strokeWidth={1.5} />
+                <RefreshCw />
                 Thử lại
               </Button>
             ) : null}

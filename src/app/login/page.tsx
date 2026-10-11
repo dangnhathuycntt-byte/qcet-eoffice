@@ -285,7 +285,7 @@ function LoginFormContent() {
               onClick={handleRequestAccess}
               className={BTN_PRIMARY}
             >
-              <Send className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+              <Send className="size-4 shrink-0" aria-hidden="true" />
               <span>{isSubmittingRequest ? "Đang gửi..." : "Gửi yêu cầu cấp quyền"}</span>
             </Pressable>
             <a
@@ -489,9 +489,9 @@ function LoginFormContent() {
               <div className="truncate text-xs leading-[18px]" style={{ color: C.sub }}>{lastUser.email}</div>
             </div>
             {isQuickLogging ? (
-              <Loader2 className="size-4 shrink-0 animate-spin" strokeWidth={1.5} style={{ color: C.sub }} aria-hidden="true" />
+              <Loader2 className="size-4 shrink-0 animate-spin" style={{ color: C.sub }} aria-hidden="true" />
             ) : (
-              <ArrowRight className="size-4 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5" strokeWidth={1.5} style={{ color: C.sub }} aria-hidden="true" />
+              <ArrowRight className="size-4 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5" style={{ color: C.sub }} aria-hidden="true" />
             )}
           </button>
 

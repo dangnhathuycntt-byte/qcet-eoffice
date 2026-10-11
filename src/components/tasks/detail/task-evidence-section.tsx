@@ -85,7 +85,7 @@ export function TaskEvidenceSection({
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Paperclip className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+          <Paperclip className="size-4 text-primary shrink-0" />
           <h2 className="text-xs font-semibold text-foreground">
             Sản phẩm bàn giao & Minh chứng ({deliverables.length})
           </h2>
@@ -99,7 +99,7 @@ export function TaskEvidenceSection({
             title="Đính kèm minh chứng hoặc liên kết kết quả"
             aria-label="Đính kèm minh chứng hoặc liên kết kết quả"
           >
-            <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
+            <Plus className="size-3.5 text-primary" />
             <span>Thêm minh chứng</span>
           </button>
         )}
@@ -160,9 +160,9 @@ export function TaskEvidenceSection({
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             >
               {isSubmitting ? (
-                <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <Check className="size-3.5" strokeWidth={1.5} />
+                <Check className="size-3.5" />
               )}
               <span>Lưu minh chứng</span>
             </button>
@@ -182,7 +182,7 @@ export function TaskEvidenceSection({
               onClick={() => setIsAdding(true)}
               className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden rounded"
             >
-              <Plus className="size-3" strokeWidth={1.5} />
+              <Plus className="size-3" />
               <span>Thêm minh chứng đầu tiên</span>
             </button>
           )}
@@ -199,7 +199,7 @@ export function TaskEvidenceSection({
                 className="flex items-start justify-between gap-3 p-3.5 hover:bg-muted/40 transition-colors group/evidence"
               >
                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                  <FileText className="size-4 text-primary shrink-0 mt-0.5" strokeWidth={1.5} />
+                  <FileText className="size-4 text-primary shrink-0 mt-0.5" />
 
                   <div className="min-w-0 space-y-1 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -219,7 +219,7 @@ export function TaskEvidenceSection({
                               : "bg-warning/10 text-warning border-warning/30"
                           )}
                         >
-                          {isApproved && <ShieldCheck className="size-3" strokeWidth={1.5} />}
+                          {isApproved && <ShieldCheck className="size-3" />}
                           {isApproved ? "Đã duyệt" : isRejected ? "Từ chối" : "Chờ duyệt"}
                         </span>
                       )}
@@ -248,7 +248,7 @@ export function TaskEvidenceSection({
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-background hover:bg-muted text-xs font-medium text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                       title="Mở liên kết minh chứng"
                     >
-                      <ExternalLink className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                      <ExternalLink className="size-3 text-muted-foreground" />
                       <span className="hidden sm:inline text-xs">Mở tệp</span>
                     </a>
                   )}
@@ -261,7 +261,7 @@ export function TaskEvidenceSection({
                       title="Xóa minh chứng"
                       aria-label="Xóa minh chứng"
                     >
-                      <Trash2 className="size-3.5" strokeWidth={1.5} />
+                      <Trash2 className="size-3.5" />
                     </button>
                   )}
                 </div>

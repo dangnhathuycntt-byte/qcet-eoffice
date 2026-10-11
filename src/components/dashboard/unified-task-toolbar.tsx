@@ -1055,7 +1055,7 @@ export function UnifiedTaskToolbar({
                     ) : opt.value === "completed" ? (
                       <StatusSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
                     ) : (
-                      <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
+                      <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
@@ -1252,14 +1252,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <School className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <School className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isFacultyActive ? "font-medium text-foreground" : "font-normal")}>
                     Khoa đào tạo
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1281,7 +1280,7 @@ export function UnifiedTaskToolbar({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <School className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <School className="size-3.5 text-muted-foreground/60 shrink-0" />
                               <span className="truncate">{dept.name}</span>
                             </div>
                             <div
@@ -1312,14 +1311,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Building className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <Building className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isAdminActive ? "font-medium text-foreground" : "font-normal")}>
                     Phòng ban hành chính
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1341,7 +1339,7 @@ export function UnifiedTaskToolbar({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <Building className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <Building className="size-3.5 text-muted-foreground/60 shrink-0" />
                               <span className="truncate">{dept.name}</span>
                             </div>
                             <div
@@ -1409,7 +1407,7 @@ export function UnifiedTaskToolbar({
                     ) : opt.value === "unassigned" ? (
                       <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeDasharray="2 2" />
                     ) : (
-                      <Users className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                      <Users className="size-3.5 text-muted-foreground/60 shrink-0" />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
@@ -1460,7 +1458,7 @@ export function UnifiedTaskToolbar({
                     ) : opt.value === "single" ? (
                       <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
                     ) : (
-                      <Users className="size-3.5 text-muted-foreground/50 shrink-0" strokeWidth={1.5} />
+                      <Users className="size-3.5 text-muted-foreground/50 shrink-0" />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
@@ -1493,14 +1491,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Calendar className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <Calendar className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isDeadlineActive ? "font-medium text-foreground" : "font-normal")}>
                     Hạn chốt
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1526,7 +1523,7 @@ export function UnifiedTaskToolbar({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" />
                               <span>{opt.label}</span>
                               {opt.count !== undefined && opt.count > 0 && (
                                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">({opt.count})</span>
@@ -1560,14 +1557,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Clock className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <Clock className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isMonthActive ? "font-medium text-foreground" : "font-normal")}>
                     Kỳ tháng
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1586,7 +1582,7 @@ export function UnifiedTaskToolbar({
                             : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                         )}
                       >
-                        <Clock className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                        <Clock className="size-3.5 text-muted-foreground/60 shrink-0" />
                         <span>Tất cả các tháng</span>
                       </MenuItem>
 
@@ -2081,7 +2077,6 @@ export function UnifiedTaskToolbar({
           </div>
           <ChevronRight
             className="size-2.5 shrink-0 text-foreground/60 group-hover:text-foreground transition-colors ml-auto"
-            strokeWidth={1.5}
           />
         </MenuSubmenuTrigger>
         <MenuPortal>
@@ -2187,7 +2182,7 @@ export function UnifiedTaskToolbar({
               aria-label="Tạo nhiệm vụ"
               className={listToolbarPrimaryButtonClass}
             >
-              <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <Plus className="size-3.5 shrink-0 text-muted-foreground" />
               <span>{createButtonLabel || (onCreateTask ? "Tạo nhiệm vụ" : primaryActionLabel)}</span>
             </Pressable>
           )}
@@ -2225,7 +2220,7 @@ export function UnifiedTaskToolbar({
               title="Bộ lọc (F)"
               className={listToolbarIconButtonClass(isCollapsedFilterOpen || activeFilterCount > 0)}
             >
-              <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
+              <Filter className="size-3.5 shrink-0" />
               <ListToolbarCountBadge count={activeFilterCount} />
             </Pressable>
           }
@@ -2238,7 +2233,7 @@ export function UnifiedTaskToolbar({
             >
               {/* Header: Add Filter... [F] */}
               <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/40 mb-1">
-                <Search className="size-3.5 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
+                <Search className="size-3.5 shrink-0 text-muted-foreground/50" />
                 <input
                   ref={menuSearchInputRef}
                   type="text"
@@ -2254,7 +2249,7 @@ export function UnifiedTaskToolbar({
                     onClick={() => setMenuSearch("")}
                     className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation"
                   >
-                    <X className="size-3" strokeWidth={1.5} />
+                    <X className="size-3" />
                   </Pressable>
                 ) : (
                   <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 font-mono text-xs leading-none text-muted-foreground bg-muted/80 border border-border/60 rounded select-none pointer-events-none">
@@ -2330,7 +2325,7 @@ export function UnifiedTaskToolbar({
                     className="flex h-7 w-full items-center justify-between rounded-md px-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer select-none outline-none"
                   >
                     <div className="flex items-center gap-1.5">
-                      <RotateCcw className="size-3 text-destructive/80" strokeWidth={1.5} />
+                      <RotateCcw className="size-3 text-destructive/80" />
                       <span>Xóa bộ lọc</span>
                     </div>
                     <span className="text-xs font-mono tabular-nums bg-destructive/15 text-destructive px-1.5 py-0.2 rounded-full">
@@ -2374,7 +2369,7 @@ export function UnifiedTaskToolbar({
           aria-label="Tạo việc mới"
           className={listToolbarPrimaryButtonClass}
         >
-          <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+          <Plus className="size-3.5 shrink-0 text-muted-foreground" />
           <span>{primaryActionLabel}</span>
         </Pressable>
       )}

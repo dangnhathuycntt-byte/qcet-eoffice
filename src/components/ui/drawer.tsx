@@ -354,7 +354,7 @@ export function Drawer({
                 className="flex items-center justify-center size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 cursor-pointer"
                 aria-label="Đóng"
               >
-                <X size={18} strokeWidth={1.5} />
+                <X size={18} />
               </button>
             </div>
 

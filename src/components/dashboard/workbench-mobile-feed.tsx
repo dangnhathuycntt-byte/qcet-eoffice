@@ -412,7 +412,6 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
           <div className="flex items-start gap-3">
             <AlertTriangle
               size={18}
-              strokeWidth={1.5}
               className="text-destructive shrink-0 mt-0.5"
             />
             <div className="space-y-0.5 min-w-0">
@@ -573,7 +572,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
                     </span>
                     <span className="text-primary font-medium inline-flex items-center gap-1 shrink-0">
                       <span>{isNeedsReview ? "Thẩm định" : "Xử lý"}</span>
-                      <ChevronRight size={13} strokeWidth={1.5} />
+                      <ChevronRight size={13} />
                     </span>
                   </div>
                 </div>
@@ -582,7 +581,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
           ) : (
             <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center space-y-1.5">
               <div className="inline-flex items-center justify-center size-12 rounded-full bg-emerald-500/10 text-emerald-600 mb-1">
-                <CheckCircle2 size={22} strokeWidth={1.5} />
+                <CheckCircle2 size={22} />
               </div>
               <p className="text-xs font-semibold text-emerald-800">
                 Tiến độ thông suốt, không có việc tồn đọng khẩn cấp
@@ -700,7 +699,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
           <span className="font-mono tabular-nums font-semibold text-primary">
             ({tasks.length})
           </span>
-          <ArrowRight size={14} strokeWidth={1.5} className="text-primary" />
+          <ArrowRight size={14} className="text-primary" />
         </Link>
       </section>
 
@@ -730,7 +729,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
                 className="p-3.5 rounded-xl border border-border bg-card shadow-2xs space-y-1.5 min-h-[48px]"
               >
                 <div className="flex items-center gap-2">
-                  <Clock size={14} strokeWidth={1.5} className="text-indigo-600 shrink-0" />
+                  <Clock size={14} className="text-indigo-600 shrink-0" />
                   <span className="font-mono tabular-nums text-xs font-bold text-indigo-700 bg-indigo-500/10 px-2 py-0.5 rounded">
                     {item.time}
                   </span>
@@ -739,7 +738,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
                   {item.title}
                 </h3>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-0.5">
-                  <MapPin size={13} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                  <MapPin size={13} className="shrink-0 text-muted-foreground" />
                   <span className="truncate">{item.location}</span>
                 </div>
               </div>
@@ -758,9 +757,9 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
           className="w-full min-h-[48px] rounded-xl border border-border bg-background hover:bg-muted/50 active:bg-muted font-medium text-xs text-foreground flex items-center justify-center gap-1.5 shadow-2xs touch-manipulation transition-colors"
           data-slot="view-calendar-btn"
         >
-          <CalendarIcon size={14} strokeWidth={1.5} className="text-indigo-600" />
+          <CalendarIcon size={14} className="text-indigo-600" />
           <span>Xem lịch công tác tuần</span>
-          <ArrowRight size={14} strokeWidth={1.5} className="text-indigo-600" />
+          <ArrowRight size={14} className="text-indigo-600" />
         </Link>
       </section>
 
@@ -792,7 +791,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
               >
                 <div className="flex items-start gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0 mt-0.5">
-                    <Bell size={14} strokeWidth={1.5} />
+                    <Bell size={14} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-relaxed">

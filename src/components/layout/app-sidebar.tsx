@@ -341,6 +341,7 @@ export function AppSidebar() {
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
   // Số đếm thật cho menu con "Văn bản" (theo quyền đọc của người dùng).
+  // Làm mới khi chuyển trang; đổi bộ lọc/ô tìm (query string) không đổi số đếm.
   const docsUserId = user?.id;
   const [canViewApprovalReport, setCanViewApprovalReport] = React.useState(false);
   React.useEffect(() => {
@@ -367,7 +368,7 @@ export function AppSidebar() {
       }
     })();
     return () => ctrl.abort();
-  }, [docsUserId, pathname, searchParams, setBadgeCounts]);
+  }, [docsUserId, pathname, setBadgeCounts]);
 
   // Automatic profile prompt on first visit if user has unassigned department
   React.useEffect(() => {
@@ -557,7 +558,6 @@ export function AppSidebar() {
                       <span>{group.label}</span>
                       <ChevronDown
                         size={11}
-                        strokeWidth={1.5}
                         className={cn(
                           "text-muted-foreground/70 transition-transform duration-150 shrink-0",
                           isGroupCollapsed && "-rotate-90"
@@ -672,7 +672,6 @@ export function AppSidebar() {
                             >
                               <ChevronDown
                                 size={12}
-                                strokeWidth={1.5}
                                 className={cn("transition-transform duration-150", !isExpanded && "-rotate-90")}
                               />
                             </Pressable>
@@ -759,7 +758,6 @@ export function AppSidebar() {
 
                     <ChevronsUpDown
                       size={13}
-                      strokeWidth={1.5}
                       className="text-muted-foreground/50 shrink-0 ml-1"
                     />
                   </>
@@ -802,7 +800,7 @@ export function AppSidebar() {
                             }}
                             className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
-                            <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <User size={14} className="text-muted-foreground/75 shrink-0" />
                             <span>Hồ sơ cá nhân</span>
                           </Pressable>
 
@@ -811,7 +809,7 @@ export function AppSidebar() {
                             onClick={() => setIsProfileDropdownOpen(false)}
                             className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
                           >
-                            <Settings size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <Settings size={14} className="text-muted-foreground/75 shrink-0" />
                             <span>Cài đặt hệ thống</span>
                           </Link>
 
@@ -824,7 +822,7 @@ export function AppSidebar() {
                             }}
                             className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
-                            <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
+                            <Smartphone size={14} className="text-primary/85 shrink-0" />
                             <span>Cài đặt ứng dụng di động</span>
                           </Pressable>
 
@@ -837,7 +835,7 @@ export function AppSidebar() {
                             }}
                             className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
-                            <HelpCircle size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <HelpCircle size={14} className="text-muted-foreground/75 shrink-0" />
                             <span>Trợ giúp &amp; Hướng dẫn</span>
                           </Pressable>
                         </div>
@@ -851,7 +849,7 @@ export function AppSidebar() {
                             }}
                             className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors text-left"
                           >
-                            <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
+                            <LogOut size={14} className="shrink-0" />
                             <span>Đăng xuất</span>
                           </Pressable>
                         </div>

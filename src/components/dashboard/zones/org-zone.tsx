@@ -21,7 +21,7 @@ function OrgZoneComponent() {
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 border border-purple-500/20">
-              <Network className="size-3" strokeWidth={1.5} />
+              <Network className="size-3" />
               <span>CƠ CẤU BỘ MÁY & DANH BẠ QCET</span>
             </span>
             <span className="text-xs text-muted-foreground font-medium hidden sm:inline">

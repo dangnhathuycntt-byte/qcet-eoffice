@@ -55,7 +55,7 @@ export function DepartmentAttentionPreview({
     >
       <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <Building2 className="size-4 text-warning" strokeWidth={1.5} />
+          <Building2 className="size-4 text-warning" />
           <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
             Đơn vị cần chú ý
           </h3>
@@ -91,7 +91,7 @@ export function DepartmentAttentionPreview({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Building2 className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                    <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
                     <span className="truncate text-xs font-semibold text-foreground">
                       {dept.departmentName}
                     </span>
@@ -130,7 +130,7 @@ export function DepartmentAttentionPreview({
                   aria-label={`Xem nhiệm vụ của ${dept.departmentName}`}
                 >
                   <span>Xem nhiệm vụ</span>
-                  <ChevronRight className="size-3" strokeWidth={1.5} />
+                  <ChevronRight className="size-3" />
                 </Link>
               </li>
             );

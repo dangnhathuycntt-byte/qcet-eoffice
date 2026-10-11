@@ -119,7 +119,7 @@ function SubmenuRow({
         <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
         <span className="flex-1 truncate">{label}</span>
         <Kbd>{shortcut}</Kbd>
-        <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" strokeWidth={1.5} />
+        <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" />
       </Pressable>
       {expanded ? (
         <div
@@ -165,7 +165,7 @@ function OptionRow({
       {leading ? <span className="flex size-4 shrink-0 items-center justify-center">{leading}</span> : null}
       <span className="flex-1 truncate">{label}</span>
       {hint ? <span className="text-xs tabular-nums text-muted-foreground/80">{hint}</span> : null}
-      {selected ? <Check className="size-3.5 shrink-0 text-foreground" strokeWidth={1.5} /> : null}
+      {selected ? <Check className="size-3.5 shrink-0 text-foreground" /> : null}
     </Pressable>
   );
 }
@@ -590,7 +590,7 @@ export function TaskContextMenu({
               <TaskIconDeadline className="size-4 text-muted-foreground" />
             </span>
             <span className="flex-1 truncate">Chọn ngày khác</span>
-            <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" strokeWidth={1.5} />
+            <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" />
           </Pressable>
           {calendarOpen ? (
             <div

@@ -353,7 +353,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
           >
             {dueBadge.label}
           </span>
-          <ChevronRight className="size-4 text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0" strokeWidth={1.5} />
+          <ChevronRight className="size-4 text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0" />
         </div>
       </div>
     </article>

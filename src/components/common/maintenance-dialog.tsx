@@ -40,7 +40,7 @@ export function MaintenanceDialog({
       <div className="space-y-4">
         <div className="flex items-start gap-4 pt-1">
           <div className="size-12 rounded-xl bg-warning/10 border border-warning/20 text-warning flex items-center justify-center shrink-0">
-            <Wrench className="size-6" strokeWidth={1.5} />
+            <Wrench className="size-6" />
           </div>
 
           <div className="space-y-1 pr-6 flex-1 min-w-0">

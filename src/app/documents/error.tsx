@@ -27,7 +27,7 @@ export default function DocumentsError({
       >
         <Button variant="secondary" size="sm" asChild>
           <Link href="/dashboard">
-            <ArrowLeft strokeWidth={1.5} />
+            <ArrowLeft />
             Bảng điều khiển
           </Link>
         </Button>

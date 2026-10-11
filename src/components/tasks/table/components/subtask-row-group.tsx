@@ -77,7 +77,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
             {!hasSubtasks ? (
               <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-card/60 border border-dashed border-border/80 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <ListTodo className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
+                  <ListTodo className="size-4 text-muted-foreground/60" />
                   <span>Nhiệm vụ này chưa có việc thành phần nào.</span>
                 </div>
                 {canAssign && onAddSubTask && (
@@ -85,7 +85,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                     onClick={() => onAddSubTask(parentTask.id)}
                     className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold active:scale-[0.98] transition-colors"
                   >
-                    <Plus className="size-3" strokeWidth={1.5} />
+                    <Plus className="size-3" />
                     <span>Thêm việc con</span>
                   </Pressable>
                 )}
@@ -132,7 +132,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                       onClick={() => onAddSubTask(parentTask.id)}
                       className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium transition-colors"
                     >
-                      <Plus className="size-3 text-primary" strokeWidth={1.5} />
+                      <Plus className="size-3 text-primary" />
                       <span>Thêm việc con cho nhiệm vụ này</span>
                     </Pressable>
                   </div>

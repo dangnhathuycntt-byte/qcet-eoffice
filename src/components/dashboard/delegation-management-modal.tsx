@@ -277,7 +277,7 @@ export function DelegationManagementModal({
         {/* Success Alert Banner */}
         {successMessage && (
           <div className="mx-6 mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-700 flex items-center gap-2">
-            <UserCheck className="size-4 shrink-0 text-emerald-600" strokeWidth={1.5} />
+            <UserCheck className="size-4 shrink-0 text-emerald-600" />
             <span className="font-medium">{successMessage}</span>
           </div>
         )}
@@ -288,7 +288,7 @@ export function DelegationManagementModal({
             {/* Left Column: Form Tạo Ủy Quyền (5 cols) */}
             <div className="lg:col-span-5 space-y-4 rounded-xl border border-border/70 bg-card p-4 sm:p-5 shadow-xs">
               <div className="flex items-center gap-2 border-b border-border/50 pb-3">
-                <Plus className="size-4 text-primary" strokeWidth={1.5} />
+                <Plus className="size-4 text-primary" />
                 <h3 className="text-sm font-semibold text-foreground">
                   Thiết lập Quyết định Ủy quyền Mới
                 </h3>
@@ -334,7 +334,7 @@ export function DelegationManagementModal({
                   />
                   {errors.granteeName && (
                     <p className="text-xs font-medium text-destructive flex items-center gap-1">
-                      <AlertCircle className="size-3" strokeWidth={1.5} />
+                      <AlertCircle className="size-3" />
                       {errors.granteeName}
                     </p>
                   )}
@@ -433,7 +433,7 @@ export function DelegationManagementModal({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="font-medium text-foreground flex items-center gap-1 text-xs">
-                      <Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                      <Calendar className="size-3 text-muted-foreground" />
                       Từ ngày
                     </label>
                     <VietnameseDatePicker
@@ -450,7 +450,7 @@ export function DelegationManagementModal({
 
                   <div className="space-y-1">
                     <label className="font-medium text-foreground flex items-center gap-1 text-xs">
-                      <Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                      <Calendar className="size-3 text-muted-foreground" />
                       Đến ngày
                     </label>
                     <VietnameseDatePicker
@@ -492,7 +492,7 @@ export function DelegationManagementModal({
                   />
                   {errors.reason && (
                     <p className="text-xs font-medium text-destructive flex items-center gap-1">
-                      <AlertCircle className="size-3" strokeWidth={1.5} />
+                      <AlertCircle className="size-3" />
                       {errors.reason}
                     </p>
                   )}
@@ -518,7 +518,7 @@ export function DelegationManagementModal({
                   disabled={isSubmitting}
                   className="w-full font-medium active:scale-[0.98]"
                 >
-                  <UserCheck className="size-4" strokeWidth={1.5} />
+                  <UserCheck className="size-4" />
                   <span>Ký & Kích hoạt ủy quyền</span>
                 </Button>
               </form>
@@ -528,7 +528,7 @@ export function DelegationManagementModal({
             <div className="lg:col-span-7 space-y-4">
               <div className="flex items-center justify-between border-b border-border/50 pb-3">
                 <div className="flex items-center gap-2">
-                  <ShieldAlert className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                  <ShieldAlert className="size-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold text-foreground">
                     Quyết định Ủy quyền của Đơn vị
                   </h3>
@@ -541,7 +541,7 @@ export function DelegationManagementModal({
               {currentDeptDelegations.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-8 text-center space-y-2">
                   <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
-                    <ShieldAlert className="size-5" strokeWidth={1.5} />
+                    <ShieldAlert className="size-5" />
                   </div>
                   <p className="text-sm font-medium text-foreground">
                     Chưa có quyết định ủy quyền nào
@@ -616,7 +616,7 @@ export function DelegationManagementModal({
                               onClick={() => onRevokeDelegation(del.id)}
                               className="active:scale-[0.98] text-xs gap-1 shrink-0"
                             >
-                              <Trash2 className="size-3" strokeWidth={1.5} />
+                              <Trash2 className="size-3" />
                               <span>Thu hồi</span>
                             </Button>
                           )}
@@ -625,14 +625,14 @@ export function DelegationManagementModal({
                         {/* Metadata Details */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 border-t border-border/40">
                           <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <UserCheck className="size-3.5 shrink-0" strokeWidth={1.5} />
+                            <UserCheck className="size-3.5 shrink-0" />
                             <span>Người ký:</span>
                             <span className="font-medium text-foreground">
                               {del.grantorName}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Calendar className="size-3.5 shrink-0" strokeWidth={1.5} />
+                            <Calendar className="size-3.5 shrink-0" />
                             <span>Hiệu lực:</span>
                             <span className="font-mono tabular-nums text-foreground">
                               {del.startDate} - {del.endDate}
@@ -667,7 +667,7 @@ export function DelegationManagementModal({
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-border/60 px-6 py-3 bg-muted/10 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <ShieldAlert className="size-3.5 text-primary" strokeWidth={1.5} />
+            <ShieldAlert className="size-3.5 text-primary" />
             Hệ thống phân quyền ủy quyền chuẩn Stanford / QCET E-Office
           </span>
           <Button

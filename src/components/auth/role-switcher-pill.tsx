@@ -72,7 +72,7 @@ function RoleSwitcherPillInner({ className }: { className?: string }) {
       className={cn("flex flex-col gap-1", className)}
     >
       <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-50 border border-orange-200/60">
-        <ArrowRightLeft size={12} strokeWidth={1.5} className="text-orange-500 shrink-0" />
+        <ArrowRightLeft size={12} className="text-orange-500 shrink-0" />
         <span className="text-xs font-medium text-orange-700">
           Test: Chuyển đổi vai trò
         </span>

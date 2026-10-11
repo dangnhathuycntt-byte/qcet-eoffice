@@ -168,15 +168,15 @@ export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflo
               <div className="relative z-10 mt-0.5 shrink-0">
                 {state === "completed" ? (
                   <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                    <CheckCircle2 className="size-3 text-emerald-600" strokeWidth={1.5} />
+                    <CheckCircle2 className="size-3 text-emerald-600" />
                   </div>
                 ) : state === "active" ? (
                   <div className="size-5 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
-                    <Clock className="size-3 text-primary animate-pulse motion-reduce:animate-none" strokeWidth={1.5} />
+                    <Clock className="size-3 text-primary animate-pulse motion-reduce:animate-none" />
                   </div>
                 ) : (
                   <div className="size-5 rounded-full border border-border/60 bg-muted/40 flex items-center justify-center">
-                    <Circle className="size-3 text-muted-foreground/40" strokeWidth={1.5} />
+                    <Circle className="size-3 text-muted-foreground/40" />
                   </div>
                 )}
               </div>

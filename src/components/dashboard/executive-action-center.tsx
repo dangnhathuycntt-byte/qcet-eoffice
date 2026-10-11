@@ -350,7 +350,7 @@ export function ExecutiveActionCenter({
             className="flex items-center gap-3 px-1 py-3 text-xs text-muted-foreground"
             data-slot="action-center-empty-state"
           >
-            <ShieldCheck className="size-4 text-emerald-600 shrink-0" strokeWidth={1.5} />
+            <ShieldCheck className="size-4 text-emerald-600 shrink-0" />
             <span>
               {allItems.length === 0
                 ? "Không có nhiệm vụ cần xử lý trong phạm vi hiện tại."
@@ -472,7 +472,7 @@ export function ExecutiveActionCenter({
                                   }}
                                   className="h-7 px-2.5 text-xs font-medium bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg gap-1 shadow-2xs"
                                 >
-                                  <Check size={13} strokeWidth={1.5} />
+                                  <Check size={13} />
                                   <span>Duyệt L2</span>
                                 </Button>
                                 <Button
@@ -492,7 +492,7 @@ export function ExecutiveActionCenter({
                                       : "hover:bg-warning/10 hover:text-warning text-muted-foreground"
                                   )}
                                 >
-                                  <RotateCcw size={12} strokeWidth={1.5} />
+                                  <RotateCcw size={12} />
                                   <span>Yêu cầu sửa</span>
                                 </Button>
                               </>
@@ -511,7 +511,7 @@ export function ExecutiveActionCenter({
                           }}
                         >
                           <span>{item.actionLabel || "Xem chi tiết"}</span>
-                          <ArrowRight className="size-3.5 group-hover/item:translate-x-0.5 transition-transform" strokeWidth={1.5} />
+                          <ArrowRight className="size-3.5 group-hover/item:translate-x-0.5 transition-transform" />
                         </Button>
                       </div>
                     </div>

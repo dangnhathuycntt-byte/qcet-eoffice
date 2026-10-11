@@ -216,7 +216,11 @@ export function CreateTaskModal({
     }
   }, [isChildTaskMode, formData.coAssignees]);
 
+  // Modal luôn được mount; chỉ tải danh sách người dùng ở lần mở đầu tiên.
+  const hasRequestedUsers = React.useRef(false);
   React.useEffect(() => {
+    if (!isOpen || hasRequestedUsers.current) return;
+    hasRequestedUsers.current = true;
     fetch("/api/users")
       .then((r) => r.json())
       .then((data) => {
@@ -225,7 +229,7 @@ export function CreateTaskModal({
         }
       })
       .catch((err) => console.error("Error loading assignees:", err));
-  }, []);
+  }, [isOpen]);
 
   const departmentGroups = React.useMemo<DepartmentGroupLocal[]>(() => {
     if (personnelList.length === 0) {
@@ -704,7 +708,7 @@ export function CreateTaskModal({
             {/* Top Header Bar */}
             <header className="sticky top-0 z-20 flex items-center justify-between px-5 sm:px-6 py-3 border-b border-border/60 bg-muted/20 shrink-0 select-none">
               <div className="flex items-center gap-1.5 text-xs min-w-0">
-                <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                <Building2 className="size-3.5 text-muted-foreground shrink-0" />
                 <span className="font-semibold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
                   {selectedAssigneeDept?.name || (user?.department || "Đơn vị")}
                 </span>
@@ -768,7 +772,7 @@ export function CreateTaskModal({
                 aria-label="Đóng"
                 className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
               >
-                <X className="size-4" strokeWidth={1.5} />
+                <X className="size-4" />
               </Pressable>
             </header>
 
@@ -865,7 +869,7 @@ export function CreateTaskModal({
                           ) : (
                             <span className="text-muted-foreground/60">Chọn cán bộ phụ trách...</span>
                           )}
-                          <ChevronDown className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                          <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
                         </Popover.Trigger>
 
                         {/* Combobox Dropdown Popover via Base UI Popover */}
@@ -875,7 +879,7 @@ export function CreateTaskModal({
                         <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-[340px] sm:w-[420px] p-0 overflow-hidden shadow-2xl rounded-xl border border-border/80 bg-card " aria-label="Danh sách cán bộ phụ trách">
                           <div className="p-2 border-b border-border/50 bg-muted/30">
                             <div className="relative flex items-center">
-                              <Search className="size-3.5 text-muted-foreground absolute left-2 pointer-events-none" strokeWidth={1.5} />
+                              <Search className="size-3.5 text-muted-foreground absolute left-2 pointer-events-none" />
                               <input
                                 ref={searchInputRef}
                                 type="text"
@@ -1012,7 +1016,7 @@ export function CreateTaskModal({
                                               <p className="text-muted-foreground truncate text-xs">{member.role}</p>
                                             </div>
                                           </div>
-                                          {isSelected && <Check className="size-3 text-primary shrink-0" strokeWidth={1.5} />}
+                                          {isSelected && <Check className="size-3 text-primary shrink-0" />}
                                         </Pressable>
                                       );
                                     })}
@@ -1055,7 +1059,7 @@ export function CreateTaskModal({
                             className="inline-flex items-center gap-1 font-semibold text-warning hover:underline pt-0.5"
                           >
                             <span>Tạo phiếu yêu cầu phối hợp</span>
-                            <ArrowRight className="size-3" strokeWidth={1.5} />
+                            <ArrowRight className="size-3" />
                           </Pressable>
                         )}
                       </div>
@@ -1122,13 +1126,12 @@ export function CreateTaskModal({
                               "size-3 shrink-0",
                               PRIORITY_OPTIONS.find((opt) => opt.value === (formData.priority || "MEDIUM"))?.iconColor || "text-muted-foreground"
                             )}
-                            strokeWidth={1.5}
                           />
                           <span className="truncate">
                             {PRIORITY_OPTIONS.find((opt) => opt.value === (formData.priority || "MEDIUM"))?.label || "Bình thường"}
                           </span>
                         </div>
-                        <ChevronDown className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                        <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
                       </Popover.Trigger>
 
 
@@ -1150,11 +1153,11 @@ export function CreateTaskModal({
                             )}
                           >
                             <div className="flex items-center gap-2">
-                              <Flag className={cn("size-3", opt.iconColor)} strokeWidth={1.5} />
+                              <Flag className={cn("size-3", opt.iconColor)} />
                               <span>{opt.label}</span>
                             </div>
                             {(formData.priority || "MEDIUM") === opt.value && (
-                              <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                              <Check className="size-3 text-foreground shrink-0" />
                             )}
                           </Pressable>
                         ))}
@@ -1176,7 +1179,6 @@ export function CreateTaskModal({
                   >
                     <ChevronDown
                       className={cn("size-3.5 transition-transform", !showAdvanced && "-rotate-90")}
-                      strokeWidth={1.5}
                     />
                     <span>{showAdvanced ? "Ẩn tùy chọn nâng cao" : "Tùy chọn nâng cao"}</span>
                   </Pressable>
@@ -1246,7 +1248,7 @@ export function CreateTaskModal({
                                   </option>
                                 ))}
                               </select>
-                              <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-3" strokeWidth={1.5} />
+                              <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-3" />
                             </div>
                           </div>
                         )}

@@ -273,7 +273,7 @@ export function TaskSubtasksSection({
             title="Thêm chi tiết việc con"
             aria-label="Thêm chi tiết việc con"
           >
-            <Plus className="size-3.5" strokeWidth={1.5} />
+            <Plus className="size-3.5" />
             <span>Thêm chi tiết</span>
           </Pressable>
         )}
@@ -318,7 +318,7 @@ export function TaskSubtasksSection({
 
             {/* Người phụ trách việc con */}
             <div className="relative flex items-center shrink-0">
-              <User className="size-3 text-muted-foreground absolute left-2 pointer-events-none" strokeWidth={1.5} />
+              <User className="size-3 text-muted-foreground absolute left-2 pointer-events-none" />
               <select
                 value={newAssigneeName}
                 onChange={(e) => setNewAssigneeName(e.target.value)}
@@ -333,7 +333,7 @@ export function TaskSubtasksSection({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="size-2.5 text-muted-foreground absolute right-1.5 pointer-events-none" strokeWidth={1.5} />
+              <ChevronDown className="size-2.5 text-muted-foreground absolute right-1.5 pointer-events-none" />
             </div>
 
             {/* Hạn hoàn thành */}
@@ -342,7 +342,7 @@ export function TaskSubtasksSection({
                 value={newDueDate}
                 onChange={(val) => setNewDueDate(val)}
                 variant="chip"
-                icon={<Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />}
+                icon={<Calendar className="size-3 text-muted-foreground" />}
                 placeholder="dd/mm/yyyy"
               />
             </div>
@@ -415,7 +415,7 @@ export function TaskSubtasksSection({
                   >
                     {isCompleted ? (
                       <div className="size-3.5 rounded-[3px] bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
-                        <Check className="size-2.5 text-white" strokeWidth={1.5} />
+                        <Check className="size-2.5 text-white" />
                       </div>
                     ) : (
                       <div className="size-3.5 rounded-[3px] bg-background hover:bg-primary/5 transition-colors" />
@@ -450,7 +450,7 @@ export function TaskSubtasksSection({
                           title="Chỉnh sửa việc con"
                           aria-label="Chỉnh sửa việc con"
                         >
-                          <Edit3 className="size-3" strokeWidth={1.5} />
+                          <Edit3 className="size-3" />
                         </Pressable>
                         {onDeleteSubtask && (
                           <Pressable
@@ -462,7 +462,7 @@ export function TaskSubtasksSection({
                             title="Xóa việc con"
                             aria-label="Xóa việc con"
                           >
-                            <Trash2 className="size-3" strokeWidth={1.5} />
+                            <Trash2 className="size-3" />
                           </Pressable>
                         )}
                       </div>
@@ -487,7 +487,6 @@ export function TaskSubtasksSection({
                           ? "text-destructive"
                           : "text-muted-foreground"
                       )}
-                      strokeWidth={1.5}
                     />
                     <span
                       className={cn(
@@ -519,7 +518,7 @@ export function TaskSubtasksSection({
       {canEdit && (
         <div className="pt-1">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/60 hover:border-border focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 bg-background transition-all">
-            <Plus className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+            <Plus className="size-3.5 text-muted-foreground/60 shrink-0" />
             <input
               ref={quickAddInputRef}
               type="text"

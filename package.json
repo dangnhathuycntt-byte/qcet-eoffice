@@ -7,7 +7,7 @@
     "build": "next build",
     "build:standalone": "next build",
     "start": "next start",
-    "lint": "node scripts/lint.mjs",
+    "lint": "node scripts/lint.mjs && node scripts/check-orphans.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:changed": "node scripts/run-tests.mjs --pattern changed",
     "test:smoke": "node scripts/run-tests.mjs --pattern smoke",

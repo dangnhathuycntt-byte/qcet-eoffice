@@ -186,7 +186,7 @@ function BulkMenu({
       >
         {icon}
         <span className="hidden sm:inline">{label}</span>
-        <ChevronUp className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
+        <ChevronUp className="size-3 text-muted-foreground shrink-0" />
       </MenuTrigger>
       <MenuPortal>
         <MenuPositioner side="top" align="start" sideOffset={8} className="z-50">

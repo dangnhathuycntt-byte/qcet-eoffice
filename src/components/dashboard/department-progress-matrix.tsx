@@ -209,7 +209,7 @@ export function DepartmentProgressMatrix({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
-            <Building2 className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <Building2 className="size-3.5 shrink-0" />
           </div>
           <span className="text-xs font-semibold text-muted-foreground truncate">
             Tiến độ các đơn vị
@@ -232,7 +232,7 @@ export function DepartmentProgressMatrix({
                 aria-label="Bỏ chọn đơn vị"
                 title="Xem toàn trường"
               >
-                <X className="size-3" strokeWidth={1.5} />
+                <X className="size-3" />
               </Pressable>
             </div>
           )}
@@ -252,7 +252,7 @@ export function DepartmentProgressMatrix({
             data-mode="ranking"
             aria-pressed={currentViewMode === "ranking"}
           >
-            <BarChart3 className="size-3.5" strokeWidth={1.5} />
+            <BarChart3 className="size-3.5" />
             <span className="hidden sm:inline">Xếp hạng</span>
           </Pressable>
           <Pressable
@@ -268,7 +268,7 @@ export function DepartmentProgressMatrix({
             data-mode="cards"
             aria-pressed={currentViewMode === "cards"}
           >
-            <LayoutGrid className="size-3.5" strokeWidth={1.5} />
+            <LayoutGrid className="size-3.5" />
             <span className="hidden sm:inline">Thẻ</span>
           </Pressable>
           <Pressable
@@ -284,7 +284,7 @@ export function DepartmentProgressMatrix({
             data-mode="compact_table"
             aria-pressed={currentViewMode === "compact_table"}
           >
-            <TableProperties className="size-3.5" strokeWidth={1.5} />
+            <TableProperties className="size-3.5" />
             <span className="hidden sm:inline">Bảng tinh gọn</span>
           </Pressable>
         </div>
@@ -429,7 +429,7 @@ export function DepartmentProgressMatrix({
                       )}
                     >
                       <span>{isSelected ? "Đang chọn" : "Lọc"}</span>
-                      <ChevronRight className="size-3 shrink-0" strokeWidth={1.5} />
+                      <ChevronRight className="size-3 shrink-0" />
                     </span>
 
                     <Link
@@ -441,7 +441,7 @@ export function DepartmentProgressMatrix({
                       data-slot="dept-task-link"
                     >
                       <span className="hidden sm:inline">Nhiệm vụ</span>
-                      <ChevronRight className="size-3 shrink-0" strokeWidth={1.5} />
+                      <ChevronRight className="size-3 shrink-0" />
                     </Link>
                   </div>
                 </div>
@@ -494,7 +494,7 @@ export function DepartmentProgressMatrix({
                 {/* Department name + lead */}
                 <div className="flex items-start gap-2.5 min-w-0">
                   <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-                    <Building2 className="size-4 shrink-0" strokeWidth={1.5} />
+                    <Building2 className="size-4 shrink-0" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground truncate leading-tight">
@@ -605,7 +605,7 @@ export function DepartmentProgressMatrix({
                 >
                   <span className="inline-flex items-center gap-1">
                     <span>Trễ hạn</span>
-                    <ArrowUpDown className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                    <ArrowUpDown className="size-3 text-muted-foreground" />
                   </span>
                 </th>
                 <th className="p-2.5 font-medium text-muted-foreground text-center whitespace-nowrap">
@@ -658,7 +658,7 @@ export function DepartmentProgressMatrix({
                     <td className="p-2.5 font-medium text-foreground">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
-                          <Building2 className="size-3.5 shrink-0" strokeWidth={1.5} />
+                          <Building2 className="size-3.5 shrink-0" />
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-foreground truncate leading-tight">
@@ -718,7 +718,7 @@ export function DepartmentProgressMatrix({
                         )}
                       >
                         <span>{isSelected ? "Đang chọn" : "Xem"}</span>
-                        <ChevronRight className="size-3 shrink-0" strokeWidth={1.5} />
+                        <ChevronRight className="size-3 shrink-0" />
                       </span>
                     </td>
                   </tr>

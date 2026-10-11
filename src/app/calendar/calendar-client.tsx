@@ -699,17 +699,17 @@ function CalendarRouteContent({
             aria-haspopup="true"
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
           >
-            <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <Plus className="size-3.5 shrink-0 text-muted-foreground" />
             <span>Tạo</span>
           </button>
           {isCreateDropdownOpen && (
             <div role="menu" className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-30 animate-in fade-in zoom-in-95 duration-150 text-xs text-popover-foreground">
               <Pressable role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left transition-colors">
-                <CheckSquare className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                <CheckSquare className="size-3.5 text-muted-foreground shrink-0" />
                 Tạo công việc
               </Pressable>
               <Pressable role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left transition-colors">
-                <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
                 Tạo sự kiện
               </Pressable>
             </div>
@@ -725,7 +725,7 @@ function CalendarRouteContent({
           aria-label={viewMode === "week" ? "Tuần trước" : "Tháng trước"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
-          <ChevronLeft className="size-4" strokeWidth={1.5} />
+          <ChevronLeft className="size-4" />
         </Pressable>
 
         <span className="font-mono tabular-nums text-sm font-semibold text-foreground select-none min-w-[7.5rem] text-center">
@@ -737,7 +737,7 @@ function CalendarRouteContent({
           aria-label={viewMode === "week" ? "Tuần tiếp theo" : "Tháng sau"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
-          <ChevronRight className="size-4" strokeWidth={1.5} />
+          <ChevronRight className="size-4" />
         </Pressable>
 
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
@@ -765,7 +765,7 @@ function CalendarRouteContent({
                 viewMode === mode ? "bg-background text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
-              <CalendarIcon className="size-3.5 shrink-0" strokeWidth={1.5} />
+              <CalendarIcon className="size-3.5 shrink-0" />
               {mode === "week" ? "Tuần" : "Tháng"}
             </Pressable>
           ))}
@@ -791,7 +791,7 @@ function CalendarRouteContent({
             {hasActiveFilters && (
               <span className="inline-flex items-center justify-center size-4 rounded-full bg-foreground/85 text-xs text-background font-mono font-bold">{activeFilterCount}</span>
             )}
-            <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isFilterOpen && "rotate-180")} strokeWidth={1.5} />
+            <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isFilterOpen && "rotate-180")} />
           </Pressable>
 
           {isFilterOpen && (
@@ -876,7 +876,7 @@ function CalendarRouteContent({
               isSecondaryOpen ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             )}
           >
-            <MoreHorizontal className="size-4" strokeWidth={1.5} />
+            <MoreHorizontal className="size-4" />
           </Pressable>
 
           {isSecondaryOpen && (
@@ -914,7 +914,7 @@ function CalendarRouteContent({
                 <span className="text-xs font-semibold text-muted-foreground">Lọc lịch hiện tại</span>
                 {isSearchExpanded ? (
                   <div className="relative">
-                    <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
+                    <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="search"
                       autoFocus
@@ -929,7 +929,7 @@ function CalendarRouteContent({
                         className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground"
                         aria-label="Xóa tìm kiếm"
                       >
-                        <X className="mx-auto size-3.5" strokeWidth={1.5} />
+                        <X className="mx-auto size-3.5" />
                       </Pressable>
                     )}
                   </div>
@@ -943,7 +943,7 @@ function CalendarRouteContent({
                         : "border-border/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
                     )}
                   >
-                    <Search className="size-3.5 shrink-0" strokeWidth={1.5} />
+                    <Search className="size-3.5 shrink-0" />
                     {searchQuery || "Tìm việc, sự kiện..."}
                   </Pressable>
                 )}
@@ -1018,7 +1018,7 @@ function CalendarRouteContent({
       {error && (
         <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 flex items-center justify-between gap-3 text-destructive">
           <div className="flex items-center gap-2 text-xs">
-            <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
+            <AlertCircle className="size-4 shrink-0" />
             <span>{error}</span>
           </div>
           <Button size="sm" variant="outline" onClick={() => loadCalendarData()} className="h-8 text-xs border-destructive/30 hover:bg-destructive/10 text-destructive">

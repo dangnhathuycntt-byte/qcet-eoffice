@@ -176,7 +176,7 @@ export function SubmissionApprovalPanel({
         "peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1",
       )}
     >
-      {checked ? <Check className="size-3" strokeWidth={1.5} /> : null}
+      {checked ? <Check className="size-3" /> : null}
     </span>
   );
 
@@ -185,7 +185,7 @@ export function SubmissionApprovalPanel({
   const submitForm = (
     <div className="-mx-4 -mb-4 flex min-h-0 flex-col sm:-mx-6 sm:-mb-6">
       <label className="flex h-10 items-center gap-2 border-y border-border px-4 sm:px-6">
-        <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+        <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <input
           value={unitQuery}
           onChange={(e) => setUnitQuery(e.target.value)}

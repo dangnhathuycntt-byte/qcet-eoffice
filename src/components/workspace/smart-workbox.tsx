@@ -187,7 +187,7 @@ export function SmartWorkbox({
                 {item.label}
               </span>
               <span className="shrink-0 text-muted-foreground group-hover:text-primary transition-colors">
-                <ArrowUpRight size={15} strokeWidth={1.5} />
+                <ArrowUpRight size={15} />
               </span>
             </div>
 

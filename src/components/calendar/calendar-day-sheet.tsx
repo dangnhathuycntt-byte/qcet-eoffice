@@ -321,9 +321,9 @@ export function CalendarDaySheet({
                   )}
                   aria-label="Lọc trạng thái"
                 >
-                  <Filter className="size-3" strokeWidth={1.5} />
+                  <Filter className="size-3" />
                   <span>{filterLabels[filter]}</span>
-                  <ChevronDown className="size-2.5 text-muted-foreground" strokeWidth={1.5} />
+                  <ChevronDown className="size-2.5 text-muted-foreground" />
                 </BaseMenu.Trigger>
                 <BaseMenu.Portal>
                   <BaseMenu.Positioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
@@ -365,9 +365,9 @@ export function CalendarDaySheet({
                     className="inline-flex items-center justify-center h-7.5 px-2 text-xs font-medium gap-1 rounded-md border border-border/70 bg-background hover:bg-muted/50 text-foreground cursor-pointer transition-colors active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     aria-label="Tạo mới nhiệm vụ hoặc sự kiện"
                   >
-                    <Plus className="size-3" strokeWidth={1.5} />
+                    <Plus className="size-3" />
                     <span>Tạo</span>
-                    <ChevronDown className="size-2.5 text-muted-foreground" strokeWidth={1.5} />
+                    <ChevronDown className="size-2.5 text-muted-foreground" />
                   </BaseMenu.Trigger>
                   <BaseMenu.Portal>
                     <BaseMenu.Positioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
@@ -376,14 +376,14 @@ export function CalendarDaySheet({
                           onClick={() => onAddTaskOnDate?.(selectedDate)}
                           className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60 transition-colors cursor-pointer outline-none select-none"
                         >
-                          <CheckSquare className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                          <CheckSquare className="size-3.5 text-primary shrink-0" />
                           <span>Nhiệm vụ hạn ngày này</span>
                         </BaseMenu.Item>
                         <BaseMenu.Item
                           onClick={() => onAddEventOnDate?.(selectedDate)}
                           className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60 transition-colors cursor-pointer outline-none select-none"
                         >
-                          <CalendarIcon className="size-3.5 text-sky-600 shrink-0" strokeWidth={1.5} />
+                          <CalendarIcon className="size-3.5 text-sky-600 shrink-0" />
                           <span>Sự kiện ngày này</span>
                         </BaseMenu.Item>
                       </BaseMenu.Popup>
@@ -397,7 +397,7 @@ export function CalendarDaySheet({
                 className="inline-flex size-7.5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Đóng chi tiết ngày"
               >
-                <X className="size-4" strokeWidth={1.5} />
+                <X className="size-4" />
               </BaseDialog.Close>
             </div>
           </header>
@@ -408,7 +408,6 @@ export function CalendarDaySheet({
               <div className="relative">
                 <Search
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/60"
-                  strokeWidth={1.5}
                   aria-hidden="true"
                 />
                 <input
@@ -426,7 +425,7 @@ export function CalendarDaySheet({
           <div className="flex-1 overflow-y-auto thin-scrollbar">
             {!selectedDate || tasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center py-14 px-4 space-y-2 text-muted-foreground">
-                <CalendarIcon className="size-8 text-muted-foreground/30 mb-1" strokeWidth={1.5} />
+                <CalendarIcon className="size-8 text-muted-foreground/30 mb-1" />
                 <p className="text-xs font-semibold text-foreground">Không có lịch công tác</p>
                 <p className="text-xs text-muted-foreground max-w-xs">
                   Không có nhiệm vụ hoặc sự kiện nào trong ngày này. Nhấn &ldquo;+ Tạo&rdquo; để thêm mới.

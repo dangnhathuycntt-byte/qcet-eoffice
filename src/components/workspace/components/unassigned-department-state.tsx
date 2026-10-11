@@ -12,11 +12,11 @@ export function UnassignedDepartmentState({ onOpenProfile }: UnassignedDepartmen
   return (
     <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-border/70 bg-card/80 backdrop-blur-xs my-6 max-w-xl mx-auto shadow-xs animate-in fade-in-50 duration-200">
       <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 mb-4 shadow-2xs">
-        <Building2 className="size-7" strokeWidth={1.5} />
+        <Building2 className="size-7" />
       </div>
 
       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-muted/80 text-muted-foreground border border-border/60 mb-3">
-        <UserCheck className="size-3.5 text-primary" strokeWidth={1.5} />
+        <UserCheck className="size-3.5 text-primary" />
         <span>Chưa phân bổ đơn vị công tác</span>
       </div>
 
@@ -33,9 +33,9 @@ export function UnassignedDepartmentState({ onOpenProfile }: UnassignedDepartmen
           onClick={onOpenProfile}
           className="h-10 px-5 rounded-xl font-medium text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs transition-all active:scale-[0.98]"
         >
-          <Building2 className="size-4" strokeWidth={1.5} />
+          <Building2 className="size-4" />
           <span>Cập nhật đơn vị công tác</span>
-          <ArrowRight className="size-3.5" strokeWidth={1.5} />
+          <ArrowRight className="size-3.5" />
         </Button>
       )}
     </div>

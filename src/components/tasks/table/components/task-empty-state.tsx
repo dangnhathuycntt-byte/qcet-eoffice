@@ -231,7 +231,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
             aria-label="Xóa bộ lọc"
             className="inline-flex h-7 items-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-medium text-background hover:bg-foreground/90 active:scale-[0.98] transition-colors"
           >
-            <RotateCcw className="size-3.5" strokeWidth={1.5} />
+            <RotateCcw className="size-3.5" />
             <span>Xóa bộ lọc</span>
           </Pressable>
         )}
@@ -247,7 +247,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
                 : "border border-border bg-card text-foreground hover:bg-muted"
             )}
           >
-            <Plus className="size-3.5" strokeWidth={1.5} />
+            <Plus className="size-3.5" />
             <span>Tạo nhiệm vụ mới</span>
           </Pressable>
         )}

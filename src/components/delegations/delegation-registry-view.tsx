@@ -187,7 +187,7 @@ export function DelegationRegistryView() {
           <div>
             <div className="mb-1 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
-                <Shield className="size-3" strokeWidth={1.5} /> Ủy quyền
+                <Shield className="size-3" /> Ủy quyền
               </span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
@@ -207,7 +207,6 @@ export function DelegationRegistryView() {
               >
                 <RefreshCw
                   className={cn("size-3.5", isLoading && "animate-spin")}
-                  strokeWidth={1.5}
                 />
                 Làm mới
               </button>
@@ -289,7 +288,6 @@ export function DelegationRegistryView() {
         <div className="relative max-w-xs w-full sm:w-auto">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-            strokeWidth={1.5}
           />
           <input
             type="text"
@@ -315,13 +313,13 @@ export function DelegationRegistryView() {
             <tr className="border-b border-border/40 text-left">
               <th className="px-4 py-3 text-xs font-medium text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <Users className="size-3" strokeWidth={1.5} />
+                  <Users className="size-3" />
                   Người ủy quyền
                 </div>
               </th>
               <th className="px-4 py-3 text-xs font-medium text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <UserCheck className="size-3" strokeWidth={1.5} />
+                  <UserCheck className="size-3" />
                   Người nhận ủy quyền
                 </div>
               </th>
@@ -330,13 +328,13 @@ export function DelegationRegistryView() {
               </th>
               <th className="hidden px-4 py-3 text-xs font-medium text-muted-foreground md:table-cell">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className="size-3" strokeWidth={1.5} />
+                  <Calendar className="size-3" />
                   Hiệu lực từ
                 </div>
               </th>
               <th className="hidden px-4 py-3 text-xs font-medium text-muted-foreground md:table-cell">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className="size-3" strokeWidth={1.5} />
+                  <Calendar className="size-3" />
                   Hiệu lực đến
                 </div>
               </th>
@@ -386,7 +384,6 @@ export function DelegationRegistryView() {
                   <div className="flex flex-col items-center gap-2">
                     <Shield
                       className="size-10 text-muted-foreground/30"
-                      strokeWidth={1.5}
                     />
                     <p className="text-sm text-muted-foreground">
                       Không tìm thấy ủy quyền nào

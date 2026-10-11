@@ -748,7 +748,6 @@ export function LegacyLecturerFocusWorkspace({
             >
               <RefreshCw
                 size={13}
-                strokeWidth={1.5}
                 className={cn("shrink-0", isRefreshing ? "animate-spin text-primary" : "")}
               />
               <span className="hidden sm:inline">Làm mới</span>
@@ -798,7 +797,7 @@ export function LegacyLecturerFocusWorkspace({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <User className="size-3.5" strokeWidth={1.5} />
+              <User className="size-3.5" />
               <span>Tôi chủ trì (DRI)</span>
               {countLeading > 0 && (
                 <span className="text-xs font-bold">({countLeading})</span>
@@ -818,7 +817,7 @@ export function LegacyLecturerFocusWorkspace({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Users className="size-3.5" strokeWidth={1.5} />
+              <Users className="size-3.5" />
               <span>Tôi tham gia (Phối hợp)</span>
               {countParticipating > 0 && (
                 <span className="text-xs font-bold">({countParticipating})</span>
@@ -832,7 +831,6 @@ export function LegacyLecturerFocusWorkspace({
             <div className="relative w-56 sm:w-64">
               <Search
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
               />
               <input
                 type="text"
@@ -847,7 +845,7 @@ export function LegacyLecturerFocusWorkspace({
                   onClick={() => setSearchTerm("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} />
+                  <X className="size-3.5" />
                 </Pressable>
               )}
             </div>
@@ -865,12 +863,12 @@ export function LegacyLecturerFocusWorkspace({
             >
               {allVisibleCollapsed ? (
                 <>
-                  <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                  <ChevronDown className="size-3.5" />
                   <span>Mở rộng tất cả</span>
                 </>
               ) : (
                 <>
-                  <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                  <ChevronUp className="size-3.5" />
                   <span>Thu gọn tất cả</span>
                 </>
               )}
@@ -878,7 +876,7 @@ export function LegacyLecturerFocusWorkspace({
 
             {/* Task counter */}
             <div className="flex items-center text-xs text-muted-foreground gap-1.5 shrink-0 pl-1 border-l border-border/60">
-              <Filter className="size-3.5" strokeWidth={1.5} />
+              <Filter className="size-3.5" />
               <span>
                 Hiển thị {filteredGroupedTasks.length} / {groupedTasks.length} nhiệm vụ
               </span>
@@ -889,7 +887,7 @@ export function LegacyLecturerFocusWorkspace({
         {/* Row 2: Interactive Status Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pt-1 border-t border-border/50">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 shrink-0 pr-1">
-            <Filter className="size-3" strokeWidth={1.5} />
+            <Filter className="size-3" />
             <span>Lọc trạng thái:</span>
           </span>
 
@@ -989,7 +987,7 @@ export function LegacyLecturerFocusWorkspace({
               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted border border-border/60 transition-colors ml-1"
               title="Xóa lọc trạng thái"
             >
-              <X className="size-3" strokeWidth={1.5} />
+              <X className="size-3" />
               <span>Xóa lọc</span>
             </Pressable>
           )}
@@ -1008,7 +1006,7 @@ export function LegacyLecturerFocusWorkspace({
         groupedTasks.length === 0 && !searchTerm && activeFilter === "ALL" && ownershipFilter === "ALL" ? (
           <div className="rounded-2xl border border-border/70 p-12 text-center bg-card/50 shadow-xs">
             <div className="mx-auto size-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 mb-3">
-              <CheckCircle2 className="size-6" strokeWidth={1.5} />
+              <CheckCircle2 className="size-6" />
             </div>
             <h3 className="text-sm sm:text-base font-semibold text-foreground">
               Tuyệt vời! Bạn không có công việc nào tồn đọng
@@ -1033,7 +1031,7 @@ export function LegacyLecturerFocusWorkspace({
         ) : (
           <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-card/40">
             <div className="mx-auto size-12 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
-              <Inbox className="size-6" strokeWidth={1.5} />
+              <Inbox className="size-6" />
             </div>
             <h3 className="text-sm font-semibold text-foreground">
               Không tìm thấy nhiệm vụ nào
@@ -1114,7 +1112,7 @@ export function LegacyLecturerFocusWorkspace({
                             : "bg-muted text-muted-foreground border border-border/60"
                         )}
                       >
-                        <User className="size-3" strokeWidth={1.5} />
+                        <User className="size-3" />
                         <span>
                           {group.isLeading
                             ? `Tôi chủ trì (DRI: ${group.parentTask.leadAssigneeName})`
@@ -1135,7 +1133,7 @@ export function LegacyLecturerFocusWorkspace({
                             : "bg-muted text-muted-foreground border border-border/70"
                         )}
                       >
-                        <Clock className="size-3" strokeWidth={1.5} />
+                        <Clock className="size-3" />
                         <span>{parentCountdown.label}</span>
                       </span>
 
@@ -1158,9 +1156,9 @@ export function LegacyLecturerFocusWorkspace({
                           {isCollapsed ? "Mở rộng" : "Thu gọn"}
                         </span>
                         {isCollapsed ? (
-                          <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                          <ChevronRight className="size-3.5" />
                         ) : (
-                          <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                          <ChevronDown className="size-3.5" />
                         )}
                       </Button>
                     </div>
@@ -1212,7 +1210,6 @@ export function LegacyLecturerFocusWorkspace({
                         <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                           <Users
                             className="size-3 text-muted-foreground"
-                            strokeWidth={1.5}
                           />
                           <span>Phân bổ nhân sự:</span>
                         </span>
@@ -1241,7 +1238,7 @@ export function LegacyLecturerFocusWorkspace({
                   <div className="pt-3 border-t border-border/60 space-y-2.5">
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                       <span className="font-semibold text-xs text-foreground flex items-center gap-1.5">
-                        <Layers className="size-3.5" strokeWidth={1.5} />
+                        <Layers className="size-3.5" />
                         <span>
                           {group.isLeading
                             ? `Tất cả công việc chi tiết (${group.allSubTasks.length})`
@@ -1255,7 +1252,6 @@ export function LegacyLecturerFocusWorkspace({
                         <div className="flex items-start gap-2.5">
                           <AlertCircle
                             className="size-4 shrink-0 text-blue-600 mt-0.5"
-                            strokeWidth={1.5}
                           />
                           <div className="space-y-0.5">
                             <p className="font-semibold text-blue-800">
@@ -1319,7 +1315,7 @@ export function LegacyLecturerFocusWorkspace({
                                   )}
                                   {subTask.assigneeName && (
                                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
-                                      <User className="size-3" strokeWidth={1.5} />
+                                      <User className="size-3" />
                                       <span>{subTask.assigneeName}</span>
                                     </span>
                                   )}
@@ -1337,7 +1333,7 @@ export function LegacyLecturerFocusWorkspace({
                                         : "bg-muted text-muted-foreground border border-border/70"
                                     )}
                                   >
-                                    <Clock className="size-3" strokeWidth={1.5} />
+                                    <Clock className="size-3" />
                                     <span>{countdownInfo.label}</span>
                                   </span>
 
@@ -1359,7 +1355,6 @@ export function LegacyLecturerFocusWorkspace({
                                   <div className="flex items-start gap-2">
                                     <AlertTriangle
                                       className="size-4 shrink-0 text-warning mt-0.5"
-                                      strokeWidth={1.5}
                                     />
                                     <div className="space-y-0.5">
                                       <p className="font-semibold text-warning">
@@ -1379,7 +1374,6 @@ export function LegacyLecturerFocusWorkspace({
                                   <div className="flex items-start gap-2">
                                     <AlertCircle
                                       className="size-4 shrink-0 text-destructive mt-0.5"
-                                      strokeWidth={1.5}
                                     />
                                     <div className="space-y-0.5">
                                       <p className="font-semibold text-destructive">
@@ -1400,7 +1394,6 @@ export function LegacyLecturerFocusWorkspace({
                                     <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                                       <FileText
                                         className="size-3 text-muted-foreground"
-                                        strokeWidth={1.5}
                                       />
                                       <span>Minh chứng đã đính kèm:</span>
                                     </span>
@@ -1421,7 +1414,6 @@ export function LegacyLecturerFocusWorkspace({
                                           >
                                             <ExternalLink
                                               className="size-2.5 inline"
-                                              strokeWidth={1.5}
                                             />
                                           </a>
                                         )}
@@ -1449,7 +1441,6 @@ export function LegacyLecturerFocusWorkspace({
                                     >
                                       <Eye
                                         className="size-3.5"
-                                        strokeWidth={1.5}
                                       />
                                       <span>Chi tiết</span>
                                     </Button>
@@ -1469,7 +1460,6 @@ export function LegacyLecturerFocusWorkspace({
                                   >
                                     <UploadCloud
                                       className="size-3.5"
-                                      strokeWidth={1.5}
                                     />
                                     <span>
                                       {subTask.status === "COMPLETED"

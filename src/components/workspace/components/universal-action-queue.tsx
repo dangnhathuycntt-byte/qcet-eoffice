@@ -150,7 +150,7 @@ export function UniversalActionQueue({
           className="flex items-center justify-between text-xs text-destructive bg-danger-soft/60 rounded px-2.5 py-1.5"
         >
           <div className="flex items-center gap-1.5 font-medium">
-            <AlertTriangle className="size-3.5 shrink-0 text-destructive" strokeWidth={1.5} />
+            <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
             <span>Có <span className="font-mono font-semibold tabular-nums">{totalOverdue}</span> tác vụ trễ hạn cần ưu tiên xử lý.</span>
           </div>
           {onFilterCanvas && (

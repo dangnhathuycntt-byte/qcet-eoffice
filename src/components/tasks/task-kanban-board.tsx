@@ -757,7 +757,7 @@ function KanbanCard({
                 menuOpen ? "opacity-100 bg-muted text-foreground" : "opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100"
               )}
             >
-              <MoreHorizontal strokeWidth={1.5} className="size-3" />
+              <MoreHorizontal className="size-3" />
             </button>
 
             {/* Action Menu Popover Portal */}
@@ -820,7 +820,6 @@ function KanbanCard({
                 >
                   <span>Chuyển trạng thái</span>
                   <ChevronRight
-                    strokeWidth={1.5}
                     className={cn(
                       "size-3 text-muted-foreground transition-transform",
                       statusSubmenuOpen && "rotate-90"
@@ -869,7 +868,7 @@ function KanbanCard({
                   }}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 transition-colors text-left"
                 >
-                  <X strokeWidth={1.5} className="size-3" />
+                  <X className="size-3" />
                   Đóng
                 </Pressable>
               </div>,
@@ -882,7 +881,7 @@ function KanbanCard({
       {/* Row 2: Optional Parent Breadcrumb (Subtle) */}
       {displaySettings.showParentTask && item.parentSchoolTaskTitle && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground/60 line-clamp-1 -mt-0.5">
-          <FolderTree strokeWidth={1.5} className="size-2.5 shrink-0 text-muted-foreground/40" />
+          <FolderTree className="size-2.5 shrink-0 text-muted-foreground/40" />
           <span className="truncate">{item.parentSchoolTaskTitle}</span>
         </div>
       )}
@@ -1060,7 +1059,7 @@ function DroppableColumn({
               aria-label={`Thêm công việc vào ${col.label || col.title}`}
               className="size-6 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              <Plus strokeWidth={1.5} className="size-3.5" />
+              <Plus className="size-3.5" />
             </Pressable>
           )}
         </div>
@@ -1159,7 +1158,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
             : "bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted"
         )}
       >
-        <SlidersHorizontal strokeWidth={1.5} className="size-3" />
+        <SlidersHorizontal className="size-3" />
         <span className="hidden sm:inline text-xs">Hiển thị thẻ</span>
       </Pressable>
 
@@ -1184,7 +1183,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
                   <span className={cn(active ? "text-foreground font-medium" : "text-muted-foreground")}>
                     {opt.label}
                   </span>
-                  {active && <Check strokeWidth={1.5} className="size-3.5 text-primary shrink-0" />}
+                  {active && <Check className="size-3.5 text-primary shrink-0" />}
                 </Pressable>
               );
             })}

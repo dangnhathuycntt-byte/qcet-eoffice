@@ -126,7 +126,7 @@ export function TaskProgressComposer({
             onClick={() => setIsEditing(true)}
             className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
           >
-            <Edit2 className="size-3" strokeWidth={1.5} />
+            <Edit2 className="size-3" />
             <span>Cập nhật</span>
           </button>
         )}
@@ -198,14 +198,14 @@ export function TaskProgressComposer({
               className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               title="Thêm phản hồi"
             >
-              <Smile className="size-3.5" strokeWidth={1.5} />
+              <Smile className="size-3.5" />
             </button>
             <button
               type="button"
               className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               title="Bình luận"
             >
-              <MessageSquare className="size-3.5" strokeWidth={1.5} />
+              <MessageSquare className="size-3.5" />
             </button>
           </div>
         </div>
@@ -310,7 +310,7 @@ export function TaskProgressComposer({
                   </>
                 ) : (
                   <>
-                    <Check className="size-3.5" strokeWidth={1.5} />
+                    <Check className="size-3.5" />
                     <span>Lưu tiến độ</span>
                   </>
                 )}

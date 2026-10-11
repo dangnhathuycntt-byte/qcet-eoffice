@@ -214,7 +214,7 @@ export function MobileAppInstallModal({
         <div className="flex items-center justify-between px-5 py-4 border-0 bg-muted/20 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-xl bg-secondary text-primary border-0">
-              <Smartphone size={18} strokeWidth={1.5} />
+              <Smartphone size={18} />
             </div>
             <div>
               <h2

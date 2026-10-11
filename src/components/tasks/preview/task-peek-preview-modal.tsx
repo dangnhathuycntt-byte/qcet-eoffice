@@ -239,7 +239,7 @@ export function TaskPeekPreviewModal({
               className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
               aria-label="Nhiệm vụ trước"
             >
-              <ChevronUp className="size-3.5" strokeWidth={1.5} />
+              <ChevronUp className="size-3.5" />
             </Pressable>
           )}
           {onNavigateNext && (
@@ -250,7 +250,7 @@ export function TaskPeekPreviewModal({
               className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
               aria-label="Nhiệm vụ kế tiếp"
             >
-              <ChevronDown className="size-3.5" strokeWidth={1.5} />
+              <ChevronDown className="size-3.5" />
             </Pressable>
           )}
           <Pressable
@@ -259,7 +259,7 @@ export function TaskPeekPreviewModal({
             className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors ml-1"
             aria-label="Đóng"
           >
-            <X className="size-3.5" strokeWidth={1.5} />
+            <X className="size-3.5" />
           </Pressable>
         </div>
       </div>
@@ -350,7 +350,6 @@ export function TaskPeekPreviewModal({
                     "size-3 shrink-0",
                     st.status === "COMPLETED" ? "text-emerald-600" : "text-muted-foreground/30"
                   )}
-                  strokeWidth={1.5}
                 />
                 <span className={cn("truncate", st.status === "COMPLETED" && "line-through text-muted-foreground/50")}>
                   {st.title}
@@ -381,7 +380,7 @@ export function TaskPeekPreviewModal({
           className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors font-normal"
         >
           <span>Mở chi tiết</span>
-          <ArrowRight className="size-3" strokeWidth={1.5} />
+          <ArrowRight className="size-3" />
         </Pressable>
       </div>
     </StandardDialog>

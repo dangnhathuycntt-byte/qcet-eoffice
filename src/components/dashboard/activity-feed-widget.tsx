@@ -137,7 +137,7 @@ export function ActivityFeedWidget({
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
           <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 shrink-0">
-            <History className="size-3.5 text-violet-600" strokeWidth={1.5} />
+            <History className="size-3.5 text-violet-600" />
           </div>
           <div>
             <h3 className="font-heading text-sm font-bold text-foreground tracking-tight">
@@ -160,7 +160,7 @@ export function ActivityFeedWidget({
               title="Xem nhật ký hệ thống"
             >
               <span className="hidden sm:inline">Nhật ký</span>
-              <ExternalLink className="size-3" strokeWidth={1.5} />
+              <ExternalLink className="size-3" />
             </Link>
           )}
         </div>
@@ -171,7 +171,7 @@ export function ActivityFeedWidget({
         {displayedActivities.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
             <div className="flex size-8 items-center justify-center rounded-full bg-muted/60">
-              <Activity className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
+              <Activity className="size-4 text-muted-foreground/60" />
             </div>
             <p className="text-xs text-muted-foreground">Chưa có hoạt động mới nào được ghi nhận</p>
           </div>
@@ -220,7 +220,7 @@ export function ActivityFeedWidget({
 
                   {/* Timestamp */}
                   <div className="flex items-center gap-1 text-2xs text-muted-foreground/75 font-mono">
-                    <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
+                    <Clock className="size-2.5 opacity-70" />
                     <span>{formatDateTime(item.timestamp)}</span>
                   </div>
                 </div>
@@ -241,12 +241,12 @@ export function ActivityFeedWidget({
             {isExpanded ? (
               <>
                 <span>Thu gọn</span>
-                <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                <ChevronUp className="size-3.5" />
               </>
             ) : (
               <>
                 <span>Xem tất cả {uniqueActivities.length} hoạt động</span>
-                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                <ChevronDown className="size-3.5" />
               </>
             )}
           </Pressable>

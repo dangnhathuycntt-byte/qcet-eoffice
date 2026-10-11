@@ -337,7 +337,7 @@ export function DashboardZone() {
           {/* Exceptions List or Quiet Empty State */}
           {attentionItems.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center bg-slate-50/40">
-              <CheckCircle2 className="size-5 text-emerald-600 mx-auto mb-2" strokeWidth={1.5} />
+              <CheckCircle2 className="size-5 text-emerald-600 mx-auto mb-2" />
               <p className="text-xs font-medium text-slate-700">
                 Không có vấn đề cần xử lý khẩn cấp
               </p>

@@ -131,7 +131,7 @@ export function GlobalShortcutsModal() {
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border/40">
           <div>
             <h2 className="text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
-              <Keyboard className="size-4.5 text-primary" strokeWidth={1.5} />
+              <Keyboard className="size-4.5 text-primary" />
               <span>Phím tắt bàn phím</span>
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -143,7 +143,7 @@ export function GlobalShortcutsModal() {
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]"
             aria-label="Đóng"
           >
-            <X className="size-4" strokeWidth={1.5} />
+            <X className="size-4" />
           </Pressable>
         </div>
 

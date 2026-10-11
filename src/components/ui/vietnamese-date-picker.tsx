@@ -301,7 +301,7 @@ export function VietnameseDatePicker({
         >
           {icon !== null && (icon || (
             <div className="size-4 shrink-0 flex items-center justify-center">
-              <CalendarIcon className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <CalendarIcon className="size-3.5 text-muted-foreground" />
             </div>
           ))}
           <span className="tabular-nums font-normal">
@@ -329,7 +329,7 @@ export function VietnameseDatePicker({
             triggerClassName
           )}
         >
-          {icon !== null && (icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />)}
+          {icon !== null && (icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" />)}
           {label && <span className={cn(error ? "text-destructive" : "text-muted-foreground font-normal")}>{label}</span>}
           <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground")}>
             {hasValue ? displayDate : placeholder}
@@ -352,7 +352,7 @@ export function VietnameseDatePicker({
           )}
         >
           <div className="flex items-center gap-2">
-            {icon !== null && (icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />)}
+            {icon !== null && (icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />)}
             <span>{hasValue ? displayDate : placeholder}</span>
           </div>
           {hasValue && !disabled && clearable && (
@@ -362,7 +362,7 @@ export function VietnameseDatePicker({
               onClick={handleClearDate}
               className="size-4 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
             >
-              <X className="size-3" strokeWidth={1.5} />
+              <X className="size-3" />
             </span>
           )}
         </Popover.Trigger>
@@ -398,7 +398,7 @@ export function VietnameseDatePicker({
               title="Xóa ngày"
             >
               <div className="size-3.5 rounded-full bg-muted flex items-center justify-center">
-                <X className="size-2 text-foreground" strokeWidth={1.5} />
+                <X className="size-2 text-foreground" />
               </div>
             </button>
           )}
@@ -451,21 +451,21 @@ export function VietnameseDatePicker({
                   title="Về tháng này"
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer mr-0.5"
                 >
-                  <ArrowRight className="size-3.5 -rotate-45" strokeWidth={1.5} />
+                  <ArrowRight className="size-3.5 -rotate-45" />
                 </button>
                 <button
                   type="button"
                   onClick={handlePrevMonth}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
-                  <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+                  <ChevronLeft className="size-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={handleNextMonth}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
-                  <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                  <ChevronRight className="size-3.5" />
                 </button>
               </div>
             </div>

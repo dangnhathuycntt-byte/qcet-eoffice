@@ -83,7 +83,7 @@ export function MaintenanceView({
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-5 relative z-10">
           <div className="size-14 rounded-2xl bg-warning/10 border border-warning/20 text-warning flex items-center justify-center shrink-0 shadow-xs">
-            <Wrench className="size-7" strokeWidth={1.5} />
+            <Wrench className="size-7" />
           </div>
 
           <div className="space-y-1.5 flex-1 min-w-0">

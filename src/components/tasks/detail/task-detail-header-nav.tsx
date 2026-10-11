@@ -85,9 +85,9 @@ export function TaskDetailHeaderNav({
           aria-label="Sao chép liên kết"
         >
           {copiedLink ? (
-            <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+            <Check className="size-3.5 text-emerald-600" />
           ) : (
-            <Link2 className="size-3.5" strokeWidth={1.5} />
+            <Link2 className="size-3.5" />
           )}
         </button>
 
@@ -106,7 +106,7 @@ export function TaskDetailHeaderNav({
             aria-label={showInspector ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
             aria-expanded={showInspector}
           >
-            <PanelRight className="size-3.5" strokeWidth={1.5} />
+            <PanelRight className="size-3.5" />
           </button>
         )}
       </div>

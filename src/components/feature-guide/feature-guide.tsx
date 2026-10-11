@@ -255,7 +255,7 @@ export function FeatureGuideCard({
                   aria-label="Đóng hướng dẫn"
                   className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                  <X className="size-3.5" aria-hidden="true" />
                 </button>
                 {preview}
               </div>
@@ -306,7 +306,7 @@ export function FeatureGuideCard({
                   aria-label="Đóng hướng dẫn"
                   className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                  <X className="size-3.5" aria-hidden="true" />
                 </button>
                 {preview}
               </div>
@@ -447,7 +447,7 @@ export function HelpGuideModal() {
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <FileText className="size-4" strokeWidth={1.5} />
+              <FileText className="size-4" />
             </div>
             <div>
               <div className="text-sm font-semibold text-foreground">1. Văn bản đến</div>
@@ -463,7 +463,7 @@ export function HelpGuideModal() {
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
-              <CheckSquare className="size-4" strokeWidth={1.5} />
+              <CheckSquare className="size-4" />
             </div>
             <div>
               <div className="text-sm font-semibold text-foreground">2. Nhiệm vụ</div>
@@ -479,7 +479,7 @@ export function HelpGuideModal() {
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
-              <Shield className="size-4" strokeWidth={1.5} />
+              <Shield className="size-4" />
             </div>
             <div>
               <div className="text-sm font-semibold text-foreground">3. Ủy quyền</div>

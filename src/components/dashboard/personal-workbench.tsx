@@ -502,7 +502,7 @@ function ManagerStaffWorkloadWidget({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Users size={16} className="text-primary" strokeWidth={1.5} />
+          <Users size={16} className="text-primary" />
           <h3 className="text-sm font-semibold text-foreground tracking-tight">
             Phân bổ công việc nhân sự
           </h3>
@@ -925,7 +925,7 @@ export function PersonalWorkbench({
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-0.5 min-w-0">
                 <div className="flex items-center gap-2">
-                  <Clock size={16} className="text-primary shrink-0" strokeWidth={1.5} />
+                  <Clock size={16} className="text-primary shrink-0" />
                   <h2 className="font-heading font-semibold text-base text-foreground tracking-tight truncate">
                     CẦN XỬ LÝ
                   </h2>
@@ -947,7 +947,7 @@ export function PersonalWorkbench({
                 className="shrink-0 text-xs text-primary font-medium hover:underline inline-flex items-center gap-1 min-h-[44px] sm:min-h-[32px] items-center"
               >
                 <span>Xem tất cả</span>
-                <ArrowRight size={13} strokeWidth={1.5} />
+                <ArrowRight size={13} />
               </Link>
             </div>
 
@@ -998,7 +998,7 @@ export function PersonalWorkbench({
 
             {/* In-place Quick Search Input */}
             <div className="relative">
-              <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <Input
                 type="text"
                 value={searchQuery}
@@ -1012,7 +1012,7 @@ export function PersonalWorkbench({
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label="Xóa tìm kiếm"
                 >
-                  <X size={13} strokeWidth={1.5} />
+                  <X size={13} />
                 </Pressable>
               )}
             </div>
@@ -1023,7 +1023,7 @@ export function PersonalWorkbench({
                 className="p-4 rounded-xl border border-border/60 bg-muted/20 text-xs text-foreground/80 flex items-center gap-3"
                 data-slot="action-empty-state"
               >
-                <CheckCircle2 size={16} className="text-muted-foreground shrink-0" strokeWidth={1.5} />
+                <CheckCircle2 size={16} className="text-muted-foreground shrink-0" />
                 <div className="space-y-0.5">
                   <p className="font-semibold">
                     {searchQuery
@@ -1182,7 +1182,7 @@ export function PersonalWorkbench({
                               className="h-6 px-2 text-xs rounded text-emerald-800 hover:bg-emerald-500/10 hover:text-emerald-900"
                               title="Đánh dấu hoàn thành 100%"
                             >
-                              <CheckCircle2 size={12} strokeWidth={1.5} className="mr-1" />
+                              <CheckCircle2 size={12} className="mr-1" />
                               <span>Hoàn thành</span>
                             </Button>
                           )}
@@ -1198,7 +1198,7 @@ export function PersonalWorkbench({
                               onClick={() => handleQuickApprove(item)}
                               className="h-6 px-2 text-xs font-medium rounded-md bg-emerald-700 hover:bg-emerald-800 text-white gap-1"
                             >
-                              <Check size={12} strokeWidth={1.5} />
+                              <Check size={12} />
                               <span>{effectiveRole === "EXECUTIVE" ? "Duyệt L2" : "Duyệt L1"}</span>
                             </Button>
                             <Button
@@ -1216,7 +1216,7 @@ export function PersonalWorkbench({
                                   : "hover:bg-warning/10 hover:text-warning text-muted-foreground"
                               )}
                             >
-                              <RotateCcw size={11} strokeWidth={1.5} />
+                              <RotateCcw size={11} />
                               <span>Yêu cầu sửa</span>
                             </Button>
                           </div>
@@ -1232,7 +1232,7 @@ export function PersonalWorkbench({
                               onClick={() => setRevisionTaskId(null)}
                               className="text-muted-foreground hover:text-foreground"
                             >
-                              <X size={12} strokeWidth={1.5} />
+                              <X size={12} />
                             </Pressable>
                           </div>
                           <Input
@@ -1287,7 +1287,7 @@ export function PersonalWorkbench({
                 className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1.5 min-h-[36px] items-center ml-auto"
               >
                 <span>Mở bảng nhiệm vụ đầy đủ ({baseTasks.length} nhiệm vụ)</span>
-                <ArrowRight size={13} strokeWidth={1.5} />
+                <ArrowRight size={13} />
               </Link>
             </div>
           </div>

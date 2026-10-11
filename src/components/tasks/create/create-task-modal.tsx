@@ -232,7 +232,7 @@ export function CreateTaskModal({
               <header className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-b border-border/60 bg-card shrink-0">
                 {/* Breadcrumb & Unit Selector */}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <Building2 className="size-3.5 text-muted-foreground/70" />
 
                   {/* Department selector */}
                   {form.availableDepartments.length > 1 ? (
@@ -283,7 +283,7 @@ export function CreateTaskModal({
                                 >
                                   <span className="truncate">{dept.name}</span>
                                   {form.formData.selectedDeptCode === dept.code && (
-                                    <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                                    <Check className="size-3.5 text-foreground shrink-0" />
                                   )}
                                 </Pressable>
                               ))}
@@ -322,7 +322,7 @@ export function CreateTaskModal({
                   title="Đóng (Esc)"
                   className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <X className="size-4" strokeWidth={1.5} />
+                  <X className="size-4" />
                 </button>
               </header>
 
@@ -491,7 +491,7 @@ export function CreateTaskModal({
                                 <span>{PRIORITY_CONFIG[p].label}</span>
                               </div>
                               {form.formData.priority === p && (
-                                <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                                <Check className="size-3 text-foreground shrink-0" />
                               )}
                             </Pressable>
                           ))}
@@ -525,7 +525,7 @@ export function CreateTaskModal({
                       {leadAssigneeDisplayName ? (
                         <UserAvatar name={leadAssigneeDisplayName} avatarUrl={leadAssigneeAvatarUrl} size="xs" />
                       ) : (
-                        <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                        <User className="size-3 text-muted-foreground" />
                       )}
                       <span className="max-w-[110px] truncate" title={leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : undefined}>
                         {leadAssigneeDisplayName || "Chủ trì"}
@@ -595,7 +595,7 @@ export function CreateTaskModal({
                                       {person.name}
                                     </span>
                                     {form.formData.leadAssigneeId === person.id && (
-                                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                                      <Check className="size-3.5 text-foreground shrink-0" />
                                     )}
                                   </Pressable>
                                 ));
@@ -615,7 +615,7 @@ export function CreateTaskModal({
                   label={form.formData.startDate ? "Bắt đầu:" : undefined}
                   variant="chip"
                   triggerClassName="h-7"
-                  icon={<Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />}
+                  icon={<Calendar className="size-3 text-muted-foreground" />}
                   placeholder="Bắt đầu"
                 />
 
@@ -639,7 +639,6 @@ export function CreateTaskModal({
                         "size-3",
                         form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground",
                       )}
-                      strokeWidth={1.5}
                     />
                   }
                   placeholder="Hạn hoàn thành"

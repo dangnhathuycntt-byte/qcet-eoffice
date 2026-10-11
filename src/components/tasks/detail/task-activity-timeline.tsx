@@ -85,7 +85,7 @@ export function TaskActivityTimeline({
   return (
     <section data-slot="task-activity-timeline" className={cn("space-y-3 cursor-default", className)}>
       <div className="flex items-center gap-2">
-        <Activity className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+        <Activity className="size-4 text-primary shrink-0" />
         <h2 className="text-xs font-semibold text-foreground">
           Lịch sử điều hành & Hoạt động ({events.length})
         </h2>
@@ -121,7 +121,7 @@ export function TaskActivityTimeline({
                   </div>
 
                   <div className="flex items-center gap-1 text-xs text-muted-foreground" title={formatICTDateTime(ev.timestamp)}>
-                    <Clock className="size-3" strokeWidth={1.5} />
+                    <Clock className="size-3" />
                     <span>{getRelativeTimeVN(ev.timestamp)}</span>
                   </div>
                 </div>

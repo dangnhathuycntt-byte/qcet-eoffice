@@ -92,7 +92,7 @@ export function WorkspaceToolbar({
                 className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground"
                 aria-hidden="true"
               >
-                <Search className="size-4" strokeWidth={1.5} />
+                <Search className="size-4" />
               </div>
               <input
                 ref={inputRef}
@@ -116,7 +116,7 @@ export function WorkspaceToolbar({
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
                   )}
                 >
-                  <X className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                  <X className="size-4" aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -170,7 +170,6 @@ export function WorkspaceToolbar({
             >
               <RotateCcw
                 className={cn("size-4", isRefreshing && "animate-spin text-blue-600")}
-                strokeWidth={1.5}
                 aria-hidden="true"
               />
             </button>

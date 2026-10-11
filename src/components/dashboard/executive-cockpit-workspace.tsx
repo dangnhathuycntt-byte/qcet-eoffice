@@ -269,13 +269,13 @@ export function ExecutiveAttentionQueue({
           className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1 shrink-0"
         >
           <span>Xem tất cả</span>
-          <ArrowRight size={12} strokeWidth={1.5} />
+          <ArrowRight size={12} />
         </Link>
       </div>
 
       {items.length === 0 ? (
         <div className="flex items-center gap-3 p-3.5 my-2 rounded-xl border border-emerald-500/20 bg-emerald-50/40 text-xs">
-          <CheckCircle2 size={16} strokeWidth={1.5} className="text-emerald-600 shrink-0" />
+          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
           <div className="min-w-0">
             <span className="font-semibold text-foreground">Tiến độ toàn trường thông suốt. </span>
             <span className="text-muted-foreground">

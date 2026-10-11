@@ -130,7 +130,7 @@ export function MobileNotificationInbox({
               title="Làm mới"
               aria-label="Làm mới"
             >
-              <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
+              <RefreshCw size={14} className={isLoading ? "motion-safe:animate-spin" : ""} />
             </Pressable>
           )}
 
@@ -140,7 +140,7 @@ export function MobileNotificationInbox({
               className="inline-flex items-center gap-1 min-h-[36px] px-2.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation shadow-2xs"
               title="Đã đọc tất cả"
             >
-              <CheckCheck size={14} strokeWidth={1.5} className="text-primary" />
+              <CheckCheck size={14} className="text-primary" />
               <span>Đã đọc hết</span>
             </Pressable>
           )}
@@ -223,7 +223,7 @@ export function MobileNotificationInbox({
           role="alert"
           data-testid="notification-error-state"
         >
-          <AlertTriangle size={24} strokeWidth={1.5} className="mx-auto text-destructive mb-2" />
+          <AlertTriangle size={24} className="mx-auto text-destructive mb-2" />
           <p className="text-xs font-bold text-foreground">Không thể tải thông báo</p>
           <p className="text-xs text-muted-foreground mt-1">
             {error ?? "Không thể kết nối tới máy chủ thông báo."}
@@ -234,7 +234,7 @@ export function MobileNotificationInbox({
               disabled={isLoading}
               className="mt-3 inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation disabled:opacity-50"
             >
-              <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
+              <RefreshCw size={14} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>
             </Pressable>
           )}
@@ -260,7 +260,7 @@ export function MobileNotificationInbox({
           className="py-12 px-4 text-center rounded-2xl border border-dashed border-border/80 bg-card"
           data-testid="notification-empty-state"
         >
-          <Bell size={24} strokeWidth={1.5} className="mx-auto text-muted-foreground/60 mb-2" />
+          <Bell size={24} className="mx-auto text-muted-foreground/60 mb-2" />
           <p className="text-xs font-bold text-foreground">{emptyCopy.title}</p>
           <p className="text-xs text-muted-foreground mt-1">{emptyCopy.description}</p>
         </div>
@@ -425,7 +425,7 @@ function MobileNotificationCard({
 
           {/* Relative Timestamp */}
           <span className="text-xs text-muted-foreground font-mono tabular-nums ml-auto flex items-center gap-1">
-            <Clock size={11} strokeWidth={1.5} />
+            <Clock size={11} />
             <span>{item.timestamp}</span>
           </span>
         </div>

@@ -3039,16 +3039,6 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/pwa/offline-conflict-dialog.tsx",
-      "text": "<FileText className=\"size-4 text-slate-500\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/pwa/offline-conflict-dialog.tsx",
-      "text": "<Server className=\"size-4 text-slate-700\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/pwa/offline-conflict-dialog.tsx",
       "text": "<div className=\"flex items-center gap-2 text-slate-900 font-semibold mb-1\">"
     },
     {

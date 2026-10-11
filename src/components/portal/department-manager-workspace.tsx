@@ -581,7 +581,6 @@ export function LegacyDepartmentManagerWorkspace({
             >
               <RefreshCw
                 size={13}
-                strokeWidth={1.5}
                 className={cn("shrink-0", isRefreshing ? "animate-spin text-primary" : "")}
               />
               <span className="hidden sm:inline">Làm mới</span>

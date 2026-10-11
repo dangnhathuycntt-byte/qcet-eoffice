@@ -323,14 +323,14 @@ export function SavedViewsSelector({
                 className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent"
                 title="Xác nhận đổi tên"
               >
-                <Check className="size-3" strokeWidth={1.5} />
+                <Check className="size-3" />
               </Pressable>
               <Pressable
                 onClick={() => setEditingViewId(null)}
                 className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent"
                 title="Hủy"
               >
-                <X className="size-3" strokeWidth={1.5} />
+                <X className="size-3" />
               </Pressable>
             </form>
           );
@@ -349,7 +349,7 @@ export function SavedViewsSelector({
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
               )}
             >
-              <Bookmark className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
+              <Bookmark className="size-3 text-muted-foreground shrink-0" />
               <span className="truncate max-w-[120px]">{cleanViewName(view.name)}</span>
             </Pressable>
 
@@ -367,7 +367,7 @@ export function SavedViewsSelector({
                   : "opacity-0 group-hover:opacity-100"
               )}
             >
-              <MoreHorizontal className="size-3" strokeWidth={1.5} />
+              <MoreHorizontal className="size-3" />
             </Pressable>
 
             {/* Context menu for rename / delete */}
@@ -380,14 +380,14 @@ export function SavedViewsSelector({
                   onClick={(e) => handleStartRename(view, e)}
                   className="w-full flex items-center gap-2 px-2.5 py-1 text-foreground hover:bg-accent text-left"
                 >
-                  <Pencil className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                  <Pencil className="size-3 text-muted-foreground" />
                   <span>Đổi tên</span>
                 </Pressable>
                 <Pressable
                   onClick={(e) => handleDelete(view.id, e)}
                   className="w-full flex items-center gap-2 px-2.5 py-1 text-destructive hover:bg-danger-soft text-left"
                 >
-                  <Trash2 className="size-3 text-destructive" strokeWidth={1.5} />
+                  <Trash2 className="size-3 text-destructive" />
                   <span>Xóa bộ lọc</span>
                 </Pressable>
               </div>
@@ -405,7 +405,7 @@ export function SavedViewsSelector({
             aria-label="Xem thêm bộ lọc đã lưu"
           >
             <span>+{overflowViews.length}</span>
-            <ChevronDown className="size-3 text-muted-foreground" strokeWidth={1.5} />
+            <ChevronDown className="size-3 text-muted-foreground" />
           </Pressable>
 
           {isOverflowOpen && (
@@ -427,7 +427,7 @@ export function SavedViewsSelector({
                       className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-0.5 rounded"
                       title="Xóa bộ lọc"
                     >
-                      <Trash2 className="size-3" strokeWidth={1.5} />
+                      <Trash2 className="size-3" />
                     </Pressable>
                   </div>
                 );
@@ -449,7 +449,7 @@ export function SavedViewsSelector({
               isCreateOpen && "bg-primary/20"
             )}
           >
-            <BookmarkPlus className="size-3.5 text-primary" strokeWidth={1.5} />
+            <BookmarkPlus className="size-3.5 text-primary" />
             <span>Lưu bộ lọc</span>
           </Pressable>
 
@@ -461,7 +461,7 @@ export function SavedViewsSelector({
             >
               <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-border/60">
                 <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <BookmarkPlus className="size-3.5 text-primary" strokeWidth={1.5} />
+                  <BookmarkPlus className="size-3.5 text-primary" />
                   <span>Lưu bộ lọc hiện tại</span>
                 </div>
                 <Pressable
@@ -469,7 +469,7 @@ export function SavedViewsSelector({
                   className="text-muted-foreground hover:text-foreground p-0.5 rounded"
                   aria-label="Đóng"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} />
+                  <X className="size-3.5" />
                 </Pressable>
               </div>
 

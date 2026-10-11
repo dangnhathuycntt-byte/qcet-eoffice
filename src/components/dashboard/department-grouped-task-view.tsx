@@ -243,7 +243,7 @@ export function DepartmentGroupedTaskView({
       {/* Thanh điều khiển phụ: Expand/Collapse All & Tóm tắt số đơn vị */}
       <div className="flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2">
-          <Building2 size={16} strokeWidth={1.5} className="text-primary" />
+          <Building2 size={16} className="text-primary" />
           <span className="text-xs font-semibold text-foreground font-mono tabular-nums">
             {departmentGroups.length} đơn vị giám sát
           </span>
@@ -256,7 +256,7 @@ export function DepartmentGroupedTaskView({
             onClick={expandAll}
             className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
           >
-            <Maximize2 size={12} strokeWidth={1.5} />
+            <Maximize2 size={12} />
             Mở rộng tất cả
           </Button>
           <Button
@@ -265,7 +265,7 @@ export function DepartmentGroupedTaskView({
             onClick={collapseAll}
             className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
           >
-            <Minimize2 size={12} strokeWidth={1.5} />
+            <Minimize2 size={12} />
             Thu gọn
           </Button>
         </div>
@@ -312,9 +312,9 @@ export function DepartmentGroupedTaskView({
                       aria-hidden="true"
                     >
                       {isExpanded ? (
-                        <ChevronDown size={18} strokeWidth={1.5} />
+                        <ChevronDown size={18} />
                       ) : (
-                        <ChevronRight size={18} strokeWidth={1.5} />
+                        <ChevronRight size={18} />
                       )}
                     </span>
 
@@ -334,7 +334,7 @@ export function DepartmentGroupedTaskView({
 
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                         <span className="inline-flex items-center gap-1 font-medium">
-                          <UserCheck size={13} strokeWidth={1.5} className="text-primary/70" />
+                          <UserCheck size={13} className="text-primary/70" />
                           {group.leaderRole}: {group.leaderName}
                         </span>
                         <span>•</span>
@@ -389,7 +389,7 @@ export function DepartmentGroupedTaskView({
                         className="h-8 px-2.5 text-xs gap-1.5 rounded-lg border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                         title={`Quản lý ủy quyền đơn vị ${group.departmentCode}`}
                       >
-                        <ShieldCheck size={13} strokeWidth={1.5} />
+                        <ShieldCheck size={13} />
                         <span>Ủy quyền</span>
                       </Button>
                     </div>
@@ -402,7 +402,7 @@ export function DepartmentGroupedTaskView({
                       onClick={() => onAddTask(group.departmentCode)}
                       className="h-8 px-2.5 text-xs gap-1 rounded-lg"
                     >
-                      <Plus size={13} strokeWidth={1.5} />
+                      <Plus size={13} />
                       <span className="hidden sm:inline">Giao việc</span>
                     </Button>
                   )}
@@ -494,7 +494,7 @@ export function DepartmentGroupedTaskView({
                                       onSelectTask(t);
                                     }}
                                   >
-                                    <ArrowUpRight size={13} strokeWidth={1.5} />
+                                    <ArrowUpRight size={13} />
                                   </Button>
                                 </td>
                               </tr>

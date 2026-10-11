@@ -87,7 +87,7 @@ export function ApprovalOverlay({
                     className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     onClick={onClose}
                   >
-                    <X className="size-4" strokeWidth={1.5} />
+                    <X className="size-4" />
                   </Dialog.Close>
                 </div>
 

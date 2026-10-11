@@ -148,7 +148,6 @@ export function UserAvatar({
               size === "lg" && "size-4",
               size === "xl" && "size-8"
             )}
-            strokeWidth={1.5}
           />
         ) : (
           getInitials(name ?? "")

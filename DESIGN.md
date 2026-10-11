@@ -44,7 +44,7 @@ Hover (`accent`) và đang chọn (`selected`) là hai trạng thái khác nhau.
 - **Kích thước bảng:** hàng một dòng 40px, hàng hai dòng 48px; tiêu đề cột cao bằng hàng; item popover/menu ≤ 32px.
 - **Ưu tiên / mức khẩn:** chỉ mức cao nhất (Khẩn cấp, Hỏa tốc, Thượng khẩn) dùng `text-destructive`; Khẩn của văn bản dùng `text-warning`; các mức khác trung tính. Áp cho cả bảng lẫn form tạo nhiệm vụ.
 - Trạng thái nhiệm vụ: [TaskStatusCircle](src/components/tasks/task-status-circle.tsx). Ưu tiên / mức khẩn: [PrioritySignalBars](src/components/tasks/priority-signal-bars.tsx). Icon nghiệp vụ: [task-icons.tsx](src/lib/icons/task-icons.tsx). Không tự vẽ chấm hay thay bằng icon lucide.
-- Icon lucide nét 1,5px (lint bắt buộc).
+- Icon lucide nét 1,5px, đặt một lần bằng `LucideProvider` ở `src/app/layout.tsx`; không truyền `strokeWidth` (lint chặn giá trị khác).
 - Giữ đủ trạng thái focus bàn phím, disabled, loading, empty, error, reduced motion.
 
 ## Trang danh sách (Nhiệm vụ là chuẩn, Văn bản dùng chung)
@@ -126,9 +126,8 @@ Kiến trúc đã duyệt ở [document-workspace.md](docs/product/specs/documen
 - Tailwind v4: `outline-none` đặt `--tw-outline-style: none`, nên `focus-visible:outline-2` một mình không hiện viền. Mọi chỗ dùng đã thêm `focus-visible:outline-solid` (Button, Pressable, Input và các primitive khác trong `ui/`); viết focus mới thì giữ cặp này.
 - Màu phân loại lĩnh vực trong `CATEGORY_DISPLAY_CONFIG` vẫn dùng `rose-500`/`amber-500` có chủ đích (`design-lint-ignore`), không phải tín hiệu.
 - Còn trong baseline lint: 182 `<button>` tự định nghĩa focus (ring-2 ring-ring, ring-primary…; chưa thống nhất về outline của Button), các `<input>`/`<select>`/`<textarea>` tự viết, và palette xám thô.
-- Primitive trong `ui/` hiện không màn nào import: `combobox`, `multi-select`, `person-picker`, `date-picker`, `segmented-control`, `data-table`. Màn hình dùng bản riêng (`VietnameseDatePicker`, `TaskAssigneePicker`). Chưa xóa; cần chọn giữ bản nào.
+- 135 component/hook không route nào dùng (gồm primitive `combobox`, `multi-select`, `person-picker`, `segmented-control`, `data-table` và shim `ui/date-picker` → `VietnameseDatePicker`) nằm trong `scripts/orphan-baseline.json`; `npm run lint` chặn mồ côi mới. Màn hình dùng `VietnameseDatePicker`, `TaskAssigneePicker`.
 - Bảng màu trạng thái nhiều sắc (xanh, tím, lục, cam, đỏ) vẫn dùng palette Tailwind: `STATUS_BADGE_CONFIGS` trong [constants.ts](src/components/tasks/table/constants.ts), nhãn trạng thái trong [document-badges.ts](src/components/documents/document-badges.ts), `iconColor` cột kanban (không còn được đọc). Đây là màu phân loại, chưa có token; cần quyết định riêng trước khi đổi.
 - Icon loại văn bản `FileText` màu cam trong [document-quick-entry-modal.tsx](src/components/documents/document-quick-entry-modal.tsx) là màu trang trí, chưa đổi.
 - `document-stats-summary.tsx`, `document-filter-bar.tsx`, `document-table.tsx` trong `registry/` không còn được trang `/documents` dùng, vẫn còn cỡ chữ/màu cũ.
-- `PriorityIndicator` trong [task-row.tsx](src/components/tasks/table/components/task-row.tsx) không còn được dùng (bảng dùng `PrioritySignalBars`) nhưng chưa xóa.
 - Trang Nhiệm vụ còn nút "Xóa bộ lọc" cạnh nút lọc, Văn bản thì không. `tests/unified-task-toolbar.test.ts` đang yêu cầu nút này.

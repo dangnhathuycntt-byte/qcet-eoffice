@@ -475,7 +475,7 @@ export function OrganizationTree({
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <Users className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <Users className="size-3.5 shrink-0 text-muted-foreground" />
             <span>Danh bạ & Cây tổ chức</span>
             <span className="font-mono tabular-nums text-xs opacity-75">
               ({departments.reduce((sum, d) => sum + d.members.length, 0)})
@@ -491,7 +491,7 @@ export function OrganizationTree({
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <LayoutGrid className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <LayoutGrid className="size-3.5 shrink-0 text-muted-foreground" />
             <span>Sơ đồ đơn vị</span>
             <span className="font-mono tabular-nums text-xs opacity-75">
               ({departments.length})
@@ -506,7 +506,7 @@ export function OrganizationTree({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all"
             title="Xuất file CSV danh bạ"
           >
-            <Download className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <Download className="size-3.5 text-muted-foreground" />
             <span>Xuất CSV</span>
           </Pressable>
           <Pressable
@@ -514,7 +514,7 @@ export function OrganizationTree({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all"
             title="In trang danh bạ"
           >
-            <Printer className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <Printer className="size-3.5 text-muted-foreground" />
             <span className="hidden sm:inline">In danh bạ</span>
           </Pressable>
         </div>
@@ -621,13 +621,13 @@ export function OrganizationTree({
                   {/* Leader & Location */}
                   <div className="space-y-1.5 text-xs text-muted-foreground my-2">
                     <div className="flex items-center gap-2">
-                      <Users className="size-3.5 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                      <Users className="size-3.5 text-muted-foreground/70 shrink-0" />
                       <span className="font-medium text-foreground truncate">
                         {dept.leaderRole}: {dept.leaderName}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                      <MapPin className="size-3.5 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                      <MapPin className="size-3.5 text-muted-foreground/70 shrink-0" />
                       <span className="truncate">{dept.location}</span>
                     </div>
                   </div>
@@ -636,7 +636,7 @@ export function OrganizationTree({
                   <div className="mt-3 pt-3 border-t border-border/60 space-y-2.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-                        <Users className="size-3.5 text-primary" strokeWidth={1.5} />
+                        <Users className="size-3.5 text-primary" />
                         Nhân sự đơn vị
                       </span>
                       <span className="font-bold text-foreground font-mono">
@@ -646,7 +646,7 @@ export function OrganizationTree({
 
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5 truncate max-w-[200px]" title={dept.email}>
-                        <Mail className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                        <Mail className="size-3 text-muted-foreground/70 shrink-0" />
                         <span className="truncate">{dept.email}</span>
                       </span>
                       <span className="text-muted-foreground/80 font-mono">
@@ -662,7 +662,7 @@ export function OrganizationTree({
                         {dept.members.length} nhân sự
                       </span>
                       <span className="font-semibold text-primary group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                        Xem danh bạ <ChevronRight className="size-3" strokeWidth={1.5} />
+                        Xem danh bạ <ChevronRight className="size-3" />
                       </span>
                     </div>
                   </div>
@@ -684,7 +684,6 @@ export function OrganizationTree({
             <div className="relative flex-1 max-w-md">
               <Search
                 className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-                strokeWidth={1.5}
               />
               <input
                 type="text"
@@ -699,7 +698,7 @@ export function OrganizationTree({
                     onClick={() => setSearchQuery("")}
                     className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground"
                   >
-                    <X className="size-3" strokeWidth={1.5} />
+                    <X className="size-3" />
                   </Pressable>
                 ) : (
                   <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-xs font-mono text-muted-foreground bg-muted border border-border/60 rounded select-none pointer-events-none">
@@ -756,7 +755,7 @@ export function OrganizationTree({
                   )}
                   title="Dạng thẻ lưới (Grid)"
                 >
-                  <LayoutGrid className="size-3.5" strokeWidth={1.5} />
+                  <LayoutGrid className="size-3.5" />
                 </Pressable>
                 <Pressable
                   onClick={() => setViewMode("list")}
@@ -769,7 +768,7 @@ export function OrganizationTree({
                   )}
                   title="Dạng danh sách (List)"
                 >
-                  <List className="size-3.5" strokeWidth={1.5} />
+                  <List className="size-3.5" />
                 </Pressable>
               </div>
             </div>
@@ -783,7 +782,7 @@ export function OrganizationTree({
                 <div className="flex items-center justify-between pb-3 mb-2 border-b border-border/60">
                   <div className="flex items-center gap-2">
                     <span className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Building2 className="size-3.5" strokeWidth={1.5} />
+                      <Building2 className="size-3.5" />
                     </span>
                     <span className="text-xs font-bold text-foreground">
                       Cơ cấu {departments.length} đơn vị QCET
@@ -812,7 +811,7 @@ export function OrganizationTree({
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <Layers className="size-3.5" strokeWidth={1.5} />
+                      <Layers className="size-3.5" />
                       <span>Toàn trường (Tất cả đơn vị)</span>
                     </div>
                     <Badge
@@ -850,9 +849,9 @@ export function OrganizationTree({
                               {catHeadcount}
                             </span>
                             {isExpanded ? (
-                              <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                              <ChevronDown className="size-3.5" />
                             ) : (
-                              <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                              <ChevronRight className="size-3.5" />
                             )}
                           </div>
                         </Pressable>
@@ -1017,7 +1016,7 @@ export function OrganizationTree({
                             className="inline-flex h-6 items-center gap-1 px-2 rounded-md border border-border/80 bg-background text-foreground text-xs font-medium hover:bg-accent transition-colors"
                             title={`Giao việc trực tiếp cho ${staff.name}`}
                           >
-                            <UserCheck className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                            <UserCheck className="size-3 text-muted-foreground" />
                             <span>Giao việc</span>
                           </Pressable>
                           {staff.phone && (
@@ -1026,7 +1025,7 @@ export function OrganizationTree({
                               className="p-1.5 rounded-lg border border-border/60 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors tabular-nums"
                               title={`Gọi ${staff.phone}`}
                             >
-                              <Phone className="size-3.5" strokeWidth={1.5} />
+                              <Phone className="size-3.5" />
                             </a>
                           )}
                           <a
@@ -1034,7 +1033,7 @@ export function OrganizationTree({
                             className="p-1.5 rounded-lg border border-border/60 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                             title={`Gửi email ${staff.email}`}
                           >
-                            <Mail className="size-3.5" strokeWidth={1.5} />
+                            <Mail className="size-3.5" />
                           </a>
                         </div>
                       </div>
@@ -1159,7 +1158,7 @@ export function OrganizationTree({
                 onClick={() => setActiveProfileStaff(null)}
                 className="size-8 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50"
               >
-                <X className="size-4" strokeWidth={1.5} />
+                <X className="size-4" />
               </Pressable>
             </div>
 
@@ -1231,7 +1230,7 @@ export function OrganizationTree({
                   href={`tel:${activeProfileStaff.phone}`}
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-border bg-background text-xs font-medium text-foreground hover:bg-muted shadow-2xs"
                 >
-                  <Phone className="size-3.5 text-primary" strokeWidth={1.5} />
+                  <Phone className="size-3.5 text-primary" />
                   <span>Gọi điện</span>
                 </a>
               )}
@@ -1239,7 +1238,7 @@ export function OrganizationTree({
                 href={`mailto:${activeProfileStaff.email}`}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 shadow-xs"
               >
-                <Mail className="size-3.5" strokeWidth={1.5} />
+                <Mail className="size-3.5" />
                 <span>Gửi thư công vụ</span>
               </a>
             </div>

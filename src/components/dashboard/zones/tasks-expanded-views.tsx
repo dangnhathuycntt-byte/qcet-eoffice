@@ -108,7 +108,7 @@ function TasksExpandedViewsComponent() {
               onClick={handleToggleStaffExpanded}
               className="gap-1.5 text-xs rounded-xl border-primary/30 text-primary bg-primary/5 hover:bg-primary/10"
             >
-              <UserCheck size={14} strokeWidth={1.5} />
+              <UserCheck size={14} />
               <span>Quay lại Chế độ trọng tâm (Cá nhân)</span>
             </Button>
           )}
@@ -121,7 +121,6 @@ function TasksExpandedViewsComponent() {
           >
             <RefreshCw
               size={14}
-              strokeWidth={1.5}
               className={isRefreshing ? "animate-spin text-primary" : ""}
             />
             <span className="hidden sm:inline">Làm mới dữ liệu</span>
@@ -177,7 +176,7 @@ function TasksExpandedViewsComponent() {
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20 transition-colors"
               >
-                <FileCheck size={13} strokeWidth={1.5} />
+                <FileCheck size={13} />
                 <span>Hàng đợi phê duyệt</span>
               </Pressable>
 
@@ -186,7 +185,7 @@ function TasksExpandedViewsComponent() {
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors"
                 title="Mở thanh công cụ đầy đủ"
               >
-                <SlidersHorizontal size={13} strokeWidth={1.5} />
+                <SlidersHorizontal size={13} />
                 <span className="hidden md:inline">Thanh công cụ đầy đủ</span>
               </Pressable>
 
@@ -225,7 +224,7 @@ function TasksExpandedViewsComponent() {
                 onClick={() => setUseAdvancedToolbar(false)}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors"
               >
-                <SlidersHorizontal size={13} strokeWidth={1.5} />
+                <SlidersHorizontal size={13} />
                 <span>Quay lại Bộ lọc tinh giản</span>
               </Pressable>
             </div>

@@ -13,7 +13,7 @@ export default function ErrorBoundary({
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-6">
       <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border/50 bg-card p-8 text-center">
-        <AlertCircle className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
+        <AlertCircle className="h-10 w-10 text-muted-foreground" />
         <div className="space-y-1">
           <h2 className="text-sm font-semibold text-foreground">
             Không thể tải hồ sơ

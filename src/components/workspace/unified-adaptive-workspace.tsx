@@ -2154,7 +2154,7 @@ function UnifiedAdaptiveWorkspaceInner({
                   aria-label="Mở hàng đợi xử lý công việc"
                   title="Mở Hộp việc khẩn cấp (Smart Workbox)"
                 >
-                  <Layers className="size-3.5" strokeWidth={1.5} />
+                  <Layers className="size-3.5" />
                   <span>Hộp việc xử lý</span>
                   <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tabular-nums leading-none">
                     {actionQueueTotal}
@@ -2407,7 +2407,7 @@ function UnifiedAdaptiveWorkspaceInner({
                 className="size-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 aria-label="Đóng hàng đợi"
               >
-                <X className="size-4" strokeWidth={1.5} />
+                <X className="size-4" />
               </Pressable>
             </div>
             <div className="flex-1 overflow-y-auto thin-scrollbar">

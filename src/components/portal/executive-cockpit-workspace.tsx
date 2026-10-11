@@ -1075,7 +1075,7 @@ export function LegacyExecutiveCockpitWorkspace({
             className="min-h-[44px] sm:h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs font-semibold rounded-lg active:scale-[0.98]"
             title="Giao chỉ đạo nhiệm vụ BGH trọng tâm cấp trường"
           >
-            <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <Plus className="w-3.5 h-3.5" />
             <span>+ Giao nhiệm vụ</span>
           </Button>
 
@@ -1086,7 +1086,7 @@ export function LegacyExecutiveCockpitWorkspace({
             className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted"
             title="Xem báo cáo giao ban điều hành BGH"
           >
-            <FileText className="w-3.5 h-3.5 shrink-0 text-indigo-600" strokeWidth={1.5} />
+            <FileText className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
             <span>Báo cáo giao ban</span>
           </Button>
 
@@ -1097,7 +1097,7 @@ export function LegacyExecutiveCockpitWorkspace({
             className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80"
           >
             <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+              <Layers className="w-3.5 h-3.5 shrink-0" />
               <span>Danh mục nhiệm vụ</span>
             </Link>
           </Button>
@@ -1111,7 +1111,6 @@ export function LegacyExecutiveCockpitWorkspace({
           >
             <RefreshCw
               className={cn("w-3.5 h-3.5 shrink-0", isRefreshing && "animate-spin")}
-              strokeWidth={1.5}
             />
             <span>Làm mới</span>
           </Button>
@@ -1127,7 +1126,6 @@ export function LegacyExecutiveCockpitWorkspace({
           <div className="flex items-center gap-2.5 min-w-0">
             <CheckCircle2
               className="w-4 h-4 shrink-0 text-emerald-600"
-              strokeWidth={1.5}
             />
             <span className="truncate">
               {undoState.summary} ({undoState.item.title})
@@ -1162,7 +1160,6 @@ export function LegacyExecutiveCockpitWorkspace({
           <div className="flex items-center gap-2">
             <CheckCircle2
               className="w-4 h-4 shrink-0 text-emerald-600"
-              strokeWidth={1.5}
             />
             <span>{reminderNotice}</span>
           </div>
@@ -1209,9 +1206,9 @@ export function LegacyExecutiveCockpitWorkspace({
               )}
             >
               {metrics.bottlenecksCount > 0 ? (
-                <AlertTriangle className="w-4 h-4" strokeWidth={1.5} />
+                <AlertTriangle className="w-4 h-4" />
               ) : (
-                <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
+                <CheckCircle2 className="w-4 h-4" />
               )}
             </div>
           </div>
@@ -1283,7 +1280,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   : "bg-muted text-muted-foreground"
               )}
             >
-              <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -1331,7 +1328,7 @@ export function LegacyExecutiveCockpitWorkspace({
               Chỉ số hoàn thành toàn trường
             </span>
             <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600">
-              <TrendingUp className="w-4 h-4" strokeWidth={1.5} />
+              <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -1374,7 +1371,7 @@ export function LegacyExecutiveCockpitWorkspace({
               Tổng số nhiệm vụ đang triển khai
             </span>
             <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-600">
-              <Layers className="w-4 h-4" strokeWidth={1.5} />
+              <Layers className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -1543,7 +1540,7 @@ export function LegacyExecutiveCockpitWorkspace({
           {activeBottlenecks.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-10 text-center border border-emerald-500/30 rounded-xl bg-emerald-500/[0.04]">
               <div className="p-3 bg-emerald-500/15 text-emerald-600 rounded-full mb-3">
-                <CheckCircle2 className="w-8 h-8" strokeWidth={1.5} />
+                <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-base font-bold text-foreground">
                 Tất cả 11 đơn vị đang vận hành thông suốt, 0 điểm nghẽn
@@ -1561,7 +1558,6 @@ export function LegacyExecutiveCockpitWorkspace({
                     <h2 className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-2">
                       <AlertTriangle
                         className="w-4 h-4 text-destructive shrink-0"
-                        strokeWidth={1.5}
                       />
                       <span>Dòng tác vụ điểm nghẽn cần tháo gỡ</span>
                     </h2>
@@ -1651,7 +1647,6 @@ export function LegacyExecutiveCockpitWorkspace({
                   <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed rounded-xl bg-card">
                     <CheckCircle2
                       className="w-6 h-6 text-emerald-600 mb-2"
-                      strokeWidth={1.5}
                     />
                     <p className="text-xs text-muted-foreground">
                       Đơn vị này hiện không có điểm nghẽn nào cần tháo gỡ.

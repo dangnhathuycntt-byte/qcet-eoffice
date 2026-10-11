@@ -253,7 +253,7 @@ export function AdaptiveScopeHeader({
               )}
               title="Xem dạng bảng chi tiết"
             >
-              <List strokeWidth={1.5} className="size-3.5" />
+              <List className="size-3.5" />
               <span className="hidden md:inline">Bảng</span>
             </Pressable>
             <Pressable
@@ -266,7 +266,7 @@ export function AdaptiveScopeHeader({
               )}
               title="Xem dạng bảng Kanban"
             >
-              <LayoutGrid strokeWidth={1.5} className="size-3.5" />
+              <LayoutGrid className="size-3.5" />
               <span className="hidden md:inline">Kanban</span>
             </Pressable>
           </div>
@@ -282,7 +282,6 @@ export function AdaptiveScopeHeader({
           >
             <RefreshCw
               className={cn("size-3.5 text-muted-foreground", isRefreshing && "animate-spin")}
-              strokeWidth={1.5}
             />
             <span className="hidden sm:inline">Làm mới</span>
           </Button>
@@ -295,7 +294,7 @@ export function AdaptiveScopeHeader({
             aria-label="Tạo nhiệm vụ mới"
             className="hidden sm:inline-flex h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs hover:bg-primary/90 hover:brightness-105 active:scale-[0.98]"
           >
-            <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
+            <Plus className="size-3.5 mr-1" />
             <span>{isExecutive ? "Giao nhiệm vụ" : "Tạo nhiệm vụ"}</span>
           </Button>
         )}

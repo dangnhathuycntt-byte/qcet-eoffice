@@ -129,9 +129,9 @@ export function PriorOverdueBacklogBanner({
             onClick={handleViewAndResolve}
             className="bg-warning hover:bg-warning/90 active:bg-warning/80 active:scale-[0.97] text-white text-xs font-semibold gap-1.5 h-8 px-3 rounded-xl shadow-xs transition-all"
           >
-            <Clock className="size-3.5" strokeWidth={1.5} />
+            <Clock className="size-3.5" />
             <span>Xem & xử lý</span>
-            <ArrowRight className="size-3.5" strokeWidth={1.5} />
+            <ArrowRight className="size-3.5" />
           </Button>
         </div>
       </div>

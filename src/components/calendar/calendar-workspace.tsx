@@ -188,7 +188,7 @@ export function CalendarEventDetailModal({
         <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3">
           <div className="space-y-1">
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-              <CalendarIcon className="size-3" strokeWidth={1.5} />
+              <CalendarIcon className="size-3" />
               <span>Sự kiện lịch biểu</span>
             </span>
             <h3 id="calendar-event-title" className="text-base font-bold text-foreground leading-snug font-heading">
@@ -200,7 +200,7 @@ export function CalendarEventDetailModal({
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label="Đóng chi tiết sự kiện"
           >
-            <X className="size-4" strokeWidth={1.5} />
+            <X className="size-4" />
           </Pressable>
         </div>
 
@@ -208,7 +208,7 @@ export function CalendarEventDetailModal({
         <div className="space-y-3">
           {/* Time and Date */}
           <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/50">
-            <Clock className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+            <Clock className="size-4 text-primary shrink-0" />
             <div>
               <div className="font-semibold text-foreground font-mono tabular-nums">
                 {event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : "Cả ngày"}
@@ -222,7 +222,7 @@ export function CalendarEventDetailModal({
           {/* Location */}
           {event.location && (
             <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/50">
-              <MapPin className="size-4 text-warning shrink-0" strokeWidth={1.5} />
+              <MapPin className="size-4 text-warning shrink-0" />
               <div>
                 <span className="font-semibold text-foreground">Địa điểm:</span>{" "}
                 <span className="text-muted-foreground">{event.location}</span>
@@ -233,7 +233,7 @@ export function CalendarEventDetailModal({
           {/* Department / Unit */}
           {(event.departmentName || event.department) && (
             <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/50">
-              <Building2 className="size-4 text-sky-600 shrink-0" strokeWidth={1.5} />
+              <Building2 className="size-4 text-sky-600 shrink-0" />
               <div>
                 <span className="font-semibold text-foreground">Đơn vị chủ trì:</span>{" "}
                 <span className="text-muted-foreground">{event.departmentName || event.department}</span>
@@ -244,7 +244,7 @@ export function CalendarEventDetailModal({
           {/* Attendees / Host */}
           {(event.attendees?.length || event.assigneeName) && (
             <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/50">
-              <Users className="size-4 text-emerald-600 shrink-0" strokeWidth={1.5} />
+              <Users className="size-4 text-emerald-600 shrink-0" />
               <div>
                 <span className="font-semibold text-foreground">Thành phần tham dự:</span>{" "}
                 <span className="text-muted-foreground">
@@ -258,7 +258,7 @@ export function CalendarEventDetailModal({
           {event.description && (
             <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
               <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                <FileText className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <FileText className="size-3.5 text-muted-foreground" />
                 <span>Nội dung / Ghi chú:</span>
               </div>
               <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
@@ -615,7 +615,7 @@ export function CalendarWorkspace({
               title="Kỳ trước"
               aria-label="Kỳ trước"
             >
-              <ChevronLeft className="size-4" strokeWidth={1.5} />
+              <ChevronLeft className="size-4" />
             </Button>
             <Button
               variant="ghost"
@@ -633,12 +633,12 @@ export function CalendarWorkspace({
               title="Kỳ sau"
               aria-label="Kỳ sau"
             >
-              <ChevronRight className="size-4" strokeWidth={1.5} />
+              <ChevronRight className="size-4" />
             </Button>
           </div>
 
           <div className="flex items-center gap-2">
-            <CalendarIcon className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+            <CalendarIcon className="size-4 text-primary shrink-0" />
             <h2 className="font-heading text-sm sm:text-base font-bold text-foreground font-mono tabular-nums tracking-tight">
               {viewMode === "day_view"
                 ? formatDayHeaderVi(currentDate)
@@ -687,7 +687,7 @@ export function CalendarWorkspace({
               onClick={() => handleAddSlotClick(activeDateStr)}
               className="gap-1.5 text-xs font-semibold rounded-lg h-7 px-2.5 shrink-0"
             >
-              <Plus className="size-3.5" strokeWidth={1.5} />
+              <Plus className="size-3.5" />
               <span className="hidden sm:inline">Thêm nhiệm vụ</span>
             </Button>
           )}
@@ -698,7 +698,7 @@ export function CalendarWorkspace({
       <div className="flex flex-wrap items-center gap-2 py-1 text-xs">
         {/* Search Query Input */}
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" strokeWidth={1.5} />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Tìm kiếm công việc, đơn vị, DRI... /"
@@ -712,14 +712,14 @@ export function CalendarWorkspace({
               className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
               aria-label="Xóa tìm kiếm"
             >
-              <X className="size-3" strokeWidth={1.5} />
+              <X className="size-3" />
             </Pressable>
           )}
         </div>
 
         {/* Department Selector */}
         <div className="flex items-center gap-1.5">
-          <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+          <Building2 className="size-3.5 text-muted-foreground shrink-0" />
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -736,7 +736,7 @@ export function CalendarWorkspace({
 
         {/* Item Type Selector */}
         <div className="flex items-center gap-1.5">
-          <Layers className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+          <Layers className="size-3.5 text-muted-foreground shrink-0" />
           <select
             value={selectedItemType}
             onChange={(e) => setSelectedItemType(e.target.value)}
@@ -753,7 +753,7 @@ export function CalendarWorkspace({
 
         {/* Status Filter */}
         <div className="flex items-center gap-1.5">
-          <CheckCircle2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+          <CheckCircle2 className="size-3.5 text-muted-foreground shrink-0" />
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
@@ -774,7 +774,7 @@ export function CalendarWorkspace({
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
           {selectedDepartment !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <Building2 className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
+              <Building2 className="size-3.5 text-muted-foreground/75 shrink-0" />
               <span className="text-muted-foreground text-xs">Đơn vị:</span>
               <span className="font-medium text-xs truncate max-w-[200px]">
                 {QCET_DEPARTMENT_FILTER_OPTIONS.find((d) => d.id === selectedDepartment)?.label}
@@ -784,13 +784,13 @@ export function CalendarWorkspace({
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc đơn vị"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
+                <X className="size-2.5" />
               </Pressable>
             </span>
           )}
           {selectedItemType !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <Layers className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
+              <Layers className="size-3.5 text-muted-foreground/75 shrink-0" />
               <span className="text-muted-foreground text-xs">Loại:</span>
               <span className="font-medium text-xs truncate max-w-[200px]">
                 {QCET_ITEM_TYPE_OPTIONS.find((t) => t.id === selectedItemType)?.label}
@@ -800,13 +800,13 @@ export function CalendarWorkspace({
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc loại hình"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
+                <X className="size-2.5" />
               </Pressable>
             </span>
           )}
           {selectedStatus !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <CheckCircle2 className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
+              <CheckCircle2 className="size-3.5 text-muted-foreground/75 shrink-0" />
               <span className="text-muted-foreground text-xs">Trạng thái:</span>
               <span className="font-medium text-xs truncate max-w-[200px]">
                 {QCET_STATUS_FILTER_OPTIONS.find((s) => s.id === selectedStatus)?.label}
@@ -816,7 +816,7 @@ export function CalendarWorkspace({
                 className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc trạng thái"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
+                <X className="size-2.5" />
               </Pressable>
             </span>
           )}
@@ -832,7 +832,7 @@ export function CalendarWorkspace({
             }}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
           >
-            <RotateCcw className="size-3" strokeWidth={1.5} />
+            <RotateCcw className="size-3" />
             <span>Xóa lọc</span>
           </Pressable>
         </div>
@@ -997,7 +997,7 @@ export function CalendarWorkspace({
           {/* Day View Header */}
           <div className="flex items-center justify-between border-b border-border/70 bg-muted/20 p-3">
             <div className="flex items-center gap-2">
-              <CalendarIcon className="size-4 text-primary" strokeWidth={1.5} />
+              <CalendarIcon className="size-4 text-primary" />
               <span className="font-heading font-bold text-sm sm:text-base">
                 {formatDayHeaderVi(currentDate)}
               </span>
@@ -1060,7 +1060,7 @@ export function CalendarWorkspace({
                     </div>
                     {ev.location && (
                       <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                        <MapPin className="size-3 text-muted-foreground" />
                         <span>{ev.location}</span>
                       </div>
                     )}
@@ -1075,7 +1075,7 @@ export function CalendarWorkspace({
         <div className="space-y-4">
           {filteredWorkItems.length === 0 && nonTaskEvents.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/80 p-8 text-center bg-muted/10 space-y-2">
-              <CalendarDays className="size-8 mx-auto text-muted-foreground/50" strokeWidth={1.5} />
+              <CalendarDays className="size-8 mx-auto text-muted-foreground/50" />
               <h3 className="text-sm font-semibold text-foreground">
                 Không có công việc hoặc sự kiện
               </h3>
@@ -1089,7 +1089,7 @@ export function CalendarWorkspace({
                   onClick={() => handleAddSlotClick()}
                   className="mt-2 text-xs rounded-xl min-h-[44px] md:min-h-0"
                 >
-                  <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
+                  <Plus className="size-3.5 mr-1" />
                   Tạo nhiệm vụ mới
                 </Button>
               )}
@@ -1155,7 +1155,7 @@ export function CalendarWorkspace({
                         </div>
                         {ev.location && (
                           <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                            <MapPin className="size-3 text-muted-foreground shrink-0" />
                             <span>{ev.location}</span>
                           </div>
                         )}

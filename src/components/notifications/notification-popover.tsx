@@ -176,7 +176,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-medium">
-                <Check size={11} strokeWidth={1.5} className="text-emerald-500" />
+                <Check size={11} className="text-emerald-500" />
                 <span>Không có thông báo chưa đọc</span>
               </span>
             )}
@@ -189,7 +189,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
                 className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
                 title="Đánh dấu tất cả là đã đọc"
               >
-                <CheckCheck size={13} strokeWidth={1.5} className="text-primary" />
+                <CheckCheck size={13} className="text-primary" />
                 <span>Đã đọc</span>
               </Pressable>
             )}
@@ -243,7 +243,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
         {viewState === "error" ? (
           <div className="py-12 px-4 text-center" role="alert" data-testid="notification-error-state">
             <div className="size-10 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-2.5">
-              <AlertTriangle size={18} strokeWidth={1.5} />
+              <AlertTriangle size={18} />
             </div>
             <p className="text-xs font-semibold text-foreground">Không thể tải thông báo</p>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -254,7 +254,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               disabled={isLoading}
               className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
             >
-              <RefreshCw size={12} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
+              <RefreshCw size={12} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>
             </Pressable>
           </div>
@@ -273,7 +273,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
         ) : filteredNotifications.length === 0 ? (
           <div className="py-12 px-4 text-center" data-testid="notification-empty-state">
             <div className="size-10 rounded-full bg-secondary/80 text-muted-foreground flex items-center justify-center mx-auto mb-2.5">
-              <Check size={18} strokeWidth={1.5} />
+              <Check size={18} />
             </div>
             <p className="text-xs font-semibold text-foreground">{emptyCopy.title}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{emptyCopy.description}</p>
@@ -329,7 +329,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
           className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors cursor-pointer"
         >
           <span>Xem tất cả thông báo điều hành</span>
-          <ExternalLink size={12} strokeWidth={1.5} />
+          <ExternalLink size={12} />
         </Link>
       </div>
         </Popover.Popup>
@@ -418,7 +418,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
             </span>
           )}
           <span className="text-xs text-muted-foreground font-mono tabular-nums flex items-center gap-1">
-            <Clock size={10} strokeWidth={1.5} className="text-muted-foreground/80 shrink-0" />
+            <Clock size={10} className="text-muted-foreground/80 shrink-0" />
             <span>{item.timestamp}</span>
           </span>
         </div>
@@ -436,7 +436,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
             className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-card hover:shadow-xs text-muted-foreground hover:text-foreground transition-all"
             title="Đánh dấu là đã đọc"
           >
-            <Check size={14} strokeWidth={1.5} />
+            <Check size={14} />
           </Pressable>
           <span className="size-2 rounded-full bg-primary ring-2 ring-primary/20 group-hover:hidden" />
         </div>

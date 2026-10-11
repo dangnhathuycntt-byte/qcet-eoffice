@@ -35,7 +35,7 @@ export function ListToolbarClearFiltersButton({ onClick }: { onClick: () => void
       aria-label="Xóa tất cả bộ lọc"
       className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation"
     >
-      <RotateCcw className="size-3 shrink-0" strokeWidth={1.5} />
+      <RotateCcw className="size-3 shrink-0" />
       <span className="hidden sm:inline">Xóa bộ lọc</span>
     </button>
   );
@@ -86,7 +86,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
         focused ? expandedWidthClassName : collapsedWidthClassName
       )}
     >
-      <Search className="size-3.5 text-muted-foreground/80 pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
+      <Search className="size-3.5 text-muted-foreground/80 pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
       <input
         ref={ref}
         type="text"
@@ -115,7 +115,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
             aria-label="Xóa từ khóa tìm kiếm"
             className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer touch-manipulation"
           >
-            <X className="size-3" strokeWidth={1.5} />
+            <X className="size-3" />
           </button>
         ) : (
           <kbd className="hidden h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/60 px-1 font-mono text-xs leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex">
@@ -246,14 +246,14 @@ export function ListToolbarFilterPopover({
       width="w-56"
       trigger={
         <>
-          <Filter className="size-3.5" strokeWidth={1.5} />
+          <Filter className="size-3.5" />
           <ListToolbarCountBadge count={activeCount} />
         </>
       }
     >
       <div className="flex flex-col">
         <div className="mb-1 flex items-center gap-2 border-b border-border/40 px-2.5 py-1.5">
-          <Search className="size-3.5 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
+          <Search className="size-3.5 shrink-0 text-muted-foreground/50" />
           <input
             type="text"
             value={query}
@@ -279,7 +279,7 @@ export function ListToolbarFilterPopover({
                 <c.Icon className="size-3.5 shrink-0 text-foreground/80" strokeWidth={1.5} />
                 <span className="flex-1 truncate">{c.label}</span>
                 {c.valueLabel ? <span className="max-w-[96px] truncate font-normal text-foreground/70">{c.valueLabel}</span> : null}
-                <ChevronRight className="size-3.5 shrink-0 text-foreground/60" strokeWidth={1.5} />
+                <ChevronRight className="size-3.5 shrink-0 text-foreground/60" />
               </Menu.Trigger>
               <Menu.Portal>
                 <Menu.Positioner side={isMobile ? "bottom" : "right"} align="start" sideOffset={4} collisionPadding={8} className="z-[60]">
@@ -310,7 +310,7 @@ export function ListToolbarFilterPopover({
                         >
                           <span className="flex-1 truncate">{opt.label}</span>
                           <Menu.RadioItemIndicator className="flex items-center">
-                            <Check className="size-3.5 text-foreground" strokeWidth={1.5} />
+                            <Check className="size-3.5 text-foreground" />
                           </Menu.RadioItemIndicator>
                         </Menu.RadioItem>
                       ))}

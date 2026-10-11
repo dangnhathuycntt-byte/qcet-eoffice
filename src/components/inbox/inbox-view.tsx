@@ -544,7 +544,7 @@ export function InboxView() {
               <MenuTrigger
                 render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" title="Tùy chọn" />}
               >
-                <MoreHorizontal strokeWidth={1.5} />
+                <MoreHorizontal />
               </MenuTrigger>
               <MenuContent align="start" className="w-60">
                 <MenuItem
@@ -552,12 +552,12 @@ export function InboxView() {
                   onClick={() => void markAllRead()}
                   className={MENU_ITEM_CLASS}
                 >
-                  <CheckCheck size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                  <CheckCheck size={14} className="shrink-0 text-muted-foreground" />
                   <span className="flex-1">Đánh dấu tất cả đã đọc</span>
                 </MenuItem>
                 <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
                 <MenuItem onClick={() => void loadList("refresh")} className={MENU_ITEM_CLASS}>
-                  <RotateCcw size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                  <RotateCcw size={14} className="shrink-0 text-muted-foreground" />
                   <span className="flex-1">Làm mới</span>
                 </MenuItem>
               </MenuContent>
@@ -575,7 +575,7 @@ export function InboxView() {
                   requestAnimationFrame(() => searchInputRef.current?.focus());
                 }}
               >
-                <Search strokeWidth={1.5} />
+                <Search />
               </Button>
               <MenuRoot>
                 <MenuTrigger
@@ -589,25 +589,25 @@ export function InboxView() {
                     />
                   }
                 >
-                  <ListFilter strokeWidth={1.5} />
+                  <ListFilter />
                 </MenuTrigger>
                 <MenuContent align="end" className="w-56">
                   <MenuItem
                     onClick={() => navigate({ filter: readFilter === "unread" ? "all" : "unread" })}
                     className={MENU_ITEM_CLASS}
                   >
-                    <MailOpen size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                    <MailOpen size={14} className="shrink-0 text-muted-foreground" />
                     <span className="flex-1">Chỉ chưa đọc</span>
                     {unreadCount !== null && (
                       <span className="tabular-nums text-muted-foreground">{unreadCount}</span>
                     )}
-                    {readFilter === "unread" && <Check size={14} strokeWidth={1.5} className="shrink-0" />}
+                    {readFilter === "unread" && <Check size={14} className="shrink-0" />}
                   </MenuItem>
                   <div role="separator" className="-mx-1 my-1 h-px bg-border" />
                   {CATEGORY_OPTIONS.map((opt) => (
                     <MenuItem key={opt.id} onClick={() => navigate({ category: opt.id })} className={MENU_ITEM_CLASS}>
                       <span className="flex-1 pl-[22px]">{opt.label}</span>
-                      {category === opt.id && <Check size={14} strokeWidth={1.5} className="shrink-0" />}
+                      {category === opt.id && <Check size={14} className="shrink-0" />}
                     </MenuItem>
                   ))}
                 </MenuContent>
@@ -619,7 +619,6 @@ export function InboxView() {
             <div className="relative shrink-0 px-3 pb-2">
               <Search
                 className="pointer-events-none absolute left-5 top-3.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-                strokeWidth={1.5}
               />
               <input
                 ref={searchInputRef}
@@ -644,7 +643,7 @@ export function InboxView() {
                   aria-label="Xóa từ khóa"
                   className="absolute right-3 top-0 flex size-7 items-center justify-center text-muted-foreground hover:text-foreground"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} />
+                  <X className="size-3.5" />
                 </Pressable>
               )}
             </div>
@@ -731,7 +730,7 @@ export function InboxView() {
         <section data-slot="inbox-detail-pane" className="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
           {detailState === "none" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-              <InboxIcon className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+              <InboxIcon className="size-6 text-muted-foreground/50" />
               <p className="text-xs text-muted-foreground">Chọn một thông báo để xem</p>
             </div>
           ) : (
@@ -739,7 +738,7 @@ export function InboxView() {
               <header className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border/60 px-3">
                 {!isWide && (
                   <Button variant="ghost" size="icon-xs" onClick={closeDetail} aria-label="Quay lại hộp thư">
-                    <ArrowLeft strokeWidth={1.5} />
+                    <ArrowLeft />
                   </Button>
                 )}
                 <span className="truncate text-xs text-muted-foreground">
@@ -756,7 +755,7 @@ export function InboxView() {
                     {selectedGroup.target && (
                       <Button variant="ghost" size="sm" onClick={() => router.push(selectedGroup.target!.href)}>
                         {selectedGroup.target.ctaLabel}
-                        <ArrowUpRight strokeWidth={1.5} />
+                        <ArrowUpRight />
                       </Button>
                     )}
                   </div>
@@ -880,7 +879,7 @@ function ReadToggle({
       aria-label={label}
       onClick={() => (unread ? onToggle(group.unreadIds, true) : onToggle([group.latest.id], false))}
     >
-      {unread ? <MailOpen strokeWidth={1.5} /> : <Mail strokeWidth={1.5} />}
+      {unread ? <MailOpen /> : <Mail />}
     </Button>
   );
 }
@@ -924,7 +923,7 @@ function InboxDetail({
           )}
           {task.dueDate && (
             <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/70 px-2 tabular-nums">
-              <Calendar size={14} strokeWidth={1.5} className="text-muted-foreground" />
+              <Calendar size={14} className="text-muted-foreground" />
               {new Date(task.dueDate).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}
             </span>
           )}
@@ -1005,7 +1004,7 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
         aria-label={`Bỏ lọc ${label}`}
         className="flex size-6 items-center justify-center text-muted-foreground hover:text-foreground"
       >
-        <X className="size-3" strokeWidth={1.5} />
+        <X className="size-3" />
       </Pressable>
     </span>
   );

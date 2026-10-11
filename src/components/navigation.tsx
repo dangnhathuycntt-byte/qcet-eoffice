@@ -66,7 +66,7 @@ export function LiveClock() {
 
   return (
     <div className="hidden xl:flex items-center gap-1.5 text-xs font-mono tabular-nums text-muted-foreground select-none">
-      <Clock size={13} strokeWidth={1.5} className="text-muted-foreground/80 shrink-0" />
+      <Clock size={13} className="text-muted-foreground/80 shrink-0" />
       <span>{timeStr}</span>
     </div>
   );
@@ -223,7 +223,7 @@ export function MobileNav({ pathname: initialPathname }: { pathname?: string } =
                 aria-hidden="true"
               />
             )}
-            <Menu size={19} strokeWidth={1.5} className="mb-0.5" />
+            <Menu size={19} className="mb-0.5" />
             <span className="text-xs leading-tight truncate max-w-[64px]">
               Thêm
             </span>
@@ -394,7 +394,7 @@ export function Navigation() {
             className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all active:scale-[0.98]"
             title={user?.role === "STAFF" ? "Tạo việc cá nhân mới (phím ⌘K hoặc N)" : "Tạo việc / Giao việc mới (phím ⌘K hoặc N)"}
           >
-            <Plus size={14} strokeWidth={1.5} className="shrink-0" />
+            <Plus size={14} className="shrink-0" />
             <span className="hidden sm:inline font-medium">Tạo việc</span>
             <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1.5 py-0.5 text-xs font-mono leading-none sm:inline-flex opacity-90">
               ⌘K
@@ -435,7 +435,6 @@ export function Navigation() {
               </div>
               <ChevronDown
                 size={12}
-                strokeWidth={1.5}
                 className="text-muted-foreground transition-transform group-hover:text-foreground hidden sm:block"
               />
             </button>
@@ -458,7 +457,7 @@ export function Navigation() {
                       </p>
                       {user.emailVerified && (
                         <span title="Tài khoản email trường đã xác minh" className="shrink-0 text-emerald-600">
-                          <CheckCircle2 size={13} strokeWidth={1.5} />
+                          <CheckCircle2 size={13} />
                         </span>
                       )}
                     </div>
@@ -490,7 +489,7 @@ export function Navigation() {
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
-                    <Settings size={14} strokeWidth={1.5} className="text-muted-foreground" />
+                    <Settings size={14} className="text-muted-foreground" />
                     <span>Cập nhật hồ sơ cán bộ</span>
                   </button>
 
@@ -502,7 +501,7 @@ export function Navigation() {
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
-                    <User size={14} strokeWidth={1.5} className="text-muted-foreground" />
+                    <User size={14} className="text-muted-foreground" />
                     <span>Đổi tài khoản / Đăng nhập khác</span>
                   </button>
 
@@ -514,7 +513,7 @@ export function Navigation() {
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
-                    <LogOut size={14} strokeWidth={1.5} />
+                    <LogOut size={14} />
                     <span>Đăng xuất</span>
                   </button>
                 </div>
@@ -526,7 +525,7 @@ export function Navigation() {
               href="/login"
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs ml-1"
             >
-              <LogIn size={13} strokeWidth={1.5} />
+              <LogIn size={13} />
               <span>Đăng nhập</span>
             </Link>
           )}

@@ -87,7 +87,7 @@ export function TaskOptionalSections({ children, className }: { children: React.
               title="Thêm tiêu chí, người tham gia, phối hợp…"
               className={cn(CHIP_CLASS, "order-1")}
             >
-              <Plus className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+              <Plus className="size-3.5" aria-hidden="true" />
               Thêm
             </Popover.Trigger>
             <Popover.Portal>
@@ -216,7 +216,7 @@ export function TaskAddChip({
 }) {
   const content = (
     <>
-      {icon ? <Plus className="size-3.5" strokeWidth={1.5} aria-hidden="true" /> : null}
+      {icon ? <Plus className="size-3.5" aria-hidden="true" /> : null}
       {children}
     </>
   );

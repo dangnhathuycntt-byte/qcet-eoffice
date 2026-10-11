@@ -165,7 +165,6 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                   "size-3 text-muted-foreground transition-transform duration-150",
                   isSizeMenuOpen && "rotate-180 text-foreground"
                 )}
-                strokeWidth={1.5}
               />
             </Popover.Trigger>
 
@@ -256,7 +255,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang đầu"
           aria-label="Về trang đầu"
         >
-          <ChevronsLeft className="size-3.5" strokeWidth={1.5} />
+          <ChevronsLeft className="size-3.5" />
         </button>
 
         {/* Previous Page Button */}
@@ -268,7 +267,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang trước"
           aria-label="Sang trang trước"
         >
-          <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+          <ChevronLeft className="size-3.5" />
         </button>
 
         {/* Numeric Page Buttons */}
@@ -317,7 +316,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang sau"
           aria-label="Sang trang sau"
         >
-          <ChevronRight className="size-3.5" strokeWidth={1.5} />
+          <ChevronRight className="size-3.5" />
         </button>
 
         {/* Last Page Button */}
@@ -329,7 +328,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang cuối"
           aria-label="Về trang cuối"
         >
-          <ChevronsRight className="size-3.5" strokeWidth={1.5} />
+          <ChevronsRight className="size-3.5" />
         </button>
       </div>
     </nav>

@@ -55,13 +55,12 @@ export function TaskSourceDocumentBadge({
                 )}
                 aria-label={`Mở văn bản gốc: ${sourceDocument.originalNumber}`}
               >
-                <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                <FileText className="size-4 shrink-0 text-muted-foreground" />
                 <span className="truncate">
                   {sourceDocument.originalNumber || `#${sourceDocument.registrationNumber}`}
                 </span>
                 <ExternalLink
                   className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-                  strokeWidth={1.5}
                 />
               </a>
             )}
@@ -108,7 +107,7 @@ export function TaskSourceDocumentBadge({
       )}
       aria-label={`Mở văn bản gốc: ${sourceDocument.originalNumber}`}
     >
-      <FileText className="size-4 shrink-0 text-muted-foreground mt-0.5" strokeWidth={1.5} />
+      <FileText className="size-4 shrink-0 text-muted-foreground mt-0.5" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">
@@ -133,7 +132,6 @@ export function TaskSourceDocumentBadge({
       </div>
       <ExternalLink
         className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground mt-0.5"
-        strokeWidth={1.5}
       />
     </a>
   );

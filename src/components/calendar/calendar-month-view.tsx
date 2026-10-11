@@ -755,7 +755,7 @@ export function CalendarMonthView({
             aria-label="Tháng trước"
             className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary/80 transition-colors"
           >
-            <ChevronLeft strokeWidth={1.5} className="size-5" />
+            <ChevronLeft className="size-5" />
           </Pressable>
           <div className="flex flex-col items-center text-center">
             <span className="font-heading text-sm font-bold text-foreground font-mono tabular-nums tracking-tight">
@@ -770,7 +770,7 @@ export function CalendarMonthView({
             aria-label="Tháng sau"
             className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary/80 transition-colors"
           >
-            <ChevronRight strokeWidth={1.5} className="size-5" />
+            <ChevronRight className="size-5" />
           </Pressable>
         </div>
 
@@ -787,14 +787,14 @@ export function CalendarMonthView({
                 aria-label="Tháng học trước"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground shadow-xs"
               >
-                <ChevronLeft strokeWidth={1.5} className="size-4" />
+                <ChevronLeft className="size-4" />
               </Pressable>
               <Pressable
                 onClick={handleNextMonth}
                 aria-label="Tháng học sau"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground shadow-xs"
               >
-                <ChevronRight strokeWidth={1.5} className="size-4" />
+                <ChevronRight className="size-4" />
               </Pressable>
 
               <Pressable
@@ -841,7 +841,6 @@ export function CalendarMonthView({
 
             <div className="relative min-w-[200px] max-w-xs">
               <Search
-                strokeWidth={1.5}
                 className="size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-2.5"
               />
               <input
@@ -858,7 +857,7 @@ export function CalendarMonthView({
               onClick={() => onAddTask?.(selectedDate)}
               className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
             >
-              <Plus strokeWidth={1.5} className="size-3.5 text-muted-foreground" />
+              <Plus className="size-3.5 text-muted-foreground" />
               <span>Giao việc</span>
             </button>
           </div>
@@ -868,7 +867,6 @@ export function CalendarMonthView({
         <div className="flex sm:hidden items-center gap-2">
           <div className="relative flex-1">
             <Search
-              strokeWidth={1.5}
               className="size-4 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
             />
             <input
@@ -883,7 +881,7 @@ export function CalendarMonthView({
             onClick={() => onAddTask?.(selectedDate)}
             className="min-h-[44px] px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all rounded-xl shrink-0"
           >
-            <Plus strokeWidth={1.5} className="size-4 mr-1" />
+            <Plus className="size-4 mr-1" />
             <span>Giao việc</span>
           </Button>
         </div>
@@ -933,7 +931,7 @@ export function CalendarMonthView({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Building2 strokeWidth={1.5} className="size-3" />
+              <Building2 className="size-3" />
               <span>Cấp Trường</span>
             </Pressable>
             <Pressable
@@ -945,7 +943,7 @@ export function CalendarMonthView({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Briefcase strokeWidth={1.5} className="size-3" />
+              <Briefcase className="size-3" />
               <span>Đơn vị</span>
             </Pressable>
           </div>
@@ -958,7 +956,7 @@ export function CalendarMonthView({
       <div className="block sm:hidden space-y-4" data-slot="mobile-agenda-feed">
         {monthlyAgendaGroups.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center bg-card/60 space-y-3">
-            <CalendarIcon strokeWidth={1.5} className="size-8 mx-auto text-muted-foreground/40" />
+            <CalendarIcon className="size-8 mx-auto text-muted-foreground/40" />
             <div className="space-y-1">
               <p className="text-sm font-bold text-foreground">Không có sự kiện hoặc nhiệm vụ</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -970,7 +968,7 @@ export function CalendarMonthView({
               onClick={() => onAddTask?.(selectedDate)}
               className="min-h-[44px] px-4 rounded-xl text-xs font-semibold gap-1.5"
             >
-              <Plus strokeWidth={1.5} className="size-4" />
+              <Plus className="size-4" />
               <span>Giao việc mới</span>
             </Button>
           </div>
@@ -1032,7 +1030,7 @@ export function CalendarMonthView({
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-semibold tabular-nums bg-primary/10 text-primary border border-primary/20">
-                            <Clock strokeWidth={1.5} className="size-3" />
+                            <Clock className="size-3" />
                             <span>{timeBadge}</span>
                           </span>
                           <span
@@ -1061,7 +1059,7 @@ export function CalendarMonthView({
                       {/* Row 3: Location/Room & Host/Participants */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-muted-foreground pt-0.5">
                         <div className="flex items-center gap-1 truncate text-foreground/80">
-                          <Building2 strokeWidth={1.5} className="size-3 shrink-0 text-muted-foreground" />
+                          <Building2 className="size-3 shrink-0 text-muted-foreground" />
                           <span className="truncate">{location}</span>
                         </div>
 
@@ -1261,7 +1259,7 @@ export function CalendarMonthView({
           <div className="flex items-start justify-between border-b border-border/70 pb-3.5">
             <div>
               <div className="flex items-center gap-1.5 text-xs text-primary font-semibold mb-0.5">
-                <CalendarIcon strokeWidth={1.5} className="size-3.5" />
+                <CalendarIcon className="size-3.5" />
                 <span>Chi tiết lịch công tác</span>
               </div>
               <h3 className="text-sm font-bold text-foreground">
@@ -1275,7 +1273,7 @@ export function CalendarMonthView({
               onClick={() => onAddTask?.(selectedDate)}
               className="h-7.5 text-xs gap-1 border-dashed px-2.5 rounded-lg font-semibold"
             >
-              <Plus strokeWidth={1.5} className="size-3" />
+              <Plus className="size-3" />
               Thêm việc
             </Button>
           </div>
@@ -1294,7 +1292,7 @@ export function CalendarMonthView({
           <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[520px] thin-scrollbar pr-0.5">
             {selectedDateTasks.length === 0 ? (
               <div className="py-14 text-center text-xs text-muted-foreground space-y-2 border border-dashed border-border/70 rounded-xl p-5 bg-muted/10">
-                <CalendarIcon strokeWidth={1.5} className="mx-auto size-8 text-muted-foreground/30 mb-1" />
+                <CalendarIcon className="mx-auto size-8 text-muted-foreground/30 mb-1" />
                 <p className="font-semibold text-foreground">
                   Không có hạn chót công việc
                 </p>
@@ -1367,7 +1365,7 @@ export function CalendarMonthView({
                     {/* Parent task if Subtask */}
                     {!isSchool && item.parentSchoolTaskTitle && (
                       <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                        <Layers strokeWidth={1.5} className="size-3 text-muted-foreground/70 shrink-0" />
+                        <Layers className="size-3 text-muted-foreground/70 shrink-0" />
                         <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
                       </div>
                     )}
@@ -1402,7 +1400,7 @@ export function CalendarMonthView({
         <div className="hidden sm:block space-y-4">
           {monthlyAgendaGroups.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/70 p-8 text-center bg-card/60 space-y-3">
-              <CalendarIcon strokeWidth={1.5} className="size-10 mx-auto text-muted-foreground/40" />
+              <CalendarIcon className="size-10 mx-auto text-muted-foreground/40" />
               <div className="space-y-1">
                 <p className="text-base font-bold text-foreground">Không có sự kiện hoặc nhiệm vụ</p>
                 <p className="text-xs text-muted-foreground leading-relaxed max-w-md mx-auto">
@@ -1414,7 +1412,7 @@ export function CalendarMonthView({
                 onClick={() => onAddTask?.(selectedDate)}
                 className="min-h-[44px] px-4 rounded-xl text-xs font-semibold gap-1.5"
               >
-                <Plus strokeWidth={1.5} className="size-4" />
+                <Plus className="size-4" />
                 <span>Giao việc mới</span>
               </Button>
             </div>
@@ -1467,7 +1465,7 @@ export function CalendarMonthView({
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5">
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-semibold tabular-nums bg-primary/10 text-primary border border-primary/20">
-                                <Clock strokeWidth={1.5} className="size-3" />
+                                <Clock className="size-3" />
                                 <span>{timeBadge}</span>
                               </span>
                               <span
@@ -1494,7 +1492,7 @@ export function CalendarMonthView({
 
                           <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground pt-0.5">
                             <div className="flex items-center gap-1 truncate text-foreground/80">
-                              <Building2 strokeWidth={1.5} className="size-3 shrink-0 text-muted-foreground" />
+                              <Building2 className="size-3 shrink-0 text-muted-foreground" />
                               <span className="truncate">{location}</span>
                             </div>
 

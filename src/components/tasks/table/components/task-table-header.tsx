@@ -101,15 +101,14 @@ export function TaskTableHeader({
     const isFieldSorted = sortField === colId || (colId === "title" && sortField === "code");
     if (isFieldSorted) {
       return sortDirection === "asc" ? (
-        <ChevronUp className="size-3 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
+        <ChevronUp className="size-3 text-primary shrink-0 transition-transform" />
       ) : (
-        <ChevronDown className="size-3 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
+        <ChevronDown className="size-3 text-primary shrink-0 transition-transform" />
       );
     }
     return (
       <ArrowUpDown
         className="size-3 text-muted-foreground opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0"
-        strokeWidth={1.5}
       />
     );
   };

@@ -167,7 +167,7 @@ export function DocumentEditDialog({
             Hủy
           </Button>
           <Button type="submit" size="sm" disabled={saving}>
-            {saving ? <Loader2 className="size-3 animate-spin" strokeWidth={1.5} /> : null}
+            {saving ? <Loader2 className="size-3 animate-spin" /> : null}
             Lưu
           </Button>
         </div>
@@ -258,7 +258,7 @@ export function AddDocumentFileButton({
     <span className={cn("inline-flex flex-col items-start", className)}>
       {input}
       <Button variant="ghost" size="sm" disabled={busy} onClick={open}>
-        {busy ? <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} /> : <Paperclip className="size-3.5" strokeWidth={1.5} />}
+        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Paperclip className="size-3.5" />}
         {busy ? "Đang tải lên…" : children}
       </Button>
       {error ? <span role="alert" className="pt-1 text-xs text-destructive">{error}</span> : null}
@@ -273,7 +273,7 @@ export function DocumentEditActions({ item, onChanged }: { item: DocumentItem | 
   return (
     <div className="-ml-2 flex flex-wrap items-start gap-1" role="group" aria-label="Chỉnh sửa văn bản">
       <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-        <Pencil className="size-3.5" strokeWidth={1.5} />
+        <Pencil className="size-3.5" />
         Sửa thông tin
       </Button>
       <AddDocumentFileButton documentId={item.id} onAdded={onChanged} />

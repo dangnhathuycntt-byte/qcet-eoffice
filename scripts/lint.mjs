@@ -72,7 +72,7 @@ const DESIGN_RULES = [
   {
     id: "icon-stroke-width",
     message:
-      "Lucide icon strokeWidth must be 1.5. Pass `strokeWidth={1.5}` explicitly.",
+      "Lucide icon stroke is 1.5, set once by LucideProvider in src/app/layout.tsx. Drop the strokeWidth prop.",
     test: (line) =>
       /strokeWidth=\{(?!1\.5\b)[\d.]+\}/.test(line) || /strokeWidth="(?!1\.5")[\d.]+"/.test(line),
   },

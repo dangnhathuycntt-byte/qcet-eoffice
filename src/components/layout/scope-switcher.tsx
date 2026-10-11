@@ -579,12 +579,12 @@ export function ScopeSwitcher({ className }: { className?: string }) {
   const renderIcon = (type: ScopeDetails["iconType"]) => {
     switch (type) {
       case "School":
-        return <School className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.5} />;
+        return <School className="w-3.5 h-3.5 text-primary shrink-0" />;
       case "Building2":
-        return <Building2 className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.5} />;
+        return <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />;
       case "User":
       default:
-        return <User className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.5} />;
+        return <User className="w-3.5 h-3.5 text-primary shrink-0" />;
     }
   };
 
@@ -616,7 +616,6 @@ export function ScopeSwitcher({ className }: { className?: string }) {
         </span>
         <ChevronDown
           size={12}
-          strokeWidth={1.5}
           className={cn(
             "text-muted-foreground transition-transform duration-150 group-hover:text-foreground shrink-0 ml-0.5",
             isOpen && "rotate-180"
@@ -660,7 +659,6 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                       "w-4 h-4 shrink-0",
                       isSchoolSelected ? "text-primary" : "text-muted-foreground"
                     )}
-                    strokeWidth={1.5}
                   />
                   <div className="truncate">
                     <span>Toàn trường (BGH QCET)</span>
@@ -670,7 +668,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   </div>
                 </div>
                 {isSchoolSelected && (
-                  <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                  <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
                 )}
               </Pressable>
             )}
@@ -691,7 +689,6 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     "w-4 h-4 shrink-0",
                     isPrimaryUnitSelected ? "text-primary" : "text-muted-foreground"
                   )}
-                  strokeWidth={1.5}
                 />
                 <div className="truncate">
                   <span>{primaryUnitName}</span>
@@ -701,7 +698,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 </div>
               </div>
               {isPrimaryUnitSelected && (
-                <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
               )}
             </Pressable>
 
@@ -721,7 +718,6 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     "w-4 h-4 shrink-0",
                     isMySelected ? "text-primary" : "text-muted-foreground"
                   )}
-                  strokeWidth={1.5}
                 />
                 <div className="truncate">
                   <span>Cá nhân (Của tôi)</span>
@@ -731,7 +727,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 </div>
               </div>
               {isMySelected && (
-                <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
               )}
             </Pressable>
           </div>
@@ -750,7 +746,6 @@ export function ScopeSwitcher({ className }: { className?: string }) {
             <div className="relative">
               <Search
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
               />
               <input
                 type="text"
@@ -765,7 +760,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
                   aria-label="Xóa tìm kiếm"
                 >
-                  <X className="w-3 h-3" strokeWidth={1.5} />
+                  <X className="w-3 h-3" />
                 </Pressable>
               )}
             </div>
@@ -801,7 +796,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     >
                       <span className="truncate">{formatDepartmentLabel(dept)}</span>
                       {isSelected && (
-                        <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />
+                        <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-1.5" />
                       )}
                     </Pressable>
                   );
@@ -823,7 +818,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
               className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors min-h-[36px]"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Shield className="w-3.5 h-3.5 shrink-0 text-primary" strokeWidth={1.5} />
+                <Shield className="w-3.5 h-3.5 shrink-0 text-primary" />
                 <span className="truncate font-medium">Phân quyền & Ủy quyền phạm vi</span>
               </div>
               <span className="size-2 rounded-full bg-emerald-500 shrink-0" title="Đang hiệu lực" />
@@ -850,7 +845,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 aria-label="Đóng bảng chọn phạm vi"
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
               >
-                <X size={18} strokeWidth={1.5} />
+                <X size={18} />
               </BottomSheetClose>
             </div>
           </BottomSheetHeader>
@@ -882,7 +877,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                             : "bg-muted text-muted-foreground"
                         )}
                       >
-                        <School className="w-4 h-4" strokeWidth={1.5} />
+                        <School className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <p className="truncate font-medium leading-tight">Toàn trường (BGH QCET)</p>
@@ -892,7 +887,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                       </div>
                     </div>
                     {isSchoolSelected && (
-                      <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                      <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
                     )}
                   </Pressable>
                 )}
@@ -916,7 +911,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                           : "bg-muted text-muted-foreground"
                       )}
                     >
-                      <Building2 className="w-4 h-4" strokeWidth={1.5} />
+                      <Building2 className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-medium leading-tight">{primaryUnitName}</p>
@@ -926,7 +921,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     </div>
                   </div>
                   {isPrimaryUnitSelected && (
-                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
                   )}
                 </Pressable>
 
@@ -949,7 +944,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                           : "bg-muted text-muted-foreground"
                       )}
                     >
-                      <User className="w-4 h-4" strokeWidth={1.5} />
+                      <User className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-medium leading-tight">Cá nhân (Của tôi)</p>
@@ -959,7 +954,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     </div>
                   </div>
                   {isMySelected && (
-                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
                   )}
                 </Pressable>
               </div>
@@ -976,7 +971,6 @@ export function ScopeSwitcher({ className }: { className?: string }) {
               <div className="relative mb-3">
                 <Search
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
-                  strokeWidth={1.5}
                 />
                 <input
                   type="text"
@@ -991,7 +985,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded"
                     aria-label="Xóa tìm kiếm"
                   >
-                    <X className="w-4 h-4" strokeWidth={1.5} />
+                    <X className="w-4 h-4" />
                   </Pressable>
                 )}
               </div>
@@ -1026,7 +1020,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                         >
                           <span className="truncate">{formatDepartmentLabel(dept)}</span>
                           {isSelected && (
-                            <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                            <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
                           )}
                         </Pressable>
                       );
@@ -1049,7 +1043,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-foreground bg-muted/40 hover:bg-muted/80 transition-colors min-h-[48px] active:scale-[0.99] border border-border/40"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Shield className="w-4 h-4 shrink-0 text-primary" strokeWidth={1.5} />
+                  <Shield className="w-4 h-4 shrink-0 text-primary" />
                   <span className="truncate">Phân quyền & Ủy quyền phạm vi</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">

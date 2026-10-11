@@ -38,7 +38,7 @@ export function InlineExplanation({
           className,
         )}
       >
-        {showIcon && <HelpCircle className="size-3 shrink-0" strokeWidth={1.5} />}
+        {showIcon && <HelpCircle className="size-3 shrink-0" />}
         <span>{triggerText}</span>
       </BasePopover.Trigger>
 

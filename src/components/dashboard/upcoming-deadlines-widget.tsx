@@ -136,7 +136,7 @@ export function UpcomingDeadlinesWidget({
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
           <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-            <Calendar className="size-3.5 text-primary" strokeWidth={1.5} />
+            <Calendar className="size-3.5 text-primary" />
           </div>
           <div>
             <h3 className="font-heading text-sm font-bold text-foreground tracking-tight">
@@ -158,7 +158,7 @@ export function UpcomingDeadlinesWidget({
           >
             <span className="hidden sm:inline">Xem tất cả {windowTotal} nhiệm vụ hạn chót</span>
             <span className="sm:hidden">Xem tất cả ({windowTotal})</span>
-            <ChevronRight className="size-3" strokeWidth={1.5} />
+            <ChevronRight className="size-3" />
           </Link>
         </div>
       </div>
@@ -168,7 +168,7 @@ export function UpcomingDeadlinesWidget({
         {displayedItems.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
             <div className="flex size-8 items-center justify-center rounded-full bg-muted/60">
-              <Calendar className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
+              <Calendar className="size-4 text-muted-foreground/60" />
             </div>
             <p className="text-xs text-muted-foreground">Không có nhiệm vụ nào có hạn chót trong 7 ngày tới</p>
           </div>
@@ -222,7 +222,7 @@ export function UpcomingDeadlinesWidget({
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
-                        <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
+                        <Clock className="size-2.5 opacity-70" />
                         {relativeDistance}
                       </span>
                     )}
@@ -258,7 +258,7 @@ export function UpcomingDeadlinesWidget({
           data-slot="upcoming-calendar-cta"
         >
           <span>Mở lịch công tác</span>
-          <ChevronRight className="size-3.5" strokeWidth={1.5} />
+          <ChevronRight className="size-3.5" />
         </Link>
         {windowTotal > initialLimit && (
           <Pressable
@@ -269,12 +269,12 @@ export function UpcomingDeadlinesWidget({
             {isExpanded ? (
               <>
                 <span>Thu gọn</span>
-                <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                <ChevronUp className="size-3.5" />
               </>
             ) : (
               <>
                 <span>Xem tất cả {windowTotal} nhiệm vụ hạn chót</span>
-                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                <ChevronDown className="size-3.5" />
               </>
             )}
           </Pressable>
