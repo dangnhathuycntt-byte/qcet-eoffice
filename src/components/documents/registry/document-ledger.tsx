@@ -19,6 +19,7 @@ import { ActiveFilterBar, FilterSegmentChip } from "@/components/workspace/compo
 import { FilterIconDept, FilterIconMonth, FilterIconPriority, FilterIconStatus } from "@/components/dashboard/task-filter-icons";
 import { TaskIconDepartment, TaskIconPriority, TaskIconStatus, TaskIconTime } from "@/lib/icons/task-icons";
 import { cn } from "@/lib/utils";
+import { getSelectionGroupPositions, type SelectionGroupPosition } from "@/lib/selection-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   formatLedgerCellDate,
@@ -586,6 +587,7 @@ interface LedgerRowProps {
   doc: OfficialDocument;
   documents: OfficialDocument[];
   selected: boolean;
+  groupPosition?: SelectionGroupPosition;
   isOpen: boolean;
   showSelectors: boolean;
   numberHeader: string;
@@ -598,7 +600,7 @@ interface LedgerRowProps {
   onToggleSelect: (id: string) => void;
 }
 
-function LedgerRow({ doc, documents, selected, isOpen, showSelectors, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect }: LedgerRowProps) {
+function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelectors, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect }: LedgerRowProps) {
   const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
   const no = numberLabel(doc);
   const urgent = urgencyText(doc);
@@ -657,6 +659,8 @@ function LedgerRow({ doc, documents, selected, isOpen, showSelectors, numberHead
         GRID,
         "group cursor-pointer select-none text-foreground transition-colors outline-none",
         "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+        // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
+        !selected || groupPosition === "only" || !groupPosition ? "rounded-md" : groupPosition === "first" ? "rounded-t-md" : groupPosition === "last" ? "rounded-b-md" : "rounded-none",
         isOpen ? "bg-selected" : selected ? "bg-muted/60 hover:bg-muted/80" : "hover:bg-muted/40"
       )}
     >
@@ -795,6 +799,8 @@ export function DocumentLedgerTable({
     );
   }
 
+  const groupPositions = getSelectionGroupPositions(documents.map((d) => d.id), selectedIds);
+
   return (
     <div role="table" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger" style={wrapperStyle}>
       {header}
@@ -804,6 +810,7 @@ export function DocumentLedgerTable({
           doc={doc}
           documents={documents}
           selected={selectedIds.has(doc.id)}
+          groupPosition={groupPositions.get(doc.id)}
           isOpen={selectedDocumentId === doc.id}
           showSelectors={selectedIds.size > 0}
           numberHeader={numberHeader}

@@ -1,5 +1,6 @@
 "use client";
 
+import type { SelectionGroupPosition } from "@/lib/selection-group";
 import * as React from "react";
 import {
   Check,
@@ -66,7 +67,7 @@ export interface TaskRowProps {
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   showTaskCode?: boolean;
   /** Position within a contiguous selection group: 'first' | 'middle' | 'last' | 'only' | null */
-  selectionGroupPosition?: "first" | "middle" | "last" | "only" | null;
+  selectionGroupPosition?: SelectionGroupPosition | null;
   className?: string;
 }
 
@@ -302,6 +303,17 @@ export const TaskRow = React.memo(function TaskRow({
       : "Mới";
 
   const rowHeightClass = "h-12 min-h-[48px]";
+  // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
+  const radiusTop = "[&>td:first-child]:rounded-tl-md [&>td:last-child]:rounded-tr-md";
+  const radiusBottom = "[&>td:first-child]:rounded-bl-md [&>td:last-child]:rounded-br-md";
+  const selectionRadiusClass =
+    !isSelected || selectionGroupPosition === "only" || selectionGroupPosition === null
+      ? cn(radiusTop, radiusBottom)
+      : selectionGroupPosition === "first"
+      ? radiusTop
+      : selectionGroupPosition === "last"
+      ? radiusBottom
+      : "";
 
   return (
     <tr
@@ -312,23 +324,27 @@ export const TaskRow = React.memo(function TaskRow({
       onContextMenu={handleRightClick}
       data-task-id={task.id}
       data-task-tier="1"
+      data-slot="task-row"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-colors select-none text-foreground",
+        // Nền và bo góc đặt trên <td> (<tr> trong bảng border-collapse không bo được;
+        // pseudo-element trong <tr> thì bị coi là một ô thừa và làm lệch cột)
+        "group cursor-pointer select-none text-foreground outline-none [&>td]:transition-colors",
         rowHeightClass,
+        selectionRadiusClass,
         // State 1: Hover on unselected row
-        !isSelected && "hover:bg-muted/40",
+        !isSelected && "hover:[&>td]:bg-muted/40",
         // State 2: Selected row
-        isSelected && "bg-selected/80 hover:bg-selected",
-        // State 3: Focus on unselected row (WCAG 2.2 AA Focus visible)
-        "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:outline-none",
+        isSelected && "[&>td]:bg-selected/80 hover:[&>td]:bg-selected",
+        // State 3: Focus (WCAG 2.2 AA Focus visible)
+        "focus-visible:[--row-ring-w:2px] focus-visible:[--row-ring-c:var(--color-primary)]",
         // State 4: Previewing (Peek preview)
-        isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
+        isPreviewing && "[&>td]:bg-blue-50/70 [--row-ring-w:1px] [--row-ring-c:color-mix(in_srgb,var(--color-blue-500)_40%,transparent)]",
         // State 5: Opened / Active detail
-        isActive && !isPreviewing && !isSelected && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
+        isActive && !isPreviewing && !isSelected && "[&>td]:bg-primary/[0.08] [--row-ring-w:1px] [--row-ring-c:color-mix(in_srgb,var(--color-primary)_40%,transparent)]",
         // State 6: Đích của menu chuột phải (giữ bôi nền khi menu mở, vì con trỏ đã rời dòng)
-        isContextMenuTarget && !isSelected && !isPreviewing && "bg-accent",
-        isExpanded && "bg-muted/20",
+        isContextMenuTarget && !isSelected && !isPreviewing && "[&>td]:bg-accent",
+        isExpanded && "[&>td]:bg-muted/20",
         className
       )}
     >

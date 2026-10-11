@@ -673,6 +673,26 @@
   border-radius: var(--radius-md);
   transition: background-color 100ms ease;
 }
+/* Viền hàng nhiệm vụ (focus / đang mở / xem trước): vẽ bằng inset shadow trên từng <td>
+   để bo theo góc của hàng; độ dày và màu lấy từ --row-ring-w / --row-ring-c đặt ở <tr>. */
+[data-slot="task-row"] > td {
+  box-shadow:
+    inset 0 var(--row-ring-w, 0px) 0 0 var(--row-ring-c, transparent),
+    inset 0 calc(var(--row-ring-w, 0px) * -1) 0 0 var(--row-ring-c, transparent);
+}
+[data-slot="task-row"] > td:first-child {
+  box-shadow:
+    inset 0 var(--row-ring-w, 0px) 0 0 var(--row-ring-c, transparent),
+    inset 0 calc(var(--row-ring-w, 0px) * -1) 0 0 var(--row-ring-c, transparent),
+    inset var(--row-ring-w, 0px) 0 0 0 var(--row-ring-c, transparent);
+}
+[data-slot="task-row"] > td:last-child {
+  box-shadow:
+    inset 0 var(--row-ring-w, 0px) 0 0 var(--row-ring-c, transparent),
+    inset 0 calc(var(--row-ring-w, 0px) * -1) 0 0 var(--row-ring-c, transparent),
+    inset calc(var(--row-ring-w, 0px) * -1) 0 0 0 var(--row-ring-c, transparent);
+}
+
 [data-slot="task-block-editor"] [data-block-selected="true"]::before {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   border-color: transparent;
