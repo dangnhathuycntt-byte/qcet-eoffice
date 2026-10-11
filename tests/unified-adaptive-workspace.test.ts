@@ -11,7 +11,6 @@ import { deriveAdaptiveWorkspaceData } from "../src/components/workspace/hooks/u
 import {
   filterTasksByScope,
   applyOptimisticStatusChange,
-  applyOptimisticCreateTask,
   TaskManagementWorkspace,
 } from "../src/components/tasks/task-management-workspace";
 import {
@@ -300,28 +299,6 @@ describe("Unified Task Workspace Engine Consolidation (Task 2)", () => {
       updatedTasks[0].progressPercent,
       100,
       "Progress percent must recalculate to 100%"
-    );
-
-    // 2. Add new subtask
-    const tasksWithSub = applyOptimisticCreateTask(sampleTasks, {
-      title: "Kiểm thử bảo mật",
-      category: "CHUYEN_DOI_SO",
-      leadAssigneeName: "Lê Văn C",
-      coAssignees: [],
-      description: "Kiểm tra bảo mật hệ thống",
-      dueDate: "2026-09-25",
-      level: "DON_VI",
-      parentTaskId: "task-1",
-    });
-
-    assert.strictEqual(
-      tasksWithSub[0].subTasks?.length,
-      2,
-      "New subtask should be appended to parent task"
-    );
-    assert.strictEqual(
-      tasksWithSub[0].subTasks?.[0].title,
-      "Kiểm thử bảo mật"
     );
   });
 

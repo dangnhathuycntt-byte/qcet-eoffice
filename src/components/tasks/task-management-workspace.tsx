@@ -10,20 +10,16 @@ import {
 } from "@/components/workspace/unified-adaptive-workspace";
 import type { UnifiedAdaptiveWorkspaceProps } from "@/components/workspace/types";
 import type { UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
-import type { CreateTaskFormData } from "@/domain/tasks/create-task-form-utils";
 import {
   filterTasksByScope,
   applyOptimisticStatusChange,
-  applyOptimisticCreateTask,
 } from "@/components/workspace/utils/task-workspace-mutations";
 
 export {
   filterTasksByScope,
   applyOptimisticStatusChange,
-  applyOptimisticCreateTask,
   type WorkspaceScope,
   type ViewMode,
-  type CreateTaskFormData,
 };
 
 export interface TaskManagementWorkspaceProps extends Partial<UnifiedAdaptiveWorkspaceProps> {

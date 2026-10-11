@@ -16,7 +16,6 @@ import type { AuthUser } from "@/types/auth";
 import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import type { ExecutiveFilter, ExecutiveActionStats, DepartmentHealthSummary, ExecutiveActionItem } from "@/lib/executive-matrix-aggregator";
 import type { DelegationRule } from "@/types/delegation";
-import type { CreateTaskFormData } from "@/domain/tasks/create-task-form-utils";
 import type { AcademicMonthInfo } from "@/lib/academic-calendar";
 import { useModalState } from "@/hooks/use-modal-state";
 import { useDashboardState } from "@/hooks/use-dashboard-state";
@@ -114,7 +113,6 @@ export interface DashboardActionsContextValue {
   handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<boolean>;
   handleSubmitDeliverable: (payload: DeliverableSubmissionPayload) => Promise<void>;
   handleReviewAction: (payload: ApprovalActionPayload) => Promise<void>;
-  handleCreateTask: (data: CreateTaskFormData) => void;
   handleManualRefresh: () => Promise<void>;
   handleSaveDelegation: (ruleData: Omit<DelegationRule, "id" | "createdAt">) => void;
   handleRevokeDelegation: (ruleId: string) => void;
@@ -417,7 +415,6 @@ export function DashboardStateProvider({
       handleStatusChange: handleStatusChangeWithSync,
       handleSubmitDeliverable: handleSubmitDeliverableWithSync,
       handleReviewAction: handleReviewActionWithSync,
-      handleCreateTask: dashboardState.handleCreateTask,
       handleManualRefresh: dashboardState.handleManualRefresh,
       handleSaveDelegation: dashboardState.handleSaveDelegation,
       handleRevokeDelegation: dashboardState.handleRevokeDelegation,
@@ -435,7 +432,6 @@ export function DashboardStateProvider({
       handleStatusChangeWithSync,
       handleSubmitDeliverableWithSync,
       handleReviewActionWithSync,
-      dashboardState.handleCreateTask,
       dashboardState.handleManualRefresh,
       dashboardState.handleSaveDelegation,
       dashboardState.handleRevokeDelegation,

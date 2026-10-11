@@ -8,12 +8,11 @@ import {
 } from "@/hooks/use-department-list";
 import {
   submitCreateTask,
+  type CreateTaskDraft,
   type CreateTaskLevel,
+  type CreateTaskSubmitResult,
 } from "@/lib/adapters/create-task-mapper";
-import {
-  isExecutiveUser,
-  resolveCreateTaskPolicy,
-} from "@/domain/tasks/create-task-policy";
+import { isExecutiveUser } from "@/domain/tasks/create-task-policy";
 import { useAuth } from "@/lib/auth-context";
 import { toCanonicalUnitCode } from "@/lib/departments";
 
@@ -43,6 +42,12 @@ export interface CreateTaskFormErrors {
 
 export type SubmissionOutcome = "created" | "rejected" | "unknown";
 
+export interface CreateTaskSubmissionResult {
+  status: SubmissionOutcome;
+  message?: string;
+  result: CreateTaskSubmitResult;
+}
+
 export interface UseCreateTaskFormOptions {
   initialLevel?: CreateTaskLevel;
   initialTitle?: string;
@@ -59,9 +64,23 @@ const DRAFT_STORAGE_KEY = "qcet_task_create_draft_v2";
 const DRAFT_DEBOUNCE_MS = 400;
 
 // ─── Validation ───────────────────────────────────────────────
+/** Hạn nhiệm vụ con không được muộn hơn hạn nhiệm vụ cha; ngày không đọc được là không hợp lệ. */
+export function validateSubtaskDueDate(parentDueDate: string, subtaskDueDate: string): boolean {
+  if (!parentDueDate || !subtaskDueDate) return true;
+  const parentTime = new Date(parentDueDate).getTime();
+  const subtaskTime = new Date(subtaskDueDate).getTime();
+  if (Number.isNaN(parentTime) || Number.isNaN(subtaskTime)) return false;
+  return subtaskTime <= parentTime;
+}
+
+function formatDateVi(isoDate: string): string {
+  const [year, month, day] = isoDate.split("T")[0].split("-");
+  return year && month && day ? `${day}/${month}/${year}` : isoDate;
+}
+
 export function validateCreateTaskForm(
   data: CreateTaskFormData,
-  options?: { isExecutive?: boolean; parentDueDate?: string },
+  options?: { parentDueDate?: string },
 ): CreateTaskFormErrors {
   const errors: CreateTaskFormErrors = {};
 
@@ -79,17 +98,54 @@ export function validateCreateTaskForm(
     errors.dueDate = "Vui lòng chọn thời hạn.";
   }
 
-  // Subtask due date must not exceed parent
-  if (data.dueDate && options?.parentDueDate) {
-    const sub = new Date(data.dueDate);
-    const parent = new Date(options.parentDueDate);
-    if (sub > parent) {
-      errors.dueDate =
-        "Thời hạn nhiệm vụ con không được vượt quá nhiệm vụ cha.";
-    }
+  if (
+    data.dueDate &&
+    options?.parentDueDate &&
+    !validateSubtaskDueDate(options.parentDueDate, data.dueDate)
+  ) {
+    errors.dueDate = `Thời hạn nhiệm vụ con không được vượt quá hạn nhiệm vụ cha (${formatDateVi(options.parentDueDate)}).`;
   }
 
   return errors;
+}
+
+/** Form có nội dung khác bản ban đầu (dùng để hỏi trước khi đóng và lưu nháp). */
+export function isCreateTaskFormDirty(
+  current: CreateTaskFormData,
+  initial: CreateTaskFormData,
+): boolean {
+  return (
+    current.title.trim() !== initial.title.trim() ||
+    current.summary.trim() !== "" ||
+    current.description.trim() !== "" ||
+    current.dueDate !== initial.dueDate ||
+    current.startDate !== "" ||
+    current.priority !== "MEDIUM" ||
+    current.category !== "CHUYEN_DOI_SO" ||
+    current.leadAssigneeId !== initial.leadAssigneeId
+  );
+}
+
+// ─── Submission ───────────────────────────────────────────────
+/**
+ * Canonical create (C1 / T26 / T27 / T72 / T73), one outcome for the UI:
+ * - `created`: server-confirmed — the only state that may be treated as success.
+ * - `rejected`: the server (or local contract validation) refused the mutation.
+ * - `unknown`: transport failure / timeout. The request may or may not have been
+ *   applied. Keep the draft and retry with the SAME idempotency key
+ *   (`result.idempotencyKey`), never with a fresh one.
+ */
+export async function performCreateTaskSubmission(
+  draft: CreateTaskDraft,
+  options: Parameters<typeof submitCreateTask>[1] = {},
+): Promise<CreateTaskSubmissionResult> {
+  const result = await submitCreateTask(draft, options);
+  if (result.ok) return { status: "created", result };
+  return {
+    status: result.reason === "unknown" ? "unknown" : "rejected",
+    message: result.error,
+    result,
+  };
 }
 
 // ─── Draft helpers ────────────────────────────────────────────
@@ -126,22 +182,10 @@ function clearDraftStorage(): void {
   }
 }
 
-// ─── Idempotency key ─────────────────────────────────────────
-function generateIdempotencyKey(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `task-create-${crypto.randomUUID()}`;
-  }
-  return `task-create-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 // ─── Hook ─────────────────────────────────────────────────────
 export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
   const { user } = useAuth();
   const isExecutive = isExecutiveUser(user);
-  const createPolicy = React.useMemo(
-    () => resolveCreateTaskPolicy(user),
-    [user],
-  );
 
   const userDeptCode = React.useMemo(
     () =>
@@ -272,18 +316,10 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
   }, [availablePersonnel, formData.leadAssigneeId]);
 
   // ── Dirty state ─────────────────────────────────────────────
-  const isDirty = React.useMemo(() => {
-    const initial = initialSnapshot.current;
-    if (formData.title.trim() !== (initial.title ?? "").trim()) return true;
-    if (formData.summary.trim() !== "") return true;
-    if (formData.description.trim() !== "") return true;
-    if (formData.dueDate !== (initial.dueDate ?? "")) return true;
-    if (formData.startDate !== "") return true;
-    if (formData.priority !== "MEDIUM") return true;
-    if (formData.category !== "CHUYEN_DOI_SO") return true;
-    if (formData.leadAssigneeId !== (initial.leadAssigneeId ?? "")) return true;
-    return false;
-  }, [formData]);
+  const isDirty = React.useMemo(
+    () => isCreateTaskFormDirty(formData, initialSnapshot.current),
+    [formData],
+  );
 
   // ── Draft restore on mount ──────────────────────────────────
   const didRestoreDraftRef = React.useRef(false);
@@ -347,7 +383,6 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
 
     // Validate
     const errors = validateCreateTaskForm(formData, {
-      isExecutive,
       parentDueDate: options.parentTaskDueDate,
     });
 
@@ -361,11 +396,6 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
     isSubmittingLockRef.current = true;
     setSubmissionOutcome(null);
     setSubmissionMessage(null);
-
-    // Generate/reuse idempotency key
-    if (!idempotencyKeyRef.current) {
-      idempotencyKeyRef.current = generateIdempotencyKey();
-    }
 
     // Compute effective level (non-exec forced to DON_VI)
     const effectiveLevel: CreateTaskLevel = isExecutive
@@ -387,8 +417,9 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
       availablePersonnel.find((p) => p.id === formData.leadAssigneeId)?.name ??
       "";
 
+    // submitCreateTask never throws: transport failures come back as `unknown`.
     try {
-      const res = await submitCreateTask(
+      const outcome = await performCreateTaskSubmission(
         {
           level: effectiveLevel,
           title: formData.title.trim(),
@@ -407,19 +438,21 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
           })),
           assigneeId: formData.leadAssigneeId || undefined,
           departmentId: currentDept?.code || currentDept?.id || userDeptCode,
-          idempotencyKey: idempotencyKeyRef.current!,
+          // Undefined on a fresh submit: the adapter generates one and returns it.
+          idempotencyKey: idempotencyKeyRef.current ?? undefined,
         },
       );
 
-      if (res.ok) {
+      if (outcome.result.ok) {
         // Success: clear draft, clear idempotency key
         clearDraftStorage();
         idempotencyKeyRef.current = null;
         setSubmissionOutcome("created");
         setSubmissionMessage(null);
-        options.onSuccess?.(res.task);
-      } else if (res.reason === "unknown") {
-        // Unknown: keep draft + idempotency key for safe retry
+        options.onSuccess?.(outcome.result.task);
+      } else if (outcome.status === "unknown") {
+        // Unknown: keep draft + the same idempotency key for a safe retry
+        idempotencyKeyRef.current = outcome.result.idempotencyKey;
         setSubmissionOutcome("unknown");
         setSubmissionMessage(
           "Chưa xác nhận được kết quả từ máy chủ. Nội dung đã nhập vẫn được giữ nguyên, có thể thử lại an toàn.",
@@ -428,15 +461,9 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
         // Rejected
         setSubmissionOutcome("rejected");
         setSubmissionMessage(
-          res.error || "Máy chủ từ chối tạo nhiệm vụ.",
+          outcome.message || "Máy chủ từ chối tạo nhiệm vụ.",
         );
       }
-    } catch {
-      // Transport failure — treat as unknown
-      setSubmissionOutcome("unknown");
-      setSubmissionMessage(
-        "Chưa xác nhận được kết quả từ máy chủ. Nội dung đã nhập vẫn được giữ nguyên.",
-      );
     } finally {
       setIsSubmitting(false);
       isSubmittingLockRef.current = false;
@@ -461,7 +488,6 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
     isDirty,
     hasRestoredDraft,
     isExecutive,
-    createPolicy,
     availableDepartments,
     availablePersonnel,
     handleSubmit,

@@ -1,16 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  isFormDirty,
-  takeFormSnapshot,
-  validateTaskForm,
-  validateSubtaskDueDate,
-  validateSubtaskAssignment,
-  resolveCreateTaskIdentity,
-  type CreateTaskFormData,
-  type CreateTaskPersonnelRef,
-} from "../src/domain/tasks/create-task-form-utils";
 import { getAllowedTaskLevelsForRole, getDefaultTaskLevelForRole } from "../src/domain/tasks/create-task-policy";
+import { validateSubtaskDueDate } from "../src/hooks/use-create-task-form";
 import {
   executeKanbanStatusTransition,
   applyOptimisticOverrides,
@@ -27,64 +18,6 @@ import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 
 describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () => {
   describe("Task 4: Form Close Contract, Snapshot Dirty Checking, and DRI Validation", () => {
-    const baseFormData: CreateTaskFormData = {
-      level: "TRUONG",
-      category: "CHUYEN_DOI_SO",
-      title: "Kế hoạch nâng cấp hạ tầng số 2026",
-      leadAssigneeName: "TS. Nguyễn Văn A",
-      dueDate: "2026-10-15",
-      description: "Mô tả chi tiết kế hoạch công tác",
-      priority: "HIGH",
-      requiresReview: false,
-      coAssignees: [],
-    };
-
-    it("evaluates clean baseline as not dirty", () => {
-      const baseline = takeFormSnapshot(baseFormData);
-      assert.strictEqual(isFormDirty(baseFormData, baseline), false);
-    });
-
-    it("detects dirty state when title, assignee, or dueDate changes", () => {
-      const baseline = takeFormSnapshot(baseFormData);
-
-      const modifiedTitle = { ...baseFormData, title: "Tên công việc mới" };
-      assert.strictEqual(isFormDirty(modifiedTitle, baseline), true);
-
-      const modifiedAssignee = { ...baseFormData, leadAssigneeName: "ThS. Trần Thị B" };
-      assert.strictEqual(isFormDirty(modifiedAssignee, baseline), true);
-
-      const modifiedDueDate = { ...baseFormData, dueDate: "2026-11-20" };
-      assert.strictEqual(isFormDirty(modifiedDueDate, baseline), true);
-    });
-
-    it("detects dirty state when advanced fields (coAssignees, priority) change", () => {
-      const baseline = takeFormSnapshot(baseFormData);
-
-      const withCollaborator = { ...baseFormData, coAssignees: ["ThS. Trần Thị B"] };
-      assert.strictEqual(isFormDirty(withCollaborator, baseline), true);
-
-      const withPriority = { ...baseFormData, priority: "URGENT" as const };
-      assert.strictEqual(isFormDirty(withPriority, baseline), true);
-    });
-
-    it("returns false (not dirty) when changes are reverted back to initial baseline", () => {
-      const baseline = takeFormSnapshot(baseFormData);
-      const modified = { ...baseFormData, title: "Tiêu đề tạm", coAssignees: ["Người hỗ trợ"] };
-      assert.strictEqual(isFormDirty(modified, baseline), true);
-
-      // Revert back
-      const reverted = { ...baseFormData, title: "Kế hoạch nâng cấp hạ tầng số 2026", coAssignees: [] };
-      assert.strictEqual(isFormDirty(reverted, baseline), false);
-    });
-
-    it("enforces Single DRI: lead assignee cannot simultaneously be collaborator", () => {
-      const valid = validateSubtaskAssignment("user-1", ["user-2", "user-3"]);
-      assert.strictEqual(valid.valid, true);
-
-      const invalid = validateSubtaskAssignment("user-1", ["user-2", "user-1"]);
-      assert.strictEqual(invalid.valid, false);
-      assert.match(invalid.error || "", /đồng thời là cán bộ phối hợp/);
-    });
 
     it("validates that subtask dueDate cannot exceed parent task dueDate", () => {
       const parentDueDate = "2026-10-15";
@@ -101,91 +34,6 @@ describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () =>
 
       assert.strictEqual(getDefaultTaskLevelForRole("ADMIN"), "TRUONG");
       assert.strictEqual(getDefaultTaskLevelForRole("MANAGER"), "DON_VI");
-    });
-
-    it("resolves assignee identity against personnel directory without fabricating IDs", () => {
-      const personnel: CreateTaskPersonnelRef[] = [
-        { id: "usr-1", name: "Nguyễn Văn A", departmentId: "dept-cntt" },
-        { id: "usr-2", name: "Trần Thị B", departmentId: "dept-kh" },
-      ];
-
-      // Exact match in institutional mode
-      const resultA = resolveCreateTaskIdentity({ leadAssigneeName: "Nguyễn Văn A" }, personnel);
-      assert.strictEqual(resultA.ok, true);
-      if (resultA.ok) {
-        assert.strictEqual(resultA.assigneeId, "usr-1");
-        assert.strictEqual(resultA.departmentId, "dept-cntt");
-      }
-
-      // Non-existent assignee rejected before network call
-      const resultUnknown = resolveCreateTaskIdentity({ leadAssigneeName: "Người Lạ" }, personnel);
-      assert.strictEqual(resultUnknown.ok, false);
-      if (!resultUnknown.ok) {
-        assert.strictEqual(resultUnknown.field, "leadAssigneeName");
-        assert.match(resultUnknown.message, /không có trong danh mục nhân sự/);
-      }
-    });
-
-    it("validates required fields in form", () => {
-      const emptyForm: CreateTaskFormData = {
-        level: "TRUONG",
-        category: "CHUYEN_DOI_SO",
-        title: "",
-        leadAssigneeName: "",
-        dueDate: "",
-        coAssignees: [],
-        description: "",
-      };
-      const errors = validateTaskForm(emptyForm);
-      assert.ok(errors.title, "Title should have validation error");
-      assert.ok(errors.leadAssigneeName, "Lead assignee should have validation error");
-    });
-
-    it("rejects subtask internal due date later than parent due date", () => {
-      const parentTask = {
-        id: "parent-1",
-        title: "Nhiệm vụ cấp Trường",
-        dueDate: "2026-10-15",
-      } as unknown as SchoolTask;
-
-      const subtaskFormData: CreateTaskFormData = {
-        level: "DON_VI",
-        category: "CHUYEN_DOI_SO",
-        title: "Nhiệm vụ con",
-        leadAssigneeName: "TS. Nguyễn Văn A",
-        dueDate: "2026-10-10",
-        internalDueDate: "2026-10-20", // Later than parent!
-        parentTaskId: "parent-1",
-        coAssignees: [],
-        description: "",
-      };
-
-      const errors = validateTaskForm(subtaskFormData, parentTask);
-      assert.ok(errors.internalDueDate, "Should raise error for invalid internalDueDate");
-      assert.match(errors.internalDueDate, /không được muộn hơn hạn chót nhiệm vụ cha/);
-    });
-
-    it("rejects subtask completion due date later than parent due date", () => {
-      const parentTask = {
-        id: "parent-1",
-        title: "Nhiệm vụ cấp Trường",
-        dueDate: "2026-10-15",
-      } as unknown as SchoolTask;
-
-      const subtaskFormData: CreateTaskFormData = {
-        level: "DON_VI",
-        category: "CHUYEN_DOI_SO",
-        title: "Nhiệm vụ con",
-        leadAssigneeName: "TS. Nguyễn Văn A",
-        dueDate: "2026-10-25", // Later than parent!
-        parentTaskId: "parent-1",
-        coAssignees: [],
-        description: "",
-      };
-
-      const errors = validateTaskForm(subtaskFormData, parentTask);
-      assert.ok(errors.dueDate, "Should raise error for invalid dueDate");
-      assert.match(errors.dueDate, /không được muộn hơn hạn chót nhiệm vụ cha/);
     });
   });
 

@@ -1,19 +1,8 @@
-import type { SchoolTask, StaffTask, TaskStatus, TaskCategory } from "@/types/dashboard";
+import type { SchoolTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import type { WorkspaceScope } from "../types";
 import { matchesUser } from "@/lib/role-task-filter";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
-import { CATEGORY_TABS } from "@/components/tasks/cascading-task-table";
-import type { CreateTaskFormData } from "@/domain/tasks/create-task-form-utils";
-import type { TaskLevel } from "@/domain/tasks/create-task-policy";
-
-export type OptimisticTaskCreationInput = Partial<CreateTaskFormData> & {
-  title: string;
-  category: TaskCategory;
-  dueDate: string;
-  level: TaskLevel;
-  leadAssigneeName: string;
-};
 
 /**
  * Pure helper function to filter tasks according to workspace scope
@@ -185,70 +174,6 @@ export function applyOptimisticStatusChange(
     );
     return { ...st, subTasks: updatedSubs };
   });
-
-  return updatedTasks.map((t) => computeSchoolTaskRollup(t));
-}
-
-/**
- * Pure helper function to apply optimistic task creation
- */
-export function applyOptimisticCreateTask(
-  tasks: SchoolTask[],
-  data: OptimisticTaskCreationInput,
-  todayStr: string = new Date().toISOString().split("T")[0]
-): SchoolTask[] {
-  let updatedTasks = [...tasks];
-
-  if (data.level === "TRUONG") {
-    const newTask: SchoolTask = {
-      id: `task-temp-${Date.now()}`,
-      title: data.title,
-      category: data.category,
-      categoryLabel:
-        CATEGORY_TABS.find((c) => c.id === data.category)?.label || data.category,
-      leadAssigneeName: data.leadAssigneeName,
-      coAssignees: data.coAssignees || [],
-      assignedDate: todayStr,
-      dueDate: data.dueDate,
-      status: "IN_PROGRESS",
-      subTasks: [],
-      totalSubTasks: 0,
-      completedSubTasks: 0,
-      progressPercent: 0,
-    };
-    updatedTasks = [newTask, ...updatedTasks];
-  } else {
-    const newSubTask: StaffTask = {
-      id: `sub-temp-${Date.now()}`,
-      title: data.title,
-      assigneeName: data.leadAssigneeName,
-      status: "NEW",
-      dueDate: data.dueDate,
-      internalDueDate: data.internalDueDate,
-      deliverableDescription: data.requiredDeliverables,
-      vtvlRole: data.vtvlRole,
-      requiresReview: data.requiresReview,
-      parentSchoolTaskId: data.parentTaskId || updatedTasks[0]?.id || "task-1",
-      updatedAt: todayStr,
-    };
-
-    if (data.parentTaskId) {
-      updatedTasks = updatedTasks.map((st) => {
-        if (st.id === data.parentTaskId) {
-          return {
-            ...st,
-            subTasks: [newSubTask, ...(st.subTasks || [])],
-          };
-        }
-        return st;
-      });
-    } else if (updatedTasks.length > 0) {
-      updatedTasks[0] = {
-        ...updatedTasks[0],
-        subTasks: [newSubTask, ...(updatedTasks[0].subTasks || [])],
-      };
-    }
-  }
 
   return updatedTasks.map((t) => computeSchoolTaskRollup(t));
 }
