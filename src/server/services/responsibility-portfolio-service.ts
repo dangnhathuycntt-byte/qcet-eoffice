@@ -23,7 +23,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { Prisma, ResponsibilityArea, PortfolioAssignment } from "@prisma/client";
+import type { ResponsibilityArea, PortfolioAssignment } from "@prisma/client";
 import { AssignmentStatus } from "@prisma/client";
 import { ValidationError, ConflictError, NotFoundError } from "@/server/api/errors";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
@@ -42,13 +42,6 @@ export interface EndPortfolioInput {
   portfolioAssignmentId: string;
   endDate: Date | string;
   notes?: string;
-}
-
-export interface PortfolioQueryFilter {
-  positionAssignmentId?: string;
-  responsibilityAreaId?: string;
-  isPrimary?: boolean;
-  activeAt?: Date | string;
 }
 
 export class ResponsibilityPortfolioService {

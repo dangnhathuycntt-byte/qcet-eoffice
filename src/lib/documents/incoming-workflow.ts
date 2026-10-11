@@ -15,17 +15,6 @@ export interface IncomingActionDef {
   input?: "reason" | "unit" | "person";
 }
 
-export const INCOMING_STATUS_LABEL: Record<string, string> = {
-  REGISTERED: "Đã vào sổ",
-  PRESENTED: "Đã trình lãnh đạo",
-  ASSIGNED_TO_LEAD_UNIT: "Đã giao đơn vị chủ trì",
-  DIRECTED: "Đã có bút phê",
-  UNIT_ASSIGNED_PERSON: "Đã phân công",
-  RESOLVED: "Đã giải quyết",
-  FILED: "Đã lập hồ sơ",
-  ARCHIVED: "Đã lưu trữ",
-};
-
 export function getIncomingActions(status: string, role: string | null | undefined): IncomingActionDef[] {
   const actions: IncomingActionDef[] = [];
   if (status === "REGISTERED" && role === "VAN_THU") {

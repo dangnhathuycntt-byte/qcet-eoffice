@@ -20,8 +20,6 @@ export const ALLOWED_FILE_EXTENSIONS = [
   ".csv",
 ] as const;
 
-export type AllowedFileExtension = (typeof ALLOWED_FILE_EXTENSIONS)[number];
-
 export const SECURE_FILE_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",

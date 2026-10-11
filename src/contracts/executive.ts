@@ -78,10 +78,6 @@ export const CreateExecutiveResolutionSchema = z
     }
   );
 
-export type CreateExecutiveResolutionInput = z.infer<
-  typeof CreateExecutiveResolutionSchema
->;
-
 export const ExecutiveResolutionQuerySchema = z.object({
   taskId: z.string().trim().max(128).optional(),
   resolutionType: z.string().trim().max(50).optional(),
@@ -89,7 +85,3 @@ export const ExecutiveResolutionQuerySchema = z.object({
   dept: z.string().trim().max(128).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
-
-export type ExecutiveResolutionQueryInput = z.infer<
-  typeof ExecutiveResolutionQuerySchema
->;

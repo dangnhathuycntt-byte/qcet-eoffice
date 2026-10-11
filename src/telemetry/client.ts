@@ -13,7 +13,6 @@
  */
 
 import { sanitizeLogContext } from "./sanitize";
-import { type WebVitalMetric } from "./web-vitals";
 
 export type TelemetryEventType =
   | "error"
@@ -319,72 +318,4 @@ export function reportClientError(
   } catch {
     // Fail completely silent
   }
-}
-
-/**
- * Dispatches a collected Web Vital metric to telemetry.
- */
-export function reportWebVital(metric: WebVitalMetric): void {
-  clientTelemetry.enqueue("web-vital", { ...metric });
-}
-
-/**
- * Dispatches a custom application runtime event to telemetry.
- */
-export function reportCustomEvent(
-  name: string,
-  payload: Record<string, unknown> = {}
-): void {
-  clientTelemetry.enqueue("custom", { name, ...payload });
-}
-
-/**
- * Initializes global client error handlers (window.onerror & unhandledrejection).
- * Returns a teardown function.
- */
-export function initClientTelemetry(
-  options?: Partial<ClientTelemetryConfig>
-): () => void {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
-
-  const queue = options ? new ClientTelemetryQueue(options) : clientTelemetry;
-
-  const errorHandler = (event: ErrorEvent) => {
-    // Check if error was already captured by boundary or reportError
-    const errorObj = event.error as Record<string, unknown> | undefined;
-    if (errorObj?.__telemetryReported) return;
-
-    reportClientError(event.error || event.message, {
-      source: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-      type: "uncaught-error",
-      __nativeReported: true,
-    });
-  };
-
-  const rejectionHandler = (event: PromiseRejectionEvent) => {
-    const errorObj = event.reason as Record<string, unknown> | undefined;
-    if (errorObj?.__telemetryReported) return;
-
-    reportClientError(event.reason || "Unhandled Promise Rejection", {
-      type: "unhandled-rejection",
-      __nativeReported: true,
-    });
-  };
-
-  window.addEventListener("error", errorHandler);
-  window.addEventListener("unhandledrejection", rejectionHandler);
-
-  return () => {
-    window.removeEventListener("error", errorHandler);
-    window.removeEventListener("unhandledrejection", rejectionHandler);
-    queue.destroy();
-  };
-}
-
-export async function flushClientTelemetry(): Promise<void> {
-  await clientTelemetry.flush(false);
 }

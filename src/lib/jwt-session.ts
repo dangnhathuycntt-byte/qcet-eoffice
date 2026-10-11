@@ -9,8 +9,7 @@ import { isSessionExpired, isSessionRevoked, assertSessionPolicy } from "@/serve
 export const SESSION_COOKIE_NAME = "authjs.session-token";
 export const SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token";
 export const LEGACY_SESSION_COOKIE_NAME = "qcet_session";
-export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
-export const SESSION_COOKIE_MAX_AGE = SESSION_MAX_AGE_SECONDS;
+// 30 days
 
 export function getJwtSecret(): string {
   const secret = process.env.AUTH_SECRET || process.env.JWT_SECRET || serverEnv.AUTH_SECRET || serverEnv.JWT_SECRET;

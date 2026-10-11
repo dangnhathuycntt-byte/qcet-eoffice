@@ -1,5 +1,4 @@
 import { shouldIgnoreShortcut } from "./guards";
-import { globalShortcutRegistry } from "./registry";
 
 /**
  * Task Workspace Keyboard Sequences (Plan v1 §Context.9 / Plan v2 §8)
@@ -12,15 +11,6 @@ import { globalShortcutRegistry } from "./registry";
 export interface TaskSequenceOptions {
   onCreateTask: () => void;
   enabled?: boolean;
-}
-
-export function registerTaskShortcuts(onCreateTask: () => void): () => void {
-  return globalShortcutRegistry.register({
-    id: "create-task-c",
-    description: "Tạo nhiệm vụ mới (c)",
-    key: "c",
-    action: () => onCreateTask(),
-  });
 }
 
 export function createTaskSequenceListener(options: TaskSequenceOptions) {

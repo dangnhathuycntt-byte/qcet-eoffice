@@ -211,16 +211,4 @@ export interface TaskResource extends BaseAuthorizationResource {
   portfolio?: InstitutionalPortfolioCode;
 }
 
-export interface SystemResource extends BaseAuthorizationResource {
-  type: 'system';
-  id?: string;
-}
-
-export interface DossierResource extends BaseAuthorizationResource {
-  type: 'dossier';
-  id: string;
-}
-
-export type GenericAuthorizationResource = BaseAuthorizationResource;
-
 export type AuthorizationResource = BaseAuthorizationResource;

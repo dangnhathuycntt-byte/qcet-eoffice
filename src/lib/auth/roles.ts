@@ -1,4 +1,4 @@
-import { AuthUser, UserRole } from "@/types/auth";
+import { AuthUser } from "@/types/auth";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 
 export { isExecutiveUser, isManagerUser };
@@ -25,22 +25,6 @@ export function canAssignUnitTask(user?: AuthUser | null): boolean {
 
 export function canSelfAssignTask(user?: AuthUser | null): boolean {
   return isStaff(user);
-}
-
-export function canDelegateRole(user?: AuthUser | null): boolean {
-  return isExecutive(user) || isManager(user);
-}
-
-export function canConfigureVTVL(user?: AuthUser | null): boolean {
-  return isExecutive(user);
-}
-
-export function isScopeAllowed(role: UserRole | undefined | null, scope: "school" | "unit" | "my"): boolean {
-  if (!role) return false;
-  if (role === "ADMIN") return true;
-  if (role === "MANAGER") return scope === "unit" || scope === "my";
-  if (role === "STAFF") return scope === "my";
-  return false;
 }
 
 export * from "@/types/auth";

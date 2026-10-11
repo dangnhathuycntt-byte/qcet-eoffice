@@ -141,58 +141,6 @@ export function getRouteByPath(pathname: string): CanonicalRouteConfig | undefin
   );
 }
 
-/**
- * T88: convenience map of the primary canonical routes, derived from
- * CANONICAL_ROUTES so hrefs and labels can never drift from the single
- * navigation source of truth.
- */
-function pickNavItem(
-  id: string
-): Pick<CanonicalRouteConfig, "id" | "href" | "label" | "iconName"> {
-  const targetId = id === "notifications" ? "inbox" : id;
-  const route = CANONICAL_ROUTES.find((r) => r.id === targetId);
-  if (!route) {
-    throw new Error(`Unknown canonical route id: ${id}`);
-  }
-  return { id: route.id, href: route.href, label: route.label, iconName: route.iconName };
-}
-
-export const CANONICAL_NAV_ITEMS = {
-  WORKBENCH: pickNavItem("tasks"),
-  TASKS: pickNavItem("tasks"),
-  CALENDAR: pickNavItem("calendar"),
-  INBOX: pickNavItem("inbox"),
-  NOTIFICATIONS: pickNavItem("inbox"),
-  DOCUMENTS: pickNavItem("documents"),
-  ORG: pickNavItem("org"),
-};
-
-export interface ResolveTasksUrlOptions {
-  scope?: "school" | "unit" | "my";
-  category?: string;
-  view?: string;
-  departmentCode?: string;
-}
-
-export function resolveTasksUrl(options: ResolveTasksUrlOptions = {}): string {
-  const params = new URLSearchParams();
-  if (options.scope) {
-    params.set("scope", options.scope);
-  }
-  if (options.category) {
-    params.set("category", options.category);
-  }
-  if (options.view) {
-    params.set("view", options.view);
-  }
-  if (options.departmentCode) {
-    params.set("departmentCode", options.departmentCode);
-  }
-
-  const query = params.toString();
-  return query ? `/tasks?${query}` : "/tasks";
-}
-
 export function resolveCanonicalHref(pathname: string, searchParams?: URLSearchParams | string): string {
   const cleanPath = pathname.split("?")[0].split("#")[0].trim();
   const params = typeof searchParams === "string" ? new URLSearchParams(searchParams) : searchParams;

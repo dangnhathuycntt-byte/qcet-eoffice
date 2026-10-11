@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { AuthUser } from "@/types/auth";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type {
@@ -78,97 +77,6 @@ export function isSubTaskAssignedToUser(st: StaffTask, user: AuthUser | null): b
   if (matchesUser(st.assignedTo, user)) return true;
   if (matchesUser(st.assigneeName, user)) return true;
   return false;
-}
-
-export function countScopeTasks(
-  tasks: SchoolTask[] = [],
-  user: AuthUser | null,
-  scope: WorkspaceScope,
-  selectedDepartment?: string
-): number {
-  const cleanTasks = tasks;
-  if (scope === "school") return cleanTasks.length;
-  const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
-  if (scope === "unit") {
-    if (!userDept || userDept === "ALL") {
-      return cleanTasks.filter((t) => t.subTasks && t.subTasks.length > 0).length;
-    }
-    const canonicalDept = resolveDepartmentId(userDept) || userDept;
-    return cleanTasks.filter((t) => {
-      const taskDept =
-        t.departmentCode ||
-        t.department ||
-        t.leadDepartmentCode ||
-        t.leadDepartment ||
-        t.departmentId ||
-        t.leadDepartmentId;
-
-      const matchParent =
-        (taskDept && (
-          (typeof taskDept === "string" && typeof userDept === "string" && (
-            taskDept.toUpperCase() === userDept.toUpperCase() ||
-            taskDept.toLowerCase() === userDept.toLowerCase()
-          )) ||
-          taskDept === canonicalDept ||
-          resolveDepartmentId(taskDept) === canonicalDept
-        )) ||
-        t.coDepartmentCodes?.some(
-          (code) =>
-            (typeof code === "string" && typeof userDept === "string" && code.toUpperCase() === userDept.toUpperCase()) ||
-            code === canonicalDept ||
-            resolveDepartmentId(code) === canonicalDept
-        ) ||
-        t.coDepartments?.some(
-          (dept) =>
-            (typeof dept === "string" && typeof userDept === "string" && dept.toLowerCase() === userDept.toLowerCase()) ||
-            dept === canonicalDept ||
-            resolveDepartmentId(dept) === canonicalDept
-        );
-
-      const matchChild =
-        t.subTasks?.some((st) => {
-          const subDept = st.departmentCode || st.department || st.departmentId;
-          return (
-            subDept && (
-              (typeof subDept === "string" && typeof userDept === "string" && (
-                subDept.toUpperCase() === userDept.toUpperCase() ||
-                subDept.toLowerCase() === userDept.toLowerCase()
-              )) ||
-              subDept === canonicalDept ||
-              resolveDepartmentId(subDept) === canonicalDept
-            )
-          );
-        });
-
-      return Boolean(matchParent || matchChild);
-    }).length;
-  }
-  // scope === "my"
-  if (!user) return cleanTasks.length;
-  return cleanTasks.filter((t) => {
-    if ((t as any).viewerContext?.relation) return true;
-    const isCreator = Boolean(
-      user.id &&
-        ((t as any).createdById === user.id ||
-          (t as any).assignedById === user.id ||
-          (t as any).createdBy === user.id ||
-          (Array.isArray((t as any).actors) && (t as any).actors.some((a: any) => a.userId === user.id)))
-    );
-    const isLead =
-      t.leadAssigneeName === user.name ||
-      matchesUser(t.leadAssigneeName, user) ||
-      (user.id && (t.leadAssigneeId === user.id || t.assignedTo === user.id));
-    const hasSub = t.subTasks?.some(
-      (s) =>
-        s.assigneeName === user.name ||
-        matchesUser(s.assigneeName, user) ||
-        (user.id && (s.assigneeId === user.id || s.assignedTo === user.id))
-    );
-    const isCo = Boolean(
-      t.coAssignees?.some((ca) => matchesUser(ca, user))
-    );
-    return Boolean(isLead || hasSub || isCo || isCreator);
-  }).length;
 }
 
 export function deriveAdaptiveWorkspaceData({
@@ -502,22 +410,4 @@ export function deriveAdaptiveWorkspaceData({
       myPendingSubmissions,
     },
   };
-}
-
-export function useAdaptiveWorkspaceData(
-  tasks: SchoolTask[],
-  user: AuthUser | null,
-  scope: WorkspaceScope,
-  selectedDepartment?: string
-): DerivedWorkspaceData {
-  return React.useMemo(
-    () =>
-      deriveAdaptiveWorkspaceData({
-        tasks,
-        user,
-        scope,
-        selectedDepartment,
-      }),
-    [tasks, user, scope, selectedDepartment]
-  );
 }

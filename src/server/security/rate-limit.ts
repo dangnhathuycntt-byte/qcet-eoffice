@@ -67,8 +67,6 @@ export interface SyncRateLimitResult {
   success: boolean;
 }
 
-export type RateLimitResult = SyncRateLimitResult;
-
 /** Namespaced key prefix for every rate-limit record (Issue #29 identifier strategy). */
 export const RATE_LIMIT_KEY_PREFIX = 'qcet:eoffice:ratelimit';
 

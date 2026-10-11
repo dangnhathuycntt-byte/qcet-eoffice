@@ -97,29 +97,6 @@ export function getAuditActionLabel(action: string): string {
   return AUDIT_ACTION_LABELS[action] || action;
 }
 
-/** Danh sách các hành động nghiệp vụ then chốt - tuyệt đối KHÔNG được gộp và đóng vai trò là rào cản (barrier) */
-export const BUSINESS_BARRIER_ACTIONS = new Set([
-  "NOT_STARTED",
-  "IN_PROGRESS",
-  "WAITING_APPROVAL",
-  "COMPLETED",
-  "CANCELLED",
-  "NEEDS_REVIEW",
-  "TASK_STATUS_CHANGED",
-  "TASK_APPROVED",
-  "TASK_REJECTED",
-  "TASK_ASSIGNED",
-  "UPDATE_DUE_DATE",
-  "UPDATE_START_DATE",
-  "TASK_DEADLINE_CHANGED",
-  "UPDATE_PROGRESS",
-  "SUBMIT_RESULT",
-  "DELIVERABLE_UPLOADED",
-  "DELIVERABLE_APPROVED",
-  "COMMENT",
-  "DIRECTIVE",
-]);
-
 /**
  * Kiểm tra xem một action có phải là thao tác chỉnh sửa văn bản liên tục có thể gộp hay không
  */

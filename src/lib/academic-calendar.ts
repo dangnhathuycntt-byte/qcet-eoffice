@@ -346,15 +346,6 @@ export function getAvailableAcademicYears(referenceDateInput?: unknown): string[
   ];
 }
 
-/**
- * Returns available calendar years.
- */
-export function getAvailableCalendarYears(referenceDateInput?: unknown): number[] {
-  const ref = referenceDateInput ?? getSystemReferenceDate();
-  const year = getCalendarYear(ref);
-  return [year - 1, year, year + 1];
-}
-
 export interface CalendarDayCell {
   date: Date;
   dateString: string; // YYYY-MM-DD
@@ -547,21 +538,6 @@ export function getAdjacentAcademicMonth(
   const targetMonth = target.getMonth() + 1;
 
   return buildAcademicMonthPeriod(targetYear, targetMonth);
-}
-
-export interface SubTask {
-  id: string;
-  taskId?: string;
-  parentSchoolTaskId?: string;
-  title: string;
-  status: string;
-  dueDate: string;
-  assignedToDepartmentId?: string;
-  assignedToDepartmentName?: string;
-  assigneeName?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: any;
 }
 
 export interface MonthPartitionBucket<T = SchoolTask> {
@@ -858,15 +834,6 @@ export function addCalendarDays(dateOnly: string, days: number): string | null {
   const shifted = new Date(Date.UTC(y, m - 1, d + days));
   if (isNaN(shifted.getTime())) return null;
   return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
-}
-
-export interface UpcomingDeadlineCandidate {
-  taskId: string;
-  title: string;
-  dueDate: string;
-  assigneeName: string;
-  level: "Trường" | "Đơn vị";
-  isOverdue: false;
 }
 
 export interface UpcomingDeadlineSelection<T> {

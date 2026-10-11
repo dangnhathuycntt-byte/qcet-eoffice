@@ -12,10 +12,6 @@ export function isSafeUrl(url: string | null | undefined): boolean {
   }
 }
 
-export function safeHref(url: string | null | undefined): string {
-  return isSafeUrl(url) ? url! : '#';
-}
-
 /**
  * Đường dẫn phục vụ tệp đính kèm. Bản ghi cũ/seed lưu đường dẫn trần
  * (`/documents/2026/a.pdf`, `uploads/a.pdf`) sẽ rơi vào route trang của Next;

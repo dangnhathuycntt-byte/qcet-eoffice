@@ -275,15 +275,6 @@ export function getServerEnv(): ServerEnv {
 }
 
 /**
- * Reset cached server environment (primarily for testing).
- */
-export function resetServerEnv(): void {
-  _cachedServerEnv = null;
-}
-
-export const resetServerEnvCacheForTesting = resetServerEnv;
-
-/**
  * Lazy proxy to access server environment variables.
  */
 export const serverEnv: ServerEnv = new Proxy({} as ServerEnv, {

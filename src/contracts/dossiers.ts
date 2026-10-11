@@ -79,7 +79,3 @@ export const FinalizeArchiveSchema = z
 export const RejectArchiveSchema = z.object({
   returnReason: z.string().trim().min(1).max(2000),
 }).strict();
-
-export type CreateDossierContract = z.infer<typeof CreateDossierSchema>;
-export type AddDossierItemContract = z.infer<typeof AddDossierItemSchema>;
-export type DossierNotesActionContract = z.infer<typeof DossierNotesActionSchema>;

@@ -175,13 +175,3 @@ export const getTelemetryEvents = getTelemetryHistory;
 export const getTelemetryLog = getTelemetryHistory;
 export const clearTelemetryLog = clearTelemetryHistory;
 export const clearTelemetryEvents = clearTelemetryHistory;
-
-/**
- * Subscribes to PWA telemetry events.
- */
-export function subscribeTelemetry(listener: TelemetryListener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}

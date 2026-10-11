@@ -152,12 +152,6 @@ export interface ViewModeOption {
   icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
 }
 
-export interface SmartFilterPill {
-  id: string;
-  label: string;
-  count?: number;
-}
-
 export interface UnifiedTaskToolbarProps {
   /** Chưa có nhiệm vụ nào: chỉ giữ tiêu đề và nút tạo việc, ẩn tìm kiếm, bộ lọc và tùy chọn hiển thị. */
   quiet?: boolean;

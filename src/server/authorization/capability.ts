@@ -121,8 +121,6 @@ export const DOCUMENT_SUBMISSION_CAPABILITIES = [
   'document.submission.approve',
 ] as const;
 
-export type DocumentSubmissionCapabilityAction = (typeof DOCUMENT_SUBMISSION_CAPABILITIES)[number];
-
 export const DOCUMENT_CAPABILITIES = [
   ...DOCUMENT_CANONICAL_CAPABILITIES,
   ...DOCUMENT_SUBMISSION_CAPABILITIES,

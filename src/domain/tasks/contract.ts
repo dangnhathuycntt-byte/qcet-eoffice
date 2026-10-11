@@ -45,17 +45,6 @@ export const {
   CAN_DOWNLOAD,
 } = TaskCapability;
 
-export const ALL_TASK_CAPABILITIES: readonly TaskCapabilityType[] = [
-  CAN_VIEW,
-  CAN_EDIT,
-  CAN_SUBMIT,
-  CAN_APPROVE,
-  CAN_REJECT,
-  CAN_DELEGATE,
-  CAN_DELETE,
-  CAN_DOWNLOAD,
-] as const;
-
 export type TaskCapabilityMatrix = Record<TaskCapabilityType, boolean>;
 
 export interface TaskCapabilityEvaluationResult {

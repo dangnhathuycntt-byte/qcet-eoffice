@@ -409,88 +409,6 @@ export function filterTasks(
 }
 
 /**
- * Tính toán số lượng tác vụ cho từng SmartFilterTab dựa trên danh sách tác vụ và options
- */
-export function computeSmartTabCounts(
-  tasks: SchoolTask[],
-  options?: TaskFilterOptions
-): Record<SmartFilterTab, number> {
-  const refDate =
-    options?.referenceDate instanceof Date
-      ? options.referenceDate.toISOString().slice(0, 10)
-      : options?.referenceDate || getSystemReferenceDate();
-
-  let base = tasks;
-  if (
-    options?.month !== undefined &&
-    options?.month !== "ALL" &&
-    typeof options.month === "number"
-  ) {
-    base = filterTasksByAcademicMonthStrict(
-      base,
-      options.month,
-      options.academicYear
-    );
-  }
-
-  const rawDept = options?.departmentId || options?.department;
-  if (rawDept && rawDept !== "ALL") {
-    const canonicalDept =
-      resolveDepartmentId(rawDept) ||
-      (typeof rawDept === "string" ? rawDept.trim().toUpperCase() : "");
-    base = base.filter((task) => {
-      if (task.departmentId === rawDept || task.leadDepartmentId === rawDept) {
-        return true;
-      }
-      return matchTaskDepartment(task, canonicalDept);
-    });
-  }
-
-  if (options?.category && options.category !== "ALL") {
-    base = base.filter((task) => task.category === options.category);
-  }
-
-  const counts: Record<SmartFilterTab, number> = {
-    all: base.length,
-    my_tasks: 0,
-    overdue: 0,
-    review: 0,
-    today: 0,
-    in_progress: 0,
-    completed: 0,
-  };
-
-  for (const task of base) {
-    if (
-      isTaskAssignedToUser(
-        task,
-        options?.currentUserId,
-        options?.currentUserName
-      )
-    ) {
-      counts.my_tasks++;
-    }
-    if (isTaskOrSubtaskOverdue(task, refDate)) {
-      counts.overdue++;
-    }
-    if (isTaskOrSubtaskPendingReview(task)) {
-      counts.review++;
-    }
-    if (isTaskOrSubtaskDueToday(task, refDate)) {
-      counts.today++;
-    }
-    if (task.status === "IN_PROGRESS") {
-      counts.in_progress++;
-    }
-    if (task.status === "COMPLETED") {
-      counts.completed++;
-    }
-  }
-
-  return counts;
-}
-
-/**
  * Trọng số ưu tiên (Priority weight) để sắp xếp
  */
 const PRIORITY_WEIGHTS: Record<string, number> = {
@@ -645,19 +563,6 @@ export function paginateTasks<T>(
     hasNext: safePage < totalPages,
     hasPrev: safePage > 1,
   };
-}
-
-/**
- * Xử lý hoàn chỉnh dữ liệu bảng: Lọc đa chiều -> Sắp xếp
- */
-export function processTaskTableData(
-  tasks: SchoolTask[],
-  filterOptions: TaskFilterOptions,
-  sortState?: ColumnSortState | null
-): SchoolTask[] {
-  const filtered = filterTasks(tasks, filterOptions);
-  if (!sortState) return filtered;
-  return sortTasks(filtered, sortState);
 }
 
 /**

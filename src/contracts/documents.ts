@@ -13,33 +13,6 @@ export const DocumentTypeSchema = z.enum([
   'VAN_BAN_DI',
   'TO_TRINH_NOI_BO',
 ]);
-export type DocumentTypeInput = z.infer<typeof DocumentTypeSchema>;
-
-/**
- * Document urgency levels.
- */
-export const DocumentUrgencySchema = z.enum([
-  'THUONG',
-  'KHAN',
-  'THUONG_KHAN',
-  'HOA_TOC',
-  'normal',
-  'urgent',
-  'top_urgent',
-  'flash',
-]);
-export type DocumentUrgencyInput = z.infer<typeof DocumentUrgencySchema>;
-
-/**
- * Document security levels.
- */
-export const DocumentSecurityLevelSchema = z.enum([
-  'THUONG',
-  'MAT',
-  'TOI_MAT',
-  'TUYET_MAT',
-]);
-export type DocumentSecurityLevelInput = z.infer<typeof DocumentSecurityLevelSchema>;
 
 /**
  * Document processing status.
@@ -56,7 +29,6 @@ export const DocumentStatusSchema = z.enum([
   'approved',
   'completed',
 ]);
-export type DocumentStatusInput = z.infer<typeof DocumentStatusSchema>;
 
 /**
  * Outgoing document workflow status values (matches Prisma OutgoingDocumentStatus).
@@ -135,8 +107,6 @@ export const DocumentQuerySchema = PaginationQuerySchema.extend({
   scope: z.string().trim().max(50).optional(),
 });
 
-export type DocumentQuery = z.infer<typeof DocumentQuerySchema>;
-
 /**
  * Export document query schema.
  */
@@ -145,8 +115,6 @@ export const ExportDocumentQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100).optional(),
   documentYear: z.coerce.number().int().min(2000).max(2100).optional(),
 });
-
-export type ExportDocumentQuery = z.infer<typeof ExportDocumentQuerySchema>;
 
 const AttachmentInputSchema = z.object({
   fileName: z.string().trim().max(255),
@@ -277,8 +245,6 @@ export const CreateDocumentSchema = z
     }
   );
 
-export type CreateDocumentInput = z.infer<typeof CreateDocumentSchema>;
-
 /**
  * HTTP contract for registering an incoming document. Legacy field aliases are
  * accepted explicitly; arbitrary mass-assignment fields are rejected.
@@ -342,8 +308,6 @@ export const CreateOutgoingDraftSchema = z
   })
   .strict();
 
-export type CreateOutgoingDraftContract = z.infer<typeof CreateOutgoingDraftSchema>;
-
 export const DeliverOutgoingDocumentSchema = z
   .object({ deliveryNotes: z.string().trim().max(2000).optional().nullable() })
   .strict();
@@ -378,8 +342,6 @@ export const UpdateDocumentSchema = z
     linkedTaskId: z.string().trim().max(64).optional().nullable(),
   })
   .strict();
-
-export type UpdateDocumentInput = z.infer<typeof UpdateDocumentSchema>;
 
 /**
  * Create executive directive contract.
@@ -423,8 +385,6 @@ export const CreateDirectiveSchema = z
     path: ['leadUnitId'],
   });
 
-export type CreateDirectiveInput = z.infer<typeof CreateDirectiveSchema>;
-
 /**
  * Batch document action types.
  */
@@ -433,7 +393,6 @@ export const BatchDocumentActionSchema = z.enum([
   'ASSIGN_LEAD_UNIT',
   'FILE_DOCUMENTS',
 ]);
-export type BatchDocumentAction = z.infer<typeof BatchDocumentActionSchema>;
 
 /**
  * Batch document request schema.
@@ -484,7 +443,6 @@ export const SignatureTypeSchema = z.enum([
   'ORGANIZATION_DIGITAL',
   'PHYSICAL',
 ]);
-export type SignatureTypeInput = z.infer<typeof SignatureTypeSchema>;
 
 /**
  * Present incoming document to leadership schema.
@@ -506,7 +464,6 @@ export const RejectContentDocumentSchema = z
     notes: z.string().trim().max(2000).optional().nullable(),
   })
   .strict();
-export type RejectContentDocumentInput = z.infer<typeof RejectContentDocumentSchema>;
 
 /**
  * Resolve incoming document schema.

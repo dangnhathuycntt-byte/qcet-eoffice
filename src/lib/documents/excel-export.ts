@@ -121,15 +121,3 @@ export function generateAppendixIVCsv(
   // Prepend UTF-8 BOM (﻿) for Excel Vietnamese character recognition
   return "﻿" + [headerRow, ...rows].join("\r\n");
 }
-
-/**
- * Generates a Buffer of the Appendix IV workbook for download or streaming.
- */
-export function generateAppendixIVWorkbook(
-  type: DocumentType,
-  year: number,
-  documents: DocumentItem[]
-): Buffer {
-  const csv = generateAppendixIVCsv(type, year, documents);
-  return Buffer.from(csv, "utf-8");
-}

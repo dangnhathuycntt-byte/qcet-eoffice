@@ -13,9 +13,6 @@ export const QCET_OFFLINE_STORES = {
   MUTATION_OUTBOX: "mutation_outbox",
 } as const;
 
-export type OfflineStoreName =
-  (typeof QCET_OFFLINE_STORES)[keyof typeof QCET_OFFLINE_STORES];
-
 export interface BaseOfflineRecord {
   fullKey: string;
   userId: string;

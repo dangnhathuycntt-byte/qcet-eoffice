@@ -148,13 +148,6 @@ export function getClientEnv(): ClientEnv {
 }
 
 /**
- * Reset cached client environment (for testing).
- */
-export function resetClientEnv(): void {
-  _cachedClientEnv = null;
-}
-
-/**
  * Client environment accessor proxy.
  */
 export const clientEnv: ClientEnv = new Proxy({} as ClientEnv, {

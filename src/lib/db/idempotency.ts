@@ -8,11 +8,6 @@ import { prisma as defaultPrisma } from "../prisma";
 import type { DbClient } from "@/lib/prisma";
 export type { DbClient };
 
-/**
- * Valid execution states for an IdempotencyRecord.
- */
-export type IdempotencyStatus = "PENDING" | "COMPLETED" | "FAILED";
-
 export interface IdempotencyConflictErrorParams {
   userId: string;
   operation: string;

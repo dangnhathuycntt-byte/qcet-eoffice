@@ -107,19 +107,6 @@ export const DEFAULT_ENGAGEMENT: EngagementSignals = {
   lastActiveAt: Date.now(),
 };
 
-export const DEFAULT_PERSISTED_STATE: CoordinatorPersistedState = {
-  stage: "NEW_USER",
-  engagement: DEFAULT_ENGAGEMENT,
-  installPromptDismissedAt: null,
-  pushPromptDismissedAt: null,
-  installedAt: null,
-  sessionCount: 1,
-  sessionInterruptionShown: false,
-  activeInterruptionType: null,
-  lastSessionId: null,
-  updatedAt: Date.now(),
-};
-
 /**
  * Storage key generator scoped by userId for strict multi-user isolation
  */

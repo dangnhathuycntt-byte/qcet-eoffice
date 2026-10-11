@@ -1,10 +1,5 @@
 import { AuthUser, UserRole } from "@/types/auth";
 
-export interface LoginFormState {
-  email: string;
-  password?: string;
-}
-
 export interface LoginValidationResult {
   valid: boolean;
   error?: string;

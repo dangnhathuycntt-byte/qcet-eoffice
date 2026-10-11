@@ -157,10 +157,6 @@ export const AuditEntityType = {
   BODY_MEMBERSHIP: "BodyMembership",
 } as const;
 
-export type AuditEntityTypeValue =
-  | (typeof AuditEntityType)[keyof typeof AuditEntityType]
-  | (string & {});
-
 /**
  * Payload for logging an audit event.
  */

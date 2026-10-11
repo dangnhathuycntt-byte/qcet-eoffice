@@ -61,15 +61,3 @@ export function computeDueStatus(
   if (diffDays === 1) return { text: 'Ngày mai', isOverdue: false };
   return { text: `Còn ${diffDays} ngày`, isOverdue: false };
 }
-
-/**
- * Returns whether a task is overdue given its lifecycle status, due date, and optional reference date.
- * Reconciles status bifurcation by evaluating both persisted OVERDUE status and dynamic calendar deadline.
- */
-export function checkTaskOverdueStatus(
-  status: string,
-  dueDate?: string | Date | null,
-  referenceDate: string = getSystemReferenceDateStr()
-): boolean {
-  return isTaskOverdue(status, dueDate, referenceDate);
-}

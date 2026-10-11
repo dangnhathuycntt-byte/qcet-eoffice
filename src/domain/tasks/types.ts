@@ -173,27 +173,6 @@ export interface TaskDTO {
   viewerContext?: TaskViewerContext;
 }
 
-export interface TaskMetricsDTO {
-  total: number;
-  completed: number;
-  inProgress: number;
-  waitingApproval: number;
-  overdue: number;
-  cancelled: number;
-  completionRate: number;
-  referenceDate: string;
-  isDenominatorSeparated?: boolean;
-}
-
-export interface TaskPaginatedDTO<T = TaskDTO> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasMore: boolean;
-}
-
 // ============================================================================
 // 3. UI VIEW MODEL (Frontend Ergonomics)
 // ============================================================================

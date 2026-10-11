@@ -6,11 +6,10 @@
  * (SmartWorkbox, UnifiedAdaptiveWorkspace tab counts, ExecutiveStatStrip, PersonalWorkbench).
  */
 
-import type { SchoolTask, StaffTask, TaskStatus, DashboardStats } from "@/types/dashboard";
-import type { AuthUser, UserRole } from "@/types/auth";
+import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
+import type { AuthUser } from "@/types/auth";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 import { matchesUser } from "@/lib/role-task-filter";
-import type { ExecutiveActionStats } from "@/lib/executive-matrix-aggregator";
 
 export type WorkspaceScope = "school" | "unit" | "my";
 
@@ -203,16 +202,6 @@ export function isTaskOverdueOrHasOverdueSubtask(
   return parentOverdue || subtaskOverdue;
 }
 
-/**
- * Checks whether a task or any of its subtasks is blocked.
- */
-export function isTaskBlocked(t: SchoolTask): boolean {
-  if ((t.status as string) === "BLOCKED") return true;
-  return Boolean(
-    t.subTasks?.some((st) => (st.status as string) === "BLOCKED")
-  );
-}
-
 // ============================================================================
 // 3. Smart Workbox Counters Aggregator
 // ============================================================================
@@ -387,64 +376,3 @@ export function computeWorkspaceTabCounts({
 // ============================================================================
 // 5. Executive Action Stats Aggregator
 // ============================================================================
-
-/**
- * Pure canonical calculation for Executive Action Stats (School level).
- */
-export function computeExecutiveActionStatsUnified(
-  tasks: SchoolTask[],
-  referenceDate: string = getSystemReferenceDate()
-): ExecutiveActionStats {
-  let pendingSchoolApprovalCount = 0;
-  let blockedTasksCount = 0;
-  let overdueTasksCount = 0;
-  let strategicActiveCount = 0;
-
-  for (const task of tasks) {
-    if ((task.status as string) === "CANCELLED") continue;
-
-    if (task.status !== "COMPLETED") {
-      const isWaiting =
-        (task.status as string) === "WAITING_APPROVAL" ||
-        task.status === "PENDING_EXECUTIVE_APPROVAL" ||
-        task.progressPercent === 100;
-      const hasSubtaskNeedingReview = (task.subTasks || []).some(
-        (st) =>
-          (st.status as string) !== "CANCELLED" &&
-          (st.status === "NEEDS_REVIEW" ||
-            st.requiresReview === true ||
-            isTaskWaitingApproval(st.status))
-      );
-      if (isWaiting || hasSubtaskNeedingReview) {
-        pendingSchoolApprovalCount++;
-      }
-    }
-
-    if (task.status === "IN_PROGRESS") {
-      strategicActiveCount++;
-    }
-
-    if ((task.status as string) === "BLOCKED") {
-      blockedTasksCount++;
-    }
-    for (const sub of task.subTasks || []) {
-      if ((sub.status as string) === "CANCELLED") continue;
-      if ((sub.status as string) === "BLOCKED") {
-        blockedTasksCount++;
-      }
-      if (sub.status !== "COMPLETED" && isTaskPastDue(sub.dueDate, referenceDate)) {
-        overdueTasksCount++;
-      }
-    }
-    if (task.status !== "COMPLETED" && isTaskPastDue(task.dueDate, referenceDate)) {
-      overdueTasksCount++;
-    }
-  }
-
-  return {
-    pendingSchoolApprovalCount,
-    blockedTasksCount,
-    overdueTasksCount,
-    strategicActiveCount,
-  };
-}

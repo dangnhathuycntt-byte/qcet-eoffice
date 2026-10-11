@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { shouldIgnoreShortcut, shouldIgnoreSpaceKey, isInteractiveInput } from "../src/lib/shortcuts/guards";
-import { ShortcutRegistry } from "../src/lib/shortcuts/registry";
 import { formatShortcutLabel } from "../src/lib/shortcuts/platform";
 
 test("guards: detects interactive input elements", () => {
@@ -30,42 +29,6 @@ test("guards: shouldIgnoreSpaceKey protects buttons, checkboxes, and interactive
   assert.equal(shouldIgnoreSpaceKey(eventOnButton), true);
   assert.equal(shouldIgnoreSpaceKey(eventOnCheckbox), true);
   assert.equal(shouldIgnoreSpaceKey(eventOnRow), false);
-});
-
-test("shortcuts: registry registers, matches keys, and handles actions", () => {
-  const registry = new ShortcutRegistry();
-  let fired = false;
-
-  const unregister = registry.register({
-    id: "test-c",
-    description: "Create task",
-    key: "c",
-    action: () => {
-      fired = true;
-    },
-  });
-
-  const row = { tagName: "TR", getAttribute: () => null } as unknown as HTMLElement;
-  const eventC = {
-    key: "c",
-    target: row,
-    isComposing: false,
-    preventDefault: () => {},
-    metaKey: false,
-    ctrlKey: false,
-    altKey: false,
-    shiftKey: false,
-  } as unknown as KeyboardEvent;
-
-  const handled = registry.handleKeyDown(eventC);
-  assert.equal(handled, true);
-  assert.equal(fired, true);
-
-  unregister();
-  fired = false;
-  const handledAfterUnregister = registry.handleKeyDown(eventC);
-  assert.equal(handledAfterUnregister, false);
-  assert.equal(fired, false);
 });
 
 test("platform: formats shortcut labels", () => {

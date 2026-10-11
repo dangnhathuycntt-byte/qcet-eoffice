@@ -10,8 +10,6 @@ export interface WeekDayItem {
   isToday: boolean;
 }
 
-export type CalendarWeekDay = WeekDayItem;
-
 export interface GetWeekDaysOptions {
   showWeekends?: boolean;
   today?: string;

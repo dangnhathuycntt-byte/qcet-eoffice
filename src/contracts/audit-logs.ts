@@ -9,8 +9,6 @@ export const AuditLogQuerySchema = PaginationQuerySchema.extend({
   to: IsoDateStringSchema.optional(),
 });
 
-export type AuditLogQuery = z.infer<typeof AuditLogQuerySchema>;
-
 export interface AuditLogEntryDTO {
   id: string;
   actorId: string | null;

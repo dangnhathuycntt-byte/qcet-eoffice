@@ -154,8 +154,6 @@ function formatShortIso(iso: string): string {
   return d && m ? `${d}/${m}` : iso;
 }
 
-export type TaskBulkActionBarProps = BatchActionBarProps;
-
 function BulkMenu({
   ariaLabel,
   icon,

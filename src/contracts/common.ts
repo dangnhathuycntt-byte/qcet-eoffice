@@ -19,13 +19,10 @@ export const PaginationQuerySchema = z.object({
   cursor: z.string().trim().max(100, 'Cursor cannot exceed 100 characters').optional(),
 });
 
-export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
-
 /**
  * Allowed operational scopes across QCET E-Office.
  */
 export const OperationalScopeSchema = z.enum(['school', 'unit', 'personal']);
-export type OperationalScope = z.infer<typeof OperationalScopeSchema>;
 
 /**
  * Common search query schema bounding query length to 100 characters and limit to 50.
@@ -51,15 +48,6 @@ export const SearchQuerySchema = z.object({
   scope: OperationalScopeSchema.optional(),
 });
 
-export type SearchQuery = z.infer<typeof SearchQuerySchema>;
-
-/**
- * Strict Search API query schema alias for SearchQuerySchema.
- */
-export const SearchApiQuerySchema = SearchQuerySchema;
-
-export type SearchApiQuery = z.infer<typeof SearchApiQuerySchema>;
-
 /**
  * Standard identifier schema (UUID, CUID, or alphanumeric entity ID).
  */
@@ -68,8 +56,6 @@ export const IdSchema = z
   .trim()
   .min(1, 'ID cannot be empty')
   .max(128, 'ID cannot exceed 128 characters');
-
-export type EntityId = z.infer<typeof IdSchema>;
 
 /**
  * ISO date string validation schema.
@@ -90,5 +76,3 @@ export const IsoDateStringSchema = z
     },
     { message: 'Invalid ISO date string format' }
   );
-
-export type IsoDateString = z.infer<typeof IsoDateStringSchema>;

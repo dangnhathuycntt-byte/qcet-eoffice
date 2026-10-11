@@ -39,10 +39,6 @@ export class UnverifiedSignatureVerifier implements SignatureVerifier {
 
 let current: SignatureVerifier = new UnverifiedSignatureVerifier();
 
-export function getSignatureVerifier(): SignatureVerifier {
-  return current;
-}
-
 /** Đổi nhà cung cấp kiểm chữ ký (khi ADR-V08 duyệt) hoặc dùng bản giả lập trong kiểm thử. */
 export function setSignatureVerifier(verifier: SignatureVerifier): void {
   current = verifier;

@@ -246,15 +246,6 @@ interface OrganizationTreeProps {
   persistContext?: boolean;
 }
 
-export function getStaffInitials(name?: string): string {
-  if (!name || !name.trim()) return "CB";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  const first = parts[0].charAt(0);
-  const last = parts[parts.length - 1].charAt(0);
-  return (first + last).toUpperCase();
-}
-
 export function OrganizationTree({
   initialDepartmentCode,
   onSelectStaff,
@@ -395,8 +386,6 @@ export function OrganizationTree({
   const totalHeadcount = React.useMemo(() => {
     return departments.reduce((acc, d) => acc + d.members.length, 0);
   }, [departments]);
-
-
 
   // Filtered members resolution
   const displayedMembers = React.useMemo(() => {

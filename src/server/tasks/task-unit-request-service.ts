@@ -44,9 +44,6 @@ export const DecideUnitRequestSchema = z
     if (v.decision === "DECLINE" && (v.note?.length ?? 0) < 3) ctx.addIssue({ code: "custom", message: "Cần nêu lý do từ chối", path: ["note"] });
   });
 
-export type CreateUnitRequestInput = z.infer<typeof CreateUnitRequestSchema>;
-export type DecideUnitRequestInput = z.infer<typeof DecideUnitRequestSchema>;
-
 const CLOSED: ReadonlySet<TaskStatus> = new Set([TaskStatus.COMPLETED, TaskStatus.CANCELLED]);
 
 /** Đơn vị mà người dùng đang làm trưởng (hoặc lãnh đạo trường, được coi là trưởng mọi đơn vị). */

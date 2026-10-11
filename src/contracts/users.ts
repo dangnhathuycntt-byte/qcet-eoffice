@@ -33,8 +33,6 @@ export const InstitutionalRoleSchema = z.enum([
   'CLERK',
 ]);
 
-export type InstitutionalRole = z.infer<typeof InstitutionalRoleSchema>;
-
 /**
  * Role update command contract.
  * Strictly prevents modification of arbitrary user fields during role update.
@@ -44,8 +42,6 @@ export const UpdateUserRoleSchema = z
     role: InstitutionalRoleSchema,
   })
   .strict();
-
-export type UpdateUserRoleInput = z.infer<typeof UpdateUserRoleSchema>;
 
 /**
  * Onboarding input contract.
@@ -64,11 +60,6 @@ export const OnboardingInputSchema = z
   })
   .strict();
 
-export type OnboardingInput = z.infer<typeof OnboardingInputSchema>;
-
-export const UpdateOnboardingSchema = OnboardingInputSchema;
-export type UpdateOnboardingInput = OnboardingInput;
-
 /**
  * User profile update command contract.
  * Strictly prevents modification of role, departmentId, isActive, or arbitrary system fields.
@@ -80,5 +71,3 @@ export const UpdateUserProfileSchema = z
     title: z.string().trim().max(100, "Chức danh không quá 100 ký tự").nullable().optional(),
   })
   .strict();
-
-export type UpdateUserProfileInput = z.infer<typeof UpdateUserProfileSchema>;

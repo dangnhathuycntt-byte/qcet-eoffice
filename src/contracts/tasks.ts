@@ -36,7 +36,6 @@ export const TaskStatusSchema = z.enum([
   'overdue',
   'cancelled',
 ]);
-export type TaskStatusInput = z.infer<typeof TaskStatusSchema>;
 
 /**
  * Deliverable specification schema for task attachments and deliverables.
@@ -75,8 +74,6 @@ export const TaskDeliverableInputSchema = z
       .nullable(),
   })
   .strict();
-
-export type TaskDeliverableInput = z.infer<typeof TaskDeliverableInputSchema>;
 
 /**
  * Canonical task query filtering and pagination schema.
@@ -150,9 +147,6 @@ export const TaskQueryParamsSchema = PaginationQuerySchema.extend({
   take: z.union([z.coerce.number().int().min(1).max(200), z.literal('all')]).optional(),
   all: z.union([z.boolean(), z.enum(['true', 'false'])]).optional(),
 });
-
-export type TaskQueryParams = z.infer<typeof TaskQueryParamsSchema>;
-export type TaskQuery = TaskQueryParams;
 
 /**
  * Canonical CreateTaskInputSchema (C1 — Create Command).
@@ -291,7 +285,6 @@ export const UpdateTaskInputSchema = z
   .strict();
 
 export type UpdateTaskInput = z.infer<typeof UpdateTaskInputSchema>;
-export type UpdateTask = UpdateTaskInput;
 
 /**
  * Update task metadata command contract.
@@ -330,8 +323,6 @@ export const UpdateTaskMetadataSchema = z
     }
   );
 
-export type UpdateTaskMetadataInput = z.infer<typeof UpdateTaskMetadataSchema>;
-
 export const ArchiveTaskSchema = z
   .object({
     reason: z.string().trim().min(3).max(1000),
@@ -356,8 +347,6 @@ export const ChangeTaskStatusSchema = z
   })
   .strict();
 
-export type ChangeTaskStatusInput = z.infer<typeof ChangeTaskStatusSchema>;
-
 /**
  * Assign task command contract.
  */
@@ -368,8 +357,6 @@ export const AssignTaskSchema = z
       .max(50, 'Cannot assign more than 50 assignees'),
   })
   .strict();
-
-export type AssignTaskInput = z.infer<typeof AssignTaskSchema>;
 
 /**
  * Canonical ApproveTaskInputSchema.
@@ -407,8 +394,6 @@ export const ApproveTaskInputSchema = z
       .optional(),
   })
   .strict();
-
-export type ApproveTaskInput = z.infer<typeof ApproveTaskInputSchema>;
 
 /**
  * Canonical SubmitDeliverableInputSchema.

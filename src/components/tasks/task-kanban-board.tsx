@@ -137,44 +137,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   },
 ];
 
-export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
-  {
-    id: "NEW",
-    title: "Mới",
-    label: "Mới",
-    emoji: "",
-    iconColor: "text-muted-foreground",
-  },
-  {
-    id: "IN_PROGRESS",
-    title: "Đang thực hiện",
-    label: "Đang thực hiện",
-    emoji: "",
-    iconColor: "text-blue-500",
-  },
-  {
-    id: "WAITING_APPROVAL",
-    title: "Chờ duyệt",
-    label: "Chờ duyệt",
-    emoji: "",
-    iconColor: "text-purple-500",
-  },
-  {
-    id: "NEEDS_REVIEW",
-    title: "Cần chỉnh sửa",
-    label: "Cần chỉnh sửa",
-    emoji: "",
-    iconColor: "text-warning",
-  },
-  {
-    id: "COMPLETED",
-    title: "Hoàn thành",
-    label: "Hoàn thành",
-    emoji: "",
-    iconColor: "text-emerald-500",
-  },
-];
-
 export interface KanbanItem {
   id: string;
   title: string;
