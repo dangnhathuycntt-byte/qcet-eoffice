@@ -141,16 +141,18 @@ export interface PrismaTaskCreateInput {
   [key: string]: any;
 }
 
+const LOCAL_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
+
 export function formatLocalDate(d: Date | string | null | undefined): string {
   if (!d) return '';
   const dateObj = typeof d === 'string' ? new Date(d) : d;
   if (isNaN(dateObj.getTime())) return '';
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(dateObj);
+  return LOCAL_DATE_FORMATTER.format(dateObj);
 }
 
 /**

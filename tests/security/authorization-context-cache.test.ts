@@ -42,15 +42,8 @@ import {
 import {
   authorizationContextCache,
   getCachedAuthorizationContext,
-  loadAuthorizationContextWithCache,
   invalidateAuthorizationContextCache,
   invalidateAllAuthorizationContextCaches,
-  getCacheMetrics,
-  invalidateOnUserDisable,
-  invalidateOnUserUpdate,
-  invalidateOnPositionAssignmentChange,
-  invalidateOnPortfolioAssignmentChange,
-  invalidateOnDelegationGrantChange,
   AuthorizationContextCacheManager,
 } from '@/server/authorization/authorization-context-cache';
 import { AccountDisabledAuthError } from '@/server/authorization/errors';
@@ -302,21 +295,21 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
   });
 
   test('2. Cache hit behavior within short TTL when caching is enabled', async () => {
-    const metricsBefore = getCacheMetrics();
+    const metricsBefore = authorizationContextCache.getCacheMetrics();
     assert.equal(metricsBefore.hits, 0);
     assert.equal(metricsBefore.misses, 0);
 
     // First call: cache miss, evaluates from DB
-    const ctx1 = await loadAuthorizationContextWithCache(testUser.id, { now });
-    const metricsAfterMiss = getCacheMetrics();
+    const ctx1 = await getCachedAuthorizationContext(testUser.id, now);
+    const metricsAfterMiss = authorizationContextCache.getCacheMetrics();
     assert.equal(metricsAfterMiss.misses, 1);
     assert.equal(metricsAfterMiss.hits, 0);
     assert.equal(metricsAfterMiss.size, 1);
 
     // Second call within TTL (same now or now + 2s): cache hit!
     const withinTtlTime = new Date(now.getTime() + 2_000);
-    const ctx2 = await loadAuthorizationContextWithCache(testUser.id, { now: withinTtlTime });
-    const metricsAfterHit = getCacheMetrics();
+    const ctx2 = await getCachedAuthorizationContext(testUser.id, withinTtlTime);
+    const metricsAfterHit = authorizationContextCache.getCacheMetrics();
     assert.equal(metricsAfterHit.hits, 1);
     assert.equal(metricsAfterHit.misses, 1);
 
@@ -326,17 +319,17 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
 
   test('3. Invalidation via invalidateAuthorizationContextCache immediately purges cached entry', async () => {
     // Populate cache
-    await loadAuthorizationContextWithCache(testUser.id, { now });
-    assert.equal(getCacheMetrics().size, 1);
+    await getCachedAuthorizationContext(testUser.id, now);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 1);
 
     // Invalidate
     invalidateAuthorizationContextCache(testUser.id);
-    assert.equal(getCacheMetrics().size, 0);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 0);
 
     // Next call must be a miss and reload fresh
-    await loadAuthorizationContextWithCache(testUser.id, { now });
-    assert.equal(getCacheMetrics().misses, 2);
-    assert.equal(getCacheMetrics().hits, 0);
+    await getCachedAuthorizationContext(testUser.id, now);
+    assert.equal(authorizationContextCache.getCacheMetrics().misses, 2);
+    assert.equal(authorizationContextCache.getCacheMetrics().hits, 0);
   });
 
   test('4. TTL expiration purges stale context and reloads fresh', async () => {
@@ -344,20 +337,20 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
     const t0 = new Date('2026-09-10T10:00:00.000Z');
 
     // 1. Initial load at t0
-    await loadAuthorizationContextWithCache(testUser.id, { now: t0, ttlMs: customTtl });
-    assert.equal(getCacheMetrics().misses, 1);
+    await getCachedAuthorizationContext(testUser.id, t0, { ttlMs: customTtl });
+    assert.equal(authorizationContextCache.getCacheMetrics().misses, 1);
 
     // 2. Query at t0 + 4s (within 5s TTL) -> HIT
     const tHit = new Date('2026-09-10T10:00:04.000Z');
-    await loadAuthorizationContextWithCache(testUser.id, { now: tHit, ttlMs: customTtl });
-    assert.equal(getCacheMetrics().hits, 1);
-    assert.equal(getCacheMetrics().misses, 1);
+    await getCachedAuthorizationContext(testUser.id, tHit, { ttlMs: customTtl });
+    assert.equal(authorizationContextCache.getCacheMetrics().hits, 1);
+    assert.equal(authorizationContextCache.getCacheMetrics().misses, 1);
 
     // 3. Query at t0 + 6s (expired > 5s TTL) -> MISS & EVICTION
     const tExpired = new Date('2026-09-10T10:00:06.000Z');
-    await loadAuthorizationContextWithCache(testUser.id, { now: tExpired, ttlMs: customTtl });
-    assert.equal(getCacheMetrics().hits, 1);
-    assert.equal(getCacheMetrics().misses, 2);
+    await getCachedAuthorizationContext(testUser.id, tExpired, { ttlMs: customTtl });
+    assert.equal(authorizationContextCache.getCacheMetrics().hits, 1);
+    assert.equal(authorizationContextCache.getCacheMetrics().misses, 2);
 
     const detailed = authorizationContextCache.getDetailedMetrics();
     assert.equal(detailed.evictions, 1);
@@ -365,7 +358,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
 
   test('5. Disabled user is immediately blocked after invalidateOnUserDisable', async () => {
     // 1. Cache the active user context
-    const cachedCtx = await loadAuthorizationContextWithCache(testUser.id, { now });
+    const cachedCtx = await getCachedAuthorizationContext(testUser.id, now);
     assert.equal(cachedCtx.user.isActive, true);
 
     // 2. User account disabled in DB
@@ -375,12 +368,12 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
     });
 
     // 3. Invalidate on user disable trigger
-    invalidateOnUserDisable(testUser.id);
+    invalidateAuthorizationContextCache(testUser.id);
 
     // 4. Subsequent request must fail with AccountDisabledAuthError
     await assert.rejects(
       async () => {
-        await loadAuthorizationContextWithCache(testUser.id, { now });
+        await getCachedAuthorizationContext(testUser.id, now);
       },
       (err: any) => {
         assert.ok(err instanceof AccountDisabledAuthError);
@@ -397,7 +390,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
 
   test('6. Revoked delegation is not served stale data after invalidateOnDelegationGrantChange', async () => {
     // 1. Cache the context while delegation is active
-    const ctx1 = await loadAuthorizationContextWithCache(testUser.id, { now });
+    const ctx1 = await getCachedAuthorizationContext(testUser.id, now);
     assert.equal(ctx1.delegations.length, 1);
     assert.equal(ctx1.delegations[0].action, 'document.outgoing.sign');
 
@@ -412,10 +405,10 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
     });
 
     // 3. Trigger delegation invalidation
-    invalidateOnDelegationGrantChange({ granteeUserId: testUser.id });
+    invalidateAuthorizationContextCache(testUser.id);
 
     // 4. Fresh context loaded on next request has zero active delegations
-    const ctx2 = await loadAuthorizationContextWithCache(testUser.id, { now });
+    const ctx2 = await getCachedAuthorizationContext(testUser.id, now);
     assert.equal(ctx2.delegations.length, 0);
 
     // Restore delegation in DB
@@ -431,35 +424,35 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
 
   test('7. Explicit invalidation triggers: Position and Portfolio changes', async () => {
     // Seed cache
-    await loadAuthorizationContextWithCache(testUser.id, { now });
-    assert.equal(getCacheMetrics().size, 1);
+    await getCachedAuthorizationContext(testUser.id, now);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 1);
 
     // Position assignment invalidation
-    invalidateOnPositionAssignmentChange(testUser.id);
-    assert.equal(getCacheMetrics().size, 0);
+    invalidateAuthorizationContextCache(testUser.id);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 0);
 
     // Seed cache again
-    await loadAuthorizationContextWithCache(testUser.id, { now });
-    assert.equal(getCacheMetrics().size, 1);
+    await getCachedAuthorizationContext(testUser.id, now);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 1);
 
     // Portfolio assignment invalidation
-    invalidateOnPortfolioAssignmentChange(testUser.id);
-    assert.equal(getCacheMetrics().size, 0);
+    invalidateAuthorizationContextCache(testUser.id);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 0);
 
     // User update invalidation
-    await loadAuthorizationContextWithCache(testUser.id, { now });
-    assert.equal(getCacheMetrics().size, 1);
-    invalidateOnUserUpdate(testUser.id);
-    assert.equal(getCacheMetrics().size, 0);
+    await getCachedAuthorizationContext(testUser.id, now);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 1);
+    invalidateAuthorizationContextCache(testUser.id);
+    assert.equal(authorizationContextCache.getCacheMetrics().size, 0);
   });
 
   test('8. Single-flight promise coalescing prevents duplicate concurrent DB queries', async () => {
     // Execute 4 concurrent requests for the same user with cold cache
     const [c1, c2, c3, c4] = await Promise.all([
-      loadAuthorizationContextWithCache(testUser.id, { now }),
-      loadAuthorizationContextWithCache(testUser.id, { now }),
-      loadAuthorizationContextWithCache(testUser.id, { now }),
-      loadAuthorizationContextWithCache(testUser.id, { now }),
+      getCachedAuthorizationContext(testUser.id, now),
+      getCachedAuthorizationContext(testUser.id, now),
+      getCachedAuthorizationContext(testUser.id, now),
+      getCachedAuthorizationContext(testUser.id, now),
     ]);
 
     assert.equal(c1.userId, testUser.id);
@@ -468,16 +461,16 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
     assert.equal(c4.userId, testUser.id);
 
     // Exactly 1 miss evaluated from DB; remaining coalesced on the in-flight promise
-    assert.equal(getCacheMetrics().misses, 1);
+    assert.equal(authorizationContextCache.getCacheMetrics().misses, 1);
   });
 
   test('9. Force refresh option bypasses cache and reloads context', async () => {
-    await loadAuthorizationContextWithCache(testUser.id, { now });
-    assert.equal(getCacheMetrics().misses, 1);
+    await getCachedAuthorizationContext(testUser.id, now);
+    assert.equal(authorizationContextCache.getCacheMetrics().misses, 1);
 
     // Query with forceRefresh: true
     await getCachedAuthorizationContext(testUser.id, now, { forceRefresh: true });
-    assert.equal(getCacheMetrics().misses, 2);
+    assert.equal(authorizationContextCache.getCacheMetrics().misses, 2);
   });
 
   test('10. Custom AuthorizationContextCacheManager instance respects maxEntries capacity pruning', async () => {

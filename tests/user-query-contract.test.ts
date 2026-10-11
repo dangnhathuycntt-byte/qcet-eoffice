@@ -6,10 +6,8 @@ import {
   OnboardingInputSchema,
   UpdateUserProfileSchema,
 } from '@/contracts/users';
-import {
-  buildUserDirectoryPagination,
-  buildUserDirectoryQueryOptions,
-} from '@/server/users/user-directory-query';
+import { buildUserDirectoryQueryOptions } from '@/server/users/user-directory-query';
+import { buildOffsetPagination } from '@/server/api/pagination';
 
 // ---------------------------------------------------------------------------
 // UserQuerySchema
@@ -87,7 +85,7 @@ describe('UserQuerySchema', () => {
     });
     assert.equal(options.take, 20);
     assert.equal(options.skip, 40);
-    assert.deepEqual(buildUserDirectoryPagination(3, options.take, 65), {
+    assert.deepEqual(buildOffsetPagination(3, options.take, 65), {
       page: 3,
       pageSize: 20,
       total: 65,

@@ -141,10 +141,6 @@ export class SharedMemoryRateLimitBackend implements RateLimitBackend {
     this.checkCallCount = 0;
   }
 
-  size(): number {
-    return this.store.size;
-  }
-
   checkAndRecordSync(key: string, now: number, windowMs: number, limit: number): SlidingWindowVerdict {
     this.checkCallCount++;
     if (this.checkCallCount >= MEMORY_AUTO_CLEANUP_INTERVAL || this.store.size > MEMORY_MAX_STORE_ENTRIES) {
@@ -268,20 +264,6 @@ export class RedisRateLimitBackend implements RateLimitBackend {
     return this.client;
   }
 
-  /** Exposes the underlying client for graceful-shutdown shims. */
-  getRedisClient(): Redis | null {
-    if (!this.url) return null;
-    return this.getClient();
-  }
-
-  async close(): Promise<void> {
-    if (this.client) {
-      const c = this.client;
-      this.client = null;
-      await c.quit().catch(() => undefined);
-    }
-  }
-
   async checkAndRecord(key: string, now: number, windowMs: number, limit: number): Promise<SlidingWindowVerdict> {
     const client = this.getClient();
     const memberUnique = `${now}:${Math.random().toString(36).slice(2, 9)}`;
@@ -369,24 +351,6 @@ export function __clearRateLimitBackendForTesting(): void {
   testBackendOverride = null;
 }
 
-/** @deprecated Use getRateLimitBackend(); kept for backward compatibility. */
-export function getRedisClient(): Redis | null {
-  const backend = getRateLimitBackend();
-  if (backend instanceof RedisRateLimitBackend) {
-    return backend.getRedisClient();
-  }
-  return null;
-}
-
-/** @deprecated Use backend close via getRateLimitBackend(); kept for backward compatibility. */
-export function closeRedisClient(): Promise<void> | void {
-  if (redisBackend) {
-    const b = redisBackend;
-    redisBackend = null;
-    return b.close().catch(() => undefined);
-  }
-}
-
 // --- Aggregate observability (process-local counters; decisions stay in the backend) ---
 
 export interface RateLimitMetricsSnapshot {
@@ -423,21 +387,9 @@ function instanceMetadata(): { pid: number; hostname: string } {
 
 // --- Legacy in-memory store shims (deprecated sync path + unit tests) --------
 
-/**
- * Clears the process-local test-double store. In production with Redis this
- * does NOT touch shared state (by design: a restart must not reset limits).
- */
-export function cleanupExpiredKeys(now = Date.now(), maxRetentionMs = 60 * 60 * 1000): void {
-  defaultMemoryBackend.cleanupExpiredKeys(now, maxRetentionMs);
-}
-
 export function resetRateLimits(): void {
   defaultMemoryBackend.clear();
   resetRateLimitMetricsForTesting();
-}
-
-export function getRateLimitStoreSize(): number {
-  return defaultMemoryBackend.size();
 }
 
 function checkRateLimitMemoryInternal(

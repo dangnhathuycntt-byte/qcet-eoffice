@@ -33,8 +33,3 @@ export function canDeleteNotification(
   }
   return notification.userId === user.id;
 }
-
-export const notificationPolicy = {
-  canReadNotification,
-  canDeleteNotification,
-};

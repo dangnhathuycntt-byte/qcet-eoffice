@@ -16,7 +16,7 @@ import type { SessionPayload } from "@/lib/jwt-session";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { SeparationOfDutiesError } from "@/server/authorization/errors";
 import { authorize } from "@/server/authorization/authorization-engine";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import type { CapabilityAction } from "@/server/authorization/capability";
 import { isPermanent, isRetentionExpired, retentionEnd, validateExtendYears } from "@/domain/dossiers/disposal-rules";
@@ -77,7 +77,7 @@ export interface DisposalState {
 
 export async function getDisposalState(session: SessionPayload, dossierId: string, now = new Date()): Promise<DisposalState> {
   const dossier = await loadDossier(dossierId, { includeDisposed: true });
-  const ctx = await loadAuthorizationContext(session.id, now, { useCache: true, ttlMs: 10_000 });
+  const ctx = await loadCachedAuthorizationContext(session.id, now);
   // Xem trạng thái xét hủy dành cho người có thẩm quyền liên quan.
   if (!can(ctx, "dossier.propose_disposal", dossier) && !can(ctx, "dossier.dispose", dossier) && dossier.responsiblePersonId !== session.id) {
     throw new ForbiddenError("Bạn không có quyền xem thông tin xét hủy hồ sơ này");
@@ -105,7 +105,7 @@ export async function getDisposalState(session: SessionPayload, dossierId: strin
 export async function proposeDisposal(session: SessionPayload, dossierId: string, input: ProposeDisposalInput, now = new Date()) {
   const validated = ProposeDisposalSchema.parse(input);
   const dossier = await loadDossier(dossierId);
-  const ctx = await loadAuthorizationContext(session.id, now, { useCache: true, ttlMs: 10_000 });
+  const ctx = await loadCachedAuthorizationContext(session.id, now);
   assertCan(ctx, "dossier.propose_disposal", dossier);
 
   const retention = retentionInput(dossier);
@@ -147,7 +147,7 @@ export async function proposeDisposal(session: SessionPayload, dossierId: string
 export async function decideDisposal(session: SessionPayload, dossierId: string, input: DecideDisposalInput, now = new Date()) {
   const validated = DecideDisposalSchema.parse(input);
   const dossier = await loadDossier(dossierId);
-  const ctx = await loadAuthorizationContext(session.id, now, { useCache: true, ttlMs: 10_000 });
+  const ctx = await loadCachedAuthorizationContext(session.id, now);
   assertCan(ctx, "dossier.dispose", dossier);
 
   const proposal = await prisma.dossierDisposalProposal.findFirst({ where: { id: validated.proposalId, dossierId } });
@@ -207,7 +207,7 @@ export async function decideDisposal(session: SessionPayload, dossierId: string,
  */
 /** Hồ sơ đã có quyết định hủy, chờ quản trị hệ thống xóa hẳn. Chỉ trả mã, tiêu đề và biên bản, không đọc nội dung. */
 export async function listDisposedDossiers(session: SessionPayload, now = new Date()) {
-  const ctx = await loadAuthorizationContext(session.id, now, { useCache: true, ttlMs: 10_000 });
+  const ctx = await loadCachedAuthorizationContext(session.id, now);
   assertCan(ctx, "dossier.purge", { id: "list", status: "ARCHIVED", responsiblePersonId: "" });
   const rows = await prisma.workDossier.findMany({
     where: { disposedAt: { not: null } },
@@ -232,7 +232,7 @@ export async function listDisposedDossiers(session: SessionPayload, now = new Da
 
 export async function purgeDossier(session: SessionPayload, dossierId: string, now = new Date()) {
   const dossier = await loadDossier(dossierId, { includeDisposed: true });
-  const ctx = await loadAuthorizationContext(session.id, now, { useCache: true, ttlMs: 10_000 });
+  const ctx = await loadCachedAuthorizationContext(session.id, now);
   assertCan(ctx, "dossier.purge", dossier);
 
   if (!dossier.disposedAt) throw new ConflictError("Chỉ xóa hẳn hồ sơ đã có quyết định hủy", "DOSSIER_NOT_DISPOSED");

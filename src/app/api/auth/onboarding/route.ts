@@ -33,6 +33,6 @@ export async function POST(req: Request) {
       { headers: { "Cache-Control": "private, no-store" }, requestId }
     );
   } catch (error) {
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

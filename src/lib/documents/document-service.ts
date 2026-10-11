@@ -503,9 +503,14 @@ export async function updateDocument(
 ): Promise<DocumentItem> {
   const db = client || defaultPrisma;
 
+  // Chỉ nạp những gì kiểm tra bất biến cần; bản đầy đủ được trả về từ lệnh update bên dưới.
   const existing = await db.document.findUnique({
     where: { id },
-    include: defaultInclude,
+    include: {
+      signatures: { select: { id: true }, take: 1 },
+      outgoingWorkflow: { select: { status: true, authorizedSignedAt: true } },
+      incomingWorkflow: { select: { id: true, status: true } },
+    },
   });
 
   if (!existing) {

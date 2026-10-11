@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { isAllowedStoredFileUrl } from "@/lib/url-utils";
-import { SubmitDeliverableSchema } from "@/contracts/tasks";
+import { SubmitDeliverableInputSchema } from "@/contracts/tasks";
 
 describe("isAllowedStoredFileUrl — URL tệp/liên kết do client gửi", () => {
   it("chấp nhận đường dẫn nội bộ và URL http(s)", () => {
@@ -34,11 +34,11 @@ describe("isAllowedStoredFileUrl — URL tệp/liên kết do client gửi", () 
     }
   });
 
-  it("SubmitDeliverableSchema từ chối fileUrl nguy hiểm", () => {
+  it("SubmitDeliverableInputSchema từ chối fileUrl nguy hiểm", () => {
     const base = { title: "Minh chứng", fileName: "a.pdf" };
-    assert.equal(SubmitDeliverableSchema.safeParse({ ...base, fileUrl: "javascript:alert(1)" }).success, false);
-    assert.equal(SubmitDeliverableSchema.safeParse({ ...base, fileUrl: "//evil.example/a.pdf" }).success, false);
-    assert.equal(SubmitDeliverableSchema.safeParse({ ...base, fileUrl: "https://drive.google.com/x" }).success, true);
-    assert.equal(SubmitDeliverableSchema.safeParse({ ...base, fileUrl: "/api/file-objects/abc" }).success, true);
+    assert.equal(SubmitDeliverableInputSchema.safeParse({ ...base, fileUrl: "javascript:alert(1)" }).success, false);
+    assert.equal(SubmitDeliverableInputSchema.safeParse({ ...base, fileUrl: "//evil.example/a.pdf" }).success, false);
+    assert.equal(SubmitDeliverableInputSchema.safeParse({ ...base, fileUrl: "https://drive.google.com/x" }).success, true);
+    assert.equal(SubmitDeliverableInputSchema.safeParse({ ...base, fileUrl: "/api/file-objects/abc" }).success, true);
   });
 });

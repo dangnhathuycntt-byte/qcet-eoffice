@@ -11,6 +11,7 @@ import { MeetingService } from '@/server/services/meeting-service';
 import { CreateMeetingSchema, ListMeetingsQuerySchema } from '@/contracts/meeting';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
+import { parseAndValidateJson } from '@/server/api/validation';
 
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -48,8 +49,7 @@ export async function POST(request: NextRequest) {
 
     await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
-    const body = await request.json();
-    const input = CreateMeetingSchema.parse(body);
+    const input = await parseAndValidateJson(request, CreateMeetingSchema);
 
     const meeting = await MeetingService.createMeeting(input, authUser.id, requestId);
     return apiSuccess(meeting, { requestId, status: 201 });

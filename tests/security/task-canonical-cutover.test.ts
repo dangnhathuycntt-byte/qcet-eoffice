@@ -8,7 +8,7 @@ describe("Issue #13 canonical Task cutover", () => {
   test("generic PATCH uses the strict metadata-only contract", () => {
     const route = read("src/app/api/tasks/[id]/route.ts");
     assert.match(route, /parseAndValidateJson\(req, UpdateTaskMetadataSchema[),]/);
-    assert.doesNotMatch(route, /parseAndValidateJson\(req, UpdateTaskSchema\)/);
+    assert.doesNotMatch(route, /parseAndValidateJson\(req, UpdateTaskInputSchema\)/);
     for (const forbidden of [
       "progressPercent: validatedBody",
       "assigneeId: validatedBody",
@@ -32,15 +32,19 @@ describe("Issue #13 canonical Task cutover", () => {
 
   test("shared action transport enforces every mutation guard", () => {
     const shared = read("src/app/api/tasks/[id]/actions/shared.ts");
+    const transport = read("src/server/api/task-subresource-request.ts");
+    // Route hành động đi qua phần đầu request dùng chung ở chế độ ghi, có schema.
+    assert.match(shared, /resolveTaskSubresourceRequest\(request, context, \{\s*mutate: true,\s*schema,/);
     for (const guard of [
       "assertCsrf(request)",
       "assertJsonContentType(request)",
       "assertRequestBodySize(request, MAX_PAYLOAD_SIZE)",
-      'assertRateLimit(user.id, "MUTATIONS_SENSITIVE")',
-      "parseAndValidateJson(request, schema)",
-      "loadAuthorizationContext(user.id",
-      "authorize(authorizationContext, action",
+      '"MUTATIONS_SENSITIVE"',
+      "parseAndValidateJson(request, options.schema)",
     ]) {
+      assert.ok(transport.includes(guard), `missing shared guard: ${guard}`);
+    }
+    for (const guard of ["loadCachedAuthorizationContext(session.id", "authorize(authorizationContext, action"]) {
       assert.ok(shared.includes(guard), `missing shared guard: ${guard}`);
     }
   });

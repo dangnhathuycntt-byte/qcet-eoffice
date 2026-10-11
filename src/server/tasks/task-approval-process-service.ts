@@ -11,7 +11,7 @@
  */
 import { z } from "zod";
 import { ApprovalProcessStatus, ApprovalStepStatus, TaskActorRole, TaskStatus, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma, type DbClient } from "@/lib/prisma";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
@@ -20,7 +20,6 @@ import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/d
 import { initiateApprovalProcess, stepWaitingSince } from "@/lib/services/task-actor-service";
 import { authorizeOnTask, can } from "./authorize-on-task";
 
-type Db = Prisma.TransactionClient | typeof prisma;
 
 export const MAX_APPROVAL_STEPS = 5;
 const STEP_ACTOR_NOTE = "Bước duyệt:";
@@ -107,7 +106,7 @@ export async function getApprovalProcess(session: SessionPayload, taskId: string
   };
 }
 
-async function assertReviewerEligible(db: Db, taskId: string, userId: string, label: string) {
+async function assertReviewerEligible(db: DbClient, taskId: string, userId: string, label: string) {
   const user = await db.user.findUnique({ where: { id: userId }, select: { isActive: true } });
   if (!user || !user.isActive) throw new ValidationError(`${label} không tồn tại hoặc đã bị khóa`, undefined, "APPROVAL_USER_NOT_FOUND");
   const task = await db.task.findUnique({
@@ -167,7 +166,7 @@ export interface SyncOutcome {
 }
 
 /** Giữ dấu REVIEWER đúng cho người của bước hiện tại; gỡ dấu của bước đã qua hoặc luồng đã kết thúc. */
-export async function syncStepReviewerActors(db: Db, taskId: string, now = new Date()): Promise<SyncOutcome> {
+export async function syncStepReviewerActors(db: DbClient, taskId: string, now = new Date()): Promise<SyncOutcome> {
   const process = await db.taskApprovalProcess.findFirst({
     where: { taskId, status: ApprovalProcessStatus.IN_REVIEW },
     orderBy: { createdAt: "desc" },

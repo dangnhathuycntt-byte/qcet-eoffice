@@ -3,12 +3,10 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { UserQuerySchema } from "@/contracts/users";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { toUserPublicDTOArray } from "@/server/dto";
+import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";
-import {
-  buildUserDirectoryPagination,
-  buildUserDirectoryQueryOptions,
-} from "@/server/users/user-directory-query";
+import { buildUserDirectoryQueryOptions } from "@/server/users/user-directory-query";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -70,12 +68,22 @@ export async function GET(req: Request) {
         orderBy: { name: "asc" },
         take: queryOptions.take,
         skip: queryOptions.skip,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          phone: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
           positionAssignments: {
             where: activeAssignmentFilter,
-            include: {
-              positionDefinition: true,
-              unit: true,
+            select: {
+              unitId: true,
+              type: true,
+              positionDefinition: { select: { title: true } },
+              unit: { select: { id: true, code: true, name: true } },
             },
           },
         },
@@ -112,7 +120,7 @@ export async function GET(req: Request) {
         success: true,
         users: toUserPublicDTOArray(enrichedUsers, authUser),
         pagination: {
-          ...buildUserDirectoryPagination(currentPage, queryOptions.take, total),
+          ...buildOffsetPagination(currentPage, queryOptions.take, total),
         },
       },
       {
@@ -121,6 +129,6 @@ export async function GET(req: Request) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

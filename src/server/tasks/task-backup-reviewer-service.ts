@@ -14,7 +14,7 @@
  */
 import { z } from "zod";
 import { TaskActorRole, TaskStatus, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma, type DbClient } from "@/lib/prisma";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { InvalidTransitionError, NotFoundError, ValidationError } from "@/server/api/errors";
@@ -22,7 +22,6 @@ import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/d
 import { partitionTaskActorUserIds } from "@/domain/tasks/task-actor-roles";
 import { authorizeOnTask, can } from "./authorize-on-task";
 
-type Db = Prisma.TransactionClient | typeof prisma;
 
 export const SetBackupReviewerSchema = z
   .object({ userId: z.string().trim().min(1).nullable() })
@@ -36,7 +35,7 @@ export interface BackupReviewerView {
 
 const CLOSED: ReadonlySet<TaskStatus> = new Set([TaskStatus.COMPLETED, TaskStatus.CANCELLED]);
 
-async function taskFacts(db: Db, taskId: string) {
+async function taskFacts(db: DbClient, taskId: string) {
   const task = await db.task.findUnique({
     where: { id: taskId },
     include: {
@@ -119,7 +118,7 @@ async function audit(tx: Prisma.TransactionClient, actorId: string, taskId: stri
 }
 
 /** Gỡ TaskActor REVIEWER đã thêm khi kích hoạt (nếu có) và xóa dấu kích hoạt. */
-async function revoke(tx: Db, row: { id: string; actorId: string | null }) {
+async function revoke(tx: DbClient, row: { id: string; actorId: string | null }) {
   if (row.actorId) await tx.taskActor.deleteMany({ where: { id: row.actorId } });
   await tx.taskBackupReviewer.update({ where: { id: row.id }, data: { actorId: null, activatedAt: null, activatedForSince: null } });
 }
@@ -131,7 +130,7 @@ export type ActivationOutcome = "ACTIVATED" | "ALREADY_ACTIVE" | "NO_BACKUP" | "
  * Kiểm lại N4 tại thời điểm này vì người dự phòng có thể đã trở thành người thực hiện hay người nộp.
  */
 export async function activateBackupReviewer(
-  db: Db,
+  db: DbClient,
   taskId: string,
   waitingSince: Date,
   now: Date
@@ -183,7 +182,7 @@ export async function activateBackupReviewer(
  * (đã nộp lại), và kích hoạt nếu đợt hiện tại đã đủ 96 giờ.
  */
 export async function reconcileBackupReviewer(
-  db: Db,
+  db: DbClient,
   taskId: string,
   waitingSince: Date,
   now: Date
@@ -196,7 +195,7 @@ export async function reconcileBackupReviewer(
 }
 
 /** Gỡ quyền của người dự phòng đã kích hoạt khi nhiệm vụ không còn chờ duyệt. */
-export async function revokeStaleBackupReviewers(db: Db, taskIds?: string[]): Promise<number> {
+export async function revokeStaleBackupReviewers(db: DbClient, taskIds?: string[]): Promise<number> {
   const rows = await db.taskBackupReviewer.findMany({
     where: {
       activatedAt: { not: null },

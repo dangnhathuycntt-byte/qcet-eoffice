@@ -92,7 +92,7 @@ export async function GET(req: Request) {
         }
       );
     }
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }
 
@@ -145,7 +145,7 @@ export async function PATCH(req: Request) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }
 

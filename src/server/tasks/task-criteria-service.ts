@@ -16,6 +16,7 @@ import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { InvalidTransitionError, NotFoundError, PreconditionFailedError } from "@/server/api/errors";
 import { authorizeOnTask, can } from "./authorize-on-task";
+import { bumpTaskVersion } from "@/server/tasks/task-version";
 
 export const MAX_CRITERIA = 20;
 
@@ -105,13 +106,7 @@ export async function replaceTaskCriteria(
   }
 
   await prisma.$transaction(async (tx) => {
-    const bumped = await tx.task.updateMany({
-      where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
-      data: { version: { increment: 1 } },
-    });
-    if (bumped.count !== 1) {
-      throw new PreconditionFailedError(`Task aggregate version conflict: expected version ${validated.expectedVersion}`);
-    }
+    await bumpTaskVersion(tx, taskId, validated.expectedVersion);
 
     const existing = await tx.taskAcceptanceCriterion.findMany({ where: { taskId } });
     const byId = new Map(existing.map((row) => [row.id, row]));

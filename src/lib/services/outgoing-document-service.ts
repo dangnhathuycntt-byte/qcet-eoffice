@@ -147,6 +147,24 @@ export interface CreateDocumentRevisionInput {
   fileSize?: number;
 }
 
+const REVIEWER_SELECT = { select: { id: true, name: true, email: true } } as const;
+
+/** Quy trình văn bản đi kèm văn bản, tệp, chữ ký và người xử lý từng bước: dùng cho trang chi tiết và danh sách. */
+export const OUTGOING_WORKFLOW_DETAIL_INCLUDE = {
+  document: {
+    include: {
+      attachments: true,
+      signatures: { orderBy: { signedAt: "asc" } },
+    },
+  },
+  contentReviewer: REVIEWER_SELECT,
+  formatReviewer: REVIEWER_SELECT,
+  authorizedSigner: REVIEWER_SELECT,
+  numberer: REVIEWER_SELECT,
+  orgSigner: REVIEWER_SELECT,
+  issuer: REVIEWER_SELECT,
+} satisfies Prisma.DocumentOutgoingWorkflowInclude;
+
 export interface OutgoingWorkflowWithDetails extends DocumentOutgoingWorkflow {
   document: Document;
   contentReviewer: { id: string; name: string; email: string } | null;
@@ -1450,22 +1468,7 @@ export class OutgoingDocumentService {
   static async getOutgoingDocument(documentId: string): Promise<OutgoingWorkflowWithDetails | null> {
     return prisma.documentOutgoingWorkflow.findUnique({
       where: { documentId },
-      include: {
-        document: {
-          include: {
-            attachments: true,
-            signatures: {
-              orderBy: { signedAt: "asc" },
-            },
-          },
-        },
-        contentReviewer: { select: { id: true, name: true, email: true } },
-        formatReviewer: { select: { id: true, name: true, email: true } },
-        authorizedSigner: { select: { id: true, name: true, email: true } },
-        numberer: { select: { id: true, name: true, email: true } },
-        orgSigner: { select: { id: true, name: true, email: true } },
-        issuer: { select: { id: true, name: true, email: true } },
-      },
+      include: OUTGOING_WORKFLOW_DETAIL_INCLUDE,
     }) as unknown as OutgoingWorkflowWithDetails | null;
   }
 

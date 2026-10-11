@@ -43,21 +43,54 @@ export async function loadFreshAuthorizationContext(
     throw new AccountNotFoundError('Mã định danh người dùng không hợp lệ');
   }
 
-  // 1. Load User
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      title: true,
-      phone: true,
-      avatarUrl: true,
-      provider: true,
-      isActive: true,
-    },
-  });
+  // 1. Load User + 3. Active Position Assignments ("Active means active") — độc lập nên chạy song song
+  const [user, rawPositions] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        title: true,
+        phone: true,
+        avatarUrl: true,
+        provider: true,
+        isActive: true,
+      },
+    }),
+    prisma.positionAssignment.findMany({
+      where: {
+        userId,
+        status: AssignmentStatus.ACTIVE,
+        effectiveFrom: { lte: now },
+        OR: [
+          { effectiveTo: null },
+          { effectiveTo: { gte: now } },
+        ],
+      },
+      include: {
+        positionDefinition: true,
+        unit: true,
+        portfolios: {
+          where: {
+            effectiveFrom: { lte: now },
+            OR: [
+              { effectiveTo: null },
+              { effectiveTo: { gte: now } },
+            ],
+          },
+          include: {
+            responsibilityArea: true,
+          },
+        },
+      },
+      orderBy: [
+        { type: 'asc' },
+        { effectiveFrom: 'desc' },
+      ],
+    }),
+  ]);
 
   if (!user) {
     throw new AccountNotFoundError('Người dùng không tồn tại trong hệ thống');
@@ -72,39 +105,6 @@ export async function loadFreshAuthorizationContext(
   if (user.role === UserRole.ADMIN) {
     systemRoles.push(SystemRole.SYSTEM_ADMIN);
   }
-
-  // 3. Load Active Position Assignments ("Active means active")
-  const rawPositions = await prisma.positionAssignment.findMany({
-    where: {
-      userId,
-      status: AssignmentStatus.ACTIVE,
-      effectiveFrom: { lte: now },
-      OR: [
-        { effectiveTo: null },
-        { effectiveTo: { gte: now } },
-      ],
-    },
-    include: {
-      positionDefinition: true,
-      unit: true,
-      portfolios: {
-        where: {
-          effectiveFrom: { lte: now },
-          OR: [
-            { effectiveTo: null },
-            { effectiveTo: { gte: now } },
-          ],
-        },
-        include: {
-          responsibilityArea: true,
-        },
-      },
-    },
-    orderBy: [
-      { type: 'asc' },
-      { effectiveFrom: 'desc' },
-    ],
-  });
 
   // Defensive in-memory verification for strict boundary checking
   const activePositions: ActivePositionAssignment[] = [];
@@ -164,112 +164,113 @@ export async function loadFreshAuthorizationContext(
     }
   }
 
-  // 4. Load Active DelegationGrants (Only canonical DelegationGrant, never DacumDelegation)
-  const activeDelegations: ActiveDelegationGrant[] = [];
-
-  if (activePositionIds.length > 0) {
-    const rawDelegations = await prisma.delegationGrant.findMany({
+  // 4. Active DelegationGrants (only canonical DelegationGrant, never DacumDelegation)
+  // 5. Active Body Memberships ("Active means active", body must be ACTIVE)
+  // Cả hai chỉ cần activePositionIds nên chạy song song.
+  const [rawDelegations, rawMemberships] = await Promise.all([
+    activePositionIds.length > 0
+      ? prisma.delegationGrant.findMany({
+        where: {
+          OR: [
+            { granteeAssignmentId: { in: activePositionIds } },
+            { grantorAssignmentId: { in: activePositionIds } },
+          ],
+          status: DelegationStatus.ACTIVE,
+          revokedAt: null,
+          validFrom: { lte: now },
+          validUntil: { gte: now },
+        },
+        include: {
+          grantorAssignment: {
+            include: {
+              user: {
+                select: { id: true, name: true },
+              },
+              positionDefinition: true,
+            },
+          },
+          granteeAssignment: {
+            include: {
+              user: {
+                select: { id: true, name: true },
+              },
+              positionDefinition: true,
+            },
+          },
+          responsibilityArea: true,
+          scopeRules: true,
+        },
+      })
+      : Promise.resolve([]),
+    prisma.bodyMembership.findMany({
       where: {
         OR: [
-          { granteeAssignmentId: { in: activePositionIds } },
-          { grantorAssignmentId: { in: activePositionIds } },
+          { userId },
+          ...(activePositionIds.length > 0 ? [{ positionAssignmentId: { in: activePositionIds } }] : []),
         ],
-        status: DelegationStatus.ACTIVE,
-        revokedAt: null,
-        validFrom: { lte: now },
-        validUntil: { gte: now },
+        appointedAt: { lte: now },
+        AND: [
+          {
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gte: now } },
+            ],
+          },
+        ],
       },
       include: {
-        grantorAssignment: {
-          include: {
-            user: {
-              select: { id: true, name: true },
-            },
-            positionDefinition: true,
-          },
-        },
-        granteeAssignment: {
-          include: {
-            user: {
-              select: { id: true, name: true },
-            },
-            positionDefinition: true,
-          },
-        },
-        responsibilityArea: true,
-        scopeRules: true,
+        body: true,
       },
+    }),
+  ]);
+
+  const activeDelegations: ActiveDelegationGrant[] = [];
+  for (const del of rawDelegations) {
+    if (del.status !== DelegationStatus.ACTIVE) continue;
+    if (del.revokedAt !== null) continue;
+    if (del.validFrom > now) continue;
+    if (del.validUntil < now) continue;
+
+    activeDelegations.push({
+      id: del.id,
+      grantorAssignmentId: del.grantorAssignmentId,
+      grantorUserId: del.grantorAssignment.userId,
+      grantorPositionCode: del.grantorAssignment.positionDefinition?.code,
+      grantorName: del.grantorAssignment.user?.name,
+      grantorPositionTitle: del.grantorAssignment.positionDefinition?.title,
+      granteeAssignmentId: del.granteeAssignmentId,
+      granteeUserId: del.granteeAssignment.userId,
+      granteePositionCode: del.granteeAssignment.positionDefinition?.code,
+      granteeName: del.granteeAssignment.user?.name,
+      granteePositionTitle: del.granteeAssignment.positionDefinition?.title,
+      responsibilityAreaId: del.responsibilityAreaId,
+      responsibilityArea: del.responsibilityArea
+        ? {
+            id: del.responsibilityArea.id,
+            code: del.responsibilityArea.code,
+            name: del.responsibilityArea.name,
+            description: del.responsibilityArea.description,
+            category: del.responsibilityArea.category,
+          }
+        : null,
+      action: del.action,
+      resourceScope: del.resourceScope,
+      validFrom: del.validFrom,
+      validUntil: del.validUntil,
+      sourceDocumentNumber: del.sourceDocumentNumber,
+      reason: del.reason,
+      status: del.status,
+      revokedAt: del.revokedAt,
+      revokedReason: del.revokedReason,
+      scopeRules: del.scopeRules.map((sr) => ({
+        id: sr.id,
+        delegationGrantId: sr.delegationGrantId,
+        entityType: sr.entityType,
+        entityId: sr.entityId,
+        constraintType: sr.constraintType,
+      })),
     });
-
-    for (const del of rawDelegations) {
-      if (del.status !== DelegationStatus.ACTIVE) continue;
-      if (del.revokedAt !== null) continue;
-      if (del.validFrom > now) continue;
-      if (del.validUntil < now) continue;
-
-      activeDelegations.push({
-        id: del.id,
-        grantorAssignmentId: del.grantorAssignmentId,
-        grantorUserId: del.grantorAssignment.userId,
-        grantorPositionCode: del.grantorAssignment.positionDefinition?.code,
-        grantorName: del.grantorAssignment.user?.name,
-        grantorPositionTitle: del.grantorAssignment.positionDefinition?.title,
-        granteeAssignmentId: del.granteeAssignmentId,
-        granteeUserId: del.granteeAssignment.userId,
-        granteePositionCode: del.granteeAssignment.positionDefinition?.code,
-        granteeName: del.granteeAssignment.user?.name,
-        granteePositionTitle: del.granteeAssignment.positionDefinition?.title,
-        responsibilityAreaId: del.responsibilityAreaId,
-        responsibilityArea: del.responsibilityArea
-          ? {
-              id: del.responsibilityArea.id,
-              code: del.responsibilityArea.code,
-              name: del.responsibilityArea.name,
-              description: del.responsibilityArea.description,
-              category: del.responsibilityArea.category,
-            }
-          : null,
-        action: del.action,
-        resourceScope: del.resourceScope,
-        validFrom: del.validFrom,
-        validUntil: del.validUntil,
-        sourceDocumentNumber: del.sourceDocumentNumber,
-        reason: del.reason,
-        status: del.status,
-        revokedAt: del.revokedAt,
-        revokedReason: del.revokedReason,
-        scopeRules: del.scopeRules.map((sr) => ({
-          id: sr.id,
-          delegationGrantId: sr.delegationGrantId,
-          entityType: sr.entityType,
-          entityId: sr.entityId,
-          constraintType: sr.constraintType,
-        })),
-      });
-    }
   }
-
-  // 5. Load Active Body Memberships ("Active means active", body must be ACTIVE)
-  const rawMemberships = await prisma.bodyMembership.findMany({
-    where: {
-      OR: [
-        { userId },
-        ...(activePositionIds.length > 0 ? [{ positionAssignmentId: { in: activePositionIds } }] : []),
-      ],
-      appointedAt: { lte: now },
-      AND: [
-        {
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gte: now } },
-          ],
-        },
-      ],
-    },
-    include: {
-      body: true,
-    },
-  });
 
   const activeBodyMemberships: ActiveBodyMembership[] = [];
   for (const mem of rawMemberships) {
@@ -369,6 +370,14 @@ export async function loadAuthorizationContext(
     });
   }
   return loadFreshAuthorizationContext(userId, now);
+}
+
+/**
+ * Ngữ cảnh phân quyền cho một request: cache 10 giây để route và service trong cùng lượt
+ * thấy cùng một bản mà không nạp lại từ DB.
+ */
+export function loadCachedAuthorizationContext(userId: string, now: Date = new Date()): Promise<AuthorizationContext> {
+  return loadAuthorizationContext(userId, now, { useCache: true, ttlMs: 10_000 });
 }
 
 /**

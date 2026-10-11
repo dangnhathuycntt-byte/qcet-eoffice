@@ -22,6 +22,7 @@ import {
   NotFoundError,
   ValidationError,
   PreconditionFailedError,
+  extractFieldErrors,
 } from '@/server/api/errors';
 import {
   logAuditEvent,
@@ -45,6 +46,7 @@ import {
 } from '@/contracts/tasks';
 import { buildTaskContext, taskStateMachine } from '@/domain/tasks/state-machine';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import { authorize, isExecutivePosition } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
 import type { CapabilityAction } from '@/server/authorization/capability';
@@ -138,11 +140,10 @@ function resolveUser(
 }
 
 async function requireTaskAuthorization(
-  userId: string,
+  authorizationContext: AuthorizationContext,
   action: CapabilityAction,
   task: Record<string, unknown>
 ) {
-  const authorizationContext = await loadAuthorizationContext(userId);
   const decision = authorize(authorizationContext, action, buildTaskResource(task));
   if (!decision.allowed) {
     if (decision.rejectionCode === 'INVALID_WORKFLOW_STATE') {
@@ -156,8 +157,7 @@ async function requireTaskAuthorization(
  * Đổi hạn trực tiếp cần quyền phân công (task.assign): người giao, trưởng đơn vị, lãnh đạo.
  * Người thực hiện không có quyền này nên phải đi qua xin gia hạn.
  */
-async function requireDeadlineChangeAuthority(userId: string, task: Record<string, unknown>) {
-  const authorizationContext = await loadAuthorizationContext(userId);
+async function requireDeadlineChangeAuthority(authorizationContext: AuthorizationContext, task: Record<string, unknown>) {
   const decision = authorize(authorizationContext, 'task.assign', buildTaskResource(task));
   if (!decision.allowed) {
     throw new AuthorizationError(
@@ -455,12 +455,7 @@ export class TaskCommandService {
     const { creatorId: _cId, code: _code, ...cleanInput } = input as any;
     const validationResult = CreateTaskInputSchema.safeParse(cleanInput);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       if (!input?.title || !input?.dueDate || (!input?.leadUnitId && !input?.parentTaskId)) {
         throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)', fieldErrors);
       }
@@ -532,7 +527,9 @@ export class TaskCommandService {
       else if (s === 'school') taskScope = TaskScope.SCHOOL;
     }
 
-    await requireTaskAuthorization(user.id, 'task.create', {
+    // Nạp một lần cho cả kiểm quyền tạo và kiểm phạm vi giao việc bên dưới.
+    const authContext = await loadAuthorizationContext(user.id);
+    await requireTaskAuthorization(authContext, 'task.create', {
       scope: taskScope,
       leadUnitId: effectiveLeadUnitId,
       // A subtask inherits its parent's scope; only an explicitly chosen scope
@@ -607,7 +604,7 @@ export class TaskCommandService {
       ].filter(Boolean);
 
       if (targetUserIds.length > 0) {
-        const creatorAuth = await loadAuthorizationContext(user.id);
+        const creatorAuth = authContext;
         const isBgh = creatorAuth.positions?.some((p) => isExecutivePosition(p.positionCode));
         const hasCrossUnitDelegation = creatorAuth.delegations?.some(
           (d) =>
@@ -728,25 +725,18 @@ export class TaskCommandService {
       }
 
       // Ghi nhận TaskActor cho các nhân sự phối hợp (collaborators)
-      if (Array.isArray(collaboratorIds) && collaboratorIds.length > 0) {
-        for (const coId of collaboratorIds) {
-          if (
-            existingUserIdSet.has(coId) &&
-            coId !== validAssigneeId &&
-            coId !== effectiveCreatorId
-          ) {
-            await tx.taskActor.create({
-              data: {
-                taskId: task.id,
-                userId: coId,
-                unitId: validLeadUnitId,
-                role: TaskActorRole.COLLABORATOR,
-                isPrimaryDRI: false,
-                assignedById: effectiveCreatorId,
-              },
-            });
-          }
-        }
+      const collaboratorRows = (Array.isArray(collaboratorIds) ? collaboratorIds : [])
+        .filter((coId) => existingUserIdSet.has(coId) && coId !== validAssigneeId && coId !== effectiveCreatorId)
+        .map((coId) => ({
+          taskId: task.id,
+          userId: coId,
+          unitId: validLeadUnitId,
+          role: TaskActorRole.COLLABORATOR,
+          isPrimaryDRI: false,
+          assignedById: effectiveCreatorId,
+        }));
+      if (collaboratorRows.length > 0) {
+        await tx.taskActor.createMany({ data: collaboratorRows });
       }
 
       const requestId =
@@ -862,12 +852,7 @@ export class TaskCommandService {
 
     const validationResult = UpdateTaskInputSchema.safeParse(sanitizedInput);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       throw new ValidationError('Dữ liệu cập nhật không hợp lệ', fieldErrors);
     }
 
@@ -884,7 +869,9 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    await requireTaskAuthorization(user.id, 'task.update_metadata', existing);
+    // Nạp một lần cho mọi bước kiểm quyền của lần sửa này.
+    const authContext = await loadAuthorizationContext(user.id);
+    await requireTaskAuthorization(authContext, 'task.update_metadata', existing);
 
     const {
       title,
@@ -990,7 +977,7 @@ export class TaskCommandService {
       // Hạn là cam kết: đổi trực tiếp chỉ dành cho người giao, trưởng đơn vị, lãnh đạo.
       // Người thực hiện phải xin gia hạn để người giao đồng ý (T-01).
       if (existing.dueDate && new Date(dueDate).getTime() !== new Date(existing.dueDate).getTime()) {
-        await requireDeadlineChangeAuthority(user.id, existing);
+        await requireDeadlineChangeAuthority(authContext, existing);
       }
     }
     if (academicMonth !== undefined) {
@@ -1021,7 +1008,7 @@ export class TaskCommandService {
         const authorizationAction = mappedStatus === TaskStatus.COMPLETED
           ? 'task.approve'
           : 'task.update_execution';
-        await requireTaskAuthorization(user.id, authorizationAction, existing);
+        await requireTaskAuthorization(authContext, authorizationAction, existing);
 
         // Canonical State Machine Validation
         const fsmResult = taskStateMachine.canTransition(
@@ -1120,7 +1107,7 @@ export class TaskCommandService {
         if (validAssigneeId) {
           effectivePrimaryOwnerId = validAssigneeId;
 
-          const updateAuthContext = await loadAuthorizationContext(user.id);
+          const updateAuthContext = authContext;
           const isExecutive = updateAuthContext.positions?.some((p) => isExecutivePosition(p.positionCode));
           const hasCrossUnitDelegation = updateAuthContext.delegations?.some(
             (d) =>
@@ -1184,18 +1171,17 @@ export class TaskCommandService {
         await tx.taskActor.deleteMany({
           where: { taskId, role: TaskActorRole.COLLABORATOR },
         });
-        for (const cId of collaboratorIds) {
-          if (cId && cId !== effectivePrimaryOwnerId) {
-            await tx.taskActor.create({
-              data: {
-                taskId,
-                userId: cId,
-                role: TaskActorRole.COLLABORATOR,
-                isPrimaryDRI: false,
-                assignedById: user.id,
-              },
-            });
-          }
+        const collaboratorRows = collaboratorIds
+          .filter((cId) => cId && cId !== effectivePrimaryOwnerId)
+          .map((cId) => ({
+            taskId,
+            userId: cId,
+            role: TaskActorRole.COLLABORATOR,
+            isPrimaryDRI: false,
+            assignedById: user.id,
+          }));
+        if (collaboratorRows.length > 0) {
+          await tx.taskActor.createMany({ data: collaboratorRows });
         }
       }
 
@@ -1372,7 +1358,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    await requireTaskAuthorization(user.id, 'task.archive', existing);
+    await requireTaskAuthorization(await loadAuthorizationContext(user.id), 'task.archive', existing);
 
     await prisma.$transaction(async (tx) => {
       // 1. Tìm toàn bộ subtasks đệ quy
@@ -1528,16 +1514,11 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    await requireTaskAuthorization(user.id, 'task.submit_result', task);
+    await requireTaskAuthorization(await loadAuthorizationContext(user.id), 'task.submit_result', task);
 
     const validationResult = SubmitDeliverableInputSchema.safeParse(input);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       if (!input?.title || !input?.fileUrl) {
         throw new ValidationError('Tiêu đề và đường dẫn file minh chứng là bắt buộc', fieldErrors);
       }
@@ -1647,12 +1628,7 @@ export class TaskCommandService {
 
     const validationResult = ReviewDeliverableInputSchema.safeParse(input);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       if (!input?.deliverableId || !input?.reviewStatus) {
         throw new ValidationError('deliverableId và reviewStatus là bắt buộc', fieldErrors);
       }
@@ -1684,7 +1660,7 @@ export class TaskCommandService {
       leadUnitId: deliverable.task.leadUnitId,
     };
     await requireTaskAuthorization(
-      user.id,
+      await loadAuthorizationContext(user.id),
       reviewStatus === 'APPROVED' ? 'task.approve' : 'task.review',
       reviewResource
     );
@@ -1865,7 +1841,7 @@ export class TaskCommandService {
       throw new AuthorizationError('Minh chứng không thuộc về nhiệm vụ được yêu cầu');
     }
 
-    await requireTaskAuthorization(user.id, 'task.update_execution', deliverable.task);
+    await requireTaskAuthorization(await loadAuthorizationContext(user.id), 'task.update_execution', deliverable.task);
 
     const requestId =
       ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'

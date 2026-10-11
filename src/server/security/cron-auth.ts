@@ -4,7 +4,7 @@ import { serverEnv } from "@/config/env.server";
 /**
  * Xác thực lời gọi cron: yêu cầu `Authorization: Bearer <CRON_SECRET>` hoặc header `x-cron-secret`.
  * Có CRON_SECRET thì bắt buộc khớp; production không có CRON_SECRET thì từ chối; môi trường
- * phát triển/kiểm thử không cấu hình thì cho gọi cục bộ. Cùng quy tắc với document-deadline-check.
+ * phát triển/kiểm thử không cấu hình thì cho gọi cục bộ.
  */
 export function isCronAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET || serverEnv.CRON_SECRET;

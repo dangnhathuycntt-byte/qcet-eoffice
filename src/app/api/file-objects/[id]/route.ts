@@ -176,6 +176,6 @@ export async function GET(
       headers,
     });
   } catch (error) {
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

@@ -3,10 +3,10 @@
  * hạn bảo quản. Mỗi nhắc nhở gắn khóa (hồ sơ, loại, mốc) với ràng buộc duy nhất nên không gửi trùng.
  */
 import { AssignmentStatus, DossierStatus, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma, type DbClient } from "@/lib/prisma";
 import { isRetentionExpired, isSubmitReminderDue, retentionEnd, submitDeadline } from "@/domain/dossiers/disposal-rules";
+import { formatDisplayDate } from "@/lib/format/date";
 
-type Db = Prisma.TransactionClient | typeof prisma;
 
 export interface DossierReminderResult {
   sent: Record<string, number>;
@@ -15,7 +15,7 @@ export interface DossierReminderResult {
 
 const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 
-async function clerkIds(db: Db): Promise<string[]> {
+async function clerkIds(db: DbClient): Promise<string[]> {
   const rows = await db.positionAssignment.findMany({
     where: { status: AssignmentStatus.ACTIVE, positionDefinition: { code: { in: ["VAN_THU", "CLERK"] } } },
     select: { userId: true },
@@ -24,7 +24,7 @@ async function clerkIds(db: Db): Promise<string[]> {
 }
 
 async function deliver(
-  db: Db,
+  db: DbClient,
   args: { dossierId: string; kind: string; dueKey: string; recipientIds: string[]; type: string; title: string; body: string },
   result: DossierReminderResult
 ) {
@@ -56,7 +56,7 @@ async function deliver(
   }
 }
 
-export async function scanDossierReminders(options: { now?: Date; db?: Db; dossierIds?: string[] } = {}): Promise<DossierReminderResult> {
+export async function scanDossierReminders(options: { now?: Date; db?: DbClient; dossierIds?: string[] } = {}): Promise<DossierReminderResult> {
   const now = options.now ?? new Date();
   const db = options.db ?? prisma;
   const scope: Prisma.WorkDossierWhereInput = options.dossierIds ? { id: { in: options.dossierIds } } : {};
@@ -77,7 +77,7 @@ export async function scanDossierReminders(options: { now?: Date; db?: Db; dossi
       recipientIds: [d.responsiblePersonId],
       type: "dossier_submit_deadline",
       title: "Hồ sơ sắp đến hạn nộp lưu trữ",
-      body: `${d.code}: ${d.title}. Hạn nộp lưu trữ cơ quan ${deadline.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}.`,
+      body: `${d.code}: ${d.title}. Hạn nộp lưu trữ cơ quan ${formatDisplayDate(deadline)}.`,
     }, result);
   }
 

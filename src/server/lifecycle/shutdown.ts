@@ -142,5 +142,3 @@ export function resetShutdownStateForTesting(): void {
   isShuttingDown = false;
   registeredHooks.length = 0;
 }
-
-export const _resetShutdownStateForTesting = resetShutdownStateForTesting;

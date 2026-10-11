@@ -7,11 +7,7 @@ import {
 import { apiError, apiSuccess } from "@/server/api/response";
 import { resolveTaskSubresourceRequest } from "@/server/api/task-subresource-request";
 import { getTaskPeople } from "@/server/tasks/task-people-view";
-import {
-  ActionRouteContext,
-  handleActionError,
-  resolveActionContext,
-} from "../actions/shared";
+import { type ActionRouteContext, taskActionRoute } from "../actions/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -28,37 +24,14 @@ export async function GET(request: NextRequest, context: ActionRouteContext) {
 }
 
 /** POST /api/tasks/{id}/people — thêm người phối hợp hoặc người theo dõi (T-07). */
-export async function POST(request: NextRequest, context: ActionRouteContext) {
-  let requestId = crypto.randomUUID();
-  try {
-    const { session, taskId, body, requestId: reqId } = await resolveActionContext(
-      request,
-      context,
-      AddPersonInputSchema,
-      "task.assign"
-    );
-    requestId = reqId;
-    const result = await taskDomainActionService.addPerson(session, taskId, body);
-    return apiSuccess({ success: true, data: result }, { requestId, status: result.changed ? 201 : 200 });
-  } catch (error) {
-    return handleActionError(error, requestId);
-  }
-}
+export const POST = taskActionRoute(
+  AddPersonInputSchema,
+  "task.assign",
+  (session, taskId, body) => taskDomainActionService.addPerson(session, taskId, body),
+  { status: (result) => (result.changed ? 201 : 200) }
+);
 
 /** DELETE /api/tasks/{id}/people — bớt người phối hợp hoặc người theo dõi (T-07). */
-export async function DELETE(request: NextRequest, context: ActionRouteContext) {
-  let requestId = crypto.randomUUID();
-  try {
-    const { session, taskId, body, requestId: reqId } = await resolveActionContext(
-      request,
-      context,
-      RemovePersonInputSchema,
-      "task.assign"
-    );
-    requestId = reqId;
-    const result = await taskDomainActionService.removePerson(session, taskId, body);
-    return apiSuccess({ success: true, data: result }, { requestId });
-  } catch (error) {
-    return handleActionError(error, requestId);
-  }
-}
+export const DELETE = taskActionRoute(RemovePersonInputSchema, "task.assign", (session, taskId, body) =>
+  taskDomainActionService.removePerson(session, taskId, body)
+);

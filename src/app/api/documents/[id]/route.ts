@@ -61,12 +61,14 @@ export async function GET(
 
     const { id } = await Promise.resolve(context.params);
 
-    const document = await getDocumentById(id);
+    const [document, authContext] = await Promise.all([
+      getDocumentById(id),
+      loadAuthorizationContext(authUser.id),
+    ]);
     if (!document) {
       throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
     }
 
-    const authContext = await loadAuthorizationContext(authUser.id);
     const docResource = buildDocumentResource(document);
     const readDecision = authorize(authContext, 'document.read', docResource);
     // Người tham gia luồng duyệt tờ trình được đọc tờ trình đó dù không liên quan theo chính sách chung.
@@ -329,7 +331,8 @@ export async function DELETE(
     const authContext = await loadAuthorizationContext(authUser.id);
     const docResource = buildDocumentResource(existing);
     const deleteDecision = authorize(authContext, 'document.archive', docResource);
-    if ((!deleteDecision.allowed && !canDeleteDocument(authUser, existing)) || !canDeleteDocument(authUser, existing)) {
+    // Cổng thật là canDeleteDocument; engine chỉ góp lý do từ chối.
+    if (!canDeleteDocument(authUser, existing)) {
       throw new ForbiddenError(
         deleteDecision.reason || "Bạn không có quyền xóa văn bản này (Forbidden)"
       );

@@ -4,6 +4,7 @@ import { loadAuthorizationContext } from "@/server/authorization/authorization-c
 import { authorize } from "@/server/authorization/authorization-engine";
 import { AuthorizationError } from "@/server/api/errors";
 import { AuditLogQuerySchema, type AuditLogEntryDTO } from "@/contracts/audit-logs";
+import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";
 import { normalizeIctDateRange } from "@/lib/ict-date-boundaries";
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
         return apiError(
           { message: range.error, statusCode: 400 },
           context.requestId,
-          { 'Cache-Control': 'private, no-store' }
+          { headers: { 'Cache-Control': 'private, no-store' } }
         );
       }
       const createdAt: Record<string, string | Date> = {};
@@ -85,13 +86,7 @@ export async function GET(req: Request) {
     return apiSuccess(
       {
         data: entries,
-        pagination: {
-          page: query.page,
-          pageSize: query.pageSize,
-          total,
-          totalPages: Math.ceil(total / query.pageSize),
-          hasMore: query.page * query.pageSize < total,
-        },
+        pagination: buildOffsetPagination(query.page, query.pageSize, total),
       },
       {
         headers: { "Cache-Control": "private, no-store" },
@@ -99,6 +94,6 @@ export async function GET(req: Request) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

@@ -54,17 +54,15 @@ function failure(id: string, code: string, message: string): BulkRowResult {
   return { id, ok: false, code, message };
 }
 
+type TaskWithActors = Awaited<ReturnType<typeof loadTaskWithActors>>;
+
 async function updateOne(
   session: SessionPayload,
   item: { id: string; expectedVersion: number },
+  task: TaskWithActors | undefined,
   priority: TaskPriority
 ): Promise<BulkRowResult> {
-  let task;
-  try {
-    task = await loadTaskWithActors(item.id);
-  } catch {
-    return failure(item.id, "NOT_FOUND", "Không tìm thấy nhiệm vụ");
-  }
+  if (!task) return failure(item.id, "NOT_FOUND", "Không tìm thấy nhiệm vụ");
 
   const decision = await can(session, "task.update_metadata", task);
   if (!decision.allowed) {
@@ -109,9 +107,15 @@ export async function bulkUpdateTaskPriority(
   input: BulkUpdatePriorityInput
 ): Promise<BulkUpdateResult> {
   const validated = BulkUpdatePrioritySchema.parse(input);
+  // Nạp mọi dòng bằng một truy vấn; phiên bản vẫn được kiểm lại trong transaction của từng dòng.
+  const tasks = await prisma.task.findMany({
+    where: { id: { in: validated.items.map((item) => item.id) } },
+    include: { actors: true },
+  });
+  const taskById = new Map(tasks.map((task) => [task.id, task]));
   const results: BulkRowResult[] = [];
   for (const item of validated.items) {
-    results.push(await updateOne(session, item, validated.priority));
+    results.push(await updateOne(session, item, taskById.get(item.id), validated.priority));
   }
   const succeeded = results.filter((r) => r.ok).length;
   return { total: results.length, succeeded, failed: results.length - succeeded, results };

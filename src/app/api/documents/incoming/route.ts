@@ -8,7 +8,7 @@ import {
 import { IncomingDocumentStatus } from "@prisma/client";
 import { RegisterIncomingDocumentSchema } from "@/contracts/documents";
 import { assertNoSuspectedDuplicate } from "@/lib/documents/duplicate-check";
-import { assertJsonContentType, assertRequestBodySize, MAX_JSON_BODY_SIZE } from "@/server/api/validation";
+import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
 
@@ -55,11 +55,9 @@ export async function POST(req: NextRequest) {
     const authUser = requireAuthenticated(context);
 
     assertCsrf(req);
-    assertJsonContentType(req);
-    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
     await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
-    const { acknowledgeDuplicate, ...body } = RegisterIncomingDocumentSchema.parse(await req.json());
+    const { acknowledgeDuplicate, ...body } = await parseAndValidateJson(req, RegisterIncomingDocumentSchema);
 
     await assertNoSuspectedDuplicate(authUser, {
       originalNumber: body.originalNumber || body.originalDocNumber || (typeof body.documentNumber === "string" ? body.documentNumber : null),

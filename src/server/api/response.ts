@@ -25,35 +25,11 @@ export interface ApiErrorOptions {
 export function apiError(
   error: unknown,
   requestId: string,
-  headersOrOptions?: HeadersInit | ApiErrorOptions,
-  options?: ApiErrorOptions
+  options: ApiErrorOptions = {}
 ): NextResponse<any> {
-  let headers: HeadersInit | undefined;
-  let legacyCompat = false;
-  let rfc9457 = false;
-  let instance: string | undefined;
-
-  if (
-    headersOrOptions &&
-    typeof headersOrOptions === 'object' &&
-    !('append' in headersOrOptions) &&
-    !Array.isArray(headersOrOptions) &&
-    ('headers' in headersOrOptions ||
-      'legacyCompat' in headersOrOptions ||
-      'rfc9457' in headersOrOptions ||
-      'instance' in headersOrOptions)
-  ) {
-    const opts = headersOrOptions as ApiErrorOptions;
-    headers = opts.headers;
-    legacyCompat = Boolean(opts.legacyCompat);
-    rfc9457 = Boolean(opts.rfc9457);
-    instance = opts.instance;
-  } else {
-    headers = headersOrOptions as HeadersInit | undefined;
-    legacyCompat = Boolean(options?.legacyCompat);
-    rfc9457 = Boolean(options?.rfc9457);
-    instance = options?.instance;
-  }
+  const { headers, instance } = options;
+  const legacyCompat = Boolean(options.legacyCompat);
+  const rfc9457 = Boolean(options.rfc9457);
 
   const { status, body } = toApiErrorResponse(error, requestId);
 

@@ -23,6 +23,7 @@ import { validateDocumentCreatePayload } from "@/lib/documents/document-validato
 import { assertNoSuspectedDuplicate } from "@/lib/documents/duplicate-check";
 import { AuthorizationError, ValidationError } from "@/server/api/errors";
 import type { DocumentType } from "@/types/document";
+import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
 
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -41,14 +42,7 @@ export async function GET(request: NextRequest) {
       await assertRateLimit(authUser.id, "SEARCH");
     }
 
-    let docType: DocumentType | undefined;
-    if (query.type === "VAN_BAN_DEN" || query.type === "INCOMING" || query.type === "inbox") {
-      docType = "VAN_BAN_DEN";
-    } else if (query.type === "VAN_BAN_DI" || query.type === "OUTGOING" || query.type === "outbox") {
-      docType = "VAN_BAN_DI";
-    } else if (query.type === "TO_TRINH_NOI_BO" || query.type === "INTERNAL") {
-      docType = "TO_TRINH_NOI_BO";
-    }
+    const docType = resolveDocumentTypeParam(query.type) ?? undefined;
 
     const limit = query.limit ?? query.pageSize ?? 50;
     const page = query.page ?? 1;
@@ -137,12 +131,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let docType: DocumentType = "VAN_BAN_DEN";
-    if (validated.type === "VAN_BAN_DI" || validated.type === "OUTGOING") {
-      docType = "VAN_BAN_DI";
-    } else if (validated.type === "TO_TRINH_NOI_BO" || validated.type === "INTERNAL") {
-      docType = "TO_TRINH_NOI_BO";
-    }
+    const docType: DocumentType = resolveDocumentTypeParam(validated.type) ?? "VAN_BAN_DEN";
 
     // Nhánh văn bản đi: gọi OutgoingDocumentService để đảm bảo DocumentOutgoingWorkflow
     // luôn được tạo cùng Document (Decree 30/2020/ND-CP compliance).

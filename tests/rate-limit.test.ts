@@ -5,7 +5,7 @@ import {
   RATE_LIMIT_TIERS,
   getRateLimitIdentifier,
   resetRateLimits,
-} from '@/server/api/rate-limit';
+} from '@/server/security/rate-limit';
 
 describe('Issue #29: Redis-backed Rate Limiter Test Suite', () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 
 /**
  * Test-DB safety guard.
@@ -60,5 +60,8 @@ export const prisma =
 
 // Guarantee singleton across process lifecycle, hot reloads, and serverless warm containers
 globalForPrisma.prisma = prisma;
+
+/** Client gốc hoặc client trong transaction: hàm nhận `db` chạy được cả hai. */
+export type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export default prisma;

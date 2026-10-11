@@ -1,44 +1,11 @@
 import { NextRequest } from "next/server";
 import { scanAndDispatchDocumentDeadlines } from "@/lib/documents/document-deadline-scanner";
-import { serverEnv } from "@/config/env.server";
+import { isCronAuthorized } from "@/server/security/cron-auth";
 import { logger } from "@/server/observability/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-/**
- * Validates whether the incoming request is authorized to execute the Cron Job.
- * According to Vercel Cron specification:
- * - Vercel sends `Authorization: Bearer <CRON_SECRET>`
- * - In non-production or test environments without CRON_SECRET configured, allows local invocation.
- */
-function isCronAuthorized(request: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET || serverEnv.CRON_SECRET;
-  const isProduction = process.env.NODE_ENV === "production";
-
-  // If a CRON_SECRET is configured, enforce strict Bearer authentication
-  if (cronSecret) {
-    const authHeader = request.headers.get("authorization");
-    if (authHeader === `Bearer ${cronSecret}`) {
-      return true;
-    }
-    // Also support direct CRON_SECRET header
-    const customHeader = request.headers.get("x-cron-secret");
-    if (customHeader === cronSecret) {
-      return true;
-    }
-    return false;
-  }
-
-  // If in production and NO CRON_SECRET is configured, fail closed
-  if (isProduction) {
-    return false;
-  }
-
-  // In development/test mode without CRON_SECRET, allow invocation
-  return true;
-}
 
 /**
  * GET /api/cron/document-deadline-check

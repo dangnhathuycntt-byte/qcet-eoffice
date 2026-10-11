@@ -13,7 +13,7 @@ import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { authorize, isExecutivePosition, isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { loadAuthorizationContext, loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { buildTaskResource } from "@/server/authorization/available-actions";
 import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError, ValidationError } from "@/server/api/errors";
@@ -63,7 +63,7 @@ function ledUnits(ctx: AuthorizationContext): { all: boolean; unitIds: Set<strin
 }
 
 async function loadContext(session: SessionPayload) {
-  return loadAuthorizationContext(session.id, new Date(), { useCache: true, ttlMs: 10_000 });
+  return loadCachedAuthorizationContext(session.id);
 }
 
 /** Người này làm được việc của trưởng đơn vị `unitId` không (capability + đúng đơn vị). */

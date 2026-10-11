@@ -1,10 +1,11 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma as defaultPrisma } from "../prisma";
 
 /**
  * Supported database client types: standard PrismaClient or an interactive transaction client.
  */
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/prisma";
+export type { DbClient };
 
 /**
  * Models that support Optimistic Concurrency Control with a version token.

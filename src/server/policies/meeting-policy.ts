@@ -142,7 +142,3 @@ export function canViewMeeting(
 
   return false;
 }
-
-export const meetingPolicy = {
-  canViewMeeting,
-};

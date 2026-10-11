@@ -169,26 +169,6 @@ export class AuthorizationContextCacheManager {
     this.evictions = 0;
   }
 
-  /**
-   * Adjusts the default cache TTL (in milliseconds).
-   */
-  public setDefaultTtl(ttlMs: number): void {
-    this.defaultTtlMs = ttlMs;
-  }
-
-  public getDefaultTtl(): number {
-    return this.defaultTtlMs;
-  }
-
-  /**
-   * Checks if an unexpired context is currently present in cache for a user.
-   */
-  public isContextCached(userId: string, now: Date = new Date()): boolean {
-    const entry = this.cache.get(userId);
-    if (!entry) return false;
-    return entry.expiresAt > now.getTime();
-  }
-
   private pruneIfNeeded(currentTime: number): void {
     if (this.cache.size >= this.maxEntries) {
       // 1. Evict any expired entries
@@ -227,21 +207,6 @@ export function getCachedAuthorizationContext(
 }
 
 /**
- * Opt-in cached loader wrapper: allows high-throughput read endpoints
- * to opt into short-TTL caching while preserving per-request freshness by default elsewhere.
- */
-export function loadAuthorizationContextWithCache(
-  userId: string,
-  options?: CacheOptions & { now?: Date }
-): Promise<AuthorizationContext> {
-  return authorizationContextCache.getCachedAuthorizationContext(
-    userId,
-    options?.now,
-    options
-  );
-}
-
-/**
  * Purges cached context for a specific user.
  */
 export function invalidateAuthorizationContextCache(userId: string): void {
@@ -253,67 +218,4 @@ export function invalidateAuthorizationContextCache(userId: string): void {
  */
 export function invalidateAllAuthorizationContextCaches(): void {
   authorizationContextCache.invalidateAllAuthorizationContextCaches();
-}
-
-/**
- * Returns cache metrics { hits, misses, size }.
- */
-export function getCacheMetrics(): { hits: number; misses: number; size: number } {
-  return authorizationContextCache.getCacheMetrics();
-}
-
-// -----------------------------------------------------------------------------
-// Explicit Invalidation Triggers
-// -----------------------------------------------------------------------------
-
-/**
- * Trigger: User account disabled or deactivated (User.isActive -> false).
- * MUST be invoked whenever a user account is locked or disabled to immediately
- * deny access on subsequent requests without waiting for TTL expiry.
- */
-export function invalidateOnUserDisable(userId: string): void {
-  authorizationContextCache.invalidateAuthorizationContextCache(userId);
-}
-
-/**
- * Trigger: User profile, role, or administrative status updated.
- */
-export function invalidateOnUserUpdate(userId: string): void {
-  authorizationContextCache.invalidateAuthorizationContextCache(userId);
-}
-
-/**
- * Trigger: PositionAssignment created, updated, terminated, or status changed.
- * Ensures appointment or removal of institutional authority is applied immediately.
- */
-export function invalidateOnPositionAssignmentChange(userId: string): void {
-  authorizationContextCache.invalidateAuthorizationContextCache(userId);
-}
-
-/**
- * Trigger: PortfolioAssignment created, updated, or reassigned.
- * Ensures changes in supervisory portfolio take effect immediately.
- */
-export function invalidateOnPortfolioAssignmentChange(userId: string): void {
-  authorizationContextCache.invalidateAuthorizationContextCache(userId);
-}
-
-/**
- * Trigger: DelegationGrant created, revoked, or updated.
- * Ensures grantee (and optionally grantor) context is refreshed immediately,
- * preventing revoked delegations from being accepted during an active session.
- */
-export function invalidateOnDelegationGrantChange(
-  target: { granteeUserId?: string; grantorUserId?: string } | string
-): void {
-  if (typeof target === 'string') {
-    authorizationContextCache.invalidateAuthorizationContextCache(target);
-  } else {
-    if (target.granteeUserId) {
-      authorizationContextCache.invalidateAuthorizationContextCache(target.granteeUserId);
-    }
-    if (target.grantorUserId) {
-      authorizationContextCache.invalidateAuthorizationContextCache(target.grantorUserId);
-    }
-  }
 }

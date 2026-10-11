@@ -1648,6 +1648,7 @@ model AuditEvent {
   @@index([entityType, entityId, createdAt(sort: Desc)])
   @@index([actorId, createdAt(sort: Desc)])
   @@index([requestId])
+  @@index([createdAt(sort: Desc)])
   @@map("audit_events")
 }
 

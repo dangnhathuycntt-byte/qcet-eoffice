@@ -4,12 +4,7 @@ import { ResolutionType, TaskPriority, TaskStatus } from '@prisma/client';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { AuthorizationError, ForbiddenError, NotFoundError, PreconditionFailedError, ValidationError } from '@/server/api/errors';
-import {
-  assertJsonContentType,
-  assertRequestBodySize,
-  extractFieldErrors,
-  MAX_JSON_BODY_SIZE,
-} from '@/server/api/validation';
+import { parseAndValidateJson } from '@/server/api/validation';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize, isExecutivePosition } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
@@ -205,24 +200,7 @@ export async function POST(request: NextRequest) {
     assertExecutiveMandate(authContext);
 
     assertCsrf(request);
-    assertJsonContentType(request);
-    assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
-
-    let rawBody: unknown;
-    try {
-      rawBody = await request.json();
-    } catch {
-      throw new ValidationError('Invalid JSON body');
-    }
-
-    const parseResult = CreateExecutiveResolutionSchema.safeParse(rawBody);
-    if (!parseResult.success) {
-      throw new ValidationError(
-        parseResult.error.issues[0]?.message || 'Validation failed',
-        extractFieldErrors(parseResult.error)
-      );
-    }
-    const validated = parseResult.data;
+    const validated = await parseAndValidateJson(request, CreateExecutiveResolutionSchema);
 
     const rawType =
       validated.resolutionType || validated.actionType || validated.type;

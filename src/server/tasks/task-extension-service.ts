@@ -32,6 +32,7 @@ import {
   validateRequestedDueDate,
 } from "@/domain/tasks/extension-rules";
 import { authorizeOnTask, can, loadTaskWithActors } from "./authorize-on-task";
+import { bumpTaskVersion } from "@/server/tasks/task-version";
 
 const DUE_DATE_INPUT = z.union([z.string().trim().min(1), z.date()]);
 const REASON = z.string().trim().min(3, "Lý do tối thiểu 3 ký tự").max(1000, "Lý do tối đa 1000 ký tự");
@@ -188,13 +189,7 @@ export async function requestExtension(
 
   return prisma.$transaction(async (tx) => {
     // Khóa phiên bản nhiệm vụ để hai yêu cầu đồng thời không cùng được tạo.
-    const bumped = await tx.task.updateMany({
-      where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
-      data: { version: { increment: 1 } },
-    });
-    if (bumped.count !== 1) {
-      throw new PreconditionFailedError(`Task aggregate version conflict: expected version ${validated.expectedVersion}`);
-    }
+    await bumpTaskVersion(tx, taskId, validated.expectedVersion);
 
     const row = await tx.taskExtensionRequest.create({
       data: {
@@ -236,13 +231,7 @@ async function applyNewDueDate(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   args: { session: SessionPayload; taskId: string; expectedVersion: number; from: Date; to: Date; requestId: string }
 ): Promise<Applied> {
-  const updated = await tx.task.updateMany({
-    where: { id: args.taskId, version: args.expectedVersion, archivedAt: null },
-    data: { dueDate: args.to, version: { increment: 1 } },
-  });
-  if (updated.count !== 1) {
-    throw new PreconditionFailedError(`Task aggregate version conflict: expected version ${args.expectedVersion}`);
-  }
+  await bumpTaskVersion(tx, args.taskId, args.expectedVersion, { data: { dueDate: args.to } });
   await auditService.logEvent(tx, {
     actorId: args.session.id,
     action: AuditAction.TASK_DEADLINE_CHANGED,
