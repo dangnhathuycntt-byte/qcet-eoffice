@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
-import fs from "node:fs";
 import {
   resolveSafeFilePath,
-  openByteRangeStream,
   isAllowedFileExtension,
-  buildContentDisposition,
 } from "@/lib/storage";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError } from "@/server/api/response";
+import { streamLocalFile } from "@/server/api/file-response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import {
   ForbiddenError,
@@ -164,34 +162,7 @@ export async function GET(req: NextRequest) {
       downloadName = req.nextUrl.searchParams.get("name") || fileName;
     }
 
-    if (!fs.existsSync(safeResolvedPath)) {
-      throw new NotFoundError("Không tìm thấy tệp yêu cầu");
-    }
-
-    const stat = await fs.promises.stat(safeResolvedPath);
-    if (!stat.isFile()) {
-      throw new ValidationError("Đường dẫn không phải là tệp hợp lệ");
-    }
-
-    const rangeHeader = req.headers.get("range");
-    const streamResult = await openByteRangeStream(safeResolvedPath, rangeHeader);
-
-    const headers = new Headers(streamResult.headers);
-    headers.set("x-request-id", requestId);
-    headers.set("X-Content-Type-Options", "nosniff");
-    headers.set("X-Frame-Options", "DENY");
-
-    if (streamResult.status === 200) {
-      headers.set("Content-Disposition", buildContentDisposition("attachment", downloadName));
-    }
-
-    return new NextResponse(
-      (streamResult.stream as unknown as BodyInit) ?? null,
-      {
-        status: streamResult.status,
-        headers,
-      }
-    );
+    return streamLocalFile(req, safeResolvedPath, requestId, { type: "attachment", filename: downloadName });
   } catch (error) {
     return apiError(error, requestId, { legacyCompat: true });
   }
