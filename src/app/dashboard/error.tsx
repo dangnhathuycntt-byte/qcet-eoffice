@@ -1,9 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { AlertCircle, RefreshCw, ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { RouteError } from "@/components/ui/route-error";
 
 export default function DashboardError({
   error,
@@ -12,53 +9,15 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  React.useEffect(() => {
-    console.error("Dashboard error boundary caught error:", error);
-  }, [error]);
-
   return (
-    <div className="max-w-[1440px] w-full mx-auto py-16 px-4" role="alert">
-      <div className="rounded-xl border border-destructive/20 bg-card p-6 text-center max-w-md mx-auto space-y-4 shadow-sm">
-        <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
-          <AlertCircle className="size-6" />
-        </div>
-        <div>
-          <h2 className="text-base font-semibold text-foreground font-heading">
-            Đã xảy ra lỗi khi tải Bảng điều hành
-          </h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            {error?.message ||
-              "Không thể xử lý dữ liệu bảng điều hành tổng thể. Vui lòng thử lại hoặc tải lại trang."}
-          </p>
-          {error?.digest && (
-            <p className="mt-2 text-xs font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/40 inline-block">
-              Mã yêu cầu: {error.digest}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={reset}
-            className="gap-1.5 text-xs font-medium"
-          >
-            <RefreshCw className="size-3.5" />
-            <span>Thử lại</span>
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            asChild
-            className="gap-1.5 text-xs font-medium"
-          >
-            <Link href="/tasks">
-              <ArrowLeft className="size-3.5" />
-              <span>Nhiệm vụ</span>
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </div>
+    <RouteError
+      error={error}
+      reset={reset}
+      logLabel="Dashboard"
+      title="Đã xảy ra lỗi khi tải Bảng điều hành"
+      fallbackMessage="Không thể xử lý dữ liệu bảng điều hành tổng thể. Vui lòng thử lại hoặc tải lại trang."
+      backHref="/tasks"
+      backLabel="Nhiệm vụ"
+    />
   );
 }
