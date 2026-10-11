@@ -15,6 +15,45 @@ import type { UniversalActionQueueItems, WorkspaceScope } from "../types";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
 
+interface ParentTaskRef {
+  id?: string;
+  title: string;
+  code?: string;
+}
+
+/** Nhiệm vụ cha của một mục hàng đợi; các nguồn dữ liệu đặt tên trường khác nhau nên thử lần lượt. */
+function resolveParentTaskRef(item: { parentTaskTitle?: string; parentTaskCode?: string; parentTaskId?: string; task: unknown }): ParentTaskRef | null {
+  const task = item.task as any;
+  const title = item.parentTaskTitle || task.parentTaskTitle || task.parentSchoolTaskTitle || task.parentTask?.title;
+  if (!title) return null;
+  return {
+    title,
+    code: item.parentTaskCode || task.parentTaskCode || task.parentSchoolTaskCode || task.parentTask?.code,
+    id: item.parentTaskId || task.parentTaskId || task.parentSchoolTaskId || task.parentTask?.id,
+  };
+}
+
+function ParentTaskLink({ parent, onSelectTask }: { parent: ParentTaskRef; onSelectTask: (task: SchoolTask) => void }) {
+  return (
+    <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
+      <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
+      <Pressable
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectTask({
+            id: parent.id || "parent",
+            title: parent.title,
+            taskCode: parent.code,
+          } as SchoolTask);
+        }}
+        className="hover:text-slate-700 truncate text-left"
+      >
+        {parent.code ? `[${parent.code}] ` : ""}{parent.title}
+      </Pressable>
+    </div>
+  );
+}
+
 export interface ActionQueueButtonMeta {
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -183,21 +222,7 @@ export function UniversalActionQueue({
 
           <div className="divide-y divide-slate-100">
             {displayedApprovals.map((item, idx) => {
-              const parentTitle =
-                item.parentTaskTitle ||
-                (item.task as any).parentTaskTitle ||
-                (item.task as any).parentSchoolTaskTitle ||
-                (item.task as any).parentTask?.title;
-              const parentCode =
-                item.parentTaskCode ||
-                (item.task as any).parentTaskCode ||
-                (item.task as any).parentSchoolTaskCode ||
-                (item.task as any).parentTask?.code;
-              const parentId =
-                item.parentTaskId ||
-                (item.task as any).parentTaskId ||
-                (item.task as any).parentSchoolTaskId ||
-                (item.task as any).parentTask?.id;
+              const parent = resolveParentTaskRef(item);
 
               const isItemOverdue = Boolean(
                 (item as any).isOverdue ||
@@ -211,24 +236,7 @@ export function UniversalActionQueue({
                   className="py-2.5 flex items-start justify-between gap-3 group"
                 >
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    {parentTitle && (
-                      <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
-                        <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
-                        <Pressable
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectTask({
-                              id: parentId || "parent",
-                              title: parentTitle,
-                              taskCode: parentCode,
-                            } as SchoolTask);
-                          }}
-                          className="hover:text-slate-700 truncate text-left"
-                        >
-                          {parentCode ? `[${parentCode}] ` : ""}{parentTitle}
-                        </Pressable>
-                      </div>
-                    )}
+                    {parent && <ParentTaskLink parent={parent} onSelectTask={onSelectTask} />}
                     <Pressable
                       onClick={() => onSelectTask(item.task)}
                       className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block"
@@ -331,21 +339,7 @@ export function UniversalActionQueue({
 
           <div className="divide-y divide-slate-100">
             {displayedSubmissions.map((item, idx) => {
-              const parentTitle =
-                item.parentTaskTitle ||
-                (item.task as any).parentTaskTitle ||
-                (item.task as any).parentSchoolTaskTitle ||
-                (item.task as any).parentTask?.title;
-              const parentCode =
-                item.parentTaskCode ||
-                (item.task as any).parentTaskCode ||
-                (item.task as any).parentSchoolTaskCode ||
-                (item.task as any).parentTask?.code;
-              const parentId =
-                item.parentTaskId ||
-                (item.task as any).parentTaskId ||
-                (item.task as any).parentSchoolTaskId ||
-                (item.task as any).parentTask?.id;
+              const parent = resolveParentTaskRef(item);
 
               return (
                 <div
@@ -353,24 +347,7 @@ export function UniversalActionQueue({
                   className="py-2.5 flex items-start justify-between gap-3 group"
                 >
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    {parentTitle && (
-                      <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
-                        <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
-                        <Pressable
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectTask({
-                              id: parentId || "parent",
-                              title: parentTitle,
-                              taskCode: parentCode,
-                            } as SchoolTask);
-                          }}
-                          className="hover:text-slate-700 truncate text-left"
-                        >
-                          {parentCode ? `[${parentCode}] ` : ""}{parentTitle}
-                        </Pressable>
-                      </div>
-                    )}
+                    {parent && <ParentTaskLink parent={parent} onSelectTask={onSelectTask} />}
                     <Pressable
                       onClick={() => onSelectTask(item.task)}
                       className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block"
