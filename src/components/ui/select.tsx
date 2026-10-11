@@ -4,7 +4,7 @@ import * as React from "react";
 import { Select as BaseSelect } from "@base-ui/react/select";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { focusRingClass } from "@/components/ui/focus-ring";
+import { fieldFocusRingClass } from "@/components/ui/focus-ring";
 
 export interface SelectOption {
   value: string;
@@ -126,7 +126,7 @@ export function Select({
           "flex w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-secondary outline-none select-none",
           compact ? "h-11 px-2 text-compact sm:h-7" : "h-12 px-3 text-base sm:h-9 sm:text-sm",
           "transition-colors duration-100 motion-reduce:transition-none",
-          `hover:bg-accent focus-visible:bg-selected ${focusRingClass} data-[popup-open]:bg-selected`,
+          `hover:bg-accent focus-visible:bg-selected ${fieldFocusRingClass} data-[popup-open]:bg-selected`,
           "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
           "aria-invalid:bg-danger-soft aria-invalid:text-destructive",
           className,

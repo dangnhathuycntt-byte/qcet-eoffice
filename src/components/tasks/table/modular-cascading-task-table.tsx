@@ -1,5 +1,6 @@
 "use client";
 
+import { getSelectionGroupPositions } from "@/lib/selection-group";
 import * as React from "react";
 import {
   Building2,
@@ -804,21 +805,10 @@ export function ModularCascadingTaskTable({
   }, [paginatedResult.items]);
 
   // 9b. Selection group positions — contiguous selected rows share a visual block
-  const selectionGroupPositions = React.useMemo(() => {
-    const items = paginatedResult.items;
-    const selected = tableState.selectedIds;
-    const positions = new Map<string, "first" | "middle" | "last" | "only">();
-    for (let i = 0; i < items.length; i++) {
-      if (!selected.has(items[i].id)) continue;
-      const prevSelected = i > 0 && selected.has(items[i - 1].id);
-      const nextSelected = i < items.length - 1 && selected.has(items[i + 1].id);
-      if (prevSelected && nextSelected) positions.set(items[i].id, "middle");
-      else if (prevSelected) positions.set(items[i].id, "last");
-      else if (nextSelected) positions.set(items[i].id, "first");
-      else positions.set(items[i].id, "only");
-    }
-    return positions;
-  }, [paginatedResult.items, tableState.selectedIds]);
+  const selectionGroupPositions = React.useMemo(
+    () => getSelectionGroupPositions(visibleIds, tableState.selectedIds),
+    [visibleIds, tableState.selectedIds],
+  );
 
   // 10. Table Container Ref, Task Selection & URL Deep Linking
   const containerRef = React.useRef<HTMLDivElement>(null);
