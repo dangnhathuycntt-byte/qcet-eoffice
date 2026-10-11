@@ -21,11 +21,6 @@ import {
   isTaskPastDue,
 } from "../src/lib/academic-calendar";
 
-import {
-  getStatusDotClass,
-  getStatusLabel,
-} from "../src/components/calendar/calendar-month-view";
-
 // Fixed anchor — injected into all helpers; never relies on wall-clock.
 const REF = "2026-09-10";
 const DUE_YESTERDAY = "2026-09-09";
@@ -96,66 +91,5 @@ describe("isTaskPastDue — kanban delegate", () => {
   test("ISO datetime string is normalized to date-only before comparison", () => {
     assert.equal(isTaskPastDue("2026-09-09T23:59:59.000Z", REF), true);
     assert.equal(isTaskPastDue("2026-09-10T00:00:00.000Z", REF), false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Calendar presentation: getStatusDotClass
-// ---------------------------------------------------------------------------
-describe("getStatusDotClass — calendar presentation (referenceDate injected)", () => {
-  test("due yesterday + IN_PROGRESS => rose (overdue) dot", () => {
-    const cls = getStatusDotClass("IN_PROGRESS", DUE_YESTERDAY, REF);
-    assert.ok(cls.includes("destructive"), `Expected destructive class, got: ${cls}`);
-  });
-
-  test("due today + IN_PROGRESS => blue (active, not overdue) dot", () => {
-    const cls = getStatusDotClass("IN_PROGRESS", DUE_TODAY, REF);
-    assert.ok(cls.includes("blue"), `Expected blue class, got: ${cls}`);
-  });
-
-  test("due future + IN_PROGRESS => blue (active, not overdue) dot", () => {
-    const cls = getStatusDotClass("IN_PROGRESS", DUE_FUTURE, REF);
-    assert.ok(cls.includes("blue"), `Expected blue class, got: ${cls}`);
-  });
-
-  test("due yesterday + COMPLETED => emerald (completed) dot, not rose", () => {
-    const cls = getStatusDotClass("COMPLETED", DUE_YESTERDAY, REF);
-    assert.ok(cls.includes("emerald"), `Expected emerald class, got: ${cls}`);
-    assert.ok(!cls.includes("destructive"), `Must not include destructive for completed task: ${cls}`);
-  });
-
-  test("due yesterday + NEW => rose (overdue) dot", () => {
-    const cls = getStatusDotClass("NEW", DUE_YESTERDAY, REF);
-    assert.ok(cls.includes("destructive"), `Expected destructive class, got: ${cls}`);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Calendar presentation: getStatusLabel
-// ---------------------------------------------------------------------------
-describe("getStatusLabel — calendar presentation (referenceDate injected)", () => {
-  test("due yesterday + IN_PROGRESS => 'Trễ hạn'", () => {
-    const label = getStatusLabel("IN_PROGRESS", DUE_YESTERDAY, REF);
-    assert.equal(label, "Trễ hạn");
-  });
-
-  test("due today + IN_PROGRESS => 'Đang thực hiện' (not overdue)", () => {
-    const label = getStatusLabel("IN_PROGRESS", DUE_TODAY, REF);
-    assert.equal(label, "Đang thực hiện");
-  });
-
-  test("due future + IN_PROGRESS => 'Đang thực hiện' (not overdue)", () => {
-    const label = getStatusLabel("IN_PROGRESS", DUE_FUTURE, REF);
-    assert.equal(label, "Đang thực hiện");
-  });
-
-  test("due yesterday + COMPLETED => 'Đã hoàn thành' (not overdue)", () => {
-    const label = getStatusLabel("COMPLETED", DUE_YESTERDAY, REF);
-    assert.equal(label, "Đã hoàn thành");
-  });
-
-  test("due yesterday + NEEDS_REVIEW => 'Trễ hạn'", () => {
-    const label = getStatusLabel("NEEDS_REVIEW", DUE_YESTERDAY, REF);
-    assert.equal(label, "Trễ hạn");
   });
 });

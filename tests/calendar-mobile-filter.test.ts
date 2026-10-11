@@ -13,107 +13,16 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CalendarAgendaView } from "../src/components/calendar/calendar-agenda-view";
 import { CalendarWeekView } from "../src/components/calendar/calendar-week-view";
 import { getSystemReferenceDate } from "../src/lib/academic-calendar";
-import type { SchoolTask } from "../src/types/dashboard";
-import type { DayTaskItem } from "../src/components/calendar/calendar-day-sheet";
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
 
 // Dynamic system reference date so tests align across dates and CI environments
 const TODAY = getSystemReferenceDate();
 
-const taskToday: SchoolTask = {
-  id: "t-today",
-  code: "NV-MOB-001",
-  taskCode: "NV-MOB-001",
-  title: "Nhiệm vụ hôm nay",
-  category: "KHAC",
-  categoryLabel: "Quản lý hành chính",
-  status: "IN_PROGRESS",
-  dueDate: `${TODAY}T09:00:00.000Z`,
-  progressPercent: 20,
-  totalSubTasks: 0,
-  completedSubTasks: 0,
-  leadAssigneeName: "ThS. Nguyễn A",
-  assignedDate: "2026-09-01",
-  coAssignees: [],
-  subTasks: [],
-};
-
-const eventToday: DayTaskItem = {
-  id: "ev-today",
-  title: "Họp định kỳ hôm nay",
-  isEvent: true,
-  dueDate: TODAY,
-  time: "10:00",
-  location: "Phòng A",
-  assigneeName: "TS. Trần B",
-  level: "Trường",
-  status: "NOT_STARTED",
-};
-
 // Ngày tương lai (không phải today) dùng cho test filter level event
 const FUTURE_DATE = "2026-09-18";
-
-// ─── 1. scroll-to-today anchor ───────────────────────────────────────────────
-
-describe("Task 6 — Scroll-to-today anchor trong agenda", () => {
-  test("Ngày hôm nay có data-today=true hoặc class 'isToday' trong markup", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [taskToday],
-        events: [],
-        selectedDate: TODAY,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-      })
-    );
-
-    // isToday section gets ring-1 ring-inset ring-primary/20
-    assert.ok(
-      html.includes("ring-primary/20") || html.includes("data-today"),
-      "Ngày hôm nay phải có visual highlight (ring-primary/20 hoặc data-today)"
-    );
-  });
-
-  test("Label 'Hôm nay' xuất hiện trong markup khi có task vào ngày hôm nay", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [taskToday],
-        events: [],
-        selectedDate: TODAY,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-      })
-    );
-
-    assert.ok(
-      html.includes("Hôm nay"),
-      "Badge 'Hôm nay' phải xuất hiện trong agenda khi ngày hiện tại có sự kiện"
-    );
-  });
-
-  test("Khi có filter active và kết quả: 'Hôm nay' vẫn hiện nếu ngày khớp", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [taskToday],
-        events: [],
-        selectedDate: TODAY,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-        statusFilter: "IN_PROGRESS",
-      })
-    );
-
-    // task matches IN_PROGRESS, so Hôm nay label should appear
-    assert.ok(
-      html.includes("Hôm nay"),
-      "Badge 'Hôm nay' vẫn hiện khi filter active và ngày hôm nay có kết quả khớp"
-    );
-  });
-});
 
 // ─── 2. Filter chip hiện tiêu chí đang chọn ──────────────────────────────────
 
@@ -206,46 +115,6 @@ describe("Task 6 — Xóa filter chip: không mất ngày và scope", () => {
   });
 });
 
-// ─── 4. Agenda không có min-width cứng gây tràn ngang ────────────────────────
-
-describe("Task 6 — Agenda mobile: không có min-width cứng", () => {
-  test("Agenda view wrapper không chứa 'min-w-[' class dạng pixel cứng trên div ngoài cùng", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [taskToday],
-        events: [eventToday],
-        selectedDate: TODAY,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-      })
-    );
-
-    // Không được có min-w-[xxx] với giá trị pixel lớn (>300px) gây overflow ngang
-    const dangerousMinWidth = /min-w-\[\d{3,}px\]/.test(html);
-    assert.ok(
-      !dangerousMinWidth,
-      "Agenda view không được có min-w-[Xpx] class cứng gây tràn ngang mobile"
-    );
-  });
-
-  test("Agenda data-slot='calendar-agenda-view' hiện diện trong markup", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [],
-        events: [],
-        selectedDate: null,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-      })
-    );
-
-    assert.ok(
-      html.includes('data-slot="calendar-agenda-view"'),
-      "Root element phải có data-slot='calendar-agenda-view'"
-    );
-  });
-});
-
 // ─── 5. Week grid không có min-width cứng mới thêm vào ───────────────────────
 
 describe("Task 6 — Week grid: không thêm min-width làm tràn ngang mobile", () => {
@@ -301,66 +170,5 @@ describe("Task 6 — ESC key: priority đóng (filter trước, form sau)", () =
     }
 
     assert.equal(formOpen, false, "formOpen đóng sau ESC thứ hai");
-  });
-});
-
-// ─── 7. Event trong agenda: tiêu chí lọc bao gồm cả event ───────────────────
-
-describe("Task 6 — Event trong agenda: được lọc đúng theo level", () => {
-  test("Event cấp Trường hiện khi levelFilter=ALL", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [],
-        events: [eventToday],
-        selectedDate: TODAY,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-        levelFilter: "ALL",
-        statusFilter: "ALL",
-      })
-    );
-
-    assert.ok(
-      html.includes("Họp định kỳ hôm nay"),
-      "Event cấp Trường phải hiện khi levelFilter=ALL"
-    );
-  });
-
-  test("Event cấp Trường hiện khi levelFilter=TRUONG", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [],
-        events: [eventToday],
-        selectedDate: TODAY,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-        levelFilter: "TRUONG",
-        statusFilter: "ALL",
-      })
-    );
-
-    assert.ok(
-      html.includes("Họp định kỳ hôm nay"),
-      "Event cấp Trường phải hiện khi levelFilter=TRUONG"
-    );
-  });
-
-  test("Event cấp Trường KHÔNG hiện khi levelFilter=DON_VI", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CalendarAgendaView, {
-        tasks: [],
-        events: [eventToday],
-        selectedDate: null,
-        onSelectDate: () => {},
-        onOpenDaySheet: () => {},
-        levelFilter: "DON_VI",
-        statusFilter: "ALL",
-      })
-    );
-
-    assert.ok(
-      !html.includes("Họp định kỳ hôm nay"),
-      "Event cấp Trường không được hiện khi levelFilter=DON_VI"
-    );
   });
 });

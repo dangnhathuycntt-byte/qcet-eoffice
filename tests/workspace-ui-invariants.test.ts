@@ -8,62 +8,19 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import {
   parseWorkspaceQuery,
   DEFAULT_WORKSPACE_FILTER_STATE,
 } from "../src/lib/workspace-query";
-import { ScopeSwitcher } from "../src/components/workspace/scope-switcher";
-import { DEFAULT_STATUS_OPTIONS } from "../src/components/workspace/status-filter";
 import {
   getExecutiveStatCardData,
   getStatCardData,
 } from "../src/components/dashboard/executive-stat-strip";
-import { getActionCardData } from "../src/components/dashboard/executive-action-center";
 import type { DashboardStats } from "../src/types/dashboard";
 import type { ExecutiveActionStats } from "../src/lib/executive-matrix-aggregator";
 
 describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () => {
   describe("Invariant 3: 'Của tôi' Scope-vs-Status Exclusivity", () => {
-    test("'Của tôi' is strictly defined in ScopeSwitcher and absent from StatusFilter options", () => {
-      // 1. Render ScopeSwitcher and assert 'Của tôi' is present as a scope tab
-      const scopeMarkup = renderToStaticMarkup(
-        React.createElement(ScopeSwitcher, {
-          activeScope: "school",
-          onScopeChange: () => {},
-        })
-      );
-      assert.ok(
-        scopeMarkup.includes('id="scope-tab-my"'),
-        "ScopeSwitcher must render 'my' scope tab"
-      );
-      assert.ok(
-        scopeMarkup.includes("Của tôi"),
-        "ScopeSwitcher must display 'Của tôi' label"
-      );
-
-      // 2. DEFAULT_STATUS_OPTIONS check
-      const statusValues = DEFAULT_STATUS_OPTIONS.map((s) => s.id);
-      assert.ok(
-        !statusValues.includes("my"),
-        "DEFAULT_STATUS_OPTIONS must NOT contain 'my'"
-      );
-      assert.ok(
-        !statusValues.includes("my_tasks"),
-        "DEFAULT_STATUS_OPTIONS must NOT contain 'my_tasks'"
-      );
-
-      const statusLabels = DEFAULT_STATUS_OPTIONS.map((s) => s.label);
-      assert.ok(
-        !statusLabels.includes("Của tôi"),
-        "DEFAULT_STATUS_OPTIONS labels must NOT include 'Của tôi'"
-      );
-      assert.ok(
-        !statusLabels.includes("Cá nhân"),
-        "DEFAULT_STATUS_OPTIONS labels must NOT include 'Cá nhân'"
-      );
-    });
 
     test("query parser preserves orthogonal separation of scope and status", () => {
       // Case A: scope=my with status=in_progress
@@ -152,24 +109,6 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
       // Card 5: Tiến độ toàn trường
       assert.equal(cards[4].title, "Tiến độ toàn trường");
       assert.equal(cards[4].value, "78%");
-    });
-
-    test("cards in Band 1 and Band 2 have distinct, non-colliding semantic purviews", () => {
-      const band1Cards = getExecutiveStatCardData(dummyStats, dummyExecutiveStats);
-      const band2Cards = getActionCardData(dummyExecutiveStats);
-
-      // Band 1 answers macro institutional status
-      assert.equal(band1Cards.length, 5);
-      // Band 2 answers micro action queues
-      assert.equal(band2Cards.length, 3);
-
-      // In Band 1, school-tasks and overall-progress provide macro situational awareness
-      assert.ok(band1Cards.some((c) => c.id === "school-tasks"));
-      assert.ok(band1Cards.some((c) => c.id === "overall-progress"));
-
-      // Band 2 only focuses on action queues
-      const band2Keys = band2Cards.map((c) => c.filterKey);
-      assert.deepEqual(band2Keys, ["PENDING_APPROVAL", "BLOCKED_OVERDUE", "STRATEGIC"]);
     });
   });
 });

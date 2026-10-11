@@ -9,8 +9,8 @@ import {
   getStatusBadgeConfig,
   CATEGORY_TABS,
   filterTasksForTable,
-} from "../src/components/dashboard/cascading-task-table";
-import { flattenPersonalTasks } from "../src/components/tasks/cascading-task-table";
+  flattenPersonalTasks,
+} from "../src/components/tasks/cascading-task-table";
 import { TaskTableHeader } from "../src/components/tasks/table/components/task-table-header";
 import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
 import type { SchoolTask } from "../src/types/dashboard";
@@ -300,14 +300,13 @@ describe("Plan 10.8/10.9: shortcut strip removal, lightweight help trigger, comp
     assert.ok(!html.includes("nhiệm vụ"));
     assert.ok(html.includes("Số lượng văn bản trên mỗi trang"));
   });
-  // NOTE on placement: neither src/components/tasks/cascading-task-table.tsx
-  // (facade delegating to ModularCascadingTaskTable) nor
-  // src/components/dashboard/cascading-task-table.tsx (re-export facade)
-  // renders its own pagination footer markup — the footer lives in
+  // NOTE on placement: src/components/tasks/cascading-task-table.tsx
+  // (facade delegating to ModularCascadingTaskTable) does not render its own
+  // pagination footer markup — the footer lives in
   // src/components/tasks/table/components/task-pagination-bar.tsx and is
   // composed by ModularCascadingTaskTable. Pagination copy is therefore
   // asserted via source-string on task-pagination-bar.tsx plus a direct
-  // render of TaskPaginationBar below, not via the facade components.
+  // render of TaskPaginationBar below, not via the facade.
 
   it("persistent shortcut strip is absent: footer markup lacks 'Phím tắt nhanh'", () => {
     const html = renderToStaticMarkup(

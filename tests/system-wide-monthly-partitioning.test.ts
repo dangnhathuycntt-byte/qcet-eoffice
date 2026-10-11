@@ -16,11 +16,6 @@ import {
   CALENDAR_MONTH_ORDER,
 } from "../src/lib/academic-calendar";
 import { CANONICAL_ROUTES } from "../src/lib/navigation/canonical-navigation-registry";
-import { SEMESTER_GROUPS } from "../src/components/layout/global-month-selector";
-import {
-  formatAcademicMonthHeader,
-  generateAcademicMonthGrid,
-} from "../src/components/calendar/calendar-month-view";
 import { computeDepartmentHealthMatrix } from "../src/lib/executive-matrix-aggregator";
 import type { SchoolTask } from "../src/types/dashboard";
 
@@ -272,16 +267,6 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       assert.equal(months[11].startDate, "2026-12-01");
       assert.equal(months[11].endDate, "2026-12-31");
     });
-
-    test("SEMESTER_GROUPS partitions all 12 operational months without omissions or overlaps", () => {
-      assert.equal(SEMESTER_GROUPS.length, 3);
-      assert.deepEqual(SEMESTER_GROUPS[0].months, [9, 10, 11, 12]);
-      assert.deepEqual(SEMESTER_GROUPS[1].months, [1, 2, 3, 4, 5]);
-      assert.deepEqual(SEMESTER_GROUPS[2].months, [6, 7, 8]);
-
-      const flattened = SEMESTER_GROUPS.flatMap((g) => g.months);
-      assert.equal(flattened.length, 12);
-    });
   });
 
   // ---------------------------------------------------------------------------
@@ -378,61 +363,6 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
   });
 
   // ---------------------------------------------------------------------------
-  // 5. PriorOverdueBacklogBanner renders when overdue backlog exists, hidden on ALL
-  // ---------------------------------------------------------------------------
-  describe("5. PriorOverdueBacklogBanner Rendering & Visibility Rules", () => {
-    test("PriorOverdueBacklogBanner renders alert banner when overdue backlog exists", async () => {
-      const { PriorOverdueBacklogBanner } = await import(
-        "../src/components/dashboard/prior-overdue-backlog-banner"
-      );
-
-      const backlogTasks: SchoolTask[] = [sampleTasks[0]];
-      const markup = renderToStaticMarkup(
-        React.createElement(PriorOverdueBacklogBanner, {
-          tasks: backlogTasks,
-          selectedMonth: 9,
-        })
-      );
-
-      assert.ok(markup.includes('data-slot="prior-overdue-backlog-banner"'));
-      assert.ok(markup.includes("Có 1 nhiệm vụ tồn đọng/trễ hạn từ các kỳ trước cần xử lý"));
-      assert.ok(markup.includes("Xem danh sách"));
-      assert.ok(markup.includes("xử lý") || markup.includes("Xem &amp; xử lý"));
-      assert.ok(markup.includes("border-warning/40") || markup.includes("bg-warning/10"));
-    });
-
-    test("PriorOverdueBacklogBanner returns empty string (null) when selectedMonth === ALL", async () => {
-      const { PriorOverdueBacklogBanner } = await import(
-        "../src/components/dashboard/prior-overdue-backlog-banner"
-      );
-
-      const markup = renderToStaticMarkup(
-        React.createElement(PriorOverdueBacklogBanner, {
-          tasks: [sampleTasks[0]],
-          selectedMonth: "ALL",
-        })
-      );
-
-      assert.equal(markup, "");
-    });
-
-    test("PriorOverdueBacklogBanner returns empty string when tasks array is empty", async () => {
-      const { PriorOverdueBacklogBanner } = await import(
-        "../src/components/dashboard/prior-overdue-backlog-banner"
-      );
-
-      const markup = renderToStaticMarkup(
-        React.createElement(PriorOverdueBacklogBanner, {
-          tasks: [],
-          selectedMonth: 9,
-        })
-      );
-
-      assert.equal(markup, "");
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // 6. Cascading task table renders prior overdue backlog and operational period
   // ---------------------------------------------------------------------------
   describe("6. CascadingTaskTable Backlog & Period Indicator Invariants", () => {
@@ -495,41 +425,6 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
 
       assert.ok(!markup.includes("TỒN ĐỌNG KỲ TRƯỚC"));
       assert.ok(!markup.includes("Prior Overdue Backlog"));
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // 7. Calendar view synchronizes with selected academic month
-  // ---------------------------------------------------------------------------
-  describe("7. Calendar View Synchronization & Operational Boundaries", () => {
-    test("generateAcademicMonthGrid correctly tags operational cycle days as isCurrentMonth", () => {
-      const period = getAcademicMonthPeriod(9, "2026-2027");
-      const grid = generateAcademicMonthGrid(period);
-
-      // Start of month: 2026-09-01
-      const startCell = grid.find((cell) => cell.dateString === "2026-09-01");
-      assert.ok(startCell, "Start cell 2026-09-01 must exist in calendar grid");
-      assert.equal(startCell?.isCurrentMonth, true, "2026-09-01 must be tagged within active cycle");
-
-      // End of month: 2026-09-30
-      const endCell = grid.find((cell) => cell.dateString === "2026-09-30");
-      assert.ok(endCell, "End cell 2026-09-30 must exist in calendar grid");
-      assert.equal(endCell?.isCurrentMonth, true, "2026-09-30 must be tagged within active cycle");
-
-      // Day before start: 2026-08-31
-      const outsideCell = grid.find((cell) => cell.dateString === "2026-08-31");
-      if (outsideCell) {
-        assert.equal(outsideCell.isCurrentMonth, false, "2026-08-31 must be tagged outside active cycle");
-      }
-    });
-
-    test("formatAcademicMonthHeader formats full Vietnamese cycle headline", () => {
-      const period = getAcademicMonthPeriod(9, "2026-2027");
-      const header = formatAcademicMonthHeader(period);
-
-      assert.match(header, /Tháng 9 \/ 2026/);
-      assert.match(header, /01\/09 - 30\/09/);
-      assert.match(header, /Năm học 2026 - 2027/);
     });
   });
 

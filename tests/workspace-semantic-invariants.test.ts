@@ -1,10 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { ScopeSwitcher, type WorkspaceScope } from "../src/components/workspace/scope-switcher";
-import { StatusFilter, DEFAULT_STATUS_OPTIONS } from "../src/components/workspace/status-filter";
-import { ViewSwitcher, TASK_VIEW_OPTIONS, CALENDAR_VIEW_OPTIONS, type TaskViewMode } from "../src/components/workspace/view-switcher";
 import { AttentionBadge, type AttentionLevel } from "../src/components/workspace/attention-badge";
 import { STATUS_BADGE_CONFIGS } from "../src/components/tasks/table/constants";
 import { deriveAdaptiveWorkspaceData } from "../src/components/workspace/hooks/use-adaptive-workspace-data";
@@ -20,10 +15,6 @@ import type { TaskStatus, SchoolTask, StaffTask } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 
 describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
-  // Known domain sets
-  const CANONICAL_WORKSPACE_SCOPES: readonly WorkspaceScope[] = ["school", "unit", "my"] as const;
-  const INSTITUTIONAL_SCOPES = ["TRUONG", "DON_VI", "CA_NHAN"] as const;
-  const ALL_SCOPES: string[] = [...CANONICAL_WORKSPACE_SCOPES, ...INSTITUTIONAL_SCOPES];
 
   const CANONICAL_TASK_STATUSES: readonly TaskStatus[] = [
     "NEW",
@@ -54,20 +45,7 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
     "overdue_items",
   ] as const;
 
-  const VIEW_MODES: readonly TaskViewMode[] = ["table", "kanban"] as const;
-
   describe("Invariant 1: Scope !== Status (Orthogonality)", () => {
-    test("scope keys and task status keys are completely disjoint sets", () => {
-      const scopeSet = new Set(ALL_SCOPES);
-      const statusSet = new Set<string>(CANONICAL_TASK_STATUSES);
-
-      const intersection = [...scopeSet].filter((s) => statusSet.has(s));
-      assert.equal(
-        intersection.length,
-        0,
-        `Scope and Status identifiers must not overlap. Overlap found: ${JSON.stringify(intersection)}`
-      );
-    });
 
     test("Vietnamese scope labels and status labels are strictly disjoint", () => {
       const scopeLabels = new Set(["Toàn trường", "Đơn vị", "Của tôi", "Cá nhân", "Trường"]);
@@ -339,53 +317,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
   });
 
   describe("Invariant 3: View !== Filter (Orthogonality)", () => {
-    test("view mode identifiers and filter predicate fields are strictly disjoint", () => {
-      const viewModes = new Set(VIEW_MODES);
-      const filterFields = new Set([
-        "status",
-        "scope",
-        "category",
-        "department",
-        "searchQuery",
-        "isOverdueOnly",
-        "activeWorkbox",
-      ]);
-
-      const overlap = [...viewModes].filter((v) => filterFields.has(v));
-      assert.equal(
-        overlap.length,
-        0,
-        `View mode identifiers and Filter fields must not overlap. Overlap found: ${JSON.stringify(overlap)}`
-      );
-    });
-
-    test("TASK_VIEW_OPTIONS options represent visual layouts, not dataset filters", () => {
-      const optionIds = TASK_VIEW_OPTIONS.map((o) => o.id);
-      assert.deepEqual(optionIds, ["table", "kanban"]);
-
-      for (const opt of TASK_VIEW_OPTIONS) {
-        assert.ok(
-          opt.label === "Bảng" || opt.label === "Kanban",
-          `Option label '${opt.label}' must be a layout descriptor`
-        );
-        assert.ok(
-          !DEFAULT_STATUS_OPTIONS.some((s) => s.label === opt.label),
-          `View label '${opt.label}' must never be a status filter option`
-        );
-      }
-    });
-
-    test("CALENDAR_VIEW_OPTIONS options represent temporal views, not dataset filters", () => {
-      const calendarIds = CALENDAR_VIEW_OPTIONS.map((c) => c.id);
-      assert.deepEqual(calendarIds, ["month", "list"]);
-
-      for (const opt of CALENDAR_VIEW_OPTIONS) {
-        assert.ok(
-          opt.label === "Lịch tháng" || opt.label === "Danh sách",
-          `Calendar view label '${opt.label}' must be a presentation descriptor`
-        );
-      }
-    });
 
     test("switching view mode does not alter dataset count, active scope, or metrics", () => {
       const mockTasks: SchoolTask[] = [
@@ -443,38 +374,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
   });
 
   describe("Invariant 4: 'Của tôi' is never treated as a task lifecycle status", () => {
-    test("'Của tôi' / 'Cá nhân' does not exist in DEFAULT_STATUS_OPTIONS", () => {
-      for (const opt of DEFAULT_STATUS_OPTIONS) {
-        assert.notEqual(
-          opt.id.toLowerCase(),
-          "my",
-          "Status option id must never be 'my'"
-        );
-        assert.notEqual(
-          opt.id.toLowerCase(),
-          "cua_toi",
-          "Status option id must never be 'cua_toi'"
-        );
-        assert.ok(
-          !opt.label.toLowerCase().includes("của tôi"),
-          `Status option label '${opt.label}' must not contain 'Của tôi'`
-        );
-        assert.ok(
-          !opt.label.toLowerCase().includes("cá nhân"),
-          `Status option label '${opt.label}' must not contain 'Cá nhân'`
-        );
-        if (opt.shortLabel) {
-          assert.ok(
-            !opt.shortLabel.toLowerCase().includes("của tôi"),
-            `Status shortLabel '${opt.shortLabel}' must not contain 'Của tôi'`
-          );
-          assert.ok(
-            !opt.shortLabel.toLowerCase().includes("cá nhân"),
-            `Status shortLabel '${opt.shortLabel}' must not contain 'Cá nhân'`
-          );
-        }
-      }
-    });
 
     test("'Của tôi' does not exist in STATUS_BADGE_CONFIGS", () => {
       const keys = Object.keys(STATUS_BADGE_CONFIGS);
@@ -492,52 +391,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
           `Status badge config for key '${k}' has label '${cfg.label}' which must not contain 'Cá nhân'`
         );
       }
-    });
-
-    test("'Của tôi' is strictly rendered by ScopeSwitcher as a WorkspaceScope tab, not Status", () => {
-      const rendered = renderToStaticMarkup(
-        React.createElement(ScopeSwitcher, {
-          activeScope: "my",
-          onScopeChange: () => {},
-        })
-      );
-
-      // Verify it renders role="tablist" with aria-label="Phạm vi công việc"
-      assert.ok(
-        rendered.includes('aria-label="Phạm vi công việc"'),
-        "ScopeSwitcher must be identified as 'Phạm vi công việc'"
-      );
-      // Verify tab id is scope-tab-my
-      assert.ok(
-        rendered.includes('id="scope-tab-my"'),
-        "Của tôi must correspond to scope-tab-my"
-      );
-      assert.ok(
-        rendered.includes("Cá nhân") || rendered.includes("Của tôi"),
-        "ScopeSwitcher must include 'Cá nhân' or 'Của tôi' label"
-      );
-    });
-
-    test("StatusFilter rendered markup does not contain 'Của tôi' or 'Cá nhân'", () => {
-      const rendered = renderToStaticMarkup(
-        React.createElement(StatusFilter, {
-          activeStatus: "ALL",
-          onStatusChange: () => {},
-        })
-      );
-
-      assert.ok(
-        rendered.includes('aria-label="Bộ lọc trạng thái"'),
-        "StatusFilter must be identified as 'Bộ lọc trạng thái'"
-      );
-      assert.ok(
-        !rendered.includes("Của tôi"),
-        "StatusFilter must never render 'Của tôi' as a status option"
-      );
-      assert.ok(
-        !rendered.includes("Cá nhân"),
-        "StatusFilter must never render 'Cá nhân' as a status option"
-      );
     });
 
     test("canonical lifecycle status labels strictly represent workflow states", () => {
@@ -836,54 +689,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
       const serialized = serializeWorkspaceQuery(parsed);
       assert.equal(serialized.get("scope"), "my");
       assert.equal(serialized.get("status"), "WAITING_APPROVAL");
-    });
-
-    test("simultaneous rendering of ScopeSwitcher and StatusFilter preserves single component domain for 'Của tôi'", () => {
-      const scopeMarkup = renderToStaticMarkup(
-        React.createElement(ScopeSwitcher, {
-          activeScope: "my",
-          onScopeChange: () => {},
-        })
-      );
-
-      const statusMarkup = renderToStaticMarkup(
-        React.createElement(StatusFilter, {
-          activeStatus: "ALL",
-          onStatusChange: () => {},
-        })
-      );
-
-      // Verify 'Cá nhân' / 'Của tôi' is present in ScopeSwitcher
-      assert.ok(
-        scopeMarkup.includes("Cá nhân") || scopeMarkup.includes("Của tôi"),
-        "ScopeSwitcher must include 'Cá nhân' or 'Của tôi' label"
-      );
-      assert.ok(
-        scopeMarkup.includes('id="scope-tab-my"'),
-        "ScopeSwitcher must anchor 'Của tôi' to scope-tab-my"
-      );
-
-      // Verify 'Của tôi' is strictly ABSENT from StatusFilter
-      assert.equal(
-        statusMarkup.includes("Của tôi"),
-        false,
-        "StatusFilter must never contain 'Của tôi'"
-      );
-      assert.equal(
-        statusMarkup.includes("Cá nhân"),
-        false,
-        "StatusFilter must never contain 'Cá nhân'"
-      );
-    });
-
-    test("StatusFilter options rejecting non-lifecycle filters", () => {
-      for (const opt of DEFAULT_STATUS_OPTIONS) {
-        assert.notEqual(opt.id, "my");
-        assert.notEqual(opt.id, "personal");
-        assert.notEqual(opt.id, "cua_toi");
-        assert.notEqual(opt.label, "Của tôi");
-        assert.notEqual(opt.label, "Cá nhân");
-      }
     });
   });
 

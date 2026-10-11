@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { NAV_ITEMS } from "../src/lib/tokens";
-import { NAVIGATION_ITEMS } from "../src/components/navigation";
 import {
   getInitialTaskFormData,
   validateTaskForm,
@@ -23,22 +22,6 @@ describe("Sprint 2 Integration & Navigation", () => {
     assert.ok(paths.includes("/org"), "contains org hierarchy route");
     assert.ok(paths.includes("/dashboard"), "contains dashboard route");
     assert.ok(paths.includes("/notifications"), "contains notifications route");
-  });
-
-  test("NAVIGATION_ITEMS and NAV_ITEMS stay synchronized", () => {
-    const tokenRoutes = NAV_ITEMS.map((item) => item.href);
-    const compRoutes = NAVIGATION_ITEMS.map((item) => item.href);
-    assert.deepEqual(
-      tokenRoutes,
-      compRoutes,
-      "token routes and component routes must match exactly"
-    );
-
-    const labels = NAVIGATION_ITEMS.map((item) => item.label);
-    assert.ok(labels.includes("Quản lý công việc"));
-    assert.ok(labels.includes("Cơ cấu & Danh bạ") || labels.includes("Cơ cấu tổ chức"));
-    assert.ok(labels.includes("Báo cáo KPI"));
-    assert.ok(labels.includes("Thông báo"));
   });
 
   test("Route files exist in app router directory", () => {

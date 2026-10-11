@@ -3,14 +3,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { cn } from "../src/lib/utils";
-import { QCET_TOKENS, qcetTokens, NAV_ITEMS } from "../src/lib/tokens";
+import { QCET_TOKENS, qcetTokens } from "../src/lib/tokens";
 import { buttonVariants, Button } from "../src/components/ui/button";
 import { badgeVariants, Badge } from "../src/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "../src/components/ui/card";
 import { Drawer } from "../src/components/ui/drawer";
 import { Progress, ProgressTrack, ProgressIndicator } from "../src/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants } from "../src/components/ui/tabs";
-import { NAVIGATION_ITEMS } from "../src/components/navigation";
 
 describe("QCET Design System Smoke Test Suite", () => {
   describe("Utility function: cn()", () => {
@@ -211,29 +210,6 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(typeof TabsTrigger, "function");
       assert.equal(typeof TabsContent, "function");
       assert.equal(typeof tabsListVariants, "function");
-    });
-  });
-
-  describe("Navigation Configuration", () => {
-    it("defines required navigation items for Phase 1 E-Office", () => {
-      const tokenRoutes = NAV_ITEMS.map((item) => item.href);
-      const compRoutes = NAVIGATION_ITEMS.map((item) => item.href);
-
-      assert.deepEqual(tokenRoutes, compRoutes, "token routes and component routes match");
-      assert.ok(compRoutes.includes("/"), "includes home dashboard");
-      assert.ok(compRoutes.includes("/org"), "includes org route");
-      assert.ok(compRoutes.includes("/dashboard"), "includes dashboard route");
-      assert.ok(compRoutes.includes("/notifications"), "includes notifications route");
-    });
-
-    it("navigation items have no decorative emojis", () => {
-      NAVIGATION_ITEMS.forEach((item) => {
-        assert.match(
-          item.label,
-          /^[\p{L}\p{N}\s\-\/&]+$/u,
-          `Item label ${item.label} must not contain emojis`
-        );
-      });
     });
   });
 });

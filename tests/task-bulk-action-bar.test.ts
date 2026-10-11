@@ -14,7 +14,7 @@ import {
   getBatchStatusUpdatePayload,
   getBatchDeadlinePayload,
   getBatchReassignPayload,
-} from "../src/components/tasks/table/components/task-bulk-action-bar";
+} from "../src/components/tasks/table/components/batch-action-bar";
 import {
   TaskRow,
   areTaskRowPropsEqual,

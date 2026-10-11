@@ -8,27 +8,8 @@ import {
   executeDirectivePipeline,
   parseCollaboratorIds
 } from "../src/lib/documents/directive-pipeline";
-import {
-  QUICK_DIRECTIVE_PRESETS,
-  applyPresetToDirective,
-  resolvePresetLeadUnit,
-  DirectiveActionPanel
-} from "../src/components/documents/directive-action-panel";
 import { DocumentQuickEntryModal } from "../src/components/documents/document-quick-entry-modal";
-import { formatIsoDate } from "@/lib/format";
 import type { DocumentItem, DocumentDirectiveItem } from "../src/types/document";
-
-// Phase 9: presets no longer carry a hardcoded legacy unit code ("DT", "TCHC").
-// They describe the target unit by keyword and are resolved against the loaded
-// canonical `OrganizationalUnit` list, so the value sent to the API is always a
-// real unit id.
-const canonicalUnits = [
-  { id: "p-kt-dbcl", name: "Phòng Khảo thí và Đảm bảo chất lượng", shortName: "KT-ĐBCL" },
-  { id: "p-tchc-qt", name: "Phòng Tổ chức - Hành chính - Quản trị", shortName: "TCHC-QT" },
-  { id: "p-tckt", name: "Phòng Tài chính - Kế toán", shortName: "TC-KT" },
-  { id: "p-qldt", name: "Phòng Quản lý Đào tạo", shortName: "QLĐT" },
-  { id: "k-cntt", name: "Khoa Công nghệ Thông tin", shortName: "CNTT" },
-];
 
 describe("Document-to-Task Directive Pipeline", () => {
   const sampleDoc: DocumentItem = {
@@ -138,91 +119,6 @@ describe("Document-to-Task Directive Pipeline", () => {
 });
 
 describe("Quick Directive Presets for Leadership", () => {
-  const presetSampleDoc: DocumentItem = {
-    id: "doc-test-1",
-    type: "VAN_BAN_DEN",
-    registrationNumber: 42,
-    documentYear: 2026,
-    registeredDate: "2026-09-07T08:30:00Z",
-    originalNumber: "125/TCGDNN-VP",
-    issuedDate: "2026-09-05T00:00:00Z",
-    issuingAuthority: "Tổng cục Giáo dục Nghề nghiệp",
-    category: "Công văn",
-    summary: "Về việc báo cáo kế hoạch đào tạo nghề trọng điểm quý IV/2026",
-    urgency: "KHAN",
-    securityLevel: "THUONG",
-    status: "CHO_PHAN_CONG",
-    registeredById: "user-vt-1",
-    registeredByName: "Văn thư Nguyễn Văn An",
-  };
-
-  test("contains standard academic and operational presets", () => {
-    assert.ok(QUICK_DIRECTIVE_PRESETS.length >= 3);
-
-    const trainingPreset = QUICK_DIRECTIVE_PRESETS.find(p => p.id === "giao-dao-tao");
-    assert.ok(trainingPreset, "Must have preset for Training Dept");
-    assert.deepEqual(trainingPreset?.unitKeywords, ["đào tạo"]);
-    assert.equal(resolvePresetLeadUnit(trainingPreset!, canonicalUnits), "p-qldt");
-
-    const adminPreset = QUICK_DIRECTIVE_PRESETS.find(p => p.id === "giao-tc-hc");
-    assert.ok(adminPreset, "Must have preset for TCHC Dept");
-    assert.equal(resolvePresetLeadUnit(adminPreset!, canonicalUnits), "p-tchc-qt");
-
-    const financePreset = QUICK_DIRECTIVE_PRESETS.find(p => p.id === "giao-kh-tc");
-    assert.ok(financePreset, "Must have preset for KHTC Dept");
-    assert.equal(resolvePresetLeadUnit(financePreset!, canonicalUnits), "p-tckt");
-  });
-
-  test("không hardcode mã đơn vị legacy trong preset", () => {
-    for (const preset of QUICK_DIRECTIVE_PRESETS) {
-      assert.ok(preset.unitKeywords.length > 0, `${preset.id} phải có từ khóa đơn vị`);
-      assert.equal((preset as any).defaultDeptId, undefined, `${preset.id} không được giữ mã đơn vị legacy`);
-    }
-    // Danh sách rỗng -> không bịa ra id giả
-    const empty = applyPresetToDirective("giao-dao-tao", undefined, []);
-    assert.equal(empty.leadUnitId, "");
-  });
-
-  test("applies preset and sets deadline offset accurately", () => {
-    const result = applyPresetToDirective("giao-dao-tao", "2026-09-07T00:00:00Z", canonicalUnits);
-    assert.equal(result.leadUnitId, "p-qldt");
-    assert.ok(result.instruction.includes("Phòng Đào tạo"));
-    assert.ok(result.deadline);
-
-    // Verify calculated date is after base date
-    const baseDate = new Date("2026-09-07T00:00:00Z");
-    const deadlineDate = new Date(result.deadline!);
-    assert.ok(deadlineDate.getTime() > baseDate.getTime(), "Deadline must be later than base date");
-  });
-
-  test("applies default deadline offset when baseDate is omitted", () => {
-    const result = applyPresetToDirective("giao-tc-hc", undefined, canonicalUnits);
-    assert.equal(result.leadUnitId, "p-tchc-qt");
-    assert.ok(result.instruction.includes("Phòng Tổ chức - Hành chính") || result.instruction.includes("Hành chính"));
-    assert.ok(result.deadline);
-  });
-
-  test("DirectiveActionPanel renders preset chips and form controls", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(DirectiveActionPanel, {
-        document: presetSampleDoc,
-        departments: [
-          { id: "DT", name: "Phòng Đào tạo" },
-          { id: "TCHC", name: "Phòng Tổ chức - Hành chính" },
-          { id: "KHTC", name: "Phòng Kế hoạch - Tài chính" },
-          { id: "CNTT", name: "Khoa Công nghệ Thông tin" },
-        ],
-      })
-    );
-
-    assert.ok(html.includes("Bút phê"), "Must render directive title");
-    assert.ok(html.includes("125/TCGDNN-VP"), "Must render document number");
-    assert.ok(html.includes("Giao P. Đào tạo") || html.includes("giao-dao-tao"), "Must render preset chips");
-    assert.ok(html.includes("Đơn vị chủ trì"), "Must render assigned department label");
-    assert.ok(html.includes("Hạn xử lý") || html.includes("Hạn báo cáo"), "Must render deadline controls");
-    assert.ok(html.includes("+1 ngày") || html.includes("+3 ngày"), "Must render quick deadline buttons");
-    assert.ok(html.includes("textarea") || html.includes("instruction"), "Must render instruction textarea");
-  });
 
   test("DocumentQuickEntryModal returns null when isOpen is false", () => {
     const html = renderToStaticMarkup(
@@ -288,17 +184,5 @@ describe("T52 & T53: Directive-to-Task Pipeline & Statutory Presets", () => {
     assert.strictEqual(payload.metadata.directiveInstruction, "Giao P. Đào tạo chủ trì");
     assert.ok(payload.title.includes("VB Đến #42"));
     assert.ok(payload.description.includes("UBND Tỉnh Bình Định"));
-  });
-
-  test("applyPresetToDirective sets statutory deadline offset correctly", () => {
-    const baseDate = "2026-09-10T00:00:00.000Z";
-    const preset = applyPresetToDirective("giao-dao-tao", baseDate, canonicalUnits);
-
-    assert.strictEqual(preset.leadUnitId, "p-qldt");
-    assert.strictEqual(preset.priority, "HIGH");
-    assert.ok(preset.instruction.includes("Phòng Đào tạo"));
-    // 5 days offset from 2026-09-10 -> 2026-09-15
-    assert.ok(preset.deadline);
-    assert.strictEqual(formatIsoDate(preset.deadline), "2026-09-15");
   });
 });

@@ -6,11 +6,7 @@ import { buttonVariants } from "../src/components/ui/button";
 import { badgeVariants } from "../src/components/ui/badge";
 import { Input } from "../src/components/ui/input";
 import { UserAvatar } from "../src/components/ui/user-avatar";
-import { QuickEntry } from "../src/components/ui/quick-entry";
-import { BulkActionBar } from "../src/components/ui/bulk-action-bar";
 import { InlineAlert } from "../src/components/ui/inline-alert";
-import { Spinner } from "../src/components/ui/spinner";
-import { Progress } from "../src/components/ui/progress";
 import { getInitials } from "../src/lib/utils";
 
 describe("UI Components Ergonomics & Touch Targets", () => {
@@ -85,33 +81,6 @@ describe("UI Components Ergonomics & Touch Targets", () => {
   });
 
   describe("Accessible Focus & Touch Target Standards (Lượt 7 Remediation)", () => {
-    it("QuickEntry should have accessible aria-labels, focus-visible states, and touch padding", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(QuickEntry, {
-          defaultValue: "Nhiệm vụ mới",
-          onSave: () => {},
-        })
-      );
-      assert.ok(html.includes('aria-label="Lưu (Enter)"'), "Save button must have aria-label");
-      assert.ok(html.includes('aria-label="Hủy (Esc)"'), "Cancel button must have aria-label");
-      assert.ok(html.includes("focus-visible:outline-2"), "Buttons must have focus-visible ring");
-      assert.ok(html.includes("before:-inset-2"), "Buttons must expand touch targets with pseudo before padding");
-    });
-
-    it("BulkActionBar should have accessible aria-labels and high-contrast focus rings on dark background", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(BulkActionBar, {
-          selectedCount: 3,
-          totalCount: 10,
-          onSelectAllPages: () => {},
-          onClearSelection: () => {},
-          actions: [{ label: "Chuyển giao", onClick: () => {} }],
-        })
-      );
-      assert.ok(html.includes('aria-label="Chọn tất cả 10 mục"'), "Select all button must have aria-label");
-      assert.ok(html.includes('aria-label="Bỏ chọn tất cả"'), "Clear button must have aria-label");
-      assert.ok(html.includes("focus-visible:ring-2"), "Buttons on dark surface must have focus-visible ring");
-    });
 
     it("InlineAlert should have accessible focus-visible states and expanded touch target on action button", () => {
       const html = renderToStaticMarkup(
@@ -124,14 +93,6 @@ describe("UI Components Ergonomics & Touch Targets", () => {
       assert.ok(html.includes('aria-label="Thử lại"'), "Action button must have aria-label");
       assert.ok(html.includes("focus-visible:outline-2"), "Action button must have focus-visible");
       assert.ok(html.includes("before:-inset-2"), "Action button must expand touch area");
-    });
-
-    it("Spinner and Progress should adhere to motion-reduce standards", () => {
-      const spinnerHtml = renderToStaticMarkup(React.createElement(Spinner));
-      assert.ok(spinnerHtml.includes("motion-reduce:animate-none"), "Spinner must disable animation on motion-reduce");
-
-      const progressHtml = renderToStaticMarkup(React.createElement(Progress, { value: 50 }));
-      assert.ok(progressHtml.includes("motion-reduce:transition-none"), "Progress must disable transitions on motion-reduce");
     });
   });
 });

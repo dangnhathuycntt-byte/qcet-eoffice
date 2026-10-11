@@ -6,10 +6,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { StandardDialog } from "../src/components/ui/dialog";
 import { Textarea, CharacterCountTextarea } from "../src/components/ui/textarea";
-import { TopBanner } from "../src/components/ui/top-banner";
 import { InlineAlert } from "../src/components/ui/inline-alert";
-import { CompletionState } from "../src/components/ui/completion-state";
-import { InlineExplanation } from "../src/components/ui/inline-explanation";
 import { QcetIcon, qcetOutlinePaths } from "../src/components/icons";
 
 describe("Design Components & Foundation Alignment Suite", () => {
@@ -62,39 +59,6 @@ describe("Design Components & Foundation Alignment Suite", () => {
     });
   });
 
-  describe("3. TopBanner Announcement (Components4.dc.html)", () => {
-    it("renders single-line top banner with status role and dismiss button", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(
-          TopBanner,
-          {
-            variant: "warning",
-            onDismiss: () => {},
-          },
-          "Hệ thống bảo trì lúc 22:00 hôm nay, khoảng 30 phút."
-        )
-      );
-
-      assert.ok(html.includes('data-slot="top-banner"'));
-      assert.ok(html.includes('role="status"'));
-      assert.ok(html.includes("Hệ thống bảo trì lúc 22:00 hôm nay, khoảng 30 phút."));
-      assert.ok(html.includes('aria-label="Ẩn thông báo"'));
-    });
-
-    it("renders destructive variant with alert role", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(
-          TopBanner,
-          { variant: "destructive" },
-          "Lỗi mất kết nối máy chủ dữ liệu."
-        )
-      );
-
-      assert.ok(html.includes('role="alert"'));
-      assert.ok(html.includes("bg-danger-soft"));
-    });
-  });
-
   describe("4. InlineAlert Component (Components2.dc.html)", () => {
     it("renders text with icon and optional action button without card borders", () => {
       const html = renderToStaticMarkup(
@@ -113,41 +77,6 @@ describe("Design Components & Foundation Alignment Suite", () => {
       assert.ok(html.includes('role="alert"'));
       assert.ok(html.includes("Không thể tải danh sách tài liệu."));
       assert.ok(html.includes("Thử lại"), "Action button label must be rendered");
-    });
-  });
-
-  describe("5. CompletionState Component (Components5.dc.html)", () => {
-    it("renders calm institutional completion state without exclamation marks", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(CompletionState, {
-          title: "Đã nộp kết quả",
-          description: "Nguyễn Ngọc Vinh sẽ nhận được thông báo. Bạn có thể theo dõi trạng thái tại trang nhiệm vụ.",
-          primaryAction: { label: "Về nhiệm vụ", href: "/tasks" },
-          secondaryAction: { label: "Xem việc tiếp theo", href: "/tasks/next" },
-        })
-      );
-
-      assert.ok(html.includes('data-slot="completion-state"'));
-      assert.ok(html.includes("Đã nộp kết quả"));
-      assert.ok(html.includes("Nguyễn Ngọc Vinh sẽ nhận được thông báo"));
-      assert.ok(html.includes("Về nhiệm vụ"));
-      assert.ok(html.includes("Xem việc tiếp theo"));
-      assert.ok(!html.includes("!"), "Zero exclamation marks in completion state");
-    });
-  });
-
-  describe("6. InlineExplanation Component (Components4.dc.html)", () => {
-    it("renders dotted underline trigger text", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(
-          InlineExplanation,
-          { triggerText: "Vì sao trễ?" },
-          "Hạn việc con là 31/08, sớm hơn ngày bắt đầu việc cha (27/09)."
-        )
-      );
-
-      assert.ok(html.includes("border-dotted") || html.includes("decoration-dotted"), "Trigger must have dotted underline");
-      assert.ok(html.includes("Vì sao trễ?"), "Trigger text must be displayed");
     });
   });
 

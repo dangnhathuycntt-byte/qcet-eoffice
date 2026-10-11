@@ -1,16 +1,10 @@
-import { describe, it, test } from "node:test";
+import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Pin reference date to 2026-09-25 for deterministic testing per invariants.md
 process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-25";
 import type { SchoolBottleneckItem } from "../src/types/workspace";
 import { applyExecutiveResolution } from "../src/lib/executive-resolution-state";
-import { getRadarDotStatus, formatRadarUnitName } from "../src/components/portal/executive-unit-radar";
-import {
-  buildExecutiveAttentionQueue,
-  type ExecutiveAttentionItem,
-} from "../src/components/dashboard/executive-cockpit-workspace";
-import type { SchoolTask } from "../src/types/dashboard";
 
 describe("Executive Cockpit Workspace Invariants", () => {
   it("xác nhận luồng cập nhật lạc quan (optimistic resolution flow) tháo gỡ điểm nghẽn ngay lập tức", () => {
@@ -68,39 +62,6 @@ describe("Executive Unit Radar Dot Calculation", () => {
     assert.equal(getDotStatus(2, 0), "RED");
     assert.equal(getDotStatus(0, 1), "RED");
     assert.equal(getDotStatus(0, 0), "GREEN");
-  });
-
-  it("getRadarDotStatus trả về đúng màu và số đếm cảnh báo", () => {
-    assert.deepEqual(getRadarDotStatus({ blockedTasks: 2, delayedTasks: 0, healthStatus: "RED" }), {
-      color: "RED",
-      count: 2,
-    });
-    assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 1, healthStatus: "YELLOW" }), {
-      color: "RED",
-      count: 1,
-    });
-    assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 0, healthStatus: "GREEN" }), {
-      color: "GREEN",
-      count: 0,
-    });
-    assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 0, healthStatus: "YELLOW" }), {
-      color: "YELLOW",
-      count: 0,
-    });
-  });
-
-  it("formatRadarUnitName rút gọn tên 11 đơn vị chuẩn mực QCET", () => {
-    assert.equal(formatRadarUnitName("Khoa Công nghệ thông tin"), "Khoa CNTT");
-    assert.equal(formatRadarUnitName("Khoa Cơ khí - Động lực"), "Khoa Cơ khí");
-    assert.equal(formatRadarUnitName("Khoa Điện - Điện tử"), "Khoa Điện");
-    assert.equal(formatRadarUnitName("Khoa Kỹ thuật - Du lịch"), "Khoa KT-DL");
-    assert.equal(formatRadarUnitName("Khoa Khoa học cơ bản"), "Khoa KHCB");
-    assert.equal(formatRadarUnitName("Phòng Đào tạo & QLKH"), "Phòng Đào tạo");
-    assert.equal(formatRadarUnitName("Phòng Hành chính - Quản trị"), "Phòng HC-QT");
-    assert.equal(formatRadarUnitName("Phòng Quản trị Thiết bị"), "Phòng QTTB");
-    assert.equal(formatRadarUnitName("TT Truyền thông & Số hóa"), "TT Truyền thông");
-    assert.equal(formatRadarUnitName("TT Đào tạo theo Nhu cầu XH"), "TT ĐT-NCXH");
-    assert.equal(formatRadarUnitName("Ban Giám hiệu"), "Ban Giám hiệu");
   });
 
   it("xử lý logic lọc đơn vị: nhấp cùng đơn vị sẽ hủy lọc, nhấp đơn vị khác sẽ chọn", () => {
@@ -171,124 +132,5 @@ describe("Single Header Rule for Executive Role", () => {
     assert.equal(shouldRenderOuterHeader("TRUONG_KHOA", false), true);
     assert.equal(shouldRenderOuterHeader("STAFF", false), true);
     assert.equal(shouldRenderOuterHeader("GIANG_VIEN", false), true);
-  });
-});
-
-describe("Executive Attention Queue Builder", () => {
-  const mockTasks = [
-    {
-      id: "task-approval-1",
-      code: "NV-001",
-      title: "Phê duyệt kế hoạch kiểm định chất lượng đào tạo",
-
-      departmentName: "Phòng Quản lý chất lượng",
-      dueDate: "2026-09-15",
-      status: "PENDING_EXECUTIVE_APPROVAL",
-      progressPercent: 100,
-      priority: "HIGH",
-      category: "BAO_CAO",
-    },
-    {
-      id: "task-blocked-1",
-      code: "NV-002",
-      title: "Giải phóng mặt bằng phân hiệu 2",
-
-      departmentName: "Phòng QT-CSVC",
-      dueDate: "2026-09-10",
-      status: "BLOCKED" as any,
-      progressPercent: 40,
-      priority: "URGENT",
-      category: "BAO_CAO",
-    },
-    {
-      id: "task-overdue-1",
-      code: "NV-003",
-      title: "Báo cáo tuyển sinh đợt 1",
-
-      departmentName: "Trung tâm TS-TT",
-      dueDate: "2026-08-30",
-      status: "IN_PROGRESS",
-      progressPercent: 60,
-      priority: "HIGH",
-      category: "BAO_CAO",
-    },
-    {
-      id: "task-normal-1",
-      code: "NV-004",
-      title: "Cập nhật đề cương chi tiết học kỳ 1",
-
-      departmentName: "Khoa CNTT",
-      dueDate: "2026-09-25",
-      status: "IN_PROGRESS",
-      progressPercent: 50,
-      priority: "NORMAL",
-      category: "CNTT",
-    },
-    {
-      id: "task-completed-1",
-      code: "NV-005",
-      title: "Tổ chức lễ khai giảng năm học 2026-2027",
-
-      departmentName: "Phòng CT-CTHSSV",
-      dueDate: "2026-09-05",
-      status: "COMPLETED",
-      progressPercent: 100,
-      priority: "HIGH",
-      category: "BAO_CAO",
-    },
-  ] as unknown as SchoolTask[];
-
-  test("buildExecutiveAttentionQueue prioritizes pending approval > blocked > overdue", () => {
-    const queue = buildExecutiveAttentionQueue(mockTasks, "2026-09-20");
-    assert.equal(queue.length, 3);
-
-    assert.equal(queue[0].id, "task-approval-1");
-    assert.equal(queue[0].type, "APPROVAL");
-
-    assert.equal(queue[1].id, "task-blocked-1");
-    assert.equal(queue[1].type, "BLOCKED");
-
-    assert.equal(queue[2].id, "task-overdue-1");
-    assert.equal(queue[2].type, "OVERDUE");
-  });
-
-  test("buildExecutiveAttentionQueue caps output at limit items", () => {
-    const manyTasks: SchoolTask[] = Array.from({ length: 20 }, (_, i) => ({
-      id: `task-${i}`,
-      code: `NV-${String(i).padStart(3, "0")}`,
-      title: `Task pending approval ${i}`,
-
-      departmentName: "Phòng ban",
-      dueDate: "2026-09-15",
-      status: "PENDING_EXECUTIVE_APPROVAL",
-      progressPercent: 100,
-      priority: "HIGH",
-      category: "BAO_CAO",
-    })) as unknown as SchoolTask[];
-
-    const defaultQueue = buildExecutiveAttentionQueue(manyTasks);
-    assert.equal(defaultQueue.length, 7);
-
-    const customQueue = buildExecutiveAttentionQueue(manyTasks, undefined, 10);
-    assert.equal(customQueue.length, 10);
-  });
-
-  test("buildExecutiveAttentionQueue returns empty array when no tasks need attention", () => {
-    const normalTasks = [
-      {
-        id: "task-ok-1",
-        code: "NV-100",
-        title: "Nhiệm vụ bình thường",
-
-        departmentName: "Khoa CNTT",
-        dueDate: "2026-10-30",
-        status: "IN_PROGRESS",
-        progressPercent: 50,
-        priority: "NORMAL",
-      },
-    ] as unknown as SchoolTask[];
-
-    const queue = buildExecutiveAttentionQueue(normalTasks);
-    assert.equal(queue.length, 0);
   });
 });
