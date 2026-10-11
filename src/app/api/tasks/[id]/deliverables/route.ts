@@ -20,6 +20,26 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+const NO_STORE = { 'Cache-Control': 'private, no-store' };
+
+/** Nạp nhiệm vụ và kiểm quyền `action` trên nó; ném 404/403 nếu không đủ điều kiện. */
+async function assertTaskAction(
+  userId: string,
+  taskId: string,
+  action: 'task.submit_result' | 'task.review' | 'task.update_execution',
+  deniedMessage: string
+) {
+  const taskResult = await taskQueryService.getTaskById(taskId);
+  if (!taskResult) {
+    throw new NotFoundError('Không tìm thấy nhiệm vụ');
+  }
+  const authContext = await loadAuthorizationContext(userId);
+  const decision = authorize(authContext, action, buildTaskResource(taskResult.task));
+  if (!decision.allowed) {
+    throw new ForbiddenError(decision.reason || deniedMessage);
+  }
+}
+
 export async function POST(req: Request, routeContext: RouteContext) {
   let requestId = crypto.randomUUID();
   try {
@@ -36,23 +56,12 @@ export async function POST(req: Request, routeContext: RouteContext) {
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
 
-    const taskResult = await taskQueryService.getTaskById(taskId);
-    if (!taskResult) {
-      throw new NotFoundError('Không tìm thấy nhiệm vụ');
-    }
-
-    const existingTask = taskResult.task;
-
-    // Canonical object authorization check
-    const taskResource = buildTaskResource(existingTask);
-    const authContext = await loadAuthorizationContext(authUser.id);
-    const submitDecision = authorize(authContext, 'task.submit_result', taskResource);
-    if (!submitDecision.allowed) {
-      throw new ForbiddenError(
-        submitDecision.reason ||
-          'Bạn không có quyền nộp minh chứng cho nhiệm vụ này hoặc nhiệm vụ đã bị hủy'
-      );
-    }
+    await assertTaskAction(
+      authUser.id,
+      taskId,
+      'task.submit_result',
+      'Bạn không có quyền nộp minh chứng cho nhiệm vụ này hoặc nhiệm vụ đã bị hủy'
+    );
 
     const validatedInput = await parseAndValidateJson(req, SubmitDeliverableInputSchema);
 
@@ -76,12 +85,12 @@ export async function POST(req: Request, routeContext: RouteContext) {
       },
       {
         status: 201,
-        headers: { 'Cache-Control': 'private, no-store' },
+        headers: NO_STORE,
         requestId: context.requestId,
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
+    return apiError(error, requestId, { headers: NO_STORE });
   }
 }
 
@@ -101,20 +110,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
 
-    const taskResult = await taskQueryService.getTaskById(taskId);
-    if (!taskResult) {
-      throw new NotFoundError('Không tìm thấy nhiệm vụ');
-    }
-    const existingTask = taskResult.task;
-
-    const taskResource = buildTaskResource(existingTask);
-    const authContext = await loadAuthorizationContext(authUser.id);
-    const reviewDecision = authorize(authContext, 'task.review', taskResource);
-    if (!reviewDecision.allowed) {
-      throw new ForbiddenError(
-        reviewDecision.reason || 'Bạn không có quyền đánh giá minh chứng cho nhiệm vụ này'
-      );
-    }
+    await assertTaskAction(authUser.id, taskId, 'task.review', 'Bạn không có quyền đánh giá minh chứng cho nhiệm vụ này');
 
     const validatedInput = await parseAndValidateJson(req, ReviewDeliverableInputSchema);
 
@@ -135,12 +131,12 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
         data: deliverableDto,
       },
       {
-        headers: { 'Cache-Control': 'private, no-store' },
+        headers: NO_STORE,
         requestId: context.requestId,
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
+    return apiError(error, requestId, { headers: NO_STORE });
   }
 }
 
@@ -156,20 +152,7 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
 
-    const taskResult = await taskQueryService.getTaskById(taskId);
-    if (!taskResult) {
-      throw new NotFoundError('Không tìm thấy nhiệm vụ');
-    }
-    const existingTask = taskResult.task;
-
-    const taskResource = buildTaskResource(existingTask);
-    const authContext = await loadAuthorizationContext(authUser.id);
-    const deleteDecision = authorize(authContext, 'task.update_execution', taskResource);
-    if (!deleteDecision.allowed) {
-      throw new ForbiddenError(
-        deleteDecision.reason || 'Bạn không có quyền xóa minh chứng của nhiệm vụ này'
-      );
-    }
+    await assertTaskAction(authUser.id, taskId, 'task.update_execution', 'Bạn không có quyền xóa minh chứng của nhiệm vụ này');
 
     const url = new URL(req.url);
     const deliverableId =
@@ -193,11 +176,11 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
         data: result,
       },
       {
-        headers: { 'Cache-Control': 'private, no-store' },
+        headers: NO_STORE,
         requestId: context.requestId,
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
+    return apiError(error, requestId, { headers: NO_STORE });
   }
 }
