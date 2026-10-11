@@ -8,6 +8,7 @@ import type {
   TaskViewMode,
 } from "../types";
 import type { TaskCategory } from "@/types/dashboard";
+import { toUrlSearchParams, type RawSearchParams } from "@/lib/url-utils";
 
 /**
  * Trạng thái URL của bảng quản lý công việc
@@ -65,33 +66,10 @@ const VALID_DENSITIES: TableDensity[] = ["compact", "comfortable"];
  * Hàm phân tích thuần túy (Pure Parser) từ URL query params sang TaskUrlState
  */
 export function parseTaskUrlParams(
-  searchParams?:
-    | URLSearchParams
-    | string
-    | Record<string, string | string[] | undefined>
-    | null,
+  searchParams?: RawSearchParams,
   defaults: TaskUrlState = DEFAULT_TASK_URL_STATE
 ): TaskUrlState {
-  let params: URLSearchParams;
-
-  if (!searchParams) {
-    params = new URLSearchParams();
-  } else if (typeof searchParams === "string") {
-    params = new URLSearchParams(searchParams);
-  } else if (searchParams instanceof URLSearchParams) {
-    params = searchParams;
-  } else {
-    params = new URLSearchParams();
-    for (const [key, val] of Object.entries(searchParams)) {
-      if (Array.isArray(val)) {
-        if (val.length > 0 && typeof val[0] === "string") {
-          params.set(key, val[0]);
-        }
-      } else if (typeof val === "string") {
-        params.set(key, val);
-      }
-    }
-  }
+  const params = toUrlSearchParams(searchParams);
 
   // 1. view
   const rawView = params.get("view");

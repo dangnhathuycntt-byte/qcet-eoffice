@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { parseDocumentBucket } from "@/lib/documents/document-sidebar-buckets";
+import { toUrlSearchParams, type RawSearchParams } from "@/lib/url-utils";
 
 export type DocumentTabType = "all" | "inbox" | "outbox" | "submission";
 
@@ -76,33 +77,10 @@ export function parseDocumentTabType(val: string | null | undefined): DocumentTa
  * Pure parser function converting URL search params to structured DocumentUrlFilters
  */
 export function parseDocumentUrlFilters(
-  searchParams?:
-    | URLSearchParams
-    | string
-    | Record<string, string | string[] | undefined>
-    | null,
+  searchParams?: RawSearchParams,
   defaults: DocumentUrlFilters = DEFAULT_DOCUMENT_URL_FILTERS
 ): DocumentUrlFilters {
-  let params: URLSearchParams;
-
-  if (!searchParams) {
-    params = new URLSearchParams();
-  } else if (typeof searchParams === "string") {
-    params = new URLSearchParams(searchParams);
-  } else if (searchParams instanceof URLSearchParams) {
-    params = searchParams;
-  } else {
-    params = new URLSearchParams();
-    for (const [key, val] of Object.entries(searchParams)) {
-      if (Array.isArray(val)) {
-        if (val.length > 0 && typeof val[0] === "string") {
-          params.set(key, val[0]);
-        }
-      } else if (typeof val === "string") {
-        params.set(key, val);
-      }
-    }
-  }
+  const params = toUrlSearchParams(searchParams);
 
   // 1. type (with tab fallback)
   const rawType = params.get("type") ?? params.get("tab");

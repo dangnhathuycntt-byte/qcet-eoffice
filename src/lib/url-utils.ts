@@ -49,3 +49,29 @@ export function isAllowedStoredFileUrl(value: string | null | undefined): boolea
 }
 
 export const STORED_FILE_URL_MESSAGE = 'Đường dẫn tệp không hợp lệ: chỉ chấp nhận đường dẫn nội bộ hoặc URL http(s)';
+
+export type RawSearchParams =
+  | URLSearchParams
+  | string
+  | Record<string, string | string[] | undefined>
+  | null
+  | undefined;
+
+/** Chuẩn hoá query (chuỗi, URLSearchParams hoặc `searchParams` của Next) về URLSearchParams; mảng lấy phần tử đầu. */
+export function toUrlSearchParams(searchParams?: RawSearchParams): URLSearchParams {
+  if (!searchParams) return new URLSearchParams();
+  if (typeof searchParams === "string") return new URLSearchParams(searchParams);
+  if (searchParams instanceof URLSearchParams) return searchParams;
+
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(searchParams)) {
+    if (Array.isArray(val)) {
+      if (val.length > 0 && typeof val[0] === "string") {
+        params.set(key, val[0]);
+      }
+    } else if (typeof val === "string") {
+      params.set(key, val);
+    }
+  }
+  return params;
+}
