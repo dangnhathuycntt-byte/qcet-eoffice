@@ -399,7 +399,9 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
       const failJson = await failRes.json();
       assert.strictEqual(failJson.success, false);
       assert.strictEqual(failJson.code, 'PRECONDITION_FAILED');
-      assert.match(failJson.error, /version conflict/i);
+      // Bên thua bị chặn ở bước kiểm phiên bản trước transaction hoặc ở updateMany trong transaction,
+      // tùy thời điểm bên thắng ghi xong; cả hai đều là xung đột phiên bản 412.
+      assert.match(failJson.error, /version conflict|Xung đột phiên bản/i);
     });
 
     test('PATCH /api/tasks/[id] with stale If-Match returns 412 PRECONDITION_FAILED', async () => {

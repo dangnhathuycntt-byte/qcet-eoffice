@@ -12,21 +12,17 @@
  */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
 
 describe("Internal Document Workflow Contract", () => {
   test("TO_TRINH_NOI_BO is a recognized document type in the API type map", async () => {
-    // Verify the document route accepts TO_TRINH_NOI_BO
+    // Route văn bản đổi tham số `type` qua resolveDocumentTypeParam.
     const routeSource = await import("node:fs").then((fs) =>
       fs.readFileSync("src/app/api/documents/route.ts", "utf8")
     );
-    assert.ok(
-      routeSource.includes("TO_TRINH_NOI_BO"),
-      "Documents API route must handle TO_TRINH_NOI_BO type"
-    );
-    assert.ok(
-      routeSource.includes('"INTERNAL"'),
-      "Documents API route must accept INTERNAL as alias"
-    );
+    assert.ok(routeSource.includes("resolveDocumentTypeParam("), "Documents API route must resolve the type param");
+    assert.strictEqual(resolveDocumentTypeParam("TO_TRINH_NOI_BO"), "TO_TRINH_NOI_BO");
+    assert.strictEqual(resolveDocumentTypeParam("INTERNAL"), "TO_TRINH_NOI_BO", "INTERNAL must be accepted as alias");
   });
 
   test("submit-content-review and approve-content action routes exist", async () => {
