@@ -1881,6 +1881,62 @@ function UnifiedAdaptiveWorkspaceInner({
   const effectiveError = errorMessage || internalError;
   const isUnassigned = isUserUnassignedDepartment(user);
 
+  const taskCollectionView = viewMode === "table" ? (
+    <ModularCascadingTaskTable
+      tasks={displayedTasks}
+      selectedTaskId={internalSelectedTask?.id}
+      scope={activeScope === "my" ? "MY_TASKS" : activeScope}
+      hideToolbar={true}
+      density={tableDensity}
+      onDensityChange={setTableDensity}
+      visibleColumns={visibleColumns}
+      groupingField={groupingField}
+      onGroupingChange={setGroupingField}
+      sortField={tableSort.field}
+      sortDirection={tableSort.direction}
+      onSortChange={handleTableSortChange}
+      onSelectTask={handleSelectTask}
+      onStatusChange={handleStatusChange}
+      onRefresh={handleRefresh}
+      onAddTask={() =>
+        openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG")
+      }
+      onUrge={handleUrge}
+      onOpenSubmitModal={
+        onSubmitDeliverable
+          ? (st) => setSubmittingTask(st)
+          : undefined
+      }
+      emptyStateProps={{
+        searchQuery: currentSearch,
+        activeTab: effectiveActiveTab,
+        attention: workspaceQuery?.queryState.attention,
+        status: currentStatus !== "ALL" ? currentStatus : undefined,
+        department: currentDept !== "ALL" ? currentDept : undefined,
+        category: currentCategory !== "ALL" ? currentCategory : undefined,
+        priority: currentPriority !== "ALL" ? currentPriority : undefined,
+        academicMonth: currentMonth,
+        onResetFilters: handleResetFilters,
+        onAddTask: () =>
+          openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
+        canAddTask: true,
+      }}
+    />
+  ) : (
+    <TaskKanbanBoard
+      tasks={displayedTasks}
+      onSelectTask={handleSelectTask}
+      onStatusChange={handleStatusChange}
+      onAddTask={(level, parentId) =>
+        openCreateModal(
+          level || (activeScope === "unit" ? "DON_VI" : "TRUONG"),
+          parentId
+        )
+      }
+      searchQuery={currentSearch}
+    />
+  );
+
   return (
     <div
       data-slot="unified-adaptive-workspace"
@@ -2181,61 +2237,7 @@ function UnifiedAdaptiveWorkspaceInner({
               />
             ) : (
               <div className="pt-0.5">
-                {viewMode === "table" ? (
-                  <ModularCascadingTaskTable
-                    tasks={displayedTasks}
-                    selectedTaskId={internalSelectedTask?.id}
-                    scope={activeScope === "my" ? "MY_TASKS" : activeScope}
-                    hideToolbar={true}
-                    density={tableDensity}
-                    onDensityChange={setTableDensity}
-                    visibleColumns={visibleColumns}
-                    groupingField={groupingField}
-                    onGroupingChange={setGroupingField}
-                    sortField={tableSort.field}
-                    sortDirection={tableSort.direction}
-                    onSortChange={handleTableSortChange}
-                    onSelectTask={handleSelectTask}
-                    onStatusChange={handleStatusChange}
-                    onRefresh={handleRefresh}
-                    onAddTask={() =>
-                      openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG")
-                    }
-                    onUrge={handleUrge}
-                    onOpenSubmitModal={
-                      onSubmitDeliverable
-                        ? (st) => setSubmittingTask(st)
-                        : undefined
-                    }
-                    emptyStateProps={{
-                      searchQuery: currentSearch,
-                      activeTab: effectiveActiveTab,
-                      attention: workspaceQuery?.queryState.attention,
-                      status: currentStatus !== "ALL" ? currentStatus : undefined,
-                      department: currentDept !== "ALL" ? currentDept : undefined,
-                      category: currentCategory !== "ALL" ? currentCategory : undefined,
-                      priority: currentPriority !== "ALL" ? currentPriority : undefined,
-                      academicMonth: currentMonth,
-                      onResetFilters: handleResetFilters,
-                      onAddTask: () =>
-                        openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
-                      canAddTask: true,
-                    }}
-                  />
-                ) : (
-                  <TaskKanbanBoard
-                    tasks={displayedTasks}
-                    onSelectTask={handleSelectTask}
-                    onStatusChange={handleStatusChange}
-                    onAddTask={(level, parentId) =>
-                      openCreateModal(
-                        level || (activeScope === "unit" ? "DON_VI" : "TRUONG"),
-                        parentId
-                      )
-                    }
-                    searchQuery={currentSearch}
-                  />
-                )}
+                {taskCollectionView}
               </div>
             )}
           </div>
@@ -2315,61 +2317,7 @@ function UnifiedAdaptiveWorkspaceInner({
               />
           ) : (
             <div>
-              {viewMode === "table" ? (
-                <ModularCascadingTaskTable
-                  tasks={displayedTasks}
-                  selectedTaskId={internalSelectedTask?.id}
-                  scope={activeScope === "my" ? "MY_TASKS" : activeScope}
-                  hideToolbar={true}
-                  density={tableDensity}
-                  onDensityChange={setTableDensity}
-                  visibleColumns={visibleColumns}
-                  groupingField={groupingField}
-                  onGroupingChange={setGroupingField}
-                  sortField={tableSort.field}
-                  sortDirection={tableSort.direction}
-                  onSortChange={handleTableSortChange}
-                  onSelectTask={handleSelectTask}
-                  onStatusChange={handleStatusChange}
-                  onRefresh={handleRefresh}
-                  onAddTask={() =>
-                    openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG")
-                  }
-                  onUrge={handleUrge}
-                  onOpenSubmitModal={
-                    onSubmitDeliverable
-                      ? (st) => setSubmittingTask(st)
-                      : undefined
-                  }
-                  emptyStateProps={{
-                    searchQuery: currentSearch,
-                    activeTab: effectiveActiveTab,
-                    attention: workspaceQuery?.queryState.attention,
-                    status: currentStatus !== "ALL" ? currentStatus : undefined,
-                    department: currentDept !== "ALL" ? currentDept : undefined,
-                    category: currentCategory !== "ALL" ? currentCategory : undefined,
-                    priority: currentPriority !== "ALL" ? currentPriority : undefined,
-                    academicMonth: currentMonth,
-                    onResetFilters: handleResetFilters,
-                    onAddTask: () =>
-                      openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
-                    canAddTask: true,
-                  }}
-                />
-              ) : (
-                <TaskKanbanBoard
-                  tasks={displayedTasks}
-                  onSelectTask={handleSelectTask}
-                  onStatusChange={handleStatusChange}
-                  onAddTask={(level, parentId) =>
-                    openCreateModal(
-                      level || (activeScope === "unit" ? "DON_VI" : "TRUONG"),
-                      parentId
-                    )
-                  }
-                  searchQuery={currentSearch}
-                />
-              )}
+              {taskCollectionView}
             </div>
           )}
           </div>
