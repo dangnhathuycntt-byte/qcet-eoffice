@@ -15,7 +15,8 @@ export function parseDocumentBucket(value: string | null | undefined): DocumentB
   return (DOCUMENT_BUCKETS as readonly string[]).includes(v) ? (v as DocumentBucket) : "";
 }
 
-const INCOMING_DONE = ["DA_HOAN_THANH", "LUU_THEO_DOI"] as const;
+/** `Document.status` đã xử lý xong: hết tính trễ hạn, vào nhóm "Đã xử lý". */
+export const DOCUMENT_DONE_STATUSES = ["DA_HOAN_THANH", "LUU_THEO_DOI"] as const;
 // Quy trình 6: văn bản đến coi là đã xử lý từ bước "Hoàn thành" trở đi.
 const INCOMING_WF_DONE = ["RESOLVED", "FILED", "ARCHIVED"] as const;
 const OUTGOING_PENDING = ["DRAFT", "CONTENT_REVIEW", "FORMAT_CHECK", "AUTHORIZED_SIGN"] as const;
@@ -36,7 +37,7 @@ export function buildDocumentBucketWhere(
       return {
         OR: [
           { incomingWorkflow: { is: { status: { notIn: [...INCOMING_WF_DONE] } } } },
-          { AND: [noIncomingWf, { status: { notIn: [...INCOMING_DONE] } }] },
+          { AND: [noIncomingWf, { status: { notIn: [...DOCUMENT_DONE_STATUSES] } }] },
         ],
       };
     }
@@ -44,7 +45,7 @@ export function buildDocumentBucketWhere(
       return {
         OR: [
           { incomingWorkflow: { is: { status: { in: [...INCOMING_WF_DONE] } } } },
-          { AND: [noIncomingWf, { status: { in: [...INCOMING_DONE] } }] },
+          { AND: [noIncomingWf, { status: { in: [...DOCUMENT_DONE_STATUSES] } }] },
         ],
       };
     }
@@ -55,7 +56,7 @@ export function buildDocumentBucketWhere(
     return {
       OR: [
         { outgoingWorkflow: { is: { status: { in: [...OUTGOING_PENDING] } } } },
-        { AND: [noWorkflow, { status: { notIn: [...INCOMING_DONE] } }] },
+        { AND: [noWorkflow, { status: { notIn: [...DOCUMENT_DONE_STATUSES] } }] },
       ],
     };
   }
@@ -65,7 +66,7 @@ export function buildDocumentBucketWhere(
   return {
     OR: [
       { outgoingWorkflow: { is: { status: { in: [...OUTGOING_ISSUED] } } } },
-      { AND: [noWorkflow, { status: { in: [...INCOMING_DONE] } }] },
+      { AND: [noWorkflow, { status: { in: [...DOCUMENT_DONE_STATUSES] } }] },
     ],
   };
 }

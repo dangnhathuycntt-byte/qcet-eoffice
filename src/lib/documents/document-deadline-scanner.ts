@@ -12,7 +12,8 @@
  */
 
 import { prisma as defaultPrisma } from "@/lib/prisma";
-import { DocumentStatus, UserRole, type Prisma } from "@prisma/client";
+import { UserRole, type Prisma } from "@prisma/client";
+import { DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
 import { getIctReferenceDateStart } from "@/domain/tasks/deadlines";
 import {
   publishOutboxEvent,
@@ -176,9 +177,7 @@ export async function scanAndDispatchDocumentDeadlines(
   const activeDocuments = await db.document.findMany({
     where: {
       dueDate: { not: null },
-      status: {
-        notIn: [DocumentStatus.DA_HOAN_THANH, DocumentStatus.LUU_THEO_DOI],
-      },
+      status: { notIn: [...DOCUMENT_DONE_STATUSES] },
       archivedAt: null,
     },
     include: {

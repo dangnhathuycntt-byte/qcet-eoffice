@@ -4,7 +4,7 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
-import { buildDocumentBucketWhere } from "@/lib/documents/document-sidebar-buckets";
+import { buildDocumentBucketWhere, DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
 import { canViewApprovalReport } from "@/server/documents/submission-approval-service";
 import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
 
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         where: {
           ...scopedFilter,
           dueDate: { lt: now },
-          status: { notIn: ["DA_HOAN_THANH", "LUU_THEO_DOI"] },
+          status: { notIn: [...DOCUMENT_DONE_STATUSES] },
         },
       }),
       prisma.document.count({
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const internal = typeCount("TO_TRINH_NOI_BO");
     const pending = statusCount("CHO_PHAN_CONG");
     const processing = statusCount("DANG_XU_LY", "CHO_PHE_DUYET");
-    const completed = statusCount("DA_HOAN_THANH", "LUU_THEO_DOI");
+    const completed = statusCount(...DOCUMENT_DONE_STATUSES);
 
     return apiSuccess(
       {
