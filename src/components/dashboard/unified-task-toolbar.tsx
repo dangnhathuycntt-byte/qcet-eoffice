@@ -16,19 +16,13 @@ import {
   Users,
   Tag,
   Flag,
-  Loader2,
   Check,
   CheckCircle2,
-  ArrowUpDown,
-  ChevronDown,
   ChevronRight,
   RotateCcw,
   FileText,
   Clock,
   Circle,
-  AlertCircle,
-  Layers,
-  Activity,
 } from "lucide-react";
 import {
   StatusSubAll,
@@ -44,43 +38,32 @@ import {
   HealthSubCompleted,
   FilterIconStatus,
   FilterIconPriority,
-  FilterIconHealth,
   FilterIconProgress,
   FilterIconLead,
   FilterIconCollaborator,
   FilterIconCategory,
   FilterIconDept,
   FilterIconDeadline,
-  FilterIconMonth,
   FilterIconOrigin,
 } from "./task-filter-icons";
 import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
-import { LIST_TOOLBAR_SEARCH_COLLAPSED, LIST_TOOLBAR_SEARCH_EXPANDED, ListToolbarClearFiltersButton, ListToolbarCountBadge, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
+import { ListToolbarClearFiltersButton, ListToolbarCountBadge, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
 import {
-  getTaskTimeFilterLabel,
   NO_TASK_TIME_FILTER,
   type TaskTimeFilter,
-  type TaskTimePreset,
 } from "@/lib/task-time-filter";
 import type { AuthUser } from "@/types/auth";
-import type { SchoolTask, StaffTask, TaskCategory } from "@/types/dashboard";
+import type { SchoolTask } from "@/types/dashboard";
 import {
   isExecutiveUser,
-  isManagerUser,
 } from "@/components/layout/scope-switcher";
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
 import {
-  ACADEMIC_MONTH_ORDER,
-  getAcademicMonthInfo,
   getAcademicMonthsForYear,
 } from "@/lib/academic-calendar";
 import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
 import { filterTasksByRole, matchesUser } from "@/lib/role-task-filter";
-import {
-  SavedViewsSelector,
-  type SavedViewsSelectorProps,
-} from "@/components/tasks/saved-views-selector";
 import {
   MenuRoot,
   MenuTrigger,
@@ -120,6 +103,8 @@ import {
   DEFAULT_DISPLAY_PROPERTIES,
   TaskTableViewOptionsPopover,
 } from "@/components/tasks/table/components/task-table-toolbar";
+import { Pressable } from "@/components/ui/pressable";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
 
 // Export Saved Views Infrastructure
 export {
@@ -351,15 +336,6 @@ export const CATEGORY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "KHAC", label: "Khác" },
 ];
 
-function normalizeFilterSearchText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d")
-    .toLowerCase()
-    .trim();
-}
-
 export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "ALL", label: "Tất cả mức độ" },
   { id: "URGENT", label: "Khẩn cấp" },
@@ -367,7 +343,24 @@ export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "NORMAL", label: "Bình thường" },
 ];
 
+/** Bật/tắt một giá trị trong bộ lọc chọn nhiều; bỏ hết thì quay về `allToken`. */
+function toggleMultiValue(
+  selectedList: string[],
+  isAll: boolean,
+  selected: boolean,
+  value: string,
+  allToken: string
+): string[] {
+  if (isAll) return [value];
+  if (selected) {
+    const next = selectedList.filter((v) => v !== value && v !== allToken);
+    return next.length === 0 ? [allToken] : next;
+  }
+  return [...selectedList.filter((v) => v !== allToken), value];
+}
+
 // Helper: filterTasksByScope (backward compatibility & unified scopes)
+
 export function filterTasksByScope(
   tasks: SchoolTask[],
   scope: TaskScope | WorkspaceScope | string,
@@ -717,8 +710,6 @@ export function UnifiedTaskToolbar({
     propIsExecutive !== undefined
       ? propIsExecutive
       : userRole === "ADMIN" || isExecutiveUser(user);
-  const isManager =
-    userRole === "MANAGER" || isManagerUser(user) || isExecutive;
   const isUnassigned =
     propIsUnassigned !== undefined
       ? propIsUnassigned
@@ -741,106 +732,6 @@ export function UnifiedTaskToolbar({
     if (normalizedTaskView === "unit") return "unit";
     return "school";
   }, [normalizedTaskView]);
-
-  // Synthesize criteria for saved views if not explicitly provided
-  const synthesizedCriteria: TaskViewCriteria = React.useMemo(() => {
-    return {
-      scope: normalizedScope,
-      dept: selectedDepartment,
-      status: activeTab,
-      category: selectedCategory,
-      priority: selectedPriority,
-      academicMonth: effectiveMonth,
-      q: searchQuery,
-      viewMode: viewMode === "kanban" ? "kanban" : "table",
-      density: density,
-      sortField,
-      sortDirection,
-    };
-  }, [
-    normalizedScope,
-    selectedDepartment,
-    activeTab,
-    selectedCategory,
-    selectedPriority,
-    effectiveMonth,
-    searchQuery,
-    viewMode,
-    density,
-    sortField,
-    sortDirection,
-  ]);
-
-  const effectiveCriteria = currentCriteria ?? synthesizedCriteria;
-
-  // Handle scope change, preserving the caller's format preference
-  const handleScopeSelect = (scopeId: TaskView, legacyScope: WorkspaceScope) => {
-    if (!onScopeChange) return;
-    if (typeof scope === "string" && scope.endsWith("_TASKS")) {
-      const legacyMap: Record<WorkspaceScope, TaskScope> = {
-        school: "SCHOOL_TASKS",
-        unit: "UNIT_TASKS",
-        my: "MY_TASKS",
-      };
-      onScopeChange(legacyMap[legacyScope]);
-    } else {
-      onScopeChange(scopeId as any);
-    }
-  };
-
-  // 1. Authorized Scope Options (Canonical Query Views: Issue #26)
-  const canViewSchoolScope = true;
-  const canViewUnitScope = true;
-
-  const scopeOptions: Array<{
-    id: TaskView;
-    legacyScope: WorkspaceScope;
-    legacyId: TaskScope;
-    label: string;
-    shortLabel: string;
-    icon: typeof School;
-    isAuthorized: boolean;
-  }> = [
-    {
-      id: "related",
-      legacyScope: "my",
-      legacyId: "MY_TASKS",
-      label: "Của tôi",
-      shortLabel: "Của tôi",
-      icon: User,
-      isAuthorized: true,
-    },
-    {
-      id: "unit",
-      legacyScope: "unit",
-      legacyId: "UNIT_TASKS",
-      label: "Đơn vị",
-      shortLabel: "Đơn vị",
-      icon: Building,
-      isAuthorized: canViewUnitScope,
-    },
-    {
-      id: "all",
-      legacyScope: "school",
-      legacyId: "SCHOOL_TASKS",
-      label: "Toàn trường",
-      shortLabel: "Toàn trường",
-      icon: School,
-      isAuthorized: canViewSchoolScope,
-    },
-    {
-      id: "approval",
-      legacyScope: "school",
-      legacyId: "SCHOOL_TASKS",
-      label: "Chờ duyệt",
-      shortLabel: "Chờ duyệt",
-      icon: Clock,
-      isAuthorized: true,
-    },
-  ];
-
-  // Only keep authorized scopes
-  const authorizedScopes = scopeOptions.filter((opt) => opt.isAuthorized);
 
   // 2. Global shortcuts for search and filter focus
   React.useEffect(() => {
@@ -937,16 +828,6 @@ export function UnifiedTaskToolbar({
     { value: "completed", label: "Hoàn thành" },
   ], [isExecutiveRole]);
 
-  const roleActionPill = React.useMemo(
-    () => buildRoleActionPill(isExecutiveRole, tabCounts, activeTab),
-    [isExecutiveRole, tabCounts, activeTab]
-  );
-
-  const quickFilterPills = React.useMemo(
-    () => buildQuickFilterPills(isExecutiveRole, tabCounts, activeTab, totalTasksCount),
-    [isExecutiveRole, tabCounts, activeTab, totalTasksCount]
-  );
-
   const effectiveStatus = React.useMemo(() => {
     if (selectedStatus !== undefined) return selectedStatus;
     if (!activeTab || activeTab === "all" || activeTab === "today" || activeTab === "this_week" || activeTab === "overdue") {
@@ -963,35 +844,6 @@ export function UnifiedTaskToolbar({
     return "all";
   }, [selectedDeadline, activeTab]);
 
-  const timeLabel = React.useMemo(() => getTaskTimeFilterLabel(effectiveTimeFilter), [effectiveTimeFilter]);
-
-  const statusLabel = React.useMemo(() => {
-    if (!effectiveStatus || effectiveStatus === "all" || effectiveStatus === "ALL") {
-      return "Trạng thái";
-    }
-    const norm = effectiveStatus.toLowerCase();
-    if (norm === "new" || norm === "not_started" || norm === "assigned") return "Mới";
-    if (norm === "in_progress") return "Đang thực hiện";
-    if (
-      norm === "waiting_approval" ||
-      norm === "review" ||
-      norm === "pending_executive_approval" ||
-      norm === "needs_review"
-    ) {
-      return isExecutiveRole ? "Cần tôi duyệt" : "Cần chỉnh sửa";
-    }
-    if (norm === "pending_submission" || norm === "waiting_submission") return "Chờ nộp BC";
-    if (norm === "completed") return "Hoàn thành";
-    if (effectiveStatus.includes(",")) {
-      const parts = effectiveStatus
-        .split(",")
-        .filter((p) => p !== "today" && p !== "this_week" && p !== "overdue");
-      if (parts.length === 0) return "Trạng thái";
-      return `Trạng thái · ${parts.length}`;
-    }
-    return "Trạng thái";
-  }, [effectiveStatus, isExecutiveRole]);
-
   const deadlineOptions = React.useMemo(() => [
     { value: "all", label: "Tất cả thời hạn" },
     { value: "today", label: "Đến hạn hôm nay", count: tabCounts?.today },
@@ -999,67 +851,9 @@ export function UnifiedTaskToolbar({
     { value: "overdue", label: "Trễ hạn", count: tabCounts?.overdue },
   ], [tabCounts]);
 
-  const deadlineLabel = React.useMemo(() => {
-    if (effectiveDeadline === "today") return "Đến hạn hôm nay";
-    if (effectiveDeadline === "this_week") return "Trong tuần này";
-    if (effectiveDeadline === "overdue") return "Trễ hạn";
-    return "Thời hạn";
-  }, [effectiveDeadline]);
-
-  const priorityLabel = React.useMemo(() => {
-    if (!selectedPriority || selectedPriority === "ALL") return "Ưu tiên";
-    if (selectedPriority.includes(",")) {
-      const parts = selectedPriority.split(",").filter(Boolean);
-      return `Ưu tiên · ${parts.length}`;
-    }
-    const found = PRIORITY_FILTER_OPTIONS.find((p) => p.id === selectedPriority);
-    return found ? found.label : selectedPriority;
-  }, [selectedPriority]);
-
   const showDepartmentFilter = React.useMemo(() => {
     return normalizedScope === "school" && availableDepartments.length > 1;
   }, [normalizedScope, availableDepartments.length]);
-
-  const departmentLabel = React.useMemo(() => {
-    if (!selectedDepartment || selectedDepartment === "ALL") return "Đơn vị";
-    if (selectedDepartment.includes(",")) {
-      const parts = selectedDepartment.split(",").filter(Boolean);
-      return `Đơn vị · ${parts.length}`;
-    }
-    const found = availableDepartments.find((d) => d.code === selectedDepartment);
-    return found ? found.name : selectedDepartment;
-  }, [selectedDepartment, availableDepartments]);
-
-  const secondaryFiltersActiveCount = React.useMemo(() => {
-    let count = 0;
-    if (selectedPriority && selectedPriority !== "ALL") count++;
-    if (showDepartmentFilter && selectedDepartment && selectedDepartment !== "ALL") count++;
-    return count;
-  }, [selectedPriority, showDepartmentFilter, selectedDepartment]);
-
-  const moreFiltersActiveCount = secondaryFiltersActiveCount;
-
-  // Count active advanced filters (Department, Priority, Custom status)
-  const activeAdvancedFilterCount = React.useMemo(() => {
-    let count = 0;
-    if (selectedDepartment && selectedDepartment !== "ALL") count++;
-    if (selectedPriority && selectedPriority !== "ALL") count++;
-    if (
-      effectiveDeadline === "today" ||
-      (isExecutiveRole
-        ? effectiveStatus === "pending_submission"
-        : effectiveStatus === "waiting_approval" || effectiveStatus === "review")
-    ) {
-      count++;
-    }
-    return count;
-  }, [
-    selectedDepartment,
-    selectedPriority,
-    effectiveDeadline,
-    effectiveStatus,
-    isExecutiveRole,
-  ]);
 
   const isMonthActive = effectiveTimeFilter.kind !== "none";
   const isStatusActive = Boolean(effectiveStatus && effectiveStatus.toLowerCase() !== "all");
@@ -1095,126 +889,10 @@ export function UnifiedTaskToolbar({
     (showDepartmentFilter && isDepartmentActive)
   );
 
-  const effectiveTotalTasksCount = totalTasksCount !== undefined ? totalTasksCount : 0;
-  const effectiveFilteredTasksCount =
-    filteredTasksCount !== undefined ? filteredTasksCount : effectiveTotalTasksCount;
-
-  // Check if active view ID should be retained or cleared due to criteria divergence
-  const effectiveActiveViewId = React.useMemo(() => {
-    if (!activeViewId) return null;
-    const view =
-      ALL_ROLE_PRESETS.find((p) => p.id === activeViewId) ||
-      getCustomSavedViews(user?.id).find((v) => v.id === activeViewId);
-    if (!view) return null;
-    if (effectiveCriteria && !areCriteriaEqual(view.criteria, effectiveCriteria)) {
-      return null;
-    }
-    return activeViewId;
-  }, [activeViewId, effectiveCriteria, user?.id]);
-
-  const hasCustomFilters = React.useMemo(() => {
-    return Boolean(
-      (searchQuery && searchQuery.trim().length > 0) ||
-      (selectedDepartment && selectedDepartment !== "ALL") ||
-      (selectedCategory && selectedCategory !== "ALL") ||
-      (selectedPriority && selectedPriority !== "ALL") ||
-      (effectiveMonth !== undefined && effectiveMonth !== "ALL") ||
-      (activeTab && activeTab !== "all")
-    );
-  }, [
-    searchQuery,
-    selectedDepartment,
-    selectedCategory,
-    selectedPriority,
-    effectiveMonth,
-    activeTab,
-  ]);
-
-  // Active filter chips for individual criterion removal
-  const activeFilterChips = React.useMemo(() => {
-    const chips: Array<{ id: string; label: string; onRemove: () => void }> = [];
-
-    if (searchQuery && searchQuery.trim().length > 0) {
-      chips.push({
-        id: "search",
-        label: `Từ khóa: "${searchQuery}"`,
-        onRemove: () => onSearchChange(""),
-      });
-    }
-
-    if (activeTab && activeTab !== "all") {
-      let tabLabel = "";
-      if (activeTab === "overdue") tabLabel = "Trễ hạn";
-      else if (activeTab === "waiting_approval" || activeTab === "review") {
-        tabLabel = isExecutiveRole ? "Cần tôi duyệt" : "Chờ duyệt";
-      } else if (activeTab === "pending_submission") {
-        tabLabel = !isExecutiveRole ? "Chờ tôi nộp" : "Chờ nộp BC";
-      } else if (activeTab === "today") tabLabel = "Hôm nay";
-      else tabLabel = activeTab;
-
-      chips.push({
-        id: "tab",
-        label: tabLabel,
-        onRemove: () => onTabChange?.("all"),
-      });
-    }
-
-    if (selectedDepartment && selectedDepartment !== "ALL") {
-      const deptName =
-        availableDepartments.find((d) => d.code === selectedDepartment)?.name ||
-        selectedDepartment;
-      chips.push({
-        id: "dept",
-        label: `Đơn vị: ${deptName}`,
-        onRemove: () => onDepartmentChange?.("ALL"),
-      });
-    }
-
-    if (selectedPriority && selectedPriority !== "ALL") {
-      const prioLabel =
-        PRIORITY_FILTER_OPTIONS.find((p) => p.id === selectedPriority)?.label ||
-        selectedPriority;
-      chips.push({
-        id: "prio",
-        label: `Ưu tiên: ${prioLabel}`,
-        onRemove: () => onPriorityChange?.("ALL"),
-      });
-    }
-
-    if (effectiveTimeFilter.kind !== "none") {
-      chips.push({
-        id: "month",
-        label: getTaskTimeFilterLabel(effectiveTimeFilter),
-        onRemove: () => handleTimeFilterChange(NO_TASK_TIME_FILTER),
-      });
-    }
-
-    return chips;
-  }, [
-    searchQuery,
-    onSearchChange,
-    activeTab,
-    isExecutiveRole,
-    onTabChange,
-    selectedDepartment,
-    availableDepartments,
-    onDepartmentChange,
-    selectedPriority,
-    onPriorityChange,
-    effectiveTimeFilter,
-  ]);
-
   // Optional 12 month cycle list for year
   const academicMonths = React.useMemo(() => {
     return getAcademicMonthsForYear(academicYear);
   }, [academicYear]);
-
-  const allYearCount = React.useMemo(() => {
-    if (monthlyTaskCounts) {
-      return Object.values(monthlyTaskCounts).reduce((acc, c) => acc + (c || 0), 0);
-    }
-    return totalTasksCount;
-  }, [monthlyTaskCounts, totalTasksCount]);
 
   // Reset all filters (Only clears supplementary filters, retains Scope & User Department)
   const handleResetFilters = () => {
@@ -1241,56 +919,6 @@ export function UnifiedTaskToolbar({
     }
     return user?.department || user?.departmentCode || "Đơn vị";
   }, [isUnassigned, availableDepartments, selectedDepartment, user]);
-
-  const leadLabel = React.useMemo(() => {
-    if (selectedLead === "my" || activeTab === "my") return "Của tôi";
-    if (selectedLead === "bgh") return "Lãnh đạo BGH";
-    if (selectedLead === "assigned") return "Đã phân công";
-    if (selectedLead === "unassigned") return "Chưa phân công";
-    return undefined;
-  }, [selectedLead, activeTab]);
-
-  const healthLabel = React.useMemo(() => {
-    if (!selectedHealth || selectedHealth === "all") return undefined;
-    if (selectedHealth.includes(",")) {
-      const parts = selectedHealth.split(",").filter(Boolean);
-      return `Tiến độ · ${parts.length}`;
-    }
-    if (selectedHealth === "on_track") return "Đúng tiến độ";
-    if (selectedHealth === "at_risk") return "Nguy cơ trễ";
-    if (selectedHealth === "overdue") return "Trễ hạn";
-    if (selectedHealth === "completed") return "Đạt 100%";
-    return undefined;
-  }, [selectedHealth]);
-
-  const originLabel = React.useMemo(() => {
-    if (!selectedOrigin || selectedOrigin === "all") return undefined;
-    if (selectedOrigin.includes(",")) {
-      const parts = selectedOrigin.split(",").filter(Boolean);
-      return `Nguồn gốc · ${parts.length}`;
-    }
-    if (selectedOrigin === "KE_HOACH_NAM") return "Kế hoạch năm";
-    if (selectedOrigin === "NGHI_QUYET") return "Nghị quyết BGH";
-    if (selectedOrigin === "GIAO_BAN") return "Giao ban";
-    if (selectedOrigin === "DON_VI") return "Đơn vị đề xuất";
-    return undefined;
-  }, [selectedOrigin]);
-
-  const categoryLabel = React.useMemo(() => {
-    if (!selectedCategory || selectedCategory === "ALL") return undefined;
-    if (selectedCategory.includes(",")) {
-      const parts = selectedCategory.split(",").filter(Boolean);
-      return `Danh mục · ${parts.length}`;
-    }
-    const found = CATEGORY_FILTER_OPTIONS.find((c) => c.id === selectedCategory);
-    return found ? found.label : selectedCategory;
-  }, [selectedCategory]);
-
-  const collaboratorLabel = React.useMemo(() => {
-    if (selectedCollaborator === "has_collab") return "Có phối hợp";
-    if (selectedCollaborator === "single") return "Tự thực hiện";
-    return undefined;
-  }, [selectedCollaborator]);
 
   const filterCategories = React.useMemo(() => [
     // 1. Nhóm thuộc tính cốt lõi
@@ -1397,15 +1025,7 @@ export function UnifiedTaskToolbar({
                   else onTabChange?.("all");
                   return;
                 }
-                let nextList: string[];
-                if (isAll) {
-                  nextList = [opt.value];
-                } else if (selected) {
-                  nextList = selectedList.filter((v) => v !== opt.value && v !== "all");
-                  if (nextList.length === 0) nextList = ["all"];
-                } else {
-                  nextList = [...selectedList.filter((v) => v !== "all"), opt.value];
-                }
+                const nextList = toggleMultiValue(selectedList, isAll, selected, opt.value, "all");
                 const nextStr = nextList.join(",");
                 if (onStatusChange) onStatusChange(nextStr);
                 else onTabChange?.(nextStr);
@@ -1435,7 +1055,7 @@ export function UnifiedTaskToolbar({
                     ) : opt.value === "completed" ? (
                       <StatusSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
                     ) : (
-                      <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
+                      <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
@@ -1471,15 +1091,7 @@ export function UnifiedTaskToolbar({
                   onPriorityChange?.("ALL");
                   return;
                 }
-                let nextList: string[];
-                if (isAll) {
-                  nextList = [opt.id];
-                } else if (selected) {
-                  nextList = selectedList.filter((p) => p !== opt.id && p !== "ALL");
-                  if (nextList.length === 0) nextList = ["ALL"];
-                } else {
-                  nextList = [...selectedList.filter((p) => p !== "ALL"), opt.id];
-                }
+                const nextList = toggleMultiValue(selectedList, isAll, selected, opt.id, "ALL");
                 onPriorityChange?.(nextList.join(","));
               };
 
@@ -1536,15 +1148,7 @@ export function UnifiedTaskToolbar({
                   onCategoryChange?.("ALL");
                   return;
                 }
-                let nextList: string[];
-                if (isAll) {
-                  nextList = [cat.id];
-                } else if (selected) {
-                  nextList = selectedList.filter((c) => c !== cat.id && c !== "ALL");
-                  if (nextList.length === 0) nextList = ["ALL"];
-                } else {
-                  nextList = [...selectedList.filter((c) => c !== "ALL"), cat.id];
-                }
+                const nextList = toggleMultiValue(selectedList, isAll, selected, cat.id, "ALL");
                 onCategoryChange?.(nextList.join(","));
               };
 
@@ -1604,15 +1208,7 @@ export function UnifiedTaskToolbar({
             onDepartmentChange?.("ALL");
             return;
           }
-          let nextList: string[];
-          if (isAll) {
-            nextList = [deptCode];
-          } else if (selectedList.includes(deptCode)) {
-            nextList = selectedList.filter((d) => d !== deptCode && d !== "ALL");
-            if (nextList.length === 0) nextList = ["ALL"];
-          } else {
-            nextList = [...selectedList.filter((d) => d !== "ALL"), deptCode];
-          }
+          const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(deptCode), deptCode, "ALL");
           onDepartmentChange?.(nextList.join(","));
         };
 
@@ -1656,14 +1252,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <School className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <School className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isFacultyActive ? "font-medium text-foreground" : "font-normal")}>
                     Khoa đào tạo
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1685,7 +1280,7 @@ export function UnifiedTaskToolbar({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <School className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <School className="size-3.5 text-muted-foreground/60 shrink-0" />
                               <span className="truncate">{dept.name}</span>
                             </div>
                             <div
@@ -1716,14 +1311,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Building className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <Building className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isAdminActive ? "font-medium text-foreground" : "font-normal")}>
                     Phòng ban hành chính
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1745,7 +1339,7 @@ export function UnifiedTaskToolbar({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <Building className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <Building className="size-3.5 text-muted-foreground/60 shrink-0" />
                               <span className="truncate">{dept.name}</span>
                             </div>
                             <div
@@ -1813,7 +1407,7 @@ export function UnifiedTaskToolbar({
                     ) : opt.value === "unassigned" ? (
                       <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeDasharray="2 2" />
                     ) : (
-                      <Users className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                      <Users className="size-3.5 text-muted-foreground/60 shrink-0" />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
@@ -1864,7 +1458,7 @@ export function UnifiedTaskToolbar({
                     ) : opt.value === "single" ? (
                       <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
                     ) : (
-                      <Users className="size-3.5 text-muted-foreground/50 shrink-0" strokeWidth={1.5} />
+                      <Users className="size-3.5 text-muted-foreground/50 shrink-0" />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </div>
@@ -1897,14 +1491,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Calendar className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <Calendar className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isDeadlineActive ? "font-medium text-foreground" : "font-normal")}>
                     Hạn chốt
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1930,7 +1523,7 @@ export function UnifiedTaskToolbar({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" />
                               <span>{opt.label}</span>
                               {opt.count !== undefined && opt.count > 0 && (
                                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">({opt.count})</span>
@@ -1964,14 +1557,13 @@ export function UnifiedTaskToolbar({
                 className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Clock className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <Clock className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
                   <span className={cn("truncate", isMonthActive ? "font-medium text-foreground" : "font-normal")}>
                     Kỳ tháng
                   </span>
                 </div>
                 <ChevronRight
                   className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                  strokeWidth={1.5}
                 />
               </MenuSubmenuTrigger>
               <MenuPortal>
@@ -1990,7 +1582,7 @@ export function UnifiedTaskToolbar({
                             : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                         )}
                       >
-                        <Clock className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                        <Clock className="size-3.5 text-muted-foreground/60 shrink-0" />
                         <span>Tất cả các tháng</span>
                       </MenuItem>
 
@@ -2048,15 +1640,7 @@ export function UnifiedTaskToolbar({
             handleHealthChange("all");
             return;
           }
-          let nextList: string[];
-          if (isAll) {
-            nextList = [val];
-          } else if (selectedList.includes(val)) {
-            nextList = selectedList.filter((h) => h !== val && h !== "all");
-            if (nextList.length === 0) nextList = ["all"];
-          } else {
-            nextList = [...selectedList.filter((h) => h !== "all"), val];
-          }
+          const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(val), val, "all");
           handleHealthChange(nextList.join(","));
         };
 
@@ -2123,15 +1707,7 @@ export function UnifiedTaskToolbar({
             handleOriginChange(null);
             return;
           }
-          let nextList: string[];
-          if (isAll) {
-            nextList = [val];
-          } else if (selectedList.includes(val)) {
-            nextList = selectedList.filter((o) => o !== val && o !== "all");
-            if (nextList.length === 0) nextList = ["all"];
-          } else {
-            nextList = [...selectedList.filter((o) => o !== "all"), val];
-          }
+          const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(val), val, "all");
           handleOriginChange(nextList.join(","));
         };
 
@@ -2179,7 +1755,7 @@ export function UnifiedTaskToolbar({
 
   const matchingSearchOptions = React.useMemo(() => {
     if (!menuSearch.trim()) return [];
-    const query = normalizeFilterSearchText(menuSearch);
+    const query = foldVietnamese(menuSearch);
     const results: Array<{
       id: string;
       categoryLabel: string;
@@ -2191,7 +1767,7 @@ export function UnifiedTaskToolbar({
 
     // Match Status
     statusOptions.forEach((opt) => {
-      if (normalizeFilterSearchText(opt.label).includes(query)) {
+      if (foldVietnamese(opt.label).includes(query)) {
         const selectedList = (effectiveStatus || "all").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
         const isAll = selectedList.length === 0 || selectedList.includes("all");
         const selected = opt.value === "all"
@@ -2213,15 +1789,7 @@ export function UnifiedTaskToolbar({
               else onTabChange?.("all");
               return;
             }
-            let nextList: string[];
-            if (isAll) {
-              nextList = [opt.value];
-            } else if (selected) {
-              nextList = selectedList.filter((v) => v !== opt.value && v !== "all");
-              if (nextList.length === 0) nextList = ["all"];
-            } else {
-              nextList = [...selectedList.filter((v) => v !== "all"), opt.value];
-            }
+            const nextList = toggleMultiValue(selectedList, isAll, selected, opt.value, "all");
             const nextStr = nextList.join(",");
             if (onStatusChange) onStatusChange(nextStr);
             else onTabChange?.(nextStr);
@@ -2232,7 +1800,7 @@ export function UnifiedTaskToolbar({
 
     // Match Priority
     PRIORITY_FILTER_OPTIONS.forEach((opt) => {
-      if (normalizeFilterSearchText(opt.label).includes(query)) {
+      if (foldVietnamese(opt.label).includes(query)) {
         const selectedList = (selectedPriority || "ALL").split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
         const isAll = selectedList.length === 0 || selectedList.includes("ALL");
         const selected = opt.id === "ALL" ? isAll : selectedList.includes(opt.id);
@@ -2247,15 +1815,7 @@ export function UnifiedTaskToolbar({
               onPriorityChange?.("ALL");
               return;
             }
-            let nextList: string[];
-            if (isAll) {
-              nextList = [opt.id];
-            } else if (selected) {
-              nextList = selectedList.filter((p) => p !== opt.id && p !== "ALL");
-              if (nextList.length === 0) nextList = ["ALL"];
-            } else {
-              nextList = [...selectedList.filter((p) => p !== "ALL"), opt.id];
-            }
+            const nextList = toggleMultiValue(selectedList, isAll, selected, opt.id, "ALL");
             onPriorityChange?.(nextList.join(","));
           },
         });
@@ -2264,7 +1824,7 @@ export function UnifiedTaskToolbar({
 
     // Match Category
     CATEGORY_FILTER_OPTIONS.forEach((cat) => {
-      if (normalizeFilterSearchText(cat.label).includes(query)) {
+      if (foldVietnamese(cat.label).includes(query)) {
         const selectedList = (selectedCategory || "ALL").split(",").map((c) => c.trim()).filter(Boolean);
         const isAll = selectedList.length === 0 || selectedList.includes("ALL");
         const selected = cat.id === "ALL" ? isAll : selectedList.includes(cat.id);
@@ -2279,15 +1839,7 @@ export function UnifiedTaskToolbar({
               onCategoryChange?.("ALL");
               return;
             }
-            let nextList: string[];
-            if (isAll) {
-              nextList = [cat.id];
-            } else if (selected) {
-              nextList = selectedList.filter((c) => c !== cat.id && c !== "ALL");
-              if (nextList.length === 0) nextList = ["ALL"];
-            } else {
-              nextList = [...selectedList.filter((c) => c !== "ALL"), cat.id];
-            }
+            const nextList = toggleMultiValue(selectedList, isAll, selected, cat.id, "ALL");
             onCategoryChange?.(nextList.join(","));
           },
         });
@@ -2296,7 +1848,7 @@ export function UnifiedTaskToolbar({
 
     // Match Department
     availableDepartments.forEach((dept) => {
-      if (normalizeFilterSearchText(dept.name).includes(query) || normalizeFilterSearchText(dept.code).includes(query)) {
+      if (foldVietnamese(dept.name).includes(query) || foldVietnamese(dept.code).includes(query)) {
         const selectedList = (selectedDepartment || "ALL").split(",").map((d) => d.trim()).filter(Boolean);
         const isAll = selectedList.length === 0 || selectedList.includes("ALL");
         const selected = dept.code === "ALL" ? isAll : selectedList.includes(dept.code);
@@ -2311,15 +1863,7 @@ export function UnifiedTaskToolbar({
               onDepartmentChange?.("ALL");
               return;
             }
-            let nextList: string[];
-            if (isAll) {
-              nextList = [dept.code];
-            } else if (selectedList.includes(dept.code)) {
-              nextList = selectedList.filter((d) => d !== dept.code && d !== "ALL");
-              if (nextList.length === 0) nextList = ["ALL"];
-            } else {
-              nextList = [...selectedList.filter((d) => d !== "ALL"), dept.code];
-            }
+            const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(dept.code), dept.code, "ALL");
             onDepartmentChange?.(nextList.join(","));
           },
         });
@@ -2328,7 +1872,7 @@ export function UnifiedTaskToolbar({
 
     // Match Deadline
     deadlineOptions.forEach((opt) => {
-      if (normalizeFilterSearchText(opt.label).includes(query)) {
+      if (foldVietnamese(opt.label).includes(query)) {
         const selected = effectiveDeadline === opt.value;
         results.push({
           id: `deadline-${opt.value}`,
@@ -2352,7 +1896,7 @@ export function UnifiedTaskToolbar({
       { value: "unassigned", label: "Chưa phân công người chủ trì" },
     ];
     leadOptions.forEach((opt) => {
-      if (normalizeFilterSearchText(opt.label).includes(query)) {
+      if (foldVietnamese(opt.label).includes(query)) {
         const selected = selectedLead === opt.value || (opt.value === "my" && activeTab === "my");
         results.push({
           id: `lead-${opt.value}`,
@@ -2380,7 +1924,7 @@ export function UnifiedTaskToolbar({
       { value: "completed", label: "Đã hoàn thành 100%" },
     ];
     healthOptions.forEach((opt) => {
-      if (normalizeFilterSearchText(opt.label).includes(query)) {
+      if (foldVietnamese(opt.label).includes(query)) {
         const selected = selectedHealth === opt.value;
         results.push({
           id: `health-${opt.value}`,
@@ -2425,7 +1969,7 @@ export function UnifiedTaskToolbar({
       { value: "DON_VI", label: "Đơn vị đề xuất" },
     ];
     originOptions.forEach((opt) => {
-      if (normalizeFilterSearchText(opt.label).includes(query)) {
+      if (foldVietnamese(opt.label).includes(query)) {
         const selected = selectedOrigin === opt.value;
         results.push({
           id: `origin-${opt.value}`,
@@ -2446,7 +1990,7 @@ export function UnifiedTaskToolbar({
       { value: "single", label: "Đơn vị tự thực hiện (không phối hợp)" },
     ];
     collabOptions.forEach((opt) => {
-      if (normalizeFilterSearchText(opt.label).includes(query)) {
+      if (foldVietnamese(opt.label).includes(query)) {
         const selected = selectedCollaborator === opt.value;
         results.push({
           id: `collab-${opt.value}`,
@@ -2464,7 +2008,7 @@ export function UnifiedTaskToolbar({
     // Match Months
     academicMonths.forEach((period) => {
       const label = `Tháng ${period.monthNumber}`;
-      if (normalizeFilterSearchText(label).includes(query)) {
+      if (foldVietnamese(label).includes(query)) {
         const selected =
           effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
         results.push({
@@ -2512,8 +2056,8 @@ export function UnifiedTaskToolbar({
 
   const matchingCategories = React.useMemo(() => {
     if (!menuSearch.trim()) return filterCategories;
-    const query = normalizeFilterSearchText(menuSearch);
-    return filterCategories.filter((cat) => normalizeFilterSearchText(cat.label).includes(query));
+    const query = foldVietnamese(menuSearch);
+    return filterCategories.filter((cat) => foldVietnamese(cat.label).includes(query));
   }, [menuSearch, filterCategories]);
 
   const renderCategorySubmenu = (category: typeof filterCategories[0]) => {
@@ -2533,7 +2077,6 @@ export function UnifiedTaskToolbar({
           </div>
           <ChevronRight
             className="size-2.5 shrink-0 text-foreground/60 group-hover:text-foreground transition-colors ml-auto"
-            strokeWidth={1.5}
           />
         </MenuSubmenuTrigger>
         <MenuPortal>
@@ -2582,9 +2125,8 @@ export function UnifiedTaskToolbar({
                 const isActive = normalizedScope === tab.id;
                 const showBadge = typeof tab.count === "number" && !isNaN(tab.count);
                 return (
-                  <button
+                  <Pressable
                     key={tab.id}
-                    type="button"
                     role="tab"
                     data-scope={tab.id}
                     aria-selected={isActive}
@@ -2594,7 +2136,7 @@ export function UnifiedTaskToolbar({
                       }
                     }}
                     className={cn(
-                      "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer select-none",
+                      "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors select-none",
                       isActive
                         ? "bg-muted text-foreground font-semibold"
                         : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -2616,7 +2158,7 @@ export function UnifiedTaskToolbar({
                         {tab.count}
                       </span>
                     )}
-                  </button>
+                  </Pressable>
                 );
               })}
             </div>
@@ -2634,16 +2176,15 @@ export function UnifiedTaskToolbar({
 
           {/* Right: Primary Page Action Button (Tạo nhiệm vụ - Linear Understated Style) */}
           {canCreateTask && handlePrimaryAction && (
-            <button
-              type="button"
+            <Pressable
               onClick={() => handlePrimaryAction()}
               title="Tạo nhiệm vụ"
               aria-label="Tạo nhiệm vụ"
               className={listToolbarPrimaryButtonClass}
             >
-              <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <Plus className="size-3.5 shrink-0 text-muted-foreground" />
               <span>{createButtonLabel || (onCreateTask ? "Tạo nhiệm vụ" : primaryActionLabel)}</span>
-            </button>
+            </Pressable>
           )}
         </div>
       )}
@@ -2667,24 +2208,21 @@ export function UnifiedTaskToolbar({
         placeholder="Tìm nhiệm vụ… /"
         aria-label="Tìm nhiệm vụ"
         wrapperClassName={!leftContent && !onScopeChange ? "ml-auto" : undefined}
-        collapsedWidthClassName={LIST_TOOLBAR_SEARCH_COLLAPSED}
-        expandedWidthClassName={LIST_TOOLBAR_SEARCH_EXPANDED}
       />
 
       {/* 2. Filter — icon-only trigger */}
       <MenuRoot open={isCollapsedFilterOpen} onOpenChange={(open) => { setIsCollapsedFilterOpen(open); if (!open) setMenuSearch(""); }}>
         <MenuTrigger
           render={
-            <button
-              type="button"
+            <Pressable
               aria-label="Bộ lọc"
               aria-expanded={isCollapsedFilterOpen}
               title="Bộ lọc (F)"
               className={listToolbarIconButtonClass(isCollapsedFilterOpen || activeFilterCount > 0)}
             >
-              <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
+              <Filter className="size-3.5 shrink-0" />
               <ListToolbarCountBadge count={activeFilterCount} />
-            </button>
+            </Pressable>
           }
         />
         <MenuPortal>
@@ -2695,7 +2233,7 @@ export function UnifiedTaskToolbar({
             >
               {/* Header: Add Filter... [F] */}
               <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/40 mb-1">
-                <Search className="size-3.5 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
+                <Search className="size-3.5 shrink-0 text-muted-foreground/50" />
                 <input
                   ref={menuSearchInputRef}
                   type="text"
@@ -2707,13 +2245,12 @@ export function UnifiedTaskToolbar({
                   className="h-5 w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
                 />
                 {menuSearch ? (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => setMenuSearch("")}
-                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer touch-manipulation"
+                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation"
                   >
-                    <X className="size-3" strokeWidth={1.5} />
-                  </button>
+                    <X className="size-3" />
+                  </Pressable>
                 ) : (
                   <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 font-mono text-xs leading-none text-muted-foreground bg-muted/80 border border-border/60 rounded select-none pointer-events-none">
                     F
@@ -2788,7 +2325,7 @@ export function UnifiedTaskToolbar({
                     className="flex h-7 w-full items-center justify-between rounded-md px-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer select-none outline-none"
                   >
                     <div className="flex items-center gap-1.5">
-                      <RotateCcw className="size-3 text-destructive/80" strokeWidth={1.5} />
+                      <RotateCcw className="size-3 text-destructive/80" />
                       <span>Xóa bộ lọc</span>
                     </div>
                     <span className="text-xs font-mono tabular-nums bg-destructive/15 text-destructive px-1.5 py-0.2 rounded-full">
@@ -2826,16 +2363,15 @@ export function UnifiedTaskToolbar({
 
       {/* 4. + Tạo việc CTA (Linear Understated Style) */}
       {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (
-        <button
-          type="button"
+        <Pressable
           onClick={() => handlePrimaryAction()}
           title="Tạo việc mới"
           aria-label="Tạo việc mới"
           className={listToolbarPrimaryButtonClass}
         >
-          <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+          <Plus className="size-3.5 shrink-0 text-muted-foreground" />
           <span>{primaryActionLabel}</span>
-        </button>
+        </Pressable>
       )}
     </div>
   );

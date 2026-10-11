@@ -25,9 +25,9 @@ export default function OutgoingDocumentDetailError({
         digest={error?.digest}
         onRetry={reset}
       >
-        <Button type="button" variant="secondary" size="sm" asChild>
+        <Button variant="secondary" size="sm" asChild>
           <Link href="/documents">
-            <ArrowLeft strokeWidth={1.5} />
+            <ArrowLeft />
             Về danh sách văn bản
           </Link>
         </Button>

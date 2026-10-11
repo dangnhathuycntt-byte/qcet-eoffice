@@ -69,13 +69,13 @@ export function VietnameseDayCalendar({ value, onSelect, className }: Vietnamese
             onClick={() => today && setView({ year: today.year, month: today.month })}
             className={iconBtn}
           >
-            <ArrowRight className="size-3.5 -rotate-45" strokeWidth={1.5} />
+            <ArrowRight className="size-3.5 -rotate-45" />
           </button>
           <button type="button" aria-label="Tháng trước" onClick={() => shift(-1)} className={iconBtn}>
-            <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+            <ChevronLeft className="size-3.5" />
           </button>
           <button type="button" aria-label="Tháng sau" onClick={() => shift(1)} className={iconBtn}>
-            <ChevronRight className="size-3.5" strokeWidth={1.5} />
+            <ChevronRight className="size-3.5" />
           </button>
         </div>
       </div>

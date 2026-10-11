@@ -8,7 +8,6 @@ import {
   FileText,
   Trash2,
   Check,
-  X,
   Loader2,
   ShieldCheck,
 } from "lucide-react";
@@ -85,7 +84,7 @@ export function TaskEvidenceSection({
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Paperclip className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+          <Paperclip className="size-4 text-primary shrink-0" />
           <h2 className="text-xs font-semibold text-foreground">
             Sản phẩm bàn giao & Minh chứng ({deliverables.length})
           </h2>
@@ -99,7 +98,7 @@ export function TaskEvidenceSection({
             title="Đính kèm minh chứng hoặc liên kết kết quả"
             aria-label="Đính kèm minh chứng hoặc liên kết kết quả"
           >
-            <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
+            <Plus className="size-3.5 text-primary" />
             <span>Thêm minh chứng</span>
           </button>
         )}
@@ -160,9 +159,9 @@ export function TaskEvidenceSection({
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             >
               {isSubmitting ? (
-                <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <Check className="size-3.5" strokeWidth={1.5} />
+                <Check className="size-3.5" />
               )}
               <span>Lưu minh chứng</span>
             </button>
@@ -182,7 +181,7 @@ export function TaskEvidenceSection({
               onClick={() => setIsAdding(true)}
               className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden rounded"
             >
-              <Plus className="size-3" strokeWidth={1.5} />
+              <Plus className="size-3" />
               <span>Thêm minh chứng đầu tiên</span>
             </button>
           )}
@@ -199,7 +198,7 @@ export function TaskEvidenceSection({
                 className="flex items-start justify-between gap-3 p-3.5 hover:bg-muted/40 transition-colors group/evidence"
               >
                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                  <FileText className="size-4 text-primary shrink-0 mt-0.5" strokeWidth={1.5} />
+                  <FileText className="size-4 text-primary shrink-0 mt-0.5" />
 
                   <div className="min-w-0 space-y-1 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -211,15 +210,15 @@ export function TaskEvidenceSection({
                       {item.status && (
                         <span
                           className={cn(
-                            "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-semibold border",
+                            "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-xs font-semibold border",
                             isApproved
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : isRejected
-                              ? "bg-rose-50 text-rose-700 border-rose-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
+                              ? "bg-danger-soft text-destructive border-destructive/30"
+                              : "bg-warning/10 text-warning border-warning/30"
                           )}
                         >
-                          {isApproved && <ShieldCheck className="size-3" strokeWidth={1.5} />}
+                          {isApproved && <ShieldCheck className="size-3" />}
                           {isApproved ? "Đã duyệt" : isRejected ? "Từ chối" : "Chờ duyệt"}
                         </span>
                       )}
@@ -231,7 +230,7 @@ export function TaskEvidenceSection({
                       </p>
                     )}
 
-                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground/80 flex-wrap pt-0.5">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground/80 flex-wrap pt-0.5">
                       {item.uploadedBy?.name && <span>Bởi: {item.uploadedBy.name}</span>}
                       {item.createdAt && <span>• {formatDetailDate(item.createdAt)}</span>}
                     </div>
@@ -248,8 +247,8 @@ export function TaskEvidenceSection({
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-background hover:bg-muted text-xs font-medium text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                       title="Mở liên kết minh chứng"
                     >
-                      <ExternalLink className="size-3 text-muted-foreground" strokeWidth={1.5} />
-                      <span className="hidden sm:inline text-[11px]">Mở tệp</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                      <span className="hidden sm:inline text-xs">Mở tệp</span>
                     </a>
                   )}
 
@@ -257,11 +256,11 @@ export function TaskEvidenceSection({
                     <button
                       type="button"
                       onClick={() => onDeleteDeliverable(item.id)}
-                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-rose-600 rounded transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:opacity-100"
+                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-destructive rounded transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:opacity-100"
                       title="Xóa minh chứng"
                       aria-label="Xóa minh chứng"
                     >
-                      <Trash2 className="size-3.5" strokeWidth={1.5} />
+                      <Trash2 className="size-3.5" />
                     </button>
                   )}
                 </div>

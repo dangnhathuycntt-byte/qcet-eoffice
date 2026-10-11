@@ -45,7 +45,7 @@ export function DestructiveConfirmDialog({
           <div className="bg-card rounded-2xl shadow-dialog border-0 max-w-md w-full p-4 sm:p-6 flex flex-col gap-4">
             <div className="flex items-start gap-3">
               <div className="size-8 rounded-full bg-danger-soft text-destructive flex items-center justify-center shrink-0">
-                <AlertOctagon className="size-4" strokeWidth={1.5} />
+                <AlertOctagon className="size-4" />
               </div>
               <div className="flex flex-col gap-1 min-w-0">
                 <AlertDialog.Title className="text-sm font-semibold text-foreground">
@@ -71,7 +71,6 @@ export function DestructiveConfirmDialog({
                 {cancelLabel}
               </AlertDialog.Close>
               <Button
-                type="button"
                 variant="destructive"
                 size="default"
                 onClick={handleConfirm}

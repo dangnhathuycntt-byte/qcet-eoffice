@@ -157,7 +157,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
       {error && <InlineAlert variant="error">{error}</InlineAlert>}
 
       {!form && (
-        <Button type="button" size="sm" onClick={() => openForm(null)}>
+        <Button size="sm" onClick={() => openForm(null)}>
           Tạo mẫu
         </Button>
       )}
@@ -191,10 +191,10 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
           <Textarea compact value={criteria} aria-label="Tiêu chí hoàn thành" placeholder="Tiêu chí hoàn thành (mỗi dòng một tiêu chí, tối đa 20)" onChange={(e) => setCriteria(e.target.value)} className="min-h-14" />
           <Textarea compact value={subtasks} aria-label="Việc con" placeholder="Việc con (mỗi dòng một việc, tối đa 20)" onChange={(e) => setSubtasks(e.target.value)} className="min-h-14" />
           <div className="flex gap-1.5">
-            <Button type="button" size="sm" disabled={busy || !formValid} onClick={() => void saveTemplate()}>
+            <Button size="sm" disabled={busy || !formValid} onClick={() => void saveTemplate()}>
               Lưu mẫu
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setForm(null)}>
+            <Button size="sm" variant="ghost" onClick={() => setForm(null)}>
               Hủy
             </Button>
           </div>
@@ -224,8 +224,8 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <Button type="button" size="xs" variant="ghost" onClick={() => openForm(t)}>Sửa</Button>
-                  <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void run(() => api(`/api/task-templates/${t.id}`, { method: "PATCH", body: JSON.stringify({ isActive: !t.isActive }) }))}>
+                  <Button size="xs" variant="ghost" onClick={() => openForm(t)}>Sửa</Button>
+                  <Button size="xs" variant="ghost" disabled={busy} onClick={() => void run(() => api(`/api/task-templates/${t.id}`, { method: "PATCH", body: JSON.stringify({ isActive: !t.isActive }) }))}>
                     {t.isActive ? "Ngừng dùng" : "Dùng lại"}
                   </Button>
                 </div>
@@ -246,9 +246,9 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
                       </span>
                       <span className="flex shrink-0 gap-1">
                         {r.lastRun?.status === "FAILED" && (
-                          <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { retryFailed: true })}>Thử lại</Button>
+                          <Button size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { retryFailed: true })}>Thử lại</Button>
                         )}
-                        <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { isActive: !r.isActive })}>
+                        <Button size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { isActive: !r.isActive })}>
                           {r.isActive ? "Tạm dừng" : "Tiếp tục"}
                         </Button>
                       </span>
@@ -258,7 +258,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
               )}
 
               {t.isActive && recFor !== t.id && (
-                <Button type="button" size="xs" variant="ghost" className="mt-2" onClick={() => setRecFor(t.id)}>
+                <Button size="xs" variant="ghost" className="mt-2" onClick={() => setRecFor(t.id)}>
                   Thêm lịch lặp lại
                 </Button>
               )}
@@ -285,8 +285,8 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
                     onValueChange={(v) => setCatchUp(v || "0")}
                   />
                   <div className="flex gap-1.5">
-                    <Button type="button" size="xs" disabled={busy || !recValid} onClick={() => void saveRecurrence(t.id)}>Lưu lịch</Button>
-                    <Button type="button" size="xs" variant="ghost" onClick={() => setRecFor(null)}>Hủy</Button>
+                    <Button size="xs" disabled={busy || !recValid} onClick={() => void saveRecurrence(t.id)}>Lưu lịch</Button>
+                    <Button size="xs" variant="ghost" onClick={() => setRecFor(null)}>Hủy</Button>
                   </div>
                 </div>
               )}

@@ -43,9 +43,9 @@ const AVATAR_PALETTES: AvatarStyle[] = [
   { bg: "bg-emerald-500/15", text: "text-emerald-700", ring: "ring-emerald-500/30" },
   { bg: "bg-blue-500/15", text: "text-blue-700", ring: "ring-blue-500/30" },
   { bg: "bg-purple-500/15", text: "text-purple-700", ring: "ring-purple-500/30" },
-  { bg: "bg-amber-500/15", text: "text-amber-800", ring: "ring-amber-500/30" },
+  { bg: "bg-warning/15", text: "text-warning", ring: "ring-warning/30" },
   { bg: "bg-teal-500/15", text: "text-teal-700", ring: "ring-teal-500/30" },
-  { bg: "bg-rose-500/15", text: "text-rose-700", ring: "ring-rose-500/30" },
+  { bg: "bg-destructive/15", text: "text-destructive", ring: "ring-destructive/30" },
   { bg: "bg-indigo-500/15", text: "text-indigo-700", ring: "ring-indigo-500/30" },
   { bg: "bg-sky-500/15", text: "text-sky-700", ring: "ring-sky-500/30" },
   { bg: "bg-violet-500/15", text: "text-violet-700", ring: "ring-violet-500/30" },
@@ -384,7 +384,7 @@ export function getTypeBadge(type: string): { bg: string; icon: LucideIcon } {
     case "deliverable_submitted":
     case "deliverable_revision":
       return {
-        bg: "bg-amber-500/15 text-amber-700 border border-amber-500/30",
+        bg: "bg-warning/15 text-warning border border-warning/30",
         icon: ShieldCheck,
       };
     case "created":
@@ -411,14 +411,14 @@ export function getTypeBadge(type: string): { bg: string; icon: LucideIcon } {
     case "directive":
     case "executive_directive":
       return {
-        bg: "bg-rose-500/15 text-rose-700 border border-rose-500/30",
+        bg: "bg-destructive/15 text-destructive border border-destructive/30",
         icon: AlertTriangle,
       };
     case "deadline":
     case "reminder":
     case "deadline_warning_24h":
       return {
-        bg: "bg-amber-500/15 text-amber-800 border border-amber-500/30",
+        bg: "bg-warning/15 text-warning border border-warning/30",
         icon: Clock,
       };
     case "test":

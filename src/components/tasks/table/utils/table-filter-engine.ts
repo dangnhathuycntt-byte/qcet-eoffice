@@ -1,9 +1,7 @@
 import { getTaskContentPreview } from "@/lib/task-content-preview";
 import type {
   SchoolTask,
-  StaffTask,
   TaskCategory,
-  TaskStatus,
 } from "@/types/dashboard";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import { matchesUser } from "@/lib/role-task-filter";
@@ -18,7 +16,6 @@ import type {
   ColumnSortState,
   FlattenedPersonalTask,
   SmartFilterTab,
-  TaskSortField,
 } from "../types";
 
 export interface TaskFilterOptions {
@@ -513,14 +510,16 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
  * 6: Hoàn thành
  * 7: Đã hủy / Tạm dừng
  */
-export function getTaskStatusUrgencyRank(task: SchoolTask): number {
+export function getTaskStatusUrgencyRank(
+  task: SchoolTask,
+  todayIso: string = new Date().toISOString().slice(0, 10)
+): number {
   const status = (task.status || "NEW").toUpperCase();
   if (status === "COMPLETED") return 6;
   if (status === "CANCELLED" || status === "CANCELED") return 7;
   if (status === "BLOCKED") return 7;
 
   // Nhiệm vụ trễ hạn thực tế
-  const todayIso = new Date().toISOString().slice(0, 10);
   const dueIso = extractIsoDateString(task.dueDate);
   if (status === "OVERDUE" || (dueIso && dueIso < todayIso) || (task as any).isOverdue === true) {
     return 1;
@@ -540,6 +539,10 @@ export function getTaskStatusUrgencyRank(task: SchoolTask): number {
   return 5;
 }
 
+// Dựng collator một lần; localeCompare(x, "vi") dựng lại ở mỗi phép so sánh.
+const VI_COLLATOR = new Intl.Collator("vi");
+const VI_NUMERIC_COLLATOR = new Intl.Collator("vi", { numeric: true });
+
 /**
  * Sắp xếp danh sách nhiệm vụ theo cột và chiều được chọn
  */
@@ -552,16 +555,17 @@ export function sortTasks(
   const field = (sortState as any).field || (sortState as any).column;
   const { direction } = sortState;
   const factor = direction === "asc" ? 1 : -1;
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   return [...tasks].sort((a, b) => {
     switch (field) {
       case "code": {
         const codeA = a.code || (a as any).taskCode || a.id || "";
         const codeB = b.code || (b as any).taskCode || b.id || "";
-        return factor * codeA.localeCompare(codeB, "vi", { numeric: true });
+        return factor * VI_NUMERIC_COLLATOR.compare(codeA, codeB);
       }
       case "title": {
-        return factor * a.title.localeCompare(b.title, "vi");
+        return factor * VI_COLLATOR.compare(a.title, b.title);
       }
       case "dueDate": {
         const dateA = extractIsoDateString(a.dueDate) || "9999-99-99";
@@ -569,8 +573,8 @@ export function sortTasks(
         return factor * dateA.localeCompare(dateB);
       }
       case "status": {
-        const rankA = getTaskStatusUrgencyRank(a);
-        const rankB = getTaskStatusUrgencyRank(b);
+        const rankA = getTaskStatusUrgencyRank(a, todayIso);
+        const rankB = getTaskStatusUrgencyRank(b, todayIso);
         if (rankA !== rankB) {
           return factor * (rankA - rankB);
         }
@@ -582,7 +586,7 @@ export function sortTasks(
       case "leadAssignee": {
         const nameA = a.leadAssigneeName || "";
         const nameB = b.leadAssigneeName || "";
-        return factor * nameA.localeCompare(nameB, "vi");
+        return factor * VI_COLLATOR.compare(nameA, nameB);
       }
       case "category": {
         const catA = a.category || "";
@@ -597,7 +601,7 @@ export function sortTasks(
       case "department": {
         const deptA = a.departmentId || a.leadDepartment || "";
         const deptB = b.departmentId || b.leadDepartment || "";
-        return factor * deptA.localeCompare(deptB, "vi");
+        return factor * VI_COLLATOR.compare(deptA, deptB);
       }
       default:
         return 0;

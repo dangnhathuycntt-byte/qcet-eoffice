@@ -76,8 +76,8 @@ const ROW_3: StatCardDef[] = [
     key: "urgent",
     label: "Khẩn/Hỏa tốc",
     icon: Flame,
-    valueClassName: "text-amber-600",
-    cardClassName: "border-amber-500/20 bg-amber-500/5",
+    valueClassName: "text-warning",
+    cardClassName: "border-warning/20 bg-warning/5",
   },
   { key: "linkedTasks", label: "Đã gắn nhiệm vụ", icon: Link2 },
 ];
@@ -181,7 +181,7 @@ export function ReportsOverviewView() {
           <div>
             <div className="mb-1 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/40 px-2.5 py-0.5 text-xs font-semibold text-foreground">
-                <BarChart3 className="size-3" strokeWidth={1.5} /> Thống kê
+                <BarChart3 className="size-3" /> Thống kê
               </span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
@@ -199,9 +199,9 @@ export function ReportsOverviewView() {
               className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium shadow-2xs transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50 sm:min-h-9 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {isExporting ? (
-                <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <Download className="size-3.5" strokeWidth={1.5} />
+                <Download className="size-3.5" />
               )}
               Xuất CSV
             </button>
@@ -213,7 +213,6 @@ export function ReportsOverviewView() {
             >
               <RefreshCw
                 className={cn("size-3.5", isLoading && "animate-spin")}
-                strokeWidth={1.5}
               />
               Làm mới
             </button>
@@ -305,7 +304,6 @@ export function ReportsOverviewView() {
                   <div className="col-span-full rounded-xl border border-border/50 bg-card px-6 py-10 text-center shadow-2xs">
                     <BarChart3
                       className="mx-auto size-8 text-muted-foreground/40"
-                      strokeWidth={1.5}
                     />
                     <p className="mt-3 text-sm text-muted-foreground">
                       Chưa có dữ liệu thống kê

@@ -12,7 +12,6 @@ import {
   Smartphone,
   HelpCircle,
   LogOut,
-  type LucideIcon,
 } from "lucide-react";
 import {
   IconSidebarHome,
@@ -33,7 +32,6 @@ import {
 } from "@/lib/navigation/canonical-navigation-registry";
 import {
   useSidebar,
-  type NavigationSection,
 } from "@/components/layout/sidebar-context";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
 import { MaintenanceDialog } from "@/components/common/maintenance-dialog";
@@ -49,6 +47,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
+import { Pressable } from "@/components/ui/pressable";
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -321,7 +320,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, logout, isProfileModalOpen, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
+  const { user, logout, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const accountTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -340,6 +339,7 @@ export function AppSidebar() {
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
   // Số đếm thật cho menu con "Văn bản" (theo quyền đọc của người dùng).
+  // Làm mới khi chuyển trang; đổi bộ lọc/ô tìm (query string) không đổi số đếm.
   const docsUserId = user?.id;
   const [canViewApprovalReport, setCanViewApprovalReport] = React.useState(false);
   React.useEffect(() => {
@@ -366,7 +366,7 @@ export function AppSidebar() {
       }
     })();
     return () => ctrl.abort();
-  }, [docsUserId, pathname, searchParams, setBadgeCounts]);
+  }, [docsUserId, pathname, setBadgeCounts]);
 
   // Automatic profile prompt on first visit if user has unassigned department
   React.useEffect(() => {
@@ -529,7 +529,7 @@ export function AppSidebar() {
                   priority
                 />
                 {!isCollapsed && (
-                  <span className="font-semibold text-[13.5px] tracking-tight text-foreground truncate select-none">
+                  <span className="font-semibold text-compact tracking-tight text-foreground truncate select-none">
                     QCET E-Office
                   </span>
                 )}
@@ -549,21 +549,19 @@ export function AppSidebar() {
                 <div key={group.id} className="space-y-0.5">
                   {/* Group Section Header (Văn bản, Đơn vị) */}
                   {group.label && !isCollapsed ? (
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => toggleGroup(group.id)}
-                      className="w-full flex items-center gap-1 px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground select-none hover:text-foreground transition-colors text-left cursor-pointer group/gh"
+                      className="w-full flex items-center gap-1 px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground select-none hover:text-foreground transition-colors text-left group/gh"
                     >
                       <span>{group.label}</span>
                       <ChevronDown
                         size={11}
-                        strokeWidth={1.5}
                         className={cn(
                           "text-muted-foreground/70 transition-transform duration-150 shrink-0",
                           isGroupCollapsed && "-rotate-90"
                         )}
                       />
-                    </button>
+                    </Pressable>
                   ) : null}
 
                   {/* Divider when collapsed */}
@@ -614,7 +612,7 @@ export function AppSidebar() {
                                   "group relative flex items-center transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
                                   isCollapsed
                                     ? "size-10 mx-auto justify-center rounded-xl p-0"
-                                    : "gap-2.5 px-2 h-8 rounded-md text-[13px]",
+                                    : "gap-2.5 px-2 h-8 rounded-md text-compact",
                                   !isCollapsed && children && "pr-7",
                                   active
                                     ? "bg-bg-hover text-foreground font-medium"
@@ -640,11 +638,11 @@ export function AppSidebar() {
 
                                 {!isCollapsed && (
                                   <>
-                                    <span className="truncate flex-1 text-[13px] tracking-tight">
+                                    <span className="truncate flex-1 text-compact tracking-tight">
                                       {item.label}
                                     </span>
                                     {badgeText ? (
-                                      <span className="text-[12px] font-normal text-muted-foreground/75 tabular-nums ml-auto shrink-0 select-none">
+                                      <span className="text-xs font-normal text-muted-foreground/75 tabular-nums ml-auto shrink-0 select-none">
                                         {badgeText}
                                       </span>
                                     ) : null}
@@ -662,21 +660,19 @@ export function AppSidebar() {
                             )}
                           </Tooltip>
                           {children && !isCollapsed ? (
-                            <button
-                              type="button"
+                            <Pressable
                               aria-label={isExpanded ? `Thu gọn ${item.label}` : `Mở rộng ${item.label}`}
                               aria-expanded={isExpanded}
                               onClick={() =>
                                 setExpandedItems((prev) => ({ ...prev, [item.id]: !isExpanded }))
                               }
-                              className="absolute right-1 top-1/2 -translate-y-1/2 flex size-6 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 flex size-6 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
                             >
                               <ChevronDown
                                 size={12}
-                                strokeWidth={1.5}
                                 className={cn("transition-transform duration-150", !isExpanded && "-rotate-90")}
                               />
-                            </button>
+                            </Pressable>
                           ) : null}
                           </div>
                           {children && !isCollapsed && isExpanded ? (
@@ -690,7 +686,7 @@ export function AppSidebar() {
                                     href={child.href}
                                     aria-current={childActive ? "page" : undefined}
                                     className={cn(
-                                      "flex items-center gap-2 px-2 h-7 rounded-md text-[13px] tracking-tight transition-colors whitespace-nowrap",
+                                      "flex items-center gap-2 px-2 h-7 rounded-md text-compact tracking-tight transition-colors whitespace-nowrap",
                                       childActive
                                         ? "bg-accent text-foreground font-medium"
                                         : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
@@ -698,7 +694,7 @@ export function AppSidebar() {
                                   >
                                     <span className="truncate flex-1">{child.label}</span>
                                     {childBadge ? (
-                                      <span className="text-[12px] font-normal text-muted-foreground/75 tabular-nums shrink-0">
+                                      <span className="text-xs font-normal text-muted-foreground/75 tabular-nums shrink-0">
                                         {childBadge}
                                       </span>
                                     ) : null}
@@ -750,17 +746,16 @@ export function AppSidebar() {
                 {!isCollapsed && (
                   <>
                     <div className="flex flex-col min-w-0 flex-1 leading-none gap-0.5">
-                      <span className="text-[13px] font-medium text-foreground truncate">
+                      <span className="text-compact font-medium text-foreground truncate">
                         {formatDisplayName(user?.name)}
                       </span>
-                      <span className="text-[11.5px] text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {userRoleLabel}
                       </span>
                     </div>
 
                     <ChevronsUpDown
                       size={13}
-                      strokeWidth={1.5}
                       className="text-muted-foreground/50 shrink-0 ml-1"
                     />
                   </>
@@ -789,76 +784,72 @@ export function AppSidebar() {
                     {user && (
                       <div>
                         {isOfflineReadOnly && (
-                          <div className="mb-1.5 p-1.5 rounded-md bg-amber-50 border border-amber-300 text-[11px] text-amber-900 font-medium leading-relaxed">
+                          <div className="mb-1.5 p-1.5 rounded-md bg-warning/10 border border-warning/40 text-xs text-warning font-medium leading-relaxed">
                             Chế độ chỉ xem từ bộ nhớ tạm.
                           </div>
                         )}
 
                         {/* Menu Items */}
                         <div className="space-y-0.5">
-                          <button
-                            type="button"
+                          <Pressable
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               setIsProfileModalOpen(true);
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
-                            <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <User size={14} className="text-muted-foreground/75 shrink-0" />
                             <span>Hồ sơ cá nhân</span>
-                          </button>
+                          </Pressable>
 
                           <Link
                             href="/settings"
                             onClick={() => setIsProfileDropdownOpen(false)}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
                           >
-                            <Settings size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <Settings size={14} className="text-muted-foreground/75 shrink-0" />
                             <span>Cài đặt hệ thống</span>
                           </Link>
 
-                          <button
-                            type="button"
+                          <Pressable
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               if (typeof window !== "undefined") {
                                 window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
                               }
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
-                            <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
+                            <Smartphone size={14} className="text-primary/85 shrink-0" />
                             <span>Cài đặt ứng dụng di động</span>
-                          </button>
+                          </Pressable>
 
-                          <button
-                            type="button"
+                          <Pressable
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               if (typeof window !== "undefined") {
                                 window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
                               }
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
                           >
-                            <HelpCircle size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <HelpCircle size={14} className="text-muted-foreground/75 shrink-0" />
                             <span>Trợ giúp &amp; Hướng dẫn</span>
-                          </button>
+                          </Pressable>
                         </div>
 
                         {/* Logout */}
                         <div className="border-t border-border/60 pt-1 mt-1">
-                          <button
-                            type="button"
+                          <Pressable
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               logout();
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-medium text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors text-left"
                           >
-                            <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
+                            <LogOut size={14} className="shrink-0" />
                             <span>Đăng xuất</span>
-                          </button>
+                          </Pressable>
                         </div>
                       </div>
                     )}

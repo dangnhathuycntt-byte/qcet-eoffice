@@ -4,7 +4,6 @@ import * as React from "react";
 import { StandardDialog } from "@/components/ui/dialog";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import {
-  Calendar as CalendarIcon,
   Clock,
   Loader2,
   MapPin,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { cn } from "@/lib/utils";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
 export interface CreateEventFormData {
@@ -151,7 +149,7 @@ export function CreateEventModal({
           {error && (
             <div
               role="alert"
-              className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 flex items-center gap-2 shrink-0"
+              className="rounded-xl border border-destructive/30 bg-danger-soft p-3 text-xs text-destructive flex items-center gap-2 shrink-0"
             >
               <span>{error}</span>
             </div>
@@ -160,7 +158,7 @@ export function CreateEventModal({
           <form id="create-event-form" onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label htmlFor="calendar-event-title" className="block text-xs font-semibold text-foreground mb-1.5">
-                Tên sự kiện / Cuộc họp <span className="text-rose-600">*</span>
+                Tên sự kiện / Cuộc họp <span className="text-destructive">*</span>
               </label>
               <input
                 ref={titleInputRef}
@@ -178,7 +176,7 @@ export function CreateEventModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label htmlFor="calendar-event-date" className="block text-xs font-semibold text-foreground mb-1.5">
-                  Ngày <span className="text-rose-600">*</span>
+                  Ngày <span className="text-destructive">*</span>
                 </label>
                 <VietnameseDatePicker
                   id="calendar-event-date"
@@ -317,12 +315,11 @@ export function CreateEventModal({
         {/* Modal Footer */}
         <div className="flex items-center justify-end gap-2 p-3.5 sm:p-4 border-t border-border/60 bg-muted/20 shrink-0 px-6">
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={() => handleOpenChange(false)}
             disabled={submitting}
-            className="min-h-[44px] sm:min-h-9 text-xs rounded-xl px-4 cursor-pointer"
+            className="min-h-[44px] sm:min-h-9 text-xs rounded-xl px-4"
           >
             Hủy
           </Button>
@@ -331,7 +328,7 @@ export function CreateEventModal({
             form="create-event-form"
             size="sm"
             disabled={submitting}
-            className="min-h-[44px] sm:min-h-9 text-xs font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+            className="min-h-[44px] sm:min-h-9 text-xs font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {submitting ? (
               <>

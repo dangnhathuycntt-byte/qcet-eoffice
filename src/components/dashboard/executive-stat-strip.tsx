@@ -356,13 +356,13 @@ export function ExecutiveStatStrip({
             executiveStats?.pendingSchoolApprovalCount ??
             stats?.needsReviewTasksCount ??
             0;
-          dotColor = pendingCount > 0 ? "bg-amber-500" : "bg-emerald-500";
+          dotColor = pendingCount > 0 ? "bg-warning" : "bg-emerald-500";
         } else if (card.id === "urgent-tasks" || card.id === "blocked-overdue") {
           dotColor = isOverdueAlert
-            ? "bg-rose-500"
+            ? "bg-destructive"
             : (stats?.needsReviewTasksCount ?? 0) > 0 ||
               (stats?.pendingTriageCount ?? 0) > 0
-              ? "bg-amber-500"
+              ? "bg-warning"
               : "bg-emerald-500";
         } else if (card.id === "overall-progress") {
           dotColor = "bg-emerald-500";
@@ -401,13 +401,13 @@ export function ExecutiveStatStrip({
               !isClickable && "hover:bg-muted/15",
               isActive && (
                 isOverdueAlert
-                  ? "ring-2 ring-rose-500 ring-inset bg-rose-500/[0.04] shadow-xs z-10"
+                  ? "ring-2 ring-destructive ring-inset bg-destructive/[0.04] shadow-xs z-10"
                   : "ring-2 ring-primary ring-inset bg-primary/[0.04] shadow-xs z-10"
               ),
               // Responsive hairline dividers for 2-column mode on mobile/tablet
               idx < 2 ? "border-b border-border lg:border-b-0" : "",
               // Subtle background tint only on active overdue alert when not active
-              isOverdueAlert && !isActive && "bg-rose-500/[0.02]"
+              isOverdueAlert && !isActive && "bg-destructive/[0.02]"
             )}
             data-slot="stat-card"
             data-card-id={card.id}
@@ -430,9 +430,9 @@ export function ExecutiveStatStrip({
                   className={cn(
                     "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
                     isOverdueAlert
-                      ? "bg-rose-500/10 text-rose-700 border border-rose-500/20"
+                      ? "bg-destructive/10 text-destructive border border-destructive/20"
                       : (stats?.needsReviewTasksCount ?? 0) > 0 || (stats?.pendingTriageCount ?? 0) > 0
-                        ? "bg-amber-500/10 text-amber-700 border border-amber-500/20"
+                        ? "bg-warning/10 text-warning border border-warning/20"
                         : "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
                   )}
                 >
@@ -465,7 +465,7 @@ export function ExecutiveStatStrip({
                       }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-[13px] font-medium text-muted-foreground">
+                  <div className="flex items-center justify-between text-xs sm:text-compact font-medium text-muted-foreground">
                     <span className="truncate">{card.subtext}</span>
                     <span
                       className="font-heading font-semibold text-foreground tabular-nums ml-1 shrink-0"
@@ -476,7 +476,7 @@ export function ExecutiveStatStrip({
                   </div>
                 </div>
               ) : (
-                <div className="text-xs sm:text-[13px] font-medium text-muted-foreground flex items-center gap-1.5 leading-snug">
+                <div className="text-xs sm:text-compact font-medium text-muted-foreground flex items-center gap-1.5 leading-snug">
                   <span className={cn("size-1.5 rounded-full shrink-0", dotColor)} />
                   <span className="truncate">{card.subtext}</span>
                 </div>

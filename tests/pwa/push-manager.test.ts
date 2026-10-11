@@ -11,15 +11,6 @@ import {
 } from "../../src/lib/pwa/push-manager";
 
 import {
-  isBadgingSupported,
-  setAppBadge,
-  clearAppBadge,
-  calculateActionableBadgeCount,
-  updateActionableBadge,
-  type ActionableBadgeCounts,
-} from "../../src/lib/pwa/badging";
-
-import {
   DEFAULT_PUSH_PREFERENCES,
   mapNotificationTypeToTopic,
   isTopicEnabled,
@@ -351,120 +342,6 @@ describe("Task 7: Push Pre-Prompt, Subscription Lifecycle, Deep Linking & Notifi
           writable: true,
         });
       }
-    });
-  });
-
-  describe("8. PWA Badging API Progressive Enhancement", () => {
-    let badgeValue: number | undefined | null = null;
-    let isCleared = false;
-
-    beforeEach(() => {
-      badgeValue = null;
-      isCleared = false;
-
-      Object.defineProperty(global, "navigator", {
-        value: {
-          setAppBadge: async (count?: number) => {
-            badgeValue = count;
-          },
-          clearAppBadge: async () => {
-            isCleared = true;
-            badgeValue = 0;
-          },
-        },
-        configurable: true,
-        writable: true,
-      });
-    });
-
-    test("returns true when navigator.setAppBadge and clearAppBadge are present", () => {
-      assert.equal(isBadgingSupported(), true);
-    });
-
-    test("returns false when navigator.setAppBadge is missing", () => {
-      Object.defineProperty(global, "navigator", {
-        value: {},
-        configurable: true,
-        writable: true,
-      });
-      assert.equal(isBadgingSupported(), false);
-    });
-
-    test("sets app badge with integer count", async () => {
-      const ok = await setAppBadge(5);
-      assert.equal(ok, true);
-      assert.equal(badgeValue, 5);
-      assert.equal(isCleared, false);
-    });
-
-    test("clears badge automatically when count is 0", async () => {
-      const ok = await setAppBadge(0);
-      assert.equal(ok, true);
-      assert.equal(isCleared, true);
-    });
-
-    test("clears badge directly via clearAppBadge", async () => {
-      const ok = await clearAppBadge();
-      assert.equal(ok, true);
-      assert.equal(isCleared, true);
-    });
-
-    test("gracefully catches exceptions and returns false without crashing", async () => {
-      Object.defineProperty(global, "navigator", {
-        value: {
-          setAppBadge: async () => {
-            throw new Error("SecurityError: Permission denied");
-          },
-          clearAppBadge: async () => {},
-        },
-        configurable: true,
-        writable: true,
-      });
-
-      const ok = await setAppBadge(10);
-      assert.equal(ok, false);
-    });
-
-    test("rejects non-finite badge counts (NaN / Infinity)", async () => {
-      assert.equal(await setAppBadge(NaN), false, "Must reject NaN badge count");
-      assert.equal(await setAppBadge(Infinity), false, "Must reject Infinity badge count");
-    });
-
-    test("calculates badge count strictly from actionable items", () => {
-      const counts: ActionableBadgeCounts = {
-        actionableTasks: 3,
-        pendingReviews: 2,
-        urgentOverdueTasks: 1,
-        pendingApprovals: 4,
-      };
-
-      const total = calculateActionableBadgeCount(counts);
-      assert.equal(total, 10);
-    });
-
-    test("handles zero and undefined counts gracefully", () => {
-      const counts: ActionableBadgeCounts = {
-        actionableTasks: 0,
-      };
-
-      const total = calculateActionableBadgeCount(counts);
-      assert.equal(total, 0);
-    });
-
-    test("updates OS badge with actionable sum and clears when total is zero", async () => {
-      // 1. Positive actionable count
-      await updateActionableBadge({
-        actionableTasks: 2,
-        pendingApprovals: 1,
-      });
-      assert.equal(badgeValue, 3);
-
-      // 2. Zero actionable count
-      await updateActionableBadge({
-        actionableTasks: 0,
-        pendingReviews: 0,
-      });
-      assert.equal(isCleared, true);
     });
   });
 });

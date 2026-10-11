@@ -4,7 +4,6 @@ import type {
   StaffTask,
   TaskCategory,
   TaskStatus,
-  TaskPriority,
 } from "@/types/dashboard";
 
 /**

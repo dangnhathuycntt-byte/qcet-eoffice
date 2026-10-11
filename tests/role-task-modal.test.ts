@@ -1,9 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  getAllowedTaskLevelsForRole,
-  getDefaultTaskLevelForRole,
-} from "../src/components/dashboard/create-task-modal";
+import { getAllowedTaskLevelsForRole, getDefaultTaskLevelForRole } from "../src/domain/tasks/create-task-policy";
 import { canAssignUnitTask } from "../src/lib/role-task-filter";
 
 describe("Role-based Task Modal Helpers", () => {

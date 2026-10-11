@@ -9,19 +9,18 @@ import {
   CircleDot,
   Clock,
   Clock3,
-  MapPin,
   Plus,
   User,
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { getSystemReferenceDate, getTodayIctDate } from "@/lib/academic-calendar";
+import { getTodayIctDate } from "@/lib/academic-calendar";
 import {
   type CalendarAttentionState,
   getCalendarAttentionState,
   sortCalendarItemsByAttention,
 } from "@/lib/calendar/calendar-presentation";
-import { getWeekDays, type CalendarWeekDay } from "@/lib/calendar/calendar-week";
+import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { type DayTaskItem } from "./calendar-day-sheet";
 import type { CalendarScope } from "./calendar-toolbar";
 
@@ -77,9 +76,9 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
   const common = cn("size-3 shrink-0", className);
   switch (state) {
     case "overdue":
-      return <AlertTriangle className={cn(common, "text-rose-600")} aria-hidden="true" />;
+      return <AlertTriangle className={cn(common, "text-destructive")} aria-hidden="true" />;
     case "waiting":
-      return <Clock3 className={cn(common, "text-amber-600")} aria-hidden="true" />;
+      return <Clock3 className={cn(common, "text-warning")} aria-hidden="true" />;
     case "due_today":
       return <Clock3 className={cn(common, "text-orange-600")} aria-hidden="true" />;
     case "in_progress":
@@ -331,7 +330,7 @@ export function CalendarWeekView({
       {/* 2. Top section: "NHIỆM VỤ ĐẾN HẠN TRONG NGÀY" (Deadlines lane) */}
       <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr] border-b-2 border-border/70 bg-muted/20">
         <div className="py-2.5 px-2 border-r border-border/50 flex flex-col items-center justify-center text-center">
-          <CheckSquare className="size-3.5 text-muted-foreground mb-1" strokeWidth={1.5} />
+          <CheckSquare className="size-3.5 text-muted-foreground mb-1" />
           <span className="text-xs font-bold text-muted-foreground leading-tight">
             Hạn chót
           </span>
@@ -367,7 +366,7 @@ export function CalendarWeekView({
                       {totalCount} việc
                     </span>
                     {overdueCount > 0 && (
-                      <span className="text-xs font-semibold text-rose-600 tabular-nums">
+                      <span className="text-xs font-semibold text-destructive tabular-nums">
                         {overdueCount} trễ hạn
                       </span>
                     )}
@@ -406,7 +405,7 @@ export function CalendarWeekView({
                             <span className="truncate">{getStatusLabel(state)}</span>
                           </span>
                           <span className="inline-flex items-center gap-0.5 text-xs font-semibold px-1 rounded-xs bg-muted/40 text-foreground border border-border/40">
-                            <CheckSquare className="size-2.5 shrink-0" strokeWidth={1.5} />
+                            <CheckSquare className="size-2.5 shrink-0" />
                             {task.level === "Trường" ? "Trường" : "ĐV"}
                           </span>
                         </div>
@@ -421,7 +420,7 @@ export function CalendarWeekView({
                         </p>
                         {!compactMode && task.assigneeName && (
                           <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                            <User className="size-2.5 shrink-0" strokeWidth={1.5} />
+                            <User className="size-2.5 shrink-0" />
                             {task.assigneeName}
                           </p>
                         )}
@@ -441,7 +440,7 @@ export function CalendarWeekView({
         {weekDays.some((day) => (eventsByDate.get(day.date) || []).some((ev) => !isEventInWindow(ev))) && (
           <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr] border-b-2 border-border/60 bg-muted/20">
             <div className="py-2 px-1 sm:px-2 border-r border-border/50 text-right pr-2 sm:pr-3 text-xs font-mono font-medium text-muted-foreground tabular-nums select-none flex items-center justify-end">
-              <Clock className="size-3 mr-0.5" strokeWidth={1.5} aria-hidden="true" />
+              <Clock className="size-3 mr-0.5" aria-hidden="true" />
             </div>
             <div className={cn("grid divide-x divide-border/40", gridColClass)}>
               {weekDays.map((day) => {
@@ -476,7 +475,7 @@ export function CalendarWeekView({
                         className="w-full text-left rounded-md px-1.5 py-1 border border-border/80 bg-background hover:bg-muted/50 hover:border-border transition-all shadow-2xs flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                         aria-label={`Sự kiện: ${ev.title}${ev.time ? ` lúc ${ev.time}` : ""}`}
                       >
-                        <CalendarIcon className="size-2.5 text-muted-foreground shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                        <CalendarIcon className="size-2.5 text-muted-foreground shrink-0" aria-hidden="true" />
                         <span className="text-xs font-medium text-foreground truncate">
                           {ev.time ? `${ev.time} ` : ""}{ev.title}
                         </span>
@@ -541,7 +540,7 @@ export function CalendarWeekView({
                         >
                           <div className="flex items-center justify-between gap-1 text-xs font-mono tabular-nums text-muted-foreground">
                             <span className="font-semibold inline-flex items-center gap-1 text-foreground">
-                              <CalendarIcon className="size-2.5 text-muted-foreground" strokeWidth={1.5} />
+                              <CalendarIcon className="size-2.5 text-muted-foreground" />
                               {ev.time || hourLabel}
                             </span>
                             {ev.location && (
@@ -573,7 +572,7 @@ export function CalendarWeekView({
                           className="absolute inset-0 opacity-0 group-hover/slot:opacity-100 focus:opacity-100 bg-primary/5 hover:bg-primary/10 transition-opacity flex items-center justify-center text-primary rounded-xs min-h-[44px]"
                           aria-label={`Thêm sự kiện ngày ${day.date} lúc ${formatHourLabel(hour)}`}
                         >
-                          <Plus className="size-4" strokeWidth={1.5} />
+                          <Plus className="size-4" />
                         </button>
                       )}
                     </div>

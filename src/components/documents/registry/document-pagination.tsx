@@ -11,6 +11,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentPaginationProps {
   currentPage: number;
@@ -164,7 +165,6 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                   "size-3 text-muted-foreground transition-transform duration-150",
                   isSizeMenuOpen && "rotate-180 text-foreground"
                 )}
-                strokeWidth={1.5}
               />
             </Popover.Trigger>
 
@@ -194,9 +194,8 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                     {effectivePageSizeOptions.map((size) => {
                       const isSelected = size === pageSize;
                       return (
-                        <button
+                        <Pressable
                           key={size}
-                          type="button"
                           role="option"
                           aria-selected={isSelected}
                           onClick={() => {
@@ -204,7 +203,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                             setIsSizeMenuOpen(false);
                           }}
                           className={cn(
-                            "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer font-mono tabular-nums",
+                            "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left font-mono tabular-nums",
                             isSelected
                               ? "bg-primary/10 text-primary font-semibold"
                               : "text-foreground hover:bg-muted/70"
@@ -217,7 +216,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                               strokeWidth={2}
                             />
                           )}
-                        </button>
+                        </Pressable>
                       );
                     })}
                   </Popover.Popup>
@@ -256,7 +255,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang đầu"
           aria-label="Về trang đầu"
         >
-          <ChevronsLeft className="size-3.5" strokeWidth={1.5} />
+          <ChevronsLeft className="size-3.5" />
         </button>
 
         {/* Previous Page Button */}
@@ -268,7 +267,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang trước"
           aria-label="Sang trang trước"
         >
-          <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+          <ChevronLeft className="size-3.5" />
         </button>
 
         {/* Numeric Page Buttons */}
@@ -317,7 +316,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang sau"
           aria-label="Sang trang sau"
         >
-          <ChevronRight className="size-3.5" strokeWidth={1.5} />
+          <ChevronRight className="size-3.5" />
         </button>
 
         {/* Last Page Button */}
@@ -329,7 +328,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           title="Trang cuối"
           aria-label="Về trang cuối"
         >
-          <ChevronsRight className="size-3.5" strokeWidth={1.5} />
+          <ChevronsRight className="size-3.5" />
         </button>
       </div>
     </nav>

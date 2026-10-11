@@ -25,7 +25,8 @@ import {
 import type { TaskStatus } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
-import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { Pressable } from "@/components/ui/pressable";
 
 /**
  * Tính ngày gia hạn hạn chót an toàn theo chuẩn UTC
@@ -185,7 +186,7 @@ function BulkMenu({
       >
         {icon}
         <span className="hidden sm:inline">{label}</span>
-        <ChevronUp className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
+        <ChevronUp className="size-3 text-muted-foreground shrink-0" />
       </MenuTrigger>
       <MenuPortal>
         <MenuPositioner side="top" align="start" sideOffset={8} className="z-50">
@@ -305,8 +306,7 @@ export function BatchActionBar({
 
         {/* Hoàn thành nhanh (P0-07: chỉ khi cả lựa chọn đủ quyền) */}
         {onBulkStatusChange && isTargetAllowed("COMPLETED") && (
-          <button
-            type="button"
+          <Pressable
             onClick={() => onBulkStatusChange("COMPLETED")}
             disabled={isLoading}
             className={btn}
@@ -314,7 +314,7 @@ export function BatchActionBar({
           >
             <TaskIconComplete className={icon} />
             <span className="hidden sm:inline">Hoàn thành</span>
-          </button>
+          </Pressable>
         )}
 
         {/* Đổi trạng thái: chỉ các trạng thái hợp lệ cho TOÀN BỘ lựa chọn (P0-07) */}
@@ -351,8 +351,7 @@ export function BatchActionBar({
 
         {/* Giao lại */}
         {onBulkReassign && (
-          <button
-            type="button"
+          <Pressable
             onClick={() => onBulkReassign("")}
             disabled={isLoading}
             className={btn}
@@ -362,7 +361,7 @@ export function BatchActionBar({
             <TaskIconAssignee className={icon} />
             <span className="hidden sm:inline">Giao lại</span>
             <span className="sr-only">Phân công lại</span>
-          </button>
+          </Pressable>
         )}
 
         {/* Ưu tiên (T-08) */}
@@ -429,8 +428,7 @@ export function BatchActionBar({
         {onExportExcel && (
           <>
             {divider}
-            <button
-              type="button"
+            <Pressable
               onClick={onExportExcel}
               disabled={isLoading}
               className={btn}
@@ -438,7 +436,7 @@ export function BatchActionBar({
             >
               <TaskIconExport className={icon} />
               <span className="hidden sm:inline">Xuất Excel</span>
-            </button>
+            </Pressable>
           </>
         )}
 

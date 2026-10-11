@@ -154,7 +154,7 @@ export function OutgoingActionPanel({
     if (status === "ISSUED") {
       return (
         <p className={cn("flex items-center gap-1.5 text-compact text-muted-foreground", className)}>
-          <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+          <CheckCircle2 className="size-4 shrink-0" aria-hidden />
           Văn bản đã phát hành · quy trình xử lý hoàn tất
         </p>
       );
@@ -173,7 +173,6 @@ export function OutgoingActionPanel({
           return (
             <Button
               key={actionDef.action}
-              type="button"
               size="sm"
               variant={actionDef.variant === "primary" ? "default" : "ghost"}
               disabled={!!pending}
@@ -183,7 +182,7 @@ export function OutgoingActionPanel({
               className={cn("text-compact", actionDef.variant === "danger" && "text-destructive hover:text-destructive")}
             >
               {isLoading ? (
-                <Loader2 className="animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+                <Loader2 className="animate-spin motion-reduce:animate-none" />
               ) : null}
               {actionDef.label}
             </Button>
@@ -193,14 +192,14 @@ export function OutgoingActionPanel({
 
       {error && (
         <div role="alert" className="mt-2 flex items-start gap-1.5 rounded-md bg-danger-soft p-2 text-xs text-destructive">
-          <AlertCircle className="size-3.5 shrink-0 mt-px" strokeWidth={1.5} />
+          <AlertCircle className="size-3.5 shrink-0 mt-px" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
         <div role="status" className="mt-2 flex items-start gap-1.5 rounded-md bg-emerald-500/10 p-2 text-xs text-emerald-700">
-          <CheckCircle2 className="size-3.5 shrink-0 mt-px" strokeWidth={1.5} />
+          <CheckCircle2 className="size-3.5 shrink-0 mt-px" />
           <span>{success}</span>
         </div>
       )}
@@ -235,20 +234,19 @@ export function OutgoingActionPanel({
             )}
 
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" size="sm" onClick={() => { setConfirmAction(null); setNote(""); }}>
+              <Button variant="outline" size="sm" onClick={() => { setConfirmAction(null); setNote(""); }}>
                 Hủy
               </Button>
               <Button
-                type="button"
                 size="sm"
                 variant={confirmAction.variant === "danger" ? "destructive" : "default"}
                 disabled={(confirmAction.requiresNote && !note.trim()) || !!pending}
                 onClick={() => executeAction(confirmAction, note || undefined)}
               >
                 {pending ? (
-                  <Loader2 className="animate-spin" strokeWidth={1.5} />
+                  <Loader2 className="animate-spin" />
                 ) : (
-                  <Send strokeWidth={1.5} />
+                  <Send />
                 )}
                 Xác nhận
               </Button>

@@ -3,14 +3,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { cn } from "../src/lib/utils";
-import { QCET_TOKENS, qcetTokens, NAV_ITEMS } from "../src/lib/tokens";
 import { buttonVariants, Button } from "../src/components/ui/button";
 import { badgeVariants, Badge } from "../src/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "../src/components/ui/card";
 import { Drawer } from "../src/components/ui/drawer";
 import { Progress, ProgressTrack, ProgressIndicator } from "../src/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants } from "../src/components/ui/tabs";
-import { NAVIGATION_ITEMS } from "../src/components/navigation";
 
 describe("QCET Design System Smoke Test Suite", () => {
   describe("Utility function: cn()", () => {
@@ -36,91 +34,6 @@ describe("QCET Design System Smoke Test Suite", () => {
       const result = cn("px-2 py-1 bg-red-500", "px-4 bg-blue-500");
       assert.equal(result, "py-1 px-4 bg-blue-500");
     });
-  });
-
-  describe("QCET Design System Tokens (Light-only semantic tokens)", () => {
-    it("defines semantic canvas and card background tokens", () => {
-      assert.equal(QCET_TOKENS.colors.light.appBg, "var(--background)");
-      assert.equal(QCET_TOKENS.colors.light.cardBg, "var(--card)");
-      assert.equal(QCET_TOKENS.colors.light.border, "var(--border)");
-      assert.equal(QCET_TOKENS.colors.light.textPrimary, "var(--foreground)");
-
-      assert.equal(QCET_TOKENS.colors.dark.appBg, QCET_TOKENS.colors.light.appBg);
-      assert.equal(QCET_TOKENS.colors.dark.cardBg, QCET_TOKENS.colors.light.cardBg);
-      assert.equal(QCET_TOKENS.colors.dark.border, QCET_TOKENS.colors.light.border);
-      assert.equal(QCET_TOKENS.colors.dark.textPrimary, QCET_TOKENS.colors.light.textPrimary);
-    });
-
-    it("defines neutral primary action token", () => {
-      assert.equal(QCET_TOKENS.colors.light.primary, "var(--primary)");
-      assert.equal(QCET_TOKENS.colors.light.accentPrimary, "var(--primary)");
-      assert.equal(QCET_TOKENS.colors.dark.primary, QCET_TOKENS.colors.light.primary);
-    });
-
-    it("defines authentic task status colors with tailwind classes and OKLCH", () => {
-      // In Progress: Sapphire Blue
-      assert.equal(QCET_TOKENS.statusColors.inProgress.name, "Sapphire Blue");
-      assert.equal(
-        QCET_TOKENS.statusColors.inProgress.classes,
-        "bg-blue-500/10 text-blue-600 border-blue-500/20"
-      );
-      assert.equal(QCET_TOKENS.statusColors.inProgress.text, "text-blue-600");
-
-      // Completed: Emerald Green
-      assert.equal(QCET_TOKENS.statusColors.completed.name, "Emerald Green");
-      assert.equal(
-        QCET_TOKENS.statusColors.completed.classes,
-        "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
-      );
-      assert.equal(QCET_TOKENS.statusColors.completed.text, "text-emerald-700");
-
-      // Overdue: Crimson Rose
-      assert.equal(QCET_TOKENS.statusColors.overdue.name, "Crimson Rose");
-      assert.equal(
-        QCET_TOKENS.statusColors.overdue.classes,
-        "bg-rose-500/10 text-rose-600 border-rose-500/20"
-      );
-      assert.equal(QCET_TOKENS.statusColors.overdue.text, "text-rose-600");
-
-      // Needs Review: Warm Amber
-      assert.equal(QCET_TOKENS.statusColors.needsReview.name, "Warm Amber");
-      assert.equal(
-        QCET_TOKENS.statusColors.needsReview.classes,
-        "bg-amber-500/10 text-amber-700 border-amber-500/20"
-      );
-      assert.equal(QCET_TOKENS.statusColors.needsReview.text, "text-amber-700");
-
-      // New: Purple Violet
-      assert.equal(QCET_TOKENS.statusColors.new.name, "Purple Violet");
-      assert.equal(
-        QCET_TOKENS.statusColors.new.classes,
-        "bg-violet-500/10 text-violet-600 border-violet-500/20"
-      );
-      assert.equal(QCET_TOKENS.statusColors.new.text, "text-violet-600");
-
-      // Assert zero dark: classes in any status color
-      Object.values(QCET_TOKENS.statusColors).forEach((status) => {
-        assert.ok(!status.classes.includes("dark:"), `Status ${status.name} classes should not contain dark:`);
-        assert.ok(!status.text.includes("dark:"), `Status ${status.name} text should not contain dark:`);
-      });
-    });
-
-    it("defines 16px panel radius and 12px control radius", () => {
-      assert.equal(QCET_TOKENS.radius.card, "1rem"); // 16px
-      assert.equal(QCET_TOKENS.radius.control, "0.75rem"); // 12px
-    });
-
-    it("defines shadow token utilities for card, hover, premium, and glow", () => {
-      assert.equal(QCET_TOKENS.shadows.card, "shadow-none");
-      assert.equal(QCET_TOKENS.shadows.cardHover, "shadow-none");
-      assert.equal(QCET_TOKENS.shadows.premium, "shadow-none");
-      assert.equal(QCET_TOKENS.shadows.glowPrimary, "shadow-none");
-    });
-
-    it("provides backward-compatible aliases for tokens", () => {
-      assert.equal(qcetTokens, QCET_TOKENS);
-    });
-
   });
 
   describe("Brand Asset Verification", () => {
@@ -211,29 +124,6 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(typeof TabsTrigger, "function");
       assert.equal(typeof TabsContent, "function");
       assert.equal(typeof tabsListVariants, "function");
-    });
-  });
-
-  describe("Navigation Configuration", () => {
-    it("defines required navigation items for Phase 1 E-Office", () => {
-      const tokenRoutes = NAV_ITEMS.map((item) => item.href);
-      const compRoutes = NAVIGATION_ITEMS.map((item) => item.href);
-
-      assert.deepEqual(tokenRoutes, compRoutes, "token routes and component routes match");
-      assert.ok(compRoutes.includes("/"), "includes home dashboard");
-      assert.ok(compRoutes.includes("/org"), "includes org route");
-      assert.ok(compRoutes.includes("/dashboard"), "includes dashboard route");
-      assert.ok(compRoutes.includes("/notifications"), "includes notifications route");
-    });
-
-    it("navigation items have no decorative emojis", () => {
-      NAVIGATION_ITEMS.forEach((item) => {
-        assert.match(
-          item.label,
-          /^[\p{L}\p{N}\s\-\/&]+$/u,
-          `Item label ${item.label} must not contain emojis`
-        );
-      });
     });
   });
 });

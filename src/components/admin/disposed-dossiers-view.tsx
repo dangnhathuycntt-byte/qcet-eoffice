@@ -80,7 +80,7 @@ export function DisposedDossiersView({ className }: { className?: string }) {
                   Hủy ngày {formatDate(d.disposedAt)} · Biên bản {d.minutesReference ?? "—"} · {d.itemCount} mục
                 </p>
               </div>
-              <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => setTarget(d)}>
+              <Button size="sm" variant="destructive" disabled={busy} onClick={() => setTarget(d)}>
                 Xóa hẳn
               </Button>
             </li>

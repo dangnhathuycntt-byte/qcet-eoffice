@@ -1,10 +1,7 @@
-// Server Component — fetches initial calendar data before handing off to the client
-// No "use client" directive: this runs on the server, enabling loading.tsx to show immediately
-import { cookies } from 'next/headers';
+
 import { auth } from '@/auth';
 import { getLiveDashboardData } from '@/lib/server/dashboard-service';
 import { MeetingService } from '@/server/services/meeting-service';
-import { isAdmin } from '@/server/policies/document-policy';
 import {
   getTodayIctDate,
   getAcademicMonthInfo,

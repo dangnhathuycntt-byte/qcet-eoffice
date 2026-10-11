@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   AlertTriangle,
-  ArrowRight,
   ChevronDown,
   ChevronUp,
   RotateCcw,
@@ -21,6 +20,7 @@ import {
   resolveConflict,
   subscribeOutbox,
 } from "@/lib/pwa/outbox-manager";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface OfflineConflictDialogProps {
   isOpen?: boolean;
@@ -182,10 +182,10 @@ export function OfflineConflictDialog({
         )}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-amber-50/60">
+        <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-warning/5">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-900 mt-0.5 shadow-xs">
-              <AlertTriangle className="size-5" strokeWidth={1.5} />
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning mt-0.5 shadow-xs">
+              <AlertTriangle className="size-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -196,7 +196,7 @@ export function OfflineConflictDialog({
                   Xung đột dữ liệu ngoại tuyến
                 </h2>
                 {conflicts.length > 1 && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-200/80 text-amber-950">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-warning/15 text-warning">
                     {currentIndex + 1} / {conflicts.length}
                   </span>
                 )}
@@ -216,7 +216,7 @@ export function OfflineConflictDialog({
             className="size-11 min-h-[44px] min-w-[44px] shrink-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             aria-label="Đóng hộp thoại xung đột"
           >
-            <X className="size-5" strokeWidth={1.5} />
+            <X className="size-5" />
           </button>
         </div>
 
@@ -226,7 +226,7 @@ export function OfflineConflictDialog({
           <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <FileText className="size-4 text-slate-500" strokeWidth={1.5} />
+                <FileText className="size-4 text-muted-foreground" />
                 <span className="font-semibold text-slate-800">
                   {formatOperationLabel(activeItem.operation)}
                 </span>
@@ -237,7 +237,7 @@ export function OfflineConflictDialog({
             </div>
 
             {activeItem.errorMessage && (
-              <p className="text-xs text-amber-800 bg-amber-100/50 p-2 rounded-lg border border-amber-200/50">
+              <p className="text-xs text-warning bg-warning/10 p-2 rounded-lg border border-warning/15">
                 {activeItem.errorMessage}
               </p>
             )}
@@ -249,7 +249,7 @@ export function OfflineConflictDialog({
             <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-3.5 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 text-blue-900 font-semibold mb-1">
-                  <Smartphone className="size-4 text-blue-700" strokeWidth={1.5} />
+                  <Smartphone className="size-4 text-blue-700" />
                   <span>Thay đổi của bạn (Cục bộ)</span>
                 </div>
                 <div className="text-xs text-blue-800/80 mb-2">
@@ -271,7 +271,7 @@ export function OfflineConflictDialog({
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 text-slate-900 font-semibold mb-1">
-                  <Server className="size-4 text-slate-700" strokeWidth={1.5} />
+                  <Server className="size-4 text-foreground" />
                   <span>Dữ liệu hiện tại máy chủ</span>
                 </div>
                 <div className="text-xs text-slate-600 mb-2">
@@ -296,18 +296,17 @@ export function OfflineConflictDialog({
 
           {/* Collapsible raw details */}
           <div>
-            <button
-              type="button"
+            <Pressable
               onClick={() => setShowDetails((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium py-1.5 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium py-1.5"
             >
               <span>{showDetails ? "Thu gọn chi tiết kỹ thuật" : "Xem chi tiết kỹ thuật"}</span>
               {showDetails ? (
-                <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                <ChevronUp className="size-3.5" />
               ) : (
-                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                <ChevronDown className="size-3.5" />
               )}
-            </button>
+            </Pressable>
 
             {showDetails && (
               <div className="mt-2 p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto space-y-1.5 animate-in fade-in duration-150">
@@ -322,12 +321,11 @@ export function OfflineConflictDialog({
           {conflicts.length > 1 && (
             <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-600">
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-                className="min-h-[44px] px-3 font-medium cursor-pointer"
+                className="min-h-[44px] px-3 font-medium"
               >
                 Xung đột trước
               </Button>
@@ -335,12 +333,11 @@ export function OfflineConflictDialog({
                 Mục {currentIndex + 1} trên {conflicts.length}
               </span>
               <Button
-                type="button"
                 variant="outline"
                 size="sm"
                 disabled={currentIndex >= conflicts.length - 1}
                 onClick={() => setCurrentIndex((i) => Math.min(conflicts.length - 1, i + 1))}
-                className="min-h-[44px] px-3 font-medium cursor-pointer"
+                className="min-h-[44px] px-3 font-medium"
               >
                 Xung đột kế tiếp
               </Button>
@@ -351,24 +348,22 @@ export function OfflineConflictDialog({
         {/* Footer Actions */}
         <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50/90 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
           <Button
-            type="button"
             variant="outline"
             disabled={hookData.isResolving}
             onClick={() => handleAction("discard")}
-            className="min-h-[44px] px-4 text-xs font-semibold text-rose-700 hover:text-rose-800 hover:bg-rose-50 border-rose-200 cursor-pointer inline-flex items-center justify-center gap-2"
+            className="min-h-[44px] px-4 text-xs font-semibold text-destructive hover:bg-danger-soft border-destructive/30 inline-flex items-center justify-center gap-2"
           >
-            <Trash2 className="size-4" strokeWidth={1.5} />
+            <Trash2 className="size-4" />
             <span>Bỏ thay đổi của tôi</span>
           </Button>
 
           <Button
-            type="button"
             variant="default"
             disabled={hookData.isResolving}
             onClick={() => handleAction("override")}
-            className="min-h-[44px] px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer inline-flex items-center justify-center gap-2"
+            className="min-h-[44px] px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs inline-flex items-center justify-center gap-2"
           >
-            <RotateCcw className="size-4" strokeWidth={1.5} />
+            <RotateCcw className="size-4" />
             <span>Áp dụng lại (Ghi đè)</span>
           </Button>
         </div>

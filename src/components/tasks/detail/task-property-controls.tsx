@@ -61,7 +61,7 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
                     <TaskStatusCircle status={option.value} />
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Select.ItemIndicator>
+                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>
@@ -74,6 +74,7 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
 
 export type { PersonnelOption as TaskPersonnelOption } from "@/hooks/use-personnel-list";
 import type { PersonnelOption } from "@/hooks/use-personnel-list";
+import { Pressable } from "@/components/ui/pressable";
 
 export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, onSelect }: {
   items: PersonnelOption[];
@@ -101,7 +102,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
         {/* Ô 16px cố định như các icon thuộc tính khác để chữ bắt đầu cùng một mép */}
         <span className="flex size-4 shrink-0 items-center justify-center">
           {pending ? (
-            <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+            <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" />
           ) : selected || assigneeName ? (
             <UserAvatar name={selected?.name ?? assigneeName} avatarUrl={selected?.avatarUrl ?? assigneeAvatarUrl} size="sm" />
           ) : (
@@ -129,7 +130,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
                       {person.departmentName && <span className="block truncate text-xs text-muted-foreground">{person.departmentName}</span>}
                     </span>
                   </span>
-                  <Combobox.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Combobox.ItemIndicator>
+                  <Combobox.ItemIndicator><Check className="size-3.5 text-foreground" /></Combobox.ItemIndicator>
                 </Combobox.Item>
               )}
             </Combobox.List>
@@ -161,8 +162,8 @@ export function TaskDateRange({
   const nearDue = !dueInfo.isOverdue && dueDateIso && (
     dueInfo.text === "Hôm nay" || dueInfo.text === "Ngày mai" || dueInfo.text === "Còn 2 ngày"
   );
-  const urgencyClass = dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-600" : "";
-  const iconClass = dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground";
+  const urgencyClass = dueInfo.isOverdue ? "text-destructive" : nearDue ? "text-warning" : "";
+  const iconClass = dueInfo.isOverdue ? "text-destructive" : nearDue ? "text-warning" : "text-muted-foreground";
 
   const startLabel = startDateIso ? formatDisplayDate(startDateIso) : "-";
   const dueLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn";
@@ -201,15 +202,14 @@ export function TaskDateRange({
         <span className={cn("tabular-nums text-xs font-normal", urgencyClass || "text-muted-foreground")}>{dueLabel}</span>
       )}
       {canEdit && onClearDates && (startDateIso || dueDateIso) && (
-        <button
-          type="button"
+        <Pressable
           onClick={(e) => { e.stopPropagation(); onClearDates(); }}
           className="opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all motion-reduce:transition-none"
           aria-label="Xóa ngày"
           title="Xóa ngày"
         >
-          <X className="size-3" strokeWidth={1.5} />
-        </button>
+          <X className="size-3" />
+        </Pressable>
       )}
     </div>
   );
@@ -226,7 +226,7 @@ const PRIORITY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 
 // Cùng quy tắc màu với PrioritySignalBars: khẩn cấp đỏ, cao đậm, còn lại mờ
 const PRIORITY_ICON_COLOR: Record<string, string> = {
-  URGENT: "text-rose-600",
+  URGENT: "text-destructive",
   HIGH: "text-foreground/70",
   NORMAL: "text-muted-foreground",
   LOW: "text-muted-foreground",
@@ -259,7 +259,7 @@ export function TaskPrioritySelect({ value, options, disabled, onValueChange }: 
                     {React.createElement(PRIORITY_ICONS[option.value] ?? TaskIconPriorityNormal, { className: cn("size-4", PRIORITY_ICON_COLOR[option.value] ?? "text-muted-foreground") })}
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Select.ItemIndicator>
+                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>

@@ -39,11 +39,12 @@ Hover (`accent`) và đang chọn (`selected`) là hai trạng thái khác nhau.
 ## Component nền
 
 - [Button](src/components/ui/button.tsx): mobile luôn cao 44px; desktop `default` 34px (`text-sm`), `sm`/`xs` 28px (`text-xs`), `icon` 34px, `icon-sm`/`icon-xs` 28px.
+- [Pressable](src/components/ui/pressable.tsx): vùng bấm không mang kiểu nút (hàng, ô lịch, thẻ, tab tự dựng). Chỉ gắn `type="button"`, focus ring như Button và con trỏ; kích thước do nơi dùng quyết định.
 - [Input](src/components/ui/input.tsx): bo 12px, nền `bg-secondary`, không viền; thường 48px mobile / 36px desktop, `compact` 44 / 28px (`text-compact`).
 - **Kích thước bảng:** hàng một dòng 40px, hàng hai dòng 48px; tiêu đề cột cao bằng hàng; item popover/menu ≤ 32px.
 - **Ưu tiên / mức khẩn:** chỉ mức cao nhất (Khẩn cấp, Hỏa tốc, Thượng khẩn) dùng `text-destructive`; Khẩn của văn bản dùng `text-warning`; các mức khác trung tính. Áp cho cả bảng lẫn form tạo nhiệm vụ.
 - Trạng thái nhiệm vụ: [TaskStatusCircle](src/components/tasks/task-status-circle.tsx). Ưu tiên / mức khẩn: [PrioritySignalBars](src/components/tasks/priority-signal-bars.tsx). Icon nghiệp vụ: [task-icons.tsx](src/lib/icons/task-icons.tsx). Không tự vẽ chấm hay thay bằng icon lucide.
-- Icon lucide nét 1,5px (lint bắt buộc).
+- Icon lucide nét 1,5px, đặt một lần bằng `LucideProvider` ở `src/app/layout.tsx`; không truyền `strokeWidth` (lint chặn giá trị khác).
 - Giữ đủ trạng thái focus bàn phím, disabled, loading, empty, error, reduced motion.
 
 ## Trang danh sách (Nhiệm vụ là chuẩn, Văn bản dùng chung)
@@ -121,9 +122,13 @@ Kiến trúc đã duyệt ở [document-workspace.md](docs/product/specs/documen
 
 ## Còn tồn (ngoài phạm vi lần thống nhất này)
 
-- Còn khoảng 236 chỗ cỡ chữ tùy biến (43 file) và 648 chỗ `rose-*`/`amber-*` (103 file) ở các màn khác: cockpit lãnh đạo, portal, lịch, PWA, trang showcase. Cần làm theo từng màn, kèm kiểm trên trình duyệt.
+- Ngày 2026-10-11 đã chuyển toàn bộ `rose-*`/`amber-*` sang token tín hiệu (sắc nhạt thành token kèm độ mờ, ví dụ `bg-amber-50` → `bg-warning/10`) và `text-[…px]` sang thang chữ (≤ 12.5px → `text-xs`, 13px → `text-compact`, 15px → `text-sm`, 17–18px → `text-lg`, 28px → `text-hero`); 489 `<button>` tự viết có `type` và không tự định nghĩa focus đã chuyển sang `Pressable`. Chưa kiểm trên trình duyệt từng màn. Trang đăng nhập giữ cỡ 15/28px riêng, nằm trong baseline.
+- Tailwind v4: `outline-none` đặt `--tw-outline-style: none`, nên `focus-visible:outline-2` một mình không hiện viền. Mọi chỗ dùng đã thêm `focus-visible:outline-solid` (Button, Pressable, Input và các primitive khác trong `ui/`); viết focus mới thì giữ cặp này.
+- Màu phân loại lĩnh vực trong `CATEGORY_DISPLAY_CONFIG` vẫn dùng `rose-500`/`amber-500` có chủ đích (`design-lint-ignore`), không phải tín hiệu.
+- Còn trong baseline lint: 182 `<button>` tự định nghĩa focus (ring-2 ring-ring, ring-primary…; chưa thống nhất về outline của Button), các `<input>`/`<select>`/`<textarea>` tự viết, và palette xám thô.
+- Ngày 2026-10-11 đã xóa 135 component/hook và 16 helper `lib/`/`types/` không route nào dùng (portal workspace cũ, `dashboard/zones`, lịch cũ, các primitive `ui/` như `combobox`, `multi-select`, `person-picker`, `segmented-control`, `data-table`, và shim). `npm run lint` chặn mồ côi mới (`scripts/check-orphans.mjs`). Cần primitive nào thì thêm lại từ git hoặc shadcn khi có màn dùng thật.
+- Một modal tạo việc duy nhất: `tasks/create/create-task-modal` (Nhiệm vụ, Lịch, chi tiết nhiệm vụ, Văn bản). Bản `dashboard/create-task-modal` đã xóa.
 - Bảng màu trạng thái nhiều sắc (xanh, tím, lục, cam, đỏ) vẫn dùng palette Tailwind: `STATUS_BADGE_CONFIGS` trong [constants.ts](src/components/tasks/table/constants.ts), nhãn trạng thái trong [document-badges.ts](src/components/documents/document-badges.ts), `iconColor` cột kanban (không còn được đọc). Đây là màu phân loại, chưa có token; cần quyết định riêng trước khi đổi.
 - Icon loại văn bản `FileText` màu cam trong [document-quick-entry-modal.tsx](src/components/documents/document-quick-entry-modal.tsx) là màu trang trí, chưa đổi.
 - `document-stats-summary.tsx`, `document-filter-bar.tsx`, `document-table.tsx` trong `registry/` không còn được trang `/documents` dùng, vẫn còn cỡ chữ/màu cũ.
-- `PriorityIndicator` trong [task-row.tsx](src/components/tasks/table/components/task-row.tsx) không còn được dùng (bảng dùng `PrioritySignalBars`) nhưng chưa xóa.
 - Trang Nhiệm vụ còn nút "Xóa bộ lọc" cạnh nút lọc, Văn bản thì không. `tests/unified-task-toolbar.test.ts` đang yêu cầu nút này.

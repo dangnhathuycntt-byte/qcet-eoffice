@@ -243,7 +243,6 @@ export function DocumentBulkToolbar({
               <div className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 text-compact font-medium text-foreground whitespace-nowrap">
                 <CheckSquare
                   className="size-3.5 text-primary shrink-0"
-                  strokeWidth={1.5}
                 />
                 <span className="flex items-center gap-1">
                   Đã chọn{" "}
@@ -266,7 +265,6 @@ export function DocumentBulkToolbar({
 
               {/* [Nút Giao đơn vị] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => openModal("assign-unit")}
@@ -274,13 +272,12 @@ export function DocumentBulkToolbar({
                 className="text-foreground"
                 title="Giao đơn vị chủ trì xử lý các văn bản đã chọn"
               >
-                <Building2 className="text-primary" strokeWidth={1.5} />
+                <Building2 className="text-primary" />
                 <span>Giao đơn vị</span>
               </Button>
 
               {/* [Nút Hoàn tất] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => openModal("resolve")}
@@ -288,13 +285,12 @@ export function DocumentBulkToolbar({
                 className="text-foreground"
                 title="Đánh dấu hoàn tất xử lý các văn bản đã chọn"
               >
-                <CheckCircle2 className="text-emerald-600" strokeWidth={1.5} />
+                <CheckCircle2 className="text-emerald-600" />
                 <span>Hoàn tất</span>
               </Button>
 
               {/* [Nút Lưu hồ sơ] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => openModal("file")}
@@ -302,7 +298,7 @@ export function DocumentBulkToolbar({
                 className="text-foreground"
                 title="Lập hồ sơ và đưa vào lưu trữ theo dõi"
               >
-                <Archive className="text-primary" strokeWidth={1.5} />
+                <Archive className="text-primary" />
                 <span>Lưu hồ sơ</span>
               </Button>
 
@@ -313,7 +309,6 @@ export function DocumentBulkToolbar({
 
               {/* [Nút Bỏ chọn (ESC)] */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={onClearSelection}
@@ -321,7 +316,7 @@ export function DocumentBulkToolbar({
                 aria-label="Bỏ chọn tất cả văn bản"
                 title="Bỏ chọn (Esc)"
               >
-                <X strokeWidth={1.5} />
+                <X />
                 <span className="hidden sm:inline">Bỏ chọn</span>
                 <kbd className="inline-flex items-center rounded border border-border/80 bg-muted/80 px-1 font-mono text-xs text-muted-foreground leading-none font-medium">
                   Esc
@@ -351,7 +346,7 @@ export function DocumentBulkToolbar({
       >
         {errorMessage && (
           <div role="alert" className="mb-3 flex items-center gap-1.5 rounded-md bg-danger-soft px-2.5 py-1.5 text-xs text-destructive">
-            <AlertCircle className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <AlertCircle className="size-3.5 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -460,12 +455,12 @@ export function DocumentBulkToolbar({
 
           {/* Footer hành động của Dialog */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
-            <Button type="button" variant="outline" size="sm" onClick={closeModal} disabled={isSubmitting}>
+            <Button variant="outline" size="sm" onClick={closeModal} disabled={isSubmitting}>
               Hủy bỏ
             </Button>
 
             <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="animate-spin motion-reduce:animate-none" strokeWidth={1.5} />}
+              {isSubmitting && <Loader2 className="animate-spin motion-reduce:animate-none" />}
               <span>
                 {isSubmitting
                   ? "Đang xử lý..."

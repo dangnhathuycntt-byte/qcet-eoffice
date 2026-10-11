@@ -4,7 +4,7 @@ import * as React from "react";
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Search,
   Inbox,
@@ -16,11 +16,10 @@ import {
   useSidebarLayout,
   resolveBreadcrumb,
 } from "@/components/layout/sidebar-context";
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 
 import { formatDisplayName } from "@/components/layout/app-sidebar";
+import { Pressable } from "@/components/ui/pressable";
 
 export function getInitials(name?: string | null): string {
   const cleanName = formatDisplayName(name);
@@ -30,7 +29,7 @@ export function getInitials(name?: string | null): string {
 
 function MobileHeaderTitle({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams();
-  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
+  const [, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
   const { breadcrumbItems } = useSidebarLayout();
   const currentTitle = breadcrumbItems?.at(-1)?.label ?? pageTitle;
 
@@ -54,7 +53,7 @@ function MobileHeaderTitle({ pathname }: { pathname: string }) {
 }
 
 function MobileHeaderTitleFallback({ pathname }: { pathname: string }) {
-  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
+  const [, pageTitle] = resolveBreadcrumb(pathname || "/");
   return (
     <div className="flex items-center min-w-0 gap-1.5">
       <Link href="/tasks" className="flex items-center gap-1.5 shrink-0" aria-label="Trang chủ">
@@ -96,7 +95,7 @@ function DesktopHeaderTitle({ pathname }: { pathname: string }) {
                   index === breadcrumbItems.length - 1
                     ? "max-w-[min(52vw,680px)] font-semibold text-foreground"
                     : "text-muted-foreground/70",
-                  item.mono && "font-mono text-[11px]"
+                  item.mono && "font-mono text-xs"
                 )}
                 title={item.label}
               >
@@ -152,9 +151,7 @@ export function DesktopTopbar() {
  */
 export function AppTopbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { badgeCounts } = useSidebar();
-  const { user } = useAuth();
 
   const unreadCount = Number(badgeCounts?.notifications) || 0;
 
@@ -179,15 +176,14 @@ export function AppTopbar() {
       {/* Right: Quick actions for mobile */}
       <div className="flex items-center gap-1 shrink-0">
         {/* Search button */}
-        <button
-          type="button"
+        <Pressable
           onClick={handleOpenSearch}
-          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
           title="Tìm kiếm (⌘K)"
           aria-label="Tìm kiếm"
         >
-          <Search size={16} strokeWidth={1.5} />
-        </button>
+          <Search size={16} />
+        </Pressable>
 
         {/* Inbox Link */}
         <Link
@@ -196,24 +192,23 @@ export function AppTopbar() {
           title="Hộp thư"
           aria-label="Hộp thư"
         >
-          <Inbox size={16} strokeWidth={1.5} />
+          <Inbox size={16} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-primary text-[9px] font-mono font-bold text-primary-foreground flex items-center justify-center ring-1 ring-background tabular-nums">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-primary text-xs font-mono font-bold text-primary-foreground flex items-center justify-center ring-1 ring-background tabular-nums">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </Link>
 
         {/* Mobile Menu Drawer button */}
-        <button
-          type="button"
+        <Pressable
           onClick={handleOpenMobileMenu}
-          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
           title="Menu tùy chọn"
           aria-label="Menu tùy chọn"
         >
-          <Menu size={16} strokeWidth={1.5} />
-        </button>
+          <Menu size={16} />
+        </Pressable>
       </div>
     </header>
   );

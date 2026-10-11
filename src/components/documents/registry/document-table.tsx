@@ -8,17 +8,11 @@ import {
   FileText,
   CheckCircle2,
   ArrowRight,
-  Download,
   MoreHorizontal,
   Copy,
-  ExternalLink,
   AlertTriangle,
   RefreshCw,
   Check,
-  Printer,
-  Inbox,
-  Send,
-  FileCheck,
 } from "lucide-react";
 import { OfficialDocument, DocumentType } from "@/types/document";
 import { Button } from "@/components/ui/button";
@@ -27,6 +21,7 @@ import {
   getUrgencyBadgeConfig,
   getStatusBadgeConfig,
 } from "../document-badges";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentTableProps {
   documents: OfficialDocument[];
@@ -245,8 +240,7 @@ export function DocumentTable({
         data-slot="document-table"
       >
         <AlertTriangle
-          className="size-8 mx-auto text-amber-500 opacity-80"
-          strokeWidth={1.5}
+          className="size-8 mx-auto text-warning opacity-80"
         />
         <div className="space-y-1">
           <p className="text-compact font-semibold text-foreground">
@@ -276,7 +270,7 @@ export function DocumentTable({
         className={cn("p-12 text-center text-muted-foreground", className)}
         data-slot="document-table"
       >
-        <FileText className="size-8 mx-auto mb-2 opacity-50" strokeWidth={1.5} />
+        <FileText className="size-8 mx-auto mb-2 opacity-50" />
         <p className="text-compact font-medium text-foreground">{emptyTitle}</p>
         <p className="text-xs mt-1">{emptyDescription}</p>
       </div>
@@ -452,18 +446,17 @@ export function DocumentTable({
                       className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/20 text-xs font-semibold transition-colors"
                       title={doc.linkedTaskTitle || `Mã nhiệm vụ ${doc.linkedTaskId}`}
                     >
-                      <CheckCircle2 className="size-3" strokeWidth={1.5} />
+                      <CheckCircle2 className="size-3" />
                       <span className="font-mono">{doc.linkedTaskId}</span>
-                      <ArrowRight className="size-2.5" strokeWidth={1.5} />
+                      <ArrowRight className="size-2.5" />
                     </Link>
                   ) : (
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => onLinkTask?.(doc)}
-                      className="text-xs text-muted-foreground/60 hover:text-primary transition-colors italic cursor-pointer"
+                      className="text-xs text-muted-foreground/60 hover:text-primary transition-colors italic"
                     >
                       Chưa tạo việc
-                    </button>
+                    </Pressable>
                   )}
                 </td>
 
@@ -477,10 +470,10 @@ export function DocumentTable({
                       variant="ghost"
                       size="icon"
                       onClick={() => onSelectDocument?.(doc)}
-                      className="size-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted cursor-pointer active:scale-[0.98]"
+                      className="size-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted active:scale-[0.98]"
                       aria-label={`Xem chi tiết văn bản ${doc.documentNumber || doc.summary}`}
                     >
-                      <Eye className="size-3.5" strokeWidth={1.5} />
+                      <Eye className="size-3.5" />
                     </Button>
 
                     <Menu.Root>
@@ -488,7 +481,7 @@ export function DocumentTable({
                         aria-label={`Tùy chọn thao tác văn bản ${doc.documentNumber || doc.summary}`}
                         className="size-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer active:scale-[0.98]"
                       >
-                        <MoreHorizontal className="size-3.5" strokeWidth={1.5} />
+                        <MoreHorizontal className="size-3.5" />
                       </Menu.Trigger>
                       <Menu.Portal>
                         <Menu.Positioner
@@ -507,26 +500,24 @@ export function DocumentTable({
                             }}
                             className="w-48 select-none rounded-xl border border-border/80 bg-popover/95 p-1 text-xs text-popover-foreground shadow-lg shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-100"
                           >
-                            <button
-                              type="button"
+                            <Pressable
                               role="menuitem"
                               onClick={() => onSelectDocument?.(doc)}
-                              className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                              className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                             >
-                              <Eye className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                              <Eye className="size-3.5 text-muted-foreground" />
                               <span>Xem chi tiết</span>
-                            </button>
+                            </Pressable>
 
                             {doc.fileAttachment && (
-                              <button
-                                type="button"
+                              <Pressable
                                 role="menuitem"
                                 onClick={() => onViewPdf?.(doc)}
-                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                               >
-                                <FileText className="size-3.5 text-primary" strokeWidth={1.5} />
+                                <FileText className="size-3.5 text-primary" />
                                 <span>Xem tệp PDF</span>
-                              </button>
+                              </Pressable>
                             )}
 
                             {doc.linkedTaskId ? (
@@ -534,25 +525,23 @@ export function DocumentTable({
                                 href={`/?taskId=${doc.linkedTaskId}`}
                                 className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-emerald-600"
                               >
-                                <CheckCircle2 className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+                                <CheckCircle2 className="size-3.5 text-emerald-600" />
                                 <span>Xem nhiệm vụ</span>
                               </Link>
                             ) : (
-                              <button
-                                type="button"
+                              <Pressable
                                 role="menuitem"
                                 onClick={() => onLinkTask?.(doc)}
-                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                                className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                               >
-                                <ArrowRight className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                                <ArrowRight className="size-3.5 text-muted-foreground" />
                                 <span>Liên thông việc</span>
-                              </button>
+                              </Pressable>
                             )}
 
                             <div className="my-1 border-t border-border/40" />
 
-                            <button
-                              type="button"
+                            <Pressable
                               role="menuitem"
                               onClick={() =>
                                 handleCopy(
@@ -560,16 +549,16 @@ export function DocumentTable({
                                   `code-${doc.id}`
                                 )
                               }
-                              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors cursor-pointer text-left text-foreground"
+                              className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted transition-colors text-left text-foreground"
                             >
                               <span className="flex items-center gap-2">
-                                <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                                <Copy className="size-3.5 text-muted-foreground" />
                                 <span>Sao chép số hiệu</span>
                               </span>
                               {copiedId === `code-${doc.id}` && (
                                 <Check className="size-3 text-emerald-600" strokeWidth={2} />
                               )}
-                            </button>
+                            </Pressable>
                           </Menu.Popup>
                         </Menu.Positioner>
                       </Menu.Portal>

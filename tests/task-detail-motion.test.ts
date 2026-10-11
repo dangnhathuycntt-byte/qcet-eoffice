@@ -45,10 +45,8 @@ test('reduced motion covers both workspace and sibling drawer', () => {
   }
 });
 
-test('tab rows and drawer menus do not add staggered or nested reveals', () => {
-  const rows = readFileSync(directory + 'detail/task-subtasks-section.tsx', 'utf8');
+test('drawer menus do not add staggered or nested reveals', () => {
   const drawer = readFileSync(directory + 'detail/subtask-detail-drawer.tsx', 'utf8');
-  assert.doesNotMatch(rows, /motion\/react|<m\.|delay:.*idx/);
   assert.doesNotMatch(drawer, /zoom-in|duration-100/);
   assert.match(drawer, /motion-reduce:animate-none/);
   assert.doesNotMatch(css.toString(), /editorReveal/);

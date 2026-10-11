@@ -1,11 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  getAllowedTaskLevelsForRole,
-  canRoleSelectAssignee,
-  validateTaskForm,
-  getInitialTaskFormData,
-} from "../src/components/dashboard/create-task-modal";
+import { canRoleSelectAssignee, validateTaskForm, getInitialTaskFormData } from "../src/domain/tasks/create-task-form-utils";
+import { getAllowedTaskLevelsForRole } from "../src/domain/tasks/create-task-policy";
 import type { AuthUser } from "../src/types/auth";
 import type { SchoolTask } from "../src/types/dashboard";
 

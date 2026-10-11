@@ -10,8 +10,6 @@ import { ArrowHint, EmptyState, type ArrowHintVariant, type IllustrationName } f
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import {
-  LIST_TOOLBAR_SEARCH_COLLAPSED,
-  LIST_TOOLBAR_SEARCH_EXPANDED,
   ListToolbarFilterPopover,
   ListToolbarPopover,
   ListToolbarSearch,
@@ -32,6 +30,7 @@ import {
   isLedgerDone,
   todayInVietnam,
 } from "@/lib/documents/document-ledger-format";
+import { Pressable } from "@/components/ui/pressable";
 
 const URGENCY_OPTIONS = [
   { value: "ALL", label: "Tất cả mức khẩn" },
@@ -332,8 +331,6 @@ export function DocumentLedgerToolbar({
         wrapperClassName="min-w-24 shrink"
         aria-label="Tìm văn bản"
         title="Tìm theo số, ký hiệu, trích yếu"
-        collapsedWidthClassName={LIST_TOOLBAR_SEARCH_COLLAPSED}
-        expandedWidthClassName={LIST_TOOLBAR_SEARCH_EXPANDED}
       />
       <ListToolbarFilterPopover
         open={isFilterOpen}
@@ -349,7 +346,7 @@ export function DocumentLedgerToolbar({
           ariaLabel="Tùy chọn hiển thị và thuộc tính bảng"
           title="Hiển thị"
           width="w-64"
-          trigger={<SlidersHorizontal className="size-3.5" strokeWidth={1.5} />}
+          trigger={<SlidersHorizontal className="size-3.5" />}
         >
           <div className="flex flex-col gap-2 p-2">
             <p className="text-xs font-medium text-muted-foreground">Thuộc tính hiển thị</p>
@@ -365,28 +362,26 @@ export function DocumentLedgerToolbar({
               ))}
             </div>
             <div className="flex justify-end border-t border-border/60 pt-1.5">
-              <button
-                type="button"
+              <Pressable
                 onClick={() => onVisibleColumnsChange(DEFAULT_LEDGER_COLUMNS)}
-                className="h-7 cursor-pointer rounded-md px-2 text-xs text-foreground/80 hover:bg-accent hover:text-foreground"
+                className="h-7 rounded-md px-2 text-xs text-foreground/80 hover:bg-accent hover:text-foreground"
               >
                 Đặt lại
-              </button>
+              </Pressable>
             </div>
           </div>
         </ListToolbarPopover>
         </>
       )}
-      <button
-        type="button"
+      <Pressable
         onClick={onPrimaryAction}
         aria-label={primaryActionLabel}
         title={primaryActionLabel}
         className={listToolbarPrimaryButtonClass}
       >
-        <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+        <Plus className="size-3.5 shrink-0 text-muted-foreground" />
         <span>{primaryActionLabel}</span>
-      </button>
+      </Pressable>
     </div>
   );
 }
@@ -472,7 +467,7 @@ function RowSelector({ checked, label, onToggle, always }: { checked: boolean; l
     >
       {checked ? (
         <span className="flex size-4 items-center justify-center rounded-[4px] bg-primary text-primary-foreground">
-          <Check className="size-3" strokeWidth={1.5} />
+          <Check className="size-3" />
         </span>
       ) : (
         <span
@@ -554,7 +549,7 @@ function IssuedDateCell({ doc, filterYear }: { doc: OfficialDocument; filterYear
   if (!doc.issuedDate) return <EmptyCell label="Chưa có ngày ban hành" />;
   return (
     <span className="inline-flex min-w-0 items-center gap-1 tabular-nums text-xs text-muted-foreground" title={`Ban hành ${formatLedgerDate(doc.issuedDate)}`}>
-      <CalendarPlus className="size-3.5 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
+      <CalendarPlus className="size-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
       <span className="truncate">{formatLedgerCellDate(doc.issuedDate, filterYear)}</span>
     </span>
   );
@@ -790,7 +785,7 @@ export function DocumentLedgerTable({
         <EmptyState
           role="status"
           density="compact"
-          icon={isFiltered ? <SearchX strokeWidth={1.5} /> : <Inbox strokeWidth={1.5} />}
+          icon={isFiltered ? <SearchX /> : <Inbox />}
           illustration={copy.illustration}
           title={copy.title}
           description={copy.description}

@@ -86,10 +86,10 @@ export function ApprovalReportView({ className }: { className?: string }) {
           Đến ngày
           <Input compact type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mt-1 w-40" />
         </label>
-        <Button type="button" size="sm" variant="ghost" asChild>
+        <Button size="sm" variant="ghost" asChild>
           <a href={`/api/documents/approval-report?${new URLSearchParams([...new URLSearchParams(query), ["format", "xlsx"]]).toString()}`}>Xuất Excel</a>
         </Button>
-        <Button type="button" size="sm" variant="ghost" asChild>
+        <Button size="sm" variant="ghost" asChild>
           <a href={`/api/documents/approval-report?${new URLSearchParams([...new URLSearchParams(query), ["format", "csv"]]).toString()}`}>Xuất CSV</a>
         </Button>
       </div>

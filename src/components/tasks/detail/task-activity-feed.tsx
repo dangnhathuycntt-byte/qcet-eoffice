@@ -19,7 +19,7 @@ const TZ = "Asia/Ho_Chi_Minh";
 type IconComponent = React.ComponentType<{ className?: string }>;
 
 function PencilIcon({ className }: { className?: string }) {
-  return <Pencil className={className} strokeWidth={1.5} />;
+  return <Pencil className={className} />;
 }
 
 /** Icon theo loại hoạt động (cùng bộ icon dự án, nét 1,5) */

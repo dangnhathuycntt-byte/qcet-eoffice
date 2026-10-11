@@ -11,7 +11,6 @@ import {
   Calendar,
   FileText,
   Building2,
-  Bell,
   Inbox,
   PlusCircle,
   ArrowRight,
@@ -38,6 +37,7 @@ import type {
   SearchDocumentResult,
 } from "@/app/api/search/route";
 import { StandardDialog } from "@/components/ui/dialog";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface QuickAction {
   id: string;
@@ -150,7 +150,7 @@ function HighlightedText({
         segment.match ? (
           <mark
             key={idx}
-            className="bg-amber-100 text-amber-950 font-medium rounded-xs px-0.5"
+            className="bg-warning/15 text-warning font-medium rounded-xs px-0.5"
           >
             {segment.text}
           </mark>
@@ -820,25 +820,23 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           />
           {isLoading && <Loader2 className="w-4 h-4 text-neutral-400 animate-spin shrink-0" />}
           {query && !isLoading && (
-            <button
-              type="button"
+            <Pressable
               onClick={() => {
                 setQuery("");
                 inputRef.current?.focus();
               }}
-              className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
               aria-label="Xóa nội dung tìm kiếm"
             >
               <X className="w-4 h-4" />
-            </button>
+            </Pressable>
           )}
-          <button
-            type="button"
+          <Pressable
             onClick={handleClose}
-            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors cursor-pointer"
+            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
           >
             ESC
-          </button>
+          </Pressable>
         </div>
 
         {/* Intent tabs (T39) */}
@@ -846,8 +844,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           ref={tabsRef}
           className="flex items-center gap-1.5 px-4 py-2 bg-neutral-50/70 border-b border-neutral-100 text-xs overflow-x-auto"
         >
-          <button
-            type="button"
+          <Pressable
             onClick={() => {
               setActiveTab("all");
               setSelectedIndex(0);
@@ -860,9 +857,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             )}
           >
             Tất cả
-          </button>
-          <button
-            type="button"
+          </Pressable>
+          <Pressable
             onClick={() => {
               setActiveTab("navigation");
               setSelectedIndex(0);
@@ -876,9 +872,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           >
             <LayoutDashboard className="w-3.5 h-3.5 text-neutral-600" />
             Đi tới
-          </button>
-          <button
-            type="button"
+          </Pressable>
+          <Pressable
             onClick={() => {
               setActiveTab("tasks");
               setSelectedIndex(0);
@@ -892,9 +887,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           >
             <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
             Nhiệm vụ {tasks.length > 0 && `(${tasks.length})`}
-          </button>
-          <button
-            type="button"
+          </Pressable>
+          <Pressable
             onClick={() => {
               setActiveTab("documents");
               setSelectedIndex(0);
@@ -906,11 +900,10 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                 : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
             )}
           >
-            <FileText className="w-3.5 h-3.5 text-amber-600" />
+            <FileText className="w-3.5 h-3.5 text-warning" />
             Văn bản {documents.length > 0 && `(${documents.length})`}
-          </button>
-          <button
-            type="button"
+          </Pressable>
+          <Pressable
             onClick={() => {
               setActiveTab("commands");
               setSelectedIndex(0);
@@ -924,9 +917,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           >
             <Zap className="w-3.5 h-3.5 text-violet-600" />
             Hành động
-          </button>
-          <button
-            type="button"
+          </Pressable>
+          <Pressable
             onClick={() => {
               setActiveTab("people");
               setSelectedIndex(0);
@@ -940,7 +932,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           >
             <Users className="w-3.5 h-3.5 text-emerald-600" />
             Cán bộ {users.length > 0 && `(${users.length})`}
-          </button>
+          </Pressable>
         </div>
 
         {/* Results List */}
@@ -970,14 +962,13 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                   <Clock className="w-3 h-3 text-neutral-400" />
                   {COMMAND_INTENT_LABELS.recent}
                 </span>
-                <button
-                  type="button"
+                <Pressable
                   onClick={clearRecentSearches}
                   className="text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1 transition-colors"
                 >
                   <Trash2 className="w-3 h-3" />
                   Xóa lịch sử
-                </button>
+                </Pressable>
               </div>
               <div className="space-y-0.5">
                 {recentSearches.map((item, idx) => {
@@ -1149,7 +1140,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             <div>
               <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-amber-600" />
+                  <FileText className="w-3.5 h-3.5 text-warning" />
                   {COMMAND_INTENT_LABELS.document} ({displayDocuments.length})
                 </span>
                 <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
@@ -1175,10 +1166,10 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       )}
                     >
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                        <FileText className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <FileText className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono font-bold text-amber-900 bg-amber-100/70 px-1.5 py-0.5 rounded border border-amber-200/60">
+                            <span className="text-xs font-mono font-bold text-warning bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20">
                               <HighlightedText text={doc.originalNumber || "VB-QCET"} query={query} />
                             </span>
                             <span className="text-xs font-semibold text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">

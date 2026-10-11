@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, ChevronRight, FileText, CheckSquare, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StandardDialog } from "@/components/ui/dialog";
+import { Pressable } from "@/components/ui/pressable";
 
 const STORAGE_PREFIX = "qcet_fg_";
 
@@ -81,7 +82,7 @@ export function resetAllFeatureGuides(): void {
 export function InboundDocumentPreview() {
   return (
     <div className="w-[230px] rounded-[10px] bg-white p-3.5 shadow-[0_0_0_1px_var(--border)]">
-      <div className="text-[11px] text-muted-foreground">Công văn đến · 214/CV-ĐT</div>
+      <div className="text-xs text-muted-foreground">Công văn đến · 214/CV-ĐT</div>
       <div className="mt-2 h-[7px] w-[90%] rounded bg-bg-hover" />
       <div className="mt-1.5 h-[7px] w-[70%] rounded bg-bg-hover" />
       <div className="mt-3 flex h-11 items-center rounded-lg border-[1.5px] border-dashed border-[var(--gray-7)] px-3">
@@ -254,7 +255,7 @@ export function FeatureGuideCard({
                   aria-label="Đóng hướng dẫn"
                   className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                  <X className="size-3.5" aria-hidden="true" />
                 </button>
                 {preview}
               </div>
@@ -305,7 +306,7 @@ export function FeatureGuideCard({
                   aria-label="Đóng hướng dẫn"
                   className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                 >
-                  <X className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                  <X className="size-3.5" aria-hidden="true" />
                 </button>
                 {preview}
               </div>
@@ -440,14 +441,13 @@ export function HelpGuideModal() {
       size="md"
     >
       <div className="space-y-2 pt-1">
-        <button
-          type="button"
+        <Pressable
           onClick={() => handleSelectGuide("inbox-sign", "/documents")}
-          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
+          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <FileText className="size-4" strokeWidth={1.5} />
+              <FileText className="size-4" />
             </div>
             <div>
               <div className="text-sm font-semibold text-foreground">1. Văn bản đến</div>
@@ -455,16 +455,15 @@ export function HelpGuideModal() {
             </div>
           </div>
           <ChevronRight className="size-4 text-muted-foreground/60 shrink-0" />
-        </button>
+        </Pressable>
 
-        <button
-          type="button"
+        <Pressable
           onClick={() => handleSelectGuide("tasks-sort", "/tasks")}
-          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
+          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
-              <CheckSquare className="size-4" strokeWidth={1.5} />
+              <CheckSquare className="size-4" />
             </div>
             <div>
               <div className="text-sm font-semibold text-foreground">2. Nhiệm vụ</div>
@@ -472,16 +471,15 @@ export function HelpGuideModal() {
             </div>
           </div>
           <ChevronRight className="size-4 text-muted-foreground/60 shrink-0" />
-        </button>
+        </Pressable>
 
-        <button
-          type="button"
+        <Pressable
           onClick={() => handleSelectGuide("delegation-create", "/delegations")}
-          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99] cursor-pointer"
+          className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all hover:bg-muted/50 hover:border-border active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
-              <Shield className="size-4" strokeWidth={1.5} />
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+              <Shield className="size-4" />
             </div>
             <div>
               <div className="text-sm font-semibold text-foreground">3. Ủy quyền</div>
@@ -489,16 +487,15 @@ export function HelpGuideModal() {
             </div>
           </div>
           <ChevronRight className="size-4 text-muted-foreground/60 shrink-0" />
-        </button>
+        </Pressable>
 
         <div className="pt-3 border-t border-border/50 flex justify-end">
-          <button
-            type="button"
+          <Pressable
             onClick={handleResetAll}
-            className="text-xs font-medium text-primary hover:underline cursor-pointer px-2 py-1"
+            className="text-xs font-medium text-primary hover:underline px-2 py-1"
           >
             Xem lại tất cả từ đầu
-          </button>
+          </Pressable>
         </div>
       </div>
     </StandardDialog>

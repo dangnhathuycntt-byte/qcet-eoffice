@@ -35,13 +35,6 @@ import {
   UniversalActionQueue,
 } from "../src/components/workspace/components/universal-action-queue";
 
-// 5. Compact Table View in DepartmentProgressMatrix
-import {
-  DepartmentProgressMatrix,
-  sortDepartmentsByOverdue,
-} from "../src/components/dashboard/department-progress-matrix";
-import type { DepartmentHealthSummary } from "../src/lib/executive-matrix-aggregator";
-
 // 6. Split-Cockpit Layout & ActiveFilterBreadcrumb
 import {
   getActiveFilterSummary,
@@ -318,98 +311,6 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
       assert.ok(html.includes('data-slot="universal-action-queue"'));
       assert.ok(html.includes("Phê duyệt"));
       assert.ok(html.includes("Duyệt đề cương học phần"));
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // Area 5: Compact Table View in DepartmentProgressMatrix
-  // --------------------------------------------------------------------------
-  describe("5. Compact Table View in DepartmentProgressMatrix", () => {
-    const mockDepts: DepartmentHealthSummary[] = [
-      {
-        departmentId: "dept-cntt",
-        code: "CNTT",
-        departmentName: "Khoa Công Nghệ Thông Tin",
-        leadName: "Nguyễn Văn A",
-        totalTasksCount: 20,
-        completedTasksCount: 16,
-        inProgressTasksCount: 4,
-        overdueTasksCount: 1,
-        blockedTasksCount: 0,
-        averageProgressPercent: 85,
-        totalTasks: 20,
-        completedTasks: 16,
-        inProgressTasks: 4,
-        overdueTasks: 1,
-        completionRate: 85,
-        status: "good",
-      },
-      {
-        departmentId: "dept-dien",
-        code: "DIEN",
-        departmentName: "Khoa Điện - Điện Tử",
-        leadName: "Trần Văn B",
-        totalTasksCount: 15,
-        completedTasksCount: 5,
-        inProgressTasksCount: 10,
-        overdueTasksCount: 4,
-        blockedTasksCount: 1,
-        averageProgressPercent: 45,
-        totalTasks: 15,
-        completedTasks: 5,
-        inProgressTasks: 10,
-        overdueTasks: 4,
-        completionRate: 45,
-        status: "critical",
-      },
-    ];
-
-    test("sortDepartmentsByOverdue sorts departments with most overdue items first", () => {
-      const sorted = sortDepartmentsByOverdue(mockDepts, true);
-      assert.equal(sorted[0].code, "DIEN", "DIEN with 4 overdue must be ranked first");
-      assert.equal(sorted[1].code, "CNTT", "CNTT with 1 overdue must be ranked second");
-    });
-
-    test("DepartmentProgressMatrix renders compact table view when mode is compact_table", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(DepartmentProgressMatrix, {
-          departments: mockDepts,
-          selectedDepartment: "ALL",
-          onSelectDepartment: () => {},
-          viewMode: "compact_table",
-        })
-      );
-
-      assert.ok(
-        html.includes('data-slot="department-progress-matrix-table"'),
-        "Must render the compact table element"
-      );
-      assert.ok(
-        html.includes('data-slot="department-table-row"'),
-        "Must render table rows for departments"
-      );
-      assert.ok(html.includes("Khoa Công Nghệ Thông Tin"));
-      assert.ok(html.includes("Khoa Điện - Điện Tử"));
-    });
-
-    test("DepartmentProgressMatrix renders cards view when mode is cards", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(DepartmentProgressMatrix, {
-          departments: mockDepts,
-          selectedDepartment: "ALL",
-          onSelectDepartment: () => {},
-          viewMode: "cards",
-        })
-      );
-
-      assert.ok(
-        html.includes('data-slot="department-progress-matrix"'),
-        "Must render the cards grid container"
-      );
-      assert.ok(
-        html.includes('data-slot="department-card"'),
-        "Must render cards for departments"
-      );
     });
   });
 

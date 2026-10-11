@@ -33,9 +33,9 @@ import {
 import {
   useDepartmentList,
   type DepartmentOption,
-  type DepartmentPersonnel,
 } from "@/hooks/use-department-list";
 import { toCanonicalUnitCode } from "@/lib/departments";
+import { Pressable } from "@/components/ui/pressable";
 
 export { MobileOrgDrillDown };
 export type { DepartmentCategory } from "@/lib/org/org-structure";
@@ -464,62 +464,58 @@ export function OrganizationTree({
           aria-label="Chế độ xem tổ chức"
           className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none self-start"
         >
-          <button
-            type="button"
+          <Pressable
             onClick={() => setActiveTab("directory")}
             aria-pressed={activeTab === "directory"}
             className={cn(
-              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
               activeTab === "directory"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <Users className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <Users className="size-3.5 shrink-0 text-muted-foreground" />
             <span>Danh bạ & Cây tổ chức</span>
-            <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+            <span className="font-mono tabular-nums text-xs opacity-75">
               ({departments.reduce((sum, d) => sum + d.members.length, 0)})
             </span>
-          </button>
-          <button
-            type="button"
+          </Pressable>
+          <Pressable
             onClick={() => setActiveTab("bento")}
             aria-pressed={activeTab === "bento"}
             className={cn(
-              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
               activeTab === "bento"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <LayoutGrid className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <LayoutGrid className="size-3.5 shrink-0 text-muted-foreground" />
             <span>Sơ đồ đơn vị</span>
-            <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+            <span className="font-mono tabular-nums text-xs opacity-75">
               ({departments.length})
             </span>
-          </button>
+          </Pressable>
         </div>
 
         {/* Utilities: Export CSV & Print */}
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          <button
-            type="button"
+          <Pressable
             onClick={() => exportDirectoryToCSV(departments)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all"
             title="Xuất file CSV danh bạ"
           >
-            <Download className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <Download className="size-3.5 text-muted-foreground" />
             <span>Xuất CSV</span>
-          </button>
-          <button
-            type="button"
+          </Pressable>
+          <Pressable
             onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all"
             title="In trang danh bạ"
           >
-            <Printer className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <Printer className="size-3.5 text-muted-foreground" />
             <span className="hidden sm:inline">In danh bạ</span>
-          </button>
+          </Pressable>
         </div>
       </div>
 
@@ -530,42 +526,40 @@ export function OrganizationTree({
         <div className="space-y-6">
           {/* Flat Informational Chips theo chuẩn Neutral Monochrome */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-muted-foreground mr-1">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">
               Nhóm đơn vị:
             </span>
-            <button
-              type="button"
+            <Pressable
               onClick={() => setSelectedDeptCode("ALL")}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11.5px] font-medium border transition-colors cursor-pointer select-none",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors select-none",
                 selectedDeptCode === "ALL"
                   ? "bg-neutral-800 text-white border-neutral-800 font-semibold shadow-2xs"
                   : "bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
               <span>Toàn trường</span>
-              <span className="font-mono tabular-nums text-[10.5px] opacity-80">({departments.length})</span>
-            </button>
+              <span className="font-mono tabular-nums text-xs opacity-80">({departments.length})</span>
+            </Pressable>
             {categoriesList.map((cat) => {
               const count = cat.departments.length;
               const isSelected = cat.departments.some(
                 (d) => d.code === selectedDeptCode
               );
               return (
-                <button
+                <Pressable
                   key={cat.category}
-                  type="button"
                   onClick={() => setSelectedDeptCode(cat.departments[0]?.code || "ALL")}
                   className={cn(
-                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11.5px] font-medium border transition-colors cursor-pointer select-none",
+                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors select-none",
                     isSelected
                       ? "bg-neutral-800 text-white border-neutral-800 font-semibold shadow-2xs"
                       : "bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
                   <span>{cat.label}</span>
-                  <span className="font-mono tabular-nums text-[10.5px] opacity-80">({count})</span>
-                </button>
+                  <span className="font-mono tabular-nums text-xs opacity-80">({count})</span>
+                </Pressable>
               );
             })}
           </div>
@@ -602,7 +596,7 @@ export function OrganizationTree({
                             ? "bg-indigo-500/10 text-indigo-600"
                             : dept.category === "KHOA_CHUYEN_MON"
                             ? "bg-emerald-500/10 text-emerald-700"
-                            : "bg-amber-500/10 text-amber-700"
+                            : "bg-warning/10 text-warning"
                         )}
                       >
                         <Icon className="size-4.5" strokeWidth={1.5} />
@@ -626,13 +620,13 @@ export function OrganizationTree({
                   {/* Leader & Location */}
                   <div className="space-y-1.5 text-xs text-muted-foreground my-2">
                     <div className="flex items-center gap-2">
-                      <Users className="size-3.5 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                      <Users className="size-3.5 text-muted-foreground/70 shrink-0" />
                       <span className="font-medium text-foreground truncate">
                         {dept.leaderRole}: {dept.leaderName}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                      <MapPin className="size-3.5 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                      <MapPin className="size-3.5 text-muted-foreground/70 shrink-0" />
                       <span className="truncate">{dept.location}</span>
                     </div>
                   </div>
@@ -641,7 +635,7 @@ export function OrganizationTree({
                   <div className="mt-3 pt-3 border-t border-border/60 space-y-2.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-                        <Users className="size-3.5 text-primary" strokeWidth={1.5} />
+                        <Users className="size-3.5 text-primary" />
                         Nhân sự đơn vị
                       </span>
                       <span className="font-bold text-foreground font-mono">
@@ -651,7 +645,7 @@ export function OrganizationTree({
 
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5 truncate max-w-[200px]" title={dept.email}>
-                        <Mail className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                        <Mail className="size-3 text-muted-foreground/70 shrink-0" />
                         <span className="truncate">{dept.email}</span>
                       </span>
                       <span className="text-muted-foreground/80 font-mono">
@@ -667,7 +661,7 @@ export function OrganizationTree({
                         {dept.members.length} nhân sự
                       </span>
                       <span className="font-semibold text-primary group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                        Xem danh bạ <ChevronRight className="size-3" strokeWidth={1.5} />
+                        Xem danh bạ <ChevronRight className="size-3" />
                       </span>
                     </div>
                   </div>
@@ -689,26 +683,24 @@ export function OrganizationTree({
             <div className="relative flex-1 max-w-md">
               <Search
                 className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-                strokeWidth={1.5}
               />
               <input
                 type="text"
                 placeholder="Tìm kiếm cán bộ, giảng viên, đơn vị… /"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-7 pl-8 pr-8 rounded-md border border-border/80 bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+                className="w-full h-7 pl-8 pr-8 rounded-md border border-border/80 bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
                 {searchQuery ? (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => setSearchQuery("")}
-                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground"
                   >
-                    <X className="size-3" strokeWidth={1.5} />
-                  </button>
+                    <X className="size-3" />
+                  </Pressable>
                 ) : (
-                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground bg-muted border border-border/60 rounded select-none pointer-events-none">
+                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-xs font-mono text-muted-foreground bg-muted border border-border/60 rounded select-none pointer-events-none">
                     /
                   </kbd>
                 )}
@@ -728,20 +720,19 @@ export function OrganizationTree({
                   { id: "FACULTY", label: "Giảng viên" },
                   { id: "SPECIALIST", label: "Chuyên viên" },
                 ].map((r) => (
-                  <button
+                  <Pressable
                     key={r.id}
-                    type="button"
                     onClick={() => setRoleFilter(r.id as any)}
                     aria-pressed={roleFilter === r.id}
                     className={cn(
-                      "px-2 h-6 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                      "px-2 h-6 rounded-[4px] text-xs font-medium transition-colors select-none",
                       roleFilter === r.id
                         ? "bg-background text-foreground shadow-2xs font-semibold"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                     )}
                   >
                     {r.label}
-                  </button>
+                  </Pressable>
                 ))}
               </div>
 
@@ -752,34 +743,32 @@ export function OrganizationTree({
                 aria-label="Chế độ hiển thị danh sách"
                 className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs select-none"
               >
-                <button
-                  type="button"
+                <Pressable
                   onClick={() => setViewMode("grid")}
                   aria-pressed={viewMode === "grid"}
                   className={cn(
-                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors cursor-pointer",
+                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors",
                     viewMode === "grid"
                       ? "bg-background text-foreground shadow-2xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   )}
                   title="Dạng thẻ lưới (Grid)"
                 >
-                  <LayoutGrid className="size-3.5" strokeWidth={1.5} />
-                </button>
-                <button
-                  type="button"
+                  <LayoutGrid className="size-3.5" />
+                </Pressable>
+                <Pressable
                   onClick={() => setViewMode("list")}
                   aria-pressed={viewMode === "list"}
                   className={cn(
-                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors cursor-pointer",
+                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors",
                     viewMode === "list"
                       ? "bg-background text-foreground shadow-2xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   )}
                   title="Dạng danh sách (List)"
                 >
-                  <List className="size-3.5" strokeWidth={1.5} />
-                </button>
+                  <List className="size-3.5" />
+                </Pressable>
               </div>
             </div>
           </div>
@@ -792,7 +781,7 @@ export function OrganizationTree({
                 <div className="flex items-center justify-between pb-3 mb-2 border-b border-border/60">
                   <div className="flex items-center gap-2">
                     <span className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Building2 className="size-3.5" strokeWidth={1.5} />
+                      <Building2 className="size-3.5" />
                     </span>
                     <span className="text-xs font-bold text-foreground">
                       Cơ cấu {departments.length} đơn vị QCET
@@ -808,21 +797,20 @@ export function OrganizationTree({
 
                 {/* "Tất cả đơn vị" option */}
                 <div className="mb-2">
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => {
                       setSelectedDeptCode("ALL");
                       setSearchQuery("");
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors",
                       selectedDeptCode === "ALL"
                         ? "bg-accent text-foreground font-medium"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <Layers className="size-3.5" strokeWidth={1.5} />
+                      <Layers className="size-3.5" />
                       <span>Toàn trường (Tất cả đơn vị)</span>
                     </div>
                     <Badge
@@ -831,7 +819,7 @@ export function OrganizationTree({
                     >
                       {totalHeadcount}
                     </Badge>
-                  </button>
+                  </Pressable>
                 </div>
 
                 {/* Department Categories Accordion */}
@@ -847,10 +835,9 @@ export function OrganizationTree({
                     return (
                       <div key={catGroup.category} className="space-y-1">
                         {/* Category Header toggle */}
-                        <button
-                          type="button"
+                        <Pressable
                           onClick={() => toggleCategory(catGroup.category)}
-                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all cursor-pointer"
+                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
                         >
                           <div className="flex items-center gap-2">
                             <Icon className="size-3.5 text-primary/80" strokeWidth={1.5} />
@@ -861,12 +848,12 @@ export function OrganizationTree({
                               {catHeadcount}
                             </span>
                             {isExpanded ? (
-                              <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                              <ChevronDown className="size-3.5" />
                             ) : (
-                              <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                              <ChevronRight className="size-3.5" />
                             )}
                           </div>
-                        </button>
+                        </Pressable>
 
                         {/* Department Items list */}
                         {isExpanded && (
@@ -878,15 +865,14 @@ export function OrganizationTree({
                                   selectedDepartment.code === dept.code);
 
                               return (
-                                <button
+                                <Pressable
                                   key={dept.id}
-                                  type="button"
                                   onClick={() => {
                                     setSelectedDeptCode(dept.code);
                                     setSearchQuery("");
                                   }}
                                   className={cn(
-                                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left cursor-pointer",
+                                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left",
                                     isDeptSelected
                                       ? "bg-accent text-foreground font-medium"
                                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -898,7 +884,7 @@ export function OrganizationTree({
                                       {dept.members.length} NS
                                     </span>
                                   </div>
-                                </button>
+                                </Pressable>
                               );
                             })}
                           </div>
@@ -1013,8 +999,7 @@ export function OrganizationTree({
                         </div>
 
                         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
+                          <Pressable
                             onClick={(e) => {
                               e.stopPropagation();
                               window.dispatchEvent(
@@ -1027,19 +1012,19 @@ export function OrganizationTree({
                                 })
                               );
                             }}
-                            className="inline-flex h-6 items-center gap-1 px-2 rounded-md border border-border/80 bg-background text-foreground text-[11px] font-medium hover:bg-accent transition-colors cursor-pointer"
+                            className="inline-flex h-6 items-center gap-1 px-2 rounded-md border border-border/80 bg-background text-foreground text-xs font-medium hover:bg-accent transition-colors"
                             title={`Giao việc trực tiếp cho ${staff.name}`}
                           >
-                            <UserCheck className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                            <UserCheck className="size-3 text-muted-foreground" />
                             <span>Giao việc</span>
-                          </button>
+                          </Pressable>
                           {staff.phone && (
                             <a
                               href={`tel:${staff.phone}`}
                               className="p-1.5 rounded-lg border border-border/60 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors tabular-nums"
                               title={`Gọi ${staff.phone}`}
                             >
-                              <Phone className="size-3.5" strokeWidth={1.5} />
+                              <Phone className="size-3.5" />
                             </a>
                           )}
                           <a
@@ -1047,7 +1032,7 @@ export function OrganizationTree({
                             className="p-1.5 rounded-lg border border-border/60 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                             title={`Gửi email ${staff.email}`}
                           >
-                            <Mail className="size-3.5" strokeWidth={1.5} />
+                            <Mail className="size-3.5" />
                           </a>
                         </div>
                       </div>
@@ -1113,7 +1098,7 @@ export function OrganizationTree({
                                   "inline-flex items-center px-2 py-0.5 rounded-md text-2xs font-semibold",
                                   staff.status === "ACTIVE"
                                     ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
-                                    : "bg-amber-500/10 text-amber-700 border border-amber-500/20"
+                                    : "bg-warning/10 text-warning border border-warning/20"
                                 )}
                               >
                                 {staff.status === "ACTIVE" ? "Đang công tác" : "Nghỉ phép"}
@@ -1168,13 +1153,12 @@ export function OrganizationTree({
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
+              <Pressable
                 onClick={() => setActiveProfileStaff(null)}
-                className="size-8 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer"
+                className="size-8 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50"
               >
-                <X className="size-4" strokeWidth={1.5} />
-              </button>
+                <X className="size-4" />
+              </Pressable>
             </div>
 
             {/* Contact Information & Room */}
@@ -1245,7 +1229,7 @@ export function OrganizationTree({
                   href={`tel:${activeProfileStaff.phone}`}
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-border bg-background text-xs font-medium text-foreground hover:bg-muted shadow-2xs"
                 >
-                  <Phone className="size-3.5 text-primary" strokeWidth={1.5} />
+                  <Phone className="size-3.5 text-primary" />
                   <span>Gọi điện</span>
                 </a>
               )}
@@ -1253,7 +1237,7 @@ export function OrganizationTree({
                 href={`mailto:${activeProfileStaff.email}`}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 shadow-xs"
               >
-                <Mail className="size-3.5" strokeWidth={1.5} />
+                <Mail className="size-3.5" />
                 <span>Gửi thư công vụ</span>
               </a>
             </div>

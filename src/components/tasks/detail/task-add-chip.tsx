@@ -4,6 +4,7 @@ import * as React from "react";
 import { Building2, CalendarClock, ClipboardCheck, GitBranch, Plus, ShieldCheck, Users } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 const CHIP_CLASS = cn(
   "order-last inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors",
@@ -86,7 +87,7 @@ export function TaskOptionalSections({ children, className }: { children: React.
               title="Thêm tiêu chí, người tham gia, phối hợp…"
               className={cn(CHIP_CLASS, "order-1")}
             >
-              <Plus className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+              <Plus className="size-3.5" aria-hidden="true" />
               Thêm
             </Popover.Trigger>
             <Popover.Portal>
@@ -109,9 +110,8 @@ export function TaskOptionalSections({ children, className }: { children: React.
                   {available.map((key) => {
                     const Icon = ENTRY_ICON[key];
                     return (
-                      <button
+                      <Pressable
                         key={key}
-                        type="button"
                         role="menuitem"
                         onClick={() => {
                           setMenuOpen(false);
@@ -121,7 +121,7 @@ export function TaskOptionalSections({ children, className }: { children: React.
                       >
                         <Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                         {entries[key]?.label}
-                      </button>
+                      </Pressable>
                     );
                   })}
                 </Popover.Popup>
@@ -216,16 +216,16 @@ export function TaskAddChip({
 }) {
   const content = (
     <>
-      {icon ? <Plus className="size-3.5" strokeWidth={1.5} aria-hidden="true" /> : null}
+      {icon ? <Plus className="size-3.5" aria-hidden="true" /> : null}
       {children}
     </>
   );
 
   if (!panel) {
     return (
-      <button type="button" data-slot="task-add-chip" title={title} onClick={onClick} className={CHIP_CLASS}>
+      <Pressable data-slot="task-add-chip" title={title} onClick={onClick} className={CHIP_CLASS}>
         {content}
-      </button>
+      </Pressable>
     );
   }
 

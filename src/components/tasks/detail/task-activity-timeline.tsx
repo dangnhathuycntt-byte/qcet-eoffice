@@ -85,7 +85,7 @@ export function TaskActivityTimeline({
   return (
     <section data-slot="task-activity-timeline" className={cn("space-y-3 cursor-default", className)}>
       <div className="flex items-center gap-2">
-        <Activity className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+        <Activity className="size-4 text-primary shrink-0" />
         <h2 className="text-xs font-semibold text-foreground">
           Lịch sử điều hành & Hoạt động ({events.length})
         </h2>
@@ -114,14 +114,14 @@ export function TaskActivityTimeline({
               <div className="rounded-xl border border-border/60 bg-card p-3 space-y-1.5 shadow-2xs hover:border-border transition-colors">
                 <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
                   <div className="flex items-center gap-1.5 font-medium text-foreground">
-                    <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold">
+                    <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
                       {(ev.actorName || "U").charAt(0).toUpperCase()}
                     </div>
                     <span>{ev.actorName || "Người điều hành"}</span>
                   </div>
 
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground" title={formatICTDateTime(ev.timestamp)}>
-                    <Clock className="size-3" strokeWidth={1.5} />
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground" title={formatICTDateTime(ev.timestamp)}>
+                    <Clock className="size-3" />
                     <span>{getRelativeTimeVN(ev.timestamp)}</span>
                   </div>
                 </div>

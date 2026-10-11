@@ -12,8 +12,6 @@ import {
   X,
   Laptop,
   CheckCircle2,
-  ExternalLink,
-  ShieldAlert,
   Loader2,
   Wifi,
   Network,
@@ -22,6 +20,7 @@ import {
 import QRCode from "qrcode";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface MobileAppInstallModalProps {
   isOpen?: boolean;
@@ -213,7 +212,7 @@ export function MobileAppInstallModal({
         <div className="flex items-center justify-between px-5 py-4 border-0 bg-muted/20 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-xl bg-secondary text-primary border-0">
-              <Smartphone size={18} strokeWidth={1.5} />
+              <Smartphone size={18} />
             </div>
             <div>
               <h2
@@ -227,14 +226,13 @@ export function MobileAppInstallModal({
               </p>
             </div>
           </div>
-          <button
-            type="button"
+          <Pressable
             onClick={handleClose}
-            className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
             aria-label="Đóng"
           >
             <X size={18} />
-          </button>
+          </Pressable>
         </div>
 
         {/* Modal Body */}
@@ -260,17 +258,16 @@ export function MobileAppInstallModal({
                 </div>
 
                 {isInstallable && !isStandalone && (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={async () => {
                       await installApp();
                       handleClose();
                     }}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-none hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-none hover:bg-primary-hover active:scale-[0.98] transition-all shrink-0"
                   >
                     <Download size={14} />
                     <span>Cài đặt ứng dụng</span>
-                  </button>
+                  </Pressable>
                 )}
               </div>
 
@@ -282,11 +279,10 @@ export function MobileAppInstallModal({
                   value={activeUrl}
                   className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all truncate"
                 />
-                <button
-                  type="button"
+                <Pressable
                   onClick={handleCopyLink}
                   className={cn(
-                    "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0",
+                    "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all shrink-0",
                     copied
                       ? "bg-emerald-600 text-white"
                       : "bg-card hover:bg-muted border-0 text-foreground"
@@ -294,7 +290,7 @@ export function MobileAppInstallModal({
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   <span>{copied ? "Đã chép" : "Chép liên kết"}</span>
-                </button>
+                </Pressable>
               </div>
             </div>
           ) : (
@@ -332,11 +328,10 @@ export function MobileAppInstallModal({
                 <div className="mt-1.5 space-y-1.5">
                   {/* Tailscale Option */}
                   {networkInfo?.tailscaleUrl && (
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => setSelectedUrlType("tailscale")}
                       className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left cursor-pointer",
+                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
                         selectedUrlType === "tailscale"
                           ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
                           : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
@@ -373,16 +368,15 @@ export function MobileAppInstallModal({
                       {selectedUrlType === "tailscale" && (
                         <CheckCircle2 size={14} className="shrink-0 ml-2" />
                       )}
-                    </button>
+                    </Pressable>
                   )}
 
                   {/* LAN Wi-Fi Option */}
                   {networkInfo?.lanUrl && (
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => setSelectedUrlType("lan")}
                       className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left cursor-pointer",
+                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
                         selectedUrlType === "lan"
                           ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
                           : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
@@ -409,15 +403,14 @@ export function MobileAppInstallModal({
                       {selectedUrlType === "lan" && (
                         <CheckCircle2 size={14} className="shrink-0 ml-2" />
                       )}
-                    </button>
+                    </Pressable>
                   )}
 
                   {/* Current / Localhost Option */}
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => setSelectedUrlType("current")}
                     className={cn(
-                      "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left cursor-pointer",
+                      "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
                       selectedUrlType === "current"
                         ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
                         : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
@@ -442,7 +435,7 @@ export function MobileAppInstallModal({
                     {selectedUrlType === "current" && (
                       <CheckCircle2 size={14} className="shrink-0 ml-2" />
                     )}
-                  </button>
+                  </Pressable>
                 </div>
               </div>
 
@@ -454,11 +447,10 @@ export function MobileAppInstallModal({
                   value={activeUrl}
                   className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all"
                 />
-                <button
-                  type="button"
+                <Pressable
                   onClick={handleCopyLink}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                     copied
                       ? "bg-emerald-600 text-white"
                       : "bg-secondary text-foreground hover:bg-secondary/80 border-0"
@@ -466,7 +458,7 @@ export function MobileAppInstallModal({
                 >
                   {copied ? <Check size={13} /> : <Copy size={13} />}
                   <span>{copied ? "Đã chép" : "Chép link"}</span>
-                </button>
+                </Pressable>
               </div>
             </div>
           </div>
@@ -475,42 +467,39 @@ export function MobileAppInstallModal({
           {/* Platform Installation Guide Tabs */}
           <div>
             <div className="flex items-center gap-1.5 border-0 pb-2 overflow-x-auto">
-              <button
-                type="button"
+              <Pressable
                 onClick={() => setActiveTab("ios")}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
                   activeTab === "ios"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 <span>iPhone / iPad (iOS)</span>
-              </button>
-              <button
-                type="button"
+              </Pressable>
+              <Pressable
                 onClick={() => setActiveTab("android")}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
                   activeTab === "android"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 <span>Điện thoại Android</span>
-              </button>
-              <button
-                type="button"
+              </Pressable>
+              <Pressable
                 onClick={() => setActiveTab("desktop")}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
                   activeTab === "desktop"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 <span>Máy tính (Desktop App)</span>
-              </button>
+              </Pressable>
             </div>
 
             {/* iOS Guide */}
@@ -614,17 +603,16 @@ export function MobileAppInstallModal({
                       <p className="text-foreground leading-relaxed">
                         Trình duyệt hiện tại sẵn sàng cài đặt ứng dụng QCET E-Office trực tiếp lên máy tính của bạn:
                       </p>
-                      <button
-                        type="button"
+                      <Pressable
                         onClick={async () => {
                           await installApp();
                           handleClose();
                         }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary-hover transition-all cursor-pointer shadow-none active:scale-[0.98]"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary-hover transition-all shadow-none active:scale-[0.98]"
                       >
                         <Laptop size={15} />
                         <span>Cài đặt ngay lên máy tính này</span>
-                      </button>
+                      </Pressable>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
@@ -648,13 +636,12 @@ export function MobileAppInstallModal({
             <Sparkles size={13} className="text-primary" />
             <span>Đồng bộ thời gian thực qua Tailscale &amp; Web Push</span>
           </div>
-          <button
-            type="button"
+          <Pressable
             onClick={handleClose}
-            className="px-4 py-2 min-h-[44px] rounded-lg border-0 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors cursor-pointer flex items-center justify-center"
+            className="px-4 py-2 min-h-[44px] rounded-lg border-0 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors flex items-center justify-center"
           >
             Đóng
-          </button>
+          </Pressable>
         </div>
       </div>
     </div>

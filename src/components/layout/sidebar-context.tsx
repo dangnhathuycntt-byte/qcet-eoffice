@@ -17,7 +17,6 @@ import {
   FileCheck,
   Archive,
   Users,
-  LayoutGrid,
   Network,
   Home,
   FileBadge,
@@ -458,7 +457,6 @@ export type SidebarContextValue = SidebarContextType;
 
 export const SidebarLayoutContext = React.createContext<SidebarLayoutContextType | undefined>(undefined);
 export const SidebarBadgeContext = React.createContext<SidebarBadgeContextType | undefined>(undefined);
-const SidebarContext = React.createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarLayoutProvider({ children }: { children?: React.ReactNode }) {
   const pathname = usePathname();

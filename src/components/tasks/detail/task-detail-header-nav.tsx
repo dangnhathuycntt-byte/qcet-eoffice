@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTaskDetailUrl } from "@/lib/tasks/task-detail-navigation";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskDetailHeaderNavProps {
   taskId: string;
@@ -66,14 +67,13 @@ export function TaskDetailHeaderNav({
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
         {/* Cập nhật tiến độ */}
         {onOpenProgressModal && (
-          <button
-            type="button"
+          <Pressable
             onClick={onOpenProgressModal}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors"
             title="Cập nhật tiến độ nhiệm vụ"
           >
             <span className="text-xs">Cập nhật tiến độ</span>
-          </button>
+          </Pressable>
         )}
 
         {/* Copy link — subtle direct icon, visible on hover/focus and touch */}
@@ -85,9 +85,9 @@ export function TaskDetailHeaderNav({
           aria-label="Sao chép liên kết"
         >
           {copiedLink ? (
-            <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+            <Check className="size-3.5 text-emerald-600" />
           ) : (
-            <Link2 className="size-3.5" strokeWidth={1.5} />
+            <Link2 className="size-3.5" />
           )}
         </button>
 
@@ -106,7 +106,7 @@ export function TaskDetailHeaderNav({
             aria-label={showInspector ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
             aria-expanded={showInspector}
           >
-            <PanelRight className="size-3.5" strokeWidth={1.5} />
+            <PanelRight className="size-3.5" />
           </button>
         )}
       </div>

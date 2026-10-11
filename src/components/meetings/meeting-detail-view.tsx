@@ -98,7 +98,7 @@ interface MeetingDetailViewProps {
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   DRAFT_AGENDA: { label: "Dự thảo chương trình", className: "bg-muted text-muted-foreground border-border/50" },
   INVITED: { label: "Đã mời", className: "bg-sky-50 text-sky-700 border-sky-200" },
-  HELD: { label: "Đã họp", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  HELD: { label: "Đã họp", className: "bg-warning/10 text-warning border-warning/30" },
   MINUTES_DRAFT: { label: "Dự thảo biên bản", className: "bg-orange-50 text-orange-700 border-orange-200" },
   MINUTES_CONFIRMED: { label: "Biên bản đã duyệt", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   CANCELLED: { label: "Đã hủy", className: "bg-red-50 text-red-700 border-red-200" },
@@ -118,7 +118,7 @@ const ATTENDANCE_CONFIG: Record<string, { label: string; className: string }> = 
   ACCEPTED: { label: "Đã nhận", className: "bg-sky-50 text-sky-700" },
   DECLINED: { label: "Từ chối", className: "bg-red-50 text-red-700" },
   ATTENDED: { label: "Có mặt", className: "bg-emerald-50 text-emerald-700" },
-  ABSENT: { label: "Vắng mặt", className: "bg-amber-50 text-amber-700" },
+  ABSENT: { label: "Vắng mặt", className: "bg-warning/10 text-warning" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -334,7 +334,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           className="mt-1 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="Quay lại"
         >
-          <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+          <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">
@@ -372,9 +372,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {holdLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Play className="h-4 w-4" strokeWidth={1.5} />
+                  <Play className="h-4 w-4" />
                 )}
                 Bắt đầu họp
               </button>
@@ -386,7 +386,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 onClick={() => setShowMinutesInput(true)}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <FileEdit className="h-4 w-4" strokeWidth={1.5} />
+                <FileEdit className="h-4 w-4" />
                 Soạn biên bản
               </button>
             )}
@@ -410,9 +410,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {confirmLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
+                  <CheckCircle2 className="h-4 w-4" />
                 )}
                 Duyệt biên bản
               </button>
@@ -424,7 +424,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 onClick={() => setShowResolutionForm(true)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <Plus className="h-4 w-4" strokeWidth={1.5} />
+                <Plus className="h-4 w-4" />
                 Thêm quyết nghị
               </button>
             )}
@@ -464,7 +464,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                   }}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {draftLoading && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />}
+                  {draftLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   Lưu biên bản
                 </button>
                 <button
@@ -486,7 +486,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
             <div className="mt-3 space-y-3 rounded-lg border border-border/30 bg-muted/20 p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <ListChecks className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                  <ListChecks className="h-4 w-4 text-muted-foreground" />
                   Thêm quyết nghị / kết luận
                 </div>
                 <button
@@ -498,13 +498,13 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                   className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Đóng"
                 >
-                  <X className="h-4 w-4" strokeWidth={1.5} />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
               {resError && (
                 <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                   {resError}
                 </div>
               )}
@@ -626,7 +626,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                   onClick={handleCreateResolution}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {resolutionLoading && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />}
+                  {resolutionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   Ban hành
                 </button>
                 <button
@@ -710,7 +710,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 {meeting.resolutions.map((res) => (
                   <div key={res.id} className="py-2.5">
                     <div className="flex items-start gap-3">
-                      <Hash className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                      <Hash className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         {res.code && (
                           <div className="mb-0.5 flex items-center gap-2">
@@ -728,19 +728,19 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           {res.deadline && (
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" strokeWidth={1.5} />
+                              <Clock className="h-3 w-3" />
                               Hạn: {formatDate(res.deadline)}
                             </span>
                           )}
                           {res.leadUnit && (
                             <span className="flex items-center gap-1">
-                              <Building2 className="h-3 w-3" strokeWidth={1.5} />
+                              <Building2 className="h-3 w-3" />
                               {res.leadUnit.name}
                             </span>
                           )}
                           {res.leadUser?.name && (
                             <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" strokeWidth={1.5} />
+                              <User className="h-3 w-3" />
                               {res.leadUser.name}
                             </span>
                           )}
@@ -778,7 +778,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                             className="flex items-center justify-between gap-2"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                              <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                               <span className="truncate text-sm text-foreground">
                                 {p.user.name ?? p.user.email}
                               </span>

@@ -118,12 +118,12 @@ export function DossierDisposalPanel({ dossierId }: { dossierId: string }) {
         {mode === "idle" ? (
           <div className="flex gap-2">
             {state.canPropose ? (
-              <Button type="button" size="sm" onClick={() => setMode("propose")}>
+              <Button size="sm" onClick={() => setMode("propose")}>
                 Đề nghị xét hủy
               </Button>
             ) : null}
             {state.canDecide ? (
-              <Button type="button" size="sm" onClick={() => setMode("decide")}>
+              <Button size="sm" onClick={() => setMode("decide")}>
                 Quyết định
               </Button>
             ) : null}
@@ -136,14 +136,13 @@ export function DossierDisposalPanel({ dossierId }: { dossierId: string }) {
             <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do đề nghị" aria-label="Lý do đề nghị" rows={2} />
             <div className="flex gap-2">
               <Button
-                type="button"
                 size="sm"
                 disabled={busy || minutes.trim().length < 3 || reason.trim().length < 3}
                 onClick={() => void call("propose-disposal", { minutesReference: minutes.trim(), reason: reason.trim() }, "Không gửi được đề nghị")}
               >
                 Gửi đề nghị
               </Button>
-              <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setMode("idle")}>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setMode("idle")}>
                 Hủy
               </Button>
             </div>
@@ -162,7 +161,6 @@ export function DossierDisposalPanel({ dossierId }: { dossierId: string }) {
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ghi chú (không bắt buộc)" aria-label="Ghi chú quyết định" rows={2} />
             <div className="flex flex-wrap gap-2">
               <Button
-                type="button"
                 size="sm"
                 disabled={busy}
                 onClick={() => void call("dispose", { proposalId: state.open!.id, decision: "DISPOSE", note: note.trim() || undefined }, "Không ghi nhận được quyết định")}
@@ -170,7 +168,6 @@ export function DossierDisposalPanel({ dossierId }: { dossierId: string }) {
                 Hủy hồ sơ
               </Button>
               <Button
-                type="button"
                 size="sm"
                 variant="secondary"
                 disabled={busy || !yearsValid}
@@ -178,7 +175,7 @@ export function DossierDisposalPanel({ dossierId }: { dossierId: string }) {
               >
                 Gia hạn bảo quản
               </Button>
-              <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setMode("idle")}>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setMode("idle")}>
                 Đóng
               </Button>
             </div>

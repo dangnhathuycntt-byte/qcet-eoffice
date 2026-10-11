@@ -12,13 +12,11 @@ import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/da
 import { isSchoolTask } from "@/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
 import { useSidebarLayout } from "@/components/layout/sidebar-context";
-import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { TaskDetailHeaderNav } from "@/components/tasks/detail/task-detail-header-nav";
 import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block";
-import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-editor";
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "@/components/tasks/detail/block-selection-canvas";
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
@@ -37,8 +35,8 @@ import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
 import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
-import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
-import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
+import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   applyProgressResult,
@@ -82,12 +80,10 @@ export function TaskDetailPage({
   const currentUser = clientUser || serverUser;
   const { setBreadcrumbItems } = useSidebarLayout();
 
-  const { restoreScrollAndNavigateBack } = useListScrollRestore();
-  const { notifySuccess, notifyError, notifyWarning } = useFeedback();
+  const { notifySuccess, notifyError } = useFeedback();
 
   // Task local state
   const [task, setTask] = React.useState<SchoolTask | StaffTask>(initialTask);
-  const [isStatusUpdating, setIsStatusUpdating] = React.useState(false);
   const isStatusUpdatingRef = React.useRef(false);
   const taskIdRef = React.useRef(task.id);
   taskIdRef.current = task.id;
@@ -242,7 +238,6 @@ export function TaskDetailPage({
 
   // Computed fields
   const officialCode = task.code || (isSchool ? schoolTask?.taskCode : staffTask?.taskId);
-  const taskCode = officialCode || task.id.slice(0, 8).toUpperCase();
 
   const parentTaskId = (task as any).parentSchoolTaskId || (task as any).parentTaskId || (task as any).parentTask?.id;
   const parentTaskTitle = (task as any).parentSchoolTaskTitle || (task as any).parentTaskTitle || (task as any).parentTask?.title;
@@ -310,11 +305,6 @@ export function TaskDetailPage({
       : isSchool
       ? schoolTask?.progress ?? 0
       : 0;
-
-  // Return to task list with preserved scroll & filters (REQ-12)
-  const handleBackToList = React.useCallback(() => {
-    restoreScrollAndNavigateBack("/tasks");
-  }, [restoreScrollAndNavigateBack]);
 
   // Title inline change handler
   const handleTitleChange = React.useCallback(async (taskId: string, newTitle: string) => {
@@ -395,7 +385,6 @@ export function TaskDetailPage({
   const handleStatusChange = React.useCallback(async (taskId: string, newStatus: TaskStatus, note?: string) => {
     if (isStatusUpdatingRef.current) return;
     isStatusUpdatingRef.current = true;
-    setIsStatusUpdating(true);
 
     const statusMap: Record<string, string> = {
       NOT_STARTED: "Mới",
@@ -465,7 +454,6 @@ export function TaskDetailPage({
       notifyError(err instanceof Error ? err.message : String(err) || "Lỗi kết nối máy chủ", "Lỗi thao tác");
     } finally {
       isStatusUpdatingRef.current = false;
-      setIsStatusUpdating(false);
     }
   }, [currentUser?.name, notifySuccess, notifyError]);
 
@@ -996,7 +984,7 @@ export function TaskDetailPage({
               className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Đóng"
             >
-              <X className="size-4" strokeWidth={1.5} />
+              <X className="size-4" />
             </ProgressDialog.Close>
           </div>
           <ProgressDialog.Description className="sr-only">Cập nhật tiến độ nhiệm vụ</ProgressDialog.Description>

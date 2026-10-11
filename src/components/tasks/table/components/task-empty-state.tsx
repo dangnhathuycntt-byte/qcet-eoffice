@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ArrowHint, InkIllustration } from "@/components/ui/empty-state";
 import { motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskEmptyStateProps {
   title?: string;
@@ -224,33 +225,31 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       {/* Action Buttons */}
       <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
         {hasFilterActive && onResetFilters && (
-          <button
-            type="button"
+          <Pressable
             onClick={onResetFilters}
             title="Đặt lại bộ lọc"
             aria-label="Xóa bộ lọc"
-            className="inline-flex h-7 items-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-medium text-background hover:bg-foreground/90 cursor-pointer active:scale-[0.98] transition-colors"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-medium text-background hover:bg-foreground/90 active:scale-[0.98] transition-colors"
           >
-            <RotateCcw className="size-3.5" strokeWidth={1.5} />
+            <RotateCcw className="size-3.5" />
             <span>Xóa bộ lọc</span>
-          </button>
+          </Pressable>
         )}
 
         {canAddTask && onAddTask && (
-          <button
-            type="button"
+          <Pressable
             onClick={onAddTask}
             className={cn(
               pointsToCreate && "md:hidden",
-              "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium cursor-pointer active:scale-[0.98] transition-colors",
+              "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium active:scale-[0.98] transition-colors",
               hasFilterActive && onResetFilters
                 ? "text-muted-foreground hover:bg-muted hover:text-foreground"
                 : "border border-border bg-card text-foreground hover:bg-muted"
             )}
           >
-            <Plus className="size-3.5" strokeWidth={1.5} />
+            <Plus className="size-3.5" />
             <span>Tạo nhiệm vụ mới</span>
-          </button>
+          </Pressable>
         )}
       </div>
     </div>

@@ -60,7 +60,7 @@ export function IncomingSignatureStatus({ documentId, className, row }: { docume
       <span className={cn(flagged ? "text-warning" : "text-foreground")}>{STATUS_LABEL[status] ?? status}</span>
       {flagged && detail ? <span className="text-muted-foreground">· {detail}</span> : null}
       {state.canRecheck ? (
-        <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void recheck()}>
+        <Button size="xs" variant="ghost" disabled={busy} onClick={() => void recheck()}>
           Kiểm lại
         </Button>
       ) : null}
@@ -84,7 +84,7 @@ export function IncomingSignatureStatus({ documentId, className, row }: { docume
       <span className={cn("font-medium", flagged ? "text-warning" : "text-foreground")}>{STATUS_LABEL[status] ?? status}</span>
       {flagged && detail ? <span className="text-muted-foreground">· {detail}</span> : null}
       {state.canRecheck ? (
-        <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void recheck()}>
+        <Button size="xs" variant="ghost" disabled={busy} onClick={() => void recheck()}>
           Kiểm lại
         </Button>
       ) : null}

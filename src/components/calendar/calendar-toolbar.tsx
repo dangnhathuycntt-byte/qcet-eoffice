@@ -26,6 +26,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export type CalendarViewMode = "month" | "week" | "agenda";
 export type CalendarScope = "school" | "unit" | "my";
@@ -184,7 +185,7 @@ export function CalendarToolbar({
               className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-8 sm:min-w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
               aria-label={prevLabel(viewMode)}
             >
-              <ChevronLeft className="size-4" strokeWidth={1.5} />
+              <ChevronLeft className="size-4" />
             </button>
             <button
               type="button"
@@ -192,7 +193,7 @@ export function CalendarToolbar({
               className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-8 sm:min-w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
               aria-label={nextLabel(viewMode)}
             >
-              <ChevronRight className="size-4" strokeWidth={1.5} />
+              <ChevronRight className="size-4" />
             </button>
           </div>
 
@@ -201,11 +202,10 @@ export function CalendarToolbar({
           </h2>
 
           <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={onToday}
-            className="min-h-[44px] sm:min-h-8 h-8 px-2.5 text-xs font-semibold rounded-lg border-border/70 hover:bg-secondary cursor-pointer"
+            className="min-h-[44px] sm:min-h-8 h-8 px-2.5 text-xs font-semibold rounded-lg border-border/70 hover:bg-secondary"
             aria-label={todayLabel(viewMode)}
           >
             {todayLabel(viewMode)}
@@ -223,21 +223,20 @@ export function CalendarToolbar({
             {VIEW_OPTIONS.map((option) => {
               const isActive = viewMode === option.id;
               return (
-                <button
+                <Pressable
                   key={option.id}
-                  type="button"
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => onViewChange(option.id)}
                   className={cn(
-                    "inline-flex items-center justify-center h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                    "inline-flex items-center justify-center h-6 px-2.5 rounded-[4px] text-xs font-medium transition-colors select-none",
                     isActive
                       ? "bg-background text-foreground shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   )}
                 >
                   {option.label}
-                </button>
+                </Pressable>
               );
             })}
           </div>
@@ -250,14 +249,13 @@ export function CalendarToolbar({
               sideOffset={6}
               trigger={
                 <Button
-                  type="button"
                   size="sm"
-                  className="min-h-[44px] sm:min-h-8 h-8 px-3 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 gap-1 cursor-pointer"
+                  className="min-h-[44px] sm:min-h-8 h-8 px-3 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 gap-1"
                   aria-label="Tạo mới"
                 >
-                  <Plus className="size-3.5" strokeWidth={1.5} />
+                  <Plus className="size-3.5" />
                   <span className="hidden sm:inline">Tạo mới</span>
-                  <ChevronDown className="size-3 opacity-80" strokeWidth={1.5} />
+                  <ChevronDown className="size-3 opacity-80" />
                 </Button>
               }
               items={[
@@ -338,7 +336,6 @@ export function CalendarToolbar({
             />
             <Search
               className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
-              strokeWidth={1.5}
             />
             {searchQuery && (
               <button
@@ -347,7 +344,7 @@ export function CalendarToolbar({
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded cursor-pointer"
                 aria-label="Xóa bộ lọc"
               >
-                <X className="size-3" strokeWidth={1.5} />
+                <X className="size-3" />
               </button>
             )}
           </div>
@@ -357,16 +354,15 @@ export function CalendarToolbar({
             <PopoverTrigger
               render={
                 <Button
-                  type="button"
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-7 px-2.5 text-xs font-medium rounded-md border border-border/80 bg-background hover:bg-accent gap-1.5 cursor-pointer text-foreground",
+                    "h-7 px-2.5 text-xs font-medium rounded-md border border-border/80 bg-background hover:bg-accent gap-1.5 text-foreground",
                     hasActiveFilters && "border-foreground/40 bg-muted/60 text-foreground font-semibold"
                   )}
                   aria-label="Bộ lọc nhiệm vụ và sự kiện"
                 >
-                  <Filter className="size-3.5" strokeWidth={1.5} />
+                  <Filter className="size-3.5" />
                   <span className="hidden sm:inline">Lọc</span>
                   {hasActiveFilters && (
                     <span className="size-1.5 rounded-full bg-foreground/80 inline-block" />
@@ -392,7 +388,7 @@ export function CalendarToolbar({
                     }}
                     className="text-xs text-foreground/85 hover:underline inline-flex items-center gap-1 font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded cursor-pointer"
                   >
-                    <RotateCcw className="size-3" strokeWidth={1.5} />
+                    <RotateCcw className="size-3" />
                     Đặt lại
                   </button>
                 )}
@@ -404,20 +400,19 @@ export function CalendarToolbar({
                   <span className="text-muted-foreground font-medium block">Loại</span>
                   <div className="grid grid-cols-1 gap-1">
                     {ITEM_TYPE_OPTIONS.map((opt) => (
-                      <button
+                      <Pressable
                         key={opt.id}
-                        type="button"
                         onClick={() => onItemTypeFilterChange(opt.id)}
                         className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                           itemTypeFilter === opt.id
                             ? "bg-secondary text-foreground font-bold"
                             : "hover:bg-muted/40 text-muted-foreground"
                         )}
                       >
                         <span>{opt.label}</span>
-                        {itemTypeFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                      </button>
+                        {itemTypeFilter === opt.id && <Check className="size-3 text-foreground/85" />}
+                      </Pressable>
                     ))}
                   </div>
                 </div>
@@ -428,20 +423,19 @@ export function CalendarToolbar({
                 <span className="text-muted-foreground font-medium block">Cấp nhiệm vụ</span>
                 <div className="grid grid-cols-1 gap-1">
                   {LEVEL_OPTIONS.map((opt) => (
-                    <button
+                    <Pressable
                       key={opt.id}
-                      type="button"
                       onClick={() => onLevelFilterChange(opt.id)}
                       className={cn(
-                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                         levelFilter === opt.id
                           ? "bg-secondary text-foreground font-bold"
                           : "hover:bg-muted/40 text-muted-foreground"
                       )}
                     >
                       <span>{opt.label}</span>
-                      {levelFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                    </button>
+                      {levelFilter === opt.id && <Check className="size-3 text-foreground/85" />}
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -451,20 +445,19 @@ export function CalendarToolbar({
                 <span className="text-muted-foreground font-medium block">Trạng thái tiến độ</span>
                 <div className="grid grid-cols-1 gap-1">
                   {STATUS_OPTIONS.map((opt) => (
-                    <button
+                    <Pressable
                       key={opt.id}
-                      type="button"
                       onClick={() => onStatusFilterChange(opt.id)}
                       className={cn(
-                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                        "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                         statusFilter === opt.id
                           ? "bg-secondary text-foreground font-bold"
                           : "hover:bg-muted/40 text-muted-foreground"
                       )}
                     >
                       <span>{opt.label}</span>
-                      {statusFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                    </button>
+                      {statusFilter === opt.id && <Check className="size-3 text-foreground/85" />}
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -480,7 +473,7 @@ export function CalendarToolbar({
                   className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-8 sm:min-w-8 items-center justify-center rounded-xl border border-border/70 bg-background text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                   aria-label="Tùy chọn hiển thị lịch"
                 >
-                  <MoreHorizontal className="size-4" strokeWidth={1.5} />
+                  <MoreHorizontal className="size-4" />
                 </button>
               }
             />
@@ -497,23 +490,22 @@ export function CalendarToolbar({
                   <span className="font-bold text-foreground block">Năm học</span>
                   <div className="space-y-1">
                     {availableAcademicYears.map((yr) => (
-                      <button
+                      <Pressable
                         key={yr}
-                        type="button"
                         onClick={() => {
                           onAcademicYearChange(yr);
                           setIsDisplayOpen(false);
                         }}
                         className={cn(
-                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors cursor-pointer",
+                          "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between font-medium min-h-[36px] transition-colors",
                           academicYear === yr
                             ? "bg-secondary text-foreground font-bold"
                             : "hover:bg-muted/40 text-muted-foreground"
                         )}
                       >
                         <span className="font-mono tabular-nums">{yr}</span>
-                        {academicYear === yr && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
-                      </button>
+                        {academicYear === yr && <Check className="size-3 text-foreground/85" />}
+                      </Pressable>
                     ))}
                   </div>
                 </div>
@@ -597,60 +589,56 @@ export function CalendarToolbar({
         <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/60">
           {itemTypeFilter && itemTypeFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <span className="text-muted-foreground text-[11px]">Loại:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Loại:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {ITEM_TYPE_OPTIONS.find((o) => o.id === itemTypeFilter)?.label}
               </span>
-              <button
-                type="button"
+              <Pressable
                 onClick={() => onItemTypeFilterChange?.("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc loại"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+                <X className="size-2.5" />
+              </Pressable>
             </span>
           )}
           {levelFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <span className="text-muted-foreground text-[11px]">Cấp:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Cấp:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {LEVEL_OPTIONS.find((o) => o.id === levelFilter)?.label}
               </span>
-              <button
-                type="button"
+              <Pressable
                 onClick={() => onLevelFilterChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc cấp"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+                <X className="size-2.5" />
+              </Pressable>
             </span>
           )}
           {statusFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
-              <span className="text-muted-foreground text-[11px]">Trạng thái:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs">Trạng thái:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {STATUS_OPTIONS.find((o) => o.id === statusFilter)?.label}
               </span>
-              <button
-                type="button"
+              <Pressable
                 onClick={() => onStatusFilterChange("ALL")}
-                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
                 aria-label="Xóa lọc trạng thái"
               >
-                <X className="size-2.5" strokeWidth={1.5} />
-              </button>
+                <X className="size-2.5" />
+              </Pressable>
             </span>
           )}
-          <button
-            type="button"
+          <Pressable
             onClick={onResetFilters}
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
           >
-            <RotateCcw className="size-3" strokeWidth={1.5} />
+            <RotateCcw className="size-3" />
             <span>Xóa lọc</span>
-          </button>
+          </Pressable>
         </div>
       )}
     </div>

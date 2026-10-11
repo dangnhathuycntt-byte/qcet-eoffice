@@ -115,8 +115,8 @@ describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () =
     assert.match(markup, /Prior Overdue Backlog/);
 
     // Amber/rose warning styling
-    assert.ok(markup.includes("border-amber-300"), "Must have amber border styling");
-    assert.ok(markup.includes("bg-amber-50"), "Must have amber ground styling");
+    assert.ok(markup.includes("border-warning/40"), "Must have amber border styling");
+    assert.ok(markup.includes("bg-warning/10"), "Must have amber ground styling");
 
     // Renders both backlog tasks
     assert.match(markup, /Báo cáo an toàn thông tin tháng 8 chưa nghiệm thu/);

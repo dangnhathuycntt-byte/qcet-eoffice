@@ -12,6 +12,7 @@ import {
 import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
+import { Pressable } from "@/components/ui/pressable";
 
 interface ShortcutGroup {
   id: string;
@@ -130,21 +131,20 @@ export function GlobalShortcutsModal() {
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border/40">
           <div>
             <h2 className="text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
-              <Keyboard className="size-4.5 text-primary" strokeWidth={1.5} />
+              <Keyboard className="size-4.5 text-primary" />
               <span>Phím tắt bàn phím</span>
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Tra cứu nhanh các phím tắt điều phối công việc trong hệ thống QCET
             </p>
           </div>
-          <button
-            type="button"
+          <Pressable
             onClick={() => setIsOpen(false)}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98] cursor-pointer"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]"
             aria-label="Đóng"
           >
-            <X className="size-4" strokeWidth={1.5} />
-          </button>
+            <X className="size-4" />
+          </Pressable>
         </div>
 
         {/* Quick Search in Shortcuts */}
@@ -159,13 +159,12 @@ export function GlobalShortcutsModal() {
             autoFocus
           />
           {searchQuery && (
-            <button
-              type="button"
+            <Pressable
               onClick={() => setSearchQuery("")}
-              className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
+              className="text-xs text-muted-foreground hover:text-foreground"
             >
               Xóa
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -180,7 +179,7 @@ export function GlobalShortcutsModal() {
               const Icon = group.icon;
               return (
                 <div key={group.id} className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11.5px] font-semibold text-muted-foreground/75 tracking-tight px-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground/75 tracking-tight px-1">
                     <Icon size={13} strokeWidth={1.5} className="text-muted-foreground/60" />
                     <span>{group.title}</span>
                   </div>
@@ -192,11 +191,11 @@ export function GlobalShortcutsModal() {
                         className="flex items-center justify-between gap-3 px-3 py-2 text-xs hover:bg-muted/40 transition-colors"
                       >
                         <div className="flex flex-col min-w-0">
-                          <span className="font-medium text-foreground text-[12.5px] tracking-tight truncate">
+                          <span className="font-medium text-foreground text-xs tracking-tight truncate">
                             {item.label}
                           </span>
                           {item.description && (
-                            <span className="text-[10.5px] text-muted-foreground/70">
+                            <span className="text-xs text-muted-foreground/70">
                               {item.description}
                             </span>
                           )}
@@ -207,7 +206,7 @@ export function GlobalShortcutsModal() {
                             <kbd
                               key={kIdx}
                               className={cn(
-                                "inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-[4px] font-mono text-[11px] font-medium leading-none",
+                                "inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-[4px] font-mono text-xs font-medium leading-none",
                                 "bg-background text-foreground border border-border shadow-2xs"
                               )}
                             >
@@ -225,24 +224,23 @@ export function GlobalShortcutsModal() {
         </div>
 
         {/* Footer Note */}
-        <div className="border-t border-border px-6 py-2.5 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
+        <div className="border-t border-border px-6 py-2.5 bg-muted/20 flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            Nhấn <kbd className="px-1 py-0.5 font-mono text-[10px] bg-background rounded border border-border/80 text-foreground">?</kbd> bất cứ lúc nào để mở bảng này
+            Nhấn <kbd className="px-1 py-0.5 font-mono text-xs bg-background rounded border border-border/80 text-foreground">?</kbd> bất cứ lúc nào để mở bảng này
           </span>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Pressable
               onClick={() => {
                 setIsOpen(false);
                 if (typeof window !== "undefined") {
                   window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
                 }
               }}
-              className="text-primary hover:underline font-medium cursor-pointer"
+              className="text-primary hover:underline font-medium"
             >
               Hướng dẫn sử dụng
-            </button>
-            <span className="font-mono text-[10.5px]">QCET E-Office</span>
+            </Pressable>
+            <span className="font-mono text-xs">QCET E-Office</span>
           </div>
         </div>
       </div>

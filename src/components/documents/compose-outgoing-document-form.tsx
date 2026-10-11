@@ -110,12 +110,12 @@ export function ComposeOutgoingDocumentForm({
     >
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-        <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/documents")}>
-          <ArrowLeft className="size-3.5" strokeWidth={1.5} />
+        <Button variant="ghost" size="sm" onClick={() => router.push("/documents")}>
+          <ArrowLeft className="size-3.5" />
           Quay lại
         </Button>
         <div className="flex items-center gap-2">
-          <FileText className="size-4 text-muted-foreground" strokeWidth={1.5} />
+          <FileText className="size-4 text-muted-foreground" />
           <h1 className="text-xl font-semibold text-foreground">Soạn văn bản đi mới</h1>
         </div>
       </div>
@@ -266,9 +266,9 @@ export function ComposeOutgoingDocumentForm({
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={isSubmitting || title.trim().length < 3}>
             {isSubmitting ? (
-              <Loader2 className="animate-spin" strokeWidth={1.5} />
+              <Loader2 className="animate-spin" />
             ) : (
-              <Send strokeWidth={1.5} />
+              <Send />
             )}
             {isSubmitting ? "Đang tạo..." : "Tạo bản nháp"}
           </Button>

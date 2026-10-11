@@ -153,7 +153,7 @@ export function DocumentAuditTimeline({ documentId, className, refreshKey }: Doc
       {auditLogs.length > 0 ? (
         <Collapsible.Root open={showLogs} onOpenChange={setShowLogs} className="mt-3">
           <Collapsible.Trigger className="-mx-1 inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-1 text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-            <ChevronRight className={cn("size-3 transition-transform motion-reduce:transition-none", showLogs && "rotate-90")} strokeWidth={1.5} aria-hidden />
+            <ChevronRight className={cn("size-3 transition-transform motion-reduce:transition-none", showLogs && "rotate-90")} aria-hidden />
             Nhật ký thao tác
             <span className="tabular-nums">{auditLogs.length}</span>
           </Collapsible.Trigger>

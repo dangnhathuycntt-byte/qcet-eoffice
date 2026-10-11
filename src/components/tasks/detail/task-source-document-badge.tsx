@@ -55,13 +55,12 @@ export function TaskSourceDocumentBadge({
                 )}
                 aria-label={`Mở văn bản gốc: ${sourceDocument.originalNumber}`}
               >
-                <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                <FileText className="size-4 shrink-0 text-muted-foreground" />
                 <span className="truncate">
                   {sourceDocument.originalNumber || `#${sourceDocument.registrationNumber}`}
                 </span>
                 <ExternalLink
                   className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-                  strokeWidth={1.5}
                 />
               </a>
             )}
@@ -108,14 +107,14 @@ export function TaskSourceDocumentBadge({
       )}
       aria-label={`Mở văn bản gốc: ${sourceDocument.originalNumber}`}
     >
-      <FileText className="size-4 shrink-0 text-muted-foreground mt-0.5" strokeWidth={1.5} />
+      <FileText className="size-4 shrink-0 text-muted-foreground mt-0.5" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             {typeLabel}
           </span>
-          <span className="text-[11px] text-muted-foreground/60">·</span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground/60">·</span>
+          <span className="text-xs text-muted-foreground">
             {sourceDocument.issuingAuthority}
           </span>
         </div>
@@ -126,14 +125,13 @@ export function TaskSourceDocumentBadge({
           {sourceDocument.summary}
         </p>
         {statusLabel && (
-          <span className="inline-flex mt-1 rounded border border-border/60 bg-background px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="inline-flex mt-1 rounded border border-border/60 bg-background px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
             {statusLabel}
           </span>
         )}
       </div>
       <ExternalLink
         className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground mt-0.5"
-        strokeWidth={1.5}
       />
     </a>
   );

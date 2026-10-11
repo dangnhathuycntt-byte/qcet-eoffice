@@ -5,10 +5,6 @@ import {
   recordDelegatedApproval,
   isDelegationActive,
 } from "../src/lib/delegation-authority-engine";
-import {
-  validateDelegationForm,
-  type DelegationFormData,
-} from "../src/components/dashboard/delegation-management-modal";
 import type { DelegationRule, ApprovalAuditLog } from "../src/types/delegation";
 
 describe("Task 4: Delegation Workflow & Governance Compliance", () => {
@@ -170,27 +166,6 @@ describe("Task 4: Delegation Workflow & Governance Compliance", () => {
       assert.equal(result.allowed, true);
       assert.equal(result.isDelegated, true);
       assert.equal(result.rule?.id, "del-stanford-001");
-    });
-
-    test("Self-Delegation Prevention: Khong the lap uy quyen cho chinh ban than nguoi uy quyen", () => {
-      const selfDelegationForm: DelegationFormData = {
-        granteeName: "TS. Nguyen Ngoc Vinh",
-        granteeRole: "MANAGER",
-        scope: "DACUM_REVIEW_STEP1",
-        startDate: "2025-03-01",
-        endDate: "2025-03-31",
-        reason: "Tu uy quyen nghiem thu",
-      };
-
-      const errors = validateDelegationForm(
-        selfDelegationForm,
-        "TS. Nguyen Ngoc Vinh"
-      );
-      assert.ok(errors.granteeName, "Phai chan tu uy quyen cho chinh minh");
-      assert.match(
-        errors.granteeName,
-        /phân lập thẩm quyền/i
-      );
     });
   });
 

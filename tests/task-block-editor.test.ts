@@ -719,12 +719,8 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
 
-    it("presents contextual popover to choose Link / Bookmark / Embed on URL paste", () => {
-      assert.ok(
-        componentContent.includes("handlePaste") || componentContent.includes("urlPastePopover"),
-        "Must provide contextual URL paste popover"
-      );
-    });
+    // Chưa làm: trước đây test này chỉ kiểm một state không dùng tới.
+    it.todo("presents contextual popover to choose Link / Bookmark / Embed on URL paste");
   });
 
   describe("9. Global Window Drag & Drop UX for Media & Files (OS File Drop Anywhere)", () => {

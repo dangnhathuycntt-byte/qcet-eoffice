@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import {
   validateTaskForm,
   getInitialTaskFormData,
-  CATEGORY_OPTIONS,
   isFormDirty,
   takeFormSnapshot,
   resolveCreateTaskIdentity,
   type CreateTaskFormData,
   type CreateTaskPersonnelRef,
-} from "../src/components/dashboard/create-task-modal";
+} from "../src/domain/tasks/create-task-form-utils";
+import { CATEGORY_DISPLAY_CONFIG } from "../src/domain/tasks/display-config";
 
 describe("CreateTaskModal Helpers", () => {
   test("getInitialTaskFormData returns clean initial state", () => {

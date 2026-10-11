@@ -7,26 +7,18 @@ import {
   Filter,
   Trash2,
   Check,
-  ChevronDown,
   ChevronRight,
   X,
-  ExternalLink,
-  ArrowRight,
   Maximize2,
   MoveUp,
   MoveDown,
   Clock,
-  Layers,
   Calendar,
   AlertTriangle,
-  Info,
-  CheckCircle2,
   RotateCw,
-  SlidersHorizontal,
   Table as TableIcon,
   Kanban as KanbanIcon,
   User,
-  Building,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,15 +28,15 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { DrawerRoot, DrawerContent, DrawerOverlay, DrawerPortal } from "@/components/ui/drawer";
 import * as m from "motion/react-m";
 import { AnimatePresence } from "motion/react";
-import { motionEase, motionTransition, motionSpring } from "@/lib/motion/tokens";
+import { motionEase, motionSpring } from "@/lib/motion/tokens";
 import { popoverVariants } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 // ============================================================================
 // Token Definitions & Metadata
@@ -154,7 +146,7 @@ function Cell({ label, hint, children }: { label: string; hint?: string; childre
     <div className="flex flex-col items-start gap-1.5">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
         <span>{label}</span>
-        {hint ? <span className="text-[11px] text-muted-foreground/75 font-normal">({hint})</span> : null}
+        {hint ? <span className="text-xs text-muted-foreground/75 font-normal">({hint})</span> : null}
       </div>
       {children}
     </div>
@@ -264,10 +256,10 @@ export function DesignShowcase() {
               </span>
               <div>
                 <h1 className="text-sm font-semibold tracking-tight text-foreground leading-none">QCET E-Office</h1>
-                <span className="text-[11px] text-muted-foreground">Bảng mẫu hệ thống thiết kế</span>
+                <span className="text-xs text-muted-foreground">Bảng mẫu hệ thống thiết kế</span>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1 text-[11px] text-muted-foreground">
+            <div className="mt-3 flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1 text-xs text-muted-foreground">
               <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Chỉ chạy ở môi trường Dev</span>
             </div>
@@ -276,7 +268,7 @@ export function DesignShowcase() {
           <nav className="flex-1 space-y-6 text-xs">
             {Array.from(new Set(NAV_ITEMS.map((i) => i.group))).map((group) => (
               <div key={group} className="space-y-1">
-                <div className="px-2 text-[11px] font-semibold text-muted-foreground/80">
+                <div className="px-2 text-xs font-semibold text-muted-foreground/80">
                   {group}
                 </div>
                 <div className="space-y-0.5">
@@ -309,9 +301,9 @@ export function DesignShowcase() {
             ))}
           </nav>
 
-          <div className="mt-auto border-t border-border/40 pt-3 text-[11px] text-muted-foreground/75 px-2">
+          <div className="mt-auto border-t border-border/40 pt-3 text-xs text-muted-foreground/75 px-2">
             <div>QCET E-Office · Canvas v1.0</div>
-            <div className="text-[10px]">Action #0058A0 · Lưới 4px</div>
+            <div className="text-xs">Action #0058A0 · Lưới 4px</div>
           </div>
         </aside>
 
@@ -321,7 +313,7 @@ export function DesignShowcase() {
           <header className="space-y-2 border-b border-border/40 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[28px]">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-hero">
                   Hệ thống thiết kế QCET E-Office
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -362,8 +354,8 @@ export function DesignShowcase() {
                         }}
                       />
                       <div className="text-xs font-semibold leading-tight text-foreground">{name}</div>
-                      <div className="text-[11px] tabular-nums text-muted-foreground">{hex}</div>
-                      <div className="text-[11px] text-muted-foreground/80 line-clamp-1">{desc}</div>
+                      <div className="text-xs tabular-nums text-muted-foreground">{hex}</div>
+                      <div className="text-xs text-muted-foreground/80 line-clamp-1">{desc}</div>
                     </div>
                   ))}
                 </div>
@@ -384,8 +376,8 @@ export function DesignShowcase() {
                         }}
                       />
                       <div className="text-xs font-semibold leading-tight text-foreground">{name}</div>
-                      <div className="text-[11px] tabular-nums text-muted-foreground">{hex}</div>
-                      <div className="text-[11px] text-muted-foreground/80">{desc}</div>
+                      <div className="text-xs tabular-nums text-muted-foreground">{hex}</div>
+                      <div className="text-xs text-muted-foreground/80">{desc}</div>
                     </div>
                   ))}
                 </div>
@@ -401,7 +393,7 @@ export function DesignShowcase() {
           >
             <div className="space-y-3 rounded-2xl border border-border/40 bg-card p-6 shadow-subtle">
               <div className="flex flex-col justify-between gap-1 border-b border-border/40 pb-3 sm:flex-row sm:items-baseline">
-                <span className="text-[28px] font-semibold leading-tight tracking-tight text-foreground">
+                <span className="text-hero font-semibold leading-tight tracking-tight text-foreground">
                   28px · Tiêu đề trang lớn
                 </span>
                 <span className="text-xs text-muted-foreground">font-semibold · tracking-tight</span>
@@ -453,20 +445,20 @@ export function DesignShowcase() {
                   <Badge variant="outline">content-max: 1440px</Badge>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
-                    <div className="text-xs font-semibold text-rose-700">Máy tính (Desktop ≥1280)</div>
-                    <div className="mt-1 text-2xl font-bold tabular-nums text-rose-900">24px</div>
-                    <p className="mt-1 text-[11px] text-rose-600">Lề hai bên trang (--page-gutter)</p>
+                  <div className="rounded-xl border border-destructive/30 bg-danger-soft/50 p-4">
+                    <div className="text-xs font-semibold text-destructive">Máy tính (Desktop ≥1280)</div>
+                    <div className="mt-1 text-2xl font-bold tabular-nums text-destructive">24px</div>
+                    <p className="mt-1 text-xs text-destructive">Lề hai bên trang (--page-gutter)</p>
                   </div>
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                    <div className="text-xs font-semibold text-amber-700">Máy tính bảng (Tablet 640–1023)</div>
-                    <div className="mt-1 text-2xl font-bold tabular-nums text-amber-900">20px</div>
-                    <p className="mt-1 text-[11px] text-amber-600">Lề trang trung gian</p>
+                  <div className="rounded-xl border border-warning/30 bg-warning/5 p-4">
+                    <div className="text-xs font-semibold text-warning">Máy tính bảng (Tablet 640–1023)</div>
+                    <div className="mt-1 text-2xl font-bold tabular-nums text-warning">20px</div>
+                    <p className="mt-1 text-xs text-warning">Lề trang trung gian</p>
                   </div>
                   <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-4">
                     <div className="text-xs font-semibold text-sky-700">Điện thoại (Mobile &lt;640)</div>
                     <div className="mt-1 text-2xl font-bold tabular-nums text-sky-900">16px</div>
-                    <p className="mt-1 text-[11px] text-sky-600">Lề thu gọn cho màn hình nhỏ</p>
+                    <p className="mt-1 text-xs text-sky-600">Lề thu gọn cho màn hình nhỏ</p>
                   </div>
                 </div>
               </div>
@@ -481,9 +473,9 @@ export function DesignShowcase() {
                 </div>
 
                 {/* Mock Card with Redline visual guides */}
-                <div className="relative rounded-2xl border border-dashed border-rose-400 bg-rose-50/20 p-6">
+                <div className="relative rounded-2xl border border-dashed border-destructive bg-danger-soft/20 p-6">
                   {/* Inset Badge */}
-                  <div className="absolute top-2 left-2 rounded bg-rose-600 px-1.5 py-0.5 font-mono text-[10px] text-white">
+                  <div className="absolute top-2 left-2 rounded bg-destructive px-1.5 py-0.5 font-mono text-xs text-white">
                     inset-24 (24px)
                   </div>
 
@@ -493,7 +485,7 @@ export function DesignShowcase() {
                         <span className="size-2 rounded-full bg-primary" />
                         <span className="text-sm font-semibold text-foreground">Chi tiết công việc</span>
                       </div>
-                      <span className="rounded bg-rose-100 px-1.5 py-0.5 font-mono text-[10px] text-rose-700">
+                      <span className="rounded bg-destructive/15 px-1.5 py-0.5 font-mono text-xs text-destructive">
                         inline-8 (8px)
                       </span>
                     </div>
@@ -506,7 +498,7 @@ export function DesignShowcase() {
                         <span className="font-medium text-foreground">Soạn tờ trình phân bổ ngân sách</span>
                       </div>
                       <div className="flex items-center gap-4 text-muted-foreground">
-                        <span className="rounded bg-rose-500/10 px-1 font-mono text-[10px] text-rose-600">h-10 (40px)</span>
+                        <span className="rounded bg-destructive/10 px-1 font-mono text-xs text-destructive">h-10 (40px)</span>
                         <UserAvatar name="Đặng Nhật Huy" size="sm" />
                         <span className="tabular-nums">12/10</span>
                       </div>
@@ -514,13 +506,13 @@ export function DesignShowcase() {
 
                     {/* Stack Annotation */}
                     <div className="flex items-center justify-center py-1">
-                      <div className="flex items-center gap-1.5 rounded bg-rose-100 px-2 py-0.5 font-mono text-[10px] text-rose-800">
+                      <div className="flex items-center gap-1.5 rounded bg-destructive/15 px-2 py-0.5 font-mono text-xs text-destructive">
                         <MoveDown className="size-3" /> stack-16 (16px) <MoveUp className="size-3" />
                       </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-2">
-                      <span className="rounded bg-rose-100 px-1.5 py-0.5 font-mono text-[10px] text-rose-700">
+                      <span className="rounded bg-destructive/15 px-1.5 py-0.5 font-mono text-xs text-destructive">
                         inline-8 (8px)
                       </span>
                       <Button variant="secondary" size="sm">
@@ -734,7 +726,7 @@ export function DesignShowcase() {
               </Cell>
               <Cell label="Trạng thái lỗi (Error)" hint="Nền #FBEDED">
                 <Input aria-invalid defaultValue="" placeholder="Vui lòng nhập tên công việc" />
-                <span className="text-[12px] text-destructive flex items-center gap-1 mt-1">
+                <span className="text-xs text-destructive flex items-center gap-1 mt-1">
                   <AlertTriangle className="size-3 shrink-0" /> Tên công việc không được để trống.
                 </span>
               </Cell>
@@ -742,7 +734,7 @@ export function DesignShowcase() {
                 <div className="relative w-full max-w-[280px]">
                   <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input placeholder="Tìm kiếm…" className="h-8 pl-8 pr-7 text-xs rounded-lg" />
-                  <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                  <kbd className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                     /
                   </kbd>
                 </div>
@@ -793,13 +785,13 @@ export function DesignShowcase() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="gap-1.5 cursor-pointer"
+                    className="gap-1.5"
                     onClick={() => setFilterOpen((p) => !p)}
                   >
                     <Filter className="size-3.5" />
                     <span>Bộ lọc</span>
                     {filterChips.length > 0 ? (
-                      <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                      <span className="flex size-4 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                         {filterChips.length}
                       </span>
                     ) : null}
@@ -817,51 +809,47 @@ export function DesignShowcase() {
                       >
                         <div className="flex items-center justify-between text-xs font-semibold text-foreground border-b border-border/40 pb-2 px-1">
                           <span>Tiêu chí lọc 2 cấp</span>
-                          <button
-                            type="button"
+                          <Pressable
                             onClick={() => setFilterOpen(false)}
-                            className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
+                            className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
                           >
                             <X className="size-3.5" />
-                          </button>
+                          </Pressable>
                         </div>
                         <div className="space-y-1 text-xs">
-                          <button
-                            type="button"
+                          <Pressable
                             onClick={() => {
                               if (!filterChips.some((c) => c.id === "time")) {
                                 setFilterChips((p) => [...p, { id: "time", label: "Thời gian: Tháng 10" }]);
                               }
                             }}
-                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left cursor-pointer"
+                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left"
                           >
                             <span className="text-foreground font-medium">Thời gian</span>
-                            <span className="text-primary font-medium text-[11px]">Tháng 10 ›</span>
-                          </button>
-                          <button
-                            type="button"
+                            <span className="text-primary font-medium text-xs">Tháng 10 ›</span>
+                          </Pressable>
+                          <Pressable
                             onClick={() => {
                               if (!filterChips.some((c) => c.id === "priority")) {
                                 setFilterChips((p) => [...p, { id: "priority", label: "Ưu tiên: Khẩn cấp, Cao" }]);
                               }
                             }}
-                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left cursor-pointer"
+                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left"
                           >
                             <span className="text-foreground font-medium">Ưu tiên</span>
-                            <span className="text-muted-foreground text-[11px]">Khẩn cấp, Cao ›</span>
-                          </button>
-                          <button
-                            type="button"
+                            <span className="text-muted-foreground text-xs">Khẩn cấp, Cao ›</span>
+                          </Pressable>
+                          <Pressable
                             onClick={() => {
                               if (!filterChips.some((c) => c.id === "status")) {
                                 setFilterChips((p) => [...p, { id: "status", label: "Trạng thái: Chờ duyệt" }]);
                               }
                             }}
-                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left cursor-pointer"
+                            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 hover:bg-secondary/70 transition-colors text-left"
                           >
                             <span className="text-foreground font-medium">Trạng thái</span>
-                            <span className="text-muted-foreground text-[11px]">Chờ duyệt ›</span>
-                          </button>
+                            <span className="text-muted-foreground text-xs">Chờ duyệt ›</span>
+                          </Pressable>
                         </div>
                       </m.div>
                     )}
@@ -884,26 +872,24 @@ export function DesignShowcase() {
                       className="inline-flex h-7 items-center gap-1.5 rounded-chip bg-secondary px-2.5 text-xs font-medium text-foreground border border-border/40 transition-colors"
                     >
                       <span>{chip.label}</span>
-                      <button
-                        type="button"
+                      <Pressable
                         onClick={() => removeChip(chip.id)}
-                        className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+                        className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                         title="Xóa bộ lọc này"
                       >
                         <X className="size-3" />
-                      </button>
+                      </Pressable>
                     </m.span>
                   ))}
                 </AnimatePresence>
 
                 {filterChips.length > 0 ? (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={clearAllChips}
-                    className="text-xs text-muted-foreground hover:text-foreground hover:underline ml-2 cursor-pointer"
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline ml-2"
                   >
                     Xóa tất cả
-                  </button>
+                  </Pressable>
                 ) : (
                   <span className="text-xs text-muted-foreground italic">Không có bộ lọc nào đang bật.</span>
                 )}
@@ -948,7 +934,7 @@ export function DesignShowcase() {
                         <TaskStatusCircle status={key} />
                         <span className="font-medium text-foreground">{label}</span>
                       </div>
-                      <span className="text-[11px] text-muted-foreground">{desc}</span>
+                      <span className="text-xs text-muted-foreground">{desc}</span>
                     </div>
                   ))}
                 </div>
@@ -964,7 +950,7 @@ export function DesignShowcase() {
                       <div className="flex items-center gap-2.5 text-sm">
                         <PrioritySignalBars priority={p} showLabel />
                       </div>
-                      <span className="text-[11px] text-muted-foreground">{desc}</span>
+                      <span className="text-xs text-muted-foreground">{desc}</span>
                     </div>
                   ))}
                 </div>
@@ -1239,7 +1225,7 @@ export function DesignShowcase() {
                 <div className="flex items-center justify-center rounded-2xl border border-border/40 bg-secondary/25 py-8 px-4">
                   <div className="inline-flex h-12 items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 py-1.5 shadow-[0_16px_36px_-8px_rgba(26,29,35,0.22),0_4px_12px_-2px_rgba(26,29,35,0.08)] backdrop-blur-md">
                     <div className="flex items-center gap-2 pl-1 pr-2">
-                      <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                         2
                       </span>
                       <span className="text-xs font-semibold text-foreground whitespace-nowrap">Đã chọn</span>
@@ -1247,47 +1233,42 @@ export function DesignShowcase() {
 
                     <div className="h-4 w-[1px] bg-border/60 mx-1" />
 
-                    <button
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    <Pressable
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Calendar className="size-3.5 text-muted-foreground" />
                       <span>Đổi hạn</span>
-                    </button>
+                    </Pressable>
 
-                    <button
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    <Pressable
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <User className="size-3.5 text-muted-foreground" />
                       <span>Giao người</span>
-                    </button>
+                    </Pressable>
 
-                    <button
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    <Pressable
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Clock className="size-3.5 text-muted-foreground" />
                       <span>Trạng thái</span>
-                    </button>
+                    </Pressable>
 
-                    <button
-                      type="button"
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-destructive/10 hover:bg-destructive/15 text-destructive px-3.5 text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    <Pressable
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-destructive/10 hover:bg-destructive/15 text-destructive px-3.5 text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Trash2 className="size-3.5 text-destructive" />
                       <span>Hủy việc</span>
-                    </button>
+                    </Pressable>
 
                     <div className="h-4 w-[1px] bg-border/60 mx-1" />
 
-                    <button
-                      type="button"
-                      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+                    <Pressable
+                      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                       title="Bỏ chọn"
                     >
                       <X className="size-4" />
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
               </div>
@@ -1368,18 +1349,18 @@ export function DesignShowcase() {
                 <div className="flex items-center justify-between border-b border-border/40 pb-3 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">Việc con 1 trên 2</span>
                   <div className="flex items-center gap-3">
-                    <button type="button" className="hover:text-foreground" title="Toàn trang">
+                    <Pressable className="hover:text-foreground" title="Toàn trang">
                       <Maximize2 className="size-3.5" />
-                    </button>
-                    <button type="button" className="hover:text-foreground" title="Việc trước">
+                    </Pressable>
+                    <Pressable className="hover:text-foreground" title="Việc trước">
                       <MoveUp className="size-3.5" />
-                    </button>
-                    <button type="button" className="hover:text-foreground" title="Việc kế">
+                    </Pressable>
+                    <Pressable className="hover:text-foreground" title="Việc kế">
                       <MoveDown className="size-3.5" />
-                    </button>
-                    <button type="button" className="hover:text-foreground" title="Đóng">
+                    </Pressable>
+                    <Pressable className="hover:text-foreground" title="Đóng">
                       <X className="size-3.5" />
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
 
@@ -1444,13 +1425,12 @@ export function DesignShowcase() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground px-4 text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                  <Pressable
+                    className="inline-flex h-8.5 items-center gap-1.5 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground px-4 text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
                   >
                     <Plus className="size-3.5 stroke-[2.5]" />
                     <span>Giao việc mới</span>
-                  </button>
+                  </Pressable>
                 </div>
               </div>
 
@@ -1465,39 +1445,37 @@ export function DesignShowcase() {
                       placeholder="Tìm kiếm nhiệm vụ…"
                       className="h-8 w-full pl-8.5 pr-8 text-xs rounded-full bg-secondary/80 focus:bg-background border border-transparent focus:border-border/60 transition-all outline-none"
                     />
-                    <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full bg-card px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground shadow-2xs">
+                    <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full bg-card px-1.5 py-0.2 text-xs font-mono text-muted-foreground shadow-2xs">
                       /
                     </kbd>
                   </div>
 
                   {/* Filter Button Pill */}
-                  <button
-                    type="button"
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all cursor-pointer"
+                  <Pressable
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary hover:bg-accent px-3.5 text-xs font-medium text-foreground transition-all"
                   >
                     <Filter className="size-3.5 text-muted-foreground" />
                     <span>Bộ lọc</span>
-                    <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    <span className="flex size-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                       1
                     </span>
-                  </button>
+                  </Pressable>
 
                   {/* Filter Chip Pill */}
                   <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-medium text-foreground border border-border/40">
                     <span>Thời gian: Tháng 10</span>
-                    <button type="button" className="rounded-full p-0.5 text-muted-foreground hover:text-foreground">
+                    <Pressable className="rounded-full p-0.5 text-muted-foreground hover:text-foreground">
                       <X className="size-3" />
-                    </button>
+                    </Pressable>
                   </span>
                 </div>
 
                 {/* View Switcher: Bảng | Kanban Segmented Pill */}
                 <div className="relative inline-flex h-8 items-center rounded-full bg-secondary p-1 text-xs">
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => setActiveTab("table")}
                     className={cn(
-                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors cursor-pointer select-none",
+                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors select-none",
                       activeTab === "table"
                         ? "text-foreground font-semibold"
                         : "text-muted-foreground hover:text-foreground"
@@ -1512,12 +1490,11 @@ export function DesignShowcase() {
                     )}
                     <TableIcon className="relative z-10 size-3.5" />
                     <span className="relative z-10">Bảng</span>
-                  </button>
-                  <button
-                    type="button"
+                  </Pressable>
+                  <Pressable
                     onClick={() => setActiveTab("kanban")}
                     className={cn(
-                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors cursor-pointer select-none",
+                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors select-none",
                       activeTab === "kanban"
                         ? "text-foreground font-semibold"
                         : "text-muted-foreground hover:text-foreground"
@@ -1532,7 +1509,7 @@ export function DesignShowcase() {
                     )}
                     <KanbanIcon className="relative z-10 size-3.5" />
                     <span className="relative z-10">Kanban</span>
-                  </button>
+                  </Pressable>
                 </div>
               </div>
 
@@ -1568,10 +1545,9 @@ export function DesignShowcase() {
 
                   {/* Group 1: Chờ duyệt (3 việc) */}
                   <div className="space-y-1">
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => setGroupCollapse((p) => ({ ...p, waiting: !p.waiting }))}
-                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors cursor-pointer select-none"
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors select-none"
                     >
                       <m.span
                         animate={{ rotate: groupCollapse.waiting ? 0 : 90 }}
@@ -1582,10 +1558,10 @@ export function DesignShowcase() {
                       </m.span>
                       <TaskStatusCircle status="WAITING_APPROVAL" />
                       <span>Chờ duyệt</span>
-                      <span className="rounded-full bg-secondary px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground">
+                      <span className="rounded-full bg-secondary px-1.5 py-0.2 text-xs font-mono text-muted-foreground">
                         3
                       </span>
-                    </button>
+                    </Pressable>
 
                     <AnimatePresence initial={false}>
                       {!groupCollapse.waiting && (
@@ -1637,10 +1613,9 @@ export function DesignShowcase() {
 
                   {/* Group 2: Đang thực hiện (5 việc, gồm selection gộp khối) */}
                   <div className="space-y-1">
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => setGroupCollapse((p) => ({ ...p, doing: !p.doing }))}
-                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors cursor-pointer select-none"
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors select-none"
                     >
                       <m.span
                         animate={{ rotate: groupCollapse.doing ? 0 : 90 }}
@@ -1651,10 +1626,10 @@ export function DesignShowcase() {
                       </m.span>
                       <TaskStatusCircle status="IN_PROGRESS" />
                       <span>Đang thực hiện</span>
-                      <span className="rounded-full bg-secondary px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground">
+                      <span className="rounded-full bg-secondary px-1.5 py-0.2 text-xs font-mono text-muted-foreground">
                         5
                       </span>
-                    </button>
+                    </Pressable>
 
                     <AnimatePresence initial={false}>
                       {!groupCollapse.doing && (
@@ -1761,10 +1736,9 @@ export function DesignShowcase() {
 
                   {/* Group 3: Mới (3 việc) */}
                   <div className="space-y-1">
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => setGroupCollapse((p) => ({ ...p, new: !p.new }))}
-                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors cursor-pointer select-none"
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-foreground hover:bg-secondary/50 transition-colors select-none"
                     >
                       <m.span
                         animate={{ rotate: groupCollapse.new ? 0 : 90 }}
@@ -1775,10 +1749,10 @@ export function DesignShowcase() {
                       </m.span>
                       <TaskStatusCircle status="NOT_STARTED" />
                       <span>Mới</span>
-                      <span className="rounded-full bg-secondary px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground">
+                      <span className="rounded-full bg-secondary px-1.5 py-0.2 text-xs font-mono text-muted-foreground">
                         3
                       </span>
-                    </button>
+                    </Pressable>
 
                     <AnimatePresence initial={false}>
                       {!groupCollapse.new && (
@@ -1844,7 +1818,7 @@ export function DesignShowcase() {
                               initial={{ scale: 0.75, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               transition={{ type: "spring", stiffness: 500, damping: 24 }}
-                              className="flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground"
+                              className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
                             >
                               {selectedTaskCodes.length}
                             </m.span>
@@ -1925,12 +1899,12 @@ export function DesignShowcase() {
                         <span className="flex items-center gap-1.5">
                           <TaskStatusCircle status="WAITING_APPROVAL" /> Chờ duyệt
                         </span>
-                        <span className="rounded bg-muted px-1.5 text-[10px]">3</span>
+                        <span className="rounded bg-muted px-1.5 text-xs">3</span>
                       </div>
                       <div className="space-y-2">
                         <div className="rounded-lg bg-card p-3 shadow-xs border border-border/40 space-y-2">
                           <div className="text-xs font-medium text-foreground">Tổng hợp báo cáo tuyển sinh</div>
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <UserAvatar name="Đặng Nhật Huy" size="xs" />
                             <span className="text-destructive font-medium">28/09 (Trễ hạn)</span>
                           </div>
@@ -1943,12 +1917,12 @@ export function DesignShowcase() {
                         <span className="flex items-center gap-1.5">
                           <TaskStatusCircle status="IN_PROGRESS" /> Đang thực hiện
                         </span>
-                        <span className="rounded bg-muted px-1.5 text-[10px]">5</span>
+                        <span className="rounded bg-muted px-1.5 text-xs">5</span>
                       </div>
                       <div className="space-y-2">
                         <div className="rounded-lg bg-card p-3 shadow-xs border border-border/40 space-y-2">
                           <div className="text-xs font-medium text-foreground">Chuẩn bị tài liệu hội nghị cán bộ</div>
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <UserAvatar name="Đặng Nhật Huy" size="xs" />
                             <span className="text-destructive font-medium">28/09 (Trễ hạn)</span>
                           </div>
@@ -1961,12 +1935,12 @@ export function DesignShowcase() {
                         <span className="flex items-center gap-1.5">
                           <TaskStatusCircle status="NOT_STARTED" /> Mới
                         </span>
-                        <span className="rounded bg-muted px-1.5 text-[10px]">3</span>
+                        <span className="rounded bg-muted px-1.5 text-xs">3</span>
                       </div>
                       <div className="space-y-2">
                         <div className="rounded-lg bg-card p-3 shadow-xs border border-border/40 space-y-2">
                           <div className="text-xs font-medium text-foreground">Soạn kế hoạch tuyển sinh</div>
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <UserAvatar name="Đặng Nhật Huy" size="xs" />
                             <span>12/10</span>
                           </div>
@@ -1989,23 +1963,22 @@ export function DesignShowcase() {
             <div className="flex items-center justify-between border-b border-border/40 pb-3 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">Việc con 1 trên 2</span>
               <div className="flex items-center gap-3">
-                <button type="button" className="hover:text-foreground" title="Toàn trang">
+                <Pressable className="hover:text-foreground" title="Toàn trang">
                   <Maximize2 className="size-3.5" />
-                </button>
-                <button type="button" className="hover:text-foreground" title="Việc trước">
+                </Pressable>
+                <Pressable className="hover:text-foreground" title="Việc trước">
                   <MoveUp className="size-3.5" />
-                </button>
-                <button type="button" className="hover:text-foreground" title="Việc kế">
+                </Pressable>
+                <Pressable className="hover:text-foreground" title="Việc kế">
                   <MoveDown className="size-3.5" />
-                </button>
-                <button
-                  type="button"
+                </Pressable>
+                <Pressable
                   onClick={() => setDrawerOpen(false)}
                   className="rounded p-1 hover:bg-accent text-foreground"
                   title="Đóng (Esc)"
                 >
                   <X className="size-4" />
-                </button>
+                </Pressable>
               </div>
             </div>
 
@@ -2156,13 +2129,13 @@ function SampleRowGrid({
         />
       </div>
       <TaskStatusCircle status={status} />
-      <span className="tabular-nums font-mono text-muted-foreground text-[11px]">{code}</span>
+      <span className="tabular-nums font-mono text-muted-foreground text-xs">{code}</span>
       <div className="flex items-center gap-2 truncate">
         <span className={cn("truncate text-foreground", selected ? "font-semibold" : "font-normal")}>
           {name}
         </span>
         {subtaskCount ? (
-          <span className="rounded bg-muted px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground shrink-0">
+          <span className="rounded bg-muted px-1.5 py-0.2 text-xs font-mono text-muted-foreground shrink-0">
             {subtaskCount}
           </span>
         ) : null}

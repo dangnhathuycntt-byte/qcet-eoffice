@@ -30,16 +30,12 @@ import {
   CreateEventModal,
   type CreateEventFormData,
 } from "@/components/calendar/create-event-modal";
-import {
-  CreateTaskModal,
-  type CreateTaskFormData,
-  type TaskLevel,
-} from "@/components/dashboard/create-task-modal";
+import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
+import type { TaskLevel } from "@/domain/tasks/create-task-policy";
 import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
-import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { useAuth } from "@/lib/auth-context";
+import { useDismissOnOutside } from "@/hooks/use-dismiss-on-outside";
 import {
-  getSystemReferenceDate,
   getTodayIctDate,
   getAcademicYear,
   getAvailableAcademicYears,
@@ -53,6 +49,7 @@ import {
 import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 // ExecutiveCalendarWorkspace compatibility and canonical workspace integration
 export type { CalendarScope };
@@ -159,9 +156,6 @@ function CalendarRouteContent({
 }) {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-
-  // ExecutiveCalendarWorkspace compatibility and zone URL routing
-  const zoneParam = searchParams?.get("zone") || "calendar";
   const dateParam = searchParams?.get("date") || undefined;
   const viewParam = searchParams?.get("view");
   const taskIdParam = searchParams?.get("taskId") || undefined;
@@ -192,10 +186,6 @@ function CalendarRouteContent({
   const currentPeriod = useMemo<AcademicMonthPeriod>(
     () => getAcademicMonthPeriod(selectedMonthNumber, selectedAcademicYear),
     [selectedMonthNumber, selectedAcademicYear]
-  );
-  const academicMonthsForYear = useMemo(
-    () => getAcademicMonthsForYear(selectedAcademicYear),
-    [selectedAcademicYear]
   );
 
   const [viewMode, setViewMode] = useState<"month" | "week">(() => {
@@ -238,44 +228,18 @@ function CalendarRouteContent({
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [createInitialDueDate, setCreateInitialDueDate] = useState<string | undefined>(undefined);
   const [createInitialLevel, setCreateInitialLevel] = useState<TaskLevel>("TRUONG");
-  const [showWeekends, setShowWeekends] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
+  const showWeekends = true;
+  const compactMode = false;
   const [createInitialStartTime, setCreateInitialStartTime] = useState("08:00");
-  const [createInitialEndTime, setCreateInitialEndTime] = useState("09:30");
+  const createInitialEndTime = "09:30";
 
   useEffect(() => {
     document.title = "Lịch Công Tác Học Vụ | QCET E-Office";
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setIsFilterOpen(false);
-      }
-    };
-    if (isFilterOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isFilterOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (secondaryRef.current && !secondaryRef.current.contains(event.target as Node)) {
-        setIsSecondaryOpen(false);
-      }
-    };
-    if (isSecondaryOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isSecondaryOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (createDropdownRef.current && !createDropdownRef.current.contains(event.target as Node)) {
-        setIsCreateDropdownOpen(false);
-      }
-    };
-    if (isCreateDropdownOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isCreateDropdownOpen]);
+  useDismissOnOutside(isFilterOpen, [filterDropdownRef], () => setIsFilterOpen(false));
+  useDismissOnOutside(isSecondaryOpen, [secondaryRef], () => setIsSecondaryOpen(false));
+  useDismissOnOutside(isCreateDropdownOpen, [createDropdownRef], () => setIsCreateDropdownOpen(false));
 
   const updateUrlParam = useCallback((key: string, value: string | null) => {
     if (typeof window === "undefined") return;
@@ -432,28 +396,16 @@ function CalendarRouteContent({
     setIsCreateEventModalOpen(true);
   }, [selectedDate]);
 
-  const handleCreateTaskSubmit = useCallback(
-    (_data: CreateTaskFormData, result?: CreateTaskSubmitResult) => {
-      setIsCreateTaskModalOpen(false);
-
-      // The create-task modal owns the canonical create: it POSTs through the
-      // create-task adapter and invokes this consumer only on a server-confirmed
-      // success. This handler must NEVER issue a second create request and must
-      // NEVER synthesize a local task from the form draft — fields such as
-      // status, progress, assignee identity and category label are server-derived
-      // and the raw `category` enum code is not part of the persisted contract
-      // (create-task-mapper.ts), so fabricating them here would render data the
-      // server never set (C1/T73, Server-Truth-Wins, Data-Dignity).
-      // Reconciliation is performed by re-loading canonical server truth, the
-      // same path confirmed event creation takes, so the created task carries
-      // exactly what the server persisted.
-      const serverTask = result?.ok ? result.task : undefined;
-      if (!serverTask) return;
-
-      void loadCalendarData();
-    },
-    [loadCalendarData]
-  );
+  // The create-task modal owns the canonical create: it POSTs through the
+  // create-task adapter, closes itself, and calls `onCreated` only with the
+  // server-confirmed task. This handler must NEVER issue a second create request
+  // and must NEVER synthesize a local task from the form draft — fields such as
+  // status, progress, assignee identity and category label are server-derived
+  // (C1/T73, Server-Truth-Wins, Data-Dignity). Reconciliation re-loads canonical
+  // server truth, the same path confirmed event creation takes.
+  const handleTaskCreated = useCallback(() => {
+    void loadCalendarData();
+  }, [loadCalendarData]);
 
   const handleCreateEventSubmit = useCallback(async (eventData: CreateEventFormData) => {
     if (eventData.endTime <= eventData.startTime) {
@@ -698,19 +650,19 @@ function CalendarRouteContent({
             aria-haspopup="true"
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
           >
-            <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <Plus className="size-3.5 shrink-0 text-muted-foreground" />
             <span>Tạo</span>
           </button>
           {isCreateDropdownOpen && (
             <div role="menu" className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-30 animate-in fade-in zoom-in-95 duration-150 text-xs text-popover-foreground">
-              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
-                <CheckSquare className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+              <Pressable role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left transition-colors">
+                <CheckSquare className="size-3.5 text-muted-foreground shrink-0" />
                 Tạo công việc
-              </button>
-              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
-                <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+              </Pressable>
+              <Pressable role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left transition-colors">
+                <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
                 Tạo sự kiện
-              </button>
+              </Pressable>
             </div>
           )}
         </div>
@@ -719,58 +671,54 @@ function CalendarRouteContent({
       {/* Primary calendar chrome — exactly 1 row */}
       <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card px-2.5 py-1.5 shadow-xs" data-slot="calendar-controls-container">
         {/* Month navigation: ‹ Tháng 9 › */}
-        <button
-          type="button"
+        <Pressable
           onClick={viewMode === "week" ? handlePrevWeek : handlePrevMonth}
           aria-label={viewMode === "week" ? "Tuần trước" : "Tháng trước"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
-          <ChevronLeft className="size-4" strokeWidth={1.5} />
-        </button>
+          <ChevronLeft className="size-4" />
+        </Pressable>
 
         <span className="font-mono tabular-nums text-sm font-semibold text-foreground select-none min-w-[7.5rem] text-center">
           {viewMode === "week" ? weekSpanLabel : currentPeriod.label}
         </span>
 
-        <button
-          type="button"
+        <Pressable
           onClick={viewMode === "week" ? handleNextWeek : handleNextMonth}
           aria-label={viewMode === "week" ? "Tuần tiếp theo" : "Tháng sau"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
-          <ChevronRight className="size-4" strokeWidth={1.5} />
-        </button>
+          <ChevronRight className="size-4" />
+        </Pressable>
 
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
         {/* Hôm nay */}
-        <button
-          type="button"
+        <Pressable
           onClick={handleCurrentMonth}
           className="inline-flex min-h-[44px] sm:min-h-9 items-center rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           Hôm nay
-        </button>
+        </Pressable>
 
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
         {/* View mode: Tuần | Tháng — primary toolbar */}
         <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex h-8 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5 select-none">
           {(["week", "month"] as const).map((mode) => (
-            <button
+            <Pressable
               key={mode}
-              type="button"
               role="tab"
               aria-selected={viewMode === mode}
               onClick={() => handleViewChange(mode)}
               className={cn(
-                "inline-flex items-center justify-center gap-1 h-7 px-2.5 rounded-[4px] text-xs font-medium transition-all cursor-pointer select-none",
+                "inline-flex items-center justify-center gap-1 h-7 px-2.5 rounded-[4px] text-xs font-medium transition-all select-none",
                 viewMode === mode ? "bg-background text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
-              <CalendarIcon className="size-3.5 shrink-0" strokeWidth={1.5} />
+              <CalendarIcon className="size-3.5 shrink-0" />
               {mode === "week" ? "Tuần" : "Tháng"}
-            </button>
+            </Pressable>
           ))}
         </div>
 
@@ -778,14 +726,13 @@ function CalendarRouteContent({
 
         {/* Scope + Filter selector: Bộ lọc ▾ */}
         <div className="relative" ref={filterDropdownRef}>
-          <button
-            type="button"
+          <Pressable
             aria-label="Bộ lọc"
             onClick={() => setIsFilterOpen((previous) => !previous)}
             aria-expanded={isFilterOpen}
             aria-haspopup="listbox"
             className={cn(
-              "inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer border border-border/80 bg-background",
+              "inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors border border-border/80 bg-background",
               (hasActiveFilters || activeScope !== "school")
                 ? "border-border bg-muted/60 text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -793,10 +740,10 @@ function CalendarRouteContent({
           >
             {activeScope === "school" ? "Toàn trường" : activeScope === "unit" ? "Đơn vị" : "Của tôi"}
             {hasActiveFilters && (
-              <span className="inline-flex items-center justify-center size-4 rounded-full bg-foreground/85 text-[10px] text-background font-mono font-bold">{activeFilterCount}</span>
+              <span className="inline-flex items-center justify-center size-4 rounded-full bg-foreground/85 text-xs text-background font-mono font-bold">{activeFilterCount}</span>
             )}
-            <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isFilterOpen && "rotate-180")} strokeWidth={1.5} />
-          </button>
+            <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isFilterOpen && "rotate-180")} />
+          </Pressable>
 
           {isFilterOpen && (
             <div role="dialog" aria-label="Phạm vi và bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150 text-popover-foreground">
@@ -805,19 +752,18 @@ function CalendarRouteContent({
                 <span className="text-xs font-semibold text-muted-foreground">Phạm vi</span>
                 <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex w-full items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5">
                   {([["school", "Toàn trường"], ["unit", "Đơn vị"], ["my", "Của tôi"]] as const).map(([value, label]) => (
-                    <button
+                    <Pressable
                       key={value}
-                      type="button"
                       role="tab"
                       aria-selected={activeScope === value}
                       onClick={() => handleScopeChange(value)}
                       className={cn(
-                        "flex-1 h-7 px-2 rounded-[4px] text-xs font-medium transition-all text-center cursor-pointer select-none",
+                        "flex-1 h-7 px-2 rounded-[4px] text-xs font-medium transition-all text-center select-none",
                         activeScope === value ? "bg-background text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                       )}
                     >
                       {label}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -829,20 +775,19 @@ function CalendarRouteContent({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
                   {hasActiveFilters && (
-                    <button type="button" onClick={handleResetFilters} className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">Đặt lại</button>
+                    <Pressable onClick={handleResetFilters} className="text-xs text-muted-foreground hover:text-foreground">Đặt lại</Pressable>
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-1">
                   {([["ALL", "Tất cả"], ["TRUONG", "Trường"], ["DON_VI", "Đơn vị"]] as const).map(([value, label]) => (
-                    <button
+                    <Pressable
                       key={value}
-                      type="button"
                       onClick={() => setLevelFilter(value)}
                       aria-pressed={levelFilter === value}
-                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors cursor-pointer select-none", levelFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
+                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", levelFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -852,15 +797,14 @@ function CalendarRouteContent({
                 <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
                 <div className="grid grid-cols-2 gap-1">
                   {([["ALL", "Tất cả"], ["IN_PROGRESS", "Đang làm"], ["COMPLETED", "Hoàn thành"], ["OVERDUE", "Trễ hạn"]] as const).map(([value, label]) => (
-                    <button
+                    <Pressable
                       key={value}
-                      type="button"
                       onClick={() => setStatusFilter(value)}
                       aria-pressed={statusFilter === value}
-                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors cursor-pointer select-none", statusFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
+                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", statusFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -873,8 +817,7 @@ function CalendarRouteContent({
 
         {/* Secondary disclosure ⋯ */}
         <div className="relative" ref={secondaryRef}>
-          <button
-            type="button"
+          <Pressable
             onClick={() => setIsSecondaryOpen((previous) => !previous)}
             aria-expanded={isSecondaryOpen}
             aria-haspopup="dialog"
@@ -884,8 +827,8 @@ function CalendarRouteContent({
               isSecondaryOpen ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             )}
           >
-            <MoreHorizontal className="size-4" strokeWidth={1.5} />
-          </button>
+            <MoreHorizontal className="size-4" />
+          </Pressable>
 
           {isSecondaryOpen && (
             <div role="dialog" aria-label="Tùy chọn hiển thị" className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
@@ -922,7 +865,7 @@ function CalendarRouteContent({
                 <span className="text-xs font-semibold text-muted-foreground">Lọc lịch hiện tại</span>
                 {isSearchExpanded ? (
                   <div className="relative">
-                    <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
+                    <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="search"
                       autoFocus
@@ -932,19 +875,17 @@ function CalendarRouteContent({
                       className="w-full h-9 pl-8 pr-7 rounded-lg border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                     {searchQuery && (
-                      <button
-                        type="button"
+                      <Pressable
                         onClick={() => setSearchQuery("")}
                         className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground"
                         aria-label="Xóa tìm kiếm"
                       >
-                        <X className="mx-auto size-3.5" strokeWidth={1.5} />
-                      </button>
+                        <X className="mx-auto size-3.5" />
+                      </Pressable>
                     )}
                   </div>
                 ) : (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => setIsSearchExpanded(true)}
                     className={cn(
                       "w-full min-h-9 flex items-center gap-2 px-2.5 rounded-lg border text-xs transition-colors text-left",
@@ -953,9 +894,9 @@ function CalendarRouteContent({
                         : "border-border/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
                     )}
                   >
-                    <Search className="size-3.5 shrink-0" strokeWidth={1.5} />
+                    <Search className="size-3.5 shrink-0" />
                     {searchQuery || "Tìm việc, sự kiện..."}
-                  </button>
+                  </Pressable>
                 )}
               </div>
             </div>
@@ -973,14 +914,13 @@ function CalendarRouteContent({
           {levelFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
               <span>Cấp: {levelFilter === "TRUONG" ? "Trường" : "Đơn vị"}</span>
-              <button
-                type="button"
+              <Pressable
                 aria-label="Xóa lọc cấp"
                 onClick={() => setLevelFilter("ALL")}
-                className="hover:text-primary/70 transition-colors cursor-pointer"
+                className="hover:text-primary/70 transition-colors"
               >
                 <X className="size-3" />
-              </button>
+              </Pressable>
             </span>
           )}
           {statusFilter !== "ALL" && (
@@ -995,36 +935,33 @@ function CalendarRouteContent({
                   ? "Trễ hạn"
                   : statusFilter}
               </span>
-              <button
-                type="button"
+              <Pressable
                 aria-label="Xóa lọc trạng thái"
                 onClick={() => setStatusFilter("ALL")}
-                className="hover:text-primary/70 transition-colors cursor-pointer"
+                className="hover:text-primary/70 transition-colors"
               >
                 <X className="size-3" />
-              </button>
+              </Pressable>
             </span>
           )}
           {searchQuery.trim() && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
               <span>Tìm: &ldquo;{searchQuery}&rdquo;</span>
-              <button
-                type="button"
+              <Pressable
                 aria-label="Xóa từ khóa tìm kiếm"
                 onClick={() => setSearchQuery("")}
-                className="hover:text-primary/70 transition-colors cursor-pointer"
+                className="hover:text-primary/70 transition-colors"
               >
                 <X className="size-3" />
-              </button>
+              </Pressable>
             </span>
           )}
-          <button
-            type="button"
+          <Pressable
             onClick={handleResetFilters}
-            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1 cursor-pointer transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1 transition-colors"
           >
             Xóa tất cả
-          </button>
+          </Pressable>
         </div>
       )}
 
@@ -1032,7 +969,7 @@ function CalendarRouteContent({
       {error && (
         <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 flex items-center justify-between gap-3 text-destructive">
           <div className="flex items-center gap-2 text-xs">
-            <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
+            <AlertCircle className="size-4 shrink-0" />
             <span>{error}</span>
           </div>
           <Button size="sm" variant="outline" onClick={() => loadCalendarData()} className="h-8 text-xs border-destructive/30 hover:bg-destructive/10 text-destructive">
@@ -1106,8 +1043,7 @@ function CalendarRouteContent({
       <CreateTaskModal
         isOpen={isCreateTaskModalOpen}
         onClose={() => setIsCreateTaskModalOpen(false)}
-        onSubmit={handleCreateTaskSubmit}
-        schoolTasks={tasks}
+        onCreated={handleTaskCreated}
         initialLevel={createInitialLevel}
         initialDueDate={createInitialDueDate}
       />

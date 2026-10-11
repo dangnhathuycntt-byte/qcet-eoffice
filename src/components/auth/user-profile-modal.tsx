@@ -19,13 +19,13 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { Pressable } from "@/components/ui/pressable";
 
 export function UserProfileModal() {
   const { user, updateProfile, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
   const { departments } = useDepartmentList();
 
   const [name, setName] = React.useState(user?.name || "");
-  const [department, setDepartment] = React.useState(user?.department || "");
   const [departmentCode, setDepartmentCode] = React.useState(user?.departmentCode || "QCET");
   const [title, setTitle] = React.useState(user?.title || "Viên chức");
   const [phone, setPhone] = React.useState(user?.phone || "");
@@ -48,7 +48,6 @@ export function UserProfileModal() {
   React.useEffect(() => {
     if (isProfileModalOpen && user) {
       setName(user.name || "");
-      setDepartment(user.department || "");
       setDepartmentCode(user.departmentCode || "QCET");
       setTitle(user.title || "Viên chức");
       setPhone(user.phone || "");
@@ -64,10 +63,6 @@ export function UserProfileModal() {
 
   const handleDepartmentChange = (code: string) => {
     setDepartmentCode(code);
-    const found = departments.find((g) => g.code === code);
-    if (found) {
-      setDepartment(found.name || "");
-    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -137,7 +132,7 @@ export function UserProfileModal() {
                 </h3>
                 {user.emailVerified && (
                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 border border-emerald-500/20">
-                    <CheckCircle2 className="size-3" strokeWidth={1.5} />
+                    <CheckCircle2 className="size-3" />
                     Đã xác thực Google
                   </span>
                 )}
@@ -148,20 +143,19 @@ export function UserProfileModal() {
             </div>
           </div>
 
-          <button
-            type="button"
+          <Pressable
             onClick={() => setIsProfileModalOpen(false)}
             aria-label="Đóng"
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
           >
-            <X className="size-4" strokeWidth={1.5} />
-          </button>
+            <X className="size-4" />
+          </Pressable>
         </div>
 
         {/* First Login Welcome Banner */}
         {user.isFirstLogin && (
           <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/[0.06] p-3 text-xs text-foreground animate-in fade-in">
-            <Sparkles className="size-4 shrink-0 text-primary mt-0.5" strokeWidth={1.5} />
+            <Sparkles className="size-4 shrink-0 text-primary mt-0.5" />
             <div className="leading-relaxed">
               <strong className="font-semibold text-primary">
                 Kính chào Quý Thầy/Cô đến với QCET E-Office!
@@ -175,7 +169,7 @@ export function UserProfileModal() {
         {/* Success Alert */}
         {savedSuccess && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 animate-in fade-in">
-            <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} />
+            <CheckCircle2 className="size-4 shrink-0" />
             <span>Cập nhật thông tin cán bộ thành công!</span>
           </div>
         )}
@@ -183,7 +177,7 @@ export function UserProfileModal() {
         {/* Error Alert */}
         {errorMessage && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs font-semibold text-destructive animate-in fade-in">
-            <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
+            <AlertCircle className="size-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -200,7 +194,7 @@ export function UserProfileModal() {
             </label>
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <User className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                <User className="size-4 text-muted-foreground" />
               </div>
               <input
                 id="profile-display-name"
@@ -225,9 +219,9 @@ export function UserProfileModal() {
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 {isDepartmentAuthoritative ? (
-                  <Lock className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                  <Lock className="size-4 text-muted-foreground" />
                 ) : (
-                  <Building2 className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                  <Building2 className="size-4 text-muted-foreground" />
                 )}
               </div>
               {isDepartmentAuthoritative ? (
@@ -267,7 +261,7 @@ export function UserProfileModal() {
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Briefcase className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                  <Briefcase className="size-4 text-muted-foreground" />
                 </div>
                 <input
                   id="profileTitle"
@@ -289,7 +283,7 @@ export function UserProfileModal() {
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Phone className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                  <Phone className="size-4 text-muted-foreground" />
                 </div>
                 <input
                   id="profile-phone"
@@ -328,7 +322,7 @@ export function UserProfileModal() {
               Phân quyền điều hành (Vai trò hệ thống)
             </label>
             <div className="flex items-start gap-3 rounded-xl border border-border/80 bg-muted/40 p-3.5">
-              <ShieldCheck className="size-4 text-primary shrink-0 mt-0.5" strokeWidth={1.5} />
+              <ShieldCheck className="size-4 text-primary shrink-0 mt-0.5" />
               <div className="space-y-0.5 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-bold text-foreground">
@@ -347,18 +341,18 @@ export function UserProfileModal() {
 
           {/* Action Buttons: single focused save button, no redundant close/cancel clutter */}
           <div className="sticky bottom-0 z-10 mt-6 flex items-center justify-end border-t border-border/60 bg-card/95 backdrop-blur-md pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <button
+            <Pressable
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.99] w-full sm:w-auto"
             >
               {isSaving ? (
-                <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <Save className="size-3.5" strokeWidth={1.5} />
+                <Save className="size-3.5" />
               )}
               <span>{isSaving ? "Đang lưu..." : "Lưu thay đổi"}</span>
-            </button>
+            </Pressable>
           </div>
         </form>
       </div>

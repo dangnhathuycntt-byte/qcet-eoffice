@@ -7,7 +7,6 @@ describe("Single Font System: Be Vietnam Pro", () => {
   const rootDir = path.resolve(__dirname, "..");
   const layoutPath = path.join(rootDir, "src/app/layout.tsx");
   const globalsCssPath = path.join(rootDir, "src/app/globals.css");
-  const tokensPath = path.join(rootDir, "src/lib/tokens.ts");
 
   test("src/app/layout.tsx only imports Be_Vietnam_Pro from next/font/google", () => {
     const layoutContent = fs.readFileSync(layoutPath, "utf-8");
@@ -42,22 +41,6 @@ describe("Single Font System: Be Vietnam Pro", () => {
     assert.ok(
       cssContent.includes("--font-mono: ui-monospace"),
       "globals.css must define native system monospace stack for --font-mono"
-    );
-  });
-
-  test("src/lib/tokens.ts defines consistent typography tokens", () => {
-    const tokensContent = fs.readFileSync(tokensPath, "utf-8");
-    assert.ok(
-      tokensContent.includes("Be Vietnam Pro"),
-      "tokens.ts must reference Be Vietnam Pro"
-    );
-    assert.ok(
-      !tokensContent.includes("Plus Jakarta Sans"),
-      "tokens.ts must not reference Plus Jakarta Sans"
-    );
-    assert.ok(
-      !tokensContent.includes("JetBrains Mono"),
-      "tokens.ts must not reference JetBrains Mono"
     );
   });
 });

@@ -23,8 +23,6 @@ import {
   getActorInitials,
   getTypeBadge,
   mapDbNotification,
-  formatRelativeTime,
-  getTimeGroup,
   resolveActionableDeepLink,
   deriveNotificationsViewState,
   getNotificationEmptyCopy,
@@ -37,7 +35,7 @@ import {
   listItemVariants,
   staggerContainerVariants,
 } from "@/lib/motion/variants";
-import { motionTransition } from "@/lib/motion/tokens";
+import { Pressable } from "@/components/ui/pressable";
 
 const PAGE_SIZE = 20;
 
@@ -139,7 +137,7 @@ export function NotificationCenter() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-muted/60">
-            <Bell size={20} strokeWidth={1.5} className="text-foreground" />
+            <Bell size={20} className="text-foreground" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-foreground tracking-tight">
@@ -160,7 +158,7 @@ export function NotificationCenter() {
               onClick={markAllAsRead}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[44px] sm:min-h-0"
             >
-              <CheckCheck size={14} strokeWidth={1.5} />
+              <CheckCheck size={14} />
               <span>Đánh dấu tất cả đã đọc</span>
             </button>
           )}
@@ -173,7 +171,6 @@ export function NotificationCenter() {
           >
             <RefreshCw
               size={16}
-              strokeWidth={1.5}
               className={cn(isLoading && "animate-spin")}
             />
           </button>
@@ -204,7 +201,7 @@ export function NotificationCenter() {
           >
             {tab.label}
             {tab.key === "unread" && unreadCount > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary tabular-nums">
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary tabular-nums">
                 {unreadCount}
               </span>
             )}
@@ -242,14 +239,13 @@ export function NotificationCenter() {
             </div>
             <p className="text-sm font-medium text-foreground mb-1">Lỗi kết nối</p>
             <p className="text-xs text-muted-foreground mb-4 max-w-xs">{error}</p>
-            <button
-              type="button"
+            <Pressable
               onClick={fetchNotifications}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-muted/60 text-foreground hover:bg-muted transition-colors cursor-pointer active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-muted/60 text-foreground hover:bg-muted transition-colors active:scale-[0.98]"
             >
-              <RefreshCw size={14} strokeWidth={1.5} />
+              <RefreshCw size={14} />
               Thử lại
-            </button>
+            </Pressable>
           </m.div>
         )}
 
@@ -447,14 +443,13 @@ function NotificationCenterRow({ item, onRead }: NotificationCenterRowProps) {
             {item.category}
           </span>
           {formatted.extraBadge && (
-            <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+            <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-warning/10 text-warning border border-warning/20">
               {formatted.extraBadge}
             </span>
           )}
           <span className="text-xs text-muted-foreground font-mono tabular-nums flex items-center gap-1">
             <Clock
               size={11}
-              strokeWidth={1.5}
               className="text-muted-foreground/80 shrink-0"
             />
             <span>{item.timestamp}</span>
@@ -476,14 +471,13 @@ function NotificationCenterRow({ item, onRead }: NotificationCenterRowProps) {
               className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-muted hover:shadow-xs text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-[0.98] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               title="Đánh dấu là đã đọc"
             >
-              <Check size={14} strokeWidth={1.5} />
+              <Check size={14} />
             </button>
             <span className="size-2 rounded-full bg-primary ring-2 ring-primary/20 group-hover:hidden" />
           </>
         )}
         <ExternalLink
           size={14}
-          strokeWidth={1.5}
           className="text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors"
         />
       </div>

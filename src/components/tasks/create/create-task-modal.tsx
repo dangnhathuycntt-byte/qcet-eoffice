@@ -14,19 +14,18 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Popover } from "@base-ui/react/popover";
 import { Dialog } from "@base-ui/react/dialog";
-import { getCategoryOptions } from "@/domain/tasks/display-config";
 import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import type { CreateTaskLevel } from "@/lib/adapters/create-task-mapper";
 import {
   useCreateTaskForm,
   type CreateTaskPriority,
 } from "@/hooks/use-create-task-form";
+import { Pressable } from "@/components/ui/pressable";
 
 // Re-export types for downstream consumers
 export type { CreateTaskPriority } from "@/hooks/use-create-task-form";
@@ -76,7 +75,6 @@ const PRIORITY_KEYS: CreateTaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 
 // Biểu mẫu dùng MEDIUM, bảng dùng NORMAL: chuẩn hóa để icon tín hiệu khớp với bảng danh sách
 const toSignalPriority = (p: CreateTaskPriority) => (p === "MEDIUM" ? "NORMAL" : p);
-const CATEGORY_OPTIONS = getCategoryOptions();
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface CreateTaskModalProps {
@@ -231,7 +229,7 @@ export function CreateTaskModal({
               <header className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-b border-border/60 bg-card shrink-0">
                 {/* Breadcrumb & Unit Selector */}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  <Building2 className="size-3.5 text-muted-foreground/70" />
 
                   {/* Department selector */}
                   {form.availableDepartments.length > 1 ? (
@@ -266,16 +264,15 @@ export function CreateTaskModal({
                               aria-label="Chọn đơn vị phòng ban"
                             >
                               {form.availableDepartments.map((dept) => (
-                                <button
+                                <Pressable
                                   key={dept.code}
-                                  type="button"
                                   onClick={() => {
                                     form.setField("selectedDeptCode", dept.code);
                                     form.setField("leadAssigneeId", "");
                                     setOpenDropdown(null);
                                   }}
                                   className={cn(
-                                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
+                                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99]",
                                     form.formData.selectedDeptCode === dept.code
                                       ? "font-semibold text-foreground bg-accent"
                                       : "text-foreground hover:bg-accent/70",
@@ -283,9 +280,9 @@ export function CreateTaskModal({
                                 >
                                   <span className="truncate">{dept.name}</span>
                                   {form.formData.selectedDeptCode === dept.code && (
-                                    <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                                    <Check className="size-3.5 text-foreground shrink-0" />
                                   )}
-                                </button>
+                                </Pressable>
                               ))}
                             </Popover.Popup>
                           </Popover.Positioner>
@@ -322,7 +319,7 @@ export function CreateTaskModal({
                   title="Đóng (Esc)"
                   className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <X className="size-4" strokeWidth={1.5} />
+                  <X className="size-4" />
                 </button>
               </header>
 
@@ -333,13 +330,12 @@ export function CreateTaskModal({
                     <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
                     <span>Đã tự động khôi phục bản nháp chưa lưu từ phiên làm việc trước.</span>
                   </div>
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={form.handleClearDraft}
-                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2 cursor-pointer"
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
                   >
                     Xóa bản nháp
-                  </button>
+                  </Pressable>
                 </div>
               )}
 
@@ -474,15 +470,14 @@ export function CreateTaskModal({
                           aria-label="Chọn mức độ ưu tiên"
                         >
                           {PRIORITY_KEYS.map((p) => (
-                            <button
+                            <Pressable
                               key={p}
-                              type="button"
                               onClick={() => {
                                 form.setField("priority", p);
                                 setOpenDropdown(null);
                               }}
                               className={cn(
-                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
+                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99]",
                                 form.formData.priority === p
                                   ? "font-medium text-foreground hover:bg-accent"
                                   : "text-foreground hover:bg-accent",
@@ -493,9 +488,9 @@ export function CreateTaskModal({
                                 <span>{PRIORITY_CONFIG[p].label}</span>
                               </div>
                               {form.formData.priority === p && (
-                                <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                                <Check className="size-3 text-foreground shrink-0" />
                               )}
-                            </button>
+                            </Pressable>
                           ))}
                         </Popover.Popup>
                       </Popover.Positioner>
@@ -527,7 +522,7 @@ export function CreateTaskModal({
                       {leadAssigneeDisplayName ? (
                         <UserAvatar name={leadAssigneeDisplayName} avatarUrl={leadAssigneeAvatarUrl} size="xs" />
                       ) : (
-                        <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                        <User className="size-3 text-muted-foreground" />
                       )}
                       <span className="max-w-[110px] truncate" title={leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : undefined}>
                         {leadAssigneeDisplayName || "Chủ trì"}
@@ -575,9 +570,8 @@ export function CreateTaskModal({
                                   );
                                 }
                                 return list.map((person) => (
-                                  <button
+                                  <Pressable
                                     key={person.id}
-                                    type="button"
                                     onClick={() => {
                                       form.setField("leadAssigneeId", person.id);
                                       if (form.fieldErrors.lead) {
@@ -587,7 +581,7 @@ export function CreateTaskModal({
                                       setOpenDropdown(null);
                                     }}
                                     className={cn(
-                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 cursor-pointer transition-colors",
+                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 transition-colors",
                                       form.formData.leadAssigneeId === person.id
                                         ? "bg-accent"
                                         : "hover:bg-accent/70",
@@ -598,9 +592,9 @@ export function CreateTaskModal({
                                       {person.name}
                                     </span>
                                     {form.formData.leadAssigneeId === person.id && (
-                                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                                      <Check className="size-3.5 text-foreground shrink-0" />
                                     )}
-                                  </button>
+                                  </Pressable>
                                 ));
                               })()
                             )}
@@ -618,7 +612,7 @@ export function CreateTaskModal({
                   label={form.formData.startDate ? "Bắt đầu:" : undefined}
                   variant="chip"
                   triggerClassName="h-7"
-                  icon={<Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />}
+                  icon={<Calendar className="size-3 text-muted-foreground" />}
                   placeholder="Bắt đầu"
                 />
 
@@ -642,7 +636,6 @@ export function CreateTaskModal({
                         "size-3",
                         form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground",
                       )}
-                      strokeWidth={1.5}
                     />
                   }
                   placeholder="Hạn hoàn thành"
@@ -653,13 +646,12 @@ export function CreateTaskModal({
               <footer className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-t border-border/60 bg-muted/20 shrink-0">
                 {/* Chỉ nút chính; đóng bằng Esc hoặc nhấn ra ngoài */}
                 <div className="flex items-center gap-2 ml-auto">
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={handleFormSubmit}
                     disabled={form.isSubmitting || !form.formData.title.trim()}
                     aria-keyshortcuts="Meta+Enter Control+Enter"
                     title={`${modKey} + Enter`}
-                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 inline-flex items-center gap-1.5"
                   >
                     {form.isSubmitting ? (
                       <>
@@ -675,7 +667,7 @@ export function CreateTaskModal({
                         </kbd>
                       </>
                     )}
-                  </button>
+                  </Pressable>
 
                 </div>
               </footer>

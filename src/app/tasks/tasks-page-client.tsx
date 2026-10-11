@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
 import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
 import { useWorkspaceQuery } from "@/hooks/use-workspace-query";
 import {
@@ -29,7 +29,6 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
 
   const isExec = user ? isUserExecutive(user as any) : false;
   const isHead = user ? isUserUnitHead(user as any) : false;
-  const isUnassigned = isUserUnassignedDepartment(user);
 
   const defaultRoleScope: WorkspaceScope = isExec ? "school" : isHead ? "unit" : "my";
   const workspaceQuery = useWorkspaceQuery({

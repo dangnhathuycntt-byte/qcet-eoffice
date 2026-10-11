@@ -1,0 +1,12 @@
+[
+  "src/lib/auth/roles.ts",
+  "src/lib/crypto/digital-signature-adapter.ts",
+  "src/lib/csp-sanitizer.ts",
+  "src/lib/dacum-definitions.ts",
+  "src/lib/db/archive.ts",
+  "src/lib/db/occ.ts",
+  "src/lib/db/search.ts",
+  "src/lib/db/transactions.ts",
+  "src/lib/document-numbering.ts",
+  "src/lib/password.ts"
+]

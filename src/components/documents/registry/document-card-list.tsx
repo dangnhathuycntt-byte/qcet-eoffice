@@ -7,9 +7,6 @@ import {
   ChevronRight,
   CheckCircle2,
   ArrowRight,
-  Building2,
-  Calendar,
-  User,
 } from "lucide-react";
 import { OfficialDocument, DocumentType } from "@/types/document";
 import { Button } from "@/components/ui/button";
@@ -123,7 +120,7 @@ export function DocumentCardList({
       >
         <EmptyState
           density="compact"
-          icon={<FileText strokeWidth={1.5} />}
+          icon={<FileText />}
           illustration={emptyIllustration}
           title={emptyTitle}
           description={emptyDescription}
@@ -247,10 +244,10 @@ export function DocumentCardList({
                   href={`/?taskId=${doc.linkedTaskId}`}
                   className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/20 text-xs font-semibold transition-colors"
                 >
-                  <CheckCircle2 className="size-3" strokeWidth={1.5} />
+                  <CheckCircle2 className="size-3" />
                   <span>Nhiệm vụ:</span>
                   <span className="min-w-0 truncate">{doc.linkedTaskTitle || "Xem nhiệm vụ"}</span>
-                  <ArrowRight className="size-2.5" strokeWidth={1.5} />
+                  <ArrowRight className="size-2.5" />
                 </Link>
               </div>
             )}
@@ -262,27 +259,25 @@ export function DocumentCardList({
             >
               {doc.fileAttachment && (
                 <Button
-                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => onViewPdf?.(doc)}
                   className="text-primary"
                   aria-label={`Xem PDF văn bản ${labelCode}`}
                 >
-                  <FileText strokeWidth={1.5} />
+                  <FileText />
                   <span>Xem PDF</span>
                 </Button>
               )}
 
               <Button
-                type="button"
                 variant="secondary"
                 size="sm"
                 onClick={() => onSelectDocument?.(doc)}
                 aria-label={`Chi tiết văn bản ${labelCode}`}
               >
                 <span>Chi tiết</span>
-                <ChevronRight strokeWidth={1.5} />
+                <ChevronRight />
               </Button>
             </div>
           </div>

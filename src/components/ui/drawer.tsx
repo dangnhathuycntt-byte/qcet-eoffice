@@ -354,13 +354,13 @@ export function Drawer({
                 className="flex items-center justify-center size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 cursor-pointer"
                 aria-label="Đóng"
               >
-                <X size={18} strokeWidth={1.5} />
+                <X size={18} />
               </button>
             </div>
 
             {stats && (
               <div className="rounded-2xl p-4 bg-secondary flex flex-col gap-2.5">
-                <div className="flex items-center justify-between text-xs sm:text-[13px] font-semibold">
+                <div className="flex items-center justify-between text-xs sm:text-compact font-semibold">
                   <span className="text-foreground">
                     Tiến độ hoàn thành:{" "}
                     <span className="tabular-nums text-primary">

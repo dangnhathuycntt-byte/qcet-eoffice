@@ -13,7 +13,7 @@ import {
   computeDashboardStats,
 } from "@/lib/dashboard-aggregator";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
-import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
+import type { CreateTaskFormData } from "@/domain/tasks/create-task-form-utils";
 import { CATEGORY_TABS } from "@/components/tasks/cascading-task-table";
 import type { DelegationRule } from "@/types/delegation";
 import type { AuthUser } from "@/types/auth";

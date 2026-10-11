@@ -25,9 +25,9 @@ export default function DocumentsError({
         digest={error?.digest}
         onRetry={reset}
       >
-        <Button type="button" variant="secondary" size="sm" asChild>
+        <Button variant="secondary" size="sm" asChild>
           <Link href="/dashboard">
-            <ArrowLeft strokeWidth={1.5} />
+            <ArrowLeft />
             Bảng điều khiển
           </Link>
         </Button>

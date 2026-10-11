@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { TaskPropertiesSidebar, type AuditLogItem } from "./task-properties-sidebar";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskPropertiesDrawerProps {
   isOpen: boolean;
@@ -61,7 +62,7 @@ export function TaskPropertiesDrawer({
           {/* Drawer Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/80 bg-muted/30 shrink-0">
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="size-4 text-primary" strokeWidth={1.5} />
+              <SlidersHorizontal className="size-4 text-primary" />
               <VaulDrawer.Title className="text-xs font-semibold text-foreground">
                 Thuộc tính nhiệm vụ
               </VaulDrawer.Title>
@@ -70,14 +71,13 @@ export function TaskPropertiesDrawer({
               </VaulDrawer.Description>
             </div>
 
-            <button
-              type="button"
+            <Pressable
               onClick={onClose}
-              className="size-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="size-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               aria-label="Đóng bảng thuộc tính (Esc)"
             >
-              <X className="size-4" strokeWidth={1.5} />
-            </button>
+              <X className="size-4" />
+            </Pressable>
           </div>
 
           {/* Drawer Content */}

@@ -13,7 +13,6 @@ import {
 } from "../src/lib/documents/document-service";
 import type { DocumentItem, DocumentType } from "../src/types/document";
 import { formatIsoDate, formatDisplayDate } from "@/lib/format";
-import { getRegistryStateKind } from "@/lib/documents/registry-state";
 
 describe("Document Numbering Engine (ND 30/2020)", () => {
   test("formats incoming and outgoing document numbers properly", () => {
@@ -188,47 +187,5 @@ describe("T49: ICT (UTC+7) Date Formatting & No Slicing", () => {
     const ictIso = "2026-09-10T08:30:00+07:00";
     assert.strictEqual(formatIsoDate(ictIso), "2026-09-10");
     assert.strictEqual(formatDisplayDate(ictIso), "10/09/2026");
-  });
-});
-
-describe("T50 & T51: Failed Fetch Never Renders 'No Documents' Empty State", () => {
-  test("Failed fetch sets state to 'error', not 'empty'", () => {
-    const stateOnFailure = getRegistryStateKind({
-      isLoading: false,
-      hasError: true,
-      itemCount: 0,
-    });
-    assert.strictEqual(
-      stateOnFailure,
-      "error",
-      "When fetch fails, state must be 'error', never 'empty'"
-    );
-  });
-
-  test("Successful empty response sets state to 'empty'", () => {
-    const stateOnEmpty = getRegistryStateKind({
-      isLoading: false,
-      hasError: false,
-      itemCount: 0,
-    });
-    assert.strictEqual(stateOnEmpty, "empty");
-  });
-
-  test("Loading state takes precedence", () => {
-    const stateOnLoading = getRegistryStateKind({
-      isLoading: true,
-      hasError: false,
-      itemCount: 0,
-    });
-    assert.strictEqual(stateOnLoading, "loading");
-  });
-
-  test("Populated documents set state to 'data'", () => {
-    const stateOnData = getRegistryStateKind({
-      isLoading: false,
-      hasError: false,
-      itemCount: 5,
-    });
-    assert.strictEqual(stateOnData, "data");
   });
 });

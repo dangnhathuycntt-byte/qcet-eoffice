@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZES } from "../constants";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface TaskPaginationBarProps {
   currentPage: number;
@@ -167,7 +168,6 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                 "size-3 text-muted-foreground transition-transform duration-150",
                 isSizeMenuOpen && "rotate-180 text-foreground"
               )}
-              strokeWidth={1.5}
             />
           </Popover.Trigger>
 
@@ -187,9 +187,8 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
               {effectivePageSizeOptions.map((size) => {
                 const isSelected = size === pageSize;
                 return (
-                  <button
+                  <Pressable
                     key={size}
-                    type="button"
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => {
@@ -197,7 +196,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                       setIsSizeMenuOpen(false);
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer font-mono tabular-nums",
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left font-mono tabular-nums",
                       isSelected
                         ? "bg-primary/10 text-primary font-semibold"
                         : "text-foreground hover:bg-muted/70 hover:text-foreground"
@@ -205,7 +204,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                   >
                     <span>{size} / trang</span>
                     {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={2} />}
-                  </button>
+                  </Pressable>
                 );
               })}
             </Popover.Popup>
@@ -236,28 +235,26 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
       {/* Right section: Page navigation buttons & optional shortcut trigger */}
       <div className="flex items-center gap-1">
         {/* First Page Button */}
-        <button
-          type="button"
+        <Pressable
           onClick={handleFirst}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang đầu"
           aria-label="Về trang đầu"
         >
-          <ChevronsLeft className="size-3.5" strokeWidth={1.5} />
-        </button>
+          <ChevronsLeft className="size-3.5" />
+        </Pressable>
 
         {/* Previous Page Button */}
-        <button
-          type="button"
+        <Pressable
           onClick={handlePrevious}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang trước"
           aria-label="Sang trang trước"
         >
-          <ChevronLeft className="size-3.5" strokeWidth={1.5} />
-        </button>
+          <ChevronLeft className="size-3.5" />
+        </Pressable>
 
         {/* Numeric Page Buttons */}
         <div className="flex items-center gap-1 mx-0.5">
@@ -276,14 +273,13 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
 
             const isCurrent = p === safeCurrentPage;
             return (
-              <button
+              <Pressable
                 key={p}
-                type="button"
                 onClick={() => !disabled && onPageChange(p)}
                 disabled={disabled}
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-all shadow-2xs cursor-pointer active:scale-[0.98]",
+                  "inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-all shadow-2xs active:scale-[0.98]",
                   isCurrent
                     ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                     : "border border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -291,34 +287,32 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                 aria-label={`Trang ${p}`}
               >
                 {p}
-              </button>
+              </Pressable>
             );
           })}
         </div>
 
         {/* Next Page Button */}
-        <button
-          type="button"
+        <Pressable
           onClick={handleNext}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang sau"
           aria-label="Sang trang sau"
         >
-          <ChevronRight className="size-3.5" strokeWidth={1.5} />
-        </button>
+          <ChevronRight className="size-3.5" />
+        </Pressable>
 
         {/* Last Page Button */}
-        <button
-          type="button"
+        <Pressable
           onClick={handleLast}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang cuối"
           aria-label="Về trang cuối"
         >
-          <ChevronsRight className="size-3.5" strokeWidth={1.5} />
-        </button>
+          <ChevronsRight className="size-3.5" />
+        </Pressable>
       </div>
     </nav>
   );

@@ -8,11 +8,6 @@ import {
   getDaysDifference,
 } from "../src/components/tasks/table/utils/table-date-helpers";
 import {
-  calculateWeightedProgress,
-  calculateSimpleRollup,
-  getDerivedTaskStatus,
-} from "../src/components/tasks/table/utils/progress-rollup-calc";
-import {
   filterTasks,
   sortTasks,
   paginateTasks,
@@ -143,75 +138,6 @@ describe("Task Table Engine - Foundations & Utilities", () => {
       assert.equal(getDaysDifference("2026-09-07", mockRefDate), -2);
       // Due today
       assert.equal(getDaysDifference("2026-09-09", mockRefDate), 0);
-    });
-  });
-
-  describe("progress-rollup-calc", () => {
-    it("calculates weighted progress using Sigma(P_i * W_i) / Sigma(W_i)", () => {
-      const subtasks = [
-        { progressPercent: 100, weight: 1 },
-        { progressPercent: 50, weight: 3 },
-      ];
-      // (100*1 + 50*3) / (1 + 3) = (100 + 150) / 4 = 250 / 4 = 62.5 => rounds to 63
-      const result = calculateWeightedProgress(subtasks);
-      assert.equal(result, 63);
-    });
-
-    it("calculates equal weighted average when weight is not specified", () => {
-      const subtasks = [
-        { progressPercent: 100 },
-        { progressPercent: 50 },
-        { progressPercent: 0 },
-      ];
-      // (100 + 50 + 0) / 3 = 50
-      assert.equal(calculateWeightedProgress(subtasks), 50);
-    });
-
-    it("handles zero or empty subtasks by returning parent fallback", () => {
-      assert.equal(calculateWeightedProgress([], 45), 45);
-      assert.equal(calculateWeightedProgress([], undefined), 0);
-    });
-
-    it("clamps progress between 0 and 100", () => {
-      assert.equal(calculateWeightedProgress([{ progressPercent: 150, weight: 1 }]), 100);
-      assert.equal(calculateWeightedProgress([{ progressPercent: -20, weight: 1 }]), 0);
-    });
-
-    it("calculateSimpleRollup returns correct subtask counts and average percent", () => {
-      const subtasks: StaffTask[] = [
-        {
-          id: "sub-1",
-          title: "Sub 1",
-          status: "COMPLETED",
-          dueDate: "2026-09-10",
-          assigneeName: "Nguyễn Văn A",
-          parentSchoolTaskId: "parent-1",
-          updatedAt: "2026-09-01",
-          progressPercent: 100,
-        },
-        {
-          id: "sub-2",
-          title: "Sub 2",
-          status: "IN_PROGRESS",
-          dueDate: "2026-09-15",
-          assigneeName: "Trần Thị B",
-          parentSchoolTaskId: "parent-1",
-          updatedAt: "2026-09-01",
-          progressPercent: 40,
-        },
-      ];
-
-      const rollup = calculateSimpleRollup(subtasks);
-      assert.equal(rollup.totalSubTasks, 2);
-      assert.equal(rollup.completedSubTasks, 1);
-      assert.equal(rollup.progressPercent, 70); // (100 + 40) / 2 = 70
-    });
-
-    it("getDerivedTaskStatus updates status based on progress and current status", () => {
-      assert.equal(getDerivedTaskStatus(100, "IN_PROGRESS"), "COMPLETED");
-      assert.equal(getDerivedTaskStatus(90, "COMPLETED"), "IN_PROGRESS");
-      assert.equal(getDerivedTaskStatus(50, "WAITING_APPROVAL"), "WAITING_APPROVAL");
-      assert.equal(getDerivedTaskStatus(0, "IN_PROGRESS"), "IN_PROGRESS");
     });
   });
 

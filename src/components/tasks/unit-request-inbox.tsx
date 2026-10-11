@@ -149,24 +149,23 @@ export function UnitRequestInbox({ className }: { className?: string }) {
                 />
                 <div className="flex gap-1.5">
                   <Button
-                    type="button"
                     size="xs"
                     disabled={busyId === row.id || (mode === "assign" ? !assigneeId : note.trim().length < 3)}
                     onClick={() => void submit(row)}
                   >
                     {mode === "assign" ? "Cử phối hợp" : "Từ chối"}
                   </Button>
-                  <Button type="button" size="xs" variant="ghost" onClick={() => setOpenId(null)}>
+                  <Button size="xs" variant="ghost" onClick={() => setOpenId(null)}>
                     Hủy
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="mt-2 flex gap-1.5">
-                <Button type="button" size="xs" onClick={() => void open(row, "assign")}>
+                <Button size="xs" onClick={() => void open(row, "assign")}>
                   Cử người phối hợp
                 </Button>
-                <Button type="button" size="xs" variant="ghost" onClick={() => void open(row, "decline")}>
+                <Button size="xs" variant="ghost" onClick={() => void open(row, "decline")}>
                   Từ chối
                 </Button>
               </div>

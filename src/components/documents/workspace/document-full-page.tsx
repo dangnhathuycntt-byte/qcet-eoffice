@@ -65,7 +65,6 @@ export function DocumentFullPage({ docId, breadcrumb, header, actions, files, pa
 
   const panelToggle = (
     <Button
-      type="button"
       variant="ghost"
       size="sm"
       onClick={togglePanel}
@@ -73,7 +72,7 @@ export function DocumentFullPage({ docId, breadcrumb, header, actions, files, pa
       aria-controls="document-info-panel"
       className="hidden text-muted-foreground hover:text-foreground lg:inline-flex"
     >
-      {panelOpen ? <PanelRightClose strokeWidth={1.5} /> : <PanelRightOpen strokeWidth={1.5} />}
+      {panelOpen ? <PanelRightClose /> : <PanelRightOpen />}
       Thông tin
     </Button>
   );
@@ -110,7 +109,7 @@ export function DocumentFullPage({ docId, breadcrumb, header, actions, files, pa
                 persistKey={docId}
                 railExtra={
                   <RailButton label={panelOpen ? "Ẩn thông tin văn bản" : "Thông tin văn bản"} onClick={togglePanel} aria-pressed={panelOpen} className="hidden lg:inline-flex">
-                    <Info strokeWidth={1.5} />
+                    <Info />
                   </RailButton>
                 }
               />

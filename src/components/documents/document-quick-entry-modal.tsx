@@ -13,7 +13,6 @@ import type {
   DocumentSecurityLevel,
   DocumentItem,
 } from "@/types/document";
-import { useAuth } from "@/lib/auth-context";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { Input } from "@/components/ui/input";
@@ -28,6 +27,7 @@ import {
   fetchDuplicateMatches,
 } from "@/lib/documents/duplicate-check-client";
 import { cn } from "@/lib/utils";
+import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentQuickEntryModalProps {
   isOpen: boolean;
@@ -77,7 +77,6 @@ export function DocumentQuickEntryModal({
   lockType = false,
   departments: propDepartments = [],
 }: DocumentQuickEntryModalProps) {
-  const { user } = useAuth();
   const { departments: fetchedDepartments, isLoading: isDepartmentsLoading } = useDepartmentList({
     enabled: isOpen,
   });
@@ -96,7 +95,7 @@ export function DocumentQuickEntryModal({
   const [category, setCategory] = React.useState<string>("Công văn");
   const [summary, setSummary] = React.useState<string>("");
   const [urgency, setUrgency] = React.useState<DocumentUrgency>("THUONG");
-  const [securityLevel, setSecurityLevel] = React.useState<DocumentSecurityLevel>("THUONG");
+  const securityLevel: DocumentSecurityLevel = "THUONG";
   const [leadUnitId, setLeadUnitId] = React.useState<string>("");
   const [dueDate, setDueDate] = React.useState<string>("");
 
@@ -310,7 +309,6 @@ export function DocumentQuickEntryModal({
               {TYPE_CHOICES.map(({ value, label, Icon }) => (
                 <Button
                   key={value}
-                  type="button"
                   size="sm"
                   variant={docType === value ? "secondary" : "ghost"}
                   aria-pressed={docType === value}
@@ -401,14 +399,13 @@ export function DocumentQuickEntryModal({
                 </datalist>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {COMMON_AUTHORITIES.slice(0, 3).map((auth) => (
-                    <button
+                    <Pressable
                       key={auth}
-                      type="button"
                       onClick={() => setIssuingAuthority(auth)}
-                      className="cursor-pointer rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       {auth}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </>
@@ -452,21 +449,20 @@ export function DocumentQuickEntryModal({
             <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,application/pdf" onChange={handleFileChange} className="sr-only" aria-label="Chọn tệp đính kèm" tabIndex={-1} />
             {attachmentFile ? (
               <span className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md bg-secondary pl-2 pr-1 text-xs text-foreground">
-                <Paperclip className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+                <Paperclip className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                 <span className="min-w-0 truncate" title={attachmentFile.name}>{attachmentFile.name}</span>
                 <span className="shrink-0 text-muted-foreground">{Math.max(1, Math.round(attachmentFile.size / 1024))} KB</span>
-                <button
-                  type="button"
+                <Pressable
                   aria-label="Bỏ tệp đính kèm"
                   onClick={() => setAttachmentFile(null)}
-                  className="inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                  className="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
-                  <X className="size-3" strokeWidth={1.5} />
-                </button>
+                  <X className="size-3" />
+                </Pressable>
               </span>
             ) : (
-              <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={() => fileInputRef.current?.click()}>
-                <Paperclip strokeWidth={1.5} />
+              <Button size="sm" variant="ghost" className="-ml-2" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip />
                 Đính kèm tệp
               </Button>
             )}
@@ -476,7 +472,7 @@ export function DocumentQuickEntryModal({
           {/* Thông tin ít dùng: thu gọn mặc định để modal gọn, không phải cuộn */}
           <Collapsible.Root className="group/more">
             <Collapsible.Trigger className="-ml-2 flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              <ChevronRight className="size-3.5 transition-transform group-data-[open]/more:rotate-90" strokeWidth={1.5} aria-hidden />
+              <ChevronRight className="size-3.5 transition-transform group-data-[open]/more:rotate-90" aria-hidden />
               Thêm thông tin
             </Collapsible.Trigger>
             <Collapsible.Panel className="space-y-4 pt-3">
@@ -521,14 +517,13 @@ export function DocumentQuickEntryModal({
                 />
                 <div className="flex gap-1">
                   {[3, 5, 7].map((days) => (
-                    <button
+                    <Pressable
                       key={days}
-                      type="button"
                       onClick={() => handleAddDaysToDueDate(days)}
-                      className="cursor-pointer rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80"
+                      className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/80"
                     >
                       +{days} ngày
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>
@@ -553,14 +548,14 @@ export function DocumentQuickEntryModal({
 
           {errorMessage && (
             <div role="alert" className="flex items-start gap-2 rounded-lg bg-danger-soft p-3 text-xs text-destructive">
-              <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} />
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
             <div role="status" className="flex items-center gap-2 rounded-lg bg-secondary p-3 text-xs text-foreground">
-              <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
               <span>{successMessage}</span>
             </div>
           )}
@@ -568,7 +563,7 @@ export function DocumentQuickEntryModal({
 
         <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-3">
           {!savedWithoutFile && (
-            <Button type="button" variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
+            <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
               Hủy
             </Button>
           )}

@@ -119,7 +119,7 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
               {r.receivedAt ? (
                 <span className="shrink-0 text-muted-foreground">Đã nhận {formatDate(r.receivedAt)}</span>
               ) : state.canConfirmReceipt ? (
-                <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={() => void call("confirm-receipt", { recipientId: r.id }, "Không ghi nhận được")}>
+                <Button size="xs" variant="ghost" disabled={busy} onClick={() => void call("confirm-receipt", { recipientId: r.id }, "Không ghi nhận được")}>
                   Ghi nhận đã nhận
                 </Button>
               ) : (
@@ -143,12 +143,12 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
       {mode === "idle" && (
         <div className="flex flex-wrap gap-1.5">
           {state.canIssue && (
-            <Button type="button" size="sm" onClick={() => setMode("issue")}>
+            <Button size="sm" onClick={() => setMode("issue")}>
               Phát hành
             </Button>
           )}
           {state.canRecall && (
-            <Button type="button" size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setMode("recall")}>
+            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setMode("recall")}>
               Thu hồi
             </Button>
           )}
@@ -190,7 +190,6 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
           )}
           <div className="flex gap-1.5">
             <Button
-              type="button"
               size="xs"
               disabled={busy || recipientsPayload.length === 0}
               onClick={() =>
@@ -199,7 +198,7 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
             >
               Phát hành
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
+            <Button size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
           </div>
         </div>
       )}
@@ -208,10 +207,10 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
         <div className="space-y-1.5">
           <Textarea compact value={reason} maxLength={1000} aria-label="Lý do thu hồi" placeholder="Lý do thu hồi (bắt buộc)" onChange={(e) => setReason(e.target.value)} className="min-h-16" />
           <div className="flex gap-1.5">
-            <Button type="button" size="xs" variant="destructive" disabled={busy || reason.trim().length < 3} onClick={() => void call("recall", { reason: reason.trim() }, "Không thu hồi được văn bản")}>
+            <Button size="xs" variant="destructive" disabled={busy || reason.trim().length < 3} onClick={() => void call("recall", { reason: reason.trim() }, "Không thu hồi được văn bản")}>
               Thu hồi văn bản
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
+            <Button size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>
           </div>
         </div>
       )}

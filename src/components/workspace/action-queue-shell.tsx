@@ -2,9 +2,6 @@
 
 import * as React from "react";
 import {
-  FileCheck,
-  UploadCloud,
-  AlertCircle,
   CheckCheck,
   ChevronDown,
   ChevronUp,
@@ -91,7 +88,7 @@ export function ActionQueueShell({
             className="size-10 rounded-control bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0"
             aria-hidden="true"
           >
-            <CheckCheck className="size-5 text-primary" strokeWidth={1.5} />
+            <CheckCheck className="size-5 text-primary" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -207,7 +204,7 @@ export function ActionQueueShell({
                 className="size-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-3"
                 aria-hidden="true"
               >
-                <Inbox className="size-6" strokeWidth={1.5} />
+                <Inbox className="size-6" />
               </div>
               <h3 className="text-base font-bold text-slate-900">{emptyTitle}</h3>
               <p className="text-xs sm:text-sm text-slate-700 max-w-md mt-1">
