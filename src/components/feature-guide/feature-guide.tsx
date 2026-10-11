@@ -227,6 +227,44 @@ export function FeatureGuideCard({
     (side === "left" || side === "right") && align === "end" && "bottom-0",
   );
 
+  const guideCardBody = (
+    <>
+      <div className="relative m-2 rounded-[10px] bg-muted h-[150px] flex items-center justify-center">
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Đóng hướng dẫn"
+          className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+        >
+          <X className="size-3.5" aria-hidden="true" />
+        </button>
+        {preview}
+      </div>
+
+      <div className="px-4 pt-2">
+        <div className="text-base font-semibold leading-6 tracking-[-0.005em] text-foreground">
+          {title}
+        </div>
+        <div className="mt-1.5 text-sm leading-5 text-muted-foreground">
+          {description}
+        </div>
+      </div>
+
+      <div className="flex h-[52px] items-center justify-between px-4 text-sm mt-1">
+        <span className="flex items-center gap-2 text-muted-foreground select-none">
+          ‹ {step} ›
+        </span>
+        <button
+          type="button"
+          onClick={handleNextClick}
+          className="font-medium text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+        >
+          {nextLabel}
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div ref={wrapperRef} className={cn("relative", className)}>
       {children}
@@ -248,39 +286,7 @@ export function FeatureGuideCard({
               ref={cardRef}
               className="w-full max-w-[374px] mx-auto rounded-2xl bg-white shadow-[0_0_0_1px_var(--border),0_12px_32px_rgba(26,29,35,0.12)] overflow-hidden border border-border/40"
             >
-              <div className="relative m-2 rounded-[10px] bg-muted h-[150px] flex items-center justify-center">
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  aria-label="Đóng hướng dẫn"
-                  className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-                >
-                  <X className="size-3.5" aria-hidden="true" />
-                </button>
-                {preview}
-              </div>
-
-              <div className="px-4 pt-2">
-                <div className="text-base font-semibold leading-6 tracking-[-0.005em] text-foreground">
-                  {title}
-                </div>
-                <div className="mt-1.5 text-sm leading-5 text-muted-foreground">
-                  {description}
-                </div>
-              </div>
-
-              <div className="flex h-[52px] items-center justify-between px-4 text-sm mt-1">
-                <span className="flex items-center gap-2 text-muted-foreground select-none">
-                  ‹ {step} ›
-                </span>
-                <button
-                  type="button"
-                  onClick={handleNextClick}
-                  className="font-medium text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-                >
-                  {nextLabel}
-                </button>
-              </div>
+              {guideCardBody}
             </div>
           </div>
 
@@ -299,39 +305,7 @@ export function FeatureGuideCard({
             <div
               className="w-[340px] rounded-2xl bg-white shadow-[0_0_0_1px_var(--border),0_12px_32px_rgba(26,29,35,0.10)] overflow-hidden border border-border/40"
             >
-              <div className="relative m-2 rounded-[10px] bg-muted h-[150px] flex items-center justify-center">
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  aria-label="Đóng hướng dẫn"
-                  className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-                >
-                  <X className="size-3.5" aria-hidden="true" />
-                </button>
-                {preview}
-              </div>
-
-              <div className="px-4 pt-2">
-                <div className="text-base font-semibold leading-6 tracking-[-0.005em] text-foreground">
-                  {title}
-                </div>
-                <div className="mt-1.5 text-sm leading-5 text-muted-foreground">
-                  {description}
-                </div>
-              </div>
-
-              <div className="flex h-[52px] items-center justify-between px-4 text-sm mt-1">
-                <span className="flex items-center gap-2 text-muted-foreground select-none">
-                  ‹ {step} ›
-                </span>
-                <button
-                  type="button"
-                  onClick={handleNextClick}
-                  className="font-medium text-foreground px-3 py-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-                >
-                  {nextLabel}
-                </button>
-              </div>
+              {guideCardBody}
             </div>
           </div>
         </>
