@@ -234,22 +234,16 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
 
     const json = await res.json();
     assert.strictEqual(json.success, true);
-    assert.ok(json.notification?.id);
-    createdNotificationIds.push(json.notification.id);
+    assert.ok(json.result, 'Phản hồi phải mang kết quả gửi push');
 
     // Verify sent push notification payload received by mock
     assert.ok(sentPushMockCalls.length >= 1, 'Mock sender must record at least 1 push delivery');
     const lastCall = sentPushMockCalls[sentPushMockCalls.length - 1];
     assert.strictEqual(lastCall.payload.data.linkHref, '/portal?tab=notifications');
 
-    // Verify in-app notification record in DB
-    const dbNotif = await prisma.notification.findUnique({
-      where: { id: json.notification.id },
-    });
-    assert.ok(dbNotif);
-    assert.strictEqual(dbNotif.userId, testUser.id);
-    assert.strictEqual(dbNotif.isRead, false);
-    assert.strictEqual(dbNotif.type, 'test');
+    // Chỉ thử chuông push: không ghi bản ghi nào vào Hộp thư của người dùng.
+    const testNotifications = await prisma.notification.count({ where: { userId: testUser.id, type: 'test' } });
+    assert.strictEqual(testNotifications, 0, 'Thử chuông không được tạo thông báo trong Hộp thư');
   });
 
   test('5. Notification record lifecycle: Task action triggers background notification creation in Prisma database', async () => {

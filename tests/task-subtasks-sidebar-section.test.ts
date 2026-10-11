@@ -42,7 +42,7 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       })
     );
     assert.ok(html.includes("Kiểm tra tài liệu"), "Must show subtask title");
-    assert.ok(html.includes("text-warning"), "Must show IN_PROGRESS status icon color");
+    assert.ok(html.includes("text-foreground/70"), "Must show IN_PROGRESS status icon (neutral tone)");
     assert.ok(html.includes(">1<"), "Count must be 1");
   });
 
@@ -138,9 +138,8 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       })
     );
     assert.ok(html.includes("text-muted-foreground/50"), "NOT_STARTED icon");
-    assert.ok(html.includes("text-warning"), "IN_PROGRESS icon");
-    assert.ok(html.includes("text-sky-500"), "WAITING_APPROVAL icon");
-    assert.ok(html.includes("text-emerald-500"), "COMPLETED icon");
+    // Màu trung tính theo bậc (xem TaskStatusCircle): tiến hành, chờ duyệt, hoàn thành cùng tông foreground/70.
+    assert.ok(html.includes("text-foreground/70"), "IN_PROGRESS / WAITING_APPROVAL / COMPLETED icons");
   });
 
   it("renders due date formatted as DD/MM", () => {

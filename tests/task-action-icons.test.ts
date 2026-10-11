@@ -7,8 +7,8 @@ import * as icons from "../src/components/tasks/task-action-icons";
 describe("Bộ icon thao tác nhiệm vụ (cùng ngôn ngữ với icon sidebar)", () => {
   const entries = Object.entries(icons).filter(([name]) => name.startsWith("TaskIcon"));
 
-  it("xuất đủ 48 icon", () => {
-    assert.equal(entries.length, 48);
+  it("xuất đủ 49 icon", () => {
+    assert.equal(entries.length, 49);
   });
 
   for (const [name, Icon] of entries) {
