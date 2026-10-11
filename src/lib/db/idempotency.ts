@@ -1,11 +1,12 @@
 import crypto from "crypto";
-import { Prisma, type PrismaClient, type IdempotencyRecord } from "@prisma/client";
+import { Prisma, type IdempotencyRecord } from "@prisma/client";
 import { prisma as defaultPrisma } from "../prisma";
 
 /**
  * Supported database client types: standard PrismaClient or an interactive transaction client.
  */
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/prisma";
+export type { DbClient };
 
 /**
  * Valid execution states for an IdempotencyRecord.

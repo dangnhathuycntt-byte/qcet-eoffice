@@ -24,7 +24,6 @@
 import {
   Prisma,
   OutboxStatus,
-  type PrismaClient,
   type OutboxEvent,
 } from "@prisma/client";
 import { prisma as defaultPrisma } from "../prisma";
@@ -32,7 +31,8 @@ import { prisma as defaultPrisma } from "../prisma";
 /**
  * Supported database client types: standard PrismaClient or an interactive transaction client.
  */
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/prisma";
+export type { DbClient };
 
 /**
  * Standard outbox event types across QCET E-Office subsystems.

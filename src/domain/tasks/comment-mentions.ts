@@ -6,6 +6,8 @@
  * nội dung, để xóa chữ thì không còn nhắc.
  */
 
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
+
 export interface MentionCandidate {
   id: string;
   name: string;
@@ -19,13 +21,9 @@ export function findMentionQuery(text: string, caret: number): { query: string; 
   return { query: match[2], start: upto.length - match[2].length - 1 };
 }
 
-function fold(value: string): string {
-  return value.normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
-}
-
 export function filterMentionCandidates(candidates: MentionCandidate[], query: string, limit = 6): MentionCandidate[] {
-  const q = fold(query);
-  return candidates.filter((c) => fold(c.name).includes(q)).slice(0, limit);
+  const q = foldVietnamese(query);
+  return candidates.filter((c) => foldVietnamese(c.name).includes(q)).slice(0, limit);
 }
 
 /** Thay phần "@truy_vấn" đang gõ bằng "@Tên " và trả nội dung mới cùng vị trí con trỏ. */

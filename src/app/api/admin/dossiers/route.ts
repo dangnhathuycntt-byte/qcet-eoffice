@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { getApiContext } from "@/server/api/context";
-import { requireAuthenticated } from "@/server/api/auth";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { listDisposedDossiers } from "@/server/dossiers/dossier-disposal-service";
 

@@ -18,7 +18,7 @@
  * (cài đặt push); báo trễ và các mốc 4 ngày thì không tắt được.
  */
 import { ApprovalProcessStatus, AssignmentStatus, ExtensionRequestStatus, TaskStatus, TaskUnitRequestStatus, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma, type DbClient } from "@/lib/prisma";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
 import {
@@ -36,8 +36,8 @@ import { deliverTaskNotice } from "@/server/outbox/task-notification-handlers";
 import { findActiveDecline } from "./task-decline-service";
 import { syncStepReviewerActors } from "./task-approval-process-service";
 import { reconcileBackupReviewer, revokeStaleBackupReviewers } from "./task-backup-reviewer-service";
+import { formatDisplayDate } from "@/lib/format/date";
 
-type Db = Prisma.TransactionClient | typeof prisma;
 
 export interface ReminderScanResult {
   considered: number;
@@ -51,11 +51,8 @@ type PrefKey = "deadlineReminder" | "taskReview";
 const EXECUTOR_ROLES = ["DRI", "COLLABORATOR"] as const;
 const REVIEWER_ROLES = ["REVIEWER", "APPROVER"] as const;
 
-function fmtDay(date: Date): string {
-  return date.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" });
-}
 
-async function unitLeaderIds(db: Db, unitId: string | null): Promise<string[]> {
+async function unitLeaderIds(db: DbClient, unitId: string | null): Promise<string[]> {
   if (!unitId) return [];
   const rows = await db.positionAssignment.findMany({
     where: { unitId, status: AssignmentStatus.ACTIVE },
@@ -65,7 +62,7 @@ async function unitLeaderIds(db: Db, unitId: string | null): Promise<string[]> {
 }
 
 /** Bỏ những người đã tắt loại nhắc này trong cài đặt thông báo (mặc định bật). */
-async function withoutOptedOut(db: Db, userIds: string[], pref: PrefKey | null): Promise<{ kept: string[]; dropped: number }> {
+async function withoutOptedOut(db: DbClient, userIds: string[], pref: PrefKey | null): Promise<{ kept: string[]; dropped: number }> {
   if (!pref || userIds.length === 0) return { kept: userIds, dropped: 0 };
   const users = await db.user.findMany({ where: { id: { in: userIds } }, select: { id: true, onboardingData: true } });
   const off = new Set(
@@ -92,7 +89,7 @@ interface Candidate {
   linkHref?: string;
 }
 
-async function send(db: Db, c: Candidate, result: ReminderScanResult) {
+async function send(db: DbClient, c: Candidate, result: ReminderScanResult) {
   const { kept, dropped } = await withoutOptedOut(db, c.recipientIds, c.pref);
   result.skippedOptOut += dropped;
   if (kept.length === 0) return;
@@ -126,7 +123,7 @@ async function send(db: Db, c: Candidate, result: ReminderScanResult) {
 }
 
 export async function scanTaskReminders(
-  options: { now?: Date; db?: Db; taskIds?: string[] } = {}
+  options: { now?: Date; db?: DbClient; taskIds?: string[] } = {}
 ): Promise<ReminderScanResult> {
   const now = options.now ?? new Date();
   const db = options.db ?? prisma;
@@ -166,8 +163,8 @@ export async function scanTaskReminders(
           pref: "deadlineReminder",
           type: "deadline",
           pushEvent: "DEADLINE_WARNING_24H",
-          note: `Hạn ${fmtDay(task.dueDate)}`,
-          dueDateStr: fmtDay(task.dueDate),
+          note: `Hạn ${formatDisplayDate(task.dueDate)}`,
+          dueDateStr: formatDisplayDate(task.dueDate),
         }, result);
       } else if (isOverdueNotifiable(task.dueDate, now)) {
         await send(db, {
@@ -178,7 +175,7 @@ export async function scanTaskReminders(
           pref: null,
           type: "overdue",
           pushEvent: "TASK_OVERDUE",
-          note: `Trễ ${dayDiff(dueKey, ictDayKey(now))} ngày so với hạn ${fmtDay(task.dueDate)}`,
+          note: `Trễ ${dayDiff(dueKey, ictDayKey(now))} ngày so với hạn ${formatDisplayDate(task.dueDate)}`,
         }, result);
       }
     }
@@ -283,7 +280,7 @@ export async function scanTaskReminders(
     await send(db, {
       taskId: req.taskId, kind: "UNIT_REQUEST_OVERDUE", dueKey: req.id, recipientIds: await unitLeaderIds(db, req.targetUnitId), pref: null,
       type: "unit_request", pushEvent: "TASK_UNIT_REQUEST", linkHref: "/tasks/unit-requests",
-      note: `Yêu cầu phối hợp đã quá hạn trả lời (hạn ${fmtDay(req.respondBy as Date)})`,
+      note: `Yêu cầu phối hợp đã quá hạn trả lời (hạn ${formatDisplayDate(req.respondBy as Date)})`,
     }, result);
     await send(db, {
       taskId: req.taskId, kind: "UNIT_REQUEST_OVERDUE_ASSIGNER", dueKey: req.id, recipientIds: [req.requestedById], pref: null,

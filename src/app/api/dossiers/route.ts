@@ -4,7 +4,7 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { DossierService } from "@/lib/services/dossier-service";
 import { DossierStatus, DataClassification } from "@prisma/client";
 import { CreateDossierSchema } from "@/contracts/dossiers";
-import { assertJsonContentType, assertRequestBodySize, MAX_JSON_BODY_SIZE } from "@/server/api/validation";
+import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
 
@@ -48,11 +48,9 @@ export async function POST(req: NextRequest) {
     const authUser = requireAuthenticated(context);
 
     assertCsrf(req);
-    assertJsonContentType(req);
-    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
     await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
-    const body = CreateDossierSchema.parse(await req.json());
+    const body = await parseAndValidateJson(req, CreateDossierSchema);
     const result = await DossierService.createDossier(authUser, body);
 
     return apiSuccess(result, { requestId, status: 201 });

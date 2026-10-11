@@ -1,15 +1,10 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getApiContext } from "@/server/api/context";
-import { requireAuthenticated } from "@/server/api/auth";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
-import { canReadDocument } from "@/server/policies/document-policy";
-import { NotFoundError, ForbiddenError } from "@/server/api/errors";
-import {
-  loadAuthorizationContext,
-  buildDocumentResource,
-  authorize,
-} from "@/server/authorization";
+import { NotFoundError } from "@/server/api/errors";
+import { loadAuthorizationContext } from "@/server/authorization";
+import { assertDocumentReadable } from "@/server/documents/authorize-on-document";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -45,6 +40,9 @@ export interface DocumentAuditLogItem {
   notes?: string | null;
   metadata?: Record<string, unknown> | null;
 }
+
+/** Thông tin người thực hiện hiển thị trên dòng thời gian. */
+const ACTOR_SELECT = { id: true, name: true, role: true, title: true, avatarUrl: true } as const;
 
 const ACTION_LABELS: Record<string, string> = {
   DOCUMENT_CREATED: "Tiếp nhận & Vào sổ văn bản",
@@ -83,15 +81,15 @@ export async function GET(
       where: { id },
       include: {
         registeredBy: {
-          select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+          select: ACTOR_SELECT,
         },
         leadUser: {
-          select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+          select: ACTOR_SELECT,
         },
         directives: {
           include: {
             leader: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
           },
           orderBy: { createdAt: "desc" },
@@ -99,10 +97,10 @@ export async function GET(
         incomingWorkflow: {
           include: {
             presentedBy: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             leader: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             leadUnit: {
               select: { id: true, name: true, code: true },
@@ -110,10 +108,10 @@ export async function GET(
             unitAssignments: {
               include: {
                 assignedBy: {
-                  select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+                  select: ACTOR_SELECT,
                 },
                 driUser: {
-                  select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+                  select: ACTOR_SELECT,
                 },
                 unit: {
                   select: { id: true, name: true, code: true },
@@ -125,35 +123,35 @@ export async function GET(
               orderBy: { createdAt: "desc" },
             },
             resolvedBy: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             filedBy: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             archivedBy: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
           },
         },
         outgoingWorkflow: {
           include: {
             contentReviewer: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             formatReviewer: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             authorizedSigner: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             numberer: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             orgSigner: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
             issuer: {
-              select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+              select: ACTOR_SELECT,
             },
           },
         },
@@ -169,13 +167,7 @@ export async function GET(
 
     // 2. Authorization check
     const authContext = await loadAuthorizationContext(authUser.id);
-    const docResource = buildDocumentResource(document as any);
-    const readDecision = authorize(authContext, "document.read", docResource);
-    if (!readDecision.allowed || !canReadDocument(authContext, document as any)) {
-      throw new ForbiddenError(
-        readDecision.reason || "Bạn không có quyền truy cập lịch sử văn bản này"
-      );
-    }
+    assertDocumentReadable(authContext, authContext, document as any, "Bạn không có quyền truy cập lịch sử văn bản này");
 
     // 3. Query Audit Events
     const rawAuditEvents = await prisma.auditEvent.findMany({
@@ -197,7 +189,7 @@ export async function GET(
     const users = actorIds.length > 0
       ? await prisma.user.findMany({
           where: { id: { in: actorIds } },
-          select: { id: true, name: true, role: true, title: true, avatarUrl: true },
+          select: ACTOR_SELECT,
         })
       : [];
     const userMap = new Map(users.map((u) => [u.id, u]));

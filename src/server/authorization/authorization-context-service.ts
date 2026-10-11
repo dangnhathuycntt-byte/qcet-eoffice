@@ -373,6 +373,14 @@ export async function loadAuthorizationContext(
 }
 
 /**
+ * Ngữ cảnh phân quyền cho một request: cache 10 giây để route và service trong cùng lượt
+ * thấy cùng một bản mà không nạp lại từ DB.
+ */
+export function loadCachedAuthorizationContext(userId: string, now: Date = new Date()): Promise<AuthorizationContext> {
+  return loadAuthorizationContext(userId, now, { useCache: true, ttlMs: 10_000 });
+}
+
+/**
  * Direct alias for fresh DB evaluation (bypasses any cache).
  */
 export const loadAuthorizationContextFromDb = loadFreshAuthorizationContext;

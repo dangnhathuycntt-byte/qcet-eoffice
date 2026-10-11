@@ -6,20 +6,14 @@
  */
 
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
-import { isExecutivePosition } from '@/server/authorization/authorization-engine';
+import { isExecutiveAdministrator } from '@/server/authorization/delegation-policy';
 import { ForbiddenError } from '@/server/api/errors';
 
 /**
  * Checks if the caller has statutory authority to create or manage institutional bodies and committees.
  */
 export function canManageOrganizationalBodies(context: AuthorizationContext): boolean {
-  if (context.isSystemAdmin() || context.user.role === 'ADMIN') {
-    return true;
-  }
-  if (context.user.role === 'BAN_GIAM_HIEU') {
-    return true;
-  }
-  return context.positions.some((pos) => isExecutivePosition(pos.positionCode));
+  return isExecutiveAdministrator(context);
 }
 
 /**

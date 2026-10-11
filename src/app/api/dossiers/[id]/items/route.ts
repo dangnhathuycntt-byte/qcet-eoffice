@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { AddDossierItemSchema, DossierItemIdSchema } from "@/contracts/dossiers";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
-import { assertJsonContentType, assertRequestBodySize, MAX_JSON_BODY_SIZE, readOptionalJsonBody } from "@/server/api/validation";
+import { assertRequestBodySize, MAX_JSON_BODY_SIZE, parseAndValidateJson, readOptionalJsonBody } from "@/server/api/validation";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -63,12 +63,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const authUser = requireAuthenticated(apiCtx);
 
     assertCsrf(req);
-    assertJsonContentType(req);
-    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
     await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     const { id } = await Promise.resolve(context.params);
-    const body = AddDossierItemSchema.parse(await req.json());
+    const body = await parseAndValidateJson(req, AddDossierItemSchema);
 
     const result = await DossierService.addItemToDossier(authUser, {
       ...body,

@@ -1,9 +1,12 @@
-import { type ZodType, ZodError } from 'zod';
+import { type ZodType } from 'zod';
 import {
   UnsupportedMediaTypeError,
   PayloadTooLargeError,
   ValidationError,
+  extractFieldErrors,
 } from './errors';
+
+export { extractFieldErrors };
 
 export const MAX_JSON_BODY_SIZE = 1024 * 1024;       // 1MB
 export const MAX_PAYLOAD_SIZE = MAX_JSON_BODY_SIZE;   // Alias for route handlers
@@ -128,21 +131,6 @@ export async function readOptionalJsonBody(
   } catch {
     throw new ValidationError('Invalid JSON body');
   }
-}
-
-/**
- * Extracts structured field errors from a ZodError.
- */
-export function extractFieldErrors(zodError: ZodError): Record<string, string[]> {
-  const fieldErrors: Record<string, string[]> = {};
-  for (const issue of zodError.issues) {
-    const pathKey = issue.path.length > 0 ? issue.path.join('.') : '_root';
-    if (!fieldErrors[pathKey]) {
-      fieldErrors[pathKey] = [];
-    }
-    fieldErrors[pathKey].push(issue.message);
-  }
-  return fieldErrors;
 }
 
 export interface ParseJsonOptions {

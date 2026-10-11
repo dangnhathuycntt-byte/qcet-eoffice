@@ -13,6 +13,7 @@ import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ConflictError, InvalidTransitionError, PreconditionFailedError } from "@/server/api/errors";
 import { authorizeOnTask, can } from "./authorize-on-task";
+import { bumpTaskVersion } from "@/server/tasks/task-version";
 
 export const DeclineTaskSchema = z
   .object({
@@ -79,13 +80,7 @@ export async function declineTask(
   }
 
   return prisma.$transaction(async (tx) => {
-    const bumped = await tx.task.updateMany({
-      where: { id: taskId, version: validated.expectedVersion, archivedAt: null, status: TaskStatus.NOT_STARTED },
-      data: { version: { increment: 1 } },
-    });
-    if (bumped.count !== 1) {
-      throw new PreconditionFailedError(`Task aggregate version conflict: expected version ${validated.expectedVersion}`);
-    }
+    await bumpTaskVersion(tx, taskId, validated.expectedVersion, { where: { status: TaskStatus.NOT_STARTED } });
 
     const notice = await tx.taskDeclineNotice.create({
       data: { taskId, userId: session.id, reason: validated.reason },

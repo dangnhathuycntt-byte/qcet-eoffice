@@ -25,13 +25,3 @@ export function buildUserDirectoryQueryOptions(query: DirectoryQueryInput) {
     skip: (query.page - 1) * take,
   };
 }
-
-export function buildUserDirectoryPagination(page: number, pageSize: number, total: number) {
-  return {
-    page,
-    pageSize,
-    total,
-    totalPages: Math.ceil(total / pageSize),
-    hasMore: page * pageSize < total,
-  };
-}

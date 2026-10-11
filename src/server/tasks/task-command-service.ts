@@ -22,6 +22,7 @@ import {
   NotFoundError,
   ValidationError,
   PreconditionFailedError,
+  extractFieldErrors,
 } from '@/server/api/errors';
 import {
   logAuditEvent,
@@ -454,12 +455,7 @@ export class TaskCommandService {
     const { creatorId: _cId, code: _code, ...cleanInput } = input as any;
     const validationResult = CreateTaskInputSchema.safeParse(cleanInput);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       if (!input?.title || !input?.dueDate || (!input?.leadUnitId && !input?.parentTaskId)) {
         throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)', fieldErrors);
       }
@@ -856,12 +852,7 @@ export class TaskCommandService {
 
     const validationResult = UpdateTaskInputSchema.safeParse(sanitizedInput);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       throw new ValidationError('Dữ liệu cập nhật không hợp lệ', fieldErrors);
     }
 
@@ -1527,12 +1518,7 @@ export class TaskCommandService {
 
     const validationResult = SubmitDeliverableInputSchema.safeParse(input);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       if (!input?.title || !input?.fileUrl) {
         throw new ValidationError('Tiêu đề và đường dẫn file minh chứng là bắt buộc', fieldErrors);
       }
@@ -1642,12 +1628,7 @@ export class TaskCommandService {
 
     const validationResult = ReviewDeliverableInputSchema.safeParse(input);
     if (!validationResult.success) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of validationResult.error.issues) {
-        const key = issue.path.join('.') || '_root';
-        if (!fieldErrors[key]) fieldErrors[key] = [];
-        fieldErrors[key].push(issue.message);
-      }
+      const fieldErrors = extractFieldErrors(validationResult.error);
       if (!input?.deliverableId || !input?.reviewStatus) {
         throw new ValidationError('deliverableId và reviewStatus là bắt buộc', fieldErrors);
       }

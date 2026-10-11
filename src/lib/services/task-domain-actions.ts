@@ -30,7 +30,7 @@ import {
   StepProgressionError,
 } from "@/lib/services/task-actor-service";
 import { authorize } from "@/server/authorization/authorization-engine";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import type { AuthorizationResource } from "@/server/authorization/resource";
 import type { CapabilityAction } from "@/server/authorization/capability";
 import {
@@ -56,6 +56,7 @@ import {
   buildTaskContext,
   getStatusLabel,
 } from "@/domain/tasks/state-machine";
+import { bumpTaskVersion } from "@/server/tasks/task-version";
 
 // ============================================================================
 // Input Validation Schemas
@@ -190,7 +191,7 @@ export type RemovePersonInput = z.infer<typeof RemovePersonInputSchema>;
 // ============================================================================
 
 async function buildUserContext(session: SessionPayload) {
-  return loadAuthorizationContext(session.id, new Date(), { useCache: true, ttlMs: 10_000 });
+  return loadCachedAuthorizationContext(session.id);
 }
 
 export async function loadTaskAndBuildResource(
@@ -1673,15 +1674,7 @@ export class TaskDomainActionService {
     const messageText = validated.message?.trim() || `Nhắc nhở thực hiện nhiệm vụ: ${task.title}`;
 
     await prisma.$transaction(async (tx) => {
-      const updated = await tx.task.updateMany({
-        where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
-        data: { version: { increment: 1 } },
-      });
-      if (updated.count !== 1) {
-        throw new PreconditionFailedError(
-          `Task aggregate version conflict: expected version ${validated.expectedVersion}`
-        );
-      }
+      await bumpTaskVersion(tx, taskId, validated.expectedVersion);
 
       await auditService.logEvent(tx, {
         actorId: session.id,
@@ -1762,15 +1755,7 @@ export class TaskDomainActionService {
     }
 
     return prisma.$transaction(async (tx) => {
-      const bumped = await tx.task.updateMany({
-        where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
-        data: { version: { increment: 1 } },
-      });
-      if (bumped.count !== 1) {
-        throw new PreconditionFailedError(
-          `Task aggregate version conflict: expected version ${validated.expectedVersion}`
-        );
-      }
+      await bumpTaskVersion(tx, taskId, validated.expectedVersion);
 
       const previousRole = existing[0]?.role ?? null;
       if (existing.length > 0) {
@@ -1848,15 +1833,7 @@ export class TaskDomainActionService {
     }
 
     return prisma.$transaction(async (tx) => {
-      const bumped = await tx.task.updateMany({
-        where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
-        data: { version: { increment: 1 } },
-      });
-      if (bumped.count !== 1) {
-        throw new PreconditionFailedError(
-          `Task aggregate version conflict: expected version ${validated.expectedVersion}`
-        );
-      }
+      await bumpTaskVersion(tx, taskId, validated.expectedVersion);
 
       await tx.taskActor.deleteMany({
         where: { taskId, userId: validated.userId, role: { in: [...PEOPLE_MANAGED_ROLES] } },

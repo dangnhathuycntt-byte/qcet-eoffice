@@ -1,8 +1,9 @@
-import { Prisma, type PrismaClient, type Task, type Document } from "@prisma/client";
+import type { Task, Document } from "@prisma/client";
 import { prisma as defaultPrisma } from "../prisma";
 import { updateTaskWithOCC, updateDocumentWithOCC } from "./occ";
 
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/prisma";
+export type { DbClient };
 
 export interface ArchiveTaskOptions {
   taskId: string;

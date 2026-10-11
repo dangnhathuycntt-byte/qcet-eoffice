@@ -3,12 +3,10 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { UserQuerySchema } from "@/contracts/users";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { toUserPublicDTOArray } from "@/server/dto";
+import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";
-import {
-  buildUserDirectoryPagination,
-  buildUserDirectoryQueryOptions,
-} from "@/server/users/user-directory-query";
+import { buildUserDirectoryQueryOptions } from "@/server/users/user-directory-query";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -122,7 +120,7 @@ export async function GET(req: Request) {
         success: true,
         users: toUserPublicDTOArray(enrichedUsers, authUser),
         pagination: {
-          ...buildUserDirectoryPagination(currentPage, queryOptions.take, total),
+          ...buildOffsetPagination(currentPage, queryOptions.take, total),
         },
       },
       {

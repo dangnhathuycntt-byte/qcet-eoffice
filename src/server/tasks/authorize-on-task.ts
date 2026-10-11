@@ -5,7 +5,7 @@
 import { prisma } from "@/lib/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { authorize } from "@/server/authorization/authorization-engine";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskResource } from "@/server/authorization/available-actions";
 import type { CapabilityAction } from "@/server/authorization/capability";
 import { ForbiddenError, NotFoundError } from "@/server/api/errors";
@@ -17,7 +17,7 @@ export async function loadTaskWithActors(taskId: string) {
 }
 
 export async function can(session: SessionPayload, action: CapabilityAction, task: Awaited<ReturnType<typeof loadTaskWithActors>>) {
-  const context = await loadAuthorizationContext(session.id, new Date(), { useCache: true, ttlMs: 10_000 });
+  const context = await loadCachedAuthorizationContext(session.id);
   return authorize(context, action, buildTaskResource(task));
 }
 

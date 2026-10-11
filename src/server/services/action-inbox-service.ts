@@ -8,6 +8,7 @@ import {
   DelegationStatus,
 } from '@prisma/client';
 import { ActionInboxItem, ActionInboxResponse } from '@/contracts/me';
+import { formatDisplayDate } from "@/lib/format/date";
 
 /** Trường văn bản mà hộp việc cần (số, trích yếu, độ mật). */
 const INBOX_DOCUMENT_SELECT = {
@@ -334,7 +335,7 @@ export class ActionInboxService {
         resourceCode: dg.sourceDocumentNumber,
         title: `Ủy quyền thực hiện hành vi: ${dg.action}`,
         requiredAction: 'Rà soát gia hạn hoặc chuẩn bị bàn giao',
-        reasonWhyMe: `Ủy quyền sẽ hết hiệu lực vào ngày ${dg.validUntil.toLocaleDateString('vi-VN')}`,
+        reasonWhyMe: `Ủy quyền sẽ hết hiệu lực vào ngày ${formatDisplayDate(dg.validUntil)}`,
         priority: 'HIGH',
         deadline: dg.validUntil.toISOString(),
         createdAt: dg.createdAt.toISOString(),

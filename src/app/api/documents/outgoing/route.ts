@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService, OUTGOING_WORKFLOW_DETAIL_INCLUDE } from "@/lib/services/outgoing-document-service";
 import { prisma } from "@/lib/prisma";
 import { OutgoingDocumentStatus } from "@prisma/client";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { CreateOutgoingDraftSchema } from "@/contracts/documents";
-import { assertJsonContentType, assertRequestBodySize, MAX_JSON_BODY_SIZE } from "@/server/api/validation";
+import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
 
@@ -51,20 +51,7 @@ export async function GET(req: NextRequest) {
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
-        include: {
-          document: {
-            include: {
-              attachments: true,
-              signatures: { orderBy: { signedAt: "asc" } },
-            },
-          },
-          contentReviewer: { select: { id: true, name: true, email: true } },
-          formatReviewer: { select: { id: true, name: true, email: true } },
-          authorizedSigner: { select: { id: true, name: true, email: true } },
-          numberer: { select: { id: true, name: true, email: true } },
-          orgSigner: { select: { id: true, name: true, email: true } },
-          issuer: { select: { id: true, name: true, email: true } },
-        },
+        include: OUTGOING_WORKFLOW_DETAIL_INCLUDE,
       }),
       prisma.documentOutgoingWorkflow.count({ where }),
     ]);
@@ -83,11 +70,9 @@ export async function POST(req: NextRequest) {
     const authUser = requireAuthenticated(context);
 
     assertCsrf(req);
-    assertJsonContentType(req);
-    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
     await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
-    const body = CreateOutgoingDraftSchema.parse(await req.json());
+    const body = await parseAndValidateJson(req, CreateOutgoingDraftSchema);
     const result = await OutgoingDocumentService.createOutgoingDraft(
       body,
       authUser as any,

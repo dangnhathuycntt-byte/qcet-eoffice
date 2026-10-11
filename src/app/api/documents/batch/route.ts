@@ -29,6 +29,7 @@ import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import { UnitWorkAssignmentStatusValues } from "@/domain/documents/unit-assignment-status";
 import { isAdmin, isManager, isClerk } from "@/server/policies/document-policy";
+import { formatDisplayDate } from "@/lib/format/date";
 
 /**
  * Checks if the user has authorization to perform batch operations on documents.
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
                   status: DocumentStatus.DA_HOAN_THANH,
                   notes: payload.notes
                     ? doc.notes
-                      ? `${doc.notes}\n[${now.toLocaleDateString("vi-VN")}]: ${payload.notes}`
+                      ? `${doc.notes}\n[${formatDisplayDate(now)}]: ${payload.notes}`
                       : payload.notes
                     : doc.notes,
                 },

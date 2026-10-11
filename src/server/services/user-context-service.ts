@@ -1,6 +1,6 @@
 import { JobCatalogGroup } from '@prisma/client';
 import { UserContextResponse } from '@/contracts/me';
-import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { AuthorizationContext } from '@/server/authorization/authorization-context';
 
 /**
@@ -22,7 +22,7 @@ export class UserContextService {
    * by mapping the canonical AuthorizationContext to the UserContextResponse DTO.
    */
   static async getUserContext(userId: string, now: Date = new Date()): Promise<UserContextResponse> {
-    const authContext = await loadAuthorizationContext(userId, now, { useCache: true, ttlMs: 10_000 });
+    const authContext = await loadCachedAuthorizationContext(userId, now);
     return this.mapToUserContextResponse(authContext, now);
   }
 

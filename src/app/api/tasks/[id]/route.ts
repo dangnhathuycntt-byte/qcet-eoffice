@@ -18,7 +18,7 @@ import {
 } from '@/server/api/errors';
 import { ArchiveTaskSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
-import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
 import {
   computeAvailableActions,
@@ -41,7 +41,7 @@ export async function GET(req: Request, routeContext: RouteContext) {
     const { id } = await Promise.resolve(routeContext.params);
     const [rawTask, authContext] = await Promise.all([
       taskQueryService.getTaskEntityForInternalUse(id),
-      loadAuthorizationContext(authUser.id, new Date(), { useCache: true, ttlMs: 10_000 }),
+      loadCachedAuthorizationContext(authUser.id),
     ]);
 
     if (!rawTask) {

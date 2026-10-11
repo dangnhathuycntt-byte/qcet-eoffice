@@ -1,10 +1,11 @@
-import { Prisma, type PrismaClient, type AuditEvent } from "@prisma/client";
+import { Prisma, type AuditEvent } from "@prisma/client";
 import { prisma as defaultPrisma } from "../prisma";
 
 /**
  * Supported database client types: standard PrismaClient or an interactive transaction client.
  */
-export type DbClient = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/prisma";
+export type { DbClient };
 
 /**
  * Standard business audit event actions across QCET E-Office.

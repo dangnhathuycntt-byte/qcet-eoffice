@@ -16,7 +16,7 @@ import {
   parseAndValidateJson,
 } from "@/server/api/validation";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { buildTaskResource } from "@/server/authorization/available-actions";
@@ -60,7 +60,7 @@ export async function resolveActionContext(
     throw new NotFoundError("Không tìm thấy nhiệm vụ");
   }
 
-  const authorizationContext = await loadAuthorizationContext(user.id, new Date(), { useCache: true, ttlMs: 10_000 });
+  const authorizationContext = await loadCachedAuthorizationContext(user.id);
   // DTO không mang TaskActor nên người duyệt được chỉ định (REVIEWER/APPROVER) chưa nhận ra ở cổng route dù dịch vụ
   // bên dưới cho phép; bổ sung các vai trò từ nguồn thật để hai chỗ kiểm quyền cùng một kết luận.
   const actors = await prisma.taskActor.findMany({

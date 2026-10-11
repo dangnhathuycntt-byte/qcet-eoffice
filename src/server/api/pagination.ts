@@ -158,3 +158,14 @@ export function paginatedResponse<T>(
     headers,
   });
 }
+
+/** Khối phân trang offset chuẩn `{ page, pageSize, total, totalPages, hasMore }` (trang tính từ 1). */
+export function buildOffsetPagination(page: number, pageSize: number, total: number) {
+  return {
+    page,
+    pageSize,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+    hasMore: page * pageSize < total,
+  };
+}

@@ -11,12 +11,12 @@
  */
 import { z } from "zod";
 import { TaskActorRole, TaskScope, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma, type DbClient } from "@/lib/prisma";
 import { auditService, AuditAction } from "@/lib/db/audit";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { getAcademicYear } from "@/lib/academic-calendar";
 import { authorize } from "@/server/authorization/authorization-engine";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskResource } from "@/server/authorization/available-actions";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { logger } from "@/server/observability/logger";
@@ -50,11 +50,10 @@ export type TemplatePatch = z.infer<typeof TemplatePatchSchema>;
 export type RecurrenceBody = z.infer<typeof RecurrenceBodySchema>;
 export type RecurrencePatch = z.infer<typeof RecurrencePatchSchema>;
 
-type Db = Prisma.TransactionClient | typeof prisma;
 
 /** Một mẫu chỉ được quản lý bởi người có quyền giao việc (`task.assign`: trưởng đơn vị, lãnh đạo) trong đơn vị đó. */
 async function canManageUnit(session: SessionPayload, unitId: string): Promise<boolean> {
-  const ctx = await loadAuthorizationContext(session.id, new Date(), { useCache: true, ttlMs: 10_000 });
+  const ctx = await loadCachedAuthorizationContext(session.id);
   return authorize(ctx, "task.assign", buildTaskResource({ scope: TaskScope.DEPARTMENT, leadUnitId: unitId, scopeExplicit: true })).allowed;
 }
 
@@ -135,7 +134,7 @@ export async function updateTemplate(session: SessionPayload, id: string, input:
 // Lặp lại
 // ---------------------------------------------------------------------------
 
-async function assertPeople(db: Db, args: { creatorId: string; driUserId: string; collaboratorIds: string[]; reviewerUserId?: string | null }) {
+async function assertPeople(db: DbClient, args: { creatorId: string; driUserId: string; collaboratorIds: string[]; reviewerUserId?: string | null }) {
   const ids = [...new Set([args.driUserId, ...args.collaboratorIds, ...(args.reviewerUserId ? [args.reviewerUserId] : [])])];
   const found = await db.user.findMany({ where: { id: { in: ids }, isActive: true }, select: { id: true } });
   if (found.length !== ids.length) throw new ValidationError("Một hoặc nhiều người được chỉ định không tồn tại hoặc đã bị khóa", undefined, "RECURRENCE_USER_NOT_FOUND");

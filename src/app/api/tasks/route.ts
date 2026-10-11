@@ -12,7 +12,7 @@ import { assertCsrf } from '@/server/security/csrf';
 import { ForbiddenError } from '@/server/api/errors';
 import { TaskQuerySchema, CreateTaskSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
-import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
 import { buildTaskResource, computeAvailableActions } from '@/server/authorization/available-actions';
 import { toTaskListDTOArray, toTaskDetailDTO } from '@/server/dto/task-dto';
@@ -92,7 +92,7 @@ export async function GET(req: Request) {
       }
     }
 
-    const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true, ttlMs: 10_000 });
+    const authorizationContext = await loadCachedAuthorizationContext(authUser.id);
     const result = await taskQueryService.queryTasks(authorizationContext, {
       all: isAll,
       page: validatedQuery.page,

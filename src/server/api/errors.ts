@@ -156,14 +156,7 @@ export function toApiErrorResponse(
 
   if (isZodError) {
     const zodError = error as ZodError;
-    const fieldErrors: Record<string, string[]> = {};
-    for (const issue of zodError.issues) {
-      const pathKey = issue.path.length > 0 ? issue.path.join('.') : '_root';
-      if (!fieldErrors[pathKey]) {
-        fieldErrors[pathKey] = [];
-      }
-      fieldErrors[pathKey].push(issue.message);
-    }
+    const fieldErrors = extractFieldErrors(zodError);
     return {
       status: 400,
       body: {
@@ -319,4 +312,19 @@ export function parseApiError(data: unknown): ParsedApiError {
     code: 'INTERNAL_ERROR',
     message: 'Đã xảy ra lỗi không xác định.',
   };
+}
+
+/**
+ * Extracts structured field errors from a ZodError.
+ */
+export function extractFieldErrors(zodError: ZodError): Record<string, string[]> {
+  const fieldErrors: Record<string, string[]> = {};
+  for (const issue of zodError.issues) {
+    const pathKey = issue.path.length > 0 ? issue.path.join('.') : '_root';
+    if (!fieldErrors[pathKey]) {
+      fieldErrors[pathKey] = [];
+    }
+    fieldErrors[pathKey].push(issue.message);
+  }
+  return fieldErrors;
 }
