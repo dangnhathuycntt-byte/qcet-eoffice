@@ -87,7 +87,7 @@ export async function GET(req: Request, routeContext: RouteContext) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }
 
@@ -270,7 +270,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }
 
@@ -317,6 +317,6 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }

@@ -1,36 +1,9 @@
-import { NextRequest } from "next/server";
-import { taskDomainActionService } from "@/lib/services/task-domain-actions";
-import { ApproveInputSchema } from "@/lib/services/task-domain-actions";
-import { apiSuccess } from "@/server/api/response";
-import {
-  ActionRouteContext,
-  handleActionError,
-  resolveActionContext,
-} from "../shared";
+import { ApproveInputSchema, taskDomainActionService } from "@/lib/services/task-domain-actions";
+import { taskActionRoute } from "../shared";
 
-export async function POST(request: NextRequest, context: ActionRouteContext) {
-  let requestId = crypto.randomUUID();
-  try {
-    const { session, taskId, body, requestId: reqId } = await resolveActionContext(
-      request,
-      context,
-      ApproveInputSchema,
-      "task.approve"
-    );
-    requestId = reqId;
-    const result = await taskDomainActionService.approve(session, taskId, body);
-
-    return apiSuccess(
-      {
-        success: true,
-        data: result,
-      },
-      { requestId }
-    );
-  } catch (error) {
-    return handleActionError(error, requestId, {
-      rfc9457: true,
-      instance: request.nextUrl.pathname,
-    });
-  }
-}
+export const POST = taskActionRoute(
+  ApproveInputSchema,
+  "task.approve",
+  (session, taskId, body) => taskDomainActionService.approve(session, taskId, body),
+  { rfc9457: true }
+);

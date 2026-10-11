@@ -45,7 +45,7 @@ export async function GET(req: Request) {
         return apiError(
           { message: range.error, statusCode: 400 },
           context.requestId,
-          { 'Cache-Control': 'private, no-store' }
+          { headers: { 'Cache-Control': 'private, no-store' } }
         );
       }
       const createdAt: Record<string, string | Date> = {};
@@ -94,6 +94,6 @@ export async function GET(req: Request) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

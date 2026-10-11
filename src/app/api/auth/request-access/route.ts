@@ -49,6 +49,6 @@ export async function POST(req: NextRequest) {
       { requestId, headers: { "Cache-Control": "private, no-store" } }
     );
   } catch (error) {
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

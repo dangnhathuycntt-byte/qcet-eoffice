@@ -10,7 +10,7 @@ import {
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
 import { ForbiddenError } from '@/server/api/errors';
-import { TaskQuerySchema, CreateTaskSchema } from '@/contracts/tasks';
+import { TaskQueryParamsSchema, CreateTaskInputSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
       }
     }
 
-    const validatedQuery = TaskQuerySchema.parse(rawParams);
+    const validatedQuery = TaskQueryParamsSchema.parse(rawParams);
 
     const searchQuery = validatedQuery.q || validatedQuery.search;
     if (searchQuery && searchQuery.trim().length > 0) {
@@ -148,7 +148,7 @@ export async function GET(req: Request) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }
 
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
 
     await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
-    const validatedBody = await parseAndValidateJson(req, CreateTaskSchema);
+    const validatedBody = await parseAndValidateJson(req, CreateTaskInputSchema);
 
     // Canonical object authorization: Check whether user can create a task for the specified department
     const authContext = await loadAuthorizationContext(authUser.id);
@@ -230,6 +230,6 @@ export async function POST(req: Request) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }

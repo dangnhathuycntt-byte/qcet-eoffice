@@ -9,7 +9,6 @@ import {
   toTaskSummaryDTO,
   toTaskListDTO,
   toTaskDetailDTO,
-  toTaskSummaryDTOArray,
   toTaskListDTOArray,
   toDocumentListDTO,
   toDocumentDetailDTO,
@@ -429,7 +428,6 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       assert.strictEqual(toTaskListDTO(null), null);
       assert.strictEqual(toTaskDetailDTO(null), null);
 
-      assert.deepStrictEqual(toTaskSummaryDTOArray(null as any), []);
       assert.deepStrictEqual(toTaskListDTOArray(undefined as any), []);
 
       const arr = toTaskListDTOArray([rawTaskWithDetails, null]);

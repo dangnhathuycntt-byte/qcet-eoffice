@@ -211,8 +211,3 @@ export function canReadDossierItem(
 
   return false;
 }
-
-export const dossierPolicy = {
-  canReadDossier,
-  canReadDossierItem,
-};

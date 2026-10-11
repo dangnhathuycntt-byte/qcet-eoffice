@@ -151,7 +151,6 @@ export const TaskQueryParamsSchema = PaginationQuerySchema.extend({
   all: z.union([z.boolean(), z.enum(['true', 'false'])]).optional(),
 });
 
-export const TaskQuerySchema = TaskQueryParamsSchema;
 export type TaskQueryParams = z.infer<typeof TaskQueryParamsSchema>;
 export type TaskQuery = TaskQueryParams;
 
@@ -221,7 +220,6 @@ export const CreateTaskInputSchema = z
   })
   .strict();
 
-export const CreateTaskSchema = CreateTaskInputSchema;
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 
 /**
@@ -292,7 +290,6 @@ export const UpdateTaskInputSchema = z
   })
   .strict();
 
-export const UpdateTaskSchema = UpdateTaskInputSchema;
 export type UpdateTaskInput = z.infer<typeof UpdateTaskInputSchema>;
 export type UpdateTask = UpdateTaskInput;
 
@@ -411,7 +408,6 @@ export const ApproveTaskInputSchema = z
   })
   .strict();
 
-export const ApproveTaskSchema = ApproveTaskInputSchema;
 export type ApproveTaskInput = z.infer<typeof ApproveTaskInputSchema>;
 
 /**
@@ -470,7 +466,6 @@ export const SubmitDeliverableInputSchema = z
   })
   .strict();
 
-export const SubmitDeliverableSchema = SubmitDeliverableInputSchema;
 export type SubmitDeliverableInput = z.infer<typeof SubmitDeliverableInputSchema>;
 
 /**

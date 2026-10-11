@@ -592,13 +592,6 @@ export function toTaskDetailDTO(rawTask: unknown): TaskDetailDTO | null {
 /**
  * Array mapping helpers
  */
-export function toTaskSummaryDTOArray(rawTasks: unknown[]): TaskSummaryDTO[] {
-  if (!Array.isArray(rawTasks)) return [];
-  return rawTasks
-    .map(toTaskSummaryDTO)
-    .filter((t): t is TaskSummaryDTO => t !== null);
-}
-
 export function toTaskListDTOArray(rawTasks: unknown[]): TaskListDTO[] {
   if (!Array.isArray(rawTasks)) return [];
   return rawTasks

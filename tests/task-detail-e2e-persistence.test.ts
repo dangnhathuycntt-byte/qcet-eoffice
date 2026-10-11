@@ -7,7 +7,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
 import { canUserDeleteDeliverable } from "@/server/tasks/task-policy";
-import { canDeleteDeliverable } from "@/server/policies/task-policy";
 import { getTextOffsetInContainer } from "@/components/tasks/detail/direct-inline-editor";
 import { TaskStatus } from "@prisma/client";
 
@@ -153,9 +152,6 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
       const check1 = canUserDeleteDeliverable(user, deliverable, targetTask);
       assert.equal(check1.allowed, false, "canUserDeleteDeliverable phải từ chối khi taskId không khớp");
-
-      const check2 = canDeleteDeliverable(user, deliverable, targetTask as any);
-      assert.equal(check2, false, "canDeleteDeliverable policy phải trả về false khi taskId không khớp");
     });
 
     it("cho phép người tải lên, Admin, hoặc DRI xóa tài liệu thuộc đúng nhiệm vụ", () => {

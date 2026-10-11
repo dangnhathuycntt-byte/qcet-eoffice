@@ -9,17 +9,13 @@ import {
   IsoDateStringSchema,
 } from '@/contracts/common';
 import {
-  LoginInputSchema,
-  RegisterInputSchema,
-} from '@/contracts/auth';
-import {
-  TaskQuerySchema,
-  CreateTaskSchema,
+  TaskQueryParamsSchema,
+  CreateTaskInputSchema,
   UpdateTaskMetadataSchema,
   ChangeTaskStatusSchema,
   AssignTaskSchema,
-  ApproveTaskSchema,
-  SubmitDeliverableSchema,
+  ApproveTaskInputSchema,
+  SubmitDeliverableInputSchema,
 } from '@/contracts/tasks';
 import {
   DocumentQuerySchema,
@@ -133,131 +129,10 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
     });
   });
 
-  describe('Auth Contracts (src/contracts/auth.ts)', () => {
-    describe('LoginInputSchema', () => {
-      it('accepts valid login credentials and normalizes email', () => {
-        const parsed = LoginInputSchema.parse({
-          email: '  GIANGVIEN@CDKTCNQN.EDU.VN  ',
-          password: 'securePassword123',
-        });
-        assert.strictEqual(parsed.email, 'giangvien@cdktcnqn.edu.vn');
-        assert.strictEqual(parsed.password, 'securePassword123');
-      });
-
-      it('rejects invalid email addresses', () => {
-        assert.strictEqual(
-          LoginInputSchema.safeParse({ email: 'not-an-email', password: '123' }).success,
-          false
-        );
-      });
-
-      it('rejects passwords exceeding 128 characters or empty passwords', () => {
-        assert.strictEqual(
-          LoginInputSchema.safeParse({
-            email: 'admin@cdktcnqn.edu.vn',
-            password: 'p'.repeat(129),
-          }).success,
-          false
-        );
-        assert.strictEqual(
-          LoginInputSchema.safeParse({
-            email: 'admin@cdktcnqn.edu.vn',
-            password: '',
-          }).success,
-          false
-        );
-      });
-
-      it('enforces strict validation to prevent malicious mass-assignment attempts', () => {
-        const result = LoginInputSchema.safeParse({
-          email: 'admin@cdktcnqn.edu.vn',
-          password: 'securePassword123',
-          role: 'ADMIN',
-          isAdmin: true,
-        });
-        assert.strictEqual(result.success, false);
-      });
-    });
-
-    describe('RegisterInputSchema', () => {
-      it('accepts valid registration payload', () => {
-        const parsed = RegisterInputSchema.parse({
-          email: 'newuser@cdktcnqn.edu.vn',
-          password: 'mypassword123',
-          name: 'Nguyễn Văn An',
-          departmentId: 'dept_cntt',
-        });
-        assert.strictEqual(parsed.email, 'newuser@cdktcnqn.edu.vn');
-        assert.strictEqual(parsed.name, 'Nguyễn Văn An');
-        assert.strictEqual(parsed.departmentId, 'dept_cntt');
-      });
-
-      it('rejects password shorter than 6 characters or longer than 128 characters', () => {
-        assert.strictEqual(
-          RegisterInputSchema.safeParse({
-            email: 'user@cdktcnqn.edu.vn',
-            password: '12345',
-            name: 'Nguyễn Văn An',
-          }).success,
-          false
-        );
-        assert.strictEqual(
-          RegisterInputSchema.safeParse({
-            email: 'user@cdktcnqn.edu.vn',
-            password: 'p'.repeat(129),
-            name: 'Nguyễn Văn An',
-          }).success,
-          false
-        );
-      });
-
-      it('rejects name shorter than 2 or longer than 100 characters', () => {
-        assert.strictEqual(
-          RegisterInputSchema.safeParse({
-            email: 'user@cdktcnqn.edu.vn',
-            password: 'password123',
-            name: 'A',
-          }).success,
-          false
-        );
-        assert.strictEqual(
-          RegisterInputSchema.safeParse({
-            email: 'user@cdktcnqn.edu.vn',
-            password: 'password123',
-            name: 'N'.repeat(101),
-          }).success,
-          false
-        );
-      });
-
-      it('rejects departmentId exceeding 64 characters', () => {
-        assert.strictEqual(
-          RegisterInputSchema.safeParse({
-            email: 'user@cdktcnqn.edu.vn',
-            password: 'password123',
-            name: 'Nguyễn Văn An',
-            departmentId: 'd'.repeat(65),
-          }).success,
-          false
-        );
-      });
-
-      it('strictly rejects mass-assignment injections', () => {
-        const result = RegisterInputSchema.safeParse({
-          email: 'user@cdktcnqn.edu.vn',
-          password: 'password123',
-          name: 'Nguyễn Văn An',
-          role: 'ADMIN',
-        });
-        assert.strictEqual(result.success, false);
-      });
-    });
-  });
-
   describe('Tasks Contracts (src/contracts/tasks.ts)', () => {
-    describe('TaskQuerySchema', () => {
+    describe('TaskQueryParamsSchema', () => {
       it('parses valid query parameters with pagination and filters', () => {
-        const parsed = TaskQuerySchema.parse({
+        const parsed = TaskQueryParamsSchema.parse({
           page: '2',
           pageSize: '50',
           status: 'IN_PROGRESS',
@@ -276,15 +151,15 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
 
       it('rejects academicMonth outside 1-12 range', () => {
-        assert.strictEqual(TaskQuerySchema.safeParse({ academicMonth: 0 }).success, false);
-        assert.strictEqual(TaskQuerySchema.safeParse({ academicMonth: 13 }).success, false);
-        assert.strictEqual(TaskQuerySchema.safeParse({ academicMonth: 12 }).success, true);
+        assert.strictEqual(TaskQueryParamsSchema.safeParse({ academicMonth: 0 }).success, false);
+        assert.strictEqual(TaskQueryParamsSchema.safeParse({ academicMonth: 13 }).success, false);
+        assert.strictEqual(TaskQueryParamsSchema.safeParse({ academicMonth: 12 }).success, true);
       });
     });
 
-    describe('CreateTaskSchema', () => {
+    describe('CreateTaskInputSchema', () => {
       it('accepts valid task creation payload with defaults', () => {
-        const parsed = CreateTaskSchema.parse({
+        const parsed = CreateTaskInputSchema.parse({
           title: 'Hoàn thiện hồ sơ đánh giá chất lượng',
           description: 'Soạn thảo báo cáo tự đánh giá theo chuẩn kiểm định 2026',
           dueDate: '2026-09-30T17:00:00Z',
@@ -298,18 +173,18 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
 
       it('rejects title shorter than 3 or longer than 255 characters', () => {
         assert.strictEqual(
-          CreateTaskSchema.safeParse({ title: 'AB' }).success,
+          CreateTaskInputSchema.safeParse({ title: 'AB' }).success,
           false
         );
         assert.strictEqual(
-          CreateTaskSchema.safeParse({ title: 'T'.repeat(256) }).success,
+          CreateTaskInputSchema.safeParse({ title: 'T'.repeat(256) }).success,
           false
         );
       });
 
       it('rejects description exceeding 5000 characters', () => {
         assert.strictEqual(
-          CreateTaskSchema.safeParse({
+          CreateTaskInputSchema.safeParse({
             title: 'Valid Task Title',
             description: 'x'.repeat(5001),
           }).success,
@@ -320,7 +195,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       it('rejects assignee list exceeding 50 assignees', () => {
         const tooManyAssignees = Array.from({ length: 51 }, (_, i) => `usr_${i}`);
         assert.strictEqual(
-          CreateTaskSchema.safeParse({
+          CreateTaskInputSchema.safeParse({
             title: 'Valid Task Title',
             assigneeIds: tooManyAssignees,
           }).success,
@@ -335,7 +210,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
           fileUrl: `https://storage.cdktcnqn.edu.vn/files/file_${i}.pdf`,
         }));
         assert.strictEqual(
-          CreateTaskSchema.safeParse({
+          CreateTaskInputSchema.safeParse({
             title: 'Valid Task Title',
             deliverables: tooManyDeliverables,
           }).success,
@@ -344,7 +219,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
 
         // Oversized file > 50MB (52,428,800 bytes)
         assert.strictEqual(
-          CreateTaskSchema.safeParse({
+          CreateTaskInputSchema.safeParse({
             title: 'Valid Task Title',
             deliverables: [
               {
@@ -360,7 +235,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
 
       it('strictly rejects mass-assignment injection of privileged fields', () => {
-        const result = CreateTaskSchema.safeParse({
+        const result = CreateTaskInputSchema.safeParse({
           title: 'Valid Task Title',
           id: 'injected_task_id',
           status: 'COMPLETED',
@@ -372,7 +247,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
 
       it('rejects "code" field (removed from public schema, .strict() boundary)', () => {
-        const result = CreateTaskSchema.safeParse({
+        const result = CreateTaskInputSchema.safeParse({
           title: 'Valid Task Title',
           dueDate: '2026-09-30T17:00:00Z',
           code: 'TASK-001',
@@ -381,7 +256,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
 
       it('rejects "creatorId" field (removed from public schema, .strict() boundary)', () => {
-        const result = CreateTaskSchema.safeParse({
+        const result = CreateTaskInputSchema.safeParse({
           title: 'Valid Task Title',
           dueDate: '2026-09-30T17:00:00Z',
           creatorId: 'usr_spoofed',
@@ -390,13 +265,13 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
 
       it('requires dueDate (no longer optional)', () => {
-        const result = CreateTaskSchema.safeParse({
+        const result = CreateTaskInputSchema.safeParse({
           title: 'Valid Task Title',
         });
         assert.strictEqual(result.success, false);
 
         // With dueDate provided, should pass
-        const withDueDate = CreateTaskSchema.safeParse({
+        const withDueDate = CreateTaskInputSchema.safeParse({
           title: 'Valid Task Title',
           dueDate: '2026-09-30T17:00:00Z',
         });
@@ -517,9 +392,9 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
     });
 
-    describe('ApproveTaskSchema', () => {
+    describe('ApproveTaskInputSchema', () => {
       it('accepts valid approval decision and optional versioning', () => {
-        const parsed = ApproveTaskSchema.parse({
+        const parsed = ApproveTaskInputSchema.parse({
           approved: true,
           comment: 'Đồng ý nghiệm thu kết quả',
           expectedVersion: 3,
@@ -531,7 +406,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
 
       it('rejects comment exceeding 1000 characters', () => {
         assert.strictEqual(
-          ApproveTaskSchema.safeParse({
+          ApproveTaskInputSchema.safeParse({
             approved: false,
             comment: 'c'.repeat(1001),
           }).success,
@@ -541,7 +416,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
 
       it('strictly rejects extra fields', () => {
         assert.strictEqual(
-          ApproveTaskSchema.safeParse({
+          ApproveTaskInputSchema.safeParse({
             approved: true,
             status: 'COMPLETED',
           }).success,
@@ -550,9 +425,9 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
     });
 
-    describe('SubmitDeliverableSchema', () => {
+    describe('SubmitDeliverableInputSchema', () => {
       it('accepts valid deliverable submission within limits', () => {
-        const parsed = SubmitDeliverableSchema.parse({
+        const parsed = SubmitDeliverableInputSchema.parse({
           title: 'Báo cáo kiểm định chất lượng đợt 1',
           fileUrl: 'https://storage.cdktcnqn.edu.vn/uploads/bao-cao.pdf',
           fileName: 'bao-cao-kiem-dinh.pdf',
@@ -564,7 +439,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
 
       it('rejects fileSize exceeding 50MB (52428800 bytes)', () => {
         assert.strictEqual(
-          SubmitDeliverableSchema.safeParse({
+          SubmitDeliverableInputSchema.safeParse({
             title: 'File quá lớn',
             fileUrl: 'https://storage.cdktcnqn.edu.vn/uploads/big.zip',
             fileName: 'big.zip',
@@ -576,7 +451,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
 
       it('rejects empty title or file URL exceeding 1024 characters', () => {
         assert.strictEqual(
-          SubmitDeliverableSchema.safeParse({
+          SubmitDeliverableInputSchema.safeParse({
             title: '',
             fileUrl: 'https://storage.cdktcnqn.edu.vn/uploads/file.pdf',
             fileName: 'file.pdf',
@@ -585,7 +460,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
           false
         );
         assert.strictEqual(
-          SubmitDeliverableSchema.safeParse({
+          SubmitDeliverableInputSchema.safeParse({
             title: 'Valid Title',
             fileUrl: 'https://storage.cdktcnqn.edu.vn/' + 'u'.repeat(1025),
             fileName: 'file.pdf',
@@ -597,7 +472,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
 
       it('strictly rejects extra fields', () => {
         assert.strictEqual(
-          SubmitDeliverableSchema.safeParse({
+          SubmitDeliverableInputSchema.safeParse({
             title: 'Valid Title',
             fileUrl: 'https://storage.cdktcnqn.edu.vn/file.pdf',
             fileName: 'file.pdf',

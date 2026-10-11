@@ -8,6 +8,6 @@ export async function POST(req: Request) {
       "Đăng nhập bằng mật khẩu đã bị vô hiệu hóa. Vui lòng sử dụng tài khoản Google Nhà trường."
     );
   } catch (error) {
-    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
+    return apiError(error, requestId, { headers: { "Cache-Control": "private, no-store" } });
   }
 }

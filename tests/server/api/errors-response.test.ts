@@ -265,7 +265,7 @@ describe('Standard Error Contract & Error Abstraction', () => {
 
     it('apiError produces NextResponse with proper status, body, and X-Request-ID header', async () => {
       const err = new AuthorizationError('Insufficient permissions');
-      const response = apiError(err, testRequestId, { 'Cache-Control': 'no-store' });
+      const response = apiError(err, testRequestId, { headers: { 'Cache-Control': 'no-store' } });
 
       assert.strictEqual(response.status, 403);
       assert.strictEqual(response.headers.get('x-request-id'), testRequestId);

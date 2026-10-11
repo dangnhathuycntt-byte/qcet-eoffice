@@ -9,7 +9,7 @@ import {
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
 import { NotFoundError, ForbiddenError } from '@/server/api/errors';
-import { SubmitDeliverableSchema, ReviewDeliverableInputSchema } from '@/contracts/tasks';
+import { SubmitDeliverableInputSchema, ReviewDeliverableInputSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
@@ -54,7 +54,7 @@ export async function POST(req: Request, routeContext: RouteContext) {
       );
     }
 
-    const validatedInput = await parseAndValidateJson(req, SubmitDeliverableSchema);
+    const validatedInput = await parseAndValidateJson(req, SubmitDeliverableInputSchema);
 
     // Atomic transaction: creates deliverable + updates task state + audit log
     const deliverable = await taskCommandService.submitDeliverable(context, taskId, {
@@ -81,7 +81,7 @@ export async function POST(req: Request, routeContext: RouteContext) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }
 
@@ -140,7 +140,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }
 
@@ -198,6 +198,6 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
       }
     );
   } catch (error) {
-    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+    return apiError(error, requestId, { headers: { 'Cache-Control': 'private, no-store' } });
   }
 }

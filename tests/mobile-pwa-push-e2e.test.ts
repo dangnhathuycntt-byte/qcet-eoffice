@@ -19,8 +19,8 @@ import {
   GET as getPushSubscribe,
   POST as postPushSubscribe,
   DELETE as deletePushSubscribe,
-} from '../src/app/api/push/subscribe/route';
-import { POST as postPushTest } from '../src/app/api/push/test/route';
+} from '../src/app/api/notifications/push/subscribe/route';
+import { POST as postPushTest } from '../src/app/api/notifications/push/test/route';
 import manifestFn from '../src/app/manifest';
 import { checkIsIOS } from '../src/hooks/use-pwa-install';
 import { UserRole } from '@prisma/client';
@@ -129,12 +129,12 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     }
   });
 
-  test('1. VAPID Configuration & Public Key API endpoint (GET /api/push/subscribe)', async () => {
-    const req = new NextRequest('http://localhost:3000/api/push/subscribe', {
+  test('1. VAPID Configuration & Public Key API endpoint (GET /api/notifications/push/subscribe)', async () => {
+    const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
       method: 'GET',
     });
     const res = await getPushSubscribe(req);
-    assert.strictEqual(res.status, 200, 'GET /api/push/subscribe must return HTTP 200');
+    assert.strictEqual(res.status, 200, 'GET /api/notifications/push/subscribe must return HTTP 200');
 
     const json = await res.json();
     assert.strictEqual(json.success, true);
@@ -142,8 +142,8 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     assert.strictEqual(json.publicKey, getVapidPublicKey());
   });
 
-  test('2. Subscription registration (POST /api/push/subscribe) with user agent, platform, endpoint, keys', async () => {
-    const req = new NextRequest('http://localhost:3000/api/push/subscribe', {
+  test('2. Subscription registration (POST /api/notifications/push/subscribe) with user agent, platform, endpoint, keys', async () => {
+    const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     });
 
     const res = await postPushSubscribe(req);
-    assert.strictEqual(res.status, 200, 'POST /api/push/subscribe must return HTTP 200');
+    assert.strictEqual(res.status, 200, 'POST /api/notifications/push/subscribe must return HTTP 200');
 
     const json = await res.json();
     assert.strictEqual(json.success, true);
@@ -180,8 +180,8 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     assert.ok(saved.userAgent?.includes('iPhone'));
   });
 
-  test('3. Subscription deletion / revocation (DELETE /api/push/subscribe)', async () => {
-    const req = new NextRequest('http://localhost:3000/api/push/subscribe', {
+  test('3. Subscription deletion / revocation (DELETE /api/notifications/push/subscribe)', async () => {
+    const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -194,7 +194,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     });
 
     const res = await deletePushSubscribe(req);
-    assert.strictEqual(res.status, 200, 'DELETE /api/push/subscribe must return HTTP 200');
+    assert.strictEqual(res.status, 200, 'DELETE /api/notifications/push/subscribe must return HTTP 200');
 
     const json = await res.json();
     assert.strictEqual(json.success, true);
@@ -206,7 +206,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     assert.strictEqual(revoked.status, 'REVOKED', 'Subscription status must transition to REVOKED');
   });
 
-  test('4. Test notification dispatch endpoint (POST /api/push/test)', async () => {
+  test('4. Test notification dispatch endpoint (POST /api/notifications/push/test)', async () => {
     // Re-activate subscription for dispatch
     await prisma.pushSubscription.update({
       where: { endpoint: testEndpoint1 },
@@ -215,7 +215,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
 
     sentPushMockCalls.length = 0;
 
-    const req = new NextRequest('http://localhost:3000/api/push/test', {
+    const req = new NextRequest('http://localhost:3000/api/notifications/push/test', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -230,7 +230,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     });
 
     const res = await postPushTest(req);
-    assert.strictEqual(res.status, 200, 'POST /api/push/test must return HTTP 200');
+    assert.strictEqual(res.status, 200, 'POST /api/notifications/push/test must return HTTP 200');
 
     const json = await res.json();
     assert.strictEqual(json.success, true);

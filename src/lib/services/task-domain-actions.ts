@@ -1854,4 +1854,3 @@ export class TaskDomainActionService {
 }
 
 export const taskDomainActionService = new TaskDomainActionService();
-export const taskDomainActions = taskDomainActionService;

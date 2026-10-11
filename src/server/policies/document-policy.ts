@@ -287,12 +287,3 @@ export function buildDocumentReadWhere(
     ],
   };
 }
-
-export const documentPolicy = {
-  canReadDocument,
-  canCreateDocument,
-  canUpdateDocument,
-  canDirectDocument,
-  canDeleteDocument,
-  buildDocumentReadWhere,
-};
