@@ -8,7 +8,6 @@ import {
   type ToastItem,
 } from "@/components/ui/feedback-layer";
 import { CircleCheckIcon } from "@/components/icons/circle-check";
-import { toastVariants } from "@/lib/motion/variants";
 
 describe("Wave 2 - Agent E: Feedback / Toast Layer & Icon Pilot Motion Invariants", () => {
   describe("Icon Pilot Specification", () => {
@@ -49,13 +48,6 @@ describe("Wave 2 - Agent E: Feedback / Toast Layer & Icon Pilot Motion Invariant
 
     it("preserves ToastContainer export for backward compat", () => {
       assert.ok(typeof ToastContainer === "function", "ToastContainer export must exist");
-    });
-  });
-
-  describe("Motion variant token fidelity", () => {
-    it("toastVariants includes initial, animate, and exit states", () => {
-      assert.ok(toastVariants.initial, "toastVariants must have initial state");
-      assert.ok(toastVariants.animate, "toastVariants must have animate state");
     });
   });
 });

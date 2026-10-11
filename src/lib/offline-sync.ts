@@ -11,22 +11,8 @@
  *  - Progressive background drain
  */
 
-import {
-  OfflineOutboxItem,
-  EnqueueOutboxItemInput,
-  enqueueOutbox,
-  removeOutboxItem,
-  clearOutbox,
-  flushOutbox,
-  getOutboxQueue,
-  getConflictItems as outboxGetConflictItems,
-  resolveConflict as outboxResolveConflict,
-  subscribeOutbox,
-  isOnline as outboxIsOnline,
-  getActiveUserId,
-} from "./pwa/outbox-manager";
+import { OfflineOutboxItem, EnqueueOutboxItemInput, enqueueOutbox, clearOutbox, getOutboxQueue, getConflictItems as outboxGetConflictItems, resolveConflict as outboxResolveConflict, subscribeOutbox, isOnline as outboxIsOnline } from "./pwa/outbox-manager";
 import { registerPurgeHook } from "./pwa/offline-store";
-import { isFeatureEnabled } from "@/features/flags";
 
 export interface OfflineMutation {
   id: string;
@@ -105,14 +91,6 @@ if (typeof window !== "undefined") {
 
 export function isOnline(): boolean {
   return outboxIsOnline();
-}
-
-/**
- * Returns current offline mutations from in-memory queue.
- * Guarantees synchronous response for React hooks and banner components.
- */
-export function getOfflineMutationQueue(): OfflineMutation[] {
-  return [...memoryQueue];
 }
 
 /**
@@ -219,17 +197,6 @@ export function enqueueOfflineMutation(
 }
 
 /**
- * Removes a mutation from in-memory queue and IndexedDB outbox.
- */
-export function removeOfflineMutation(id: string): void {
-  memoryQueue = memoryQueue.filter((item) => item.id !== id);
-  notifySubscribers(memoryQueue);
-  removeOutboxItem(id).catch((err) => {
-    console.warn("Failed to remove outbox item from IndexedDB:", err);
-  });
-}
-
-/**
  * Clears all mutations from memory queue and IndexedDB outbox.
  */
 export function clearOfflineMutationQueue(): void {
@@ -238,47 +205,6 @@ export function clearOfflineMutationQueue(): void {
   clearOutbox().catch((err) => {
     console.warn("Failed to clear IndexedDB outbox:", err);
   });
-}
-
-/**
- * Subscribes to mutation queue changes.
- */
-export function subscribeOfflineQueue(
-  listener: (queue: OfflineMutation[]) => void
-): () => void {
-  subscribers.add(listener);
-  return () => {
-    subscribers.delete(listener);
-  };
-}
-
-/**
- * Flushes all pending offline mutations by delegating to the durable outbox engine.
- */
-export async function flushOfflineMutations(): Promise<{
-  succeeded: number;
-  failed: number;
-}> {
-  if (!isFeatureEnabled("offlineMutations")) {
-    console.warn(
-      "[OfflineSync] Offline mutation sync is disabled by operational kill switch ('offlineMutations')."
-    );
-    return {
-      succeeded: 0,
-      failed: 0,
-    };
-  }
-
-  const result = await flushOutbox();
-  // Refresh memory queue
-  const latestOutbox = await getOutboxQueue();
-  memoryQueue = latestOutbox.map(mapOutboxItemToMutation);
-  notifySubscribers(memoryQueue);
-
-  return {
-    succeeded: result.succeeded,
-    failed: result.failed,
-  };
 }
 
 // Re-export conflict management functions for UI integration

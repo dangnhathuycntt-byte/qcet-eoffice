@@ -146,46 +146,6 @@ export function validateDocumentCreatePayload(payload: any): ValidationResult {
   };
 }
 
-/**
- * Validates leadership directive payload (Bút phê BGH).
- */
-export function validateDirectivePayload(payload: any): ValidationResult {
-  const errors: string[] = [];
-
-  if (!payload || typeof payload !== "object") {
-    return { isValid: false, errors: ["Payload phải là một đối tượng hợp lệ"] };
-  }
-
-  // 1. Ý kiến chỉ đạo bút phê (instruction)
-  if (
-    typeof payload.instruction !== "string" ||
-    !payload.instruction.trim()
-  ) {
-    errors.push("Nội dung chỉ đạo bút phê (instruction) là bắt buộc");
-  }
-
-  // 2. Đơn vị chủ trì tiếp nhận nhiệm vụ (leadUnitId — OrganizationalUnit.id|code)
-  if (
-    typeof payload.leadUnitId !== "string" ||
-    !payload.leadUnitId.trim()
-  ) {
-    errors.push("Đơn vị chủ trì thực hiện (leadUnitId) là bắt buộc");
-  }
-
-  // 3. Hạn hoàn thành báo cáo (deadline) nếu có
-  if (payload.deadline) {
-    const d = new Date(payload.deadline);
-    if (isNaN(d.getTime())) {
-      errors.push("Hạn báo cáo (deadline) không đúng định dạng ngày tháng hợp lệ");
-    }
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
-
 export const FORBIDDEN_PATCH_FIELDS = [
   "status",
   "signedAt",
@@ -205,19 +165,6 @@ export const FORBIDDEN_PATCH_FIELDS = [
   "registeredDate",
   "type",
   "version",
-] as const;
-
-export const ALLOWED_DOCUMENT_UPDATE_FIELDS = [
-  "summary",
-  "notes",
-  "category",
-  "urgency",
-  "securityLevel",
-  "recipientList",
-  "distributedCopies",
-  "dueDate",
-  "leadUnitId",
-  "leadUserId",
 ] as const;
 
 export function isWorkflowControlledField(fieldName: string): boolean {

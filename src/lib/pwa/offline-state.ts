@@ -56,16 +56,6 @@ export const OFFLINE_STATE_LABELS: Record<OfflineMutationState, string> = {
   "unknown-after-timeout": "Đang chờ đồng bộ",
 };
 
-/** The six unique canonical label strings required by T62. */
-export const CANONICAL_OFFLINE_LABELS = [
-  "Đã lưu trên thiết bị",
-  "Đang chờ đồng bộ",
-  "Đang đồng bộ",
-  "Đã đồng bộ",
-  "Không thể đồng bộ",
-  "Xung đột cần xử lý",
-] as const;
-
 /**
  * Maps a durable outbox item (persisted status + unconfirmed-result flag) to
  * the canonical C6 state.
@@ -88,11 +78,6 @@ export function outboxItemToOfflineState(item: {
     default:
       return item.unconfirmedResult ? "unknown-after-timeout" : "queued";
   }
-}
-
-/** Returns the truthful Vietnamese label for a canonical offline state. */
-export function labelForOfflineState(state: OfflineMutationState): string {
-  return OFFLINE_STATE_LABELS[state];
 }
 
 /**
@@ -144,9 +129,4 @@ export function deriveOfflineState(
     }
   }
   return best;
-}
-
-/** True only when the server has acknowledged the mutation (T73 / D13). */
-export function isServerConfirmed(state: OfflineMutationState): boolean {
-  return state === "server-confirmed";
 }

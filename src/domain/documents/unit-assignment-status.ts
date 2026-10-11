@@ -39,11 +39,6 @@ export const ALLOWED_UNIT_ASSIGNMENT_TRANSITIONS: Record<
   CANCELLED: [], // Terminal
 };
 
-export const TERMINAL_UNIT_ASSIGNMENT_STATUSES: readonly UnitWorkAssignmentStatus[] = [
-  "RESOLVED",
-  "CANCELLED",
-];
-
 /**
  * Check if a status string belongs to the controlled vocabulary
  */

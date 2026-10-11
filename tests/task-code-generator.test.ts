@@ -1,11 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { prisma } from '../src/lib/prisma';
-import {
-  generateTaskCodeAtomic,
-  generateTaskCode,
-  resetTaskCodeMemorySequences,
-} from '../src/lib/task-code-generator';
+import { generateTaskCodeAtomic, resetTaskCodeMemorySequences } from '../src/lib/task-code-generator';
 
 describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
   const testYear = 2026;
@@ -193,10 +189,5 @@ describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
 
     assert.strictEqual(code1, 'NV-2025-05-001');
     assert.strictEqual(code2, 'NV-2025-05-002');
-  });
-
-  test('backward-compatible generateTaskCode alias works', async () => {
-    const code = await generateTaskCode(prisma, 2099, 3);
-    assert.match(code, /^NV-2099-03-\d{3}$/);
   });
 });

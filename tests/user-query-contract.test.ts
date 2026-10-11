@@ -1,11 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  UserQuerySchema,
-  UpdateUserRoleSchema,
-  OnboardingInputSchema,
-  UpdateUserProfileSchema,
-} from '@/contracts/users';
+import { UserQuerySchema, UpdateUserProfileSchema } from '@/contracts/users';
 import { buildUserDirectoryQueryOptions } from '@/server/users/user-directory-query';
 import { buildOffsetPagination } from '@/server/api/pagination';
 
@@ -183,120 +178,6 @@ describe('UserQuerySchema', () => {
       anotherExtra: 42,
     });
     assert.equal(result.success, true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// UpdateUserRoleSchema
-// ---------------------------------------------------------------------------
-describe('UpdateUserRoleSchema', () => {
-  const VALID_ROLES = [
-    'ADMIN',
-    'MANAGER',
-    'STAFF',
-    'BAN_GIAM_HIEU',
-    'TRUONG_PHONG',
-    'CHUYEN_VIEN',
-    'GIANG_VIEN',
-    'VAN_THU',
-    'CLERK',
-  ] as const;
-
-  // --- Happy paths ---
-
-  test('accepts all 9 valid role enum values', () => {
-    for (const role of VALID_ROLES) {
-      const result = UpdateUserRoleSchema.safeParse({ role });
-      assert.equal(result.success, true, `should accept role=${role}`);
-    }
-  });
-
-  // --- Rejection ---
-
-  test('rejects invalid role value', () => {
-    const result = UpdateUserRoleSchema.safeParse({ role: 'SUPER_ADMIN' });
-    assert.equal(result.success, false);
-  });
-
-  test('rejects missing role', () => {
-    const result = UpdateUserRoleSchema.safeParse({});
-    assert.equal(result.success, false);
-  });
-
-  // --- Strict ---
-
-  test('rejects unknown fields (strict)', () => {
-    const result = UpdateUserRoleSchema.safeParse({
-      role: 'ADMIN',
-      extraField: 'not-allowed',
-    });
-    assert.equal(result.success, false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// OnboardingInputSchema
-// ---------------------------------------------------------------------------
-describe('OnboardingInputSchema', () => {
-  // --- Happy paths ---
-
-  test('accepts empty body (all fields optional)', () => {
-    const result = OnboardingInputSchema.safeParse({});
-    assert.equal(result.success, true);
-  });
-
-  test('accepts full input with all fields', () => {
-    const result = OnboardingInputSchema.safeParse({
-      hasSeenWelcome: true,
-      hasCompletedTour: false,
-      completedSteps: ['step-1', 'step-2', 'step-3'],
-      isDismissed: false,
-      snoozedUntil: '2025-06-01T00:00:00Z',
-    });
-    assert.equal(result.success, true);
-  });
-
-  test('accepts snoozedUntil as null', () => {
-    const result = OnboardingInputSchema.safeParse({ snoozedUntil: null });
-    assert.equal(result.success, true);
-  });
-
-  // --- completedSteps boundaries ---
-
-  test('accepts completedSteps with 50 items (max)', () => {
-    const steps = Array.from({ length: 50 }, (_, i) => `step-${i}`);
-    const result = OnboardingInputSchema.safeParse({ completedSteps: steps });
-    assert.equal(result.success, true);
-  });
-
-  test('rejects completedSteps with 51 items (exceeds max)', () => {
-    const steps = Array.from({ length: 51 }, (_, i) => `step-${i}`);
-    const result = OnboardingInputSchema.safeParse({ completedSteps: steps });
-    assert.equal(result.success, false);
-  });
-
-  test('accepts completedSteps item at max 100 chars', () => {
-    const result = OnboardingInputSchema.safeParse({
-      completedSteps: ['s'.repeat(100)],
-    });
-    assert.equal(result.success, true);
-  });
-
-  test('rejects completedSteps item exceeding 100 chars', () => {
-    const result = OnboardingInputSchema.safeParse({
-      completedSteps: ['s'.repeat(101)],
-    });
-    assert.equal(result.success, false);
-  });
-
-  // --- Strict ---
-
-  test('rejects unknown fields (strict)', () => {
-    const result = OnboardingInputSchema.safeParse({
-      hasSeenWelcome: true,
-      extraField: 'not-allowed',
-    });
-    assert.equal(result.success, false);
   });
 });
 

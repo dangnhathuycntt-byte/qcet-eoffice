@@ -15,15 +15,7 @@ import {
 } from "../src/lib/unified-task-hub";
 
 // 2. Scope Unification
-import {
-  scopeToWorkspaceScope,
-  workspaceScopeToTaskScope,
-  workspaceScopeToUrlParam,
-  urlParamToWorkspaceScope,
-  parseScopeParam,
-  scopeToParam,
-  getDefaultScopeForRole,
-} from "../src/lib/unified-task-hub";
+import { workspaceScopeToTaskScope, parseScopeParam, scopeToParam, getDefaultScopeForRole } from "../src/lib/unified-task-hub";
 
 // 3. Pipeline Filtering Consistency
 import { filterTasksHub } from "../src/lib/unified-task-hub";
@@ -36,10 +28,7 @@ import {
 } from "../src/components/workspace/components/universal-action-queue";
 
 // 6. Split-Cockpit Layout & ActiveFilterBreadcrumb
-import {
-  getActiveFilterSummary,
-  ActiveFilterBreadcrumb,
-} from "../src/components/workspace/components/active-filter-breadcrumb";
+import { ActiveFilterBreadcrumb } from "../src/components/workspace/components/active-filter-breadcrumb";
 import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-adaptive-workspace";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
@@ -140,28 +129,6 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
   // Area 2: Scope Unification across school / unit / my scopes
   // --------------------------------------------------------------------------
   describe("2. Scope Unification Across Scopes", () => {
-    test("bidirectional conversion between TaskScope and WorkspaceScope", () => {
-      assert.equal(scopeToWorkspaceScope("SCHOOL_TASKS"), "school");
-      assert.equal(scopeToWorkspaceScope("UNIT_TASKS"), "unit");
-      assert.equal(scopeToWorkspaceScope("MY_TASKS"), "my");
-
-      assert.equal(workspaceScopeToTaskScope("school"), "SCHOOL_TASKS");
-      assert.equal(workspaceScopeToTaskScope("unit"), "UNIT_TASKS");
-      assert.equal(workspaceScopeToTaskScope("my"), "MY_TASKS");
-    });
-
-    test("bidirectional URL parameter conversion", () => {
-      assert.equal(workspaceScopeToUrlParam("school"), "all");
-      assert.equal(workspaceScopeToUrlParam("unit"), "unit");
-      assert.equal(workspaceScopeToUrlParam("my"), "personal");
-
-      assert.equal(urlParamToWorkspaceScope("all"), "school");
-      assert.equal(urlParamToWorkspaceScope("school"), "school");
-      assert.equal(urlParamToWorkspaceScope("unit"), "unit");
-      assert.equal(urlParamToWorkspaceScope("my"), "my");
-      assert.equal(urlParamToWorkspaceScope("personal"), "my");
-      assert.equal(urlParamToWorkspaceScope(undefined, "unit"), "unit");
-    });
 
     test("parseScopeParam correctly normalizes and guards scope permissions", () => {
       assert.equal(parseScopeParam("my"), "MY_TASKS");
@@ -318,24 +285,6 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
   // Area 6: Split-Cockpit Layout & ActiveFilterBreadcrumb
   // --------------------------------------------------------------------------
   describe("6. Split-Cockpit Layout & ActiveFilterBreadcrumb", () => {
-    test("getActiveFilterSummary produces accurate chips and handles defaults", () => {
-      const activeFilters = getActiveFilterSummary({
-        dept: "CNTT",
-        workbox: "URGENT_OVERDUE",
-        search: "đề cương",
-      });
-      assert.equal(activeFilters.length, 3);
-      assert.equal(activeFilters[0], "Đơn vị: CNTT");
-      assert.equal(activeFilters[1], "Hộp việc: URGENT_OVERDUE");
-      assert.equal(activeFilters[2], 'Từ khóa: "đề cương"');
-
-      const defaultFilters = getActiveFilterSummary({
-        dept: "ALL",
-        workbox: "ALL",
-        search: "",
-      });
-      assert.equal(defaultFilters.length, 0);
-    });
 
     test("UnifiedAdaptiveWorkspace renders responsive Split-Cockpit desktop grid", () => {
       const html = renderToStaticMarkup(

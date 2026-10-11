@@ -223,37 +223,6 @@ function getCollaboratorDisplayLabel(collaborator: string): string {
   }
 }
 
-export function getActiveFilterSummary(params: ActiveFilterSummaryParams): string[] {
-  const parts: string[] = [];
-  if (params.dept && params.dept !== "ALL") {
-    parts.push(`Đơn vị: ${params.dept}`);
-  }
-  if (params.workbox && params.workbox !== "ALL") {
-    parts.push(`Hộp việc: ${getWorkboxDisplayLabel(params.workbox)}`);
-  }
-  if (params.search && params.search.trim()) {
-    parts.push(`Từ khóa: "${params.search.trim()}"`);
-  }
-  if (params.status && params.status !== "ALL") {
-    parts.push(`Trạng thái: ${params.status}`);
-  }
-  if (params.overdue) {
-    parts.push("Trễ hạn");
-  }
-  if (params.scope && params.scope !== "ALL") {
-    const scopeLabel =
-      params.scope === "school"
-        ? "Toàn trường"
-        : params.scope === "unit"
-        ? "Đơn vị"
-        : params.scope === "my"
-        ? "Việc của tôi"
-        : params.scope;
-    parts.push(`Phạm vi: ${scopeLabel}`);
-  }
-  return parts;
-}
-
 /** Linear-style segmented filter chip (Property | Value | ✕) */
 export interface FilterSegmentChipProps {
   icon?: React.ComponentType<any>;

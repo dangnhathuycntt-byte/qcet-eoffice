@@ -3,15 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
-import {
-  isTaskWaitingApproval,
-  isActiveTaskStatus,
-  isTaskOverdueOrHasOverdueSubtask,
-  isTaskAssignedToUser,
-  isTaskAssignedToUserOrUnit,
-  computeSmartWorkboxCounts,
-  computeWorkspaceTabCounts,
-} from "../src/lib/workspace-metrics-aggregator";
+import { isTaskWaitingApproval, isActiveTaskStatus, isTaskOverdueOrHasOverdueSubtask, isTaskAssignedToUser, isTaskAssignedToUserOrUnit, computeWorkspaceTabCounts } from "../src/lib/workspace-metrics-aggregator";
 import {
   deriveAdaptiveWorkspaceData,
   type WorkspaceMetrics,
@@ -331,13 +323,7 @@ describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () 
   });
 });
 
-
 /* ===== merged from tests/workspace-metrics-aggregator.test.ts ===== */
-
-
-
-
-
 
 describe("Workspace Metrics Aggregator (Unified Phase 5/6)", () => {
   const staffUser = {
@@ -415,36 +401,6 @@ describe("Workspace Metrics Aggregator (Unified Phase 5/6)", () => {
     assert.strictEqual(isTaskAssignedToUserOrUnit(sampleTasks[3], staffUser), false); // Other dept
   });
 
-  test("computeSmartWorkboxCounts matches expectations for Staff", () => {
-    const counts = computeSmartWorkboxCounts({
-      tasks: sampleTasks,
-      user: staffUser,
-      roleScope: "my",
-      referenceDate: "2026-09-10",
-    });
-
-    // 2 tasks assigned to user (task-1 active, task-2 waiting approval)
-    assert.strictEqual(counts.myCount, 2);
-    assert.strictEqual(counts.waitingApprovalCount, 1);
-    assert.strictEqual(counts.pendingSubmissionCount, 1);
-    assert.strictEqual(counts.overdueCount, 0);
-  });
-
-  test("computeSmartWorkboxCounts matches expectations for Unit scope", () => {
-    const counts = computeSmartWorkboxCounts({
-      tasks: sampleTasks,
-      user: staffUser,
-      roleScope: "unit",
-      referenceDate: "2026-09-10",
-    });
-
-    // 3 tasks in KTL dept (excluding completed task-4)
-    assert.strictEqual(counts.myCount, 3);
-    assert.strictEqual(counts.waitingApprovalCount, 1);
-    assert.strictEqual(counts.pendingSubmissionCount, 2);
-    assert.strictEqual(counts.overdueCount, 1); // task-3 is overdue
-  });
-
   test("computeWorkspaceTabCounts produces consistent tab counts", () => {
     const tabCounts = computeWorkspaceTabCounts({
       scopedTasks: sampleTasks,
@@ -459,13 +415,7 @@ describe("Workspace Metrics Aggregator (Unified Phase 5/6)", () => {
   });
 });
 
-
 /* ===== merged from tests/adaptive-metric-strip.test.ts ===== */
-
-
-
-
-
 
 describe("AdaptiveMetricStrip Component", () => {
   const metrics = {

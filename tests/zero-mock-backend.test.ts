@@ -4,7 +4,6 @@ import { NextRequest } from "next/server";
 import { POST as loginRoute } from "../src/app/api/auth/login/route";
 import { GET as dashboardOverviewRoute } from "../src/app/api/dashboard/overview/route";
 import { getLiveDashboardData } from "../src/lib/server/dashboard-service";
-import { validateLoginForm } from "../src/lib/login-helpers";
 import { prisma } from "../src/lib/prisma";
 import { signSessionToken } from "../src/lib/jwt-session";
 
@@ -89,20 +88,6 @@ describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
       assert.equal(json.source, "database");
       assert.ok(Array.isArray(json.tasks));
       assert.ok(json.stats);
-    });
-  });
-
-  describe("5. login-helpers.ts and auth-context.tsx zero-mockup invariants", () => {
-    test("validateLoginForm validates format and does NOT synthesize user-custom-*", () => {
-      const emptyRes = validateLoginForm("");
-      assert.equal(emptyRes.valid, false);
-
-      const invalidEmailRes = validateLoginForm("not-an-email");
-      assert.equal(invalidEmailRes.valid, false);
-
-      const validRes = validateLoginForm("tuongpv@cdktcnqn.edu.vn", "validPassword123");
-      assert.equal(validRes.valid, true);
-      assert.equal((validRes as any).user, undefined, "validateLoginForm must not synthesize user object");
     });
   });
 });

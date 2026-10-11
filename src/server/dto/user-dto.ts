@@ -156,36 +156,6 @@ export function toUserPublicDTO(
   };
 }
 
-/**
- * Maps raw user entity to UserSessionDTO for session validation and client auth state.
- * Returns null if raw user is null, undefined, or not an object.
- */
-export function toUserSessionDTO(rawUser: unknown): UserSessionDTO | null {
-  if (!rawUser || typeof rawUser !== 'object') return null;
-  const user = rawUser as Record<string, any>;
-
-  return {
-    id: String(user.id ?? ''),
-    name: String(user.name ?? ''),
-    email: String(user.email ?? ''),
-    role: String(user.role ?? ''),
-    departmentId: user.departmentId ?? user.department?.id ?? null,
-    departmentCode: user.departmentCode ?? user.department?.code ?? user.department?.shortName ?? null,
-    departmentName: user.departmentName ?? user.department?.name ?? null,
-    avatarUrl: user.avatarUrl ?? user.avatar ?? null,
-  };
-}
-
-/**
- * Array mapping helpers
- */
-export function toUserSummaryDTOArray(rawUsers: unknown[]): UserSummaryDTO[] {
-  if (!Array.isArray(rawUsers)) return [];
-  return rawUsers
-    .map(toUserSummaryDTO)
-    .filter((u): u is UserSummaryDTO => u !== null);
-}
-
 export function toUserPublicDTOArray(
   rawUsers: unknown[],
   viewer?: UserViewerContext

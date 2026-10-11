@@ -4,18 +4,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  NOTIFICATION_CATEGORIES,
-  NOTIFICATION_TYPES,
-  NotificationCategoryValues,
-  isValidNotificationCategory,
-  isValidNotificationType,
-  normalizeNotificationCategory,
-  assertNotificationCategory,
-  assertNotificationType,
-  getCategoryForNotificationType,
-  isValidCategoryTypePair,
-} from '@/domain/notifications';
+import { NOTIFICATION_CATEGORIES, NOTIFICATION_TYPES, isValidNotificationCategory, isValidNotificationType, normalizeNotificationCategory } from '@/domain/notifications';
 import { ValidationError } from '@/server/api/errors';
 
 describe('WI-7.2: Notification Controlled Vocabulary (RFC-07)', () => {
@@ -84,49 +73,6 @@ describe('WI-7.2: Notification Controlled Vocabulary (RFC-07)', () => {
 
       assert.strictEqual(normalizeNotificationCategory('invalid_val'), null);
       assert.strictEqual(normalizeNotificationCategory(null), null);
-    });
-
-    it('assertNotificationCategory returns normalized category or throws ValidationError', () => {
-      assert.strictEqual(assertNotificationCategory('task'), 'TASK_ACTIVITY');
-
-      assert.throws(
-        () => assertNotificationCategory('INVALID_CATEGORY'),
-        (err: any) => {
-          assert.ok(err instanceof ValidationError);
-          assert.strictEqual(err.code, 'INVALID_NOTIFICATION_CATEGORY');
-          return true;
-        }
-      );
-    });
-
-    it('assertNotificationType returns validated type or throws ValidationError', () => {
-      assert.strictEqual(assertNotificationType('task_created'), 'TASK_CREATED');
-
-      assert.throws(
-        () => assertNotificationType('INVALID_TYPE'),
-        (err: any) => {
-          assert.ok(err instanceof ValidationError);
-          assert.strictEqual(err.code, 'INVALID_NOTIFICATION_TYPE');
-          return true;
-        }
-      );
-    });
-  });
-
-  describe('3. Category-Type Relationship & Compatibility', () => {
-    it('getCategoryForNotificationType resolves correct parent category', () => {
-      assert.strictEqual(getCategoryForNotificationType('TASK_CREATED'), 'TASK_ACTIVITY');
-      assert.strictEqual(getCategoryForNotificationType('DOCUMENT_DIRECTIVE'), 'DOCUMENT_DISPATCH');
-      assert.strictEqual(getCategoryForNotificationType('MEETING_INVITED'), 'MEETING_CALENDAR');
-      assert.strictEqual(getCategoryForNotificationType('DOSSIER_ARCHIVED' as any), 'SYSTEM_ANNOUNCEMENT');
-      assert.strictEqual(getCategoryForNotificationType('DOSSIER_ACCEPTED_ARCHIVE'), 'DOSSIER_ARCHIVE');
-    });
-
-    it('isValidCategoryTypePair returns true for matched pairs and false for mismatches', () => {
-      assert.strictEqual(isValidCategoryTypePair('TASK_ACTIVITY', 'TASK_APPROVED'), true);
-      assert.strictEqual(isValidCategoryTypePair('DOCUMENT_DISPATCH', 'DOCUMENT_RECEIVED'), true);
-      assert.strictEqual(isValidCategoryTypePair('TASK_ACTIVITY', 'DOCUMENT_RECEIVED'), false);
-      assert.strictEqual(isValidCategoryTypePair('MEETING_CALENDAR', 'DOSSIER_CLOSED'), false);
     });
   });
 });

@@ -110,14 +110,6 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
   },
 ] as const;
 
-export const CANONICAL_ZONES: readonly WorkspaceZone[] = [
-  "dashboard",
-  "calendar",
-  "tasks",
-  "documents",
-  "org",
-] as const;
-
 export function getSidebarNavItems(): CanonicalRouteConfig[] {
   return [...CANONICAL_ROUTES].sort((a, b) => a.order - b.order);
 }

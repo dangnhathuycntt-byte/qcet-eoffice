@@ -173,9 +173,3 @@ export function toCanonicalUnitCode(rawCode: string): string {
     trimmed
   );
 }
-
-export function isCanonicalUnitCode(code: string): boolean {
-  if (!code) return false;
-  const canonical = toCanonicalUnitCode(code);
-  return (QCET_CANONICAL_UNITS as readonly string[]).includes(canonical);
-}

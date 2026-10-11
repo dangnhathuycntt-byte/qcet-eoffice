@@ -1915,20 +1915,6 @@ export async function assertAuthorized(
 }
 
 /**
- * Boolean-returning authorization check
- */
-export async function isAuthorized(
-  user: AuthenticatedUserContext,
-  action: CapabilityAction,
-  resource: AuthorizationResource,
-  context: AuthorizationContext = {},
-  now: Date = new Date()
-): Promise<boolean> {
-  const result = await authorize(user, action, resource, context, now);
-  return result.allowed;
-}
-
-/**
  * Standalone verification of Separation of Duties (SoD)
  */
 export function checkSeparationOfDuties(
@@ -2020,32 +2006,4 @@ export function checkSeparationOfDuties(
   }
 
   return { valid: true };
-}
-
-/**
- * Standalone verification of Portfolio Alignment under QD 420
- */
-export function checkPortfolioAlignment(
-  user: AuthenticatedUserContext,
-  action: CapabilityAction,
-  resource: AuthorizationResource
-): { valid: boolean; reason?: string } {
-  if (!PORTFOLIO_BOUND_ACTIONS.includes(action) || !resource.portfolio) {
-    return { valid: true };
-  }
-
-  const pos = (user.activePositionCode || "").toUpperCase();
-  if (pos === "HIEU_TRUONG" || pos === "BGH_HT" || user.systemRole === "RECTOR") {
-    return { valid: true };
-  }
-
-  const userPortfolios = user.portfolios || [];
-  if (userPortfolios.includes(resource.portfolio)) {
-    return { valid: true };
-  }
-
-  return {
-    valid: false,
-    reason: `Nhiệm vụ thuộc mảng [${resource.portfolio}], không thuộc mảng phụ trách của người dùng.`,
-  };
 }

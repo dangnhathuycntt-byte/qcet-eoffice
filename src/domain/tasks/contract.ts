@@ -225,8 +225,6 @@ export function assertAntiSelfApproval(context: SoDEvaluationContext): void {
   }
 }
 
-export const assertSeparationOfDuties = assertAntiSelfApproval;
-
 // ============================================================================
 // 3. TASK CAPABILITY MATRIX EVALUATION
 // ============================================================================

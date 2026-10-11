@@ -32,33 +32,3 @@ export function shouldIgnoreShortcut(event: KeyboardEvent): boolean {
 
   return isInteractiveInput(target);
 }
-
-/**
- * Strict guard for Space key peek preview (REQ-10)
- * Space must NEVER be intercepted when the focused target is any interactive control.
- */
-export function shouldIgnoreSpaceKey(event: KeyboardEvent): boolean {
-  if (shouldIgnoreShortcut(event)) return true;
-
-  const target = event.target as HTMLElement | null;
-  if (!target) return false;
-
-  const tagName = target.tagName.toLowerCase();
-  const role = target.getAttribute("role");
-
-  if (
-    tagName === "button" ||
-    tagName === "a" ||
-    tagName === "select" ||
-    role === "button" ||
-    role === "checkbox" ||
-    role === "radio" ||
-    role === "menuitem" ||
-    role === "tab" ||
-    role === "switch"
-  ) {
-    return true;
-  }
-
-  return false;
-}

@@ -24,7 +24,7 @@ describe("Bộ icon thao tác nhiệm vụ (cùng ngôn ngữ với icon sidebar
   }
 
   it("cho phép đổi kích thước và độ dày nét", () => {
-    const html = renderToStaticMarkup(React.createElement(icons.TaskIconStar, { size: 24, strokeWidth: 2 }));
+    const html = renderToStaticMarkup(React.createElement(icons.TaskIconStatus, { size: 24, strokeWidth: 2 }));
     assert.ok(html.includes('width="24"') && html.includes('stroke-width="2"'));
   });
 });

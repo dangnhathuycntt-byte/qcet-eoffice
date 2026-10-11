@@ -1,11 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  filterTasksByAcademicMonthStrict,
-  computePriorOverdueBacklog,
-  computeMonthPartitionBucket,
-  getAcademicMonthPeriod,
-} from "../src/lib/academic-calendar";
+import { filterTasksByAcademicMonthStrict, computePriorOverdueBacklog, getAcademicMonthPeriod } from "../src/lib/academic-calendar";
 import type { SchoolTask } from "../src/types/dashboard";
 
 describe("Academic Calendar Monthly Partitioning & Backlog Engine", () => {
@@ -139,19 +134,6 @@ describe("Academic Calendar Monthly Partitioning & Backlog Engine", () => {
   test("computePriorOverdueBacklog ignores completed prior tasks", () => {
     const backlog = computePriorOverdueBacklog(sampleTasks, 9, "2026-2027", "2026-09-04");
     assert.ok(!backlog.some((t) => t.id === "task-aug-completed"));
-  });
-
-  test("computeMonthPartitionBucket produces structured bucket for Month 9", () => {
-    const bucket = computeMonthPartitionBucket(sampleTasks, 9, "2026-2027", "2026-09-04");
-    assert.equal(bucket.monthNumber, 9);
-    assert.equal(bucket.academicYear, "2026-2027");
-    assert.equal(bucket.tasks.length, 1);
-    assert.equal(bucket.priorOverdueBacklog.length, 1);
-    assert.equal(bucket.stats.totalTasks, 1);
-    assert.equal(bucket.stats.completedTasks, 0);
-    assert.equal(bucket.stats.inProgressTasks, 1);
-    assert.equal(bucket.stats.overdueTasks, 0);
-    assert.equal(bucket.stats.completionRate, 0);
   });
 
   test("getAcademicMonthPeriod returns accurate cycle dates for Month 9 and Month 1", () => {

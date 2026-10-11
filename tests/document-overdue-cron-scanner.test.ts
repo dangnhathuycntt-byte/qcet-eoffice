@@ -4,12 +4,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '../src/lib/prisma';
 import { DocumentStatus, DocumentType, UserRole, UnitType, UnitStatus } from '@prisma/client';
 import { getIctReferenceDateStart } from '../src/domain/tasks/deadlines';
-import {
-  scanAndDispatchDocumentDeadlines,
-  resolveDocumentStakeholders,
-  formatIctDate,
-  documentDeadlineOutboxHandler,
-} from '../src/lib/documents/document-deadline-scanner';
+import { scanAndDispatchDocumentDeadlines, resolveDocumentStakeholders, formatIctDate } from '../src/lib/documents/document-deadline-scanner';
 import {
   formatDocumentPushPayload,
   setPushSenderForTesting,
@@ -438,39 +433,6 @@ describe('Document Overdue Cron Scanner & Web-Push Dispatcher (document-overdue-
       } finally {
         process.env.CRON_SECRET = originalSecret;
       }
-    });
-  });
-
-  describe('6. Outbox Event Handler for Document Deadlines', () => {
-    test('processes DOCUMENT_OVERDUE_NOTIFICATION outbox event and sends push', async () => {
-      const pushedUsers: string[] = [];
-      setPushSenderForTesting(async (sub) => {
-        return { statusCode: 201, body: 'ok', headers: {} };
-      });
-
-      const mockEvent: any = {
-        id: `evt-test-${Date.now()}`,
-        eventType: OutboxEventType.DOCUMENT_OVERDUE_NOTIFICATION,
-        aggregateType: 'Document',
-        aggregateId: `doc-overdue-${testRunId}`,
-        payload: {
-          documentId: `doc-overdue-${testRunId}`,
-          documentNumber: '999/QCET',
-          summary: 'Kiểm thử xử lý outbox event',
-          dueDateStr: '20/09/2026',
-          urgency: 'KHAN',
-          type: 'OVERDUE',
-          targetUserIds: [testLeadUser.id, testLeaderUser.id],
-        },
-      };
-
-      await documentDeadlineOutboxHandler(mockEvent, {
-        client: prisma,
-        attempt: 1,
-        now: new Date(),
-      });
-      // Handler completes without error
-      assert.ok(true, 'documentDeadlineOutboxHandler should execute cleanly');
     });
   });
 });

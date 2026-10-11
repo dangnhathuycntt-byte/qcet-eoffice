@@ -34,33 +34,6 @@ export const InstitutionalRoleSchema = z.enum([
 ]);
 
 /**
- * Role update command contract.
- * Strictly prevents modification of arbitrary user fields during role update.
- */
-export const UpdateUserRoleSchema = z
-  .object({
-    role: InstitutionalRoleSchema,
-  })
-  .strict();
-
-/**
- * Onboarding input contract.
- * Strict bounds and mass-assignment protection.
- */
-export const OnboardingInputSchema = z
-  .object({
-    hasSeenWelcome: z.boolean().optional(),
-    hasCompletedTour: z.boolean().optional(),
-    completedSteps: z
-      .array(z.string().trim().max(100, 'Step identifier cannot exceed 100 characters'))
-      .max(50, 'Cannot record more than 50 completed steps')
-      .optional(),
-    isDismissed: z.boolean().optional(),
-    snoozedUntil: z.string().max(100).nullable().optional(),
-  })
-  .strict();
-
-/**
  * User profile update command contract.
  * Strictly prevents modification of role, departmentId, isActive, or arbitrary system fields.
  */

@@ -8,13 +8,7 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  OUTGOING_DOCUMENT_TRANSITIONS,
-  OutgoingDocumentStateMachine,
-  isDocumentImmutable,
-  assertDocumentNotImmutable,
-  mapOutgoingWorkflowStatusToDocumentStatus,
-} from "../src/lib/documents/state-machine";
+import { OUTGOING_DOCUMENT_TRANSITIONS, OutgoingDocumentStateMachine, isDocumentImmutable, mapOutgoingWorkflowStatusToDocumentStatus } from "../src/lib/documents/state-machine";
 import type { OutgoingDocumentStatus } from "@prisma/client";
 
 // ============================================================================
@@ -231,19 +225,6 @@ describe("Bất biến văn bản (Document Immutability)", () => {
       isDocumentImmutable({
         outgoingWorkflow: { status: "AUTHORIZED_SIGN", authorizedSignedAt: new Date() },
       })
-    );
-  });
-
-  it("assertDocumentNotImmutable ném lỗi với code IMMUTABLE_DOCUMENT", () => {
-    assert.throws(
-      () => assertDocumentNotImmutable({ outgoingWorkflow: { status: "ISSUED" } }),
-      (err: any) => err.code === "IMMUTABLE_DOCUMENT"
-    );
-  });
-
-  it("assertDocumentNotImmutable không ném lỗi cho văn bản mutable", () => {
-    assert.doesNotThrow(() =>
-      assertDocumentNotImmutable({ outgoingWorkflow: { status: "DRAFT" } })
     );
   });
 });

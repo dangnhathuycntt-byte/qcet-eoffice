@@ -359,17 +359,3 @@ export function canUserDeleteDeliverable(
   };
 }
 
-export const taskPolicy = {
-  isPrivilegedUser,
-  isDepartmentLeader,
-  checkActiveDelegation,
-  canUserCreateTask,
-  canUserUpdateTask,
-  canUserApproveTask,
-  canUserDeleteTask,
-  canUserSubmitDeliverable,
-  canUserReviewDeliverable,
-  canUserDeleteDeliverable,
-  canUserTransitionStatus,
-};
-

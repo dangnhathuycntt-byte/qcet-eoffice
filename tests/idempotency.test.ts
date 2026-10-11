@@ -2,13 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../src/lib/prisma';
-import {
-  withIdempotency,
-  IdempotencyConflictError,
-  getIdempotencyRecord,
-  clearIdempotencyRecord,
-  cleanupExpiredIdempotencyRecords,
-} from '../src/lib/db/idempotency';
+import { withIdempotency, IdempotencyConflictError, getIdempotencyRecord, clearIdempotencyRecord } from '../src/lib/db/idempotency';
 
 describe('Task 8: Idempotency Record Table & Helper', () => {
   const testRunId = `test_idem_${Date.now()}`;
@@ -529,51 +523,6 @@ describe('Task 8: Idempotency Record Table & Helper', () => {
 
       const existsAfter = await getIdempotencyRecord(prisma, { userId: testUserId1, operation: op, key });
       assert.strictEqual(existsAfter, null);
-    });
-
-    test('cleanupExpiredIdempotencyRecords deletes expired records while preserving active', async () => {
-      const expiredKey = `key_expired_clean_${Date.now()}`;
-      const activeKey = `key_active_clean_${Date.now()}`;
-
-      // Insert one expired and one active record
-      await prisma.idempotencyRecord.create({
-        data: {
-          userId: testUserId1,
-          operation: 'CLEANUP_TEST',
-          key: expiredKey,
-          status: 'COMPLETED',
-          response: { exp: true },
-          expiresAt: new Date(Date.now() - 10000), // 10s ago
-        },
-      });
-
-      await prisma.idempotencyRecord.create({
-        data: {
-          userId: testUserId1,
-          operation: 'CLEANUP_TEST',
-          key: activeKey,
-          status: 'COMPLETED',
-          response: { active: true },
-          expiresAt: new Date(Date.now() + 60000), // 60s in future
-        },
-      });
-
-      const deletedCount = await cleanupExpiredIdempotencyRecords(prisma, new Date());
-      assert.ok(deletedCount >= 1, 'Should delete at least 1 expired record');
-
-      const expiredRecord = await getIdempotencyRecord(prisma, {
-        userId: testUserId1,
-        operation: 'CLEANUP_TEST',
-        key: expiredKey,
-      });
-      assert.strictEqual(expiredRecord, null, 'Expired record should have been cleaned up');
-
-      const activeRecord = await getIdempotencyRecord(prisma, {
-        userId: testUserId1,
-        operation: 'CLEANUP_TEST',
-        key: activeKey,
-      });
-      assert.ok(activeRecord, 'Active record must remain intact');
     });
   });
 

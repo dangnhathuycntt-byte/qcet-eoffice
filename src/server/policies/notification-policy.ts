@@ -19,17 +19,3 @@ export function canReadNotification(
   }
   return notification.userId === user.id;
 }
-
-/**
- * Checks if user can delete the specified notification.
- * Strictly enforces recipient-only deletion.
- */
-export function canDeleteNotification(
-  user: AuthenticatedUser,
-  notification: NotificationEntity
-): boolean {
-  if (!user || !user.id || !notification || !notification.userId) {
-    return false;
-  }
-  return notification.userId === user.id;
-}

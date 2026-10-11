@@ -17,10 +17,8 @@ import {
   PayloadTooLargeError,
   UnsupportedMediaTypeError,
   toApiErrorResponse,
-  parseApiError,
   type ApiErrorResponse,
 } from "../src/server/api/errors";
-// api-client shim removed; parseApiError is imported directly from src/server/api/errors above
 import { apiError } from "../src/server/api/response";
 
 // Import all route loading and error components
@@ -188,100 +186,6 @@ describe("Phase 20: Canonical Error Contract", () => {
     });
   });
 
-  describe("parseApiError parsing helper", () => {
-    it("parses canonical flat API error response", () => {
-      const payload = {
-        error: "Truy cập bị từ chối",
-        code: "FORBIDDEN",
-        message: "Truy cập bị từ chối",
-        requestId: "req-abc-123",
-      };
-
-      const parsed = parseApiError(payload);
-      assert.strictEqual(parsed.code, "FORBIDDEN");
-      assert.strictEqual(parsed.message, "Truy cập bị từ chối");
-      assert.strictEqual(parsed.requestId, "req-abc-123");
-      assert.strictEqual(parsed.fieldErrors, undefined);
-    });
-
-    it("parses canonical error with fieldErrors", () => {
-      const payload = {
-        error: "Validation failed",
-        code: "VALIDATION_ERROR",
-        message: "Dữ liệu không hợp lệ",
-        fieldErrors: { title: ["Thiếu tiêu đề"], deadline: ["Ngày không hợp lệ"] },
-        requestId: "req-val-456",
-      };
-
-      const parsed = parseApiError(payload);
-      assert.strictEqual(parsed.code, "VALIDATION_ERROR");
-      assert.strictEqual(parsed.message, "Dữ liệu không hợp lệ");
-      assert.deepStrictEqual(parsed.fieldErrors, {
-        title: ["Thiếu tiêu đề"],
-        deadline: ["Ngày không hợp lệ"],
-      });
-      assert.strictEqual(parsed.requestId, "req-val-456");
-    });
-
-    it("parses legacy string error { error: string } cleanly", () => {
-      const legacyPayload = {
-        error: "Người dùng chưa đăng nhập hoặc phiên làm việc đã hết hạn",
-      };
-
-      const parsed = parseApiError(legacyPayload);
-      assert.strictEqual(parsed.code, "UNKNOWN_ERROR");
-      assert.strictEqual(
-        parsed.message,
-        "Người dùng chưa đăng nhập hoặc phiên làm việc đã hết hạn"
-      );
-    });
-
-    it("parses legacy string error with optional code { error: string, code: string }", () => {
-      const legacyPayload = {
-        error: "Phiên đăng nhập hết hạn",
-        code: "AUTH_REQUIRED",
-      };
-
-      const parsed = parseApiError(legacyPayload);
-      assert.strictEqual(parsed.code, "AUTH_REQUIRED");
-      assert.strictEqual(parsed.message, "Phiên đăng nhập hết hạn");
-    });
-
-    it("parses nested error payload { error: { code, message, requestId } }", () => {
-      const nestedPayload = {
-        error: {
-          code: "CONFLICT",
-          message: "Mã số nhiệm vụ đã được sử dụng",
-          requestId: "req-nested-999",
-        },
-      };
-
-      const parsed = parseApiError(nestedPayload);
-      assert.strictEqual(parsed.code, "CONFLICT");
-      assert.strictEqual(parsed.message, "Mã số nhiệm vụ đã được sử dụng");
-      assert.strictEqual(parsed.requestId, "req-nested-999");
-    });
-
-    it("gracefully handles plain strings and Error instances", () => {
-      const stringResult = parseApiError("Lỗi kết nối máy chủ");
-      assert.strictEqual(stringResult.code, "UNKNOWN_ERROR");
-      assert.strictEqual(stringResult.message, "Lỗi kết nối máy chủ");
-
-      const errorResult = parseApiError(new Error("Timeout khi đồng bộ"));
-      assert.strictEqual(errorResult.code, "INTERNAL_ERROR");
-      assert.strictEqual(errorResult.message, "Timeout khi đồng bộ");
-    });
-
-    it("gracefully handles null, undefined, and empty objects", () => {
-      const nullResult = parseApiError(null);
-      assert.strictEqual(nullResult.code, "INTERNAL_ERROR");
-      assert.ok(nullResult.message.length > 0);
-
-      const emptyResult = parseApiError({});
-      assert.strictEqual(emptyResult.code, "UNKNOWN_ERROR");
-      assert.ok(emptyResult.message.length > 0);
-    });
-  });
 });
 
 describe("Phase 9: Route-level Loading & Error Architecture", () => {

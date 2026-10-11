@@ -252,27 +252,6 @@ export const DEFAULT_PAGE_SIZE = 20;
 export const DEFAULT_PAGE_SIZES = [20, 50, 100];
 
 /**
- * Density mapping compatible with numeric/string row heights
- */
-export const TABLE_DENSITY_CONFIG = {
-  compact: {
-    rowHeight: 36,
-    padding: "py-1.5 px-3",
-    fontSize: "text-xs",
-  },
-  standard: {
-    rowHeight: 48,
-    padding: "py-2.5 px-3",
-    fontSize: "text-sm",
-  },
-  comfortable: {
-    rowHeight: 56,
-    padding: "py-3 px-4",
-    fontSize: "text-sm",
-  },
-};
-
-/**
  * Status config map compatible with STATUS_BADGE_CONFIGS
  */
 export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; borderClass: string; oklchColor: string; oklchBg: string }> = {
@@ -346,15 +325,5 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     oklchColor: "oklch(0.55 0.01 250)",
     oklchBg: "oklch(0.95 0.005 250)",
   },
-};
-
-export const CATEGORY_LABELS: Record<string, string> = {
-  CHUYEN_DOI_SO: "Chuyển đổi số",
-  TRUYEN_THONG: "Truyền thông",
-  CNTT: "CNTT",
-  ATTT: "An toàn thông tin",
-  THU_VIEN: "Thư viện",
-  BAO_CAO: "Báo cáo",
-  KHAC: "Khác",
 };
 

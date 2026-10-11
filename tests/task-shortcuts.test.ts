@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { shouldIgnoreShortcut, shouldIgnoreSpaceKey, isInteractiveInput } from "../src/lib/shortcuts/guards";
-import { formatShortcutLabel } from "../src/lib/shortcuts/platform";
+import { shouldIgnoreShortcut, isInteractiveInput } from "../src/lib/shortcuts/guards";
 
 test("guards: detects interactive input elements", () => {
   const input = { tagName: "INPUT", getAttribute: () => null } as unknown as HTMLElement;
@@ -15,23 +14,4 @@ test("guards: detects interactive input elements", () => {
   assert.equal(isInteractiveInput(select), true);
   assert.equal(isInteractiveInput(textboxRole), true);
   assert.equal(isInteractiveInput(div), false);
-});
-
-test("guards: shouldIgnoreSpaceKey protects buttons, checkboxes, and interactive controls", () => {
-  const button = { tagName: "BUTTON", getAttribute: () => null } as unknown as HTMLElement;
-  const checkbox = { tagName: "INPUT", getAttribute: (attr: string) => attr === "role" ? "checkbox" : null } as unknown as HTMLElement;
-  const tableRow = { tagName: "TR", getAttribute: () => null } as unknown as HTMLElement;
-
-  const eventOnButton = { target: button, isComposing: false, keyCode: 32 } as unknown as KeyboardEvent;
-  const eventOnCheckbox = { target: checkbox, isComposing: false, keyCode: 32 } as unknown as KeyboardEvent;
-  const eventOnRow = { target: tableRow, isComposing: false, keyCode: 32 } as unknown as KeyboardEvent;
-
-  assert.equal(shouldIgnoreSpaceKey(eventOnButton), true);
-  assert.equal(shouldIgnoreSpaceKey(eventOnCheckbox), true);
-  assert.equal(shouldIgnoreSpaceKey(eventOnRow), false);
-});
-
-test("platform: formats shortcut labels", () => {
-  const label = formatShortcutLabel(["ctrl", "shift", "c"]);
-  assert.ok(label.includes("C"));
 });

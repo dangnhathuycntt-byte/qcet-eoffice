@@ -34,16 +34,6 @@ export const CreateMeetingSchema = z.object({
 
 export type CreateMeetingInput = z.infer<typeof CreateMeetingSchema>;
 
-export const UpdateMeetingSchema = z.object({
-  title: z.string().min(3).max(500).optional(),
-  code: z.string().max(100).optional(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
-  location: z.string().max(255).optional(),
-  agenda: z.string().optional(),
-  materialsUrl: z.string().optional(),
-});
-
 export const AddParticipantSchema = z.object({
   userId: z.string().min(1, 'userId là bắt buộc'),
   role: z.nativeEnum(MeetingParticipantRole).default(MeetingParticipantRole.ATTENDEE),

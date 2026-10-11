@@ -18,7 +18,7 @@
  *    silently become business authority to view personal data.
  */
 
-import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
+import { type AuthenticatedUser } from '@/server/api/request-context';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 
 export interface TargetUserDescriptor {
@@ -180,7 +180,3 @@ export function canReadSensitivePersonalData(
   // Default Deny: All other members (staff, colleagues, cross-unit peers)
   return false;
 }
-
-export const userDirectoryPolicy = {
-  canReadSensitivePersonalData,
-};

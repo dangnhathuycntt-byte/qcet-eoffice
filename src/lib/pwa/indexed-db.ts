@@ -318,38 +318,6 @@ export async function deleteRecord(
 }
 
 /**
- * Retrieves all records from an object store.
- */
-export async function getAllRecords<T extends BaseOfflineRecord>(
-  storeName: string
-): Promise<T[]> {
-  const db = await getDatabase();
-  if (!db) {
-    const memory = getMemoryStore(storeName);
-    return Array.from(memory.values()).map(
-      (v) => JSON.parse(JSON.stringify(v)) as T
-    );
-  }
-
-  return new Promise<T[]>((resolve, reject) => {
-    try {
-      const tx = db.transaction(storeName, "readonly");
-      const store = tx.objectStore(storeName);
-      const req = store.getAll();
-
-      req.onsuccess = () => {
-        resolve((req.result as T[]) || []);
-      };
-      req.onerror = () => {
-        reject(req.error);
-      };
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-/**
  * Retrieves records using an index.
  */
 export async function getRecordsByIndex<T extends BaseOfflineRecord>(
@@ -468,29 +436,6 @@ export async function clearStore(storeName: string): Promise<void> {
       const req = store.clear();
 
       req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-/**
- * Counts the number of records in an object store.
- */
-export async function countRecords(storeName: string): Promise<number> {
-  const db = await getDatabase();
-  if (!db) {
-    return getMemoryStore(storeName).size;
-  }
-
-  return new Promise<number>((resolve, reject) => {
-    try {
-      const tx = db.transaction(storeName, "readonly");
-      const store = tx.objectStore(storeName);
-      const req = store.count();
-
-      req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     } catch (err) {
       reject(err);

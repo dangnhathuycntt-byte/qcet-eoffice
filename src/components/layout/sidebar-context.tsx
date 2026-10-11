@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import type { UserRole } from "@/types/auth";
 import { resolveBreadcrumb } from "@/lib/navigation/active-matcher";
-import { FileText, Building2, LayoutDashboard, Calendar, Bell, CheckSquare, Inbox, Network, type LucideIcon } from "lucide-react";
+import { FileText, Building2, LayoutDashboard, Calendar, CheckSquare, Inbox, type LucideIcon } from "lucide-react";
 import { WorkspaceZone } from "@/types/workspace";
 import { animate, useMotionValue, type MotionValue } from "motion/react";
 import { motionTransition } from "@/lib/motion/tokens";
@@ -137,21 +137,6 @@ export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
   docsOutbox: 0,
   docsPending: 0,
 };
-
-export const NAVIGATION_ITEMS: NavigationItem[] = [
-  { href: "/", label: "Quản lý công việc", icon: CheckSquare },
-  { href: "/dashboard", label: "Báo cáo KPI", icon: LayoutDashboard },
-  { href: "/org", label: "Cơ cấu & Danh bạ", icon: Network },
-  { href: "/notifications", label: "Thông báo", icon: Bell },
-];
-
-export const SIDEBAR_ZONE_ITEMS: NavigationItem[] = [
-  { href: "/tasks", label: "Nhiệm vụ", icon: CheckSquare, zone: "tasks" },
-  { href: "/calendar", label: "Lịch công tác", icon: Calendar, zone: "calendar" },
-  { href: "/documents", label: "Sổ văn bản đến/đi", icon: FileText, zone: "documents" },
-  { href: "/org", label: "Sơ đồ tổ chức & Nhân sự", icon: Network, zone: "org" },
-  { href: "/notifications", label: "Thông báo & Nhắc việc", icon: Bell },
-];
 
 export const SIDEBAR_STORAGE_KEY = "qcet_sidebar_collapsed";
 export const SIDEBAR_EXPANDED_WIDTH = 228;

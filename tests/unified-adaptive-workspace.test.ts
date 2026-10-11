@@ -13,11 +13,7 @@ import {
   applyOptimisticStatusChange,
   TaskManagementWorkspace,
 } from "../src/components/tasks/task-management-workspace";
-import {
-  parseTaskUrlParams,
-  buildTaskUrlQuery,
-  syncTaskUrlParams,
-} from "../src/hooks/use-task-filters";
+import { parseTaskUrlParams, buildTaskUrlQuery } from "../src/hooks/use-task-filters";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
@@ -134,13 +130,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   });
 });
 
-
 /* ===== merged from tests/adaptive-workspace-data.test.ts ===== */
-
-
-
-
-
 
 describe("Adaptive Workspace Data Derivation", () => {
   const payload = getMockDashboardPayload();
@@ -233,15 +223,7 @@ describe("Adaptive Workspace Data Derivation", () => {
   });
 });
 
-
 /* ===== merged from tests/unified-workspace-consolidation.test.ts ===== */
-
-
-
-
-
-
-
 
 describe("Unified Task Workspace Engine Consolidation (Task 2)", () => {
   const sampleTasks: SchoolTask[] = [
@@ -304,18 +286,7 @@ describe("Unified Task Workspace Engine Consolidation (Task 2)", () => {
 
 });
 
-
 /* ===== merged from tests/adaptive-detail-surface.test.ts ===== */
-
-
-
-
-
-
-
-
-
-
 
 const sampleUser: AuthUser = {
   id: "user-admin-01",
@@ -536,44 +507,6 @@ describe("Task 4: Full-Width Task Canvas & Adaptive Detail Surface", () => {
         taskId: "NV-2026-09-001",
       });
       assert.ok(query.includes("taskId=NV-2026-09-001"), "Query string must include taskId");
-    });
-
-    test("syncTaskUrlParams sets taskId when selecting task and deletes taskId when closing detail", () => {
-      let currentUrl = "";
-      const mockRouter = {
-        push: (url: string) => {
-          currentUrl = url;
-        },
-        replace: (url: string) => {
-          currentUrl = url;
-        },
-      };
-
-      // Select task
-      syncTaskUrlParams(
-        {
-          scope: "school",
-          taskId: "NV-2026-09-001",
-        },
-        mockRouter as any
-      );
-      assert.ok(
-        currentUrl.includes("taskId=NV-2026-09-001"),
-        "URL must include taskId when selecting task"
-      );
-
-      // Deselect task (close detail)
-      syncTaskUrlParams(
-        {
-          scope: "school",
-          taskId: null,
-        },
-        mockRouter as any
-      );
-      assert.ok(
-        !currentUrl.includes("taskId="),
-        "URL must not include taskId when detail is closed"
-      );
     });
   });
 

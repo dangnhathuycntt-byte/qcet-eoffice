@@ -49,15 +49,6 @@ export const SearchQuerySchema = z.object({
 });
 
 /**
- * Standard identifier schema (UUID, CUID, or alphanumeric entity ID).
- */
-export const IdSchema = z
-  .string()
-  .trim()
-  .min(1, 'ID cannot be empty')
-  .max(128, 'ID cannot exceed 128 characters');
-
-/**
  * ISO date string validation schema.
  * Validates ISO 8601 strings (YYYY-MM-DD or full ISO 8601 with time/timezone).
  */

@@ -360,26 +360,6 @@ export function isTaskAssignee(task: any, userId: string): boolean {
 }
 
 /**
- * Checks if the task due date is strictly in the past using ICT timezone boundaries.
- */
-function isDatePast(dueDate: string | Date | null | undefined, referenceNow?: Date | string | number): boolean {
-  if (!dueDate) return false;
-
-  const refDateStr = referenceNow
-    ? typeof referenceNow === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(referenceNow.slice(0, 10))
-      ? referenceNow.slice(0, 10)
-      : new Intl.DateTimeFormat('en-CA', {
-          timeZone: 'Asia/Ho_Chi_Minh',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-        }).format(new Date(referenceNow))
-    : getSystemReferenceDate();
-
-  return isTaskPastDue(dueDate, refDateStr);
-}
-
-/**
  * Checks if the task due date is within the specified days window (default 3 days)
  * from the reference date in ICT timezone, and not yet overdue.
  *
@@ -421,69 +401,4 @@ export function isTaskDueSoon(
   const diffDays = Math.round((dueUtc - refUtc) / (1000 * 60 * 60 * 24));
 
   return diffDays >= 0 && diffDays <= daysWindow;
-}
-
-/**
- * Resolves the subjective attention types for a user on a given task.
- *
- * @param task The task domain entity, DTO, or ViewModel.
- * @param userContext Context of the inspecting user.
- * @returns Array of applicable UserAttentionType items.
- */
-export function resolveUserAttention(
-  task: any,
-  userContext: UserContext
-): UserAttentionType[] {
-  if (!task || !userContext || !userContext.userId) {
-    return [];
-  }
-
-  const { userId } = userContext;
-  const status = mapDbStatusToLifecycle(task.status);
-  const attentions: UserAttentionType[] = [];
-
-  const isAssignee = isTaskAssignee(task, userId);
-
-  const isOverdue =
-    task.isOverdue === true ||
-    isDatePast(task.dueDate, userContext.now);
-
-  // 1. Temporal Attention: 'overdue'
-  // When dueDate < now and status !== 'COMPLETED' (and !== 'CANCELLED')
-  if (status !== 'COMPLETED' && status !== 'CANCELLED') {
-    if (isOverdue) {
-      attentions.push('overdue');
-    }
-  }
-
-  // 2. Temporal Attention: 'due_soon'
-  // Active task, not overdue, and dueDate within 3 days in ICT
-  if (status !== 'COMPLETED' && status !== 'CANCELLED' && !isOverdue) {
-    if (isTaskDueSoon(task.dueDate, userContext.now, 3)) {
-      attentions.push('due_soon');
-    }
-  }
-
-  // 3. Maker Attention: 'requires_my_action'
-  // When user is assignee/co-assignee and task is NOT_STARTED or IN_PROGRESS
-  if (isAssignee) {
-    if (status === 'NOT_STARTED' || status === 'IN_PROGRESS') {
-      attentions.push('requires_my_action');
-    }
-  }
-
-  // 4. Checker Attention: 'requires_my_approval'
-  // Actor-specific, server-capability gated, and SoD-enforced via the single
-  // canonical review gate (T04).
-  if (canUserReviewTask(task, userContext)) {
-    attentions.push('requires_my_approval');
-  }
-
-  // 5. Blocked Attention: 'blocked'
-  if (task.status === 'BLOCKED' || task.isBlocked === true) {
-    attentions.push('blocked');
-  }
-
-  // Deduplicate results while preserving deterministic order
-  return Array.from(new Set(attentions));
 }

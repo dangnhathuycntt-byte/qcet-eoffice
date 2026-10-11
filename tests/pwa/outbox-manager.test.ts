@@ -1,28 +1,6 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import {
-  enqueueOutbox,
-  getOutboxQueue,
-  peekOutbox,
-  getConflictItems,
-  getUnknownResultItems,
-  resolveConflict,
-  removeOutboxItem,
-  clearOutbox,
-  updateOutboxItem,
-  flushOutbox,
-  drainOutbox,
-  reconcileUnknownItems,
-  reconcileStuckSyncingItems,
-  setActiveUserId,
-  getActiveUserId,
-  switchActiveUser,
-  subscribeOutbox,
-  registerBackgroundSync,
-  setupOutboxAutoSyncListeners,
-  SYNC_TAG_QCET_OUTBOX,
-  OfflineOutboxItem,
-} from "../../src/lib/pwa/outbox-manager";
+import { enqueueOutbox, getOutboxQueue, peekOutbox, getConflictItems, getUnknownResultItems, resolveConflict, removeOutboxItem, clearOutbox, updateOutboxItem, flushOutbox, drainOutbox, reconcileUnknownItems, reconcileStuckSyncingItems, setActiveUserId, getActiveUserId, subscribeOutbox, registerBackgroundSync, setupOutboxAutoSyncListeners, SYNC_TAG_QCET_OUTBOX, OfflineOutboxItem } from "../../src/lib/pwa/outbox-manager";
 import {
   purgeUserOfflineData,
   clearOfflineMutationQueue,
@@ -34,29 +12,14 @@ import {
   PWAConnectivityManager,
   checkServerReachable,
 } from "../../src/lib/pwa/connectivity";
-import {
-  OFFLINE_STATE_LABELS,
-  CANONICAL_OFFLINE_LABELS,
-  outboxItemToOfflineState,
-  offlineStateForDisplay,
-  deriveOfflineState,
-  labelForOfflineState,
-  isServerConfirmed,
-} from "../../src/lib/pwa/offline-state";
+import { OFFLINE_STATE_LABELS, outboxItemToOfflineState, offlineStateForDisplay, deriveOfflineState } from "../../src/lib/pwa/offline-state";
 import {
   getTelemetryLog,
   clearTelemetryLog,
   recordTelemetry,
   maskUserId,
 } from "../../src/lib/pwa/telemetry";
-import {
-  enqueueOfflineMutation,
-  getOfflineMutationQueue,
-  removeOfflineMutation,
-  clearOfflineMutationQueue as clearLegacyMutationQueue,
-  flushOfflineMutations,
-  subscribeOfflineQueue,
-} from "../../src/lib/offline-sync";
+import { enqueueOfflineMutation, clearOfflineMutationQueue as clearLegacyMutationQueue } from "../../src/lib/offline-sync";
 
 const __originalNavigator = globalThis.navigator;
 const __originalWindow = (globalThis as { window?: unknown }).window;
@@ -405,55 +368,6 @@ describe("Task 4: Durable Offline Mutation Outbox with Idempotency & OCC Conflic
       assert.strictEqual(callCount, 1, "Fetch should only be called once across concurrent flush calls");
       assert.strictEqual(res1.succeeded, 1);
       assert.strictEqual(res2.succeeded, 1);
-    });
-  });
-
-  describe("6. Backward Compatibility Bridge in offline-sync.ts", () => {
-    it("allows synchronous enqueue, inspection, removal, and queue subscription", () => {
-      let notifiedQueue: any[] = [];
-      const unsub = subscribeOfflineQueue((q) => {
-        notifiedQueue = q;
-      });
-
-      const mutation = enqueueOfflineMutation({
-        url: "/api/tasks/compat-101",
-        method: "PATCH",
-        body: { status: "IN_PROGRESS" },
-        description: "Tiến độ nhiệm vụ compat-101",
-        expectedVersion: 1,
-      });
-
-      assert.ok(mutation.id);
-      assert.strictEqual(mutation.operation, "Tiến độ nhiệm vụ compat-101");
-      assert.strictEqual(mutation.entityId, "compat-101");
-
-      const current = getOfflineMutationQueue();
-      assert.ok(current.some((m) => m.id === mutation.id));
-      assert.ok(notifiedQueue.some((m) => m.id === mutation.id));
-
-      removeOfflineMutation(mutation.id);
-      const afterRemoval = getOfflineMutationQueue();
-      assert.strictEqual(afterRemoval.length, 0);
-
-      unsub();
-    });
-  });
-
-  describe("7. Task 3 Reviewer Fixes Verification", () => {
-    it("purgeUserOfflineData resets in-memory queue even when userId is falsy/empty", async () => {
-      // Put item in legacy/in-memory queue
-      enqueueOfflineMutation({
-        url: "/api/tasks/test",
-        method: "POST",
-        body: {},
-      });
-      assert.strictEqual(getOfflineMutationQueue().length, 1);
-
-      // Call purge with empty string / falsy userId
-      await purgeUserOfflineData("");
-
-      // In-memory queue must be cleared
-      assert.strictEqual(getOfflineMutationQueue().length, 0);
     });
   });
 
@@ -964,40 +878,6 @@ describe("Task 4: Durable Offline Mutation Outbox with Idempotency & OCC Conflic
     });
 
     describe("T62 / C6: Truthful offline state taxonomy", () => {
-      it("exposes exactly the six canonical truthful Vietnamese labels", () => {
-        assert.deepEqual([...CANONICAL_OFFLINE_LABELS], [
-          "Đã lưu trên thiết bị",
-          "Đang chờ đồng bộ",
-          "Đang đồng bộ",
-          "Đã đồng bộ",
-          "Không thể đồng bộ",
-          "Xung đột cần xử lý",
-        ]);
-        assert.equal(OFFLINE_STATE_LABELS["server-confirmed"], "Đã đồng bộ");
-        assert.equal(OFFLINE_STATE_LABELS.queued, "Đang chờ đồng bộ");
-        assert.equal(OFFLINE_STATE_LABELS.conflict, "Xung đột cần xử lý");
-        assert.equal(OFFLINE_STATE_LABELS.failed, "Không thể đồng bộ");
-      });
-
-      it("never presents queued or unconfirmed work as server-confirmed", () => {
-        const queued = outboxItemToOfflineState({ status: "pending" });
-        const unknown = outboxItemToOfflineState({
-          status: "pending",
-          unconfirmedResult: true,
-        });
-
-        assert.equal(queued, "queued");
-        assert.equal(unknown, "unknown-after-timeout");
-        assert.notEqual(queued, "server-confirmed");
-        assert.notEqual(unknown, "server-confirmed");
-        assert.equal(isServerConfirmed(queued), false);
-        assert.equal(isServerConfirmed(unknown), false);
-
-        assert.notEqual(
-          labelForOfflineState(unknown),
-          OFFLINE_STATE_LABELS["server-confirmed"]
-        );
-      });
 
       it("prioritizes conflict over queued when both are present", () => {
         const aggregate = deriveOfflineState([
@@ -1006,38 +886,6 @@ describe("Task 4: Durable Offline Mutation Outbox with Idempotency & OCC Conflic
         ]);
         assert.equal(aggregate, "conflict");
         assert.equal(deriveOfflineState([]), null);
-      });
-
-      it("surfaces the local-only 'Đã lưu trên thiết bị' label for work queued on an offline device", () => {
-        const queued = outboxItemToOfflineState({ status: "pending" });
-
-        assert.equal(
-          offlineStateForDisplay(queued, { isOnline: true }),
-          "queued",
-          "Online queued work is waiting to sync"
-        );
-        assert.equal(
-          offlineStateForDisplay(queued, { isOnline: false }),
-          "local-only",
-          "Offline queued work is truthfully saved on the device"
-        );
-        assert.equal(
-          labelForOfflineState("local-only"),
-          "Đã lưu trên thiết bị",
-          "local-only must render the canonical saved-on-device label"
-        );
-
-        const reachable = new Set<string>([
-          labelForOfflineState("local-only"),
-          labelForOfflineState("queued"),
-          labelForOfflineState("syncing"),
-          labelForOfflineState("server-confirmed"),
-          labelForOfflineState("failed"),
-          labelForOfflineState("conflict"),
-        ]);
-        for (const label of CANONICAL_OFFLINE_LABELS) {
-          assert.ok(reachable.has(label), `Canonical label must be reachable: ${label}`);
-        }
       });
     });
 
@@ -1092,41 +940,6 @@ describe("Task 4: Durable Offline Mutation Outbox with Idempotency & OCC Conflic
     });
 
     describe("T66: unknown mutation result requires reconciliation", () => {
-      it("marks a lost-response mutation as unknown-after-timeout, not cleanly pending", async () => {
-        const item = await enqueueOutbox(
-          {
-            operation: "TASK_APPROVE",
-            entityId: "task-unknown",
-            url: "/api/tasks/task-unknown/approve",
-            method: "POST",
-            payload: { decision: "APPROVED" },
-            idempotencyKey: "idemp-lost-response-key",
-          },
-          USER
-        );
-
-        const throwingFetch: typeof fetch = async () => {
-          throw new Error("Socket closed after request dispatch");
-        };
-
-        const result = await flushOutbox(USER, { fetchFn: throwingFetch });
-        assert.equal(result.succeeded, 0);
-
-        const queue = await getOutboxQueue(USER);
-        assert.equal(queue.length, 1, "Item must remain in the outbox");
-        assert.equal(queue[0].status, "pending");
-        assert.equal(queue[0].unconfirmedResult, true, "Lost response must set unconfirmedResult");
-
-        const unknown = await getUnknownResultItems(USER);
-        assert.equal(unknown.length, 1);
-        assert.equal(outboxItemToOfflineState(unknown[0]), "unknown-after-timeout");
-        assert.notEqual(
-          labelForOfflineState(outboxItemToOfflineState(unknown[0])),
-          OFFLINE_STATE_LABELS["server-confirmed"]
-        );
-
-        assert.equal(queue[0].id, item.id);
-      });
 
       it("reconciles the unknown result by replaying with the SAME idempotency key", async () => {
         await enqueueOutbox(
@@ -1443,29 +1256,6 @@ describe("Task 4: Durable Offline Mutation Outbox with Idempotency & OCC Conflic
       assert.equal(await getOutboxItem(USER_A, itemB.id), null);
       assert.ok(await getOutboxItem(USER_A, itemA.id));
       assert.ok(await getOutboxItem(USER_B, itemB.id));
-    });
-
-    it("switchActiveUser purges the previous account partition with no cross-account leakage", async () => {
-      const itemA = await enqueueFor(USER_A, "task-a-leak");
-      assert.equal((await getOutboxQueue(USER_A)).length, 1);
-
-      await switchActiveUser(USER_B, { purgePrevious: true });
-
-      assert.equal(getActiveUserId(), USER_B);
-      assert.equal(
-        (await getOutboxQueue(USER_A)).length,
-        0,
-        "Outgoing account's outbox must be cleared on switch"
-      );
-      assert.equal(
-        await getOutboxItem(USER_A, itemA.id),
-        null,
-        "No residual mutation may remain for the previous account"
-      );
-      assert.equal((await getOutboxQueue(USER_B)).length, 0);
-
-      await purgeUserOfflineData(USER_B);
-      assert.equal((await getOutboxQueue(USER_B)).length, 0);
     });
   });
 

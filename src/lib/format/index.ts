@@ -14,5 +14,4 @@
 
 export * from "./date";
 export * from "./relative-date";
-export * from "./academic-period";
 export * from "./personnel";

@@ -1,34 +1,9 @@
-import { AuthUser, UserRole } from "@/types/auth";
+import { AuthUser } from "@/types/auth";
 
 export interface LoginValidationResult {
   valid: boolean;
   error?: string;
   user?: AuthUser;
-}
-
-export function validateLoginForm(email: string, password?: string): LoginValidationResult {
-  const trimmedEmail = (email || "").trim().toLowerCase();
-
-  if (!trimmedEmail) {
-    return { valid: false, error: "Vui lòng nhập địa chỉ email công vụ (@cdktcnqn.edu.vn)" };
-  }
-
-  // Basic email pattern check
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(trimmedEmail)) {
-    return { valid: false, error: "Địa chỉ email không đúng định dạng" };
-  }
-
-  // Check password if provided (for standard login)
-  if (password !== undefined && password.length < 4) {
-    return { valid: false, error: "Mật khẩu phải có ít nhất 4 ký tự" };
-  }
-
-  return { valid: true };
-}
-
-export function resolveDemoUserByRole(_role: UserRole): AuthUser | undefined {
-  return undefined;
 }
 
 /**

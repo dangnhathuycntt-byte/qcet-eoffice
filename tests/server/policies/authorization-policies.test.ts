@@ -9,11 +9,7 @@ import {
   canDeleteDocument,
   type DocumentEntity,
 } from '@/server/policies/document-policy';
-import {
-  canReadNotification,
-  canDeleteNotification,
-  type NotificationEntity,
-} from '@/server/policies/notification-policy';
+import { canReadNotification, type NotificationEntity } from '@/server/policies/notification-policy';
 import * as PoliciesIndex from '@/server/policies';
 
 // Sample Users representing different roles & departments
@@ -207,30 +203,5 @@ describe('Notification Authorization Policy (notification-policy.ts)', () => {
       assert.strictEqual(canReadNotification(managerDeptA, notifUserA), false);
       assert.strictEqual(canReadNotification(adminUser, notifUserA), false);
     });
-  });
-
-  describe('canDeleteNotification (Strict BOLA Protection)', () => {
-    it('allows recipient to delete their notification', () => {
-      assert.strictEqual(canDeleteNotification(staffDeptA, notifUserA), true);
-    });
-
-    it('BOLA: strictly rejects other users from deleting notification', () => {
-      assert.strictEqual(canDeleteNotification(staffDeptA2, notifUserA), false);
-      assert.strictEqual(canDeleteNotification(managerDeptA, notifUserA), false);
-      assert.strictEqual(canDeleteNotification(adminUser, notifUserA), false);
-    });
-  });
-});
-
-describe('Central Policies Index (policies/index.ts)', () => {
-  it('re-exports all expected policy functions', () => {
-    assert.strictEqual(typeof PoliciesIndex.canReadDocument, 'function');
-    assert.strictEqual(typeof PoliciesIndex.canCreateDocument, 'function');
-    assert.strictEqual(typeof PoliciesIndex.canUpdateDocument, 'function');
-    assert.strictEqual(typeof PoliciesIndex.canDirectDocument, 'function');
-    assert.strictEqual(typeof PoliciesIndex.canDeleteDocument, 'function');
-
-    assert.strictEqual(typeof PoliciesIndex.canReadNotification, 'function');
-    assert.strictEqual(typeof PoliciesIndex.canDeleteNotification, 'function');
   });
 });

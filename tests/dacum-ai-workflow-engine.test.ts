@@ -2,12 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { StaffTask, SchoolTask } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
-import {
-  screenDeliverablesWithAI,
-  processTriageDecision,
-  transitionStaffTaskStatus,
-  evaluateReviewEscalation,
-} from "../src/lib/dacum-workflow-engine";
+import { screenDeliverablesWithAI, transitionStaffTaskStatus } from "../src/lib/dacum-workflow-engine";
 
 describe("DACUM AI Executive Review Assistant", () => {
   const mockSchoolTask: SchoolTask = {
@@ -107,136 +102,6 @@ describe("DACUM AI Executive Review Assistant", () => {
   });
 });
 
-describe("Cross-Department Triage Queue Processing", () => {
-  const managerCNTT: AuthUser = {
-    id: "user-mgr-cntt",
-    name: "Truong khoa CNTT",
-    email: "cntt@qcet.edu.vn",
-    role: "MANAGER",
-    roleLabel: "Truong khoa",
-    department: "Khoa CNTT",
-    departmentCode: "K_CNTT",
-  };
-
-  const staffOtherDept: AuthUser = {
-    id: "user-staff-khac",
-    name: "Nhan vien khac",
-    email: "staff@qcet.edu.vn",
-    role: "STAFF",
-    roleLabel: "Chuyen vien",
-    department: "Phong Khac",
-    departmentCode: "P_KHAC",
-  };
-
-  const pendingTriageTask: StaffTask = {
-    id: "task-triage-01",
-    title: "Phoi hop cu giang vien coi thi tuyen sinh",
-    assigneeName: "Chua phan cong",
-    status: "NEW",
-    dueDate: "2026-10-05",
-    parentSchoolTaskId: "school-task-01",
-    updatedAt: new Date().toISOString(),
-    triageStatus: "PENDING_TRIAGE",
-    triageSourceDept: "P_KHTC",
-    departmentCode: "K_CNTT",
-  };
-
-  test("rejects triage action if actor is not MANAGER or ADMIN of target department", () => {
-    const result = processTriageDecision(
-      pendingTriageTask,
-      "ACCEPT",
-      staffOtherDept,
-      { targetAssigneeId: "staff-01", targetAssigneeName: "Le Van B" }
-    );
-    assert.equal(result.success, false);
-    assert.ok(
-      result.error?.toLowerCase().includes("thẩm quyền") ||
-      result.error?.toLowerCase().includes("tham quyen")
-    );
-  });
-
-  test("rejects triage action if MANAGER belongs to a different department than the task", () => {
-    const managerOtherDept: AuthUser = {
-      id: "user-mgr-khac",
-      name: "Truong phong khac",
-      email: "mgr-khac@qcet.edu.vn",
-      role: "MANAGER",
-      roleLabel: "Truong phong",
-      department: "Phong Dao tao",
-      departmentCode: "P_DT",
-    };
-    const result = processTriageDecision(
-      pendingTriageTask,
-      "ACCEPT",
-      managerOtherDept,
-      { targetAssigneeId: "staff-01", targetAssigneeName: "Le Van B" }
-    );
-    assert.equal(result.success, false);
-    assert.ok(
-      result.error?.toLowerCase().includes("thẩm quyền") ||
-      result.error?.toLowerCase().includes("tham quyen")
-    );
-  });
-
-  test("rejects triage when task triageStatus is not PENDING_TRIAGE", () => {
-    const alreadyAccepted: StaffTask = {
-      ...pendingTriageTask,
-      triageStatus: "ACCEPTED",
-      status: "IN_PROGRESS",
-    };
-    const result = processTriageDecision(
-      alreadyAccepted,
-      "ACCEPT",
-      managerCNTT,
-      { targetAssigneeId: "staff-cntt-01", targetAssigneeName: "Nguyen Van C" }
-    );
-    assert.equal(result.success, false);
-    assert.ok(result.error?.includes("PENDING_TRIAGE"));
-  });
-
-  test("successfully accepts triage and reassigns task to internal staff", () => {
-    const result = processTriageDecision(
-      pendingTriageTask,
-      "ACCEPT",
-      managerCNTT,
-      {
-        targetAssigneeId: "staff-cntt-01",
-        targetAssigneeName: "Nguyen Van C",
-        internalDueDate: "2026-10-04",
-      }
-    );
-    assert.equal(result.success, true);
-    assert.equal(result.updatedTask?.triageStatus, "ACCEPTED");
-    assert.equal(result.updatedTask?.status, "IN_PROGRESS");
-    assert.equal(result.updatedTask?.assigneeName, "Nguyen Van C");
-    assert.equal(result.updatedTask?.internalDueDate, "2026-10-04");
-  });
-
-  test("requires rejectionReason when declining a triage request", () => {
-    const resultNoReason = processTriageDecision(
-      pendingTriageTask,
-      "REJECT",
-      managerCNTT,
-      {}
-    );
-    assert.equal(resultNoReason.success, false);
-    assert.ok(
-      resultNoReason.error?.toLowerCase().includes("lý do") ||
-      resultNoReason.error?.toLowerCase().includes("ly do")
-    );
-
-    const resultValid = processTriageDecision(
-      pendingTriageTask,
-      "REJECT",
-      managerCNTT,
-      { rejectionReason: "Trung lich bao ve do an tot nghiep." }
-    );
-    assert.equal(resultValid.success, true);
-    assert.equal(resultValid.updatedTask?.triageStatus, "REJECTED");
-    assert.equal(resultValid.updatedTask?.status, "BLOCKED");
-  });
-});
-
 describe("SLA Escalation Timers & Executive Override", () => {
   const bghAdmin: AuthUser = {
     id: "bgh-01",
@@ -278,41 +143,6 @@ describe("SLA Escalation Timers & Executive Override", () => {
     assert.equal(res.success, true);
     assert.ok(res.updatedTask?.escalation?.reviewDeadline);
     assert.equal(res.updatedTask?.escalation?.isEscalated, false);
-  });
-
-  test("evaluates escalation and sets isEscalated when past 48h SLA", () => {
-    const submittedTime = new Date("2026-09-01T08:00:00Z");
-    const deadlineTime = new Date("2026-09-03T08:00:00Z"); // +48h
-
-    const task: StaffTask = {
-      id: "task-esc-02",
-      title: "Cham thi tuyen sinh",
-      assigneeName: "Giang vien E",
-      status: "NEEDS_REVIEW",
-      dueDate: "2026-09-10",
-      parentSchoolTaskId: "school-01",
-      updatedAt: submittedTime.toISOString(),
-      escalation: {
-        submittedForReviewAt: submittedTime.toISOString(),
-        reviewDeadline: deadlineTime.toISOString(),
-        isEscalated: false,
-      },
-    };
-
-    // Before deadline
-    const taskBefore = evaluateReviewEscalation(
-      task,
-      new Date("2026-09-02T10:00:00Z")
-    );
-    assert.equal(taskBefore.escalation?.isEscalated, false);
-
-    // After deadline (+50h)
-    const taskAfter = evaluateReviewEscalation(
-      task,
-      new Date("2026-09-03T10:00:00Z")
-    );
-    assert.equal(taskAfter.escalation?.isEscalated, true);
-    assert.equal(taskAfter.escalation?.escalatedToRole, "ADMIN");
   });
 
   test("allows BGH ADMIN executive override on escalated tasks", () => {

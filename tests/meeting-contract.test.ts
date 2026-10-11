@@ -1,16 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  CreateMeetingSchema,
-  UpdateMeetingSchema,
-  AddParticipantSchema,
-  UpdateAttendanceSchema,
-  DraftMinutesSchema,
-  ConfirmMinutesSchema,
-  CreateOrganizationalBodySchema,
-  AddBodyMembershipSchema,
-  ListMeetingsQuerySchema,
-} from '@/contracts/meeting';
+import { CreateMeetingSchema, AddParticipantSchema, UpdateAttendanceSchema, DraftMinutesSchema, ConfirmMinutesSchema, CreateOrganizationalBodySchema, AddBodyMembershipSchema, ListMeetingsQuerySchema } from '@/contracts/meeting';
 
 const ISO_NOW = '2025-06-15T09:00:00.000Z';
 const ISO_LATER = '2025-06-15T11:00:00.000Z';
@@ -70,25 +60,6 @@ describe('CreateMeetingSchema', () => {
       });
       assert.equal(r.success, true, `role ${role} should be accepted`);
     }
-  });
-});
-
-// ── UpdateMeetingSchema ─────────────────────────────────────────────
-
-describe('UpdateMeetingSchema', () => {
-  test('accepts empty body (all fields optional)', () => {
-    const r = UpdateMeetingSchema.safeParse({});
-    assert.equal(r.success, true);
-  });
-
-  test('accepts title update', () => {
-    const r = UpdateMeetingSchema.safeParse({ title: 'Họp bổ sung' });
-    assert.equal(r.success, true);
-  });
-
-  test('rejects title shorter than 3 chars', () => {
-    const r = UpdateMeetingSchema.safeParse({ title: 'AB' });
-    assert.equal(r.success, false);
   });
 });
 

@@ -12,21 +12,11 @@
  */
 
 import { prisma as defaultPrisma } from "@/lib/prisma";
-import { UserRole, type Prisma } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
 import { getIctReferenceDateStart } from "@/domain/tasks/deadlines";
-import {
-  publishOutboxEvent,
-  OutboxEventType,
-  OutboxAggregateType,
-  type DbClient,
-  type OutboxEventHandler,
-} from "@/lib/db/outbox";
-import {
-  formatDocumentPushPayload,
-  sendPushNotificationToUser,
-  type PushResult,
-} from "@/lib/push-service";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType, type DbClient } from "@/lib/db/outbox";
+import { formatDocumentPushPayload, type PushResult } from "@/lib/push-service";
 
 export interface ScanDocumentDeadlinesOptions {
   now?: Date;
@@ -329,37 +319,3 @@ export async function scanAndDispatchDocumentDeadlines(
 
   return result;
 }
-
-/**
- * Outbox event handler for processing DOCUMENT_OVERDUE_NOTIFICATION
- * and DOCUMENT_EXPIRING_SOON_NOTIFICATION asynchronously.
- */
-export const documentDeadlineOutboxHandler: OutboxEventHandler = async (event) => {
-  const payload = event.payload as {
-    documentId: string;
-    documentNumber?: string;
-    summary: string;
-    dueDateStr?: string;
-    urgency?: string;
-    type: "OVERDUE" | "EXPIRING_SOON";
-    targetUserIds?: string[];
-  };
-
-  if (!payload || !payload.documentId) {
-    throw new Error("Invalid document deadline outbox payload");
-  }
-
-  const pushPayload = formatDocumentPushPayload({
-    event: payload.type === "OVERDUE" ? "DOCUMENT_OVERDUE" : "DOCUMENT_EXPIRING_SOON",
-    documentId: payload.documentId,
-    documentNumber: payload.documentNumber,
-    summary: payload.summary,
-    dueDateStr: payload.dueDateStr,
-    urgency: payload.urgency,
-  });
-
-  const targetUsers = payload.targetUserIds || [];
-  for (const userId of targetUsers) {
-    await sendPushNotificationToUser(userId, pushPayload);
-  }
-};

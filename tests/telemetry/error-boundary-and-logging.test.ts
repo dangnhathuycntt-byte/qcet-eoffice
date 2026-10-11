@@ -2,7 +2,7 @@ import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { sanitizeLogContext, sanitizeString } from "../../src/telemetry/sanitize";
 import { ServerLogger } from "../../src/telemetry/server";
-import { normalizeWebVital, getMetricRating } from "../../src/telemetry/web-vitals";
+import { getMetricRating } from "../../src/telemetry/web-vitals";
 
 describe("Error Boundary & Structured Logging Integration", () => {
   it("enforces sanitization of sensitive credentials and headers in log context", () => {
@@ -42,15 +42,5 @@ describe("Error Boundary & Structured Logging Integration", () => {
     assert.equal(captured.message, "Database connection retry");
     assert.equal(captured.context.dbUrl, "[REDACTED]");
     assert.equal(captured.context.attempt, 3);
-  });
-
-  it("web vitals normalization formats CLS and LCP correctly", () => {
-    const lcp = normalizeWebVital({ name: "LCP", value: 2100 });
-    assert.equal(lcp.rating, "good");
-    assert.equal(lcp.value, 2100);
-
-    const cls = normalizeWebVital({ name: "CLS", value: 0.28 });
-    assert.equal(cls.rating, "poor");
-    assert.equal(cls.value, 0.28);
   });
 });

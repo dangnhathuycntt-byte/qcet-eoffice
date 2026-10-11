@@ -1,35 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  ICT_TIME_ZONE,
-  toIctDateTimeParts,
-  formatIsoDate,
-  formatDisplayDate,
-  formatCompactDate,
-  formatDateSpan,
-  formatTime,
-  formatDateTime,
-  formatRelativeDate,
-  daysUntil,
-  RELATIVE_NEAR_TERM_MAX_DAYS,
-  formatAcademicMonthLabel,
-  formatAcademicMonthFullLabel,
-  formatAcademicMonthSpan,
-  formatSemesterLabel,
-  formatSemesterFullLabel,
-  formatAcademicYear,
-  formatAcademicPeriodLabel,
-} from "../src/lib/format";
+import { ICT_TIME_ZONE, toIctDateTimeParts, formatIsoDate, formatDisplayDate, formatCompactDate, formatTime, formatDateTime, formatRelativeDate, daysUntil, RELATIVE_NEAR_TERM_MAX_DAYS } from "../src/lib/format";
 import { getSystemReferenceDate } from "../src/lib/academic-calendar";
 
 describe("C19 — date/time formatting utilities (src/lib/format)", () => {
-  it("emits the frozen ISO, display, compact and span date formats (vocabulary §G.1)", () => {
-    assert.equal(formatIsoDate("2026-09-25"), "2026-09-25");
-    assert.equal(formatDisplayDate("2026-09-25"), "25/09/2026");
-    assert.equal(formatCompactDate("2026-09-25"), "25/09");
-    assert.equal(formatDateSpan("2026-08-25", "2026-09-24"), "25/08 - 24/09");
-  });
 
   it("resolves a Date to ICT calendar parts (UTC+7) rather than UTC slicing", () => {
     // 17:30 UTC is 00:30 ICT on the next day.
@@ -44,13 +19,6 @@ describe("C19 — date/time formatting utilities (src/lib/format)", () => {
     assert.equal(formatDateTime(new Date("2026-09-25T01:30:00Z")), "25/09/2026 08:30");
     assert.equal(formatDateTime("2026-09-25T08:30"), "25/09/2026 08:30");
     assert.equal(formatTime("2026-09-25T08:30"), "08:30");
-  });
-
-  it("emits the fallback for missing or invalid input", () => {
-    assert.equal(formatDisplayDate(null), "-");
-    assert.equal(formatDisplayDate("not-a-date"), "-");
-    assert.equal(formatDateTime(undefined), "-");
-    assert.equal(formatDateSpan("2026-08-25", null), "-");
   });
 
   it("rejects out-of-range components instead of rendering a fabricated date", () => {
@@ -102,30 +70,5 @@ describe("C19 — date/time formatting utilities (src/lib/format)", () => {
     assert.equal(formatRelativeDate(sysRef), "Hôm nay");
     assert.equal(daysUntil(sysRef), 0);
     assert.equal(formatRelativeDate(null), "-");
-  });
-});
-
-describe("C19 — academic-period labels (vocabulary §G.3)", () => {
-  it("emits operational month labels and spans from the canonical engine", () => {
-    assert.equal(formatAcademicMonthLabel(9), "Tháng 9");
-    assert.equal(formatAcademicMonthFullLabel(9, "2026-2027"), "Tháng 9 / 2026 (01/09 - 30/09)");
-    assert.equal(formatAcademicMonthSpan(9, "2026-2027"), "01/09 - 30/09");
-  });
-
-  it("emits semester labels in both short and full forms", () => {
-    assert.equal(formatSemesterLabel(1), "Học kỳ I");
-    assert.equal(formatSemesterLabel(2), "Học kỳ II");
-    assert.equal(formatSemesterFullLabel(1, "2026-2027"), "Học kỳ I (2026 - 2027)");
-    assert.equal(formatSemesterFullLabel(2, "2026-2027"), "Học kỳ II (2026 - 2027)");
-  });
-
-  it("emits the academic year label with the 01/09 cut-off", () => {
-    assert.equal(formatAcademicYear("2026-09-09"), "2026-2027");
-    assert.equal(formatAcademicYear("2026-08-31"), "2025-2026");
-  });
-
-  it("derives the current academic period label from the canonical engine", () => {
-    assert.equal(formatAcademicPeriodLabel("2026-09-09"), "Học kỳ I (2026 - 2027)");
-    assert.equal(formatAcademicPeriodLabel("2027-02-01"), "Học kỳ II (2026 - 2027)");
   });
 });

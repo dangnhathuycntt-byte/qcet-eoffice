@@ -26,7 +26,7 @@ import {
   OutgoingDocumentStatus,
   DocumentStatus,
 } from "@prisma/client";
-import { InvalidTransitionError, ValidationError, ForbiddenError } from "@/server/api/errors";
+import { InvalidTransitionError, ForbiddenError } from "@/server/api/errors";
 
 // ============================================================================
 // INCOMING DOCUMENT STATE MACHINE
@@ -435,20 +435,4 @@ export function isDocumentImmutable(doc: DocumentImmutabilityTarget): boolean {
   }
 
   return false;
-}
-
-/**
- * Assert that document is not immutable, or throw ValidationError.
- */
-export function assertDocumentNotImmutable(
-  doc: DocumentImmutabilityTarget,
-  operationDescription = "chỉnh sửa"
-): void {
-  if (isDocumentImmutable(doc)) {
-    throw new ValidationError(
-      `Văn bản đã ký hoặc ban hành là bất biến (immutable). Không thể ${operationDescription} trực tiếp qua generic PATCH. Vui lòng tạo bản sửa đổi (revision) hoặc văn bản đính chính.`,
-      undefined,
-      "IMMUTABLE_DOCUMENT"
-    );
-  }
 }

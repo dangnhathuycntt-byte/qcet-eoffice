@@ -333,32 +333,6 @@ export const ArchiveTaskSchema = z
 export type ArchiveTaskInput = z.infer<typeof ArchiveTaskSchema>;
 
 /**
- * Change task status command contract.
- */
-export const ChangeTaskStatusSchema = z
-  .object({
-    status: TaskStatusSchema,
-    comment: z
-      .string()
-      .trim()
-      .max(1000, 'Comment cannot exceed 1000 characters')
-      .optional()
-      .nullable(),
-  })
-  .strict();
-
-/**
- * Assign task command contract.
- */
-export const AssignTaskSchema = z
-  .object({
-    assigneeIds: z
-      .array(z.string().trim().max(128, 'Assignee ID cannot exceed 128 characters'))
-      .max(50, 'Cannot assign more than 50 assignees'),
-  })
-  .strict();
-
-/**
  * Canonical ApproveTaskInputSchema.
  * Supports resolution enum ('APPROVED' | 'REJECTED' | 'REVISION_REQUIRED'), boolean approved, and notes.
  */

@@ -4,16 +4,7 @@
 
 import * as nodeTest from "node:test";
 import assert from "node:assert/strict";
-import {
-  UNIT_WORK_ASSIGNMENT_STATUSES,
-  UnitWorkAssignmentStatusValues,
-  isValidUnitWorkAssignmentStatus,
-  assertUnitWorkAssignmentStatus,
-  canTransitionUnitAssignment,
-  assertUnitAssignmentTransition,
-  ALLOWED_UNIT_ASSIGNMENT_TRANSITIONS,
-  TERMINAL_UNIT_ASSIGNMENT_STATUSES,
-} from "../../src/domain/documents/unit-assignment-status";
+import { UNIT_WORK_ASSIGNMENT_STATUSES, UnitWorkAssignmentStatusValues, isValidUnitWorkAssignmentStatus, assertUnitWorkAssignmentStatus, canTransitionUnitAssignment, assertUnitAssignmentTransition, ALLOWED_UNIT_ASSIGNMENT_TRANSITIONS } from "../../src/domain/documents/unit-assignment-status";
 import { ValidationError, InvalidTransitionError } from "../../src/server/api/errors";
 
 const describe: any = (globalThis as any).describe || nodeTest.describe;
@@ -85,14 +76,6 @@ describe("WI-7.3: UnitWorkAssignment Controlled Vocabulary", () => {
     it("prohibits backward transitions to ASSIGNED", () => {
       assert.equal(canTransitionUnitAssignment("IN_PROGRESS", "ASSIGNED"), false);
       assert.equal(canTransitionUnitAssignment("RESOLVED", "ASSIGNED"), false);
-    });
-
-    it("prohibits outgoing transitions from terminal states (RESOLVED, CANCELLED)", () => {
-      for (const terminal of TERMINAL_UNIT_ASSIGNMENT_STATUSES) {
-        for (const target of UNIT_WORK_ASSIGNMENT_STATUSES) {
-          assert.equal(canTransitionUnitAssignment(terminal, target), false);
-        }
-      }
     });
 
     it("assertUnitAssignmentTransition does not throw for valid transition", () => {

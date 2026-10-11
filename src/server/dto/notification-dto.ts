@@ -70,26 +70,3 @@ export function toNotificationDTOArray(rawNotifs: unknown[]): NotificationDTO[] 
     .map(toNotificationDTO)
     .filter((n): n is NotificationDTO => n !== null);
 }
-
-/**
- * Creates canonical NotificationListResponseDTO with counts.
- */
-export function toNotificationListResponseDTO(
-  rawNotifs: unknown[],
-  unreadCount?: number,
-  total?: number
-): NotificationListResponseDTO {
-  const items = toNotificationDTOArray(rawNotifs);
-  const actualUnreadCount = typeof unreadCount === 'number'
-    ? unreadCount
-    : items.filter((n) => !n.isRead).length;
-  const actualTotal = typeof total === 'number'
-    ? total
-    : items.length;
-
-  return {
-    items,
-    unreadCount: actualUnreadCount,
-    total: actualTotal,
-  };
-}

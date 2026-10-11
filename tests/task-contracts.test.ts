@@ -9,17 +9,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  CreateTaskInputSchema,
-  UpdateTaskMetadataSchema,
-  ChangeTaskStatusSchema,
-  ApproveTaskInputSchema,
-  SubmitDeliverableInputSchema,
-  ReviewDeliverableInputSchema,
-  AssignTaskSchema,
-  ArchiveTaskSchema,
-  TaskDeliverableInputSchema,
-} from "@/contracts/tasks";
+import { CreateTaskInputSchema, UpdateTaskMetadataSchema, ApproveTaskInputSchema, SubmitDeliverableInputSchema, ReviewDeliverableInputSchema, ArchiveTaskSchema, TaskDeliverableInputSchema } from "@/contracts/tasks";
 
 // ---------------------------------------------------------------------------
 // CreateTaskInputSchema
@@ -195,64 +185,6 @@ describe("UpdateTaskMetadataSchema validation", () => {
       status: "COMPLETED",
     });
     assert.strictEqual(result.success, false, "Strict mode prevents status injection via metadata update");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// ChangeTaskStatusSchema
-// ---------------------------------------------------------------------------
-describe("ChangeTaskStatusSchema validation", () => {
-  test("accepts valid status change", () => {
-    const result = ChangeTaskStatusSchema.safeParse({
-      status: "IN_PROGRESS",
-    });
-    assert.ok(result.success);
-  });
-
-  test("accepts status change with comment", () => {
-    const result = ChangeTaskStatusSchema.safeParse({
-      status: "COMPLETED",
-      comment: "Đã hoàn thành theo yêu cầu",
-    });
-    assert.ok(result.success);
-  });
-
-  test("accepts all valid status values", () => {
-    for (const s of ["NOT_STARTED", "IN_PROGRESS", "WAITING_APPROVAL", "COMPLETED", "OVERDUE", "CANCELLED",
-                      "not_started", "in_progress", "waiting_approval", "completed", "overdue", "cancelled"]) {
-      const result = ChangeTaskStatusSchema.safeParse({ status: s });
-      assert.ok(result.success, `Status ${s} should be valid`);
-    }
-  });
-
-  test("rejects invalid status", () => {
-    const result = ChangeTaskStatusSchema.safeParse({
-      status: "DELETED",
-    });
-    assert.strictEqual(result.success, false);
-  });
-
-  test("rejects missing status", () => {
-    const result = ChangeTaskStatusSchema.safeParse({
-      comment: "Thiếu status",
-    });
-    assert.strictEqual(result.success, false);
-  });
-
-  test("rejects comment exceeding 1000 chars", () => {
-    const result = ChangeTaskStatusSchema.safeParse({
-      status: "IN_PROGRESS",
-      comment: "C".repeat(1001),
-    });
-    assert.strictEqual(result.success, false);
-  });
-
-  test("rejects unknown extra fields (strict mode)", () => {
-    const result = ChangeTaskStatusSchema.safeParse({
-      status: "COMPLETED",
-      approvedById: "injected-user",
-    });
-    assert.strictEqual(result.success, false);
   });
 });
 
@@ -521,50 +453,6 @@ describe("ReviewDeliverableInputSchema validation", () => {
       reviewStatus: "APPROVED",
       expectedVersion: 1,
       reviewedById: "injected-user",
-    });
-    assert.strictEqual(result.success, false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// AssignTaskSchema
-// ---------------------------------------------------------------------------
-describe("AssignTaskSchema validation", () => {
-  test("accepts valid assignment with one assignee", () => {
-    const result = AssignTaskSchema.safeParse({
-      assigneeIds: ["user-1"],
-    });
-    assert.ok(result.success);
-  });
-
-  test("accepts assignment with multiple assignees", () => {
-    const result = AssignTaskSchema.safeParse({
-      assigneeIds: ["user-1", "user-2", "user-3"],
-    });
-    assert.ok(result.success);
-  });
-
-  test("accepts exactly 50 assignees (max boundary)", () => {
-    const ids = Array.from({ length: 50 }, (_, i) => `user-${i}`);
-    const result = AssignTaskSchema.safeParse({ assigneeIds: ids });
-    assert.ok(result.success);
-  });
-
-  test("rejects more than 50 assignees", () => {
-    const ids = Array.from({ length: 51 }, (_, i) => `user-${i}`);
-    const result = AssignTaskSchema.safeParse({ assigneeIds: ids });
-    assert.strictEqual(result.success, false);
-  });
-
-  test("rejects missing assigneeIds", () => {
-    const result = AssignTaskSchema.safeParse({});
-    assert.strictEqual(result.success, false);
-  });
-
-  test("rejects unknown extra fields (strict mode)", () => {
-    const result = AssignTaskSchema.safeParse({
-      assigneeIds: ["user-1"],
-      assignedById: "injected-user",
     });
     assert.strictEqual(result.success, false);
   });

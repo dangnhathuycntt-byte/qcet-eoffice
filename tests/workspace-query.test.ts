@@ -4,14 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
-import {
-  parseWorkspaceQuery,
-  serializeWorkspaceQuery,
-  isWorkspaceQueryEqual,
-  buildWorkspaceUrl,
-  DEFAULT_WORKSPACE_FILTER_STATE,
-  type WorkspaceFilterState,
-} from "../src/lib/workspace-query";
+import { parseWorkspaceQuery, serializeWorkspaceQuery, type WorkspaceFilterState } from "../src/lib/workspace-query";
 import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "../src/hooks/use-workspace-query";
 import { buildTaskReadWhere } from "../src/server/tasks/task-query-service";
 import type { AuthenticatedUser } from "../src/server/api/request-context";
@@ -522,32 +515,6 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       assert.equal(params.get("view_id"), null);
       assert.equal(params.get("period"), null);
     });
-
-    test("deep link URL full round-trip maintains exact semantic state", () => {
-      const originalState: WorkspaceFilterState = {
-        scope: "unit",
-        unitId: "PKHTC",
-        dept: "PKHTC",
-        unit: "PKHTC",
-        month: 11,
-        date: "2026-11-20",
-        status: "WAITING_APPROVAL",
-        attention: "requires_my_approval",
-        view: "kanban",
-        q: "dự toán ngân sách",
-        query: "dự toán ngân sách",
-        taskId: "task-fin-99",
-        selectedTaskId: "task-fin-99",
-      };
-
-      const serialized = serializeWorkspaceQuery(originalState);
-      const parsed = parseWorkspaceQuery(serialized);
-
-      assert.ok(
-        isWorkspaceQueryEqual(originalState, parsed),
-        "Round-trip serialized query must equal original semantic state"
-      );
-    });
   });
 
   describe("9. URL Roundtrip: serialize(parse(url)) === url for valid parameters", () => {
@@ -577,122 +544,6 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       const parsed = parseWorkspaceQuery(query, { isCalendar: true });
       const serialized = serializeWorkspaceQuery(parsed, { isCalendar: true }).toString();
       assert.equal(serialized, query);
-    });
-
-    test("roundtrips full URL paths via buildWorkspaceUrl", () => {
-      const path = "/tasks";
-      const state: WorkspaceFilterState = {
-        scope: "unit",
-        dept: "CNTT",
-        month: 10,
-        status: "COMPLETED",
-        view: "kanban",
-      };
-      const url = buildWorkspaceUrl(path, state);
-      const parsedParams = parseWorkspaceQuery(url);
-      const reconstructedUrl = buildWorkspaceUrl(path, parsedParams);
-      assert.equal(reconstructedUrl, url);
-    });
-  });
-
-  describe("10. isWorkspaceQueryEqual semantic comparison", () => {
-    test("returns true for identical filter states", () => {
-      const a: WorkspaceFilterState = {
-        scope: "school",
-        month: "ALL",
-        status: "ALL",
-        view: "table",
-      };
-      const b: WorkspaceFilterState = { ...a };
-      assert.equal(isWorkspaceQueryEqual(a, b), true);
-    });
-
-    test("returns true when aliases match (dept vs unitId vs unit, q vs query, taskId vs selectedTaskId)", () => {
-      const a: WorkspaceFilterState = {
-        scope: "unit",
-        dept: "CNTT",
-        month: 5,
-        status: "IN_PROGRESS",
-        view: "table",
-        q: "test",
-        taskId: "t-1",
-      };
-      const b: WorkspaceFilterState = {
-        scope: "unit",
-        unitId: "CNTT",
-        unit: "CNTT",
-        month: 5,
-        status: "IN_PROGRESS",
-        view: "table",
-        query: "test",
-        selectedTaskId: "t-1",
-      };
-      assert.equal(isWorkspaceQueryEqual(a, b), true);
-    });
-
-    test("returns false when any semantic dimension differs", () => {
-      const base: WorkspaceFilterState = {
-        scope: "school",
-        month: "ALL",
-        status: "ALL",
-        view: "table",
-      };
-
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, scope: "unit" }), false);
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, month: 9 }), false);
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, status: "COMPLETED" }), false);
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, view: "kanban" }), false);
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, q: "search" }), false);
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, taskId: "task-1" }), false);
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, date: "2026-09-10" }), false);
-      assert.equal(isWorkspaceQueryEqual(base, { ...base, attention: "requires_my_action" }), false);
-    });
-
-    test("treats attention: 'ALL' and attention: undefined as semantically equal across serialization round-trip", () => {
-      const stateWithAll: WorkspaceFilterState = {
-        scope: "school",
-        month: "ALL",
-        status: "ALL",
-        view: "table",
-        attention: "ALL",
-      };
-      const stateWithUndefined: WorkspaceFilterState = {
-        scope: "school",
-        month: "ALL",
-        status: "ALL",
-        view: "table",
-        attention: undefined,
-      };
-
-      assert.equal(isWorkspaceQueryEqual(stateWithAll, stateWithUndefined), true);
-      const serialized = serializeWorkspaceQuery(stateWithAll).toString();
-      const parsed = parseWorkspaceQuery(serialized);
-      assert.equal(isWorkspaceQueryEqual(stateWithAll, parsed), true);
-    });
-  });
-
-  describe("11. buildWorkspaceUrl helper", () => {
-    test("builds clean url with query string", () => {
-      const url = buildWorkspaceUrl("/tasks", {
-        scope: "unit",
-        dept: "CNTT",
-        status: "IN_PROGRESS",
-      });
-      assert.equal(url, "/tasks?scope=unit&dept=CNTT&status=IN_PROGRESS");
-    });
-
-    test("omits query string when params are empty", () => {
-      const url = buildWorkspaceUrl(
-        "/tasks",
-        {
-          scope: "school",
-          view: "table",
-          month: "ALL",
-          status: "ALL",
-        },
-        { omitDefaultScope: true }
-      );
-      assert.equal(url, "/tasks");
     });
   });
 

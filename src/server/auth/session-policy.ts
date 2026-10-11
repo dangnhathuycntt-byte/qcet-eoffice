@@ -119,29 +119,6 @@ export async function revokeAllUserSessions(
 }
 
 /**
- * Admin operation to disable a user and revoke all active sessions.
- */
-export async function disableUser(
-  userId: string,
-  options?: { disabledById?: string; reason?: string }
-): Promise<void> {
-  if (!userId) return;
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      isActive: false,
-      deactivatedAt: new Date(),
-    },
-  });
-
-  await revokeAllUserSessions(userId, {
-    revokedById: options?.disabledById,
-    revokeReason: options?.reason || 'Account disabled by administrator',
-  });
-}
-
-/**
  * Validates session parameters and user state according to Session Policy.
  * Throws AuthenticationError(401) with code SESSION_INVALID or ACCOUNT_DISABLED.
  */

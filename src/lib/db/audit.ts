@@ -514,21 +514,6 @@ export async function getUserAuditTrail(
   });
 }
 
-/**
- * IMMUTABILITY GUARANTEE & ARCHITECTURAL INVARIANT:
- *
- * 1. AuditEvent is strictly append-only (WORM - Write Once, Read Many).
- * 2. There are NO exported functions for update, patch, delete, or truncate operations.
- * 3. Any attempt to modify or erase audit history violates QCET compliance rules.
- */
-export const AUDIT_IMMUTABILITY_INVARIANT = Object.freeze({
-  isAppendOnly: true,
-  allowUpdates: false,
-  allowDeletions: false,
-  modelName: "AuditEvent",
-  tableName: "audit_events",
-});
-
 export const recordAuditEvent = logAuditEvent;
 
 /**

@@ -302,49 +302,6 @@ export function buildTaskUrlQuery(
   return params.toString();
 }
 
-/**
- * Synchronize task filters to the browser URL search params without reload.
- */
-export function syncTaskUrlParams(
-  updates: Partial<TaskUrlParams>,
-  router?: { replace: (url: string, opts?: { scroll?: boolean }) => void }
-): string {
-  const existingParams =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search)
-      : new URLSearchParams();
-  const currentParsed = parseTaskUrlParams(existingParams);
-  const merged: TaskUrlParams = {
-    ...currentParsed,
-    ...updates,
-  };
-
-  for (const [key, val] of Object.entries(updates)) {
-    if (val === null || val === "" || val === "ALL") {
-      delete (merged as any)[key];
-    }
-  }
-
-  const queryString = buildTaskUrlQuery(merged, existingParams);
-  const basePath =
-    typeof window !== "undefined" ? window.location.pathname : "/tasks";
-  const newUrl = queryString ? `${basePath}?${queryString}` : basePath;
-
-  try {
-    if (router && typeof router.replace === "function") {
-      router.replace(newUrl, { scroll: false });
-    } else if (typeof window !== "undefined" && window.history?.replaceState) {
-      window.history.replaceState(null, "", newUrl);
-    }
-  } catch {
-    if (typeof window !== "undefined" && window.history?.replaceState) {
-      window.history.replaceState(null, "", newUrl);
-    }
-  }
-
-  return queryString;
-}
-
 // ============================================================================
 // Canonical scope + period slices (plan T03)
 // ============================================================================

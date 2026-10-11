@@ -5,7 +5,7 @@
  * Shared by every UI surface that gates task creation (workspace toolbar,
  * tasks/create modal, calendar).
  */
-import type { UserRole, AuthUser } from "@/types/auth";
+import type { AuthUser } from "@/types/auth";
 
 // ---------------------------------------------------------------------------
 // Role classification
@@ -36,18 +36,6 @@ export function isExecutiveUser(user?: AuthUser | null): boolean {
 // ---------------------------------------------------------------------------
 
 export type TaskLevel = "TRUONG" | "DON_VI" | "STAFF";
-
-export function getAllowedTaskLevelsForRole(role: UserRole): TaskLevel[] {
-  if (role === "ADMIN") return ["TRUONG", "DON_VI"];
-  if (role === "MANAGER") return ["DON_VI"];
-  if (role === "STAFF") return [];
-  return [];
-}
-
-export function getDefaultTaskLevelForRole(role: UserRole): TaskLevel {
-  if (role === "ADMIN") return "TRUONG";
-  return "DON_VI";
-}
 
 // ---------------------------------------------------------------------------
 // Create-task policy

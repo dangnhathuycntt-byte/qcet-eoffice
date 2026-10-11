@@ -10,17 +10,7 @@
  *  - Backward compatibility bridge for existing offline mutation queues
  */
 
-import {
-  OfflineOutboxItem,
-  EnqueueOutboxItemInput,
-  enqueueOutboxItem as storeEnqueue,
-  getOutboxItem as storeGet,
-  getOutboxQueue as storeGetQueue,
-  updateOutboxItem as storeUpdate,
-  removeOutboxItem as storeRemove,
-  clearUserOutbox as storeClear,
-  purgeUserOfflineData,
-} from "./offline-store";
+import { OfflineOutboxItem, EnqueueOutboxItemInput, enqueueOutboxItem as storeEnqueue, getOutboxItem as storeGet, getOutboxQueue as storeGetQueue, updateOutboxItem as storeUpdate, removeOutboxItem as storeRemove, clearUserOutbox as storeClear } from "./offline-store";
 import { recordTelemetry } from "./telemetry";
 
 export type OutboxStatus = "pending" | "syncing" | "conflict" | "failed";
@@ -66,26 +56,6 @@ export function getActiveUserId(): string {
     }
   }
   return "";
-}
-
-/**
- * Safely switches the active offline partition to another account (T63).
- *
- * On an account switch the previous user's queued data MUST NOT leak into the
- * new user's partition. Passing `purgePrevious: true` clears the outgoing
- * account's private offline data (read cache, drafts, outbox) after the switch.
- */
-export async function switchActiveUser(
-  nextUserId: string | null,
-  options?: { purgePrevious?: boolean }
-): Promise<void> {
-  const previousUserId = activeUserIdOverride ?? getActiveUserId();
-  setActiveUserId(nextUserId);
-
-  const next = nextUserId ?? "";
-  if (options?.purgePrevious && previousUserId && previousUserId !== next) {
-    await purgeUserOfflineData(previousUserId);
-  }
 }
 
 // ---------------------------------------------------------------------------

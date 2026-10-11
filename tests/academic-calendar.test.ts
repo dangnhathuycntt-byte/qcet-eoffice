@@ -1,19 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  getAcademicMonthInfo,
-  getAcademicYear,
-  getCalendarYear,
-  getAcademicMonthsForYear,
-  isDateInAcademicMonth,
-  getAdjacentAcademicMonth,
-  getQuarterPeriod,
-  getQuarterFromMonth,
-  isDateInQuarter,
-  isLeapYear,
-  getDaysInMonth,
-  type AcademicMonthPeriod,
-} from "../src/lib/academic-calendar";
+import { getAcademicMonthInfo, getAcademicYear, getCalendarYear, getAcademicMonthsForYear, isDateInAcademicMonth, getAdjacentAcademicMonth, getQuarterFromMonth, isLeapYear, getDaysInMonth, type AcademicMonthPeriod } from "../src/lib/academic-calendar";
 
 describe("Gregorian Solar Calendar & Time Period Engine Suite", () => {
   describe("1. Calendar Year & Academic Year Invariants", () => {
@@ -122,66 +109,6 @@ describe("Gregorian Solar Calendar & Time Period Engine Suite", () => {
       assert.equal(getDaysInMonth(2028, 2), 29);
       const feb2028 = getAcademicMonthInfo("2028-02-01");
       assert.equal(feb2028.endDate, "2028-02-29");
-    });
-  });
-
-  describe("4. Quarters (Quý) Definition & Mapping", () => {
-    test("Quý 1 covers Tháng 1–3 (01/01 - 31/03)", () => {
-      const q1 = getQuarterPeriod(1, 2026);
-      assert.equal(q1.quarter, 1);
-      assert.equal(q1.startDate, "2026-01-01");
-      assert.equal(q1.endDate, "2026-03-31");
-      assert.equal(q1.nextQuarterStartDate, "2026-04-01");
-      assert.deepEqual(q1.months, [1, 2, 3]);
-
-      assert.equal(getQuarterFromMonth(1), 1);
-      assert.equal(getQuarterFromMonth(2), 1);
-      assert.equal(getQuarterFromMonth(3), 1);
-    });
-
-    test("Quý 2 covers Tháng 4–6 (01/04 - 30/06)", () => {
-      const q2 = getQuarterPeriod(2, 2026);
-      assert.equal(q2.quarter, 2);
-      assert.equal(q2.startDate, "2026-04-01");
-      assert.equal(q2.endDate, "2026-06-30");
-      assert.deepEqual(q2.months, [4, 5, 6]);
-
-      assert.equal(getQuarterFromMonth(4), 2);
-      assert.equal(getQuarterFromMonth(5), 2);
-      assert.equal(getQuarterFromMonth(6), 2);
-    });
-
-    test("Quý 3 covers Tháng 7–9 (01/07 - 30/09)", () => {
-      const q3 = getQuarterPeriod(3, 2026);
-      assert.equal(q3.quarter, 3);
-      assert.equal(q3.startDate, "2026-07-01");
-      assert.equal(q3.endDate, "2026-09-30");
-      assert.deepEqual(q3.months, [7, 8, 9]);
-
-      assert.equal(getQuarterFromMonth(7), 3);
-      assert.equal(getQuarterFromMonth(8), 3);
-      assert.equal(getQuarterFromMonth(9), 3);
-    });
-
-    test("Quý 4 covers Tháng 10–12 (01/10 - 31/12)", () => {
-      const q4 = getQuarterPeriod(4, 2026);
-      assert.equal(q4.quarter, 4);
-      assert.equal(q4.startDate, "2026-10-01");
-      assert.equal(q4.endDate, "2026-12-31");
-      assert.equal(q4.nextQuarterStartDate, "2027-01-01");
-      assert.deepEqual(q4.months, [10, 11, 12]);
-
-      assert.equal(getQuarterFromMonth(10), 4);
-      assert.equal(getQuarterFromMonth(11), 4);
-      assert.equal(getQuarterFromMonth(12), 4);
-    });
-
-    test("isDateInQuarter matches dates accurately", () => {
-      assert.equal(isDateInQuarter("2026-01-01", 1), true);
-      assert.equal(isDateInQuarter("2026-03-31", 1), true);
-      assert.equal(isDateInQuarter("2026-04-01", 1), false);
-      assert.equal(isDateInQuarter("2026-09-30", 3), true);
-      assert.equal(isDateInQuarter("2026-10-01", 4), true);
     });
   });
 

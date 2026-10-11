@@ -2,37 +2,16 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 // Contract imports
-import {
-  PaginationQuerySchema,
-  SearchQuerySchema,
-  IdSchema,
-  IsoDateStringSchema,
-} from '@/contracts/common';
-import {
-  TaskQueryParamsSchema,
-  CreateTaskInputSchema,
-  UpdateTaskMetadataSchema,
-  ChangeTaskStatusSchema,
-  AssignTaskSchema,
-  ApproveTaskInputSchema,
-  SubmitDeliverableInputSchema,
-} from '@/contracts/tasks';
+import { PaginationQuerySchema, SearchQuerySchema, IsoDateStringSchema } from '@/contracts/common';
+import { TaskQueryParamsSchema, CreateTaskInputSchema, UpdateTaskMetadataSchema, ApproveTaskInputSchema, SubmitDeliverableInputSchema } from '@/contracts/tasks';
 import {
   DocumentQuerySchema,
   CreateDocumentSchema,
   UpdateDocumentSchema,
   CreateDirectiveSchema,
 } from '@/contracts/documents';
-import {
-  NotificationQuerySchema,
-  SubscribePushSchema,
-  TestPushSchema,
-} from '@/contracts/notifications';
-import {
-  UserQuerySchema,
-  UpdateUserRoleSchema,
-  OnboardingInputSchema,
-} from '@/contracts/users';
+import { NotificationQuerySchema, TestPushSchema } from '@/contracts/notifications';
+import { UserQuerySchema } from '@/contracts/users';
 
 describe('Shared Input Contracts & Strict Boundary Limits', () => {
   describe('Common Contracts (src/contracts/common.ts)', () => {
@@ -97,19 +76,6 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
         assert.strictEqual(SearchQuerySchema.safeParse({ scope: 'unit' }).success, true);
         assert.strictEqual(SearchQuerySchema.safeParse({ scope: 'personal' }).success, true);
         assert.strictEqual(SearchQuerySchema.safeParse({ scope: 'invalid_scope' }).success, false);
-      });
-    });
-
-    describe('IdSchema', () => {
-      it('accepts valid identifier strings between 1 and 128 chars', () => {
-        assert.strictEqual(IdSchema.safeParse('usr_12345').success, true);
-        assert.strictEqual(IdSchema.safeParse('a'.repeat(128)).success, true);
-      });
-
-      it('rejects empty strings or strings exceeding 128 characters', () => {
-        assert.strictEqual(IdSchema.safeParse('').success, false);
-        assert.strictEqual(IdSchema.safeParse('   ').success, false);
-        assert.strictEqual(IdSchema.safeParse('a'.repeat(129)).success, false);
       });
     });
 
@@ -327,68 +293,6 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
             false
           );
         }
-      });
-    });
-
-    describe('ChangeTaskStatusSchema', () => {
-      it('accepts valid status and optional comment', () => {
-        const parsed = ChangeTaskStatusSchema.parse({
-          status: 'IN_PROGRESS',
-          comment: 'Bắt đầu triển khai phân hệ mới',
-        });
-        assert.strictEqual(parsed.status, 'IN_PROGRESS');
-        assert.strictEqual(parsed.comment, 'Bắt đầu triển khai phân hệ mới');
-      });
-
-      it('rejects invalid status', () => {
-        assert.strictEqual(
-          ChangeTaskStatusSchema.safeParse({ status: 'INVALID_STATUS' }).success,
-          false
-        );
-      });
-
-      it('rejects comment exceeding 1000 characters', () => {
-        assert.strictEqual(
-          ChangeTaskStatusSchema.safeParse({
-            status: 'COMPLETED',
-            comment: 'c'.repeat(1001),
-          }).success,
-          false
-        );
-      });
-
-      it('strictly rejects extra keys', () => {
-        assert.strictEqual(
-          ChangeTaskStatusSchema.safeParse({
-            status: 'COMPLETED',
-            assigneeId: 'usr_new',
-          }).success,
-          false
-        );
-      });
-    });
-
-    describe('AssignTaskSchema', () => {
-      it('accepts array of assignee ids up to 50', () => {
-        const parsed = AssignTaskSchema.parse({
-          assigneeIds: ['usr_1', 'usr_2', 'usr_3'],
-        });
-        assert.deepStrictEqual(parsed.assigneeIds, ['usr_1', 'usr_2', 'usr_3']);
-      });
-
-      it('rejects more than 50 assignees', () => {
-        const tooMany = Array.from({ length: 51 }, (_, i) => `usr_${i}`);
-        assert.strictEqual(AssignTaskSchema.safeParse({ assigneeIds: tooMany }).success, false);
-      });
-
-      it('strictly rejects extra unallowed fields', () => {
-        assert.strictEqual(
-          AssignTaskSchema.safeParse({
-            assigneeIds: ['usr_1'],
-            role: 'MANAGER',
-          }).success,
-          false
-        );
       });
     });
 
@@ -674,69 +578,6 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
       });
     });
 
-    describe('SubscribePushSchema', () => {
-      it('accepts valid Web Push subscription payload', () => {
-        const parsed = SubscribePushSchema.parse({
-          endpoint: 'https://fcm.googleapis.com/fcm/send/sample-token-12345',
-          keys: {
-            p256dh: 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QT9Q0A4APqOM8pA4P_wnd8',
-            auth: 'tBHItJI5svbpez7KI4CCXg',
-          },
-          deviceType: 'mobile',
-        });
-        assert.strictEqual(
-          parsed.endpoint,
-          'https://fcm.googleapis.com/fcm/send/sample-token-12345'
-        );
-        assert.strictEqual(parsed.keys.auth, 'tBHItJI5svbpez7KI4CCXg');
-      });
-
-      it('rejects non-URL endpoint or endpoint exceeding 1024 characters', () => {
-        assert.strictEqual(
-          SubscribePushSchema.safeParse({
-            endpoint: 'not-a-valid-url',
-            keys: { p256dh: 'abc', auth: 'def' },
-          }).success,
-          false
-        );
-        assert.strictEqual(
-          SubscribePushSchema.safeParse({
-            endpoint: 'https://example.com/' + 'x'.repeat(1025),
-            keys: { p256dh: 'abc', auth: 'def' },
-          }).success,
-          false
-        );
-      });
-
-      it('rejects keys with empty or oversized values (> 255 chars)', () => {
-        assert.strictEqual(
-          SubscribePushSchema.safeParse({
-            endpoint: 'https://example.com/push',
-            keys: { p256dh: '', auth: 'valid_auth' },
-          }).success,
-          false
-        );
-        assert.strictEqual(
-          SubscribePushSchema.safeParse({
-            endpoint: 'https://example.com/push',
-            keys: { p256dh: 'k'.repeat(256), auth: 'valid_auth' },
-          }).success,
-          false
-        );
-      });
-
-      it('strictly rejects mass-assignment injection', () => {
-        assert.strictEqual(
-          SubscribePushSchema.safeParse({
-            endpoint: 'https://example.com/push',
-            keys: { p256dh: 'abc', auth: 'def' },
-            userId: 'usr_spoofed',
-          }).success,
-          false
-        );
-      });
-    });
-
     describe('TestPushSchema', () => {
       it('accepts valid test push payload within limits', () => {
         const parsed = TestPushSchema.parse({
@@ -783,100 +624,6 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
         assert.strictEqual(parsed.pageSize, 10);
         assert.strictEqual(parsed.departmentId, 'dept_cntt');
         assert.strictEqual(parsed.q, 'Nguyễn');
-      });
-    });
-
-    describe('UpdateUserRoleSchema', () => {
-      it('accepts valid institutional user roles', () => {
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'ADMIN' }).success,
-          true
-        );
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'MANAGER' }).success,
-          true
-        );
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'STAFF' }).success,
-          true
-        );
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'BAN_GIAM_HIEU' }).success,
-          true
-        );
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'TRUONG_PHONG' }).success,
-          true
-        );
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'CHUYEN_VIEN' }).success,
-          true
-        );
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'GIANG_VIEN' }).success,
-          true
-        );
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'VAN_THU' }).success,
-          true
-        );
-      });
-
-      it('rejects invalid or unauthorized roles', () => {
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({ role: 'SUPERUSER_ROOT' }).success,
-          false
-        );
-      });
-
-      it('strictly rejects extra injection fields', () => {
-        assert.strictEqual(
-          UpdateUserRoleSchema.safeParse({
-            role: 'ADMIN',
-            passwordHash: 'injected_hash',
-          }).success,
-          false
-        );
-      });
-    });
-
-    describe('OnboardingInputSchema', () => {
-      it('accepts valid onboarding state updates matching onboarding-schema.ts', () => {
-        const parsed = OnboardingInputSchema.parse({
-          hasSeenWelcome: true,
-          hasCompletedTour: true,
-          completedSteps: ['step-profile', 'step-push'],
-          isDismissed: false,
-          snoozedUntil: null,
-        });
-        assert.strictEqual(parsed.hasSeenWelcome, true);
-        assert.deepStrictEqual(parsed.completedSteps, ['step-profile', 'step-push']);
-      });
-
-      it('rejects completedSteps list exceeding 50 items or step exceeding 100 characters', () => {
-        const tooManySteps = Array.from({ length: 51 }, (_, i) => `step-${i}`);
-        assert.strictEqual(
-          OnboardingInputSchema.safeParse({ completedSteps: tooManySteps }).success,
-          false
-        );
-
-        assert.strictEqual(
-          OnboardingInputSchema.safeParse({
-            completedSteps: ['s'.repeat(101)],
-          }).success,
-          false
-        );
-      });
-
-      it('strictly rejects arbitrary mass-assignment injections', () => {
-        assert.strictEqual(
-          OnboardingInputSchema.safeParse({
-            hasSeenWelcome: true,
-            isAdmin: true,
-            role: 'ADMIN',
-          }).success,
-          false
-        );
       });
     });
   });

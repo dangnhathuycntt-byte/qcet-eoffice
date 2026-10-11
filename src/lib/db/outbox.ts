@@ -221,25 +221,6 @@ export async function publishTaskCompletedEvent(
 }
 
 /**
- * Publishes multiple outbox events in batch.
- *
- * @param client Database client or interactive transaction
- * @param events Array of outbox event input data
- * @returns Array of persisted OutboxEvents
- */
-export async function publishOutboxEvents(
-  client: DbClient,
-  events: PublishOutboxEventInput[]
-): Promise<OutboxEvent[]> {
-  const results: OutboxEvent[] = [];
-  for (const event of events) {
-    const published = await publishOutboxEvent(client, event);
-    results.push(published);
-  }
-  return results;
-}
-
-/**
  * Options for querying available outbox events.
  */
 export interface FetchAvailableOutboxEventsOptions {
@@ -614,88 +595,4 @@ export async function processOutboxBatch(
   }
 
   return result;
-}
-
-/**
- * Returns operational metrics of outbox events by status.
- */
-export async function getOutboxMetrics(
-  client: DbClient
-): Promise<Record<OutboxStatus, number>> {
-  const db = client ?? defaultPrisma;
-
-  const counts = await db.outboxEvent.groupBy({
-    by: ["status"],
-    _count: { _all: true },
-  });
-
-  const metrics: Record<OutboxStatus, number> = {
-    [OutboxStatus.PENDING]: 0,
-    [OutboxStatus.PROCESSING]: 0,
-    [OutboxStatus.COMPLETED]: 0,
-    [OutboxStatus.FAILED]: 0,
-  };
-
-  for (const c of counts) {
-    metrics[c.status] = c._count._all;
-  }
-
-  return metrics;
-}
-
-/**
- * Re-queues failed (dead-lettered) outbox events back to PENDING.
- *
- * @param client Database client
- * @param options Options including specific event IDs and whether to reset attempt counters
- * @returns Count of re-queued events
- */
-export async function retryFailedOutboxEvents(
-  client: DbClient,
-  options: { ids?: string[]; resetAttempts?: boolean; now?: Date } = {}
-): Promise<{ updatedCount: number }> {
-  const db = client ?? defaultPrisma;
-  const referenceNow = options.now ?? new Date();
-
-  const whereClause: Prisma.OutboxEventWhereInput = {
-    status: OutboxStatus.FAILED,
-    ...(options.ids && options.ids.length > 0 ? { id: { in: options.ids } } : {}),
-  };
-
-  const updateResult = await db.outboxEvent.updateMany({
-    where: whereClause,
-    data: {
-      status: OutboxStatus.PENDING,
-      availableAt: referenceNow,
-      ...(options.resetAttempts ? { attempts: 0 } : {}),
-      lastError: null,
-    },
-  });
-
-  return { updatedCount: updateResult.count };
-}
-
-/**
- * Cleans up old COMPLETED outbox events according to retention policy.
- *
- * @param client Database client
- * @param olderThanDays Retention threshold in days (default: 30 days)
- * @returns Count of purged events
- */
-export async function cleanupCompletedOutboxEvents(
-  client: DbClient,
-  olderThanDays: number = 30
-): Promise<{ deletedCount: number }> {
-  const db = client ?? defaultPrisma;
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-
-  const deleteResult = await db.outboxEvent.deleteMany({
-    where: {
-      status: OutboxStatus.COMPLETED,
-      processedAt: { lte: cutoffDate },
-    },
-  });
-
-  return { deletedCount: deleteResult.count };
 }

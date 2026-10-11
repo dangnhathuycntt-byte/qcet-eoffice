@@ -10,15 +10,8 @@ import {
   ServerLogger,
   serverLogger,
 } from "../../src/telemetry/server";
-import {
-  normalizeWebVital,
-  getMetricRating,
-  WEB_VITAL_THRESHOLDS,
-} from "../../src/telemetry/web-vitals";
-import {
-  ClientTelemetryQueue,
-  reportClientError,
-} from "../../src/telemetry/client";
+import { getMetricRating, WEB_VITAL_THRESHOLDS } from "../../src/telemetry/web-vitals";
+import { ClientTelemetryQueue } from "../../src/telemetry/client";
 import {
   POST,
   OPTIONS,
@@ -269,53 +262,6 @@ describe("Telemetry & Error Boundaries Comprehensive Test Suite", () => {
       assert.equal(getMetricRating("TTFB", 1200), "needs-improvement");
       assert.equal(getMetricRating("TTFB", 2500), "poor");
     });
-
-    it("normalizes Web Vital payloads and formats numerical precision", () => {
-      const normalizedLcp = normalizeWebVital({
-        name: "LCP",
-        value: 2345.6789,
-        route: "/tasks",
-      });
-
-      assert.equal(normalizedLcp.name, "LCP");
-      assert.equal(normalizedLcp.value, 2345.7); // 1 decimal precision
-      assert.equal(normalizedLcp.rating, "good");
-      assert.equal(normalizedLcp.route, "/tasks");
-      assert.ok(normalizedLcp.timestamp > 0);
-
-      const normalizedCls = normalizeWebVital({
-        name: "CLS",
-        value: 0.123456,
-        route: "/dashboard",
-      });
-
-      assert.equal(normalizedCls.name, "CLS");
-      assert.equal(normalizedCls.value, 0.1235); // 4 decimal precision
-      assert.equal(normalizedCls.rating, "needs-improvement");
-    });
-
-    it("rejects invalid metric names or negative values", () => {
-      assert.throws(() => {
-        normalizeWebVital({
-          name: "INVALID_METRIC" as any,
-          value: 100,
-        });
-      }, /Invalid or unsupported Web Vital metric name/);
-
-      assert.throws(() => {
-        normalizeWebVital({
-          name: "LCP",
-          value: -50,
-        });
-      }, /has invalid value/);
-
-      assert.throws(() => {
-        normalizeWebVital({
-          name: "LCP",
-          value: NaN,
-        });
-      }, /has invalid value/);
-    });
   });
 
   // =========================================================================
@@ -360,16 +306,6 @@ describe("Telemetry & Error Boundaries Comprehensive Test Suite", () => {
       assert.equal(duplicate, false); // Debounced & deduplicated
       assert.equal(queue.getQueueLength(), 1);
       queue.destroy();
-    });
-
-    it("reportClientError safely captures errors without throwing", () => {
-      assert.doesNotThrow(() => {
-        reportClientError(new Error("Test client error"), { section: "test" });
-        reportClientError("String error message", { section: "test-string" });
-        reportClientError({ custom: "error-object" });
-        reportClientError(null);
-        reportClientError(undefined);
-      });
     });
   });
 

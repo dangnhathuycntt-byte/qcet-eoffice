@@ -397,9 +397,5 @@ export function parseToPlateValue(raw?: string | null): PlateValue {
   return blocksToPlate(parseContentToBlocks(raw));
 }
 
-export function serializePlateValue(value: PlateValue): string {
-  return serializeBlocksToContent(plateToBlocks(value));
-}
-
 // Re-export Plate node type constants for use in editor plugin config
 export { PT as PLATE_NODE_TYPES };

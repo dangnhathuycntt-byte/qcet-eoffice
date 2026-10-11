@@ -427,20 +427,3 @@ export async function clearIdempotencyRecord(
     return false;
   }
 }
-
-/**
- * Prunes expired idempotency records from the database.
- */
-export async function cleanupExpiredIdempotencyRecords(
-  client: DbClient = defaultPrisma,
-  before: Date = new Date()
-): Promise<number> {
-  const result = await client.idempotencyRecord.deleteMany({
-    where: {
-      expiresAt: {
-        lte: before,
-      },
-    },
-  });
-  return result.count;
-}

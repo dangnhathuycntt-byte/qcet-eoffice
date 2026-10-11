@@ -1,9 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  canReadSensitivePersonalData,
-  userDirectoryPolicy,
-} from '@/server/policies/user-directory-policy';
+import { canReadSensitivePersonalData } from '@/server/policies/user-directory-policy';
 import { toUserPublicDTO, toUserPublicDTOArray } from '@/server/dto/user-dto';
 
 describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', () => {

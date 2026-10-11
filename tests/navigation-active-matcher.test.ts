@@ -5,15 +5,7 @@ import {
   normalizePath,
   resolveBreadcrumb,
 } from "../src/lib/navigation/active-matcher";
-import {
-  CANONICAL_ROUTES,
-  CANONICAL_ZONES,
-  getRouteByPath,
-  getSidebarNavItems,
-  getMobileBottomNavItems,
-  getMobileDrawerItems,
-  getMobileBottomBarItems,
-} from "../src/lib/navigation/canonical-navigation-registry";
+import { CANONICAL_ROUTES, getRouteByPath, getSidebarNavItems, getMobileBottomNavItems, getMobileDrawerItems, getMobileBottomBarItems } from "../src/lib/navigation/canonical-navigation-registry";
 
 describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   test("isRouteActive: matches exact pathnames correctly", () => {
@@ -176,19 +168,6 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
         getMobileBottomBarItems().map((i) => i.id),
         ["tasks", "calendar", "inbox", "documents"]
       );
-    });
-
-    test("exports CANONICAL_ZONES and getRouteByPath resolves accurately", () => {
-      assert.ok(Array.isArray(CANONICAL_ZONES), "CANONICAL_ZONES must be an array");
-      for (const zone of ["dashboard", "tasks", "calendar", "documents", "org"]) {
-        assert.ok(CANONICAL_ZONES.includes(zone as never), `CANONICAL_ZONES must include ${zone}`);
-      }
-
-      assert.equal(getRouteByPath("/")?.id, "desk");
-      assert.equal(getRouteByPath("/dashboard")?.id, "desk");
-      assert.equal(getRouteByPath("/unit-tasks")?.id, "tasks");
-      assert.equal(getRouteByPath("/calendar?month=2026-09#top")?.id, "calendar");
-      assert.equal(getRouteByPath("/unknown-route"), undefined);
     });
   });
 

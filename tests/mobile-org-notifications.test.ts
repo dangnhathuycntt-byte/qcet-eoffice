@@ -1,14 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  extractNotificationEntity,
-  resolveActionableDeepLink,
-  getNotificationDayGroup,
-  groupNotificationsByDay,
-  filterNotificationsMobile,
-  formatNotificationContent,
-  type QCETNotification,
-} from "../src/lib/notification-triage";
+import { extractNotificationEntity, resolveActionableDeepLink, getNotificationDayGroup, groupNotificationsByDay, formatNotificationContent, type QCETNotification } from "../src/lib/notification-triage";
 import { QCET_ORG_UNITS } from "../src/lib/org/org-structure";
 
 describe("Sprint M5: Mobile Org Drill-Down & Actionable Notification Inbox", () => {
@@ -186,68 +178,6 @@ describe("Sprint M5: Mobile Org Drill-Down & Actionable Notification Inbox", () 
       assert.equal(grouped.today[0].id, "notif-1");
       assert.equal(grouped.earlier.length, 1);
       assert.equal(grouped.earlier[0].id, "notif-2");
-    });
-
-    test("filterNotificationsMobile correctly filters [Tất cả], [Chưa đọc], [Cần xử lý]", () => {
-      const notifications: QCETNotification[] = [
-        {
-          id: "n-1",
-          title: "Giao việc NV-01",
-          body: "Yêu cầu nộp báo cáo",
-          action: "đã giao",
-          targetTitle: "NV-01",
-          category: "Nhiệm vụ",
-          timestamp: "10 phút trước",
-          isRead: false,
-          timeGroup: "new",
-          type: "task_assigned",
-          actorName: "Trần Hùng",
-          linkHref: "/tasks?taskId=NV-01",
-        },
-        {
-          id: "n-2",
-          title: "Đã đọc việc NV-02",
-          body: "Đã xong",
-          action: "đã hoàn thành",
-          targetTitle: "NV-02",
-          category: "Nhiệm vụ",
-          timestamp: "1 giờ trước",
-          isRead: true,
-          timeGroup: "new",
-          type: "task_completed",
-          actorName: "Lê Hoàng Nam",
-          linkHref: "/tasks?taskId=NV-02",
-        },
-        {
-          id: "n-3",
-          title: "Tờ trình cần duyệt",
-          body: "Chờ phê duyệt tờ trình",
-          action: "chờ phê duyệt",
-          targetTitle: "15/TTr",
-          category: "Văn bản",
-          timestamp: "Hôm qua",
-          isRead: false,
-          timeGroup: "earlier",
-          type: "approval_needed",
-          actorName: "Đặng Văn Hậu",
-          linkHref: "/documents?docId=15/TTr",
-        },
-      ];
-
-      // All tab
-      const allResult = filterNotificationsMobile(notifications, "all");
-      assert.equal(allResult.length, 3);
-
-      // Unread tab
-      const unreadResult = filterNotificationsMobile(notifications, "unread");
-      assert.equal(unreadResult.length, 2);
-      assert.ok(unreadResult.every((n) => !n.isRead));
-
-      // Action required tab
-      const actionResult = filterNotificationsMobile(notifications, "action_required");
-      assert.ok(actionResult.length >= 1);
-      const actionIds = actionResult.map((n) => n.id);
-      assert.ok(actionIds.includes("n-1") || actionIds.includes("n-3"));
     });
 
     test("formatNotificationContent extracts actorName, actionText, targetTitle accurately", () => {

@@ -209,16 +209,6 @@ export interface ContentBlockItem {
   providerType?: string;
 }
 
-export function moveBlock(blocks: ContentBlockItem[], activeId: string, overId: string) {
-  const from = blocks.findIndex((block) => block.id === activeId);
-  const to = blocks.findIndex((block) => block.id === overId);
-  if (from < 0 || to < 0 || from === to) return blocks;
-  const next = [...blocks];
-  const [block] = next.splice(from, 1);
-  next.splice(to, 0, block);
-  return next;
-}
-
 export { isMeaningfulBlock, parseContentToBlocks, serializeBlocksToContent };
 
 export interface TaskBlockEditorProps {

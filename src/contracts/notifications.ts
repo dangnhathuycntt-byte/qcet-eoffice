@@ -65,39 +65,6 @@ export const PushSubscriptionKeysSchema = z
   .strict();
 
 /**
- * Web Push subscription contract.
- * Strictly checks endpoint URL and bounds key sizes.
- */
-export const SubscribePushSchema = z
-  .object({
-    endpoint: z
-      .string()
-      .trim()
-      .url('Push endpoint must be a valid URL')
-      .max(1024, 'Endpoint cannot exceed 1024 characters'),
-    keys: PushSubscriptionKeysSchema,
-    deviceType: z
-      .string()
-      .trim()
-      .max(50, 'Device type cannot exceed 50 characters')
-      .optional()
-      .nullable(),
-    platform: z
-      .string()
-      .trim()
-      .max(50, 'Platform cannot exceed 50 characters')
-      .optional()
-      .nullable(),
-    userAgent: z
-      .string()
-      .trim()
-      .max(500, 'User agent cannot exceed 500 characters')
-      .optional()
-      .nullable(),
-  })
-  .strict();
-
-/**
  * Flexible Push subscription contract supporting both flat (p256dh, auth)
  * and nested ({ keys: { p256dh, auth } }) structures with HTTPS URL enforcement.
  */

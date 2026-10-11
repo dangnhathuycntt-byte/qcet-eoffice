@@ -1,9 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  buildQuickFilterPills,
-  type QuickFilterPill,
-} from "../src/components/dashboard/unified-task-toolbar";
+import { type QuickFilterPill } from "../src/components/dashboard/unified-task-toolbar";
 import {
   saveCustomView,
   getCustomSavedViews,
@@ -60,39 +57,6 @@ describe("Saved Filters & Scope Recovery Test Suite", () => {
       assert.strictEqual(resolveEffectiveScope(undefined, undefined, "STAFF"), "my");
       assert.strictEqual(resolveEffectiveScope(undefined, undefined, "MANAGER"), "unit");
       assert.strictEqual(resolveEffectiveScope(undefined, undefined, "ADMIN"), "school");
-    });
-  });
-
-  describe("2. Quick Filter Pills Order & Business Logic", () => {
-    test("buildQuickFilterPills places Tất cả → Trễ hạn → Đến hạn tuần này → Chờ duyệt first", () => {
-      const tabCounts = {
-        all: 50,
-        overdue: 5,
-        this_week: 12,
-        today: 3,
-        waiting_approval: 8,
-        review: 8,
-        pending_submission: 4,
-      };
-
-      const pills = buildQuickFilterPills(true, tabCounts as any, "all", 50);
-
-      assert.strictEqual(pills.length, 4);
-      assert.strictEqual(pills[0].id, "all");
-      assert.strictEqual(pills[0].label, "Tất cả");
-      assert.strictEqual(pills[0].count, 50);
-
-      assert.strictEqual(pills[1].id, "overdue");
-      assert.strictEqual(pills[1].label, "Trễ hạn");
-      assert.strictEqual(pills[1].count, 5);
-
-      assert.strictEqual(pills[2].id, "this_week");
-      assert.strictEqual(pills[2].label, "Đến hạn tuần này");
-      assert.strictEqual(pills[2].count, 12);
-
-      assert.strictEqual(pills[3].id, "waiting_approval");
-      assert.strictEqual(pills[3].label, "Chờ duyệt");
-      assert.strictEqual(pills[3].count, 8);
     });
   });
 

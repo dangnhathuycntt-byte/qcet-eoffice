@@ -289,57 +289,6 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
   });
 
   describe("Task 3 Toolbar: Quick Filter Group, Role-Based Actions, a11y & Saved Views", () => {
-    test("3.1 Role-Based Action Selection in Quick Filters: Executive gets 'Cần tôi duyệt'", () => {
-      const { buildRoleActionPill, buildQuickFilterPills } = require("../src/components/dashboard/unified-task-toolbar");
-      const tabCounts = {
-        all: 12,
-        waiting_approval: 4,
-        pending_submission: 1,
-        overdue: 2,
-        today: 3,
-      };
-
-      const pill = buildRoleActionPill(true, tabCounts, "all");
-      assert.equal(pill.label, "Cần tôi duyệt");
-      assert.equal(pill.id, "waiting_approval");
-      assert.equal(pill.count, 4);
-
-      const allPills = buildQuickFilterPills(true, tabCounts, "all");
-      const labels = allPills.map((p: any) => p.label);
-      assert.ok(labels.includes("Tất cả"));
-      assert.ok(labels.includes("Trễ hạn"));
-    });
-
-    test("3.1b Role-Based Action Selection: Staff gets 'Chờ tôi nộp'", () => {
-      const { buildRoleActionPill } = require("../src/components/dashboard/unified-task-toolbar");
-      const tabCounts = {
-        all: 8,
-        waiting_approval: 0,
-        pending_submission: 3,
-        overdue: 1,
-        today: 2,
-      };
-
-      const pill = buildRoleActionPill(false, tabCounts, "all");
-      assert.equal(pill.label, "Chờ tôi nộp");
-      assert.equal(pill.id, "pending_submission");
-      assert.equal(pill.count, 3);
-    });
-
-    test("3.2 Selected state persists even when count is 0", () => {
-      const { buildRoleActionPill } = require("../src/components/dashboard/unified-task-toolbar");
-      const tabCounts = {
-        all: 10,
-        waiting_approval: 0,
-        overdue: 0,
-      };
-
-      const pill = buildRoleActionPill(true, tabCounts, "waiting_approval");
-      assert.equal(pill.isActive, true);
-      assert.equal(pill.count, 0);
-      assert.equal(pill.label, "Cần tôi duyệt");
-    });
-
     test("3.3 a11y standards: type='button', touch 44px mobile, no tab semantics in filter group", () => {
       const html = renderToStaticMarkup(
         React.createElement(UnifiedTaskToolbar, {

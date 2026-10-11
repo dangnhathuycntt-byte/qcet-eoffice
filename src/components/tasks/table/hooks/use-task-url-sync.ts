@@ -288,21 +288,6 @@ export function serializeTaskUrlParams(
 }
 
 /**
- * Xây dựng URL hoàn chỉnh kết hợp path hiện tại và cập nhật params
- */
-export function buildTaskUrl(
-  updates: Partial<TaskUrlState>,
-  existingParams?: URLSearchParams | string | null,
-  pathname?: string
-): string {
-  return serializeTaskUrlParams(updates, {
-    pathname: pathname ?? "",
-    existingParams,
-    preserveOtherParams: true,
-  });
-}
-
-/**
  * Kiểu trả về cho hook useTaskUrlSync
  */
 export interface UseTaskUrlSyncReturn {

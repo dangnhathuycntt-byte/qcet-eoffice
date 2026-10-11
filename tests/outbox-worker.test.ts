@@ -2,13 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { prisma } from '../src/lib/prisma';
 import { OutboxStatus } from '@prisma/client';
-import {
-  publishOutboxEvent,
-  processOutboxEvent,
-  processOutboxBatch,
-  retryFailedOutboxEvents,
-  calculateExponentialBackoff,
-} from '../src/lib/db/outbox';
+import { publishOutboxEvent, processOutboxEvent, processOutboxBatch, calculateExponentialBackoff } from '../src/lib/db/outbox';
 
 describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
   const testRunId = `worker_test_${Date.now()}`;
@@ -223,64 +217,6 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
         expectedAvailableAt.toISOString(),
         'availableAt must match exponential backoff timestamp'
       );
-    });
-  });
-
-  describe('4. Dead-Letter Queue Terminal Failure (PENDING -> FAILED)', () => {
-    test('transitions to FAILED when attempts reach maxRetries and records fatal error', async () => {
-      const aggId = `dead_item_${testRunId}`;
-      const eventType = `EVENT_DEAD_${testRunId}`;
-      const aggType = `AGG_${testRunId}`;
-
-      // Create an event that already failed 2 times
-      const event = await prisma.outboxEvent.create({
-        data: {
-          eventType,
-          aggregateType: aggType,
-          aggregateId: aggId,
-          payload: { critical: true },
-          status: OutboxStatus.PENDING,
-          attempts: 2,
-        },
-      });
-
-      const now = new Date();
-      const result = await processOutboxEvent(
-        prisma,
-        event,
-        async () => {
-          throw new Error('Permanent authentication failure at external service');
-        },
-        {
-          now,
-          maxRetries: 3,
-        }
-      );
-
-      assert.strictEqual(result.status, OutboxStatus.FAILED);
-      assert.strictEqual(result.attempts, 3);
-      assert.strictEqual(result.error, 'Permanent authentication failure at external service');
-
-      // Verify DB record is marked FAILED
-      const dbEvent = await prisma.outboxEvent.findUnique({ where: { id: event.id } });
-      assert.ok(dbEvent);
-      assert.strictEqual(dbEvent.status, OutboxStatus.FAILED);
-      assert.strictEqual(dbEvent.attempts, 3);
-      assert.strictEqual(dbEvent.lastError, 'Permanent authentication failure at external service');
-      assert.ok(dbEvent.processedAt instanceof Date);
-
-      // Verify retryFailedOutboxEvents can recover it back to PENDING for manual replay
-      const retryResult = await retryFailedOutboxEvents(prisma, {
-        ids: [event.id],
-        resetAttempts: true,
-      });
-      assert.strictEqual(retryResult.updatedCount, 1);
-
-      const recoveredEvent = await prisma.outboxEvent.findUnique({ where: { id: event.id } });
-      assert.ok(recoveredEvent);
-      assert.strictEqual(recoveredEvent.status, OutboxStatus.PENDING);
-      assert.strictEqual(recoveredEvent.attempts, 0);
-      assert.strictEqual(recoveredEvent.lastError, null);
     });
   });
 });

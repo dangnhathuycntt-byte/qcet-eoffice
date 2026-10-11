@@ -10,12 +10,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  parseStrictDateOnly,
-  addCalendarDays,
-  selectUpcomingDeadlines,
-  isTaskPastDue,
-} from "../src/lib/academic-calendar";
+import { parseStrictDateOnly, addCalendarDays, isTaskPastDue } from "../src/lib/academic-calendar";
 import {
   SMALL_FIXTURE_TASKS,
   FIXTURE_REFERENCE_DATE,
@@ -67,101 +62,5 @@ describe("W1 — calendar-day arithmetic across month/year boundaries", () => {
   test("returns null for an invalid base date", () => {
     assert.equal(addCalendarDays("2026-02-30", 1), null);
     assert.equal(addCalendarDays("not-a-date", 1), null);
-  });
-});
-
-describe("W1 — upcoming window [D, D+6] over the shared fixture", () => {
-  const result = selectUpcomingDeadlines(SMALL_FIXTURE_TASKS, FIXTURE_REFERENCE_DATE);
-
-  test("selects exactly the hand-written order", () => {
-    assert.deepEqual(
-      result.items.map((t) => t.id),
-      EXPECTED_UPCOMING_ORDER
-    );
-  });
-
-  test("excludes every id the fixture marks absent", () => {
-    const ids = new Set(result.items.map((t) => t.id));
-    for (const id of EXPECTED_UPCOMING_ABSENT) {
-      assert.equal(ids.has(id), false, `${id} must not appear in upcoming`);
-    }
-  });
-
-  test("D is included and is NOT overdue", () => {
-    assert.equal(result.items.some((t) => t.id === "q14"), true);
-    assert.equal(isTaskPastDue(D.today, FIXTURE_REFERENCE_DATE), false);
-  });
-
-  test("D-1 / D-3 (overdue) are excluded", () => {
-    const ids = new Set(result.items.map((t) => t.id));
-    assert.equal(ids.has("q04"), false, "q04 due D-1 must not appear");
-    assert.equal(ids.has("q06"), false, "q06 due D-3 must not appear");
-  });
-
-  test("D+6 is included, D+7 is excluded", () => {
-    const ids = new Set(result.items.map((t) => t.id));
-    assert.equal(ids.has("q12"), true, "q12 due D+6 must appear");
-    assert.equal(ids.has("q13"), false, "q13 due D+7 must not appear");
-  });
-
-  test("invalid and impossible dates stay missing, never coerced to today", () => {
-    const ids = new Set(result.items.map((t) => t.id));
-    assert.equal(ids.has("q09"), false, "q09 invalid due date must not appear");
-    assert.equal(ids.has("q09b"), false, "q09b impossible calendar date must not appear");
-    assert.equal(parseStrictDateOnly("2026-02-30"), null);
-  });
-
-  test("completed and cancelled rows are excluded", () => {
-    const ids = new Set(result.items.map((t) => t.id));
-    assert.equal(ids.has("q07"), false, "completed q07 must not appear");
-    assert.equal(ids.has("q08"), false, "cancelled q08 must not appear");
-  });
-
-  test("total equals the full window size, preview is the first five rows", () => {
-    assert.equal(result.total, EXPECTED_UPCOMING_ORDER.length);
-    assert.equal(result.preview.length, 5);
-    assert.deepEqual(
-      result.preview.map((t) => t.id),
-      EXPECTED_UPCOMING_ORDER.slice(0, 5)
-    );
-  });
-
-  test("sort is stable: due asc, then priority desc, then id asc", () => {
-    const dueOf = (id: string) => SMALL_FIXTURE_TASKS.find((t) => t.id === id)!.dueDate;
-    const dueOrder = result.items.map((t) => dueOf(t.id));
-    const sortedDue = [...dueOrder].sort();
-    assert.deepEqual(dueOrder, sortedDue, "rows must be ordered by due date ascending");
-
-    const tie = result.items.filter((t) => dueOf(t.id) === D.plus3).map((t) => t.id);
-    assert.deepEqual(tie, ["q02", "q01", "q11"], "same-day tie: q02 HIGH, then q01/q11 by id");
-  });
-});
-
-describe("W1 — upcoming window across a year boundary", () => {
-  const row = (id: string, dueDate: string, priority = "NORMAL") => ({
-    id,
-    title: id,
-    dueDate,
-    status: "IN_PROGRESS",
-    priority,
-  });
-
-  test("window end crosses from December into January", () => {
-    const rows = [
-      row("past", "2026-12-29"),
-      row("today", "2026-12-30"),
-      row("edge", "2027-01-05"),
-      row("outside", "2027-01-06"),
-    ];
-    const result = selectUpcomingDeadlines(rows, "2026-12-30", { previewLimit: 5 });
-    assert.deepEqual(
-      result.items.map((r) => r.id),
-      ["today", "edge"]
-    );
-  });
-
-  test("an invalid reference date yields an empty selection, not a crash", () => {
-    const result = selectUpcomingDeadlines([row("a", "2026-09-13")], "2026-02-30");
-    assert.deepEqual(result, { items: [], total: 0, preview: [] });
   });
 });

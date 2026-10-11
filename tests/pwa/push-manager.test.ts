@@ -1,14 +1,7 @@
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  urlBase64ToUint8Array,
-  validateSameOriginRoute,
-  validateDeepLinkUrl,
-  generateNotificationTag,
-  formatNotificationPayload,
-  checkIOSPushStatus,
-} from "../../src/lib/pwa/push-manager";
+import { urlBase64ToUint8Array, validateSameOriginRoute, generateNotificationTag, checkIOSPushStatus } from "../../src/lib/pwa/push-manager";
 
 import {
   DEFAULT_PUSH_PREFERENCES,
@@ -139,26 +132,6 @@ describe("Task 7: Push Pre-Prompt, Subscription Lifecycle, Deep Linking & Notifi
       const tagFromDocEntity = generateNotificationTag("document", "doc-456", "directive");
       assert.equal(tagFromDocEntity, "doc:doc-456:directive");
     });
-
-    test("formats notification payload conforming to canonical schema", () => {
-      const payload = formatNotificationPayload(
-        "[GIAO VIỆC] Soạn thảo kế hoạch",
-        "Hiệu trưởng vừa giao việc cho bạn",
-        {
-          entityType: "task",
-          entityId: "task-001",
-          action: "assigned",
-          route: "/tasks?taskId=task-001",
-        }
-      );
-
-      assert.equal(payload.title, "[GIAO VIỆC] Soạn thảo kế hoạch");
-      assert.equal(payload.tag, "task:task-001:assigned");
-      assert.equal(payload.data.entityId, "task-001");
-      assert.equal(payload.data.type, "ASSIGNED");
-      assert.equal(payload.data.route, "/tasks?taskId=task-001");
-      assert.equal(payload.data.url, "/tasks?taskId=task-001");
-    });
   });
 
   describe("4. iOS Platform Constraints & Web Push Guidance", () => {
@@ -261,31 +234,6 @@ describe("Task 7: Push Pre-Prompt, Subscription Lifecycle, Deep Linking & Notifi
       assert.equal(
         getPushPreferencesStorageKey(null),
         "qcet_push_prefs_v1:anonymous"
-      );
-    });
-  });
-
-  describe("6. Same-Origin Deep Link URL Validation (validateDeepLinkUrl)", () => {
-    test("validates same-origin deep link URLs and rejects external/open redirects", () => {
-      (global as any).window = { location: { origin: "https://eoffice.qcet.edu.vn" } };
-
-      // Valid internal paths
-      assert.equal(
-        validateDeepLinkUrl("/tasks/task-123", "https://eoffice.qcet.edu.vn"),
-        "https://eoffice.qcet.edu.vn/tasks/task-123"
-      );
-
-      // Malicious external redirects
-      assert.equal(
-        validateDeepLinkUrl("https://phishing-site.com/login", "https://eoffice.qcet.edu.vn"),
-        null,
-        "Must reject external origins"
-      );
-
-      assert.equal(
-        validateDeepLinkUrl("javascript:alert(1)", "https://eoffice.qcet.edu.vn"),
-        null,
-        "Must reject javascript: protocols"
       );
     });
   });

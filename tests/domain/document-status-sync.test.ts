@@ -17,16 +17,7 @@ import {
   IncomingDocumentStatus,
   OutgoingDocumentStatus,
 } from "@prisma/client";
-import {
-  mapIncomingWorkflowStatusToDocumentStatus,
-  mapOutgoingWorkflowStatusToDocumentStatus,
-  isDocumentImmutable,
-  assertDocumentNotImmutable,
-} from "../../src/lib/documents/state-machine";
-import {
-  syncDocumentStatusFromIncomingWorkflow,
-  syncDocumentStatusFromOutgoingWorkflow,
-} from "../../src/lib/documents/document-service";
+import { mapIncomingWorkflowStatusToDocumentStatus, mapOutgoingWorkflowStatusToDocumentStatus, isDocumentImmutable } from "../../src/lib/documents/state-machine";
 import { InvalidTransitionError, ValidationError } from "../../src/server/api/errors";
 
 const describe: any = (globalThis as any).describe || nodeTest.describe;
@@ -452,124 +443,6 @@ describe("WI-5.1 / ADR-004: Document Status Two-Tier Synchronization", () => {
           }),
           false
         );
-      });
-    });
-
-    describe("assertDocumentNotImmutable: throws ValidationError with IMMUTABLE_DOCUMENT", () => {
-      it("throws when document status is DA_HOAN_THANH", () => {
-        assert.throws(
-          () => assertDocumentNotImmutable({ status: DocumentStatus.DA_HOAN_THANH }),
-          (err: any) => {
-            assert.ok(err instanceof ValidationError);
-            assert.equal(err.code, "IMMUTABLE_DOCUMENT");
-            return true;
-          }
-        );
-      });
-
-      it("throws when document status is ISSUED", () => {
-        assert.throws(
-          () => assertDocumentNotImmutable({ status: "ISSUED" }),
-          (err: any) => {
-            assert.ok(err instanceof ValidationError);
-            assert.equal(err.code, "IMMUTABLE_DOCUMENT");
-            return true;
-          }
-        );
-      });
-
-      it("throws when document status is ARCHIVED", () => {
-        assert.throws(
-          () => assertDocumentNotImmutable({ status: "ARCHIVED" }),
-          (err: any) => {
-            assert.ok(err instanceof ValidationError);
-            assert.equal(err.code, "IMMUTABLE_DOCUMENT");
-            return true;
-          }
-        );
-      });
-
-      it("does not throw when document is mutable", () => {
-        assert.doesNotThrow(() => {
-          assertDocumentNotImmutable({ status: DocumentStatus.DANG_XU_LY });
-        });
-      });
-    });
-  });
-
-  // ==========================================================================
-  // 4. TRANSACTIONAL ATOMIC SYNCHRONIZATION HELPERS
-  // ==========================================================================
-  describe("4. Transactional Atomic Synchronization Service Helpers", () => {
-    it("syncDocumentStatusFromIncomingWorkflow updates document status in transaction", async () => {
-      let updatedPayload: any = null;
-      const mockTx: any = {
-        document: {
-          update: async (args: any) => {
-            updatedPayload = args;
-            return { id: args.where.id, status: args.data.status };
-          },
-        },
-      };
-
-      const result = await syncDocumentStatusFromIncomingWorkflow(
-        mockTx,
-        "doc-incoming-123",
-        IncomingDocumentStatus.RESOLVED
-      );
-
-      assert.equal(result, DocumentStatus.DA_HOAN_THANH);
-      assert.deepEqual(updatedPayload, {
-        where: { id: "doc-incoming-123" },
-        data: { status: DocumentStatus.DA_HOAN_THANH },
-      });
-    });
-
-    it("syncDocumentStatusFromOutgoingWorkflow updates document status in transaction", async () => {
-      let updatedPayload: any = null;
-      const mockTx: any = {
-        document: {
-          update: async (args: any) => {
-            updatedPayload = args;
-            return { id: args.where.id, status: args.data.status };
-          },
-        },
-      };
-
-      const result = await syncDocumentStatusFromOutgoingWorkflow(
-        mockTx,
-        "doc-outgoing-456",
-        OutgoingDocumentStatus.ISSUED
-      );
-
-      assert.equal(result, DocumentStatus.DA_HOAN_THANH);
-      assert.deepEqual(updatedPayload, {
-        where: { id: "doc-outgoing-456" },
-        data: { status: DocumentStatus.DA_HOAN_THANH },
-      });
-    });
-
-    it("syncDocumentStatusFromOutgoingWorkflow correctly maps NUMBERED to DANG_XU_LY", async () => {
-      let updatedPayload: any = null;
-      const mockTx: any = {
-        document: {
-          update: async (args: any) => {
-            updatedPayload = args;
-            return { id: args.where.id, status: args.data.status };
-          },
-        },
-      };
-
-      const result = await syncDocumentStatusFromOutgoingWorkflow(
-        mockTx,
-        "doc-outgoing-789",
-        OutgoingDocumentStatus.NUMBERED
-      );
-
-      assert.equal(result, DocumentStatus.DANG_XU_LY);
-      assert.deepEqual(updatedPayload, {
-        where: { id: "doc-outgoing-789" },
-        data: { status: DocumentStatus.DANG_XU_LY },
       });
     });
   });

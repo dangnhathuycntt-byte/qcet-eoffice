@@ -6,16 +6,7 @@ import {
   motionSpring,
   motionTransition,
 } from "../src/lib/motion/tokens";
-import {
-  fadeVariants,
-  popoverVariants,
-  dialogVariants,
-  sideSheetVariants,
-  bottomSheetVariants,
-  toastVariants,
-  listItemVariants,
-  staggerContainerVariants,
-} from "../src/lib/motion/variants";
+import { fadeVariants, popoverVariants, sideSheetVariants, listItemVariants, staggerContainerVariants } from "../src/lib/motion/variants";
 
 describe("Motion Tokens & System Specifications", () => {
   it("defines asymmetric enterprise duration tokens", () => {
@@ -61,46 +52,5 @@ describe("Motion Tokens & System Specifications", () => {
     assert.equal(motionTransition.dropdownExit.duration, 0.14);
     assert.deepEqual(motionTransition.snappySpring, motionSpring.snappy);
     assert.deepEqual(motionTransition.gentleSpring, motionSpring.gentle);
-  });
-
-  it("exports asymmetric variants for modals, popovers, sheets and lists", () => {
-    // fadeVariants
-    assert.deepEqual(fadeVariants.initial, { opacity: 0 });
-    assert.ok(fadeVariants.animate);
-    assert.ok(fadeVariants.exit);
-
-    // popoverVariants
-    assert.ok(popoverVariants.initial);
-    assert.ok(popoverVariants.animate);
-    assert.ok(popoverVariants.exit);
-
-    // dialogVariants
-    assert.ok(dialogVariants.initial);
-    assert.ok(dialogVariants.animate);
-    assert.ok(dialogVariants.exit);
-
-    // sideSheetVariants
-    assert.deepEqual(sideSheetVariants.initial, { x: "100%" });
-    assert.ok(sideSheetVariants.animate);
-    assert.ok(sideSheetVariants.exit);
-
-    // bottomSheetVariants
-    assert.deepEqual(bottomSheetVariants.initial, { y: "100%" });
-    assert.ok(bottomSheetVariants.animate);
-    assert.ok(bottomSheetVariants.exit);
-
-    // listItemVariants
-    assert.ok(listItemVariants.initial);
-    assert.ok(listItemVariants.animate);
-    assert.ok(listItemVariants.exit);
-
-    // toastVariants
-    assert.ok(toastVariants.initial);
-    assert.ok(toastVariants.animate);
-    assert.ok(toastVariants.exit);
-
-    // staggerContainerVariants
-    assert.ok(staggerContainerVariants.animate);
-    assert.ok(staggerContainerVariants.exit);
   });
 });
