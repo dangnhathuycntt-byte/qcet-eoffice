@@ -1,34 +1,14 @@
-import { NextRequest } from "next/server";
-import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
-import { apiError, apiSuccess } from "@/server/api/response";
-import { assertRequestBodySize, MAX_JSON_BODY_SIZE, parseAndValidateJson } from "@/server/api/validation";
-import { assertCsrf } from "@/server/security/csrf";
-import { assertRateLimit } from "@/server/security/rate-limit";
 import { ResolveDocumentSchema } from "@/contracts/documents";
 import { resolveDocument } from "@/lib/services/incoming-document-service";
 import { withIdempotency } from "@/lib/db/idempotency";
 import { ValidationError } from "@/server/api/errors";
+import { documentActionRoute } from "../shared";
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
-
-export async function POST(req: NextRequest, context: RouteContext) {
-  let requestId = crypto.randomUUID();
-  try {
-    assertCsrf(req);
-    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
-
-    const apiCtx = await getApiContext(req);
-    requestId = apiCtx.requestId;
-    const authUser = requireAuthenticated(apiCtx);
-    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
-
-    const { id } = await context.params;
-    const body = await parseAndValidateJson(req, ResolveDocumentSchema, { allowEmpty: true });
-
+export const POST = documentActionRoute(
+  ResolveDocumentSchema,
+  (user, body, { documentId, requestId, req }) => {
     const command = {
-      documentId: id,
+      documentId,
       resolutionSummary: body.resolutionSummary,
       resolutionDocUrl: body.resolutionDocUrl ?? undefined,
       notes: body.notes ?? undefined,
@@ -43,20 +23,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const result = await withIdempotency(
+    return withIdempotency(
       {
-        userId: authUser.id,
-        operation: `document.incoming.resolve:${id}`,
+        userId: user.id,
+        operation: `document.incoming.resolve:${documentId}`,
         key: idempotencyKey,
         payload: command,
       },
-      () => resolveDocument(command, authUser, requestId)
+      () => resolveDocument(command, user, requestId)
     );
-
-    return apiSuccess(result, {
-      requestId,
-    });
-  } catch (error) {
-    return apiError(error, requestId);
-  }
-}
+  },
+  { allowEmpty: true, legacyErrors: true }
+);

@@ -2,11 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { prisma } from "../src/lib/prisma";
-import {
-  validateDocumentCreatePayload,
-  validateDirectivePayload,
-  validateDocumentUpdatePayload,
-} from "../src/lib/documents/document-validator";
+import { validateDocumentCreatePayload, validateDocumentUpdatePayload } from "../src/lib/documents/document-validator";
 import { CreateDirectiveSchema } from "../src/contracts/documents";
 import { GET as listDocumentsRoute, POST as createDocumentRoute } from "../src/app/api/documents/route";
 import { GET as getDocumentRoute, PATCH as patchDocumentRoute } from "../src/app/api/documents/[id]/route";
@@ -189,26 +185,6 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
         assignedDeptId: seededDeptId,
       });
       assert.equal(result.success, false);
-    });
-
-    test("validateDirectivePayload requires instruction and leadUnitId", () => {
-      const validDirective = {
-        leaderId: seededUserId,
-        instruction: "Giao Phòng Đào tạo phối hợp Khoa CNTT xây dựng kế hoạch",
-        leadUnitId: seededDeptId,
-      };
-      const validResult = validateDirectivePayload(validDirective);
-      assert.equal(validResult.isValid, true);
-      assert.equal(validResult.errors.length, 0);
-
-      const invalidDirective = {
-        leaderId: seededUserId,
-        instruction: "",
-      };
-      const invalidResult = validateDirectivePayload(invalidDirective);
-      assert.equal(invalidResult.isValid, false);
-      assert.ok(invalidResult.errors.some((e) => e.includes("instruction") || e.includes("chỉ đạo")));
-      assert.ok(invalidResult.errors.some((e) => e.includes("leadUnitId") || e.includes("đơn vị")));
     });
 
     test("validateDocumentUpdatePayload validates fields correctly", () => {

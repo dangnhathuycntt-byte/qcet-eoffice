@@ -1,10 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  isDelegationActive,
-  canUserApproveTask,
-  recordDelegatedApproval,
-} from "../src/lib/delegation-authority-engine";
+import { isDelegationActive, canUserApproveTask } from "../src/lib/delegation-authority-engine";
 import type { DelegationRule } from "../src/types/delegation";
 
 describe("Stanford Authority Delegation Engine", () => {
@@ -303,59 +299,6 @@ describe("Stanford Authority Delegation Engine", () => {
         result.reason,
         "Bạn không có quyền phê duyệt công việc này hoặc thời gian ủy quyền đã hết hiệu lực."
       );
-    });
-  });
-
-  describe("6. recordDelegatedApproval", () => {
-    test("tao dung vet kiem toan ApprovalAuditLog khi duoc uy quyen", () => {
-      const auditLog = recordDelegatedApproval({
-        taskId: "task-dacum-101",
-        action: "APPROVE_DACUM_STEP1",
-        actor: {
-          id: "staff-01",
-          name: "Le Van A",
-          role: "STAFF",
-        },
-        rule: baseActiveRule,
-        timestamp: "2025-03-15T10:30:00.000Z",
-        notes: "Phe duyet thay mat Truong phong Tran Hung theo quyen uy quyen",
-      });
-
-      assert.equal(auditLog.taskId, "task-dacum-101");
-      assert.equal(auditLog.action, "APPROVE_DACUM_STEP1");
-      assert.equal(auditLog.performedByUserId, "staff-01");
-      assert.equal(auditLog.performedByUserName, "Le Van A");
-      assert.equal(auditLog.performedByUserRole, "STAFF");
-      assert.equal(auditLog.isDelegated, true);
-      assert.equal(auditLog.delegatedByGrantorId, "mgr-01");
-      assert.equal(auditLog.delegatedByGrantorName, "Tran Hung");
-      assert.equal(auditLog.timestamp, "2025-03-15T10:30:00.000Z");
-      assert.equal(
-        auditLog.notes,
-        "Phe duyet thay mat Truong phong Tran Hung theo quyen uy quyen"
-      );
-    });
-
-    test("tao dung vet kiem toan ApprovalAuditLog khi phe duyet truc tiep khong uy quyen", () => {
-      const auditLog = recordDelegatedApproval({
-        taskId: "task-dacum-102",
-        action: "APPROVE_DACUM_STEP1",
-        actor: {
-          id: "mgr-01",
-          name: "Tran Hung",
-          role: "MANAGER",
-        },
-      });
-
-      assert.equal(auditLog.taskId, "task-dacum-102");
-      assert.equal(auditLog.action, "APPROVE_DACUM_STEP1");
-      assert.equal(auditLog.performedByUserId, "mgr-01");
-      assert.equal(auditLog.performedByUserName, "Tran Hung");
-      assert.equal(auditLog.performedByUserRole, "MANAGER");
-      assert.equal(auditLog.isDelegated, false);
-      assert.equal(auditLog.delegatedByGrantorId, undefined);
-      assert.equal(auditLog.delegatedByGrantorName, undefined);
-      assert.ok(auditLog.timestamp);
     });
   });
 });

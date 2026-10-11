@@ -264,12 +264,3 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     externalDbKey: "khoa_dai_cuong",
   }
 ];
-
-/** Lookup a unit config by code (case-insensitive). */
-export function getOrgUnitConfig(code: string): OrgUnitConfig | undefined {
-  if (!code) return undefined;
-  const norm = code.trim().toUpperCase();
-  return QCET_ORG_UNITS.find(
-    (u) => u.code.toUpperCase() === norm || u.id.toUpperCase() === norm,
-  );
-}

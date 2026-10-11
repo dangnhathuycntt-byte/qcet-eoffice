@@ -256,7 +256,6 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
 
   test("POST /api/auth/login rejects inactive user (isActive: false) with status 403", async () => {
     const { prisma } = await import("../src/lib/prisma");
-    const { hashPassword } = await import("../src/lib/password");
     const inactiveEmail = "locked_user@qcet.edu.vn";
     const inactivePassword = "PasswordLocked123";
 
@@ -265,12 +264,10 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     });
 
     try {
-      const hashedPassword = await hashPassword(inactivePassword);
       await prisma.user.create({
         data: {
           email: inactiveEmail,
           name: "Locked User",
-          passwordHash: hashedPassword,
           role: "CHUYEN_VIEN",
           isActive: false,
         },

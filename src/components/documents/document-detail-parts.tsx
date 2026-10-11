@@ -3,8 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronDown, ChevronRight, Download } from "lucide-react";
-import { FileTypeIcon } from "./file-type-icon";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { cn } from "@/lib/utils";
 import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
@@ -12,7 +11,6 @@ import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { getDueIndicator, getSlaBadgeStatus } from "@/components/tasks/table/utils/table-date-helpers";
 import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
-import { toServedFileUrl } from "@/lib/url-utils";
 import { useTrackOpenPopover } from "./popover-escape-guard";
 
 /** Tiêu đề chính là trích yếu; số, ký hiệu và nguồn là dòng phụ. */
@@ -113,89 +111,6 @@ export function SectionHeading({ children, count }: { children: React.ReactNode;
       {children}
       {typeof count === "number" ? <span className="tabular-nums text-muted-foreground/70">{count}</span> : null}
     </h2>
-  );
-}
-
-function formatFileSize(bytes?: number | null): string | null {
-  if (!bytes) return null;
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
-
-/**
- * Dòng tệp đính kèm tối giản: tên + dung lượng; nút tải chỉ hiện khi hover/focus.
- * `onSelect` dùng khi dòng chọn tệp để xem trước; `selected` tô nền nhẹ.
- */
-export function AttachmentRow({
-  fileName,
-  fileUrl,
-  fileSize,
-  sizeLabel,
-  selected,
-  onSelect,
-  trailing,
-  meta,
-  mimeType,
-}: {
-  fileName: string;
-  mimeType?: string | null;
-  fileUrl?: string | null;
-  fileSize?: number | null;
-  /** Dung lượng đã định dạng sẵn từ API, dùng khi không có số byte. */
-  sizeLabel?: string | null;
-  selected?: boolean;
-  onSelect?: () => void;
-  trailing?: React.ReactNode;
-  /** Thông tin phụ nằm giữa tên và dung lượng (ví dụ số trang). */
-  meta?: React.ReactNode;
-}) {
-  const size = formatFileSize(fileSize) ?? sizeLabel ?? null;
-  const href = toServedFileUrl(fileUrl);
-  const label = (
-    <>
-      <FileTypeIcon fileName={fileName} mimeType={mimeType} />
-      <span className={cn("min-w-0 flex-1 truncate text-compact text-foreground", selected && "font-medium")}>{fileName}</span>
-      {meta ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{meta}</span> : null}
-      {size ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{size}</span> : null}
-    </>
-  );
-  return (
-    <div
-      className={cn(
-        "group/att -mx-2 flex min-h-8 items-center gap-1 rounded-md pr-1 transition-colors hover:bg-muted/50",
-        selected && "bg-muted/60",
-      )}
-    >
-      {onSelect ? (
-        <button
-          type="button"
-          onClick={onSelect}
-          aria-pressed={selected}
-          title={fileName}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {label}
-        </button>
-      ) : (
-        <span className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1" title={fileName}>
-          {label}
-        </span>
-      )}
-      {trailing}
-      {href ? (
-        <a
-          href={href}
-          download={fileName}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Tải về ${fileName}`}
-          title="Tải về"
-          className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/att:opacity-100 [@media(hover:none)]:opacity-100"
-        >
-          <Download className="size-3.5" />
-        </a>
-      ) : null}
-    </div>
   );
 }
 

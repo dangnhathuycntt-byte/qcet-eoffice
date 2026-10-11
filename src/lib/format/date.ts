@@ -210,18 +210,6 @@ export function formatCompactDate(
   return `${pad2(p.day)}/${pad2(p.month)}`;
 }
 
-/** Display date span — `dd/MM - dd/MM` (vocabulary §G.1 / §G.3). */
-export function formatDateSpan(
-  start: Date | string | number | null | undefined,
-  end: Date | string | number | null | undefined,
-  fallback: string = DATE_FALLBACK
-): string {
-  const s = toIctDateTimeParts(start);
-  const e = toIctDateTimeParts(end);
-  if (!s || !e) return fallback;
-  return `${pad2(s.day)}/${pad2(s.month)} - ${pad2(e.day)}/${pad2(e.month)}`;
-}
-
 /**
  * Display time — 24-hour `HH:mm` (vocabulary §G.1).
  * Requires a time-bearing input; a date-only value yields the fallback rather than a

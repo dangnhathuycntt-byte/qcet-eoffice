@@ -1,10 +1,6 @@
 import { z } from 'zod';
 import { PaginationQuerySchema } from './common';
-import {
-  NOTIFICATION_CATEGORIES,
-  NOTIFICATION_TYPES,
-  normalizeNotificationCategory,
-} from '@/domain/notifications';
+import { normalizeNotificationCategory } from '@/domain/notifications';
 
 /**
  * Controlled schemas for notification category and type (RFC-07 / WI-7.2)
@@ -50,8 +46,6 @@ export const NotificationQuerySchema = PaginationQuerySchema.extend({
   triage: z.enum(['all', 'action_required', 'approvals', 'reminders']).optional(),
 });
 
-export type NotificationQuery = z.infer<typeof NotificationQuerySchema>;
-
 /**
  * Push subscription keys schema.
  */
@@ -69,43 +63,6 @@ export const PushSubscriptionKeysSchema = z
       .max(255, 'auth key cannot exceed 255 characters'),
   })
   .strict();
-
-export type PushSubscriptionKeys = z.infer<typeof PushSubscriptionKeysSchema>;
-
-/**
- * Web Push subscription contract.
- * Strictly checks endpoint URL and bounds key sizes.
- */
-export const SubscribePushSchema = z
-  .object({
-    endpoint: z
-      .string()
-      .trim()
-      .url('Push endpoint must be a valid URL')
-      .max(1024, 'Endpoint cannot exceed 1024 characters'),
-    keys: PushSubscriptionKeysSchema,
-    deviceType: z
-      .string()
-      .trim()
-      .max(50, 'Device type cannot exceed 50 characters')
-      .optional()
-      .nullable(),
-    platform: z
-      .string()
-      .trim()
-      .max(50, 'Platform cannot exceed 50 characters')
-      .optional()
-      .nullable(),
-    userAgent: z
-      .string()
-      .trim()
-      .max(500, 'User agent cannot exceed 500 characters')
-      .optional()
-      .nullable(),
-  })
-  .strict();
-
-export type SubscribePushInput = z.infer<typeof SubscribePushSchema>;
 
 /**
  * Flexible Push subscription contract supporting both flat (p256dh, auth)
@@ -162,8 +119,6 @@ export const PushSubscriptionSchema = z
     }
   );
 
-export type PushSubscriptionInput = z.infer<typeof PushSubscriptionSchema>;
-
 /**
  * Test push notification contract.
  */
@@ -186,5 +141,3 @@ export const TestPushSchema = z
       .optional(),
   })
   .strict();
-
-export type TestPushInput = z.infer<typeof TestPushSchema>;

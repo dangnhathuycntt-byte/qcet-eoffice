@@ -20,7 +20,6 @@ import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/d
 import { initiateApprovalProcess, stepWaitingSince } from "@/lib/services/task-actor-service";
 import { authorizeOnTask, can } from "./authorize-on-task";
 
-
 export const MAX_APPROVAL_STEPS = 5;
 const STEP_ACTOR_NOTE = "Bước duyệt:";
 
@@ -40,7 +39,6 @@ export const DefineApprovalProcessSchema = z
       .max(MAX_APPROVAL_STEPS, `Tối đa ${MAX_APPROVAL_STEPS} bước`),
   })
   .strict();
-export type DefineApprovalProcessInput = z.infer<typeof DefineApprovalProcessSchema>;
 
 export interface ApprovalProcessView {
   process: {

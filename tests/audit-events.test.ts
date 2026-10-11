@@ -2,25 +2,8 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { Prisma, TaskStatus, TaskScope, TaskPriority, DeliverableReviewStatus } from '@prisma/client';
 import { prisma } from '../src/lib/prisma';
-import {
-  logAuditEvent,
-  getEntityAuditHistory,
-  getActorAuditHistory,
-  getRequestAuditEvents,
-  countEntityAuditEvents,
-  AuditAction,
-  TASK_CREATED,
-  TASK_STATUS_CHANGED,
-  TASK_APPROVED,
-  DELIVERABLE_SUBMITTED,
-  AUDIT_IMMUTABILITY_INVARIANT,
-} from '../src/lib/db/audit';
+import { logAuditEvent, getEntityAuditHistory, getActorAuditHistory, getRequestAuditEvents, countEntityAuditEvents, AuditAction, TASK_CREATED, TASK_STATUS_CHANGED, TASK_APPROVED, DELIVERABLE_SUBMITTED } from '../src/lib/db/audit';
 import * as auditModule from '../src/lib/db/audit';
-import {
-  createTaskAtomic,
-  submitDeliverableAtomic,
-  approveTaskAtomic,
-} from '../src/lib/db/transactions';
 
 describe('Task 9: Immutable AuditEvent Model & Service', () => {
   const testRunId = `audit_test_${Date.now()}`;
@@ -400,12 +383,6 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
   // SUITE 4: Immutability Invariant Verification
   // ==========================================================================
   describe('4. Immutability Invariant Verification', () => {
-    test('AUDIT_IMMUTABILITY_INVARIANT guarantees append-only contract', () => {
-      assert.strictEqual(AUDIT_IMMUTABILITY_INVARIANT.isAppendOnly, true);
-      assert.strictEqual(AUDIT_IMMUTABILITY_INVARIANT.allowUpdates, false);
-      assert.strictEqual(AUDIT_IMMUTABILITY_INVARIANT.allowDeletions, false);
-      assert.strictEqual(AUDIT_IMMUTABILITY_INVARIANT.tableName, 'audit_events');
-    });
 
     test('Audit service module exposes zero mutation/deletion functions', () => {
       const exportedKeys = Object.keys(auditModule);
@@ -427,126 +404,6 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
           );
         }
       }
-    });
-  });
-
-  // ==========================================================================
-  // SUITE 5: Integration with Transaction Handlers (Task 7)
-  // ==========================================================================
-  describe('5. Integration with Task 7 Transaction Handlers', () => {
-    test('createTaskAtomic automatically records TASK_CREATED in audit_events', async () => {
-      const title = `Task Audit Integration ${testRunId}`;
-      const result = await createTaskAtomic(prisma, {
-        createdById: testUserId,
-
-        title,
-        dueDate: '2026-10-15',
-        scope: TaskScope.DEPARTMENT,
-        priority: TaskPriority.NORMAL,
-        primaryOwnerId: testUserId,
-      });
-
-      const auditHistory = await getEntityAuditHistory({
-        entityType: 'Task',
-        entityId: result.task.id,
-      });
-
-      assert.ok(auditHistory.length >= 1, 'AuditEvent must be created during createTaskAtomic');
-      const createdEvent = auditHistory.find((e) => e.action === TASK_CREATED);
-      assert.ok(createdEvent, 'Must find TASK_CREATED action');
-      assert.strictEqual(createdEvent?.entityId, result.task.id);
-      assert.strictEqual(createdEvent?.actorId, testUserId);
-    });
-
-    test('submitDeliverableAtomic automatically records TASK_DELIVERABLE_SUBMITTED in audit_events', async () => {
-      const created = await createTaskAtomic(prisma, {
-        createdById: testUserId,
-
-        title: `Task for Deliverable ${testRunId}`,
-        dueDate: '2026-10-15',
-        scope: TaskScope.DEPARTMENT,
-        priority: TaskPriority.NORMAL,
-        primaryOwnerId: testUserId,
-      });
-
-      const result = await submitDeliverableAtomic(prisma, {
-        taskId: created.task.id,
-        uploadedById: testUserId,
-        title: 'Báo cáo thử nghiệm hoàn thành',
-        fileUrl: 'https://example.com/deliv.pdf',
-      });
-
-      const auditHistory = await getEntityAuditHistory({
-        entityType: 'TaskDeliverable',
-        entityId: result.deliverable.id,
-      });
-
-      assert.ok(auditHistory.length >= 1);
-      const submittedEvent = auditHistory.find(
-        (e) => e.action === 'TASK_DELIVERABLE_SUBMITTED' || e.action === DELIVERABLE_SUBMITTED
-      );
-      assert.ok(submittedEvent);
-      assert.strictEqual(submittedEvent?.entityId, result.deliverable.id);
-      assert.strictEqual(submittedEvent?.actorId, testUserId);
-    });
-
-    test('approveTaskAtomic automatically records TASK_APPROVED in audit_events', async () => {
-      const created = await createTaskAtomic(prisma, {
-        createdById: testUserId,
-
-        title: `Task for Approval ${testRunId}`,
-        dueDate: '2026-10-15',
-        scope: TaskScope.DEPARTMENT,
-        priority: TaskPriority.NORMAL,
-        primaryOwnerId: testUserId,
-      });
-
-      const sub = await submitDeliverableAtomic(prisma, {
-        taskId: created.task.id,
-        uploadedById: testUserId,
-        title: 'Báo cáo cần phê duyệt',
-        fileUrl: 'https://example.com/deliv.pdf',
-      });
-
-      const result = await approveTaskAtomic(prisma, {
-        taskId: created.task.id,
-        approverId: testUserId,
-        deliverableReview: {
-          deliverableId: sub.deliverable.id,
-          reviewStatus: DeliverableReviewStatus.APPROVED,
-          reviewNote: 'Đạt yêu cầu xuất sắc',
-        },
-      });
-
-      assert.strictEqual(result.task.status, TaskStatus.COMPLETED);
-
-      const auditHistory = await getEntityAuditHistory({
-        entityType: 'Task',
-        entityId: created.task.id,
-      });
-
-      const approvedEvent = auditHistory.find((e) => e.action === TASK_APPROVED);
-      assert.ok(approvedEvent, 'TASK_APPROVED audit event must be recorded');
-      assert.strictEqual(approvedEvent?.actorId, testUserId);
-    });
-
-    test('Atomic rollback preserves audit clean state when transaction fails', async () => {
-      const fakeTaskId = `non_existent_task_${testRunId}`;
-
-      await assert.rejects(async () => {
-        await submitDeliverableAtomic(prisma, {
-          taskId: fakeTaskId,
-          uploadedById: testUserId,
-          title: 'Sản phẩm giao nộp lỗi',
-          fileUrl: 'https://example.com/err.pdf',
-        });
-      });
-
-      // Verify no orphan audit event was created for the non-existent task
-      const audits = await prisma.auditEvent.findMany({
-        where: { entityId: fakeTaskId },
-      });
-      assert.strictEqual(audits.length, 0, 'No audit events should exist for failed transactions');
     });
   });
 });

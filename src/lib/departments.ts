@@ -21,8 +21,6 @@ export const QCET_CANONICAL_UNITS = [
   "TT_NNTH",
 ] as const;
 
-export type QCETCanonicalUnit = typeof QCET_CANONICAL_UNITS[number];
-
 /**
  * Bảng ánh xạ tương thích ngược và chuẩn hóa mã đơn vị QCET
  * Ánh xạ tất cả mã cũ / kebab-case / alias về mã chuẩn quy chuẩn
@@ -174,10 +172,4 @@ export function toCanonicalUnitCode(rawCode: string): string {
     QCET_UNIT_CANONICAL_MAP[trimmed.toLowerCase()] ||
     trimmed
   );
-}
-
-export function isCanonicalUnitCode(code: string): boolean {
-  if (!code) return false;
-  const canonical = toCanonicalUnitCode(code);
-  return (QCET_CANONICAL_UNITS as readonly string[]).includes(canonical);
 }

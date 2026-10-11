@@ -10,16 +10,7 @@
  * User B on a shared device will never see User A's data.
  */
 
-import {
-  QCET_OFFLINE_STORES,
-  BaseOfflineRecord,
-  getRecord,
-  putRecord,
-  deleteRecord,
-  getRecordsByIndex,
-  deleteRecordsByIndex,
-  clearStore,
-} from "./indexed-db";
+import { QCET_OFFLINE_STORES, BaseOfflineRecord, getRecord, putRecord, deleteRecord, getRecordsByIndex, deleteRecordsByIndex } from "./indexed-db";
 
 export type OfflineStoreCategory = "READ_CACHE" | "DRAFT" | "MUTATION_OUTBOX";
 
@@ -61,22 +52,6 @@ export function buildUserStoreKey(
     throw new Error("userId is required to build user-scoped offline store key");
   }
   return `qcet:user:${userId}:${storeCategory}:${key}`;
-}
-
-/**
- * Builds the canonical user-scoped namespace prefix:
- * qcet:user:${userId}:${storeCategory} or qcet:user:${userId}
- */
-export function buildUserPrefix(
-  userId: string,
-  storeCategory?: OfflineStoreCategory | string
-): string {
-  if (!userId) {
-    throw new Error("userId is required to build user-scoped prefix");
-  }
-  return storeCategory
-    ? `qcet:user:${userId}:${storeCategory}`
-    : `qcet:user:${userId}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -414,43 +389,6 @@ export async function clearUserOutbox(userId: string): Promise<number> {
 // 4. Scoped User Offline Store Facade
 // ---------------------------------------------------------------------------
 
-export function getUserOfflineStore(userId: string) {
-  if (!userId) {
-    throw new Error("userId is required to initialize user offline store");
-  }
-
-  return {
-    userId,
-    readCache: {
-      get: <T>(key: string) => getReadCache<T>(userId, key),
-      set: <T>(key: string, data: T, ttlMs?: number) =>
-        setReadCache<T>(userId, key, data, { ttlMs }),
-      remove: (key: string) => removeReadCache(userId, key),
-      clear: () => clearUserReadCache(userId),
-    },
-    drafts: {
-      get: <T>(key: string) => getDraft<T>(userId, key),
-      set: <T>(key: string, data: T) => setDraft<T>(userId, key, data),
-      remove: (key: string) => removeDraft(userId, key),
-      list: <T>() => listUserDrafts<T>(userId),
-      clear: () => clearUserDrafts(userId),
-    },
-    outbox: {
-      enqueue: <T>(
-        item: Parameters<typeof enqueueOutboxItem<T>>[1]
-      ) => enqueueOutboxItem<T>(userId, item),
-      get: <T>(id: string) => getOutboxItem<T>(userId, id),
-      getAll: <T>(status?: "pending" | "syncing" | "conflict" | "failed") =>
-        getOutboxQueue<T>(userId, status),
-      update: <T>(id: string, updates: Partial<OfflineOutboxItem<T>>) =>
-        updateOutboxItem<T>(userId, id, updates),
-      remove: (id: string) => removeOutboxItem(userId, id),
-      clear: () => clearUserOutbox(userId),
-    },
-    purge: () => purgeUserOfflineData(userId),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // 5. Logout Purge & Device Cleanup
 // ---------------------------------------------------------------------------
@@ -526,47 +464,5 @@ export async function purgeUserOfflineData(userId: string): Promise<void> {
     clearOfflineMutationQueue();
   } catch (err) {
     console.warn("Error resetting in-memory mutation queue:", err);
-  }
-}
-
-/**
- * Comprehensive device-wide offline data cleanup.
- * Clears all stores in IndexedDB, all runtime/api caches, and memory queues.
- */
-export async function purgeAllUserData(): Promise<void> {
-  await Promise.allSettled([
-    clearStore(QCET_OFFLINE_STORES.READ_CACHE),
-    clearStore(QCET_OFFLINE_STORES.DRAFT),
-    clearStore(QCET_OFFLINE_STORES.MUTATION_OUTBOX),
-  ]);
-
-  const cacheStorage =
-    typeof caches !== "undefined"
-      ? caches
-      : typeof window !== "undefined" && (window as any).caches
-      ? (window as any).caches
-      : null;
-
-  if (cacheStorage) {
-    try {
-      const cacheNames = await cacheStorage.keys();
-      for (const name of cacheNames) {
-        if (
-          name.includes("api") ||
-          name.includes("runtime") ||
-          name.includes("user")
-        ) {
-          await cacheStorage.delete(name);
-        }
-      }
-    } catch {
-      // Ignore cache deletion errors
-    }
-  }
-
-  try {
-    clearOfflineMutationQueue();
-  } catch {
-    // Ignore queue errors
   }
 }

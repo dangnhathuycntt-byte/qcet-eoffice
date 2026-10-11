@@ -19,7 +19,6 @@
 
 import type { TaskStatus, TaskPriority } from '@/types/dashboard';
 import type * as React from 'react';
-import type { LucideIcon } from 'lucide-react';
 import {
   Ban,
   PauseCircle,
@@ -209,14 +208,6 @@ export const PRIORITY_DISPLAY_CONFIG: ReadonlyArray<PriorityDisplayConfig> = [
   },
 ];
 
-/** Lookup a single priority display config by value. Falls back to NORMAL. */
-export function getPriorityDisplay(priority: TaskPriority | string): PriorityDisplayConfig {
-  return (
-    PRIORITY_DISPLAY_CONFIG.find((c) => c.value === priority) ??
-    PRIORITY_DISPLAY_CONFIG[2] // NORMAL
-  );
-}
-
 /* ── Dropdown Option Shapes ─────────────────────────────────────── */
 
 /** Compact option shape used by dropdowns in task identity / detail views. */
@@ -254,27 +245,3 @@ export const PRIORITY_OPTIONS: ReadonlyArray<PriorityDropdownOption> = PRIORITY_
 }));
 
 /* ── Category Display ────────────────────────────────────────────── */
-
-export interface CategoryDisplayConfig {
-  /** Canonical category ID */
-  id: string;
-  /** Vietnamese label for UI display */
-  label: string;
-  /** Tailwind background-color class for category indicator */
-  color: string;
-}
-
-export const CATEGORY_DISPLAY_CONFIG: ReadonlyArray<CategoryDisplayConfig> = [
-  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số", color: "bg-blue-500" },
-  { id: "TRUYEN_THONG", label: "Truyền thông & Tuyển sinh", color: "bg-purple-500" },
-  { id: "CNTT", label: "Hạ tầng & CNTT", color: "bg-emerald-500" },
-  { id: "ATTT", label: "An toàn thông tin", color: "bg-rose-500" }, // design-lint-ignore no-signal-palette: màu phân loại, không phải tín hiệu
-  { id: "THU_VIEN", label: "Thư viện & Học liệu", color: "bg-amber-500" }, // design-lint-ignore no-signal-palette: màu phân loại, không phải tín hiệu
-  { id: "BAO_CAO", label: "Báo cáo & Tổng hợp", color: "bg-cyan-500" },
-  { id: "KHAC", label: "Khác", color: "bg-muted-foreground" },
-];
-
-/** Get category options array for select/dropdown UI controls. */
-export function getCategoryOptions(): ReadonlyArray<CategoryDisplayConfig> {
-  return CATEGORY_DISPLAY_CONFIG;
-}

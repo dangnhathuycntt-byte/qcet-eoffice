@@ -22,28 +22,10 @@ import assert from 'node:assert/strict';
 const describe: any = (globalThis as any).describe || nodeTest.describe;
 const it: any = (globalThis as any).it || (globalThis as any).test || nodeTest.it;
 
-import {
-  MeetingStatus,
-  MEETING_STATUSES,
-  ALLOWED_MEETING_TRANSITIONS,
-  TERMINAL_MEETING_STATUSES,
-  canTransition,
-  assertTransition,
-  isMeetingFinalized,
-  assertMeetingNotFinalized,
-  InvalidMeetingStateTransitionError,
-  FinalizedMeetingError,
-  MeetingStateMachine,
-} from '../../src/domain/meetings';
+import { MeetingStatus, MEETING_STATUSES, ALLOWED_MEETING_TRANSITIONS, TERMINAL_MEETING_STATUSES, canTransition, assertTransition, isMeetingFinalized, assertMeetingNotFinalized, InvalidMeetingStateTransitionError, FinalizedMeetingError } from '../../src/domain/meetings';
 
 // Barrel export reachability proof via alias
-import {
-  canTransition as barrelCanTransition,
-  assertTransition as barrelAssertTransition,
-  isMeetingFinalized as barrelIsMeetingFinalized,
-  assertMeetingNotFinalized as barrelAssertMeetingNotFinalized,
-  MeetingStateMachine as BarrelMeetingStateMachine,
-} from '@/domain/meetings';
+import { canTransition as barrelCanTransition, assertTransition as barrelAssertTransition, isMeetingFinalized as barrelIsMeetingFinalized, assertMeetingNotFinalized as barrelAssertMeetingNotFinalized } from '@/domain/meetings';
 
 describe('WI-6.1a: Meeting State Machine Formalization', () => {
   describe('1. Canonical Statuses & Definitions', () => {
@@ -62,14 +44,6 @@ describe('WI-6.1a: Meeting State Machine Formalization', () => {
 
     it('identifies terminal statuses correctly', () => {
       assert.deepEqual([...TERMINAL_MEETING_STATUSES], ['MINUTES_CONFIRMED', 'CANCELLED']);
-    });
-
-    it('barrel export resolves identical functions', () => {
-      assert.equal(canTransition, barrelCanTransition);
-      assert.equal(assertTransition, barrelAssertTransition);
-      assert.equal(isMeetingFinalized, barrelIsMeetingFinalized);
-      assert.equal(assertMeetingNotFinalized, barrelAssertMeetingNotFinalized);
-      assert.equal(MeetingStateMachine, BarrelMeetingStateMachine);
     });
   });
 
@@ -273,29 +247,6 @@ describe('WI-6.1a: Meeting State Machine Formalization', () => {
           return true;
         }
       );
-    });
-  });
-
-  describe('8. MeetingStateMachine Facade Parity', () => {
-    it('facade static methods delegate correctly to standalone functions', () => {
-      assert.equal(
-        MeetingStateMachine.canTransition('INVITED', 'HELD'),
-        canTransition('INVITED', 'HELD')
-      );
-      assert.equal(
-        MeetingStateMachine.isFinalized('MINUTES_CONFIRMED'),
-        isMeetingFinalized('MINUTES_CONFIRMED')
-      );
-      assert.doesNotThrow(() => MeetingStateMachine.assertTransition('HELD', 'MINUTES_DRAFT'));
-      assert.doesNotThrow(() => MeetingStateMachine.assertNotFinalized('INVITED', 'test'));
-      assert.throws(() => MeetingStateMachine.assertTransition('CANCELLED', 'HELD'));
-      assert.throws(() => MeetingStateMachine.assertNotFinalized('CANCELLED', 'test'));
-    });
-
-    it('exposes STATUSES and TRANSITIONS maps on the facade class', () => {
-      assert.deepEqual(MeetingStateMachine.STATUSES, MEETING_STATUSES);
-      assert.deepEqual(MeetingStateMachine.TRANSITIONS, ALLOWED_MEETING_TRANSITIONS);
-      assert.deepEqual(MeetingStateMachine.TERMINAL_STATUSES, TERMINAL_MEETING_STATUSES);
     });
   });
 });

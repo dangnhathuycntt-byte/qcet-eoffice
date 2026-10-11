@@ -663,23 +663,6 @@ export function groupNotificationsByDay(
 
 export type MobileNotificationFilter = "all" | "unread" | "action_required";
 
-/**
- * Filters notifications on mobile inbox for:
- * [Tất cả] [Chưa đọc] [Cần xử lý]
- */
-export function filterNotificationsMobile(
-  notifications: QCETNotification[],
-  filter: MobileNotificationFilter
-): QCETNotification[] {
-  if (filter === "unread") {
-    return notifications.filter((n) => !n.isRead);
-  }
-  if (filter === "action_required") {
-    return filterNotificationsByTab(notifications, "action_required");
-  }
-  return notifications;
-}
-
 // ============================================================================
 // View-State Machine, Bounded Empty Copy & Optimistic Read Reconciliation
 // T44 (error vs empty), T45 (bounded copy), T46 (read reconciliation)
@@ -714,20 +697,6 @@ export function deriveNotificationsViewState(
   if (input.isLoading && input.count === 0) return "loading";
   return input.count > 0 ? "data" : "empty";
 }
-
-/**
- * Canonical phrases that overclaim that ALL institutional work is handled.
- * Empty notification copy must never contain these (T45).
- */
-export const NOTIFICATION_OVERCLAIM_PHRASES = [
-  "toàn bộ hoạt động",
-  "nắm bắt toàn bộ",
-  "nắm bắt hết",
-  "cập nhật toàn bộ",
-  "xử lý toàn bộ",
-  "đã xử lý và cập nhật",
-  "hoàn tất toàn bộ",
-] as const;
 
 export interface NotificationEmptyCopy {
   title: string;
@@ -772,17 +741,6 @@ export function getNotificationEmptyCopy(
         description: "Hiện chưa có cập nhật nào được ghi nhận trong phạm vi này.",
       };
   }
-}
-
-/**
- * Bounded empty copy for the mobile inbox triage filters (T45/T47).
- */
-export function getMobileNotificationEmptyCopy(
-  filter: MobileNotificationFilter
-): NotificationEmptyCopy {
-  if (filter === "unread") return getNotificationEmptyCopy("all", true);
-  if (filter === "action_required") return getNotificationEmptyCopy("action_required");
-  return getNotificationEmptyCopy("all");
 }
 
 /**

@@ -18,30 +18,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  authorize,
-  assertAuthorized,
-  isAuthorized,
-  checkSeparationOfDuties,
-  checkPortfolioAlignment,
-  getResourceRelationships,
-  isCapabilityAction,
-  isSystemAdminUser,
-  isExecutivePosition,
-  isUnitLeaderPosition,
-  SeparationOfPowersError,
-  SeparationOfDutiesError,
-  PortfolioMismatchError,
-  DelegationExpiredError,
-  NonDelegablePowerError,
-  SingleDRIError,
-  HybridAuthorizationError,
-  type AuthenticatedUserContext,
-  type AuthorizationResource,
-  type AuthorizationContext,
-  type ActiveDelegationGrantContext,
-  type CapabilityAction,
-} from "../src/lib/auth/hybrid-authorization";
+import { authorize, assertAuthorized, checkSeparationOfDuties, getResourceRelationships, isCapabilityAction, isSystemAdminUser, isExecutivePosition, isUnitLeaderPosition, SeparationOfPowersError, SeparationOfDutiesError, PortfolioMismatchError, DelegationExpiredError, NonDelegablePowerError, SingleDRIError, HybridAuthorizationError, type AuthenticatedUserContext, type AuthorizationResource, type AuthorizationContext, type ActiveDelegationGrantContext, type CapabilityAction } from "../src/lib/auth/hybrid-authorization";
 
 describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)", () => {
   // Common Actors

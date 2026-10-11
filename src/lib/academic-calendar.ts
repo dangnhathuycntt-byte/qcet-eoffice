@@ -67,10 +67,6 @@ export interface CurrentAcademicPeriod {
   label: string; // e.g. "Học kỳ I (2026 - 2027)"
 }
 
-/**
- * 12 months ordered chronologically by solar calendar (Tháng 1 -> Tháng 12).
- */
-export const CALENDAR_MONTH_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 export const ACADEMIC_MONTH_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
 /**
@@ -269,40 +265,6 @@ function buildAcademicMonthPeriod(
 }
 
 /**
- * Returns QuarterPeriod object for a given quarter (1-4) and year.
- */
-export function getQuarterPeriod(quarter: number, year: number = 2026): QuarterPeriod {
-  const clampedQuarter = Math.max(1, Math.min(4, quarter));
-  const startMonth = (clampedQuarter - 1) * 3 + 1;
-  const endMonth = clampedQuarter * 3;
-  const lastDay = getDaysInMonth(year, endMonth);
-
-  const startDate = `${year}-${pad(startMonth)}-01`;
-  const endDate = `${year}-${pad(endMonth)}-${pad(lastDay)}`;
-
-  const nextQuarterYear = clampedQuarter === 4 ? year + 1 : year;
-  const nextQuarterStartMonth = clampedQuarter === 4 ? 1 : endMonth + 1;
-  const nextQuarterStartDate = `${nextQuarterYear}-${pad(nextQuarterStartMonth)}-01`;
-
-  const shortDateSpan = `01/${pad(startMonth)} - ${pad(lastDay)}/${pad(endMonth)}`;
-  const label = `Quý ${clampedQuarter}`;
-  const fullLabel = `Quý ${clampedQuarter} / ${year} (${shortDateSpan})`;
-  const months = [startMonth, startMonth + 1, endMonth];
-
-  return {
-    quarter: clampedQuarter,
-    year,
-    startDate,
-    endDate,
-    nextQuarterStartDate,
-    label,
-    fullLabel,
-    shortDateSpan,
-    months,
-  };
-}
-
-/**
  * Returns the Academic Year string "YYYY-(YYYY+1)" for any given date.
  * Academic year cut-off is 01/09:
  * - Dates on or after 01/09 belong to currentYear - (currentYear + 1)
@@ -344,15 +306,6 @@ export function getAvailableAcademicYears(referenceDateInput?: unknown): string[
     `${startYear}-${startYear + 1}`,
     `${startYear + 1}-${startYear + 2}`,
   ];
-}
-
-/**
- * Returns available calendar years.
- */
-export function getAvailableCalendarYears(referenceDateInput?: unknown): number[] {
-  const ref = referenceDateInput ?? getSystemReferenceDate();
-  const year = getCalendarYear(ref);
-  return [year - 1, year, year + 1];
 }
 
 export interface CalendarDayCell {
@@ -520,22 +473,6 @@ export function isDateInAcademicMonth(
 }
 
 /**
- * Checks if a given date falls inside a Quarter (1-4).
- */
-export function isDateInQuarter(
-  dateInput: string | Date,
-  quarter: number,
-  year?: number
-): boolean {
-  const parts = parseDateParts(dateInput);
-  if (!parts) return false;
-  const q = getQuarterFromMonth(parts.month);
-  if (q !== quarter) return false;
-  if (year !== undefined && parts.year !== year) return false;
-  return true;
-}
-
-/**
  * Calculates the adjacent calendar month period given a delta (+1, -1, etc.).
  */
 export function getAdjacentAcademicMonth(
@@ -547,21 +484,6 @@ export function getAdjacentAcademicMonth(
   const targetMonth = target.getMonth() + 1;
 
   return buildAcademicMonthPeriod(targetYear, targetMonth);
-}
-
-export interface SubTask {
-  id: string;
-  taskId?: string;
-  parentSchoolTaskId?: string;
-  title: string;
-  status: string;
-  dueDate: string;
-  assignedToDepartmentId?: string;
-  assignedToDepartmentName?: string;
-  assigneeName?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: any;
 }
 
 export interface MonthPartitionBucket<T = SchoolTask> {
@@ -728,57 +650,6 @@ export function computePriorOverdueBacklog<
 }
 
 /**
- * Tạo bucket phân vùng nhiệm vụ theo tháng kèm thống kê và danh sách nợ đọng.
- */
-export function computeMonthPartitionBucket<
-  T extends { dueDate?: string | Date | null; status?: string } = SchoolTask,
->(
-  tasks: T[],
-  month: number,
-  yearOrAcademicYear?: string | number,
-  referenceDate?: string
-): MonthPartitionBucket<T> {
-  const period = getAcademicMonthPeriod(month, yearOrAcademicYear);
-  const filteredTasks = filterTasksByAcademicMonthStrict(tasks, month, yearOrAcademicYear);
-  const priorBacklog = computePriorOverdueBacklog(tasks, month, yearOrAcademicYear, referenceDate);
-  const ref = referenceDate ?? getSystemReferenceDate();
-
-  let completedTasks = 0;
-  let inProgressTasks = 0;
-  let overdueTasks = 0;
-
-  for (const t of filteredTasks) {
-    const s = String(t.status || "").toUpperCase();
-    if (s === "COMPLETED") {
-      completedTasks++;
-    } else if (s === "IN_PROGRESS" || s === "NOT_STARTED" || s === "NEW") {
-      inProgressTasks++;
-    }
-    if (isTaskOverdue(s, t.dueDate, ref)) {
-      overdueTasks++;
-    }
-  }
-
-  const totalTasks = filteredTasks.length;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  return {
-    monthNumber: month,
-    academicYear: period.academicYear,
-    period,
-    tasks: filteredTasks,
-    priorOverdueBacklog: priorBacklog,
-    stats: {
-      totalTasks,
-      completedTasks,
-      inProgressTasks,
-      overdueTasks,
-      completionRate,
-    },
-  };
-}
-
-/**
  * Trả về thông tin chu kỳ hiện tại (năm dương lịch, năm học, quý, học kỳ, tháng và nhãn hiển thị).
  */
 export function getCurrentAcademicPeriod(referenceDateInput?: unknown): CurrentAcademicPeriod {
@@ -860,80 +731,8 @@ export function addCalendarDays(dateOnly: string, days: number): string | null {
   return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
 }
 
-export interface UpcomingDeadlineCandidate {
-  taskId: string;
-  title: string;
-  dueDate: string;
-  assigneeName: string;
-  level: "Trường" | "Đơn vị";
-  isOverdue: false;
-}
-
 export interface UpcomingDeadlineSelection<T> {
   items: T[];
   total: number;
   preview: T[];
-}
-
-/**
- * Chọn các nhiệm vụ có hạn trong cửa sổ [referenceDate, +windowDays].
- */
-export function selectUpcomingDeadlines<
-  T extends {
-    id: string;
-    title?: string;
-    dueDate?: string | Date | null;
-    status?: string;
-    priority?: string;
-    leadAssigneeName?: string;
-    assigneeName?: string;
-  } = SchoolTask,
->(
-  tasks: T[],
-  referenceDate: string,
-  options: { windowDays?: number; previewLimit?: number } = {}
-): UpcomingDeadlineSelection<T> {
-  const windowDays = options.windowDays ?? UPCOMING_WINDOW_DAYS;
-  const previewLimit = options.previewLimit ?? 5;
-
-  const ref = parseStrictDateOnly(referenceDate);
-  if (!ref) {
-    return { items: [], total: 0, preview: [] };
-  }
-  const windowEnd = addCalendarDays(ref, windowDays);
-  if (!windowEnd) {
-    return { items: [], total: 0, preview: [] };
-  }
-
-  const priorityWeight: Record<string, number> = {
-    URGENT: 3,
-    HIGH: 2,
-    NORMAL: 1,
-    MEDIUM: 1,
-    LOW: 0,
-  };
-
-  const items = tasks
-    .filter((t) => {
-      const status = String(t.status ?? "").toUpperCase();
-      if (status === "COMPLETED" || status === "CANCELLED") return false;
-      const due = parseStrictDateOnly(t.dueDate);
-      if (!due) return false;
-      return due >= ref && due <= windowEnd;
-    })
-    .sort((a, b) => {
-      const dueA = parseStrictDateOnly(a.dueDate)!;
-      const dueB = parseStrictDateOnly(b.dueDate)!;
-      if (dueA !== dueB) return dueA < dueB ? -1 : 1;
-      const prA = priorityWeight[String(a.priority ?? "").toUpperCase()] ?? 1;
-      const prB = priorityWeight[String(b.priority ?? "").toUpperCase()] ?? 1;
-      if (prA !== prB) return prB - prA;
-      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-    });
-
-  return {
-    items,
-    total: items.length,
-    preview: items.slice(0, previewLimit),
-  };
 }

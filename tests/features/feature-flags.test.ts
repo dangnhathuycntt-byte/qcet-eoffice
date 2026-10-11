@@ -21,7 +21,6 @@ import { sendPushNotificationToUser } from "@/lib/push-service";
 import { GET as googleAuthRoute } from "@/app/api/auth/google/route";
 import { GET as nextAuthRoute } from "@/app/api/auth/[...nextauth]/route";
 import { GET as exportExcelRoute } from "@/app/api/documents/export-excel/route";
-import { flushOfflineMutations } from "@/lib/offline-sync";
 import { signSessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { prisma } from "@/lib/prisma";
 
@@ -377,13 +376,6 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       } finally {
         prisma.user.findUnique = originalFindUnique;
       }
-    });
-
-    it("offline-sync aborts flush when offlineMutations is killed", async () => {
-      setFeatureFlagOverride("offlineMutations", false);
-
-      const result = await flushOfflineMutations();
-      assert.deepStrictEqual(result, { succeeded: 0, failed: 0 });
     });
   });
 

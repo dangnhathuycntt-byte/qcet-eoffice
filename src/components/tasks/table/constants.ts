@@ -7,32 +7,7 @@ import {
   Calendar,
 } from "lucide-react";
 import type { TaskCategory, TaskStatus } from "@/types/dashboard";
-import type {
-  CategoryTab,
-  DepartmentOption,
-  SmartFilterTabOption,
-  TableDensity,
-  TableDensityConfig,
-} from "./types";
-
-/**
- * Bảng màu chuẩn OKLCH (Light-Only Standard)
- * Tuyệt đối không dùng dark variant, tối ưu cho môi trường công sở hành chính giáo dục
- */
-export const TABLE_OKLCH_COLORS = {
-  background: "oklch(0.985 0.002 247.5)",
-  card: "oklch(1 0 0)",
-  border: "oklch(0.92 0.004 240)",
-  borderHover: "oklch(0.85 0.01 250)",
-  textPrimary: "oklch(0.145 0.015 250)",
-  textSecondary: "oklch(0.48 0.015 250)",
-  textMuted: "oklch(0.65 0.015 250)",
-  primary: "oklch(0.42 0.18 250)",          // Sapphire Blue #2563EB
-  success: "oklch(0.68 0.17 150)",          // Emerald Green #10B981
-  warning: "oklch(0.74 0.17 75)",           // Warm Amber #F59E0B
-  danger: "oklch(0.63 0.22 25)",            // Crimson Rose #F43F5E
-  neutral: "oklch(0.96 0.005 240)",         // Neutral slate
-} as const;
+import type { CategoryTab, DepartmentOption, SmartFilterTabOption, TableDensity } from "./types";
 
 /**
  * Cấu hình hiển thị Badge trạng thái
@@ -268,55 +243,13 @@ export const SMART_FILTER_TABS: SmartFilterTabOption[] = [
   { id: "completed", label: "Hoàn thành", description: "Nhiệm vụ đã hoàn thành toàn bộ" },
 ];
 
-/**
- * Cấu hình mật độ hiển thị hàng
- */
-export const DENSITY_CONFIGS: Record<TableDensity, TableDensityConfig> = {
-  compact: {
-    id: "compact",
-    label: "Gọn",
-    rowHeight: "h-9",
-    padding: "py-1.5 px-3",
-    fontSize: "text-xs",
-  },
-  comfortable: {
-    id: "comfortable",
-    label: "Chuẩn",
-    rowHeight: "h-12",
-    padding: "py-2.5 px-3",
-    fontSize: "text-sm",
-  },
-};
-
 export const DEFAULT_DENSITY: TableDensity = "compact";
 
 /**
  * Cấu hình phân trang mặc định (20 rows/page on desktop)
  */
 export const DEFAULT_PAGE_SIZE = 20;
-export const PAGE_SIZE_OPTIONS = [20, 50, 100];
 export const DEFAULT_PAGE_SIZES = [20, 50, 100];
-
-/**
- * Density mapping compatible with numeric/string row heights
- */
-export const TABLE_DENSITY_CONFIG = {
-  compact: {
-    rowHeight: 36,
-    padding: "py-1.5 px-3",
-    fontSize: "text-xs",
-  },
-  standard: {
-    rowHeight: 48,
-    padding: "py-2.5 px-3",
-    fontSize: "text-sm",
-  },
-  comfortable: {
-    rowHeight: 56,
-    padding: "py-3 px-4",
-    fontSize: "text-sm",
-  },
-};
 
 /**
  * Status config map compatible with STATUS_BADGE_CONFIGS
@@ -392,15 +325,5 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     oklchColor: "oklch(0.55 0.01 250)",
     oklchBg: "oklch(0.95 0.005 250)",
   },
-};
-
-export const CATEGORY_LABELS: Record<string, string> = {
-  CHUYEN_DOI_SO: "Chuyển đổi số",
-  TRUYEN_THONG: "Truyền thông",
-  CNTT: "CNTT",
-  ATTT: "An toàn thông tin",
-  THU_VIEN: "Thư viện",
-  BAO_CAO: "Báo cáo",
-  KHAC: "Khác",
 };
 

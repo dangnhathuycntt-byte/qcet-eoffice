@@ -117,28 +117,3 @@ export function assertMeetingNotFinalized(
     throw new FinalizedMeetingError(status, action);
   }
 }
-
-/**
- * Static facade class for object-style usage
- */
-export class MeetingStateMachine {
-  static readonly STATUSES = MEETING_STATUSES;
-  static readonly TRANSITIONS = ALLOWED_MEETING_TRANSITIONS;
-  static readonly TERMINAL_STATUSES = TERMINAL_MEETING_STATUSES;
-
-  static canTransition(from: MeetingStatus | string, to: MeetingStatus | string): boolean {
-    return canTransition(from, to);
-  }
-
-  static assertTransition(from: MeetingStatus | string, to: MeetingStatus | string): void {
-    assertTransition(from, to);
-  }
-
-  static isFinalized(status: MeetingStatus | string): boolean {
-    return isMeetingFinalized(status);
-  }
-
-  static assertNotFinalized(status: MeetingStatus | string, action?: string): void {
-    assertMeetingNotFinalized(status, action);
-  }
-}

@@ -6,10 +6,7 @@ import {
   UniversalActionQueue,
   type UniversalActionQueueProps,
 } from "../src/components/workspace/components/universal-action-queue";
-import {
-  getActiveFilterSummary,
-  getWorkboxDisplayLabel,
-} from "../src/components/workspace/components/active-filter-breadcrumb";
+import { getWorkboxDisplayLabel } from "../src/components/workspace/components/active-filter-breadcrumb";
 import {
   filterDisplayedTasks,
 } from "../src/components/workspace/unified-adaptive-workspace";
@@ -78,14 +75,6 @@ describe("Smart Workbox & Linear-Style Interaction (Phase 6)", () => {
     assert.equal(getWorkboxDisplayLabel("waiting_approval"), "Chờ duyệt");
     assert.equal(getWorkboxDisplayLabel("pending_submission"), "Chờ nộp BC");
     assert.equal(getWorkboxDisplayLabel("URGENT_OVERDUE"), "URGENT_OVERDUE");
-  });
-
-  test("getActiveFilterSummary formats workbox filter label properly", () => {
-    const summary = getActiveFilterSummary({
-      workbox: "my_pending_approval",
-    });
-    assert.equal(summary.length, 1);
-    assert.equal(summary[0], "Hộp việc: Chờ tôi duyệt");
   });
 
   test("filterDisplayedTasks correctly filters for approvals and submissions", () => {

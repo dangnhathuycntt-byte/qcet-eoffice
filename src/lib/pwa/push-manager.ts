@@ -177,26 +177,6 @@ export function generateNotificationTag(
 }
 
 /**
- * Validates deep link URL against base origin, preventing open redirects or javascript: injection.
- */
-export function validateDeepLinkUrl(rawTargetUrl: string, baseOrigin: string): string | null {
-  try {
-    if (typeof rawTargetUrl !== "string") return null;
-    const trimmed = rawTargetUrl.trim();
-    if (/^(javascript|data|vbscript):/i.test(trimmed)) {
-      return null;
-    }
-    const parsed = new URL(trimmed, baseOrigin);
-    if (parsed.origin === baseOrigin) {
-      return parsed.href;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Checks platform compatibility specifically for iOS Safari.
  * Apple requires Web Push on iOS 16.4+ to be installed to the Home Screen (standalone mode).
  */
@@ -483,44 +463,6 @@ export async function unsubscribeFromPush(options?: {
     console.error("Failed to unsubscribe from push:", err);
     return false;
   }
-}
-
-/**
- * Formats a notification payload ensuring deduplication tags and same-origin routes
- */
-export function formatNotificationPayload(
-  title: string,
-  body: string,
-  options: {
-    entityType?: "task" | "doc" | string;
-    entityId?: string;
-    action?: string;
-    route?: string;
-    customTag?: string;
-  }
-): FormattedPushPayload {
-  const entityType = options.entityType || "task";
-  const entityId = options.entityId || "general";
-  const action = options.action || "notice";
-  const tag =
-    options.customTag || generateNotificationTag(entityType, entityId, action);
-
-  const safeRoute = validateSameOriginRoute(options.route || `/tasks?taskId=${encodeURIComponent(entityId)}`);
-
-  return {
-    title: title.trim(),
-    body: body.trim(),
-    icon: "/icons/icon-192.png",
-    badge: "/icons/badge-72x72.png",
-    tag,
-    data: {
-      entityId,
-      type: action.toUpperCase(),
-      route: safeRoute,
-      url: safeRoute,
-      linkHref: safeRoute,
-    },
-  };
 }
 
 export {

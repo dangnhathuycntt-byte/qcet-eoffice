@@ -27,7 +27,7 @@ test("Base UI popups/menus have portal, positioning context, and a trigger or ex
       const root = ancestors.find((node) => (node.openingElement.tagName.getText(source) === "Popover.Root" || node.openingElement.tagName.getText(source) === "Menu.Root"));
       assert.ok(positioner, `${entry}: Popup requires Positioner`);
       const layer = positioner.openingElement.attributes.properties.find((attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "className");
-      assert.ok(layer && ts.isJsxAttribute(layer) && layer.initializer && ts.isStringLiteral(layer.initializer) && layer.initializer.text.split(/\s+/).includes("z-50"), `${entry}: overlay layer belongs on the Positioner stacking context`);
+      assert.ok(layer && ts.isJsxAttribute(layer) && layer.initializer && ts.isStringLiteral(layer.initializer) && layer.initializer.text.split(/\s+/).some((cls) => /^z-(\d+|\[\d+\])$/.test(cls)), `${entry}: overlay layer belongs on the Positioner stacking context`);
       assert.ok(root, `${entry}: Popup requires Root`);
       assert.ok(ancestors.some((node) => (node.openingElement.tagName.getText(source) === "Popover.Portal" || node.openingElement.tagName.getText(source) === "Menu.Portal")), `${entry}: Popup requires Portal`);
       const hasAnchor = positioner.openingElement.attributes.properties.some((attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "anchor");

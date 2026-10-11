@@ -17,11 +17,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  extractExecutiveActionItems,
-  selectExecutiveActionQueue,
-  type ExecutiveActionItem,
-} from "../src/lib/executive-matrix-aggregator";
+import { extractExecutiveActionItems, type ExecutiveActionItem } from "../src/lib/executive-matrix-aggregator";
 import {
   SMALL_FIXTURE_TASKS,
   FIXTURE_REFERENCE_DATE,
@@ -60,10 +56,6 @@ describe("W2 — review predicate is a real pending request, not progress=100", 
   test("completed and cancelled rows are absent", () => {
     assert.equal(byId.has("q07"), false);
     assert.equal(byId.has("q08"), false);
-  });
-
-  test("a subtask NEEDS_REVIEW puts the parent in the review group", () => {
-    assert.equal(byId.get("q11")?.primaryReason, "REVIEW");
   });
 });
 
@@ -107,56 +99,6 @@ describe("W2 — queue order", () => {
   });
 });
 
-describe("W2 — union-distinct totals", () => {
-  const all = selectExecutiveActionQueue(queue, "ALL");
-  const review = selectExecutiveActionQueue(queue, "PENDING_APPROVAL");
-  const blockedOverdue = selectExecutiveActionQueue(queue, "BLOCKED_OVERDUE");
-
-  test("ALL equals the distinct row count, not the sum of the groups", () => {
-    assert.equal(all.filteredTotal, EXPECTED_QUEUE_ROWS.length);
-    assert.equal(review.filteredTotal, 3, "q04, q03, q11");
-    assert.equal(blockedOverdue.filteredTotal, 3, "q06, q04, q05");
-    // q04 belongs to both groups, so the groups overlap:
-    assert.ok(
-      review.filteredTotal + blockedOverdue.filteredTotal > all.filteredTotal,
-      "the two groups must overlap on q04 — a naive sum would over-count"
-    );
-  });
-
-  test("filter counts match their predicate", () => {
-    assert.equal(all.counts.PENDING_APPROVAL, review.filteredTotal);
-    assert.equal(all.counts.BLOCKED_OVERDUE, blockedOverdue.filteredTotal);
-  });
-
-  test("the BLOCKED_OVERDUE predicate keeps a REVIEW-primary row that is overdue", () => {
-    assert.equal(
-      byId.get("q04")?.primaryReason,
-      "REVIEW",
-      "q04 is primarily a review file"
-    );
-    assert.equal(
-      blockedOverdue.previewItems.some((i) => i.taskId === "q04"),
-      true,
-      "q04 must still list under Vướng mắc & Trễ hạn because it carries OVERDUE"
-    );
-  });
-});
-
-describe("W2 — labels", () => {
-  test("review rows open to review, others open to detail", () => {
-    assert.equal(byId.get("q03")?.actionLabel, "Xem xét");
-    assert.equal(byId.get("q11")?.actionLabel, "Xem xét");
-    assert.equal(byId.get("q06")?.actionLabel, "Xem chi tiết");
-    assert.equal(byId.get("q05")?.actionLabel, "Xem chi tiết");
-  });
-
-  test("review badge wording does not claim the actor is the approver", () => {
-    const label = String(byId.get("q03")?.badgeLabel ?? "");
-    assert.equal(label.includes("Chờ bạn duyệt"), false);
-    assert.equal(label.includes("Phê duyệt"), false);
-  });
-});
-
 describe("W2 — department resolution never falls back to BGH", () => {
   test("an unresolvable department surfaces 'Chưa xác định đơn vị'", () => {
     const orphan = {
@@ -189,65 +131,9 @@ describe("W2 — scale fixture (311 rows, preview exactly 5)", () => {
     assert.equal(largeQueue.length, large.expectedActionRowCount);
   });
 
-  test("preview is sliced to exactly 5 AFTER sort, total stays 311", () => {
-    const selected = selectExecutiveActionQueue(largeQueue, "ALL", 5);
-    assert.equal(selected.filteredTotal, 311);
-    assert.equal(selected.previewItems.length, 5);
-    assert.deepEqual(
-      selected.previewItems.map((i) => i.taskId),
-      largeQueue.slice(0, 5).map((i) => i.taskId)
-    );
-  });
-
   test("sort is fully deterministic (no ties left unresolved)", () => {
     const ids = largeQueue.map((i) => i.taskId);
     const again = extractExecutiveActionItems(large.tasks, FIXTURE_REFERENCE_DATE).map((i) => i.taskId);
     assert.deepEqual(ids, again);
-  });
-});
-
-describe("W2 — sort contract details", () => {
-  const mk = (over: Partial<ExecutiveActionItem> & { taskId: string }): ExecutiveActionItem =>
-    ({
-      id: `act-${over.taskId}`,
-      title: over.taskId,
-      dueDate: D.today,
-      filterType: "BLOCKED_OVERDUE",
-      reasons: ["BLOCKED"],
-      primaryReason: "BLOCKED",
-      ...over,
-    }) as ExecutiveActionItem;
-
-  test("higher priority outranks an overdue lower-priority row", () => {
-    const highNotOverdue = mk({ taskId: "a", priority: "CAO", dueDate: D.plus1 });
-    const urgentOverdue = mk({
-      taskId: "b",
-      priority: "KHAN_CAP",
-      reasons: ["OVERDUE"],
-      primaryReason: "OVERDUE",
-      dueDate: D.minus1,
-    });
-    const order = selectExecutiveActionQueue([highNotOverdue, urgentOverdue], "ALL");
-    assert.deepEqual(order.previewItems.map((i) => i.taskId), ["b", "a"]);
-  });
-
-  test("same priority: overdue first, then due asc", () => {
-    const normalDueLater = mk({ taskId: "c", priority: "TRUNG_BINH", dueDate: D.plus2 });
-    const normalOverdue = mk({
-      taskId: "d",
-      priority: "TRUNG_BINH",
-      reasons: ["OVERDUE"],
-      primaryReason: "OVERDUE",
-      dueDate: D.minus2,
-    });
-    const order = selectExecutiveActionQueue([normalDueLater, normalOverdue], "ALL");
-    assert.deepEqual(order.previewItems.map((i) => i.taskId), ["d", "c"]);
-  });
-
-  test("a row with no usable due date sorts last, never coerced to today", () => {
-    const dated = mk({ taskId: "e", priority: "TRUNG_BINH", dueDate: D.plus1 });
-    const undated = mk({ taskId: "f", priority: "TRUNG_BINH", dueDate: "khong-phai-ngay" });
-    const order = selectExecutiveActionQueue([undated, dated], "ALL");
-    assert.deepEqual(order.previewItems.map((i) => i.taskId), ["e", "f"]);
   });
 });

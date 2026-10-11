@@ -5,40 +5,10 @@ import { apiSuccess, apiError } from "@/server/api/response";
 import { NotFoundError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization";
 import { assertDocumentReadable } from "@/server/documents/authorize-on-document";
+import type { DocumentAuditLogItem, DocumentTimelineStep } from "@/types/document-audit";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
-}
-
-export interface DocumentTimelineStep {
-  id: string;
-  stepNumber: number;
-  key: string;
-  title: string;
-  subtitle: string;
-  status: "completed" | "current" | "pending" | "rejected";
-  actorName?: string | null;
-  actorRole?: string | null;
-  actorTitle?: string | null;
-  actorAvatar?: string | null;
-  timestamp?: string | null;
-  notes?: string | null;
-  departmentName?: string | null;
-  assignedToName?: string | null;
-  deadline?: string | null;
-}
-
-export interface DocumentAuditLogItem {
-  id: string;
-  action: string;
-  actionLabel: string;
-  actorName: string;
-  actorRole?: string | null;
-  actorTitle?: string | null;
-  actorAvatar?: string | null;
-  timestamp: string;
-  notes?: string | null;
-  metadata?: Record<string, unknown> | null;
 }
 
 /** Thông tin người thực hiện hiển thị trên dòng thời gian. */

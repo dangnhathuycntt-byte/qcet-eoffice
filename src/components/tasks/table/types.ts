@@ -63,29 +63,6 @@ export interface SelectionState {
 }
 
 /**
- * Trạng thái bộ lọc đa chiều của bảng nhiệm vụ
- */
-export interface TaskTableFilterState {
-  search: string;
-  category: TaskCategory | "ALL";
-  department: string;
-  tab: SmartFilterTab;
-  month?: number | "ALL";
-  academicYear?: string;
-}
-
-/**
- * Cấu hình mật độ hiển thị
- */
-export interface TableDensityConfig {
-  id: TableDensity;
-  label: string;
-  rowHeight: string;
-  padding: string;
-  fontSize: string;
-}
-
-/**
  * Chế độ hiển thị không gian làm việc
  */
 export type TaskViewMode = "table" | "kanban" | "gantt";
@@ -116,17 +93,6 @@ export interface SmartFilterTabOption {
   label: string;
   description?: string;
   count?: number;
-}
-
-/**
- * Kết quả tính toán cuốn chiếu tiến độ nhiệm vụ (Rollup)
- */
-export interface TaskProgressRollupResult {
-  progressPercent: number;
-  totalSubTasks: number;
-  completedSubTasks: number;
-  isAllCompleted: boolean;
-  hasSubtasks: boolean;
 }
 
 /**

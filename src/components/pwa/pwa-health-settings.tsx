@@ -662,5 +662,3 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
     </div>
   );
 }
-
-export const PWASettingsCard = PWAHealthSettings;

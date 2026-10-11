@@ -8,18 +8,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 // Pin deterministic reference date for test execution
 process.env.NEXT_PUBLIC_REFERENCE_DATE = process.env.NEXT_PUBLIC_REFERENCE_DATE || "2026-09-25";
 
-import {
-  TaskBulkActionBar,
-  calculateExtendedDeadline,
-  getBatchStatusUpdatePayload,
-  getBatchDeadlinePayload,
-  getBatchReassignPayload,
-} from "../src/components/tasks/table/components/batch-action-bar";
-import {
-  TaskRow,
-  areTaskRowPropsEqual,
-  parseLeadAssignee,
-} from "../src/components/tasks/table/components/task-row";
+import { TaskBulkActionBar, calculateExtendedDeadline } from "../src/components/tasks/table/components/batch-action-bar";
+import { TaskRow, parseLeadAssignee } from "../src/components/tasks/table/components/task-row";
 import {
   BatchActionBar,
   BULK_DEADLINE_OPTIONS,
@@ -267,35 +257,6 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
   });
 
   describe("3. Bulk Action Payloads & Date Extension Calculation", () => {
-    it("generates correct batch status update payload", () => {
-      const taskIds = ["task-01", "task-02", "task-03"];
-      const payload = getBatchStatusUpdatePayload(taskIds, "COMPLETED");
-
-      assert.deepEqual(payload, {
-        taskIds: ["task-01", "task-02", "task-03"],
-        status: "COMPLETED",
-      });
-    });
-
-    it("generates correct batch deadline payload", () => {
-      const taskIds = ["task-01", "task-02"];
-      const payload = getBatchDeadlinePayload(taskIds, "2026-09-16");
-
-      assert.deepEqual(payload, {
-        taskIds: ["task-01", "task-02"],
-        dueDate: "2026-09-16",
-      });
-    });
-
-    it("generates correct batch reassign payload", () => {
-      const taskIds = ["task-01", "task-02"];
-      const payload = getBatchReassignPayload(taskIds, "user-lead-99");
-
-      assert.deepEqual(payload, {
-        taskIds: ["task-01", "task-02"],
-        assigneeId: "user-lead-99",
-      });
-    });
 
     it("calculates extended deadline safely using UTC to prevent date drift", () => {
       const baseDate = "2026-09-09";

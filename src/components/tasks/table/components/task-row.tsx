@@ -156,44 +156,6 @@ function TaskDateValue({
   );
 }
 
-export function areTaskRowPropsEqual(
-  prev: Readonly<TaskRowProps>,
-  next: Readonly<TaskRowProps>
-): boolean {
-  if (prev.task.id !== next.task.id) return false;
-  if (prev.task.title !== next.task.title) return false;
-  if (prev.task.status !== next.task.status) return false;
-  if (prev.task.dueDate !== next.task.dueDate) return false;
-  if (prev.task.priority !== next.task.priority) return false;
-  if (prev.task.leadAssigneeId !== next.task.leadAssigneeId) return false;
-  if (prev.task.leadAssigneeName !== next.task.leadAssigneeName) return false;
-  if (prev.task.leadAssigneeAvatar !== next.task.leadAssigneeAvatar) return false;
-  if (prev.task.department !== next.task.department) return false;
-  if (prev.task.category !== next.task.category) return false;
-  if ((prev.task.subTasks?.length || 0) !== (next.task.subTasks?.length || 0)) return false;
-  if (prev.task.completedSubTasks !== next.task.completedSubTasks) return false;
-  if (prev.task.totalSubTasks !== next.task.totalSubTasks) return false;
-  if (prev.isSelected !== next.isSelected) return false;
-  if (prev.isExpanded !== next.isExpanded) return false;
-  if (prev.isActive !== next.isActive) return false;
-  if (prev.isPreviewing !== next.isPreviewing) return false;
-  if (prev.density !== next.density) return false;
-  if (prev.showSelection !== next.showSelection) return false;
-  if (prev.canAssign !== next.canAssign) return false;
-  if (prev.selectedAcademicMonth !== next.selectedAcademicMonth) return false;
-  if (prev.referenceDate !== next.referenceDate) return false;
-  if (prev.activeCategory !== next.activeCategory) return false;
-  if (prev.suppressCategory !== next.suppressCategory) return false;
-  if (prev.onAddSubTask !== next.onAddSubTask) return false;
-  if (prev.showTaskCode !== next.showTaskCode) return false;
-  if (prev.selectionGroupPosition !== next.selectionGroupPosition) return false;
-  if (prev.onContextMenu !== next.onContextMenu) return false;
-  if (prev.isContextMenuTarget !== next.isContextMenuTarget) return false;
-  if (prev.task.viewerContext?.relation !== next.task.viewerContext?.relation) return false;
-  if (prev.task.viewerContext?.matchedSubtaskCount !== next.task.viewerContext?.matchedSubtaskCount) return false;
-  return true;
-}
-
 export const TaskRow = React.memo(function TaskRow({
   task,
   scope,

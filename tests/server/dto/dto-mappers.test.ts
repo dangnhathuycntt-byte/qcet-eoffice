@@ -1,22 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  toUserSummaryDTO,
-  toUserPublicDTO,
-  toUserSessionDTO,
-  toUserSummaryDTOArray,
-  toUserPublicDTOArray,
-  toTaskSummaryDTO,
-  toTaskListDTO,
-  toTaskDetailDTO,
-  toTaskListDTOArray,
-  toDocumentListDTO,
-  toDocumentDetailDTO,
-  toDocumentListDTOArray,
-  toNotificationDTO,
-  toNotificationDTOArray,
-  toNotificationListResponseDTO,
-} from '@/server/dto';
+import { toUserSummaryDTO, toUserPublicDTO, toUserPublicDTOArray, toTaskSummaryDTO, toTaskListDTO, toTaskDetailDTO, toTaskListDTOArray, toDocumentListDTO, toDocumentDetailDTO, toDocumentListDTOArray, toNotificationDTO, toNotificationDTOArray } from '@/server/dto';
 import {
   toExecutiveResolutionDTO,
   toExecutiveResolutionDTOArray,
@@ -106,77 +90,6 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       assert.strictEqual((dto as any).password, undefined);
       assert.strictEqual((dto as any).passwordHash, undefined);
       assert.strictEqual((dto as any).refreshToken, undefined);
-    });
-
-    it('toUserSessionDTO constructs minimal authenticated session contract', () => {
-      const dto = toUserSessionDTO(rawUserWithSecrets);
-
-      assert.ok(dto);
-      assert.strictEqual(dto.id, 'usr-101');
-      assert.strictEqual(dto.name, 'Nguyễn Văn An');
-      assert.strictEqual(dto.email, 'an.nv@qcet.edu.vn');
-      assert.strictEqual(dto.role, 'MANAGER');
-      assert.strictEqual(dto.departmentId, 'dept-01');
-      assert.strictEqual(dto.departmentCode, 'DTQLKH');
-      assert.strictEqual(dto.departmentName, 'Phòng Đào tạo & Quản lý Khoa học');
-      assert.strictEqual(dto.avatarUrl, 'https://cdn.qcet.edu.vn/avatars/an.jpg');
-
-      assert.strictEqual((dto as any).passwordHash, undefined);
-      assert.strictEqual((dto as any).token, undefined);
-    });
-
-    it('gracefully handles users with missing optional relations / fields', () => {
-      const minimalRaw = {
-        id: 'usr-999',
-        name: 'Khách vãng lai',
-        email: 'guest@qcet.edu.vn',
-        role: 'STAFF',
-      };
-
-      const summary = toUserSummaryDTO(minimalRaw);
-      assert.ok(summary);
-      assert.strictEqual(summary.avatarUrl, null);
-
-      const pub = toUserPublicDTO(minimalRaw);
-      assert.ok(pub);
-      assert.strictEqual(pub.department, null);
-      assert.strictEqual(pub.departmentId, null);
-      assert.strictEqual(pub.phone, null);
-      assert.strictEqual(pub.position, null);
-
-      const session = toUserSessionDTO(minimalRaw);
-      assert.ok(session);
-      assert.strictEqual(session.departmentId, null);
-      assert.strictEqual(session.departmentCode, null);
-      assert.strictEqual(session.departmentName, null);
-    });
-
-    it('handles null and undefined safely without throwing', () => {
-      assert.strictEqual(toUserSummaryDTO(null), null);
-      assert.strictEqual(toUserSummaryDTO(undefined), null);
-      assert.strictEqual(toUserSummaryDTO('not-an-object'), null);
-      assert.strictEqual(toUserSummaryDTO(123), null);
-
-      assert.strictEqual(toUserPublicDTO(null), null);
-      assert.strictEqual(toUserPublicDTO(undefined), null);
-
-      assert.strictEqual(toUserSessionDTO(null), null);
-      assert.strictEqual(toUserSessionDTO(undefined), null);
-    });
-
-    it('array mapping functions map lists and filter invalid records', () => {
-      const list = [rawUserWithSecrets, null, { id: 'usr-2', name: 'User 2', email: 'u2@qcet.edu.vn', role: 'STAFF' }, undefined];
-      const summaries = toUserSummaryDTOArray(list);
-      assert.strictEqual(summaries.length, 2);
-      assert.strictEqual(summaries[0].id, 'usr-101');
-      assert.strictEqual(summaries[1].id, 'usr-2');
-
-      const publics = toUserPublicDTOArray(list);
-      assert.strictEqual(publics.length, 2);
-
-      // Non-array input
-      assert.deepStrictEqual(toUserSummaryDTOArray(null as any), []);
-      assert.deepStrictEqual(toUserPublicDTOArray(undefined as any), []);
     });
   });
 
@@ -795,25 +708,6 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
 
       assert.deepStrictEqual(toNotificationDTOArray(null as any), []);
     });
-
-    it('toNotificationListResponseDTO creates canonical response with unread count', () => {
-      const readNotif = { ...rawNotification, id: 'notif-read', isRead: true, readAt: new Date() };
-      const unreadNotif = { ...rawNotification, id: 'notif-unread', isRead: false, readAt: null };
-
-      const response = toNotificationListResponseDTO([readNotif, unreadNotif]);
-
-      assert.strictEqual(response.items.length, 2);
-      assert.strictEqual(response.total, 2);
-      assert.strictEqual(response.unreadCount, 1);
-    });
-
-    it('toNotificationListResponseDTO respects explicit unreadCount and total overrides', () => {
-      const response = toNotificationListResponseDTO([rawNotification], 15, 100);
-
-      assert.strictEqual(response.items.length, 1);
-      assert.strictEqual(response.unreadCount, 15);
-      assert.strictEqual(response.total, 100);
-    });
   });
 
   // ==========================================================================
@@ -853,26 +747,6 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
         assertNoSensitiveKeys(obj[key], path ? `${path}.${key}` : key);
       }
     }
-
-    it('verifies mapped User DTOs have no sensitive keys', () => {
-      const rawUser = {
-        id: 'u-1',
-        name: 'User',
-        email: 'u@qcet.edu.vn',
-        role: 'STAFF',
-        password: '123',
-        passwordHash: 'hash',
-        token: 'tok',
-        refreshToken: 'rt',
-        secret: 'sec',
-        salt: 'slt',
-        department: { id: 'd1', name: 'Dept' },
-      };
-
-      assertNoSensitiveKeys(toUserSummaryDTO(rawUser));
-      assertNoSensitiveKeys(toUserPublicDTO(rawUser));
-      assertNoSensitiveKeys(toUserSessionDTO(rawUser));
-    });
 
     it('verifies mapped Task DTOs have no sensitive keys in any nested level', () => {
       const rawTask = {
@@ -967,22 +841,6 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
 
       assertNoSensitiveKeys(toDocumentListDTO(rawDoc));
       assertNoSensitiveKeys(toDocumentDetailDTO(rawDoc));
-    });
-
-    it('verifies mapped Notification DTOs have no sensitive keys', () => {
-      const rawNotif = {
-        id: 'n-1',
-        userId: 'u-1',
-        title: 'Notif',
-        message: 'Msg',
-        type: 'ALERT',
-        token: 'leak-tok',
-        password: 'leak-pwd',
-        user: { passwordHash: 'leak-hash' },
-      };
-
-      assertNoSensitiveKeys(toNotificationDTO(rawNotif));
-      assertNoSensitiveKeys(toNotificationListResponseDTO([rawNotif]));
     });
   });
 });

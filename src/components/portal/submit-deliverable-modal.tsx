@@ -112,13 +112,6 @@ export function validateDeliverableSubmission(
   return { isValid: true };
 }
 
-/**
- * Flexible check supporting either name or URL presence
- */
-export function isValidSubmission(name: string, url: string = ""): boolean {
-  return name.trim().length > 0 || url.trim().length > 0;
-}
-
 // ============================================================================
 // 2. Component Props Interface
 // ============================================================================

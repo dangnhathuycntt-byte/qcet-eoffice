@@ -38,15 +38,6 @@ function TaskActionSvg({
   );
 }
 
-/** Đánh dấu ưu tiên */
-export function TaskIconStar(props: TaskActionIconProps) {
-  return (
-    <TaskActionSvg {...props}>
-      <path d="M9.5 2.4L11.6 6.7L16.3 7.4L12.9 10.7L13.7 15.4L9.5 13.2L5.3 15.4L6.1 10.7L2.7 7.4L7.4 6.7Z" />
-    </TaskActionSvg>
-  );
-}
-
 /** Trạng thái (thuộc tính): các lớp = các bậc trạng thái */
 export function TaskIconStatus(props: TaskActionIconProps) {
   return (

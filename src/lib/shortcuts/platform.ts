@@ -13,25 +13,3 @@ export function isMac(): boolean {
 export function getPlatformModifierKey(): "⌘" | "Ctrl" {
   return isMac() ? "⌘" : "Ctrl";
 }
-
-export function formatShortcutLabel(keys: string[]): string {
-  const isApple = isMac();
-  return keys
-    .map((k) => {
-      const lower = k.toLowerCase();
-      if (lower === "meta" || lower === "cmd" || lower === "command") {
-        return isApple ? "⌘" : "Ctrl";
-      }
-      if (lower === "ctrl" || lower === "control") {
-        return isApple ? "⌃" : "Ctrl";
-      }
-      if (lower === "alt" || lower === "option") {
-        return isApple ? "⌥" : "Alt";
-      }
-      if (lower === "shift") {
-        return isApple ? "⇧" : "Shift";
-      }
-      return k.toUpperCase();
-    })
-    .join(isApple ? "" : "+");
-}

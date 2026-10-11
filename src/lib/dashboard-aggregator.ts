@@ -1,4 +1,4 @@
-import type { SchoolTask, DashboardStats, TaskCategory } from "@/types/dashboard";
+import type { SchoolTask, DashboardStats } from "@/types/dashboard";
 import { getSystemReferenceDate, isTaskPastDue } from "@/lib/academic-calendar";
 
 export function computeSchoolTaskRollup(task: SchoolTask): SchoolTask {
@@ -139,30 +139,4 @@ export function computeDashboardStats(
     overdueTasks: schoolTasksOverdue,
     pendingApprovals: schoolTasksWaitingApproval,
   };
-}
-
-export function filterSchoolTasks(
-  tasks: SchoolTask[],
-  filter: { query?: string; category?: TaskCategory | "ALL"; lead?: string }
-): SchoolTask[] {
-  return tasks.filter((t) => {
-    if (filter.category && filter.category !== "ALL" && t.category !== filter.category) {
-      return false;
-    }
-    if (filter.lead && filter.lead !== "ALL" && t.leadAssigneeName !== filter.lead) {
-      return false;
-    }
-    if (filter.query && filter.query.trim() !== "") {
-      const q = filter.query.toLowerCase().trim();
-      const matchTitle = t.title?.toLowerCase().includes(q) ?? false;
-      const matchLead = t.leadAssigneeName?.toLowerCase().includes(q) ?? false;
-      const matchSub = (t.subTasks || []).some(
-        (sub) =>
-          sub.title?.toLowerCase().includes(q) ||
-          sub.assigneeName?.toLowerCase().includes(q)
-      );
-      if (!matchTitle && !matchLead && !matchSub) return false;
-    }
-    return true;
-  });
 }

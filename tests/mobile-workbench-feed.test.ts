@@ -56,7 +56,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
     });
 
     describe("6. MobileTaskCard Component Ergonomics", () => {
-      test("renders task code, status badge, title, unit, and progress with clean styling", () => {
+      test("renders task code, status badge, title, unit and assignee with clean styling", () => {
         const html = renderToStaticMarkup(
           React.createElement(MobileTaskCard, {
             task: mockTaskCardTask,
@@ -71,8 +71,8 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
         // Department and Assignee
         assert.ok(html.includes("Phòng Đào tạo"), "Must display department");
         assert.ok(html.includes("Nguyễn Văn A"), "Must display assignee name");
-        // Progress percentage
-        assert.ok(html.includes("72%"), "Must display progress percentage");
+        // Thẻ compact không hiện phần trăm tiến độ (xem 89122fe8): hạn và trạng thái đủ cho danh sách di động
+        assert.ok(!html.includes("72%"), "Compact card must not repeat the progress percentage");
         // Touch manipulation and minimum 48px height target
         assert.ok(html.includes("touch-manipulation"), "Card must have touch-manipulation");
         assert.ok(html.includes("min-h-[48px]"), "Card must have min-h-[48px]");

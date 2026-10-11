@@ -34,11 +34,7 @@ import {
   JobCatalogGroup,
   ResponsibilityCategory,
 } from '@prisma/client';
-import {
-  loadAuthorizationContext,
-  loadFreshAuthorizationContext,
-  loadAuthorizationContextFromDb,
-} from '@/server/authorization/authorization-context-service';
+import { loadAuthorizationContext, loadFreshAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import {
   authorizationContextCache,
   getCachedAuthorizationContext,

@@ -1,14 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { resolveDemoUserByRole, validateLoginForm } from "../src/lib/login-helpers";
-import {
-  isExecutive,
-  isManager,
-  isStaff,
-  canCreateSchoolTask,
-  canAssignUnitTask,
-  canSelfAssignTask,
-} from "../src/lib/auth/roles";
 import {
   filterTasksByRole,
   filterUpcomingByRole,
@@ -19,27 +10,6 @@ import type { UserRole } from "../src/types/auth";
 
 describe("Task 3: Authentication Session Management & Removal of Auto-Login Demo", () => {
   describe("1. Role Checkers and Task Filters handle unauthenticated (null/undefined) safely", () => {
-    test("isExecutive, isManager, isStaff return false for null and undefined", () => {
-      assert.strictEqual(isExecutive(null), false);
-      assert.strictEqual(isExecutive(undefined), false);
-
-      assert.strictEqual(isManager(null), false);
-      assert.strictEqual(isManager(undefined), false);
-
-      assert.strictEqual(isStaff(null), false);
-      assert.strictEqual(isStaff(undefined), false);
-    });
-
-    test("permission helpers return false for null/undefined user", () => {
-      assert.strictEqual(canCreateSchoolTask(null), false);
-      assert.strictEqual(canCreateSchoolTask(undefined), false);
-
-      assert.strictEqual(canAssignUnitTask(null), false);
-      assert.strictEqual(canAssignUnitTask(undefined), false);
-
-      assert.strictEqual(canSelfAssignTask(null), false);
-      assert.strictEqual(canSelfAssignTask(undefined), false);
-    });
 
     test("matchesUser returns false for null/undefined user", () => {
       assert.strictEqual(matchesUser("Nguyễn Ngọc Vinh", null), false);
@@ -96,15 +66,6 @@ describe("Task 3: Authentication Session Management & Removal of Auto-Login Demo
 
       assert.deepStrictEqual(filterUpcomingByRole(sampleUpcoming, null), []);
       assert.deepStrictEqual(filterUpcomingByRole(sampleUpcoming, undefined), []);
-    });
-  });
-
-  describe("2. resolveDemoUserByRole does not default to Principal (BGH)", () => {
-    test("returns undefined when role is invalid or does not match", () => {
-      // Must not fall back to DEFAULT_DEMO_USERS[0]
-      const invalidRole = "NON_EXISTENT_ROLE" as unknown as UserRole;
-      const result = resolveDemoUserByRole(invalidRole);
-      assert.strictEqual(result, undefined);
     });
   });
 

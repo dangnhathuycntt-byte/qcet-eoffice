@@ -1,16 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  blocksToPlate,
-  plateToBlocks,
-  parseContentToBlocks,
-  serializeBlocksToContent,
-  parseToPlateValue,
-  serializePlateValue,
-  isMeaningfulBlock,
-  PLATE_NODE_TYPES as PT,
-} from "../src/components/tasks/detail/plate-block-codec";
+import { blocksToPlate, plateToBlocks, parseContentToBlocks, serializeBlocksToContent, parseToPlateValue, isMeaningfulBlock, PLATE_NODE_TYPES as PT } from "../src/components/tasks/detail/plate-block-codec";
 import type { ContentBlockItem } from "../src/components/tasks/detail/task-block-editor";
 
 // ---------------------------------------------------------------------------
@@ -268,78 +259,6 @@ describe("plate-block-codec", () => {
       ]);
       const parsed = JSON.parse(result);
       assert.equal(parsed.blocks.length, 1);
-    });
-  });
-
-  describe("parseToPlateValue / serializePlateValue", () => {
-    it("full round-trip through Plate Value", () => {
-      const raw = JSON.stringify({
-        qcetBlocks: true,
-        version: 1,
-        blocks: [
-          { id: "b1", type: "text", content: "Hello" },
-          { id: "b2", type: "checklist", content: "Done", checked: true },
-          { id: "b3", type: "divider", content: "" },
-        ],
-      });
-      const plateValue = parseToPlateValue(raw);
-      assert.equal(plateValue.length, 3);
-      assert.equal(plateValue[0].type, "p");
-      assert.equal(plateValue[1].checked, true);
-      assert.equal(plateValue[2].type, "hr");
-
-      const serialized = serializePlateValue(plateValue);
-      const parsed = JSON.parse(serialized);
-      assert.equal(parsed.blocks.length, 3);
-      assert.equal(parsed.blocks[0].type, "text");
-      assert.equal(parsed.blocks[1].type, "checklist");
-      assert.equal(parsed.blocks[1].checked, true);
-      assert.equal(parsed.blocks[2].type, "divider");
-    });
-
-    it("legacy plain text → Plate Value → QCET", () => {
-      const plateValue = parseToPlateValue("Some old text");
-      assert.equal(plateValue.length, 1);
-      assert.equal(plateValue[0].type, "p");
-
-      const serialized = serializePlateValue(plateValue);
-      const parsed = JSON.parse(serialized);
-      assert.equal(parsed.blocks[0].content, "Some old text");
-    });
-
-    it("empty → Plate Value → empty string", () => {
-      const plateValue = parseToPlateValue("");
-      const serialized = serializePlateValue(plateValue);
-      assert.equal(serialized, "");
-    });
-
-    it("image with caption updates and serializes properly to QCET JSON", () => {
-      const raw = JSON.stringify({
-        qcetBlocks: true,
-        version: 1,
-        blocks: [
-          {
-            id: "img-1",
-            type: "image",
-            url: "https://qcet.edu.vn/logo.png",
-            caption: "Logo QCET ban đầu",
-            imageWidth: 75,
-          },
-        ],
-      });
-      const plateValue = parseToPlateValue(raw);
-      assert.equal(plateValue[0].caption, "Logo QCET ban đầu");
-
-      // Simulate caption update in editor
-      plateValue[0].caption = "Logo QCET cập nhật mới";
-      plateValue[0].children = [{ text: "Logo QCET cập nhật mới" }];
-
-      const serialized = serializePlateValue(plateValue);
-      const parsed = JSON.parse(serialized);
-      assert.equal(parsed.blocks[0].type, "image");
-      assert.equal(parsed.blocks[0].caption, "Logo QCET cập nhật mới");
-      assert.equal(parsed.blocks[0].url, "https://qcet.edu.vn/logo.png");
-      assert.equal(parsed.blocks[0].imageWidth, 75);
     });
   });
 

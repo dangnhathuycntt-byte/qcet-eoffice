@@ -1,14 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import {
-  AssignmentStatus,
-  AssignmentType,
-  BodyStatus,
-  DelegationStatus,
-  JobCatalogGroup,
-  UnitStatus,
-  UnitType,
-  UserRole,
-} from '@prisma/client';
+import { AssignmentStatus, AssignmentType, BodyStatus, DelegationStatus, UnitStatus, UserRole } from '@prisma/client';
 import {
   ActiveBodyMembership,
   ActiveDelegationGrant,
@@ -379,9 +370,4 @@ export async function loadAuthorizationContext(
 export function loadCachedAuthorizationContext(userId: string, now: Date = new Date()): Promise<AuthorizationContext> {
   return loadAuthorizationContext(userId, now, { useCache: true, ttlMs: 10_000 });
 }
-
-/**
- * Direct alias for fresh DB evaluation (bypasses any cache).
- */
-export const loadAuthorizationContextFromDb = loadFreshAuthorizationContext;
 

@@ -2,28 +2,7 @@
 
 // Unified Task Toolbar Component — Unified control toolbar for task views
 import * as React from "react";
-import {
-  Search,
-  X,
-  Plus,
-  Filter,
-  List,
-  Kanban,
-  Building,
-  Calendar,
-  School,
-  User,
-  Users,
-  Tag,
-  Flag,
-  Check,
-  CheckCircle2,
-  ChevronRight,
-  RotateCcw,
-  FileText,
-  Clock,
-  Circle,
-} from "lucide-react";
+import { Search, X, Plus, Filter, Building, Calendar, School, User, Users, Tag, Flag, Check, CheckCircle2, ChevronRight, RotateCcw, FileText, Clock, Circle } from "lucide-react";
 import {
   StatusSubAll,
   StatusSubNew,
@@ -150,12 +129,6 @@ export interface ViewModeOption {
   id: TaskViewMode;
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
-}
-
-export interface SmartFilterPill {
-  id: string;
-  label: string;
-  count?: number;
 }
 
 export interface UnifiedTaskToolbarProps {
@@ -296,20 +269,6 @@ export interface UnifiedTaskToolbarProps {
 // 2. Constants & Metadata (Legacy Compatibility)
 // ============================================================================
 
-export const SCOPE_TABS: ScopeTab[] = [
-  { id: "MY_TASKS", label: "Việc của tôi", shortLabel: "Cá nhân" },
-  { id: "SCHOOL_TASKS", label: "Nhiệm vụ cấp Trường", shortLabel: "Cấp Trường" },
-  { id: "UNIT_TASKS", label: "Công việc Đơn vị", shortLabel: "Đơn vị" },
-];
-
-export const VIEW_MODE_OPTIONS: ViewModeOption[] = [
-  { id: "table", label: "Bảng", icon: List },
-  { id: "kanban", label: "Kanban", icon: Kanban },
-  { id: "calendar", label: "Lịch", icon: Calendar },
-  { id: "department", label: "Theo đơn vị", icon: Building },
-  { id: "executive", label: "Chỉ huy BGH", icon: School },
-];
-
 export const DEFAULT_AVAILABLE_DEPARTMENTS: { code: string; name: string }[] = [
   { code: "ALL", name: "Tất cả đơn vị" },
   { code: "BGH", name: "Ban Giám hiệu" },
@@ -436,66 +395,6 @@ export interface QuickFilterPill {
   label: string;
   count: number | undefined;
   isActive: boolean;
-}
-
-export function buildRoleActionPill(
-  isExecutiveRole: boolean,
-  tabCounts: UnifiedTaskToolbarProps["tabCounts"],
-  activeTab: string
-): QuickFilterPill {
-  if (isExecutiveRole) {
-    return {
-      id: "waiting_approval",
-      label: "Cần tôi duyệt",
-      count: tabCounts?.waiting_approval ?? tabCounts?.review ?? 0,
-      isActive: activeTab === "waiting_approval" || activeTab === "review",
-    };
-  }
-  return {
-    id: "pending_submission",
-    label: "Chờ tôi nộp",
-    count: tabCounts?.pending_submission ?? 0,
-    isActive: activeTab === "pending_submission",
-  };
-}
-
-export function buildQuickFilterPills(
-  isExecutiveRole: boolean,
-  tabCounts: UnifiedTaskToolbarProps["tabCounts"],
-  activeTab: string,
-  totalTasksCount?: number
-): QuickFilterPill[] {
-  const isPendingActive =
-    activeTab === "waiting_approval" ||
-    activeTab === "review" ||
-    activeTab === "pending_submission";
-
-  return [
-    {
-      id: "all",
-      label: "Tất cả",
-      count: tabCounts?.all ?? totalTasksCount,
-      isActive: activeTab === "all" || !activeTab,
-    },
-    {
-      id: "overdue",
-      label: "Trễ hạn",
-      count: tabCounts?.overdue ?? 0,
-      isActive: activeTab === "overdue",
-    },
-    {
-      id: "this_week",
-      label: "Đến hạn tuần này",
-      count: tabCounts?.this_week ?? tabCounts?.today ?? 0,
-      isActive: activeTab === "this_week" || activeTab === "today",
-    },
-    {
-      id: isExecutiveRole ? "waiting_approval" : "review",
-      label: isExecutiveRole ? "Chờ duyệt" : "Chờ nộp/duyệt",
-      count: tabCounts?.waiting_approval ?? tabCounts?.review ?? tabCounts?.pending_submission ?? 0,
-      isActive: isPendingActive,
-    },
-  ];
 }
 
 // ============================================================================

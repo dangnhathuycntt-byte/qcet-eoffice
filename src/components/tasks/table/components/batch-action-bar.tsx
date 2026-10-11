@@ -41,45 +41,6 @@ export function calculateExtendedDeadline(
   return d.toISOString().slice(0, 10);
 }
 
-/**
- * Tạo payload cập nhật trạng thái hàng loạt
- */
-export function getBatchStatusUpdatePayload(
-  taskIds: string[],
-  newStatus: TaskStatus
-): { taskIds: string[]; status: TaskStatus } {
-  return {
-    taskIds,
-    status: newStatus,
-  };
-}
-
-/**
- * Tạo payload gia hạn hạn chót hàng loạt
- */
-export function getBatchDeadlinePayload(
-  taskIds: string[],
-  newDueDate: string
-): { taskIds: string[]; dueDate: string } {
-  return {
-    taskIds,
-    dueDate: newDueDate,
-  };
-}
-
-/**
- * Tạo payload phân công lại người thực hiện hàng loạt
- */
-export function getBatchReassignPayload(
-  taskIds: string[],
-  newAssigneeId: string
-): { taskIds: string[]; assigneeId: string } {
-  return {
-    taskIds,
-    assigneeId: newAssigneeId,
-  };
-}
-
 export type BulkPriority = "URGENT" | "HIGH" | "NORMAL" | "LOW";
 
 export interface BatchActionBarProps {
@@ -153,8 +114,6 @@ function formatShortIso(iso: string): string {
   const [, m, d] = iso.split("-");
   return d && m ? `${d}/${m}` : iso;
 }
-
-export type TaskBulkActionBarProps = BatchActionBarProps;
 
 function BulkMenu({
   ariaLabel,

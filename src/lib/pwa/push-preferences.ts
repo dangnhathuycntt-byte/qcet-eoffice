@@ -195,31 +195,6 @@ export function isTopicEnabled(
   }
 }
 
-export async function fetchServerPushPreferences(): Promise<PushPreferences | null> {
-  try {
-    const res = await fetch("/api/notifications/push", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data?.preferences) {
-      return {
-        taskAssigned: Boolean(data.preferences.taskAssigned ?? true),
-        taskReview: Boolean(data.preferences.taskReview ?? true),
-        deadlineReminder: Boolean(data.preferences.deadlineReminder ?? true),
-        documentDirective: Boolean(data.preferences.documentDirective ?? true),
-        taskExtension: Boolean(data.preferences.taskExtension ?? true),
-        taskDecline: Boolean(data.preferences.taskDecline ?? true),
-        unitRequest: Boolean(data.preferences.unitRequest ?? true),
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 export async function syncServerPushPreferences(
   preferences: PushPreferences
 ): Promise<boolean> {

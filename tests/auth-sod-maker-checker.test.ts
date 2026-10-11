@@ -1,13 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  checkAntiSelfApproval,
-  checkSeparationOfDuties,
-  assertAntiSelfApproval,
-  assertSeparationOfDuties,
-  evaluateTaskCapabilityMatrix,
-} from '../src/domain/tasks/contract';
+import { checkAntiSelfApproval, checkSeparationOfDuties, assertAntiSelfApproval, evaluateTaskCapabilityMatrix } from '../src/domain/tasks/contract';
 import { taskStateMachine } from '../src/domain/tasks/state-machine';
 import { isTaskMaker } from '../src/domain/tasks/attention-resolver';
 import {
@@ -98,32 +92,6 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
   // a) Creator cannot self-approve
   // ==========================================================================
   describe('a) Creator cannot self-approve', () => {
-    it('checkAntiSelfApproval / checkSeparationOfDuties rejects creatorId with SOD_CREATOR_CANNOT_APPROVE', () => {
-      const sod1 = checkAntiSelfApproval({
-        userId: 'creator_1',
-        creatorId: 'creator_1',
-        primaryOwnerId: 'other_user',
-      });
-      assert.equal(sod1.allowed, false);
-      assert.equal(sod1.violationCode, 'SOD_CREATOR_CANNOT_APPROVE');
-
-      const sod2 = checkSeparationOfDuties({
-        userId: 'creator_2',
-        createdById: 'creator_2',
-        primaryOwnerId: 'other_user',
-      });
-      assert.equal(sod2.allowed, false);
-      assert.equal(sod2.violationCode, 'SOD_CREATOR_CANNOT_APPROVE');
-
-      assert.throws(
-        () => assertAntiSelfApproval({ userId: 'c1', creatorId: 'c1' }),
-        (err: any) => err.code === 'SOD_CREATOR_CANNOT_APPROVE'
-      );
-      assert.throws(
-        () => assertSeparationOfDuties({ userId: 'c1', createdById: 'c1' }),
-        (err: any) => err.code === 'SOD_CREATOR_CANNOT_APPROVE'
-      );
-    });
 
     it('taskStateMachine rejects WAITING_APPROVAL -> COMPLETED when actor is creator', () => {
       const actor = {

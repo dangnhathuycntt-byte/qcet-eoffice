@@ -280,17 +280,6 @@ export function getExecutiveStatCardData(
   ];
 }
 
-export function getStatCardsForView(
-  stats: DashboardStats,
-  isExecutive?: boolean,
-  executiveStats?: ExecutiveActionStats | null
-): StatCardData[] {
-  const isExecutiveView = Boolean(isExecutive || executiveStats);
-  return isExecutiveView
-    ? getExecutiveStatCardData(stats, executiveStats)
-    : getStatCardData(stats);
-}
-
 export function ExecutiveStatStrip({
   stats,
   executiveStats,

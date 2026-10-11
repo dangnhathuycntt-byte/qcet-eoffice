@@ -1,10 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  mapPrismaTaskToSchoolTask,
-  mapPrismaTaskToStaffTask,
-  mapSchoolTaskToPrismaCreateInput,
-} from '../src/lib/adapters/task-db-adapter';
+import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from '../src/lib/adapters/task-db-adapter';
 
 describe('TaskDbAdapter Unit Tests', () => {
   test('maps full Prisma Task record to SchoolTask without data loss', () => {
@@ -117,34 +113,6 @@ describe('TaskDbAdapter Unit Tests', () => {
     };
 
     assert.strictEqual(mapPrismaTaskToSchoolTask(raw).createdAt, '2026-09-15');
-  });
-
-  test('maps SchoolTask domain object to Prisma create input structure', () => {
-    const domainTask = {
-      id: 'task-new',
-      title: 'Xây dựng kế hoạch tuyển sinh 2026',
-      description: 'Chi tiết kế hoạch tuyển sinh',
-      department: 'Trung tâm Tuyển sinh & Truyền thông',
-      assignedTo: 'ThS. Nguyễn Văn A',
-      dueDate: '2026-10-15',
-      status: 'in_progress',
-      priority: 'high',
-      progress: 20,
-      academicMonth: 10,
-      category: 'Chỉ đạo cấp Trường'
-    };
-
-    const prismaInput = mapSchoolTaskToPrismaCreateInput(domainTask, 'user-creator-123', 'dept-01');
-
-    assert.strictEqual(prismaInput.title, 'Xây dựng kế hoạch tuyển sinh 2026');
-    assert.strictEqual(prismaInput.description, 'Chi tiết kế hoạch tuyển sinh');
-    assert.strictEqual(prismaInput.createdById, 'user-creator-123');
-    assert.strictEqual(prismaInput.leadUnitId, 'dept-01');
-    assert.strictEqual(prismaInput.status, 'IN_PROGRESS');
-    assert.strictEqual(prismaInput.priority, 'HIGH');
-    assert.strictEqual(prismaInput.scope, 'SCHOOL');
-    assert.strictEqual(prismaInput.progressPercent, 20);
-    assert.strictEqual(prismaInput.academicMonth, 10);
   });
 
   describe('Subtask Hierarchy & Rollup Mapping', () => {

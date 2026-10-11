@@ -19,7 +19,6 @@ import {
   IncomingDocumentStateMachine,
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
-  assertDocumentNotImmutable,
 } from "../src/lib/documents/state-machine";
 import {
   getNextRegistrationNumber,
@@ -29,7 +28,6 @@ import {
 import {
   validateDocumentUpdatePayload,
   isWorkflowControlledField,
-  ALLOWED_DOCUMENT_UPDATE_FIELDS,
 } from "../src/lib/documents/document-validator";
 import { canReadDocument, canDeleteDocument } from "../src/server/policies/document-policy";
 import { PATCH, DELETE, GET } from "../src/app/api/documents/[id]/route";
@@ -641,9 +639,6 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       };
 
       assert.equal(isDocumentImmutable(target), true);
-      assert.throws(() => {
-        assertDocumentNotImmutable(target);
-      });
     });
 
     it("rejects generic PATCH on immutable document with IMMUTABLE_DOCUMENT error", async () => {

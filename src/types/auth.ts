@@ -29,15 +29,6 @@ export interface AuthUser {
 }
 
 /**
- * Live server-authenticated session with active credentials and server truth.
- */
-export interface AuthenticatedSession {
-  user: AuthUser;
-  token?: string;
-  expiresAt?: string;
-}
-
-/**
  * Offline cached identity representation (Phase 8: Auth/Session cleanup).
  * Distinct from an active server-authenticated session.
  * Allows viewing cached local data, but strictly forbids privileged mutations.
@@ -63,11 +54,6 @@ export interface CachedUser {
   cachedAt?: string;
   isOfflineCached?: boolean;
 }
-
-/**
- * Offline cached identity representation.
- */
-export type CachedOfflineIdentity = CachedUser;
 
 /**
  * Explicit demo identity representation.
@@ -96,6 +82,4 @@ export type AuthState =
   | { status: 'offline-cached'; user: CachedUser }
   | { status: 'anonymous' }
   | { status: 'loading' };
-
-export type PermissionChecker = (roleOrUser: UserRole | AuthUser | CachedUser | DemoIdentity) => boolean;
 

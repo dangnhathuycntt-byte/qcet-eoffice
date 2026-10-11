@@ -137,44 +137,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   },
 ];
 
-export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
-  {
-    id: "NEW",
-    title: "Mới",
-    label: "Mới",
-    emoji: "",
-    iconColor: "text-muted-foreground",
-  },
-  {
-    id: "IN_PROGRESS",
-    title: "Đang thực hiện",
-    label: "Đang thực hiện",
-    emoji: "",
-    iconColor: "text-blue-500",
-  },
-  {
-    id: "WAITING_APPROVAL",
-    title: "Chờ duyệt",
-    label: "Chờ duyệt",
-    emoji: "",
-    iconColor: "text-purple-500",
-  },
-  {
-    id: "NEEDS_REVIEW",
-    title: "Cần chỉnh sửa",
-    label: "Cần chỉnh sửa",
-    emoji: "",
-    iconColor: "text-warning",
-  },
-  {
-    id: "COMPLETED",
-    title: "Hoàn thành",
-    label: "Hoàn thành",
-    emoji: "",
-    iconColor: "text-emerald-500",
-  },
-];
-
 export interface KanbanItem {
   id: string;
   title: string;
@@ -194,13 +156,6 @@ export interface KanbanItem {
   parentSchoolTaskTitle?: string;
   rawTask: SchoolTask | StaffTask;
 }
-
-const STATUS_ORDER: TaskStatus[] = [
-  "NEW",
-  "IN_PROGRESS",
-  "NEEDS_REVIEW",
-  "COMPLETED",
-];
 
 // ============================================================================
 // Status Mapping & Helpers
@@ -236,20 +191,6 @@ export function mapTaskStatusToKanbanColumn(status?: string): TaskStatus {
     default:
       return "IN_PROGRESS";
   }
-}
-
-export function getNextStatus(status: TaskStatus): TaskStatus | null {
-  const colId = mapTaskStatusToKanbanColumn(status);
-  const index = STATUS_ORDER.indexOf(colId);
-  if (index === -1 || index >= STATUS_ORDER.length - 1) return null;
-  return STATUS_ORDER[index + 1];
-}
-
-export function getPrevStatus(status: TaskStatus): TaskStatus | null {
-  const colId = mapTaskStatusToKanbanColumn(status);
-  const index = STATUS_ORDER.indexOf(colId);
-  if (index <= 0) return null;
-  return STATUS_ORDER[index - 1];
 }
 
 export interface MenuPositionResult {
@@ -475,15 +416,6 @@ export function filterKanbanItems(
     }
     return true;
   });
-}
-
-export function groupTasksByStatus(
-  tasks: SchoolTask[],
-  levelFilter: TaskLevelFilter = "ALL",
-  categoryFilter: TaskCategory | "ALL" = "ALL",
-  searchQuery = ""
-): Record<TaskStatus, KanbanItem[]> {
-  return groupKanbanItemsByStatus(filterKanbanItems(tasks, levelFilter, categoryFilter, searchQuery));
 }
 
 /** Chia các mục đã lọc vào cột theo trạng thái. */

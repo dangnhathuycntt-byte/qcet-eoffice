@@ -3,18 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import {
-  getAcademicMonthInfo,
-  getAcademicMonthPeriod,
-  getAcademicMonthsForYear,
-  getAcademicYear,
-  isDateInAcademicMonth,
-  filterTasksByAcademicMonthStrict,
-  computePriorOverdueBacklog,
-  computeMonthPartitionBucket,
-  ACADEMIC_MONTH_ORDER,
-  CALENDAR_MONTH_ORDER,
-} from "../src/lib/academic-calendar";
+import { getAcademicMonthInfo, getAcademicMonthPeriod, getAcademicMonthsForYear, getAcademicYear, isDateInAcademicMonth, filterTasksByAcademicMonthStrict, computePriorOverdueBacklog, ACADEMIC_MONTH_ORDER } from "../src/lib/academic-calendar";
 import { CANONICAL_ROUTES } from "../src/lib/navigation/canonical-navigation-registry";
 import { computeDepartmentHealthMatrix } from "../src/lib/executive-matrix-aggregator";
 import type { SchoolTask } from "../src/types/dashboard";
@@ -243,14 +232,6 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
   // 2. Solar Calendar Month Sequence (1 to 12)
   // ---------------------------------------------------------------------------
   describe("2. Solar Calendar Month Sequence (1 to 12)", () => {
-    test("CALENDAR_MONTH_ORDER constant is strictly ordered from 1 through 12", () => {
-      assert.deepEqual(
-        CALENDAR_MONTH_ORDER,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as any,
-        "Calendar month order must be 1 through 12"
-      );
-      assert.equal(CALENDAR_MONTH_ORDER.length, 12);
-    });
 
     test("getAcademicMonthsForYear produces 12 sequential periods beginning with Month 1", () => {
       const months = getAcademicMonthsForYear(2026);
@@ -326,22 +307,6 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
     test("computePriorOverdueBacklog excludes completed prior tasks", () => {
       const backlog = computePriorOverdueBacklog(sampleTasks, 9, "2026-2027", "2026-09-04");
       assert.ok(!backlog.some((t) => t.id === "task-aug-completed"));
-    });
-
-    test("computeMonthPartitionBucket produces mathematically sound monthly stats", () => {
-      const bucket = computeMonthPartitionBucket(sampleTasks, 9, "2026-2027", "2026-09-04");
-
-      assert.equal(bucket.monthNumber, 9);
-      assert.equal(bucket.academicYear, "2026-2027");
-      assert.equal(bucket.tasks.length, 2);
-      assert.equal(bucket.priorOverdueBacklog.length, 1);
-
-      // Stats assertions
-      assert.equal(bucket.stats.totalTasks, 2);
-      assert.equal(bucket.stats.completedTasks, 1);
-      assert.equal(bucket.stats.inProgressTasks, 1);
-      assert.equal(bucket.stats.overdueTasks, 0);
-      assert.equal(bucket.stats.completionRate, 50);
     });
 
     test("computeDepartmentHealthMatrix isolates department statistics to selected month", () => {

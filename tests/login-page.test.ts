@@ -2,13 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  validateLoginForm,
-  resolveDemoUserByRole,
-  resolveOAuthError,
-  sanitizeRedirectUrl,
-  shouldShowLoginSkeleton,
-} from "../src/lib/login-helpers";
+import { resolveOAuthError, sanitizeRedirectUrl, shouldShowLoginSkeleton } from "../src/lib/login-helpers";
 
 describe("Issue #6: Single Centered Column Architecture & Institutional Copy Verification", () => {
   const loginPageSource = fs.readFileSync(
@@ -251,26 +245,6 @@ describe("Issue #6: Open Redirect Protection (OWASP A01)", () => {
     assert.equal(sanitizeRedirectUrl(undefined), "/tasks");
     assert.equal(sanitizeRedirectUrl(""), "/tasks");
     assert.equal(sanitizeRedirectUrl("   "), "/tasks");
-  });
-});
-
-describe("Issue #6: Form Validation Fallbacks & Mock Zero-Tolerance", () => {
-  test("resolveDemoUserByRole returns undefined (no mock accounts in production codebase)", () => {
-    assert.equal(resolveDemoUserByRole("ADMIN"), undefined);
-    assert.equal(resolveDemoUserByRole("MANAGER"), undefined);
-    assert.equal(resolveDemoUserByRole("STAFF"), undefined);
-  });
-
-  test("validateLoginForm performs strict input validation", () => {
-    const emptyResult = validateLoginForm("");
-    assert.equal(emptyResult.valid, false);
-
-    const malformedResult = validateLoginForm("invalid-email");
-    assert.equal(malformedResult.valid, false);
-
-    const validResult = validateLoginForm("teacher@cdktcnqn.edu.vn");
-    assert.equal(validResult.valid, true);
-    assert.equal(validResult.user, undefined);
   });
 });
 

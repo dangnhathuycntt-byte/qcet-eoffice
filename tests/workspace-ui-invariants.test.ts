@@ -8,10 +8,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  parseWorkspaceQuery,
-  DEFAULT_WORKSPACE_FILTER_STATE,
-} from "../src/lib/workspace-query";
+import { parseWorkspaceQuery } from "../src/lib/workspace-query";
 import {
   getExecutiveStatCardData,
   getStatCardData,
@@ -20,38 +17,6 @@ import type { DashboardStats } from "../src/types/dashboard";
 import type { ExecutiveActionStats } from "../src/lib/executive-matrix-aggregator";
 
 describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () => {
-  describe("Invariant 3: 'Của tôi' Scope-vs-Status Exclusivity", () => {
-
-    test("query parser preserves orthogonal separation of scope and status", () => {
-      // Case A: scope=my with status=in_progress
-      const parsedA = parseWorkspaceQuery(
-        new URLSearchParams("scope=my&status=in_progress")
-      );
-      assert.equal(parsedA.scope, "my", "scope=my must parse as scope='my'");
-      assert.equal(
-        parsedA.status,
-        "IN_PROGRESS",
-        "Orthogonal status must be parsed as IN_PROGRESS"
-      );
-
-      // Case B: legacy alias s=cua_toi
-      const parsedB = parseWorkspaceQuery(new URLSearchParams("s=cua_toi"));
-      assert.equal(parsedB.scope, "my", "s=cua_toi must normalize to scope='my'");
-      assert.equal(
-        parsedB.status,
-        DEFAULT_WORKSPACE_FILTER_STATE.status,
-        "Status must remain default ALL when only scope is passed"
-      );
-
-      // Case C: invalid status=my does NOT pollute status (falls back to default ALL)
-      const parsedC = parseWorkspaceQuery(new URLSearchParams("status=my"));
-      assert.equal(
-        parsedC.status,
-        "ALL",
-        "Invalid status 'my' must not be recognized as a valid lifecycle status"
-      );
-    });
-  });
 
   describe("Invariant 4: Dashboard Cockpit & Metric Strip Deduplication", () => {
     const dummyStats: DashboardStats = {

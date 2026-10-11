@@ -260,14 +260,6 @@ export function findPresetById(id?: string | null): SavedTaskView | undefined {
 }
 
 /**
- * Strips decorative star glyphs from view names for clean presentation.
- */
-export function cleanViewName(name?: string | null): string {
-  if (!name) return "";
-  return name.replace(/^[★*]\s*/, "").trim();
-}
-
-/**
  * Finds a preset by exact name or name with star removed.
  */
 export function findPresetByName(name?: string | null): SavedTaskView | undefined {

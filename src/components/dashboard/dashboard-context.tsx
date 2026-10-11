@@ -96,10 +96,6 @@ export function useDashboardData(): DashboardDataContextValue {
   return context;
 }
 
-export function useOptionalDashboardData(): DashboardDataContextValue | null {
-  return React.useContext(DashboardDataContext);
-}
-
 // 3. Actions Context
 export interface DashboardActionsContextValue {
   handleDepartmentChange: (dept: string) => void;
@@ -127,10 +123,6 @@ export function useDashboardActions(): DashboardActionsContextValue {
     throw new Error("useDashboardActions must be used within a DashboardStateProvider");
   }
   return context;
-}
-
-export function useOptionalDashboardActions(): DashboardActionsContextValue | null {
-  return React.useContext(DashboardActionsContext);
 }
 
 // 4. Modal Context

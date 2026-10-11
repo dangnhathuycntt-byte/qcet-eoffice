@@ -1,10 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  computeSchoolTaskRollup,
-  computeDashboardStats,
-  filterSchoolTasks,
-} from "../src/lib/dashboard-aggregator";
+import { computeSchoolTaskRollup, computeDashboardStats } from "../src/lib/dashboard-aggregator";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
 
@@ -62,20 +58,6 @@ describe("Dashboard Aggregator & Rollup Engine", () => {
     assert.equal(stats.staffTasksCompleted, 1);
     assert.equal(stats.staffTasksInProgress, 1);
     assert.equal(stats.averageSchoolProgressPercent, 50);
-  });
-
-  test("filterSchoolTasks filters by search query and category", () => {
-    const computedTask = computeSchoolTaskRollup(sampleSchoolTask);
-    const results = filterSchoolTasks([computedTask], {
-      query: "sao lưu",
-      category: "ATTT",
-    });
-    assert.equal(results.length, 1);
-
-    const emptyResults = filterSchoolTasks([computedTask], {
-      query: "không tồn tại",
-    });
-    assert.equal(emptyResults.length, 0);
   });
 
   test("computeDashboardStats strictly adheres to MECE conservation law", () => {

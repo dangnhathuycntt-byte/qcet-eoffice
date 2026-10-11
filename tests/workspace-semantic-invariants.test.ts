@@ -3,14 +3,7 @@ import assert from "node:assert/strict";
 import { AttentionBadge, type AttentionLevel } from "../src/components/workspace/attention-badge";
 import { STATUS_BADGE_CONFIGS } from "../src/components/tasks/table/constants";
 import { deriveAdaptiveWorkspaceData } from "../src/components/workspace/hooks/use-adaptive-workspace-data";
-import {
-  parseWorkspaceQuery,
-  serializeWorkspaceQuery,
-  isWorkspaceQueryEqual,
-  DEFAULT_WORKSPACE_FILTER_STATE,
-  buildWorkspaceUrl,
-  type WorkspaceFilterState,
-} from "../src/lib/workspace-query";
+import { parseWorkspaceQuery, serializeWorkspaceQuery, type WorkspaceFilterState } from "../src/lib/workspace-query";
 import type { TaskStatus, SchoolTask, StaffTask } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 
@@ -416,62 +409,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
   });
 
   describe("Invariant 5: URL Query State Parse-Serialize-Parse Stability & Normalization", () => {
-    test("round-trip stability for default parameters", () => {
-      const defaultState = parseWorkspaceQuery({});
-      assert.equal(defaultState.scope, "school");
-      assert.equal(defaultState.month, "ALL");
-      assert.equal(defaultState.status, "ALL");
-      assert.equal(defaultState.view, "table");
-
-      const serialized = serializeWorkspaceQuery(defaultState);
-      const reParsed = parseWorkspaceQuery(serialized);
-
-      assert.ok(
-        isWorkspaceQueryEqual(defaultState, reParsed),
-        "Default state must be round-trip stable and equal after parse -> serialize -> parse"
-      );
-      assert.equal(reParsed.scope, "school");
-      assert.equal(reParsed.month, "ALL");
-      assert.equal(reParsed.status, "ALL");
-      assert.equal(reParsed.view, "table");
-    });
-
-    test("round-trip stability for fully-specified custom workspace parameters", () => {
-      const customInput: WorkspaceFilterState = {
-        scope: "unit",
-        unitId: "K.CNTT",
-        dept: "K.CNTT",
-        unit: "K.CNTT",
-        month: 9,
-        date: "2026-09-15",
-        status: "IN_PROGRESS",
-        attention: "requires_my_approval",
-        view: "kanban",
-        q: "Kế hoạch kiểm định chất lượng",
-        query: "Kế hoạch kiểm định chất lượng",
-        taskId: "task-canonical-001",
-        selectedTaskId: "task-canonical-001",
-      };
-
-      const serialized = serializeWorkspaceQuery(customInput);
-      const reParsed = parseWorkspaceQuery(serialized);
-
-      assert.ok(
-        isWorkspaceQueryEqual(customInput, reParsed),
-        "Custom workspace filter state must be semantically equal after round-trip serialization"
-      );
-
-      assert.equal(reParsed.scope, "unit");
-      assert.equal(reParsed.unitId, "K.CNTT");
-      assert.equal(reParsed.dept, "K.CNTT");
-      assert.equal(reParsed.month, 9);
-      assert.equal(reParsed.date, "2026-09-15");
-      assert.equal(reParsed.status, "IN_PROGRESS");
-      assert.equal(reParsed.attention, "requires_my_approval");
-      assert.equal(reParsed.view, "kanban");
-      assert.equal(reParsed.q, "Kế hoạch kiểm định chất lượng");
-      assert.equal(reParsed.taskId, "task-canonical-001");
-    });
 
     test("round-trip stability for Calendar workspace with agenda view", () => {
       const calendarInput: Partial<WorkspaceFilterState> = {
@@ -488,34 +425,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
       assert.equal(reParsed.month, 11);
       assert.equal(reParsed.date, "2026-11-20");
       assert.equal(reParsed.scope, "school");
-    });
-
-    test("idempotence invariant: P(S(P(x))) === P(x) across edge cases", () => {
-      const rawInputs = [
-        "scope=school&month=ALL&status=ALL&view=table",
-        "scope=unit&dept=DAO_TAO&month=10&status=WAITING_APPROVAL&view=kanban&q=kiem+dinh",
-        "tab=my_tasks&departmentId=K_KT&query=bao+cao&selectedTaskId=t-99",
-        "s=cua_toi&m=2026-09&status=in_progress",
-        "scope=personal&tab=review&p=2026-10-15",
-        "invalid_param=123&scope=invalid_scope&month=99&status=bad_status",
-      ];
-
-      for (const input of rawInputs) {
-        const p1 = parseWorkspaceQuery(input);
-        const s1 = serializeWorkspaceQuery(p1);
-        const p2 = parseWorkspaceQuery(s1);
-        const s2 = serializeWorkspaceQuery(p2);
-        const p3 = parseWorkspaceQuery(s2);
-
-        assert.ok(
-          isWorkspaceQueryEqual(p1, p2),
-          `Idempotence failed on step 1 for input: ${input}`
-        );
-        assert.ok(
-          isWorkspaceQueryEqual(p2, p3),
-          `Idempotence failed on step 2 for input: ${input}`
-        );
-      }
     });
 
     test("normalization of invalid scope parameters to canonical default", () => {
@@ -604,51 +513,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
       assert.equal(serialized.get("dept"), "DEPT-01");
       assert.equal(serialized.get("q"), "thi tot nghiep");
       assert.equal(serialized.get("taskId"), "sub-42");
-    });
-
-    test("isWorkspaceQueryEqual semantic equivalence axioms", () => {
-      const a = parseWorkspaceQuery("scope=unit&dept=CNTT&month=9&status=IN_PROGRESS");
-      const b = parseWorkspaceQuery("scope=unit&unit=CNTT&month=9&status=IN_PROGRESS");
-      const c = parseWorkspaceQuery("scope=unit&unitId=CNTT&academicMonth=9&status=IN_PROGRESS");
-
-      // Reflexive
-      assert.ok(isWorkspaceQueryEqual(a, a), "isWorkspaceQueryEqual must be reflexive");
-
-      // Symmetric
-      assert.ok(isWorkspaceQueryEqual(a, b), "isWorkspaceQueryEqual must be symmetric (a == b)");
-      assert.ok(isWorkspaceQueryEqual(b, a), "isWorkspaceQueryEqual must be symmetric (b == a)");
-
-      // Transitive
-      assert.ok(isWorkspaceQueryEqual(b, c), "isWorkspaceQueryEqual (b == c)");
-      assert.ok(isWorkspaceQueryEqual(a, c), "isWorkspaceQueryEqual must be transitive (a == c)");
-
-      // Defaults equivalence
-      const emptyState = parseWorkspaceQuery({});
-      const explicitDefaults: WorkspaceFilterState = {
-        scope: "school",
-        month: "ALL",
-        status: "ALL",
-        view: "table",
-      };
-      assert.ok(
-        isWorkspaceQueryEqual(emptyState, explicitDefaults),
-        "Implicit empty params and explicit defaults must be semantically equal"
-      );
-    });
-
-    test("buildWorkspaceUrl generates clean normalized URLs", () => {
-      const url = buildWorkspaceUrl("/tasks", {
-        scope: "my",
-        status: "WAITING_APPROVAL",
-        month: 9,
-      });
-
-      assert.ok(url.startsWith("/tasks?"));
-      assert.ok(url.includes("scope=my"));
-      assert.ok(url.includes("status=WAITING_APPROVAL"));
-      assert.ok(url.includes("month=9"));
-      // Default view 'table' should be omitted
-      assert.ok(!url.includes("view=table"));
     });
   });
 

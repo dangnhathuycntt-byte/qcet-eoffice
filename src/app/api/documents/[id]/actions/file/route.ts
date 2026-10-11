@@ -1,19 +1,9 @@
-import { NextRequest } from "next/server";
 import { z } from "zod";
-import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
-import { apiError, apiSuccess } from "@/server/api/response";
-import { assertCsrf } from "@/server/security/csrf";
-import { assertRateLimit } from "@/server/security/rate-limit";
-import {
-  assertJsonContentType,
-  assertRequestBodySize,
-  MAX_JSON_BODY_SIZE,
-  parseAndValidateJson,
-} from "@/server/api/validation";
 import { fileDocument } from "@/lib/services/incoming-document-service";
 import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
 import { prisma } from "@/lib/prisma";
 import { NotFoundError } from "@/server/api/errors";
+import { documentActionRoute } from "../shared";
 
 const FileDocumentSchema = z.object({
   dossierId: z.string().trim().max(100).optional().nullable(),
@@ -21,54 +11,32 @@ const FileDocumentSchema = z.object({
   storageLocation: z.string().trim().max(255).optional().nullable(),
 }).strict();
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
-
-export async function POST(req: NextRequest, context: RouteContext) {
-  let requestId = crypto.randomUUID();
-  try {
-    assertCsrf(req);
-    assertJsonContentType(req);
-    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
-
-    const apiCtx = await getApiContext(req);
-    requestId = apiCtx.requestId;
-    const authUser = requireAuthenticated(apiCtx);
-    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
-
-    const { id } = await context.params;
-    const body = await parseAndValidateJson(req, FileDocumentSchema, { allowEmpty: true });
-
+export const POST = documentActionRoute(
+  FileDocumentSchema,
+  async (user, body, { documentId, requestId }) => {
     // Phân nhánh theo loại văn bản (ADR-004)
-    const doc = await prisma.document.findUnique({ where: { id }, select: { type: true } });
+    const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { type: true } });
     if (!doc) throw new NotFoundError("Văn bản không tồn tại");
 
     if (doc.type === "VAN_BAN_DI") {
-      const result = await OutgoingDocumentService.fileOutgoingDocument(
-        {
-          documentId: id,
-          filingNotes: body.filingNotes ?? undefined,
-        },
-        authUser,
+      return OutgoingDocumentService.fileOutgoingDocument(
+        { documentId, filingNotes: body.filingNotes ?? undefined },
+        user,
         { requestId }
       );
-      return apiSuccess(result, { requestId });
     }
 
     // Văn bản đến
-    const result = await fileDocument(
+    return fileDocument(
       {
-        documentId: id,
+        documentId,
         dossierId: body.dossierId ?? undefined,
         filingNotes: body.filingNotes ?? undefined,
         storageLocation: body.storageLocation ?? undefined,
       },
-      authUser,
+      user,
       requestId
     );
-    return apiSuccess(result, { requestId });
-  } catch (error) {
-    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
-  }
-}
+  },
+  { allowEmpty: true }
+);

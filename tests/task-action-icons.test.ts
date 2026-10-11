@@ -7,8 +7,8 @@ import * as icons from "../src/components/tasks/task-action-icons";
 describe("Bộ icon thao tác nhiệm vụ (cùng ngôn ngữ với icon sidebar)", () => {
   const entries = Object.entries(icons).filter(([name]) => name.startsWith("TaskIcon"));
 
-  it("xuất đủ 48 icon", () => {
-    assert.equal(entries.length, 48);
+  it("xuất đủ 49 icon", () => {
+    assert.equal(entries.length, 49);
   });
 
   for (const [name, Icon] of entries) {
@@ -24,7 +24,7 @@ describe("Bộ icon thao tác nhiệm vụ (cùng ngôn ngữ với icon sidebar
   }
 
   it("cho phép đổi kích thước và độ dày nét", () => {
-    const html = renderToStaticMarkup(React.createElement(icons.TaskIconStar, { size: 24, strokeWidth: 2 }));
+    const html = renderToStaticMarkup(React.createElement(icons.TaskIconStatus, { size: 24, strokeWidth: 2 }));
     assert.ok(html.includes('width="24"') && html.includes('stroke-width="2"'));
   });
 });

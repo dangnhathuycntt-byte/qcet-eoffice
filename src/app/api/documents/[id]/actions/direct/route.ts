@@ -1,16 +1,6 @@
-import { NextRequest } from "next/server";
 import { z } from "zod";
-import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
-import { apiError, apiSuccess } from "@/server/api/response";
-import { assertCsrf } from "@/server/security/csrf";
-import { assertRateLimit } from "@/server/security/rate-limit";
-import {
-  assertJsonContentType,
-  assertRequestBodySize,
-  MAX_JSON_BODY_SIZE,
-  parseAndValidateJson,
-} from "@/server/api/validation";
 import { directDocument } from "@/lib/services/incoming-document-service";
+import { documentActionRoute } from "../shared";
 
 const DirectDocumentSchema = z
   .object({
@@ -34,43 +24,20 @@ const DirectDocumentSchema = z
     }
   );
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
-
-export async function POST(req: NextRequest, context: RouteContext) {
-  let requestId = crypto.randomUUID();
-  try {
-    assertCsrf(req);
-    assertJsonContentType(req);
-    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
-
-    const apiCtx = await getApiContext(req);
-    requestId = apiCtx.requestId;
-    const authUser = requireAuthenticated(apiCtx);
-    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
-
-    const { id } = await context.params;
-    const body = await parseAndValidateJson(req, DirectDocumentSchema, { allowEmpty: false });
-
-    const leadershipInstruction = (body.leadershipInstruction || body.instruction)!;
-
-    const result = await directDocument(
+export const POST = documentActionRoute(
+  DirectDocumentSchema,
+  (user, body, { documentId, requestId }) =>
+    directDocument(
       {
-        documentId: id,
+        documentId,
         leadUnitId: body.leadUnitId,
         coordinatingUnitIds: body.coordinatingUnitIds ?? undefined,
-        leadershipInstruction,
+        leadershipInstruction: (body.leadershipInstruction || body.instruction)!,
         deadline: body.deadline ? new Date(body.deadline) : undefined,
         responsibilityAreaId: body.responsibilityAreaId ?? undefined,
         notes: body.notes ?? undefined,
       },
-      authUser,
+      user,
       requestId
-    );
-
-    return apiSuccess(result, { requestId });
-  } catch (error) {
-    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
-  }
-}
+    )
+);

@@ -1,16 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
-import {
-  assertJsonContentType,
-  assertPayloadSize,
-  assertQueryStringLength,
-  parseAndValidateJson,
-  MAX_JSON_BODY_SIZE,
-  MAX_AUTH_BODY_SIZE,
-  MAX_QUERY_STRING_LENGTH,
-  readOptionalJsonBody,
-} from '@/server/api/validation';
+import { assertJsonContentType, assertPayloadSize, assertQueryStringLength, parseAndValidateJson, MAX_JSON_BODY_SIZE, MAX_QUERY_STRING_LENGTH, readOptionalJsonBody } from '@/server/api/validation';
 import {
   UnsupportedMediaTypeError,
   PayloadTooLargeError,
@@ -149,27 +140,6 @@ describe('Payload Guards & Content-Type Validation Engine', () => {
       });
 
       assert.doesNotThrow(() => assertPayloadSize(req));
-    });
-
-    it('throws 413 PayloadTooLargeError when Content-Length exceeds maxBytes', () => {
-      const req = new Request('http://localhost:3000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'content-length': String(MAX_AUTH_BODY_SIZE + 1),
-        },
-      });
-
-      assert.throws(
-        () => assertPayloadSize(req, MAX_AUTH_BODY_SIZE),
-        (err: unknown) => {
-          assert.ok(err instanceof PayloadTooLargeError);
-          assert.ok(err instanceof ApiError);
-          assert.strictEqual(err.statusCode, 413);
-          assert.strictEqual(err.code, 'PAYLOAD_TOO_LARGE');
-          return true;
-        }
-      );
     });
 
     it('passes when Content-Length is absent', () => {

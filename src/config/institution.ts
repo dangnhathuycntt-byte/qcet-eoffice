@@ -64,78 +64,9 @@ export const INSTITUTION_CONFIG: Readonly<InstitutionProfile> = deepFreeze({
 });
 
 /**
- * Returns the canonical institutional official name.
- */
-export function getInstitutionName(): string {
-  return INSTITUTION_CONFIG.officialName;
-}
-
-/**
- * Returns the short acronym name (e.g. "QCET").
- */
-export function getInstitutionShortName(): string {
-  return INSTITUTION_CONFIG.shortName;
-}
-
-/**
- * Returns the subordinate managing authority.
- */
-export function getInstitutionSubordinateTo(): string {
-  return INSTITUTION_CONFIG.subordinateTo;
-}
-
-/**
- * Returns the institutional code.
- */
-export function getInstitutionCode(): string {
-  return INSTITUTION_CONFIG.institutionCode;
-}
-
-/**
- * Returns structured header information according to Decree 30/2020/ND-CP administrative document layout.
- */
-export function getInstitutionHeader(): {
-  subordinateTo: string;
-  officialName: string;
-  formattedHeader: string;
-} {
-  const officialNameUpper = INSTITUTION_CONFIG.officialName.toUpperCase();
-  return {
-    subordinateTo: INSTITUTION_CONFIG.subordinateTo,
-    officialName: officialNameUpper,
-    formattedHeader: `${INSTITUTION_CONFIG.subordinateTo}\n${officialNameUpper}`,
-  };
-}
-
-/**
  * Formats the official digital signing capacity for organizational seals.
  * E.g. "VĂN PHÒNG / Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn "
  */
 export function getOfficialSigningCapacity(department = "VĂN PHÒNG"): string {
   return `${department.toUpperCase()} / ${INSTITUTION_CONFIG.officialName.toUpperCase()}`;
-}
-
-/**
- * Returns full application title with optional page title prefix.
- */
-export function getAppTitle(pageTitle?: string): string {
-  const brand = `${INSTITUTION_CONFIG.shortName} E-Office`;
-  return pageTitle ? `${pageTitle} - ${brand}` : brand;
-}
-
-/**
- * Checks whether a given string matches the institution identity (name, code, acronym, or domain).
- */
-export function isCurrentInstitution(nameOrCode?: string | null): boolean {
-  if (!nameOrCode) return false;
-  const normalized = nameOrCode.trim().toLowerCase();
-  return (
-    normalized === INSTITUTION_CONFIG.officialName.toLowerCase() ||
-    normalized === INSTITUTION_CONFIG.shortName.toLowerCase() ||
-    normalized === INSTITUTION_CONFIG.institutionCode.toLowerCase() ||
-    normalized === INSTITUTION_CONFIG.abbreviatedName.toLowerCase() ||
-    normalized.includes("kỹ thuật công nghệ") ||
-    normalized.includes("kỹ thuật & công nghệ") ||
-    normalized.includes(INSTITUTION_CONFIG.domain.toLowerCase())
-  );
 }

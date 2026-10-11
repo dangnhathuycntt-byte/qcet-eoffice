@@ -45,14 +45,6 @@ export interface CalendarUserContext {
   departmentName?: string;
 }
 
-export function isCalendarTaskEntry(entry: CalendarEntry): entry is CalendarTaskEntry {
-  return entry.kind === "task";
-}
-
-export function isCalendarEventEntry(entry: CalendarEntry): entry is CalendarEventEntry {
-  return entry.kind === "event";
-}
-
 export function matchesCalendarScope(
   entry: CalendarEntry,
   scope: CalendarScope,
@@ -98,14 +90,6 @@ export function matchesCalendarScope(
   }
 
   return true;
-}
-
-export function filterCalendarEntriesByScope(
-  entries: readonly CalendarEntry[],
-  scope: CalendarScope,
-  user?: CalendarUserContext
-): CalendarEntry[] {
-  return entries.filter((entry) => matchesCalendarScope(entry, scope, user));
 }
 
 export type CalendarAttentionState =
@@ -275,19 +259,6 @@ export function filterCalendarItems<T extends CalendarAttentionItem>(
 }
 
 /**
- * Thin display-filter wrapper over matchesCalendarScope.
- * Scope is a visual dataset filter only — it never grants, narrows, or widens
- * operational authorization. Never use role as scope.
- */
-export function isCalendarEntryVisibleForScope(
-  entry: CalendarEntry,
-  scope: CalendarScope,
-  user?: CalendarUserContext
-): boolean {
-  return matchesCalendarScope(entry, scope, user);
-}
-
-/**
  * Pure grouping of calendar entries by their date-only key (YYYY-MM-DD).
  * Preserves input order within each day; no ranking applied here.
  */
@@ -306,61 +277,6 @@ export function groupCalendarEntriesByDate(
     }
   }
   return grouped;
-}
-
-function getCalendarEntryAttentionPriority(
-  entry: CalendarEntry,
-  referenceDate: string
-): number {
-  if (entry.kind === "task") {
-    return STATE_PRIORITY[
-      getCalendarAttentionState(
-        { id: entry.id, title: entry.title, status: entry.status, dueDate: entry.dueDate },
-        referenceDate
-      )
-    ];
-  }
-  // Timed events carry no task status; rank with pending work so urgent
-  // tasks always stay ahead while ordering remains deterministic.
-  return STATE_PRIORITY["pending"];
-}
-
-/**
- * Attention-first deterministic ranking for agenda lists.
- * Primary: attention priority (overdue > waiting > due_today > pending events).
- * Tie-breakers: date, event startTime, title, id, then stable input order.
- */
-export function sortAgendaEntries(
-  entries: readonly CalendarEntry[],
-  referenceDate: string
-): CalendarEntry[] {
-  return entries
-    .map((entry, index) => ({ entry, index }))
-    .sort((left, right) => {
-      const leftPriority = getCalendarEntryAttentionPriority(left.entry, referenceDate);
-      const rightPriority = getCalendarEntryAttentionPriority(right.entry, referenceDate);
-      if (leftPriority !== rightPriority) {
-        return leftPriority - rightPriority;
-      }
-      const leftDate = cleanDate(left.entry.date) ?? "";
-      const rightDate = cleanDate(right.entry.date) ?? "";
-      if (leftDate !== rightDate) {
-        return leftDate < rightDate ? -1 : 1;
-      }
-      const leftTime = left.entry.kind === "event" ? left.entry.startTime ?? "" : "";
-      const rightTime = right.entry.kind === "event" ? right.entry.startTime ?? "" : "";
-      if (leftTime !== rightTime) {
-        return leftTime < rightTime ? -1 : 1;
-      }
-      if (left.entry.title !== right.entry.title) {
-        return left.entry.title < right.entry.title ? -1 : 1;
-      }
-      if (left.entry.id !== right.entry.id) {
-        return left.entry.id < right.entry.id ? -1 : 1;
-      }
-      return left.index - right.index;
-    })
-    .map(({ entry }) => entry);
 }
 
 export interface MonthCellPresentation {
@@ -448,29 +364,4 @@ export interface DeadlineSummary {
   dueToday: number;
   upcoming: number;
   completed: number;
-}
-
-/**
- * Deadline-focused rollup derived from the single canonical attention state
- * model (same classifier as getCalendarDaySummary). Upcoming aggregates the
- * non-urgent open states (waiting + in_progress + pending).
- */
-export function getDeadlineSummary(
-  items: readonly CalendarAttentionItem[],
-  referenceDate: string
-): DeadlineSummary {
-  let overdue = 0;
-  let dueToday = 0;
-  let upcoming = 0;
-  let completed = 0;
-
-  for (const item of items) {
-    const state = getCalendarAttentionState(item, referenceDate);
-    if (state === "overdue") overdue += 1;
-    else if (state === "due_today") dueToday += 1;
-    else if (state === "completed") completed += 1;
-    else upcoming += 1;
-  }
-
-  return { total: items.length, overdue, dueToday, upcoming, completed };
 }

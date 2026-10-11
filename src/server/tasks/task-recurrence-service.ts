@@ -45,12 +45,6 @@ export const RecurrencePatchSchema = z
   })
   .strict();
 
-export type TemplateBody = z.infer<typeof TemplateBodySchema>;
-export type TemplatePatch = z.infer<typeof TemplatePatchSchema>;
-export type RecurrenceBody = z.infer<typeof RecurrenceBodySchema>;
-export type RecurrencePatch = z.infer<typeof RecurrencePatchSchema>;
-
-
 /** Một mẫu chỉ được quản lý bởi người có quyền giao việc (`task.assign`: trưởng đơn vị, lãnh đạo) trong đơn vị đó. */
 async function canManageUnit(session: SessionPayload, unitId: string): Promise<boolean> {
   const ctx = await loadCachedAuthorizationContext(session.id);

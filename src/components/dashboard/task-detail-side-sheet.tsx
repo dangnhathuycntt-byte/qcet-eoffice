@@ -558,13 +558,6 @@ export function getTaskAuditTimeline(
   return events;
 }
 
-export interface ActivityNote {
-  id: string;
-  author: string;
-  content: string;
-  timestamp: string;
-}
-
 export interface TaskDetailSideSheetProps {
   task: SchoolTask | StaffTask | null;
   isOpen?: boolean;

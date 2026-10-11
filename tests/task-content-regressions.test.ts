@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { UpdateTaskInputSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
 import { parseAndValidateJson, MAX_JSON_BODY_SIZE } from '@/server/api/validation';
-import { moveBlock, parseContentToBlocks, serializeBlocksToContent } from '@/components/tasks/detail/task-block-editor';
+import { parseContentToBlocks, serializeBlocksToContent } from '@/components/tasks/detail/task-block-editor';
 
 const editorPath = 'src/components/tasks/detail/task-block-editor.tsx';
 const editorSource = ts.createSourceFile(editorPath, readFileSync(editorPath, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -21,7 +21,7 @@ test('editing blocks preserves the row component identity across editor renders'
 });
 
 test('Space never toggles task panels while Ctrl+I remains available', () => {
-  const source = ts.createSourceFile('detail.tsx', readFileSync('src/components/tasks/task-detail-page.tsx', 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const source = ts.createSourceFile('detail.tsx', readFileSync('src/components/tasks/detail/task-detail-view.tsx', 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let effect: ts.Node | undefined;
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node) && node.expression.getText(source) === 'React.useEffect' && node.arguments[0]?.getText(source).includes('window.addEventListener("keydown", handleKeyDown)')) effect = node.arguments[0];
@@ -44,10 +44,11 @@ test('Space never toggles task panels while Ctrl+I remains available', () => {
   })();
   const event = { key: ' ', code: 'Space', target: body, preventDefault: () => { prevented += 1; }, repeat: false };
   handleKeyDown(event);
-  assert.equal(toggles, 1, 'Space on body toggles inspector');
-  assert.equal(prevented, 1, 'Space on body calls preventDefault');
+  assert.equal(toggles, 0, 'Space on body does not toggle inspector');
+  assert.equal(prevented, 0, 'Space on body is left to the browser');
   handleKeyDown({ ...event, key: 'i', code: 'KeyI', ctrlKey: true });
-  assert.equal(toggles, 2, 'Ctrl+I also toggles inspector');
+  assert.equal(toggles, 1, 'Ctrl+I toggles inspector');
+  assert.equal(prevented, 1, 'Ctrl+I calls preventDefault');
 });
 
 function editorCallback(name: string, scope: Record<string, any>) {
@@ -101,7 +102,6 @@ test('autosave waits for persistent media URLs instead of saving blob previews',
   const src = readFileSync(editorPath, 'utf8');
   assert.ok(src.includes('blob:'), 'Autosave must check for blob: URLs');
 });
-
 
 test('global file drop is scoped and always clears its overlay state', () => {
   const src = readFileSync(editorPath, 'utf8');

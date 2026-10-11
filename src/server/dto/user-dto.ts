@@ -13,6 +13,7 @@ import {
 } from '@/server/policies/user-directory-policy';
 import type { AuthenticatedUser } from '@/server/api/request-context';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
+import { toISOStringSafe } from './dto-helpers';
 
 export type UserViewerContext =
   | DirectoryViewerContext
@@ -58,17 +59,6 @@ export interface UserSessionDTO {
   departmentCode?: string | null;
   departmentName?: string | null;
   avatarUrl?: string | null;
-}
-
-function toISOStringSafe(val: unknown): string {
-  if (val instanceof Date) {
-    return isNaN(val.getTime()) ? new Date(0).toISOString() : val.toISOString();
-  }
-  if (typeof val === 'string' || typeof val === 'number') {
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) return d.toISOString();
-  }
-  return new Date(0).toISOString();
 }
 
 function extractDepartment(raw: Record<string, any>): UserDepartmentDTO | null {
@@ -154,36 +144,6 @@ export function toUserPublicDTO(
     createdAt: toISOStringSafe(user.createdAt),
     updatedAt: toISOStringSafe(user.updatedAt),
   };
-}
-
-/**
- * Maps raw user entity to UserSessionDTO for session validation and client auth state.
- * Returns null if raw user is null, undefined, or not an object.
- */
-export function toUserSessionDTO(rawUser: unknown): UserSessionDTO | null {
-  if (!rawUser || typeof rawUser !== 'object') return null;
-  const user = rawUser as Record<string, any>;
-
-  return {
-    id: String(user.id ?? ''),
-    name: String(user.name ?? ''),
-    email: String(user.email ?? ''),
-    role: String(user.role ?? ''),
-    departmentId: user.departmentId ?? user.department?.id ?? null,
-    departmentCode: user.departmentCode ?? user.department?.code ?? user.department?.shortName ?? null,
-    departmentName: user.departmentName ?? user.department?.name ?? null,
-    avatarUrl: user.avatarUrl ?? user.avatar ?? null,
-  };
-}
-
-/**
- * Array mapping helpers
- */
-export function toUserSummaryDTOArray(rawUsers: unknown[]): UserSummaryDTO[] {
-  if (!Array.isArray(rawUsers)) return [];
-  return rawUsers
-    .map(toUserSummaryDTO)
-    .filter((u): u is UserSummaryDTO => u !== null);
 }
 
 export function toUserPublicDTOArray(

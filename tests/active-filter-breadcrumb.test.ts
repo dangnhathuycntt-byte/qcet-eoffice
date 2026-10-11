@@ -2,43 +2,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import {
-  ActiveFilterBreadcrumb,
-  getActiveFilterSummary,
-} from "../src/components/workspace/components/active-filter-breadcrumb";
+import { ActiveFilterBreadcrumb } from "../src/components/workspace/components/active-filter-breadcrumb";
 
 describe("ActiveFilterBreadcrumb Component & Logic", () => {
-  test("computes active filter summary correctly for various criteria", () => {
-    const filters = getActiveFilterSummary({
-      dept: "CNTT",
-      workbox: "URGENT_OVERDUE",
-      search: "nghiệm thu",
-      status: "IN_PROGRESS",
-      overdue: true,
-      scope: "unit",
-    });
-
-    assert.equal(filters.length, 6);
-    assert.ok(filters.includes("Đơn vị: CNTT"));
-    assert.ok(filters.includes("Hộp việc: URGENT_OVERDUE"));
-    assert.ok(filters.includes('Từ khóa: "nghiệm thu"'));
-    assert.ok(filters.includes("Trạng thái: IN_PROGRESS"));
-    assert.ok(filters.includes("Trễ hạn"));
-    assert.ok(filters.includes("Phạm vi: Đơn vị"));
-  });
-
-  test("ignores default/ALL and empty values in summary", () => {
-    const filters = getActiveFilterSummary({
-      dept: "ALL",
-      workbox: "ALL",
-      search: "   ",
-      status: "ALL",
-      overdue: false,
-      scope: "ALL",
-    });
-
-    assert.equal(filters.length, 0);
-  });
 
   test("renders null when no active filters are present", () => {
     const html = renderToStaticMarkup(

@@ -4,76 +4,13 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import type { UserRole } from "@/types/auth";
 import { resolveBreadcrumb } from "@/lib/navigation/active-matcher";
-import {
-  Briefcase,
-  FileText,
-  Building2,
-  LayoutDashboard,
-  Calendar,
-  Bell,
-  CheckSquare,
-  Inbox,
-  Send,
-  FileCheck,
-  Archive,
-  Users,
-  Network,
-  Home,
-  FileBadge,
-  Eye,
-  Search,
-  BookUser,
-  CalendarDays,
-  ClipboardList,
-  Headphones,
-  Settings,
-  LogOut,
-  type LucideIcon,
-} from "lucide-react";
+import { FileText, Building2, LayoutDashboard, Calendar, CheckSquare, Inbox, type LucideIcon } from "lucide-react";
 import { WorkspaceZone } from "@/types/workspace";
 import { animate, useMotionValue, type MotionValue } from "motion/react";
 import { motionTransition } from "@/lib/motion/tokens";
 
 export type NavigationModule = "work" | "documents" | "org";
 export type NavigationSection = "work" | "org" | "operations" | "personal" | "workspace";
-
-export interface ModuleMeta {
-  id: NavigationModule;
-  label: string;
-  shortLabel: string;
-  icon: LucideIcon;
-  defaultHref: string;
-  description: string;
-  isComingSoon?: boolean;
-}
-
-export const MODULES: ModuleMeta[] = [
-  {
-    id: "work",
-    label: "Quản lý công việc",
-    shortLabel: "Công việc",
-    icon: Briefcase,
-    defaultHref: "/",
-    description: "Bàn làm việc, lịch công tác, kho nhiệm vụ",
-  },
-  {
-    id: "documents",
-    label: "Văn bản & Công văn",
-    shortLabel: "Văn bản",
-    icon: FileText,
-    defaultHref: "/documents",
-    description: "Sổ văn bản đến/đi, tờ trình & ký số điện tử",
-    isComingSoon: true,
-  },
-  {
-    id: "org",
-    label: "Cơ cấu & Danh bạ",
-    shortLabel: "Cơ cấu",
-    icon: Building2,
-    defaultHref: "/org",
-    description: "Sơ đồ tổ chức 11 đơn vị, nhân sự",
-  },
-];
 
 export interface SidebarItem {
   id: string;
@@ -88,111 +25,6 @@ export interface SidebarItem {
   aliases?: string[];
   allowedRoles?: UserRole[];
 }
-
-export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
-  work: [
-    {
-      id: "tasks",
-      label: "Nhiệm vụ",
-      href: "/tasks",
-      icon: CheckSquare,
-      section: "workspace",
-      badgeKey: "allTasks",
-    },
-    {
-      id: "calendar",
-      label: "Lịch công tác",
-      href: "/calendar",
-      icon: Calendar,
-      section: "personal",
-      badgeKey: "calendar",
-    },
-    {
-      id: "inbox",
-      label: "Hộp thư",
-      href: "/inbox",
-      icon: Inbox,
-      section: "personal",
-      badgeKey: "notifications",
-      aliases: ["/notifications"],
-    },
-  ],
-  documents: [
-    {
-      id: "docs-inbox",
-      label: "Văn bản đến",
-      href: "/documents?tab=inbox",
-      icon: Inbox,
-      section: "personal",
-      badgeKey: "docsInbox",
-      hasSubmenu: true,
-    },
-    {
-      id: "docs-outbox",
-      label: "Văn bản đi",
-      href: "/documents?tab=outbox",
-      icon: Send,
-      section: "personal",
-      badgeKey: "docsOutbox",
-      hasSubmenu: true,
-    },
-    {
-      id: "docs-starred",
-      label: "Văn bản đánh dấu",
-      href: "/maintenance?feature=starred-docs&title=V%C4%83n%20b%E1%BA%A3n%20%C4%91%C3%A1nh%20d%E1%BA%A5u",
-      icon: FileBadge,
-      section: "personal",
-      isMaintenance: true,
-    },
-    {
-      id: "docs-fyi",
-      label: "Văn bản xem để biết",
-      href: "/maintenance?feature=fyi-docs&title=V%C4%83n%20b%E1%BA%A3n%20xem%20%C4%91%E1%BB%83%20bi%E1%BA%BFt",
-      icon: Eye,
-      section: "personal",
-      isMaintenance: true,
-    },
-    {
-      id: "docs-search",
-      label: "Tra cứu văn bản",
-      href: "/maintenance?feature=search-docs&title=Tra%20c%E1%BB%A9u%20v%C4%83n%20b%E1%BA%A3n",
-      icon: Search,
-      section: "workspace",
-      isMaintenance: true,
-    },
-    {
-      id: "docs-pending",
-      label: "Tờ trình duyệt",
-      href: "/documents?tab=pending",
-      icon: FileCheck,
-      section: "workspace",
-      badgeKey: "docsPending",
-    },
-    {
-      id: "docs-archive",
-      label: "Sổ lưu trữ toàn trường",
-      href: "/documents?tab=archive",
-      icon: Archive,
-      section: "workspace",
-    },
-  ],
-  org: [
-    {
-      id: "org-structure",
-      label: "Sơ đồ tổ chức",
-      href: "/org",
-      icon: Building2,
-      section: "workspace",
-    },
-    {
-      id: "org-directory",
-      label: "Danh bạ cán bộ",
-      href: "/org?tab=directory",
-      icon: Users,
-      section: "workspace",
-    },
-  ],
-};
 
 function createNavItem(
   item: Omit<SidebarItem, "section"> & {
@@ -272,107 +104,6 @@ export const SINGLE_TIER_NAV_ITEMS: SidebarItem[] = [
   }),
 ];
 
-export interface QCETMenuItem {
-  id: string;
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  isMaintenance?: boolean;
-  hasSubmenu?: boolean;
-  badge?: string;
-  badgeVariant?: "primary" | "sky" | "muted" | "danger";
-}
-
-/**
- * Danh mục chuẩn Chuyển đổi số Trường CĐ KTCN Quy Nhơn (Version 2.4.3)
- * Bao gồm đầy đủ 12 mục theo cấu trúc hệ thống nhà trường.
- */
-export const QCET_CDS_MENU_ITEMS: QCETMenuItem[] = [
-  {
-    id: "home",
-    label: "Trang chủ",
-    href: "/",
-    icon: Home,
-  },
-  {
-    id: "docs-inbox",
-    label: "Văn bản đến",
-    href: "/documents?tab=inbox",
-    icon: FileText,
-    hasSubmenu: true,
-  },
-  {
-    id: "docs-outbox",
-    label: "Văn bản đi",
-    href: "/documents?tab=outbox",
-    icon: FileText,
-    hasSubmenu: true,
-  },
-  {
-    id: "docs-starred",
-    label: "Văn bản đánh dấu",
-    href: "/maintenance?feature=starred-docs&title=V%C4%83n%20b%E1%BA%A3n%20%C4%91%C3%A1nh%20d%E1%BA%A5u",
-    icon: FileBadge,
-    isMaintenance: true,
-  },
-  {
-    id: "docs-fyi",
-    label: "Văn bản xem để biết",
-    href: "/maintenance?feature=fyi-docs&title=V%C4%83n%20b%E1%BA%A3n%20xem%20%C4%91%E1%BB%83%20bi%E1%BA%BFt",
-    icon: Eye,
-    isMaintenance: true,
-  },
-  {
-    id: "docs-search",
-    label: "Tra cứu văn bản",
-    href: "/maintenance?feature=search-docs&title=Tra%20c%E1%BB%A9u%20v%C4%83n%20b%E1%BA%A3n",
-    icon: Search,
-    isMaintenance: true,
-  },
-  {
-    id: "org-directory",
-    label: "Danh bạ",
-    href: "/org?tab=directory",
-    icon: BookUser,
-  },
-  {
-    id: "unit-calendar",
-    label: "Quản lý lịch đơn vị",
-    href: "/calendar",
-    icon: CalendarDays,
-    hasSubmenu: true,
-  },
-  {
-    id: "task-management",
-    label: "Quản lý công việc",
-    href: "/tasks",
-    icon: ClipboardList,
-    hasSubmenu: true,
-  },
-  {
-    id: "executive-info",
-    label: "Thông tin điều hành",
-    href: "/notifications",
-    icon: Headphones,
-    hasSubmenu: true,
-  },
-  {
-    id: "system-settings",
-    label: "Cài đặt hệ thống",
-    href: "/maintenance?feature=settings&title=C%C3%A0i%20%C4%91%E1%BA%B7t%20h%E1%BB%87%20th%E1%BB%91ng",
-    icon: Settings,
-    hasSubmenu: true,
-    isMaintenance: true,
-  },
-  {
-    id: "logout",
-    label: "Đăng xuất",
-    href: "/maintenance?feature=logout&title=%C4%90%C4%83ng%20xu%E1%BA%A5t",
-    icon: LogOut,
-    isMaintenance: true,
-  },
-];
-
 export function resolveModuleFromPathname(pathname: string): NavigationModule {
   if (!pathname) return "work";
   if (pathname.startsWith("/documents")) return "documents";
@@ -407,21 +138,6 @@ export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
   docsPending: 0,
 };
 
-export const NAVIGATION_ITEMS: NavigationItem[] = [
-  { href: "/", label: "Quản lý công việc", icon: CheckSquare },
-  { href: "/dashboard", label: "Báo cáo KPI", icon: LayoutDashboard },
-  { href: "/org", label: "Cơ cấu & Danh bạ", icon: Network },
-  { href: "/notifications", label: "Thông báo", icon: Bell },
-];
-
-export const SIDEBAR_ZONE_ITEMS: NavigationItem[] = [
-  { href: "/tasks", label: "Nhiệm vụ", icon: CheckSquare, zone: "tasks" },
-  { href: "/calendar", label: "Lịch công tác", icon: Calendar, zone: "calendar" },
-  { href: "/documents", label: "Sổ văn bản đến/đi", icon: FileText, zone: "documents" },
-  { href: "/org", label: "Sơ đồ tổ chức & Nhân sự", icon: Network, zone: "org" },
-  { href: "/notifications", label: "Thông báo & Nhắc việc", icon: Bell },
-];
-
 export const SIDEBAR_STORAGE_KEY = "qcet_sidebar_collapsed";
 export const SIDEBAR_EXPANDED_WIDTH = 228;
 export const SIDEBAR_COLLAPSED_WIDTH = 64;
@@ -452,8 +168,6 @@ export interface SidebarBadgeContextType {
 }
 
 export interface SidebarContextType extends SidebarLayoutContextType, SidebarBadgeContextType {}
-
-export type SidebarContextValue = SidebarContextType;
 
 export const SidebarLayoutContext = React.createContext<SidebarLayoutContextType | undefined>(undefined);
 export const SidebarBadgeContext = React.createContext<SidebarBadgeContextType | undefined>(undefined);

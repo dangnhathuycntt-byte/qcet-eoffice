@@ -9,8 +9,6 @@ import {
   decodeNotificationCursor,
   encodeNotificationCursor,
 } from '@/lib/notification-inbox';
-import { assertCsrf } from '@/server/security/csrf';
-import { assertRateLimit } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -92,39 +90,5 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
-  let requestId = crypto.randomUUID();
-  try {
-    assertCsrf(request);
-    const context = await getApiContext(request);
-    requestId = context.requestId;
-    requireAuthenticated(context);
-    const authUser = context.user!;
-
-    await assertRateLimit(authUser.id, 'MUTATION');
-
-    const result = await prisma.notification.updateMany({
-      where: {
-        userId: authUser.id,
-        isRead: false,
-      },
-      data: {
-        isRead: true,
-        readAt: new Date(),
-      },
-    });
-
-    return apiSuccess(
-      {
-        count: result.count,
-        updatedCount: result.count,
-      },
-      {
-        requestId,
-        legacyCompat: true,
-      }
-    );
-  } catch (error) {
-    return apiError(error, requestId, { legacyCompat: true });
-  }
-}
+// Đánh dấu tất cả đã đọc: dùng chung xử lý với POST /api/notifications/read-all.
+export { POST as PATCH } from './read-all/route';

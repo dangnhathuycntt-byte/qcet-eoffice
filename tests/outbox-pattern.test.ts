@@ -2,20 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { Prisma, OutboxStatus } from '@prisma/client';
 import { prisma } from '../src/lib/prisma';
-import {
-  publishOutboxEvent,
-  publishOutboxEvents,
-  fetchAvailableOutboxEvents,
-  processOutboxEvent,
-  processOutboxBatch,
-  calculateExponentialBackoff,
-  getOutboxMetrics,
-  retryFailedOutboxEvents,
-  cleanupCompletedOutboxEvents,
-  OutboxEventType,
-  OutboxAggregateType,
-  type OutboxEventHandler,
-} from '../src/lib/db/outbox';
+import { publishOutboxEvent, fetchAvailableOutboxEvents, processOutboxEvent, processOutboxBatch, calculateExponentialBackoff, OutboxEventType, OutboxAggregateType, type OutboxEventHandler } from '../src/lib/db/outbox';
 
 describe('Task 10: Transactional Outbox Pattern & Model', () => {
   const testRunId = `outbox_test_${Date.now()}`;
@@ -313,28 +300,6 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
         null,
         'OutboxEvent must be rolled back on transaction error (zero orphan events)'
       );
-    });
-
-    test('publishOutboxEvents supports multi-event batch publishing', async () => {
-      const aggregateId = `batch_${testRunId}`;
-      const events = await publishOutboxEvents(prisma, [
-        {
-          eventType: OutboxEventType.TASK_ASSIGNED_NOTIFICATION,
-          aggregateType: OutboxAggregateType.TASK,
-          aggregateId,
-          payload: { recipientId: testUserId, role: 'PRIMARY_OWNER' },
-        },
-        {
-          eventType: OutboxEventType.PUSH_NOTIFICATION_DISPATCH,
-          aggregateType: OutboxAggregateType.PUSH_SUBSCRIPTION,
-          aggregateId,
-          payload: { title: 'New Task Assignment' },
-        },
-      ]);
-
-      assert.strictEqual(events.length, 2);
-      assert.strictEqual(events[0].status, OutboxStatus.PENDING);
-      assert.strictEqual(events[1].status, OutboxStatus.PENDING);
     });
   });
 
@@ -807,67 +772,6 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
       assert.ok(batchResult.succeeded >= 1);
       assert.ok(batchResult.retried >= 1);
       assert.ok(batchResult.deadLettered >= 1);
-    });
-
-    test('retryFailedOutboxEvents resets dead-lettered events to PENDING', async () => {
-      const ev = await prisma.outboxEvent.create({
-        data: {
-          eventType: `RETRY_ADMIN_${testRunId}`,
-          aggregateType: 'ManualRecovery',
-          aggregateId: `recovery_${testRunId}`,
-          payload: {},
-          status: OutboxStatus.FAILED,
-          attempts: 5,
-          lastError: 'Fatal connection error',
-        },
-      });
-
-      const res = await retryFailedOutboxEvents(prisma, {
-        ids: [ev.id],
-        resetAttempts: true,
-      });
-
-      assert.strictEqual(res.updatedCount, 1);
-
-      const recovered = await prisma.outboxEvent.findUniqueOrThrow({
-        where: { id: ev.id },
-      });
-      assert.strictEqual(recovered.status, OutboxStatus.PENDING);
-      assert.strictEqual(recovered.attempts, 0);
-      assert.strictEqual(recovered.lastError, null);
-    });
-
-    test('getOutboxMetrics reports counts accurately', async () => {
-      const metrics = await getOutboxMetrics(prisma);
-
-      assert.ok(typeof metrics.PENDING === 'number');
-      assert.ok(typeof metrics.PROCESSING === 'number');
-      assert.ok(typeof metrics.COMPLETED === 'number');
-      assert.ok(typeof metrics.FAILED === 'number');
-    });
-
-    test('cleanupCompletedOutboxEvents deletes expired COMPLETED records', async () => {
-      const oldProcessedAt = new Date();
-      oldProcessedAt.setDate(oldProcessedAt.getDate() - 40);
-
-      const ev = await prisma.outboxEvent.create({
-        data: {
-          eventType: `OLD_PURGE_${testRunId}`,
-          aggregateType: 'Retention',
-          aggregateId: `old_${testRunId}`,
-          payload: {},
-          status: OutboxStatus.COMPLETED,
-          processedAt: oldProcessedAt,
-        },
-      });
-
-      const res = await cleanupCompletedOutboxEvents(prisma, 30);
-      assert.ok(res.deletedCount >= 1);
-
-      const check = await prisma.outboxEvent.findUnique({
-        where: { id: ev.id },
-      });
-      assert.strictEqual(check, null, 'Old completed event must be purged');
     });
   });
 });

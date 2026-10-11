@@ -1,11 +1,7 @@
 import { test, describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import {
-  isAllowedDomain,
-  buildGoogleAuthUrl,
-  OFFICIAL_DOMAIN,
-} from "@/lib/google-oauth";
+import { isAllowedDomain, OFFICIAL_DOMAIN } from "@/lib/google-oauth";
 import {
   signSessionToken,
   verifySessionToken,
@@ -17,7 +13,6 @@ import {
   resolveCurrentSession,
   extractTokenFromRequest,
 } from "@/server/auth/current-session";
-import { loadCurrentUser } from "@/server/auth/current-user";
 import {
   assertSessionPolicy,
   isSessionExpired,
@@ -108,25 +103,6 @@ describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test 
       assert.strictEqual(isAllowedDomain("staff@cdktcnqn.edu.vn", null), true);
       assert.strictEqual(isAllowedDomain("Staff.MixedCase@CDKTCNQN.EDU.VN", "cdktcnqn.edu.vn"), true);
     });
-
-    test("1.2 buildGoogleAuthUrl sets required OAuth parameters including hd constraint", () => {
-      const authUrlStr = buildGoogleAuthUrl({
-        clientId: "client-123",
-        redirectUri: "https://eoffice.cdktcnqn.edu.vn/api/auth/callback/google",
-        state: "csrf-state-abc-123",
-      });
-      const authUrl = new URL(authUrlStr);
-
-      assert.strictEqual(authUrl.hostname, "accounts.google.com");
-      assert.strictEqual(authUrl.searchParams.get("client_id"), "client-123");
-      assert.strictEqual(authUrl.searchParams.get("redirect_uri"), "https://eoffice.cdktcnqn.edu.vn/api/auth/callback/google");
-      assert.strictEqual(authUrl.searchParams.get("response_type"), "code");
-      assert.strictEqual(authUrl.searchParams.get("scope"), "openid email profile");
-      assert.strictEqual(authUrl.searchParams.get("state"), "csrf-state-abc-123");
-      assert.strictEqual(authUrl.searchParams.get("hd"), OFFICIAL_DOMAIN);
-      assert.strictEqual(authUrl.searchParams.get("prompt"), "select_account");
-      assert.strictEqual(authUrl.searchParams.get("access_type"), "offline");
-    });
   });
 
   // =========================================================================
@@ -190,26 +166,6 @@ describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test 
   // 4. Disabled User Rejection
   // =========================================================================
   describe("Scenario 4: Disabled User Rejection (isActive = false)", () => {
-    test("4.1 loadCurrentUser throws ACCOUNT_DISABLED for inactive user", async () => {
-      prisma.user.findUnique = (async () => ({
-        id: "usr_disabled_01",
-        email: "locked.staff@cdktcnqn.edu.vn",
-        name: "Cán bộ đã nghỉ việc",
-        isActive: false,
-      })) as any;
-
-      await assert.rejects(
-        async () => {
-          await loadCurrentUser("usr_disabled_01");
-        },
-        (err: any) => {
-          assert.ok(err instanceof AuthenticationError);
-          assert.strictEqual(err.code, "ACCOUNT_DISABLED");
-          assert.ok(err.message.includes("vô hiệu hóa") || err.message.includes("khóa"));
-          return true;
-        }
-      );
-    });
 
     test("4.2 assertSessionPolicy throws ACCOUNT_DISABLED when user entity is inactive", () => {
       assert.throws(
@@ -521,18 +477,6 @@ describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test 
   // 9. Fail Closed
   // =========================================================================
   describe("Scenario 9: Fail Closed on Database Connection Errors", () => {
-    test("9.1 Database error in loadCurrentUser fails closed by rejecting execution", async () => {
-      prisma.user.findUnique = (async () => {
-        throw new Error("DATABASE_CONNECTION_REFUSED");
-      }) as any;
-
-      await assert.rejects(
-        async () => {
-          await loadCurrentUser("usr_normal_01");
-        },
-        /DATABASE_CONNECTION_REFUSED/
-      );
-    });
 
     test("9.2 Database error in loadFreshAuthorizationContext fails closed", async () => {
       prisma.user.findUnique = (async () => {

@@ -26,21 +26,12 @@ import {
   tryResolveCurrentSession,
   CurrentSession,
 } from '@/server/auth/current-session';
-import { loadCurrentUser } from '@/server/auth/current-user';
-import {
-  revokeSession,
-  revokeAllUserSessions,
-  disableUser,
-  clearRevocationStoreForTesting,
-  isSessionRevoked,
-  isSessionExpired,
-} from '@/server/auth/session-policy';
+import { revokeSession, revokeAllUserSessions, clearRevocationStoreForTesting, isSessionRevoked, isSessionExpired } from '@/server/auth/session-policy';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { GET as getTaskById } from '@/app/api/tasks/[id]/route';
 import { POST as createTask } from '@/app/api/tasks/route';
 import { POST as logoutRoute } from '@/app/api/auth/logout/route';
 import { AuthenticationError } from '@/server/api/errors';
-
 
 describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () => {
   const testRunId = String(Date.now());
@@ -212,18 +203,6 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
       assert.strictEqual((session as any).role, undefined);
       assert.strictEqual((session.user as any).role, undefined);
     });
-
-    test('loadCurrentUser returns active DB user and rejects inactive user', async () => {
-      const user = await loadCurrentUser(activeUser.id);
-      assert.strictEqual(user.id, activeUser.id);
-      assert.strictEqual(user.isActive, true);
-
-      // If user does not exist in DB -> throws SESSION_INVALID
-      await assert.rejects(
-        async () => loadCurrentUser('non-existent-user-id'),
-        (err: any) => err instanceof AuthenticationError && err.code === 'SESSION_INVALID'
-      );
-    });
   });
 
   describe('2. Valid Session (Success scenario)', () => {
@@ -293,31 +272,6 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
       assert.strictEqual(postJson.code, 'ACCOUNT_DISABLED');
 
       // Restore user state for subsequent tests
-      await prisma.user.update({
-        where: { id: dynamicUser.id },
-        data: { isActive: true },
-      });
-    });
-
-    test('disableUser helper disables user and revokes all sessions', async () => {
-      await disableUser(dynamicUser.id, { reason: 'Security lock' });
-
-      // Verify DB record
-      const dbUser = await prisma.user.findUnique({ where: { id: dynamicUser.id } });
-      assert.strictEqual(dbUser?.isActive, false);
-
-      // Verify token rejected (both session revocation and account disabled reject with 401)
-      const req = createRequest(`http://localhost:3000/api/tasks/${testTask.id}`, {
-        token: dynamicToken,
-      });
-      await assert.rejects(
-        async () => resolveCurrentSession(req),
-        (err: any) =>
-          err instanceof AuthenticationError &&
-          (err.code === 'ACCOUNT_DISABLED' || err.code === 'SESSION_INVALID')
-      );
-
-      // Restore
       await prisma.user.update({
         where: { id: dynamicUser.id },
         data: { isActive: true },

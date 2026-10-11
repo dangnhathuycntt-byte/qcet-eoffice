@@ -2,7 +2,6 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { TaskStatus, SchoolTask, StaffTask } from "../src/types/dashboard";
 import { deriveAdaptiveWorkspaceData } from "../src/components/workspace/hooks/use-adaptive-workspace-data";
-import { groupTasksByStatus } from "../src/components/tasks/task-kanban-board";
 
 /**
  * Canonical 4-column Kanban mapping function ensuring 100% of non-cancelled
@@ -48,7 +47,6 @@ export function mapTaskToKanbanColumn(task: SchoolTask): KanbanTargetColumn | "E
       return "IN_PROGRESS";
   }
 }
-
 
 export function makeSchoolTask(override: Partial<SchoolTask> & { id: string; title: string; status: TaskStatus }): SchoolTask {
   const { id, title, status, ...rest } = override;
@@ -169,38 +167,6 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       for (const id of inputIds) {
         assert.ok(outputIds.has(id), `Task ${id} must exist in the output collection`);
       }
-    });
-
-    test("raw groupTasksByStatus preserves total task count without omission", () => {
-      const tasks: SchoolTask[] = [
-        makeSchoolTask({ id: "t1", title: "T1", status: "NOT_STARTED", progressPercent: 0 }),
-        makeSchoolTask({ id: "t2", title: "T2", status: "WAITING_APPROVAL", progressPercent: 50 }),
-        makeSchoolTask({ id: "t3", title: "T3", status: "IN_PROGRESS", progressPercent: 30, dueDate: "2026-09-01", isOverdue: true }),
-        makeSchoolTask({ id: "t4", title: "T4", status: "IN_PROGRESS", progressPercent: 40 }),
-        makeSchoolTask({ id: "t5", title: "T5", status: "COMPLETED", progressPercent: 100, dueDate: "2026-09-10" }),
-      ];
-
-      const grouped = groupTasksByStatus(tasks);
-      const activeColumns: KanbanTargetColumn[] = ["NEW", "IN_PROGRESS", "NEEDS_REVIEW", "COMPLETED"];
-      const totalInActiveColumns = activeColumns.reduce(
-        (sum, col) => sum + (grouped[col]?.length || 0),
-        0
-      );
-
-      assert.equal(
-        totalInActiveColumns,
-        tasks.length,
-        `All active input items must exist in active columns: ${totalInActiveColumns} === ${tasks.length}`
-      );
-
-      const uniqueIds = new Set(
-        activeColumns.flatMap((col) => (grouped[col] || []).map((item) => item.id))
-      );
-      assert.equal(
-        uniqueIds.size,
-        tasks.length,
-        "Every input task must be uniquely accounted for in active columns"
-      );
     });
 
     test("denominator separation preserves work items reconciliation", () => {

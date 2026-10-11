@@ -41,15 +41,6 @@ export function isHapticsEnabled(): boolean {
   }
 }
 
-export function setHapticsEnabled(enabled: boolean): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(HAPTIC_STORAGE_KEY, String(enabled));
-  } catch {
-    // Ignore storage failures
-  }
-}
-
 export function triggerHaptic(type: HapticType = "light"): boolean {
   if (!isHapticSupported() || !isHapticsEnabled()) {
     return false;

@@ -1,7 +1,6 @@
 import { test, describe, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { prisma } from '@/lib/prisma';
-import { hashPassword } from '@/lib/password';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { resetRateLimits } from '@/server/security/rate-limit';
 import { POST as loginPost } from '@/app/api/auth/login/route';
@@ -26,12 +25,10 @@ describe('Authentication and User API Routes Hardening', () => {
     });
 
     // Create a verified active test user for login and auth checks
-    const passwordHash = await hashPassword(testUserPassword);
     const user = await prisma.user.create({
       data: {
         email: testUserEmail,
         name: 'Nguyễn Văn Kiểm Thử',
-        passwordHash,
         role: 'CHUYEN_VIEN',
         isActive: true,
       },

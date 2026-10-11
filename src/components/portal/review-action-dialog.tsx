@@ -76,18 +76,6 @@ export const DECISION_OPTIONS: DecisionOptionConfig[] = [
 ];
 
 /**
- * Validates whether a decision and its accompanying comment satisfy submission rules.
- * revision_requested and rejected require at least 5 characters.
- * approved makes comment optional.
- */
-export function canSubmitDecision(decision: ApprovalDecision, comment: string): boolean {
-  if (decision === "revision_requested" || decision === "rejected") {
-    return comment.trim().length >= 5;
-  }
-  return true;
-}
-
-/**
  * Returns structured validation result with human-readable Vietnamese error message.
  */
 export function validateReviewDecision(

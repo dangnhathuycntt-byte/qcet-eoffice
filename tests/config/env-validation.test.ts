@@ -9,13 +9,7 @@ import {
   assertRuntimeAuthSecret,
   isPlaceholderAuthSecret,
 } from "@/config/env.server";
-import {
-  ClientEnvSchema,
-  validateClientEnv,
-  extractClientEnv,
-  clientSource,
-  FORBIDDEN_SERVER_SECRETS,
-} from "@/config/env.client";
+import { ClientEnvSchema, validateClientEnv, clientSource, FORBIDDEN_SERVER_SECRETS } from "@/config/env.client";
 import {
   getPublicRuntimeConfig,
   assertZeroSecrets,
@@ -282,27 +276,6 @@ describe("Central Environment Configuration & Secret Isolation (Task 2)", () => 
       assert.ok("NODE_ENV" in clientSource);
       assert.ok("NEXT_PUBLIC_APP_URL" in clientSource);
       assert.ok("NEXT_PUBLIC_GOOGLE_CLIENT_ID" in clientSource);
-    });
-
-    it("extractClientEnv filters out all private server secrets from raw environment", () => {
-      const rawMixedEnv = {
-        NODE_ENV: "production",
-        DATABASE_URL: "postgresql://admin:secret@db:5432/prod",
-        AUTH_SECRET: "server_master_secret_key_long_enough",
-        JWT_SECRET: "jwt_secret_value",
-        GOOGLE_CLIENT_SECRET: "google_secret_123",
-        NEXT_PUBLIC_APP_URL: "https://e-office.cdktcnqn.edu.vn",
-        NEXT_PUBLIC_GOOGLE_CLIENT_ID: "google_client_id_pub",
-      };
-
-      const extracted = extractClientEnv(rawMixedEnv);
-      assert.strictEqual(extracted.NODE_ENV, "production");
-      assert.strictEqual(extracted.NEXT_PUBLIC_APP_URL, "https://e-office.cdktcnqn.edu.vn");
-      assert.strictEqual(extracted.NEXT_PUBLIC_GOOGLE_CLIENT_ID, "google_client_id_pub");
-      assert.strictEqual(extracted.DATABASE_URL, undefined);
-      assert.strictEqual(extracted.AUTH_SECRET, undefined);
-      assert.strictEqual(extracted.JWT_SECRET, undefined);
-      assert.strictEqual(extracted.GOOGLE_CLIENT_SECRET, undefined);
     });
 
     it("rejects DATABASE_URL in client environment", () => {

@@ -93,62 +93,6 @@ export function formatTableDate(dateStr?: string | Date | null): string {
 }
 
 /**
- * Trả về đối tượng Date của ngày tham chiếu hệ thống.
- */
-export function getTaskTableReferenceDate(ref?: string | Date): Date {
-  if (ref instanceof Date) return ref;
-  if (typeof ref === "string") {
-    const d = new Date(ref);
-    if (!isNaN(d.getTime())) return d;
-  }
-  const sysRef = getSystemReferenceDate();
-  return new Date(`${sysRef}T00:00:00.000Z`);
-}
-
-/**
- * Kiểm tra xem một nhiệm vụ có bị trễ hạn hay không (UTC-safe và tôn trọng trạng thái hoàn thành).
- */
-export function isTableTaskPastDue(
-  task: { dueDate?: string | Date | null; status?: string },
-  referenceDate?: string | Date
-): boolean {
-  if (task.status === "COMPLETED") return false;
-  const refStr =
-    referenceDate instanceof Date
-      ? referenceDate.toISOString().slice(0, 10)
-      : referenceDate || getSystemReferenceDate();
-  return isTaskPastDue(task.dueDate, refStr);
-}
-
-/**
- * Kiểm tra xem một nhiệm vụ có đến hạn vào đúng ngày tham chiếu hay không.
- */
-export function isTableTaskDueToday(
-  task: { dueDate?: string | Date | null },
-  referenceDate?: string | Date
-): boolean {
-  const refStr =
-    referenceDate instanceof Date
-      ? referenceDate.toISOString().slice(0, 10)
-      : referenceDate || getSystemReferenceDate();
-  return isTaskDueToday(task.dueDate, refStr);
-}
-
-/**
- * Tính toán chênh lệch số ngày so với ngày tham chiếu.
- */
-export function getDaysDifference(
-  dueDate?: string | Date | null,
-  referenceDate?: string | Date
-): number | null {
-  const refStr =
-    referenceDate instanceof Date
-      ? referenceDate.toISOString().slice(0, 10)
-      : referenceDate || getSystemReferenceDate();
-  return getDaysRemaining(dueDate, refStr);
-}
-
-/**
  * Tính toán trạng thái và nhãn hiển thị SLA hạn chót cho hàng công việc.
  */
 export function getSlaBadgeStatus(

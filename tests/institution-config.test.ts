@@ -1,16 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  INSTITUTION_CONFIG,
-  getInstitutionName,
-  getInstitutionShortName,
-  getInstitutionSubordinateTo,
-  getInstitutionCode,
-  getInstitutionHeader,
-  getOfficialSigningCapacity,
-  getAppTitle,
-  isCurrentInstitution,
-} from "../src/config/institution";
+import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "../src/config/institution";
 
 describe("Task 3.18 - Institutional Profile & Identity Configuration", () => {
   describe("1. Canonical Configuration Integrity", () => {
@@ -82,25 +72,6 @@ describe("Task 3.18 - Institutional Profile & Identity Configuration", () => {
   });
 
   describe("2. Institutional Helper Functions", () => {
-    it("returns correct institutional name and acronym via getters", () => {
-      assert.equal(getInstitutionName(), "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn");
-      assert.equal(getInstitutionShortName(), "QCET");
-      assert.equal(getInstitutionSubordinateTo(), "ỦY BAN NHÂN DÂN TỈNH BÌNH ĐỊNH");
-      assert.equal(getInstitutionCode(), "QCET");
-    });
-
-    it("formats Decree 30/2020/ND-CP institutional header correctly", () => {
-      const header = getInstitutionHeader();
-      assert.equal(header.subordinateTo, "ỦY BAN NHÂN DÂN TỈNH BÌNH ĐỊNH");
-      assert.equal(
-        header.officialName,
-        "TRƯỜNG CAO ĐẲNG KỸ THUẬT CÔNG NGHỆ QUY NHƠN"
-      );
-      assert.equal(
-        header.formattedHeader,
-        "ỦY BAN NHÂN DÂN TỈNH BÌNH ĐỊNH\nTRƯỜNG CAO ĐẲNG KỸ THUẬT CÔNG NGHỆ QUY NHƠN"
-      );
-    });
 
     it("formats digital signature capacity correctly for administrative departments", () => {
       const defaultCapacity = getOfficialSigningCapacity();
@@ -114,21 +85,6 @@ describe("Task 3.18 - Institutional Profile & Identity Configuration", () => {
         customCapacity,
         "PHÒNG TỔ CHỨC CÁN BỘ / TRƯỜNG CAO ĐẲNG KỸ THUẬT CÔNG NGHỆ QUY NHƠN"
       );
-    });
-
-    it("formats application page titles consistently", () => {
-      assert.equal(getAppTitle(), "QCET E-Office");
-      assert.equal(getAppTitle("Quản lý Văn bản"), "Quản lý Văn bản - QCET E-Office");
-    });
-
-    it("correctly identifies valid and invalid institutional identifiers", () => {
-      assert.equal(isCurrentInstitution("Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"), true);
-      assert.equal(isCurrentInstitution("QCET"), true);
-      assert.equal(isCurrentInstitution("Trường CĐ Kỹ thuật Công nghệ Quy Nhơn"), true);
-      assert.equal(isCurrentInstitution("user@cdktcnqn.edu.vn"), true);
-      assert.equal(isCurrentInstitution("Trường Đại học Bách Khoa"), false);
-      assert.equal(isCurrentInstitution(null), false);
-      assert.equal(isCurrentInstitution(undefined), false);
     });
   });
 });

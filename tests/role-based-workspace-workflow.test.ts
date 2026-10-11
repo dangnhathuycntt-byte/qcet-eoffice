@@ -9,25 +9,9 @@ import type {
   DepartmentHealthSummary,
 } from "../src/types/workspace";
 import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
-import {
-  SIDEBAR_ZONE_ITEMS,
-  NAVIGATION_ITEMS,
-} from "../src/components/layout/sidebar-context";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
-import {
-  validateDeliverableSubmission,
-  isValidSubmission,
-  getDeliverableDraftKey,
-  inferFileType,
-  formatFileSize,
-  SUPPORTED_FILE_TYPES,
-} from "../src/components/portal/submit-deliverable-modal";
-import {
-  canSubmitDecision,
-  validateReviewDecision,
-  QUICK_COMMENT_TEMPLATES,
-  DECISION_OPTIONS,
-} from "../src/components/portal/review-action-dialog";
+import { validateDeliverableSubmission, getDeliverableDraftKey, inferFileType, formatFileSize, SUPPORTED_FILE_TYPES } from "../src/components/portal/submit-deliverable-modal";
+import { validateReviewDecision, QUICK_COMMENT_TEMPLATES, DECISION_OPTIONS } from "../src/components/portal/review-action-dialog";
 
 describe("Workspace Type Definitions & Validators", () => {
   test("validates ApprovalDecision union values", () => {
@@ -118,13 +102,6 @@ describe("Deliverable Submission Validation", () => {
     assert.equal(isValidSubmissionFn("", "https://link.com"), true);
   });
 
-  test("validates exported isValidSubmission helper", () => {
-    assert.equal(isValidSubmission("", ""), false);
-    assert.equal(isValidSubmission("   ", "  "), false);
-    assert.equal(isValidSubmission("Bao cao nghiem thu.docx"), true);
-    assert.equal(isValidSubmission("", "https://drive.google.com/xyz"), true);
-  });
-
   test("validateDeliverableSubmission validates name and URL formats", () => {
     // Empty name
     const emptyResult = validateDeliverableSubmission("");
@@ -192,35 +169,6 @@ describe("Deliverable Submission Validation", () => {
 });
 
 describe("Review Action Rules", () => {
-  test("requires at least 5 characters comment when decision is revision_requested", () => {
-    // Exact function signature from step 1 brief
-    const canSubmitDecisionLocal = (decision: ApprovalDecision, comment: string) => {
-      if (decision === "revision_requested") {
-        return comment.trim().length >= 5;
-      }
-      return true;
-    };
-    assert.equal(canSubmitDecisionLocal("approved", ""), true);
-    assert.equal(canSubmitDecisionLocal("revision_requested", ""), false);
-    assert.equal(canSubmitDecisionLocal("revision_requested", "abc"), false);
-    assert.equal(canSubmitDecisionLocal("revision_requested", "Thiếu phụ lục 2"), true);
-
-    // Also test exported canSubmitDecision helper
-    assert.equal(canSubmitDecision("approved", ""), true);
-    assert.equal(canSubmitDecision("revision_requested", ""), false);
-    assert.equal(canSubmitDecision("revision_requested", "abc"), false);
-    assert.equal(canSubmitDecision("revision_requested", "Thiếu phụ lục 2"), true);
-  });
-
-  test("requires at least 5 characters comment when decision is rejected", () => {
-    assert.equal(canSubmitDecision("rejected", ""), false);
-    assert.equal(canSubmitDecision("rejected", "   "), false);
-    assert.equal(canSubmitDecision("rejected", "hỏng"), false);
-    assert.equal(
-      canSubmitDecision("rejected", "Không đáp ứng tiêu chuẩn hồ sơ minh chứng"),
-      true
-    );
-  });
 
   test("validateReviewDecision provides localized error feedback", () => {
     // Approved: always valid, no comment needed
@@ -384,42 +332,6 @@ describe("Executive Health Radar Logic", () => {
 });
 
 describe("Sidebar Navigation Hygiene", () => {
-  test("ensures all navigation items use clean Next.js path routes without query strings", () => {
-    const allItems = [...SIDEBAR_ZONE_ITEMS, ...NAVIGATION_ITEMS];
-    for (const item of allItems) {
-      assert.equal(
-        item.href.includes("?zone="),
-        false,
-        `Item ${item.label} should not contain ?zone=`
-      );
-      assert.equal(
-        item.href.includes("?view="),
-        false,
-        `Item ${item.label} should not contain ?view=`
-      );
-      assert.equal(
-        item.href.includes("?tab="),
-        false,
-        `Item ${item.label} should not contain ?tab=`
-      );
-    }
-  });
-
-  test("defines clean canonical routes in SIDEBAR_ZONE_ITEMS", () => {
-    const routes = SIDEBAR_ZONE_ITEMS.map((item) => item.href);
-    assert.ok(routes.includes("/tasks"), "Must contain /tasks");
-    assert.ok(routes.includes("/calendar"), "Must contain /calendar");
-    assert.ok(routes.includes("/documents"), "Must contain /documents");
-    assert.ok(routes.includes("/org"), "Must contain /org");
-    assert.ok(routes.includes("/notifications"), "Must contain /notifications");
-  });
-
-  test("ensures all SIDEBAR_ZONE_ITEMS have valid Lucide icons and non-empty labels", () => {
-    for (const item of SIDEBAR_ZONE_ITEMS) {
-      assert.ok(item.label && item.label.length > 0, "Item must have non-empty label");
-      assert.equal(typeof item.icon, "object", `Item ${item.label} icon must be a Lucide component`);
-    }
-  });
 
   test("verifies active route matching behavior for clean paths", () => {
     const isItemActive = (itemHref: string, pathname: string, searchZone?: string | null) => {

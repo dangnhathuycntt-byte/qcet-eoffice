@@ -1,12 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  formatNumber,
-  getStatCardData,
-  getExecutiveStatCardData,
-  getStatCardsForView,
-  type WorkboxFilter,
-} from "../src/components/dashboard/executive-stat-strip";
+import { formatNumber, getStatCardData, getExecutiveStatCardData, type WorkboxFilter } from "../src/components/dashboard/executive-stat-strip";
 import type { DashboardStats } from "../src/types/dashboard";
 
 describe("ExecutiveStatStrip Helpers", () => {
@@ -350,45 +344,5 @@ describe("Executive 5-KPI Strip Variant", () => {
     assert.equal(cards[0].value, "50");
     assert.equal(cards[1].value, "4");
     assert.equal(cards[4].value, "68%");
-  });
-
-  test("isExecutive={true} without executiveStats correctly yields 5-KPI configuration", () => {
-    const cards = getStatCardsForView(mockStats, true, undefined);
-    assert.equal(cards.length, 5);
-
-    const titles = cards.map((c) => c.title);
-    assert.deepEqual(titles, [
-      "Tổng nhiệm vụ",
-      "Chờ duyệt",
-      "Trễ / vướng",
-      "Trọng tâm",
-      "Tiến độ toàn trường",
-    ]);
-
-    // Fallback mappings when executiveStats is absent
-    const pendingApprovalCard = cards.find((c) => c.id === "pending-approval");
-    assert.equal(pendingApprovalCard?.value, "4"); // stats.needsReviewTasksCount
-
-    const blockedOverdueCard = cards.find((c) => c.id === "blocked-overdue");
-    assert.equal(blockedOverdueCard?.value, "3"); // stats.overdueTasksCount
-
-    const strategicCard = cards.find((c) => c.id === "strategic-active");
-    assert.equal(strategicCard?.value, "0");
-
-    const overallProgressCard = cards.find((c) => c.id === "overall-progress");
-    assert.equal(overallProgressCard?.value, "68%");
-  });
-
-  test("isExecutive={false} without executiveStats correctly yields 4-KPI non-executive configuration", () => {
-    const cards = getStatCardsForView(mockStats, false, undefined);
-    assert.equal(cards.length, 4);
-
-    const titles = cards.map((c) => c.title);
-    assert.deepEqual(titles, [
-      "Nhiệm vụ cấp Trường",
-      "Công việc Đơn vị",
-      "Cần xử lý & Trễ hạn",
-      "Tiến độ trung bình toàn trường",
-    ]);
   });
 });

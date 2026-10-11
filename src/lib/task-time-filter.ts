@@ -10,12 +10,6 @@ export type TaskTimeFilter =
 
 export const NO_TASK_TIME_FILTER: TaskTimeFilter = { kind: "none" };
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-export function isValidTaskDateRange(from?: string, to?: string): boolean {
-  return Boolean(from && to && ISO_DATE.test(from) && ISO_DATE.test(to) && from <= to);
-}
-
 export function getTaskTimeFilterLabel(filter: TaskTimeFilter): string {
   if (filter.kind === "month") return `Tháng ${filter.month}`;
   if (filter.kind === "range") {

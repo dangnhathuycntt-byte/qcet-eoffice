@@ -1,13 +1,3 @@
-/**
- * QCET E-Office: Notification Controlled Vocabulary & Category Mapping (WI-7.2 / RFC-07)
- *
- * Implements canonical controlled vocabulary for Notification feed events:
- * - Controlled categories (Task, Document, Meeting, Dossier, System)
- * - Controlled event types aligned with RFC-07 Action Inbox separation and WI-7.4 Domain Events
- * - Bidirectional normalization between legacy strings and canonical vocabulary
- */
-
-import { ValidationError } from '@/server/api/errors';
 
 /**
  * Canonical Notification Categories according to RFC-07
@@ -21,14 +11,6 @@ export const NOTIFICATION_CATEGORIES = [
 ] as const;
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
-
-export const NotificationCategoryValues = {
-  TASK_ACTIVITY: 'TASK_ACTIVITY' as const,
-  DOCUMENT_DISPATCH: 'DOCUMENT_DISPATCH' as const,
-  MEETING_CALENDAR: 'MEETING_CALENDAR' as const,
-  DOSSIER_ARCHIVE: 'DOSSIER_ARCHIVE' as const,
-  SYSTEM_ANNOUNCEMENT: 'SYSTEM_ANNOUNCEMENT' as const,
-};
 
 /**
  * Canonical Notification Event Types across QCET Domains
@@ -156,47 +138,4 @@ export function normalizeNotificationCategory(raw: unknown): NotificationCategor
     return LEGACY_CATEGORY_MAP[lower];
   }
   return null;
-}
-
-/**
- * Asserts that a category is valid, throwing a ValidationError if invalid
- */
-export function assertNotificationCategory(value: unknown, fieldName = 'category'): NotificationCategory {
-  const normalized = normalizeNotificationCategory(value);
-  if (!normalized) {
-    throw new ValidationError(
-      `Danh mục thông báo '${value}' không hợp lệ. Các danh mục được phép: ${NOTIFICATION_CATEGORIES.join(', ')}`,
-      { [fieldName]: [`Giá trị phải thuộc: ${NOTIFICATION_CATEGORIES.join(', ')}`] },
-      'INVALID_NOTIFICATION_CATEGORY'
-    );
-  }
-  return normalized;
-}
-
-/**
- * Asserts that a notification type is valid, throwing a ValidationError if invalid
- */
-export function assertNotificationType(value: unknown, fieldName = 'type'): NotificationType {
-  if (typeof value !== 'string' || !isValidNotificationType(value.trim().toUpperCase())) {
-    throw new ValidationError(
-      `Loại thông báo '${value}' không hợp lệ.`,
-      { [fieldName]: [`Giá trị không thuộc danh mục loại thông báo được phép.`] },
-      'INVALID_NOTIFICATION_TYPE'
-    );
-  }
-  return value.trim().toUpperCase() as NotificationType;
-}
-
-/**
- * Resolves the canonical category for a given notification event type
- */
-export function getCategoryForNotificationType(type: NotificationType): NotificationCategory {
-  return TYPE_TO_CATEGORY_MAP[type] ?? 'SYSTEM_ANNOUNCEMENT';
-}
-
-/**
- * Verifies whether a given category and type pair are semantically compatible
- */
-export function isValidCategoryTypePair(category: NotificationCategory, type: NotificationType): boolean {
-  return TYPE_TO_CATEGORY_MAP[type] === category;
 }

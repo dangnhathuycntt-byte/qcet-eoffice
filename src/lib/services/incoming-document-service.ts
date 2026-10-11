@@ -18,6 +18,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentAcademicPeriod } from "@/lib/academic-calendar";
+import { generateTaskCodeAtomic } from "@/lib/task-code-generator";
 import { Prisma } from "@prisma/client";
 import type { Document, DocumentIncomingWorkflow, UnitWorkAssignment } from "@prisma/client";
 import {
@@ -904,7 +906,13 @@ export async function assignUnitWork(
     // Optional Task creation for execution tracking
     if (input.createTask) {
       const now = new Date();
-      const code = `VB-${doc.registrationNumber}-${Math.floor(1000 + Math.random() * 9000)}`;
+      // Kỳ công tác và mã nhiệm vụ theo quy ước chung (năm học bắt đầu 01/09, mã NV tuần tự), như mọi nơi tạo việc khác.
+      const { month: academicMonth, academicYear } = getCurrentAcademicPeriod();
+      const code = await generateTaskCodeAtomic(tx, {
+        year: now.getFullYear(),
+        month: academicMonth,
+        scope: TaskScope.DEPARTMENT,
+      });
       const taskTitle = input.taskTitle || `Xử lý văn bản số ${doc.registrationNumber}: ${doc.summary}`;
 
       // Phase 9: Department model dropped — use leadUnitId directly
@@ -921,8 +929,8 @@ export async function assignUnitWork(
               : doc.urgency === DocumentUrgency.KHAN
               ? TaskPriority.HIGH
               : TaskPriority.NORMAL,
-          academicMonth: now.getMonth() + 1,
-          academicYear: `${now.getFullYear()}-${now.getFullYear() + 1}`,
+          academicMonth,
+          academicYear,
           startDate: now,
           dueDate: deadline || new Date(now.getTime() + 7 * 86400000),
           createdById: user.id,

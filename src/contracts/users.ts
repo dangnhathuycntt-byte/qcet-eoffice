@@ -33,42 +33,6 @@ export const InstitutionalRoleSchema = z.enum([
   'CLERK',
 ]);
 
-export type InstitutionalRole = z.infer<typeof InstitutionalRoleSchema>;
-
-/**
- * Role update command contract.
- * Strictly prevents modification of arbitrary user fields during role update.
- */
-export const UpdateUserRoleSchema = z
-  .object({
-    role: InstitutionalRoleSchema,
-  })
-  .strict();
-
-export type UpdateUserRoleInput = z.infer<typeof UpdateUserRoleSchema>;
-
-/**
- * Onboarding input contract.
- * Strict bounds and mass-assignment protection.
- */
-export const OnboardingInputSchema = z
-  .object({
-    hasSeenWelcome: z.boolean().optional(),
-    hasCompletedTour: z.boolean().optional(),
-    completedSteps: z
-      .array(z.string().trim().max(100, 'Step identifier cannot exceed 100 characters'))
-      .max(50, 'Cannot record more than 50 completed steps')
-      .optional(),
-    isDismissed: z.boolean().optional(),
-    snoozedUntil: z.string().max(100).nullable().optional(),
-  })
-  .strict();
-
-export type OnboardingInput = z.infer<typeof OnboardingInputSchema>;
-
-export const UpdateOnboardingSchema = OnboardingInputSchema;
-export type UpdateOnboardingInput = OnboardingInput;
-
 /**
  * User profile update command contract.
  * Strictly prevents modification of role, departmentId, isActive, or arbitrary system fields.
@@ -80,5 +44,3 @@ export const UpdateUserProfileSchema = z
     title: z.string().trim().max(100, "Chức danh không quá 100 ký tự").nullable().optional(),
   })
   .strict();
-
-export type UpdateUserProfileInput = z.infer<typeof UpdateUserProfileSchema>;

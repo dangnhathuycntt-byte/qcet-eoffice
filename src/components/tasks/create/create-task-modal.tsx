@@ -30,12 +30,6 @@ import { Pressable } from "@/components/ui/pressable";
 // Re-export types for downstream consumers
 export type { CreateTaskPriority } from "@/hooks/use-create-task-form";
 
-/**
- * Feature Flag: Kích hoạt Trợ lý AI khi hệ thống tích hợp backend AI/LLM.
- * Mặc định: false (không hiển thị trong production).
- */
-export const ENABLE_TASK_AGENT_ASSISTANT = false;
-
 // ─── Visual Config ─────────────────────────────────────────────
 const PRIORITY_CONFIG: Record<
   CreateTaskPriority,

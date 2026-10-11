@@ -35,7 +35,6 @@ import { POST as createBodyRoute } from '@/app/api/organization/bodies/route';
 import { POST as addBodyMemberRoute } from '@/app/api/organization/bodies/[id]/route';
 import { POST as createDelegationRoute } from '@/app/api/delegations/route';
 import { PATCH as patchTaskRoute } from '@/app/api/tasks/[id]/route';
-import { updateTaskWithOCC, ConcurrencyConflictError } from '@/lib/db/occ';
 
 describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => {
   const runId = String(Date.now());
@@ -473,28 +472,6 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
         },
       });
       createdTaskIds.push(taskRecord.id);
-    });
-
-    test('Direct OCC updateTaskWithOCC throws ConcurrencyConflictError (HTTP 409) on stale expectedVersion', async () => {
-      const staleVersion = 999;
-
-      await assert.rejects(
-        async () => {
-          await updateTaskWithOCC(prisma, taskRecord.id, staleVersion, {
-            title: 'Tiêu đề cập nhật không hợp lệ',
-          });
-        },
-        (err: any) => {
-          assert.ok(err instanceof ConcurrencyConflictError, 'Must throw ConcurrencyConflictError');
-          assert.strictEqual(err.status, 409, 'ConcurrencyConflictError must have status 409');
-          assert.strictEqual(err.code, 'CONCURRENCY_CONFLICT');
-          assert.strictEqual(err.entity, 'Task');
-          assert.strictEqual(err.entityId, taskRecord.id);
-          assert.strictEqual(err.expectedVersion, staleVersion);
-          assert.strictEqual(err.actualVersion, 1);
-          return true;
-        }
-      );
     });
 
     test('HTTP Route PATCH /api/tasks/:id returns 409 on version mismatch with stale expectedVersion', async () => {

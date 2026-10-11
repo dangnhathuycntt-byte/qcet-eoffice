@@ -10,7 +10,7 @@ export { extractFieldErrors };
 
 export const MAX_JSON_BODY_SIZE = 1024 * 1024;       // 1MB
 export const MAX_PAYLOAD_SIZE = MAX_JSON_BODY_SIZE;   // Alias for route handlers
-export const MAX_AUTH_BODY_SIZE = 64 * 1024;         // 64KB
+// 64KB
 export const MAX_QUERY_STRING_LENGTH = 2048;         // 2048 characters
 
 const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH']);

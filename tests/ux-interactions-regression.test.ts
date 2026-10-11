@@ -1,15 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { getAllowedTaskLevelsForRole, getDefaultTaskLevelForRole } from "../src/domain/tasks/create-task-policy";
 import { validateSubtaskDueDate } from "../src/hooks/use-create-task-form";
-import {
-  executeKanbanStatusTransition,
-  applyOptimisticOverrides,
-  extractKanbanItems,
-  filterKanbanItems,
-  groupTasksByStatus,
-  type KanbanTransitionState,
-} from "../src/components/tasks/task-kanban-board";
+import { executeKanbanStatusTransition, applyOptimisticOverrides, extractKanbanItems, filterKanbanItems, type KanbanTransitionState } from "../src/components/tasks/task-kanban-board";
 import {
   getCalendarAttentionState,
   sortCalendarItemsByAttention,
@@ -25,15 +17,6 @@ describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () =>
       assert.strictEqual(validateSubtaskDueDate(parentDueDate, "2026-10-15"), true);
       assert.strictEqual(validateSubtaskDueDate(parentDueDate, "2026-10-16"), false);
       assert.strictEqual(validateSubtaskDueDate(parentDueDate, "2026-11-01"), false);
-    });
-
-    it("enforces allowed task levels by user role", () => {
-      assert.deepStrictEqual(getAllowedTaskLevelsForRole("ADMIN"), ["TRUONG", "DON_VI"]);
-      assert.deepStrictEqual(getAllowedTaskLevelsForRole("MANAGER"), ["DON_VI"]);
-      assert.deepStrictEqual(getAllowedTaskLevelsForRole("STAFF"), []);
-
-      assert.strictEqual(getDefaultTaskLevelForRole("ADMIN"), "TRUONG");
-      assert.strictEqual(getDefaultTaskLevelForRole("MANAGER"), "DON_VI");
     });
   });
 
@@ -144,43 +127,6 @@ describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () =>
       assert.strictEqual(updated[0].subTasks?.[0].status, "COMPLETED");
       // Other fields intact
       assert.strictEqual(updated[0].title, "Kế hoạch năm học");
-    });
-
-    it("extracts and groups tasks by status across school and unit levels", () => {
-      const mockTasks = [
-        {
-          id: "school-1",
-          title: "Công việc cấp trường",
-          level: "TRUONG",
-          status: "IN_PROGRESS",
-          category: "CHUYEN_DOI_SO",
-          leadAssigneeName: "TS. A",
-          subTasks: [
-            {
-              id: "sub-1",
-              title: "Công việc cấp đơn vị",
-              status: "COMPLETED",
-              assigneeName: "ThS. B",
-            } as unknown as StaffTask,
-          ],
-        } as unknown as SchoolTask,
-      ];
-
-      const allItems = extractKanbanItems(mockTasks);
-      assert.strictEqual(allItems.length, 2);
-
-      const filteredSchoolOnly = filterKanbanItems(mockTasks, "TRUONG");
-      assert.strictEqual(filteredSchoolOnly.length, 1);
-      assert.strictEqual(filteredSchoolOnly[0].id, "school-1");
-
-      const filteredUnitOnly = filterKanbanItems(mockTasks, "DON_VI");
-      assert.strictEqual(filteredUnitOnly.length, 1);
-      assert.strictEqual(filteredUnitOnly[0].id, "sub-1");
-
-      const grouped = groupTasksByStatus(mockTasks);
-      assert.strictEqual(grouped.IN_PROGRESS.length, 1);
-      assert.strictEqual(grouped.COMPLETED.length, 1);
-      assert.strictEqual(grouped.NEW.length, 0);
     });
   });
 

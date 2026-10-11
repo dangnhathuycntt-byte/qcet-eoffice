@@ -25,6 +25,7 @@ import {
   type CalendarEventEntry,
 } from "@/lib/calendar/calendar-presentation";
 import { type DayTaskItem } from "./calendar-day-sheet";
+import { groupDayTaskItemsByDate } from "./day-task-items";
 
 export type CalendarScope = "school" | "unit" | "my";
 
@@ -150,123 +151,20 @@ export function CalendarMonthGrid({
     // If canonical entries are provided, skip legacy derivation entirely.
     if (entriesByDate !== null) return new Map<string, DayTaskItem[]>();
 
-    const map = new Map<string, DayTaskItem[]>();
-
-    const matchesStatus = (status: string, dueDate?: string) => {
-      if (!statusFilter || statusFilter === "ALL") return true;
-      if (statusFilter === "OVERDUE") {
-        return getCalendarAttentionState(
-          { id: "filter", title: "filter", status, dueDate },
-          referenceDate
-        ) === "overdue";
-      }
-      return status === statusFilter;
-    };
-
-    const addItem = (dateKey: string, item: DayTaskItem) => {
-      const existing = map.get(dateKey);
-      if (existing) existing.push(item);
-      else map.set(dateKey, [item]);
-    };
-
-    for (const st of tasks) {
-      const matchesSchoolLevel = !levelFilter || levelFilter === "ALL" || levelFilter === "TRUONG";
-      const isSchoolMatchScope =
-        scope === "school" ||
-        (scope === "my" &&
-          ((currentUserId && st.leadAssigneeId === currentUserId) ||
-            (currentUserName && st.leadAssigneeName === currentUserName)));
-
-      if (
-        isSchoolMatchScope &&
-        matchesSchoolLevel &&
-        st.dueDate &&
-        matchesStatus(st.status, st.dueDate)
-      ) {
-        const matchesQuery =
-          !deferredQuery ||
-          st.title.toLowerCase().includes(deferredQuery) ||
-          Boolean(st.leadAssigneeName?.toLowerCase().includes(deferredQuery));
-
-        if (matchesQuery) {
-          addItem(st.dueDate.split("T")[0], {
-            id: st.id,
-            title: st.title,
-            level: "Trường",
-            category: st.category,
-            categoryLabel: st.categoryLabel,
-            assigneeName: st.leadAssigneeName,
-            assigneeAvatar: st.leadAssigneeAvatar,
-            dueDate: st.dueDate,
-            status: st.status,
-            progressPercent: st.progressPercent,
-            originalTask: st,
-          });
-        }
-      }
-
-      const matchesSubLevel = !levelFilter || levelFilter === "ALL" || levelFilter === "DON_VI";
-      if (!matchesSubLevel || !Array.isArray(st.subTasks)) continue;
-
-      for (const sub of st.subTasks) {
-        const isUnitMatchScope =
-          scope === "unit" ||
-          (scope === "my" &&
-            ((currentUserId && sub.assigneeId === currentUserId) ||
-              (currentUserName && sub.assigneeName === currentUserName)));
-
-        if (!isUnitMatchScope || !sub.dueDate || !matchesStatus(sub.status, sub.dueDate)) continue;
-
-        const matchesQuery =
-          !deferredQuery ||
-          sub.title.toLowerCase().includes(deferredQuery) ||
-          Boolean(sub.assigneeName?.toLowerCase().includes(deferredQuery));
-        if (!matchesQuery) continue;
-
-        addItem(sub.dueDate.split("T")[0], {
-          id: sub.id,
-          title: sub.title,
-          level: "Đơn vị",
-          category: st.category,
-          categoryLabel: st.categoryLabel,
-          assigneeName: sub.assigneeName,
-          assigneeAvatar: sub.assigneeAvatar,
-          dueDate: sub.dueDate,
-          status: sub.status,
-          parentSchoolTaskId: st.id,
-          parentSchoolTaskTitle: st.title,
-          originalTask: sub,
-        });
-      }
+    const { tasks: taskMap, events: eventMap } = groupDayTaskItemsByDate(tasks, events, {
+      scope,
+      currentUserId,
+      currentUserName,
+      query: deferredQuery,
+      statusFilter,
+      levelFilter,
+      referenceDate,
+    });
+    // Lưới tháng xếp chung nhiệm vụ và sự kiện của một ngày.
+    for (const [dateKey, items] of eventMap) {
+      taskMap.set(dateKey, sortCalendarItemsByAttention([...(taskMap.get(dateKey) ?? []), ...items], referenceDate));
     }
-
-    if (statusFilter === "ALL") {
-      for (const event of events) {
-        const matchesLevel =
-          levelFilter === "ALL" ||
-          (levelFilter === "TRUONG" && event.level === "Trường") ||
-          (levelFilter === "DON_VI" && event.level === "Đơn vị");
-        const matchesScope =
-          scope === "my" ||
-          (scope === "school" && event.level === "Trường") ||
-          (scope === "unit" && event.level === "Đơn vị");
-        const matchesQuery =
-          !deferredQuery ||
-          [event.title, event.assigneeName, event.host, event.location]
-            .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(deferredQuery));
-
-        if (matchesLevel && matchesScope && matchesQuery && event.dueDate) {
-          addItem(event.dueDate.split("T")[0], event);
-        }
-      }
-    }
-
-    for (const [dateKey, items] of map) {
-      map.set(dateKey, sortCalendarItemsByAttention(items, referenceDate));
-    }
-
-    return map;
+    return taskMap;
   }, [
     entriesByDate,
     tasks,

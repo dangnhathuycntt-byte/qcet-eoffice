@@ -1,3 +1,4 @@
+import { toISOStringSafe } from './dto-helpers';
 /**
  * Notification Data Transfer Objects (DTOs) & Sanitization Mappers
  *
@@ -24,17 +25,6 @@ export interface NotificationListResponseDTO {
   items: NotificationDTO[];
   unreadCount: number;
   total: number;
-}
-
-function toISOStringSafe(val: unknown): string {
-  if (val instanceof Date) {
-    return isNaN(val.getTime()) ? new Date(0).toISOString() : val.toISOString();
-  }
-  if (typeof val === 'string' || typeof val === 'number') {
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) return d.toISOString();
-  }
-  return new Date(0).toISOString();
 }
 
 /**
@@ -69,27 +59,4 @@ export function toNotificationDTOArray(rawNotifs: unknown[]): NotificationDTO[] 
   return rawNotifs
     .map(toNotificationDTO)
     .filter((n): n is NotificationDTO => n !== null);
-}
-
-/**
- * Creates canonical NotificationListResponseDTO with counts.
- */
-export function toNotificationListResponseDTO(
-  rawNotifs: unknown[],
-  unreadCount?: number,
-  total?: number
-): NotificationListResponseDTO {
-  const items = toNotificationDTOArray(rawNotifs);
-  const actualUnreadCount = typeof unreadCount === 'number'
-    ? unreadCount
-    : items.filter((n) => !n.isRead).length;
-  const actualTotal = typeof total === 'number'
-    ? total
-    : items.length;
-
-  return {
-    items,
-    unreadCount: actualUnreadCount,
-    total: actualTotal,
-  };
 }

@@ -1,26 +1,9 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  CALENDAR_MONTH_ORDER,
-  getAcademicMonthPeriod,
-  getAcademicMonthInfo,
-} from "../src/lib/academic-calendar";
+import { getAcademicMonthPeriod, getAcademicMonthInfo } from "../src/lib/academic-calendar";
 
 describe("Global Month Selector Component Invariants", () => {
-  test("calendar defines 12 months in correct solar order (1 through 12)", () => {
-    assert.deepEqual(CALENDAR_MONTH_ORDER, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-  });
-
-  test("semester groups cover all 12 operational months without duplication", () => {
-    const semester1 = [9, 10, 11, 12];
-    const semester2 = [1, 2, 3, 4, 5];
-    const summer = [6, 7, 8];
-
-    const combined = [...semester1, ...semester2, ...summer];
-    assert.equal(combined.length, 12);
-    assert.deepEqual(new Set(combined), new Set(CALENDAR_MONTH_ORDER));
-  });
 
   test("solar month date spans conform to day 01 to end of month cycle", () => {
     const period9 = getAcademicMonthPeriod(9, "2026-2027");

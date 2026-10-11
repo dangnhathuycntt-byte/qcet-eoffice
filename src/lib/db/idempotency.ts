@@ -8,11 +8,6 @@ import { prisma as defaultPrisma } from "../prisma";
 import type { DbClient } from "@/lib/prisma";
 export type { DbClient };
 
-/**
- * Valid execution states for an IdempotencyRecord.
- */
-export type IdempotencyStatus = "PENDING" | "COMPLETED" | "FAILED";
-
 export interface IdempotencyConflictErrorParams {
   userId: string;
   operation: string;
@@ -431,21 +426,4 @@ export async function clearIdempotencyRecord(
   } catch {
     return false;
   }
-}
-
-/**
- * Prunes expired idempotency records from the database.
- */
-export async function cleanupExpiredIdempotencyRecords(
-  client: DbClient = defaultPrisma,
-  before: Date = new Date()
-): Promise<number> {
-  const result = await client.idempotencyRecord.deleteMany({
-    where: {
-      expiresAt: {
-        lte: before,
-      },
-    },
-  });
-  return result.count;
 }

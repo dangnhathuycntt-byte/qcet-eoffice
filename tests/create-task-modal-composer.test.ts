@@ -18,10 +18,7 @@ import * as React from "react";
 import * as fs from "fs";
 import * as path from "path";
 import { renderToStaticMarkup } from "react-dom/server";
-import {
-  CreateTaskModal,
-  ENABLE_TASK_AGENT_ASSISTANT,
-} from "../src/components/tasks/create/create-task-modal";
+import { CreateTaskModal } from "../src/components/tasks/create/create-task-modal";
 import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picker";
 import { isInteractiveInput, shouldIgnoreShortcut } from "../src/lib/shortcuts/guards";
 import { createTaskSequenceListener } from "../src/lib/shortcuts/task-shortcuts";
@@ -59,11 +56,6 @@ describe("Compact Composer Modal - Production Specification", () => {
     );
 
     // 3. AI / Mock Feature Scope: Must NOT render 'Tạo cùng Agent' in production
-    assert.equal(
-      ENABLE_TASK_AGENT_ASSISTANT,
-      false,
-      "ENABLE_TASK_AGENT_ASSISTANT feature flag must default to false"
-    );
     assert.ok(
       !html.includes("Tạo cùng Agent"),
       "Must NOT render 'Tạo cùng Agent' button in production modal header"

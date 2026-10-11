@@ -91,22 +91,6 @@ export const clientSource = {
 };
 
 /**
- * Safely extracts only NEXT_PUBLIC_* and NODE_ENV variables from an environment record.
- * This guarantees server secrets in process.env are never passed to the client validator.
- */
-export function extractClientEnv(
-  raw: Record<string, unknown> = process.env
-): Record<string, unknown> {
-  const extracted: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(raw)) {
-    if (key === "NODE_ENV" || key.startsWith("NEXT_PUBLIC_")) {
-      extracted[key] = value;
-    }
-  }
-  return extracted;
-}
-
-/**
  * Validates client environment variables.
  * If rawEnv is explicitly provided, validates it directly through ClientEnvSchema
  * (rejecting any unrecognized or secret keys).
@@ -145,13 +129,6 @@ export function getClientEnv(): ClientEnv {
     _cachedClientEnv = validateClientEnv();
   }
   return _cachedClientEnv;
-}
-
-/**
- * Reset cached client environment (for testing).
- */
-export function resetClientEnv(): void {
-  _cachedClientEnv = null;
 }
 
 /**

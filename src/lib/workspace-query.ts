@@ -75,14 +75,6 @@ export interface SerializeWorkspaceQueryOptions {
   canonicalTaskView?: boolean;
 }
 
-export const DEFAULT_WORKSPACE_FILTER_STATE: Readonly<WorkspaceFilterState> = Object.freeze({
-  taskView: "all",
-  scope: "school",
-  month: "ALL",
-  status: "ALL",
-  view: "table",
-});
-
 const VALID_LIFECYCLE_STATUSES: Set<TaskLifecycleStatus> = new Set([
   "NOT_STARTED",
   "IN_PROGRESS",
@@ -643,73 +635,4 @@ export function serializeWorkspaceQuery(
   }
 
   return params;
-}
-
-/**
- * Compare two WorkspaceFilterState objects for semantic equality.
- *
- * Normalizes implicit defaults (e.g. month: 'ALL' vs month: undefined)
- * and field aliases (dept vs unit vs unitId, q vs query, taskId vs selectedTaskId).
- */
-export function isWorkspaceQueryEqual(
-  a: WorkspaceFilterState,
-  b: WorkspaceFilterState
-): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-
-  const aTaskView = a.taskView || (a.scope === "my" ? "related" : a.scope === "unit" ? "unit" : "all");
-  const bTaskView = b.taskView || (b.scope === "my" ? "related" : b.scope === "unit" ? "unit" : "all");
-  if (aTaskView !== bTaskView) return false;
-
-  const aScope = a.scope || "school";
-  const bScope = b.scope || "school";
-  if (aScope !== bScope) return false;
-
-  const aDept = a.unit || a.unitId || a.dept || undefined;
-  const bDept = b.unit || b.unitId || b.dept || undefined;
-  if (aDept !== bDept) return false;
-
-  const aMonth = a.month ?? "ALL";
-  const bMonth = b.month ?? "ALL";
-  if (aMonth !== bMonth) return false;
-
-  const aDate = a.date || undefined;
-  const bDate = b.date || undefined;
-  if (aDate !== bDate) return false;
-
-  const aStatus = a.status ?? "ALL";
-  const bStatus = b.status ?? "ALL";
-  if (aStatus !== bStatus) return false;
-
-  const aView = a.view || "table";
-  const bView = b.view || "table";
-  if (aView !== bView) return false;
-
-  const aQ = (a.q ?? a.query ?? "").trim() || undefined;
-  const bQ = (b.q ?? b.query ?? "").trim() || undefined;
-  if (aQ !== bQ) return false;
-
-  const aTaskId = (a.taskId ?? a.selectedTaskId ?? "").trim() || undefined;
-  const bTaskId = (b.taskId ?? b.selectedTaskId ?? "").trim() || undefined;
-  if (aTaskId !== bTaskId) return false;
-
-  const aAttention = (!a.attention || a.attention === "ALL") ? undefined : a.attention;
-  const bAttention = (!b.attention || b.attention === "ALL") ? undefined : b.attention;
-  if (aAttention !== bAttention) return false;
-
-  return true;
-}
-
-/**
- * Construct a clean URL string with pathname and serialized workspace parameters.
- */
-export function buildWorkspaceUrl(
-  pathname: string,
-  state: Partial<WorkspaceFilterState>,
-  options?: SerializeWorkspaceQueryOptions
-): string {
-  const params = serializeWorkspaceQuery(state, options);
-  const queryStr = params.toString();
-  return queryStr ? `${pathname}?${queryStr}` : pathname;
 }

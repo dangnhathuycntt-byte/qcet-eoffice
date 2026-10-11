@@ -8,7 +8,6 @@ import {
   matchUnitCodeByTitle,
   normalizeVietnamese,
 } from "../prisma/seeds/canonical-org-seed";
-import { QCET_VTVL_ROLES } from "../src/lib/dacum-definitions";
 
 /**
  * Phase 9 / WS3: kiểm tra logic suy ra vị trí việc làm và đơn vị canonical cho
@@ -65,23 +64,6 @@ describe("Seed: PositionAssignment & canonical unit resolution", () => {
       const seededCodes = new Set(CANONICAL_POSITION_DEFINITIONS.map((p) => p.code));
       for (const code of requiredCodes) {
         assert.ok(seededCodes.has(code), `Thiếu PositionDefinition cho mã ${code}`);
-      }
-    });
-
-    test("mọi vị trí trong danh mục VTVL pháp lý đều có vị trí tương ứng", () => {
-      // QCET_VTVL_ROLES là nguồn chuẩn tắc; seed không được bỏ sót vị trí nào.
-      const vtvlToPosition: Record<string, string> = {
-        VTVL_TRUONG_KHOA: "TRUONG_KHOA",
-        VTVL_PHO_TRUONG_KHOA: "PHO_TRUONG_KHOA",
-        VTVL_GV_CHUYEN_NGANH: "GIANG_VIEN",
-        VTVL_CV_DAO_TAO: "CHUYEN_VIEN",
-        VTVL_KTV_PHONG_MAY: "KTV_PHONG_MAY",
-      };
-      const seededCodes = new Set(CANONICAL_POSITION_DEFINITIONS.map((p) => p.code));
-      for (const role of QCET_VTVL_ROLES) {
-        const mapped = vtvlToPosition[role.code];
-        assert.ok(mapped, `VTVL ${role.code} chưa được ánh xạ sang PositionDefinition`);
-        assert.ok(seededCodes.has(mapped), `Thiếu PositionDefinition ${mapped} cho ${role.code}`);
       }
     });
   });

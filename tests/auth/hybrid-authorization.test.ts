@@ -1,34 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  authorize,
-  assertAuthorized,
-  isAuthorized,
-  checkSeparationOfDuties,
-  checkPortfolioAlignment,
-  getResourceRelationships,
-  isCapabilityAction,
-  isSystemAdminUser,
-  isExecutivePosition,
-  isUnitLeaderPosition,
-  SeparationOfPowersError,
-  SeparationOfDutiesError,
-  PortfolioMismatchError,
-  DelegationExpiredError,
-  NonDelegablePowerError,
-  SingleDRIError,
-  HybridAuthorizationError,
-  TASK_CAPABILITIES,
-  DOCUMENT_INCOMING_CAPABILITIES,
-  DOCUMENT_OUTGOING_CAPABILITIES,
-  DOSSIER_CAPABILITIES,
-  SYSTEM_CAPABILITIES,
-  NON_DELEGABLE_CAPABILITIES,
-  type AuthenticatedUserContext,
-  type AuthorizationResource,
-  type AuthorizationContext,
-  type ActiveDelegationGrantContext,
-} from "../../src/lib/auth/hybrid-authorization";
+import { authorize, assertAuthorized, checkSeparationOfDuties, getResourceRelationships, isCapabilityAction, isSystemAdminUser, isExecutivePosition, isUnitLeaderPosition, SeparationOfPowersError, SeparationOfDutiesError, PortfolioMismatchError, DelegationExpiredError, NonDelegablePowerError, SingleDRIError, HybridAuthorizationError, TASK_CAPABILITIES, DOCUMENT_INCOMING_CAPABILITIES, DOCUMENT_OUTGOING_CAPABILITIES, DOSSIER_CAPABILITIES, SYSTEM_CAPABILITIES, NON_DELEGABLE_CAPABILITIES, type AuthenticatedUserContext, type AuthorizationResource, type AuthorizationContext, type ActiveDelegationGrantContext } from "../../src/lib/auth/hybrid-authorization";
 
 describe("Hybrid Authorization Engine (QCET E-Office)", () => {
   // Mock Base Users
@@ -946,20 +918,6 @@ describe("Hybrid Authorization Engine (QCET E-Office)", () => {
       );
     });
 
-    test("isAuthorized returns boolean properly", async () => {
-      const allowed = await isAuthorized(rectorUser, "task.view", {
-        id: "t3",
-        type: "task",
-      });
-      assert.equal(allowed, true);
-
-      const denied = await isAuthorized(staffUser, "document.outgoing.sign", {
-        id: "d3",
-        type: "document_outgoing",
-      });
-      assert.equal(denied, false);
-    });
-
     test("standalone checkSeparationOfDuties catches SoD violations", () => {
       const violation = checkSeparationOfDuties(
         staffUser,
@@ -975,22 +933,6 @@ describe("Hybrid Authorization Engine (QCET E-Office)", () => {
         { id: "t", type: "task", primaryOwnerId: staffUser.id, createdById: "other" }
       );
       assert.equal(clean.valid, true);
-    });
-
-    test("standalone checkPortfolioAlignment validates correctly", () => {
-      const mismatch = checkPortfolioAlignment(viceRectorAcademic, "task.approve", {
-        id: "t",
-        type: "task",
-        portfolio: "ADMINISTRATION_LOGISTICS",
-      });
-      assert.equal(mismatch.valid, false);
-
-      const rectorUniversal = checkPortfolioAlignment(rectorUser, "task.approve", {
-        id: "t",
-        type: "task",
-        portfolio: "ADMINISTRATION_LOGISTICS",
-      });
-      assert.equal(rectorUniversal.valid, true);
     });
   });
 });

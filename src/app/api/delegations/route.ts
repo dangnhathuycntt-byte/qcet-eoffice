@@ -51,6 +51,37 @@ const CreateDelegationSchema = z
   })
   .passthrough();
 
+const ASSIGNMENT_INCLUDE = {
+  user: { select: { id: true, name: true, email: true, role: true } },
+  unit: { select: { id: true, name: true, code: true } },
+  positionDefinition: { select: { id: true, title: true, code: true } },
+} as const;
+
+const DELEGATION_INCLUDE = {
+  grantorAssignment: { include: ASSIGNMENT_INCLUDE },
+  granteeAssignment: { include: ASSIGNMENT_INCLUDE },
+  responsibilityArea: true,
+} as const;
+
+/**
+ * Tìm quyết định phân công còn hiệu lực: theo id (hoặc positionDefinitionId kèm user), theo user,
+ * hoặc `fallbackUserId` khi không chỉ định gì.
+ */
+async function resolveAssignment(assignmentId?: string | null, userId?: string | null, fallbackUserId?: string) {
+  const include = { user: true, unit: true, positionDefinition: true } as const;
+  if (assignmentId) {
+    const byId = await prisma.positionAssignment.findUnique({ where: { id: assignmentId }, include });
+    if (byId || !userId) return byId;
+    return prisma.positionAssignment.findFirst({
+      where: { userId, positionDefinitionId: assignmentId, status: 'ACTIVE' },
+      include,
+    });
+  }
+  const targetUserId = userId || fallbackUserId;
+  if (!targetUserId) return null;
+  return prisma.positionAssignment.findFirst({ where: { userId: targetUserId, status: 'ACTIVE' }, include });
+}
+
 /**
  * GET /api/delegations
  * Lists delegations with optional filtering by status, userId, or unitId.
@@ -154,61 +185,7 @@ export async function GET(request: NextRequest) {
 
     const delegations = await prisma.delegationGrant.findMany({
       where,
-      include: {
-        grantorAssignment: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-              },
-            },
-            unit: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-              },
-            },
-            positionDefinition: {
-              select: {
-                id: true,
-                title: true,
-                code: true,
-              },
-            },
-          },
-        },
-        granteeAssignment: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-              },
-            },
-            unit: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-              },
-            },
-            positionDefinition: {
-              select: {
-                id: true,
-                title: true,
-                code: true,
-              },
-            },
-          },
-        },
-        responsibilityArea: true,
-      },
+      include: DELEGATION_INCLUDE,
       orderBy: {
         createdAt: 'desc',
       },
@@ -310,35 +287,8 @@ export async function POST(request: NextRequest) {
       grantorAssignmentId || body.delegatorPositionId || body.delegatorAssignmentId;
     const targetGrantorUserId =
       grantorUserId || grantorId || body.delegatorUserId || body.delegatorId;
-    let grantorAssignment = null;
-
-    if (targetGrantorAssignmentId) {
-      grantorAssignment = await prisma.positionAssignment.findUnique({
-        where: { id: targetGrantorAssignmentId },
-        include: { user: true, unit: true, positionDefinition: true },
-      });
-      if (!grantorAssignment && targetGrantorUserId) {
-        grantorAssignment = await prisma.positionAssignment.findFirst({
-          where: {
-            userId: targetGrantorUserId,
-            positionDefinitionId: targetGrantorAssignmentId,
-            status: 'ACTIVE',
-          },
-          include: { user: true, unit: true, positionDefinition: true },
-        });
-      }
-    } else if (targetGrantorUserId) {
-      grantorAssignment = await prisma.positionAssignment.findFirst({
-        where: { userId: targetGrantorUserId, status: 'ACTIVE' },
-        include: { user: true, unit: true, positionDefinition: true },
-      });
-    } else {
-      // Default to session user's active assignment
-      grantorAssignment = await prisma.positionAssignment.findFirst({
-        where: { userId: authUser.id, status: 'ACTIVE' },
-        include: { user: true, unit: true, positionDefinition: true },
-      });
-    }
+    // Mặc định lấy quyết định phân công đang hiệu lực của người đang đăng nhập.
+    const grantorAssignment = await resolveAssignment(targetGrantorAssignmentId, targetGrantorUserId, authUser.id);
 
     if (!grantorAssignment) {
       throw new ApiError(
@@ -353,29 +303,7 @@ export async function POST(request: NextRequest) {
       granteeAssignmentId || body.delegateePositionId || body.delegateeAssignmentId;
     const targetGranteeUserId =
       granteeUserId || granteeId || body.delegateeUserId || body.delegateeId;
-    let granteeAssignment = null;
-
-    if (targetGranteeAssignmentId) {
-      granteeAssignment = await prisma.positionAssignment.findUnique({
-        where: { id: targetGranteeAssignmentId },
-        include: { user: true, unit: true, positionDefinition: true },
-      });
-      if (!granteeAssignment && targetGranteeUserId) {
-        granteeAssignment = await prisma.positionAssignment.findFirst({
-          where: {
-            userId: targetGranteeUserId,
-            positionDefinitionId: targetGranteeAssignmentId,
-            status: 'ACTIVE',
-          },
-          include: { user: true, unit: true, positionDefinition: true },
-        });
-      }
-    } else if (targetGranteeUserId) {
-      granteeAssignment = await prisma.positionAssignment.findFirst({
-        where: { userId: targetGranteeUserId, status: 'ACTIVE' },
-        include: { user: true, unit: true, positionDefinition: true },
-      });
-    }
+    const granteeAssignment = await resolveAssignment(targetGranteeAssignmentId, targetGranteeUserId);
 
     if (!granteeAssignment) {
       throw new ApiError(
@@ -420,61 +348,7 @@ export async function POST(request: NextRequest) {
           reason: reason ? String(reason).trim() : null,
           status: DelegationStatus.ACTIVE,
         },
-        include: {
-          grantorAssignment: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  role: true,
-                },
-              },
-              unit: {
-                select: {
-                  id: true,
-                  name: true,
-                  code: true,
-                },
-              },
-              positionDefinition: {
-                select: {
-                  id: true,
-                  title: true,
-                  code: true,
-                },
-              },
-            },
-          },
-          granteeAssignment: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  role: true,
-                },
-              },
-              unit: {
-                select: {
-                  id: true,
-                  name: true,
-                  code: true,
-                },
-              },
-              positionDefinition: {
-                select: {
-                  id: true,
-                  title: true,
-                  code: true,
-                },
-              },
-            },
-          },
-          responsibilityArea: true,
-        },
+        include: DELEGATION_INCLUDE,
       });
 
       await logAuditEvent(tx, {

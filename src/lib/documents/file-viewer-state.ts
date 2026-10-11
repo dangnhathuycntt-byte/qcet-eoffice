@@ -12,7 +12,6 @@ export interface FileViewState {
 
 export const ZOOM_MIN = 50;
 export const ZOOM_MAX = 200;
-export const ZOOM_STEP = 15;
 export const ZOOM_DEFAULT = 100;
 /** Số tệp tối đa hiển thị dạng vạch trên rail; nhiều hơn chỉ còn nút "Tệp N". */
 export const MAX_FILES_AS_TICKS = 8;

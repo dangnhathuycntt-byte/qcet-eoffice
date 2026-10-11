@@ -7,11 +7,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  PushSubscriptionSchema,
-  SubscribePushSchema,
-  TestPushSchema,
-} from "@/contracts/notifications";
+import { PushSubscriptionSchema, TestPushSchema } from "@/contracts/notifications";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -120,94 +116,6 @@ describe("PushSubscriptionSchema", () => {
       unknownField: "should pass through",
     });
     assert.ok(result.success, JSON.stringify(result));
-  });
-});
-
-// ---------------------------------------------------------------------------
-// SubscribePushSchema
-// ---------------------------------------------------------------------------
-
-describe("SubscribePushSchema", () => {
-  test("accepts valid minimal (endpoint + keys)", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: validKeys,
-    });
-    assert.ok(result.success, JSON.stringify(result));
-  });
-
-  test("accepts full input with deviceType + userAgent", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: validKeys,
-      deviceType: "mobile",
-      userAgent: "Chrome/120",
-    });
-    assert.ok(result.success, JSON.stringify(result));
-  });
-
-  test("rejects invalid URL endpoint", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: "not-a-url",
-      keys: validKeys,
-    });
-    assert.equal(result.success, false);
-  });
-
-  test("rejects missing keys (required)", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-    });
-    assert.equal(result.success, false);
-  });
-
-  test("rejects keys with missing p256dh", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: { auth: "tBHItQ..." },
-    });
-    assert.equal(result.success, false);
-  });
-
-  test("rejects keys with missing auth", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: { p256dh: "BNcRdre..." },
-    });
-    assert.equal(result.success, false);
-  });
-
-  test("rejects keys with extra fields (keys schema is strict)", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: { ...validKeys, extra: "not-allowed" },
-    });
-    assert.equal(result.success, false);
-  });
-
-  test("rejects p256dh exceeding 255 chars", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: { p256dh: "x".repeat(256), auth: "tBHItQ..." },
-    });
-    assert.equal(result.success, false);
-  });
-
-  test("rejects auth exceeding 255 chars", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: { p256dh: "BNcRdre...", auth: "x".repeat(256) },
-    });
-    assert.equal(result.success, false);
-  });
-
-  test("rejects unknown extra fields (strict)", () => {
-    const result = SubscribePushSchema.safeParse({
-      endpoint: validEndpoint,
-      keys: validKeys,
-      unknownField: "should fail",
-    });
-    assert.equal(result.success, false);
   });
 });
 

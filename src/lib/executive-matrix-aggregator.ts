@@ -740,31 +740,6 @@ export function matchesExecutiveFilter(
   }
 }
 
-/**
- * Selects the visible rows for a lens. The filter and the sort are applied
- * BEFORE the preview slice, and `filteredTotal` is the size of the filtered set
- * — a caller must never read `previewItems.length` as the total.
- */
-export function selectExecutiveActionQueue(
-  items: ExecutiveActionItem[],
-  filter: ExecutiveFilter = "ALL",
-  previewLimit = 5
-): ExecutiveActionQueueSelection {
-  const filtered = items
-    .filter((item) => matchesExecutiveFilter(item, filter))
-    .sort(compareExecutiveActionItems);
-
-  return {
-    filteredTotal: filtered.length,
-    previewItems: filtered.slice(0, previewLimit),
-    counts: {
-      PENDING_APPROVAL: items.filter((i) => matchesExecutiveFilter(i, "PENDING_APPROVAL")).length,
-      BLOCKED_OVERDUE: items.filter((i) => matchesExecutiveFilter(i, "BLOCKED_OVERDUE")).length,
-      STRATEGIC: items.filter((i) => matchesExecutiveFilter(i, "STRATEGIC")).length,
-    },
-  };
-}
-
 /** Minimal shape `summarizeDepartmentAttention` needs from a department row. */
 export interface DepartmentAttentionInput {
   departmentId: string;

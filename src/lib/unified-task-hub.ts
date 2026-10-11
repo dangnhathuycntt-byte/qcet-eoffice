@@ -1,4 +1,4 @@
-import type { SchoolTask, TaskCategory, TaskStatus } from "@/types/dashboard";
+import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import type { AuthUser, UserRole } from "@/types/auth";
 import type { WorkspaceScope } from "@/types/workspace";
 import {
@@ -20,21 +20,6 @@ import {
 export const TODAY_ISO = getCanonicalReferenceDateStr();
 
 /**
- * Converts TaskScope ("SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS") to WorkspaceScope ("school" | "unit" | "my").
- */
-export function scopeToWorkspaceScope(scope: TaskScope): WorkspaceScope {
-  switch (scope) {
-    case "SCHOOL_TASKS":
-      return "school";
-    case "UNIT_TASKS":
-      return "unit";
-    case "MY_TASKS":
-    default:
-      return "my";
-  }
-}
-
-/**
  * Converts WorkspaceScope ("school" | "unit" | "my") to TaskScope ("SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS").
  */
 export function workspaceScopeToTaskScope(scope: WorkspaceScope): TaskScope {
@@ -47,36 +32,6 @@ export function workspaceScopeToTaskScope(scope: WorkspaceScope): TaskScope {
     default:
       return "MY_TASKS";
   }
-}
-
-/**
- * Converts WorkspaceScope to URL parameter representation ("all" | "unit" | "personal").
- */
-export function workspaceScopeToUrlParam(scope: WorkspaceScope): string {
-  switch (scope) {
-    case "school":
-      return "all";
-    case "unit":
-      return "unit";
-    case "my":
-    default:
-      return "personal";
-  }
-}
-
-/**
- * Parses URL scope parameter into WorkspaceScope, supporting both legacy and modern values.
- */
-export function urlParamToWorkspaceScope(
-  param: string | null | undefined,
-  fallback: WorkspaceScope = "school"
-): WorkspaceScope {
-  if (!param) return fallback;
-  const p = param.trim().toLowerCase();
-  if (p === "all" || p === "school") return "school";
-  if (p === "unit") return "unit";
-  if (p === "personal" || p === "my") return "my";
-  return fallback;
 }
 
 /**
@@ -145,29 +100,6 @@ export function getDefaultScopeForRole(role?: UserRole): TaskScope {
 export function getDefaultViewModeForRole(role?: UserRole): TaskViewMode {
   if (role === "ADMIN") return "executive";
   return "table";
-}
-
-/**
- * Resolves whether a user in zone=tasks should display the Staff focus view or the advanced view.
- * - If role !== "STAFF", returns "ADVANCED"
- * - If role === "STAFF":
- *   - If isExpanded is true -> "ADVANCED"
- *   - If viewQuery is explicitly provided and not "focus" -> "ADVANCED"
- *   - Otherwise -> "STAFF_FOCUS"
- */
-export function resolveStaffLandingMode({
-  role,
-  isExpanded = false,
-  viewQuery,
-}: {
-  role?: UserRole;
-  isExpanded?: boolean;
-  viewQuery?: string | null;
-}): "STAFF_FOCUS" | "ADVANCED" {
-  if (role !== "STAFF") return "ADVANCED";
-  if (isExpanded) return "ADVANCED";
-  if (viewQuery && viewQuery !== "focus") return "ADVANCED";
-  return "STAFF_FOCUS";
 }
 
 /**

@@ -1,6 +1,6 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { triggerHaptic, isHapticSupported, isHapticsEnabled, setHapticsEnabled } from "@/lib/haptics";
+import { triggerHaptic, isHapticSupported, isHapticsEnabled } from "@/lib/haptics";
 import { isSchoolTask } from "@/types/dashboard";
 
 describe("Bundle Leak Prevention & Haptics Suite", () => {
@@ -20,13 +20,5 @@ describe("Bundle Leak Prevention & Haptics Suite", () => {
     assert.strictEqual(isSchoolTask(mockUnitTask), false);
     assert.strictEqual(isSchoolTask(null), false);
     assert.strictEqual(isSchoolTask(undefined), false);
-  });
-
-  test("Haptics trigger runs safely in Node/SSR environment without throwing", () => {
-    assert.strictEqual(isHapticSupported(), false);
-    assert.strictEqual(isHapticsEnabled(), false);
-    setHapticsEnabled(true);
-    const result = triggerHaptic("light");
-    assert.strictEqual(result, false);
   });
 });
