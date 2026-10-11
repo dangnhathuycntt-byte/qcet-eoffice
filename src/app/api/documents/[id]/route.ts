@@ -61,12 +61,14 @@ export async function GET(
 
     const { id } = await Promise.resolve(context.params);
 
-    const document = await getDocumentById(id);
+    const [document, authContext] = await Promise.all([
+      getDocumentById(id),
+      loadAuthorizationContext(authUser.id),
+    ]);
     if (!document) {
       throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
     }
 
-    const authContext = await loadAuthorizationContext(authUser.id);
     const docResource = buildDocumentResource(document);
     const readDecision = authorize(authContext, 'document.read', docResource);
     // Người tham gia luồng duyệt tờ trình được đọc tờ trình đó dù không liên quan theo chính sách chung.

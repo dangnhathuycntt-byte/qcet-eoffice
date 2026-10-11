@@ -9,6 +9,14 @@ import {
 } from '@prisma/client';
 import { ActionInboxItem, ActionInboxResponse } from '@/contracts/me';
 
+/** Trường văn bản mà hộp việc cần (số, trích yếu, độ mật). */
+const INBOX_DOCUMENT_SELECT = {
+  originalNumber: true,
+  registrationNumber: true,
+  summary: true,
+  securityLevel: true,
+} as const;
+
 export class ActionInboxService {
   /**
    * Derives a unified institutional Action Inbox tailored to the active user's roles and responsibilities.
@@ -26,7 +34,6 @@ export class ActionInboxService {
       },
       include: {
         positionDefinition: true,
-        unit: true,
       },
     });
 
@@ -86,14 +93,14 @@ export class ActionInboxService {
       // 3. INCOMING: Directly assigned via UnitWorkAssignment
       prisma.unitWorkAssignment.findMany({
         where: { driUserId: userId, status: { in: ['ASSIGNED', 'IN_PROGRESS'] } },
-        include: { workflow: { include: { document: true } } },
+        include: { workflow: { include: { document: { select: INBOX_DOCUMENT_SELECT } } } },
         orderBy: { createdAt: 'desc' },
         take: 15,
       }),
       // 4. OUTGOING: Content review assigned to this user
       prisma.documentOutgoingWorkflow.findMany({
         where: { status: OutgoingDocumentStatus.CONTENT_REVIEW, contentReviewerId: userId },
-        include: { document: true },
+        include: { document: { select: INBOX_DOCUMENT_SELECT } },
         orderBy: { createdAt: 'desc' },
         take: 15,
       }),
@@ -124,7 +131,7 @@ export class ActionInboxService {
       isBGH
         ? prisma.documentIncomingWorkflow.findMany({
             where: { status: IncomingDocumentStatus.PRESENTED },
-            include: { document: true },
+            include: { document: { select: INBOX_DOCUMENT_SELECT } },
             orderBy: { createdAt: 'desc' },
             take: 15,
           })
@@ -136,7 +143,7 @@ export class ActionInboxService {
               status: IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT,
               leadUnitId: { in: unitHeadUnitIds },
             },
-            include: { document: true },
+            include: { document: { select: INBOX_DOCUMENT_SELECT } },
             orderBy: { createdAt: 'desc' },
             take: 15,
           })
@@ -153,7 +160,7 @@ export class ActionInboxService {
                 ],
               },
             },
-            include: { document: true },
+            include: { document: { select: INBOX_DOCUMENT_SELECT } },
             orderBy: { createdAt: 'desc' },
             take: 15,
           })
@@ -162,7 +169,7 @@ export class ActionInboxService {
       isBGH
         ? prisma.documentOutgoingWorkflow.findMany({
             where: { status: OutgoingDocumentStatus.AUTHORIZED_SIGN },
-            include: { document: true },
+            include: { document: { select: INBOX_DOCUMENT_SELECT } },
             orderBy: { createdAt: 'desc' },
             take: 15,
           })

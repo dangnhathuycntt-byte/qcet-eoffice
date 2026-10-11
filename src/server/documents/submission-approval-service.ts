@@ -104,21 +104,34 @@ function canActOnStep(
 async function recipientsForPendingSteps(db: Prisma.TransactionClient | typeof prisma, workflowId: string): Promise<string[]> {
   const steps = await db.documentApprovalStep.findMany({ where: { workflowId, status: "PENDING" } });
   const ids = new Set<string>();
+  const headUnitIds = new Set<string>();
+  let needsExecutives = false;
   for (const step of steps) {
-    if (step.approverUserId) {
-      ids.add(step.approverUserId);
-      continue;
-    }
-    const where =
-      step.stage === "UNIT_HEAD"
-        ? { unitId: step.unitId ?? "", status: AssignmentStatus.ACTIVE }
-        : { status: AssignmentStatus.ACTIVE };
-    const rows = await db.positionAssignment.findMany({ where, include: { positionDefinition: { select: { code: true } } } });
-    for (const r of rows) {
-      const code = r.positionDefinition.code.toUpperCase();
-      const isExec = code === "HIEU_TRUONG" || code === "PHO_HIEU_TRUONG" || code.startsWith("PHO_HIEU_TRUONG") || code.startsWith("BGH");
-      if (step.stage === "UNIT_HEAD" ? isUnitLeaderPosition(code) : isExec) ids.add(r.userId);
-    }
+    if (step.approverUserId) ids.add(step.approverUserId);
+    else if (step.stage === "UNIT_HEAD") headUnitIds.add(step.unitId ?? "");
+    else needsExecutives = true;
+  }
+  if (headUnitIds.size === 0 && !needsExecutives) return [...ids];
+
+  // Một truy vấn cho mọi bước: lọc thô trong DB, xét đúng chức vụ ở dưới.
+  const rows = await db.positionAssignment.findMany({
+    where: {
+      status: AssignmentStatus.ACTIVE,
+      OR: [
+        ...(headUnitIds.size > 0 ? [{ unitId: { in: [...headUnitIds] } }] : []),
+        ...(needsExecutives
+          ? ["HIEU_TRUONG", "PHO_HIEU_TRUONG", "BGH"].map((prefix) => ({
+              positionDefinition: { code: { startsWith: prefix, mode: "insensitive" as const } },
+            }))
+          : []),
+      ],
+    },
+    select: { userId: true, unitId: true, positionDefinition: { select: { code: true } } },
+  });
+  for (const r of rows) {
+    const code = r.positionDefinition.code.toUpperCase();
+    const isExec = code === "HIEU_TRUONG" || code === "PHO_HIEU_TRUONG" || code.startsWith("PHO_HIEU_TRUONG") || code.startsWith("BGH");
+    if ((headUnitIds.has(r.unitId) && isUnitLeaderPosition(code)) || (needsExecutives && isExec)) ids.add(r.userId);
   }
   return [...ids];
 }

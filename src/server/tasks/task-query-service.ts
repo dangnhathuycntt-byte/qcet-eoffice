@@ -137,75 +137,6 @@ const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
   },
 };
 
-const getTaskInclude = () => ({
-  leadUnit: true,
-  actors: {
-    select: {
-      userId: true,
-      unitId: true,
-      role: true,
-      isPrimaryDRI: true,
-      user: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          positionAssignments: {
-            where: {
-              status: 'ACTIVE',
-              effectiveFrom: { lte: new Date() },
-              OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
-            },
-            select: { unitId: true, effectiveTo: true, effectiveFrom: true },
-            orderBy: { effectiveFrom: 'desc' as const },
-            take: 1,
-          },
-        },
-      },
-    },
-  },
-  deliverables: true,
-  dacumTaskDef: {
-    include: {
-      duty: true,
-    },
-  },
-  linkedDocument: {
-    select: {
-      id: true,
-      originalNumber: true,
-      summary: true,
-      type: true,
-      issuedDate: true,
-      issuingAuthority: true,
-      registrationNumber: true,
-      documentYear: true,
-      status: true,
-    },
-  },
-  parentTask: {
-    select: { id: true, code: true, title: true, scope: true },
-  },
-  subTasks: {
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      status: true,
-      progressPercent: true,
-      archivedAt: true,
-      actors: {
-        select: {
-          userId: true,
-          isPrimaryDRI: true,
-          role: true,
-          user: { select: { id: true, name: true, avatarUrl: true } },
-        },
-      },
-    },
-  },
-} satisfies Prisma.TaskInclude);
-
 export function isAuthorizationContext(target: unknown): target is AuthorizationContext {
   if (!target || typeof target !== 'object') return false;
   const candidate = target as Record<string, unknown>;
@@ -1040,7 +971,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: getTaskInclude(),
+          include: TASK_LIST_INCLUDE,
           orderBy: effectiveOrderBy,
           cursor: { id: cursor },
           skip: 1,
@@ -1060,16 +991,13 @@ export class TaskQueryService {
       formattedTasks = rawTasks.map(formatTaskWithViewer);
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
     } else if (isAll) {
-      const [totalCount, rawTasks] = await Promise.all([
-        prisma.task.count({ where }),
-        prisma.task.findMany({
-          where,
-          include: getTaskInclude(),
-          orderBy: effectiveOrderBy,
-        }),
-      ]);
-      total = totalCount;
-      limit = Math.min(totalCount > 0 ? totalCount : 50, 100);
+      const rawTasks = await prisma.task.findMany({
+        where,
+        include: TASK_LIST_INCLUDE,
+        orderBy: effectiveOrderBy,
+      });
+      total = rawTasks.length;
+      limit = Math.min(total > 0 ? total : 50, 100);
       page = 1;
       totalPages = 1;
       hasMore = false;
@@ -1088,7 +1016,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: getTaskInclude(),
+          include: TASK_LIST_INCLUDE,
           orderBy: effectiveOrderBy,
           skip,
           take: limit,

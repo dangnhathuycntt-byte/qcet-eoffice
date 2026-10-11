@@ -41,13 +41,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       });
 
     const [
-      total,
-      incoming,
-      outgoing,
-      internal,
-      pending,
-      processing,
-      completed,
+      byType,
+      byStatus,
       urgent,
       overdue,
       linkedTasks,
@@ -58,23 +53,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       outgoingIssued,
       canSeeApprovalReport,
     ] = await Promise.all([
-      prisma.document.count({ where: baseFilter }),
-      prisma.document.count({ where: { ...baseFilter, type: "VAN_BAN_DEN" } }),
-      prisma.document.count({ where: { ...baseFilter, type: "VAN_BAN_DI" } }),
-      prisma.document.count({ where: { ...baseFilter, type: "TO_TRINH_NOI_BO" } }),
-      prisma.document.count({ where: { ...scopedFilter, status: "CHO_PHAN_CONG" } }),
-      prisma.document.count({
-        where: {
-          ...scopedFilter,
-          status: { in: ["DANG_XU_LY", "CHO_PHE_DUYET"] },
-        },
-      }),
-      prisma.document.count({
-        where: {
-          ...scopedFilter,
-          status: { in: ["DA_HOAN_THANH", "LUU_THEO_DOI"] },
-        },
-      }),
+      prisma.document.groupBy({ by: ["type"], where: baseFilter, _count: { _all: true } }),
+      prisma.document.groupBy({ by: ["status"], where: scopedFilter, _count: { _all: true } }),
       prisma.document.count({
         where: {
           ...scopedFilter,
@@ -101,6 +81,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       countBucket("VAN_BAN_DI", "issued"),
       canViewApprovalReport(authUser),
     ]);
+
+    const countOf = (rows: { _count: { _all: number } }[]) => rows.reduce((sum, row) => sum + row._count._all, 0);
+    const typeCount = (...types: string[]) => countOf(byType.filter((row) => types.includes(row.type)));
+    const statusCount = (...statuses: string[]) => countOf(byStatus.filter((row) => statuses.includes(row.status)));
+    const total = countOf(byType);
+    const incoming = typeCount("VAN_BAN_DEN");
+    const outgoing = typeCount("VAN_BAN_DI");
+    const internal = typeCount("TO_TRINH_NOI_BO");
+    const pending = statusCount("CHO_PHAN_CONG");
+    const processing = statusCount("DANG_XU_LY", "CHO_PHE_DUYET");
+    const completed = statusCount("DA_HOAN_THANH", "LUU_THEO_DOI");
 
     return apiSuccess(
       {

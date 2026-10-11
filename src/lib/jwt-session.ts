@@ -109,7 +109,9 @@ export async function resolveCanonicalTokenSession(token: string): Promise<Canon
   try {
     const dbSession = await prisma.session.findUnique({
       where: { sessionToken: trimmed },
-      include: { user: true },
+      include: {
+        user: { select: { id: true, email: true, name: true, role: true, title: true, isActive: true } },
+      },
     });
 
     if (dbSession) {

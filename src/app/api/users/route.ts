@@ -70,12 +70,22 @@ export async function GET(req: Request) {
         orderBy: { name: "asc" },
         take: queryOptions.take,
         skip: queryOptions.skip,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          phone: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
           positionAssignments: {
             where: activeAssignmentFilter,
-            include: {
-              positionDefinition: true,
-              unit: true,
+            select: {
+              unitId: true,
+              type: true,
+              positionDefinition: { select: { title: true } },
+              unit: { select: { id: true, code: true, name: true } },
             },
           },
         },
