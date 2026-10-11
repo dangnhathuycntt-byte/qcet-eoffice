@@ -14,6 +14,7 @@ import {
 } from './user-dto';
 import { isTaskOverdue } from '@/lib/academic-calendar';
 import type { TaskViewerContext } from '@/domain/tasks';
+import { extractDateString, extractVersion, toISOStringSafe } from './dto-helpers';
 
 export interface TaskSourceDocumentDTO {
   id: string;
@@ -102,46 +103,6 @@ export interface TaskDetailDTO extends TaskListDTO {
   academicMonth?: number;
   academicYear?: string;
   sourceDocument?: TaskSourceDocumentDTO | null;
-}
-
-function toISOStringSafe(val: unknown): string {
-  if (val instanceof Date) {
-    return isNaN(val.getTime()) ? new Date(0).toISOString() : val.toISOString();
-  }
-  if (typeof val === 'string' || typeof val === 'number') {
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) return d.toISOString();
-  }
-  return new Date(0).toISOString();
-}
-
-function extractDateString(val: unknown): string {
-  if (val instanceof Date) {
-    return isNaN(val.getTime()) ? '' : val.toISOString();
-  }
-  if (typeof val === 'string') {
-    return val;
-  }
-  if (typeof val === 'number') {
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? '' : d.toISOString();
-  }
-  return '';
-}
-
-function extractVersion(raw: Record<string, any>): number {
-  if (typeof raw.version === 'number' && !isNaN(raw.version)) {
-    return raw.version;
-  }
-  if (typeof raw.version === 'string') {
-    const parsed = parseInt(raw.version, 10);
-    if (!isNaN(parsed)) return parsed;
-  }
-  if (raw.updatedAt) {
-    const ts = new Date(raw.updatedAt).getTime();
-    if (!isNaN(ts)) return ts;
-  }
-  return 1;
 }
 
 function extractProgress(raw: Record<string, any>): number {

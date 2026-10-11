@@ -13,6 +13,7 @@ import {
 } from '@/server/policies/user-directory-policy';
 import type { AuthenticatedUser } from '@/server/api/request-context';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
+import { toISOStringSafe } from './dto-helpers';
 
 export type UserViewerContext =
   | DirectoryViewerContext
@@ -58,17 +59,6 @@ export interface UserSessionDTO {
   departmentCode?: string | null;
   departmentName?: string | null;
   avatarUrl?: string | null;
-}
-
-function toISOStringSafe(val: unknown): string {
-  if (val instanceof Date) {
-    return isNaN(val.getTime()) ? new Date(0).toISOString() : val.toISOString();
-  }
-  if (typeof val === 'string' || typeof val === 'number') {
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) return d.toISOString();
-  }
-  return new Date(0).toISOString();
 }
 
 function extractDepartment(raw: Record<string, any>): UserDepartmentDTO | null {
