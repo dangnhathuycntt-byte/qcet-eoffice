@@ -16,7 +16,7 @@ import { TaskActivityTimeline, type ActivityEvent } from "./task-activity-timeli
 import { TaskPropertiesSidebar, type AuditLogItem } from "./task-properties-sidebar";
 import { TaskPropertiesDrawer } from "./task-properties-drawer";
 import { DirectInlineEditor } from "./direct-inline-editor";
-import { updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { createDeliverable, deleteDeliverable, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { motionTransition } from "@/lib/motion/tokens";
@@ -245,48 +245,12 @@ export function TaskDetailView({
   }, [currentUser?.name]);
 
   const handleAddDeliverable = React.useCallback(async (title: string, fileUrl?: string, notes?: string) => {
-    const trimmedTitle = title.trim();
-    const trimmedUrl = fileUrl?.trim();
-
-    if (!trimmedTitle) {
-      throw new Error("Tên tài liệu minh chứng không được để trống");
-    }
-    if (!trimmedUrl) {
-      throw new Error("Đường dẫn liên kết tài liệu minh chứng là bắt buộc");
-    }
-
-    const res = await fetch(`/api/tasks/${taskRef.current.id}/deliverables`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: trimmedTitle,
-        fileUrl: trimmedUrl,
-        notes: notes?.trim() || undefined,
-      }),
-    });
-
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => null);
-      const errMsg =
-        errJson?.error?.message ||
-        errJson?.message ||
-        (res.status === 403
-          ? "Bạn không có quyền nộp tài liệu minh chứng cho nhiệm vụ này (403 Forbidden)"
-          : "Không thể thêm tài liệu minh chứng. Vui lòng thử lại");
-      throw new Error(errMsg);
-    }
-
-    const data = await res.json();
-    const created = data?.deliverable || data?.data;
-
-    if (!created || !created.id) {
-      throw new Error("Dữ liệu tài liệu phản hồi từ máy chủ không hợp lệ");
-    }
+    const created = await createDeliverable(taskRef.current.id, { title, fileUrl, notes });
 
     const newDeliv: DeliverableItem = {
       id: created.id,
-      title: created.title || trimmedTitle,
-      fileUrl: created.fileUrl || trimmedUrl,
+      title: created.title || title.trim(),
+      fileUrl: created.fileUrl || fileUrl?.trim(),
       notes: created.notes || notes,
       uploadedBy: currentUser ? { id: currentUser.id, name: currentUser.name || "Người dùng" } : undefined,
       createdAt: created.createdAt || new Date().toISOString(),
@@ -301,25 +265,7 @@ export function TaskDetailView({
     setDeliverables((prev) => prev.filter((d) => d.id !== deliverableId));
 
     try {
-      const res = await fetch(
-        `/api/tasks/${taskRef.current.id}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        const errMsg =
-          errJson?.error?.message ||
-          errJson?.message ||
-          (res.status === 403
-            ? "Bạn không có quyền xóa tài liệu minh chứng này (403 Forbidden)"
-            : res.status === 404
-            ? "Không tìm thấy tài liệu minh chứng cần xóa"
-            : "Không thể xóa tài liệu minh chứng. Vui lòng thử lại");
-        throw new Error(errMsg);
-      }
+      await deleteDeliverable(taskRef.current.id, deliverableId);
     } catch (error: unknown) {
       setDeliverables(previousDeliverables);
       notifyError(error instanceof Error ? error.message : "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");

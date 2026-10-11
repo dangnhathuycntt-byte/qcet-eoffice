@@ -471,33 +471,73 @@ export async function deleteTask(
   }
 }
 
-export async function deleteDeliverable(
+/** Lấy thông điệp lỗi từ phản hồi của API minh chứng, ưu tiên nội dung máy chủ trả về. */
+async function deliverableError(res: Response, byStatus: Record<number, string>, fallback: string): Promise<Error> {
+  const errJson = await res.json().catch(() => null);
+  return new Error(errJson?.error?.message || errJson?.message || byStatus[res.status] || fallback);
+}
+
+export interface CreatedDeliverable {
+  id: string;
+  title?: string;
+  fileUrl?: string;
+  notes?: string | null;
+  reviewStatus?: string;
+  createdAt?: string;
+}
+
+/**
+ * POST /api/tasks/[id]/deliverables — nộp tài liệu minh chứng (liên kết).
+ * Ném `Error` kèm thông điệp tiếng Việt khi thiếu dữ liệu hoặc máy chủ từ chối.
+ */
+export async function createDeliverable(
   taskId: string,
-  deliverableId: string
-): Promise<TaskActionResult> {
-  try {
-    const res = await fetch(
-      `/api/tasks/${taskId}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
-      {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      }
+  input: { title: string; fileUrl?: string; notes?: string }
+): Promise<CreatedDeliverable> {
+  const title = input.title.trim();
+  const fileUrl = input.fileUrl?.trim();
+  if (!title) {
+    throw new Error("Tên tài liệu minh chứng không được để trống");
+  }
+  if (!fileUrl) {
+    throw new Error("Đường dẫn liên kết tài liệu minh chứng là bắt buộc");
+  }
+
+  const res = await fetch(`/api/tasks/${taskId}/deliverables`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, fileUrl, notes: input.notes?.trim() || undefined }),
+  });
+  if (!res.ok) {
+    throw await deliverableError(
+      res,
+      { 403: "Bạn không có quyền nộp tài liệu minh chứng cho nhiệm vụ này (403 Forbidden)" },
+      "Không thể thêm tài liệu minh chứng. Vui lòng thử lại"
     );
+  }
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi xóa tài liệu minh chứng (${res.status})`,
-      };
-    }
+  const data = await res.json();
+  const created = data?.deliverable || data?.data;
+  if (!created || !created.id) {
+    throw new Error("Dữ liệu tài liệu phản hồi từ máy chủ không hợp lệ");
+  }
+  return created;
+}
 
-    const data = await res.json().catch(() => ({}));
-    return { ok: true, data };
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
-    };
+/** DELETE /api/tasks/[id]/deliverables — ném `Error` kèm thông điệp tiếng Việt khi không xóa được. */
+export async function deleteDeliverable(taskId: string, deliverableId: string): Promise<void> {
+  const res = await fetch(
+    `/api/tasks/${taskId}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    throw await deliverableError(
+      res,
+      {
+        403: "Bạn không có quyền xóa tài liệu minh chứng này (403 Forbidden)",
+        404: "Không tìm thấy tài liệu minh chứng cần xóa",
+      },
+      "Không thể xóa tài liệu minh chứng. Vui lòng thử lại"
+    );
   }
 }
