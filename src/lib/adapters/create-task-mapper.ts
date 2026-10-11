@@ -44,9 +44,7 @@ export const TASK_LEVEL_TO_SCOPE = {
 /**
  * Canonical UI create draft.
  *
- * Structurally compatible with `CreateTaskFormData` (the create-task modal) so
- * existing callers can pass their draft through unchanged, but it also accepts
- * an optional `priority`.
+ * Built by `useCreateTaskForm` (hooks/use-create-task-form) from its form state.
  *
  * The legacy-only fields below are retained purely for structural compatibility;
  * they are intentionally NOT persisted through POST /api/tasks because the strict

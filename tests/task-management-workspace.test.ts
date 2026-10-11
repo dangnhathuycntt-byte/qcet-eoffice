@@ -5,7 +5,6 @@ import type { AuthUser } from "../src/types/auth";
 import {
   filterTasksByScope,
   applyOptimisticStatusChange,
-  applyOptimisticCreateTask,
 } from "../src/components/tasks/task-management-workspace";
 
 describe("TaskManagementWorkspace Unit & Integration Suite", () => {
@@ -185,52 +184,6 @@ describe("TaskManagementWorkspace Unit & Integration Suite", () => {
     );
     const task = updated.find((t) => t.id === "task-school-1");
     assert.strictEqual(task?.status, "COMPLETED");
-  });
-
-  test("applyOptimisticCreateTask: appends new school task or adds subtask", () => {
-    const newSchoolTask = applyOptimisticCreateTask(
-      sampleTasks,
-      {
-        title: "Xây dựng cổng thông tin tuyển sinh",
-        level: "TRUONG",
-        category: "CNTT",
-        leadAssigneeName: "Nguyễn Văn A",
-        coAssignees: [],
-        description: "Triển khai cổng tuyển sinh",
-        dueDate: "2026-10-15",
-      },
-      "2026-09-09"
-    );
-
-    assert.strictEqual(newSchoolTask.length, 3);
-    assert.strictEqual(
-      newSchoolTask[0].title,
-      "Xây dựng cổng thông tin tuyển sinh"
-    );
-
-    const newSubTaskResult = applyOptimisticCreateTask(
-      sampleTasks,
-      {
-        title: "Tạo biểu mẫu đăng ký dự thi",
-        level: "DON_VI",
-        category: "CNTT",
-        parentTaskId: "task-school-1",
-        leadAssigneeName: "Lê Văn B",
-        coAssignees: [],
-        description: "Soạn thảo biểu mẫu điện tử",
-        dueDate: "2026-09-12",
-      },
-      "2026-09-09"
-    );
-
-    const targetParent = newSubTaskResult.find(
-      (t) => t.id === "task-school-1"
-    );
-    assert.strictEqual(targetParent?.subTasks?.length, 3);
-    assert.strictEqual(
-      targetParent?.subTasks?.[0].title,
-      "Tạo biểu mẫu đăng ký dự thi"
-    );
   });
 
 });

@@ -13,8 +13,6 @@ import {
   computeDashboardStats,
 } from "@/lib/dashboard-aggregator";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
-import type { CreateTaskFormData } from "@/domain/tasks/create-task-form-utils";
-import { CATEGORY_TABS } from "@/components/tasks/cascading-task-table";
 import type { DelegationRule } from "@/types/delegation";
 import type { AuthUser } from "@/types/auth";
 import { isOnline, enqueueOfflineMutation } from "@/lib/offline-sync";
@@ -59,7 +57,6 @@ export interface TaskMutationsReturn {
   handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<boolean>;
   handleSubmitDeliverable: (payload: DeliverableSubmissionPayload) => Promise<void>;
   handleReviewAction: (payload: ApprovalActionPayload) => Promise<void>;
-  handleCreateTask: (data: CreateTaskFormData) => void;
   handleManualRefresh: () => Promise<void>;
   handleSaveDelegation: (ruleData: Omit<DelegationRule, "id" | "createdAt">) => void;
   handleRevokeDelegation: (ruleId: string) => void;
@@ -543,75 +540,6 @@ export function useTaskMutations(
     [dashboardData]
   );
 
-  const handleCreateTask = React.useCallback(
-    (data: CreateTaskFormData) => {
-      const todayStr = getSystemReferenceDateStr();
-
-      setDashboardData((prev) => {
-        let updatedTasks = [...prev.tasks];
-
-        if (data.level === "TRUONG") {
-          const newTask: SchoolTask = {
-            id: `task-${Date.now()}`,
-            title: data.title,
-            category: data.category,
-            categoryLabel:
-              CATEGORY_TABS.find((c) => c.id === data.category)?.label || data.category,
-            leadAssigneeName: data.leadAssigneeName,
-            coAssignees: data.coAssignees,
-            assignedDate: todayStr,
-            dueDate: data.dueDate,
-            status: "IN_PROGRESS",
-            subTasks: [],
-            totalSubTasks: 0,
-            completedSubTasks: 0,
-            progressPercent: 0,
-          };
-          updatedTasks.unshift(newTask);
-        } else {
-          const newSubTask: StaffTask = {
-            id: `sub-${Date.now()}`,
-            title: data.title,
-            assigneeName: data.leadAssigneeName,
-            status: "NEW",
-            dueDate: data.dueDate,
-            internalDueDate: data.internalDueDate,
-            deliverableDescription: data.requiredDeliverables,
-            vtvlRole: data.vtvlRole,
-            requiresReview: data.requiresReview,
-            parentSchoolTaskId: data.parentTaskId || updatedTasks[0]?.id || "task-1",
-            updatedAt: todayStr,
-          };
-
-          if (data.parentTaskId) {
-            updatedTasks = updatedTasks.map((st) => {
-              if (st.id === data.parentTaskId) {
-                return {
-                  ...st,
-                  subTasks: [newSubTask, ...st.subTasks],
-                };
-              }
-              return st;
-            });
-          } else if (updatedTasks.length > 0) {
-            updatedTasks[0] = {
-              ...updatedTasks[0],
-              subTasks: [newSubTask, ...updatedTasks[0].subTasks],
-            };
-          }
-        }
-
-        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
-        return {
-          ...prev,
-          tasks: rolledUp,
-          stats: computeDashboardStats(rolledUp),
-        };
-      });
-    },
-    []
-  );
-
   const handleSaveDelegation = React.useCallback(
     (ruleData: Omit<DelegationRule, "id" | "createdAt">) => {
       const newRule: DelegationRule = {
@@ -632,25 +560,16 @@ export function useTaskMutations(
 
   // Global custom event listeners
   React.useEffect(() => {
-    const handleGlobalTaskCreated = (e: Event) => {
-      const customEvent = e as CustomEvent<CreateTaskFormData>;
-      if (customEvent.detail) {
-        handleCreateTask(customEvent.detail);
-      }
-    };
-
     const handleGlobalOpenCreate = (e: Event) => {
       const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
       onOpenCreateModal?.("TRUONG", undefined, customEvent?.detail?.leadAssigneeName);
     };
 
-    window.addEventListener("qcet:task-created", handleGlobalTaskCreated);
     window.addEventListener("qcet:open-create-task", handleGlobalOpenCreate);
     return () => {
-      window.removeEventListener("qcet:task-created", handleGlobalTaskCreated);
       window.removeEventListener("qcet:open-create-task", handleGlobalOpenCreate);
     };
-  }, [handleCreateTask, onOpenCreateModal]);
+  }, [onOpenCreateModal]);
 
   return {
     dashboardData,
@@ -663,7 +582,6 @@ export function useTaskMutations(
     handleStatusChange,
     handleSubmitDeliverable,
     handleReviewAction,
-    handleCreateTask,
     handleManualRefresh,
     handleSaveDelegation,
     handleRevokeDelegation,

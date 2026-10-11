@@ -6,18 +6,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { CreateTaskModal } from "../../src/components/tasks/create/create-task-modal";
 import {
-  resolveCreateTaskIdentity,
   performCreateTaskSubmission,
-  getInitialTaskFormData,
+  validateCreateTaskForm,
   validateSubtaskDueDate,
-  validateSubtaskAssignment,
-  validateTaskForm,
-  ADVANCED_METADATA_PERSISTENCE_NOTICE,
   type CreateTaskFormData,
-} from "../../src/domain/tasks/create-task-form-utils";
+} from "../../src/hooks/use-create-task-form";
+import type { CreateTaskDraft } from "../../src/lib/adapters/create-task-mapper";
 import { resolveCreateTaskPolicy } from "../../src/domain/tasks/create-task-policy";
 import type { AuthUser } from "../../src/types/auth";
-import type { SchoolTask, StaffTask } from "../../src/types/dashboard";
+import type { StaffTask } from "../../src/types/dashboard";
 
 /**
  * Create-task form: draft preservation (T26), unknown-timeout safety (T27/T72),
@@ -59,14 +56,13 @@ const staffUser: AuthUser = {
   departmentCode: "DAO_TAO",
 };
 
-function makeDraft(): CreateTaskFormData {
+function makeDraft(): CreateTaskDraft {
   return {
-    ...getInitialTaskFormData("DON_VI"),
+    level: "DON_VI",
     title: "Rà soát đề cương môn học",
     leadAssigneeName: "Trần Hùng",
     dueDate: "2026-09-30",
     description: "Kết quả mong đợi: đề cương đã thẩm định",
-    requiredDeliverables: "Đề cương chi tiết (PDF)",
     priority: "HIGH",
   };
 }
@@ -218,8 +214,8 @@ describe("CreateTaskForm submission outcomes (T26 / T27 / T72 / T73)", () => {
 
   test("a local validation failure never issues a network request", async () => {
     let called = false;
-    const invalidDraft: CreateTaskFormData = {
-      ...getInitialTaskFormData("DON_VI"),
+    const invalidDraft: CreateTaskDraft = {
+      level: "DON_VI",
       title: "Họp giao ban",
       leadAssigneeName: "Trần Hùng",
       dueDate: "", // required by the canonical contract
@@ -236,88 +232,6 @@ describe("CreateTaskForm submission outcomes (T26 / T27 / T72 / T73)", () => {
     assert.equal(outcome.status, "rejected");
     assert.equal(outcome.result.ok, false);
     if (!outcome.result.ok) assert.equal(outcome.result.reason, "validation");
-  });
-});
-
-describe("CreateTaskForm stable identity resolution (T24 / D5 / SK-03)", () => {
-  const directory = [
-    { id: "u-hung", name: "Trần Hùng", departmentId: "dept-dao-tao" },
-    { id: "u-thuy", name: "Nguyễn Thị Bích Thủy", departmentId: "dept-dao-tao" },
-    { id: "u-orphan", name: "Cán Bộ Không Đơn Vị", departmentId: null },
-  ];
-
-  test("resolves a directory assignee to a stable id + unit (T24)", () => {
-    const res = resolveCreateTaskIdentity(
-      { leadAssigneeName: "trần hùng" },
-      directory,
-      null,
-      "INSTITUTIONAL"
-    );
-    assert.equal(res.ok, true);
-    if (res.ok) {
-      assert.equal(res.assigneeId, "u-hung");
-      assert.equal(res.departmentId, "dept-dao-tao");
-    }
-  });
-
-  test("rejects a free-text assignee outside the directory before any request (SK-03)", () => {
-    const res = resolveCreateTaskIdentity(
-      { leadAssigneeName: "Người Ngoài Danh Mục" },
-      directory,
-      null,
-      "INSTITUTIONAL"
-    );
-    assert.equal(res.ok, false, "an unresolvable DRI must block the submit");
-    if (!res.ok) {
-      assert.equal(res.field, "leadAssigneeName");
-      assert.ok(res.message.includes("danh mục"));
-    }
-  });
-
-  test("rejects when the assignee's unit cannot be derived", () => {
-    const res = resolveCreateTaskIdentity(
-      { leadAssigneeName: "Cán Bộ Không Đơn Vị" },
-      directory,
-      null,
-      "INSTITUTIONAL"
-    );
-    assert.equal(res.ok, false);
-    if (!res.ok) assert.equal(res.field, "form");
-  });
-
-  test("rejects when the personnel directory is unavailable", () => {
-    const res = resolveCreateTaskIdentity(
-      { leadAssigneeName: "Trần Hùng" },
-      [],
-      null,
-      "INSTITUTIONAL"
-    );
-    assert.equal(res.ok, false);
-    if (!res.ok) assert.equal(res.field, "form");
-  });
-
-  test("personal mode resolves the actor's own stable record for the unit (T06)", () => {
-    const res = resolveCreateTaskIdentity(
-      { leadAssigneeName: "Nguyễn Thị Bích Thủy" },
-      directory,
-      { id: "u-thuy", name: "Nguyễn Thị Bích Thủy" },
-      "PERSONAL"
-    );
-    assert.equal(res.ok, true);
-    if (res.ok) {
-      assert.equal(res.assigneeId, "u-thuy");
-      assert.equal(res.departmentId, "dept-dao-tao");
-    }
-  });
-
-  test("personal mode fails when the actor is absent from the directory", () => {
-    const res = resolveCreateTaskIdentity(
-      { leadAssigneeName: "Nguyễn Thị Bích Thủy" },
-      directory,
-      { id: "u-ghost", name: "Người Lạ" },
-      "PERSONAL"
-    );
-    assert.equal(res.ok, false);
   });
 });
 
@@ -361,19 +275,12 @@ describe("CreateTaskModal rendered form (T21 / T23 / SK-03 / SK-04)", () => {
   });
 
   test("advanced metadata options section is removed per streamlined Linear design", () => {
-    // Verify source does not render the advanced metadata persistence notice
+    // VTVL, hạn chót nội bộ, sản phẩm đầu ra, nghiệm thu are not part of the form.
     const html = renderModal();
-    assert.equal(
-      html.includes(ADVANCED_METADATA_PERSISTENCE_NOTICE),
-      false,
-      "advanced metadata options section must be completely eliminated per user request"
-    );
-    // Also verify at source level
-    assert.equal(
-      modalSource.includes(ADVANCED_METADATA_PERSISTENCE_NOTICE),
-      false,
-      "advanced metadata persistence notice must not appear in source"
-    );
+    for (const content of [html, modalSource]) {
+      assert.equal(content.includes("Tùy chọn nâng cao"), false, "advanced metadata section must not render");
+      assert.equal(content.includes("Hạn chót nội bộ"), false, "internal due date field must not exist");
+    }
   });
 });
 
@@ -406,121 +313,40 @@ describe("Task Decomposition UI & Validation Logic", () => {
     });
   });
 
-  describe("2. validateSubtaskAssignment (Single DRI Principle)", () => {
-    test("passes when valid single DRI is assigned without collaborators", () => {
-      const res = validateSubtaskAssignment("user-123", []);
-      assert.equal(res.valid, true);
-      assert.equal(res.error, undefined);
-    });
-
-    test("passes when valid single DRI is assigned with distinct collaborators", () => {
-      const res = validateSubtaskAssignment("user-123", ["user-456", "user-789"]);
-      assert.equal(res.valid, true);
-      assert.equal(res.error, undefined);
-    });
-
-    test("fails when single DRI (leadAssignee) is missing or empty", () => {
-      const res1 = validateSubtaskAssignment("", ["user-456"]);
-      assert.equal(res1.valid, false);
-      assert.ok(res1.error?.includes("Người phụ trách chính") || res1.error?.includes("DRI"));
-
-      const res2 = validateSubtaskAssignment("   ", []);
-      assert.equal(res2.valid, false);
-      assert.ok(res2.error?.includes("Người phụ trách chính") || res2.error?.includes("DRI"));
-    });
-
-    test("fails when collaborator list duplicates the leadAssignee", () => {
-      const res = validateSubtaskAssignment("user-123", ["user-456", "user-123"]);
-      assert.equal(res.valid, false);
-      assert.ok(
-        res.error?.includes("Người phụ trách chính không thể") ||
-        res.error?.includes("trùng") ||
-        res.error?.includes("phối hợp")
-      );
-    });
-  });
-
-  describe("3. CreateTaskModal form validation for Subtasks", () => {
-    const parentTask: SchoolTask = {
-      id: "parent-task-1",
-      code: "NV-2026-09-001",
-      title: "Triển khai hệ thống E-Office toàn trường",
+  describe("2. validateCreateTaskForm for subtasks", () => {
+    const subtaskForm = (dueDate: string): CreateTaskFormData => ({
+      title: "Xây dựng module phân rã nhiệm vụ",
+      summary: "",
+      description: "",
+      priority: "MEDIUM",
+      level: "DON_VI",
+      selectedDeptCode: "CNTT",
+      leadAssigneeId: "u-tuan",
+      startDate: "",
+      dueDate,
       category: "CHUYEN_DOI_SO",
-      categoryLabel: "Chuyển đổi số",
-      leadAssigneeName: "Trần Hùng",
-      coAssignees: [],
-      assignedDate: "2026-09-01",
-      dueDate: "2026-10-31",
-      status: "IN_PROGRESS",
-      progressPercent: 40,
-      totalSubTasks: 3,
-      completedSubTasks: 1,
-      subTasks: [],
-    };
+      parentTaskId: "parent-task-1",
+    });
 
-    test("validateTaskForm enforces subtask due date cannot exceed parent task due date", () => {
-      const invalidSubtaskForm: CreateTaskFormData = {
-        level: "DON_VI",
-        category: "CHUYEN_DOI_SO",
-        title: "Xây dựng module phân rã nhiệm vụ",
-        leadAssigneeName: "Nguyễn Văn Tuấn",
-        coAssignees: ["Trần Thị Hoa"],
-        dueDate: "2026-11-05",
-        description: "",
-        parentTaskId: "parent-task-1",
-      };
-
-      const errors = validateTaskForm(invalidSubtaskForm, parentTask);
-      assert.ok(errors.dueDate, "Phải có lỗi dueDate khi vượt quá hạn chót cha");
-      assert.ok(
-        errors.dueDate.includes("Hạn chót của nhiệm vụ con không được muộn hơn hạn chót nhiệm vụ cha") ||
-        errors.dueDate.includes("không được vượt quá hạn chót"),
-        `Unexpected error message: ${errors.dueDate}`
+    test("subtask due date cannot exceed the parent due date (message names the parent date)", () => {
+      const errors = validateCreateTaskForm(subtaskForm("2026-11-05"), { parentDueDate: "2026-10-31" });
+      assert.equal(
+        errors.dueDate,
+        "Thời hạn nhiệm vụ con không được vượt quá hạn nhiệm vụ cha (31/10/2026).",
       );
     });
 
-    test("validateTaskForm accepts subtask when dueDate is within parent task dueDate", () => {
-      const validSubtaskForm: CreateTaskFormData = {
-        level: "DON_VI",
-        category: "CHUYEN_DOI_SO",
-        title: "Xây dựng module phân rã nhiệm vụ",
-        leadAssigneeName: "Nguyễn Văn Tuấn",
-        coAssignees: ["Trần Thị Hoa"],
-        dueDate: "2026-10-25",
-        description: "",
-        parentTaskId: "parent-task-1",
-      };
-
-      const errors = validateTaskForm(validSubtaskForm, parentTask);
-      assert.equal(errors.dueDate, undefined);
+    test("subtask due on or before the parent due date is accepted", () => {
+      assert.equal(validateCreateTaskForm(subtaskForm("2026-10-25"), { parentDueDate: "2026-10-31" }).dueDate, undefined);
+      assert.equal(validateCreateTaskForm(subtaskForm("2026-10-31"), { parentDueDate: "2026-10-31" }).dueDate, undefined);
     });
 
-    test("validateTaskForm accepts explicit parentDueDate string when parentSchoolTask object is not provided", () => {
-      const invalidSubtaskForm: CreateTaskFormData = {
-        level: "DON_VI",
-        category: "CHUYEN_DOI_SO",
-        title: "Nhiệm vụ con độc lập",
-        leadAssigneeName: "Nguyễn Văn Tuấn",
-        coAssignees: [],
-        dueDate: "2026-11-15",
-        description: "",
-        parentTaskId: "parent-task-1",
-      };
-
-      const errors = validateTaskForm(
-        invalidSubtaskForm,
-        undefined,
-        undefined,
-        "2026-10-31"
-      );
-      assert.ok(errors.dueDate, "Phải có lỗi khi vượt qua explicit parentDueDate");
-      assert.ok(
-        errors.dueDate.includes("Hạn chót của nhiệm vụ con không được muộn hơn hạn chót nhiệm vụ cha")
-      );
+    test("an unreadable parent due date blocks the subtask instead of passing silently", () => {
+      assert.ok(validateCreateTaskForm(subtaskForm("2026-10-25"), { parentDueDate: "not-a-date" }).dueDate);
     });
   });
 
-  describe("4. TaskDetailSideSheet Decomposition & Breadcrumb Contracts", () => {
+  describe("3. TaskDetailSideSheet Decomposition & Breadcrumb Contracts", () => {
     test("verifies breadcrumb target and subtask selection contracts", () => {
       const subTaskSample: StaffTask = {
         id: "sub-101",

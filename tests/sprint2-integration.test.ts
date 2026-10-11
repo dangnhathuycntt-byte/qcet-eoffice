@@ -2,12 +2,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { getInitialTaskFormData, validateTaskForm, CreateTaskFormData } from "../src/domain/tasks/create-task-form-utils";
 import {
   computeSchoolTaskRollup,
-  computeDashboardStats,
 } from "../src/lib/dashboard-aggregator";
-import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 
 describe("Sprint 2 Integration & Navigation", () => {
@@ -42,52 +39,6 @@ describe("Sprint 2 Integration & Navigation", () => {
     assert.ok(unitTasksRedirect, "Must redirect /unit-tasks");
     assert.strictEqual(unitTasksRedirect.destination, "/tasks?scope=unit");
     assert.strictEqual(unitTasksRedirect.permanent, true);
-  });
-
-  test("Task creation integration: new SchoolTask updates dashboard stats and rollup", () => {
-    const payload = getMockDashboardPayload();
-    const initialSchoolCount = payload.stats.totalSchoolTasks;
-
-    const newFormData: CreateTaskFormData = {
-      level: "TRUONG",
-      category: "CHUYEN_DOI_SO",
-      title: "Triển khai hệ thống chữ ký số tập trung QCET 2026",
-      leadAssigneeName: "TS. Nguyễn Văn A",
-      coAssignees: ["ThS. Trần B"],
-      dueDate: "2026-10-30",
-      description: "Tích hợp ký số cho toàn thể cán bộ giảng viên",
-    };
-
-    const errors = validateTaskForm(newFormData);
-    assert.equal(Object.keys(errors).length, 0, "Valid form has no errors");
-
-    const newTask: SchoolTask = {
-      id: `task-integration-${Date.now()}`,
-      title: newFormData.title,
-      category: newFormData.category,
-      categoryLabel: "Chuyển đổi số",
-      leadAssigneeName: newFormData.leadAssigneeName,
-      coAssignees: newFormData.coAssignees,
-      assignedDate: "2026-09-04",
-      dueDate: newFormData.dueDate,
-      status: "IN_PROGRESS",
-      subTasks: [],
-      totalSubTasks: 0,
-      completedSubTasks: 0,
-      progressPercent: 0,
-    };
-
-    const updatedTasks = [newTask, ...payload.tasks];
-    const rolledUpTasks = updatedTasks.map((t) => computeSchoolTaskRollup(t));
-    const newStats = computeDashboardStats(rolledUpTasks);
-
-    assert.equal(
-      newStats.totalSchoolTasks,
-      initialSchoolCount + 1,
-      "Total school tasks count increments by 1"
-    );
-    assert.equal(rolledUpTasks[0].id, newTask.id);
-    assert.equal(rolledUpTasks[0].progressPercent, 0);
   });
 
   test("Task creation integration: new StaffTask links to SchoolTask and recalibrates progress", () => {
