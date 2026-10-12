@@ -54,7 +54,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
         <VaulDrawer.Overlay className="fixed inset-0 z-40 bg-overlay" />
         <VaulDrawer.Content
           aria-describedby={undefined}
-          className="fixed inset-y-0 left-0 z-50 flex w-[min(280px,calc(100vw-56px))] flex-col overflow-hidden rounded-r-sm bg-sidebar text-foreground shadow-dialog outline-none"
+          className="fixed inset-y-0 left-0 z-50 flex w-[min(330px,calc(100vw-60px))] flex-col overflow-hidden rounded-r-md bg-sidebar text-foreground shadow-dialog outline-none"
         >
           <VaulDrawer.Title className="sr-only">Menu điều hướng</VaulDrawer.Title>
 
