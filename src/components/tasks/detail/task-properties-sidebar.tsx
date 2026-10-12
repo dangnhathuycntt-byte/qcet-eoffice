@@ -15,6 +15,7 @@ import { computeDueStatus } from "@/domain/tasks/deadlines";
 import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { getTaskUnitId } from "@/lib/tasks/task-unit";
 import { TaskStatusSelect, TaskAssigneePicker, TaskPrioritySelect } from "./task-property-controls";
 import { PropertyRow } from "@/components/ui/property-row";
 import { UserAvatar, UserAvatarGroup } from "@/components/ui/user-avatar";
@@ -129,7 +130,7 @@ export function TaskPropertiesSidebar({
   const [isReassigning, setIsReassigning] = React.useState(false);
 
   // Shared personnel list via hook (replaces local useState + useEffect fetch)
-  const { personnel: personnelList } = usePersonnelList();
+  const { personnel: personnelList } = usePersonnelList({ departmentId: getTaskUnitId(task) });
 
   // Status normalization via canonical-semantics (replaces inline if/else chain)
   const normalizedStatus = normalizeDisplayStatus(task.status);

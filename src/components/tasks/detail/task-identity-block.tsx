@@ -6,6 +6,7 @@ import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { getTaskUnitId } from "@/lib/tasks/task-unit";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskSourceDocumentBadge } from "./task-source-document-badge";
 import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
@@ -69,7 +70,8 @@ export function TaskIdentityBlock({
     return map;
   }, [allowedTransitions]);
 
-  const { personnel: personnelList } = usePersonnelList();
+  // Đơn vị nào giao việc đơn vị đó: chỉ liệt kê cán bộ của đơn vị chủ trì
+  const { personnel: personnelList } = usePersonnelList({ departmentId: getTaskUnitId(task) });
 
   // isSchoolTask() có thể nhận nhầm nhiệm vụ đơn vị có mảng subTasks là cấp trường,
   // nên đọc cả hai nhóm trường như task-properties-sidebar để không hiện "Chưa phân công" sai.

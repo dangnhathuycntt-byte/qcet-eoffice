@@ -1594,6 +1594,9 @@ export class TaskDomainActionService {
     const authResult = await authorize(userContext, "task.reassign", resource);
     assertAuthAllowed(authResult, "task.reassign", taskId);
 
+    // Đơn vị nào giao việc đơn vị đó: người chủ trì mới phải thuộc đơn vị chủ trì (BGH và người được ủy quyền giao việc là ngoại lệ)
+    await assertCollaboratorInLeadUnit(session, task, validated.newAssigneeId);
+
     const result = await prisma.$transaction(async (tx) => {
       const primaryDRI = await setTaskDRI(
         taskId,

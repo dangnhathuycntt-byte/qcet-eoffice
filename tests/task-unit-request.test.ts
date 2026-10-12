@@ -109,6 +109,18 @@ describe('T-12 giao việc liên đơn vị qua trưởng đơn vị', () => {
     assert.equal(follower.changed, true, 'người theo dõi ở đơn vị khác vẫn thêm được');
   });
 
+  test('đổi người chủ trì chỉ trong đơn vị chủ trì: gọi API trực tiếp cũng không giao sang đơn vị khác', async () => {
+    const id = await makeTask('reassign');
+    let version = (await prisma.task.findUniqueOrThrow({ where: { id } })).version;
+    await assert.rejects(
+      taskDomainActionService.reassign(session('assigner'), id, { newAssigneeId: u.staffB, expectedVersion: version } as never),
+      code('CROSS_UNIT_REQUIRES_UNIT_HEAD')
+    );
+    assert.equal((await prisma.task.findUniqueOrThrow({ where: { id } })).version, version, 'bị chặn thì không đổi phiên bản');
+    const moved = await taskDomainActionService.reassign(session('assigner'), id, { newAssigneeId: u.staffA, expectedVersion: version } as never);
+    assert.equal(moved.newAssigneeId, u.staffA);
+  });
+
   test('chỉ người giao gửi yêu cầu; không gửi cho đơn vị chủ trì; một yêu cầu chờ mỗi đơn vị', async () => {
     const id = await makeTask('create');
     for (const key of ['dri', 'outsiderC', 'headB']) {

@@ -12,6 +12,7 @@ import { STATUS_OPTIONS } from "@/domain/tasks/display-config";
 import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { getTaskUnitId } from "@/lib/tasks/task-unit";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { markSelectionStartTarget } from "./block-selection-canvas";
 import { TaskBlockEditor } from "./task-block-editor";
@@ -74,7 +75,7 @@ export function SubtaskDetailDrawer({
 
   // Dropdown states
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const { personnel: personnelList } = usePersonnelList();
+  const { personnel: personnelList } = usePersonnelList({ departmentId: getTaskUnitId(subtask) });
 
   // FSM guard: compute allowed status transitions
   const actorContext = React.useMemo(() => buildActorContext(currentUser), [currentUser]);

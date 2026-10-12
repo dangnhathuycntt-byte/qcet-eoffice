@@ -531,28 +531,29 @@ export function TaskDetailPage({
 
   // Reassign Lead / DRI handler
   const handleReassignLead = React.useCallback(async (personId: string, personName: string) => {
+    // API reassign nhận đúng { newAssigneeId, expectedVersion } (schema strict), không nhận tên.
+    const expectedVersion = Number(taskVersionRef.current ?? 0);
     const res = await fetch(`/api/tasks/${taskIdRef.current}/actions/reassign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        newAssigneeId: personId,
-        newAssigneeName: personName,
-      }),
+      body: JSON.stringify({ newAssigneeId: personId, expectedVersion }),
     });
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => null);
       const errMsg =
-        errJson?.error?.message ||
-        errJson?.message ||
-        (res.status === 403
-          ? "Bạn không có quyền chuyển giao người phụ trách (403 Forbidden)"
-          : "Không thể chuyển giao người phụ trách. Vui lòng thử lại");
+        res.status === 412
+          ? "Nhiệm vụ vừa được người khác cập nhật. Vui lòng tải lại trang rồi thử lại."
+          : res.status === 403
+            ? "Bạn không có quyền chuyển giao người phụ trách"
+            : errJson?.error?.message || errJson?.message || "Không thể chuyển giao người phụ trách. Vui lòng thử lại";
       throw new Error(errMsg);
     }
 
     setTask((prev) => ({
       ...prev,
+      // Server tăng version khi đổi người chủ trì nhưng không trả lại: tự cộng để thao tác sau không bị 412
+      version: expectedVersion + 1,
       assignedTo: personName,
       leadAssigneeName: personName,
       leadAssigneeId: personId,

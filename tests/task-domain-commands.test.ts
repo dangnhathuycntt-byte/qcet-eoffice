@@ -186,6 +186,17 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
     });
     createdUserIds.push(newDriUser.id);
 
+    // Người chủ trì mới phải thuộc đơn vị chủ trì của nhiệm vụ (đơn vị nào giao việc đơn vị đó)
+    const assignNewDri = await prisma.positionAssignment.create({
+      data: {
+        userId: newDriUser.id,
+        positionDefinitionId: posDeptHeadDef.id,
+        unitId: orgUnit.id,
+        status: "ACTIVE",
+      },
+    });
+    createdAssignmentIds.push(assignNewDri.id);
+
     collaboratorUser = await prisma.user.create({
       data: {
         name: "Cán Bộ Phối Hợp Test",

@@ -36,6 +36,7 @@ import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { getTaskUnitId } from "@/lib/tasks/task-unit";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
 import { MENU_ROW_CLASS as ROW, MenuSubmenuTitle as SubmenuTitle } from "@/components/ui/menu";
@@ -226,11 +227,7 @@ export function TaskContextMenu({
   availableAssignees: availableAssigneesProp,
 }: TaskContextMenuProps) {
   // Đơn vị nào giao việc đơn vị đó: chỉ liệt kê cán bộ thuộc đơn vị chủ trì của nhiệm vụ
-  const taskUnit = task as { leadDepartmentId?: string; departmentId?: string; department?: unknown } | null;
-  const unitId =
-    taskUnit?.leadDepartmentId ??
-    taskUnit?.departmentId ??
-    (typeof taskUnit?.department === "object" ? (taskUnit.department as { id?: string } | null)?.id : undefined);
+  const unitId = getTaskUnitId(task);
   const { personnel: unitPersonnel } = usePersonnelList({ enabled: isOpen && !availableAssigneesProp && Boolean(unitId), departmentId: unitId });
   const availableAssignees = React.useMemo(
     () =>
