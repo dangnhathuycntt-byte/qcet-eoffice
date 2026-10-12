@@ -6,7 +6,6 @@ import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
-  ChevronsUpDown,
   User,
   Settings,
   Smartphone,
@@ -48,7 +47,7 @@ import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
 import { Pressable } from "@/components/ui/pressable";
-import { MENU_POPUP_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu";
+import { MENU_POPUP_CLASS, MenuActionItem } from "@/components/ui/menu";
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
   { ssr: false }
@@ -716,7 +715,7 @@ export function AppSidebar() {
           {/* ========================================================= */}
           {/* 3. SIDEBAR BOTTOM FOOTER: USER ACCOUNT PROFILE CARD       */}
           {/* ========================================================= */}
-          <div className="shrink-0 w-full p-2 mt-auto border-t border-border/40">
+          <div className="shrink-0 w-full px-2.5 pt-1.5 pb-2.5 mt-auto">
             <Menu.Root
               open={isProfileDropdownOpen && Boolean(user)}
               onOpenChange={(open) => setIsProfileDropdownOpen(open)}
@@ -725,39 +724,30 @@ export function AppSidebar() {
                 ref={accountTriggerRef}
                 type="button"
                 className={cn(
-                  "flex items-center transition-colors cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  "flex items-center transition-colors cursor-pointer text-left outline-none focus-visible:bg-sidebar-accent",
                   isCollapsed
-                    ? "size-10 mx-auto justify-center rounded-xl p-0"
-                    : "w-full gap-2.5 px-2 py-1.5 rounded-lg",
+                    ? "size-7 mx-auto justify-center rounded-sm p-0"
+                    : "w-full gap-2 px-2 h-7 rounded-sm",
                   isProfileDropdownOpen
-                    ? "bg-muted"
-                    : "hover:bg-muted/60"
+                    ? "bg-sidebar-accent"
+                    : "hover:bg-sidebar-accent/60"
                 )}
                 aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
+                title={userRoleLabel || undefined}
                 aria-expanded={isProfileDropdownOpen}
               >
                 <UserAvatar
                   name={formatDisplayName(user?.name)}
                   avatarUrl={user?.avatar}
                   size="sm"
-                  className="shrink-0 size-7"
+                  className="shrink-0"
                 />
 
                 {!isCollapsed && (
                   <>
-                    <div className="flex flex-col min-w-0 flex-1 leading-none gap-0.5">
-                      <span className="text-compact font-medium text-foreground truncate">
-                        {formatDisplayName(user?.name)}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {userRoleLabel}
-                      </span>
-                    </div>
-
-                    <ChevronsUpDown
-                      size={13}
-                      className="text-muted-foreground/50 shrink-0 ml-1"
-                    />
+                    <span className="min-w-0 flex-1 truncate text-compact text-foreground">
+                      {formatDisplayName(user?.name)}
+                    </span>
                   </>
                 )}
               </Menu.Trigger>
@@ -783,6 +773,9 @@ export function AppSidebar() {
                   >
                     {user && (
                       <div>
+                        {userRoleLabel ? (
+                          <div className="px-2 pb-1 pt-0.5 text-xs text-muted-foreground truncate">{userRoleLabel}</div>
+                        ) : null}
                         {isOfflineReadOnly && (
                           <div className="mb-1.5 p-1.5 rounded-md bg-warning/10 border border-warning/40 text-xs text-warning font-medium leading-relaxed">
                             Chế độ chỉ xem từ bộ nhớ tạm.
@@ -791,65 +784,31 @@ export function AppSidebar() {
 
                         {/* Menu Items */}
                         <div className="space-y-px">
-                          <Pressable
-                            onClick={() => {
-                              setIsProfileDropdownOpen(false);
-                              setIsProfileModalOpen(true);
-                            }}
-                            className={MENU_ROW_CLASS}
+                          <MenuActionItem leading={<User />} onClick={() => setIsProfileModalOpen(true)}>
+                            Hồ sơ cá nhân
+                          </MenuActionItem>
+                          <MenuActionItem leading={<Settings />} render={<Link href="/settings" />}>
+                            Cài đặt hệ thống
+                          </MenuActionItem>
+                          <MenuActionItem
+                            leading={<Smartphone />}
+                            onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-install-modal"))}
                           >
-                            <User className="size-4 text-muted-foreground" />
-                            <span>Hồ sơ cá nhân</span>
-                          </Pressable>
-
-                          <Link
-                            href="/settings"
-                            onClick={() => setIsProfileDropdownOpen(false)}
-                            className={MENU_ROW_CLASS}
+                            Cài đặt ứng dụng di động
+                          </MenuActionItem>
+                          <MenuActionItem
+                            leading={<HelpCircle />}
+                            onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-help-guide"))}
                           >
-                            <Settings className="size-4 text-muted-foreground" />
-                            <span>Cài đặt hệ thống</span>
-                          </Link>
-
-                          <Pressable
-                            onClick={() => {
-                              setIsProfileDropdownOpen(false);
-                              if (typeof window !== "undefined") {
-                                window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
-                              }
-                            }}
-                            className={MENU_ROW_CLASS}
-                          >
-                            <Smartphone className="size-4 text-muted-foreground" />
-                            <span>Cài đặt ứng dụng di động</span>
-                          </Pressable>
-
-                          <Pressable
-                            onClick={() => {
-                              setIsProfileDropdownOpen(false);
-                              if (typeof window !== "undefined") {
-                                window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
-                              }
-                            }}
-                            className={MENU_ROW_CLASS}
-                          >
-                            <HelpCircle className="size-4 text-muted-foreground" />
-                            <span>Trợ giúp &amp; Hướng dẫn</span>
-                          </Pressable>
+                            Trợ giúp &amp; Hướng dẫn
+                          </MenuActionItem>
                         </div>
 
                         {/* Logout */}
                         <div className="border-t border-border/40 pt-1 mt-1">
-                          <Pressable
-                            onClick={() => {
-                              setIsProfileDropdownOpen(false);
-                              logout();
-                            }}
-                            className={cn(MENU_ROW_CLASS, "text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10")}
-                          >
-                            <LogOut className="size-4" />
-                            <span>Đăng xuất</span>
-                          </Pressable>
+                          <MenuActionItem leading={<LogOut />} destructive onClick={() => logout()}>
+                            Đăng xuất
+                          </MenuActionItem>
                         </div>
                       </div>
                     )}
