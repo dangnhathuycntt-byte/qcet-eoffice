@@ -564,3 +564,34 @@ export function TaskIconBlockDivider(props: TaskActionIconProps) {
     </TaskActionSvg>
   );
 }
+
+/** Tìm kiếm (ba icon thanh công cụ dùng chung khung 12,5/19, tâm 9,5 để cân thị giác) */
+export function TaskIconSearch(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg {...props}>
+      <circle cx="8.25" cy="8.25" r="5" />
+      <path d="M11.9 11.9L15.75 15.75" />
+    </TaskActionSvg>
+  );
+}
+
+/** Bộ lọc: phễu */
+export function TaskIconFilter(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg {...props}>
+      <path d="M4.1 4H14.9A.75.75 0 0 1 15.47 5.24L11.35 9.98A1.5 1.5 0 0 0 11 10.94V15H8V10.94A1.5 1.5 0 0 0 7.65 9.98L3.53 5.24A.75.75 0 0 1 4.1 4Z" />
+    </TaskActionSvg>
+  );
+}
+
+/** Tùy chọn hiển thị: hai thanh trượt, núm viền */
+export function TaskIconDisplay(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg {...props}>
+      <path d="M3.25 6H4.75M8.75 6H15.75" />
+      <circle cx="6.75" cy="6" r="2" />
+      <path d="M3.25 13H10.25M14.25 13H15.75" />
+      <circle cx="12.25" cy="13" r="2" />
+    </TaskActionSvg>
+  );
+}
