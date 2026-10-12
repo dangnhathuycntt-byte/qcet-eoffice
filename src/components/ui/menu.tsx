@@ -7,6 +7,7 @@ import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { popoverVariants } from "@/lib/motion/variants";
 import { Pressable } from "@/components/ui/pressable";
+import { useVirtualKeyboard } from "@/hooks/use-virtual-keyboard";
 
 /** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
 export const MENU_ROW_CLASS =
@@ -22,11 +23,17 @@ export const MENU_POPUP_CLASS =
  * Positioner của Base UI ghi `position/top/left/transform` inline nên các lớp vị trí phải `!` mới thắng.
  */
 export const SHEET_BACKDROP_CLASS =
-  "fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none md:hidden";
+  "fixed inset-0 z-[55] bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none md:hidden";
 export const SHEET_POSITIONER_CLASS =
-  "max-md:fixed! max-md:inset-x-0! max-md:top-auto! max-md:bottom-0! max-md:transform-none! max-md:z-50";
+  "max-md:fixed! max-md:inset-x-0! max-md:top-auto! max-md:bottom-[var(--keyboard-height,0px)]! max-md:transform-none! max-md:z-[56]";
 export const SHEET_POPUP_CLASS =
-  "max-md:w-full! max-md:max-w-none! max-md:min-w-0! max-md:max-h-[80dvh]! max-md:overflow-y-auto max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-2 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+8px)] max-md:text-compact max-md:has-[[data-popup-open]]:invisible max-md:[&_[role=menuitem]]:h-10 max-md:[&_[role=menuitem]]:px-3 max-md:[&_[role=menuitem]]:text-compact";
+  "max-md:w-full! max-md:max-w-none! max-md:min-w-0! max-md:max-h-[calc(80dvh-var(--keyboard-height,0px))]! max-md:overflow-y-auto max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-2 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+8px)] max-md:text-compact max-md:has-[[data-popup-open]]:invisible max-md:[&_[role=menuitem]]:h-10 max-md:[&_[role=menuitem]]:px-3 max-md:[&_[role=menuitem]]:text-compact max-md:[&_[role=option]]:min-h-10 max-md:[&_[role=option]]:px-3 max-md:[&_[role=option]]:text-compact";
+
+/** Gắn vào sheet có ô nhập: khi bàn phím ảo mở, `--keyboard-height` nâng sheet lên trên bàn phím (iOS không co khung nhìn). */
+export function SheetKeyboardSync() {
+  useVirtualKeyboard();
+  return null;
+}
 
 /** Đầu bottom sheet (chỉ hiện trên điện thoại): thanh kéo, tiêu đề, nút quay lại khi đang ở menu con. */
 export function MenuSheetHeader({ title, onBack }: { title?: React.ReactNode; onBack?: () => void }) {

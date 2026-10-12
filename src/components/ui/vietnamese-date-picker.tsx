@@ -15,6 +15,7 @@ import {
 } from "@/lib/format/date";
 import { Popover } from "@base-ui/react/popover";
 import { fieldFocusRingClass, focusRingClass } from "@/components/ui/focus-ring";
+import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 export type DateGranularity = "day" | "month" | "quarter" | "half-year" | "year";
 
@@ -370,13 +371,16 @@ export function VietnameseDatePicker({
       {/* 2. Date Picker Popover Portal */}
 
       <Popover.Portal>
-      <Popover.Positioner className="z-50" side={side} align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
-      <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+      <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
+      <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side={side} align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
+      <Popover.Popup
         aria-label="Chọn ngày trên lịch"
-        className="w-[290px] p-4 text-foreground rounded-2xl border-0 bg-popover shadow-menu"
+        className="w-[290px] max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto p-4 text-foreground rounded-2xl border-0 bg-popover shadow-menu max-md:w-full! max-md:max-w-none! max-md:max-h-[80dvh]! max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-4 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+16px)]"
       >
+        {/* Điện thoại: thanh kéo + tiêu đề của sheet; desktop dùng nhãn nhỏ bên dưới */}
+        <MenuSheetHeader title={title || label || placeholder || "Chọn ngày"} />
         {/* Header Label */}
-        <div className="text-xs font-medium text-muted-foreground mb-1.5 px-0.5">
+        <div className="text-xs font-medium text-muted-foreground mb-1.5 px-0.5 max-md:hidden">
           {title || label || placeholder || "Chọn ngày"}
         </div>
 
@@ -419,7 +423,7 @@ export function VietnameseDatePicker({
               type="button"
               onClick={() => setMode(item.key)}
               className={cn(
-                "py-1 rounded-lg font-medium transition-colors text-center cursor-pointer select-none whitespace-nowrap flex items-center justify-center leading-none text-xs",
+                "py-1 max-md:py-2 rounded-lg font-medium transition-colors text-center cursor-pointer select-none whitespace-nowrap flex items-center justify-center leading-none text-xs",
                 item.key === "half-year" ? "px-2" : "flex-1 px-1.5",
                 mode === item.key
                   ? "bg-card text-foreground font-semibold"
@@ -448,21 +452,21 @@ export function VietnameseDatePicker({
                     setViewMonth(todayParts.month);
                   }}
                   title="Về tháng này"
-                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer mr-0.5"
+                  className="p-1 max-md:p-2.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer mr-0.5"
                 >
                   <ArrowRight className="size-3.5 -rotate-45" />
                 </button>
                 <button
                   type="button"
                   onClick={handlePrevMonth}
-                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  className="p-1 max-md:p-2.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="size-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={handleNextMonth}
-                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  className="p-1 max-md:p-2.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
                   <ChevronRight className="size-3.5" />
                 </button>
@@ -489,7 +493,7 @@ export function VietnameseDatePicker({
                   type="button"
                   onClick={() => handleSelectDate(cell.year, cell.month, cell.day)}
                   className={cn(
-                    "size-8 mx-auto flex items-center justify-center rounded-full text-xs transition-colors cursor-pointer",
+                    "size-8 max-md:size-10 mx-auto flex items-center justify-center rounded-full text-xs max-md:text-compact transition-colors cursor-pointer",
                     cell.isCurrentMonth
                       ? "text-foreground font-normal"
                       : "text-disabled",

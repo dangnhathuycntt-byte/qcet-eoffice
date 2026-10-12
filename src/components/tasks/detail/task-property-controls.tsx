@@ -51,8 +51,10 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
         <Select.Value>{() => <span>{selected?.label ?? value}</span>}</Select.Value>
       </Select.Trigger>
       <Select.Portal>
-        <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8} alignItemWithTrigger={false} collisionAvoidance={{ side: "none", align: "shift" }}>
-          <Select.Popup className={cn(propertyPopupClassName, "w-48 max-h-[var(--available-height)] overflow-y-auto")} style={propertyMotionStyle}>
+        <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
+        <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={8} alignItemWithTrigger={false} collisionAvoidance={{ side: "none", align: "shift" }}>
+          <Select.Popup className={cn(propertyPopupClassName, "w-48 max-h-[var(--available-height)] overflow-y-auto", SHEET_POPUP_CLASS)} style={propertyMotionStyle}>
+            <MenuSheetHeader title="Trạng thái" />
             <Select.List>
               {visibleOptions.map((option) => (
                 <Select.Item key={option.value} value={option.value} disabled={option.disabled} title={option.reason}
@@ -75,6 +77,7 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
 export type { PersonnelOption as TaskPersonnelOption } from "@/hooks/use-personnel-list";
 import type { PersonnelOption } from "@/hooks/use-personnel-list";
 import { Pressable } from "@/components/ui/pressable";
+import { MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, onSelect }: {
   items: PersonnelOption[];
@@ -112,15 +115,18 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
         <span className="truncate font-normal">{displayName}</span>
       </Combobox.Trigger>
       <Combobox.Portal>
-        <Combobox.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8}>
-          <Combobox.Popup className={cn(propertyPopupClassName, "w-64 max-w-[var(--available-width)]")} style={propertyMotionStyle}>
+        <Combobox.Backdrop className={SHEET_BACKDROP_CLASS} />
+        <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={8}>
+          <Combobox.Popup className={cn(propertyPopupClassName, "w-64 max-w-[var(--available-width)]", SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")} style={propertyMotionStyle}>
+            {open && <SheetKeyboardSync />}
+            <MenuSheetHeader title="Người phụ trách" />
             <Combobox.InputGroup className="m-1 border-b border-border/40 pb-1.5">
-              <Combobox.Input aria-label="Tìm cán bộ" placeholder="Tìm cán bộ..." className="h-8 w-full rounded-md bg-muted/40 px-2 text-xs outline-none focus:bg-background" />
+              <Combobox.Input aria-label="Tìm cán bộ" placeholder="Tìm cán bộ..." className="h-8 w-full rounded-md bg-muted/40 px-2 text-xs outline-none focus:bg-background max-md:h-10 max-md:px-3 max-md:text-base" />
             </Combobox.InputGroup>
             <Combobox.Empty>
               <div className="px-2 py-3 text-center text-xs text-muted-foreground">Không tìm thấy cán bộ phù hợp</div>
             </Combobox.Empty>
-            <Combobox.List className="max-h-60 overflow-y-auto overscroll-contain outline-none">
+            <Combobox.List className="max-h-60 overflow-y-auto overscroll-contain outline-none max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
               {(person) => (
                 <Combobox.Item key={person.id} value={person} className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs font-normal outline-none data-[highlighted]:bg-muted data-[selected]:bg-accent data-[selected]:font-medium">
                   <span className="flex min-w-0 items-center gap-2">
@@ -249,8 +255,10 @@ export function TaskPrioritySelect({ value, options, disabled, onValueChange }: 
         <Select.Value>{() => <span>{selected?.label ?? value}</span>}</Select.Value>
       </Select.Trigger>
       <Select.Portal>
-        <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8} alignItemWithTrigger={false} collisionAvoidance={{ side: "none", align: "shift" }}>
-          <Select.Popup className={cn(propertyPopupClassName, "w-44 max-h-[var(--available-height)] overflow-y-auto")} style={propertyMotionStyle}>
+        <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
+        <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={8} alignItemWithTrigger={false} collisionAvoidance={{ side: "none", align: "shift" }}>
+          <Select.Popup className={cn(propertyPopupClassName, "w-44 max-h-[var(--available-height)] overflow-y-auto", SHEET_POPUP_CLASS)} style={propertyMotionStyle}>
+            <MenuSheetHeader title="Ưu tiên" />
             <Select.List>
               {options.map((option) => (
                 <Select.Item key={option.value} value={option.value}

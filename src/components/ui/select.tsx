@@ -5,6 +5,7 @@ import { Select as BaseSelect } from "@base-ui/react/select";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fieldFocusRingClass } from "@/components/ui/focus-ring";
+import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 export interface SelectOption {
   value: string;
@@ -141,20 +142,23 @@ export function Select({
         </BaseSelect.Icon>
       </BaseSelect.Trigger>
       <BaseSelect.Portal>
+        <BaseSelect.Backdrop className={SHEET_BACKDROP_CLASS} />
         <BaseSelect.Positioner
           sideOffset={4}
           alignItemWithTrigger={false}
           collisionPadding={12}
-          className={cn("z-30 outline-none", positionerClassName)}
+          className={cn("z-30 outline-none", positionerClassName, SHEET_POSITIONER_CLASS)}
         >
           <BaseSelect.Popup
             className={cn(
               "min-w-[var(--anchor-width)] origin-[var(--transform-origin)] rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-popover-foreground shadow-menu outline-none",
               "transition-opacity duration-100 ease-out motion-reduce:transition-none",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+              SHEET_POPUP_CLASS,
               popupClassName,
             )}
           >
+            <MenuSheetHeader title={label ?? ariaLabel ?? placeholder} />
             <BaseSelect.List className="max-h-[var(--available-height)] overflow-y-auto">
               {groups.map(([group, list]) =>
                 group ? (
