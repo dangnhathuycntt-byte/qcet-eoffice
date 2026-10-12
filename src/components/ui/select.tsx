@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Select as BaseSelect } from "@base-ui/react/select";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fieldFocusRingClass } from "@/components/ui/focus-ring";
 import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
@@ -48,14 +48,11 @@ function renderItem(option: SelectOption, compact = false) {
       value={option.value}
       disabled={option.disabled}
       className={cn(
-        "grid cursor-pointer grid-cols-[1rem_1fr] items-center gap-2 rounded-lg px-2.5 text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "flex cursor-pointer items-center rounded-lg px-2.5 text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         compact ? "min-h-11 py-1 text-xs sm:min-h-7" : "py-2 text-sm sm:py-1.5",
       )}
     >
-      <BaseSelect.ItemIndicator className="col-start-1 text-primary">
-        <Check className={compact ? "size-3.5" : "size-4"} strokeWidth={compact ? 1.5 : undefined} />
-      </BaseSelect.ItemIndicator>
-      <BaseSelect.ItemText className="col-start-2 truncate">
+      <BaseSelect.ItemText className="min-w-0 truncate">
         {option.label}
       </BaseSelect.ItemText>
     </BaseSelect.Item>

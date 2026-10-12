@@ -75,7 +75,7 @@ export function SubtaskDetailDrawer({
 
   // Dropdown states
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const { personnel: personnelList } = usePersonnelList({ departmentId: getTaskUnitId(subtask) });
+  const { personnel: personnelList, isLoading: personnelLoading } = usePersonnelList({ departmentId: getTaskUnitId(subtask) });
 
   // FSM guard: compute allowed status transitions
   const actorContext = React.useMemo(() => buildActorContext(currentUser), [currentUser]);
@@ -493,6 +493,7 @@ export function SubtaskDetailDrawer({
 
             <TaskAssigneePicker
               items={personnelList}
+              loading={personnelLoading}
               assigneeId={(subtask as any).assigneeId}
               assigneeName={subtask.assigneeName}
               displayName={assigneeDisplay}

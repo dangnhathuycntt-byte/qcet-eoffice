@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Popover as BasePopover } from "@base-ui/react/popover";
 import { cn } from "@/lib/utils";
+import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 // Namespace re-export
 export const Popover = BasePopover;
@@ -44,6 +45,10 @@ export interface PopoverContentProps
   backdropClassName?: string;
   positionerClassName?: string;
   arrow?: boolean;
+  /** Điện thoại (< md): hiện thành bottom sheet bám đáy kèm lớp tối; từ md giữ popup neo. */
+  mobileSheet?: boolean;
+  /** Tiêu đề trên sheet (chỉ điện thoại). */
+  sheetTitle?: React.ReactNode;
 }
 
 /**
@@ -67,6 +72,8 @@ export const PopoverContent = React.forwardRef<
       backdropClassName,
       positionerClassName,
       arrow = false,
+      mobileSheet = false,
+      sheetTitle,
       children,
       ...props
     },
@@ -74,6 +81,7 @@ export const PopoverContent = React.forwardRef<
   ) => {
     return (
       <BasePopover.Portal>
+        {mobileSheet && <BasePopover.Backdrop className={SHEET_BACKDROP_CLASS} />}
         {showBackdrop && (
           <BasePopover.Backdrop
             className={cn(
@@ -88,7 +96,7 @@ export const PopoverContent = React.forwardRef<
           sideOffset={sideOffset}
           alignOffset={alignOffset}
           collisionPadding={collisionPadding}
-          className={cn("z-30 outline-none", positionerClassName)}
+          className={cn("z-30 outline-none", positionerClassName, mobileSheet && SHEET_POSITIONER_CLASS)}
         >
           <BasePopover.Popup
             ref={ref}
@@ -97,10 +105,12 @@ export const PopoverContent = React.forwardRef<
               "origin-[var(--transform-origin)] transition-opacity duration-100 ease-out",
               "data-[starting-style]:opacity-0",
               "data-[ending-style]:opacity-0",
+              mobileSheet && SHEET_POPUP_CLASS,
               className
             )}
             {...props}
           >
+            {mobileSheet && <MenuSheetHeader title={sheetTitle} />}
             {children}
             {arrow && (
               <BasePopover.Arrow className="fill-popover" />

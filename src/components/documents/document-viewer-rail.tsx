@@ -88,7 +88,7 @@ function SearchButton({ search }: { search: RailSearch }) {
           Tìm trong tệp
         </TooltipContent>
       </Tooltip>
-      <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-64 p-1.5">
+      <PopoverContent mobileSheet sheetTitle="Tìm trong tệp" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-64 p-1.5">
         <PopoverTitle className="sr-only">Tìm trong tệp</PopoverTitle>
         <div className="flex items-center gap-1">
           <input
@@ -195,7 +195,7 @@ function PageGroup({ pages }: { pages: RailPages }) {
             </>
           )}
         </PopoverTrigger>
-        <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-44 p-1.5">
+        <PopoverContent mobileSheet sheetTitle="Đi tới trang" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-44 p-1.5">
           <PopoverTitle className="sr-only">Đi tới trang</PopoverTitle>
           <PageJumpForm pages={pages} onDone={() => setOpen(false)} />
         </PopoverContent>
@@ -242,7 +242,7 @@ function ZoomMenu({ zoom, onZoomChange }: { zoom: number; onZoomChange: (zoom: n
           Thu phóng
         </TooltipContent>
       </Tooltip>
-      <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
+      <PopoverContent mobileSheet sheetTitle="Tỷ lệ so với vừa chiều rộng" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
         <PopoverTitle className="px-2 pb-1 pt-1.5 text-xs font-normal text-muted-foreground">Tỷ lệ so với vừa chiều rộng</PopoverTitle>
         <Pressable className={MENU_ITEM} disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
           <ZoomIn />
@@ -280,7 +280,7 @@ function ViewToolsMenu({ pages }: { pages: RailPages }) {
           Công cụ xem
         </TooltipContent>
       </Tooltip>
-      <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1.5">
+      <PopoverContent mobileSheet sheetTitle="Trang" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1.5">
         <PopoverTitle className="px-0.5 pb-1.5 text-xs font-normal text-muted-foreground">Trang</PopoverTitle>
         <div className="flex items-center gap-1">
           <Pressable aria-label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)} className={cn(RAIL_BUTTON, "size-7")}>
@@ -315,7 +315,7 @@ function DownloadMenu({ fileUrl, onDownload }: { fileUrl: string; onDownload: ()
           Tải về
         </TooltipContent>
       </Tooltip>
-      <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
+      <PopoverContent mobileSheet sheetTitle="Tải về hoặc mở tệp" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
         <PopoverTitle className="sr-only">Tải về hoặc mở tệp</PopoverTitle>
         <Pressable
           className={item}
@@ -400,7 +400,7 @@ export function FilesMenu({
           </TooltipContent>
         </Tooltip>
       )}
-      <PopoverContent
+      <PopoverContent mobileSheet sheetTitle="Chọn tệp đính kèm"
         side={variant === "labelled" ? "bottom" : "left"}
         align={variant === "labelled" ? "end" : "center"}
         sideOffset={variant === "labelled" ? 4 : 8}

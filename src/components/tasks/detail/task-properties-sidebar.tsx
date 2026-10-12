@@ -130,7 +130,7 @@ export function TaskPropertiesSidebar({
   const [isReassigning, setIsReassigning] = React.useState(false);
 
   // Shared personnel list via hook (replaces local useState + useEffect fetch)
-  const { personnel: personnelList } = usePersonnelList({ departmentId: getTaskUnitId(task) });
+  const { personnel: personnelList, isLoading: personnelLoading } = usePersonnelList({ departmentId: getTaskUnitId(task) });
 
   // Status normalization via canonical-semantics (replaces inline if/else chain)
   const normalizedStatus = normalizeDisplayStatus(task.status);
@@ -382,6 +382,7 @@ export function TaskPropertiesSidebar({
           <PropertyRow label="Phụ trách" interactive={canEdit}>
             <TaskAssigneePicker
               items={personnelList}
+              loading={personnelLoading}
               assigneeId={anyTask.leadAssigneeId || anyTask.assigneeId}
               assigneeName={leadName}
               assigneeAvatarUrl={leadAvatar}

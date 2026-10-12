@@ -71,7 +71,7 @@ export function TaskIdentityBlock({
   }, [allowedTransitions]);
 
   // Đơn vị nào giao việc đơn vị đó: chỉ liệt kê cán bộ của đơn vị chủ trì
-  const { personnel: personnelList } = usePersonnelList({ departmentId: getTaskUnitId(task) });
+  const { personnel: personnelList, isLoading: personnelLoading } = usePersonnelList({ departmentId: getTaskUnitId(task) });
 
   // isSchoolTask() có thể nhận nhầm nhiệm vụ đơn vị có mảng subTasks là cấp trường,
   // nên đọc cả hai nhóm trường như task-properties-sidebar để không hiện "Chưa phân công" sai.
@@ -167,6 +167,7 @@ export function TaskIdentityBlock({
         {/* Người phụ trách — @base-ui/react Combobox */}
         <TaskAssigneePicker
           items={personnelList}
+          loading={personnelLoading}
           assigneeId={(task as any).leadAssigneeId}
           assigneeName={leadName}
           displayName={leadName}

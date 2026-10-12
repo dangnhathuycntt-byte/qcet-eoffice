@@ -224,7 +224,7 @@ export function DetailsPopover({ rows, title = "Chi tiết văn bản" }: { rows
         Chi tiết
         <ChevronDown className="size-3" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={4} positionerClassName="z-[60]" className="z-[60] w-64 p-3">
+      <PopoverContent mobileSheet sheetTitle={title} align="start" sideOffset={4} positionerClassName="z-[60]" className="z-[60] w-64 p-3">
         <PopoverTitle className="sr-only">{title}</PopoverTitle>
         <dl className="text-xs">
           {visible.map((row) => (

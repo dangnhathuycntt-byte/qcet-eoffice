@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
-import { Check, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   TaskIconAssignee,
   TaskIconDeadline,
@@ -63,7 +63,6 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
                     <TaskStatusCircle status={option.value} />
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>
@@ -79,7 +78,7 @@ import type { PersonnelOption } from "@/hooks/use-personnel-list";
 import { Pressable } from "@/components/ui/pressable";
 import { MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
-export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, onSelect }: {
+export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, loading, onSelect }: {
   items: PersonnelOption[];
   assigneeId?: string;
   assigneeName?: string;
@@ -87,6 +86,8 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
   displayName: string;
   disabled?: boolean;
   pending?: boolean;
+  /** Danh sách cán bộ đang tải: hiện "Đang tải…" thay vì "Không tìm thấy" */
+  loading?: boolean;
   onSelect: (person: PersonnelOption) => Promise<void>;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -124,7 +125,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
               <Combobox.Input aria-label="Tìm cán bộ" placeholder="Tìm cán bộ..." className="h-8 w-full rounded-md bg-muted/40 px-2 text-xs outline-none focus:bg-background max-md:h-10 max-md:px-3 max-md:text-base" />
             </Combobox.InputGroup>
             <Combobox.Empty>
-              <div className="px-2 py-3 text-center text-xs text-muted-foreground">Không tìm thấy cán bộ phù hợp</div>
+              <div className="px-2 py-3 text-center text-xs text-muted-foreground">{loading ? "Đang tải danh sách cán bộ…" : "Không tìm thấy cán bộ phù hợp"}</div>
             </Combobox.Empty>
             <Combobox.List className="max-h-60 overflow-y-auto overscroll-contain outline-none max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
               {(person) => (
@@ -136,7 +137,6 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
                       {person.departmentName && <span className="block truncate text-xs text-muted-foreground">{person.departmentName}</span>}
                     </span>
                   </span>
-                  <Combobox.ItemIndicator><Check className="size-3.5 text-foreground" /></Combobox.ItemIndicator>
                 </Combobox.Item>
               )}
             </Combobox.List>
@@ -267,7 +267,6 @@ export function TaskPrioritySelect({ value, options, disabled, onValueChange }: 
                     {React.createElement(PRIORITY_ICONS[option.value] ?? TaskIconPriorityNormal, { className: cn("size-4", PRIORITY_ICON_COLOR[option.value] ?? "text-muted-foreground") })}
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>

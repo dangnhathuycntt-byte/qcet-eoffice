@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Combobox as BaseCombobox } from "@base-ui/react/combobox";
-import { Check, ChevronDown, X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import * as m from "motion/react-m";
@@ -117,12 +117,9 @@ export function Combobox({
                 <BaseCombobox.Item
                   key={item.value}
                   value={item}
-                  className="grid h-7 cursor-pointer grid-cols-[1rem_1fr] items-center gap-2 rounded-md px-2 text-xs text-foreground outline-none select-none data-[highlighted]:bg-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  className="flex h-7 cursor-pointer items-center rounded-md px-2 text-xs text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
                 >
-                  <BaseCombobox.ItemIndicator className="col-start-1 text-primary">
-                    <Check className="size-3.5" />
-                  </BaseCombobox.ItemIndicator>
-                  <span className="col-start-2 block min-w-0 truncate">{item.label}</span>
+                  <span className="block min-w-0 truncate">{item.label}</span>
                 </BaseCombobox.Item>
               )}
             </BaseCombobox.List>
