@@ -37,7 +37,7 @@ import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-di
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
-import { MENU_ROW_CLASS as ROW } from "@/components/ui/menu";
+import { MENU_ROW_CLASS as ROW, MenuSubmenuTitle as SubmenuTitle } from "@/components/ui/menu";
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return <kbd className="font-sans text-xs tabular-nums text-muted-foreground/80">{children}</kbd>;
@@ -126,10 +126,6 @@ function SubmenuRow({
       ) : null}
     </div>
   );
-}
-
-function SubmenuTitle({ children }: { children: React.ReactNode }) {
-  return <div className="px-2 pt-1 pb-1 text-xs text-muted-foreground select-none">{children}</div>;
 }
 
 /** Hàng lựa chọn trong menu con: [leading] nhãn · gợi ý · dấu chọn. */

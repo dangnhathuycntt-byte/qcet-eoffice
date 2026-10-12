@@ -48,8 +48,9 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 // ============================================================================
 
 const COLORS_GRAY: Array<[string, string, string, string]> = [
-  ["Bậc 1 · bg-app", "--gray-1", "#FAFBFC", "Nền trang"],
-  ["Bậc 2 · bg-panel", "--gray-2", "#FFFFFF", "Panel, hộp thoại, menu"],
+  ["Bậc 0 · bg-raised", "--gray-0", "#FFFFFF", "Nút, ô nhập nổi, popover, menu"],
+  ["Bậc 1 · bg-app", "--gray-1", "#EFEFF0", "Canvas ngoài: sidebar, viền quanh thẻ"],
+  ["Bậc 2 · bg-panel", "--gray-2", "#F9F9FA", "Thẻ nội dung, bảng"],
   ["Bậc 3 · bg-control", "--gray-3", "#F2F4F7", "Ô nhập, nút phụ, chip"],
   ["Bậc 4 · bg-hover", "--gray-4", "#EAEDF1", "Di chuột dòng, nút"],
   ["Bậc 5 · bg-selected", "--accent-3", "#E1EBF8", "Dòng đang chọn, tiêu điểm"],

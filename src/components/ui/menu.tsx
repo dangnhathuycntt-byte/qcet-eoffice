@@ -10,7 +10,7 @@ export const MENU_ROW_CLASS =
 
 /** Khung popup menu: bo góc theo token, không viền, bóng menu */
 export const MENU_POPUP_CLASS =
-  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-micro)] ease-out data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none";
+  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] animate-in fade-in-0 zoom-in-95 duration-100 motion-reduce:animate-none";
 
 // Namespace re-export
 export const Menu = BaseMenu;
@@ -55,6 +55,121 @@ export const MenuRadioGroup = BaseMenu.RadioGroup;
 export const MenuRadioItem = BaseMenu.RadioItem;
 export const MenuSubmenuRoot = BaseMenu.SubmenuRoot;
 export const MenuSubmenuTrigger = BaseMenu.SubmenuTrigger;
+
+/** Tiêu đề nhỏ ở đầu menu con ("Độ ưu tiên", "Hạn hoàn thành"…). */
+export function MenuSubmenuTitle({ children }: { children: React.ReactNode }) {
+  return <div className="px-2 pt-1 pb-1 text-xs text-muted-foreground select-none">{children}</div>;
+}
+
+/** Ô icon 16px dẫn đầu hàng menu, để mọi hàng thẳng cột dù icon lớn nhỏ khác nhau. */
+function MenuRowLeading({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      data-slot="menu-leading"
+      className="flex size-4 shrink-0 items-center justify-center text-muted-foreground [&_svg:not([class*='size-'])]:size-4"
+    >
+      {children}
+    </span>
+  );
+}
+
+export interface MenuOptionItemProps extends React.ComponentPropsWithoutRef<typeof BaseMenu.Item> {
+  /** Icon dẫn đầu (16px). */
+  leading?: React.ReactNode;
+  /** Gợi ý bên phải: số lượng, ngày, giá trị đang chọn. */
+  hint?: React.ReactNode;
+  /** Phím tắt hiển thị bên phải. */
+  shortcut?: React.ReactNode;
+  /** Đang chọn: nền accent, chữ đậm, không dấu tick. */
+  selected?: boolean;
+  /** Thao tác xóa/nguy hiểm: chữ và nền hover màu destructive. */
+  destructive?: boolean;
+}
+
+/**
+ * Hàng trong menu/popover: [icon] nhãn · gợi ý · phím tắt.
+ * Chuẩn chung: hàng 28px, chữ 12px, đang chọn = nền accent + chữ đậm (không tick, không ô tích).
+ * Là hàng chọn giá trị nên bấm không đóng menu (chọn nhiều giá trị liên tiếp); hàng thao tác dùng `MenuActionItem`.
+ */
+export const MenuOptionItem = React.forwardRef<HTMLDivElement, MenuOptionItemProps>(
+  ({ leading, hint, shortcut, selected, destructive, className, children, closeOnClick = false, ...props }, ref) => (
+    <BaseMenu.Item
+      ref={ref}
+      closeOnClick={closeOnClick}
+      aria-current={selected ? "true" : undefined}
+      className={cn(
+        MENU_ROW_CLASS,
+        "whitespace-nowrap data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        selected && "bg-accent font-medium",
+        destructive && "text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10 [&_[data-slot=menu-leading]]:text-destructive",
+        className
+      )}
+      {...props}
+    >
+      {leading ? <MenuRowLeading>{leading}</MenuRowLeading> : null}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {hint ? <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground/80">{hint}</span> : null}
+      {shortcut ? <kbd className="shrink-0 font-sans text-xs font-normal tabular-nums text-muted-foreground/80">{shortcut}</kbd> : null}
+    </BaseMenu.Item>
+  )
+);
+MenuOptionItem.displayName = "MenuOptionItem";
+
+/** Hàng thao tác (Sửa, In, Xóa…): cùng diện mạo `MenuOptionItem` nhưng bấm xong thì đóng menu. */
+export const MenuActionItem = React.forwardRef<HTMLDivElement, MenuOptionItemProps>(
+  ({ closeOnClick = true, ...props }, ref) => <MenuOptionItem ref={ref} closeOnClick={closeOnClick} {...props} />
+);
+MenuActionItem.displayName = "MenuActionItem";
+
+export interface MenuSubmenuProps {
+  /** Icon dẫn đầu của hàng mở menu con (16px). */
+  icon?: React.ReactNode;
+  label: React.ReactNode;
+  /** Gợi ý bên phải hàng: số bộ lọc đang bật, giá trị đang chọn. */
+  hint?: React.ReactNode;
+  /** Đang có giá trị được chọn bên trong: nhãn đậm. */
+  active?: boolean;
+  /** Tiêu đề trong menu con. */
+  title?: React.ReactNode;
+  /** Lớp bổ sung cho khung menu con (độ rộng, chiều cao tối đa). */
+  popupClassName?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Hàng mở menu con thả sang trái: rê chuột là mở ngay (delay 0), đóng sau 80ms.
+ * Không mũi tên; hàng mở có nền accent. Dùng chung cho mọi bộ lọc nhiều cấp.
+ */
+export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, children }: MenuSubmenuProps) {
+  return (
+    <BaseMenu.SubmenuRoot>
+      <BaseMenu.SubmenuTrigger
+        openOnHover
+        delay={0}
+        closeDelay={80}
+        className={cn(MENU_ROW_CLASS, "group select-none data-[popup-open]:bg-accent")}
+      >
+        {icon ? <MenuRowLeading>{icon}</MenuRowLeading> : null}
+        <span className={cn("min-w-0 flex-1 truncate", active && "font-medium")}>{label}</span>
+        {hint ? <span className="max-w-24 shrink-0 truncate text-xs tabular-nums text-muted-foreground/80">{hint}</span> : null}
+      </BaseMenu.SubmenuTrigger>
+      <BaseMenu.Portal>
+        <BaseMenu.Positioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+          <BaseMenu.Popup
+            className={cn(
+              MENU_POPUP_CLASS,
+              "w-auto min-w-[176px] max-w-[320px] max-h-[min(26rem,var(--available-height))] overflow-y-auto",
+              popupClassName
+            )}
+          >
+            {title ? <MenuSubmenuTitle>{title}</MenuSubmenuTitle> : null}
+            {children}
+          </BaseMenu.Popup>
+        </BaseMenu.Positioner>
+      </BaseMenu.Portal>
+    </BaseMenu.SubmenuRoot>
+  );
+}
 
 export interface MenuContentProps
   extends React.ComponentPropsWithoutRef<typeof BaseMenu.Popup> {
@@ -112,13 +227,7 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
         >
           <BaseMenu.Popup
             ref={ref}
-            className={cn(
-              "z-30 min-w-[12rem] rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-popover-foreground shadow-menu outline-none motion-reduce:transition-none",
-              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-micro)] ease-out",
-              "data-[starting-style]:opacity-0",
-              "data-[ending-style]:opacity-0",
-              className
-            )}
+            className={cn(MENU_POPUP_CLASS, "min-w-[12rem]", className)}
             {...props}
           >
             {children}
@@ -133,129 +242,3 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
 );
 
 MenuContent.displayName = "MenuContent";
-
-export interface StandardMenuItem {
-  id: string;
-  label: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  onClick?: () => void;
-  disabled?: boolean;
-  destructive?: boolean;
-  separator?: boolean;
-}
-
-export interface StandardMenuProps {
-  trigger: React.ReactNode;
-  items: StandardMenuItem[];
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  align?: "start" | "center" | "end";
-  side?: "top" | "bottom" | "left" | "right";
-  sideOffset?: number;
-  alignOffset?: number;
-  collisionPadding?: number;
-  showBackdrop?: boolean;
-  backdropClassName?: string;
-  positionerClassName?: string;
-  popupClassName?: string;
-  className?: string;
-  arrow?: boolean;
-  modal?: boolean;
-}
-
-/**
- * StandardMenu convenient component built over `@base-ui/react/menu`.
- * Provides accessible menu trigger, floating positioning, collision avoidance,
- * keyboard navigation, WAI-ARIA Menu role, and rich item rendering.
- */
-export function StandardMenu({
-  trigger,
-  items,
-  open,
-  defaultOpen,
-  onOpenChange,
-  align = "start",
-  side = "bottom",
-  sideOffset = 4,
-  alignOffset = 0,
-  collisionPadding = 12,
-  showBackdrop = false,
-  backdropClassName,
-  positionerClassName,
-  popupClassName,
-  className,
-  arrow = false,
-  modal = true,
-}: StandardMenuProps) {
-  return (
-    <BaseMenu.Root
-      open={open}
-      defaultOpen={defaultOpen}
-      onOpenChange={onOpenChange}
-      modal={modal}
-    >
-      <BaseMenu.Trigger
-        render={React.isValidElement(trigger) ? trigger : <span>{trigger}</span>}
-      />
-      <BaseMenu.Portal>
-        {showBackdrop && (
-          <BaseMenu.Backdrop
-            className={cn(
-              "fixed inset-0 z-40 bg-black/20 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none",
-              backdropClassName
-            )}
-          />
-        )}
-        <BaseMenu.Positioner
-          side={side}
-          align={align}
-          sideOffset={sideOffset}
-          alignOffset={alignOffset}
-          collisionPadding={collisionPadding}
-          className={cn("z-50 outline-none", positionerClassName)}
-        >
-          <BaseMenu.Popup
-            className={cn(
-              "z-50 min-w-[12rem] rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-popover-foreground shadow-menu outline-none motion-reduce:transition-none",
-              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-micro)] ease-out",
-              "data-[starting-style]:opacity-0",
-              "data-[ending-style]:opacity-0",
-              popupClassName,
-              className
-            )}
-          >
-            {items.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <React.Fragment key={item.id || index}>
-                  {item.separator && index > 0 && (
-                    <BaseMenu.Separator className="-mx-1 my-1 h-px bg-border" />
-                  )}
-                  <BaseMenu.Item
-                    disabled={item.disabled}
-                    onClick={item.onClick}
-                    className={cn(
-                      "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none",
-                      "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
-                      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-                      "focus-visible:bg-accent focus-visible:text-accent-foreground",
-                      item.destructive &&
-                        "text-destructive data-[highlighted]:bg-danger-soft data-[highlighted]:text-destructive focus-visible:bg-danger-soft focus-visible:text-destructive"
-                    )}
-                  >
-                    {Icon && <Icon className="h-4 w-4 shrink-0" />}
-                    <span className="flex-1 truncate">{item.label}</span>
-                  </BaseMenu.Item>
-                </React.Fragment>
-              );
-            })}
-            {arrow && (
-              <BaseMenu.Arrow className="fill-popover" />
-            )}
-          </BaseMenu.Popup>
-        </BaseMenu.Positioner>
-      </BaseMenu.Portal>
-    </BaseMenu.Root>
-  );
-}

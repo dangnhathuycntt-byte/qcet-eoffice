@@ -50,6 +50,7 @@ import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
+import { MenuActionItem, MenuContent, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 
 // ExecutiveCalendarWorkspace compatibility and canonical workspace integration
 export type { CalendarScope };
@@ -222,8 +223,6 @@ function CalendarRouteContent({
   }, [selectedDate, sysDate, currentPeriod.label]);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<SchoolTask | StaffTask | null>(null);
-  const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
-  const createDropdownRef = useRef<HTMLDivElement>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [createInitialDueDate, setCreateInitialDueDate] = useState<string | undefined>(undefined);
@@ -239,7 +238,6 @@ function CalendarRouteContent({
 
   useDismissOnOutside(isFilterOpen, [filterDropdownRef], () => setIsFilterOpen(false));
   useDismissOnOutside(isSecondaryOpen, [secondaryRef], () => setIsSecondaryOpen(false));
-  useDismissOnOutside(isCreateDropdownOpen, [createDropdownRef], () => setIsCreateDropdownOpen(false));
 
   const updateUrlParam = useCallback((key: string, value: string | null) => {
     if (typeof window === "undefined") return;
@@ -642,30 +640,27 @@ function CalendarRouteContent({
         </h1>
 
         {/* + Tạo dropdown */}
-        <div className="relative shrink-0" ref={createDropdownRef}>
-          <button
-            type="button"
-            onClick={() => setIsCreateDropdownOpen((previous) => !previous)}
-            aria-expanded={isCreateDropdownOpen}
-            aria-haspopup="true"
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
+        <MenuRoot>
+          <MenuTrigger
+            render={
+              <button
+                type="button"
+                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
+              />
+            }
           >
             <Plus className="size-3.5 shrink-0 text-muted-foreground" />
             <span>Tạo</span>
-          </button>
-          {isCreateDropdownOpen && (
-            <div role="menu" className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-30 animate-in fade-in zoom-in-95 duration-150 text-xs text-popover-foreground">
-              <Pressable role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left transition-colors">
-                <CheckSquare className="size-3.5 text-muted-foreground shrink-0" />
-                Tạo công việc
-              </Pressable>
-              <Pressable role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left transition-colors">
-                <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
-                Tạo sự kiện
-              </Pressable>
-            </div>
-          )}
-        </div>
+          </MenuTrigger>
+          <MenuContent align="end" sideOffset={6} className="w-44 min-w-0">
+            <MenuActionItem leading={<CheckSquare />} onClick={() => handleOpenAddTask()}>
+              Tạo công việc
+            </MenuActionItem>
+            <MenuActionItem leading={<CalendarIcon />} onClick={() => handleOpenAddEvent()}>
+              Tạo sự kiện
+            </MenuActionItem>
+          </MenuContent>
+        </MenuRoot>
       </div>
 
       {/* Primary calendar chrome — exactly 1 row */}

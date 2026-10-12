@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Calendar,
-  Check,
   CheckCheck,
   ListFilter,
   Mail,
@@ -21,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { TaskStatusIcon } from "@/components/ui/task-status-icon";
 import { PriorityIndicator } from "@/components/ui/priority-indicator";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
+import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
 import { getStatusLabel } from "@/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
 import { InkIllustration, type IllustrationName } from "@/components/ui/empty-state";
@@ -66,9 +65,6 @@ const CATEGORY_OPTIONS: { id: NotificationTriageTab; label: string }[] = [
   { id: "action_required", label: "Việc cần làm" },
   { id: "reminders", label: "Nhắc hạn" },
 ];
-
-const MENU_ITEM_CLASS =
-  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs outline-none data-[highlighted]:bg-accent data-[disabled]:cursor-default data-[disabled]:opacity-50";
 
 function parseCategory(value: string | null): NotificationTriageTab {
   const tab = parseTriageTab(value);
@@ -547,19 +543,17 @@ export function InboxView() {
                 <MoreHorizontal />
               </MenuTrigger>
               <MenuContent align="start" className="w-60">
-                <MenuItem
+                <MenuActionItem
                   disabled={!unreadCount || isMarkingAll || pendingIds.size > 0}
                   onClick={() => void markAllRead()}
-                  className={MENU_ITEM_CLASS}
+                  leading={<CheckCheck />}
                 >
-                  <CheckCheck size={14} className="shrink-0 text-muted-foreground" />
-                  <span className="flex-1">Đánh dấu tất cả đã đọc</span>
-                </MenuItem>
+                  Đánh dấu tất cả đã đọc
+                </MenuActionItem>
                 <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
-                <MenuItem onClick={() => void loadList("refresh")} className={MENU_ITEM_CLASS}>
-                  <RotateCcw size={14} className="shrink-0 text-muted-foreground" />
-                  <span className="flex-1">Làm mới</span>
-                </MenuItem>
+                <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
+                  Làm mới
+                </MenuActionItem>
               </MenuContent>
             </MenuRoot>
 
@@ -592,23 +586,19 @@ export function InboxView() {
                   <ListFilter />
                 </MenuTrigger>
                 <MenuContent align="end" className="w-56">
-                  <MenuItem
+                  <MenuActionItem
+                    selected={readFilter === "unread"}
+                    leading={<MailOpen />}
+                    hint={unreadCount !== null ? unreadCount : undefined}
                     onClick={() => navigate({ filter: readFilter === "unread" ? "all" : "unread" })}
-                    className={MENU_ITEM_CLASS}
                   >
-                    <MailOpen size={14} className="shrink-0 text-muted-foreground" />
-                    <span className="flex-1">Chỉ chưa đọc</span>
-                    {unreadCount !== null && (
-                      <span className="tabular-nums text-muted-foreground">{unreadCount}</span>
-                    )}
-                    {readFilter === "unread" && <Check size={14} className="shrink-0" />}
-                  </MenuItem>
-                  <div role="separator" className="-mx-1 my-1 h-px bg-border" />
+                    Chỉ chưa đọc
+                  </MenuActionItem>
+                  <MenuSeparator className="my-1 border-t border-border/40" />
                   {CATEGORY_OPTIONS.map((opt) => (
-                    <MenuItem key={opt.id} onClick={() => navigate({ category: opt.id })} className={MENU_ITEM_CLASS}>
-                      <span className="flex-1 pl-[22px]">{opt.label}</span>
-                      {category === opt.id && <Check size={14} className="shrink-0" />}
-                    </MenuItem>
+                    <MenuActionItem key={opt.id} selected={category === opt.id} onClick={() => navigate({ category: opt.id })}>
+                      {opt.label}
+                    </MenuActionItem>
                   ))}
                 </MenuContent>
               </MenuRoot>

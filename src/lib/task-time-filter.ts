@@ -14,6 +14,7 @@ export function getTaskTimeFilterLabel(filter: TaskTimeFilter): string {
   if (filter.kind === "month") return `Tháng ${filter.month}`;
   if (filter.kind === "range") {
     const short = (value: string) => `${value.slice(8, 10)}/${value.slice(5, 7)}`;
+    if (filter.from === filter.to) return short(filter.from);
     return `${short(filter.from)}–${short(filter.to)}`;
   }
   if (filter.kind === "preset") {

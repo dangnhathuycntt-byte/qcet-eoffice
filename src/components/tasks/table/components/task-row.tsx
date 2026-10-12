@@ -22,7 +22,6 @@ import {
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
-import { getTaskContentPreview } from "@/lib/task-content-preview";
 import { getCategoryBadgeConfig, TASK_COLUMN_CLASS } from "../constants";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -300,11 +299,6 @@ export const TaskRow = React.memo(function TaskRow({
 
   const rawCode = task.code || task.taskCode || `NV-${task.id.slice(0, 4)}`;
   const taskCode = rawCode.replace(/[–—–—]/g, "-");
-  // Mô tả là JSON khối; chỉ parse lại khi mô tả đổi, không phải mỗi lần hàng render.
-  const descriptionPreview = React.useMemo(
-    () => getTaskContentPreview(task.description).replace(/\s*\n\s*/g, " "),
-    [task.description]
-  );
   const statusLabel =
     task.status === "COMPLETED"
       ? "Hoàn thành"
@@ -478,14 +472,6 @@ export const TaskRow = React.memo(function TaskRow({
                 </span>
               )}
             </div>
-            {descriptionPreview && (
-              <span
-                className="block truncate text-xs font-normal text-muted-foreground"
-                title={descriptionPreview}
-              >
-                {descriptionPreview}
-              </span>
-            )}
           </div>
         </div>
         {/* Nút thao tác: hiện khi rê chuột / focus dòng; màn cảm ứng luôn hiện vì không có hover */}

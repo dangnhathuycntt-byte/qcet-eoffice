@@ -44,7 +44,8 @@
   | Ô nhập, nhiều dòng, chọn, tích | `Input`, `Textarea`, `Select`, `Checkbox` |
   | Ngày; người nhận việc | `VietnameseDatePicker`; `TaskAssigneePicker` (`tasks/detail/task-property-controls`) |
   | Toolbar, ô tìm, hàng bộ lọc trang danh sách | `list-toolbar` (`ListToolbarSearch`…), `ActiveFilterBar` |
-  | Hộp thoại; xác nhận xóa; popover, menu | `Dialog`; `DestructiveConfirmDialog`; `Popover`, `Menu` |
+  | Hộp thoại; xác nhận xóa; popover | `Dialog`; `DestructiveConfirmDialog`; `Popover` |
+  | Menu thao tác, menu lọc nhiều cấp | `ui/menu`: `MENU_POPUP_CLASS`, `MenuActionItem` (thao tác, đóng khi bấm), `MenuOptionItem` (chọn giá trị, giữ mở), `MenuSubmenu`; bộ lọc trang danh sách: `ListToolbarFilterPopover`. Đang chọn = nền accent + chữ đậm, không tick/ô tích/mũi tên |
   | Rỗng; thông báo trong trang; avatar; tooltip | `EmptyState`; `InlineAlert`; `UserAvatar`; `Tooltip` |
   | Màu tín hiệu | `text-destructive`, `bg-danger-soft`, `bg-destructive/10`; `text-warning`, `bg-warning/10` |
   | Cỡ chữ | `text-xs`, `text-compact`, `text-sm`… (thang ở `DESIGN.md`) |

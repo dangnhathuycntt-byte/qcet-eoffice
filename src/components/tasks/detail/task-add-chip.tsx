@@ -5,6 +5,7 @@ import { Building2, CalendarClock, ClipboardCheck, GitBranch, Plus, ShieldCheck,
 import { Popover } from "@base-ui/react/popover";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
+import { MENU_POPUP_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu";
 
 const CHIP_CLASS = cn(
   "order-last inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors",
@@ -12,16 +13,14 @@ const CHIP_CLASS = cn(
   "data-[popup-open]:bg-accent data-[popup-open]:text-foreground",
 );
 
-// Bo góc lồng nhau: vỏ rounded-lg (14px) − đệm 6px = bo mục 8px (rounded-sm). Bóng dùng token menu, không dùng shadow-2xl.
-const MENU_CLASS = "w-60 rounded-lg border border-border bg-popover p-1.5 shadow-menu outline-none";
+// Menu "+ Thêm" dùng khung và hàng chuẩn của ui/menu.
+const MENU_CLASS = cn(MENU_POPUP_CLASS, "w-60");
 // Ô nhập trong popover giữ nền xám trung tính khi focus (không chuyển xanh), viền focus mảnh: popover yên, ít màu.
 const PANEL_CLASS = cn(
   "w-64 overflow-y-auto rounded-lg border border-border bg-popover p-3 shadow-menu outline-none",
   "[&_:is(textarea,input,button[aria-haspopup]):focus-visible]:bg-secondary [&_[data-popup-open]]:bg-secondary",
 );
 const PANEL_TITLE_CLASS = "mb-2 text-xs font-medium text-foreground";
-const MENU_ITEM_CLASS =
-  "flex h-7 w-full cursor-pointer items-center gap-2.5 rounded-sm px-2 text-left text-xs text-foreground transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none";
 
 /** Các khối tùy chọn có thể gom vào menu "+ Thêm" của chi tiết nhiệm vụ. */
 export type TaskOptionalKey = "extension" | "people" | "backup" | "unit-request" | "criteria" | "approval";
@@ -117,9 +116,9 @@ export function TaskOptionalSections({ children, className }: { children: React.
                           setMenuOpen(false);
                           entries[key]?.open();
                         }}
-                        className={MENU_ITEM_CLASS}
+                        className={MENU_ROW_CLASS}
                       >
-                        <Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                        <Icon className="size-4 shrink-0 text-muted-foreground" />
                         {entries[key]?.label}
                       </Pressable>
                     );

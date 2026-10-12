@@ -15,8 +15,9 @@ Hướng dẫn agent nằm ở [AGENTS.md](AGENTS.md). Tệp này ghi **hiện t
 
 | Vai trò | Utility | Giá trị |
 |---|---|---|
-| Nền ứng dụng | `bg-background` | `#FAFBFC` |
-| Thẻ, panel, popover | `bg-card`, `bg-popover` | `#FFFFFF` |
+| Canvas ngoài (sidebar, viền quanh thẻ) | `bg-sidebar` (`--gray-1`) | `#EFEFF0` |
+| Thẻ nội dung, bảng | `bg-card` (`--gray-2`) | `#F9F9FA` |
+| Nút, ô nhập nổi, popover, menu | `bg-background`, `bg-popover` (`--gray-0`) | `#FFFFFF` |
 | Ô nhập, nút phụ | `bg-secondary`, `bg-muted` | `#F2F4F7` |
 | Hover; viền | `bg-accent`; `border-border` | `#EAEDF1` |
 | Đường ngăn trung tính | `--gray-5` | `#DEE2E8` |
@@ -31,6 +32,10 @@ Hướng dẫn agent nằm ở [AGENTS.md](AGENTS.md). Tệp này ghi **hiện t
 Hover (`accent`) và đang chọn (`selected`) là hai trạng thái khác nhau. Nút chính là xanh `#0058A0`; màu than chì `#25282F` trong gói thiết kế cũ không áp dụng.
 
 **Chữ:** Be Vietnam Pro (`next/font`, [layout.tsx](src/app/layout.tsx)); mono là font hệ thống. Thang: `text-xs` 12px · `text-compact` 13px/18px · `text-sm` 14px · 16 · 20 · 24 · 28px. Không dùng cỡ tùy biến `text-[…px]`.
+
+**Popover, menu:** nền trắng, viền mảnh 1px và 3 lớp bóng qua token `--shadow-menu` (theo Linear) để tách khỏi bảng phía sau; không tự vẽ bóng riêng.
+
+**Menu và bộ lọc nhiều cấp (chuẩn trang Nhiệm vụ):** dựng từ `ui/menu` (`MENU_POPUP_CLASS`, `MenuOptionItem`, `MenuActionItem`, `MenuSubmenu`, `MenuSubmenuTitle`), không tự viết hàng hay khung. Hàng cao 28px, chữ 12px, icon 16px trong ô `size-4`; hàng đều nhau, không đường kẻ giữa các nhóm (chỉ một đường kẻ mảnh trước nhóm khác loại như "Kỳ tháng" hoặc "Xóa"). Mục đang chọn = nền accent + chữ đậm; **không dấu tick, không ô tích, không mũi tên** (nhóm có số bộ lọc đang bật thì hiện số bên phải). Menu con thả sang trái, mở khi rê chuột ngay (`delay` 0, đóng sau 80ms), tối đa 3 cấp (nhóm → mốc → lịch/lưới tháng). Hàng chọn giá trị không đóng menu (`MenuOptionItem`); hàng thao tác đóng khi bấm (`MenuActionItem`). Nút lọc báo đang lọc bằng chấm (`ListToolbarFilterButton`), không dùng số để bề rộng nút không đổi. Bộ lọc của trang danh sách dựng bằng `ListToolbarFilterPopover`, riêng trang Nhiệm vụ cần nhiều kiểu chọn nên ghép trực tiếp từ các thành phần trên.
 
 **Bo góc:** `--radius-chip` 8px · `--radius-control` 12px · `--radius-card` 14px · `--radius-panel` 16px · `--radius-menu` 14px. Utility Tailwind `rounded-sm/md/lg/xl` = 8/12/14/16px.
 

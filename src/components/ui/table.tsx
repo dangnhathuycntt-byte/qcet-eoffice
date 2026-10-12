@@ -29,7 +29,7 @@ function Table({ className, density = "one-line", ...props }: TableProps) {
 }
 
 function TableHeader({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead data-slot="table-header" className={cn("bg-background", className)} {...props} />;
+  return <thead data-slot="table-header" className={cn("bg-card", className)} {...props} />;
 }
 
 function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {

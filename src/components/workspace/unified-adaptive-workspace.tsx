@@ -1783,6 +1783,59 @@ function UnifiedAdaptiveWorkspaceInner({
   const effectiveError = errorMessage || internalError;
   const isUnassigned = isUserUnassignedDepartment(user);
 
+  // Chip bộ lọc đang áp: nằm trong hàng toolbar (không chèn thêm hàng làm bảng giật xuống); trang ẩn toolbar thì hiện thành hàng riêng
+  const renderActiveFilters = (inline: boolean) => (
+      <ActiveFilterBreadcrumb
+        inline={inline}
+        scope={activeScope}
+        department={currentDept}
+        workbox={currentWorkbox}
+        status={currentStatus}
+        search={currentSearch}
+        overdue={Boolean(currentOverdue)}
+        timeFilter={timeFilter}
+        deadline={internalDeadline}
+        priority={currentPriority}
+        totalFilteredCount={displayedTasks.length}
+        totalCount={scopedTasks.length}
+        onResetFilters={handleResetFilters}
+        onClearAll={handleResetFilters}
+        onRemoveDepartment={() => {
+          onDepartmentChange?.("ALL");
+          workspaceQuery?.setUnit(undefined, { shallow: true, replace: true });
+        }}
+        onRemoveWorkbox={() => setInternalWorkbox("ALL")}
+        onRemoveStatus={() => handleStatusFilterChange("ALL")}
+        onRemoveSearch={() => {
+          setInternalSearch(undefined);
+          onSearchChange?.("");
+          workspaceQuery?.setSearchQuery("", { shallow: true, replace: true });
+        }}
+        onRemoveOverdue={() => handleDeadlineFilterChange("all")}
+        onRemoveTimeFilter={() => {
+          setTimeFilter(NO_TASK_TIME_FILTER);
+          setCurrentMonth("ALL");
+          workspaceQuery?.updateWorkspaceQuery((prev) => ({
+            ...prev,
+            month: "ALL",
+            time: undefined,
+            dateFrom: undefined,
+            dateTo: undefined,
+          }), { shallow: true, replace: true });
+        }}
+        onRemoveDeadline={() => handleDeadlineFilterChange("all")}
+        onRemovePriority={() => handlePriorityChange("ALL")}
+        category={currentCategory}
+        onRemoveCategory={() => handleCategoryChange("ALL")}
+        health={healthFilter}
+        onRemoveHealth={() => setHealthFilter(null)}
+        origin={originFilter}
+        onRemoveOrigin={() => setOriginFilter(null)}
+        collaborator={collaboratorFilter}
+        onRemoveCollaborator={() => setCollaboratorFilter(null)}
+      />
+  );
+
   const taskCollectionView = (
     <ModularCascadingTaskTable
       tasks={displayedTasks}
@@ -1831,7 +1884,7 @@ function UnifiedAdaptiveWorkspaceInner({
       data-slot="unified-adaptive-workspace"
       data-active-scope={activeScope}
       className={cn(
-        "space-y-4 pb-2 sm:pb-8",
+        "space-y-4 pb-2 sm:pb-8 md:[--task-table-sticky-top:88px]",
         className
       )}
     >
@@ -2003,6 +2056,7 @@ function UnifiedAdaptiveWorkspaceInner({
           onSort={handleToolbarSort}
           onRefresh={handleRefresh}
           isRefreshing={effectiveIsRefreshing}
+          activeFilters={renderActiveFilters(true)}
           totalTasksCount={scopedTasks.length}
           filteredTasksCount={displayedTasks.length}
           actionQueueCount={actionQueueTotal}
@@ -2026,55 +2080,7 @@ function UnifiedAdaptiveWorkspaceInner({
         </div>
       )}
 
-      {/* Active Filter Breadcrumb */}
-      <ActiveFilterBreadcrumb
-        scope={activeScope}
-        department={currentDept}
-        workbox={currentWorkbox}
-        status={currentStatus}
-        search={currentSearch}
-        overdue={Boolean(currentOverdue)}
-        timeFilter={timeFilter}
-        deadline={internalDeadline}
-        priority={currentPriority}
-        totalFilteredCount={displayedTasks.length}
-        totalCount={scopedTasks.length}
-        onResetFilters={handleResetFilters}
-        onClearAll={handleResetFilters}
-        onRemoveDepartment={() => {
-          onDepartmentChange?.("ALL");
-          workspaceQuery?.setUnit(undefined, { shallow: true, replace: true });
-        }}
-        onRemoveWorkbox={() => setInternalWorkbox("ALL")}
-        onRemoveStatus={() => handleStatusFilterChange("ALL")}
-        onRemoveSearch={() => {
-          setInternalSearch(undefined);
-          onSearchChange?.("");
-          workspaceQuery?.setSearchQuery("", { shallow: true, replace: true });
-        }}
-        onRemoveOverdue={() => handleDeadlineFilterChange("all")}
-        onRemoveTimeFilter={() => {
-          setTimeFilter(NO_TASK_TIME_FILTER);
-          setCurrentMonth("ALL");
-          workspaceQuery?.updateWorkspaceQuery((prev) => ({
-            ...prev,
-            month: "ALL",
-            time: undefined,
-            dateFrom: undefined,
-            dateTo: undefined,
-          }), { shallow: true, replace: true });
-        }}
-        onRemoveDeadline={() => handleDeadlineFilterChange("all")}
-        onRemovePriority={() => handlePriorityChange("ALL")}
-        category={currentCategory}
-        onRemoveCategory={() => handleCategoryChange("ALL")}
-        health={healthFilter}
-        onRemoveHealth={() => setHealthFilter(null)}
-        origin={originFilter}
-        onRemoveOrigin={() => setOriginFilter(null)}
-        collaborator={collaboratorFilter}
-        onRemoveCollaborator={() => setCollaboratorFilter(null)}
-      />
+      {hideScopeSwitcher && renderActiveFilters(false)}
 
       {/* 2. Workspace Layout: Full-Width Canvas (Default) or Backward-compatible Split Cockpit */}
       {enableSplitCockpit ? (

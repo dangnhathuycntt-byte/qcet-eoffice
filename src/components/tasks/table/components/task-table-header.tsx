@@ -119,7 +119,7 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 bg-card select-none",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-[var(--task-table-sticky-top,0px)] z-10 bg-card select-none",
         className
       )}
     >

@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MenuContent, MenuItem, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
+import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import type { DocumentItem, OfficialDocument } from "@/types/document";
 import { useDocumentDetail } from "@/hooks/use-document-detail";
 import { fromDocumentItem, fromOfficialDocument, type DocumentViewModel } from "@/lib/documents/document-view-model";
@@ -21,9 +21,6 @@ const PRINT_DETAIL_CSS = `@media print {
   [data-slot="document-quick-body"], [data-slot="document-quick-body"] * { visibility: visible !important; }
   [data-slot="document-quick-body"] { position: absolute; inset: 0; overflow: visible !important; }
 }`;
-
-const MENU_ITEM =
-  "flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-compact text-foreground outline-none data-[highlighted]:bg-muted/60 [&_svg]:size-4 [&_svg]:text-muted-foreground";
 
 /**
  * "Thao tác khác": sửa thông tin và bổ sung tệp (khi server cho phép), in phiếu thông tin văn bản
@@ -51,27 +48,15 @@ function MoreActionsMenu({
       </MenuTrigger>
       <MenuContent align="end" positionerClassName="z-[60]" className="z-[60] w-56 min-w-0">
         {onEdit ? (
-          <MenuItem className={MENU_ITEM} onClick={onEdit}>
-            <Pencil />
-            Sửa thông tin
-          </MenuItem>
+          <MenuActionItem leading={<Pencil />} onClick={onEdit}>Sửa thông tin</MenuActionItem>
         ) : null}
         {onAddFiles ? (
-          <MenuItem className={MENU_ITEM} onClick={onAddFiles}>
-            <Paperclip />
-            Thêm tệp
-          </MenuItem>
+          <MenuActionItem leading={<Paperclip />} onClick={onAddFiles}>Thêm tệp</MenuActionItem>
         ) : null}
-        {onEdit || onAddFiles ? <MenuSeparator className="my-1 h-px bg-border/60" /> : null}
-        <MenuItem className={MENU_ITEM} onClick={onPrint}>
-          <Printer />
-          In phiếu văn bản
-        </MenuItem>
+        {onEdit || onAddFiles ? <MenuSeparator className="my-1 border-t border-border/40" /> : null}
+        <MenuActionItem leading={<Printer />} onClick={onPrint}>In phiếu văn bản</MenuActionItem>
         {onViewSignature ? (
-          <MenuItem className={MENU_ITEM} onClick={onViewSignature}>
-            <Stamp />
-            Xem chữ ký số
-          </MenuItem>
+          <MenuActionItem leading={<Stamp />} onClick={onViewSignature}>Xem chữ ký số</MenuActionItem>
         ) : null}
       </MenuContent>
     </MenuRoot>

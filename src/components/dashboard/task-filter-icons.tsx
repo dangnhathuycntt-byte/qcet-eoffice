@@ -11,7 +11,6 @@ export {
   TaskIconCollaborators as FilterIconCollaborator,
   TaskIconDeadline as FilterIconDeadline,
   TaskIconTime as FilterIconMonth,
-  TaskIconHealth as FilterIconHealth,
   TaskIconProgress as FilterIconProgress,
   TaskIconOrigin as FilterIconOrigin,
   TaskIconStatusAll as StatusSubAll,

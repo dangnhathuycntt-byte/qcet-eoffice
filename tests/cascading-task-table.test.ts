@@ -491,7 +491,7 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
     );
   });
 
-  it("renders task description below task title when description exists (Linear Style)", () => {
+  it("does not render a description line under the task title", () => {
     const taskWithDesc: SchoolTask = {
       ...sampleTask,
       id: "task-desc-01",
@@ -499,48 +499,18 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
       description: "Thực hiện rà soát công tác chuẩn bị và chuẩn bị văn kiện",
     };
 
-    const htmlWithDesc = renderToStaticMarkup(
+    const html = renderToStaticMarkup(
       React.createElement(
         "table",
         null,
-        React.createElement(
-          "tbody",
-          null,
-          React.createElement(TaskRow, {
-            task: taskWithDesc,
-          })
-        )
+        React.createElement("tbody", null, React.createElement(TaskRow, { task: taskWithDesc }))
       )
     );
 
+    assert.ok(html.includes("Chuẩn bị hội nghị viên chức"), "Must render the title");
     assert.ok(
-      htmlWithDesc.includes("Thực hiện rà soát công tác chuẩn bị và chuẩn bị văn kiện"),
-      "Must render description below title"
-    );
-
-    const taskWithoutDesc: SchoolTask = {
-      ...sampleTask,
-      id: "task-no-desc",
-      description: undefined,
-    };
-
-    const htmlWithoutDesc = renderToStaticMarkup(
-      React.createElement(
-        "table",
-        null,
-        React.createElement(
-          "tbody",
-          null,
-          React.createElement(TaskRow, {
-            task: taskWithoutDesc,
-          })
-        )
-      )
-    );
-
-    assert.ok(
-      !htmlWithoutDesc.includes("text-muted-foreground/75 truncate block mt-0.5"),
-      "Must not render description container when description is empty"
+      !html.includes("Thực hiện rà soát công tác chuẩn bị và chuẩn bị văn kiện"),
+      "Must not render the description under the title"
     );
   });
 });

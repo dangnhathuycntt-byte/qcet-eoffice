@@ -37,7 +37,7 @@ export function IconSidebarHome({
 }
 
 /**
- * 2. Nhiệm vụ / Công việc (Job listings / Briefcase) — Theo đúng hình mẫu trong screenshot
+ * 2. Nhiệm vụ (danh sách việc có dấu tích)
  */
 export function IconSidebarTasks({
   size = 19,
@@ -55,29 +55,22 @@ export function IconSidebarTasks({
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      {/* Tay cầm bo tròn */}
       <path
-        d="M6.5 4.5V3C6.5 2.17 7.17 1.5 8 1.5H11C11.83 1.5 12.5 2.17 12.5 3V4.5"
+        d="M2.5 5.5L4.25 7.25L7 3.75"
         stroke="currentColor"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Thân cặp bo tròn */}
-      <rect
-        x="1.75"
-        y="4.5"
-        width="15.5"
-        height="12"
-        rx="3.2"
+      <path
+        d="M2.5 13.5L4.25 15.25L7 11.75"
         stroke="currentColor"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Đường nắp mở cặp uốn cong nhẹ ở giữa */}
       <path
-        d="M1.75 9.5H6.8L7.8 11.2C8 11.5 8.5 11.8 9 11.8H10C10.5 11.8 11 11.5 11.2 11.2L12.2 9.5H17.25"
+        d="M10.5 5.5H16.5M10.5 13.5H16.5"
         stroke="currentColor"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
@@ -321,7 +314,7 @@ export function IconSidebarFolder({
 }
 
 /**
- * 9. Cơ cấu & Danh bạ (Candidates / People) — Giống hệt icon "Candidates" trong ảnh screenshot
+ * 9. Cơ cấu & Danh bạ (sơ đồ tổ chức: một nút cha, hai nút con)
  */
 export function IconSidebarPeople({
   size = 19,
@@ -339,33 +332,29 @@ export function IconSidebarPeople({
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      {/* Người chính (bên trái) */}
-      <circle
-        cx="6"
-        cy="5.25"
-        r="2.5"
+      <rect
+        x="6.75" y="2" width="5.5" height="4" rx="1.25"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="1.75" y="13" width="5.5" height="4" rx="1.25"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="11.75" y="13" width="5.5" height="4" rx="1.25"
         stroke="currentColor"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M1.75 15.5C1.75 12.8 3.8 10.75 6.5 10.75C9.2 10.75 11.25 12.8 11.25 15.5"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Người phụ (bên phải) */}
-      <path
-        d="M11 3.5C11.5 2.9 12.2 2.5 13 2.5C14.4 2.5 15.5 3.6 15.5 5C15.5 5.8 15.1 6.5 14.5 7"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12.5 10.9C14.7 11.4 16.5 13.2 16.75 15.5"
+        d="M9.5 6V9.5M4.5 13V9.5H14.5V13"
         stroke="currentColor"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
