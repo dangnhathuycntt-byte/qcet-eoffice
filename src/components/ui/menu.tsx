@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils";
 
 /** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
 export const MENU_ROW_CLASS =
-  "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors outline-none hover:bg-accent focus-visible:bg-accent";
+  "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors duration-75 outline-none hover:bg-accent focus-visible:bg-accent";
 
-/** Khung popup menu: bo góc theo token, không viền, bóng menu */
+/** Khung popup menu: bo góc theo token, không viền, bóng menu; vào 140ms (scale+mờ), ra 80ms theo token motion */
 export const MENU_POPUP_CLASS =
-  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] animate-in fade-in-0 zoom-in-95 duration-100 motion-reduce:animate-none";
+  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] transition-[opacity,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-enter)] data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:duration-[var(--motion-duration-micro)] data-[ending-style]:ease-[var(--motion-ease-exit)] motion-reduce:transition-none motion-reduce:transform-none";
 
 // Namespace re-export
 export const Menu = BaseMenu;
