@@ -21,6 +21,7 @@ import {
 import { workspaceScopeToTaskScope } from "@/lib/unified-task-hub";
 import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
 import { parseWorkspaceQuery } from "@/lib/workspace-query";
+import { matchesTaskTab, resolveTaskTab, type TaskTab } from "@/domain/tasks/task-tabs";
 import { matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
@@ -30,6 +31,7 @@ import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActionQueueShell } from "./action-queue-shell";
 import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
+import { TaskTabPills } from "@/components/tasks/task-tab-pills";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import type { SortDirection, TableColumnVisibility, TaskSortField } from "@/components/tasks/table/types";
 import { getNextSortDirection } from "@/components/tasks/table/hooks/use-task-table-state";
@@ -114,6 +116,8 @@ export interface FilterDisplayedTasksOptions {
   health?: "on_track" | "at_risk" | "overdue" | "completed" | "all" | string | null;
   origin?: string | null;
   collaborator?: "has_collab" | "single" | "all" | string | null;
+  /** View của trang (Đang thực hiện, Trễ hạn, Hoàn thành…); "all" hoặc vắng = không lọc */
+  taskTab?: TaskTab;
 }
 
 function matchesSingleStatus(t: SchoolTask, st: string, user: AuthUser | null | undefined, refDate: string): boolean {
@@ -222,11 +226,17 @@ export function filterDisplayedTasks({
   health,
   origin,
   collaborator,
+  taskTab,
 }: FilterDisplayedTasksOptions): SchoolTask[] {
   // Issue #21: Only show top-level (parent) tasks in the list.
   // Child tasks are still available as nested subTasks on each parent.
   let result = tasks.filter((t) => !t.parentTaskId);
   const activeRefDate = referenceDate || getSystemReferenceDate();
+
+  // 0. View của trang: tập nền trước các bộ lọc khác ("Trễ hạn" cùng định nghĩa với bộ lọc thời hạn "Trễ hạn")
+  if (taskTab && taskTab !== "all") {
+    result = result.filter((t) => matchesTaskTab(t, taskTab, (task) => isTaskOverdueOrHasOverdueSubtask(task, activeRefDate)));
+  }
 
   // 1. Search Query
   if (search && search.trim()) {
@@ -493,6 +503,7 @@ function UnifiedAdaptiveWorkspaceInner({
   disableInternalDetail = false,
   selectedTaskId: propSelectedTaskId,
   workspaceQuery,
+  defaultTaskTab,
 }: UnifiedAdaptiveWorkspaceProps & { workspaceQuery: UseWorkspaceQueryReturn }) {
   const auth = useAuth();
   const fallbackUser: AuthUser = React.useMemo(
@@ -776,6 +787,20 @@ function UnifiedAdaptiveWorkspaceInner({
   const currentWorkbox = activeWorkbox !== undefined
     ? activeWorkbox
     : (isOverdueOnly === false && internalWorkbox === "overdue" ? "ALL" : internalWorkbox);
+
+  // View của trang: lấy từ URL; URL đã mang bộ lọc trạng thái/thời hạn/tìm kiếm/nhiệm vụ thì không áp view mặc định
+  const isFilterValue = (v: unknown) => !(v === undefined || v === null || v === "" || v === "ALL" || v === "all");
+  const effectiveTaskTab = resolveTaskTab({
+    param: workspaceQuery?.queryState.taskTab,
+    hasOtherLifecycleFilters:
+      isFilterValue(currentStatus) ||
+      isFilterValue(internalDeadline) ||
+      Boolean(currentOverdue) ||
+      Boolean(workspaceQuery?.queryState.attention) ||
+      Boolean(workspaceQuery?.queryState.taskId) ||
+      Boolean(currentSearch && String(currentSearch).trim()),
+    defaultTab: defaultTaskTab,
+  });
 
   // Synchronize state with canonical workspace query (URL-driven navigation: back/forward)
   React.useEffect(() => {
@@ -1293,7 +1318,11 @@ function UnifiedAdaptiveWorkspaceInner({
       const normStatus = status === "all" ? undefined : status;
       setInternalStatus(normStatus);
       onStatusFilterChange?.(normStatus);
-      workspaceQuery?.setStatus((normStatus as any) || "ALL", { shallow: true, replace: true });
+      // Chọn trạng thái tay thì bộ lọc thay view (view "Đang thực hiện" sẽ che mất "Hoàn thành")
+      workspaceQuery?.updateWorkspaceQuery(
+        { status: (normStatus as any) || "ALL", ...(normStatus ? { taskTab: "all" as const } : {}) },
+        { shallow: true, replace: true }
+      );
     },
     [onStatusFilterChange, workspaceQuery]
   );
@@ -1309,11 +1338,28 @@ function UnifiedAdaptiveWorkspaceInner({
         {
           deadline: normDeadline,
           attention: isOverdue ? "overdue" : undefined,
+          ...(normDeadline ? { taskTab: "all" as const } : {}),
         },
         { shallow: true, replace: true }
       );
     },
     [onOverdueFilterChange, workspaceQuery]
+  );
+
+  // Chọn view: view thay các bộ lọc trạng thái/thời hạn (các bộ lọc khác giữ nguyên), một lần cập nhật URL
+  const handleTaskTabChange = React.useCallback(
+    (tab: TaskTab) => {
+      setInternalStatus(undefined);
+      onStatusFilterChange?.(undefined);
+      setInternalDeadline(undefined);
+      setInternalOverdue(false);
+      onOverdueFilterChange?.(false);
+      workspaceQuery?.updateWorkspaceQuery(
+        { taskTab: tab, status: "ALL", deadline: undefined, attention: undefined },
+        { shallow: true, replace: true }
+      );
+    },
+    [onStatusFilterChange, onOverdueFilterChange, workspaceQuery]
   );
 
   const handlePriorityChange = React.useCallback(
@@ -1351,8 +1397,10 @@ function UnifiedAdaptiveWorkspaceInner({
       health: healthFilter,
       origin: originFilter,
       collaborator: collaboratorFilter,
+      taskTab: effectiveTaskTab,
     });
   }, [
+    effectiveTaskTab,
     scopedTasks,
     currentSearch,
     currentStatus,
@@ -1871,6 +1919,7 @@ function UnifiedAdaptiveWorkspaceInner({
         category: currentCategory !== "ALL" ? currentCategory : undefined,
         priority: currentPriority !== "ALL" ? currentPriority : undefined,
         academicMonth: currentMonth,
+        taskTab: effectiveTaskTab,
         onResetFilters: handleResetFilters,
         onAddTask: () =>
           openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
@@ -2056,6 +2105,7 @@ function UnifiedAdaptiveWorkspaceInner({
           onSort={handleToolbarSort}
           onRefresh={handleRefresh}
           isRefreshing={effectiveIsRefreshing}
+          viewTabs={defaultTaskTab ? <TaskTabPills value={effectiveTaskTab} onChange={handleTaskTabChange} /> : undefined}
           activeFilters={renderActiveFilters(true)}
           totalTasksCount={scopedTasks.length}
           filteredTasksCount={displayedTasks.length}

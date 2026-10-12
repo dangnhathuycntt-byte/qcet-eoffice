@@ -9,6 +9,7 @@ import { ArrowHint, InkIllustration } from "@/components/ui/empty-state";
 import { motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
 import { Pressable } from "@/components/ui/pressable";
+import type { TaskTab } from "@/domain/tasks/task-tabs";
 
 export interface TaskEmptyStateProps {
   title?: string;
@@ -22,6 +23,8 @@ export interface TaskEmptyStateProps {
   department?: string;
   category?: string;
   priority?: string;
+  /** View đang chọn của trang (Đang thực hiện, Trễ hạn, Hoàn thành); view không phải bộ lọc nên không đếm vào bộ lọc */
+  taskTab?: TaskTab;
   userName?: string;
   onResetFilters?: () => void;
   onAddTask?: () => void;
@@ -112,6 +115,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   department,
   category,
   priority,
+  taskTab,
   userName,
   onResetFilters,
   onAddTask,
@@ -168,6 +172,15 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       displayTitle = "Không có nhiệm vụ nào chờ phê duyệt";
       displayDescription =
         "Hiện tại không có nhiệm vụ hoặc báo cáo nào đang chờ duyệt từ bạn.";
+    } else if (taskTab === "active" && activeFiltersCount === 0) {
+      displayTitle = "Không có nhiệm vụ nào đang thực hiện";
+      displayDescription = "Mọi nhiệm vụ đã hoàn thành, hoặc chưa có việc nào được giao. Chọn \"Tất cả\" để xem toàn bộ.";
+    } else if (taskTab === "overdue" && activeFiltersCount === 0) {
+      displayTitle = "Không có nhiệm vụ nào trễ hạn";
+      displayDescription = "Tuyệt vời! Tất cả nhiệm vụ đều đúng tiến độ hoặc đã được giải quyết.";
+    } else if (taskTab === "done" && activeFiltersCount === 0) {
+      displayTitle = "Chưa có nhiệm vụ nào hoàn thành";
+      displayDescription = "Nhiệm vụ hoàn thành sẽ hiện ở đây.";
     } else if (department && department !== "ALL") {
       displayTitle = `Đơn vị "${department}" chưa có nhiệm vụ`;
       displayDescription =
@@ -188,7 +201,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   }
 
   // Chưa có gì và được phép tạo việc: mũi tên chỉ lên nút "Tạo việc" ở thanh công cụ (chỉ từ md trở lên, nơi nút ở góc phải).
-  const pointsToCreate = !hasFilterActive && canAddTask && Boolean(onAddTask);
+  const pointsToCreate = !hasFilterActive && !(taskTab && taskTab !== "all") && canAddTask && Boolean(onAddTask);
 
   return (
     <div className="relative w-full">

@@ -80,6 +80,7 @@ export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientP
         onSelectTask={handleSelectTask}
         initialTasks={initialTasks}
         workspaceQuery={workspaceQuery}
+        defaultTaskTab="active"
       />
     </TaskSortFeatureGuide>
   );

@@ -8,7 +8,7 @@ import type {
 } from "@/contracts/workspace-semantic";
 import type { TaskTimePreset } from "@/lib/task-time-filter";
 import type { TaskView } from "@/domain/tasks";
-
+import { parseTaskTab, type TaskTab } from "@/domain/tasks/task-tabs";
 export type {
   WorkspaceScopeType,
   TaskLifecycleStatus,
@@ -45,6 +45,8 @@ export interface WorkspaceFilterState extends BaseWorkspaceFilterState {
   priority?: string;
   category?: string;
   deadline?: string;
+  /** View của trang Nhiệm vụ (Tất cả · Đang thực hiện · Trễ hạn · Hoàn thành); vắng = theo mặc định của trang */
+  taskTab?: TaskTab;
   time?: TaskTimePreset | "range";
   dateFrom?: string;
   dateTo?: string;
@@ -121,6 +123,7 @@ const WORKSPACE_QUERY_KEYS = [
   "category",
   "cat",
   "deadline",
+  "taskTab",
   "time",
   "dateFrom",
   "dateTo",
@@ -409,6 +412,8 @@ export function parseWorkspaceQuery(
   const rawDeadline = extractParam(params, "deadline");
   const deadline = rawDeadline && rawDeadline !== "ALL" && rawDeadline !== "all" ? rawDeadline : undefined;
 
+  const taskTab = parseTaskTab(extractParam(params, "taskTab"));
+
   const rawTime = extractParam(params, "time");
   const time = rawTime === "today" || rawTime === "this_week" || rawTime === "this_month" || rawTime === "overdue" || rawTime === "range"
     ? rawTime
@@ -431,6 +436,7 @@ export function parseWorkspaceQuery(
     priority,
     category,
     deadline,
+    taskTab,
     time: hasValidRange ? "range" : time === "range" ? undefined : time,
     dateFrom: hasValidRange ? rawDateFrom : undefined,
     dateTo: hasValidRange ? rawDateTo : undefined,
@@ -632,6 +638,11 @@ export function serializeWorkspaceQuery(
   // 12. Deadline (omit 'ALL')
   if (state.deadline && state.deadline !== "ALL") {
     params.set("deadline", state.deadline);
+  }
+
+  // 13. View của trang Nhiệm vụ (vắng = mặc định của trang)
+  if (state.taskTab) {
+    params.set("taskTab", state.taskTab);
   }
 
   return params;

@@ -1492,6 +1492,7 @@ export function ModularCascadingTaskTable({
           department={emptyStateProps?.department ?? activeDept}
           category={emptyStateProps?.category ?? activeCategory}
           priority={emptyStateProps?.priority}
+          taskTab={emptyStateProps?.taskTab}
           userName={emptyStateProps?.userName}
           onResetFilters={emptyStateProps?.onResetFilters ?? handleResetFilters}
           onAddTask={emptyStateProps?.onAddTask ?? onAddTask}

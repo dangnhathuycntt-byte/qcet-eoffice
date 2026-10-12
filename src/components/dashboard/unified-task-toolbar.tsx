@@ -236,6 +236,8 @@ export interface UnifiedTaskToolbarProps {
   // Density
   /** Chip bộ lọc đang áp, hiện bên trái hàng điều khiển */
   activeFilters?: React.ReactNode;
+  /** Các view (Đang thực hiện, Trễ hạn…) đặt bên trái hàng điều khiển, trước chip bộ lọc */
+  viewTabs?: React.ReactNode;
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
 
@@ -486,6 +488,7 @@ export function UnifiedTaskToolbar({
   showAcademicMonthBar = false,
   onResetFilters,
   activeFilters,
+  viewTabs,
   density = "comfortable",
   onDensityChange,
   visibleColumns: propVisibleColumns,
@@ -1504,7 +1507,10 @@ export function UnifiedTaskToolbar({
 
       {!quiet && (
         <div className="flex h-11 w-full min-w-0 items-center gap-1.5">
-      <div className="flex min-w-0 flex-1 items-center">{activeFilters}</div>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {viewTabs}
+        {activeFilters}
+      </div>
       {/* 1. Search: icon thu gọn, bấm hoặc nhấn "/" để mở ô */}
       {searchExpanded ? (
         <ListToolbarSearch

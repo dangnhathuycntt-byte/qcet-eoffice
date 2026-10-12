@@ -525,6 +525,7 @@ export function useWorkspaceQuery(
         priority: undefined,
         category: undefined,
         deadline: undefined,
+        taskTab: undefined,
         time: undefined,
         dateFrom: undefined,
         dateTo: undefined,

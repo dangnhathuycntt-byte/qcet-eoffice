@@ -55,6 +55,8 @@ export interface UnifiedAdaptiveWorkspaceProps {
   isOffline?: boolean;
   errorMessage?: string | null;
   hideScopeSwitcher?: boolean;
+  /** View mặc định khi URL sạch (trang Nhiệm vụ truyền "active"); vắng = không lọc theo view */
+  defaultTaskTab?: import('@/domain/tasks/task-tabs').TaskTab;
   className?: string;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onReview?: (payload: ApprovalActionPayload) => Promise<void> | void;
