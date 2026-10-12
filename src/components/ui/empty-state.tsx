@@ -28,11 +28,12 @@ export type IllustrationName =
   | "meetings"
   | "approvals-done"
   | "directory"
-  | "reports";
+  | "reports"
+  | "no-results";
 
 /**
  * Tranh nét mực tô bằng CSS mask: ảnh PNG chỉ giữ kênh alpha nên màu nét theo `bg-*` và đổi theo theme.
- * Chỉ dùng cho trạng thái chưa có dữ liệu; kết quả lọc/tìm kiếm rỗng dùng icon.
+ * Dùng cho trạng thái chưa có dữ liệu và kết quả lọc/tìm kiếm rỗng (`no-results`).
  */
 export function InkIllustration({ name, className }: { name: IllustrationName; className?: string }) {
   const mask = `url(/design/illustrations/${name}.png) center / contain no-repeat`;

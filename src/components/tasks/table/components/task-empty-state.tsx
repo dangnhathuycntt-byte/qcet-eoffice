@@ -1,12 +1,9 @@
 "use client";
 
 import * as React from "react";
-import * as m from "motion/react-m";
-import { useReducedMotion } from "motion/react";
 import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ArrowHint, InkIllustration } from "@/components/ui/empty-state";
-import { motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
 import { Pressable } from "@/components/ui/pressable";
 import type { TaskTab } from "@/domain/tasks/task-tabs";
@@ -33,74 +30,6 @@ export interface TaskEmptyStateProps {
 }
 
 // ---------------------------------------------------------------------------
-// Filter Empty Illustration — SVG filter+X, used when filters yield 0 results
-// ---------------------------------------------------------------------------
-
-function FilterEmptyIllustration({
-  reducedMotion,
-}: {
-  reducedMotion: boolean;
-}) {
-  const instant = { duration: 0 };
-
-  return (
-    <div className="flex items-center justify-center pb-5 pt-2">
-      <m.div
-        className="relative"
-        initial={reducedMotion ? false : { opacity: 0, y: 6, scale: 0.92 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={reducedMotion ? instant : motionSpring.gentle}
-      >
-        <svg
-          width="120"
-          height="100"
-          viewBox="0 0 120 100"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="text-muted-foreground"
-          aria-hidden="true"
-        >
-          {/* Ground shadow */}
-          <ellipse cx="60" cy="90" rx="40" ry="6" fill="currentColor" opacity="0.06" />
-
-          {/* Paper sheet */}
-          <g transform="translate(28, 12) rotate(-2, 32, 36)">
-            <rect x="3" y="3" width="58" height="72" rx="5" fill="currentColor" opacity="0.06" />
-            <rect x="0" y="0" width="58" height="72" rx="5" fill="white" stroke="currentColor" strokeWidth="1" strokeOpacity="0.15" />
-            <rect x="8" y="10" width="30" height="3" rx="1.5" fill="currentColor" opacity="0.1" />
-            <rect x="8" y="18" width="42" height="3" rx="1.5" fill="currentColor" opacity="0.07" />
-            <rect x="8" y="26" width="36" height="3" rx="1.5" fill="currentColor" opacity="0.07" />
-            <rect x="8" y="34" width="24" height="3" rx="1.5" fill="currentColor" opacity="0.05" />
-            <rect x="8" y="46" width="38" height="2.5" rx="1.25" fill="currentColor" opacity="0.04" />
-            <rect x="8" y="53" width="28" height="2.5" rx="1.25" fill="currentColor" opacity="0.03" />
-            <rect x="8" y="60" width="32" height="2.5" rx="1.25" fill="currentColor" opacity="0.03" />
-          </g>
-
-          {/* Filter funnel */}
-          <g transform="translate(66, 44)">
-            <path d="M6 4 L34 4 L23 18 L23 30 L17 33 L17 18 Z" fill="currentColor" opacity="0.05" />
-            <path d="M4 2 L32 2 L21 16 L21 28 L15 31 L15 16 Z" fill="white" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.25" strokeLinejoin="round" />
-            <path d="M8 4 L28 4" stroke="currentColor" strokeWidth="0.8" strokeOpacity="0.08" strokeLinecap="round" />
-          </g>
-        </svg>
-
-        {/* Animated X badge */}
-        <m.div
-          className="absolute top-1.5 right-0 flex items-center justify-center size-7 rounded-full bg-background border border-border/80 shadow-card"
-          initial={reducedMotion ? false : { opacity: 0, scale: 0, rotate: -120 }}
-          animate={{ opacity: 1, scale: 1, rotate: 0 }}
-          transition={reducedMotion ? instant : { ...motionSpring.snappy, delay: 0.18 }}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-muted-foreground/60" aria-hidden="true">
-            <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </m.div>
-      </m.div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
@@ -122,8 +51,6 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   canAddTask = false,
   className,
 }: TaskEmptyStateProps) {
-  const reducedMotion = useReducedMotion() ?? false;
-
   let displayTitle = title;
   let displayDescription = description;
   const isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
@@ -200,29 +127,25 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
     }
   }
 
-  // Chưa có gì và được phép tạo việc: mũi tên chỉ lên nút "Tạo việc" ở thanh công cụ (chỉ từ md trở lên, nơi nút ở góc phải).
+  // Chưa có gì và được phép tạo việc: mũi tên chỉ lên nút "Tạo việc" ở thanh công cụ (chỉ từ md trở lên, nơi nút ở góc phải); nút giữa trang luôn hiện kèm phím tắt C.
   const pointsToCreate = !hasFilterActive && !(taskTab && taskTab !== "all") && canAddTask && Boolean(onAddTask);
 
   return (
     <div className="relative w-full">
     {pointsToCreate ? (
-      <ArrowHint variant="loop" className="-top-2 right-10" />
+      <ArrowHint variant="loop" className="top-1 right-10" />
     ) : null}
     <div
       data-slot="workspace-empty-state"
       role="status"
       aria-live="polite"
       className={cn(
-        "flex flex-col items-center justify-center min-h-[40vh] py-8 px-4 sm:px-6 text-center select-none max-w-4xl mx-auto w-full",
+        "flex flex-col items-center justify-center min-h-[66vh] py-8 px-4 sm:px-6 text-center select-none max-w-4xl mx-auto w-full",
         className
       )}
     >
-      {/* Minh họa: phễu lọc khi có bộ lọc; tranh nét mực khi chưa có nhiệm vụ (không dựng dữ liệu giả) */}
-      {hasFilterActive ? (
-        <FilterEmptyIllustration reducedMotion={reducedMotion} />
-      ) : (
-        <InkIllustration name="tasks" className="mb-4" />
-      )}
+      {/* Tranh nét mực: kính lúp khi bộ lọc loại hết kết quả; bảng nhiệm vụ khi chưa có việc (không dựng dữ liệu giả) */}
+      <InkIllustration name={hasFilterActive ? "no-results" : "tasks"} className="mb-4" />
 
       {/* Title */}
       <h3 className="text-compact font-semibold text-foreground tracking-tight max-w-md text-balance">
@@ -253,7 +176,6 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           <Pressable
             onClick={onAddTask}
             className={cn(
-              pointsToCreate && "md:hidden",
               "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium active:scale-[0.98] transition-colors",
               hasFilterActive && onResetFilters
                 ? "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -262,6 +184,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           >
             <Plus className="size-3.5" />
             <span>Tạo nhiệm vụ mới</span>
+            {pointsToCreate ? <kbd className="ml-1 font-sans text-xs text-muted-foreground/80">C</kbd> : null}
           </Pressable>
         )}
       </div>

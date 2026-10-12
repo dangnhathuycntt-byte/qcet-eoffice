@@ -358,6 +358,19 @@ export function ToastContainer({
 
 const FeedbackContext = React.createContext<FeedbackContextValue | null>(null);
 
+
+/** Toast lỗi và cảnh báo giữ chung khung với toast thường; chỉ icon và tiêu đề theo màu tín hiệu, hiện lâu hơn để kịp đọc. */
+const SIGNAL_TOAST_OPTIONS = {
+  error: {
+    duration: 7000,
+    classNames: { title: "!text-destructive", icon: "!text-destructive" },
+  },
+  warning: {
+    duration: 6000,
+    classNames: { title: "!text-warning", icon: "!text-warning" },
+  },
+} as const;
+
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const dismissToast = React.useCallback((id: string) => {
     sonnerToast.dismiss(id);
@@ -377,7 +390,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
 
       const toastId = fn(item.title || item.message, {
         description: item.title ? item.message : undefined,
-        duration: item.durationMs ?? 4000,
+        ...(item.variant === "error" || item.variant === "warning" ? SIGNAL_TOAST_OPTIONS[item.variant] : {}),
+        duration: item.durationMs ?? (item.variant === "error" || item.variant === "warning" ? SIGNAL_TOAST_OPTIONS[item.variant].duration : 4000),
         action: item.action
           ? {
               label: item.action.label,
@@ -405,6 +419,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       String(
         sonnerToast.error(t || m, {
           description: t ? m : undefined,
+          ...SIGNAL_TOAST_OPTIONS.error,
         })
       ),
     []
@@ -415,6 +430,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       String(
         sonnerToast.warning(t || m, {
           description: t ? m : undefined,
+          ...SIGNAL_TOAST_OPTIONS.warning,
         })
       ),
     []
@@ -441,8 +457,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       <Toaster
         position="bottom-center"
         offset={16}
-        /* Mobile: nằm trên thanh điều hướng dưới cố định (56px + safe area) */
-        mobileOffset={{ bottom: "calc(56px + env(safe-area-inset-bottom, 0px) + 12px)", left: 16, right: 16 }}
+        /* Mobile: chừa safe area dưới */
+        mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", left: 16, right: 16 }}
         toastOptions={{
           className:
             "rounded-2xl border-0 bg-card text-foreground font-sans shadow-menu text-xs",
