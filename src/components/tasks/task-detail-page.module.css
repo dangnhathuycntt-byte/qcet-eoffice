@@ -9,6 +9,18 @@
   position: relative;
 }
 
+/* Điện thoại: trang chi tiết tràn mép như Linear, không còn thẻ bo góc trên khay xám */
+@media (max-width: 767px) {
+  .splitWorkspace {
+    padding: 0;
+    gap: 0;
+  }
+  .splitWorkspace > .workspace {
+    border: 0;
+    border-radius: 0;
+  }
+}
+
 /* ── Child peek pane ──────────────────────────��───────────────── */
 
 /* Mobile: full-screen overlay from right */

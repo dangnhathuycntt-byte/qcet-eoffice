@@ -14,21 +14,30 @@ interface TaskDetailSplitLayoutProps {
   className?: string;
 }
 
+const STACKED_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
+
+function subscribeStacked(onChange: () => void) {
+  const mql = window.matchMedia(STACKED_QUERY);
+  mql.addEventListener("change", onChange);
+  return () => mql.removeEventListener("change", onChange);
+}
+
+/** Màn hẹp (< 1024px): cột thuộc tính không còn là cột phải mà xếp dọc cùng nội dung. SSR luôn là bố cục rộng. */
+export function useStackedTaskDetail() {
+  return React.useSyncExternalStore(
+    subscribeStacked,
+    () => window.matchMedia(STACKED_QUERY).matches,
+    () => false,
+  );
+}
+
 export function TaskDetailSplitLayout({
   inspectorOpen,
   children,
   inspector,
   className,
 }: TaskDetailSplitLayoutProps) {
-  const [isMobile, setIsMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    setIsMobile(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, []);
+  const isMobile = useStackedTaskDetail();
 
   // Mobile: không min-h-0 để khối nội dung giữ chiều cao tự nhiên; canvas cha là vùng cuộn duy nhất
   if (isMobile) {

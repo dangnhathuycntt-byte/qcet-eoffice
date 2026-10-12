@@ -32,7 +32,7 @@ import { TaskUnitRequests } from "@/components/tasks/detail/task-unit-requests";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
-import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
+import { TaskDetailSplitLayout, useStackedTaskDetail } from "@/components/tasks/detail/task-detail-split-layout";
 import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { createDeliverable, deleteDeliverable, updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
@@ -272,6 +272,7 @@ export function TaskDetailPage({
 
   // Cột thuộc tính luôn hiện, trừ khi drawer việc con đang mở (drawer thay vào chỗ đó)
   const showInspector = !activeSubtask;
+  const stacked = useStackedTaskDetail();
 
   const handleSubtaskUpdated = React.useCallback((updated: StaffTask) => {
     setTask((prev) => {
@@ -717,6 +718,31 @@ export function TaskDetailPage({
     [activeSubtask, peekWidth]
   );
 
+  // Một thể hiện duy nhất: cột phải ở màn rộng, hoặc ngay dưới tiêu đề ở màn hẹp (< 1024px)
+  const inspectorNode = (
+                <aside aria-label="Cột thuộc tính nhiệm vụ" className={styles.inspector} style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
+              <TaskPropertiesSidebar
+                task={task}
+                currentUser={currentUser}
+                canEdit={canEdit}
+                canChangeDueDate={!Array.isArray((task as any).availableActions) || (task as any).availableActions.includes('task.assign')}
+                onStatusChange={handleStatusChange}
+                onPriorityChange={handlePriorityChange}
+                onDueDateChange={handleDueDateChange}
+                onStartDateChange={handleStartDateChange}
+                onReassignLead={handleReassignLead}
+                onNavigateTab={handleNavigateTab}
+                auditEvents={feedActivityEvents}
+                isMobileAccordion={true}
+                showRelatedSections={true}
+                subTasks={subTasks}
+                activeSubtaskId={selectedSubtaskId}
+                onSelectSubtask={handleOpenSubtaskDrawer}
+                onAddSubtask={handleAddSubtask}
+              />
+            </aside>
+  );
+
   const content = (
     <>
       {/* Visually-hidden aria-live region for status announcements */}
@@ -765,30 +791,8 @@ export function TaskDetailPage({
             onClick={handleCanvasClick}
           >
             <TaskDetailSplitLayout
-              inspectorOpen={showInspector}
-              inspector={
-                <aside aria-label="Cột thuộc tính nhiệm vụ" className={styles.inspector} style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
-              <TaskPropertiesSidebar
-                task={task}
-                currentUser={currentUser}
-                canEdit={canEdit}
-                canChangeDueDate={!Array.isArray((task as any).availableActions) || (task as any).availableActions.includes('task.assign')}
-                onStatusChange={handleStatusChange}
-                onPriorityChange={handlePriorityChange}
-                onDueDateChange={handleDueDateChange}
-                onStartDateChange={handleStartDateChange}
-                onReassignLead={handleReassignLead}
-                onNavigateTab={handleNavigateTab}
-                auditEvents={feedActivityEvents}
-                isMobileAccordion={true}
-                showRelatedSections={true}
-                subTasks={subTasks}
-                activeSubtaskId={selectedSubtaskId}
-                onSelectSubtask={handleOpenSubtaskDrawer}
-                onAddSubtask={handleAddSubtask}
-              />
-            </aside>
-          }
+              inspectorOpen={showInspector && !stacked}
+              inspector={inspectorNode}
         >
           <main
             role="tabpanel"
@@ -813,6 +817,8 @@ export function TaskDetailPage({
                 onDeleteDeliverable={handleDeleteDeliverable}
                 showInlineProperties={!showInspector}
               />
+
+              {stacked && showInspector && inspectorNode}
 
 
 

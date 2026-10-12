@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Link2, PanelRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Link2, PanelRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTaskDetailUrl } from "@/lib/tasks/task-detail-navigation";
+import { Button } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
@@ -28,6 +30,13 @@ export function TaskDetailHeaderNav({
   className,
 }: TaskDetailHeaderNavProps) {
   const feedback = useFeedback();
+  const router = useRouter();
+
+  // Có lịch sử trong app thì quay lại đúng danh sách (giữ tab/bộ lọc); mở thẳng từ liên kết thì về /tasks
+  const handleBack = React.useCallback(() => {
+    if (window.history.length > 1) router.back();
+    else router.push("/tasks");
+  }, [router]);
 
   const handleCopyLink = React.useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -43,12 +52,24 @@ export function TaskDetailHeaderNav({
     <header
       data-slot="task-detail-header-nav"
       className={cn(
-        "h-10 w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
+        "h-10 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)] w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
         className
       )}
     >
       {/* Bên trái: tab; breadcrumb do layout quản lý */}
-      <div className="flex min-w-0 items-center">{leading}</div>
+      <div className="flex min-w-0 items-center">
+        {/* Chỉ dưới md: topbar chung đã nhường chỗ cho header này */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="-ml-2 md:hidden"
+          onClick={handleBack}
+          aria-label="Quay lại danh sách nhiệm vụ"
+        >
+          <ChevronLeft />
+        </Button>
+        {leading}
+      </div>
 
       {/* Right actions */}
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
