@@ -147,8 +147,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 min-w-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] min-w-0 flex-1 flex flex-col"}
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
-        {/* Mobile Header (chỉ dưới md); danh sách và chi tiết nhiệm vụ tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
-        {!isTasksList && !isTaskDetail && <AppTopbar />}
+        {/* Mobile Header (chỉ dưới md); danh sách, chi tiết nhiệm vụ và sổ văn bản tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
+        {!isTasksList && !isTaskDetail && pathname !== "/documents" && <AppTopbar />}
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
         {!hideDesktopTopbar && <DesktopTopbar />}

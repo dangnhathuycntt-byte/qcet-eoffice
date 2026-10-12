@@ -24,7 +24,8 @@ const PANE_WIDTH_KEY = "qcet_document_pane_width";
  * Khung workspace, cùng giá trị với `src/components/workspace/split-workspace.module.css` (Task Detail dùng module đó).
  * Viết bằng utility để test Node đọc được; `tests/split-workspace-contract.test.ts` khóa hai bên không lệch nhau.
  */
-const SPLIT_WORKSPACE = "grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-1.5 p-2";
+// Điện thoại: tràn mép như Linear (không padding, thẻ không viền/bo); từ md giữ khung hai thẻ
+const SPLIT_WORKSPACE = "grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-1.5 p-2 max-md:gap-0 max-md:p-0";
 const WORKSPACE_CARD = "@container flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-foreground";
 
 interface ApiDoc {
@@ -380,8 +381,8 @@ export function DocumentRegistryView() {
           data-peek-open={paneVisible}
           style={paneVisible ? { gridTemplateColumns: `minmax(0, 1fr) min(75vw, ${layout.width}px)` } : undefined}
         >
-          <section className={WORKSPACE_CARD} data-slot="document-list-card" aria-label="Sổ văn bản">
-            <header className="shrink-0 border-b border-border/60 px-4 pb-2 pt-2.5 sm:px-6">
+          <section className={cn(WORKSPACE_CARD, "max-md:rounded-none max-md:border-0")} data-slot="document-list-card" aria-label="Sổ văn bản">
+            <header className="shrink-0 border-b border-border/60 px-4 pb-2 pt-2.5 max-md:flex max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:flex-col max-md:justify-center max-md:pb-0 max-md:pt-[env(safe-area-inset-top,0px)] sm:px-6">
               <DocumentLedgerToolbar
                 title={typeTitle[filters.type] ?? "Sổ văn bản"}
                 searchValue={searchInputValue}
@@ -417,7 +418,7 @@ export function DocumentRegistryView() {
               ref={listRef}
               tabIndex={-1}
               data-slot="document-list-region"
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-6 pt-4 outline-none sm:px-4 md:pb-8"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-0 pb-6 pt-1 outline-none sm:px-4 sm:pt-4 md:pb-8"
             >
               <InboundDocumentFeatureGuide>
                 <div>
@@ -442,7 +443,7 @@ export function DocumentRegistryView() {
                       documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
                       emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description} emptyIllustration={emptyCopy.illustration}
                       emptyAction={emptyAction}
-                      onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={handleOpenDetail}
+                      onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect}
                       isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
                     />
                   </div>

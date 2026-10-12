@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
-import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check, Plus, SlidersHorizontal, Inbox, SearchX } from "lucide-react";
+import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check, Plus, Inbox, SearchX } from "lucide-react";
 import type { OfficialDocument } from "@/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
@@ -13,11 +13,13 @@ import {
   ListToolbarFilterPopover,
   ListToolbarPopover,
   ListToolbarSearch,
+  listToolbarIconButtonClass,
   listToolbarPrimaryButtonClass,
 } from "@/components/ui/list-toolbar";
 import { ActiveFilterBar, FilterSegmentChip } from "@/components/workspace/components/active-filter-breadcrumb";
 import { FilterIconDept, FilterIconMonth, FilterIconPriority, FilterIconStatus } from "@/components/dashboard/task-filter-icons";
-import { TaskIconDepartment, TaskIconPriority, TaskIconStatus, TaskIconTime } from "@/lib/icons/task-icons";
+import { TaskIconDepartment, TaskIconDisplay, TaskIconPriority, TaskIconSearch, TaskIconStatus, TaskIconTime } from "@/lib/icons/task-icons";
+import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
 import { cn } from "@/lib/utils";
 import { getSelectionGroupPositions, type SelectionGroupPosition } from "@/lib/selection-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -252,12 +254,20 @@ export function DocumentLedgerToolbar({
   const searchRef = React.useRef<HTMLInputElement>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
+  // Điện thoại: ô tìm thu thành icon, bấm mới mở chiếm chỗ tiêu đề (như trang Nhiệm vụ); có từ khóa thì luôn mở
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  const showSearch = isSearchOpen || Boolean(searchValue);
+
+  React.useEffect(() => {
+    if (isSearchOpen) searchRef.current?.focus();
+  }, [isSearchOpen]);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "/") {
         if (isShortcutBlocked(e)) return;
         e.preventDefault();
+        setIsSearchOpen(true);
         searchRef.current?.focus();
       } else if ((e.key === "f" || e.key === "F") && !isShortcutBlocked(e)) {
         e.preventDefault();
@@ -318,18 +328,39 @@ export function DocumentLedgerToolbar({
     // Cùng thanh công cụ trang Nhiệm vụ: tiêu đề bên trái; tìm · lọc · hiển thị · hành động chính bên phải.
     // Xóa bộ lọc nằm ở hàng chip bên dưới ("Xóa lọc"), không lặp lại cạnh nút Lọc.
     <div data-slot="document-ledger-toolbar" className="flex items-center gap-1.5">
+      {/* Điện thoại: nút mở sidebar thay cho thanh trên cùng (như Linear) */}
+      <Pressable
+        onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
+        aria-label="Mở menu"
+        className={cn("-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground md:hidden", showSearch && "max-md:hidden")}
+      >
+        <IconSidebarPanel size={18} />
+      </Pressable>
       {/* Tiêu đề không bị cắt: pane hẹp thì ô tìm co lại trước (min 96px), không phải tiêu đề */}
-      <div className="flex min-w-fit flex-1 items-center pr-3">
+      <div className={cn("flex min-w-fit flex-1 items-center pr-3", showSearch && "max-md:hidden")}>
         <h1 className="whitespace-nowrap text-compact font-semibold text-foreground select-none">{title}</h1>
       </div>
       {!quiet && (
         <>
+      {!showSearch && (
+        <Pressable
+          onClick={() => setIsSearchOpen(true)}
+          aria-label="Tìm văn bản"
+          title="Tìm theo số, ký hiệu, trích yếu"
+          className={cn(listToolbarIconButtonClass(false), "md:hidden")}
+        >
+          <TaskIconSearch size={14} className="shrink-0 text-muted-foreground" />
+        </Pressable>
+      )}
       <ListToolbarSearch
         ref={searchRef}
         value={searchValue}
         onChange={onSearchChange}
+        onBlur={() => {
+          if (!searchValue.trim()) setIsSearchOpen(false);
+        }}
         placeholder="Tìm văn bản… /"
-        wrapperClassName="min-w-24 shrink"
+        wrapperClassName={cn("min-w-24 shrink", showSearch ? "max-md:w-auto! max-md:flex-1" : "max-md:hidden")}
         aria-label="Tìm văn bản"
         title="Tìm theo số, ký hiệu, trích yếu"
       />
@@ -341,13 +372,15 @@ export function DocumentLedgerToolbar({
         onClear={onClearFilters}
         ariaLabel="Bộ lọc văn bản"
       />
+        {/* Thuộc tính cột chỉ áp dụng cho bảng (từ sm); thẻ trên điện thoại không dùng */}
+        <div className="hidden sm:contents">
         <ListToolbarPopover
           open={isDisplayOpen}
           onOpenChange={setIsDisplayOpen}
           ariaLabel="Tùy chọn hiển thị và thuộc tính bảng"
           title="Hiển thị"
           width="w-64"
-          trigger={<SlidersHorizontal className="size-3.5" />}
+          trigger={<TaskIconDisplay size={14} className="shrink-0 text-muted-foreground" />}
         >
           <div className="flex flex-col gap-2 p-2">
             <p className="text-xs font-medium text-muted-foreground">Thuộc tính hiển thị</p>
@@ -372,16 +405,18 @@ export function DocumentLedgerToolbar({
             </div>
           </div>
         </ListToolbarPopover>
+        </div>
         </>
       )}
+      {/* Điện thoại: chỉ còn nút tròn "+" (nhãn vẫn đọc được qua aria-label) để hàng không tràn */}
       <Pressable
         onClick={onPrimaryAction}
         aria-label={primaryActionLabel}
         title={primaryActionLabel}
-        className={listToolbarPrimaryButtonClass}
+        className={cn(listToolbarPrimaryButtonClass, "max-md:size-7 max-md:rounded-full max-md:px-0")}
       >
         <Plus className="size-3.5 shrink-0 text-muted-foreground" />
-        <span>{primaryActionLabel}</span>
+        <span className="max-md:sr-only">{primaryActionLabel}</span>
       </Pressable>
     </div>
   );

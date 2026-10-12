@@ -2,19 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  FileText,
-  ChevronRight,
-  CheckCircle2,
-  ArrowRight,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import { OfficialDocument, DocumentType } from "@/types/document";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { cn } from "@/lib/utils";
 import { formatLedgerDate, getLedgerStepLabel } from "@/lib/documents/document-ledger-format";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { TaskIconLink } from "@/lib/icons/task-icons";
+import { getTaskDetailHref } from "@/lib/tasks/task-detail-navigation";
 import {
   getUrgencyBadgeConfig,
 } from "../document-badges";
@@ -25,7 +22,6 @@ export interface DocumentCardListProps {
   selectedIds?: Set<string>;
   onSelectDocument?: (doc: OfficialDocument) => void;
   onToggleSelect?: (docId: string, isShift?: boolean) => void;
-  onViewPdf?: (doc: OfficialDocument) => void;
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -60,7 +56,6 @@ export function DocumentCardList({
   selectedIds = new Set<string>(),
   onSelectDocument,
   onToggleSelect,
-  onViewPdf,
   isLoading = false,
   error = null,
   onRetry,
@@ -71,27 +66,23 @@ export function DocumentCardList({
   className,
   selectable = false,
 }: DocumentCardListProps) {
-  // Loading Skeleton State
+  // Loading Skeleton State: cùng nhịp với hàng thật (mã + ngày, trích yếu, dòng phụ)
   if (isLoading) {
     return (
       <div
-        className={cn("p-3 space-y-3 select-none", className)}
+        className={cn("divide-y divide-border/60 select-none motion-safe:animate-pulse", className)}
         data-slot="document-card-list"
       >
-        {Array.from({ length: 4 }).map((_, idx) => (
-          <div
-            key={`mob-skel-${idx}`}
-            className="p-3 rounded-lg border border-border/60 bg-card/60 motion-safe:animate-pulse space-y-2.5"
-          >
-            <div className="flex justify-between items-center">
-              <div className="h-4 w-28 bg-muted rounded" />
-              <div className="h-4 w-16 bg-muted/70 rounded" />
-            </div>
-            <div className="h-4 w-5/6 bg-muted rounded" />
-            <div className="h-3 w-1/2 bg-muted/60 rounded" />
-            <div className="flex justify-end gap-2 pt-1 border-t border-border/40">
-              <div className="h-11 w-20 bg-muted/60 rounded-lg" />
-              <div className="h-11 w-20 bg-muted/70 rounded-lg" />
+        {Array.from({ length: 6 }).map((_, idx) => (
+          <div key={`mob-skel-${idx}`} className="flex gap-3 px-4 py-2.5">
+            <div className="mt-0.5 size-4 shrink-0 rounded-full bg-muted" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex justify-between">
+                <div className="h-3 w-24 rounded bg-muted/70" />
+                <div className="h-3 w-12 rounded bg-muted/60" />
+              </div>
+              <div className="h-3.5 w-5/6 rounded bg-muted" />
+              <div className="h-3 w-1/2 rounded bg-muted/60" />
             </div>
           </div>
         ))}
@@ -130,13 +121,15 @@ export function DocumentCardList({
     );
   }
 
+  // Hàng gọn kiểu Linear: không viền thẻ, chia bằng đường kẻ; bấm cả hàng để mở văn bản (tệp xem trong chi tiết)
   return (
     <div
-      className={cn("p-3 space-y-3", className)}
+      className={cn("divide-y divide-border/60", className)}
       data-slot="document-card-list"
     >
       {documents.map((doc) => {
         const urgencyConfig = getUrgencyBadgeConfig(doc.urgency);
+        const isUrgent = Boolean(doc.urgency) && doc.urgency !== "normal" && doc.urgency !== "THUONG";
         const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
         const stepStatus = { new: "NOT_STARTED", progress: "IN_PROGRESS", review: "WAITING_APPROVAL", done: "COMPLETED" }[step.kind];
         const typeLabel = getDocTypeLabel(doc.type);
@@ -144,6 +137,7 @@ export function DocumentCardList({
         const labelCode = displayCode || doc.summary;
         const isSelectedRow = selectedIds.has(doc.id);
         const isCurrentActive = selectedDocument?.id === doc.id;
+        const issuedDate = formatLedgerDate(doc.issuedDate);
 
         return (
           <div
@@ -151,6 +145,7 @@ export function DocumentCardList({
             role="button"
             tabIndex={0}
             data-doc-id={doc.id}
+            aria-label={`${typeLabel} ${labelCode}: ${doc.summary}`}
             onClick={() => onSelectDocument?.(doc)}
             onKeyDown={(e) => {
               if (e.target !== e.currentTarget) return;
@@ -160,125 +155,57 @@ export function DocumentCardList({
               }
             }}
             className={cn(
-              "p-3 rounded-lg border border-border/70 bg-card space-y-2.5 transition-colors cursor-pointer select-none",
-              "active:bg-muted/40 outline-none focus-visible:ring-2 focus-visible:ring-primary",
-              isSelectedRow && "border-primary/40 bg-primary/5",
-              isCurrentActive && "ring-1 ring-primary/40"
+              "flex gap-3 px-4 py-2.5 transition-colors cursor-pointer select-none touch-manipulation",
+              "active:bg-muted/50 outline-none focus-visible:bg-accent",
+              (isSelectedRow || isCurrentActive) && "bg-accent/60"
             )}
             data-slot="mobile-document-card"
           >
-            {/* Header Row: Checkbox (optional) + Code & Badges */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex w-full items-center gap-2 min-w-0">
-                {selectable && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="min-h-[44px] min-w-[32px] flex items-center justify-center"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelectedRow}
-                      onChange={(e) => {
-                        onToggleSelect?.(doc.id, (e.nativeEvent as MouseEvent)?.shiftKey);
-                      }}
-                      aria-label={`Chọn văn bản ${labelCode}`}
-                      className="size-4 rounded border-border/80 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                    />
-                  </div>
-                )}
-                <span className="min-w-0 break-words font-mono tabular-nums font-medium text-compact text-foreground">
-                  {displayCode}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {doc.urgency &&
-                  doc.urgency !== "normal" &&
-                  doc.urgency !== "THUONG" && (
-                    <span
-                      className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border",
-                        urgencyConfig.className
-                      )}
-                    >
-                      {urgencyConfig.label}
-                    </span>
-                  )}
-                <span
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
-                >
-                  <TaskStatusCircle status={stepStatus} />
-                  <span>{step.label}</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Document Title / Summary */}
-            <p className="text-compact font-medium text-foreground line-clamp-2 leading-relaxed">
-              {doc.summary}
-            </p>
-
-            {/* Metadata Row: Loại văn bản · Ngày ban hành */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5 truncate">
-                <span className="font-medium text-foreground">{typeLabel}</span>
-                <span>•</span>
-                <span className="font-mono tabular-nums">
-                  {formatLedgerDate(doc.issuedDate) || "—"}
-                </span>
-              </div>
-              {doc.issuingAuthority && (
-                <span className="truncate max-w-[140px] text-right font-medium">
-                  {doc.issuingAuthority}
-                </span>
-              )}
-            </div>
-
-            {/* Linked task notice (if linked) */}
-            {doc.linkedTaskId && (
+            {selectable ? (
+              // Vùng bấm 32px quanh ô tích; không mở văn bản khi tích
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="pt-0.5"
+                className="-m-2 flex size-8 shrink-0 items-center justify-center self-start"
               >
-                <Link
-                  href={`/?taskId=${doc.linkedTaskId}`}
-                  className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/20 text-xs font-semibold transition-colors"
-                >
-                  <CheckCircle2 className="size-3" />
-                  <span>Nhiệm vụ:</span>
-                  <span className="min-w-0 truncate">{doc.linkedTaskTitle || "Xem nhiệm vụ"}</span>
-                  <ArrowRight className="size-2.5" />
-                </Link>
+                <Checkbox
+                  checked={isSelectedRow}
+                  onChange={(e) => onToggleSelect?.(doc.id, (e.nativeEvent as MouseEvent)?.shiftKey)}
+                  aria-label={`Chọn văn bản ${labelCode}`}
+                />
               </div>
-            )}
+            ) : null}
+            <TaskStatusCircle status={stepStatus} className="mt-0.5" />
 
-            {/* Nút hành động: 44px trên điện thoại, 28px trên desktop (Button sm) */}
-            <div
-              className="flex items-center justify-end gap-2 pt-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {doc.fileAttachment && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onViewPdf?.(doc)}
-                  className="text-primary"
-                  aria-label={`Xem PDF văn bản ${labelCode}`}
+            <div className="min-w-0 flex-1 space-y-0.5">
+              {/* Số ký hiệu · mức khẩn ........ ngày ban hành */}
+              <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                <span className="min-w-0 truncate font-mono tabular-nums">{displayCode || typeLabel}</span>
+                {isUrgent ? (
+                  <span className={cn("shrink-0 font-medium", urgencyConfig.className.includes("destructive") ? "text-destructive" : "text-warning")}>
+                    {urgencyConfig.label}
+                  </span>
+                ) : null}
+                {issuedDate ? <span className="ml-auto shrink-0 tabular-nums">{issuedDate}</span> : null}
+              </div>
+
+              <p className="line-clamp-2 text-compact text-foreground">{doc.summary}</p>
+
+              {/* Bước xử lý · cơ quan ban hành */}
+              <p className="truncate text-xs text-muted-foreground">
+                {step.label}
+                {doc.issuingAuthority ? ` · ${doc.issuingAuthority}` : ""}
+              </p>
+
+              {doc.linkedTaskId ? (
+                <Link
+                  href={getTaskDetailHref(doc.linkedTaskId)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex max-w-full items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                 >
-                  <FileText />
-                  <span>Xem PDF</span>
-                </Button>
-              )}
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onSelectDocument?.(doc)}
-                aria-label={`Chi tiết văn bản ${labelCode}`}
-              >
-                <span>Chi tiết</span>
-                <ChevronRight />
-              </Button>
+                  <TaskIconLink className="size-3.5 shrink-0" />
+                  <span className="min-w-0 truncate">{doc.linkedTaskTitle || "Nhiệm vụ liên kết"}</span>
+                </Link>
+              ) : null}
             </div>
           </div>
         );

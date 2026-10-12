@@ -234,13 +234,14 @@ export function DocumentBulkToolbar({
               },
             }}
             className={cn(
-              "fixed bottom-6 inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max select-none",
+              // Điện thoại: thanh rộng gần hết màn, hàng 1 = số đã chọn + bỏ chọn, hàng 2 = ba thao tác chia đều
+              "fixed bottom-6 inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max select-none max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+12px)] max-sm:w-[calc(100vw-24px)]",
               className
             )}
           >
             <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card px-2 py-1 shadow-lg text-foreground">
               {/* Badge hiển thị số lượng */}
-              <div className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 text-compact font-medium text-foreground whitespace-nowrap">
+              <div className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 text-compact font-medium text-foreground whitespace-nowrap max-sm:flex-1">
                 <CheckSquare
                   className="size-3.5 text-primary shrink-0"
                 />
@@ -259,7 +260,7 @@ export function DocumentBulkToolbar({
               </div>
 
               <div
-                className="h-4 w-px bg-border/80 mx-0.5 shrink-0"
+                className="h-4 w-px bg-border/80 mx-0.5 shrink-0 max-sm:hidden"
                 aria-hidden="true"
               />
 
@@ -269,7 +270,7 @@ export function DocumentBulkToolbar({
                 size="sm"
                 onClick={() => openModal("assign-unit")}
                 disabled={isLoading || isSubmitting}
-                className="text-foreground"
+                className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
                 title="Giao đơn vị chủ trì xử lý các văn bản đã chọn"
               >
                 <Building2 className="text-primary" />
@@ -282,7 +283,7 @@ export function DocumentBulkToolbar({
                 size="sm"
                 onClick={() => openModal("resolve")}
                 disabled={isLoading || isSubmitting}
-                className="text-foreground"
+                className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
                 title="Đánh dấu hoàn tất xử lý các văn bản đã chọn"
               >
                 <CheckCircle2 className="text-emerald-600" />
@@ -295,7 +296,7 @@ export function DocumentBulkToolbar({
                 size="sm"
                 onClick={() => openModal("file")}
                 disabled={isLoading || isSubmitting}
-                className="text-foreground"
+                className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
                 title="Lập hồ sơ và đưa vào lưu trữ theo dõi"
               >
                 <Archive className="text-primary" />
@@ -303,7 +304,7 @@ export function DocumentBulkToolbar({
               </Button>
 
               <div
-                className="h-4 w-px bg-border/80 mx-0.5 shrink-0"
+                className="h-4 w-px bg-border/80 mx-0.5 shrink-0 max-sm:hidden"
                 aria-hidden="true"
               />
 
@@ -315,13 +316,16 @@ export function DocumentBulkToolbar({
                 disabled={isLoading || isSubmitting}
                 aria-label="Bỏ chọn tất cả văn bản"
                 title="Bỏ chọn (Esc)"
+                className="max-sm:order-1 max-sm:size-9 max-sm:px-0"
               >
                 <X />
                 <span className="hidden sm:inline">Bỏ chọn</span>
-                <kbd className="inline-flex items-center rounded border border-border/80 bg-muted/80 px-1 font-mono text-xs text-muted-foreground leading-none font-medium">
+                <kbd className="hidden sm:inline-flex items-center rounded border border-border/80 bg-muted/80 px-1 font-mono text-xs text-muted-foreground leading-none font-medium">
                   Esc
                 </kbd>
               </Button>
+              {/* Điện thoại: ngắt hàng sau nút bỏ chọn để ba thao tác nằm riêng hàng dưới */}
+              <div aria-hidden="true" className="hidden h-0 basis-full max-sm:order-1 max-sm:block" />
             </div>
           </m.aside>
         )}
