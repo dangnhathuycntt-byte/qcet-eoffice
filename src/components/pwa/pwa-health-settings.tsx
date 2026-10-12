@@ -215,7 +215,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
   return (
     <div
       className={cn(
-        "rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-6 text-slate-900",
+        "rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-6 text-foreground",
         className
       )}
     >
@@ -419,7 +419,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
       </div>
 
       {/* Row 2: Bộ nhớ ngoại tuyến & Lưu trữ vĩnh viễn */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50/30 p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-muted/30 p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
           <Badge
             variant="outline"
             className={cn(
-              "text-xs px-2.5 py-1 font-medium w-fit flex items-center gap-1.5",
+              "text-xs px-2.5 py-1 font-medium w-fit max-w-full whitespace-normal text-left flex items-center gap-1.5",
               estimate.isPersisted
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : "bg-slate-100 text-slate-600 border-slate-200"
@@ -493,7 +493,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               size="sm"
               onClick={handleRequestPersistence}
               disabled={isRequestingPersist}
-              className="min-h-[44px] text-xs font-medium border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="min-h-[44px] h-auto whitespace-normal text-xs font-medium border-blue-200 text-blue-700 hover:bg-blue-50"
             >
               {isRequestingPersist ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
@@ -587,7 +587,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
       </div>
 
       {/* Row 3: Hàng đợi đồng bộ hóa ngoại tuyến (Outbox Sync) */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50/30 p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-muted/30 p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">

@@ -11,8 +11,9 @@ export const metadata: Metadata = {
 
 export default function SettingsPage() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-      <div>
+    <div className="w-full max-w-5xl mx-auto px-4 py-8 space-y-8 max-md:space-y-4 max-md:px-0 max-md:py-1">
+      {/* Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
+      <div className="max-md:sr-only">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Cài đặt hệ thống</h1>
         <p className="text-sm text-slate-500 mt-1">
           Cấu hình ứng dụng, bộ nhớ ngoại tuyến và tùy chọn cá nhân hóa trên thiết bị

@@ -282,8 +282,8 @@ export function GlobalSearchView() {
       initial="initial"
       animate="animate"
     >
-      {/* Header */}
-      <div className="flex items-center gap-3">
+      {/* Header (điện thoại: tên trang đã nằm trên thanh trên cùng) */}
+      <div className="flex items-center gap-3 max-md:sr-only">
         <div className="p-2 rounded-xl bg-muted/60">
           <Search size={20} className="text-foreground" />
         </div>

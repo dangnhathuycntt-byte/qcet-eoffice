@@ -634,8 +634,9 @@ function CalendarRouteContent({
   return (
     <div className="space-y-4" data-slot="calendar-page-container">
       {/* Page header: title + primary action */}
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold tracking-tight text-foreground font-heading">
+      {/* Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
+      <div className="flex items-center justify-between gap-3 max-md:justify-end">
+        <h1 className="text-xl font-bold tracking-tight text-foreground font-heading max-md:sr-only">
           Lịch công tác
         </h1>
 

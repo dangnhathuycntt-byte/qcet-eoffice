@@ -182,8 +182,9 @@ export function DelegationRegistryView() {
     >
       {/* Header */}
       <div>
-        <div className="flex flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="flex flex-col gap-3 border-b border-border/40 pb-4 max-md:border-b-0 max-md:pb-0 sm:flex-row sm:items-center sm:justify-between">
+          {/* Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
+          <div className="max-md:sr-only">
             <div className="mb-1 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
                 <Shield className="size-3" /> Ủy quyền

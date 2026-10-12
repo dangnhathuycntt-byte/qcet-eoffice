@@ -10,8 +10,9 @@ export const metadata: Metadata = {
 
 export default function UserDirectoryPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-      <div>
+    <div className="w-full max-w-7xl mx-auto px-4 py-8 space-y-6 max-md:px-0 max-md:py-1">
+      {/* Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
+      <div className="max-md:sr-only">
         <h1 className="text-xl font-bold text-foreground tracking-tight">Danh bạ Nhân sự</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Tra cứu thông tin nhân sự toàn trường - chế độ chỉ đọc

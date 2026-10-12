@@ -45,8 +45,9 @@ export default function OrgPage() {
       className="max-w-[1440px] w-full mx-auto space-y-5 pb-6 md:pb-10"
       data-slot="org-page"
     >
-      {/* Page header: identity + primary context. No metric cards, no duplicate actions. */}
-      <div className="flex flex-col gap-2">
+      {/* Page header: identity + primary context. No metric cards, no duplicate actions.
+          Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
+      <div className="flex flex-col gap-2 max-md:sr-only">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
             <Network className="size-3" />
