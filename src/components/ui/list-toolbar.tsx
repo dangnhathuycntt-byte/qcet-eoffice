@@ -7,6 +7,7 @@ import { TaskIconFilter, TaskIconSearch } from "@/lib/icons/task-icons";
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
 import { Pressable } from "@/components/ui/pressable";
+import { useIsPhone } from "@/hooks/use-is-phone";
 import {
   MENU_POPUP_CLASS,
   MenuBackdrop,
@@ -118,13 +119,6 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
 });
 
 /** Khung popover của thanh công cụ: nút trigger dùng chung và panel theo style property */
-const MOBILE_QUERY = "(max-width: 767px)";
-function subscribeMobile(onChange: () => void) {
-  const mql = window.matchMedia(MOBILE_QUERY);
-  mql.addEventListener("change", onChange);
-  return () => mql.removeEventListener("change", onChange);
-}
-
 export function ListToolbarPopover({
   open,
   onOpenChange,
@@ -151,11 +145,7 @@ export function ListToolbarPopover({
   /** Tiêu đề bottom sheet trên điện thoại (mặc định dùng ariaLabel) */
   sheetTitle?: string;
 }) {
-  const isMobile = React.useSyncExternalStore(
-    subscribeMobile,
-    () => window.matchMedia(MOBILE_QUERY).matches,
-    () => false
-  );
+  const isMobile = useIsPhone();
 
   // Chuột phải ở nơi khác (menu thao tác của hàng) không kích hoạt "bấm ra ngoài" của Popover: tự đóng để không chồng hai lớp
   React.useEffect(() => {

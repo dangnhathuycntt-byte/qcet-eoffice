@@ -2018,7 +2018,8 @@ function UnifiedAdaptiveWorkspaceInner({
       data-slot="unified-adaptive-workspace"
       data-active-scope={activeScope}
       className={cn(
-        "space-y-4 pb-2 sm:pb-8 md:[--task-table-sticky-top:88px]",
+        // Điện thoại: danh sách sát ngay dưới hàng chip như Linear (4px), từ md giữ 16px
+        "space-y-4 max-md:space-y-1 pb-2 sm:pb-8 md:[--task-table-sticky-top:88px]",
         className
       )}
     >

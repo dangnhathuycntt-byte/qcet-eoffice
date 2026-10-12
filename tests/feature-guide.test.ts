@@ -95,9 +95,9 @@ describe("Feature Guide Specification (Board FeatureGuide)", () => {
       featureGuideSource.includes('aria-modal="false"'),
       "FeatureGuideCard must be non-modal (aria-modal='false') so background is interactable"
     );
-    // Mobile bottom anchoring
+    // Mobile bottom anchoring: cố định ở đáy viewport, cách 8px (cộng safe area iOS)
     assert.ok(
-      featureGuideSource.includes("fixed bottom-2") || featureGuideSource.includes("bottom-2"),
+      /fixed bottom-(2|\[calc\(env\(safe-area-inset-bottom,0px\)\+8px\)\])/.test(featureGuideSource),
       "Mobile feature guide must sit at bottom of viewport"
     );
     // Animation timing (180ms ease-out)

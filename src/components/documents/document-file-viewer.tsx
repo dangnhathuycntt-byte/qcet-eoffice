@@ -4,7 +4,9 @@ import * as React from "react";
 import { DocumentPdfViewer } from "./document-detail-parts";
 import { DocumentFilesRail, FilesMenu, type RailFile } from "./document-viewer-rail";
 import { FileTypeIcon } from "./file-type-icon";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pressable } from "@/components/ui/pressable";
 import { cn } from "@/lib/utils";
 import {
   MAX_FILES_AS_TICKS,
@@ -198,5 +200,86 @@ export function DocumentFileViewer({
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Điện thoại: tệp đính kèm là các dòng (như Linear), không nhúng khung xem vào trang chi tiết;
+ * chạm một dòng để mở `DocumentFileScreen` toàn màn hình.
+ */
+export function DocumentFileRows({
+  files,
+  onOpen,
+  gutterClassName = "px-4",
+}: {
+  files: DocumentFile[];
+  onOpen: (id: string) => void;
+  gutterClassName?: string;
+}) {
+  return (
+    <section aria-label="Tệp đính kèm" data-slot="document-file-rows" className={cn("pb-4", gutterClassName)}>
+      <h2 className="flex h-8 items-center text-xs text-muted-foreground">Tệp đính kèm · {files.length}</h2>
+      <ul className="-mx-2">
+        {files.map((file) => (
+          <li key={file.id}>
+            <Pressable
+              onClick={() => onOpen(file.id)}
+              aria-label={`Xem tệp ${file.name}`}
+              className="flex h-11 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-left active:bg-muted/50"
+            >
+              <FileTypeIcon fileName={file.name} mimeType={file.mimeType} />
+              <span className="min-w-0 flex-1 truncate text-compact text-foreground">{file.name}</span>
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatSize(file.sizeBytes ?? file.sizeLabel)}</span>
+              <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            </Pressable>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Điện thoại: xem tệp toàn màn hình, nút quay lại về chi tiết văn bản; Esc cũng quay lại. */
+export function DocumentFileScreen({
+  title,
+  files,
+  activeFileId,
+  onActiveFileChange,
+  onClose,
+}: {
+  title: React.ReactNode;
+  files: DocumentFile[];
+  activeFileId: string;
+  onActiveFileChange: (id: string) => void;
+  onClose: () => void;
+}) {
+  const backRef = React.useRef<HTMLButtonElement>(null);
+  React.useEffect(() => backRef.current?.focus(), []);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Xem tệp đính kèm"
+      data-slot="document-file-screen"
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        // React gắn ở document cùng chỗ với handler Escape của overlay: preventDefault để overlay bỏ qua lần này
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }}
+      className="fixed inset-0 z-[60] flex flex-col bg-card"
+    >
+      <header className="flex h-[calc(44px+env(safe-area-inset-top,0px))] shrink-0 items-center gap-1 border-b border-border/60 px-2 pt-[env(safe-area-inset-top,0px)]">
+        <Button ref={backRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Quay lại chi tiết văn bản">
+          <ChevronLeft />
+        </Button>
+        <p className="min-w-0 truncate text-xs text-muted-foreground">{title}</p>
+      </header>
+      <div className="@container/doc min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)]">
+        <DocumentFileViewer files={files} activeFileId={activeFileId} onActiveFileChange={onActiveFileChange} gutterClassName="px-4" stickyHeader />
+      </div>
+    </div>
   );
 }

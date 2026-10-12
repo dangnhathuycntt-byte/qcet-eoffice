@@ -3,14 +3,16 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import * as React from "react";
 import Link from "next/link";
-import { Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
+import { ChevronLeft, Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import type { DocumentItem, OfficialDocument } from "@/types/document";
 import { useDocumentDetail } from "@/hooks/use-document-detail";
 import { fromDocumentItem, fromOfficialDocument, type DocumentViewModel } from "@/lib/documents/document-view-model";
 import { resolveActiveFileId } from "@/lib/documents/file-viewer-state";
-import { DocumentFileViewer } from "../document-file-viewer";
+import { DocumentFileRows, DocumentFileScreen, DocumentFileViewer } from "../document-file-viewer";
+import { useIsPhone } from "@/hooks/use-is-phone";
 import { hasOpenDetailsPopover, useTrackOpenPopover } from "../popover-escape-guard";
 import { DocumentInfoSections, DocumentSummaryBlock } from "./document-workspace-parts";
 import { AddDocumentFileButton, DocumentEditDialog, useAddDocumentFiles } from "./document-edit";
@@ -116,6 +118,10 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
     onWorkflowUpdate?.();
   };
   const upload = useAddDocumentFiles(docId, afterChange);
+  // Điện thoại: tệp là danh sách dòng, chạm để xem toàn màn hình (không nhúng khung xem dài vào trang)
+  const isPhone = useIsPhone();
+  const [viewingFileId, setViewingFileId] = React.useState<string | null>(null);
+  React.useEffect(() => setViewingFileId(null), [docId]);
 
   // Pane không modal: focus ở lại dòng danh sách để tiếp tục duyệt bằng ↑/↓ hoặc j/k.
   // Overlay là hộp thoại: chuyển focus vào nút Đóng khi mở, kể cả khi pane vừa chuyển sang overlay do thu hẹp.
@@ -140,6 +146,12 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
     if (event.key !== "Escape" || event.defaultPrevented) return;
     // Popover đang mở đóng trước, pane đóng ở lần Escape sau
     if (hasOpenDetailsPopover()) return;
+    // Điện thoại: đang xem tệp toàn màn hình thì Escape chỉ quay về chi tiết
+    if (viewingFileId) {
+      event.preventDefault();
+      setViewingFileId(null);
+      return;
+    }
     event.preventDefault();
     onClose();
   };
@@ -168,9 +180,23 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
     "Chi tiết văn bản"
   );
 
+  // Điện thoại: nút quay lại bên trái (như chi tiết nhiệm vụ / Linear) thay cho nút đóng bên phải; chừa safe area
+  const backAsClose = isPhone && mode === "overlay";
   const header = (
-    <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 pl-4 pr-2 select-none">
-      <p className="min-w-0 truncate text-xs text-muted-foreground">{typeLine}</p>
+    <header
+      className={cn(
+        "flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 pl-4 pr-2 select-none",
+        backAsClose && "h-[calc(44px+env(safe-area-inset-top,0px))] pl-2 pt-[env(safe-area-inset-top,0px)]",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-1">
+        {backAsClose ? (
+          <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Quay lại danh sách văn bản">
+            <ChevronLeft />
+          </Button>
+        ) : null}
+        <p className="min-w-0 truncate text-xs text-muted-foreground">{typeLine}</p>
+      </div>
       <div className="flex shrink-0 items-center gap-0.5">
         <MoreActionsMenu
           onPrint={() => window.print()}
@@ -178,9 +204,11 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
           onEdit={canEdit ? () => setEditing(true) : undefined}
           onAddFiles={canEdit && !upload.busy ? upload.open : undefined}
         />
-        <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Đóng" title="Đóng" className="text-muted-foreground hover:text-foreground">
-          <X className="size-4" />
-        </Button>
+        {backAsClose ? null : (
+          <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Đóng" title="Đóng" className="text-muted-foreground hover:text-foreground">
+            <X className="size-4" />
+          </Button>
+        )}
       </div>
     </header>
   );
@@ -230,7 +258,29 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
       {upload.input}
       {item && canEdit ? <DocumentEditDialog item={item} open={editing} onOpenChange={setEditing} onSaved={afterChange} /> : null}
 
-      {vm.files.length > 0 ? (
+      {vm.files.length > 0 && isPhone ? (
+        <>
+          <DocumentFileRows
+            files={vm.files}
+            onOpen={(id) => {
+              onFileChange?.(id);
+              setViewingFileId(id);
+            }}
+          />
+          {viewingFileId ? (
+            <DocumentFileScreen
+              title={typeLine}
+              files={vm.files}
+              activeFileId={viewingFileId}
+              onActiveFileChange={(id) => {
+                onFileChange?.(id);
+                setViewingFileId(id);
+              }}
+              onClose={() => setViewingFileId(null)}
+            />
+          ) : null}
+        </>
+      ) : vm.files.length > 0 ? (
         <DocumentFileViewer
           key={`files-${vm.id}`}
           files={vm.files}
@@ -278,7 +328,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
           aria-label={label}
           data-slot="document-quick-view"
           data-mode="overlay"
-          className="fixed inset-0 z-50 flex flex-col overflow-hidden rounded-(--radius-xl) border border-border bg-card text-foreground"
+          className="fixed inset-0 z-50 flex flex-col overflow-hidden rounded-(--radius-xl) border border-border bg-card text-foreground max-md:rounded-none max-md:border-0"
         >
           {content}
         </section>

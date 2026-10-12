@@ -1531,7 +1531,7 @@ export function UnifiedTaskToolbar({
           onChange={handleSearchInputChange}
           onClear={handleSearchClear}
           loading={loading}
-          placeholder="Tìm nhiệm vụ… /"
+          placeholder="Tìm nhiệm vụ…"
           aria-label="Tìm nhiệm vụ"
           onBlur={() => {
             if (!localSearch.trim()) setIsSearchOpen(false);

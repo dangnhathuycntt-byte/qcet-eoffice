@@ -147,8 +147,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 min-w-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] min-w-0 flex-1 flex flex-col"}
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
-        {/* Mobile Header (chỉ dưới md); danh sách, chi tiết nhiệm vụ và sổ văn bản tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
-        {!isTasksList && !isTaskDetail && pathname !== "/documents" && <AppTopbar />}
+        {/* Mobile Header (chỉ dưới md); danh sách, chi tiết nhiệm vụ, hộp thư và sổ văn bản tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
+        {!isTasksList && !isTaskDetail && !isInbox && pathname !== "/documents" && <AppTopbar />}
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
         {!hideDesktopTopbar && <DesktopTopbar />}
@@ -162,7 +162,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           className={isWorkspaceShell
             ? "flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
             : isInbox
-            ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:mt-2 md:h-[calc(100dvh-8px)] md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card outline-none overflow-hidden"
+            ? "flex flex-1 min-w-0 flex-col h-[100dvh] md:mt-2 md:h-[calc(100dvh-8px)] md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card outline-none overflow-hidden"
             : cn(
                 "flex-1 flex flex-col md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden",
                 // Danh sách nhiệm vụ: khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết

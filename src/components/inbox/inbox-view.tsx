@@ -23,6 +23,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
 import { getStatusLabel } from "@/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
+import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
 import { InkIllustration, type IllustrationName } from "@/components/ui/empty-state";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
@@ -531,10 +532,20 @@ export function InboxView() {
           data-slot="inbox-list-pane"
           className={cn(
             "flex min-h-0 flex-col",
-            isWide ? "w-[440px] shrink-0 border-r border-border/60" : "w-full"
+            isWide ? "w-[440px] shrink-0 border-r border-border/60" : "w-full",
+            // Điện thoại: nền trắng tràn mép như Linear
+            "max-md:bg-card"
           )}
         >
-          <div className="flex h-10 shrink-0 items-center gap-1 px-3">
+          {/* Điện thoại: header riêng thay topbar chung (nút mở sidebar, chừa safe area) như trang Nhiệm vụ */}
+          <div className="flex h-10 shrink-0 items-center gap-1 px-3 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:border-b max-md:border-border/60 max-md:px-4 max-md:pt-[env(safe-area-inset-top,0px)]">
+            <Pressable
+              onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
+              aria-label="Mở menu"
+              className="-ml-1.5 mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground md:hidden"
+            >
+              <IconSidebarPanel size={18} />
+            </Pressable>
             <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
             <MenuRoot>
               <MenuTrigger
@@ -725,7 +736,7 @@ export function InboxView() {
             </div>
           ) : (
             <>
-              <header className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border/60 px-3">
+              <header className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border/60 px-3 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
                 {!isWide && (
                   <Button variant="ghost" size="icon-xs" onClick={closeDetail} aria-label="Quay lại hộp thư">
                     <ArrowLeft />

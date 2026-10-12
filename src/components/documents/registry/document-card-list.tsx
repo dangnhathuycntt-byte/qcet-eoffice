@@ -70,7 +70,7 @@ export function DocumentCardList({
     return (
       <div className={cn("select-none motion-safe:animate-pulse", className)} data-slot="document-card-list">
         {Array.from({ length: 8 }).map((_, idx) => (
-          <div key={`mob-skel-${idx}`} className="flex min-h-[52px] items-start gap-3 px-4 py-2">
+          <div key={`mob-skel-${idx}`} className="mx-2 flex min-h-[52px] items-start gap-3 px-2 py-2">
             <div className="mt-0.5 size-4 shrink-0 rounded-full bg-muted" />
             <div className="min-w-0 flex-1 space-y-1.5 pt-0.5">
               <div className="flex justify-between gap-3">
@@ -197,7 +197,8 @@ function DocumentMobileRow({
       }}
       {...longPressHandlers}
       className={cn(
-        "flex min-h-[52px] items-start gap-3 px-4 py-2 cursor-pointer select-none touch-manipulation [-webkit-touch-callout:none]",
+        // Lùi 8px hai bên, bo góc: nền khi chạm/chọn không tràn mép (như Linear)
+        "mx-2 flex min-h-[52px] items-start gap-3 rounded-lg px-2 py-2 cursor-pointer select-none touch-manipulation [-webkit-touch-callout:none]",
         "transition-colors duration-100 active:bg-muted/50 outline-none focus-visible:bg-accent",
         (selected || active) && "bg-accent"
       )}

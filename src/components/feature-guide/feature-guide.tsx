@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { X, ChevronRight, FileText, CheckSquare, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Pressable } from "@/components/ui/pressable";
 
@@ -199,17 +200,18 @@ export function FeatureGuideCard({
   // Đóng khi click ra ngoài thẻ
   React.useEffect(() => {
     if (!visible) return;
-    const onClick = (e: MouseEvent) => {
+    const onClick = (e: PointerEvent) => {
       if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
         handleDismiss();
       }
     };
+    // pointerdown để chạm ngoài thẻ trên điện thoại cũng đóng
     const timer = setTimeout(() => {
-      document.addEventListener("mousedown", onClick);
+      document.addEventListener("pointerdown", onClick);
     }, 150);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("pointerdown", onClick);
     };
   }, [visible, handleDismiss]);
 
@@ -277,16 +279,31 @@ export function FeatureGuideCard({
             aria-modal="false"
             aria-label={title}
             className={cn(
-              "block min-[600px]:hidden fixed bottom-2 left-2 right-2 z-50 pointer-events-auto",
+              "block min-[600px]:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] left-2 right-2 z-50 pointer-events-auto",
               "transition-all duration-[180ms] ease-out motion-reduce:transition-opacity motion-reduce:transform-none",
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
             )}
           >
+            {/* Điện thoại: bản gọn (không hình minh họa 150px) để không che nửa danh sách */}
             <div
               ref={cardRef}
-              className="w-full max-w-[374px] mx-auto rounded-2xl bg-white shadow-[0_0_0_1px_var(--border),0_12px_32px_rgba(26,29,35,0.12)] overflow-hidden border border-border/40"
+              className="w-full max-w-[374px] mx-auto rounded-2xl bg-popover shadow-[0_0_0_1px_var(--border),0_12px_32px_rgba(26,29,35,0.12)] overflow-hidden border border-border/40"
             >
-              {guideCardBody}
+              <div className="flex items-start gap-2 px-4 pt-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-compact font-semibold text-foreground">{title}</div>
+                  <div className="mt-0.5 text-xs leading-5 text-muted-foreground">{description}</div>
+                </div>
+                <Button variant="ghost" size="icon-xs" onClick={handleDismiss} aria-label="Đóng hướng dẫn" className="-mr-2 -mt-1">
+                  <X />
+                </Button>
+              </div>
+              <div className="flex h-11 items-center justify-between px-4 text-xs">
+                <span className="text-muted-foreground select-none">{step}</span>
+                <Button variant="ghost" size="xs" onClick={handleNextClick} className="-mr-2.5 text-foreground">
+                  {nextLabel}
+                </Button>
+              </div>
             </div>
           </div>
 

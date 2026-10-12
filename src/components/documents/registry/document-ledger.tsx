@@ -406,7 +406,7 @@ export function DocumentLedgerToolbar({
         onBlur={() => {
           if (!searchValue.trim()) setIsSearchOpen(false);
         }}
-        placeholder="Tìm văn bản… /"
+        placeholder="Tìm văn bản…"
         wrapperClassName={cn("min-w-24 shrink max-md:order-4", showSearch ? "max-md:w-auto! max-md:flex-1" : "max-md:hidden")}
         aria-label="Tìm văn bản"
         title="Tìm theo số, ký hiệu, trích yếu"

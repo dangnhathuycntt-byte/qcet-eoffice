@@ -273,7 +273,8 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       data-task-id={task.id}
       aria-label={`Nhiệm vụ ${formattedCode}: ${title}. Trạng thái ${statusConfig.label}`}
       className={cn(
-        "group relative flex min-h-[48px] items-center gap-3 px-4 py-2",
+        // Lùi 8px hai bên, bo góc: nền khi chạm/chọn không tràn mép (như Linear)
+        "group relative mx-2 flex min-h-[48px] items-center gap-3 rounded-lg px-2 py-2",
         "touch-manipulation cursor-pointer select-none [-webkit-touch-callout:none] active:bg-muted/50 transition-colors duration-100",
         className
       )}
