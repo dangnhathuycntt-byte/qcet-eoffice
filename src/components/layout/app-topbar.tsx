@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Suspense } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
@@ -110,6 +111,20 @@ export function DesktopTopbar() {
   );
 }
 
+const TOPBAR_ACTIONS_ID = "app-topbar-actions";
+
+/**
+ * Đưa nút thao tác chính của trang (vd. "+") lên thanh trên cùng điện thoại, cạnh nút tìm, như Linear.
+ * Trang tự ẩn nút gốc dưới md; trên desktop thanh này ẩn nên nút gắn vào cũng không hiện.
+ */
+export function MobileTopbarActions({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    setTarget(document.getElementById(TOPBAR_ACTIONS_ID));
+  }, []);
+  return target ? createPortal(children, target) : null;
+}
+
 /**
  * Mobile-only topbar (< 768px): nút mở sidebar, tên trang, nút tìm, cùng mẫu header riêng của Nhiệm vụ/Hộp thư (như Linear).
  */
@@ -148,9 +163,15 @@ export function AppTopbar() {
         <MobileHeaderTitle pathname={pathname} />
       </Suspense>
 
-      <Button variant="ghost" size="icon-xs" className="ml-auto" onClick={handleOpenSearch} aria-label="Tìm kiếm" title="Tìm kiếm (⌘K)">
-        <Search />
+      {/* Nút tìm và nút của trang cùng cỡ 32px với nút mở sidebar */}
+      <Button variant="ghost" size="icon-xs" className="ml-auto size-8 rounded-md text-foreground/80" onClick={handleOpenSearch} aria-label="Tìm kiếm" title="Tìm kiếm (⌘K)">
+        <Search className="size-4" />
       </Button>
+      {/* Nút của trang (vd. "+") gắn vào qua MobileTopbarActions */}
+      <div
+        id={TOPBAR_ACTIONS_ID}
+        className="-mr-1.5 flex items-center empty:hidden [&>button]:size-8 [&>button]:rounded-md [&>button]:text-foreground/80 [&_svg]:size-4!"
+      />
     </header>
   );
 }

@@ -17,6 +17,8 @@ import {
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pressable } from "@/components/ui/pressable";
+import { Button } from "@/components/ui/button";
+import { MobileTopbarActions } from "@/components/layout/app-topbar";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -218,6 +220,7 @@ export function DossierRegistryView() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const handleRefresh = () => fetchDossiers();
+  const handleCreateDossier = () => alert("Chức năng tạo hồ sơ mới đang phát triển");
 
   // -------------------------------------------------------------------------
   // Render
@@ -274,13 +277,19 @@ export function DossierRegistryView() {
               />
               Làm mới
             </Pressable>
+            {/* Điện thoại: nút "+" trên thanh trên cùng */}
             <Pressable
-              onClick={() => alert("Chức năng tạo hồ sơ mới đang phát triển")}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 active:scale-[0.98] sm:min-h-9"
+              onClick={handleCreateDossier}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 active:scale-[0.98] max-md:hidden sm:min-h-9"
             >
               <Plus className="size-3.5" />
               Tạo hồ sơ mới
             </Pressable>
+            <MobileTopbarActions>
+              <Button variant="ghost" size="icon-xs" onClick={handleCreateDossier} aria-label="Tạo hồ sơ mới" title="Tạo hồ sơ mới">
+                <Plus />
+              </Button>
+            </MobileTopbarActions>
           </div>
         </div>
       </div>

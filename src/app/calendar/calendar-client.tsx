@@ -51,6 +51,7 @@ import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
 import { MenuActionItem, MenuContent, MenuRoot, MenuTrigger } from "@/components/ui/menu";
+import { MobileTopbarActions } from "@/components/layout/app-topbar";
 
 // ExecutiveCalendarWorkspace compatibility and canonical workspace integration
 export type { CalendarScope };
@@ -631,38 +632,56 @@ function CalendarRouteContent({
     setSearchQuery("");
   }, []);
 
+  const createMenuItems = (
+    <>
+      <MenuActionItem leading={<CheckSquare />} onClick={() => handleOpenAddTask()}>
+        Tạo công việc
+      </MenuActionItem>
+      <MenuActionItem leading={<CalendarIcon />} onClick={() => handleOpenAddEvent()}>
+        Tạo sự kiện
+      </MenuActionItem>
+    </>
+  );
+
   return (
     <div className="space-y-4" data-slot="calendar-page-container">
       {/* Page header: title + primary action */}
       {/* Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
-      <div className="flex items-center justify-between gap-3 max-md:justify-end">
+      <div className="flex items-center justify-between gap-3 max-md:contents">
         <h1 className="text-xl font-bold tracking-tight text-foreground font-heading max-md:sr-only">
           Lịch công tác
         </h1>
 
-        {/* + Tạo dropdown */}
+        {/* + Tạo dropdown (điện thoại: nút "+" trên thanh trên cùng, bên dưới) */}
+        <div className="max-md:hidden">
+          <MenuRoot>
+            <MenuTrigger
+              render={
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
+                />
+              }
+            >
+              <Plus className="size-3.5 shrink-0 text-muted-foreground" />
+              <span>Tạo</span>
+            </MenuTrigger>
+            <MenuContent align="end" sideOffset={6} className="w-44 min-w-0">
+              {createMenuItems}
+            </MenuContent>
+          </MenuRoot>
+        </div>
+      </div>
+      <MobileTopbarActions>
         <MenuRoot>
-          <MenuTrigger
-            render={
-              <button
-                type="button"
-                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
-              />
-            }
-          >
-            <Plus className="size-3.5 shrink-0 text-muted-foreground" />
-            <span>Tạo</span>
+          <MenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label="Tạo" title="Tạo" />}>
+            <Plus />
           </MenuTrigger>
-          <MenuContent align="end" sideOffset={6} className="w-44 min-w-0">
-            <MenuActionItem leading={<CheckSquare />} onClick={() => handleOpenAddTask()}>
-              Tạo công việc
-            </MenuActionItem>
-            <MenuActionItem leading={<CalendarIcon />} onClick={() => handleOpenAddEvent()}>
-              Tạo sự kiện
-            </MenuActionItem>
+          <MenuContent align="end" sideOffset={6} className="w-44 min-w-0" mobileSheet sheetTitle="Tạo">
+            {createMenuItems}
           </MenuContent>
         </MenuRoot>
-      </div>
+      </MobileTopbarActions>
 
       {/* Primary calendar chrome — exactly 1 row */}
       <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card px-2.5 py-1.5 shadow-xs" data-slot="calendar-controls-container">
