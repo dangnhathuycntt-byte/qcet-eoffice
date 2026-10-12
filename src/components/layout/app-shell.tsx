@@ -9,7 +9,6 @@ import {
 } from "@/components/layout/sidebar-context";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar, DesktopTopbar } from "@/components/layout/app-topbar";
-import { MobileBottomNav } from "@/components/navigation/mobile-bottom-nav";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useAuth } from "@/lib/auth-context";
@@ -148,8 +147,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 min-w-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] min-w-0 flex-1 flex flex-col"}
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
-        {/* Mobile Header (Only visible below md) */}
-        <AppTopbar />
+        {/* Mobile Header (chỉ dưới md); trang Nhiệm vụ tự có header kèm nút mở sidebar như Linear */}
+        {!isTasksList && <AppTopbar />}
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
         {!hideDesktopTopbar && <DesktopTopbar />}
@@ -176,15 +175,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               isWorkspaceShell
                 ? "flex min-h-0 min-w-0 flex-1 flex-col"
                 : isInbox
-                ? "flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0"
+                ? "flex min-h-0 min-w-0 flex-1 flex-col pb-[env(safe-area-inset-bottom,0px)] md:pb-0"
                 : isTasksList
-                ? "flex-1 min-h-0 overflow-y-auto flex flex-col"
-                : "w-full flex-1 p-3 sm:p-5 md:p-6 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6 flex flex-col"
+                ? "flex-1 min-h-0 overflow-y-auto flex flex-col bg-card md:bg-transparent"
+                : "w-full flex-1 p-3 sm:p-5 md:p-6 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] md:pb-6 flex flex-col"
             }
           >
             {/* Danh sách nhiệm vụ: padding nằm trong vùng cuộn để tiêu đề cột dính sát mép khung */}
             {isTasksList ? (
-              <div className="flex w-full flex-1 flex-col p-3 sm:p-5 md:px-[18px] md:pt-0 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6">
+              <div className="flex w-full flex-1 flex-col px-4 pt-1 sm:p-5 md:px-[18px] md:pt-0 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] md:pb-6">
                 {children}
               </div>
             ) : (
@@ -193,11 +192,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </m.div>
-
-      {/* Mobile Navigation */}
-      <React.Suspense fallback={null}>
-        <MobileBottomNav className="flex md:hidden" />
-      </React.Suspense>
 
       <React.Suspense fallback={null}>
         <MobileMenuDrawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />

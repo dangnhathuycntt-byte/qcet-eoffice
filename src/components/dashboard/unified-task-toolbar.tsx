@@ -2,7 +2,8 @@
 
 // Unified Task Toolbar Component — Unified control toolbar for task views
 import * as React from "react";
-import { Search, Plus, Filter, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
+import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
 import {
   HealthSubAll,
   HealthSubOnTrack,
@@ -37,6 +38,7 @@ import {
   TaskIconDeadline,
   TaskIconTime,
   TaskIconStatusNew,
+  TaskIconSearch,
 } from "@/lib/icons/task-icons";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { ListToolbarFilterButton, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
@@ -66,6 +68,11 @@ import {
   MenuOptionItem,
   MenuSeparator,
   MenuSubmenu,
+  MenuBackdrop,
+  MenuSheetHeader,
+  SHEET_BACKDROP_CLASS,
+  SHEET_POSITIONER_CLASS,
+  SHEET_POPUP_CLASS,
 } from "@/components/ui/menu";
 import {
   type SavedTaskView,
@@ -234,9 +241,7 @@ export interface UnifiedTaskToolbarProps {
   onResetFilters?: () => void;
 
   // Density
-  /** Chip bộ lọc đang áp, hiện bên trái hàng điều khiển */
-  activeFilters?: React.ReactNode;
-  /** Các view (Đang thực hiện, Trễ hạn…) đặt bên trái hàng điều khiển, trước chip bộ lọc */
+  /** Các view (Đang thực hiện, Trễ hạn…) đặt bên trái hàng điều khiển */
   viewTabs?: React.ReactNode;
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
@@ -487,7 +492,6 @@ export function UnifiedTaskToolbar({
   monthlyTaskCounts,
   showAcademicMonthBar = false,
   onResetFilters,
-  activeFilters,
   viewTabs,
   density = "comfortable",
   onDensityChange,
@@ -1388,10 +1392,10 @@ export function UnifiedTaskToolbar({
       onClick={() => handlePrimaryAction()}
       title="Tạo việc mới"
       aria-label="Tạo việc mới"
-      className={cn(listToolbarPrimaryButtonClass, "rounded-full border-transparent bg-transparent shadow-none")}
+      className={cn(listToolbarPrimaryButtonClass, "rounded-full border-transparent bg-transparent shadow-none max-md:size-8 max-md:px-0")}
     >
       <Plus className="size-3.5 shrink-0 text-muted-foreground" />
-      <span>{primaryActionLabel}</span>
+      <span className="hidden md:inline">{primaryActionLabel}</span>
     </Pressable>
   ) : null;
 
@@ -1399,7 +1403,8 @@ export function UnifiedTaskToolbar({
     <div
       data-slot="unified-task-toolbar"
       className={cn(
-        "flex items-center gap-x-1.5 gap-y-0 bg-transparent relative z-40 overflow-visible flex-wrap",
+        // z-20 trên điện thoại để cuộn xuống không đè lên thanh trên cùng (z-30)
+        "flex items-center gap-x-1.5 gap-y-0 bg-transparent relative z-20 md:z-40 overflow-visible flex-wrap",
         !leftContent && "border-b border-border/60 pb-2",
         // Khung tiêu đề + toolbar đứng yên khi cuộn (88px = 44 tiêu đề + 44 hàng điều khiển; tiêu đề cột bảng dính ngay dưới)
         leftContent && "md:sticky md:top-0 md:bg-card md:mb-0",
@@ -1499,18 +1504,25 @@ export function UnifiedTaskToolbar({
 
       {/* Left Content (View Title / Summary Strip) */}
       {leftContent && (
-        <div className="flex h-11 w-full min-w-0 items-center justify-between gap-3 border-b border-border/60 md:-mx-[18px] md:w-[calc(100%+36px)] md:px-[18px]">
-          <div className="min-w-0 flex items-center">{leftContent}</div>
+        <div className="-mx-4 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-[calc(100%+32px)] min-w-0 items-center justify-between gap-3 border-b border-border/60 px-4 pt-[env(safe-area-inset-top,0px)] md:-mx-[18px] md:h-11 md:w-[calc(100%+36px)] md:px-[18px] md:pt-0">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* Điện thoại: nút mở sidebar thay cho thanh trên cùng (như Linear) */}
+            <Pressable
+              onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
+              aria-label="Mở menu"
+              className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground md:hidden"
+            >
+              <IconSidebarPanel size={18} />
+            </Pressable>
+            {leftContent}
+          </div>
           {createCta}
         </div>
       )}
 
       {!quiet && (
         <div className="flex h-11 w-full min-w-0 items-center gap-1.5">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {viewTabs}
-        {activeFilters}
-      </div>
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-hidden no-scrollbar py-0.5">{viewTabs}</div>
       {/* 1. Search: icon thu gọn, bấm hoặc nhấn "/" để mở ô */}
       {searchExpanded ? (
         <ListToolbarSearch
@@ -1530,9 +1542,9 @@ export function UnifiedTaskToolbar({
           onClick={openSearch}
           aria-label="Tìm nhiệm vụ"
           title="Tìm nhiệm vụ (/)"
-          className={cn(listToolbarIconButtonClass(false), "rounded-full")}
+          className={listToolbarIconButtonClass(false)}
         >
-          <Search className="size-3.5 shrink-0" />
+          <TaskIconSearch size={14} className="shrink-0 text-muted-foreground" />
         </Pressable>
       )}
 
@@ -1549,11 +1561,13 @@ export function UnifiedTaskToolbar({
           }
         />
         <MenuPortal>
-          <MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-50 outline-none">
+          <MenuBackdrop className={SHEET_BACKDROP_CLASS} />
+          <MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className={cn("z-50 outline-none", SHEET_POSITIONER_CLASS)}>
             <MenuPopup
               data-slot="task-filter-menu"
-              className={cn(MENU_POPUP_CLASS, "w-52")}
+              className={cn(MENU_POPUP_CLASS, "w-52", SHEET_POPUP_CLASS)}
             >
+              <MenuSheetHeader title="Bộ lọc" />
               <div className="space-y-px">
                 {filterCategories.map((category, index) => (
                   <React.Fragment key={category.key}>

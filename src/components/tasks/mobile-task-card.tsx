@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { TaskStatusCircle } from "./task-status-circle";
+import { TaskIconPriorityHigh, TaskIconPriorityUrgent } from "./task-action-icons";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { FlattenedPersonalTask } from "./table/types";
 import { getStatusBadgeConfig } from "./table/constants";
@@ -13,7 +13,6 @@ import {
   getDaysRemaining,
   getDueIndicator,
 } from "./table/utils/table-date-helpers";
-import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
 export interface MobileTaskCardProps {
   task: SchoolTask | StaffTask | FlattenedPersonalTask;
@@ -153,20 +152,15 @@ export function getMobilePriorityBadgeConfig(
 }
 
 /**
- * MobileTaskCard - Thẻ nhiệm vụ di động chuẩn Apple HIG & WCAG 2.2
+ * MobileTaskCard - hàng nhiệm vụ di động gọn kiểu Linear (hàng phẳng, không thẻ).
  *
- * Thiết kế tinh gọn, chống slop:
- * - Toàn bộ thẻ có thể chạm/nhấp để mở chi tiết (min-h-[48px], touch-manipulation)
- * - Hàng trên: Mã nhiệm vụ (NV-xxx), Huy hiệu trạng thái
- * - Tiêu đề: 14-15px font-semibold text-foreground leading-snug
- * - Đơn vị & Người phụ trách: Tên phòng ban • Tên người phụ trách (avatar/dot)
- * - Hàng dưới: Ngày hạn (Hạn 14/09) & Huy hiệu thời hạn/trễ hạn
- * - Không có nút bấm rác bên trong thẻ
+ * - Cả hàng chạm được để mở chi tiết (min-h-[48px], touch-manipulation), không có nút lẻ bên trong
+ * - Một dòng: icon trạng thái, tiêu đề; bên phải icon ưu tiên (khẩn cấp, cao), ngày hạn (đỏ khi trễ, cam khi sắp tới) và avatar
+ * - Mã, người phụ trách, đơn vị, trạng thái chữ nằm ở aria-label và văn bản dành cho trình đọc màn hình
  */
 export const MobileTaskCard = React.memo(function MobileTaskCard({
   task,
   onSelectTask,
-  selectedAcademicMonth,
   referenceDate = getSystemReferenceDate(),
   className,
 }: MobileTaskCardProps) {
@@ -219,15 +213,26 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
   const statusConfig = getStatusBadgeConfig(task.status);
   const dueBadge = getMobileDueBadge(task.dueDate, task.status, referenceDate);
   const formattedDueDate = formatMobileDueDate(task.dueDate);
-  const priorityBadge = getMobilePriorityBadgeConfig(
-    anyTask.priority || (schoolTask as any)?.priority || flattenedTask?.priority
-  );
-
-  const isDueInMonth =
-    selectedAcademicMonth &&
-    selectedAcademicMonth !== "ALL" &&
-    task.dueDate &&
-    isDateInAcademicMonth(task.dueDate, selectedAcademicMonth, "2026-2027");
+  const rawPriority = String(anyTask.priority || "").toUpperCase();
+  const PriorityIcon =
+    rawPriority === "URGENT" || rawPriority === "CRITICAL" || rawPriority === "KHAN_CAP"
+      ? TaskIconPriorityUrgent
+      : rawPriority === "HIGH" || rawPriority === "CAO"
+      ? TaskIconPriorityHigh
+      : null;
+  const priorityLabel = getMobilePriorityBadgeConfig(rawPriority)?.label;
+  // Chỉ giữ màu chữ tín hiệu của huy hiệu hạn: hàng phẳng không có nền chip
+  const dueTone = dueBadge.className.includes("text-destructive")
+    ? "text-destructive"
+    : dueBadge.className.includes("text-warning")
+    ? "text-warning"
+    : "text-muted-foreground";
+  const contextLabel =
+    (isSubTask && (flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle)) || departmentName;
+  const subtaskDri =
+    "viewerContext" in task && (task as any).viewerContext?.relation === "SUBTASK_DRI"
+      ? Number((task as any).viewerContext.matchedSubtaskCount ?? 0)
+      : 0;
 
   const handleCardClick = React.useCallback(() => {
     onSelectTask?.(task as unknown as SchoolTask | StaffTask);
@@ -243,6 +248,8 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
     [onSelectTask, task]
   );
 
+  const shortDue = task.dueDate ? formattedDueDate.replace(/^Hạn /, "") : "";
+
   return (
     <article
       role="button"
@@ -253,108 +260,30 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       data-task-id={task.id}
       aria-label={`Nhiệm vụ ${formattedCode}: ${title}. Trạng thái ${statusConfig.label}`}
       className={cn(
-        "group relative flex flex-col gap-2.5 rounded-xl border border-border/70 bg-card p-3.5 shadow-2xs",
-        "min-h-[48px] touch-manipulation cursor-pointer select-none",
-        "hover:border-primary/40 hover:shadow-xs active:bg-muted/40 transition-all duration-150",
+        "group relative flex min-h-[48px] items-center gap-3 px-4 py-2",
+        "touch-manipulation cursor-pointer select-none active:bg-muted/50 transition-colors duration-100",
         className
       )}
     >
-      {/* Top Row: Task Code + Department / Context + Priority & Status badge */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-mono text-xs font-bold text-foreground bg-muted/70 border border-border/70 px-2 py-0.5 rounded-md shrink-0">
-            {formattedCode}
-          </span>
-          <span className="text-xs font-semibold text-foreground/80 truncate bg-muted/50 border border-border/50 px-2 py-0.5 rounded-md">
-            {departmentName}
-          </span>
-          {isSubTask && (flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle) && (
-            <span className="text-xs text-muted-foreground truncate" title={flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle}>
-              • {flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle}
-            </span>
-          )}
-        </div>
+      <TaskStatusCircle status={task.status} className="size-4" />
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {priorityBadge && (
-            <span
-              className={cn(
-                "inline-flex items-center h-5.5 px-2 text-xs font-medium tabular-nums leading-none shrink-0 border rounded-full",
-                priorityBadge.className
-              )}
-            >
-              {priorityBadge.label}
-            </span>
-          )}
-          <Badge
-            variant={statusConfig.variant}
-            className={cn(
-              "h-5.5 px-2 text-xs font-semibold tabular-nums leading-none shrink-0 border",
-              statusConfig.className
-            )}
-          >
-            {statusConfig.label}
-          </Badge>
-        </div>
-      </div>
+      <h3 className="min-w-0 flex-1 truncate text-compact font-normal text-foreground">{title}</h3>
 
-      {/* Title */}
-      <h3 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
-        {title}
-      </h3>
+      {/* Thông tin phụ cho trình đọc màn hình; trên hàng chỉ giữ ký hiệu để nhìn thoáng như Linear */}
+      <span className="sr-only">
+        {formattedCode} · {assigneeName} · {contextLabel}
+        {subtaskDri > 0 ? ` · Phụ trách ${subtaskDri} việc con` : ""} · {dueBadge.label}
+      </span>
 
-      {/* Matched Subtask Badge for SUBTASK_DRI (Issue #21 & Issue #26) */}
-      {"viewerContext" in task && (task as any).viewerContext?.relation === "SUBTASK_DRI" && ((task as any).viewerContext.matchedSubtaskCount ?? 0) > 0 && (
-        <div className="flex items-center gap-1">
-          <span
-            data-slot="subtask-dri-badge"
-            className="inline-flex items-center gap-1 rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-2 py-0.5 font-mono text-xs font-semibold tabular-nums"
-          >
-            Phụ trách {(task as any).viewerContext.matchedSubtaskCount} việc con
-          </span>
-        </div>
-      )}
-
-      {/* Lead Assignee: Assignee name with avatar/dot */}
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-        <span className="text-muted-foreground/80 shrink-0">Phụ trách:</span>
-        <div className="flex items-center gap-1.5 min-w-0 truncate">
-          <UserAvatar
-            name={assigneeName}
-            avatarUrl={assigneeAvatar}
-            size="xs"
-            className="size-4.5"
+      <div className="flex shrink-0 items-center gap-2.5">
+        {PriorityIcon ? (
+          <PriorityIcon
+            className={cn("size-4", rawPriority === "HIGH" || rawPriority === "CAO" ? "text-foreground/60" : "text-destructive")}
+            aria-label={priorityLabel}
           />
-          <span className="font-medium text-foreground truncate" title={assigneeName}>
-            {assigneeName}
-          </span>
-        </div>
-      </div>
-
-      {/* Bottom Row: Due date (Hạn 14/09) & days remaining / overdue badge + Chevron */}
-      <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-xs">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {formattedDueDate}
-          </span>
-          {isDueInMonth && (
-            <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-              Kỳ T{selectedAcademicMonth}
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span
-            className={cn(
-              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium tabular-nums border",
-              dueBadge.className
-            )}
-          >
-            {dueBadge.label}
-          </span>
-          <ChevronRight className="size-4 text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0" />
-        </div>
+        ) : null}
+        {shortDue ? <span className={cn("text-xs tabular-nums", dueTone)}>{shortDue}</span> : null}
+        <UserAvatar name={assigneeName} avatarUrl={assigneeAvatar} size="sm" />
       </div>
     </article>
   );

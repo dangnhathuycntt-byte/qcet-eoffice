@@ -3,27 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  ChevronDown,
   User,
   Settings,
   Smartphone,
   HelpCircle,
   LogOut,
 } from "lucide-react";
-import {
-  IconSidebarHome,
-  IconSidebarTasks,
-  IconSidebarMail,
-  IconSidebarCalendar,
-  IconSidebarReports,
-  IconSidebarSend,
-  IconSidebarDocLines,
-  IconSidebarFolder,
-  IconSidebarPeople,
-  IconSidebarSettingsBracket,
-} from "@/components/layout/sidebar-rounded-icons";
+import { SidebarNavList } from "@/components/layout/sidebar-nav-list";
 import dynamic from "next/dynamic";
 import {
   getSidebarNavItems,
@@ -32,7 +20,6 @@ import {
 import {
   useSidebar,
 } from "@/components/layout/sidebar-context";
-import { isRouteActive } from "@/lib/navigation/active-matcher";
 import { MaintenanceDialog } from "@/components/common/maintenance-dialog";
 import {
   Tooltip,
@@ -46,7 +33,6 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
-import { Pressable } from "@/components/ui/pressable";
 import { MENU_POPUP_CLASS, MenuActionItem } from "@/components/ui/menu";
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -160,187 +146,22 @@ export function handleSidebarShortcut(
   return false;
 }
 
-export interface SidebarNavSubItem {
-  id: string;
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }>;
-  badgeKey?: string;
-  defaultBadge?: number;
-  aliases?: string[];
-  isMaintenance?: boolean;
-  /** Menu con lồng nhau (chỉ hiển thị khi sidebar mở rộng). */
-  children?: SidebarNavChild[];
-}
-
-export interface SidebarNavChild {
-  id: string;
-  label: string;
-  href: string;
-  badgeKey?: string;
-  /** Chỉ hiện khi máy chủ báo người dùng có quyền xem mục này. */
-  requiresApprovalReport?: boolean;
-}
-
-export interface SidebarNavGroup {
-  id: string;
-  label?: string;
-  collapsible?: boolean;
-  items: SidebarNavSubItem[];
-}
-
-/**
- * Danh mục nhóm điều hướng bám sát thiết kế chuẩn (3. Danh sách · 1440×900@1x.png)
- * Sử dụng bộ icon bo tròn mềm mại đồng bộ với Vector 2758.svg và mẫu UI
- */
-const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
-  // 1. Nhóm chính (Core Workspace): Tổng quan, Hộp thư, Nhiệm vụ, Lịch công tác
-  {
-    id: "core",
-    items: [
-      {
-        id: "desk",
-        label: "Tổng quan",
-        href: "/",
-        icon: IconSidebarHome,
-        aliases: ["/dashboard", "/workbench"],
-      },
-      {
-        id: "inbox",
-        label: "Hộp thư",
-        href: "/inbox",
-        icon: IconSidebarMail,
-        badgeKey: "notifications",
-        defaultBadge: 4,
-        aliases: ["/notifications"],
-      },
-      {
-        id: "tasks",
-        label: "Nhiệm vụ",
-        href: "/tasks",
-        icon: IconSidebarTasks,
-        badgeKey: "taskAttention",
-        aliases: ["/unit-tasks"],
-        children: [
-          { id: "tasks-unit-requests", label: "Yêu cầu phối hợp", href: "/tasks/unit-requests" },
-          { id: "tasks-templates", label: "Mẫu và lặp lại", href: "/tasks/templates" },
-        ],
-      },
-      {
-        id: "calendar",
-        label: "Lịch công tác",
-        href: "/calendar",
-        icon: IconSidebarCalendar,
-        badgeKey: "calendar",
-        aliases: ["/meetings"],
-      },
-    ],
-  },
-  // 2. Nhóm Văn bản: Văn bản đến, Văn bản đi, Tờ trình nội bộ, Hồ sơ công việc
-  {
-    id: "documents",
-    label: "Văn bản",
-    collapsible: true,
-    items: [
-      {
-        id: "docs-incoming",
-        label: "Văn bản đến",
-        href: "/documents?type=inbox",
-        icon: IconSidebarReports,
-        aliases: ["/documents/incoming"],
-        children: [
-          { id: "docs-incoming-pending", label: "Chờ xử lý", href: "/documents?type=inbox&bucket=pending", badgeKey: "docsIncomingPending" },
-          { id: "docs-incoming-done", label: "Đã xử lý", href: "/documents?type=inbox&bucket=done", badgeKey: "docsIncomingDone" },
-        ],
-      },
-      {
-        id: "docs-outgoing",
-        label: "Văn bản đi",
-        href: "/documents?type=outbox",
-        icon: IconSidebarSend,
-        aliases: ["/documents/outgoing"],
-        children: [
-          { id: "docs-outgoing-pending", label: "Chờ xử lý", href: "/documents?type=outbox&bucket=pending", badgeKey: "docsOutgoingPending" },
-          { id: "docs-outgoing-done", label: "Đã xử lý", href: "/documents?type=outbox&bucket=done", badgeKey: "docsOutgoingDone" },
-          { id: "docs-outgoing-issued", label: "Đã phát hành", href: "/documents?type=outbox&bucket=issued", badgeKey: "docsOutgoingIssued" },
-          { id: "docs-outgoing-recalled", label: "Đã thu hồi", href: "/documents?type=outbox&bucket=recalled" },
-        ],
-      },
-      {
-        id: "docs-internal",
-        label: "Tờ trình nội bộ",
-        href: "/documents?tab=submission",
-        icon: IconSidebarDocLines,
-        aliases: ["/documents/internal", "/documents?tab=submission", "/documents?tab=pending", "/documents?type=submission"],
-        children: [{ id: "docs-approval-report", label: "Báo cáo thời gian duyệt", href: "/documents/approval-report", requiresApprovalReport: true }],
-      },
-      {
-        id: "docs-dossiers",
-        label: "Hồ sơ công việc",
-        href: "/documents?tab=dossiers",
-        icon: IconSidebarFolder,
-        aliases: ["/documents/dossiers", "/documents?tab=archive", "/documents?type=dossier", "/dossiers"],
-      },
-    ],
-  },
-  // 3. Nhóm Đơn vị: Cơ cấu & Danh bạ, Thêm
-  {
-    id: "org",
-    label: "Đơn vị",
-    collapsible: true,
-    items: [
-      {
-        id: "org-directory",
-        label: "Cơ cấu & Danh bạ",
-        href: "/org",
-        icon: IconSidebarPeople,
-        aliases: ["/organization", "/directory", "/?zone=org"],
-      },
-      {
-        id: "more",
-        label: "Thêm",
-        href: "/settings",
-        icon: IconSidebarSettingsBracket,
-        defaultBadge: 1,
-        aliases: ["/settings", "/more"],
-      },
-    ],
-  },
-];
-
 export function AppSidebar() {
   const {
     isCollapsed,
     toggleCollapse,
     sidebarWidthMotion,
-    badgeCounts,
     setBadgeCounts,
   } = useSidebar();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, logout, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const accountTriggerRef = React.useRef<HTMLButtonElement>(null);
 
-  // Quản lý trạng thái mở/đóng của các nhóm collapsible
-  const [collapsedGroups, setCollapsedGroups] = React.useState<Record<string, boolean>>({});
-
-  const toggleGroup = React.useCallback((groupId: string) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }));
-  }, []);
-
-  // Menu con có thể mở/đóng thủ công; mặc định mở khi đang ở bên trong.
-  const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
-
-  // Số đếm thật cho menu con "Văn bản" (theo quyền đọc của người dùng).
-  // Làm mới khi chuyển trang; đổi bộ lọc/ô tìm (query string) không đổi số đếm.
+  // Quyền xem "Báo cáo thời gian duyệt" (menu con của Tờ trình nội bộ), làm mới khi chuyển trang.
   const docsUserId = user?.id;
-  const [canViewApprovalReport, setCanViewApprovalReport] = React.useState(false);
   React.useEffect(() => {
     if (!docsUserId) return;
     const ctrl = new AbortController();
@@ -349,19 +170,10 @@ export function AppSidebar() {
         const res = await fetch("/api/documents/stats", { signal: ctrl.signal });
         if (!res.ok) return;
         const json = await res.json();
-        setCanViewApprovalReport(json?.data?.canViewApprovalReport === true);
-        const b = json?.data?.buckets;
-        if (!b) return;
-        setBadgeCounts((prev) => ({
-          ...prev,
-          docsIncomingPending: b.incomingPending ?? 0,
-          docsIncomingDone: b.incomingDone ?? 0,
-          docsOutgoingPending: b.outgoingPending ?? 0,
-          docsOutgoingDone: b.outgoingDone ?? 0,
-          docsOutgoingIssued: b.outgoingIssued ?? 0,
-        }));
+        const canViewReport = json?.data?.canViewApprovalReport === true;
+        setBadgeCounts((prev) => ({ ...prev, docsApprovalReport: canViewReport ? 1 : 0 }));
       } catch {
-        // giữ nguyên số đếm cũ khi lỗi mạng
+        // giữ nguyên trạng thái cũ khi lỗi mạng
       }
     })();
     return () => ctrl.abort();
@@ -439,53 +251,6 @@ export function AppSidebar() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleOpenSearch, toggleCollapse, router]);
 
-  // Helper to determine if a nav item is active
-  const isItemActive = React.useCallback(
-    (item: SidebarNavSubItem) => {
-      return isRouteActive(
-        item.href,
-        pathname,
-        searchParams,
-        item.aliases
-      );
-    },
-    [pathname, searchParams]
-  );
-
-  // Helper to get badge counter
-  const getBadgeNumber = React.useCallback(
-    (item: SidebarNavSubItem): string | null => {
-      let val: string | number | undefined;
-
-      if (item.badgeKey && badgeCounts?.[item.badgeKey] !== undefined) {
-        val = badgeCounts[item.badgeKey];
-      } else if (item.defaultBadge !== undefined) {
-        val = item.defaultBadge;
-      }
-
-      if (val === undefined || val === null || val === "" || val === 0 || val === "0") {
-        return null;
-      }
-      return String(val);
-    },
-    [badgeCounts]
-  );
-
-  const isChildActive = React.useCallback(
-    (child: SidebarNavChild) => isRouteActive(child.href, pathname, searchParams),
-    [pathname, searchParams]
-  );
-
-  const getChildBadge = React.useCallback(
-    (child: SidebarNavChild): string | null => {
-      const val = child.badgeKey ? badgeCounts?.[child.badgeKey] : undefined;
-      return val === undefined || val === null || val === "" || val === 0 || val === "0"
-        ? null
-        : String(val);
-    },
-    [badgeCounts]
-  );
-
   const userRoleLabel =
     user?.role === "ADMIN"
       ? "Ban Giám hiệu"
@@ -540,182 +305,15 @@ export function AppSidebar() {
           {/* ========================================================= */}
           {/* 2. NAVIGATION ITEMS BODY                                  */}
           {/* ========================================================= */}
-          <div className="overflow-y-auto flex-1 px-2.5 pt-1.5 pb-2 space-y-3 thin-scrollbar">
-            {SIDEBAR_NAV_GROUPS.map((group) => {
-              const isGroupCollapsed = Boolean(collapsedGroups[group.id]);
-
-              return (
-                <div key={group.id} className="space-y-0.5">
-                  {/* Group Section Header (Văn bản, Đơn vị) */}
-                  {group.label && !isCollapsed ? (
-                    <Pressable
-                      onClick={() => toggleGroup(group.id)}
-                      className="w-full flex items-center gap-1 px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground select-none hover:text-foreground transition-colors text-left group/gh"
-                    >
-                      <span>{group.label}</span>
-                      <ChevronDown
-                        size={11}
-                        className={cn(
-                          "text-muted-foreground/70 transition-transform duration-150 shrink-0",
-                          isGroupCollapsed && "-rotate-90"
-                        )}
-                      />
-                    </Pressable>
-                  ) : null}
-
-                  {/* Divider when collapsed */}
-                  {group.label && isCollapsed ? (
-                    <div className="w-6 mx-auto my-2 border-t border-border/50" />
-                  ) : null}
-
-                  {/* Group Items */}
-                  {(!group.label || !isGroupCollapsed) && (
-                    <div className="space-y-px">
-                      {group.items.map((item) => {
-                        const visibleChildren = item.children?.filter((c) => !c.requiresApprovalReport || canViewApprovalReport);
-                        const hasActiveChild = Boolean(visibleChildren?.some(isChildActive));
-                        const active = isItemActive(item) && !hasActiveChild;
-                        const Icon = item.icon;
-                        const children = visibleChildren?.length ? visibleChildren : undefined;
-                        const isExpanded = expandedItems[item.id] ?? true;
-                        const badgeText = children
-                          ? (() => {
-                              const first = children[0].badgeKey;
-                              const pending = first ? badgeCounts?.[first] : undefined;
-
-                              return pending ? String(pending) : null;
-                            })()
-                          : getBadgeNumber(item);
-
-                        return (
-                          <React.Fragment key={item.id}>
-                          <div className="relative">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link
-                                href={item.href}
-                                onClick={(e) => {
-                                  if (item.isMaintenance) {
-                                    e.preventDefault();
-                                    setMaintenanceDialog({
-                                      isOpen: true,
-                                      title: item.label,
-                                      feature: item.id,
-                                    });
-                                    return;
-                                  }
-                                }}
-                                aria-current={active ? "page" : undefined}
-                                aria-label={item.label}
-                                className={cn(
-                                  "group relative flex items-center transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
-                                  isCollapsed
-                                    ? "size-10 mx-auto justify-center rounded-xl p-0"
-                                    : "gap-2 px-2 h-7 rounded-sm text-compact",
-                                  !isCollapsed && children && "pr-7",
-                                  active
-                                    ? "bg-sidebar-accent text-foreground font-medium"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60 font-medium"
-                                )}
-                              >
-                                <span className={cn(
-                                  "shrink-0 flex items-center justify-center",
-                                  isCollapsed ? "size-6" : "size-3.5"
-                                )}>
-                                  <Icon
-                                    size={isCollapsed ? 19 : 14}
-                                    strokeWidth={1.5}
-                                    className={cn(
-                                      isCollapsed ? "size-[19px]" : "size-3.5",
-                                      "shrink-0 transition-colors",
-                                      active
-                                        ? "text-foreground"
-                                        : "text-muted-foreground group-hover:text-foreground"
-                                    )}
-                                  />
-                                </span>
-
-                                {!isCollapsed && (
-                                  <>
-                                    <span className="truncate flex-1 text-compact tracking-tight">
-                                      {item.label}
-                                    </span>
-                                    {badgeText ? (
-                                      <span className="text-xs font-normal text-muted-foreground/75 tabular-nums ml-auto shrink-0 select-none">
-                                        {badgeText}
-                                      </span>
-                                    ) : null}
-                                  </>
-                                )}
-                              </Link>
-                            </TooltipTrigger>
-                            {isCollapsed && (
-                              <TooltipContent side="right" sideOffset={8}>
-                                <span>
-                                  {item.label}
-                                  {badgeText ? ` (${badgeText})` : ""}
-                                </span>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                          {children && !isCollapsed ? (
-                            <Pressable
-                              aria-label={isExpanded ? `Thu gọn ${item.label}` : `Mở rộng ${item.label}`}
-                              aria-expanded={isExpanded}
-                              onClick={() =>
-                                setExpandedItems((prev) => ({ ...prev, [item.id]: !isExpanded }))
-                              }
-                              className="absolute right-1 top-1/2 -translate-y-1/2 flex size-6 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
-                            >
-                              <ChevronDown
-                                size={12}
-                                className={cn("transition-transform duration-150", !isExpanded && "-rotate-90")}
-                              />
-                            </Pressable>
-                          ) : null}
-                          </div>
-                          {children && !isCollapsed && isExpanded ? (
-                            <div className="ml-[15px] border-l border-border/60 pl-1.5 space-y-px">
-                              {children.map((child) => {
-                                const childActive = isChildActive(child);
-                                const childBadge = getChildBadge(child);
-                                return (
-                                  <Link
-                                    key={child.id}
-                                    href={child.href}
-                                    aria-current={childActive ? "page" : undefined}
-                                    className={cn(
-                                      "flex items-center gap-2 px-2 h-7 rounded-sm text-compact tracking-tight transition-colors whitespace-nowrap",
-                                      childActive
-                                        ? "bg-sidebar-accent text-foreground font-medium"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
-                                    )}
-                                  >
-                                    <span className="truncate flex-1">{child.label}</span>
-                                    {childBadge ? (
-                                      <span className="text-xs font-normal text-muted-foreground/75 tabular-nums shrink-0">
-                                        {childBadge}
-                                      </span>
-                                    ) : null}
-                                  </Link>
-                                );
-                              })}
-                            </div>
-                          ) : null}
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <SidebarNavList
+            isCollapsed={isCollapsed}
+            onMaintenance={(item) => setMaintenanceDialog({ isOpen: true, title: item.label, feature: item.id })}
+          />
 
           {/* ========================================================= */}
           {/* 3. SIDEBAR BOTTOM FOOTER: USER ACCOUNT PROFILE CARD       */}
           {/* ========================================================= */}
-          <div className="shrink-0 w-full px-2.5 pt-1.5 pb-2.5 mt-auto">
+          <div className="shrink-0 w-full px-3 pt-1.5 pb-2.5 mt-auto">
             <Menu.Root
               open={isProfileDropdownOpen && Boolean(user)}
               onOpenChange={(open) => setIsProfileDropdownOpen(open)}

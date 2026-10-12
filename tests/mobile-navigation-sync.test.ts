@@ -6,7 +6,6 @@ import {
   getMobileDrawerItems,
 } from "../src/lib/navigation/canonical-navigation-registry";
 import { isRouteActive } from "../src/lib/navigation/active-matcher";
-import { MobileBottomNav } from "../src/components/navigation/mobile-bottom-nav";
 import { MobileMenuDrawer } from "../src/components/layout/mobile-menu-drawer";
 
 describe("Task 6: Mobile Navigation Synchronization & Touch Ergonomics", () => {
@@ -75,10 +74,6 @@ describe("Task 6: Mobile Navigation Synchronization & Touch Ergonomics", () => {
   });
 
   describe("4. Component Contracts", () => {
-    it("MobileBottomNav is defined and is a valid React component", () => {
-      assert.equal(typeof MobileBottomNav, "function");
-    });
-
     it("MobileMenuDrawer is defined and is a valid React component", () => {
       assert.equal(typeof MobileMenuDrawer, "function");
     });

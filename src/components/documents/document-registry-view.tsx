@@ -374,7 +374,7 @@ export function DocumentRegistryView() {
   return (
     <div ref={workspaceRef} className="flex min-h-0 min-w-0 flex-1 flex-col" data-slot="document-registry-view">
       {/* Cùng khung với Task Detail: hai thẻ bo tròn độc lập, gap 6px, padding 8px. Mobile chừa chỗ cho thanh điều hướng dưới. */}
-      <div className="flex min-h-0 flex-1 flex-col pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <div className="flex min-h-0 flex-1 flex-col pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
         <div
           className={SPLIT_WORKSPACE}
           data-peek-open={paneVisible}

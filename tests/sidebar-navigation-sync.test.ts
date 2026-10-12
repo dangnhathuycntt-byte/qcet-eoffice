@@ -279,17 +279,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       assert.equal(ids[1], "tasks", "Second canonical item must be tasks, immediately after desk");
     });
 
-    test("canonical registry drives MobileBottomNav destinations", () => {
-      const mobileNavPath = path.resolve(
-        process.cwd(),
-        "src/components/navigation/mobile-bottom-nav.tsx"
-      );
-      assert.ok(fs.existsSync(mobileNavPath), "mobile-bottom-nav.tsx must exist");
-      const content = fs.readFileSync(mobileNavPath, "utf-8");
-      assert.ok(
-        content.includes("getMobileBottomBarItems"),
-        "MobileBottomNav must be driven by getMobileBottomBarItems"
-      );
+    test("mục thanh dưới của registry là tập con của registry chuẩn", () => {
       const items = getMobileBottomBarItems();
       const registryIds = new Set(CANONICAL_ROUTES.map((r) => r.id));
       for (const item of items) {

@@ -1481,7 +1481,7 @@ graph TB
 
 | Platform | Component | Specification |
 |----------|-----------|---------------|
-| Desktop | Sidebar | 228px fixed width, contains all navigation |
+| Desktop | Sidebar | 247px fixed width, contains all navigation |
 | Desktop | Topbar | Breadcrumb, search, user menu |
 | Mobile | Bottom bar | 4 items: Tasks, Calendar, Inbox, Documents |
 | Mobile | Drawer | Org, Settings (slide from left) |

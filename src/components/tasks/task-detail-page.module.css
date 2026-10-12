@@ -301,8 +301,8 @@
   .content { padding-top: 24px; }
 }
 @media (max-width: 1023px) {
-  /* Đáy cuộn phải cao hơn thanh điều hướng cố định 56px (+ safe area) */
-  .canvas { padding: 0 16px calc(56px + env(safe-area-inset-bottom, 0px) + 24px); }
+  /* Đáy cuộn chừa safe area */
+  .canvas { padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 24px); }
   .content { padding-top: 24px; }
   .workspace > nav[role='tablist'] { flex-wrap: wrap; }
   .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] {

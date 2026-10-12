@@ -2,412 +2,194 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import {
-  Building2,
-  Calendar,
-  FileText,
-  User,
-  Settings,
-  LogOut,
-  X,
-  ChevronRight,
-  Bell,
-  BellRing,
-  BellOff,
-  Volume2,
-  Download,
-  Smartphone,
-  CheckCircle2,
-  Loader2,
-  HelpCircle,
-} from "lucide-react";
-import {
-  BottomSheet,
-  BottomSheetContent,
-  BottomSheetHeader,
-  BottomSheetTitle,
-  BottomSheetDescription,
-  BottomSheetClose,
-} from "@/components/ui/bottom-sheet";
+import Image from "next/image";
+import { Drawer as VaulDrawer } from "vaul";
+import { Bell, BellOff, Download, HelpCircle, Loader2, LogOut, Smartphone, User, Volume2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { useSidebarContext } from "@/components/layout/sidebar-context";
+import { SidebarNavList } from "@/components/layout/sidebar-nav-list";
+import { formatDisplayName } from "@/components/layout/app-sidebar";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
-import { getMobileDrawerItems } from "@/lib/navigation/canonical-navigation-registry";
-import { isRouteActive } from "@/lib/navigation/active-matcher";
 import { Pressable } from "@/components/ui/pressable";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 export interface MobileMenuDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const DRAWER_ICONS: Record<
-  string,
-  React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
-> = {
-  Calendar,
-  FileText,
-  Building2,
-  Settings,
-};
+/** Cùng kiểu hàng với mục điều hướng của sidebar desktop (h-7, chữ compact, nền sidebar-accent khi chạm). */
+const ROW_CLASS =
+  "flex h-7 w-full items-center gap-2 rounded-sm px-2 text-compact font-medium text-muted-foreground outline-none touch-manipulation transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:bg-sidebar-accent active:bg-sidebar-accent";
+const ICON_CLASS = "size-3.5 shrink-0";
 
-const DRAWER_SUBTITLES: Record<string, string> = {
-  calendar: "Lịch tuần, sự kiện",
-  documents: "Sổ công văn, tờ trình",
-  org: "Đơn vị & danh bạ",
-  settings: "Hệ thống & tùy chọn",
-};
-
+/**
+ * Sidebar di động trượt từ trái: cùng logo, nhóm và danh sách điều hướng với sidebar desktop (`SidebarNavList`),
+ * kèm các thao tác tài khoản và ứng dụng. Mở bằng sự kiện `qcet:open-mobile-menu`.
+ */
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
   const { user, logout, setIsProfileModalOpen } = useAuth();
-  const pathname = usePathname() || "/";
-  const searchParams = useSearchParams();
-  const { badgeCounts } = useSidebarContext();
   const [isTestingPush, setIsTestingPush] = React.useState(false);
-  const [testPushResult, setTestPushResult] = React.useState<"success" | "failed" | null>(null);
 
-  // Automatically dismiss virtual keyboard if input is active when drawer opens
+  // Đóng bàn phím ảo nếu đang mở khi drawer hiện ra
   React.useEffect(() => {
-    if (open && typeof document !== "undefined") {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
+    if (open && typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
     }
   }, [open]);
 
-  // Canonical drawer routes: /documents (Văn bản & Điều hành), /calendar, /org, /settings
-  const drawerItems = getMobileDrawerItems();
+  const { isSupported, isSubscribed, isLoading, subscribeToPush, unsubscribeFromPush, sendTestNotification } =
+    usePushNotification();
+  const { isInstallable, isIOS, isStandalone, installApp } = usePWAInstall();
 
-  const {
-    isSupported,
-    isSubscribed,
-    isLoading,
-    subscribeToPush,
-    unsubscribeFromPush,
-    sendTestNotification,
-  } = usePushNotification();
-
-  const {
-    isInstallable,
-    isIOS,
-    isStandalone,
-    installApp,
-  } = usePWAInstall();
+  const close = () => onOpenChange(false);
+  const userRoleLabel =
+    user?.role === "ADMIN" ? "Ban Giám hiệu" : user?.role === "MANAGER" ? "Trưởng đơn vị" : "Chuyên viên";
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange}>
-      <BottomSheetContent className="max-h-[85dvh] overflow-y-auto">
-        <BottomSheetHeader className="border-b border-border/50 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="size-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                {user?.name?.slice(0, 2).toUpperCase() || "ND"}
-              </div>
-              <div className="min-w-0">
-                <BottomSheetTitle className="text-sm font-semibold truncate">
-                  {user?.name || "Người dùng QCET"}
-                </BottomSheetTitle>
-                <BottomSheetDescription className="text-xs truncate">
-                  {user?.title || "Cán bộ giảng viên"} • {user?.department || "Trường CĐ Kỹ thuật Công nghệ Quy Nhơn"}
-                </BottomSheetDescription>
-              </div>
-            </div>
-            <BottomSheetClose
-              onClick={() => triggerHaptic("light")}
-              className="flex items-center justify-center min-w-[48px] min-h-[48px] p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer touch-manipulation"
+    <VaulDrawer.Root open={open} onOpenChange={onOpenChange} direction="left">
+      <VaulDrawer.Portal>
+        <VaulDrawer.Overlay className="fixed inset-0 z-40 bg-overlay" />
+        <VaulDrawer.Content
+          aria-describedby={undefined}
+          className="fixed inset-y-0 left-0 z-50 flex w-[min(280px,calc(100vw-56px))] flex-col bg-sidebar text-foreground shadow-dialog outline-none"
+        >
+          <VaulDrawer.Title className="sr-only">Menu điều hướng</VaulDrawer.Title>
+
+          <div className="shrink-0 px-3 pt-[calc(env(safe-area-inset-top,0px)+14px)] pb-2.5">
+            <Link
+              href="/"
+              onClick={close}
+              title="QCET E-Office"
+              className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
-              <X size={18} />
-            </BottomSheetClose>
-          </div>
-        </BottomSheetHeader>
-
-        <div className="p-4 space-y-4">
-          {/* Core App Navigation Shortcuts - 2-Column Grid with 48px targets */}
-          <div className="space-y-2">
-            <div className="text-xs font-bold text-muted-foreground px-1 pb-0.5">
-              LỐI TẮT HỆ THỐNG
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {drawerItems.map((item) => {
-                const IconComponent = DRAWER_ICONS[item.iconName] || FileText;
-                const isActive = isRouteActive(item.href, pathname, searchParams, item.aliases);
-                const subtitle = DRAWER_SUBTITLES[item.id] || item.shortLabel;
-                const badgeCount = item.badgeKey ? Number(badgeCounts?.[item.badgeKey]) || 0 : 0;
-                const isDocuments = item.id === "documents";
-
-                return (
-                  <Link
-                    key={item.id}
-                    href={isDocuments ? "#" : item.href}
-                    onClick={(e) => {
-                      if (isDocuments) {
-                        e.preventDefault();
-                        return;
-                      }
-                      triggerHaptic("light");
-                      onOpenChange(false);
-                    }}
-                    aria-disabled={isDocuments ? true : undefined}
-                    tabIndex={isDocuments ? -1 : undefined}
-                    aria-label={`${item.label}${isDocuments ? " (Đang phát triển - Chưa thể truy cập)" : ""}`}
-                    aria-current={isActive ? "page" : undefined}
-                    className={cn(
-                      "flex flex-col justify-between p-3 min-h-[48px] rounded-xl border transition-all touch-manipulation",
-                      isDocuments
-                        ? "border-border/40 bg-card/60 opacity-60 cursor-not-allowed select-none"
-                        : "cursor-pointer active:scale-[0.98] group",
-                      isActive
-                        ? "bg-primary/10 border-primary/40 font-semibold text-primary shadow-xs"
-                        : !isDocuments && "border-border/50 bg-card hover:bg-muted/50 text-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div
-                        className={cn(
-                          "size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                          isDocuments
-                            ? "bg-muted text-muted-foreground"
-                            : isActive
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                        )}
-                      >
-                        <IconComponent size={16} strokeWidth={isActive ? 2.25 : 1.75} />
-                      </div>
-                      <span className="text-xs font-semibold truncate">{item.label}</span>
-                      {isDocuments && (
-                        <span className="ml-auto px-1.5 py-0.5 rounded text-xs font-medium tracking-tight bg-warning/10 text-warning border border-warning/20 shrink-0 leading-none select-none">
-                          Đang phát triển
-                        </span>
-                      )}
-                      {!isDocuments && badgeCount > 0 && (
-                        <span className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground">
-                          {badgeCount}
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        "text-xs truncate",
-                        isActive ? "text-primary/80" : "text-muted-foreground"
-                      )}
-                    >
-                      {subtitle}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Profile Quick Link */}
-            <Pressable
-              onClick={() => {
-                triggerHaptic("light");
-                onOpenChange(false);
-                if (setIsProfileModalOpen) {
-                  setIsProfileModalOpen(true);
-                } else if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("qcet:open-profile-modal"));
-                }
-              }}
-              className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] touch-manipulation"
-            >
-              <div className="flex items-center gap-3">
-                <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <User size={16} />
-                </div>
-                <div className="text-left">
-                  <div className="text-xs font-semibold">Hồ sơ cá nhân</div>
-                  <div className="text-xs text-muted-foreground">Xem chi tiết tài khoản & phân quyền</div>
-                </div>
-              </div>
-              <ChevronRight size={15} className="text-muted-foreground" />
-            </Pressable>
+              <Image src="/logo-qcet.png" alt="QCET" width={24} height={24} className="size-6 shrink-0 rounded-full object-contain" priority />
+              <span className="truncate text-compact font-semibold tracking-tight text-foreground">QCET E-Office</span>
+            </Link>
           </div>
 
-          {/* Mobile Push Notification & App Section */}
-          <div className="space-y-2 pt-2 border-t border-border/40">
-            <div className="flex items-center justify-between px-1 pb-1">
-              <div className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                <Bell size={13} className="text-primary" />
-                <span>THÔNG BÁO ĐIỆN THOẠI & ỨNG DỤNG</span>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto thin-scrollbar">
+            <SidebarNavList onNavigate={close} className="flex-none overflow-visible" />
+
+            <div className="space-y-0.5 px-2.5 pt-3 pb-3">
+              <div className="flex items-center gap-2 px-2 pt-1 pb-1.5">
+                <UserAvatar name={formatDisplayName(user?.name)} avatarUrl={user?.avatar} size="sm" className="shrink-0" />
+                <div className="min-w-0">
+                  <div className="truncate text-compact text-foreground">{formatDisplayName(user?.name)}</div>
+                  <div className="truncate text-xs text-muted-foreground">{user?.department || userRoleLabel}</div>
+                </div>
               </div>
+
+              <Pressable
+                onClick={() => {
+                  triggerHaptic("light");
+                  close();
+                  if (setIsProfileModalOpen) setIsProfileModalOpen(true);
+                  else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("qcet:open-profile-modal"));
+                }}
+                className={ROW_CLASS}
+              >
+                <User className={ICON_CLASS} />
+                <span className="flex-1 truncate text-left">Hồ sơ cá nhân</span>
+              </Pressable>
+
               {isSupported ? (
-                isSubscribed ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                    <CheckCircle2 size={11} />
-                    Đã kích hoạt
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-warning/10 text-warning border border-warning/20">
-                    Chưa bật
-                  </span>
-                )
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border/40">
-                  Không hỗ trợ
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              {/* Push Toggle Button */}
-              {isSupported && (
                 <Pressable
                   disabled={isLoading}
                   onClick={async () => {
                     triggerHaptic("selection");
-                    if (isSubscribed) {
-                      await unsubscribeFromPush();
-                    } else {
-                      await subscribeToPush();
-                    }
+                    if (isSubscribed) await unsubscribeFromPush();
+                    else await subscribeToPush();
                   }}
-                  className={cn(
-                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border touch-manipulation active:scale-[0.98]",
-                    isSubscribed
-                      ? "bg-muted/40 hover:bg-muted/60 border-border/50 text-foreground"
-                      : "bg-primary/10 hover:bg-primary/15 border-primary/30 text-primary font-semibold"
-                  )}
+                  className={ROW_CLASS}
                 >
-                  <div className="flex items-center gap-3">
-                    {isLoading ? (
-                      <Loader2 size={17} className="animate-spin text-primary" />
-                    ) : isSubscribed ? (
-                      <BellOff size={17} className="text-muted-foreground" />
-                    ) : (
-                      <BellRing size={17} className="text-primary" />
-                    )}
-                    <span>{isSubscribed ? "T��t thông báo chuông" : "Bật thông báo chuông"}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {isSubscribed ? "Đang bật" : "Kích hoạt"}
-                  </span>
+                  {isLoading ? <Loader2 className={cn(ICON_CLASS, "animate-spin")} /> : isSubscribed ? <BellOff className={ICON_CLASS} /> : <Bell className={ICON_CLASS} />}
+                  <span className="flex-1 truncate text-left">{isSubscribed ? "Tắt thông báo chuông" : "Bật thông báo chuông"}</span>
                 </Pressable>
-              )}
+              ) : null}
 
-              {/* Test Ring Button */}
-              {isSupported && isSubscribed && (
+              {isSupported && isSubscribed ? (
                 <Pressable
                   disabled={isTestingPush || isLoading}
                   onClick={async () => {
                     triggerHaptic("selection");
                     setIsTestingPush(true);
-                    setTestPushResult(null);
                     try {
-                      const ok = await sendTestNotification({
+                      await sendTestNotification({
                         title: "BGH giao việc mới",
                         body: "Thử nghiệm kết nối chuông đẩy QCET E-Office thành công.",
                         linkHref: "/tasks",
                       });
-                      setTestPushResult(ok ? "success" : "failed");
-                      setTimeout(() => setTestPushResult(null), 3000);
                     } finally {
                       setIsTestingPush(false);
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors border border-border/40 touch-manipulation active:scale-[0.98]"
+                  className={ROW_CLASS}
                 >
-                  <div className="flex items-center gap-3">
-                    {isTestingPush ? (
-                      <Loader2 size={17} className="animate-spin text-primary" />
-                    ) : (
-                      <Volume2 size={17} className="text-primary" />
-                    )}
-                    <span>Thử chuông ngay</span>
-                  </div>
-                  <span
-                    className={cn(
-                      "text-xs font-semibold font-mono",
-                      testPushResult === "failed" ? "text-destructive" : "text-primary"
-                    )}
-                  >
-                    {testPushResult === "success"
-                      ? "Đã gửi chuông"
-                      : testPushResult === "failed"
-                      ? "Lỗi gửi"
-                      : "Gửi thử"}
-                  </span>
+                  {isTestingPush ? <Loader2 className={cn(ICON_CLASS, "animate-spin")} /> : <Volume2 className={ICON_CLASS} />}
+                  <span className="flex-1 truncate text-left">Thử chuông ngay</span>
                 </Pressable>
-              )}
+              ) : null}
 
-              {/* Install App Button if installable */}
-              {isInstallable && (
+              {isInstallable ? (
                 <Pressable
                   onClick={async () => {
                     triggerHaptic("medium");
                     await installApp();
-                    onOpenChange(false);
+                    close();
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors shadow-xs touch-manipulation active:scale-[0.98]"
+                  className={ROW_CLASS}
                 >
-                  <div className="flex items-center gap-3">
-                    <Download size={17} />
-                    <span>Cài đặt lên màn hình chính</span>
-                  </div>
+                  <Download className={ICON_CLASS} />
+                  <span className="flex-1 truncate text-left">Cài đặt lên màn hình chính</span>
                 </Pressable>
-              )}
+              ) : null}
 
-              {/* iOS Safari Guide Button if iOS & not standalone */}
-              {isIOS && !isStandalone && (
+              {isIOS && !isStandalone ? (
                 <Pressable
                   onClick={() => {
                     triggerHaptic("light");
-                    onOpenChange(false);
-                    if (typeof window !== "undefined") {
-                      window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
-                    }
+                    close();
+                    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors touch-manipulation active:scale-[0.98]"
+                  className={ROW_CLASS}
                 >
-                  <div className="flex items-center gap-3">
-                    <Smartphone size={17} />
-                    <span>Xem hướng dẫn cài đặt iOS</span>
-                  </div>
-                  <ChevronRight size={14} />
+                  <Smartphone className={ICON_CLASS} />
+                  <span className="flex-1 truncate text-left">Hướng dẫn cài đặt iOS</span>
                 </Pressable>
-              )}
+              ) : null}
 
-              {/* Feature Guide Help Button */}
               <Pressable
                 onClick={() => {
                   triggerHaptic("light");
-                  onOpenChange(false);
-                  if (typeof window !== "undefined") {
-                    window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
-                  }
+                  close();
+                  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
                 }}
-                className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl hover:bg-muted text-foreground border border-border/60 font-medium text-xs transition-colors touch-manipulation active:scale-[0.98]"
+                className={ROW_CLASS}
               >
-                <div className="flex items-center gap-3">
-                  <HelpCircle size={17} className="text-muted-foreground" />
-                  <span>Trợ giúp &amp; Hướng dẫn</span>
-                </div>
-                <ChevronRight size={14} className="text-muted-foreground" />
+                <HelpCircle className={ICON_CLASS} />
+                <span className="flex-1 truncate text-left">Trợ giúp và hướng dẫn</span>
               </Pressable>
             </div>
           </div>
 
-          {/* Preferences & Actions */}
-          <div className="space-y-2 pt-2 border-t border-border/40">
+          <div className="shrink-0 border-t border-border/60 px-2.5 pt-1.5 pb-[calc(env(safe-area-inset-bottom,0px)+8px)]">
             <Pressable
               onClick={() => {
                 triggerHaptic("warning");
                 logout();
-                onOpenChange(false);
+                close();
               }}
-              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors touch-manipulation active:scale-[0.98]"
+              className={cn(ROW_CLASS, "text-destructive hover:bg-destructive/10 hover:text-destructive active:bg-destructive/10")}
             >
-              <LogOut size={16} />
-              <span>Đăng xuất</span>
+              <LogOut className={ICON_CLASS} />
+              <span className="flex-1 truncate text-left">Đăng xuất</span>
             </Pressable>
           </div>
-        </div>
-      </BottomSheetContent>
-    </BottomSheet>
+        </VaulDrawer.Content>
+      </VaulDrawer.Portal>
+    </VaulDrawer.Root>
   );
 }
