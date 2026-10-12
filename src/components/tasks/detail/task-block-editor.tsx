@@ -2106,8 +2106,6 @@ export function TaskBlockEditor({
 
   // Autosave: debounced, skip blob URLs
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
-  const savedFadeRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Luôn gọi bản onSaveContent mới nhất (version/đóng gói state đổi theo mỗi lần render)
   const onSaveRef = React.useRef(onSaveContent);
   onSaveRef.current = onSaveContent;
@@ -2162,15 +2160,10 @@ export function TaskBlockEditor({
         try {
           const payload = serializeBlocksToContent(savableBlocks);
           if (payload === lastSavedContentRef.current) return;
-          if (savedFadeRef.current) clearTimeout(savedFadeRef.current);
-          setSaveState("saving");
           await onSaveRef.current(payload);
           lastSavedContentRef.current = payload;
           setSaveError(null);
-          setSaveState("saved");
-          savedFadeRef.current = setTimeout(() => setSaveState("idle"), 2000);
         } catch (err: unknown) {
-          setSaveState("idle");
           setSaveError(err instanceof Error ? err.message : "Lỗi lưu nội dung");
         }
       }, 800);
@@ -2190,7 +2183,6 @@ export function TaskBlockEditor({
   // Flush pending save on unmount / navigate away
   React.useEffect(() => {
     return () => {
-      if (savedFadeRef.current) clearTimeout(savedFadeRef.current);
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -2554,16 +2546,6 @@ export function TaskBlockEditor({
             </div>
           </div>,
           document.body
-        )}
-
-        {canEdit && saveState !== "idle" && !saveError && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="pointer-events-none sticky bottom-2 flex justify-end px-3 text-xs text-muted-foreground"
-          >
-            {saveState === "saving" ? "Đang lưu…" : "Đã lưu"}
-          </div>
         )}
 
         {saveError && (

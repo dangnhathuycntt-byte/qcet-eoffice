@@ -25,6 +25,7 @@ import {
   getSystemReferenceDate,
 } from "@/lib/academic-calendar";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-host";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DashboardModalContext } from "@/components/dashboard/dashboard-context";
@@ -40,6 +41,7 @@ import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_DENSITY,
   getStatusBadgeConfig,
+  TASK_COLUMN_CLASS,
 } from "./constants";
 import {
   filterTasks,
@@ -57,7 +59,6 @@ import { TaskRow } from "./components/task-row";
 import { TaskContextMenu } from "./task-context-menu";
 import { TaskPeekPreviewModal } from "@/components/tasks/preview/task-peek-preview-modal";
 import { isInteractiveInput } from "@/lib/shortcuts/guards";
-import { TaskPaginationBar } from "./components/task-pagination-bar";
 import { TaskEmptyState, type TaskEmptyStateProps } from "./components/task-empty-state";
 import { MobileTaskCard } from "./components/mobile-task-card";
 import {
@@ -85,6 +86,9 @@ const BULK_LIFECYCLE_CANDIDATES: TaskStatus[] = [
   "CANCELLED",
 ];
 
+/** Số dòng hiện thêm mỗi lần cuộn gần cuối danh sách. */
+const INFINITE_SCROLL_BATCH = 100;
+
 export interface ModularCascadingTaskTableProps {
   tasks: SchoolTask[];
   scope?: string;
@@ -105,7 +109,6 @@ export interface ModularCascadingTaskTableProps {
   className?: string;
   hideWorkbox?: boolean;
   hideToolbar?: boolean;
-  hidePagination?: boolean;
   onOpenSubmitModal?: (task: StaffTask) => void;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   selectedAcademicMonth?: number | "ALL";
@@ -155,7 +158,6 @@ export function ModularCascadingTaskTable({
   className,
   hideWorkbox = false,
   hideToolbar = false,
-  hidePagination = false,
   onOpenSubmitModal,
   onAddSubTask,
   selectedAcademicMonth,
@@ -400,12 +402,16 @@ export function ModularCascadingTaskTable({
   });
 
   const handleRowContextMenu = React.useCallback(
-    (task: SchoolTask, e: React.MouseEvent) => {
+    (task: SchoolTask, e: React.MouseEvent | React.KeyboardEvent) => {
       e.preventDefault();
       const targetEl = (e.currentTarget || e.target) as HTMLElement | null;
+      // Nút "⋯" và bàn phím không có điểm chuột phải: neo menu vào mép dưới phần tử vừa kích hoạt.
+      const rect = e.type !== "contextmenu" ? targetEl?.getBoundingClientRect() : null;
       setContextMenu({
         isOpen: true,
-        position: { x: e.clientX, y: e.clientY },
+        position: rect
+          ? { x: e.type === "keydown" ? rect.left + 48 : rect.left, y: rect.bottom + 4 }
+          : { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY },
         task,
         triggerElement: targetEl,
       });
@@ -579,24 +585,6 @@ export function ModularCascadingTaskTable({
     filteredTaskIdsRef.current = key;
   }, [filteredTasks, clearSelection]);
 
-  const handlePageChange = React.useCallback(
-    (newPage: number) => {
-      tableState.setPage(newPage);
-      if (typeof window !== "undefined") {
-        if (tableContainerRef.current) {
-          const topbarHeight = window.innerWidth >= 768 ? 0 : 48;
-          const rect = tableContainerRef.current.getBoundingClientRect();
-          const targetY = rect.top + window.scrollY - topbarHeight - 12;
-          window.scrollTo({
-            top: Math.max(0, targetY),
-            behavior: "smooth",
-          });
-        }
-      }
-    },
-    [tableState]
-  );
-
   // 5b. P0-07 / R-T07-bulk: lifecycle targets valid for the ENTIRE selection.
   // Derived from the canonical capability engine, never from a role string.
   // Note: SchoolTask carries no creator identity, so the engine's SoD
@@ -706,15 +694,40 @@ export function ModularCascadingTaskTable({
   }, [onBulkPriorityChange, tableState, tasks, feedback, onRefresh]);
 
   const effectiveOnBulkDelete = React.useMemo(() => {
-    if (onBulkDelete) return onBulkDelete;
-    if (handleContextMenuDelete) {
-      return async (ids: string[]) => {
-        await Promise.all(ids.map((id) => handleContextMenuDelete(id)));
-        tableState.clearSelection();
-      };
-    }
-    return undefined;
-  }, [onBulkDelete, handleContextMenuDelete, tableState]);
+    return async (ids: string[]) => {
+      const titleOf = (id: string) => tasks.find((t) => t.id === id)?.title ?? "Nhiệm vụ";
+      const preview = ids.slice(0, 3).map((id) => `“${titleOf(id)}”`).join(", ");
+      const more = ids.length > 3 ? ` và ${ids.length - 3} nhiệm vụ khác` : "";
+      const ok = await confirmAction({
+        title: ids.length === 1 ? "Xóa nhiệm vụ?" : `Xóa ${ids.length} nhiệm vụ?`,
+        description: `${preview}${more} sẽ được lưu trữ và không còn hiển thị trong danh sách nhiệm vụ đang hoạt động.`,
+        confirmLabel: ids.length === 1 ? "Xóa nhiệm vụ" : `Xóa ${ids.length} nhiệm vụ`,
+        cancelLabel: "Giữ lại",
+        destructive: true,
+      });
+      if (!ok) return;
+
+      const settled = onBulkDelete
+        ? await Promise.allSettled([Promise.resolve(onBulkDelete(ids))]).then((r) => ids.map(() => r[0]))
+        : await Promise.allSettled(ids.map((id) => handleContextMenuDelete(id)));
+      const okIds = ids.filter((_, i) => settled[i].status === "fulfilled");
+      const failed = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (typeof window !== "undefined" && okIds.length > 0) {
+        for (const taskId of okIds) {
+          window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId, optimistic: true } }));
+        }
+        window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: null, optimistic: false } }));
+      }
+      if (failed.length === 0) {
+        feedback.notifySuccess(`Đã lưu trữ ${okIds.length} nhiệm vụ.`);
+      } else {
+        const reason = failed[0].reason instanceof Error ? `: ${failed[0].reason.message}` : "";
+        feedback.notifyWarning(`Đã lưu trữ ${okIds.length}, ${failed.length} nhiệm vụ không xóa được${reason}`);
+      }
+      // Giữ lại chọn những dòng lỗi để người dùng thử lại.
+      if (failed.length === 0) tableState.clearSelection();
+    };
+  }, [onBulkDelete, handleContextMenuDelete, tableState, tasks, feedback]);
 
   const effectiveOnExportExcel = React.useMemo(() => {
     if (onExportExcel) return onExportExcel;
@@ -795,10 +808,27 @@ export function ModularCascadingTaskTable({
     });
   }, [filteredTasks, tableState.sortField, tableState.sortDirection]);
 
-  // 9. Pagination
+  // 9. Cuộn liên tục (không phân trang): hiện dần từng đợt khi cuộn gần cuối danh sách
+  const [visibleCount, setVisibleCount] = React.useState(INFINITE_SCROLL_BATCH);
   const paginatedResult = React.useMemo(() => {
-    return paginateTasks(sortedTasks, tableState.currentPage, tableState.pageSize);
-  }, [sortedTasks, tableState.currentPage, tableState.pageSize]);
+    return paginateTasks(sortedTasks, 1, visibleCount);
+  }, [sortedTasks, visibleCount]);
+  const hasMoreRows = paginatedResult.items.length < sortedTasks.length;
+  const loadMoreRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!hasMoreRows || !node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleCount((count) => count + INFINITE_SCROLL_BATCH);
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreRows, visibleCount]);
 
   const visibleIds = React.useMemo(() => {
     return paginatedResult.items.map((t) => t.id);
@@ -1471,18 +1501,18 @@ export function ModularCascadingTaskTable({
         <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
           {/* Desktop Table View (>= 768px) — Clean borderless table surface (Linear-style) */}
           <div className="hidden md:block">
-            <div className="overflow-x-auto thin-scrollbar">
+            <div className="@container overflow-x-clip thin-scrollbar">
               <table className="w-full text-left border-collapse table-fixed">
                 <colgroup>
-                  <col className="min-w-[280px]" />
-                  {effectiveVisibleColumns.priority !== false && <col className="w-[84px]" />}
-                  {effectiveVisibleColumns.leadAssignee !== false && <col className="w-[170px]" />}
-                  {effectiveVisibleColumns.coAssignees === true && <col className="w-[110px]" />}
-                  {effectiveVisibleColumns.department !== false && <col className="w-[170px]" />}
-                  {effectiveVisibleColumns.startDate === true && <col className="w-[110px]" />}
-                  {effectiveVisibleColumns.dueDate !== false && <col className="w-[110px]" />}
-                  {effectiveVisibleColumns.createdAt === true && <col className="w-[110px]" />}
-                  {effectiveVisibleColumns.status === true && <col className="w-[180px]" />}
+                  <col className={TASK_COLUMN_CLASS.title} />
+                  {effectiveVisibleColumns.priority !== false && <col className={TASK_COLUMN_CLASS.priority} />}
+                  {effectiveVisibleColumns.leadAssignee !== false && <col className={TASK_COLUMN_CLASS.leadAssignee} />}
+                  {effectiveVisibleColumns.coAssignees === true && <col className={TASK_COLUMN_CLASS.coAssignees} />}
+                  {effectiveVisibleColumns.department !== false && <col className={TASK_COLUMN_CLASS.department} />}
+                  {effectiveVisibleColumns.startDate === true && <col className={TASK_COLUMN_CLASS.startDate} />}
+                  {effectiveVisibleColumns.dueDate !== false && <col className={TASK_COLUMN_CLASS.dueDate} />}
+                  {effectiveVisibleColumns.createdAt === true && <col className={TASK_COLUMN_CLASS.createdAt} />}
+                  {effectiveVisibleColumns.status === true && <col className={TASK_COLUMN_CLASS.status} />}
                 </colgroup>
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
@@ -1711,16 +1741,7 @@ export function ModularCascadingTaskTable({
             )}
           </div>
 
-          {/* Pagination Controls - Show only when totalItems > pageSize and not explicitly hidden */}
-          {!hidePagination && tableState.totalItems > tableState.pageSize && (
-            <TaskPaginationBar
-              currentPage={tableState.currentPage}
-              pageSize={tableState.pageSize}
-              totalItems={tableState.totalItems}
-              onPageChange={handlePageChange}
-              onPageSizeChange={tableState.setPageSize}
-            />
-          )}
+          {hasMoreRows && <div ref={loadMoreRef} aria-hidden className="h-px" />}
         </div>
       )}
 

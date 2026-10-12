@@ -156,12 +156,10 @@ test.describe("Quick View (pane không modal)", () => {
     // Quy trình xử lý nằm trong mục "Chi tiết và luân chuyển" thu gọn mặc định (SPEC §17.5C)
     await pane(page).getByRole("button", { name: "Chi tiết và luân chuyển", exact: true }).click();
     await expect(pane(page).getByText("Quy trình xử lý")).toBeVisible();
-    await expect(pane(page).getByRole("link", { name: "Mở trang đầy đủ" })).toHaveAttribute("href", new RegExp(`/documents/outgoing/${DOC_OUTGOING_ID}`));
     await page.goto(`/documents?docId=${DOC_SUBMISSION_ID}`);
     await expect(pane(page).getByRole("heading", { name: "Tờ trình E2E ba tệp" })).toBeVisible();
     await pane(page).getByRole("button", { name: "Chi tiết và luân chuyển", exact: true }).click();
     await expect(pane(page).getByRole("region", { name: "Luân chuyển" })).toBeVisible();
-    await expect(pane(page).getByRole("link", { name: "Mở trang đầy đủ" })).toHaveAttribute("href", new RegExp(`/documents/${DOC_SUBMISSION_ID}`));
   });
 
   test("mở xem không tick checkbox; chọn để thao tác hàng loạt không đổi văn bản đang xem (SPEC §17.4C)", async ({ page }) => {
@@ -204,14 +202,6 @@ test.describe("Quick View (pane không modal)", () => {
     await expect(pane(page).getByRole("region", { name: "Luân chuyển" })).toHaveCount(0);
     await pane(page).getByRole("button", { name: "Chi tiết và luân chuyển", exact: true }).click();
     await expect(pane(page).getByRole("region", { name: "Luân chuyển" })).toBeVisible();
-  });
-
-  test("nút Mở trang đầy đủ giữ tệp đang xem", async ({ page }) => {
-    await page.goto(`/documents?docId=${docIdForFiles(5)}&file=${docIdForFiles(5)}_att2`);
-    await expect(pane(page).getByRole("link", { name: "Mở trang đầy đủ" })).toHaveAttribute(
-      "href",
-      `/documents/incoming/${docIdForFiles(5)}?file=${docIdForFiles(5)}_att2`,
-    );
   });
 });
 
@@ -271,25 +261,5 @@ test.describe("Rail ở cửa sổ thấp", () => {
       expect(box!.y + box!.height, name).toBeLessThanOrEqual(body!.y + body!.height);
     }
     await expect(pane(page).getByRole("button", { name: "Tệp 5" })).toBeVisible();
-  });
-});
-
-test.describe("Vị trí cuộn danh sách", () => {
-  test.use({ viewport: { width: 1440, height: 420 } });
-
-  test("quay lại từ Full Page giữ vị trí cuộn của danh sách", async ({ page }) => {
-    await page.goto("/documents");
-    const region = page.locator('[data-slot="document-list-region"]');
-    await expect(row(page, docIdForFiles(1))).toBeAttached();
-    // Hàng 32px nên danh sách ngắn hơn trước: cuộn xuống hết cỡ thay vì một giá trị cố định
-    await region.evaluate((el) => (el.scrollTop = el.scrollHeight));
-    await expect.poll(() => region.evaluate((el) => el.scrollTop)).toBeGreaterThan(40);
-    const before = await region.evaluate((el) => el.scrollTop);
-    await page.waitForTimeout(400);
-    await page.goto(`/documents/incoming/${docIdForFiles(5)}`);
-    await expect(page.locator('[data-slot="document-full-page"]')).toBeVisible();
-    await page.goBack();
-    await expect(row(page, docIdForFiles(1))).toBeAttached();
-    await expect.poll(() => region.evaluate((el) => el.scrollTop)).toBe(before);
   });
 });

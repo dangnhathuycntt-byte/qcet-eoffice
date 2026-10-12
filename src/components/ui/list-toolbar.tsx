@@ -2,42 +2,26 @@
 
 import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
-import { Menu } from "@base-ui/react/menu";
-import { Check, ChevronRight, Filter, Loader2, RotateCcw, Search, X } from "lucide-react";
+import { Filter, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
+import { Pressable } from "@/components/ui/pressable";
+import {
+  MENU_POPUP_CLASS,
+  MenuOptionItem,
+  MenuPopup,
+  MenuPortal,
+  MenuPositioner,
+  MenuRoot,
+  MenuSubmenu,
+  MenuTrigger,
+} from "@/components/ui/menu";
 
 /** Nút icon trên thanh công cụ danh sách (bộ lọc, hiển thị) */
 export function listToolbarIconButtonClass(active = false) {
   return cn(
     "inline-flex h-7 shrink-0 cursor-pointer select-none items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-colors touch-manipulation",
     active ? "border-border bg-accent/60 text-foreground hover:bg-accent" : "border-border/80 bg-background text-foreground hover:bg-accent"
-  );
-}
-
-/** Số bộ lọc đang áp dụng trên nút Lọc (dùng chung Nhiệm vụ và Văn bản). */
-export function ListToolbarCountBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
-  return (
-    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-foreground/80 border border-border/80 font-mono text-xs leading-none font-semibold tabular-nums">
-      {count}
-    </span>
-  );
-}
-
-/** Nút "Xóa bộ lọc" cạnh nút Lọc, chỉ hiện khi có bộ lọc (dùng chung Nhiệm vụ và Văn bản). */
-export function ListToolbarClearFiltersButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title="Xóa tất cả bộ lọc"
-      aria-label="Xóa tất cả bộ lọc"
-      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation"
-    >
-      <RotateCcw className="size-3 shrink-0" />
-      <span className="hidden sm:inline">Xóa bộ lọc</span>
-    </button>
   );
 }
 
@@ -101,7 +85,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
           onBlur?.(e);
         }}
         className={cn(
-          "h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 transition-colors",
+          "h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 transition-colors",
           className
         )}
         {...inputProps}
@@ -151,6 +135,17 @@ export function ListToolbarPopover({
   /** Giới hạn chiều cao và cuộn khi nội dung dài */
   scrollable?: boolean;
 }) {
+  // Chuột phải ở nơi khác (menu thao tác của hàng) không kích hoạt "bấm ra ngoài" của Popover: tự đóng để không chồng hai lớp
+  React.useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (e.target instanceof Element && e.target.closest("[data-list-toolbar-popover]")) return;
+      onOpenChange(false);
+    };
+    document.addEventListener("contextmenu", close, true);
+    return () => document.removeEventListener("contextmenu", close, true);
+  }, [open, onOpenChange]);
+
   return (
     <Popover.Root open={open} onOpenChange={onOpenChange}>
       <Popover.Trigger type="button" aria-label={ariaLabel} title={title} className={cn(listToolbarIconButtonClass(open), "relative")}>
@@ -160,6 +155,7 @@ export function ListToolbarPopover({
         <Popover.Portal>
           <Popover.Positioner side="bottom" align="end" sideOffset={6} collisionPadding={8} className="z-50">
             <Popover.Popup
+              data-list-toolbar-popover=""
               className={cn(
                 propertyPopupClassName,
                 width,
@@ -198,13 +194,37 @@ export interface ListToolbarFilterPopoverProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: ListFilterCategory[];
-  /** Số bộ lọc đang áp dụng, hiện trên nút và quyết định có hiện "Xóa bộ lọc" */
+  /** Số bộ lọc đang áp dụng: hiện chấm trên nút và quyết định có hiện "Xóa bộ lọc" */
   activeCount: number;
   onClear: () => void;
   ariaLabel?: string;
 }
 
-/** Popover bộ lọc dùng chung: tìm loại bộ lọc, danh mục có submenu chọn một giá trị, xóa bộ lọc */
+/** Nút mở bộ lọc: chấm báo đang lọc thay cho số, nên nút giữ bề rộng và các nút bên cạnh không bị đẩy. */
+export const ListToolbarFilterButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { activeCount: number; open: boolean }
+>(function ListToolbarFilterButton({ activeCount, open, className, ...props }, ref) {
+  const label = activeCount > 0 ? `Bộ lọc (${activeCount} đang áp dụng)` : "Bộ lọc";
+  return (
+    <Pressable
+      ref={ref}
+      aria-label={label}
+      title={activeCount > 0 ? `Bộ lọc (F) · ${activeCount} đang áp dụng` : "Bộ lọc (F)"}
+      className={cn(listToolbarIconButtonClass(open || activeCount > 0), "relative", className)}
+      {...props}
+    >
+      <Filter className="size-3.5 shrink-0" />
+      {activeCount > 0 && <span aria-hidden className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />}
+    </Pressable>
+  );
+});
+
+/**
+ * Bộ lọc dùng chung của trang danh sách, cùng menu với trang Nhiệm vụ:
+ * mỗi nhóm mở menu con thả sang trái, mục đang chọn nền accent đậm (không tick, không mũi tên),
+ * chọn xong menu vẫn mở để đổi tiếp.
+ */
 export function ListToolbarFilterPopover({
   open,
   onOpenChange,
@@ -213,130 +233,45 @@ export function ListToolbarFilterPopover({
   onClear,
   ariaLabel = "Bộ lọc",
 }: ListToolbarFilterPopoverProps) {
-  const [query, setQuery] = React.useState("");
-  const [openCategory, setOpenCategory] = React.useState<string | null>(null);
-  const [isMobile, setIsMobile] = React.useState(false);
-  const categoryRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
-
-  React.useEffect(() => {
-    const media = window.matchMedia("(max-width: 639px)");
-    const sync = () => setIsMobile(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  const close = () => {
-    setOpenCategory(null);
-    setQuery("");
-    onOpenChange(false);
-  };
-
-  const q = query.trim().toLowerCase();
-  const shown = categories.filter(
-    (c) => !q || c.label.toLowerCase().includes(q) || c.options.some((o) => o.label.toLowerCase().includes(q))
-  );
-
   return (
-    <ListToolbarPopover
-      open={open}
-      onOpenChange={(next) => (next ? onOpenChange(true) : close())}
-      ariaLabel={ariaLabel}
-      title="Lọc"
-      width="w-56"
-      trigger={
-        <>
-          <Filter className="size-3.5" />
-          <ListToolbarCountBadge count={activeCount} />
-        </>
-      }
-    >
-      <div className="flex flex-col">
-        <div className="mb-1 flex items-center gap-2 border-b border-border/40 px-2.5 py-1.5">
-          <Search className="size-3.5 shrink-0 text-muted-foreground/50" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Thêm bộ lọc…"
-            aria-label="Tìm loại bộ lọc"
-            autoFocus
-            className="h-5 w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
-          />
-          <kbd className="hidden items-center rounded border border-border/60 bg-muted/80 px-1.5 font-mono text-xs leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex">
-            F
-          </kbd>
-        </div>
-        <div className="flex flex-col p-1">
-          {shown.map((c) => (
-            <Menu.Root key={c.id} open={openCategory === c.id} onOpenChange={(o) => setOpenCategory(o ? c.id : null)}>
-              <Menu.Trigger
-                ref={(el: HTMLButtonElement | null) => {
-                  categoryRefs.current[c.id] = el;
-                }}
-                className="flex h-7.5 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-foreground outline-none hover:bg-accent focus-visible:bg-accent data-[popup-open]:bg-accent"
-              >
-                <c.Icon className="size-3.5 shrink-0 text-foreground/80" strokeWidth={1.5} />
-                <span className="flex-1 truncate">{c.label}</span>
-                {c.valueLabel ? <span className="max-w-[96px] truncate font-normal text-foreground/70">{c.valueLabel}</span> : null}
-                <ChevronRight className="size-3.5 shrink-0 text-foreground/60" />
-              </Menu.Trigger>
-              <Menu.Portal>
-                <Menu.Positioner side={isMobile ? "bottom" : "right"} align="start" sideOffset={4} collisionPadding={8} className="z-[60]">
-                  <Menu.Popup
-                    className={cn(propertyPopupClassName, "w-56 max-w-[calc(100vw-1rem)] max-h-[min(288px,var(--available-height))] overflow-y-auto")}
-                    style={propertyMotionStyle}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowLeft") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setOpenCategory(null);
-                        categoryRefs.current[c.id]?.focus();
-                      }
-                    }}
-                  >
-                    <Menu.RadioGroup
-                      value={c.value}
-                      onValueChange={(v) => {
-                        c.onSelect(v);
-                        close();
-                      }}
-                    >
-                      {c.options.map((opt) => (
-                        <Menu.RadioItem
-                          key={opt.value}
-                          value={opt.value}
-                          className="flex h-7.5 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-xs font-medium text-foreground outline-none data-[highlighted]:bg-accent"
-                        >
-                          <span className="flex-1 truncate">{opt.label}</span>
-                          <Menu.RadioItemIndicator className="flex items-center">
-                            <Check className="size-3.5 text-foreground" />
-                          </Menu.RadioItemIndicator>
-                        </Menu.RadioItem>
-                      ))}
-                    </Menu.RadioGroup>
-                  </Menu.Popup>
-                </Menu.Positioner>
-              </Menu.Portal>
-            </Menu.Root>
-          ))}
-          {shown.length === 0 ? <p className="px-2 py-2 text-xs text-muted-foreground">Không có loại bộ lọc phù hợp</p> : null}
-        </div>
-        {activeCount > 0 ? (
-          <div className="border-t border-border/60 p-1">
-            <button
-              type="button"
-              onClick={() => {
-                onClear();
-                close();
-              }}
-              className="flex h-7 w-full cursor-pointer items-center rounded-md px-2 text-xs font-medium text-foreground/80 hover:bg-accent hover:text-foreground"
-            >
-              Xóa bộ lọc
-            </button>
-          </div>
-        ) : null}
-      </div>
-    </ListToolbarPopover>
+    <MenuRoot open={open} onOpenChange={onOpenChange}>
+      <MenuTrigger render={<ListToolbarFilterButton activeCount={activeCount} open={open} aria-label={ariaLabel} />} />
+      <MenuPortal>
+        <MenuPositioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className="z-50 outline-none">
+          <MenuPopup className={cn(MENU_POPUP_CLASS, "w-52")}>
+            <div className="space-y-px">
+              {categories.map((c) => (
+                <MenuSubmenu
+                  key={c.id}
+                  icon={<c.Icon className="size-4 text-muted-foreground" />}
+                  label={c.label}
+                  active={c.valueLabel !== undefined}
+                  hint={c.valueLabel}
+                  title={c.label}
+                >
+                  <div className="space-y-px">
+                    {c.options.map((opt) => (
+                      <MenuOptionItem key={opt.value} selected={c.value === opt.value} onClick={() => c.onSelect(opt.value)}>
+                        {opt.label}
+                      </MenuOptionItem>
+                    ))}
+                  </div>
+                </MenuSubmenu>
+              ))}
+              {activeCount > 0 ? (
+                <MenuOptionItem
+                  closeOnClick
+                  leading={<RotateCcw className="size-4 text-muted-foreground" />}
+                  hint={activeCount}
+                  onClick={onClear}
+                >
+                  Xóa bộ lọc
+                </MenuOptionItem>
+              ) : null}
+            </div>
+          </MenuPopup>
+        </MenuPositioner>
+      </MenuPortal>
+    </MenuRoot>
   );
 }

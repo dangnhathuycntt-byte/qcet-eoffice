@@ -17,7 +17,8 @@ interface TabsContextValue {
 const TabsContext = React.createContext<TabsContextValue | null>(null);
 
 interface TabsListContextValue {
-  variant?: "default" | "line";
+  variant?: "default" | "line" | "segmented" | "pill";
+  size?: "default" | "sm";
   motionIndicator?: boolean;
   layoutId?: string;
 }
@@ -93,10 +94,19 @@ const tabsListVariants = cva(
       variant: {
         default: "bg-muted",
         line: "gap-1 bg-transparent",
+        // Cụm chuyển chế độ xem: nền secondary, mục đang chọn là thẻ trắng.
+        segmented: "rounded-md bg-secondary p-0.5 gap-0.5",
+        // Các chip viên thuốc, không có nền nhóm.
+        pill: "gap-1 rounded-none bg-transparent p-0",
+      },
+      size: {
+        default: "",
+        sm: "group-data-horizontal/tabs:h-7",
       },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   }
 );
@@ -112,6 +122,7 @@ export interface TabsListProps
 function TabsList({
   className,
   variant = "default",
+  size = "default",
   motionIndicator,
   layoutId,
   children,
@@ -170,6 +181,7 @@ function TabsList({
     <TabsListContext.Provider
       value={{
         variant: variant ?? "default",
+        size: size ?? "default",
         motionIndicator: effectiveMotionIndicator,
         layoutId: indicatorLayoutId,
       }}
@@ -182,7 +194,7 @@ function TabsList({
         role="tablist"
         aria-orientation={tabsContext.orientation ?? "horizontal"}
         onKeyDown={handleKeyDown}
-        className={cn(tabsListVariants({ variant }), className)}
+        className={cn(tabsListVariants({ variant, size }), className)}
         {...props}
       >
         {children}
@@ -204,7 +216,7 @@ function TabsTrigger({
   ...props
 }: TabsTriggerProps) {
   const { value: activeValue, onValueChange } = useTabsContext();
-  const { motionIndicator, layoutId, variant } = React.useContext(TabsListContext);
+  const { motionIndicator, layoutId, variant, size } = React.useContext(TabsListContext);
   const isActive = activeValue === value;
 
   return (
@@ -230,6 +242,9 @@ function TabsTrigger({
           : "data-active:bg-selected data-active:text-foreground",
         !motionIndicator &&
           "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+        variant === "segmented" && "rounded-sm data-active:bg-card data-active:shadow-2xs",
+        variant === "pill" && "rounded-full border border-border/70 data-active:border-transparent",
+        size === "sm" && "h-full px-2 py-0 text-xs",
         className
       )}
       {...props}

@@ -38,6 +38,7 @@ import type {
 } from "@/app/api/search/route";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Pressable } from "@/components/ui/pressable";
+import { getDocumentHref } from "@/lib/documents/document-view-model";
 
 export interface QuickAction {
   id: string;
@@ -300,7 +301,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
 
       handleClose();
 
-      const targetUrl = `/documents/${doc.id}`;
+      const targetUrl = getDocumentHref(doc.id);
       if (inNewTab) {
         window.open(targetUrl, "_blank");
       } else {

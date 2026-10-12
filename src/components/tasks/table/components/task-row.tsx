@@ -7,12 +7,12 @@ import {
   Calendar,
   CalendarCheck,
   CalendarClock,
-  CalendarDays,
-  CalendarPlus,
   CalendarX2,
+  Ellipsis,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { Button } from "@/components/ui/button";
 import type { SchoolTask, TaskStatus } from "@/types/dashboard";
 import type { TableDensity, TableColumnVisibility } from "../types";
 import {
@@ -22,8 +22,7 @@ import {
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
-import { getTaskContentPreview } from "@/lib/task-content-preview";
-import { getCategoryBadgeConfig } from "../constants";
+import { getCategoryBadgeConfig, TASK_COLUMN_CLASS } from "../constants";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { TaskIconStatusOverdue } from "@/lib/icons/task-icons";
@@ -61,7 +60,7 @@ export interface TaskRowProps {
   onToggleSelect?: (taskId: string, e?: React.MouseEvent | React.ChangeEvent) => void;
   onToggleExpand?: (taskId: string, e?: React.MouseEvent) => void;
   onClick?: (task: SchoolTask) => void;
-  onContextMenu?: (task: SchoolTask, e: React.MouseEvent) => void;
+  onContextMenu?: (task: SchoolTask, e: React.MouseEvent | React.KeyboardEvent) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<void> | void;
   onUrge?: (taskId: string, taskTitle: string, assigneeName: string) => Promise<void> | void;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
@@ -129,8 +128,18 @@ export function parseLeadAssignee(
   };
 }
 
+/** Ô chưa có dữ liệu: dấu gạch mờ cho mắt, "Chưa có" cho trình đọc màn hình */
+function EmptyCell() {
+  return (
+    <span className="text-xs text-muted-foreground/50">
+      <span aria-hidden="true">–</span>
+      <span className="sr-only">Chưa có</span>
+    </span>
+  );
+}
+
 /** Ô ngày dùng chung cho cột Ngày tạo và Hạn (cùng padding, căn trái) */
-const TASK_DATE_CELL_CLASS = "w-[110px] align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-2 text-left";
+const TASK_DATE_CELL_CLASS = "align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-1.5 text-left";
 
 /** Hiển thị ngày dùng chung cho cột Ngày tạo và Hạn: cùng cỡ chữ, số căn đều */
 function TaskDateValue({
@@ -142,7 +151,7 @@ function TaskDateValue({
   srText,
 }: {
   value: string | Date;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: "true" }>;
+  icon?: React.ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: "true" }>;
   iconClassName?: string;
   textClassName?: string;
   title?: string;
@@ -150,7 +159,7 @@ function TaskDateValue({
 }) {
   return (
     <div className="flex items-center gap-1.5 tabular-nums text-xs" title={title}>
-      <Icon className={cn("size-3.5 shrink-0", iconClassName)} strokeWidth={1.5} aria-hidden="true" />
+      {Icon && <Icon className={cn("size-3.5 shrink-0", iconClassName)} strokeWidth={1.5} aria-hidden="true" />}
       <span className={textClassName}>{formatShortTableDate(value)}</span>
       {srText && <span className="sr-only">{srText}</span>}
     </div>
@@ -265,7 +274,11 @@ export const TaskRow = React.memo(function TaskRow({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    // Phím Menu hoặc Shift+F10: mở menu thao tác như chuột phải (chỉ khi focus đang ở chính dòng).
+    if ((e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) && e.target === e.currentTarget) {
+      e.preventDefault();
+      onContextMenu?.(task, e);
+    } else if (e.key === "Enter") {
       e.preventDefault();
       onClick?.(task);
     } else if (e.key === " " || e.key === "x" || e.key === "X") {
@@ -286,11 +299,6 @@ export const TaskRow = React.memo(function TaskRow({
 
   const rawCode = task.code || task.taskCode || `NV-${task.id.slice(0, 4)}`;
   const taskCode = rawCode.replace(/[–—–—]/g, "-");
-  // Mô tả là JSON khối; chỉ parse lại khi mô tả đổi, không phải mỗi lần hàng render.
-  const descriptionPreview = React.useMemo(
-    () => getTaskContentPreview(task.description).replace(/\s*\n\s*/g, " "),
-    [task.description]
-  );
   const statusLabel =
     task.status === "COMPLETED"
       ? "Hoàn thành"
@@ -306,14 +314,21 @@ export const TaskRow = React.memo(function TaskRow({
   // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
   const radiusTop = "[&>td:first-child]:rounded-tl-md [&>td:last-child]:rounded-tr-md";
   const radiusBottom = "[&>td:first-child]:rounded-bl-md [&>td:last-child]:rounded-br-md";
-  const selectionRadiusClass =
-    !isSelected || selectionGroupPosition === "only" || selectionGroupPosition === null
+  // Hàng chưa chọn chỉ bo góc khi có nền riêng (hover, đang xem, menu chuột phải). Nếu bo sẵn, lúc
+  // bỏ chọn hàng loạt nền xanh còn đang mờ dần sẽ lộ các góc bo rời rạc giữa các hàng liền nhau.
+  const hoverRadiusClass = "hover:[&>td:first-child]:rounded-l-md hover:[&>td:last-child]:rounded-r-md";
+  const hasStandaloneBg = isPreviewing || isActive || isContextMenuTarget || isExpanded;
+  const selectionRadiusClass = !isSelected
+    ? hasStandaloneBg
       ? cn(radiusTop, radiusBottom)
-      : selectionGroupPosition === "first"
-      ? radiusTop
-      : selectionGroupPosition === "last"
-      ? radiusBottom
-      : "";
+      : hoverRadiusClass
+    : selectionGroupPosition === "only" || selectionGroupPosition === null
+    ? cn(radiusTop, radiusBottom)
+    : selectionGroupPosition === "first"
+    ? radiusTop
+    : selectionGroupPosition === "last"
+    ? radiusBottom
+    : "";
 
   return (
     <tr
@@ -349,131 +364,140 @@ export const TaskRow = React.memo(function TaskRow({
       )}
     >
       {/* 1. Tên nhiệm vụ Column: Selector + Status Circle + Title + Code + Subtask Count */}
-      <td className="min-w-[280px] align-middle pl-4 sm:pl-5 pr-3 py-2">
-        <div className="flex flex-col min-w-0 gap-0.5">
-          <div className="flex items-center gap-2 min-w-0">
-            {/* Integrated leading selector */}
-            <div
-              role="checkbox"
-              aria-checked={isSelected}
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
-                }
-              }}
-              className="size-7 sm:size-8 -my-2 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
-              onClick={handleCheckboxClick}
-              title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
-            >
-              <input
-                type="checkbox"
-                checked={isSelected}
-                readOnly
-                className="sr-only"
-                aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
-                tabIndex={-1}
+      <td className={cn("relative align-middle pl-4 sm:pl-5 pr-11 py-1.5", TASK_COLUMN_CLASS.title)}>
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Integrated leading selector */}
+          <div
+            role="checkbox"
+            aria-checked={isSelected}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
+              }
+            }}
+            className="size-7 sm:size-8 -my-2 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+            onClick={handleCheckboxClick}
+            title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
+          >
+            <input
+              type="checkbox"
+              checked={isSelected}
+              readOnly
+              className="sr-only"
+              aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
+              tabIndex={-1}
+            />
+            {isSelected ? (
+              <div
+                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
+                aria-hidden="true"
+              >
+                <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+              </div>
+            ) : (
+              <div
+                className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
+                aria-hidden="true"
               />
-              {isSelected ? (
-                <div
-                  className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
-                  aria-hidden="true"
-                >
-                  <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
-                </div>
-              ) : (
-                <div
-                  className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
-                  aria-hidden="true"
-                />
-              )}
-            </div>
-
-            <span className="sr-only">{statusLabel}</span>
-
-            <span
-              className="text-compact font-medium text-foreground group-hover:text-primary transition-colors truncate"
-              title={task.title}
-            >
-              {task.title}
-            </span>
-
-            {/* Task Code */}
-            {visibleColumns?.code === true && (
-              <span
-                className="font-mono text-xs text-muted-foreground/60 tabular-nums shrink-0"
-                title={taskCode}
-              >
-                {taskCode}
-              </span>
-            )}
-
-            {/* Linear-style Category / Tag Pill */}
-            {task.category && !suppressCategory && visibleColumns?.category === true && (
-              <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium bg-muted/60 text-muted-foreground border border-border/40 shrink-0"
-                title={`Danh mục: ${getCategoryBadgeConfig(task.category).label}`}
-              >
-                <span
-                  className="size-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: getCategoryBadgeConfig(task.category).oklchColor }}
-                  aria-hidden="true"
-                />
-                <span>{getCategoryBadgeConfig(task.category).label}</span>
-              </span>
-            )}
-
-            {/* Inline subtask counter matching Image #1 and qcet-nhiem-vu.html: e.g. 1/4 or 0/3 */}
-            {totalSubTasks > 0 && visibleColumns?.subtasks !== false && (
-              <span
-                className="text-xs text-muted-foreground/60 tabular-nums font-normal shrink-0"
-                title={`${completedSubTasks}/${totalSubTasks} việc con hoàn thành`}
-              >
-                {completedSubTasks}/{totalSubTasks}
-              </span>
-            )}
-
-            {/* Matched Subtask Badge for SUBTASK_DRI */}
-            {task.viewerContext?.relation === "SUBTASK_DRI" && (task.viewerContext.matchedSubtaskCount ?? 0) > 0 && (
-              <span
-                data-slot="subtask-dri-badge"
-                className="rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-1.5 py-0.2 font-mono text-xs font-semibold tabular-nums shrink-0 inline-flex items-center gap-1"
-                title={`Bạn phụ trách ${task.viewerContext.matchedSubtaskCount} việc con trong nhiệm vụ này`}
-              >
-                Phụ trách {task.viewerContext.matchedSubtaskCount} việc con
-              </span>
-            )}
-
-            {/* Due in month indicator */}
-            {dueInMonthCount > 0 && (
-              <span
-                className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-xs font-semibold tabular-nums shrink-0"
-                title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
-              >
-                Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
-              </span>
             )}
           </div>
-          {descriptionPreview && (
-            <span
-              className="block truncate pl-8 sm:pl-10 text-xs font-normal text-muted-foreground"
-              title={descriptionPreview}
-            >
-              {descriptionPreview}
-            </span>
-          )}
+
+          <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="sr-only">{statusLabel}</span>
+
+              <span
+                className="text-compact font-medium text-foreground group-hover:text-primary transition-colors truncate"
+                title={task.title}
+              >
+                {task.title}
+              </span>
+
+              {/* Task Code */}
+              {visibleColumns?.code === true && (
+                <span
+                  className="font-mono text-xs text-muted-foreground/60 tabular-nums shrink-0"
+                  title={taskCode}
+                >
+                  {taskCode}
+                </span>
+              )}
+
+              {/* Linear-style Category / Tag Pill */}
+              {task.category && !suppressCategory && visibleColumns?.category === true && (
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium bg-muted/60 text-muted-foreground border border-border/40 shrink-0"
+                  title={`Danh mục: ${getCategoryBadgeConfig(task.category).label}`}
+                >
+                  <span
+                    className="size-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: getCategoryBadgeConfig(task.category).oklchColor }}
+                    aria-hidden="true"
+                  />
+                  <span>{getCategoryBadgeConfig(task.category).label}</span>
+                </span>
+              )}
+
+              {/* Inline subtask counter matching Image #1 and qcet-nhiem-vu.html: e.g. 1/4 or 0/3 */}
+              {totalSubTasks > 0 && visibleColumns?.subtasks !== false && (
+                <span
+                  className="text-xs text-muted-foreground/60 tabular-nums font-normal shrink-0"
+                  title={`${completedSubTasks}/${totalSubTasks} việc con hoàn thành`}
+                >
+                  {completedSubTasks}/{totalSubTasks}
+                </span>
+              )}
+
+              {/* Matched Subtask Badge for SUBTASK_DRI */}
+              {task.viewerContext?.relation === "SUBTASK_DRI" && (task.viewerContext.matchedSubtaskCount ?? 0) > 0 && (
+                <span
+                  data-slot="subtask-dri-badge"
+                  className="rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-1.5 py-0.2 font-mono text-xs font-semibold tabular-nums shrink-0 inline-flex items-center gap-1"
+                  title={`Bạn phụ trách ${task.viewerContext.matchedSubtaskCount} việc con trong nhiệm vụ này`}
+                >
+                  Phụ trách {task.viewerContext.matchedSubtaskCount} việc con
+                </span>
+              )}
+
+              {/* Due in month indicator */}
+              {dueInMonthCount > 0 && (
+                <span
+                  className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-xs font-semibold tabular-nums shrink-0"
+                  title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
+                >
+                  Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
+                </span>
+              )}
+            </div>
+          </div>
         </div>
+        {/* Nút thao tác: hiện khi rê chuột / focus dòng; màn cảm ứng luôn hiện vì không có hover */}
+        {onContextMenu && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 aria-expanded:opacity-100"
+            aria-label={`Thao tác với nhiệm vụ ${task.title}`}
+            aria-haspopup="menu"
+            aria-expanded={isContextMenuTarget}
+            onClick={(e) => {
+              e.stopPropagation();
+              onContextMenu(task, e);
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <Ellipsis />
+          </Button>
+        )}
       </td>
 
       {/* 3. Ưu tiên Column */}
       {visibleColumns?.priority !== false && (
-        <td className="w-[84px] align-middle whitespace-nowrap px-3 py-2">
-          <div
-            className="inline-flex items-center cursor-pointer hover:opacity-80 transition-opacity"
-            title="Nhấp để đổi độ ưu tiên"
-          >
+        <td className={cn("align-middle whitespace-nowrap px-3 py-1.5", TASK_COLUMN_CLASS.priority)}>
+          <div className="inline-flex items-center">
             <PrioritySignalBars priority={task.priority} />
           </div>
         </td>
@@ -481,11 +505,8 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 4. Phụ trách Column: Avatar + Name */}
       {visibleColumns?.leadAssignee !== false && (
-        <td className="w-[170px] align-middle whitespace-nowrap px-3 py-2">
-          <div
-            className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-            title="Nhấp để đổi người phụ trách"
-          >
+        <td className={cn("align-middle px-3 py-1.5", TASK_COLUMN_CLASS.leadAssignee)}>
+          <div className="flex items-center gap-2 min-w-0" title={driInfo.primaryName || undefined}>
             {driInfo.primaryName ? (
               <>
                 <UserAvatar
@@ -493,12 +514,12 @@ export const TaskRow = React.memo(function TaskRow({
                   avatarUrl={task.leadAssigneeAvatar}
                   size="sm"
                 />
-                <span className="text-xs font-medium text-foreground truncate">
+                <span className="min-w-0 truncate text-xs font-medium text-foreground">
                   {driInfo.primaryName}
                 </span>
               </>
             ) : (
-              <span className="text-muted-foreground/50 text-xs">-</span>
+              <EmptyCell />
             )}
           </div>
         </td>
@@ -506,7 +527,7 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 4b. Phối hợp Column */}
       {visibleColumns?.coAssignees === true && (
-        <td className="w-[110px] align-middle whitespace-nowrap px-3 py-2">
+        <td className={cn("align-middle whitespace-nowrap px-3 py-1.5", TASK_COLUMN_CLASS.coAssignees)}>
           {coAssigneesList.length > 0 && (
             <div className="flex items-center -space-x-1" title={coAssigneesList.join(", ")}>
               {coAssigneeEntries.slice(0, 3).map((entry) => (
@@ -524,10 +545,10 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 2. Đơn vị Column */}
       {visibleColumns?.department !== false && (
-        <td className="w-[170px] align-middle px-3 py-2">
+        <td className={cn("align-middle px-3 py-1.5", TASK_COLUMN_CLASS.department)}>
           <span
-            className="text-xs leading-snug text-muted-foreground line-clamp-2 break-words cursor-pointer hover:text-foreground transition-colors"
-            title={departmentName ? `${departmentName} · Nhấp để đổi đơn vị phụ trách` : "Nhấp để đổi đơn vị phụ trách"}
+            className="text-xs leading-snug text-muted-foreground line-clamp-2 break-words"
+            title={departmentName || undefined}
           >
             {departmentName || "-"}
           </span>
@@ -536,25 +557,23 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* Bắt đầu Column */}
       {visibleColumns?.startDate === true && (
-        <td className={TASK_DATE_CELL_CLASS}>
+        <td className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.startDate)}>
           {task.startDate ? (
             <TaskDateValue
               value={task.startDate}
-              icon={CalendarDays}
-              iconClassName="text-muted-foreground/70"
               textClassName="text-muted-foreground"
               title={formatTableDate(task.startDate)}
             />
           ) : (
-            <span className="text-muted-foreground/50 text-xs">-</span>
+            <EmptyCell />
           )}
         </td>
       )}
 
       {/* Hạn Column */}
       {visibleColumns?.dueDate !== false && (
-        <td className={cn(TASK_DATE_CELL_CLASS, "relative group/due")}>
-          <div className="cursor-pointer hover:opacity-80 transition-opacity" title="Nhấp để đổi hạn hoàn thành">
+        <td className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.dueDate, "relative group/due")}>
+          <div>
             {task.dueDate ? (
               <TaskDateValue
                 value={task.dueDate}
@@ -566,12 +585,12 @@ export const TaskRow = React.memo(function TaskRow({
                     ? "text-warning"
                     : "text-muted-foreground/70"
                 }
-                textClassName={dueTone === "muted" ? "text-muted-foreground font-semibold" : "text-foreground font-semibold"}
+                textClassName={dueTone === "muted" ? "text-muted-foreground font-medium" : "text-foreground font-semibold"}
                 title={`${formatTableDate(task.dueDate)} · ${dueHint}`}
                 srText={dueHint}
               />
             ) : (
-              <span className="text-muted-foreground/50 text-xs">-</span>
+              <EmptyCell />
             )}
           </div>
         </td>
@@ -579,31 +598,29 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* Ngày tạo Column (đứng sau Hạn) */}
       {visibleColumns?.createdAt === true && (
-        <td className={TASK_DATE_CELL_CLASS}>
+        <td className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.createdAt)}>
           {task.createdAt ? (
             <TaskDateValue
               value={task.createdAt}
-              icon={CalendarPlus}
-              iconClassName="text-muted-foreground/70"
               textClassName="text-muted-foreground"
               title={formatTableDate(task.createdAt)}
             />
           ) : (
-            <span className="text-muted-foreground/50 text-xs">-</span>
+            <EmptyCell />
           )}
         </td>
       )}
 
       {/* Trạng thái Column */}
       {visibleColumns?.status === true && (
-        <td className="w-[180px] align-middle whitespace-nowrap px-3 py-2">
+        <td className={cn("align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-1.5", TASK_COLUMN_CLASS.status)}>
           <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             {statusLabel === "Trễ hạn" ? (
               <TaskIconStatusOverdue className="size-4 shrink-0 text-destructive" />
             ) : (
               <TaskStatusCircle status={task.status} />
             )}
-            <span className={cn("truncate font-semibold", statusLabel === "Trễ hạn" && "text-destructive")}>{statusLabel}</span>
+            <span className={cn("truncate font-medium", statusLabel === "Trễ hạn" && "font-semibold text-destructive")}>{statusLabel}</span>
           </span>
         </td>
       )}

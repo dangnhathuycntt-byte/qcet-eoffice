@@ -212,8 +212,17 @@ export function buildDocumentReadWhere(
 
   const role = normalizeRole(user?.role);
   const positionCode = ((user as any)?.positionCode || '').toUpperCase();
-  const departmentId =
-    (userOrContext as any)?.primaryUnitIds?.[0] || (user as any)?.departmentId || null;
+  // Mọi đơn vị người dùng thuộc về (kể cả kiêm nhiệm), cùng tập với quy tắc `canAccessClassification`;
+  // chỉ lấy đơn vị đầu tiên thì người kiêm nhiệm không thấy văn bản của đơn vị còn lại dù mở chi tiết được.
+  const userUnitIds = [
+    ...new Set<string>(
+      [
+        ...(((userOrContext as any)?.primaryUnitIds ?? []) as string[]),
+        ...(((userOrContext as any)?.positions ?? []) as Array<{ unitId?: string | null }>).map((p) => p.unitId ?? ''),
+        (user as any)?.departmentId ?? '',
+      ].filter(Boolean)
+    ),
+  ];
 
   // 1. Handling confidential / restricted documents (classification != TUYET_MAT):
   // State secrets (TUYET_MAT) are strictly forbidden from regular document queries
@@ -230,7 +239,11 @@ export function buildDocumentReadWhere(
     role === 'HIEU_TRUONG' ||
     role === 'PHO_HIEU_TRUONG' ||
     positionCode === 'HIEU_TRUONG' ||
-    positionCode === 'PHO_HIEU_TRUONG';
+    positionCode === 'PHO_HIEU_TRUONG' ||
+    // Lãnh đạo theo chức danh được phân công (ngữ cảnh đầy đủ), cùng quy tắc với `canAccessClassification`.
+    (((userOrContext as any)?.positions ?? []) as Array<{ positionCode?: string }>).some(
+      (p) => p.positionCode === 'HIEU_TRUONG' || p.positionCode === 'PHO_HIEU_TRUONG'
+    );
 
   if (isPrivileged) {
     return nonConfidentialCondition;
@@ -269,14 +282,14 @@ export function buildDocumentReadWhere(
     orConditions.push({ approvalWorkflow: { is: { steps: { some: { unitId: { in: headedUnitIds } } } } } });
   }
 
-  if (departmentId) {
+  for (const unitId of userUnitIds) {
     orConditions.push(
       // Phase 9: unit scope is canonical `OrganizationalUnit`. `Document` has no
       // unit column and `DocumentDirective.assignedDeptId` was dropped, so the
       // only unit-scoped predicates left are the incoming workflow's lead unit
       // and the lead unit of the task a directive generated.
-      { incomingWorkflow: { is: { leadUnitId: departmentId } } },
-      { linkedTask: { is: { leadUnitId: departmentId } } }
+      { incomingWorkflow: { is: { leadUnitId: unitId } } },
+      { linkedTask: { is: { leadUnitId: unitId } } }
     );
   }
 

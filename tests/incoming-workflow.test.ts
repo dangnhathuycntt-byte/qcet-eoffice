@@ -4,6 +4,7 @@ import {
   buildIncomingQuotes,
   formatShortDateTime,
   getIncomingActions,
+  getIncomingFlow,
 } from "../src/lib/documents/incoming-workflow";
 import type { DocumentItem } from "../src/types/document";
 
@@ -16,6 +17,18 @@ describe("incoming workflow actions", () => {
     assert.deepEqual(keys("DIRECTED", "TRUONG_PHONG"), ["assign-unit"]);
     assert.deepEqual(keys("UNIT_ASSIGNED_PERSON", "CHUYEN_VIEN"), ["resolve"]);
     assert.deepEqual(keys("RESOLVED", "VAN_THU"), ["file"]);
+    // Phân công kèm nhiệm vụ đưa văn bản sang IN_PROGRESS: người xử lý vẫn báo cáo kết quả được.
+    assert.deepEqual(keys("IN_PROGRESS", "CHUYEN_VIEN"), ["resolve"]);
+  });
+
+  it("luồng văn bản đến: bước đang chờ và người cần làm theo trạng thái", () => {
+    const registered = getIncomingFlow("REGISTERED");
+    assert.deepEqual(registered?.steps.map((s) => s.state), ["done", "active", "upcoming", "upcoming", "upcoming"]);
+    assert.equal(registered?.waitingFor, "Văn thư trình lãnh đạo");
+    assert.equal(getIncomingFlow("IN_PROGRESS")?.steps[3].state, "active");
+    assert.deepEqual(getIncomingFlow("FILED")?.steps.map((s) => s.state), ["done", "done", "done", "done", "done"]);
+    assert.equal(getIncomingFlow("FILED")?.waitingFor, null);
+    assert.equal(getIncomingFlow("RECALLED"), null);
   });
 
   it("sai vai trò hoặc sai bước thì không có thao tác nào", () => {
@@ -40,12 +53,16 @@ describe("incoming workflow actions", () => {
     assert.deepEqual(keys("REGISTERED", "TRUONG_PHONG"), []);
   });
 
-  it("BGH duyệt/từ chối nội dung ở bước đã bút phê hoặc đã phân công; từ chối là thao tác phá hủy", () => {
-    const directed = getIncomingActions("DIRECTED", "BAN_GIAM_HIEU");
-    assert.deepEqual(directed.map((a) => a.key), ["approve-content", "reject-content"]);
-    assert.equal(directed.find((a) => a.key === "reject-content")?.destructive, true);
-    assert.equal(directed.find((a) => a.key === "approve-content")?.destructive, undefined);
-    assert.deepEqual(keys("REGISTERED", "BAN_GIAM_HIEU"), []);
+  it("Bút phê của BGH mở biểu mẫu (đơn vị chủ trì + ý kiến), dùng được cả khi Văn thư chưa trình", () => {
+    for (const status of ["REGISTERED", "PRESENTED"]) {
+      const [direct] = getIncomingActions(status, "BAN_GIAM_HIEU");
+      assert.equal(direct.key, "direct");
+      assert.equal(direct.input, "direct");
+    }
+    // Duyệt/từ chối nội dung là thao tác của văn bản đi, không hiện cho văn bản đến.
+    assert.deepEqual(keys("DIRECTED", "BAN_GIAM_HIEU"), []);
+    assert.deepEqual(keys("UNIT_ASSIGNED_PERSON", "BAN_GIAM_HIEU"), []);
+    assert.equal(getIncomingActions("UNIT_ASSIGNED_PERSON", "CHUYEN_VIEN")[0].input, "resolve");
   });
 });
 

@@ -15,8 +15,9 @@ Hướng dẫn agent nằm ở [AGENTS.md](AGENTS.md). Tệp này ghi **hiện t
 
 | Vai trò | Utility | Giá trị |
 |---|---|---|
-| Nền ứng dụng | `bg-background` | `#FAFBFC` |
-| Thẻ, panel, popover | `bg-card`, `bg-popover` | `#FFFFFF` |
+| Canvas ngoài (sidebar, viền quanh thẻ) | `bg-sidebar` (`--gray-1`) | `#EFEFF0` |
+| Thẻ nội dung, bảng | `bg-card` (`--gray-2`) | `#F9F9FA` |
+| Nút, ô nhập nổi, popover, menu | `bg-background`, `bg-popover` (`--gray-0`) | `#FFFFFF` |
 | Ô nhập, nút phụ | `bg-secondary`, `bg-muted` | `#F2F4F7` |
 | Hover; viền | `bg-accent`; `border-border` | `#EAEDF1` |
 | Đường ngăn trung tính | `--gray-5` | `#DEE2E8` |
@@ -32,6 +33,10 @@ Hover (`accent`) và đang chọn (`selected`) là hai trạng thái khác nhau.
 
 **Chữ:** Be Vietnam Pro (`next/font`, [layout.tsx](src/app/layout.tsx)); mono là font hệ thống. Thang: `text-xs` 12px · `text-compact` 13px/18px · `text-sm` 14px · 16 · 20 · 24 · 28px. Không dùng cỡ tùy biến `text-[…px]`.
 
+**Popover, menu:** nền trắng, viền mảnh 1px và 3 lớp bóng qua token `--shadow-menu` (theo Linear) để tách khỏi bảng phía sau; không tự vẽ bóng riêng.
+
+**Menu và bộ lọc nhiều cấp (chuẩn trang Nhiệm vụ):** dựng từ `ui/menu` (`MENU_POPUP_CLASS`, `MenuOptionItem`, `MenuActionItem`, `MenuSubmenu`, `MenuSubmenuTitle`), không tự viết hàng hay khung. Hàng cao 28px, chữ 12px, icon 16px trong ô `size-4`; hàng đều nhau, không đường kẻ giữa các nhóm (chỉ một đường kẻ mảnh trước nhóm khác loại như "Kỳ tháng" hoặc "Xóa"). Mục đang chọn = nền accent + chữ đậm; **không dấu tick, không ô tích, không mũi tên** (nhóm có số bộ lọc đang bật thì hiện số bên phải). Menu con thả sang trái, mở khi rê chuột ngay (`delay` 0, đóng sau 80ms), tối đa 3 cấp (nhóm → mốc → lịch/lưới tháng). Hàng chọn giá trị không đóng menu (`MenuOptionItem`); hàng thao tác đóng khi bấm (`MenuActionItem`). Nút lọc báo đang lọc bằng chấm (`ListToolbarFilterButton`), không dùng số để bề rộng nút không đổi. Bộ lọc của trang danh sách dựng bằng `ListToolbarFilterPopover`, riêng trang Nhiệm vụ cần nhiều kiểu chọn nên ghép trực tiếp từ các thành phần trên.
+
 **Bo góc:** `--radius-chip` 8px · `--radius-control` 12px · `--radius-card` 14px · `--radius-panel` 16px · `--radius-menu` 14px. Utility Tailwind `rounded-sm/md/lg/xl` = 8/12/14/16px.
 
 **Kích thước control:** `--control-height` 34px · `--control-height-sm` 28px · `--touch-target` 44px · avatar 20 (bảng) / 24 / 32px · sidebar 254px / 64px khi thu gọn.
@@ -41,10 +46,19 @@ Hover (`accent`) và đang chọn (`selected`) là hai trạng thái khác nhau.
 - [Button](src/components/ui/button.tsx): mobile luôn cao 44px; desktop `default` 34px (`text-sm`), `sm`/`xs` 28px (`text-xs`), `icon` 34px, `icon-sm`/`icon-xs` 28px.
 - [Pressable](src/components/ui/pressable.tsx): vùng bấm không mang kiểu nút (hàng, ô lịch, thẻ, tab tự dựng). Chỉ gắn `type="button"`, focus ring như Button và con trỏ; kích thước do nơi dùng quyết định.
 - [Input](src/components/ui/input.tsx): bo 12px, nền `bg-secondary`, không viền; thường 48px mobile / 36px desktop, `compact` 44 / 28px (`text-compact`).
-- **Kích thước bảng:** hàng một dòng 40px, hàng hai dòng 48px; tiêu đề cột cao bằng hàng; item popover/menu ≤ 32px.
+- **Kích thước bảng:** hàng một dòng 40px, hàng hai dòng 48px; tiêu đề cột bảng Nhiệm vụ 32px (thấp hơn hàng); item popover/menu ≤ 32px.
 - **Ưu tiên / mức khẩn:** chỉ mức cao nhất (Khẩn cấp, Hỏa tốc, Thượng khẩn) dùng `text-destructive`; Khẩn của văn bản dùng `text-warning`; các mức khác trung tính. Áp cho cả bảng lẫn form tạo nhiệm vụ.
 - Trạng thái nhiệm vụ: [TaskStatusCircle](src/components/tasks/task-status-circle.tsx). Ưu tiên / mức khẩn: [PrioritySignalBars](src/components/tasks/priority-signal-bars.tsx). Icon nghiệp vụ: [task-icons.tsx](src/lib/icons/task-icons.tsx). Không tự vẽ chấm hay thay bằng icon lucide.
 - Icon lucide nét 1,5px, đặt một lần bằng `LucideProvider` ở `src/app/layout.tsx`; không truyền `strokeWidth` (lint chặn giá trị khác).
+- [CountBadge](src/components/ui/count-badge.tsx): số đếm nhỏ, không hiện khi ≤ 0; `ListToolbarCountBadge` là alias giữ import cũ. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [Spinner](src/components/ui/spinner.tsx): `xs` 12px, `sm` 14px (mặc định), `md` 16px; `tone` currentColor / muted / primary; có `label` thì thành vùng `role="status"`. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [Button](src/components/ui/button.tsx): prop `loading` hiện Spinner, khóa nút, giữ nguyên nhãn; variant `toolbar` cho nút trên thanh công cụ danh sách. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [Tabs](src/components/ui/tabs.tsx): variant `segmented` và `pill`, size `sm` (28px, `text-xs`); mặc định giữ nguyên. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [Badge](src/components/ui/badge.tsx): variant `warning-soft` (`text-warning` trên `bg-warning/10`); alias `warning` giữ màu cũ cho màn nghiệp vụ. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [Skeleton](src/components/ui/skeleton.tsx): prop `pulse` nhấp nháy nhẹ, mặc định tĩnh. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [ToggleGroup](src/components/ui/toggle-group.tsx): nhóm bật/tắt, variant `segmented` / `outline` / `soft`, size `xs` / `sm`, `iconOnly` bắt buộc `aria-label`, tone `destructive`. Chưa có màn dùng thật. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [Combobox](src/components/ui/combobox.tsx): chọn một có ô lọc, `freeSolo` tùy chọn. Chưa có màn dùng thật. (quyết định 2026-10-12, theo ủy quyền của người dùng)
+- [Table](src/components/ui/table.tsx): bảng dùng chung, `density` `one-line` 40px (mặc định) / `two-line` 48px; `TableRow` có `interactive`, `selected`, `current`. Không kèm skeleton hay trạng thái rỗng. (quyết định 2026-10-12, theo ủy quyền của người dùng)
 - Giữ đủ trạng thái focus bàn phím, disabled, loading, empty, error, reduced motion.
 
 ## Trang danh sách (Nhiệm vụ là chuẩn, Văn bản dùng chung)
@@ -59,7 +73,7 @@ Người dùng chọn thanh công cụ Nhiệm vụ làm chuẩn (2026-10-10). P
 
 ## Nhiệm vụ
 
-- **Danh sách** (`/tasks`): phạm vi `?view=` Cá nhân / Đơn vị / Toàn trường / Chờ duyệt; bảng hoặc kanban, đồng bộ URL. Hàng bảng 48px (hai dòng), tiêu đề cột 48px ([task-row.tsx](src/components/tasks/table/components/task-row.tsx), [task-table-header.tsx](src/components/tasks/table/components/task-table-header.tsx)).
+- **Danh sách** (`/tasks`): phạm vi `?view=` Cá nhân / Đơn vị / Toàn trường / Chờ duyệt; chỉ có dạng bảng (đã bỏ Kanban), đồng bộ URL. Hàng bảng 48px (hai dòng), tiêu đề cột 32px; khung tiêu đề 44px full-bleed, lề ngang 18px, toolbar cách đều 8px ([task-row.tsx](src/components/tasks/table/components/task-row.tsx), [task-table-header.tsx](src/components/tasks/table/components/task-table-header.tsx)).
 - **Hạn** dùng `getDueIndicator` ([table-date-helpers.ts](src/components/tasks/table/utils/table-date-helpers.ts)): `destructive` khi trễ hoặc hôm nay, `warning` khi còn ≤ 7 ngày, còn lại xám; việc hoàn thành/hủy luôn xám. Thẻ di động dùng cùng quy tắc.
 - **Chi tiết (đã duyệt):**
   - Trang cha và khung việc con dùng chung `TaskStatusSelect`, `TaskAssigneePicker`, `TaskDateRange` ([task-property-controls.tsx](src/components/tasks/detail/task-property-controls.tsx)).
@@ -69,7 +83,6 @@ Người dùng chọn thanh công cụ Nhiệm vụ làm chuẩn (2026-10-10). P
   - Mô tả tự lưu sau 800ms.
   - Breadcrumb desktop ẩn ở Nhiệm vụ, Hộp thư, Sổ văn bản.
 - **Di động:** vùng chạm 44px là chủ đích. Thẻ nhiệm vụ `rounded-xl`, tiêu đề tối đa 2 dòng; bộ lọc mở bằng sheet.
-- **Kanban:** cột `bg-muted/30`, bo 16px; thẻ `bg-card`, bo 16px; trạng thái cột dùng `TaskStatusCircle`.
 
 ## Văn bản
 
@@ -116,8 +129,8 @@ Kiến trúc đã duyệt ở [document-workspace.md](docs/product/specs/documen
 
 ## Đã thống nhất ngày 2026-10-10
 
-- AGENTS.md, SPEC Văn bản và code dùng cùng chuẩn chiều cao hàng (40/48px, tiêu đề cột bằng hàng). Tiêu đề cột bảng Nhiệm vụ đã nâng từ 44 lên 48px.
-- Component dùng chung của trang danh sách (`list-toolbar`, `active-filter-breadcrumb`), thanh công cụ, bảng, kanban, thẻ di động, form tạo nhiệm vụ và Văn bản đang dùng (ledger, Quick View, trình xem, form vào sổ) không còn cỡ chữ tùy biến.
+- AGENTS.md, SPEC Văn bản và code dùng cùng chuẩn chiều cao hàng (40/48px, tiêu đề cột bằng hàng). Tiêu đề cột bảng Nhiệm vụ hạ xuống 32px (theo Linear, theo quyết định người dùng 12/10/2026).
+- Component dùng chung của trang danh sách (`list-toolbar`, `active-filter-breadcrumb`), thanh công cụ, bảng, thẻ di động, form tạo nhiệm vụ và Văn bản đang dùng (ledger, Quick View, trình xem, form vào sổ) không còn cỡ chữ tùy biến.
 - Trong các phạm vi trên, màu tín hiệu (trễ hạn, sắp hạn, lỗi nhập, khẩn) dùng `text-destructive`/`bg-danger-soft` và `text-warning` (token mới `--warning`) thay cho `rose-*`/`amber-*`. Ưu tiên ở form tạo nhiệm vụ theo cùng quy tắc với bảng.
 
 ## Còn tồn (ngoài phạm vi lần thống nhất này)
@@ -128,7 +141,7 @@ Kiến trúc đã duyệt ở [document-workspace.md](docs/product/specs/documen
 - Còn trong baseline lint: 182 `<button>` tự định nghĩa focus (ring-2 ring-ring, ring-primary…; chưa thống nhất về outline của Button), các `<input>`/`<select>`/`<textarea>` tự viết, và palette xám thô.
 - Ngày 2026-10-11 đã xóa 135 component/hook và 16 helper `lib/`/`types/` không route nào dùng (portal workspace cũ, `dashboard/zones`, lịch cũ, các primitive `ui/` như `combobox`, `multi-select`, `person-picker`, `segmented-control`, `data-table`, và shim). `npm run lint` chặn mồ côi mới (`scripts/check-orphans.mjs`). Cần primitive nào thì thêm lại từ git hoặc shadcn khi có màn dùng thật.
 - Một modal tạo việc duy nhất: `tasks/create/create-task-modal` (Nhiệm vụ, Lịch, chi tiết nhiệm vụ, Văn bản). Bản `dashboard/create-task-modal` đã xóa.
-- Bảng màu trạng thái nhiều sắc (xanh, tím, lục, cam, đỏ) vẫn dùng palette Tailwind: `STATUS_BADGE_CONFIGS` trong [constants.ts](src/components/tasks/table/constants.ts), nhãn trạng thái trong [document-badges.ts](src/components/documents/document-badges.ts), `iconColor` cột kanban (không còn được đọc). Đây là màu phân loại, chưa có token; cần quyết định riêng trước khi đổi.
+- Bảng màu trạng thái nhiều sắc (xanh, tím, lục, cam, đỏ) vẫn dùng palette Tailwind: `STATUS_BADGE_CONFIGS` trong [constants.ts](src/components/tasks/table/constants.ts), nhãn trạng thái trong [document-badges.ts](src/components/documents/document-badges.ts). Đây là màu phân loại, chưa có token; cần quyết định riêng trước khi đổi.
 - Icon loại văn bản `FileText` màu cam trong [document-quick-entry-modal.tsx](src/components/documents/document-quick-entry-modal.tsx) là màu trang trí, chưa đổi.
 - `document-stats-summary.tsx`, `document-filter-bar.tsx`, `document-table.tsx` trong `registry/` không còn được trang `/documents` dùng, vẫn còn cỡ chữ/màu cũ.
 - Trang Nhiệm vụ còn nút "Xóa bộ lọc" cạnh nút lọc, Văn bản thì không. `tests/unified-task-toolbar.test.ts` đang yêu cầu nút này.

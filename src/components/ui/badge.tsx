@@ -36,6 +36,9 @@ const badgeVariants = cva(
           "bg-secondary text-foreground",
         warning:
           "bg-secondary text-foreground",
+        // Tín hiệu sắp tới hạn (text-warning). Tên khác `warning` vì alias đó giữ màu cũ cho màn nghiệp vụ.
+        "warning-soft":
+          "bg-warning/10 text-warning",
       },
     },
     defaultVariants: {

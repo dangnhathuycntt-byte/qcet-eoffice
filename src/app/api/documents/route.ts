@@ -24,6 +24,7 @@ import { assertNoSuspectedDuplicate } from "@/lib/documents/duplicate-check";
 import { AuthorizationError, ValidationError } from "@/server/api/errors";
 import type { DocumentType } from "@/types/document";
 import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -59,7 +60,8 @@ export async function GET(request: NextRequest) {
       search: searchQuery,
       limit,
       offset,
-      authUser,
+      // Ngữ cảnh đầy đủ (mọi chức danh/đơn vị, kể cả kiêm nhiệm) để danh sách khớp với quyền mở chi tiết văn bản.
+      authUser: await loadCachedAuthorizationContext(authUser.id),
     };
 
     const { documents, total } = await listDocuments(filter);

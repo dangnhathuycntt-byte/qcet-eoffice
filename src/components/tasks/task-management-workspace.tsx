@@ -5,7 +5,6 @@ import type { SchoolTask } from "@/types/dashboard";
 import {
   UnifiedAdaptiveWorkspace,
   UnifiedAdaptiveWorkspaceControlled,
-  type ViewMode,
   type WorkspaceScope,
 } from "@/components/workspace/unified-adaptive-workspace";
 import type { UnifiedAdaptiveWorkspaceProps } from "@/components/workspace/types";
@@ -19,14 +18,12 @@ export {
   filterTasksByScope,
   applyOptimisticStatusChange,
   type WorkspaceScope,
-  type ViewMode,
 };
 
 export interface TaskManagementWorkspaceProps extends Partial<UnifiedAdaptiveWorkspaceProps> {
   scope?: WorkspaceScope;
   onScopeChange?: (scope: WorkspaceScope) => void;
   className?: string;
-  initialViewMode?: ViewMode;
   initialTasks?: SchoolTask[];
   workspaceQuery?: UseWorkspaceQueryReturn;
 }
@@ -39,7 +36,6 @@ export interface TaskManagementWorkspaceProps extends Partial<UnifiedAdaptiveWor
  *
  * Integrated subsystems forwarded to unified engine:
  * - Table Engine: ModularCascadingTaskTable
- * - Kanban Engine: TaskKanbanBoard
  * - Detail Panel: TaskDetailSideSheet
  * - Creation Dialog: CreateTaskModal
  * - Unassigned Guard: UnassignedDepartmentState with setIsProfileModalOpen
@@ -66,7 +62,6 @@ export function TaskManagementWorkspace(props: TaskManagementWorkspaceProps) {
     forcedScope,
     onScopeChange,
     className,
-    initialViewMode: props.initialViewMode ?? "table" as ViewMode,
     initialTasks,
     ...rest,
   };

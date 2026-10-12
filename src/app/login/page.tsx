@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react";
 import { Send, Copy, Check, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { DevLoginPanel } from "@/components/auth/dev-login-panel";
 import {
   resolveOAuthError,
   sanitizeRedirectUrl,
@@ -135,16 +136,6 @@ function LoginFormContent() {
   const targetUrl = React.useMemo(() => sanitizeRedirectUrl(
     searchParams.get("returnTo") || searchParams.get("redirect") || searchParams.get("callbackUrl")
   ), [searchParams]);
-
-  const deepLinkLabel = React.useMemo(() => {
-    const raw = searchParams.get("returnTo") || searchParams.get("redirect") || "";
-    const title = searchParams.get("title");
-    if (title) return title;
-    if (raw.startsWith("/tasks/") && raw !== "/tasks") {
-      return "Rà soát hồ sơ xét tuyển";
-    }
-    return null;
-  }, [searchParams]);
 
   const promptParam = searchParams.get("prompt");
   const isSharedMachine = promptParam === "select_account" || searchParams.get("shared") === "1";
@@ -551,14 +542,6 @@ function LoginFormContent() {
         <h1 className="mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]" style={{ color: C.fg }}>{title}</h1>
         <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>{subtitle}</p>
 
-        {/* Khối Vào từ liên kết (Board 1 · card 8) */}
-        {deepLinkLabel && !fromExpired && !fromLogout && (
-          <div className="mt-5 w-full rounded-[14px] bg-muted p-3 text-center text-[13.5px] leading-relaxed text-foreground">
-            Đăng nhập để mở nhiệm vụ<br />
-            <span className="font-semibold">{deepLinkLabel}</span>
-          </div>
-        )}
-
         <div className="mt-7 w-full">
           <GoogleLoginButton
             returnTo={targetUrl}
@@ -585,10 +568,17 @@ function LoginFormContent() {
   );
 }
 
+function DevLoginPanelWithReturn() {
+  const searchParams = useSearchParams();
+  const returnTo = sanitizeRedirectUrl(searchParams.get("returnTo") || searchParams.get("redirect") || searchParams.get("callbackUrl"));
+  return <DevLoginPanel returnTo={returnTo} />;
+}
+
 export default function LoginPage() {
   return (
     <React.Suspense fallback={<LoginSkeleton />}>
       <LoginFormContent />
+      <DevLoginPanelWithReturn />
     </React.Suspense>
   );
 }

@@ -3,7 +3,6 @@ import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
 
 export type WorkspaceScope = "school" | "unit" | "my";
-export type ViewMode = "table" | "kanban";
 
 export interface AdaptiveWorkspaceMetrics {
   totalTasks: number;
@@ -57,9 +56,6 @@ export interface UnifiedAdaptiveWorkspaceProps {
   errorMessage?: string | null;
   hideScopeSwitcher?: boolean;
   className?: string;
-  viewMode?: ViewMode;
-  initialViewMode?: ViewMode;
-  onViewModeChange?: (viewMode: ViewMode) => void;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onReview?: (payload: ApprovalActionPayload) => Promise<void> | void;
   onSubmitDeliverable?: (payload: DeliverableSubmissionPayload) => Promise<void> | void;

@@ -1,14 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { validateSubtaskDueDate } from "../src/hooks/use-create-task-form";
-import { executeKanbanStatusTransition, applyOptimisticOverrides, extractKanbanItems, filterKanbanItems, type KanbanTransitionState } from "../src/components/tasks/task-kanban-board";
 import {
   getCalendarAttentionState,
   sortCalendarItemsByAttention,
 } from "../src/lib/calendar/calendar-presentation";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 
-describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () => {
+describe("Stream Form + Lịch UX Interactions Regression Suite", () => {
   describe("Task 4: Form Close Contract, Snapshot Dirty Checking, and DRI Validation", () => {
 
     it("validates that subtask dueDate cannot exceed parent task dueDate", () => {
@@ -17,116 +15,6 @@ describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () =>
       assert.strictEqual(validateSubtaskDueDate(parentDueDate, "2026-10-15"), true);
       assert.strictEqual(validateSubtaskDueDate(parentDueDate, "2026-10-16"), false);
       assert.strictEqual(validateSubtaskDueDate(parentDueDate, "2026-11-01"), false);
-    });
-  });
-
-  describe("Task 5: Kanban Transitions, Double-Click Prevention, and Optimistic Rollback", () => {
-    const initialState: KanbanTransitionState = {
-      pendingTaskIds: {},
-      optimisticStatuses: {},
-      taskErrors: {},
-    };
-
-    it("sets pending and optimistic state during transition and cleans up upon success", async () => {
-      let dispatchedTaskId = "";
-      let dispatchedStatus = "";
-
-      const onStatusChange = async (taskId: string, newStatus: string) => {
-        dispatchedTaskId = taskId;
-        dispatchedStatus = newStatus;
-        return { success: true };
-      };
-
-      const result = await executeKanbanStatusTransition(
-        "task-101",
-        "IN_PROGRESS",
-        "NEW",
-        initialState,
-        onStatusChange
-      );
-
-      assert.strictEqual(result.ok, true);
-      assert.strictEqual(dispatchedTaskId, "task-101");
-      assert.strictEqual(dispatchedStatus, "IN_PROGRESS");
-      assert.strictEqual(result.state.pendingTaskIds["task-101"], undefined);
-      assert.strictEqual(result.state.optimisticStatuses["task-101"], "IN_PROGRESS");
-    });
-
-    it("prevents double execution while a task is already pending", async () => {
-      const pendingState: KanbanTransitionState = {
-        pendingTaskIds: { "task-101": true },
-        optimisticStatuses: { "task-101": "IN_PROGRESS" },
-        taskErrors: {},
-      };
-
-      let called = false;
-      const onStatusChange = async () => {
-        called = true;
-      };
-
-      const result = await executeKanbanStatusTransition(
-        "task-101",
-        "COMPLETED",
-        "IN_PROGRESS",
-        pendingState,
-        onStatusChange
-      );
-
-      assert.strictEqual(result.ok, false);
-      assert.strictEqual(called, false);
-      assert.match(result.error || "", /đang xử lý/);
-    });
-
-    it("rolls back optimistic status and surfaces Vietnamese error when server rejects transition", async () => {
-      const onStatusChange = async () => {
-        throw new Error("Lỗi mạng: Không thể kết nối đến máy chủ.");
-      };
-
-      const result = await executeKanbanStatusTransition(
-        "task-202",
-        "COMPLETED",
-        "IN_PROGRESS",
-        initialState,
-        onStatusChange
-      );
-
-      assert.strictEqual(result.ok, false);
-      assert.strictEqual(result.state.pendingTaskIds["task-202"], undefined);
-      assert.strictEqual(result.state.optimisticStatuses["task-202"], undefined);
-      assert.match(result.state.taskErrors["task-202"] || "", /Không thể kết nối/);
-    });
-
-    it("applies optimistic overrides to tasks and nested subtasks cleanly", () => {
-      const mockTasks = [
-        {
-          id: "school-1",
-          title: "Kế hoạch năm học",
-          level: "TRUONG",
-          status: "NEW",
-          category: "CHUYEN_DOI_SO",
-          leadAssigneeName: "TS. A",
-          progressPercent: 0,
-          subTasks: [
-            {
-              id: "sub-1",
-              title: "Nhiệm vụ con 1",
-              status: "NEW",
-              assigneeName: "ThS. B",
-            } as unknown as StaffTask,
-          ],
-        } as unknown as SchoolTask,
-      ];
-
-      const overrides = {
-        "school-1": "IN_PROGRESS" as const,
-        "sub-1": "COMPLETED" as const,
-      };
-
-      const updated = applyOptimisticOverrides(mockTasks, overrides);
-      assert.strictEqual(updated[0].status, "IN_PROGRESS");
-      assert.strictEqual(updated[0].subTasks?.[0].status, "COMPLETED");
-      // Other fields intact
-      assert.strictEqual(updated[0].title, "Kế hoạch năm học");
     });
   });
 

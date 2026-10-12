@@ -212,8 +212,10 @@
   --font-size-title: 20px;
   --font-size-headline: 24px;
   --font-size-hero: 28px;
-  --gray-1: #FAFBFC; /* #FAFBFC · app background */
-  --gray-2: #FFFFFF; /* #FFFFFF · panel, popover */
+  /* Nền theo Linear: canvas ngoài (sidebar, viền quanh) tối hơn thẻ nội dung; ô điều khiển và popover trắng nổi lên */
+  --gray-0: #FFFFFF; /* #FFFFFF · raised: nút, ô nhập nổi, popover, menu */
+  --gray-1: #EFEFF0; /* #EFEFF0 · app canvas: sidebar, nền quanh thẻ nội dung */
+  --gray-2: #F9F9FA; /* #F9F9FA · panel: thẻ nội dung, bảng */
   --gray-3: #F2F4F7; /* #F2F4F7 · control (input, secondary button) */
   --gray-4: #EAEDF1; /* #EAEDF1 · hover */
   --gray-5: #DEE2E8; /* #DEE2E8 · neutral separator */
@@ -232,11 +234,11 @@
   --accent-10: #004A88; /* nút chính khi di chuột */
 
   /* Semantic tier: point at the ramp. Keep shadcn names so existing utilities keep working. */
-  --background: var(--gray-1);
+  --background: var(--gray-0);
   --foreground: var(--gray-12);
   --card: var(--gray-2);
   --card-foreground: var(--gray-12);
-  --popover: var(--gray-2);
+  --popover: var(--gray-0);
   --popover-foreground: var(--gray-12);
   --primary: var(--accent-9);
   --primary-hover: var(--accent-10);
@@ -274,7 +276,8 @@
 
   /* Elevation tokens chuẩn: Chỉ 2 token cho overlay */
   --shadow-dialog: 0 24px 60px -20px rgb(0 0 0 / 0.35);
-  --shadow-menu: 0 8px 24px -10px rgb(26 29 35 / 0.18);
+  /* Viền mảnh 1px + 3 lớp bóng (theo Linear): popover trắng trên nền trắng vẫn tách khỏi bảng phía sau */
+  --shadow-menu: 0 0 0 1px rgb(26 29 35 / 0.09), 0 8px 24px rgb(26 29 35 / 0.08), 0 3px 8px rgb(26 29 35 / 0.06), 0 1px 1px rgb(26 29 35 / 0.06);
   --shadow-dropdown: var(--shadow-menu);
 
   /* Distinct chart colors for data visualization */
@@ -389,7 +392,7 @@
   --sidebar-foreground: var(--gray-12);
   --sidebar-primary: var(--gray-9);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: var(--gray-4);
+  --sidebar-accent: #E1E1E2; /* hàng sidebar đang chọn/hover, đo từ Linear; --gray-4 gần trùng canvas #EFEFF0 nên không dùng được */
   --sidebar-accent-foreground: var(--gray-12);
   --sidebar-border: var(--gray-4);
   --sidebar-ring: var(--gray-8);

@@ -81,6 +81,21 @@ describe("Document Stats ACL via buildDocumentReadWhere", () => {
     assert.ok(hasUnitScope, "Expected unit-scoped condition for dept-A");
   });
 
+  test("người kiêm nhiệm: lọc theo mọi đơn vị của các chức danh, không chỉ đơn vị đầu tiên", () => {
+    const ctx = {
+      userId: "multi-1",
+      user: { id: "multi-1", role: "TRUONG_PHONG" },
+      primaryUnitIds: ["unit-A"],
+      positions: [{ unitId: "unit-A" }, { unitId: "unit-B" }],
+    };
+    const orConditions = (buildDocumentReadWhere(ctx as any) as any).AND[1].OR;
+    const hasUnit = (id: string) =>
+      orConditions.some((c: any) => c.incomingWorkflow?.is?.leadUnitId === id) &&
+      orConditions.some((c: any) => c.linkedTask?.is?.leadUnitId === id);
+    assert.ok(hasUnit("unit-A"), "Thiếu điều kiện đơn vị A");
+    assert.ok(hasUnit("unit-B"), "Thiếu điều kiện đơn vị B (chức danh thứ hai)");
+  });
+
   test("should return scoped filter for TRUONG_PHONG", () => {
     const tp = {
       id: "tp-1",

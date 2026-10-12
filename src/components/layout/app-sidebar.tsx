@@ -48,7 +48,7 @@ import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
 import { Pressable } from "@/components/ui/pressable";
-
+import { MENU_POPUP_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu";
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
   { ssr: false }
@@ -571,7 +571,7 @@ export function AppSidebar() {
 
                   {/* Group Items */}
                   {(!group.label || !isGroupCollapsed) && (
-                    <div className="space-y-0.5">
+                    <div className="space-y-px">
                       {group.items.map((item) => {
                         const visibleChildren = item.children?.filter((c) => !c.requiresApprovalReport || canViewApprovalReport);
                         const hasActiveChild = Boolean(visibleChildren?.some(isChildActive));
@@ -612,26 +612,26 @@ export function AppSidebar() {
                                   "group relative flex items-center transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
                                   isCollapsed
                                     ? "size-10 mx-auto justify-center rounded-xl p-0"
-                                    : "gap-2.5 px-2 h-8 rounded-md text-compact",
+                                    : "gap-2 px-2 h-7 rounded-sm text-compact",
                                   !isCollapsed && children && "pr-7",
                                   active
-                                    ? "bg-bg-hover text-foreground font-medium"
-                                    : "text-foreground/80 hover:text-foreground hover:bg-muted/50 font-medium"
+                                    ? "bg-sidebar-accent text-foreground font-medium"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60 font-medium"
                                 )}
                               >
                                 <span className={cn(
                                   "shrink-0 flex items-center justify-center",
-                                  isCollapsed ? "size-6" : "size-4"
+                                  isCollapsed ? "size-6" : "size-3.5"
                                 )}>
                                   <Icon
-                                    size={isCollapsed ? 19 : 16}
+                                    size={isCollapsed ? 19 : 14}
                                     strokeWidth={1.5}
                                     className={cn(
-                                      isCollapsed ? "size-[19px]" : "size-4",
+                                      isCollapsed ? "size-[19px]" : "size-3.5",
                                       "shrink-0 transition-colors",
                                       active
                                         ? "text-foreground"
-                                        : "text-foreground/70 group-hover:text-foreground"
+                                        : "text-muted-foreground group-hover:text-foreground"
                                     )}
                                   />
                                 </span>
@@ -676,7 +676,7 @@ export function AppSidebar() {
                           ) : null}
                           </div>
                           {children && !isCollapsed && isExpanded ? (
-                            <div className="ml-[15px] border-l border-border/60 pl-1.5 space-y-0.5">
+                            <div className="ml-[15px] border-l border-border/60 pl-1.5 space-y-px">
                               {children.map((child) => {
                                 const childActive = isChildActive(child);
                                 const childBadge = getChildBadge(child);
@@ -686,10 +686,10 @@ export function AppSidebar() {
                                     href={child.href}
                                     aria-current={childActive ? "page" : undefined}
                                     className={cn(
-                                      "flex items-center gap-2 px-2 h-7 rounded-md text-compact tracking-tight transition-colors whitespace-nowrap",
+                                      "flex items-center gap-2 px-2 h-7 rounded-sm text-compact tracking-tight transition-colors whitespace-nowrap",
                                       childActive
-                                        ? "bg-accent text-foreground font-medium"
-                                        : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+                                        ? "bg-sidebar-accent text-foreground font-medium"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
                                     )}
                                   >
                                     <span className="truncate flex-1">{child.label}</span>
@@ -777,7 +777,7 @@ export function AppSidebar() {
                       maxHeight: "var(--available-height)",
                       overflowY: "auto",
                     }}
-                    className="w-56 p-1 shadow-dropdown border border-border/80 bg-popover rounded-xl text-popover-foreground select-none"
+                    className={cn(MENU_POPUP_CLASS, "w-56 select-none")}
                     role="menu"
                     aria-label="Menu tài khoản"
                   >
@@ -790,24 +790,24 @@ export function AppSidebar() {
                         )}
 
                         {/* Menu Items */}
-                        <div className="space-y-0.5">
+                        <div className="space-y-px">
                           <Pressable
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               setIsProfileModalOpen(true);
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
+                            className={MENU_ROW_CLASS}
                           >
-                            <User size={14} className="text-muted-foreground/75 shrink-0" />
+                            <User className="size-4 text-muted-foreground" />
                             <span>Hồ sơ cá nhân</span>
                           </Pressable>
 
                           <Link
                             href="/settings"
                             onClick={() => setIsProfileDropdownOpen(false)}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                            className={MENU_ROW_CLASS}
                           >
-                            <Settings size={14} className="text-muted-foreground/75 shrink-0" />
+                            <Settings className="size-4 text-muted-foreground" />
                             <span>Cài đặt hệ thống</span>
                           </Link>
 
@@ -818,9 +818,9 @@ export function AppSidebar() {
                                 window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
                               }
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
+                            className={MENU_ROW_CLASS}
                           >
-                            <Smartphone size={14} className="text-primary/85 shrink-0" />
+                            <Smartphone className="size-4 text-muted-foreground" />
                             <span>Cài đặt ứng dụng di động</span>
                           </Pressable>
 
@@ -831,23 +831,23 @@ export function AppSidebar() {
                                 window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
                               }
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors text-left"
+                            className={MENU_ROW_CLASS}
                           >
-                            <HelpCircle size={14} className="text-muted-foreground/75 shrink-0" />
+                            <HelpCircle className="size-4 text-muted-foreground" />
                             <span>Trợ giúp &amp; Hướng dẫn</span>
                           </Pressable>
                         </div>
 
                         {/* Logout */}
-                        <div className="border-t border-border/60 pt-1 mt-1">
+                        <div className="border-t border-border/40 pt-1 mt-1">
                           <Pressable
                             onClick={() => {
                               setIsProfileDropdownOpen(false);
                               logout();
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors text-left"
+                            className={cn(MENU_ROW_CLASS, "text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10")}
                           >
-                            <LogOut size={14} className="shrink-0" />
+                            <LogOut className="size-4" />
                             <span>Đăng xuất</span>
                           </Pressable>
                         </div>

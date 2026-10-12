@@ -3,12 +3,15 @@
 import * as React from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 
 interface ConfirmRequest {
   title: string;
   description?: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Hành động xóa/không đảo ngược: dùng hộp thoại cảnh báo đỏ, mặc định focus vào nút Hủy. */
+  destructive?: boolean;
 }
 
 type Listener = (request: ConfirmRequest & { resolve: (ok: boolean) => void }) => void;
@@ -41,6 +44,20 @@ export function ConfirmHost() {
     current?.resolve(ok);
     setCurrent(null);
   };
+
+  if (current?.destructive) {
+    return (
+      <DestructiveConfirmDialog
+        isOpen
+        onClose={() => settle(false)}
+        onConfirm={() => settle(true)}
+        title={current.title}
+        description={current.description}
+        confirmLabel={current.confirmLabel ?? "Xóa"}
+        cancelLabel={current.cancelLabel ?? "Hủy"}
+      />
+    );
+  }
 
   return (
     <AlertDialog.Root open={current !== null} onOpenChange={(open) => { if (!open) settle(false); }}>

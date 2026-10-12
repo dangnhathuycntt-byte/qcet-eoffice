@@ -17,7 +17,7 @@ import {
   FilterIconCollaborator,
   FilterIconDeadline,
   FilterIconMonth,
-  FilterIconHealth,
+  FilterIconProgress,
   FilterIconOrigin,
 } from "@/components/dashboard/task-filter-icons";
 import { cn } from "@/lib/utils";
@@ -263,6 +263,8 @@ export function FilterSegmentChip({
 }
 
 export interface ActiveFilterBreadcrumbProps {
+  /** Nằm trong hàng toolbar: một dòng, chip cuộn ngang */
+  inline?: boolean;
   scope?: string;
   department?: string;
   workbox?: string;
@@ -333,6 +335,7 @@ export function ActiveFilterBreadcrumb({
   onRemoveOrigin,
   onRemoveCollaborator,
   onRemoveFilter,
+  inline,
   className = "",
 }: ActiveFilterBreadcrumbProps) {
   const hasDept = Boolean(department && department !== "ALL");
@@ -373,6 +376,7 @@ export function ActiveFilterBreadcrumb({
   return (
     <ActiveFilterBar
       dataSlot="active-filter-breadcrumb"
+      inline={inline}
       className={className}
       onClearAll={onResetFilters || onClearAll ? handleClearAll : undefined}
       filteredCount={totalFilteredCount}
@@ -469,7 +473,7 @@ export function ActiveFilterBreadcrumb({
         {hasHealth && (
           <FilterSegmentChip
             dataSlot="filter-chip-health"
-            icon={FilterIconHealth}
+            icon={FilterIconProgress}
             label="Tiến độ"
             value={getHealthDisplayLabel(health!)}
             onRemove={(onRemoveHealth || onRemoveFilter) ? () => handleRemove(onRemoveHealth, "health") : undefined}
@@ -531,6 +535,8 @@ export interface ActiveFilterBarProps {
   /** Số kết quả sau lọc; `totalCount` (nếu biết) hiện dạng "x kết quả / y". */
   filteredCount?: number;
   totalCount?: number;
+  /** Nằm trong hàng toolbar: một dòng, chip cuộn ngang thay vì xuống dòng */
+  inline?: boolean;
   className?: string;
   dataSlot?: string;
 }
@@ -539,17 +545,19 @@ export interface ActiveFilterBarProps {
  * Hàng bộ lọc đang áp dụng dưới thanh công cụ danh sách: chip bên trái, "Xóa lọc" và số kết quả bên phải.
  * Dùng chung Nhiệm vụ và Văn bản.
  */
-export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCount, className, dataSlot = "active-filter-bar" }: ActiveFilterBarProps) {
+export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCount, inline, className, dataSlot = "active-filter-bar" }: ActiveFilterBarProps) {
   return (
     <div
       data-slot={dataSlot}
       className={cn(
-        "flex flex-wrap items-center justify-between gap-2 py-1 text-xs min-h-[30px]",
+        inline
+          ? "flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-2 text-xs"
+          : "flex flex-wrap items-center justify-between gap-2 py-1 text-xs min-h-[30px]",
         className
       )}
     >
       {/* Active Filter Chips (Linear segmented compounds) */}
-      <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">{children}</div>
+      <div className={cn("flex items-center gap-1.5 min-w-0 flex-1", inline ? "flex-nowrap overflow-x-auto thin-scrollbar" : "flex-wrap")}>{children}</div>
 
       <div className="flex items-center gap-2.5 shrink-0 ml-auto">
         {onClearAll && (

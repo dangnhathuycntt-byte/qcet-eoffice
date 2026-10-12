@@ -16,6 +16,10 @@ import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular
 import { TaskEmptyState } from "../src/components/tasks/table/components/task-empty-state";
 import { TaskTableToolbar } from "../src/components/tasks/table/components/task-table-toolbar";
 
+// Số bộ lọc đang bật nằm ở aria-label (nút chỉ hiện chấm, không có huy hiệu số)
+const COUNTED_FILTER_LABEL = /aria-label="Bộ lọc \((\d+) đang áp dụng\)"/;
+const FILTER_BUTTON_LABEL = /aria-label="Bộ lọc(?: \(\d+ đang áp dụng\))?"/;
+
 describe("UnifiedTaskToolbar Helpers", () => {
   const payload = getMockDashboardPayload();
   const staffUser = DEFAULT_DEMO_USERS.find((u) => u.name.includes("Vinh")) || DEFAULT_DEMO_USERS[3]; // Nguyễn Ngọc Vinh (CNTT)
@@ -139,8 +143,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         selectedDepartment: "ALL",
         onDepartmentChange: () => {},
         searchQuery: "",
@@ -167,12 +169,12 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       "Must render the single-row toolbar slot"
     );
     assert.ok(
-      html.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(html),
       "Must render the collapsed filter button with aria-label"
     );
     // With selectedAcademicMonth=9 active, the filter badge must show a count >= 1
     assert.ok(
-      html.match(/rounded-full[\s\S]*?\d+/),
+      html.match(COUNTED_FILTER_LABEL),
       "Filter button must show a badge count when month is selected"
     );
   });
@@ -182,8 +184,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         searchQuery: "",
         onSearchChange: () => {},
         selectedAcademicMonth: "ALL",
@@ -202,8 +202,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         selectedDepartment: "ALL",
         onDepartmentChange: () => {},
         searchQuery: "",
@@ -221,7 +219,7 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
     // In the compact toolbar, with all filters at default ("ALL"), the filter
     // button should render without any active-count badge (no filters active).
     assert.ok(
-      html.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(html),
       "Must render the filter button with aria-label"
     );
     // No badge should appear when all filters are at default
@@ -245,8 +243,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "MY_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         selectedDepartment: "ALL",
         onDepartmentChange: () => {},
         searchQuery: "",
@@ -292,7 +288,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       "Must render search input for staff user"
     );
     assert.ok(
-      html.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(html),
       "Must render filter button for staff user"
     );
   });
@@ -320,7 +316,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       "Must render search input for admin user"
     );
     assert.ok(
-      html.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(html),
       "Must render filter button for admin user"
     );
   });
@@ -334,7 +330,8 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         onSearchChange: () => {},
       })
     );
-    assert.ok(emptyHtml.includes(">&#x2F;</kbd>") || emptyHtml.includes(">/</kbd>"), "Must show '/' shortcut badge");
+    // Ô tìm thu gọn thành icon; phím "/" được gợi ý ở tooltip và mở ô khi bấm
+    assert.ok(emptyHtml.includes('title="Tìm nhiệm vụ (/)"'), "Must show collapsed search icon with '/' hint");
 
     const filledHtml = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
@@ -359,8 +356,6 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         searchQuery: "",
         onSearchChange: () => {},
         showSavedViews: true,
-        viewMode: "table",
-        onViewModeChange: () => {},
         onDensityChange: () => {},
         selectedDepartment: "ALL",
         selectedCategory: "ALL",
@@ -382,7 +377,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
     );
 
     // Filter button must be present (aria-label="Bộ lọc")
-    assert.ok(html.includes('aria-label="Bộ lọc"'), "Must render Filter (Bộ lọc) button");
+    assert.ok(FILTER_BUTTON_LABEL.test(html), "Must render Filter (Bộ lọc) button");
 
     // Display popover trigger must be present adjacent to Filter
     assert.ok(
@@ -438,8 +433,6 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         onScopeChange: () => {},
         searchQuery: "",
         onSearchChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
       })
     );
 
@@ -482,12 +475,12 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       "Search input must be present in the toolbar"
     );
     assert.ok(
-      html.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(html),
       "Filter button must be present in the toolbar"
     );
     // With month=9, status=in_progress, priority=URGENT, department=CNTT
     // all active, the badge must show a count >= 3
-    const badgeMatch = html.match(/rounded-full[^>]*>(\d+)</);
+    const badgeMatch = html.match(COUNTED_FILTER_LABEL);
     assert.ok(badgeMatch, "Filter button must show a badge count for active filters");
     const count = parseInt(badgeMatch![1], 10);
     assert.ok(count >= 3, `Filter badge count must be >= 3, got ${count}`);
@@ -688,18 +681,21 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
     // badge count on the collapsed filter button — no inline labels or
     // individual clear buttons are rendered in static markup.
     assert.ok(
-      html.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(html),
       "Filter button must be present with aria-label"
     );
     // With month=4, status=in_progress, priority=URGENT active, badge >= 3
-    const badgeMatch = html.match(/rounded-full[^>]*>(\d+)</);
+    const badgeMatch = html.match(COUNTED_FILTER_LABEL);
     assert.ok(badgeMatch, "Filter button must show badge count for active filters");
     const count = parseInt(badgeMatch![1], 10);
     assert.ok(count >= 3, `Filter badge count must be >= 3 reflecting active filters, got ${count}`);
 
     // Filter button must NOT use primary blue styling (no bg-blue, bg-primary)
     assert.ok(!html.includes("bg-blue"), "Filter button must not use primary blue background");
-    assert.ok(!html.includes("bg-primary"), "Filter button must not use primary background");
+    // Chấm báo đang lọc (size-1.5) là chỗ duy nhất được dùng màu primary; nền nút thì không
+    const primaryUses = html.match(/bg-primary/g)?.length ?? 0;
+    const dotUses = html.match(/size-1\.5 rounded-full bg-primary/g)?.length ?? 0;
+    assert.equal(primaryUses, dotUses, "Filter button must not use primary background (only the status dot may)");
   });
 
   test("Selecting deadline filter (e.g. overdue) activates ONLY Thời hạn and does NOT jump or duplicate Trạng thái", () => {
@@ -721,11 +717,11 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
     // aria-label="Lọc trạng thái" in static markup. The toolbar shows the
     // filter button with a badge reflecting exactly the active deadline filter.
     assert.ok(
-      html.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(html),
       "Must render the collapsed filter button"
     );
     // With only activeTab="overdue" set, badge count should be exactly 1
-    const badgeMatch = html.match(/rounded-full[^>]*>(\d+)</);
+    const badgeMatch = html.match(COUNTED_FILTER_LABEL);
     assert.ok(badgeMatch, "Filter button must show badge when deadline is active");
     const count = parseInt(badgeMatch![1], 10);
     assert.ok(count >= 1, `Badge count must be >= 1 for active deadline filter, got ${count}`);
@@ -793,10 +789,10 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
     // no visible "Mới" or individual clear button in static markup.
     // The filter button shows a badge count reflecting the active status filter.
     assert.ok(
-      htmlNew.includes('aria-label="Bộ lọc"'),
+      FILTER_BUTTON_LABEL.test(htmlNew),
       "Must render the filter button with aria-label"
     );
-    const badgeNew = htmlNew.match(/rounded-full[^>]*>(\d+)</);
+    const badgeNew = htmlNew.match(COUNTED_FILTER_LABEL);
     assert.ok(badgeNew, "Filter button must show badge when selectedStatus is 'new'");
     const countNew = parseInt(badgeNew![1], 10);
     assert.ok(countNew >= 1, `Badge count must be >= 1 for active status filter, got ${countNew}`);
@@ -812,7 +808,7 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
       })
     );
 
-    const badgeNotStarted = htmlNotStarted.match(/rounded-full[^>]*>(\d+)</);
+    const badgeNotStarted = htmlNotStarted.match(COUNTED_FILTER_LABEL);
     assert.ok(badgeNotStarted, "Filter button must show badge when selectedStatus is 'NOT_STARTED'");
   });
 });

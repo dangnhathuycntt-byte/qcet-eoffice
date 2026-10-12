@@ -30,11 +30,9 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     );
 
     // 1. Trigger button 'Bộ lọc'
-    assert.ok(html.includes('aria-label="Bộ lọc"'), "Trigger button must have accessible aria-label");
-    assert.ok(html.includes("Bộ lọc"), "Must display 'Bộ lọc' text label");
-
-    // 2. Active filter count badge (2 active: status + priority)
-    assert.ok(html.includes(">2<"), "Must render active filter badge count");
+    // 2 bộ lọc đang bật (trạng thái + ưu tiên): số nằm ở aria-label/title, nút chỉ hiện chấm để không đổi bề rộng
+    assert.ok(html.includes('aria-label="Bộ lọc (2 đang áp dụng)"'), "Trigger button must have accessible aria-label with active count");
+    assert.ok(!html.includes(">2<"), "Filter button must not render a numeric badge (dot only, no layout jitter)");
 
     // 3. Anti-slop: zero checkbox inputs or roles in the entire toolbar
     assert.ok(!html.includes('type="checkbox"'), "Must NOT contain any HTML checkbox input");
@@ -55,11 +53,13 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "Root MenuPositioner must have z-50 outline-none"
     );
 
-    // 2. Submenu positioners must have side=left, sideOffset=2, and z-50 outline-none
+    // 2. Submenu positioner nằm trong MenuSubmenu dùng chung: side=left, sideOffset=2, z-50 outline-none
+    const menuSource = fs.readFileSync(path.resolve(process.cwd(), "src/components/ui/menu.tsx"), "utf-8");
     assert.ok(
-      source.includes('MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none"'),
-      "Submenu MenuPositioner must have side=left and z-50 outline-none to avoid overlapping root menu"
+      menuSource.includes('side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none"'),
+      "Shared MenuSubmenu positioner must have side=left and z-50 outline-none to avoid overlapping root menu"
     );
+    assert.ok(source.includes("<MenuSubmenu"), "Toolbar must build nested filter menus from the shared MenuSubmenu");
 
     // 3. Status category icon must be FilterIconStatus
     assert.ok(
@@ -91,8 +91,8 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "utf-8"
     );
 
-    // 1. Supports Linear-style search header 'Thêm bộ lọc... F'
-    assert.ok(source.includes('placeholder="Thêm bộ lọc..."'), "Must include search header input");
+    // 1. Menu lọc gọn như menu chuột phải: không có ô tìm ở đầu
+    assert.ok(!source.includes('placeholder="Thêm bộ lọc..."'), "Filter menu must not render a search header");
 
     // 2. Contains expanded categories: Lead team, Lead, Collaborators, Health, Origin
     assert.ok(source.includes('label: "Đơn vị"'), "Must include lead team category");
@@ -110,23 +110,23 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "utf-8"
     );
 
-    // 1. Root menu width w-56 for compact Linear-style spacing
-    assert.ok(source.includes('className="w-56 rounded-lg'), "Root menu width must be w-56 for compact spacing");
+    // 1. Root menu hẹp (w-52) dùng khung chuẩn MENU_POPUP_CLASS
+    assert.ok(source.includes('cn(MENU_POPUP_CLASS, "w-52")'), "Root menu must use shared popup class at w-52");
 
     // 2. Linear-style 3-tier dates category in root menu
     assert.ok(source.includes('label: "Mốc thời gian"'), "Root menu must contain 'Mốc thời gian' (Dates)");
 
     // 3. Sub-dropdown tier 2: Hạn chốt & Kỳ tháng nested under Mốc thời gian
     assert.ok(source.includes('case "dates":'), "Must contain dedicated 'dates' handler in renderCategorySubmenuItems");
-    assert.ok(source.includes("Hạn chốt"), "Tier 2 must contain Target date / Hạn chốt");
-    assert.ok(source.includes("Kỳ tháng"), "Tier 2 must contain Academic period / Kỳ tháng");
+    assert.ok(source.includes("Kỳ tháng"), "Tier 3 must contain Academic period / Kỳ tháng");
+    assert.ok(source.includes("Chọn ngày khác"), "Tier 3 must contain the shared day calendar / Chọn ngày khác");
 
     // 4. No-op stubs removed (anti-slop clean architecture)
     assert.ok(!source.includes("Ngày giao việc"), "Must NOT contain stub sub dropdown for Ngày giao việc");
     assert.ok(!source.includes("Ngày hoàn thành"), "Must NOT contain stub sub dropdown for Ngày hoàn thành");
   });
 
-  test("Comprehensive search indexing in matchingSearchOptions across all 9 dimensions", async () => {
+  test("Filter menu keeps no parallel search index (menu is browse-only like the context menu)", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const source = fs.readFileSync(
@@ -134,12 +134,7 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "utf-8"
     );
 
-    // Verify all dimensions are indexed into matchingSearchOptions
-    assert.ok(source.includes("// Match Lead / Người chủ trì"), "Must index Lead options");
-    assert.ok(source.includes("// Match Health / Tiến độ"), "Must index Health options");
-    assert.ok(source.includes("// Match Origin / Nguồn gốc"), "Must index Origin options");
-    assert.ok(source.includes("// Match Collaborator / Người phối hợp"), "Must index Collaborator options");
-    assert.ok(source.includes("// Match Months"), "Must index Academic month options T1..T12");
+    assert.ok(!source.includes("matchingSearchOptions"), "Search index was removed together with the search header");
   });
 
   test("filterDisplayedTasks canonical filtering engine supports health, origin, and collaborator", async () => {
@@ -275,9 +270,10 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       !source.includes('MenuPositioner side="right"'),
       "Submenu positioners must not use side='right' which would overlap parent root menu"
     );
+    const menuSource = fs.readFileSync(path.resolve(process.cwd(), "src/components/ui/menu.tsx"), "utf-8");
     assert.ok(
-      source.includes('MenuPositioner side="left"'),
-      "Submenu positioners must open to side='left'"
+      menuSource.includes('side="left"'),
+      "Shared submenu positioner must open to side='left'"
     );
   });
 });

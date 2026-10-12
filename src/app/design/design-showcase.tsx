@@ -16,8 +16,6 @@ import {
   Calendar,
   AlertTriangle,
   RotateCw,
-  Table as TableIcon,
-  Kanban as KanbanIcon,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,14 +35,22 @@ import { motionEase, motionSpring } from "@/lib/motion/tokens";
 import { popoverVariants } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
+import { CountBadge } from "@/components/ui/count-badge";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 // ============================================================================
 // Token Definitions & Metadata
 // ============================================================================
 
 const COLORS_GRAY: Array<[string, string, string, string]> = [
-  ["Bậc 1 · bg-app", "--gray-1", "#FAFBFC", "Nền trang"],
-  ["Bậc 2 · bg-panel", "--gray-2", "#FFFFFF", "Panel, hộp thoại, menu"],
+  ["Bậc 0 · bg-raised", "--gray-0", "#FFFFFF", "Nút, ô nhập nổi, popover, menu"],
+  ["Bậc 1 · bg-app", "--gray-1", "#EFEFF0", "Canvas ngoài: sidebar, viền quanh thẻ"],
+  ["Bậc 2 · bg-panel", "--gray-2", "#F9F9FA", "Thẻ nội dung, bảng"],
   ["Bậc 3 · bg-control", "--gray-3", "#F2F4F7", "Ô nhập, nút phụ, chip"],
   ["Bậc 4 · bg-hover", "--gray-4", "#EAEDF1", "Di chuột dòng, nút"],
   ["Bậc 5 · bg-selected", "--accent-3", "#E1EBF8", "Dòng đang chọn, tiêu điểm"],
@@ -112,6 +118,7 @@ const NAV_ITEMS = [
   { id: "stepper", label: "Stepper tiến trình", group: "Thành phần nâng cao" },
   { id: "thao-tac-hang-loat", label: "Thao tác hàng loạt", group: "Thành phần nâng cao" },
   { id: "peek-drawer", label: "Ngăn kéo xem nhanh", group: "Thành phần nâng cao" },
+  { id: "primitive-moi", label: "Primitive mới", group: "Thành phần nâng cao" },
   { id: "trang-danh-sach-nhiem-vu", label: "Trang nhiệm vụ (T3List)", group: "Mẫu ứng dụng" },
 ];
 
@@ -162,7 +169,6 @@ export function DesignShowcase() {
   const [on, setOn] = React.useState(true);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [activeSection, setActiveSection] = React.useState("mau");
-  const [activeTab, setActiveTab] = React.useState("table");
 
   // Filter chips state
   const [filterChips, setFilterChips] = React.useState([
@@ -1469,53 +1475,10 @@ export function DesignShowcase() {
                     </Pressable>
                   </span>
                 </div>
-
-                {/* View Switcher: Bảng | Kanban Segmented Pill */}
-                <div className="relative inline-flex h-8 items-center rounded-full bg-secondary p-1 text-xs">
-                  <Pressable
-                    onClick={() => setActiveTab("table")}
-                    className={cn(
-                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors select-none",
-                      activeTab === "table"
-                        ? "text-foreground font-semibold"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {activeTab === "table" && (
-                      <m.span
-                        layoutId="active-view-tab"
-                        className="absolute inset-0 rounded-full bg-card shadow-xs"
-                        transition={{ type: "spring", stiffness: 450, damping: 32 }}
-                      />
-                    )}
-                    <TableIcon className="relative z-10 size-3.5" />
-                    <span className="relative z-10">Bảng</span>
-                  </Pressable>
-                  <Pressable
-                    onClick={() => setActiveTab("kanban")}
-                    className={cn(
-                      "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors select-none",
-                      activeTab === "kanban"
-                        ? "text-foreground font-semibold"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {activeTab === "kanban" && (
-                      <m.span
-                        layoutId="active-view-tab"
-                        className="absolute inset-0 rounded-full bg-card shadow-xs"
-                        transition={{ type: "spring", stiffness: 450, damping: 32 }}
-                      />
-                    )}
-                    <KanbanIcon className="relative z-10 size-3.5" />
-                    <span className="relative z-10">Kanban</span>
-                  </Pressable>
-                </div>
               </div>
 
-              {/* Data Table / Kanban View with Presence Animation */}
+              {/* Data Table View */}
               <AnimatePresence mode="wait">
-                {activeTab === "table" ? (
                   <m.div
                     key="table-view"
                     initial={{ opacity: 0, y: 4 }}
@@ -1884,74 +1847,10 @@ export function DesignShowcase() {
                     )}
                   </AnimatePresence>
                   </m.div>
-                ) : (
-                  /* Kanban View Demo */
-                  <m.div
-                    key="kanban-view"
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.15, ease: motionEase.enter }}
-                    className="grid grid-cols-1 gap-4 sm:grid-cols-3"
-                  >
-                    <div className="rounded-xl bg-secondary/40 p-3 space-y-3">
-                      <div className="flex items-center justify-between text-xs font-semibold text-foreground px-1">
-                        <span className="flex items-center gap-1.5">
-                          <TaskStatusCircle status="WAITING_APPROVAL" /> Chờ duyệt
-                        </span>
-                        <span className="rounded bg-muted px-1.5 text-xs">3</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="rounded-lg bg-card p-3 shadow-xs border border-border/40 space-y-2">
-                          <div className="text-xs font-medium text-foreground">Tổng hợp báo cáo tuyển sinh</div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <UserAvatar name="Đặng Nhật Huy" size="xs" />
-                            <span className="text-destructive font-medium">28/09 (Trễ hạn)</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl bg-secondary/40 p-3 space-y-3">
-                      <div className="flex items-center justify-between text-xs font-semibold text-foreground px-1">
-                        <span className="flex items-center gap-1.5">
-                          <TaskStatusCircle status="IN_PROGRESS" /> Đang thực hiện
-                        </span>
-                        <span className="rounded bg-muted px-1.5 text-xs">5</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="rounded-lg bg-card p-3 shadow-xs border border-border/40 space-y-2">
-                          <div className="text-xs font-medium text-foreground">Chuẩn bị tài liệu hội nghị cán bộ</div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <UserAvatar name="Đặng Nhật Huy" size="xs" />
-                            <span className="text-destructive font-medium">28/09 (Trễ hạn)</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl bg-secondary/40 p-3 space-y-3">
-                      <div className="flex items-center justify-between text-xs font-semibold text-foreground px-1">
-                        <span className="flex items-center gap-1.5">
-                          <TaskStatusCircle status="NOT_STARTED" /> Mới
-                        </span>
-                        <span className="rounded bg-muted px-1.5 text-xs">3</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="rounded-lg bg-card p-3 shadow-xs border border-border/40 space-y-2">
-                          <div className="text-xs font-medium text-foreground">Soạn kế hoạch tuyển sinh</div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <UserAvatar name="Đặng Nhật Huy" size="xs" />
-                            <span>12/10</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </m.div>
-                )}
               </AnimatePresence>
             </div>
           </Section>
+          <NewPrimitivesSection />
         </main>
       </div>
 
@@ -2085,6 +1984,179 @@ function SampleRowItem({
         {due}
       </span>
     </div>
+  );
+}
+
+// ============================================================================
+// Primitive mới (quyết định 2026-10-12): chưa thay ở màn nghiệp vụ nào
+// ============================================================================
+
+const DEMO_OPTIONS: ComboboxOption[] = [
+  { value: "mau-1", label: "Mục mẫu 1" },
+  { value: "mau-2", label: "Mục mẫu 2" },
+  { value: "mau-3", label: "Mục mẫu 3" },
+];
+
+function NewPrimitivesSection() {
+  const [tab, setTab] = React.useState("tong-quan");
+  const [pill, setPill] = React.useState("tat-ca");
+  const [viewIds, setViewIds] = React.useState<string[]>(["bang"]);
+  const [urgentIds, setUrgentIds] = React.useState<string[]>([]);
+  const [picked, setPicked] = React.useState<ComboboxOption | null>(null);
+  const [freePicked, setFreePicked] = React.useState<ComboboxOption | null>(null);
+
+  return (
+    <Section id="primitive-moi" title="Primitive mới" note="Thêm theo quyết định 2026-10-12. Chưa thay ở màn nghiệp vụ nào.">
+      <div className="grid gap-6 md:grid-cols-2">
+        <Cell label="CountBadge" hint="ẩn khi số ≤ 0">
+          <div className="flex items-center gap-2">
+            <CountBadge count={3} />
+            <CountBadge count={12} />
+            <CountBadge count={0} />
+            <span className="text-xs text-muted-foreground">Số 0 không hiện</span>
+          </div>
+        </Cell>
+
+        <Cell label="Spinner" hint="xs 12px · sm 14px mặc định · md 16px">
+          <div className="flex items-center gap-4 text-muted-foreground">
+            <Spinner size="xs" />
+            <Spinner size="sm" />
+            <Spinner size="md" tone="primary" />
+            <Spinner size="sm" tone="muted" label="Đang tải dữ liệu" />
+          </div>
+        </Cell>
+
+        <Cell label="Button" hint="loading giữ nhãn, khóa nút, aria-busy · variant toolbar">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="toolbar" size="sm">
+              <Plus />
+              Tạo việc
+            </Button>
+            <Button size="sm" loading>Đang lưu</Button>
+            <Button variant="toolbar" size="xs" loading>Đang tải</Button>
+            <Button size="default" loading>Gửi</Button>
+          </div>
+        </Cell>
+
+        <Cell label="Tabs" hint="segmented, pill, size sm · mặc định giữ nguyên">
+          <div className="flex flex-col items-start gap-3">
+            <Tabs value={tab} onValueChange={setTab}>
+              <TabsList variant="segmented" size="sm">
+                <TabsTrigger value="tong-quan">Tổng quan</TabsTrigger>
+                <TabsTrigger value="chi-tiet">Chi tiết</TabsTrigger>
+                <TabsTrigger value="lich-su">Lịch sử</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Tabs value={pill} onValueChange={setPill}>
+              <TabsList variant="pill" size="sm">
+                <TabsTrigger value="tat-ca">Tất cả</TabsTrigger>
+                <TabsTrigger value="cho-duyet">Chờ duyệt</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </Cell>
+
+        <Cell label="Badge" hint="destructive, warning-soft · warning giữ màu cũ">
+          <div className="flex items-center gap-2">
+            <Badge variant="destructive">Trễ hạn</Badge>
+            <Badge variant="warning-soft">Sắp đến hạn</Badge>
+          </div>
+        </Cell>
+
+        <Cell label="Skeleton" hint="pulse bật nhấp nháy nhẹ, mặc định tĩnh">
+          <div className="flex w-full max-w-xs flex-col gap-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton pulse className="h-4 w-2/3" />
+          </div>
+        </Cell>
+
+        <Cell label="ToggleGroup" hint="segmented, outline, soft · iconOnly cần aria-label">
+          <div className="flex flex-col items-start gap-3">
+            <ToggleGroup aria-label="Chế độ xem" value={viewIds} onValueChange={setViewIds} variant="segmented">
+              <ToggleGroupItem value="bang">Bảng</ToggleGroupItem>
+              <ToggleGroupItem value="lich">Lịch</ToggleGroupItem>
+            </ToggleGroup>
+            <ToggleGroup
+              aria-label="Lọc theo mức"
+              multiple
+              variant="outline"
+              tone="destructive"
+              value={urgentIds}
+              onValueChange={setUrgentIds}
+            >
+              <ToggleGroupItem value="khan" iconOnly aria-label="Khẩn">
+                <AlertTriangle />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="tre" iconOnly aria-label="Trễ hạn">
+                <Clock />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <ToggleGroup aria-label="Hiển thị" variant="soft" size="xs" defaultValue={["ten"]}>
+              <ToggleGroupItem value="ten">Tên</ToggleGroupItem>
+              <ToggleGroupItem value="han">Hạn</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+        </Cell>
+
+        <Cell label="Combobox" hint="chọn một, có ô lọc · freeSolo nhập tự do">
+          <div className="flex w-full max-w-xs flex-col gap-2">
+            <Combobox aria-label="Chọn mục mẫu" options={DEMO_OPTIONS} value={picked} onValueChange={setPicked} />
+            <Combobox
+              aria-label="Nhập hoặc chọn"
+              options={DEMO_OPTIONS}
+              value={freePicked}
+              onValueChange={setFreePicked}
+              freeSolo
+              placeholder="Gõ hoặc chọn"
+            />
+          </div>
+        </Cell>
+      </div>
+
+      <Cell label="Table" hint="một dòng 40px mặc định · hai dòng 48px · tiêu đề cao bằng hàng">
+        <div className="grid w-full gap-6 lg:grid-cols-2">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Việc</TableHead>
+                <TableHead>Trạng thái</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow interactive>
+                <TableCell>Mục mẫu A</TableCell>
+                <TableCell className="text-muted-foreground">Đang làm</TableCell>
+              </TableRow>
+              <TableRow interactive current>
+                <TableCell>Mục mẫu B (đang mở)</TableCell>
+                <TableCell className="text-muted-foreground">Chờ duyệt</TableCell>
+              </TableRow>
+              <TableRow interactive selected>
+                <TableCell>Mục mẫu C (đã chọn)</TableCell>
+                <TableCell className="text-muted-foreground">Hoàn thành</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+          <Table density="two-line">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Việc</TableHead>
+                <TableHead>Người nhận</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow interactive>
+                <TableCell>
+                  <div className="font-medium">Mục mẫu hai dòng</div>
+                  <div className="text-xs text-muted-foreground">Dòng mô tả phụ</div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">Người mẫu</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </Cell>
+    </Section>
   );
 }
 

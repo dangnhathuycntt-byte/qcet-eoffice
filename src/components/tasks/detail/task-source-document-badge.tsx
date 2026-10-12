@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { TaskSourceDocument } from "@/types/dashboard";
 import { formatDisplayDate } from "@/lib/format/date";
 import { Tooltip } from "@base-ui/react/tooltip";
+import { getDocumentHref } from "@/lib/documents/document-view-model";
 
 interface TaskSourceDocumentBadgeProps {
   sourceDocument: TaskSourceDocument;
@@ -19,7 +20,7 @@ export function TaskSourceDocumentBadge({
   className,
   compact = false,
 }: TaskSourceDocumentBadgeProps) {
-  const docHref = `/documents?highlight=${sourceDocument.id}`;
+  const docHref = getDocumentHref(sourceDocument.id);
   const typeLabel =
     sourceDocument.type === "VAN_BAN_DEN"
       ? "Văn bản đến"

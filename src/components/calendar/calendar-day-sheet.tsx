@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import { Dialog as BaseDialog } from "@base-ui/react/dialog";
-import { Menu as BaseMenu } from "@base-ui/react/menu";
+import {
+  MENU_POPUP_CLASS,
+  MenuActionItem,
+  MenuPopup,
+  MenuPortal,
+  MenuPositioner,
+  MenuRoot,
+  MenuTrigger,
+} from "@/components/ui/menu";
 import {
   AlertTriangle,
   Calendar as CalendarIcon,
@@ -310,8 +318,8 @@ export function CalendarDaySheet({
 
             <div className="flex items-center gap-1.5 shrink-0">
               {/* [filter] BaseMenu dropdown */}
-              <BaseMenu.Root>
-                <BaseMenu.Trigger
+              <MenuRoot>
+                <MenuTrigger
                   className={cn(
                     "inline-flex items-center gap-1 h-7.5 px-2 rounded-md text-xs font-medium border transition-colors cursor-pointer active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     filter !== "all"
@@ -323,10 +331,10 @@ export function CalendarDaySheet({
                   <Filter className="size-3" />
                   <span>{filterLabels[filter]}</span>
                   <ChevronDown className="size-2.5 text-muted-foreground" />
-                </BaseMenu.Trigger>
-                <BaseMenu.Portal>
-                  <BaseMenu.Positioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
-                    <BaseMenu.Popup className="z-50 w-36 rounded-lg border border-border/70 bg-popover p-1 text-popover-foreground shadow-lg outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
+                </MenuTrigger>
+                <MenuPortal>
+                  <MenuPositioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
+                    <MenuPopup className={cn(MENU_POPUP_CLASS, "w-40")}>
                       {(["all", "attention", "overdue", "waiting"] as const).map((key) => {
                         const counts = {
                           all: summary.total,
@@ -335,60 +343,40 @@ export function CalendarDaySheet({
                           waiting: summary.waiting,
                         };
                         return (
-                          <BaseMenu.Item
-                            key={key}
-                            onClick={() => setFilter(key)}
-                            className={cn(
-                              "w-full flex items-center justify-between rounded px-2 py-1.5 text-xs text-left transition-colors cursor-pointer outline-none select-none",
-                              filter === key
-                                ? "bg-primary/10 text-primary font-semibold"
-                                : "text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60"
-                            )}
-                          >
-                            <span>{filterLabels[key]}</span>
-                            <span className="font-mono tabular-nums text-muted-foreground text-xs">
-                              {counts[key]}
-                            </span>
-                          </BaseMenu.Item>
+                          <MenuActionItem key={key} selected={filter === key} hint={counts[key]} onClick={() => setFilter(key)}>
+                            {filterLabels[key]}
+                          </MenuActionItem>
                         );
                       })}
-                    </BaseMenu.Popup>
-                  </BaseMenu.Positioner>
-                </BaseMenu.Portal>
-              </BaseMenu.Root>
+                    </MenuPopup>
+                  </MenuPositioner>
+                </MenuPortal>
+              </MenuRoot>
 
               {/* [+ Tạo] action BaseMenu dropdown */}
               {selectedDate && (
-                <BaseMenu.Root>
-                  <BaseMenu.Trigger
+                <MenuRoot>
+                  <MenuTrigger
                     className="inline-flex items-center justify-center h-7.5 px-2 text-xs font-medium gap-1 rounded-md border border-border/70 bg-background hover:bg-muted/50 text-foreground cursor-pointer transition-colors active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     aria-label="Tạo mới nhiệm vụ hoặc sự kiện"
                   >
                     <Plus className="size-3" />
                     <span>Tạo</span>
                     <ChevronDown className="size-2.5 text-muted-foreground" />
-                  </BaseMenu.Trigger>
-                  <BaseMenu.Portal>
-                    <BaseMenu.Positioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
-                      <BaseMenu.Popup className="z-50 w-44 rounded-lg border border-border/70 bg-popover p-1 text-popover-foreground shadow-lg outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
-                        <BaseMenu.Item
-                          onClick={() => onAddTaskOnDate?.(selectedDate)}
-                          className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60 transition-colors cursor-pointer outline-none select-none"
-                        >
-                          <CheckSquare className="size-3.5 text-primary shrink-0" />
-                          <span>Nhiệm vụ hạn ngày này</span>
-                        </BaseMenu.Item>
-                        <BaseMenu.Item
-                          onClick={() => onAddEventOnDate?.(selectedDate)}
-                          className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60 transition-colors cursor-pointer outline-none select-none"
-                        >
-                          <CalendarIcon className="size-3.5 text-sky-600 shrink-0" />
-                          <span>Sự kiện ngày này</span>
-                        </BaseMenu.Item>
-                      </BaseMenu.Popup>
-                    </BaseMenu.Positioner>
-                  </BaseMenu.Portal>
-                </BaseMenu.Root>
+                  </MenuTrigger>
+                  <MenuPortal>
+                    <MenuPositioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
+                      <MenuPopup className={cn(MENU_POPUP_CLASS, "w-48")}>
+                        <MenuActionItem leading={<CheckSquare className="size-4 text-primary" />} onClick={() => onAddTaskOnDate?.(selectedDate)}>
+                          Nhiệm vụ hạn ngày này
+                        </MenuActionItem>
+                        <MenuActionItem leading={<CalendarIcon className="size-4" />} onClick={() => onAddEventOnDate?.(selectedDate)}>
+                          Sự kiện ngày này
+                        </MenuActionItem>
+                      </MenuPopup>
+                    </MenuPositioner>
+                  </MenuPortal>
+                </MenuRoot>
               )}
 
               {/* [×] Close */}

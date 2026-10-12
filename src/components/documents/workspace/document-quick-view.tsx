@@ -3,12 +3,12 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
+import { Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MenuContent, MenuItem, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
+import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import type { DocumentItem, OfficialDocument } from "@/types/document";
 import { useDocumentDetail } from "@/hooks/use-document-detail";
-import { fromDocumentItem, fromOfficialDocument, getFullPageHref, type DocumentViewModel } from "@/lib/documents/document-view-model";
+import { fromDocumentItem, fromOfficialDocument, type DocumentViewModel } from "@/lib/documents/document-view-model";
 import { resolveActiveFileId } from "@/lib/documents/file-viewer-state";
 import { DocumentFileViewer } from "../document-file-viewer";
 import { hasOpenDetailsPopover, useTrackOpenPopover } from "../popover-escape-guard";
@@ -21,9 +21,6 @@ const PRINT_DETAIL_CSS = `@media print {
   [data-slot="document-quick-body"], [data-slot="document-quick-body"] * { visibility: visible !important; }
   [data-slot="document-quick-body"] { position: absolute; inset: 0; overflow: visible !important; }
 }`;
-
-const MENU_ITEM =
-  "flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-compact text-foreground outline-none data-[highlighted]:bg-muted/60 [&_svg]:size-4 [&_svg]:text-muted-foreground";
 
 /**
  * "Thao tác khác": sửa thông tin và bổ sung tệp (khi server cho phép), in phiếu thông tin văn bản
@@ -51,27 +48,15 @@ function MoreActionsMenu({
       </MenuTrigger>
       <MenuContent align="end" positionerClassName="z-[60]" className="z-[60] w-56 min-w-0">
         {onEdit ? (
-          <MenuItem className={MENU_ITEM} onClick={onEdit}>
-            <Pencil />
-            Sửa thông tin
-          </MenuItem>
+          <MenuActionItem leading={<Pencil />} onClick={onEdit}>Sửa thông tin</MenuActionItem>
         ) : null}
         {onAddFiles ? (
-          <MenuItem className={MENU_ITEM} onClick={onAddFiles}>
-            <Paperclip />
-            Thêm tệp
-          </MenuItem>
+          <MenuActionItem leading={<Paperclip />} onClick={onAddFiles}>Thêm tệp</MenuActionItem>
         ) : null}
-        {onEdit || onAddFiles ? <MenuSeparator className="my-1 h-px bg-border/60" /> : null}
-        <MenuItem className={MENU_ITEM} onClick={onPrint}>
-          <Printer />
-          In phiếu văn bản
-        </MenuItem>
+        {onEdit || onAddFiles ? <MenuSeparator className="my-1 border-t border-border/40" /> : null}
+        <MenuActionItem leading={<Printer />} onClick={onPrint}>In phiếu văn bản</MenuActionItem>
         {onViewSignature ? (
-          <MenuItem className={MENU_ITEM} onClick={onViewSignature}>
-            <Stamp />
-            Xem chữ ký số
-          </MenuItem>
+          <MenuActionItem leading={<Stamp />} onClick={onViewSignature}>Xem chữ ký số</MenuActionItem>
         ) : null}
       </MenuContent>
     </MenuRoot>
@@ -177,7 +162,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
   const typeLine = vm ? (
     <>
       {vm.typeLabel}
-      {vm.numberLabel ? <span className="tabular-nums"> · {vm.numberLabel}</span> : null}
+      {vm.numberLabel ? <span className="font-medium tabular-nums text-foreground"> · {vm.numberLabel}</span> : null}
     </>
   ) : (
     "Chi tiết văn bản"
@@ -187,13 +172,6 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
     <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 pl-4 pr-2 select-none">
       <p className="min-w-0 truncate text-xs text-muted-foreground">{typeLine}</p>
       <div className="flex shrink-0 items-center gap-0.5">
-        {vm ? (
-          <Button asChild variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground">
-            <Link href={getFullPageHref(vm.kind, vm.id, activeFileId || null)} aria-label="Mở trang đầy đủ" title="Mở trang đầy đủ">
-              <ArrowUpRight className="size-4" />
-            </Link>
-          </Button>
-        ) : null}
         <MoreActionsMenu
           onPrint={() => window.print()}
           onViewSignature={vm?.hasSignature && onViewSignature ? () => onViewSignature(item) : undefined}

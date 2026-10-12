@@ -177,7 +177,9 @@ export async function middleware(request: NextRequest) {
       pathname === '/api/csp-report' ||
       pathname.startsWith('/api/csp-report/') ||
       pathname === '/api/runtime-config' ||
-      pathname.startsWith('/api/runtime-config/');
+      pathname.startsWith('/api/runtime-config/') ||
+      // Đăng nhập thử theo vai trò: chỉ tồn tại khi `next dev`; route còn tự kiểm host cục bộ.
+      (process.env.NODE_ENV === 'development' && pathname === '/api/dev/login-as');
 
     if (isPublicApi) {
       return nextWithCorrelation();

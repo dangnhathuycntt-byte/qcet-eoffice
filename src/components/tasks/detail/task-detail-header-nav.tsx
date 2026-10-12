@@ -1,14 +1,11 @@
 "use client";
 
 import * as React from "react";
-import {
-  Link2,
-  Check,
-  PanelRight,
-} from "lucide-react";
+import { Link2, PanelRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTaskDetailUrl } from "@/lib/tasks/task-detail-navigation";
 import { Pressable } from "@/components/ui/pressable";
+import { useFeedback } from "@/components/ui/feedback-layer";
 
 export interface TaskDetailHeaderNavProps {
   taskId: string;
@@ -30,27 +27,17 @@ export function TaskDetailHeaderNav({
   leading,
   className,
 }: TaskDetailHeaderNavProps) {
-  const [copiedLink, setCopiedLink] = React.useState(false);
-  const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  React.useEffect(() => {
-    return () => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-    };
-  }, []);
+  const feedback = useFeedback();
 
   const handleCopyLink = React.useCallback(async () => {
     if (typeof window === "undefined") return;
     try {
-      const url = getTaskDetailUrl(taskId);
-      await navigator.clipboard.writeText(url);
-      setCopiedLink(true);
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-      copyTimerRef.current = setTimeout(() => setCopiedLink(false), 2000);
+      await navigator.clipboard.writeText(getTaskDetailUrl(taskId));
+      feedback.notifySuccess("Đã sao chép liên kết");
     } catch {
-      // Clipboard write failed — silently degrade
+      feedback.notifyError("Không sao chép được liên kết");
     }
-  }, [taskId]);
+  }, [taskId, feedback]);
 
   return (
     <header
@@ -84,11 +71,7 @@ export function TaskDetailHeaderNav({
           title="Sao chép liên kết"
           aria-label="Sao chép liên kết"
         >
-          {copiedLink ? (
-            <Check className="size-3.5 text-emerald-600" />
-          ) : (
-            <Link2 className="size-3.5" />
-          )}
+          <Link2 className="size-3.5" />
         </button>
 
         {/* Properties toggle — hidden when child drawer is open */}

@@ -78,6 +78,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isWorkspaceShell = isTaskDetail || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
   const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isInbox || pathname === "/documents";
+  const isTasksList = pathname === "/tasks";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isRedirectingRef = React.useRef(false);
@@ -144,7 +145,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area: Content Panel on Desktop */}
       <m.div
-        className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] flex-1 flex flex-col"}
+        className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 min-w-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] min-w-0 flex-1 flex flex-col"}
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
         {/* Mobile Header (Only visible below md) */}
@@ -164,8 +165,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             : isInbox
             ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:mt-2 md:h-[calc(100dvh-8px)] md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card outline-none overflow-hidden"
             : cn(
-                "flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden",
-                hideDesktopTopbar && "md:mt-2 md:min-h-[calc(100dvh-8px)]"
+                "flex-1 flex flex-col md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden",
+                // Danh sách nhiệm vụ: khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết
+                isTasksList ? "md:rounded-2xl md:border-r md:border-b md:mr-2 md:mb-2" : "md:rounded-tl-2xl",
+                hideDesktopTopbar && (isTasksList ? "md:mt-2 md:h-[calc(100dvh-16px)] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px)]")
               )}
         >
           <div
@@ -174,10 +177,19 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 ? "flex min-h-0 min-w-0 flex-1 flex-col"
                 : isInbox
                 ? "flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0"
+                : isTasksList
+                ? "flex-1 min-h-0 overflow-y-auto flex flex-col"
                 : "w-full flex-1 p-3 sm:p-5 md:p-6 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6 flex flex-col"
             }
           >
-            {children}
+            {/* Danh sách nhiệm vụ: padding nằm trong vùng cuộn để tiêu đề cột dính sát mép khung */}
+            {isTasksList ? (
+              <div className="flex w-full flex-1 flex-col p-3 sm:p-5 md:px-[18px] md:pt-0 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6">
+                {children}
+              </div>
+            ) : (
+              children
+            )}
           </div>
         </main>
       </m.div>

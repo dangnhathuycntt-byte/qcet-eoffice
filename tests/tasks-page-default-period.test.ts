@@ -10,7 +10,8 @@ describe("Trang /tasks: không tự lọc theo tháng hiện tại", () => {
     assert.ok(!src.includes("getCurrentAcademicPeriod"));
   });
 
-  it("vẫn giữ các mặc định theo vai trò (phạm vi, kiểu xem)", () => {
-    assert.ok(src.includes("defaultScope") && src.includes("defaultView"));
+  it("vẫn giữ phạm vi mặc định theo vai trò; không còn kiểu xem Kanban", () => {
+    assert.ok(src.includes("defaultScope"));
+    assert.ok(!/kanban/i.test(src), "trang /tasks chỉ còn dạng bảng");
   });
 });

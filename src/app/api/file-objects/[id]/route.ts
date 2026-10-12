@@ -44,7 +44,18 @@ export async function GET(
     const file = await prisma.fileObject.findUnique({
       where: { id },
       include: {
-        attachments: { include: { document: true } },
+        // Quyền đọc văn bản theo đơn vị cần đủ đơn vị xử lý (workflow, chỉ đạo, nhiệm vụ liên kết), nên nạp như route /api/files.
+        attachments: {
+          include: {
+            document: {
+              include: {
+                directives: true,
+                incomingWorkflow: { include: { unitAssignments: true } },
+                linkedTask: { select: { leadUnitId: true } },
+              },
+            },
+          },
+        },
         deliverables: { include: { task: true } },
         dossierItems: { include: { dossier: true } },
         meetingMaterials: {
@@ -57,8 +68,17 @@ export async function GET(
     });
     if (!file || file.isArchived) throw new NotFoundError("Không tìm thấy tệp");
 
+    // Ngữ cảnh phân quyền đầy đủ (chức danh, đơn vị, kiêm nhiệm) để trưởng đơn vị và lãnh đạo mở được tệp của văn bản
+    // thuộc đơn vị mình; chỉ có `authUser` (id + vai trò) thì quy tắc theo đơn vị luôn từ chối. Giữ cổng cũ theo `authUser`
+    // như route /api/files để không mất quyền của tài khoản chỉ có vai trò (vd. văn thư).
+    const documentAuthContext = file.attachments.some((attachment) => attachment.document)
+      ? await loadAuthorizationContext(authUser.id, new Date())
+      : null;
     let hasAuthorizedResource = file.attachments.some(
-      (attachment) => attachment.document && canReadDocument(authUser, attachment.document)
+      (attachment) =>
+        attachment.document &&
+        ((documentAuthContext && canReadDocument(documentAuthContext, attachment.document)) ||
+          canReadDocument(authUser, attachment.document))
     );
 
     if (!hasAuthorizedResource && file.deliverables.length > 0) {

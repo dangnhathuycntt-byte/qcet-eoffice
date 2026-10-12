@@ -42,7 +42,7 @@ function TaskActionSvg({
 export function TaskIconStatus(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
-      <path d="M9.5 2.6L16.2 6.3L9.5 10L2.8 6.3Z" />
+      <path d="M9.5 2.6L16.2 6.3L9.5 10L2.8 6.3Z" fill="currentColor" />
       <path d="M2.8 9.6L9.5 13.3L16.2 9.6" />
       <path d="M2.8 12.9L9.5 16.6L16.2 12.9" />
     </TaskActionSvg>
@@ -53,8 +53,8 @@ export function TaskIconStatus(props: TaskActionIconProps) {
 export function TaskIconPriority(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
-      <rect x="2.6" y="10.4" width="3.2" height="5.6" rx="1.2" />
-      <rect x="7.9" y="6.6" width="3.2" height="9.4" rx="1.2" />
+      <rect x="2.6" y="10.4" width="3.2" height="5.6" rx="1.2" fill="currentColor" />
+      <rect x="7.9" y="6.6" width="3.2" height="9.4" rx="1.2" fill="currentColor" />
       <rect x="13.2" y="2.8" width="3.2" height="13.2" rx="1.2" />
     </TaskActionSvg>
   );
@@ -64,7 +64,7 @@ export function TaskIconPriority(props: TaskActionIconProps) {
 export function TaskIconAssignee(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
-      <circle cx="9.5" cy="6.2" r="3.2" />
+      <circle cx="9.5" cy="6.2" r="3.2" fill="currentColor" />
       <path d="M3.4 16C3.4 12.8 6 10.8 9.5 10.8C13 10.8 15.6 12.8 15.6 16" />
     </TaskActionSvg>
   );
@@ -75,9 +75,21 @@ export function TaskIconDeadline(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
       <rect x="1.9" y="3.4" width="15.2" height="13.2" rx="3.2" />
-      <path d="M1.9 8H17.1" />
+      <path d="M1.9 6.6C1.9 5 3.2 3.4 5.1 3.4H13.9C15.8 3.4 17.1 5 17.1 6.6V8H1.9Z" fill="currentColor" />
       <path d="M6.4 1.8V4.8M12.6 1.8V4.8" />
       <path d="M6.6 12.2H6.61M9.5 12.2H9.51M12.4 12.2H12.41" />
+    </TaskActionSvg>
+  );
+}
+
+/** Trong tuần này: lịch với dải tuần */
+export function TaskIconWeek(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg {...props}>
+      <rect x="1.9" y="3.4" width="15.2" height="13.2" rx="3.2" />
+      <path d="M1.9 8H17.1" />
+      <path d="M6.4 1.8V4.8M12.6 1.8V4.8" />
+      <path d="M5.4 12.2H13.6" />
     </TaskActionSvg>
   );
 }
@@ -250,7 +262,7 @@ export function TaskIconStatusAll(props: TaskActionIconProps) {
 export function TaskIconCollaborators(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
-      <circle cx="7" cy="6.4" r="2.8" />
+      <circle cx="7" cy="6.4" r="2.8" fill="currentColor" />
       <path d="M1.8 15.6C1.8 12.8 4 11 7 11C10 11 12.2 12.8 12.2 15.6" />
       <path d="M12.4 3.9A2.8 2.8 0 0 1 12.4 9" />
       <path d="M14.2 11.4C15.9 12 17.2 13.4 17.2 15.6" />
@@ -263,7 +275,7 @@ export function TaskIconCategory(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
       <path d="M2.4 4.6C2.4 3.4 3.4 2.4 4.6 2.4H9.2C9.8 2.4 10.4 2.6 10.8 3.1L16 8.3C16.8 9.1 16.8 10.4 16 11.2L11.2 16C10.4 16.8 9.1 16.8 8.3 16L3.1 10.8C2.6 10.4 2.4 9.8 2.4 9.2Z" />
-      <path d="M6.5 6.5H6.51" />
+      <circle cx="6.6" cy="6.6" r="1.3" fill="currentColor" />
     </TaskActionSvg>
   );
 }
@@ -274,7 +286,7 @@ export function TaskIconDepartment(props: TaskActionIconProps) {
     <TaskActionSvg {...props}>
       <rect x="3.2" y="2.2" width="12.6" height="14.6" rx="3" />
       <path d="M7 6.2H7.01M12 6.2H12.01M7 9.4H7.01M12 9.4H12.01" />
-      <path d="M7.9 16.8V13.9C7.9 13.3 8.4 12.8 9 12.8H10C10.6 12.8 11.1 13.3 11.1 13.9V16.8" />
+      <path d="M7.9 16.8V13.9C7.9 13.3 8.4 12.8 9 12.8H10C10.6 12.8 11.1 13.3 11.1 13.9V16.8Z" fill="currentColor" />
     </TaskActionSvg>
   );
 }
@@ -298,12 +310,13 @@ export function TaskIconHealth(props: TaskActionIconProps) {
   );
 }
 
-/** Tiến độ: vòng tròn với cung đã hoàn thành */
+/** Tiến độ: đồng hồ đo (cung hở phía dưới và kim chỉ mức) */
 export function TaskIconProgress(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
-      <circle cx="9.5" cy="9.5" r="6.8" />
-      <path d="M9.5 2.7A6.8 6.8 0 1 1 2.7 9.5" />
+      <path d="M4.7 14.3A6.8 6.8 0 1 1 14.3 14.3" />
+      <path d="M9.5 9.5L12.4 6.6" />
+      <circle cx="9.5" cy="9.5" r="1.7" fill="currentColor" />
     </TaskActionSvg>
   );
 }
@@ -313,7 +326,7 @@ export function TaskIconOrigin(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
       <path d="M4.2 2.2H10.6L15.2 6.8V14.8C15.2 15.9 14.3 16.8 13.2 16.8H5.8C4.7 16.8 3.8 15.9 3.8 14.8V2.6" />
-      <path d="M10.4 2.4V6.9H15" />
+      <path d="M10.4 2.4V6.9H15Z" fill="currentColor" />
       <path d="M6.6 10.4H12.4M6.6 13.2H10" />
     </TaskActionSvg>
   );

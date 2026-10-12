@@ -27,6 +27,7 @@ import {
   listItemVariants,
   staggerContainerVariants,
 } from "@/lib/motion/variants";
+import { getDocumentHref } from "@/lib/documents/document-view-model";
 
 // ---------------------------------------------------------------------------
 // Types (mirrors API response)
@@ -645,7 +646,7 @@ function DocumentResults({
         return (
           <m.div key={doc.id} variants={listItemVariants}>
             <Link
-              href={`/documents/incoming/${doc.id}`}
+              href={getDocumentHref(doc.id)}
               className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/40 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             >
               {/* Icon */}

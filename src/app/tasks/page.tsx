@@ -2,7 +2,7 @@ import * as React from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { TasksPageClient } from "./tasks-page-client";
-import { type WorkspaceScope, type ViewMode } from "@/components/tasks/task-management-workspace";
+import { type WorkspaceScope } from "@/components/tasks/task-management-workspace";
 import { getSessionFromRequest } from "@/lib/jwt-session";
 import { taskQueryService } from "@/server/tasks";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
@@ -17,7 +17,6 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
   // 1. Canonical view resolution with legacy scope backward-compat mapping (Issue #26)
   const rawView = searchParams.get("view");
   const rawScope = searchParams.get("scope");
-  const rawViewMode = searchParams.get("viewMode");
 
   let canonicalView: TaskView | undefined;
   if (rawView === "related" || rawView === "unit" || rawView === "all" || rawView === "approval") {
@@ -42,13 +41,6 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
     nextParams.set("view", canonicalView);
     redirect(`/tasks?${nextParams.toString()}`);
   }
-
-  const initialViewMode: ViewMode | undefined =
-    rawViewMode === "kanban" || rawViewMode === "table"
-      ? rawViewMode
-      : rawView === "kanban" || rawView === "table"
-      ? rawView
-      : undefined;
 
   const cookieStore = await cookies();
   const session = await getSessionFromRequest({ cookies: cookieStore });
@@ -76,7 +68,6 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
     <TasksPageClient
       initialTasks={authorizedTasks as unknown as SchoolTask[]}
       initialScope={scope}
-      initialView={initialViewMode}
       initialTaskView={canonicalView}
     />
   );

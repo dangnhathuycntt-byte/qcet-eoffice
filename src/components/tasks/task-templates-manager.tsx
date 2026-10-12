@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,9 @@ import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WorkspacePageCard } from "@/components/workspace/page-card";
+import { useAuth } from "@/lib/auth-context";
+import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
 
 interface Template {
   id: string;
@@ -57,6 +61,9 @@ const currentPeriod = () => new Date().toLocaleDateString("sv-SE", { timeZone: "
  * quyền kiểm ở máy chủ nên người khác nhận danh sách rỗng hoặc bị từ chối khi lưu.
  */
 export function TaskTemplatesManager({ className }: { className?: string }) {
+  const { user } = useAuth();
+  // Chỉ ẩn nút cho người chắc chắn không có quyền; máy chủ vẫn là nơi quyết định (`task.assign` theo đơn vị).
+  const canManage = user ? isUserExecutive(user as never) || isUserUnitHead(user as never) : false;
   const [templates, setTemplates] = React.useState<Template[] | null>(null);
   const [recurrences, setRecurrences] = React.useState<Recurrence[]>([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -153,147 +160,166 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
   const recValid = dri && PERIOD_RE.test(start) && (!end || PERIOD_RE.test(end)) && Number(every) >= 1 && Number(every) <= 12;
 
   return (
-    <section aria-label="Mẫu nhiệm vụ" className={cn("space-y-3", className)}>
-      {error && <InlineAlert variant="error">{error}</InlineAlert>}
+    <WorkspacePageCard
+      title="Mẫu nhiệm vụ và nhiệm vụ lặp lại"
+      description="Mẫu cho việc định kỳ: gắn người thực hiện và chu kỳ theo tháng, hệ thống tự tạo nhiệm vụ của tháng."
+      actions={
+        canManage && !form ? (
+          <Button size="sm" onClick={() => openForm(null)}>
+            <Plus aria-hidden="true" />
+            Tạo mẫu
+          </Button>
+        ) : null
+      }
+    >
+      <section aria-label="Mẫu nhiệm vụ" className={cn("space-y-3", className)}>
+        {error && <InlineAlert variant="error">{error}</InlineAlert>}
 
-      {!form && (
-        <Button size="sm" onClick={() => openForm(null)}>
-          Tạo mẫu
-        </Button>
-      )}
-
-      {form && (
-        <div className="space-y-2 rounded-lg border border-border bg-card p-3">
-          <h2 className="text-compact font-semibold text-foreground">{form.id ? "Sửa mẫu" : "Mẫu mới"}</h2>
-          <Input compact value={name} maxLength={200} aria-label="Tên mẫu" placeholder="Tên mẫu (ví dụ: Báo cáo công tác tháng)" onChange={(e) => setName(e.target.value)} />
-          <Select
-            compact
-            positionerClassName="z-50"
-            aria-label="Đơn vị"
-            placeholder="— Đơn vị chủ quản —"
-            options={departments.map((d) => ({ value: d.id, label: d.name }))}
-            value={unitId}
-            onValueChange={(v) => setUnitId(v || null)}
-          />
-          <Input compact value={title} maxLength={500} aria-label="Tiêu đề nhiệm vụ" placeholder="Tiêu đề, dùng {thang}, {nam}, {nam_hoc} để chèn kỳ" onChange={(e) => setTitle(e.target.value)} />
-          <Textarea compact value={description} maxLength={5000} aria-label="Mô tả" placeholder="Mô tả (không bắt buộc)" onChange={(e) => setDescription(e.target.value)} className="min-h-14" />
-          <div className="grid grid-cols-2 gap-2">
+        {form && (
+          <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+            <h2 className="text-compact font-semibold text-foreground">{form.id ? "Sửa mẫu" : "Mẫu mới"}</h2>
+            <Input compact value={name} maxLength={200} aria-label="Tên mẫu" placeholder="Tên mẫu (ví dụ: Báo cáo công tác tháng)" onChange={(e) => setName(e.target.value)} />
             <Select
               compact
               positionerClassName="z-50"
-              aria-label="Ưu tiên"
-              options={PRIORITY_DISPLAY_CONFIG.map((p) => ({ value: p.value, label: p.label }))}
-              value={priority}
-              onValueChange={(v) => setPriority(v || "NORMAL")}
+              aria-label="Đơn vị"
+              placeholder="— Đơn vị chủ quản —"
+              options={departments.map((d) => ({ value: d.id, label: d.name }))}
+              value={unitId}
+              onValueChange={(v) => setUnitId(v || null)}
             />
-            <Input compact value={dueDay} inputMode="numeric" aria-label="Ngày hạn trong tháng" placeholder="Ngày hạn (1-28)" onChange={(e) => setDueDay(e.target.value.replace(/\D/g, ""))} />
+            <Input compact value={title} maxLength={500} aria-label="Tiêu đề nhiệm vụ" placeholder="Tiêu đề, dùng {thang}, {nam}, {nam_hoc} để chèn kỳ" onChange={(e) => setTitle(e.target.value)} />
+            <Textarea compact value={description} maxLength={5000} aria-label="Mô tả" placeholder="Mô tả (không bắt buộc)" onChange={(e) => setDescription(e.target.value)} className="min-h-14" />
+            <div className="grid grid-cols-2 gap-2">
+              <Select
+                compact
+                positionerClassName="z-50"
+                aria-label="Ưu tiên"
+                options={PRIORITY_DISPLAY_CONFIG.map((p) => ({ value: p.value, label: p.label }))}
+                value={priority}
+                onValueChange={(v) => setPriority(v || "NORMAL")}
+              />
+              <Input compact value={dueDay} inputMode="numeric" aria-label="Ngày hạn trong tháng" placeholder="Ngày hạn (1-28)" onChange={(e) => setDueDay(e.target.value.replace(/\D/g, ""))} />
+            </div>
+            <Textarea compact value={criteria} aria-label="Tiêu chí hoàn thành" placeholder="Tiêu chí hoàn thành (mỗi dòng một tiêu chí, tối đa 20)" onChange={(e) => setCriteria(e.target.value)} className="min-h-14" />
+            <Textarea compact value={subtasks} aria-label="Việc con" placeholder="Việc con (mỗi dòng một việc, tối đa 20)" onChange={(e) => setSubtasks(e.target.value)} className="min-h-14" />
+            <div className="flex gap-1.5">
+              <Button size="sm" disabled={busy || !formValid} onClick={() => void saveTemplate()}>
+                Lưu mẫu
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setForm(null)}>
+                Hủy
+              </Button>
+            </div>
           </div>
-          <Textarea compact value={criteria} aria-label="Tiêu chí hoàn thành" placeholder="Tiêu chí hoàn thành (mỗi dòng một tiêu chí, tối đa 20)" onChange={(e) => setCriteria(e.target.value)} className="min-h-14" />
-          <Textarea compact value={subtasks} aria-label="Việc con" placeholder="Việc con (mỗi dòng một việc, tối đa 20)" onChange={(e) => setSubtasks(e.target.value)} className="min-h-14" />
-          <div className="flex gap-1.5">
-            <Button size="sm" disabled={busy || !formValid} onClick={() => void saveTemplate()}>
-              Lưu mẫu
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setForm(null)}>
-              Hủy
-            </Button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {templates && templates.length === 0 && !form && (
-        <EmptyState
-          role="status"
-          density="compact"
-          illustration="templates"
-          title="Chưa có mẫu nào"
-          description="Mẫu nhiệm vụ của các đơn vị bạn quản lý sẽ hiện ở đây."
-        />
-      )}
-
-      <ul className="space-y-2">
-        {(templates ?? []).map((t) => {
-          const recs = recurrences.filter((r) => r.templateId === t.id);
-          return (
-            <li key={t.id} className={cn("rounded-lg border border-border bg-card p-3", !t.isActive && "opacity-70")}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-compact font-medium text-foreground" title={t.name}>{t.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {unitName(t.unitId)} · hạn ngày {t.dueDay} · {t.criteria.length} tiêu chí · {t.subtasks.length} việc con{!t.isActive ? " · đã ngừng dùng" : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-1">
-                  <Button size="xs" variant="ghost" onClick={() => openForm(t)}>Sửa</Button>
-                  <Button size="xs" variant="ghost" disabled={busy} onClick={() => void run(() => api(`/api/task-templates/${t.id}`, { method: "PATCH", body: JSON.stringify({ isActive: !t.isActive }) }))}>
-                    {t.isActive ? "Ngừng dùng" : "Dùng lại"}
-                  </Button>
-                </div>
-              </div>
-
-              {recs.length > 0 && (
-                <ul className="mt-2 space-y-1">
-                  {recs.map((r) => (
-                    <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
-                      <span className="min-w-0 truncate text-foreground">
-                        {personName(r.driUserId)} · mỗi {r.everyMonths} tháng từ {r.startPeriod}{r.endPeriod ? ` đến ${r.endPeriod}` : ""}{r.catchUpPeriods ? ` · bù ${r.catchUpPeriods} tháng` : ""}
-                        {!r.isActive ? " · tạm dừng" : ""}
-                        {r.lastRun ? (
-                          <span className={cn("ml-1", r.lastRun.error ? "text-destructive" : "text-muted-foreground")} title={r.lastRun.error ?? undefined}>
-                            · kỳ {r.lastRun.periodKey}: {RUN_LABEL[r.lastRun.status]}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="flex shrink-0 gap-1">
-                        {r.lastRun?.status === "FAILED" && (
-                          <Button size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { retryFailed: true })}>Thử lại</Button>
-                        )}
-                        <Button size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { isActive: !r.isActive })}>
-                          {r.isActive ? "Tạm dừng" : "Tiếp tục"}
-                        </Button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {t.isActive && recFor !== t.id && (
-                <Button size="xs" variant="ghost" className="mt-2" onClick={() => setRecFor(t.id)}>
-                  Thêm lịch lặp lại
+        {templates && templates.length === 0 && !form && (
+          <EmptyState
+            role="status"
+            density="compact"
+            illustration="templates"
+            title="Chưa có mẫu nào"
+            description={
+              canManage
+                ? "Tạo mẫu cho việc lặp lại hằng tháng (báo cáo tháng, kiểm kê…) để hệ thống tự tạo nhiệm vụ mỗi kỳ."
+                : "Chỉ trưởng đơn vị và lãnh đạo tạo và quản lý mẫu nhiệm vụ. Mẫu của đơn vị bạn quản lý sẽ hiện ở đây."
+            }
+            action={
+              canManage ? (
+                <Button size="sm" onClick={() => openForm(null)}>
+                  <Plus aria-hidden="true" />
+                  Tạo mẫu đầu tiên
                 </Button>
-              )}
-              {recFor === t.id && (
-                <div className="mt-2 space-y-1.5">
-                  <Select compact positionerClassName="z-50" aria-label="Người chủ trì" placeholder="— Người chủ trì —" options={personnel.map((p) => ({ value: p.id, label: p.name }))} value={dri} onValueChange={(v) => setDri(v || null)} />
-                  <Select compact positionerClassName="z-50" aria-label="Người duyệt" placeholder="— Người duyệt (không bắt buộc) —" options={personnel.map((p) => ({ value: p.id, label: p.name }))} value={reviewer} onValueChange={(v) => setReviewer(v || null)} />
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input compact value={every} inputMode="numeric" aria-label="Lặp mỗi (tháng)" placeholder="Mỗi N tháng" onChange={(e) => setEvery(e.target.value.replace(/\D/g, ""))} />
-                    <Input compact value={start} aria-label="Kỳ bắt đầu" placeholder="Bắt đầu YYYY-MM" onChange={(e) => setStart(e.target.value)} />
-                    <Input compact value={end} aria-label="Kỳ kết thúc" placeholder="Kết thúc YYYY-MM" onChange={(e) => setEnd(e.target.value)} />
+              ) : undefined
+            }
+          />
+        )}
+
+        <ul className="space-y-2">
+          {(templates ?? []).map((t) => {
+            const recs = recurrences.filter((r) => r.templateId === t.id);
+            return (
+              <li key={t.id} className={cn("rounded-lg border border-border bg-card p-3", !t.isActive && "opacity-70")}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-compact font-medium text-foreground" title={t.name}>{t.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {unitName(t.unitId)} · hạn ngày {t.dueDay} · {t.criteria.length} tiêu chí · {t.subtasks.length} việc con{!t.isActive ? " · đã ngừng dùng" : ""}
+                    </p>
                   </div>
-                  <Select
-                    compact
-                    positionerClassName="z-50"
-                    aria-label="Bù kỳ đã qua"
-                    options={[
-                      { value: "0", label: "Không bù kỳ đã qua" },
-                      { value: "1", label: "Bù tối đa 1 tháng đã qua" },
-                      { value: "2", label: "Bù tối đa 2 tháng đã qua" },
-                      { value: "3", label: "Bù tối đa 3 tháng đã qua" },
-                    ]}
-                    value={catchUp}
-                    onValueChange={(v) => setCatchUp(v || "0")}
-                  />
-                  <div className="flex gap-1.5">
-                    <Button size="xs" disabled={busy || !recValid} onClick={() => void saveRecurrence(t.id)}>Lưu lịch</Button>
-                    <Button size="xs" variant="ghost" onClick={() => setRecFor(null)}>Hủy</Button>
+                  <div className="flex shrink-0 gap-1">
+                    <Button size="xs" variant="ghost" onClick={() => openForm(t)}>Sửa</Button>
+                    <Button size="xs" variant="ghost" disabled={busy} onClick={() => void run(() => api(`/api/task-templates/${t.id}`, { method: "PATCH", body: JSON.stringify({ isActive: !t.isActive }) }))}>
+                      {t.isActive ? "Ngừng dùng" : "Dùng lại"}
+                    </Button>
                   </div>
                 </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+
+                {recs.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {recs.map((r) => (
+                      <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
+                        <span className="min-w-0 truncate text-foreground">
+                          {personName(r.driUserId)} · mỗi {r.everyMonths} tháng từ {r.startPeriod}{r.endPeriod ? ` đến ${r.endPeriod}` : ""}{r.catchUpPeriods ? ` · bù ${r.catchUpPeriods} tháng` : ""}
+                          {!r.isActive ? " · tạm dừng" : ""}
+                          {r.lastRun ? (
+                            <span className={cn("ml-1", r.lastRun.error ? "text-destructive" : "text-muted-foreground")} title={r.lastRun.error ?? undefined}>
+                              · kỳ {r.lastRun.periodKey}: {RUN_LABEL[r.lastRun.status]}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="flex shrink-0 gap-1">
+                          {r.lastRun?.status === "FAILED" && (
+                            <Button size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { retryFailed: true })}>Thử lại</Button>
+                          )}
+                          <Button size="xs" variant="ghost" disabled={busy} onClick={() => void patchRecurrence(r.id, { isActive: !r.isActive })}>
+                            {r.isActive ? "Tạm dừng" : "Tiếp tục"}
+                          </Button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {t.isActive && recFor !== t.id && (
+                  <Button size="xs" variant="ghost" className="mt-2" onClick={() => setRecFor(t.id)}>
+                    Thêm lịch lặp lại
+                  </Button>
+                )}
+                {recFor === t.id && (
+                  <div className="mt-2 space-y-1.5">
+                    <Select compact positionerClassName="z-50" aria-label="Người chủ trì" placeholder="— Người chủ trì —" options={personnel.map((p) => ({ value: p.id, label: p.name }))} value={dri} onValueChange={(v) => setDri(v || null)} />
+                    <Select compact positionerClassName="z-50" aria-label="Người duyệt" placeholder="— Người duyệt (không bắt buộc) —" options={personnel.map((p) => ({ value: p.id, label: p.name }))} value={reviewer} onValueChange={(v) => setReviewer(v || null)} />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input compact value={every} inputMode="numeric" aria-label="Lặp mỗi (tháng)" placeholder="Mỗi N tháng" onChange={(e) => setEvery(e.target.value.replace(/\D/g, ""))} />
+                      <Input compact value={start} aria-label="Kỳ bắt đầu" placeholder="Bắt đầu YYYY-MM" onChange={(e) => setStart(e.target.value)} />
+                      <Input compact value={end} aria-label="Kỳ kết thúc" placeholder="Kết thúc YYYY-MM" onChange={(e) => setEnd(e.target.value)} />
+                    </div>
+                    <Select
+                      compact
+                      positionerClassName="z-50"
+                      aria-label="Bù kỳ đã qua"
+                      options={[
+                        { value: "0", label: "Không bù kỳ đã qua" },
+                        { value: "1", label: "Bù tối đa 1 tháng đã qua" },
+                        { value: "2", label: "Bù tối đa 2 tháng đã qua" },
+                        { value: "3", label: "Bù tối đa 3 tháng đã qua" },
+                      ]}
+                      value={catchUp}
+                      onValueChange={(v) => setCatchUp(v || "0")}
+                    />
+                    <div className="flex gap-1.5">
+                      <Button size="xs" disabled={busy || !recValid} onClick={() => void saveRecurrence(t.id)}>Lưu lịch</Button>
+                      <Button size="xs" variant="ghost" onClick={() => setRecFor(null)}>Hủy</Button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </WorkspacePageCard>
   );
 }

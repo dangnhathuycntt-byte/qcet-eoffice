@@ -112,10 +112,10 @@ const toRows = (rows: Array<ViewDetailRow | null>): ViewDetailRow[] => rows.filt
 const stepKindOf = (status: DocumentStatus, workflowStatus: string | null | undefined, kind: DocumentKind) =>
   getLedgerStepLabel(status, workflowStatus ?? undefined, kind === "incoming" ? "inbox" : kind === "outgoing" ? "outbox" : "submission");
 
-/** Đường dẫn trang đầy đủ của văn bản; `fileId` giữ tệp đang xem. */
-export function getFullPageHref(kind: DocumentKind, id: string, fileId?: string | null): string {
-  const base = kind === "incoming" ? `/documents/incoming/${id}` : kind === "outgoing" ? `/documents/outgoing/${id}` : `/documents/${id}`;
-  return fileId ? `${base}?file=${encodeURIComponent(fileId)}` : base;
+/** Đường dẫn mở văn bản trong Quick View của sổ văn bản (không còn trang chi tiết riêng); `fileId` giữ tệp đang xem. */
+export function getDocumentHref(id: string, fileId?: string | null): string {
+  const base = `/documents?docId=${encodeURIComponent(id)}`;
+  return fileId ? `${base}&file=${encodeURIComponent(fileId)}` : base;
 }
 
 /** Từ dữ liệu API (`GET /api/documents/[id]`). */

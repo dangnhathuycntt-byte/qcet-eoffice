@@ -2,14 +2,8 @@
 
 // Unified Task Toolbar Component — Unified control toolbar for task views
 import * as React from "react";
-import { Search, X, Plus, Filter, Building, Calendar, School, User, Users, Tag, Flag, Check, CheckCircle2, ChevronRight, RotateCcw, FileText, Clock, Circle } from "lucide-react";
+import { Search, Plus, Filter, RotateCcw } from "lucide-react";
 import {
-  StatusSubAll,
-  StatusSubNew,
-  StatusSubInProgress,
-  StatusSubReview,
-  StatusSubCompleted,
-  PrioritySubBars,
   HealthSubAll,
   HealthSubOnTrack,
   HealthSubAtRisk,
@@ -27,9 +21,28 @@ import {
 } from "./task-filter-icons";
 import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
-import { ListToolbarClearFiltersButton, ListToolbarCountBadge, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
+import { MENU_POPUP_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import {
+  TaskIconPriorityUrgent,
+  TaskIconPriorityHigh,
+  TaskIconPriorityNormal,
+} from "@/components/tasks/task-action-icons";
+import {
+  TaskIconAssignee,
+  TaskIconCollaborators,
+  TaskIconDepartment,
+  TaskIconPriority,
+  TaskIconStatus,
+  TaskIconDeadline,
+  TaskIconTime,
+  TaskIconStatusNew,
+} from "@/lib/icons/task-icons";
+import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
+import { ListToolbarFilterButton, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
 import {
   NO_TASK_TIME_FILTER,
+  getTaskTimeFilterLabel,
   type TaskTimeFilter,
 } from "@/lib/task-time-filter";
 import type { AuthUser } from "@/types/auth";
@@ -50,9 +63,9 @@ import {
   MenuPositioner,
   MenuPopup,
   MenuItem,
+  MenuOptionItem,
   MenuSeparator,
-  MenuSubmenuRoot,
-  MenuSubmenuTrigger,
+  MenuSubmenu,
 } from "@/components/ui/menu";
 import {
   type SavedTaskView,
@@ -83,7 +96,6 @@ import {
   TaskTableViewOptionsPopover,
 } from "@/components/tasks/table/components/task-table-toolbar";
 import { Pressable } from "@/components/ui/pressable";
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
 
 // Export Saved Views Infrastructure
 export {
@@ -221,11 +233,9 @@ export interface UnifiedTaskToolbarProps {
 
   onResetFilters?: () => void;
 
-  // View Mode
-  viewMode?: TaskViewMode | "table" | "kanban";
-  onViewModeChange?: (view: any) => void;
-
   // Density
+  /** Chip bộ lọc đang áp, hiện bên trái hàng điều khiển */
+  activeFilters?: React.ReactNode;
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
 
@@ -302,7 +312,12 @@ export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "NORMAL", label: "Bình thường" },
 ];
 
-/** Bật/tắt một giá trị trong bộ lọc chọn nhiều; bỏ hết thì quay về `allToken`. */
+/** Số giá trị đang lọc của một nhóm (0 khi đang là "Tất cả"). */
+function countFilterValues(raw: string | undefined | null, allToken: string): number {
+  if (!raw) return 0;
+  return raw.split(",").map((v) => v.trim()).filter((v) => v && v.toLowerCase() !== allToken.toLowerCase()).length;
+}
+
 function toggleMultiValue(
   selectedList: string[],
   isAll: boolean,
@@ -470,8 +485,7 @@ export function UnifiedTaskToolbar({
   monthlyTaskCounts,
   showAcademicMonthBar = false,
   onResetFilters,
-  viewMode = "table",
-  onViewModeChange,
+  activeFilters,
   density = "comfortable",
   onDensityChange,
   visibleColumns: propVisibleColumns,
@@ -498,6 +512,7 @@ export function UnifiedTaskToolbar({
 }: UnifiedTaskToolbarProps) {
   // Input ref for keyboard focus shortcut
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
 
   // Search input local state & debouncing (synchronous typing, 0ms input lag)
   const [localSearch, setLocalSearch] = React.useState(searchQuery || "");
@@ -531,8 +546,6 @@ export function UnifiedTaskToolbar({
   }, [onSearchChange]);
 
   const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
-  const [menuSearch, setMenuSearch] = React.useState("");
-  const menuSearchInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedLead, setSelectedLead] = React.useState<string | null>(null);
   const [internalHealth, setInternalHealth] = React.useState<string | null>(null);
   const selectedHealth = propSelectedHealth !== undefined ? propSelectedHealth : internalHealth;
@@ -583,17 +596,6 @@ export function UnifiedTaskToolbar({
   const handleResetDisplayProperties = React.useCallback(() => {
     handleVisibleColumnsChange(DEFAULT_DISPLAY_PROPERTIES);
   }, [handleVisibleColumnsChange]);
-
-  React.useEffect(() => {
-    if (isCollapsedFilterOpen) {
-      const timer = setTimeout(() => {
-        menuSearchInputRef.current?.focus({ preventScroll: true });
-      }, 60);
-      return () => clearTimeout(timer);
-    } else {
-      setMenuSearch("");
-    }
-  }, [isCollapsedFilterOpen]);
 
   // Resolve Month props (supporting compatibility aliases)
   const effectiveMonth = selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
@@ -674,8 +676,11 @@ export function UnifiedTaskToolbar({
           return;
         }
 
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
+        setIsSearchOpen(true);
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        });
       }
     };
 
@@ -778,16 +783,6 @@ export function UnifiedTaskToolbar({
     isCollaboratorActive,
   ].filter(Boolean).length;
 
-  const isAnyFilterActive = Boolean(
-    isSearchActive ||
-    isMonthActive ||
-    isStatusActive ||
-    isDeadlineActive ||
-    isPriorityActive ||
-    isCategoryActive ||
-    (showDepartmentFilter && isDepartmentActive)
-  );
-
   // Optional 12 month cycle list for year
   const academicMonths = React.useMemo(() => {
     return getAcademicMonthsForYear(academicYear);
@@ -801,7 +796,6 @@ export function UnifiedTaskToolbar({
     handleHealthChange(null);
     handleOriginChange(null);
     handleCollaboratorChange(null);
-    setMenuSearch("");
     resetTaskToolbarFilters({
       onResetFilters, onSearchChange, onTabChange, onStatusChange,
       onDeadlineChange, onCategoryChange, onPriorityChange,
@@ -931,45 +925,28 @@ export function UnifiedTaskToolbar({
               };
 
               return (
-                <MenuItem
+                <MenuOptionItem
                   key={opt.value}
-                  closeOnClick={false}
                   onClick={handleToggle}
-                  className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-muted/70 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {opt.value === "all" ? (
-                      <StatusSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
-                    ) : opt.value === "new" ? (
-                      <StatusSubNew className="size-3.5 text-muted-foreground/70 shrink-0" />
-                    ) : opt.value === "in_progress" ? (
-                      <StatusSubInProgress className="size-3.5 text-foreground/80 shrink-0" />
-                    ) : opt.value === "waiting_approval" || opt.value === "review" ? (
-                      <StatusSubReview className="size-3.5 text-foreground/80 shrink-0" />
-                    ) : opt.value === "completed" ? (
-                      <StatusSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
+                  selected={selected}
+                  leading={opt.value === "all" ? (
+                      <TaskIconStatus className="size-4 text-muted-foreground" />
                     ) : (
-                      <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" />
+                      <TaskStatusCircle
+                        status={
+                          opt.value === "new"
+                            ? "NOT_STARTED"
+                            : opt.value === "in_progress"
+                              ? "IN_PROGRESS"
+                              : opt.value === "completed"
+                                ? "COMPLETED"
+                                : "WAITING_APPROVAL"
+                        }
+                      />
                     )}
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                      selected
-                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                    )}
-                  >
-                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                  </div>
-                </MenuItem>
+                >
+                  {opt.label}
+                </MenuOptionItem>
               );
             })}
           </div>
@@ -995,39 +972,22 @@ export function UnifiedTaskToolbar({
               };
 
               return (
-                <MenuItem
+                <MenuOptionItem
                   key={opt.id}
-                  closeOnClick={false}
                   onClick={handleToggle}
-                  className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-muted/70 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <PrioritySubBars
-                      level={level as 0 | 1 | 2 | 3}
-                      className={cn(
-                        "size-3.5 shrink-0",
-                        selected ? "text-foreground" : "text-muted-foreground/70"
-                      )}
-                    />
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                      selected
-                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
+                  selected={selected}
+                  leading={opt.id === "URGENT" ? (
+                      <TaskIconPriorityUrgent className="size-4 text-destructive" />
+                    ) : opt.id === "HIGH" ? (
+                      <TaskIconPriorityHigh className="size-4 text-foreground/70" />
+                    ) : opt.id === "NORMAL" ? (
+                      <TaskIconPriorityNormal className="size-4 text-muted-foreground" />
+                    ) : (
+                      <TaskIconPriority className="size-4 text-muted-foreground" />
                     )}
-                  >
-                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                  </div>
-                </MenuItem>
+                >
+                  {opt.label}
+                </MenuOptionItem>
               );
             })}
           </div>
@@ -1038,7 +998,7 @@ export function UnifiedTaskToolbar({
         const isAll = selectedList.length === 0 || selectedList.includes("ALL");
 
         return (
-          <div className="space-y-px max-h-56 overflow-y-auto">
+          <div className="space-y-px">
             {CATEGORY_FILTER_OPTIONS.map((cat) => {
               const selected = cat.id === "ALL" ? isAll : selectedList.includes(cat.id);
 
@@ -1052,33 +1012,13 @@ export function UnifiedTaskToolbar({
               };
 
               return (
-                <MenuItem
+                <MenuOptionItem
                   key={cat.id}
-                  closeOnClick={false}
                   onClick={handleToggle}
-                  className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-muted/70 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
+                  selected={selected}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FilterIconCategory className="size-3.5 text-muted-foreground/60 shrink-0" />
-                    <span className="truncate">{cat.label}</span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                      selected
-                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                    )}
-                  >
-                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                  </div>
-                </MenuItem>
+                  {cat.label}
+                </MenuOptionItem>
               );
             })}
           </div>
@@ -1114,151 +1054,57 @@ export function UnifiedTaskToolbar({
         return (
           <div className="space-y-px">
             {/* Tất cả đơn vị */}
-            <MenuItem
-              closeOnClick={false}
+            <MenuOptionItem
               onClick={() => handleDeptToggle("ALL")}
-              className={cn(
-                "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                isAll
-                  ? "bg-accent font-medium text-foreground"
-                  : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-              )}
+              selected={isAll}
+              leading={<FilterIconDept className="size-4 text-muted-foreground" />}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <FilterIconDept className="size-3.5 text-muted-foreground/60 shrink-0" />
-                <span>Tất cả đơn vị</span>
-              </div>
-              <div
-                className={cn(
-                  "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                  isAll
-                    ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                    : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                )}
-              >
-                {isAll && <Check className="size-2.5 stroke-[2.5]" />}
-              </div>
-            </MenuItem>
+              Tất cả đơn vị
+            </MenuOptionItem>
 
             <MenuSeparator className="h-px bg-border/40 my-1" />
 
             {/* Sub-dropdown cấp 2: Khoa chuyên môn */}
-            <MenuSubmenuRoot>
-              <MenuSubmenuTrigger
-                openOnHover
-                delay={60}
-                closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <School className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
-                  <span className={cn("truncate", isFacultyActive ? "font-medium text-foreground" : "font-normal")}>
-                    Khoa đào tạo
-                  </span>
-                </div>
-                <ChevronRight
-                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                />
-              </MenuSubmenuTrigger>
-              <MenuPortal>
-                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-                  <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-                    <div className="space-y-px">
-                      {facultyDepts.map((dept) => {
-                        const selected = !isAll && selectedList.includes(dept.code);
-                        return (
-                          <MenuItem
-                            key={dept.code}
-                            closeOnClick={false}
-                            onClick={() => handleDeptToggle(dept.code)}
-                            className={cn(
-                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                              selected
-                                ? "bg-accent font-medium text-foreground"
-                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <School className="size-3.5 text-muted-foreground/60 shrink-0" />
-                              <span className="truncate">{dept.name}</span>
-                            </div>
-                            <div
-                              className={cn(
-                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                                selected
-                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                                  : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                              )}
-                            >
-                              {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                            </div>
-                          </MenuItem>
-                        );
-                      })}
-                    </div>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </MenuSubmenuRoot>
+            <MenuSubmenu
+              icon={<TaskIconDepartment className="size-4 text-muted-foreground" />}
+              label="Khoa đào tạo"
+              active={isFacultyActive}
+              popupClassName="min-w-[210px]"
+            >
+              <div className="space-y-px">
+                {facultyDepts.map((dept) => (
+                  <MenuOptionItem
+                    key={dept.code}
+                    onClick={() => handleDeptToggle(dept.code)}
+                    selected={!isAll && selectedList.includes(dept.code)}
+                    leading={<TaskIconDepartment className="size-4 text-muted-foreground" />}
+                  >
+                    {dept.name}
+                  </MenuOptionItem>
+                ))}
+              </div>
+            </MenuSubmenu>
 
             {/* Sub-dropdown cấp 2: Khối Hành chính & Phòng ban */}
-            <MenuSubmenuRoot>
-              <MenuSubmenuTrigger
-                openOnHover
-                delay={60}
-                closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Building className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
-                  <span className={cn("truncate", isAdminActive ? "font-medium text-foreground" : "font-normal")}>
-                    Phòng ban hành chính
-                  </span>
-                </div>
-                <ChevronRight
-                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                />
-              </MenuSubmenuTrigger>
-              <MenuPortal>
-                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-                  <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-                    <div className="space-y-px">
-                      {adminDepts.map((dept) => {
-                        const selected = !isAll && selectedList.includes(dept.code);
-                        return (
-                          <MenuItem
-                            key={dept.code}
-                            closeOnClick={false}
-                            onClick={() => handleDeptToggle(dept.code)}
-                            className={cn(
-                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                              selected
-                                ? "bg-accent font-medium text-foreground"
-                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Building className="size-3.5 text-muted-foreground/60 shrink-0" />
-                              <span className="truncate">{dept.name}</span>
-                            </div>
-                            <div
-                              className={cn(
-                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                                selected
-                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                                  : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                              )}
-                            >
-                              {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                            </div>
-                          </MenuItem>
-                        );
-                      })}
-                    </div>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </MenuSubmenuRoot>
+            <MenuSubmenu
+              icon={<TaskIconDepartment className="size-4 text-muted-foreground" />}
+              label="Phòng ban hành chính"
+              active={isAdminActive}
+              popupClassName="min-w-[210px]"
+            >
+              <div className="space-y-px">
+                {adminDepts.map((dept) => (
+                  <MenuOptionItem
+                    key={dept.code}
+                    onClick={() => handleDeptToggle(dept.code)}
+                    selected={!isAll && selectedList.includes(dept.code)}
+                    leading={<TaskIconDepartment className="size-4 text-muted-foreground" />}
+                  >
+                    {dept.name}
+                  </MenuOptionItem>
+                ))}
+              </div>
+            </MenuSubmenu>
           </div>
         );
       }
@@ -1275,9 +1121,8 @@ export function UnifiedTaskToolbar({
             {leadOptions.map((opt) => {
               const selected = selectedLead === opt.value || (opt.value === "all" && !selectedLead && activeTab !== "my") || (opt.value === "my" && activeTab === "my");
               return (
-                <MenuItem
+                <MenuOptionItem
                   key={opt.value}
-                  closeOnClick={false}
                   onClick={() => {
                     if (opt.value === "my") {
                       onTabChange?.("my");
@@ -1289,39 +1134,21 @@ export function UnifiedTaskToolbar({
                       setSelectedLead(opt.value);
                     }
                   }}
-                  className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-muted/70 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {opt.value === "my" ? (
-                      <FilterIconLead className="size-3.5 text-foreground/80 shrink-0" />
+                  selected={selected}
+                  leading={opt.value === "my" ? (
+                      <FilterIconLead className="size-4 text-muted-foreground" />
                     ) : opt.value === "bgh" ? (
-                      <FilterIconDept className="size-3.5 text-muted-foreground/70 shrink-0" />
+                      <FilterIconDept className="size-4 text-muted-foreground" />
                     ) : opt.value === "assigned" ? (
-                      <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
+                      <FilterIconLead className="size-4 text-muted-foreground" />
                     ) : opt.value === "unassigned" ? (
-                      <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeDasharray="2 2" />
+                      <TaskIconStatusNew className="size-4 text-muted-foreground" />
                     ) : (
-                      <Users className="size-3.5 text-muted-foreground/60 shrink-0" />
+                      <TaskIconCollaborators className="size-4 text-muted-foreground" />
                     )}
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                      selected
-                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                    )}
-                  >
-                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                  </div>
-                </MenuItem>
+                >
+                  {opt.label}
+                </MenuOptionItem>
               );
             })}
           </div>
@@ -1338,188 +1165,94 @@ export function UnifiedTaskToolbar({
             {collabOptions.map((opt) => {
               const selected = selectedCollaborator === opt.value || (opt.value === "all" && !selectedCollaborator);
               return (
-                <MenuItem
+                <MenuOptionItem
                   key={opt.value}
-                  closeOnClick={false}
                   onClick={() => {
                     handleCollaboratorChange(opt.value === "all" ? null : opt.value);
                   }}
-                  className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-muted/70 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {opt.value === "has_collab" ? (
-                      <FilterIconCollaborator className="size-3.5 text-foreground/80 shrink-0" />
+                  selected={selected}
+                  leading={opt.value === "has_collab" ? (
+                      <FilterIconCollaborator className="size-4 text-muted-foreground" />
                     ) : opt.value === "single" ? (
-                      <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
+                      <FilterIconLead className="size-4 text-muted-foreground" />
                     ) : (
-                      <Users className="size-3.5 text-muted-foreground/50 shrink-0" />
+                      <TaskIconCollaborators className="size-4 text-muted-foreground" />
                     )}
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                      selected
-                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                    )}
-                  >
-                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                  </div>
-                </MenuItem>
+                >
+                  {opt.label}
+                </MenuOptionItem>
               );
             })}
           </div>
         );
       }
       case "dates": {
+        // Cấp 2 theo menu "Đổi hạn hoàn thành": nhãn trái, gợi ý phải, hàng đang chọn nền accent đậm.
+        // Cấp 3 là "Kỳ tháng" (lưới tháng) và "Chọn ngày khác" (lịch dùng chung với menu chuột phải).
         return (
           <div className="space-y-px">
-            {/* Sub-dropdown cấp 2: Hạn chốt */}
-            <MenuSubmenuRoot>
-              <MenuSubmenuTrigger
-                openOnHover
-                delay={60}
-                closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+            {deadlineOptions.map((opt) => (
+              <MenuOptionItem
+                key={opt.value}
+                selected={
+                  effectiveDeadline === opt.value ||
+                  (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"))
+                }
+                hint={opt.count !== undefined && opt.count > 0 ? opt.count : undefined}
+                onClick={() => {
+                  if (onDeadlineChange) onDeadlineChange(opt.value);
+                  else onTabChange?.(opt.value === "all" ? "all" : opt.value);
+                }}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Calendar className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
-                  <span className={cn("truncate", isDeadlineActive ? "font-medium text-foreground" : "font-normal")}>
-                    Hạn chốt
-                  </span>
-                </div>
-                <ChevronRight
-                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                />
-              </MenuSubmenuTrigger>
-              <MenuPortal>
-                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-                  <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-                    <div className="space-y-px">
-                      {deadlineOptions.map((opt) => {
-                        const selected = effectiveDeadline === opt.value ||
-                          (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"));
-                        return (
-                          <MenuItem
-                            key={opt.value}
-                            closeOnClick={false}
-                            onClick={() => {
-                              if (onDeadlineChange) onDeadlineChange(opt.value);
-                              else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-                            }}
-                            className={cn(
-                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                              selected
-                                ? "bg-accent font-medium text-foreground"
-                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" />
-                              <span>{opt.label}</span>
-                              {opt.count !== undefined && opt.count > 0 && (
-                                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">({opt.count})</span>
-                              )}
-                            </div>
-                            <div
-                              className={cn(
-                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                                selected
-                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                                  : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                              )}
-                            >
-                              {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                            </div>
-                          </MenuItem>
-                        );
-                      })}
-                    </div>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </MenuSubmenuRoot>
+                {opt.label}
+              </MenuOptionItem>
+            ))}
 
-            {/* Sub-dropdown cấp 2: Kỳ tháng */}
-            <MenuSubmenuRoot>
-              <MenuSubmenuTrigger
-                openOnHover
-                delay={60}
-                closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+            <MenuSeparator className="my-1 border-t border-border/40" />
+
+            <MenuSubmenu
+              icon={<TaskIconTime className="size-4 text-muted-foreground" />}
+              label="Kỳ tháng"
+              hint={effectiveTimeFilter.kind === "month" ? `T${effectiveTimeFilter.month}` : undefined}
+              title={`Năm học ${academicYear}`}
+              popupClassName="w-52"
+            >
+              <MenuOptionItem
+                selected={effectiveTimeFilter.kind === "none"}
+                onClick={() => handleTimeFilterChange(NO_TASK_TIME_FILTER)}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Clock className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" />
-                  <span className={cn("truncate", isMonthActive ? "font-medium text-foreground" : "font-normal")}>
-                    Kỳ tháng
-                  </span>
-                </div>
-                <ChevronRight
-                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-                />
-              </MenuSubmenuTrigger>
-              <MenuPortal>
-                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-                  <MenuPopup className="min-w-[190px] w-auto max-w-[260px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-                    <div className="space-y-px">
-                      <MenuItem
-                        closeOnClick={false}
-                        onClick={() => {
-                          handleTimeFilterChange(NO_TASK_TIME_FILTER);
-                        }}
-                        className={cn(
-                          "flex h-7 w-full items-center gap-2 rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                          effectiveTimeFilter.kind === "none"
-                            ? "bg-accent font-medium text-foreground"
-                            : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                        )}
-                      >
-                        <Clock className="size-3.5 text-muted-foreground/60 shrink-0" />
-                        <span>Tất cả các tháng</span>
-                      </MenuItem>
+                Tất cả các tháng
+              </MenuOptionItem>
+              <div className="grid grid-cols-4 gap-0.5 pt-1">
+                {academicMonths.map((period) => {
+                  const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
+                  return (
+                    <MenuItem
+                      key={period.monthNumber}
+                      closeOnClick={false}
+                      aria-current={selected ? "true" : undefined}
+                      aria-label={`Tháng ${period.monthNumber}`}
+                      onClick={() => handleTimeFilterChange({ kind: "month", month: period.monthNumber })}
+                      className={cn(MENU_ROW_CLASS, "justify-center px-0", selected && "bg-accent font-medium")}
+                    >
+                      T{period.monthNumber}
+                    </MenuItem>
+                  );
+                })}
+              </div>
+            </MenuSubmenu>
 
-                      <MenuSeparator className="h-px bg-border/40 my-1" />
-
-                      <div className="px-1.5 py-1">
-                        <p className="mb-1.5 text-xs font-medium text-muted-foreground select-none">
-                          Năm học {academicYear}
-                        </p>
-                        <div className="grid grid-cols-4 gap-1">
-                          {academicMonths.map((period) => {
-                            const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-                            return (
-                              <button
-                                key={period.monthNumber}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => {
-                                  handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-                                }}
-                                className={cn(
-                                  "flex h-6 items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none touch-manipulation",
-                                  selected
-                                    ? "bg-neutral-800 text-white font-semibold shadow-2xs"
-                                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                                )}
-                              >
-                                T{period.monthNumber}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </MenuSubmenuRoot>
+            <MenuSubmenu
+              icon={<TaskIconDeadline className="size-4 text-muted-foreground" />}
+              label="Chọn ngày khác"
+              hint={effectiveTimeFilter.kind === "range" ? getTaskTimeFilterLabel(effectiveTimeFilter) : undefined}
+              popupClassName="w-56 p-2"
+            >
+              <VietnameseDayCalendar
+                value={effectiveTimeFilter.kind === "range" && effectiveTimeFilter.from === effectiveTimeFilter.to ? effectiveTimeFilter.from : ""}
+                onSelect={(iso) => handleTimeFilterChange({ kind: "range", from: iso, to: iso })}
+              />
+            </MenuSubmenu>
           </div>
         );
       }
@@ -1548,43 +1281,24 @@ export function UnifiedTaskToolbar({
             {healthOptions.map((opt) => {
               const selected = opt.value === "all" ? isAll : selectedList.includes(opt.value);
               return (
-                <MenuItem
+                <MenuOptionItem
                   key={opt.value}
-                  closeOnClick={false}
                   onClick={() => handleHealthToggle(opt.value)}
-                  className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-muted/70 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {opt.value === "on_track" ? (
-                      <HealthSubOnTrack className="size-3.5 text-foreground/80 shrink-0" />
+                  selected={selected}
+                  leading={opt.value === "on_track" ? (
+                      <HealthSubOnTrack className="size-4 text-muted-foreground" />
                     ) : opt.value === "at_risk" ? (
-                      <HealthSubAtRisk className="size-3.5 text-foreground/80 shrink-0" />
+                      <HealthSubAtRisk className="size-4 text-muted-foreground" />
                     ) : opt.value === "overdue" ? (
-                      <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
+                      <HealthSubOverdue className="size-4 text-muted-foreground" />
                     ) : opt.value === "completed" ? (
-                      <HealthSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
+                      <HealthSubCompleted className="size-4 text-muted-foreground" />
                     ) : (
-                      <HealthSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
+                      <HealthSubAll className="size-4 text-muted-foreground" />
                     )}
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                      selected
-                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                    )}
-                  >
-                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                  </div>
-                </MenuItem>
+                >
+                  {opt.label}
+                </MenuOptionItem>
               );
             })}
           </div>
@@ -1615,33 +1329,14 @@ export function UnifiedTaskToolbar({
             {originOptions.map((opt) => {
               const selected = opt.value === "all" ? isAll : selectedList.includes(opt.value);
               return (
-                <MenuItem
+                <MenuOptionItem
                   key={opt.value}
-                  closeOnClick={false}
                   onClick={() => handleOriginToggle(opt.value)}
-                  className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-muted/70 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
+                  selected={selected}
+                  leading={<FilterIconOrigin className="size-4 text-muted-foreground" />}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FilterIconOrigin className="size-3.5 text-muted-foreground/60 shrink-0" />
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                      selected
-                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                    )}
-                  >
-                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
-                  </div>
-                </MenuItem>
+                  {opt.label}
+                </MenuOptionItem>
               );
             })}
           </div>
@@ -1652,348 +1347,59 @@ export function UnifiedTaskToolbar({
     }
   };
 
-  const matchingSearchOptions = React.useMemo(() => {
-    if (!menuSearch.trim()) return [];
-    const query = foldVietnamese(menuSearch);
-    const results: Array<{
-      id: string;
-      categoryLabel: string;
-      label: string;
-      icon: any;
-      selected: boolean;
-      onSelect: () => void;
-    }> = [];
-
-    // Match Status
-    statusOptions.forEach((opt) => {
-      if (foldVietnamese(opt.label).includes(query)) {
-        const selectedList = (effectiveStatus || "all").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("all");
-        const selected = opt.value === "all"
-          ? isAll
-          : opt.value === "new"
-            ? selectedList.includes("new") || selectedList.includes("not_started") || selectedList.includes("assigned")
-            : opt.value === "waiting_approval" || opt.value === "review"
-              ? selectedList.includes("waiting_approval") || selectedList.includes("review") || selectedList.includes("pending_executive_approval") || selectedList.includes("needs_review")
-              : selectedList.includes(opt.value);
-        results.push({
-          id: `status-${opt.value}`,
-          categoryLabel: "Trạng thái",
-          label: opt.label,
-          icon: CheckCircle2,
-          selected,
-          onSelect: () => {
-            if (opt.value === "all") {
-              if (onStatusChange) onStatusChange("all");
-              else onTabChange?.("all");
-              return;
-            }
-            const nextList = toggleMultiValue(selectedList, isAll, selected, opt.value, "all");
-            const nextStr = nextList.join(",");
-            if (onStatusChange) onStatusChange(nextStr);
-            else onTabChange?.(nextStr);
-          },
-        });
-      }
-    });
-
-    // Match Priority
-    PRIORITY_FILTER_OPTIONS.forEach((opt) => {
-      if (foldVietnamese(opt.label).includes(query)) {
-        const selectedList = (selectedPriority || "ALL").split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
-        const selected = opt.id === "ALL" ? isAll : selectedList.includes(opt.id);
-        results.push({
-          id: `prio-${opt.id}`,
-          categoryLabel: "Mức ưu tiên",
-          label: opt.label,
-          icon: Flag,
-          selected,
-          onSelect: () => {
-            if (opt.id === "ALL") {
-              onPriorityChange?.("ALL");
-              return;
-            }
-            const nextList = toggleMultiValue(selectedList, isAll, selected, opt.id, "ALL");
-            onPriorityChange?.(nextList.join(","));
-          },
-        });
-      }
-    });
-
-    // Match Category
-    CATEGORY_FILTER_OPTIONS.forEach((cat) => {
-      if (foldVietnamese(cat.label).includes(query)) {
-        const selectedList = (selectedCategory || "ALL").split(",").map((c) => c.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
-        const selected = cat.id === "ALL" ? isAll : selectedList.includes(cat.id);
-        results.push({
-          id: `cat-${cat.id}`,
-          categoryLabel: "Danh mục",
-          label: cat.label,
-          icon: Tag,
-          selected,
-          onSelect: () => {
-            if (cat.id === "ALL") {
-              onCategoryChange?.("ALL");
-              return;
-            }
-            const nextList = toggleMultiValue(selectedList, isAll, selected, cat.id, "ALL");
-            onCategoryChange?.(nextList.join(","));
-          },
-        });
-      }
-    });
-
-    // Match Department
-    availableDepartments.forEach((dept) => {
-      if (foldVietnamese(dept.name).includes(query) || foldVietnamese(dept.code).includes(query)) {
-        const selectedList = (selectedDepartment || "ALL").split(",").map((d) => d.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
-        const selected = dept.code === "ALL" ? isAll : selectedList.includes(dept.code);
-        results.push({
-          id: `dept-${dept.code}`,
-          categoryLabel: "Đơn vị",
-          label: dept.name,
-          icon: Building,
-          selected,
-          onSelect: () => {
-            if (dept.code === "ALL") {
-              onDepartmentChange?.("ALL");
-              return;
-            }
-            const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(dept.code), dept.code, "ALL");
-            onDepartmentChange?.(nextList.join(","));
-          },
-        });
-      }
-    });
-
-    // Match Deadline
-    deadlineOptions.forEach((opt) => {
-      if (foldVietnamese(opt.label).includes(query)) {
-        const selected = effectiveDeadline === opt.value;
-        results.push({
-          id: `deadline-${opt.value}`,
-          categoryLabel: "Thời hạn",
-          label: opt.label,
-          icon: Calendar,
-          selected,
-          onSelect: () => {
-            if (onDeadlineChange) onDeadlineChange(opt.value);
-            else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-          },
-        });
-      }
-    });
-
-    // Match Lead / Người chủ trì
-    const leadOptions = [
-      { value: "my", label: "Giao cho tôi (Tôi chủ trì)" },
-      { value: "bgh", label: "Lãnh đạo / Ban Giám hiệu" },
-      { value: "assigned", label: "Đã phân công người chủ trì" },
-      { value: "unassigned", label: "Chưa phân công người chủ trì" },
-    ];
-    leadOptions.forEach((opt) => {
-      if (foldVietnamese(opt.label).includes(query)) {
-        const selected = selectedLead === opt.value || (opt.value === "my" && activeTab === "my");
-        results.push({
-          id: `lead-${opt.value}`,
-          categoryLabel: "Người chủ trì",
-          label: opt.label,
-          icon: User,
-          selected,
-          onSelect: () => {
-            if (opt.value === "my") {
-              onTabChange?.("my");
-              setSelectedLead("my");
-            } else {
-              setSelectedLead(opt.value);
-            }
-          },
-        });
-      }
-    });
-
-    // Match Health / Tiến độ
-    const healthOptions = [
-      { value: "on_track", label: "Đúng tiến độ (Bình thường)" },
-      { value: "at_risk", label: "Có nguy cơ trễ hạn (≤ 7 ngày)" },
-      { value: "overdue", label: "Trễ hạn / Trễ hạn" },
-      { value: "completed", label: "Đã hoàn thành 100%" },
-    ];
-    healthOptions.forEach((opt) => {
-      if (foldVietnamese(opt.label).includes(query)) {
-        const selected = selectedHealth === opt.value;
-        results.push({
-          id: `health-${opt.value}`,
-          categoryLabel: "Tiến độ",
-          label: opt.label,
-          icon:
-            opt.value === "on_track"
-              ? HealthSubOnTrack
-              : opt.value === "at_risk"
-                ? HealthSubAtRisk
-                : opt.value === "overdue"
-                  ? HealthSubOverdue
-                  : opt.value === "completed"
-                    ? HealthSubCompleted
-                    : FilterIconProgress,
-          selected,
-          onSelect: () => {
-            handleHealthChange(opt.value);
-            if (opt.value === "overdue") {
-              if (onDeadlineChange) onDeadlineChange("overdue");
-              else onTabChange?.("overdue");
-            } else if (opt.value === "at_risk") {
-              if (onDeadlineChange) onDeadlineChange("this_week");
-              else onTabChange?.("this_week");
-            } else if (opt.value === "completed") {
-              if (onStatusChange) onStatusChange("completed");
-              else onTabChange?.("completed");
-            } else if (opt.value === "on_track") {
-              if (onStatusChange) onStatusChange("in_progress");
-              else onTabChange?.("in_progress");
-            }
-          },
-        });
-      }
-    });
-
-    // Match Origin / Nguồn gốc
-    const originOptions = [
-      { value: "KE_HOACH_NAM", label: "Kế ho���ch năm học" },
-      { value: "NGHI_QUYET", label: "Nghị quyết Đảng ủy / BGH" },
-      { value: "GIAO_BAN", label: "Kết luận họp giao ban" },
-      { value: "DON_VI", label: "Đơn vị đề xuất" },
-    ];
-    originOptions.forEach((opt) => {
-      if (foldVietnamese(opt.label).includes(query)) {
-        const selected = selectedOrigin === opt.value;
-        results.push({
-          id: `origin-${opt.value}`,
-          categoryLabel: "Nguồn gốc",
-          label: opt.label,
-          icon: FileText,
-          selected,
-          onSelect: () => {
-            handleOriginChange(opt.value);
-          },
-        });
-      }
-    });
-
-    // Match Collaborator / Người phối hợp
-    const collabOptions = [
-      { value: "has_collab", label: "Có đơn vị / người phối hợp" },
-      { value: "single", label: "Đơn vị tự thực hiện (không phối hợp)" },
-    ];
-    collabOptions.forEach((opt) => {
-      if (foldVietnamese(opt.label).includes(query)) {
-        const selected = selectedCollaborator === opt.value;
-        results.push({
-          id: `collab-${opt.value}`,
-          categoryLabel: "Phối hợp",
-          label: opt.label,
-          icon: Users,
-          selected,
-          onSelect: () => {
-            handleCollaboratorChange(opt.value);
-          },
-        });
-      }
-    });
-
-    // Match Months
-    academicMonths.forEach((period) => {
-      const label = `Tháng ${period.monthNumber}`;
-      if (foldVietnamese(label).includes(query)) {
-        const selected =
-          effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-        results.push({
-          id: `month-${period.monthNumber}`,
-          categoryLabel: "Kỳ tháng",
-          label,
-          icon: Clock,
-          selected,
-          onSelect: () => {
-            handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-          },
-        });
-      }
-    });
-
-    return results.slice(0, 10);
-  }, [
-    menuSearch,
-    statusOptions,
-    effectiveStatus,
-    onStatusChange,
-    onTabChange,
-    selectedPriority,
-    onPriorityChange,
-    selectedCategory,
-    onCategoryChange,
-    availableDepartments,
-    selectedDepartment,
-    onDepartmentChange,
-    deadlineOptions,
-    effectiveDeadline,
-    onDeadlineChange,
-    selectedLead,
-    activeTab,
-    selectedHealth,
-    handleHealthChange,
-    selectedOrigin,
-    handleOriginChange,
-    selectedCollaborator,
-    handleCollaboratorChange,
-    academicMonths,
-    effectiveTimeFilter,
-    handleTimeFilterChange,
-  ]);
-
-  const matchingCategories = React.useMemo(() => {
-    if (!menuSearch.trim()) return filterCategories;
-    const query = foldVietnamese(menuSearch);
-    return filterCategories.filter((cat) => foldVietnamese(cat.label).includes(query));
-  }, [menuSearch, filterCategories]);
+  const activeValueCount = (key: string, isActive: boolean): number => {
+    switch (key) {
+      case "status": return countFilterValues(effectiveStatus, "all");
+      case "priority": return countFilterValues(selectedPriority, "ALL");
+      case "category": return countFilterValues(selectedCategory, "ALL");
+      case "dept": return countFilterValues(selectedDepartment, "ALL");
+      case "dates": return (isDeadlineActive ? 1 : 0) + (isMonthActive ? 1 : 0);
+      default: return isActive ? 1 : 0;
+    }
+  };
 
   const renderCategorySubmenu = (category: typeof filterCategories[0]) => {
+    const activeCount = activeValueCount(category.key, category.isActive);
     return (
-      <MenuSubmenuRoot key={category.key}>
-        <MenuSubmenuTrigger
-          openOnHover
-          delay={60}
-          closeDelay={180}
-          className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs font-medium transition-colors hover:bg-accent text-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <category.icon className="size-3.5 shrink-0 text-foreground/80 group-hover:text-foreground transition-colors" strokeWidth={1.5} />
-            <span className="truncate font-medium text-foreground">
-              {category.label}
-            </span>
-          </div>
-          <ChevronRight
-            className="size-2.5 shrink-0 text-foreground/60 group-hover:text-foreground transition-colors ml-auto"
-          />
-        </MenuSubmenuTrigger>
-        <MenuPortal>
-          <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-            <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-              {renderCategorySubmenuItems(category.key)}
-            </MenuPopup>
-          </MenuPositioner>
-        </MenuPortal>
-      </MenuSubmenuRoot>
+      <MenuSubmenu
+        key={category.key}
+        icon={<category.icon className="size-4 text-muted-foreground" />}
+        label={category.label}
+        active={category.isActive}
+        hint={activeCount > 0 ? activeCount : undefined}
+        title={category.label}
+        popupClassName={category.key === "dates" ? "min-w-[232px]" : undefined}
+      >
+        {renderCategorySubmenuItems(category.key)}
+      </MenuSubmenu>
     );
   };
+
+  const searchExpanded = isSearchOpen || isSearchActive;
+  const openSearch = () => {
+    setIsSearchOpen(true);
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+  };
+  const createCta = (leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction ? (
+    <Pressable
+      onClick={() => handlePrimaryAction()}
+      title="Tạo việc mới"
+      aria-label="Tạo việc mới"
+      className={cn(listToolbarPrimaryButtonClass, "rounded-full border-transparent bg-transparent shadow-none")}
+    >
+      <Plus className="size-3.5 shrink-0 text-muted-foreground" />
+      <span>{primaryActionLabel}</span>
+    </Pressable>
+  ) : null;
 
   return (
     <div
       data-slot="unified-task-toolbar"
       className={cn(
-        "flex items-center gap-1.5 border-b border-border/60 pb-2 bg-transparent relative z-40 overflow-visible flex-wrap",
+        "flex items-center gap-x-1.5 gap-y-0 bg-transparent relative z-40 overflow-visible flex-wrap",
+        !leftContent && "border-b border-border/60 pb-2",
+        // Khung tiêu đề + toolbar đứng yên khi cuộn (88px = 44 tiêu đề + 44 hàng điều khiển; tiêu đề cột bảng dính ngay dưới)
+        leftContent && "md:sticky md:top-0 md:bg-card md:mb-0",
         className
       )}
     >
@@ -2016,9 +1422,9 @@ export function UnifiedTaskToolbar({
               aria-label="Phạm vi công việc"
             >
               {[
-                { id: "my", label: "Cá nhân", icon: User, count: (effectiveScopeBadgeCounts as any)?.my ?? (effectiveScopeBadgeCounts as any)?.related },
-                { id: "unit", label: "Đơn vị", icon: Building, count: (effectiveScopeBadgeCounts as any)?.unit },
-                { id: "school", label: "Toàn trường", icon: School, count: (effectiveScopeBadgeCounts as any)?.school ?? (effectiveScopeBadgeCounts as any)?.all },
+                { id: "my", label: "Cá nhân", icon: TaskIconAssignee, count: (effectiveScopeBadgeCounts as any)?.my ?? (effectiveScopeBadgeCounts as any)?.related },
+                { id: "unit", label: "Đơn vị", icon: TaskIconDepartment, count: (effectiveScopeBadgeCounts as any)?.unit },
+                { id: "school", label: "Toàn trường", icon: TaskIconDepartment, count: (effectiveScopeBadgeCounts as any)?.school ?? (effectiveScopeBadgeCounts as any)?.all },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = normalizedScope === tab.id;
@@ -2090,148 +1496,75 @@ export function UnifiedTaskToolbar({
 
       {/* Left Content (View Title / Summary Strip) */}
       {leftContent && (
-        <div className="flex-1 min-w-0 flex items-center pr-4">
-          {leftContent}
+        <div className="flex h-11 w-full min-w-0 items-center justify-between gap-3 border-b border-border/60 md:-mx-[18px] md:w-[calc(100%+36px)] md:px-[18px]">
+          <div className="min-w-0 flex items-center">{leftContent}</div>
+          {createCta}
         </div>
       )}
 
       {!quiet && (
-        <>
-      {/* 1. Search */}
-      <ListToolbarSearch
-        ref={searchInputRef}
-        value={localSearch}
-        onChange={handleSearchInputChange}
-        onClear={handleSearchClear}
-        loading={loading}
-        placeholder="Tìm nhiệm vụ… /"
-        aria-label="Tìm nhiệm vụ"
-        wrapperClassName={!leftContent && !onScopeChange ? "ml-auto" : undefined}
-      />
+        <div className="flex h-11 w-full min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 items-center">{activeFilters}</div>
+      {/* 1. Search: icon thu gọn, bấm hoặc nhấn "/" để mở ô */}
+      {searchExpanded ? (
+        <ListToolbarSearch
+          ref={searchInputRef}
+          value={localSearch}
+          onChange={handleSearchInputChange}
+          onClear={handleSearchClear}
+          loading={loading}
+          placeholder="Tìm nhiệm vụ… /"
+          aria-label="Tìm nhiệm vụ"
+          onBlur={() => {
+            if (!localSearch.trim()) setIsSearchOpen(false);
+          }}
+        />
+      ) : (
+        <Pressable
+          onClick={openSearch}
+          aria-label="Tìm nhiệm vụ"
+          title="Tìm nhiệm vụ (/)"
+          className={cn(listToolbarIconButtonClass(false), "rounded-full")}
+        >
+          <Search className="size-3.5 shrink-0" />
+        </Pressable>
+      )}
 
       {/* 2. Filter — icon-only trigger */}
-      <MenuRoot open={isCollapsedFilterOpen} onOpenChange={(open) => { setIsCollapsedFilterOpen(open); if (!open) setMenuSearch(""); }}>
+      <MenuRoot open={isCollapsedFilterOpen} onOpenChange={setIsCollapsedFilterOpen}>
         <MenuTrigger
           render={
-            <Pressable
-              aria-label="Bộ lọc"
+            <ListToolbarFilterButton
+              activeCount={activeFilterCount}
+              open={isCollapsedFilterOpen}
               aria-expanded={isCollapsedFilterOpen}
-              title="Bộ lọc (F)"
-              className={listToolbarIconButtonClass(isCollapsedFilterOpen || activeFilterCount > 0)}
-            >
-              <Filter className="size-3.5 shrink-0" />
-              <ListToolbarCountBadge count={activeFilterCount} />
-            </Pressable>
+              className="rounded-full"
+            />
           }
         />
         <MenuPortal>
           <MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-50 outline-none">
             <MenuPopup
               data-slot="task-filter-menu"
-              className="w-56 rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+              className={cn(MENU_POPUP_CLASS, "w-52")}
             >
-              {/* Header: Add Filter... [F] */}
-              <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/40 mb-1">
-                <Search className="size-3.5 shrink-0 text-muted-foreground/50" />
-                <input
-                  ref={menuSearchInputRef}
-                  type="text"
-                  value={menuSearch}
-                  onChange={(e) => setMenuSearch(e.target.value)}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  placeholder="Thêm bộ lọc..."
-                  aria-label="Tìm hoặc thêm bộ lọc"
-                  className="h-5 w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
-                />
-                {menuSearch ? (
-                  <Pressable
-                    onClick={() => setMenuSearch("")}
-                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground touch-manipulation"
-                  >
-                    <X className="size-3" />
-                  </Pressable>
-                ) : (
-                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 font-mono text-xs leading-none text-muted-foreground bg-muted/80 border border-border/60 rounded select-none pointer-events-none">
-                    F
-                  </kbd>
-                )}
+              <div className="space-y-px">
+                {filterCategories.map((category, index) => (
+                  <React.Fragment key={category.key}>
+                    {renderCategorySubmenu(category)}
+                  </React.Fragment>
+                ))}
               </div>
 
-              {menuSearch.trim() ? (
-                <div className="space-y-1">
-                  {/* Matching options */}
-                  {matchingSearchOptions.length > 0 && (
-                    <div className="space-y-0.5">
-                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
-                        Giá trị phù hợp
-                      </div>
-                      {matchingSearchOptions.map((match) => (
-                        <MenuItem
-                          key={match.id}
-                          closeOnClick={false}
-                          onClick={match.onSelect}
-                          className="group/item flex h-7.5 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none hover:bg-accent text-foreground/90 hover:text-foreground"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <match.icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                            <span className="text-muted-foreground text-xs">{match.categoryLabel}:</span>
-                            <span className="truncate font-medium text-foreground">{match.label}</span>
-                          </div>
-                          <div
-                            className={cn(
-                              "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                              match.selected
-                                ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                                : "border-border/80 bg-background group-hover/item:border-neutral-400"
-                            )}
-                          >
-                            {match.selected && <Check className="size-2.5 stroke-[2.5]" />}
-                          </div>
-                        </MenuItem>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Matching categories */}
-                  {matchingCategories.length > 0 && (
-                    <div className="space-y-0.5">
-                      {matchingSearchOptions.length > 0 && <MenuSeparator className="h-px bg-border/60 my-1" />}
-                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
-                        Nhóm bộ lọc
-                      </div>
-                      {matchingCategories.map(renderCategorySubmenu)}
-                    </div>
-                  )}
-
-                  {matchingSearchOptions.length === 0 && matchingCategories.length === 0 && (
-                    <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                      Không tìm thấy bộ lọc phù hợp.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                /* Categories — Seamless, compact Linear list */
-                <div className="space-y-px">
-                  {filterCategories.map(renderCategorySubmenu)}
-                </div>
-              )}
-
               {activeFilterCount > 0 && (
-                <>
-                  <MenuSeparator className="h-px bg-border/50 my-1" />
-                  <MenuItem
-                    onClick={handleResetFilters}
-                    className="flex h-7 w-full items-center justify-between rounded-md px-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer select-none outline-none"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <RotateCcw className="size-3 text-destructive/80" />
-                      <span>Xóa bộ lọc</span>
-                    </div>
-                    <span className="text-xs font-mono tabular-nums bg-destructive/15 text-destructive px-1.5 py-0.2 rounded-full">
-                      {activeFilterCount}
-                    </span>
-                  </MenuItem>
-                </>
+                <MenuOptionItem
+                  closeOnClick
+                  onClick={handleResetFilters}
+                  leading={<RotateCcw className="size-4 text-muted-foreground" />}
+                  hint={activeFilterCount}
+                >
+                  Xóa bộ lọc
+                </MenuOptionItem>
               )}
             </MenuPopup>
           </MenuPositioner>
@@ -2239,12 +1572,9 @@ export function UnifiedTaskToolbar({
       </MenuRoot>
 
       {/* Active Filter Clear on Toolbar */}
-      {isAnyFilterActive && <ListToolbarClearFiltersButton onClick={handleResetFilters} />}
 
       {/* 3. Linear Display / View Options Popover — Icon hiển thị kề bên Filter! */}
       <TaskTableViewOptionsPopover
-        viewMode={viewMode === "kanban" ? "kanban" : "table"}
-        onViewModeChange={onViewModeChange}
         groupingField={groupingField}
         onGroupingChange={setGroupingField}
         sortField={sortField as any}
@@ -2254,24 +1584,13 @@ export function UnifiedTaskToolbar({
         onVisibleColumnsChange={handleVisibleColumnsChange}
         isCustomized={isDisplayCustomized}
         onReset={handleResetDisplayProperties}
-        triggerClassName="inline-flex h-7 w-7 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-border/80 bg-background text-foreground hover:bg-accent text-xs font-medium transition-colors touch-manipulation"
+        triggerClassName="inline-flex h-7 w-7 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border border-border/80 bg-background text-foreground hover:bg-accent text-xs font-medium transition-colors touch-manipulation"
       />
 
-        </>
+        </div>
       )}
 
-      {/* 4. + Tạo việc CTA (Linear Understated Style) */}
-      {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (
-        <Pressable
-          onClick={() => handlePrimaryAction()}
-          title="Tạo việc mới"
-          aria-label="Tạo việc mới"
-          className={listToolbarPrimaryButtonClass}
-        >
-          <Plus className="size-3.5 shrink-0 text-muted-foreground" />
-          <span>{primaryActionLabel}</span>
-        </Pressable>
-      )}
+      {!leftContent && createCta}
     </div>
   );
 }

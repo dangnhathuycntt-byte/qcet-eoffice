@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-host";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
@@ -156,7 +157,14 @@ export function TaskComments({ taskId, canComment = true, className }: TaskComme
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("Xóa bình luận này?")) return;
+    const ok = await confirmAction({
+      title: "Xóa bình luận?",
+      description: "Bình luận sẽ bị gỡ khỏi nhiệm vụ.",
+      confirmLabel: "Xóa bình luận",
+      cancelLabel: "Giữ lại",
+      destructive: true,
+    });
+    if (!ok) return;
     setError(null);
     try {
       const res = await fetch(`/api/tasks/${taskId}/comments/${id}`, { method: "DELETE" });

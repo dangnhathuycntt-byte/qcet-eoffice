@@ -41,36 +41,19 @@ export function TaskBoardLoading({ label }: { label: string }) {
         </div>
       </div>
 
-      {/* Content Area Skeleton: Kanban Columns */}
-      <section aria-label={`Đang tải dữ liệu ${label}`} className="min-h-[420px]">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((col) => (
-            <div
-              key={col}
-              className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-3 min-h-[380px]"
-            >
-              <div className="flex items-center justify-between pb-2 border-b border-border/40">
-                <div className="h-4 w-28 rounded bg-muted/70" />
-                <div className="size-5 rounded-full bg-muted/50" />
-              </div>
-              <div className="space-y-2.5">
-                {[1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-lg border border-border/60 bg-card p-3 space-y-2 shadow-2xs"
-                  >
-                    <div className="h-4 w-3/4 rounded bg-muted/70" />
-                    <div className="h-3 w-1/2 rounded bg-muted/40" />
-                    <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                      <div className="size-6 rounded-full bg-muted/50" />
-                      <div className="h-3 w-16 rounded bg-muted/40" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+      {/* Content Area Skeleton: các dòng của bảng danh sách */}
+      <section aria-label={`Đang tải dữ liệu ${label}`} className="min-h-[420px] space-y-1">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((row) => (
+          <div key={row} className="flex h-12 items-center gap-4 rounded-lg px-3">
+            <div className="size-4 rounded bg-muted/50 shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3.5 w-2/3 rounded bg-muted/70" />
+              <div className="h-3 w-1/3 rounded bg-muted/40" />
             </div>
-          ))}
-        </div>
+            <div className="hidden md:block h-3 w-24 rounded bg-muted/40" />
+            <div className="hidden md:block h-3 w-16 rounded bg-muted/40" />
+          </div>
+        ))}
       </section>
     </div>
   );

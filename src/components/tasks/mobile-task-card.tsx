@@ -334,7 +334,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       {/* Bottom Row: Due date (Hạn 14/09) & days remaining / overdue badge + Chevron */}
       <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-xs">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+          <span className="text-xs text-muted-foreground tabular-nums">
             {formattedDueDate}
           </span>
           {isDueInMonth && (
@@ -347,7 +347,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
         <div className="flex items-center gap-1.5 shrink-0">
           <span
             className={cn(
-              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono tabular-nums border",
+              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium tabular-nums border",
               dueBadge.className
             )}
           >
