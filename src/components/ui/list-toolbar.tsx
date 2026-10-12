@@ -2,12 +2,18 @@
 
 import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
-import { Filter, Loader2, RotateCcw, Search, X } from "lucide-react";
+import { Loader2, RotateCcw, X } from "lucide-react";
+import { TaskIconFilter, TaskIconSearch } from "@/lib/icons/task-icons";
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
 import { Pressable } from "@/components/ui/pressable";
 import {
   MENU_POPUP_CLASS,
+  MenuBackdrop,
+  MenuSheetHeader,
+  SHEET_BACKDROP_CLASS,
+  SHEET_POPUP_CLASS,
+  SHEET_POSITIONER_CLASS,
   MenuOptionItem,
   MenuPopup,
   MenuPortal,
@@ -20,14 +26,14 @@ import {
 /** Nút icon trên thanh công cụ danh sách (bộ lọc, hiển thị) */
 export function listToolbarIconButtonClass(active = false) {
   return cn(
-    "inline-flex h-7 shrink-0 cursor-pointer select-none items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-colors touch-manipulation",
+    "inline-flex size-7 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation",
     active ? "border-border bg-accent/60 text-foreground hover:bg-accent" : "border-border/80 bg-background text-foreground hover:bg-accent"
   );
 }
 
 /** Ô tìm của trang danh sách: 140/180px, focus giãn 240px (chuẩn thanh Nhiệm vụ). */
 export const LIST_TOOLBAR_SEARCH_COLLAPSED = "w-[140px] sm:w-[180px]";
-export const LIST_TOOLBAR_SEARCH_EXPANDED = "w-[240px]";
+export const LIST_TOOLBAR_SEARCH_EXPANDED = "w-[200px] sm:w-[240px]";
 
 /** Nút chính trên thanh công cụ (Tạo việc, Soạn văn bản) */
 export const listToolbarPrimaryButtonClass =
@@ -70,7 +76,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
         focused ? expandedWidthClassName : collapsedWidthClassName
       )}
     >
-      <Search className="size-3.5 text-muted-foreground/80 pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
+      <TaskIconSearch size={14} className="text-muted-foreground/80 pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
       <input
         ref={ref}
         type="text"
@@ -85,7 +91,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
           onBlur?.(e);
         }}
         className={cn(
-          "h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 transition-colors",
+          "h-8 sm:h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 transition-colors",
           className
         )}
         {...inputProps}
@@ -112,6 +118,13 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
 });
 
 /** Khung popover của thanh công cụ: nút trigger dùng chung và panel theo style property */
+const MOBILE_QUERY = "(max-width: 767px)";
+function subscribeMobile(onChange: () => void) {
+  const mql = window.matchMedia(MOBILE_QUERY);
+  mql.addEventListener("change", onChange);
+  return () => mql.removeEventListener("change", onChange);
+}
+
 export function ListToolbarPopover({
   open,
   onOpenChange,
@@ -122,6 +135,7 @@ export function ListToolbarPopover({
   title,
   flush = false,
   scrollable = true,
+  sheetTitle,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -134,7 +148,15 @@ export function ListToolbarPopover({
   flush?: boolean;
   /** Giới hạn chiều cao và cuộn khi nội dung dài */
   scrollable?: boolean;
+  /** Tiêu đề bottom sheet trên điện thoại (mặc định dùng ariaLabel) */
+  sheetTitle?: string;
 }) {
+  const isMobile = React.useSyncExternalStore(
+    subscribeMobile,
+    () => window.matchMedia(MOBILE_QUERY).matches,
+    () => false
+  );
+
   // Chuột phải ở nơi khác (menu thao tác của hàng) không kích hoạt "bấm ra ngoài" của Popover: tự đóng để không chồng hai lớp
   React.useEffect(() => {
     if (!open) return;
@@ -147,13 +169,19 @@ export function ListToolbarPopover({
   }, [open, onOpenChange]);
 
   return (
-    <Popover.Root open={open} onOpenChange={onOpenChange}>
+    // Điện thoại: popover là bottom sheet nên chạy modal (khóa cuộn trang phía sau như sheet của Menu); desktop giữ non-modal.
+    <Popover.Root
+      open={open}
+      onOpenChange={onOpenChange}
+      modal={isMobile}
+    >
       <Popover.Trigger type="button" aria-label={ariaLabel} title={title} className={cn(listToolbarIconButtonClass(open), "relative")}>
         {trigger}
       </Popover.Trigger>
       {open ? (
         <Popover.Portal>
-          <Popover.Positioner side="bottom" align="end" sideOffset={6} collisionPadding={8} className="z-50">
+          <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
+          <Popover.Positioner side="bottom" align="end" sideOffset={6} collisionPadding={8} className={cn("z-50", SHEET_POSITIONER_CLASS)}>
             <Popover.Popup
               data-list-toolbar-popover=""
               className={cn(
@@ -161,10 +189,13 @@ export function ListToolbarPopover({
                 width,
                 "max-w-[calc(100vw-1rem)]",
                 scrollable && "max-h-[min(360px,var(--available-height))] overflow-y-auto",
-                flush && "p-0 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xl"
+                flush && "p-0 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xl",
+                SHEET_POPUP_CLASS,
+                "max-md:border-0 max-md:bg-popover"
               )}
               style={propertyMotionStyle}
             >
+              <MenuSheetHeader title={sheetTitle ?? ariaLabel} />
               {children}
             </Popover.Popup>
           </Popover.Positioner>
@@ -214,7 +245,7 @@ export const ListToolbarFilterButton = React.forwardRef<
       className={cn(listToolbarIconButtonClass(open || activeCount > 0), "relative", className)}
       {...props}
     >
-      <Filter className="size-3.5 shrink-0" />
+      <TaskIconFilter size={14} className="shrink-0 text-muted-foreground" />
       {activeCount > 0 && <span aria-hidden className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />}
     </Pressable>
   );
@@ -237,8 +268,10 @@ export function ListToolbarFilterPopover({
     <MenuRoot open={open} onOpenChange={onOpenChange}>
       <MenuTrigger render={<ListToolbarFilterButton activeCount={activeCount} open={open} aria-label={ariaLabel} />} />
       <MenuPortal>
-        <MenuPositioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className="z-50 outline-none">
-          <MenuPopup className={cn(MENU_POPUP_CLASS, "w-52")}>
+        <MenuBackdrop className={SHEET_BACKDROP_CLASS} />
+        <MenuPositioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className={cn("z-50 outline-none", SHEET_POSITIONER_CLASS)}>
+          <MenuPopup className={cn(MENU_POPUP_CLASS, "w-52", SHEET_POPUP_CLASS)}>
+            <MenuSheetHeader title={ariaLabel} />
             <div className="space-y-px">
               {categories.map((c) => (
                 <MenuSubmenu

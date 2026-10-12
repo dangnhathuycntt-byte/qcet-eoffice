@@ -3,8 +3,10 @@
 import * as React from "react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import * as m from "motion/react-m";
+import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { popoverVariants } from "@/lib/motion/variants";
+import { Pressable } from "@/components/ui/pressable";
 
 /** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
 export const MENU_ROW_CLASS =
@@ -12,7 +14,42 @@ export const MENU_ROW_CLASS =
 
 /** Khung popup menu: bo góc theo token, không viền, bóng menu. Chuyển động do `MenuPopup` (motion) đảm nhiệm. */
 export const MENU_POPUP_CLASS =
-  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)]";
+  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] data-[closed]:hidden";
+
+/**
+ * Điện thoại (< md): menu/popover thành bottom sheet kiểu Linear mobile — lớp tối phía sau, khung bám đáy rộng hết màn,
+ * bo góc trên, thanh kéo + tiêu đề (`MenuSheetHeader`), hàng cao 40px cho ngón tay. Từ md trở lên giữ popup như cũ.
+ * Positioner của Base UI ghi `position/top/left/transform` inline nên các lớp vị trí phải `!` mới thắng.
+ */
+export const SHEET_BACKDROP_CLASS =
+  "fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none md:hidden";
+export const SHEET_POSITIONER_CLASS =
+  "max-md:fixed! max-md:inset-x-0! max-md:top-auto! max-md:bottom-0! max-md:transform-none! max-md:z-50";
+export const SHEET_POPUP_CLASS =
+  "max-md:w-full! max-md:max-w-none! max-md:min-w-0! max-md:max-h-[80dvh]! max-md:overflow-y-auto max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-2 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+8px)] max-md:text-compact max-md:has-[[data-popup-open]]:invisible max-md:[&_[role=menuitem]]:h-10 max-md:[&_[role=menuitem]]:px-3 max-md:[&_[role=menuitem]]:text-compact";
+
+/** Đầu bottom sheet (chỉ hiện trên điện thoại): thanh kéo, tiêu đề, nút quay lại khi đang ở menu con. */
+export function MenuSheetHeader({ title, onBack }: { title?: React.ReactNode; onBack?: () => void }) {
+  return (
+    <div className="sticky top-0 z-10 -mx-2 bg-popover px-2 pt-2 md:hidden">
+      <div aria-hidden className="mx-auto mb-1 h-1 w-9 rounded-full bg-mark" />
+      {title || onBack ? (
+        <div className="flex h-10 items-center gap-1 px-1 text-compact font-medium text-foreground">
+          {onBack ? (
+            <Pressable
+              onClick={onBack}
+              aria-label="Quay lại"
+              className="-ml-1 flex size-8 items-center justify-center rounded-md text-muted-foreground active:bg-accent"
+            >
+              <ChevronLeft className="size-4" />
+            </Pressable>
+          ) : null}
+          <span className="min-w-0 truncate">{title}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 // Namespace re-export
 export const Menu = BaseMenu;
@@ -47,7 +84,7 @@ export const MenuPositioner = React.forwardRef<
 MenuPositioner.displayName = "MenuPositioner";
 /**
  * Khung popup của menu: vào bằng `popoverVariants` của thư viện motion (cùng chuyển động với popover khác trong app),
- * đóng ngay như menu chuột phải. Tự tắt khi người dùng bật giảm chuyển động (MotionConfig reducedMotion="user").
+ * đóng ngay như menu chuột phải (`data-[closed]:hidden` gỡ popup đang đóng, không chờ animation vào chạy nốt nên submenu cũ không chồng lên submenu mới). Tự tắt khi người dùng bật giảm chuyển động (MotionConfig reducedMotion="user").
  */
 export const MenuPopup = React.forwardRef<HTMLDivElement, React.ComponentPropsWithoutRef<typeof BaseMenu.Popup>>(
   function MenuPopup(props, ref) {
@@ -157,8 +194,10 @@ export interface MenuSubmenuProps {
  * Không mũi tên; hàng mở có nền accent. Dùng chung cho mọi bộ lọc nhiều cấp.
  */
 export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, children }: MenuSubmenuProps) {
+  // Điều khiển trạng thái mở để nút "Quay lại" của bottom sheet (điện thoại) đóng được riêng menu con.
+  const [open, setOpen] = React.useState(false);
   return (
-    <BaseMenu.SubmenuRoot>
+    <BaseMenu.SubmenuRoot open={open} onOpenChange={setOpen}>
       <BaseMenu.SubmenuTrigger
         openOnHover
         delay={0}
@@ -170,15 +209,24 @@ export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, 
         {hint ? <span className="max-w-24 shrink-0 truncate text-xs tabular-nums text-muted-foreground/80">{hint}</span> : null}
       </BaseMenu.SubmenuTrigger>
       <BaseMenu.Portal>
-        <BaseMenu.Positioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+        <BaseMenu.Positioner
+          side="left"
+          align="start"
+          sideOffset={2}
+          alignOffset={-4}
+          collisionPadding={12}
+          className={cn("z-50 outline-none", SHEET_POSITIONER_CLASS)}
+        >
           <MenuPopup
             className={cn(
               MENU_POPUP_CLASS,
               "w-auto min-w-[176px] max-w-[320px] max-h-[min(26rem,var(--available-height))] overflow-y-auto",
-              popupClassName
+              popupClassName,
+              SHEET_POPUP_CLASS
             )}
           >
-            {title ? <MenuSubmenuTitle>{title}</MenuSubmenuTitle> : null}
+            <MenuSheetHeader title={title ?? label} onBack={() => setOpen(false)} />
+            {title ? <div className="max-md:hidden"><MenuSubmenuTitle>{title}</MenuSubmenuTitle></div> : null}
             {children}
           </MenuPopup>
         </BaseMenu.Positioner>
@@ -198,6 +246,10 @@ export interface MenuContentProps
   backdropClassName?: string;
   positionerClassName?: string;
   arrow?: boolean;
+  /** Điện thoại: hiện thành bottom sheet (xem `SHEET_POPUP_CLASS`). */
+  mobileSheet?: boolean;
+  /** Tiêu đề của bottom sheet trên điện thoại. */
+  sheetTitle?: React.ReactNode;
 }
 
 /**
@@ -218,6 +270,8 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
       backdropClassName,
       positionerClassName,
       arrow = false,
+      mobileSheet = false,
+      sheetTitle,
       children,
       ...props
     },
@@ -225,6 +279,7 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
   ) => {
     return (
       <BaseMenu.Portal>
+        {mobileSheet && <BaseMenu.Backdrop className={SHEET_BACKDROP_CLASS} />}
         {showBackdrop && (
           <BaseMenu.Backdrop
             className={cn(
@@ -239,13 +294,14 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
           sideOffset={sideOffset}
           alignOffset={alignOffset}
           collisionPadding={collisionPadding}
-          className={cn("z-30 outline-none", positionerClassName)}
+          className={cn("z-30 outline-none", positionerClassName, mobileSheet && SHEET_POSITIONER_CLASS)}
         >
           <MenuPopup
             ref={ref}
-            className={cn(MENU_POPUP_CLASS, "min-w-[12rem]", className)}
+            className={cn(MENU_POPUP_CLASS, "min-w-[12rem]", className, mobileSheet && SHEET_POPUP_CLASS)}
             {...props}
           >
+            {mobileSheet ? <MenuSheetHeader title={sheetTitle} /> : null}
             {children}
             {arrow && (
               <BaseMenu.Arrow className="fill-popover" />

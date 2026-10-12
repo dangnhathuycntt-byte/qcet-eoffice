@@ -12,9 +12,9 @@ import {
   Loader2,
   Filter,
   RotateCcw,
-  SlidersHorizontal,
   ArrowUpDown,
 } from "lucide-react";
+import { TaskIconDisplay } from "@/lib/icons/task-icons";
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -262,12 +262,13 @@ export function TaskTableViewOptionsPopover({
       onOpenChange={setIsOpen}
       ariaLabel={ariaLabel}
       title="Tùy chọn hiển thị (View options)"
+      sheetTitle="Hiển thị"
       width="w-[280px]"
       flush
       scrollable={false}
       trigger={
         <>
-          <SlidersHorizontal className="size-3.5 sm:size-4" />
+          <TaskIconDisplay size={14} className="text-muted-foreground" />
           <span className="sr-only">Hiển thị</span>
           {isCustomized && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />}
         </>
@@ -828,7 +829,7 @@ export function TaskTableToolbar({
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="size-4.5 text-primary" />
+                  <TaskIconDisplay size={18} className="text-primary" />
                   <h3 className="text-base font-semibold text-foreground">Bộ lọc công việc</h3>
                 </div>
                 <Pressable
