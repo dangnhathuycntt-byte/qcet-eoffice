@@ -9,6 +9,7 @@ import { useTrackOpenPopover } from "./popover-escape-guard";
 import { FileTypeIcon } from "./file-type-icon";
 import type { FilePreviewKind } from "@/lib/documents/file-viewer-state";
 import { Pressable } from "@/components/ui/pressable";
+import { SheetKeyboardSync } from "@/components/ui/menu";
 
 // Nút thao tác (có trạng thái hover), không phải hộp bọc icon tĩnh
 const RAIL_BUTTON = cn(
@@ -89,6 +90,7 @@ function SearchButton({ search }: { search: RailSearch }) {
         </TooltipContent>
       </Tooltip>
       <PopoverContent mobileSheet sheetTitle="Tìm trong tệp" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-64 p-1.5">
+        {open ? <SheetKeyboardSync /> : null}
         <PopoverTitle className="sr-only">Tìm trong tệp</PopoverTitle>
         <div className="flex items-center gap-1">
           <input
@@ -167,9 +169,39 @@ function PageJumpForm({ pages, onDone }: { pages: RailPages; onDone: () => void 
   );
 }
 
-function PageGroup({ pages }: { pages: RailPages }) {
+/** Ô "trang hiện tại / tổng": chạm để nhập số trang (dùng ở rail dọc và thanh ngang điện thoại). */
+function PageJump({ pages, className, oneLine = true }: { pages: RailPages; className?: string; oneLine?: boolean }) {
   const [open, setOpen] = React.useState(false);
   useTrackOpenPopover(open);
+  const { current, total } = pages;
+  return (
+    <PopoverRoot open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        aria-label={`Trang ${current} trên ${total}, bấm để nhập số trang`}
+        data-popup-open={open || undefined}
+        className={cn(RAIL_TILE, "text-xs leading-none tabular-nums", className)}
+      >
+        {oneLine ? (
+          <span className="whitespace-nowrap">
+            <span className="text-foreground">{current || "–"}</span>/{total}
+          </span>
+        ) : (
+          <>
+            <span className="text-foreground">{current || "–"}</span>
+            <span>/{total}</span>
+          </>
+        )}
+      </PopoverTrigger>
+      <PopoverContent mobileSheet sheetTitle="Đi tới trang" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-44 p-1.5">
+        <PopoverTitle className="sr-only">Đi tới trang</PopoverTitle>
+        {open ? <SheetKeyboardSync /> : null}
+        <PageJumpForm pages={pages} onDone={() => setOpen(false)} />
+      </PopoverContent>
+    </PopoverRoot>
+  );
+}
+
+function PageGroup({ pages }: { pages: RailPages }) {
   const { current, total, onGoto } = pages;
   const go = (page: number) => onGoto(Math.min(total, Math.max(1, page)));
   const oneLine = pageLabelFits(current, total);
@@ -178,28 +210,7 @@ function PageGroup({ pages }: { pages: RailPages }) {
       <RailButton label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)}>
         <ChevronUp />
       </RailButton>
-      <PopoverRoot open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          aria-label={`Trang ${current} trên ${total}, bấm để nhập số trang`}
-          data-popup-open={open || undefined}
-          className={cn(RAIL_TILE, "h-8 text-xs leading-none tabular-nums", !oneLine && "h-9 gap-0.5")}
-        >
-          {oneLine ? (
-            <span className="whitespace-nowrap">
-              <span className="text-foreground">{current || "–"}</span>/{total}
-            </span>
-          ) : (
-            <>
-              <span className="text-foreground">{current || "–"}</span>
-              <span>/{total}</span>
-            </>
-          )}
-        </PopoverTrigger>
-        <PopoverContent mobileSheet sheetTitle="Đi tới trang" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-44 p-1.5">
-          <PopoverTitle className="sr-only">Đi tới trang</PopoverTitle>
-          <PageJumpForm pages={pages} onDone={() => setOpen(false)} />
-        </PopoverContent>
-      </PopoverRoot>
+      <PageJump pages={pages} className={cn("h-8", !oneLine && "h-9 gap-0.5")} oneLine={oneLine} />
       <RailButton label="Trang sau" disabled={current >= total} onClick={() => go(current + 1)}>
         <ChevronDown />
       </RailButton>
@@ -720,5 +731,44 @@ export function DocumentFilesRail({
         ) : null}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * Điện thoại: thanh công cụ ngang bám đáy màn xem tệp (thay rail dọc 44px để giấy rộng hết bề ngang,
+ * nút trong tầm ngón cái). Thu nhỏ · tỷ lệ (chạm để về vừa chiều rộng) · phóng to | trang | tìm | tải về.
+ * Không có toàn màn hình (đã toàn màn hình) và vạch tệp (chọn tệp bằng "Tệp N" ở dòng tên tệp).
+ */
+export function DocumentViewerBar({ fileUrl, fileName, kind, zoom, onZoomChange, search, pages, onDownload }: DocumentRailProps) {
+  if (kind === "other") return null;
+  const hasPages = kind === "pdf" && pages && pages.total > 1;
+  return (
+    <div
+      role="toolbar"
+      aria-orientation="horizontal"
+      aria-label={`Công cụ xem ${fileName}`}
+      data-slot="document-viewer-bar"
+      className="fixed inset-x-0 bottom-0 z-10 flex h-[calc(48px+env(safe-area-inset-bottom,0px))] items-center justify-around border-t border-border/60 bg-card px-2 pb-[env(safe-area-inset-bottom,0px)]"
+    >
+      <div role="group" aria-label="Thu phóng" className="flex items-center gap-0.5">
+        <RailButton label="Thu nhỏ" className="size-10" disabled={zoom <= 50} onClick={() => onZoomChange(Math.max(zoom - 15, 50))}>
+          <ZoomOut />
+        </RailButton>
+        <Pressable
+          onClick={() => onZoomChange(100)}
+          disabled={zoom === 100}
+          aria-label={zoom === 100 ? zoomAriaLabel(zoom) : `${zoomAriaLabel(zoom)}, chạm để về vừa chiều rộng`}
+          className="h-8 min-w-14 rounded-md px-1 text-xs tabular-nums text-muted-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+        >
+          {zoom === 100 ? "Vừa rộng" : `${zoom}%`}
+        </Pressable>
+        <RailButton label="Phóng to" className="size-10" disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
+          <ZoomIn />
+        </RailButton>
+      </div>
+      {hasPages ? <PageJump pages={pages} className="h-10 w-auto min-w-14 px-2" /> : null}
+      {kind === "pdf" && search ? <SearchButton search={search} /> : null}
+      <DownloadMenu fileUrl={fileUrl} onDownload={onDownload} />
+    </div>
   );
 }

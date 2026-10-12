@@ -6,7 +6,7 @@ import { Download, FileQuestion } from "lucide-react";
 import { FileTypeIcon } from "./file-type-icon";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { DocumentViewerRail } from "./document-viewer-rail";
+import { DocumentViewerBar, DocumentViewerRail } from "./document-viewer-rail";
 import type { PdfCanvasController, PdfPosition } from "./pdf-document-canvas";
 import { isSafeUrl, toServedFileUrl } from "@/lib/url-utils";
 import { describeFileFormat, getPreviewKind } from "@/lib/documents/file-viewer-state";
@@ -50,6 +50,8 @@ export interface DocumentPdfViewerProps {
   viewportProps?: React.HTMLAttributes<HTMLDivElement>;
   /** Thao tác thêm khi tệp không xem trước được (ví dụ chuyển sang tệp PDF khác của văn bản). */
   unsupportedAction?: React.ReactNode;
+  /** `rail`: thanh dọc mép phải (mặc định). `bar`: thanh ngang bám đáy màn hình (màn xem tệp trên điện thoại). */
+  toolbar?: "rail" | "bar";
 }
 
 export function DocumentPdfViewer({
@@ -68,6 +70,7 @@ export function DocumentPdfViewer({
   onPageCount,
   viewportProps,
   unsupportedAction,
+  toolbar = "rail",
 }: DocumentPdfViewerProps) {
   const fileUrl = toServedFileUrl(rawFileUrl);
   const [localZoom, setLocalZoom] = React.useState<number>(100);
@@ -212,6 +215,29 @@ export function DocumentPdfViewer({
       </div>
     );
 
+  const toolProps = {
+    fileUrl,
+    fileName,
+    kind,
+    zoom: zoomLevel,
+    onZoomChange: setZoomLevel,
+    search: { query: searchQuery, onQueryChange: handleSearchQuery, total: searchTotal, active: activeMatch, onActiveChange: setActiveMatch, noText: searchNoText },
+    pages: pageCount ? { current: position.page, total: pageCount, onGoto: (page: number) => controllerRef.current?.scrollToPage(page, 0) } : undefined,
+    onDownload: handleDefaultDownload,
+  };
+
+  if (toolbar === "bar") {
+    // Thanh ngang cố định ở đáy: chừa chỗ dưới nội dung để trang cuối không bị che
+    return (
+      <div ref={rootRef} className={`bg-muted/50 pb-[calc(48px+env(safe-area-inset-bottom,0px))] ${className}`} data-slot="document-file-viewer">
+        <div {...viewportProps} data-pdf-no-scroll="" className="min-w-0 overflow-x-auto p-2">
+          {content}
+        </div>
+        <DocumentViewerBar {...toolProps} />
+      </div>
+    );
+  }
+
   return (
       <div
         ref={rootRef}
@@ -222,16 +248,9 @@ export function DocumentPdfViewer({
           {content}
         </div>
         <DocumentViewerRail
-          fileUrl={fileUrl}
-          fileName={fileName}
-          kind={kind}
-          zoom={zoomLevel}
-          onZoomChange={setZoomLevel}
-          search={{ query: searchQuery, onQueryChange: handleSearchQuery, total: searchTotal, active: activeMatch, onActiveChange: setActiveMatch, noText: searchNoText }}
-          pages={pageCount ? { current: position.page, total: pageCount, onGoto: (page) => controllerRef.current?.scrollToPage(page, 0) } : undefined}
+          {...toolProps}
           fullscreen={isFullscreen}
           onFullscreen={canFullscreen ? toggleFullscreen : undefined}
-          onDownload={handleDefaultDownload}
           files={railFiles}
           extra={railExtra}
         />

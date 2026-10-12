@@ -61,6 +61,8 @@ export interface DocumentFileViewerProps {
    * Rail công cụ bám ngay dưới dòng này.
    */
   stickyHeader?: boolean;
+  /** Kiểu thanh công cụ của khung xem (xem `DocumentPdfViewer`). */
+  toolbar?: "rail" | "bar";
 }
 
 /** Chiều cao dòng tên tệp (h-8); rail bám dưới dòng này khi `stickyHeader`. */
@@ -105,6 +107,7 @@ export function DocumentFileViewer({
   className,
   gutterClassName = "px-4 @lg/doc:px-6",
   stickyHeader = false,
+  toolbar = "rail",
 }: DocumentFileViewerProps) {
   const controlled = activeFileId !== undefined;
   const [internalId, setInternalId] = React.useState(() => resolveActiveFileId(files, activeFileId));
@@ -192,6 +195,7 @@ export function DocumentFileViewer({
             ) : undefined
           }
           viewportProps={multiple ? { role: "region", "aria-label": `Xem tệp ${active.name}` } : undefined}
+          toolbar={toolbar}
           unsupportedAction={alternative ? (
             <Button variant="ghost" size="sm" onClick={() => select(alternative.id)} title={alternative.name}>
               <span className="max-w-48 truncate">Xem {alternative.name}</span>
@@ -277,8 +281,8 @@ export function DocumentFileScreen({
         </Button>
         <p className="min-w-0 truncate text-xs text-muted-foreground">{title}</p>
       </header>
-      <div className="@container/doc min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)]">
-        <DocumentFileViewer files={files} activeFileId={activeFileId} onActiveFileChange={onActiveFileChange} gutterClassName="px-4" stickyHeader />
+      <div className="@container/doc min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <DocumentFileViewer files={files} activeFileId={activeFileId} onActiveFileChange={onActiveFileChange} gutterClassName="px-4" stickyHeader toolbar="bar" />
       </div>
     </div>
   );
