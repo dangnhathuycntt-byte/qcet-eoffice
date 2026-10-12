@@ -6,7 +6,6 @@ import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
-  ChevronsUpDown,
   User,
   Settings,
   Smartphone,
@@ -716,7 +715,7 @@ export function AppSidebar() {
           {/* ========================================================= */}
           {/* 3. SIDEBAR BOTTOM FOOTER: USER ACCOUNT PROFILE CARD       */}
           {/* ========================================================= */}
-          <div className="shrink-0 w-full p-2 mt-auto border-t border-border/40">
+          <div className="shrink-0 w-full p-2 mt-auto">
             <Menu.Root
               open={isProfileDropdownOpen && Boolean(user)}
               onOpenChange={(open) => setIsProfileDropdownOpen(open)}
@@ -727,11 +726,11 @@ export function AppSidebar() {
                 className={cn(
                   "flex items-center transition-colors cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                   isCollapsed
-                    ? "size-10 mx-auto justify-center rounded-xl p-0"
-                    : "w-full gap-2.5 px-2 py-1.5 rounded-lg",
+                    ? "size-9 mx-auto justify-center rounded-sm p-0"
+                    : "w-full gap-2 px-2 h-9 rounded-sm",
                   isProfileDropdownOpen
-                    ? "bg-muted"
-                    : "hover:bg-muted/60"
+                    ? "bg-sidebar-accent"
+                    : "hover:bg-sidebar-accent/60"
                 )}
                 aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
                 aria-expanded={isProfileDropdownOpen}
@@ -739,13 +738,13 @@ export function AppSidebar() {
                 <UserAvatar
                   name={formatDisplayName(user?.name)}
                   avatarUrl={user?.avatar}
-                  size="sm"
-                  className="shrink-0 size-7"
+                  size="md"
+                  className="shrink-0"
                 />
 
                 {!isCollapsed && (
                   <>
-                    <div className="flex flex-col min-w-0 flex-1 leading-none gap-0.5">
+                    <div className="flex flex-col min-w-0 flex-1 leading-none gap-1">
                       <span className="text-compact font-medium text-foreground truncate">
                         {formatDisplayName(user?.name)}
                       </span>
@@ -754,10 +753,6 @@ export function AppSidebar() {
                       </span>
                     </div>
 
-                    <ChevronsUpDown
-                      size={13}
-                      className="text-muted-foreground/50 shrink-0 ml-1"
-                    />
                   </>
                 )}
               </Menu.Trigger>
