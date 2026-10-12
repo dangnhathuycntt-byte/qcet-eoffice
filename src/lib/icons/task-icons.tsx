@@ -82,6 +82,18 @@ export function TaskIconDeadline(props: TaskActionIconProps) {
   );
 }
 
+/** Trong tuần này: lịch với dải tuần */
+export function TaskIconWeek(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg {...props}>
+      <rect x="1.9" y="3.4" width="15.2" height="13.2" rx="3.2" />
+      <path d="M1.9 8H17.1" />
+      <path d="M6.4 1.8V4.8M12.6 1.8V4.8" />
+      <path d="M5.4 12.2H13.6" />
+    </TaskActionSvg>
+  );
+}
+
 /** Sao chép liên kết */
 export function TaskIconLink(props: TaskActionIconProps) {
   return (

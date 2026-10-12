@@ -150,7 +150,7 @@ function BulkMenu({
       <MenuPortal>
         <MenuPositioner side="top" align="start" sideOffset={8} className="z-50">
           <MenuPopup
-            className="min-w-56 rounded-lg border border-border bg-popover p-1 text-xs text-popover-foreground shadow-lg outline-none animate-in fade-in-0 zoom-in-95 duration-100"
+            className="min-w-56 rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none animate-in fade-in-0 zoom-in-95 duration-100"
             onKeyDown={(e) => {
               if (onDigit && /^[1-9]$/.test(e.key) && onDigit(Number(e.key))) {
                 e.preventDefault();
@@ -240,12 +240,12 @@ export function BatchActionBar({
       aria-live="polite"
       aria-busy={isLoading}
       className={cn(
-        "hidden sm:block fixed bottom-6 inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max",
+        "hidden sm:block fixed bottom-6 inset-x-0 md:left-[var(--sidebar-w,0px)] mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max",
         "animate-in fade-in slide-in-from-bottom-3 duration-200",
         className
       )}
     >
-      <div className="flex flex-wrap items-center gap-0.5 rounded-xl border border-border bg-card px-2 py-1.5 shadow-lg text-foreground">
+      <div className="flex flex-wrap items-center gap-0.5 rounded-[var(--radius-menu)] border border-border/60 bg-card px-2 py-1.5 shadow-menu text-foreground">
         {/* Bộ đếm số lượng mục đã chọn */}
         <div className="flex items-center gap-2 pl-1.5 pr-2 text-xs font-medium text-foreground whitespace-nowrap">
           <TaskIconChecklist className="size-4 text-primary shrink-0" />

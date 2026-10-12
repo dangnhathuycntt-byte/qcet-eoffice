@@ -28,6 +28,7 @@ import { fadeVariants } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 import { DossierDisposalPanel } from "./dossier-disposal-panel";
+import { getDocumentHref } from "@/lib/documents/document-view-model";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -212,7 +213,7 @@ function itemDetailHref(
   if (!itemId) return null;
   switch (itemType) {
     case "DOCUMENT":
-      return `/documents/${itemId}`;
+      return getDocumentHref(itemId);
     case "TASK":
       return `/tasks/${itemId}`;
     default:

@@ -6,6 +6,7 @@ import { Menu } from "@base-ui/react/menu";
 import { Check, ChevronRight, Filter, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
+import { CountBadge } from "@/components/ui/count-badge";
 
 /** Nút icon trên thanh công cụ danh sách (bộ lọc, hiển thị) */
 export function listToolbarIconButtonClass(active = false) {
@@ -15,15 +16,8 @@ export function listToolbarIconButtonClass(active = false) {
   );
 }
 
-/** Số bộ lọc đang áp dụng trên nút Lọc (dùng chung Nhiệm vụ và Văn bản). */
-export function ListToolbarCountBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
-  return (
-    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-foreground/80 border border-border/80 font-mono text-xs leading-none font-semibold tabular-nums">
-      {count}
-    </span>
-  );
-}
+/** Alias giữ tên cũ cho import hiện có; định nghĩa nằm ở `count-badge.tsx`. */
+export const ListToolbarCountBadge = CountBadge;
 
 /** Nút "Xóa bộ lọc" cạnh nút Lọc, chỉ hiện khi có bộ lọc (dùng chung Nhiệm vụ và Văn bản). */
 export function ListToolbarClearFiltersButton({ onClick }: { onClick: () => void }) {
@@ -101,7 +95,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
           onBlur?.(e);
         }}
         className={cn(
-          "h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 transition-colors",
+          "h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 transition-colors",
           className
         )}
         {...inputProps}

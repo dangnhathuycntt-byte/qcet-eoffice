@@ -217,8 +217,6 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
           onCategoryChange: () => {},
           density: "comfortable",
           onDensityChange: () => {},
-          viewMode: "table",
-          onViewModeChange: () => {},
         })
       );
 
@@ -410,7 +408,7 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
   });
 
   describe("5. TaskTableToolbar Presentation Controls", () => {
-    it("renders the T10 first row and offers department, category, density and view controls on the disclosed panels", () => {
+    it("renders the T10 first row and offers department, category and density controls on the disclosed panels", () => {
       const html = renderToStaticMarkup(
         React.createElement(TaskTableToolbar, {
           searchQuery: "Nhiệm vụ số",
@@ -423,8 +421,6 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
           onCategoryChange: () => {},
           density: "compact",
           onDensityChange: () => {},
-          viewMode: "kanban",
-          onViewModeChange: () => {},
           onAddTask: () => {},
           onExportExcel: () => {},
         })
@@ -444,7 +440,6 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
         'aria-label="Lọc theo đơn vị phòng ban"',
         'aria-label="Mật độ hiển thị bảng"',
         'aria-label="Chế độ hiển thị gọn"',
-        'aria-label="Chế độ xem không gian làm việc"',
       ]) {
         assert.ok(
           !html.includes(disclosed),
@@ -466,11 +461,12 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
         'aria-label="Lọc theo đơn vị phòng ban"',
         'aria-label="Mật độ hiển thị bảng"',
         'aria-label="Chế độ hiển thị gọn"',
-        'aria-label="Chế độ xem không gian làm việc"',
         "Xuất Excel",
       ]) {
         assert.ok(toolbarSrc.includes(offered), `Toolbar must still offer ${offered}`);
       }
+      // Đã bỏ chế độ Kanban: popover Hiển thị không còn nút chuyển Danh sách/Kanban.
+      assert.ok(!/kanban/i.test(toolbarSrc), "Toolbar must not offer a Kanban view");
     });
 
     it("renders loading spinner in search input when loading prop is true", () => {

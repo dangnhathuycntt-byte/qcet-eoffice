@@ -450,7 +450,7 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
     );
   });
 
-  it("renders interactive triggers for inline editing: Priority, Department, Assignee, Due Date", () => {
+  it("does not advertise inline editing on Priority, Department, Assignee, Due Date cells", () => {
     const html = renderToStaticMarkup(
       React.createElement(
         "table",
@@ -474,23 +474,15 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
       )
     );
 
-    // 1. Priority trigger
-    assert.ok(
-      html.includes('title="Nhấp để đổi độ ưu tiên"'),
-      "Must render interactive trigger for priority"
-    );
-
-    // 2. Department trigger
-    assert.ok(
-      html.includes("Nhấp để đổi đơn vị phụ trách"),
-      "Must render interactive trigger for department"
-    );
-
-    // 3. Due Date trigger
-    assert.ok(
-      html.includes('title="Nhấp để đổi hạn hoàn thành"'),
-      "Must render interactive trigger for due date"
-    );
+    // Đổi ưu tiên, người chủ trì, hạn nằm ở menu chuột phải; ô trong bảng không mời bấm để sửa
+    for (const phrase of [
+      "Nhấp để đổi độ ưu tiên",
+      "Nhấp để đổi đơn vị phụ trách",
+      "Nhấp để đổi người phụ trách",
+      "Nhấp để đổi hạn hoàn thành",
+    ]) {
+      assert.ok(!html.includes(phrase), `Cell must not advertise inline edit: ${phrase}`);
+    }
 
     // Tiến độ đã gộp vào cột Trạng thái nhưng không còn nút cập nhật riêng
     assert.ok(

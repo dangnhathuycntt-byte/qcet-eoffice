@@ -14,6 +14,7 @@ import type {
   TableColumnVisibility,
   TaskSortField,
 } from "../types";
+import { TASK_COLUMN_CLASS } from "../constants";
 
 export interface TaskTableHeaderProps {
   sortField?: TaskSortField;
@@ -67,31 +68,31 @@ export function TaskTableHeader({
 
   const activeColumns = React.useMemo(() => {
     const cols: ColumnDefinition[] = [
-      { id: "title", label: "Tiêu đề", sortable: true, widthClass: "min-w-[280px]" },
+      { id: "title", label: "Tiêu đề", sortable: true, widthClass: TASK_COLUMN_CLASS.title },
     ];
     if (visibleColumns?.priority !== false) {
-      cols.push({ id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-[84px]" });
+      cols.push({ id: "priority", label: "Ưu tiên", sortable: true, widthClass: TASK_COLUMN_CLASS.priority });
     }
     if (visibleColumns?.leadAssignee !== false) {
-      cols.push({ id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-[170px]" });
+      cols.push({ id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: TASK_COLUMN_CLASS.leadAssignee });
     }
     if (visibleColumns?.coAssignees === true) {
-      cols.push({ id: "coAssignees", label: "Phối hợp", widthClass: "w-[110px]" });
+      cols.push({ id: "coAssignees", label: "Phối hợp", widthClass: TASK_COLUMN_CLASS.coAssignees });
     }
     if (visibleColumns?.department !== false) {
-      cols.push({ id: "department", label: "Đơn vị", sortable: true, widthClass: "w-[170px]" });
+      cols.push({ id: "department", label: "Đơn vị", sortable: true, widthClass: TASK_COLUMN_CLASS.department });
     }
     if (visibleColumns?.startDate === true) {
-      cols.push({ id: "startDate", label: "Bắt đầu", widthClass: "w-[110px]" });
+      cols.push({ id: "startDate", label: "Bắt đầu", widthClass: TASK_COLUMN_CLASS.startDate });
     }
     if (visibleColumns?.dueDate !== false) {
-      cols.push({ id: "dueDate", label: "Hạn", sortable: true, widthClass: "w-[110px]" });
+      cols.push({ id: "dueDate", label: "Hạn", sortable: true, widthClass: TASK_COLUMN_CLASS.dueDate });
     }
     if (visibleColumns?.createdAt === true) {
-      cols.push({ id: "createdAt", label: "Ngày tạo", widthClass: "w-[110px]" });
+      cols.push({ id: "createdAt", label: "Ngày tạo", widthClass: TASK_COLUMN_CLASS.createdAt });
     }
     if (visibleColumns?.status === true) {
-      cols.push({ id: "status", label: "Trạng thái", sortable: true, widthClass: "w-[180px]" });
+      cols.push({ id: "status", label: "Trạng thái", sortable: true, widthClass: TASK_COLUMN_CLASS.status });
     }
     return cols;
   }, [visibleColumns]);
@@ -112,8 +113,8 @@ export function TaskTableHeader({
     );
   };
 
-  const rowHeightClass = "h-12"; // Tiêu đề cột cao bằng hàng (48px)
-  const paddingClass = "px-3 py-2.5";
+  const rowHeightClass = "h-8"; // Tiêu đề cột 32px (thấp hơn hàng dữ liệu, như Linear)
+  const paddingClass = "px-3 py-1.5";
 
   return (
     <thead
@@ -157,10 +158,10 @@ export function TaskTableHeader({
 
           // First column padding alignment when selection checkbox is absent
           const isFirstColumn = !showSelection && colIdx === 0;
-          const leadingPaddingClass = isFirstColumn ? "pl-4 sm:pl-5 pr-2.5 py-2.5" : paddingClass;
+          const leadingPaddingClass = isFirstColumn ? "pl-4 sm:pl-5 pr-2.5 py-1.5" : paddingClass;
           const isLastColumn = colIdx === activeColumns.length - 1;
           const columnPaddingClass = col.id === "dueDate" || col.id === "createdAt" || col.id === "startDate" || isLastColumn
-            ? "pl-2.5 pr-4 sm:pr-5 py-2.5"
+            ? "pl-2.5 pr-4 sm:pr-5 py-1.5"
             : isFirstColumn
             ? leadingPaddingClass
             : paddingClass;

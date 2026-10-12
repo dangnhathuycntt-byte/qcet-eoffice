@@ -71,6 +71,22 @@ const nextConfig: NextConfig = {
         destination: "/tasks",
         permanent: true,
       },
+      // Trang chi tiết văn bản riêng đã bỏ (trùng Quick View): đường dẫn cũ trong thông báo/dấu trang mở thẳng Quick View, giữ ?file=.
+      {
+        source: "/documents/incoming/:id",
+        destination: "/documents?docId=:id",
+        permanent: false,
+      },
+      {
+        source: "/documents/outgoing/:id((?!compose$)[^/]+)",
+        destination: "/documents?docId=:id",
+        permanent: false,
+      },
+      {
+        source: "/documents/:id((?!approval-report$|incoming$|outgoing$)[^/]+)",
+        destination: "/documents?docId=:id",
+        permanent: false,
+      },
       {
         source: "/portal",
         destination: "/tasks",

@@ -327,3 +327,21 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
   },
 };
 
+
+/**
+ * Độ rộng cột bảng nhiệm vụ — nguồn duy nhất cho `<col>`, `<th>` và `<td>`.
+ * Cột phụ tự ẩn theo độ rộng khung bảng (container query, cần `@container` ở khung cuộn)
+ * để Tiêu đề, Hạn và Trạng thái luôn thấy được mà không phải cuộn ngang.
+ * Ẩn theo thứ tự: ngày tạo/bắt đầu → đơn vị, phối hợp → phụ trách → ưu tiên.
+ */
+export const TASK_COLUMN_CLASS = {
+  title: "min-w-[220px]",
+  priority: "w-[84px] @max-[560px]:hidden",
+  leadAssignee: "w-[184px] @max-[760px]:hidden",
+  coAssignees: "w-[110px] @max-[940px]:hidden",
+  department: "w-[176px] @max-[940px]:hidden",
+  startDate: "w-[80px] @max-[1120px]:hidden",
+  dueDate: "w-[96px]",
+  createdAt: "w-[80px] @max-[1120px]:hidden",
+  status: "w-[148px]",
+} as const;

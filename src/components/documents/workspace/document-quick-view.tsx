@@ -3,12 +3,12 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
+import { Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MenuContent, MenuItem, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import type { DocumentItem, OfficialDocument } from "@/types/document";
 import { useDocumentDetail } from "@/hooks/use-document-detail";
-import { fromDocumentItem, fromOfficialDocument, getFullPageHref, type DocumentViewModel } from "@/lib/documents/document-view-model";
+import { fromDocumentItem, fromOfficialDocument, type DocumentViewModel } from "@/lib/documents/document-view-model";
 import { resolveActiveFileId } from "@/lib/documents/file-viewer-state";
 import { DocumentFileViewer } from "../document-file-viewer";
 import { hasOpenDetailsPopover, useTrackOpenPopover } from "../popover-escape-guard";
@@ -177,7 +177,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
   const typeLine = vm ? (
     <>
       {vm.typeLabel}
-      {vm.numberLabel ? <span className="tabular-nums"> · {vm.numberLabel}</span> : null}
+      {vm.numberLabel ? <span className="font-medium tabular-nums text-foreground"> · {vm.numberLabel}</span> : null}
     </>
   ) : (
     "Chi tiết văn bản"
@@ -187,13 +187,6 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
     <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 pl-4 pr-2 select-none">
       <p className="min-w-0 truncate text-xs text-muted-foreground">{typeLine}</p>
       <div className="flex shrink-0 items-center gap-0.5">
-        {vm ? (
-          <Button asChild variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground">
-            <Link href={getFullPageHref(vm.kind, vm.id, activeFileId || null)} aria-label="Mở trang đầy đủ" title="Mở trang đầy đủ">
-              <ArrowUpRight className="size-4" />
-            </Link>
-          </Button>
-        ) : null}
         <MoreActionsMenu
           onPrint={() => window.print()}
           onViewSignature={vm?.hasSignature && onViewSignature ? () => onViewSignature(item) : undefined}

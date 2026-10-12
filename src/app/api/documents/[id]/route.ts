@@ -86,6 +86,7 @@ export async function GET(
       docResource
     );
 
+    const marked = Boolean(await prisma.documentMark.findUnique({ where: { documentId_userId: { documentId: id, userId: authUser.id } }, select: { userId: true } }));
     const documentDTO = toDocumentDetailDTO(document);
     // Cùng điều kiện với PATCH và bổ sung tệp: UI chỉ hiện "Sửa"/"Thêm tệp" khi thao tác thực sự được phép
     const canEdit = canUpdateDocument(authContext, document) && !isDocumentImmutable(document);
@@ -97,11 +98,13 @@ export async function GET(
           ...document,
           availableActions,
           canEdit,
+          marked,
         },
         document: {
           ...documentDTO,
           availableActions,
           canEdit,
+          marked,
         },
         availableActions,
       },

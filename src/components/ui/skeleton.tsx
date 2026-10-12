@@ -1,19 +1,23 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export type SkeletonProps = React.HTMLAttributes<HTMLDivElement>;
+export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Nhấp nháy nhẹ (tắt khi người dùng bật giảm chuyển động). Mặc định tắt. */
+  pulse?: boolean;
+}
 
 /**
  * Khối giữ chỗ khi dữ liệu đang tải. Chỉ trang trí nên ẩn khỏi trình đọc màn hình;
  * vùng chứa nên đặt `aria-busy` và có thông báo trạng thái riêng.
  */
-function Skeleton({ className, ...props }: SkeletonProps) {
+function Skeleton({ className, pulse = false, ...props }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
       data-slot="skeleton"
       className={cn(
         "rounded-lg bg-secondary",
+        pulse && "motion-safe:animate-pulse",
         className,
       )}
       {...props}

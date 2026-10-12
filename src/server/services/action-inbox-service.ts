@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { ActionInboxItem, ActionInboxResponse } from '@/contracts/me';
 import { formatDisplayDate } from "@/lib/format/date";
+import { getDocumentHref } from "@/lib/documents/document-view-model";
 
 /** Trường văn bản mà hộp việc cần (số, trích yếu, độ mật). */
 const INBOX_DOCUMENT_SELECT = {
@@ -223,7 +224,7 @@ export class ActionInboxService {
         deadline: w.deadline?.toISOString(),
         createdAt: w.createdAt.toISOString(),
         classification: w.document.securityLevel as any,
-        linkUrl: `/documents/incoming/${w.documentId}`,
+        linkUrl: getDocumentHref(w.documentId),
       });
     }
 
@@ -240,7 +241,7 @@ export class ActionInboxService {
         deadline: w.deadline?.toISOString(),
         createdAt: w.createdAt.toISOString(),
         classification: w.document.securityLevel as any,
-        linkUrl: `/documents/incoming/${w.documentId}`,
+        linkUrl: getDocumentHref(w.documentId),
       });
     }
 
@@ -258,7 +259,7 @@ export class ActionInboxService {
         deadline: ua.deadline?.toISOString() || w.deadline?.toISOString(),
         createdAt: ua.createdAt.toISOString(),
         classification: w.document.securityLevel as any,
-        linkUrl: `/documents/incoming/${w.documentId}`,
+        linkUrl: getDocumentHref(w.documentId),
       });
     }
 
@@ -274,7 +275,7 @@ export class ActionInboxService {
         priority: 'HIGH',
         createdAt: w.createdAt.toISOString(),
         classification: w.document.securityLevel as any,
-        linkUrl: `/documents/outgoing/${w.documentId}`,
+        linkUrl: getDocumentHref(w.documentId),
       });
     }
 
@@ -291,7 +292,7 @@ export class ActionInboxService {
         priority: 'URGENT',
         createdAt: w.createdAt.toISOString(),
         classification: w.document.securityLevel as any,
-        linkUrl: `/documents/outgoing/${w.documentId}`,
+        linkUrl: getDocumentHref(w.documentId),
       });
     }
 
@@ -307,7 +308,7 @@ export class ActionInboxService {
         priority: 'URGENT',
         createdAt: w.createdAt.toISOString(),
         classification: w.document.securityLevel as any,
-        linkUrl: `/documents/outgoing/${w.documentId}`,
+        linkUrl: getDocumentHref(w.documentId),
       });
     }
 

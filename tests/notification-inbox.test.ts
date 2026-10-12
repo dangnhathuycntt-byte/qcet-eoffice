@@ -62,7 +62,7 @@ describe("resolveNotificationTarget", () => {
   test("/documents?id= dẫn tới trang chi tiết văn bản", () => {
     const t = resolveNotificationTarget("/documents?id=doc%201");
     assert.equal(t?.kind, "document");
-    assert.equal(t?.href, "/documents/doc%201");
+    assert.equal(t?.href, "/documents?docId=doc%201");
     assert.equal(t?.ctaLabel, "Mở văn bản");
   });
 });

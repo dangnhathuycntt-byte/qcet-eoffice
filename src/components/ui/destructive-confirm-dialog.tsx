@@ -11,8 +11,12 @@ export interface DestructiveConfirmDialogProps {
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
   title: string;
+  /** Nhãn loại đối tượng đứng trước `entityName`, vd "Nhiệm vụ". */
+  entityLabel?: string;
   entityName?: string;
   description?: string;
+  /** Nội dung phụ dưới mô tả, vd danh sách các mục sắp xóa. */
+  children?: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   irreversible?: boolean;
@@ -24,14 +28,18 @@ export function DestructiveConfirmDialog({
   onClose,
   onConfirm,
   title,
+  entityLabel = "Nhiệm vụ",
   entityName,
   description,
+  children,
   confirmLabel = "Xóa",
   cancelLabel = "Hủy",
   irreversible = true,
   isConfirming = false,
 }: DestructiveConfirmDialogProps) {
   const handleConfirm = async () => { await onConfirm(); };
+  // Mặc định rơi vào nút an toàn: Enter không vô tình xác nhận xóa.
+  const cancelRef = React.useRef<HTMLButtonElement>(null);
 
   return (
     <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -40,6 +48,7 @@ export function DestructiveConfirmDialog({
           className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
         />
         <AlertDialog.Popup
+          initialFocus={cancelRef}
           className="fixed inset-0 z-40 flex items-center justify-center p-4 outline-none motion-reduce:transition-none"
         >
           <div className="bg-card rounded-2xl shadow-dialog border-0 max-w-md w-full p-4 sm:p-6 flex flex-col gap-4">
@@ -53,19 +62,20 @@ export function DestructiveConfirmDialog({
                 </AlertDialog.Title>
                 <AlertDialog.Description className="text-xs text-muted-foreground leading-relaxed">
                   {entityName && (
-                    <>Nhiệm vụ{" "}<span className="font-semibold text-foreground">&ldquo;{entityName}&rdquo;</span>{" "}</>
+                    <>{entityLabel}{" "}<span className="font-semibold text-foreground">&ldquo;{entityName}&rdquo;</span>{" "}</>
                   )}
-                  {description || "sẽ được lưu trữ / hủy bỏ."}
+                  {description}
                   {irreversible && (
                     <span className="block mt-1 text-destructive font-medium">Hành động này không thể hoàn tác.</span>
                   )}
                 </AlertDialog.Description>
+                {children}
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-0">
               <AlertDialog.Close
-                render={<Button variant="secondary" size="default" />}
+                render={<Button ref={cancelRef} variant="secondary" size="default" />}
                 disabled={isConfirming}
               >
                 {cancelLabel}

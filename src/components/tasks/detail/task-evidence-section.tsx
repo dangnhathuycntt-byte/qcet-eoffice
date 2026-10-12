@@ -11,6 +11,7 @@ import {
   Loader2,
   ShieldCheck,
 } from "lucide-react";
+import { confirmAction } from "@/components/ui/confirm-host";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { isSafeUrl } from "@/lib/url-utils";
@@ -255,7 +256,16 @@ export function TaskEvidenceSection({
                   {canEdit && onDeleteDeliverable && (
                     <button
                       type="button"
-                      onClick={() => onDeleteDeliverable(item.id)}
+                      onClick={async () => {
+                        const ok = await confirmAction({
+                          title: "Xóa minh chứng?",
+                          description: `Minh chứng “${item.title}” sẽ bị gỡ khỏi nhiệm vụ.`,
+                          confirmLabel: "Xóa minh chứng",
+                          cancelLabel: "Giữ lại",
+                          destructive: true,
+                        });
+                        if (ok) void onDeleteDeliverable(item.id);
+                      }}
                       className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-destructive rounded transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:opacity-100"
                       title="Xóa minh chứng"
                       aria-label="Xóa minh chứng"

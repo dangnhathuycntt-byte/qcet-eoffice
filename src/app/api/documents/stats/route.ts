@@ -7,6 +7,7 @@ import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { buildDocumentBucketWhere, DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
 import { canViewApprovalReport } from "@/server/documents/submission-approval-service";
 import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const now = new Date();
     // ACL: scope document counts to what the authenticated user can read
-    const aclWhere = buildDocumentReadWhere(authUser);
+    const aclWhere = buildDocumentReadWhere(await loadCachedAuthorizationContext(authUser.id));
     const typeParam = request.nextUrl.searchParams.get("type");
     const scopedType = resolveDocumentTypeParam(typeParam);
     const baseFilter = { AND: [{ archivedAt: null }, aclWhere] };

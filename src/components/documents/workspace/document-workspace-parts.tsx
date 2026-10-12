@@ -15,7 +15,7 @@ import { OutgoingRecipientsPanel } from "../outgoing-recipients-panel";
 import { IncomingSignatureStatus } from "../incoming-signature-status";
 import { IncomingReturnHistory } from "../incoming-return-history";
 import { OutgoingInitialSign } from "../outgoing-initial-sign";
-import { IncomingDirectives, IncomingWorkflowActions, IncomingWorkflowDetails, getIncomingAttributes } from "./incoming-workflow-sections";
+import { IncomingDirectives, IncomingFlowProgress, IncomingWorkflowActions, IncomingWorkflowDetails, getIncomingAttributes } from "./incoming-workflow-sections";
 import { SubmissionApprovalPanel } from "./submission-approval-panel";
 import { DocumentEditActions } from "./document-edit";
 import { OutgoingWorkflowStepper } from "../outgoing-workflow-stepper";
@@ -292,8 +292,9 @@ export function DocumentInfoSections({
         {isIncoming && incomingStatus ? <IncomingSignatureStatus key={`incoming-signature-${vm.id}`} documentId={vm.id} row /> : null}
 
         {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
+        {isIncoming && incomingStatus ? <IncomingFlowProgress status={incomingStatus} leadUnitName={item?.leadUnitName} /> : null}
         {isIncoming && incomingStatus ? (
-          <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />
+          <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} marked={item?.marked} onDone={onWorkflowUpdate} />
         ) : null}
         <QuickInfoSection key={`quick-info-${vm.id}`} vm={vm} item={item} outgoingStatus={outgoingStatus} />
       </>
@@ -322,8 +323,10 @@ export function DocumentInfoSections({
 
       {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
 
+      {isIncoming && incomingStatus ? <IncomingFlowProgress status={incomingStatus} leadUnitName={item?.leadUnitName} /> : null}
+
       {isIncoming && incomingStatus ? (
-        <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} onDone={onWorkflowUpdate} />
+        <IncomingWorkflowActions documentId={vm.id} status={incomingStatus} marked={item?.marked} onDone={onWorkflowUpdate} />
       ) : null}
 
       <DocumentEditActions item={item} onChanged={onWorkflowUpdate} />

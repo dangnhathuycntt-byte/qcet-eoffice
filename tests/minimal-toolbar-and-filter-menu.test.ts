@@ -62,12 +62,12 @@ describe("Minimal Toolbar & Filter Menu UX Suite", () => {
         user: mockUser,
         searchQuery: "",
         onSearchChange: () => {},
-        onViewModeChange: () => {},
       })
     );
 
-    // 1. Search input placeholder
-    assert.match(markup, /placeholder="Tìm nhiệm vụ… \/"/);
+    // 1. Search collapses to an icon button when the query is empty
+    assert.match(markup, /aria-label="Tìm nhiệm vụ"/);
+    assert.ok(!markup.includes('placeholder="Tìm nhiệm vụ… /"'));
 
     // 2. Filter button
     assert.match(markup, /Bộ lọc/);

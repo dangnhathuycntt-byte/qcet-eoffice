@@ -13,6 +13,8 @@ import {
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZES } from "../constants";
 import { Pressable } from "@/components/ui/pressable";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export interface TaskPaginationBarProps {
   currentPage: number;
@@ -28,34 +30,83 @@ export interface TaskPaginationBarProps {
   shortcutTrigger?: React.ReactNode;
 }
 
+/**
+ * Luôn trả về tối đa 7 ô (trang đầu, trang cuối, trang hiện tại ± 1 và dấu "...")
+ * để thanh phân trang giữ nguyên độ rộng khi chuyển trang.
+ */
 export function getPageNumbers(
   currentPage: number,
   totalPages: number
 ): (number | "...")[] {
-  if (totalPages <= 5) {
-    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  const range = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+  if (totalPages <= 7) return range(1, totalPages);
+  if (currentPage <= 4) return [...range(1, 5), "...", totalPages];
+  if (currentPage >= totalPages - 3) return [1, "...", ...range(totalPages - 4, totalPages)];
+  return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+}
+
+/** Dấu "..." bấm được: mở ô nhập để nhảy thẳng tới một trang. */
+function PageJump({
+  totalPages,
+  disabled,
+  onJump,
+}: {
+  totalPages: number;
+  disabled: boolean;
+  onJump: (page: number) => void;
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState("");
+
+  if (!editing) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        disabled={disabled}
+        onClick={() => {
+          setValue("");
+          setEditing(true);
+        }}
+        className="text-xs"
+        title="Nhập số trang"
+        aria-label={`Đến trang (1–${totalPages})`}
+      >
+        …
+      </Button>
+    );
   }
 
-  const pages: (number | "...")[] = [];
-  pages.push(1);
+  const commit = () => {
+    const page = Number.parseInt(value, 10);
+    if (Number.isFinite(page)) onJump(Math.min(Math.max(1, page), totalPages));
+    setEditing(false);
+  };
 
-  if (currentPage > 3) {
-    pages.push("...");
-  }
-
-  const start = Math.max(2, currentPage - 1);
-  const end = Math.min(totalPages - 1, currentPage + 1);
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-
-  if (currentPage < totalPages - 2) {
-    pages.push("...");
-  }
-
-  pages.push(totalPages);
-  return pages;
+  return (
+    <Input
+      compact
+      autoFocus
+      inputMode="numeric"
+      value={value}
+      onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setEditing(false);
+        }
+      }}
+      onBlur={() => setEditing(false)}
+      placeholder="Trang"
+      aria-label={`Đến trang (1–${totalPages})`}
+      className="w-14 text-center text-xs tabular-nums"
+    />
+  );
 }
 
 export const TaskPaginationBar = React.memo(function TaskPaginationBar({
@@ -232,87 +283,84 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
         </Popover.Root>
       </div>
 
-      {/* Right section: Page navigation buttons & optional shortcut trigger */}
-      <div className="flex items-center gap-1">
-        {/* First Page Button */}
-        <Pressable
+      {/* Right section: điều hướng trang. Di động chỉ còn ‹ x / n ›, máy tính hiện dãy số trang */}
+      <div className="flex items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={handleFirst}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
-          title="Trang đầu"
+          className="sm:hidden"
           aria-label="Về trang đầu"
         >
           <ChevronsLeft className="size-3.5" />
-        </Pressable>
-
-        {/* Previous Page Button */}
-        <Pressable
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={handlePrevious}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang trước"
           aria-label="Sang trang trước"
         >
           <ChevronLeft className="size-3.5" />
-        </Pressable>
+        </Button>
 
-        {/* Numeric Page Buttons */}
-        <div className="flex items-center gap-1 mx-0.5">
+        <span className="px-2 text-xs tabular-nums text-muted-foreground sm:hidden" aria-live="polite">
+          <span className="font-medium text-foreground">{safeCurrentPage}</span> / {totalPages}
+        </span>
+
+        <div className="hidden sm:flex items-center gap-0.5">
           {pageNumbers.map((p, idx) => {
             if (p === "...") {
               return (
-                <span
+                <PageJump
                   key={`ellipsis-${idx}`}
-                  className="inline-flex size-7 items-center justify-center text-xs font-mono text-muted-foreground select-none"
-                  aria-hidden="true"
-                >
-                  ...
-                </span>
+                  totalPages={totalPages}
+                  disabled={disabled}
+                  onJump={onPageChange}
+                />
               );
             }
 
             const isCurrent = p === safeCurrentPage;
             return (
-              <Pressable
+              <Button
                 key={p}
-                onClick={() => !disabled && onPageChange(p)}
+                variant={isCurrent ? "default" : "ghost"}
+                size="icon-sm"
+                onClick={() => !isCurrent && !disabled && onPageChange(p)}
                 disabled={disabled}
                 aria-current={isCurrent ? "page" : undefined}
-                className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-all shadow-2xs active:scale-[0.98]",
-                  isCurrent
-                    ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                    : "border border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
+                className="w-auto min-w-7 px-1.5 text-xs tabular-nums"
                 aria-label={`Trang ${p}`}
               >
                 {p}
-              </Pressable>
+              </Button>
             );
           })}
         </div>
 
-        {/* Next Page Button */}
-        <Pressable
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={handleNext}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
           title="Trang sau"
           aria-label="Sang trang sau"
         >
           <ChevronRight className="size-3.5" />
-        </Pressable>
-
-        {/* Last Page Button */}
-        <Pressable
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={handleLast}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs active:scale-[0.98]"
-          title="Trang cuối"
+          className="sm:hidden"
           aria-label="Về trang cuối"
         >
           <ChevronsRight className="size-3.5" />
-        </Pressable>
+        </Button>
       </div>
     </nav>
   );

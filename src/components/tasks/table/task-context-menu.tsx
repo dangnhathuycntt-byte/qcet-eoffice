@@ -37,9 +37,7 @@ import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-di
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
-
-const ROW =
-  "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors outline-none hover:bg-accent focus-visible:bg-accent";
+import { MENU_ROW_CLASS as ROW } from "@/components/ui/menu";
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return <kbd className="font-sans text-xs tabular-nums text-muted-foreground/80">{children}</kbd>;
@@ -119,7 +117,7 @@ function SubmenuRow({
           role="menu"
           className={cn(
             panelPlacementClass,
-            "rounded-lg border border-border/80 bg-popover p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50",
+            "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs shadow-menu animate-in fade-in-0 zoom-in-95 duration-100 z-50",
             panelClassName
           )}
         >
@@ -235,7 +233,6 @@ export function TaskContextMenu({
     setActiveSubmenu((prev) => (mode === "open" ? name : prev === name ? null : name));
   }, []);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
-  const [copiedNotification, setCopiedNotification] = React.useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const feedback = useFeedback();
@@ -291,11 +288,8 @@ export function TaskContextMenu({
     try {
       const url = `${window.location.origin}/tasks/${task.id}`;
       await navigator.clipboard.writeText(url);
-      setCopiedNotification("Đã sao chép liên kết!");
-      setTimeout(() => {
-        setCopiedNotification(null);
-        onClose();
-      }, 700);
+      feedback.notifySuccess("Đã sao chép liên kết");
+      onClose();
     } catch {
       onClose();
     }
@@ -304,11 +298,8 @@ export function TaskContextMenu({
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(taskCode.toUpperCase());
-      setCopiedNotification("Đã sao chép mã!");
-      setTimeout(() => {
-        setCopiedNotification(null);
-        onClose();
-      }, 700);
+      feedback.notifySuccess("Đã sao chép mã nhiệm vụ");
+      onClose();
     } catch {
       onClose();
     }
@@ -421,7 +412,7 @@ export function TaskContextMenu({
 
   return (
     <>
-    <Menu.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Menu.Root open={isOpen && !showDeleteConfirm} onOpenChange={(open) => { if (!open) onClose(); }}>
     <Menu.Portal>
     <Menu.Positioner className="z-50"
       anchor={position ? { getBoundingClientRect: () => new DOMRect(position.x, position.y, 0, 0) } : triggerElement}
@@ -431,23 +422,8 @@ export function TaskContextMenu({
     <Menu.Popup
       ref={menuRef}
       aria-label="Thao tác nhanh nhiệm vụ"
-      className="w-60 select-none rounded-lg border border-border/80 bg-popover p-1 text-xs text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
+      className="w-60 select-none rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu animate-in fade-in-0 zoom-in-95 duration-100"
     >
-      {/* Copied Feedback Toast */}
-      {copiedNotification && (
-        <div className="mb-1 rounded bg-foreground px-2 py-1 text-center font-medium text-background shadow-xs">
-          {copiedNotification}
-        </div>
-      )}
-
-      {/* Task header: mã + tiêu đề */}
-      <div className="px-2 pt-1 pb-1.5 mb-1 border-b border-border/40">
-        <div className="font-mono text-xs uppercase text-muted-foreground truncate">{taskCode}</div>
-        <div className="text-xs font-medium text-foreground truncate" title={taskTitle}>
-          {taskTitle}
-        </div>
-      </div>
-
       <MenuRow
         icon={
           <TaskIconPriorityUrgent
@@ -620,7 +596,7 @@ export function TaskContextMenu({
 
       <div className="my-1 border-t border-border/40" />
 
-      <MenuRow icon={<TaskIconTrash className="size-4" />} label="Xóa / Hủy nhiệm vụ" onClick={handleDeleteTask} danger />
+      <MenuRow icon={<TaskIconTrash className="size-4" />} label="Xóa nhiệm vụ" onClick={handleDeleteTask} danger />
 
     </Menu.Popup>
     </Menu.Positioner>
@@ -633,10 +609,10 @@ export function TaskContextMenu({
         isOpen={showDeleteConfirm}
         onClose={() => { setShowDeleteConfirm(false); setIsDeleting(false); }}
         onConfirm={handleConfirmDelete}
-        title="Xóa / Hủy nhiệm vụ"
+        title="Xóa nhiệm vụ?"
         entityName={taskTitle}
         description="sẽ được lưu trữ và không còn hiển thị trong danh sách nhiệm vụ đang hoạt động."
-        confirmLabel="Xóa / Hủy nhiệm vụ"
+        confirmLabel="Xóa nhiệm vụ"
         cancelLabel="Giữ lại"
         irreversible
         isConfirming={isDeleting}

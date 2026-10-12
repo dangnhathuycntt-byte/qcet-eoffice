@@ -108,6 +108,8 @@ export interface DocumentItem {
   incomingWorkflow?: any;
   /** Server tính: người xem được sửa thông tin/bổ sung tệp (có quyền và văn bản chưa bất biến). */
   canEdit?: boolean;
+  /** Người đang xem đã đánh dấu văn bản này. */
+  marked?: boolean;
   outgoingWorkflow?: any;
   signatures?: any[];
   linkedTaskId?: string | null;

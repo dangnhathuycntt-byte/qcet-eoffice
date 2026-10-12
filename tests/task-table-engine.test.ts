@@ -581,34 +581,34 @@ describe("Task Table Hooks - URL Sync, Keyboard Nav & State Engine", () => {
 // ---------------------------------------------------------------------------
 describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
   describe("TaskPaginationBar - getPageNumbers Pagination Engine", () => {
-    it("returns direct sequential page numbers when totalPages <= 5", () => {
+    it("returns direct sequential page numbers when totalPages <= 7", () => {
       assert.deepEqual(getPageNumbers(1, 1), [1]);
       assert.deepEqual(getPageNumbers(1, 3), [1, 2, 3]);
-      assert.deepEqual(getPageNumbers(3, 5), [1, 2, 3, 4, 5]);
+      assert.deepEqual(getPageNumbers(7, 7), [1, 2, 3, 4, 5, 6, 7]);
     });
 
-    it("inserts right ellipsis when on early pages (page 1-3 of 10)", () => {
-      const p1 = getPageNumbers(1, 10);
-      assert.equal(p1[0], 1);
-      assert.equal(p1[p1.length - 1], 10);
-      assert.ok(p1.includes("..."));
-      assert.deepEqual(p1, [1, 2, "...", 10]);
-
-      const p3 = getPageNumbers(3, 10);
-      assert.deepEqual(p3, [1, 2, 3, 4, "...", 10]);
+    it("keeps a constant 7 slots so the bar width does not shift (pages 1-4 of 10)", () => {
+      for (const page of [1, 2, 3, 4]) {
+        assert.deepEqual(getPageNumbers(page, 10), [1, 2, 3, 4, 5, "...", 10]);
+      }
     });
 
-    it("inserts both left and right ellipses when in the middle (page 5 of 10)", () => {
-      const p5 = getPageNumbers(5, 10);
-      assert.deepEqual(p5, [1, "...", 4, 5, 6, "...", 10]);
+    it("inserts both ellipses around current ± 1 in the middle (page 5 of 10)", () => {
+      assert.deepEqual(getPageNumbers(5, 10), [1, "...", 4, 5, 6, "...", 10]);
     });
 
-    it("inserts left ellipsis when on late pages (page 8-10 of 10)", () => {
-      const p8 = getPageNumbers(8, 10);
-      assert.deepEqual(p8, [1, "...", 7, 8, 9, 10]);
+    it("anchors the last five pages near the end (pages 7-10 of 10)", () => {
+      for (const page of [7, 8, 9, 10]) {
+        assert.deepEqual(getPageNumbers(page, 10), [1, "...", 6, 7, 8, 9, 10]);
+      }
+    });
 
-      const p10 = getPageNumbers(10, 10);
-      assert.deepEqual(p10, [1, "...", 9, 10]);
+    it("never exceeds 7 slots on large page counts", () => {
+      for (const page of [1, 50, 99, 100]) {
+        const slots = getPageNumbers(page, 100);
+        assert.equal(slots.length, 7);
+        assert.ok(slots.includes(page));
+      }
     });
   });
 

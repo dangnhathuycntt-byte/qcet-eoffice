@@ -607,6 +607,62 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       );
     });
 
+    test("canonical FileObject: thành viên đơn vị chủ trì đọc được tệp của văn bản nội bộ do đơn vị mình xử lý", async () => {
+      // Văn bản do người ở Phòng B đăng ký nhưng giao Phòng A chủ trì: người Phòng A (không phải người đăng ký) phải mở được tệp.
+      fs.writeFileSync(path.join(testSandboxAbs, "lead-unit.pdf"), samplePdfContent);
+      let docId: string | null = null;
+      let fileId: string | null = null;
+      try {
+        const doc = await prisma.document.create({
+          data: {
+            type: "VAN_BAN_DEN",
+            documentYear: new Date().getFullYear(),
+            registrationNumber: Math.floor(Math.random() * 800000) + 100000,
+            originalNumber: `LEAD-${Date.now()}`,
+            summary: "Văn bản giao đơn vị chủ trì",
+            category: "Kế hoạch",
+            issuingAuthority: "Cơ quan thử nghiệm",
+            issuedDate: new Date(),
+            registeredById: deptBUser.id,
+            incomingWorkflow: { create: { leadUnitId: deptAId } },
+          },
+        });
+        docId = doc.id;
+        const file = await prisma.fileObject.create({
+          data: {
+            storageKey: `${testSandboxRel}/lead-unit.pdf`,
+            originalName: "lead-unit.pdf",
+            mimeType: "application/pdf",
+            extension: ".pdf",
+            byteSize: BigInt(samplePdfContent.length),
+            contentHash: "2".repeat(64),
+            scanStatus: "CLEAN",
+            uploadedById: deptBUser.id,
+          },
+        });
+        fileId = file.id;
+        await prisma.documentAttachment.create({
+          data: {
+            documentId: doc.id,
+            fileName: "lead-unit.pdf",
+            fileUrl: `/api/file-objects/${file.id}`,
+            fileObjectId: file.id,
+            fileSize: samplePdfContent.length,
+            mimeType: "application/pdf",
+          },
+        });
+        const res = await getFileObjectRoute(
+          createRequest(`http://localhost:3000/api/file-objects/${file.id}`, { token: deptAToken }),
+          { params: Promise.resolve({ id: file.id }) }
+        );
+        assert.equal(res.status, 200);
+      } finally {
+        if (docId) await prisma.documentAttachment.deleteMany({ where: { documentId: docId } });
+        if (fileId) await prisma.fileObject.deleteMany({ where: { id: fileId } });
+        if (docId) await prisma.document.deleteMany({ where: { id: docId } });
+      }
+    });
+
     test("canonical FileObject route blocks pending scans and unlinked objects", async () => {
       const pending = await getFileObjectRoute(
         createRequest(`http://localhost:3000/api/file-objects/${testPendingFileId}`, { token: deptBToken }),

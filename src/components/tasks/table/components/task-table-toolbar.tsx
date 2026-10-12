@@ -1,14 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Popover } from "@base-ui/react/popover";
 import {
   Search,
   X,
   Building2,
   Calendar,
-  List,
-  Kanban,
   Plus,
   FileSpreadsheet,
   ChevronDown,
@@ -17,10 +14,10 @@ import {
   RotateCcw,
   SlidersHorizontal,
   ArrowUpDown,
-  Check,
 } from "lucide-react";
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ListToolbarPopover } from "@/components/ui/list-toolbar";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
@@ -69,7 +66,6 @@ import type {
   SmartFilterTabOption,
   TableDensity,
   TableColumnVisibility,
-  TaskViewMode,
   TaskSortField,
   SortDirection,
 } from "../types";
@@ -200,8 +196,6 @@ export interface TaskTableToolbarProps {
   onDensityChange?: (density: TableDensity) => void;
   visibleColumns?: TableColumnVisibility;
   onVisibleColumnsChange?: (cols: TableColumnVisibility) => void;
-  viewMode?: TaskViewMode;
-  onViewModeChange?: (mode: TaskViewMode) => void;
 
   // Tiêu chí nhóm (Linear-style Grouping)
   groupingField?: string;
@@ -227,8 +221,6 @@ export interface TaskTableToolbarProps {
 }
 
 export interface TaskTableViewOptionsPopoverProps {
-  viewMode?: TaskViewMode;
-  onViewModeChange?: (mode: TaskViewMode) => void;
   groupingField: string;
   onGroupingChange: (field: string) => void;
   sortField?: TaskSortField | string;
@@ -248,8 +240,6 @@ export interface TaskTableViewOptionsPopoverProps {
  * Popover tùy chọn hiển thị và thuộc tính bảng theo phong cách Linear (View Options)
  */
 export function TaskTableViewOptionsPopover({
-  viewMode = "table",
-  onViewModeChange,
   groupingField,
   onGroupingChange,
   sortField,
@@ -284,39 +274,6 @@ export function TaskTableViewOptionsPopover({
       }
     >
       <div data-slot="desktop-display-panel">
-                {/* 1. Layout View Mode Switcher */}
-                {onViewModeChange && (
-                  <div
-                    aria-label="Chế độ xem không gian làm việc"
-                    className="grid grid-cols-2 gap-1.5 px-3 pt-3 pb-2.5"
-                  >
-                    <Pressable
-                      onClick={() => onViewModeChange("table")}
-                      className={cn(
-                        "inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium transition-colors",
-                        viewMode === "table"
-                          ? "bg-muted text-foreground font-medium border border-border"
-                          : "bg-card text-muted-foreground border border-border/70 hover:text-foreground hover:bg-muted/50"
-                      )}
-                    >
-                      <List className="size-3.5" />
-                      <span>Danh sách</span>
-                    </Pressable>
-                    <Pressable
-                      onClick={() => onViewModeChange("kanban")}
-                      className={cn(
-                        "inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium transition-colors",
-                        viewMode === "kanban"
-                          ? "bg-muted text-foreground font-medium border border-border"
-                          : "bg-card text-muted-foreground border border-border/70 hover:text-foreground hover:bg-muted/50"
-                      )}
-                    >
-                      <Kanban className="size-3.5" />
-                      <span>Bảng Kanban</span>
-                    </Pressable>
-                  </div>
-                )}
-
                 {/* Density Options */}
                 {onDensityChange && (
                   <div
@@ -353,7 +310,36 @@ export function TaskTableViewOptionsPopover({
                   </div>
                 )}
 
-                {/* 2. Grouping & Ordering */}
+                {/* 2. Display properties: đặt trước Nhóm/Sắp xếp để listbox không che chip */}
+                <div className="space-y-2 px-3 py-2.5 border-t border-border/50">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Thuộc tính hiển thị
+                  </div>
+
+                  {/* Chip bật/tắt theo thứ tự cột của bảng; bật = nền trung tính, tắt = chữ nhạt */}
+                  <div className="flex flex-wrap gap-1">
+                    {DISPLAY_PROPERTY_OPTIONS.map((prop) => {
+                      const isEnabled = visibleColumns[prop.id] !== false;
+                      return (
+                        <PropertyToggleChip
+                          key={prop.id}
+                          variant="quiet"
+                          pressed={isEnabled}
+                          onPressedChange={() => {
+                            onVisibleColumnsChange?.({
+                              ...visibleColumns,
+                              [prop.id]: !isEnabled,
+                            });
+                          }}
+                        >
+                          {prop.label}
+                        </PropertyToggleChip>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Grouping & Ordering: sát footer, listbox mở xuống chỉ che footer */}
                 <div className="space-y-2 px-3 py-2.5 border-t border-border/50">
                   {/* Grouping */}
                   <div className="flex items-center justify-between text-xs">
@@ -394,34 +380,6 @@ export function TaskTableViewOptionsPopover({
                   </div>
                 </div>
 
-                {/* 3. List options: Display properties */}
-                <div className="space-y-2 px-3 py-2.5 border-t border-border/50">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Thuộc tính hiển thị
-                  </div>
-
-                  {/* Chips toggle: bật = nền xám + viền + chữ đậm vừa, tắt = chữ nhạt không viền */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {DISPLAY_PROPERTY_OPTIONS.map((prop) => {
-                      const isEnabled = visibleColumns[prop.id] !== false;
-                      return (
-                        <PropertyToggleChip
-                          key={prop.id}
-                          pressed={isEnabled}
-                          onPressedChange={() => {
-                            onVisibleColumnsChange?.({
-                              ...visibleColumns,
-                              [prop.id]: !isEnabled,
-                            });
-                          }}
-                        >
-                          {prop.label}
-                        </PropertyToggleChip>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 {/* 4. Footer: Reset & Default */}
                 <div className="flex items-center justify-end px-3 py-2.5 border-t border-border/50 text-xs">
                   <Pressable
@@ -441,6 +399,7 @@ interface CustomSelectOption<T extends string> {
   label: string;
 }
 
+/** Ô chọn trong popover hiển thị: dùng `Select` chung (điều hướng bàn phím, highlight, shadow chuẩn của menu). */
 function CustomSelectMenu<T extends string>({
   value,
   onChange,
@@ -452,47 +411,18 @@ function CustomSelectMenu<T extends string>({
   options: CustomSelectOption<T>[];
   ariaLabel: string;
 }) {
-  const [open, setOpen] = React.useState(false);
-  const selected = options.find((o) => o.value === value) || options[0];
-
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger
-        type="button"
-        aria-label={ariaLabel}
-        className="h-7 px-2.5 rounded-lg border border-border/70 bg-card text-xs font-medium text-foreground hover:bg-muted/70 transition-colors inline-flex items-center justify-between gap-1.5 cursor-pointer shadow-2xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-[105px]"
-      >
-        <span className="truncate">{selected.label}</span>
-        <ChevronDown className="size-3 text-muted-foreground/70 shrink-0" />
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Positioner side="bottom" align="end" sideOffset={4} className="z-50">
-          <Popover.Popup className="min-w-[130px] rounded-xl border border-border/80 bg-card p-1 shadow-lg select-none text-xs animate-in fade-in-0 zoom-in-95 duration-100 flex flex-col">
-            {options.map((opt) => {
-              const isSelected = opt.value === value;
-              return (
-                <Pressable
-                  key={opt.value}
-                  onClick={() => {
-                    onChange(opt.value);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-left transition-colors",
-                    isSelected
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "hover:bg-muted/70 text-foreground font-normal"
-                  )}
-                >
-                  <span>{opt.label}</span>
-                  {isSelected && <Check className="size-3.5 text-primary shrink-0" />}
-                </Pressable>
-              );
-            })}
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+    <Select
+      compact
+      aria-label={ariaLabel}
+      options={options}
+      value={value}
+      onValueChange={(next) => {
+        if (next) onChange(next as T);
+      }}
+      className="w-32"
+      positionerClassName="z-50"
+    />
   );
 }
 
@@ -534,8 +464,6 @@ export function TaskTableToolbar({
   onDensityChange,
   visibleColumns = { priority: true, subtasks: true, status: true },
   onVisibleColumnsChange,
-  viewMode = "table",
-  onViewModeChange,
   groupingField: propGroupingField,
   onGroupingChange: propOnGroupingChange,
   sortField,
@@ -817,8 +745,6 @@ export function TaskTableToolbar({
 
             {/* Nút Tùy chọn hiển thị di động (kề bên nút Bộ lọc theo phong cách Linear) */}
             <TaskTableViewOptionsPopover
-              viewMode={viewMode}
-              onViewModeChange={onViewModeChange}
               groupingField={groupingField}
               onGroupingChange={setGroupingField}
               sortField={sortField}
@@ -1132,8 +1058,6 @@ export function TaskTableToolbar({
 
             {/* Linear-style View Options & Display Properties Popover (Kề bên nút Filter) */}
             <TaskTableViewOptionsPopover
-              viewMode={viewMode}
-              onViewModeChange={onViewModeChange}
               groupingField={groupingField}
               onGroupingChange={setGroupingField}
               sortField={sortField}

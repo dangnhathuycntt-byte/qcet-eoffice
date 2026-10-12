@@ -201,7 +201,7 @@ export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflo
                         ? "text-foreground"
                         : state === "active"
                           ? "text-foreground font-semibold"
-                          : "text-muted-foreground/60"
+                          : "text-muted-foreground"
                     )}
                   >
                     {step.label}

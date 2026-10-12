@@ -139,8 +139,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         selectedDepartment: "ALL",
         onDepartmentChange: () => {},
         searchQuery: "",
@@ -182,8 +180,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         searchQuery: "",
         onSearchChange: () => {},
         selectedAcademicMonth: "ALL",
@@ -202,8 +198,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         selectedDepartment: "ALL",
         onDepartmentChange: () => {},
         searchQuery: "",
@@ -245,8 +239,6 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       React.createElement(UnifiedTaskToolbar, {
         scope: "MY_TASKS",
         onScopeChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
         selectedDepartment: "ALL",
         onDepartmentChange: () => {},
         searchQuery: "",
@@ -334,7 +326,8 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         onSearchChange: () => {},
       })
     );
-    assert.ok(emptyHtml.includes(">&#x2F;</kbd>") || emptyHtml.includes(">/</kbd>"), "Must show '/' shortcut badge");
+    // Ô tìm thu gọn thành icon; phím "/" được gợi ý ở tooltip và mở ô khi bấm
+    assert.ok(emptyHtml.includes('title="Tìm nhiệm vụ (/)"'), "Must show collapsed search icon with '/' hint");
 
     const filledHtml = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
@@ -359,8 +352,6 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         searchQuery: "",
         onSearchChange: () => {},
         showSavedViews: true,
-        viewMode: "table",
-        onViewModeChange: () => {},
         onDensityChange: () => {},
         selectedDepartment: "ALL",
         selectedCategory: "ALL",
@@ -438,8 +429,6 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         onScopeChange: () => {},
         searchQuery: "",
         onSearchChange: () => {},
-        viewMode: "table",
-        onViewModeChange: () => {},
       })
     );
 

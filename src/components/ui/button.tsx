@@ -2,6 +2,7 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { focusRingClass } from "@/components/ui/focus-ring";
+import { Spinner } from "@/components/ui/spinner";
 
 const buttonVariants = cva(
   `group/button inline-flex shrink-0 items-center justify-center rounded-md border-0 bg-clip-padding text-sm font-medium whitespace-nowrap transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none outline-none select-none ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 aria-invalid:bg-danger-soft aria-invalid:text-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer`,
@@ -21,6 +22,9 @@ const buttonVariants = cva(
         premium:
           "bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:bg-primary-hover",
         link: "text-primary underline-offset-4 hover:underline",
+        // Nút trên thanh công cụ danh sách (Tạo việc, Soạn văn bản, Lọc): viền mảnh, nền trắng.
+        toolbar:
+          "border border-border/80 bg-background text-foreground hover:bg-accent",
       },
       size: {
         default:
@@ -45,20 +49,25 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  /** Đang xử lý: hiện Spinner, khóa nút, giữ nguyên nhãn. Với `asChild` chỉ gắn aria-busy. */
+  loading?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", asChild = false, type = "button", children, ...props }, ref) => {
+  ({ className, variant = "default", size = "default", asChild = false, loading = false, type = "button", children, ...props }, ref) => {
+    const busyAria = loading ? { "aria-busy": true } : {};
     if (asChild && React.isValidElement(children)) {
       const child = children as React.ReactElement<any>;
       return React.cloneElement(child, {
         ref,
         "data-slot": "button",
         className: cn(buttonVariants({ variant, size, className }), child.props.className),
+        ...busyAria,
         ...props,
       });
     }
 
+    const spinnerSize = size === "xs" || size === "sm" || size === "icon-xs" || size === "icon-sm" ? "xs" : "sm";
     return (
       <button
         ref={ref}
@@ -66,7 +75,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
         {...props}
+        disabled={props.disabled || loading}
+        aria-busy={loading || undefined}
       >
+        {loading && <Spinner size={spinnerSize} />}
         {children}
       </button>
     );

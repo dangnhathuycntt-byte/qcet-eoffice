@@ -189,6 +189,7 @@ model User {
   meetingResolutionsLead            MeetingResolution[]        @relation("MeetingResolutionLead")
 
   @@map("users")
+  documentMarks         DocumentMark[]
 }
 
 model Account {
@@ -393,6 +394,7 @@ model Document {
 
   // Quan hệ tệp đính kèm & Bút phê BGH
   attachments        DocumentAttachment[]
+  marks              DocumentMark[]
   directives         DocumentDirective[]
   incomingWorkflow   DocumentIncomingWorkflow?
   unitReturns        DocumentUnitReturn[]
@@ -420,6 +422,19 @@ model Document {
 // 2. BỘ ĐẾM SỐ TỰ ĐỘNG ATOMIC (NUMBER SEQUENCE)
 // Đảm bảo nguyên tắc cấp số liên tục Điều 15 & Điều 22
 // ===================================================
+// Đánh dấu văn bản của riêng từng người dùng (nút "Đánh dấu" ở chi tiết văn bản); không ảnh hưởng quyền hay luồng xử lý.
+model DocumentMark {
+  documentId String   @map("document_id")
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@id([documentId, userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("document_marks")
+}
+
 model DocumentNumberSequence {
   id         String       @id @default(cuid())
   type       DocumentType

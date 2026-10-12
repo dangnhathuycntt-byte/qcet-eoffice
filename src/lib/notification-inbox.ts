@@ -5,6 +5,7 @@ import {
   type NotificationTriageTab,
   type QCETNotification,
 } from "@/lib/notification-triage";
+import { getDocumentHref } from "@/lib/documents/document-view-model";
 
 const ICT_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -144,10 +145,10 @@ export function resolveNotificationTarget(link: string | null | undefined): Noti
     return { href, kind: "task", ctaLabel: "Mở nhiệm vụ", kindLabel: "Nhiệm vụ", taskId };
   }
   if (url.pathname.startsWith("/documents")) {
-    // Thông báo hạn văn bản lưu dạng /documents?id=<id>; trang chi tiết là /documents/<id>.
+    // Thông báo hạn văn bản lưu dạng /documents?id=<id>; mở thẳng Quick View của văn bản đó.
     const docId = url.pathname === "/documents" ? url.searchParams.get("id") : null;
     return {
-      href: docId ? `/documents/${encodeURIComponent(docId)}` : href,
+      href: docId ? getDocumentHref(docId) : href,
       kind: "document",
       ctaLabel: "Mở văn bản",
       kindLabel: "Văn bản",
@@ -186,8 +187,8 @@ export function getNotificationGroupKey(notification: QCETNotification): string 
   const target = resolveNotificationTarget(notification.linkHref);
   if (target?.kind === "task" && target.taskId) return `task:${target.taskId}`;
   if (target?.kind === "document") {
-    const docId = target.href.match(/^\/documents\/([^/?#]+)/)?.[1];
-    if (docId) return `document:${decodeURIComponent(docId)}`;
+    const docId = new URL(target.href, "http://local").searchParams.get("docId");
+    if (docId) return `document:${docId}`;
   }
   return `notification:${notification.id}`;
 }

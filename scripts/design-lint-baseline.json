@@ -1408,11 +1408,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "src/components/workspace/action-queue-shell.tsx",
       "text": "<button"
     },

@@ -18,12 +18,12 @@ export {
   TaskIconStatusAll as HealthSubAll,
   TaskIconStatusDone as HealthSubOnTrack,
   TaskIconAtRisk as HealthSubAtRisk,
-  TaskIconOverdue as HealthSubOverdue,
+  TaskIconStatusOverdue as HealthSubOverdue,
   TaskIconStatusDone as HealthSubCompleted,
   TaskIconStatusAll as ProgressSubAll,
   TaskIconStatusDone as ProgressSubOnTrack,
   TaskIconAtRisk as ProgressSubAtRisk,
-  TaskIconOverdue as ProgressSubOverdue,
+  TaskIconStatusOverdue as ProgressSubOverdue,
   TaskIconStatusDone as ProgressSubCompleted,
 } from "@/lib/icons/task-icons";
 

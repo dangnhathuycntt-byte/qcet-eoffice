@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { fromDocumentItem, fromOfficialDocument, getDocumentKind, getFullPageHref } from "../src/lib/documents/document-view-model";
+import { fromDocumentItem, fromOfficialDocument, getDocumentKind, getDocumentHref } from "../src/lib/documents/document-view-model";
 import type { DocumentItem, OfficialDocument } from "../src/types/document";
 
 const attachment = (id: string, name: string, isOriginal = false) => ({
@@ -120,8 +120,7 @@ describe("View model văn bản (Quick View / Full Page)", () => {
   });
 
   test("đường dẫn trang đầy đủ theo loại, giữ ?file=", () => {
-    assert.equal(getFullPageHref("incoming", "d1"), "/documents/incoming/d1");
-    assert.equal(getFullPageHref("outgoing", "d1", "f 1"), "/documents/outgoing/d1?file=f%201");
-    assert.equal(getFullPageHref("submission", "d1", "f"), "/documents/d1?file=f");
+    assert.equal(getDocumentHref("d1"), "/documents?docId=d1");
+    assert.equal(getDocumentHref("d 1", "f 1"), "/documents?docId=d%201&file=f%201");
   });
 });

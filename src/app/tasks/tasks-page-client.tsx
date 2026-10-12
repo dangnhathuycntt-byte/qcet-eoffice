@@ -7,36 +7,42 @@ import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolv
 import { useWorkspaceQuery } from "@/hooks/use-workspace-query";
 import {
   TaskManagementWorkspace,
-  type ViewMode,
   type WorkspaceScope,
 } from "@/components/tasks/task-management-workspace";
 import { TaskSortFeatureGuide } from "@/components/feature-guide/feature-guide";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type { TaskView } from "@/domain/tasks";
 
-export type { ViewMode, WorkspaceScope, TaskView };
+export type { WorkspaceScope, TaskView };
 
 export interface TasksPageClientProps {
   initialTasks?: SchoolTask[];
   initialScope?: WorkspaceScope;
-  initialView?: ViewMode;
   initialTaskView?: TaskView;
 }
 
-export function TasksPageClient({ initialTasks, initialScope, initialView }: TasksPageClientProps) {
+// Biến module sống qua các lần điều hướng phía client: true khi danh sách đã từng hiển thị trong phiên này.
+let hasShownTaskList = false;
+
+export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientProps) {
   const router = useRouter();
   const { user } = useAuth();
+
+  // Quay lại danh sách (back/link) Next dùng bản RSC đã lưu nên thiếu thay đổi vừa làm ở trang chi tiết: tải lại ngầm.
+  React.useEffect(() => {
+    if (hasShownTaskList) router.refresh();
+    hasShownTaskList = true;
+  }, [router]);
 
   const isExec = user ? isUserExecutive(user as any) : false;
   const isHead = user ? isUserUnitHead(user as any) : false;
 
   const defaultRoleScope: WorkspaceScope = isExec ? "school" : isHead ? "unit" : "my";
   const workspaceQuery = useWorkspaceQuery({
-    defaultView: initialView,
     defaultScope: initialScope || defaultRoleScope,
     canonicalTaskView: true,
   });
-  const { queryState, setScope, setTaskView, setDept, setView } = workspaceQuery;
+  const { queryState, setScope, setTaskView, setDept } = workspaceQuery;
 
   const activeScope: WorkspaceScope =
     queryState.scope || initialScope || defaultRoleScope;
@@ -57,21 +63,12 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
     setDept(nextDept !== "ALL" ? nextDept : null, { shallow: true, replace: true });
   };
 
-  const handleViewChange = (v: ViewMode) => {
-    setView(v, { shallow: true, replace: true });
-  };
-
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
       router.push(`/tasks/${task.id}`);
     },
     [router]
   );
-
-  const activeView: ViewMode =
-    queryState.view === "kanban" || queryState.view === "table"
-      ? queryState.view
-      : (initialView ?? "table");
 
   return (
     <TaskSortFeatureGuide>
@@ -80,9 +77,6 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
         onScopeChange={onScopeChange}
         selectedDepartment={currentDept}
         onDepartmentChange={handleDepartmentChange}
-        viewMode={activeView}
-        initialViewMode={initialView ?? "table"}
-        onViewModeChange={handleViewChange}
         onSelectTask={handleSelectTask}
         initialTasks={initialTasks}
         workspaceQuery={workspaceQuery}

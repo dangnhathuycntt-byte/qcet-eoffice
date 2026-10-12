@@ -4,6 +4,14 @@ import * as React from "react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { cn } from "@/lib/utils";
 
+/** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
+export const MENU_ROW_CLASS =
+  "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors outline-none hover:bg-accent focus-visible:bg-accent";
+
+/** Khung popup menu: bo góc theo token, không viền, bóng menu */
+export const MENU_POPUP_CLASS =
+  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-micro)] ease-out data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none";
+
 // Namespace re-export
 export const Menu = BaseMenu;
 
