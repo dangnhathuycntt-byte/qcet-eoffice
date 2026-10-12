@@ -31,7 +31,7 @@ export const SHEET_POPUP_CLASS =
 /** Đầu bottom sheet (chỉ hiện trên điện thoại): thanh kéo, tiêu đề, nút quay lại khi đang ở menu con. */
 export function MenuSheetHeader({ title, onBack }: { title?: React.ReactNode; onBack?: () => void }) {
   return (
-    <div className="sticky top-0 z-10 -mx-2 bg-popover px-2 pt-2 md:hidden">
+    <div data-sheet-header="" className="sticky top-0 z-10 -mx-2 bg-popover px-2 pt-2 md:hidden">
       <div aria-hidden className="mx-auto mb-1 h-1 w-9 rounded-full bg-mark" />
       {title || onBack ? (
         <div className="flex h-10 items-center gap-1 px-1 text-compact font-medium text-foreground">
@@ -111,7 +111,7 @@ export const MenuSubmenuTrigger = BaseMenu.SubmenuTrigger;
 
 /** Tiêu đề nhỏ ở đầu menu con ("Độ ưu tiên", "Hạn hoàn thành"…). */
 export function MenuSubmenuTitle({ children }: { children: React.ReactNode }) {
-  return <div className="px-2 pt-1 pb-1 text-xs text-muted-foreground select-none">{children}</div>;
+  return <div data-slot="menu-submenu-title" className="px-2 pt-1 pb-1 text-xs text-muted-foreground select-none">{children}</div>;
 }
 
 /** Ô icon 16px dẫn đầu hàng menu, để mọi hàng thẳng cột dù icon lớn nhỏ khác nhau. */

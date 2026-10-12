@@ -421,6 +421,11 @@ export function ModularCascadingTaskTable({
     []
   );
 
+  // Điện thoại: nhấn giữ hàng mở menu thao tác (bottom sheet), neo vào chính hàng đó
+  const handleOpenMobileActions = React.useCallback((task: SchoolTask | StaffTask, anchor: HTMLElement) => {
+    setContextMenu({ isOpen: true, position: null, task: task as SchoolTask, triggerElement: anchor });
+  }, []);
+
   const handleCloseContextMenu = React.useCallback(() => {
     setContextMenu((prev) => ({ ...prev, isOpen: false }));
   }, []);
@@ -1725,6 +1730,7 @@ export function ModularCascadingTaskTable({
                             onOpenSubmitModal={onOpenSubmitModal}
                             onAddSubTask={effectiveOnAddSubTask}
                             canAssign={canAssignUnit}
+                            onOpenActions={handleOpenMobileActions}
                           />
                         ))}
                       </div>
@@ -1748,6 +1754,7 @@ export function ModularCascadingTaskTable({
                   onOpenSubmitModal={onOpenSubmitModal}
                   onAddSubTask={effectiveOnAddSubTask}
                   canAssign={canAssignUnit}
+                  onOpenActions={handleOpenMobileActions}
                 />
               ))
             )}

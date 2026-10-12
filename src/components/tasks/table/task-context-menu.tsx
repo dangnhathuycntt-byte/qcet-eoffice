@@ -39,7 +39,24 @@ import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { getTaskUnitId } from "@/lib/tasks/task-unit";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
-import { MENU_ROW_CLASS as ROW, MenuSubmenuTitle as SubmenuTitle } from "@/components/ui/menu";
+import {
+  MENU_ROW_CLASS as ROW,
+  MenuSubmenuTitle as SubmenuTitle,
+  MenuSheetHeader,
+  SHEET_BACKDROP_CLASS,
+  SHEET_POPUP_CLASS,
+  SHEET_POSITIONER_CLASS,
+} from "@/components/ui/menu";
+
+/** Điện thoại: menu con không bay ngang mà thay thế nội dung trong bottom sheet (có nút quay lại ở đầu sheet). */
+const MOBILE_INLINE_PANEL =
+  "max-md:static! max-md:m-0! max-md:w-full! max-md:max-h-none! max-md:overflow-visible! max-md:bg-transparent max-md:p-0 max-md:shadow-none max-md:animate-none";
+const SUBMENU_ONLY_ON_MOBILE = {
+  status: "max-md:[&>*:not([data-submenu=status]):not([data-sheet-header])]:hidden",
+  priority: "max-md:[&>*:not([data-submenu=priority]):not([data-sheet-header])]:hidden",
+  assignee: "max-md:[&>*:not([data-submenu=assignee]):not([data-sheet-header])]:hidden",
+  dueDate: "max-md:[&>*:not([data-submenu=dueDate]):not([data-sheet-header])]:hidden",
+} as const;
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return <kbd className="font-sans text-xs tabular-nums text-muted-foreground/80">{children}</kbd>;
@@ -126,7 +143,9 @@ function SubmenuRow({
         role="menuitem"
         aria-haspopup="true"
         aria-expanded={expanded}
-        onMouseEnter={onOpen}
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse") onOpen();
+        }}
         onClick={onToggle}
         className={cn(ROW, expanded && "bg-accent")}
       >
@@ -141,7 +160,8 @@ function SubmenuRow({
           className={cn(
             panelPlacementClass,
             "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs shadow-menu animate-in fade-in-0 zoom-in-95 duration-100 z-50",
-            panelClassName
+            panelClassName,
+            MOBILE_INLINE_PANEL
           )}
         >
           {children}
@@ -445,7 +465,8 @@ export function TaskContextMenu({
     <>
     <Menu.Root open={isOpen && !showDeleteConfirm} onOpenChange={(open) => { if (!open) onClose(); }}>
     <Menu.Portal>
-    <Menu.Positioner className="z-50"
+    <Menu.Backdrop className={SHEET_BACKDROP_CLASS} />
+    <Menu.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)}
       anchor={position ? { getBoundingClientRect: () => new DOMRect(position.x, position.y, 0, 0) } : triggerElement}
       align="start"
       collisionPadding={12}
@@ -453,8 +474,21 @@ export function TaskContextMenu({
     <Menu.Popup
       ref={menuRef}
       aria-label="Thao tác nhanh nhiệm vụ"
-      className="w-60 select-none rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu animate-in fade-in-0 zoom-in-95 duration-100"
+      className={cn(
+        "w-60 select-none rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu animate-in fade-in-0 zoom-in-95 duration-100",
+        SHEET_POPUP_CLASS,
+        "max-md:animate-none max-md:[&_[data-submenu]>[aria-haspopup=true][aria-expanded=true]]:hidden max-md:[&_[data-slot=menu-submenu-title]]:hidden",
+        activeSubmenu && SUBMENU_ONLY_ON_MOBILE[activeSubmenu]
+      )}
     >
+      <MenuSheetHeader
+        title={
+          activeSubmenu
+            ? { status: "Đổi trạng thái", priority: "Độ ưu tiên", assignee: "Người chủ trì", dueDate: "Hạn hoàn thành" }[activeSubmenu]
+            : taskTitle
+        }
+        onBack={activeSubmenu ? () => setActiveSubmenu(null) : undefined}
+      />
       <MenuRow
         icon={
           <TaskIconPriorityUrgent
@@ -582,7 +616,9 @@ export function TaskContextMenu({
             role="menuitem"
             aria-haspopup="dialog"
             aria-expanded={calendarOpen}
-            onMouseEnter={() => setCalendarOpen(true)}
+            onPointerEnter={(e) => {
+              if (e.pointerType === "mouse") setCalendarOpen(true);
+            }}
             onClick={() => setCalendarOpen((v) => !v)}
             className={cn(ROW, calendarOpen && "bg-accent")}
           >
@@ -598,7 +634,8 @@ export function TaskContextMenu({
               aria-label="Chọn ngày hoàn thành"
               className={cn(
                 submenuClass,
-                "w-56 rounded-lg border border-border/80 bg-popover p-2 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50"
+                "w-56 rounded-lg border border-border/80 bg-popover p-2 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50",
+                "max-md:static! max-md:mt-1 max-md:w-full! max-md:animate-none max-md:border-0 max-md:p-0 max-md:shadow-none"
               )}
             >
               <VietnameseDayCalendar
