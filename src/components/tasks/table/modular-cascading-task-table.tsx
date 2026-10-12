@@ -47,7 +47,7 @@ import {
   filterTasks,
   paginateTasks,
 } from "./utils/table-filter-engine";
-import { deleteTask } from "@/lib/tasks/task-actions";
+import { deleteTask, updateTaskDueDate, updateTaskPriority } from "@/lib/tasks/task-actions";
 import { formatTableDate } from "./utils/table-date-helpers";
 import { sortTasks } from "./utils/table-sorters";
 import { getNextSortDirection, useTaskTableState } from "./hooks/use-task-table-state";
@@ -140,6 +140,7 @@ export interface ModularCascadingTaskTableProps {
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
+  onAssigneeChange?: (taskId: string, newAssigneeId: string, newAssigneeName: string) => Promise<void> | void;
   onDeleteTask?: (taskId: string) => Promise<void> | void;
   onExportExcel?: () => void;
   selectedTaskId?: string;
@@ -189,6 +190,7 @@ export function ModularCascadingTaskTable({
   onBulkDelete,
   onPriorityChange,
   onDueDateChange,
+  onAssigneeChange,
   onDeleteTask,
   onExportExcel,
   selectedTaskId,
@@ -434,8 +436,12 @@ export function ModularCascadingTaskTable({
   const handleContextMenuPriorityChange = React.useCallback(
     async (taskId: string, newPriority: TaskPriority) => {
       if (onPriorityChange) {
+        // Nơi giữ dữ liệu tự cập nhật và lưu; không sửa object cục bộ để lỗi lưu không bị che.
         await onPriorityChange(taskId, newPriority);
+        return;
       }
+      const res = await updateTaskPriority(taskId, newPriority);
+      if (!res.ok) throw new Error(res.error || "Không thể cập nhật độ ưu tiên");
       const target = tasks.find((t) => t.id === taskId);
       if (target) {
         target.priority = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
@@ -455,8 +461,13 @@ export function ModularCascadingTaskTable({
     async (taskId: string, newDueDate: string) => {
       if (onDueDateChange) {
         await onDueDateChange(taskId, newDueDate);
-      } else if (onBulkExtendDeadline) {
+        return;
+      }
+      if (onBulkExtendDeadline) {
         await onBulkExtendDeadline(newDueDate);
+      } else {
+        const res = await updateTaskDueDate(taskId, newDueDate);
+        if (!res.ok) throw new Error(res.error || "Không thể cập nhật hạn hoàn thành");
       }
       const target = tasks.find((t) => t.id === taskId);
       if (target) {
@@ -1676,15 +1687,15 @@ export function ModularCascadingTaskTable({
           </div>
 
           {/* Mobile Card Feed View (< 768px) */}
-          <div className="md:hidden space-y-2.5">
+          <div className="md:hidden -mx-4">
             {groupedTasks ? (
               groupedTasks.map((group) => {
                 const isCollapsed = collapsedGroupKeys.has(group.key);
                 return (
-                  <div key={group.key} className="space-y-2">
+                  <div key={group.key}>
                     <Pressable
                       onClick={() => toggleGroupCollapse(group.key)}
-                      className="w-full flex items-center justify-between py-1.5 px-3 rounded-lg bg-muted/40 border border-border/50 text-xs font-semibold text-foreground"
+                      className="w-full flex min-h-11 items-center justify-between px-4 bg-muted/40 border-b border-border/50 text-xs font-semibold text-foreground"
                     >
                       <div className="flex items-center gap-2">
                         <ChevronDown
@@ -1698,7 +1709,7 @@ export function ModularCascadingTaskTable({
                       </div>
                     </Pressable>
                     {!isCollapsed && (
-                      <div className="space-y-2 pl-1">
+                      <div>
                         {group.tasks.map((task) => (
                           <MobileTaskCard
                             key={task.id}
@@ -1775,6 +1786,7 @@ export function ModularCascadingTaskTable({
         onStatusChange={onStatusChange}
         onPriorityChange={handleContextMenuPriorityChange}
         onDueDateChange={handleContextMenuDueDateChange}
+        onAssigneeChange={onAssigneeChange}
         onDeleteTask={handleContextMenuDelete}
       />
 

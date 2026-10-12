@@ -41,13 +41,14 @@ import { resolveCreateTaskPolicy } from "@/domain/tasks/create-task-policy";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { Button } from "@/components/ui/button";
-import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskPriority, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { useTaskShortcuts } from "@/hooks/use-task-shortcuts";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
-import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
-import { updateTaskStatus } from "@/lib/tasks/task-actions";
+import { applyOptimisticStatusChange, applyOptimisticTaskPatch } from "./utils/task-workspace-mutations";
+import { updateTaskAssignee, updateTaskDueDate, updateTaskPriority, updateTaskStatus } from "@/lib/tasks/task-actions";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import { cn } from "@/lib/utils";
 import {
   filterTasksByTime,
@@ -1803,6 +1804,87 @@ function UnifiedAdaptiveWorkspaceInner({
     [onStatusChange, internalTasks]
   );
 
+  // Sửa nhanh từ menu thao tác của hàng: cập nhật ngay trên bảng, lưu qua API; lỗi thì trả đúng nhiệm vụ đó về giá trị cũ và báo lỗi.
+  const feedback = useFeedback();
+
+  const findTaskForEdit = React.useCallback(
+    (taskId: string) =>
+      internalTasks.find((task) => task.id === taskId) ??
+      internalTasks.flatMap((task) => task.subTasks || []).find((task) => task.id === taskId),
+    [internalTasks]
+  );
+
+  const commitTaskEdit = React.useCallback(
+    async (
+      taskId: string,
+      optimistic: { patch: Partial<SchoolTask>; subTaskPatch: Record<string, unknown> },
+      rollback: { patch: Partial<SchoolTask>; subTaskPatch: Record<string, unknown> },
+      save: (version?: number) => ReturnType<typeof updateTaskPriority>,
+      failureMessage: string
+    ) => {
+      const version = (findTaskForEdit(taskId) as { version?: number } | undefined)?.version;
+      setInternalTasks((prev) => applyOptimisticTaskPatch(prev, taskId, optimistic.patch, optimistic.subTaskPatch));
+      const res = await save(version);
+      if (!res.ok) {
+        setInternalTasks((prev) => applyOptimisticTaskPatch(prev, taskId, rollback.patch, rollback.subTaskPatch));
+        feedback.notifyError(res.error || failureMessage, "Lỗi cập nhật");
+        return;
+      }
+      const data = res.data as { data?: { version?: number }; task?: { version?: number }; version?: number } | undefined;
+      const nextVersion = data?.data?.version ?? data?.task?.version ?? data?.version;
+      if (nextVersion !== undefined) {
+        setInternalTasks((prev) => applyOptimisticTaskPatch(prev, taskId, { version: nextVersion } as Partial<SchoolTask>, { version: nextVersion }));
+      }
+    },
+    [feedback, findTaskForEdit]
+  );
+
+  const handleRowPriorityChange = React.useCallback(
+    async (taskId: string, newPriority: TaskPriority) => {
+      const previous = (findTaskForEdit(taskId) as { priority?: TaskPriority } | undefined)?.priority;
+      const next = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
+      await commitTaskEdit(
+        taskId,
+        { patch: { priority: next }, subTaskPatch: { priority: next } },
+        { patch: { priority: previous }, subTaskPatch: { priority: previous } },
+        (version) => updateTaskPriority(taskId, newPriority, version),
+        "Không thể cập nhật độ ưu tiên"
+      );
+    },
+    [commitTaskEdit, findTaskForEdit]
+  );
+
+  const handleRowDueDateChange = React.useCallback(
+    async (taskId: string, newDueDate: string) => {
+      const previous = (findTaskForEdit(taskId) as { dueDate?: string } | undefined)?.dueDate ?? "";
+      await commitTaskEdit(
+        taskId,
+        { patch: { dueDate: newDueDate }, subTaskPatch: { dueDate: newDueDate } },
+        { patch: { dueDate: previous }, subTaskPatch: { dueDate: previous } },
+        (version) => updateTaskDueDate(taskId, newDueDate, version),
+        "Không thể cập nhật hạn hoàn thành"
+      );
+    },
+    [commitTaskEdit, findTaskForEdit]
+  );
+
+  const handleRowAssigneeChange = React.useCallback(
+    async (taskId: string, assigneeId: string, assigneeName: string) => {
+      const current = findTaskForEdit(taskId) as { leadAssigneeId?: string; leadAssigneeName?: string; assigneeId?: string; assigneeName?: string } | undefined;
+      await commitTaskEdit(
+        taskId,
+        { patch: { leadAssigneeId: assigneeId, leadAssigneeName: assigneeName }, subTaskPatch: { assigneeId, assigneeName } },
+        {
+          patch: { leadAssigneeId: current?.leadAssigneeId, leadAssigneeName: current?.leadAssigneeName ?? "" },
+          subTaskPatch: { assigneeId: current?.assigneeId, assigneeName: current?.assigneeName },
+        },
+        (version) => updateTaskAssignee(taskId, assigneeId, assigneeName, version),
+        "Không thể phân công người chủ trì"
+      );
+    },
+    [commitTaskEdit, findTaskForEdit]
+  );
+
   // Urge notification trigger
   const handleUrge = React.useCallback(
     async (taskId: string, taskTitle: string, assigneeName: string) => {
@@ -1831,10 +1913,10 @@ function UnifiedAdaptiveWorkspaceInner({
   const effectiveError = errorMessage || internalError;
   const isUnassigned = isUserUnassignedDepartment(user);
 
-  // Chip bộ lọc đang áp: nằm trong hàng toolbar (không chèn thêm hàng làm bảng giật xuống); trang ẩn toolbar thì hiện thành hàng riêng
-  const renderActiveFilters = (inline: boolean) => (
+  // Chip bộ lọc đang áp: hàng riêng ngay dưới toolbar (hàng trên chỉ có view và công cụ); cuộn đi cùng trang, toolbar giữ nguyên 88px nên không đổi mốc dính của tiêu đề cột
+  const renderActiveFilters = () => (
       <ActiveFilterBreadcrumb
-        inline={inline}
+        className="-mt-2"
         scope={activeScope}
         department={currentDept}
         workbox={currentWorkbox}
@@ -1900,6 +1982,9 @@ function UnifiedAdaptiveWorkspaceInner({
       onSortChange={handleTableSortChange}
       onSelectTask={handleSelectTask}
       onStatusChange={handleStatusChange}
+      onPriorityChange={handleRowPriorityChange}
+      onDueDateChange={handleRowDueDateChange}
+      onAssigneeChange={handleRowAssigneeChange}
       onRefresh={handleRefresh}
       onAddTask={() =>
         openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG")
@@ -2106,7 +2191,6 @@ function UnifiedAdaptiveWorkspaceInner({
           onRefresh={handleRefresh}
           isRefreshing={effectiveIsRefreshing}
           viewTabs={defaultTaskTab ? <TaskTabPills value={effectiveTaskTab} onChange={handleTaskTabChange} /> : undefined}
-          activeFilters={renderActiveFilters(true)}
           totalTasksCount={scopedTasks.length}
           filteredTasksCount={displayedTasks.length}
           actionQueueCount={actionQueueTotal}
@@ -2130,7 +2214,7 @@ function UnifiedAdaptiveWorkspaceInner({
         </div>
       )}
 
-      {hideScopeSwitcher && renderActiveFilters(false)}
+      {renderActiveFilters()}
 
       {/* 2. Workspace Layout: Full-Width Canvas (Default) or Backward-compatible Split Cockpit */}
       {enableSplitCockpit ? (

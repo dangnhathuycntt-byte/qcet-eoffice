@@ -315,10 +315,12 @@ export async function updateTaskPriority(
   }
 }
 
+/** `assigneeName` chỉ để giữ chữ ký cũ: schema reassign là `.strict()` nên máy chủ không nhận tên, và bắt buộc `expectedVersion`. */
 export async function updateTaskAssignee(
   taskId: string,
   assigneeId: string,
-  assigneeName?: string
+  _assigneeName?: string,
+  expectedVersion?: number
 ): Promise<TaskActionResult> {
   try {
     const res = await fetch(`/api/tasks/${taskId}/actions/reassign`, {
@@ -326,7 +328,7 @@ export async function updateTaskAssignee(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         newAssigneeId: assigneeId,
-        newAssigneeName: assigneeName,
+        expectedVersion: Number(expectedVersion ?? 0),
       }),
     });
 

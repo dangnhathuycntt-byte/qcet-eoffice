@@ -177,3 +177,23 @@ export function applyOptimisticStatusChange(
 
   return updatedTasks.map((t) => computeSchoolTaskRollup(t));
 }
+
+/**
+ * Áp một phần thay đổi (ưu tiên, hạn, người chủ trì…) lên nhiệm vụ hoặc nhiệm vụ con có `taskId`.
+ * Trả về bản mới để làm optimistic update; rollback bằng cách áp lại giá trị cũ cho đúng nhiệm vụ đó.
+ */
+export function applyOptimisticTaskPatch(
+  tasks: SchoolTask[],
+  taskId: string,
+  patch: Partial<SchoolTask>,
+  subTaskPatch: Record<string, unknown> = {}
+): SchoolTask[] {
+  return tasks.map((st) => {
+    if (st.id === taskId) return { ...st, ...patch };
+    if (!(st.subTasks || []).some((sub) => sub.id === taskId)) return st;
+    return {
+      ...st,
+      subTasks: st.subTasks.map((sub) => (sub.id === taskId ? { ...sub, ...subTaskPatch } : sub)),
+    };
+  });
+}

@@ -262,7 +262,7 @@ export function SubtaskDetailDrawer({
   const handleAssigneeChange = async (person: { id: string; name: string }): Promise<void> => {
     if (!subtask) return;
     setIsReassigning(true);
-    const result = await updateTaskAssignee(subtask.id, person.id, person.name);
+    const result = await updateTaskAssignee(subtask.id, person.id, person.name, (subtask as any).version);
     setIsReassigning(false);
     if (!result.ok) {
       notifyError(result.error || "Không thể cập nhật người phụ trách", "Lỗi cập nhật");

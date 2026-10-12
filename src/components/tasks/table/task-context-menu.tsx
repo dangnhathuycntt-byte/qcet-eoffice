@@ -35,6 +35,7 @@ import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
 import { MENU_ROW_CLASS as ROW, MenuSubmenuTitle as SubmenuTitle } from "@/components/ui/menu";
@@ -97,8 +98,29 @@ function SubmenuRow({
   panelPlacementClass: string;
   children: React.ReactNode;
 }) {
+  // Chuột lệch khỏi hàng/panel một chút không đóng ngay: chờ 200ms, vào lại thì hủy; mở menu con khác thì hủy luôn
+  const leaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelLeave = React.useCallback(() => {
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+  }, []);
+  React.useEffect(() => {
+    if (!expanded) cancelLeave();
+    return cancelLeave;
+  }, [expanded, cancelLeave]);
+
   return (
-    <div className="relative" data-submenu={name} onMouseLeave={onLeave}>
+    <div
+      className="relative"
+      data-submenu={name}
+      onMouseEnter={cancelLeave}
+      onMouseLeave={() => {
+        cancelLeave();
+        leaveTimer.current = setTimeout(onLeave, 200);
+      }}
+    >
       <Pressable
         role="menuitem"
         aria-haspopup="true"
@@ -201,8 +223,23 @@ export function TaskContextMenu({
   onAssigneeChange,
   onDueDateChange,
   onDeleteTask,
-  availableAssignees = [],
+  availableAssignees: availableAssigneesProp,
 }: TaskContextMenuProps) {
+  // Đơn vị nào giao việc đơn vị đó: chỉ liệt kê cán bộ thuộc đơn vị chủ trì của nhiệm vụ
+  const taskUnit = task as { leadDepartmentId?: string; departmentId?: string; department?: unknown } | null;
+  const unitId =
+    taskUnit?.leadDepartmentId ??
+    taskUnit?.departmentId ??
+    (typeof taskUnit?.department === "object" ? (taskUnit.department as { id?: string } | null)?.id : undefined);
+  const { personnel: unitPersonnel } = usePersonnelList({ enabled: isOpen && !availableAssigneesProp && Boolean(unitId), departmentId: unitId });
+  const availableAssignees = React.useMemo(
+    () =>
+      availableAssigneesProp ??
+      (unitId
+        ? unitPersonnel.map((person) => ({ id: person.id, name: person.name, avatar: person.avatarUrl ?? undefined, department: person.departmentName }))
+        : []),
+    [availableAssigneesProp, unitId, unitPersonnel]
+  );
   const menuRef = React.useRef<HTMLDivElement>(null);
   // Phím số 1-9 chọn nhanh mục trong menu con đang mở (như Linear)
   const digitSelectRef = React.useRef<((digit: number) => void) | null>(null);
@@ -333,7 +370,7 @@ export function TaskContextMenu({
     if (onAssigneeChange) {
       await onAssigneeChange(task.id, personId, personName);
     } else {
-      await updateTaskAssignee(task.id, personId, personName);
+      await updateTaskAssignee(task.id, personId, personName, (task as any).version);
     }
     onClose();
   };
@@ -369,7 +406,7 @@ export function TaskContextMenu({
           return;
         }
       }
-      feedback.notifySuccess(`Đã lưu trữ "${taskTitle}".`);
+      feedback.notifySuccess("Đã lưu trữ 1 nhiệm vụ.");
       // Confirm: refresh để sync server truth
       window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: task.id, optimistic: false } }));
       router?.refresh();
@@ -401,9 +438,10 @@ export function TaskContextMenu({
   };
 
   const submenuClass = cn(
-    "absolute z-50 before:absolute before:inset-y-0 before:w-2 before:content-['']",
-    submenuPlacement.side === "right" ? "left-full ml-1 before:-left-2" : "right-full mr-1 before:-right-2",
-    submenuPlacement.align === "top" ? "-top-1" : "-bottom-1",
+    "absolute z-50 before:absolute before:inset-y-0 before:w-3 before:content-['']",
+    submenuPlacement.side === "right" ? "left-full ml-0.5 before:-left-3" : "right-full mr-0.5 before:-right-3",
+    // Nâng lên so với hàng gốc để chuột đi chéo từ hàng sang mục đầu tiên không trượt ra ngoài
+    submenuPlacement.align === "top" ? "-top-3" : "-bottom-3",
   );
 
   return (
@@ -492,7 +530,7 @@ export function TaskContextMenu({
         onOpen={() => toggleSubmenu("assignee", "open")}
         onToggle={() => toggleSubmenu("assignee")}
         onLeave={() => setActiveSubmenu(null)}
-        panelClassName="w-60 max-h-64 overflow-y-auto"
+        panelClassName="w-60 max-h-64 overflow-y-auto overflow-x-hidden"
         panelPlacementClass={submenuClass}
       >
         <SubmenuTitle>Người chủ trì (DRI)</SubmenuTitle>

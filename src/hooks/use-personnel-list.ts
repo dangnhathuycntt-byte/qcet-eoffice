@@ -23,41 +23,48 @@ export interface PersonnelOption {
 /**
  * Module-level cache — avoids re-fetching when multiple components mount
  * simultaneously (e.g. identity-block + sidebar both call `usePersonnelList`).
+ * Khóa theo đơn vị (`""` = toàn trường) để mỗi đơn vị chỉ tải danh sách của mình một lần.
  */
-let _cache: PersonnelOption[] | null = null;
-let _inflight: Promise<PersonnelOption[]> | null = null;
+const _cache = new Map<string, PersonnelOption[]>();
+const _inflight = new Map<string, Promise<PersonnelOption[]>>();
 
-async function fetchPersonnel(): Promise<PersonnelOption[]> {
-  if (_cache) return _cache;
-  if (_inflight) return _inflight;
+async function fetchPersonnel(departmentId?: string): Promise<PersonnelOption[]> {
+  const key = departmentId ?? "";
+  const cached = _cache.get(key);
+  if (cached) return cached;
+  const pending = _inflight.get(key);
+  if (pending) return pending;
 
-  _inflight = fetch("/api/users")
+  // Theo đơn vị: lấy đủ cán bộ của đơn vị đó (API mặc định chỉ trả 20 người đầu).
+  const url = departmentId ? `/api/users?departmentId=${encodeURIComponent(departmentId)}&limit=100` : "/api/users";
+  const request = fetch(url)
     .then((r) => r.json())
     .then((data): PersonnelOption[] => {
-      if (data.success && Array.isArray(data.users)) {
-        _cache = data.users.map((u: any) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          departmentName: u.department?.name || u.departmentName || "Đơn vị",
-          title: u.position || u.title || null,
-          role: u.role || null,
-          avatarUrl: u.avatarUrl || null,
-        }));
-      } else {
-        _cache = [];
-      }
-      return _cache!;
+      const list: PersonnelOption[] =
+        data.success && Array.isArray(data.users)
+          ? data.users.map((u: any) => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              departmentName: u.department?.name || u.departmentName || "Đơn vị",
+              title: u.position || u.title || null,
+              role: u.role || null,
+              avatarUrl: u.avatarUrl || null,
+            }))
+          : [];
+      _cache.set(key, list);
+      return list;
     })
     .catch((): PersonnelOption[] => {
-      _cache = [];
-      return _cache;
+      _cache.set(key, []);
+      return [];
     })
     .finally(() => {
-      _inflight = null;
+      _inflight.delete(key);
     });
 
-  return _inflight!;
+  _inflight.set(key, request);
+  return request;
 }
 
 /**
@@ -71,29 +78,33 @@ async function fetchPersonnel(): Promise<PersonnelOption[]> {
  *   Pass `canEdit` so read-only views never fire the request.
  */
 export function usePersonnelList(
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; departmentId?: string },
 ): { personnel: PersonnelOption[]; isLoading: boolean } {
   const enabled = options?.enabled ?? true;
-  const [personnel, setPersonnel] = React.useState<PersonnelOption[]>(_cache ?? []);
-  const [isLoading, setIsLoading] = React.useState(!_cache && enabled);
+  const departmentId = options?.departmentId;
+  const key = departmentId ?? "";
+  const [personnel, setPersonnel] = React.useState<PersonnelOption[]>(_cache.get(key) ?? []);
+  const [isLoading, setIsLoading] = React.useState(!_cache.has(key) && enabled);
 
   React.useEffect(() => {
     if (!enabled) return;
-    if (_cache) {
-      setPersonnel(_cache);
+    const cached = _cache.get(key);
+    if (cached) {
+      setPersonnel(cached);
       setIsLoading(false);
       return;
     }
     let cancelled = false;
+    setPersonnel([]);
     setIsLoading(true);
-    void fetchPersonnel().then((list) => {
+    void fetchPersonnel(departmentId).then((list) => {
       if (!cancelled) {
         setPersonnel(list);
         setIsLoading(false);
       }
     });
     return () => { cancelled = true; };
-  }, [enabled]);
+  }, [enabled, key, departmentId]);
 
   return { personnel, isLoading };
 }
