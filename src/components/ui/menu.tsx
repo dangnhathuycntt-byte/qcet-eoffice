@@ -2,15 +2,17 @@
 
 import * as React from "react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
+import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
+import { popoverVariants } from "@/lib/motion/variants";
 
 /** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
 export const MENU_ROW_CLASS =
   "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors duration-75 outline-none hover:bg-accent focus-visible:bg-accent";
 
-/** Khung popup menu: bo góc theo token, không viền, bóng menu; vào 140ms (scale+mờ), ra 80ms theo token motion */
+/** Khung popup menu: bo góc theo token, không viền, bóng menu. Chuyển động do `MenuPopup` (motion) đảm nhiệm. */
 export const MENU_POPUP_CLASS =
-  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] transition-[opacity,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-enter)] data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:duration-[var(--motion-duration-micro)] data-[ending-style]:ease-[var(--motion-ease-exit)] motion-reduce:transition-none motion-reduce:transform-none";
+  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)]";
 
 // Namespace re-export
 export const Menu = BaseMenu;
@@ -43,7 +45,21 @@ export const MenuPositioner = React.forwardRef<
   />
 ));
 MenuPositioner.displayName = "MenuPositioner";
-export const MenuPopup = BaseMenu.Popup;
+/**
+ * Khung popup của menu: vào bằng `popoverVariants` của thư viện motion (cùng chuyển động với popover khác trong app),
+ * đóng ngay như menu chuột phải. Tự tắt khi người dùng bật giảm chuyển động (MotionConfig reducedMotion="user").
+ */
+export const MenuPopup = React.forwardRef<HTMLDivElement, React.ComponentPropsWithoutRef<typeof BaseMenu.Popup>>(
+  function MenuPopup(props, ref) {
+    return (
+      <BaseMenu.Popup
+        ref={ref}
+        render={<m.div variants={popoverVariants} initial="initial" animate="animate" />}
+        {...props}
+      />
+    );
+  }
+);
 export const MenuItem = BaseMenu.Item;
 export const MenuSeparator = BaseMenu.Separator;
 export const MenuGroup = BaseMenu.Group;
@@ -155,7 +171,7 @@ export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, 
       </BaseMenu.SubmenuTrigger>
       <BaseMenu.Portal>
         <BaseMenu.Positioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-          <BaseMenu.Popup
+          <MenuPopup
             className={cn(
               MENU_POPUP_CLASS,
               "w-auto min-w-[176px] max-w-[320px] max-h-[min(26rem,var(--available-height))] overflow-y-auto",
@@ -164,7 +180,7 @@ export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, 
           >
             {title ? <MenuSubmenuTitle>{title}</MenuSubmenuTitle> : null}
             {children}
-          </BaseMenu.Popup>
+          </MenuPopup>
         </BaseMenu.Positioner>
       </BaseMenu.Portal>
     </BaseMenu.SubmenuRoot>
@@ -225,7 +241,7 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
           collisionPadding={collisionPadding}
           className={cn("z-30 outline-none", positionerClassName)}
         >
-          <BaseMenu.Popup
+          <MenuPopup
             ref={ref}
             className={cn(MENU_POPUP_CLASS, "min-w-[12rem]", className)}
             {...props}
@@ -234,7 +250,7 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
             {arrow && (
               <BaseMenu.Arrow className="fill-popover" />
             )}
-          </BaseMenu.Popup>
+          </MenuPopup>
         </BaseMenu.Positioner>
       </BaseMenu.Portal>
     );

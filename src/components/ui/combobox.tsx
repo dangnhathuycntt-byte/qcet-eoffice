@@ -5,6 +5,8 @@ import { Combobox as BaseCombobox } from "@base-ui/react/combobox";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { focusRingClass } from "@/components/ui/focus-ring";
+import * as m from "motion/react-m";
+import { popoverVariants } from "@/lib/motion/variants";
 import { MENU_POPUP_CLASS } from "@/components/ui/menu";
 
 export interface ComboboxOption {
@@ -104,6 +106,7 @@ export function Combobox({
       <BaseCombobox.Portal>
         <BaseCombobox.Positioner sideOffset={4} collisionPadding={12} className="z-30 outline-none">
           <BaseCombobox.Popup
+            render={<m.div variants={popoverVariants} initial="initial" animate="animate" />}
             className={cn(MENU_POPUP_CLASS, "w-[var(--anchor-width)] max-w-[var(--available-width)]")}
           >
             <BaseCombobox.Empty>
