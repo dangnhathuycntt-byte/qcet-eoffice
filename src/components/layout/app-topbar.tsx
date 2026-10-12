@@ -3,14 +3,8 @@
 import * as React from "react";
 import { Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import {
-  Search,
-  Inbox,
-  Menu,
-  ChevronRight,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import {
   useSidebar,
   useSidebarLayout,
@@ -20,6 +14,8 @@ import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 
 import { formatDisplayName } from "@/components/layout/app-sidebar";
 import { Pressable } from "@/components/ui/pressable";
+import { Button } from "@/components/ui/button";
+import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
 
 export function getInitials(name?: string | null): string {
   const cleanName = formatDisplayName(name);
@@ -33,44 +29,12 @@ function MobileHeaderTitle({ pathname }: { pathname: string }) {
   const { breadcrumbItems } = useSidebarLayout();
   const currentTitle = breadcrumbItems?.at(-1)?.label ?? pageTitle;
 
-  return (
-    <div className="flex items-center min-w-0 gap-1.5">
-      <Link href="/tasks" className="flex items-center gap-1.5 shrink-0" aria-label="Trang chủ">
-        <Image
-          src="/logo-qcet.png"
-          alt="QCET Logo"
-          width={22}
-          height={22}
-          className="rounded object-contain shrink-0"
-        />
-      </Link>
-      <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
-      <span className="text-xs font-bold text-foreground truncate max-w-[160px]">
-        {currentTitle}
-      </span>
-    </div>
-  );
+  return <p className="min-w-0 truncate text-compact font-medium text-foreground">{currentTitle}</p>;
 }
 
 function MobileHeaderTitleFallback({ pathname }: { pathname: string }) {
   const [, pageTitle] = resolveBreadcrumb(pathname || "/");
-  return (
-    <div className="flex items-center min-w-0 gap-1.5">
-      <Link href="/tasks" className="flex items-center gap-1.5 shrink-0" aria-label="Trang chủ">
-        <Image
-          src="/logo-qcet.png"
-          alt="QCET Logo"
-          width={22}
-          height={22}
-          className="rounded object-contain shrink-0"
-        />
-      </Link>
-      <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
-      <span className="text-xs font-bold text-foreground truncate max-w-[160px]">
-        {pageTitle}
-      </span>
-    </div>
-  );
+  return <p className="min-w-0 truncate text-compact font-medium text-foreground">{pageTitle}</p>;
 }
 
 function DesktopHeaderTitle({ pathname }: { pathname: string }) {
@@ -147,7 +111,7 @@ export function DesktopTopbar() {
 }
 
 /**
- * Mobile-only topbar (< 768px).
+ * Mobile-only topbar (< 768px): nút mở sidebar, tên trang, nút tìm, cùng mẫu header riêng của Nhiệm vụ/Hộp thư (như Linear).
  */
 export function AppTopbar() {
   const pathname = usePathname();
@@ -166,50 +130,27 @@ export function AppTopbar() {
   return (
     <header
       data-slot="app-topbar"
-      className="md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none"
+      className="md:hidden sticky top-0 z-30 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-full shrink-0 items-center gap-1 border-b border-border/60 bg-card/95 px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md select-none"
     >
-      {/* Left: Brand / Title */}
+      {/* Hộp thư có thông báo chưa đọc: chấm trên nút mở sidebar, số nằm ở mục Hộp thư trong sidebar */}
+      <Pressable
+        onClick={handleOpenMobileMenu}
+        aria-label={unreadCount > 0 ? `Mở menu, ${unreadCount} thông báo chưa đọc` : "Mở menu"}
+        className="relative -ml-1.5 mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground"
+      >
+        <IconSidebarPanel size={18} />
+        {unreadCount > 0 && (
+          <span aria-hidden className="absolute right-1 top-1 size-2 rounded-full bg-primary ring-2 ring-card" />
+        )}
+      </Pressable>
+
       <Suspense fallback={<MobileHeaderTitleFallback pathname={pathname} />}>
         <MobileHeaderTitle pathname={pathname} />
       </Suspense>
 
-      {/* Right: Quick actions for mobile */}
-      <div className="flex items-center gap-1 shrink-0">
-        {/* Search button */}
-        <Pressable
-          onClick={handleOpenSearch}
-          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          title="Tìm kiếm (⌘K)"
-          aria-label="Tìm kiếm"
-        >
-          <Search size={16} />
-        </Pressable>
-
-        {/* Inbox Link */}
-        <Link
-          href="/inbox"
-          className="size-8 relative flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          title="Hộp thư"
-          aria-label="Hộp thư"
-        >
-          <Inbox size={16} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-primary text-xs font-mono font-bold text-primary-foreground flex items-center justify-center ring-1 ring-background tabular-nums">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </Link>
-
-        {/* Mobile Menu Drawer button */}
-        <Pressable
-          onClick={handleOpenMobileMenu}
-          className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          title="Menu tùy chọn"
-          aria-label="Menu tùy chọn"
-        >
-          <Menu size={16} />
-        </Pressable>
-      </div>
+      <Button variant="ghost" size="icon-xs" className="ml-auto" onClick={handleOpenSearch} aria-label="Tìm kiếm" title="Tìm kiếm (⌘K)">
+        <Search />
+      </Button>
     </header>
   );
 }

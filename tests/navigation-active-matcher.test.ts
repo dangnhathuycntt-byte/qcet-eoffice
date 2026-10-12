@@ -198,5 +198,14 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
       assert.equal(root, "QCET E-Office");
       assert.equal(page, getRouteByPath("/tasks")!.label);
     });
+
+    test("resolveBreadcrumb names pages outside the registry instead of falling back to the home title", () => {
+      // Thanh trên điện thoại hiện tên này làm tiêu đề trang; rơi về "Tổng quan" là sai tên.
+      assert.deepEqual(resolveBreadcrumb("/dossiers"), ["QCET E-Office", "Hồ sơ công việc"]);
+      assert.deepEqual(resolveBreadcrumb("/dossiers/abc"), ["QCET E-Office", "Hồ sơ công việc"]);
+      assert.deepEqual(resolveBreadcrumb("/reports"), ["QCET E-Office", "Báo cáo thống kê"]);
+      assert.deepEqual(resolveBreadcrumb("/admin/dossiers"), ["QCET E-Office", "Hồ sơ chờ xóa hẳn"]);
+      assert.deepEqual(resolveBreadcrumb("/unknown-page"), ["QCET E-Office", "Tổng quan"]);
+    });
   });
 });

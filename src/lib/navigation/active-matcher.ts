@@ -110,6 +110,17 @@ export function isRouteActive(
 /**
  * Resolves breadcrumb titles [rootTitle, pageTitle] from current pathname and search params.
  */
+const NON_CANONICAL_TITLES: readonly (readonly [string, string])[] = [
+  ["/admin/audit", "Nhật ký kiểm toán"],
+  ["/admin/users", "Danh bạ nhân sự"],
+  ["/admin/dossiers", "Hồ sơ chờ xóa hẳn"],
+  ["/dossiers", "Hồ sơ công việc"],
+  ["/reports", "Báo cáo thống kê"],
+  ["/delegations", "Ủy quyền tác nghiệp"],
+  ["/search", "Tìm kiếm"],
+  ["/onboarding", "Bắt đầu sử dụng"],
+];
+
 export function resolveBreadcrumb(
   pathname: string,
   searchParams?: URLSearchParams | string | null
@@ -189,6 +200,12 @@ export function resolveBreadcrumb(
   if (matchedRoute) {
     return ["QCET E-Office", matchedRoute.label];
   }
+
+  // Trang ngoài registry: lấy theo tiêu đề trang, kể cả trang con (`/dossiers/<id>`)
+  const surface = NON_CANONICAL_TITLES.find(
+    ([href]) => cleanPath === href || cleanPath.startsWith(`${href}/`)
+  );
+  if (surface) return ["QCET E-Office", surface[1]];
 
   return ["QCET E-Office", "Tổng quan"];
 }
