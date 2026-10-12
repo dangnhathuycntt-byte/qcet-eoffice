@@ -382,7 +382,7 @@ export function DocumentRegistryView() {
           style={paneVisible ? { gridTemplateColumns: `minmax(0, 1fr) min(75vw, ${layout.width}px)` } : undefined}
         >
           <section className={cn(WORKSPACE_CARD, "max-md:rounded-none max-md:border-0")} data-slot="document-list-card" aria-label="Sổ văn bản">
-            <header className="shrink-0 border-b border-border/60 px-4 pb-2 pt-2.5 max-md:flex max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:flex-col max-md:justify-center max-md:pb-0 max-md:pt-[env(safe-area-inset-top,0px)] sm:px-6">
+            <header className="shrink-0 border-b border-border/60 px-4 pb-2 pt-2.5 max-md:overflow-x-clip max-md:border-b-0 max-md:pb-0 max-md:pt-[env(safe-area-inset-top,0px)] sm:px-6">
               <DocumentLedgerToolbar
                 title={typeTitle[filters.type] ?? "Sổ văn bản"}
                 searchValue={searchInputValue}
@@ -403,6 +403,11 @@ export function DocumentRegistryView() {
                 visibleColumns={visibleColumns}
                 onVisibleColumnsChange={setVisibleColumns}
                 quiet={isColdStartEmpty}
+                view={{
+                  value: filters.bucket ?? "",
+                  options: [{ value: "", label: "Tất cả" }, ...Object.entries(bucketLabels).map(([value, label]) => ({ value, label }))],
+                  onChange: (bucket) => setFilter("bucket", bucket),
+                }}
               />
             </header>
             {/* Cách đường kẻ 16px; vùng danh sách bên dưới tự có 16px phía trên, nên có hay không có bộ lọc bảng đều cách đều như trang Nhiệm vụ (space-y-4) */}

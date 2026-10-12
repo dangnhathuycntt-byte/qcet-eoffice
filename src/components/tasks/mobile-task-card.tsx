@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { triggerHaptic } from "@/lib/haptics";
+import { useLongPress } from "@/hooks/use-long-press";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { TaskStatusCircle } from "./task-status-circle";
 import { TaskIconPriorityHigh, TaskIconPriorityUrgent } from "./task-action-icons";
@@ -36,9 +36,6 @@ export interface MobileTaskCardProps {
   /** Nhấn giữ hàng: mở menu thao tác nhanh (bottom sheet) */
   onOpenActions?: (task: SchoolTask | StaffTask, anchor: HTMLElement) => void;
 }
-
-const LONG_PRESS_MS = 450;
-const LONG_PRESS_MOVE_TOLERANCE = 10;
 
 /**
  * Định dạng ngày đến hạn cho thẻ di động: "Hạn 14/09"
@@ -242,50 +239,16 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       : 0;
 
   // Nhấn giữ mở menu thao tác; lần chạm nhả sau đó không được mở trang chi tiết
-  const pressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pressStart = React.useRef<{ x: number; y: number } | null>(null);
-  const longPressed = React.useRef(false);
-  const cancelPress = React.useCallback(() => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  }, []);
-  React.useEffect(() => cancelPress, [cancelPress]);
-
   const openActions = React.useCallback(
-    (anchor: HTMLElement) => {
-      if (!onOpenActions) return;
-      longPressed.current = true;
-      triggerHaptic("medium");
-      onOpenActions(task as unknown as SchoolTask | StaffTask, anchor);
-    },
+    (anchor: HTMLElement) => onOpenActions?.(task as unknown as SchoolTask | StaffTask, anchor),
     [onOpenActions, task]
   );
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLElement>) => {
-    if (!onOpenActions) return;
-    longPressed.current = false;
-    const touch = e.touches[0];
-    pressStart.current = { x: touch.clientX, y: touch.clientY };
-    const anchor = e.currentTarget;
-    cancelPress();
-    pressTimer.current = setTimeout(() => openActions(anchor), LONG_PRESS_MS);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLElement>) => {
-    const start = pressStart.current;
-    const touch = e.touches[0];
-    if (start && Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > LONG_PRESS_MOVE_TOLERANCE) cancelPress();
-  };
+  const { handlers: longPressHandlers, consumeClick } = useLongPress<HTMLElement>(onOpenActions ? openActions : undefined);
 
   const handleCardClick = React.useCallback(() => {
-    if (longPressed.current) {
-      longPressed.current = false;
-      return;
-    }
+    if (consumeClick()) return;
     onSelectTask?.(task as unknown as SchoolTask | StaffTask);
-  }, [onSelectTask, task]);
+  }, [consumeClick, onSelectTask, task]);
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
@@ -305,19 +268,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleKeyDown}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={cancelPress}
-      onTouchCancel={cancelPress}
-      onContextMenu={
-        onOpenActions
-          ? (e) => {
-              // Android báo nhấn giữ bằng contextmenu; iOS dùng bộ đếm ở trên
-              e.preventDefault();
-              if (!longPressed.current) openActions(e.currentTarget);
-            }
-          : undefined
-      }
+      {...longPressHandlers}
       data-slot="mobile-task-card"
       data-task-id={task.id}
       aria-label={`Nhiệm vụ ${formattedCode}: ${title}. Trạng thái ${statusConfig.label}`}

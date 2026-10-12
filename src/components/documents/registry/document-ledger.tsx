@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
-import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check, Plus, Inbox, SearchX } from "lucide-react";
+import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check, ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
+import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import type { OfficialDocument } from "@/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
@@ -228,6 +229,8 @@ export interface DocumentLedgerToolbarProps {
   onVisibleColumnsChange: (columns: LedgerColumnVisibility) => void;
   /** Sổ chưa có văn bản (không lọc): chỉ giữ tiêu đề và nút chính, ẩn tìm · lọc · hiển thị vì không có gì để lọc. */
   quiet?: boolean;
+  /** Điện thoại: chip nhóm (Tất cả, Chờ xử lý…) ở hàng thứ hai như "All projects" của Linear; từ md nhóm chọn ở sidebar. */
+  view?: { value: string; options: LedgerFilterOption[]; onChange: (value: string) => void };
 }
 
 export function DocumentLedgerToolbar({
@@ -250,7 +253,10 @@ export function DocumentLedgerToolbar({
   visibleColumns,
   onVisibleColumnsChange,
   quiet = false,
+  view,
 }: DocumentLedgerToolbarProps) {
+  const [isViewOpen, setIsViewOpen] = React.useState(false);
+  const currentView = view?.options.find((o) => o.value === view.value) ?? view?.options[0];
   const searchRef = React.useRef<HTMLInputElement>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
@@ -327,27 +333,68 @@ export function DocumentLedgerToolbar({
   return (
     // Cùng thanh công cụ trang Nhiệm vụ: tiêu đề bên trái; tìm · lọc · hiển thị · hành động chính bên phải.
     // Xóa bộ lọc nằm ở hàng chip bên dưới ("Xóa lọc"), không lặp lại cạnh nút Lọc.
-    <div data-slot="document-ledger-toolbar" className="flex items-center gap-1.5">
+    // Điện thoại (< md) hai hàng như Linear / trang Nhiệm vụ: [menu · tiêu đề · +] rồi [nhóm · tìm · lọc]; thứ tự đổi bằng order
+    <div data-slot="document-ledger-toolbar" className="flex items-center gap-1.5 max-md:flex-wrap max-md:gap-y-0">
       {/* Điện thoại: nút mở sidebar thay cho thanh trên cùng (như Linear) */}
       <Pressable
         onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
         aria-label="Mở menu"
-        className={cn("-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground md:hidden", showSearch && "max-md:hidden")}
+        className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground md:hidden"
       >
         <IconSidebarPanel size={18} />
       </Pressable>
       {/* Tiêu đề không bị cắt: pane hẹp thì ô tìm co lại trước (min 96px), không phải tiêu đề */}
-      <div className={cn("flex min-w-fit flex-1 items-center pr-3", showSearch && "max-md:hidden")}>
+      <div className="flex min-w-fit flex-1 items-center pr-3 max-md:h-11">
         <h1 className="whitespace-nowrap text-compact font-semibold text-foreground select-none">{title}</h1>
       </div>
+      {/* Điện thoại: "+" trơn ở góc phải hàng đầu (nhãn đọc qua aria-label) */}
+      <Pressable
+        onClick={onPrimaryAction}
+        aria-label={primaryActionLabel}
+        title={primaryActionLabel}
+        className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-8 max-md:rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
+      >
+        <Plus className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="max-md:sr-only">{primaryActionLabel}</span>
+      </Pressable>
       {!quiet && (
         <>
+      {/* Điện thoại: đường kẻ dưới hàng đầu, tràn hết bề ngang header */}
+      <div aria-hidden="true" className="hidden h-px basis-[calc(100%+32px)] -mx-4 bg-border/60 max-md:order-2 max-md:block sm:-mx-6 sm:basis-[calc(100%+48px)]" />
+      {view && currentView ? (
+        <div className={cn("hidden h-11 min-w-0 flex-1 items-center max-md:order-3 max-md:flex", showSearch && "max-md:hidden")}>
+          <MenuRoot open={isViewOpen} onOpenChange={setIsViewOpen}>
+            <MenuTrigger
+              aria-label={`Nhóm văn bản: ${currentView.label}`}
+              className="inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-foreground outline-none touch-manipulation"
+            >
+              <span>{currentView.label}</span>
+              <ChevronDown className="size-3.5 text-muted-foreground" />
+            </MenuTrigger>
+            <MenuContent align="start" className="w-48" mobileSheet sheetTitle="Nhóm văn bản">
+              {view.options.map((option) => (
+                <MenuOptionItem
+                  key={option.value}
+                  className="h-9"
+                  selected={option.value === view.value}
+                  closeOnClick
+                  onClick={() => view.onChange(option.value)}
+                >
+                  {option.label}
+                </MenuOptionItem>
+              ))}
+            </MenuContent>
+          </MenuRoot>
+        </div>
+      ) : (
+        <div aria-hidden="true" className={cn("hidden h-11 flex-1 max-md:order-3", !showSearch && "max-md:block")} />
+      )}
       {!showSearch && (
         <Pressable
           onClick={() => setIsSearchOpen(true)}
           aria-label="Tìm văn bản"
           title="Tìm theo số, ký hiệu, trích yếu"
-          className={cn(listToolbarIconButtonClass(false), "md:hidden")}
+          className={cn(listToolbarIconButtonClass(false), "md:hidden max-md:order-4")}
         >
           <TaskIconSearch size={14} className="shrink-0 text-muted-foreground" />
         </Pressable>
@@ -360,20 +407,22 @@ export function DocumentLedgerToolbar({
           if (!searchValue.trim()) setIsSearchOpen(false);
         }}
         placeholder="Tìm văn bản… /"
-        wrapperClassName={cn("min-w-24 shrink", showSearch ? "max-md:w-auto! max-md:flex-1" : "max-md:hidden")}
+        wrapperClassName={cn("min-w-24 shrink max-md:order-4", showSearch ? "max-md:w-auto! max-md:flex-1" : "max-md:hidden")}
         aria-label="Tìm văn bản"
         title="Tìm theo số, ký hiệu, trích yếu"
       />
-      <ListToolbarFilterPopover
-        open={isFilterOpen}
-        onOpenChange={setIsFilterOpen}
-        categories={categories}
-        activeCount={filterCount}
-        onClear={onClearFilters}
-        ariaLabel="Bộ lọc văn bản"
-      />
+      <div className="flex shrink-0 items-center max-md:order-5 max-md:h-11">
+        <ListToolbarFilterPopover
+          open={isFilterOpen}
+          onOpenChange={setIsFilterOpen}
+          categories={categories}
+          activeCount={filterCount}
+          onClear={onClearFilters}
+          ariaLabel="Bộ lọc văn bản"
+        />
+      </div>
         {/* Thuộc tính cột chỉ áp dụng cho bảng (từ sm); thẻ trên điện thoại không dùng */}
-        <div className="hidden sm:contents">
+        <div className="hidden shrink-0 sm:flex max-md:order-6">
         <ListToolbarPopover
           open={isDisplayOpen}
           onOpenChange={setIsDisplayOpen}
@@ -408,16 +457,6 @@ export function DocumentLedgerToolbar({
         </div>
         </>
       )}
-      {/* Điện thoại: chỉ còn nút tròn "+" (nhãn vẫn đọc được qua aria-label) để hàng không tràn */}
-      <Pressable
-        onClick={onPrimaryAction}
-        aria-label={primaryActionLabel}
-        title={primaryActionLabel}
-        className={cn(listToolbarPrimaryButtonClass, "max-md:size-7 max-md:rounded-full max-md:px-0")}
-      >
-        <Plus className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="max-md:sr-only">{primaryActionLabel}</span>
-      </Pressable>
     </div>
   );
 }
