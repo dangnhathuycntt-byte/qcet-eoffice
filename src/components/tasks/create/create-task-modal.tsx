@@ -26,6 +26,7 @@ import {
   type CreateTaskPriority,
 } from "@/hooks/use-create-task-form";
 import { Pressable } from "@/components/ui/pressable";
+import { SheetKeyboardSync } from "@/components/ui/menu";
 
 // Re-export types for downstream consumers
 export type { CreateTaskPriority } from "@/hooks/use-create-task-form";
@@ -208,22 +209,26 @@ export function CreateTaskModal({
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
           />
           <Dialog.Popup
-            className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-2 sm:p-4 md:p-6 outline-none"
+            className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-2 sm:p-4 md:p-6 outline-none max-md:p-2 max-md:pt-[calc(env(safe-area-inset-top,0px)+40px)] max-md:pb-[calc(env(safe-area-inset-bottom,0px)+8px+var(--keyboard-height,0px))]"
           >
+            {/* Điện thoại: đẩy hộp lên khi bàn phím ảo hiện (như sheet chọn thuộc tính) */}
+            {isOpen ? <SheetKeyboardSync /> : null}
             {/* Outer Card: Compact task composer */}
             <div
               data-slot="create-task-modal"
               className={cn(
                 "pointer-events-auto relative flex flex-col bg-card rounded-2xl shadow-2xl border-0 overflow-hidden",
                 "w-full max-w-[680px] min-h-[360px] max-h-[85vh]",
+                // Điện thoại: thẻ cao gần hết màn hình như hộp tạo mới của Linear
+                "max-md:h-full max-md:max-h-none max-md:min-h-0",
                 "animate-in fade-in zoom-in-95",
               )}
             >
               {/* ── Modal Top Header ──────────────────────────── */}
-              <header className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-b border-border/60 bg-card shrink-0">
+              <header className="flex items-center justify-between gap-2 px-5 sm:px-6 py-2.5 border-b border-border/60 bg-card shrink-0">
                 {/* Breadcrumb & Unit Selector */}
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Building2 className="size-3.5 text-muted-foreground/70" />
+                <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                  <Building2 className="size-3.5 shrink-0 text-muted-foreground/70" />
 
                   {/* Department selector */}
                   {form.availableDepartments.length > 1 ? (
@@ -231,20 +236,20 @@ export function CreateTaskModal({
                       open={openDropdown === "dept"}
                       onOpenChange={(open) => setOpenDropdown(open ? "dept" : null)}
                     >
-                      <div className="relative inline-block text-left">
+                      <div className="relative inline-block min-w-0 text-left">
                         <Popover.Trigger
                           type="button"
                           className={cn(
-                            "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
+                            "inline-flex max-w-full items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
                             openDropdown === "dept"
                               ? "text-foreground bg-accent shadow-2xs"
                               : "text-foreground hover:text-foreground/80 hover:bg-accent/50",
                           )}
                         >
-                          <span>{currentDeptName}</span>
+                          <span className="truncate max-md:max-w-[200px]">{currentDeptName}</span>
                           <ChevronDown
                             className={cn(
-                              "size-3 text-muted-foreground transition-transform duration-200 ease-out",
+                              "size-3 shrink-0 text-muted-foreground transition-transform duration-200 ease-out",
                               openDropdown === "dept" && "rotate-180 text-foreground",
                             )}
                           />
@@ -284,7 +289,7 @@ export function CreateTaskModal({
                       </div>
                     </Popover.Root>
                   ) : (
-                    <span className="font-semibold text-foreground px-1.5 py-0.5 rounded bg-accent/40">
+                    <span className="min-w-0 truncate font-semibold text-foreground px-1.5 py-0.5 rounded bg-accent/40 max-md:max-w-[200px]">
                       {currentDeptName}
                     </span>
                   )}
@@ -301,7 +306,7 @@ export function CreateTaskModal({
                     </>
                   )}
                   <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
-                  <Dialog.Title className="text-muted-foreground font-medium truncate text-xs">
+                  <Dialog.Title className="shrink-0 text-muted-foreground font-medium text-xs whitespace-nowrap">
                     {initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}
                   </Dialog.Title>
                 </div>
@@ -311,7 +316,7 @@ export function CreateTaskModal({
                   onClick={handleRequestClose}
                   aria-label="Đóng"
                   title="Đóng (Esc)"
-                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-md:size-8"
                 >
                   <X className="size-4" />
                 </button>
@@ -645,7 +650,7 @@ export function CreateTaskModal({
                     disabled={form.isSubmitting || !form.formData.title.trim()}
                     aria-keyshortcuts="Meta+Enter Control+Enter"
                     title={`${modKey} + Enter`}
-                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 inline-flex items-center gap-1.5"
+                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 inline-flex items-center gap-1.5 max-md:h-9 max-md:px-4"
                   >
                     {form.isSubmitting ? (
                       <>
