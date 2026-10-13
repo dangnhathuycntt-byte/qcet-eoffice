@@ -209,7 +209,7 @@ export function CreateTaskModal({
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
           />
           <Dialog.Popup
-            className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-2 sm:p-4 md:p-6 outline-none max-md:p-2 max-md:pt-[calc(env(safe-area-inset-top,0px)+40px)] max-md:pb-[calc(env(safe-area-inset-bottom,0px)+8px+var(--keyboard-height,0px))]"
+            className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-2 sm:p-4 md:p-6 outline-none max-md:p-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+47px)] max-md:pb-[max(calc(env(safe-area-inset-bottom,0px)+47px),calc(var(--keyboard-height,0px)+8px))]"
           >
             {/* Điện thoại: đẩy hộp lên khi bàn phím ảo hiện (như sheet chọn thuộc tính) */}
             {isOpen ? <SheetKeyboardSync /> : null}
@@ -435,7 +435,7 @@ export function CreateTaskModal({
               </div>
 
               {/* 3. Thuộc tính: dưới phần soạn, luôn thấy kể cả khi mô tả dài */}
-              <div className="flex flex-wrap items-center gap-1.5 px-5 sm:px-6 pb-3 shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5 px-5 sm:px-6 pb-3 shrink-0 max-md:gap-2">
                 {/* 3.1 Priority Chip */}
                 <Popover.Root
                   open={openDropdown === "priority"}
@@ -444,18 +444,21 @@ export function CreateTaskModal({
                   <div className="relative">
                     <Popover.Trigger
                       type="button"
+                      aria-label={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
+                      title={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
                       className={cn(
                         "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
+                        "max-md:size-7 max-md:justify-center max-md:gap-0 max-md:rounded-full max-md:px-0",
                         openDropdown === "priority"
                           ? "border-border bg-accent text-foreground shadow-2xs"
                           : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
                       )}
                     >
                       <PrioritySignalBars priority={toSignalPriority(form.formData.priority)} className="shrink-0" />
-                      <span>{PRIORITY_CONFIG[form.formData.priority].label}</span>
+                      <span className="max-md:hidden">{PRIORITY_CONFIG[form.formData.priority].label}</span>
                       <ChevronDown
                         className={cn(
-                          "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                          "size-2.5 text-muted-foreground transition-transform duration-200 ease-out max-md:hidden",
                           openDropdown === "priority" && "rotate-180 text-foreground",
                         )}
                       />
@@ -509,8 +512,10 @@ export function CreateTaskModal({
                     <Popover.Trigger
                       type="button"
                       aria-required="true"
+                      aria-label={leadAssigneeDisplayName ? undefined : "Chủ trì"}
                       className={cn(
                         "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
+                        !leadAssigneeDisplayName && "max-md:size-7 max-md:justify-center max-md:gap-0 max-md:rounded-full max-md:px-0",
                         form.fieldErrors.lead
                           ? "bg-danger-soft text-destructive border-destructive/30"
                           : openDropdown === "dri"
@@ -521,14 +526,15 @@ export function CreateTaskModal({
                       {leadAssigneeDisplayName ? (
                         <UserAvatar name={leadAssigneeDisplayName} avatarUrl={leadAssigneeAvatarUrl} size="xs" />
                       ) : (
-                        <User className="size-3 text-muted-foreground" />
+                        <User className={cn("size-3 max-md:size-3.5", "text-muted-foreground")} />
                       )}
-                      <span className="max-w-[110px] truncate" title={leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : undefined}>
+                      <span className={cn("max-w-[110px] truncate", !leadAssigneeDisplayName && "max-md:hidden")} title={leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : undefined}>
                         {leadAssigneeDisplayName || "Chủ trì"}
                       </span>
                       <ChevronDown
                         className={cn(
                           "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                          !leadAssigneeDisplayName && "max-md:hidden",
                           openDropdown === "dri" && "rotate-180 text-foreground",
                         )}
                       />
@@ -611,7 +617,8 @@ export function CreateTaskModal({
                   label={form.formData.startDate ? "Bắt đầu:" : undefined}
                   variant="chip"
                   triggerClassName="h-7"
-                  icon={<Calendar className="size-3 text-muted-foreground" />}
+                  compactWhenEmpty
+                  icon={<Calendar className="size-3 text-muted-foreground max-md:size-3.5" />}
                   placeholder="Bắt đầu"
                 />
 
@@ -628,11 +635,12 @@ export function CreateTaskModal({
                   label={form.formData.dueDate ? "Hạn:" : undefined}
                   variant="chip"
                   triggerClassName="h-7"
+                  compactWhenEmpty
                   error={Boolean(form.fieldErrors.dueDate)}
                   icon={
                     <CalendarClock
                       className={cn(
-                        "size-3",
+                        "size-3 max-md:size-3.5",
                         form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground",
                       )}
                     />

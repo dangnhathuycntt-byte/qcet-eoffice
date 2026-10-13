@@ -58,6 +58,8 @@ export interface VietnameseDatePickerProps {
   triggerClassName?: string;
   /** ID cho input field nếu cần */
   id?: string;
+  /** Chip điện thoại: khi chưa chọn ngày chỉ hiện nút tròn có icon (như Linear), chọn rồi mới hiện chữ. */
+  compactWhenEmpty?: boolean;
 }
 
 const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -105,6 +107,7 @@ export function VietnameseDatePicker({
   className,
   triggerClassName,
   id,
+  compactWhenEmpty = false,
 }: VietnameseDatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [mode, setMode] = React.useState<DateGranularity>("day");
@@ -313,6 +316,7 @@ export function VietnameseDatePicker({
           type="button"
           id={id}
           title={title || undefined}
+          aria-label={compactWhenEmpty && !hasValue ? title || label || placeholder : undefined}
           disabled={disabled}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
@@ -326,12 +330,13 @@ export function VietnameseDatePicker({
               : "border-0 bg-secondary hover:bg-accent text-foreground",
             !error && (hasValue ? "text-foreground" : "text-muted-foreground"),
             disabled && "opacity-50 cursor-not-allowed",
+            compactWhenEmpty && !hasValue && "max-md:size-7 max-md:justify-center max-md:gap-0 max-md:rounded-full max-md:px-0",
             triggerClassName
           )}
         >
           {icon !== null && (icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" />)}
-          {label && <span className={cn(error ? "text-destructive" : "text-muted-foreground font-normal")}>{label}</span>}
-          <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground")}>
+          {label && <span className={cn(error ? "text-destructive" : "text-muted-foreground font-normal", compactWhenEmpty && !hasValue && "max-md:hidden")}>{label}</span>}
+          <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground", compactWhenEmpty && !hasValue && "max-md:hidden")}>
             {hasValue ? displayDate : placeholder}
           </span>
         </Popover.Trigger>
