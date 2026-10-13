@@ -2455,6 +2455,25 @@ export function TaskBlockEditor({
     [canEdit, editor],
   );
 
+  // Bấm vùng trống dưới khối cuối: khối cuối là ảnh/tệp/bảng thì thêm dòng mới, còn lại đặt con trỏ cuối nội dung
+  const handleMouseDownBelowContent = React.useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      if (e.button !== 0 || !canEdit || editor.api.isReadOnly()) return;
+      const contentEl = e.currentTarget.querySelector<HTMLElement>("[data-slate-editor]");
+      if (!contentEl || (e.target !== contentEl && e.target !== e.currentTarget)) return;
+      const lastBlockEl = contentEl.lastElementChild;
+      if (lastBlockEl && e.clientY <= lastBlockEl.getBoundingClientRect().bottom) return;
+      e.preventDefault();
+      const lastNode = editor.children[editor.children.length - 1] as any;
+      if (lastNode?.type !== PT.paragraph) {
+        editor.tf.insertNodes(editor.api.create.block({ type: PT.paragraph }), { at: [editor.children.length] });
+      }
+      editor.tf.select(editor.api.end([]));
+      editor.tf.focus();
+    },
+    [canEdit, editor],
+  );
+
   return (
     <SlashSelectContext.Provider value={handleSlashSelect}>
       <TaskEditorUploadContext.Provider value={uploadContextValue}>
@@ -2483,6 +2502,7 @@ export function TaskBlockEditor({
                 data-plate-selectable="true"
                 className="relative flex-1 min-h-0 flex flex-col"
                 onContextMenu={handleEditorContextMenu}
+                onMouseDown={handleMouseDownBelowContent}
               >
                 <PlateContent
                   readOnly={!canEdit}

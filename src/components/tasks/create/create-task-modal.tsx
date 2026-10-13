@@ -161,7 +161,6 @@ export function CreateTaskModal({
   React.useEffect(() => setModKey(getPlatformModifierKey()), []);
 
   const titleInputRef = React.useRef<HTMLInputElement>(null);
-  const summaryInputRef = React.useRef<HTMLInputElement>(null);
   const descriptionTextareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   // Autofocus title input when modal opens
@@ -412,7 +411,7 @@ export function CreateTaskModal({
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
                         e.preventDefault();
-                        summaryInputRef.current?.focus();
+                        descriptionTextareaRef.current?.focus();
                       }
                     }}
                     placeholder={initialParentTaskId ? "Tên việc con" : "Tên nhiệm vụ"}
@@ -426,30 +425,6 @@ export function CreateTaskModal({
                       {form.fieldErrors.title}
                     </p>
                   )}
-                </div>
-
-                {/* 2. Short Summary */}
-                <div className="shrink-0">
-                  <label htmlFor="create-task-summary" className="sr-only">
-                    Mô tả ngắn hoặc kết quả kỳ vọng
-                  </label>
-                  <input
-                    id="create-task-summary"
-                    ref={summaryInputRef}
-                    type="text"
-                    name="task-summary"
-                    autoComplete="off"
-                    value={form.formData.summary}
-                    onChange={(e) => form.setField("summary", e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
-                        e.preventDefault();
-                        descriptionTextareaRef.current?.focus();
-                      }
-                    }}
-                    placeholder="Thêm mô tả ngắn hoặc kết quả kỳ vọng"
-                    className="w-full text-xs text-muted-foreground placeholder:text-muted-foreground/70 bg-transparent border-0 p-0 focus:outline-none focus:ring-0"
-                  />
                 </div>
 
                 {/* 4. Detailed Description / Canvas */}
@@ -551,7 +526,7 @@ export function CreateTaskModal({
                         "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
                         !leadAssigneeDisplayName && "max-md:size-7 max-md:justify-center max-md:gap-0 max-md:rounded-full max-md:px-0",
                         form.fieldErrors.lead
-                          ? "bg-danger-soft text-destructive border-destructive/30"
+                          ? "border-transparent bg-danger-soft text-destructive"
                           : openDropdown === "dri"
                             ? "border-border bg-accent text-foreground shadow-2xs"
                             : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
@@ -560,7 +535,7 @@ export function CreateTaskModal({
                       {leadAssigneeDisplayName ? (
                         <UserAvatar name={leadAssigneeDisplayName} avatarUrl={leadAssigneeAvatarUrl} size="xs" />
                       ) : (
-                        <User className={cn("size-3 max-md:size-3.5", "text-muted-foreground")} />
+                        <User className={cn("size-3 max-md:size-3.5", form.fieldErrors.lead ? "text-destructive" : "text-muted-foreground")} />
                       )}
                       <span className={cn("max-w-[110px] truncate", !leadAssigneeDisplayName && "max-md:hidden")} title={leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : undefined}>
                         {leadAssigneeDisplayName || "Chủ trì"}

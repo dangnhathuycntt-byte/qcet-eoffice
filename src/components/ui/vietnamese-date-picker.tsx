@@ -345,7 +345,7 @@ export function VietnameseDatePicker({
         >
           {icon !== null && (icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" />)}
           {label && <span className={cn(error ? "text-destructive" : "text-muted-foreground font-normal", compactWhenEmpty && !hasValue && "max-md:hidden")}>{label}</span>}
-          <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground", compactWhenEmpty && !hasValue && "max-md:hidden")}>
+          <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : error ? "text-destructive" : "text-muted-foreground", compactWhenEmpty && !hasValue && "max-md:hidden")}>
             {hasValue ? displayDate : placeholder}
           </span>
         </Popover.Trigger>
