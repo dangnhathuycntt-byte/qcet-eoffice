@@ -138,12 +138,12 @@ export function IconSidebarMore(props: SidebarIconProps) {
   );
 }
 
-/** 11. Mở/đóng sidebar: khung bo nhỏ như nút sidebar của Linear, vạch ngăn bên trái */
+/** 11. Mở/đóng sidebar: khung 14×12 trên lưới 16 và vạch ngăn lệch trái như nút sidebar của Linear (vẽ ở 14px) */
 export function IconSidebarPanel(props: SidebarIconProps) {
   return (
     <SidebarSvg {...props}>
-      <rect x="1.75" y="2.25" width="12.5" height="11.5" rx="2" />
-      <path d="M5.75 5.5v5" />
+      <rect x="1.625" y="2.625" width="12.75" height="10.75" rx="2.25" />
+      <path d="M4.75 5.625v4.75" />
     </SidebarSvg>
   );
 }

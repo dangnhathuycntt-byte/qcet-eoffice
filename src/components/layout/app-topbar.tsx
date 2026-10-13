@@ -151,9 +151,9 @@ export function AppTopbar() {
       <Pressable
         onClick={handleOpenMobileMenu}
         aria-label={unreadCount > 0 ? `Mở menu, ${unreadCount} thông báo chưa đọc` : "Mở menu"}
-        className="relative -ml-1.5 mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground"
+        className="relative -ml-1.5 mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
       >
-        <IconSidebarPanel size={18} />
+        <IconSidebarPanel size={14} />
         {unreadCount > 0 && (
           <span aria-hidden className="absolute right-1 top-1 size-2 rounded-full bg-primary ring-2 ring-card" />
         )}

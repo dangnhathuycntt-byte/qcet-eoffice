@@ -339,9 +339,9 @@ export function DocumentLedgerToolbar({
       <Pressable
         onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
         aria-label="Mở menu"
-        className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground md:hidden"
+        className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:hidden"
       >
-        <IconSidebarPanel size={18} />
+        <IconSidebarPanel size={14} />
       </Pressable>
       {/* Tiêu đề không bị cắt: pane hẹp thì ô tìm co lại trước (min 96px), không phải tiêu đề */}
       <div className="flex min-w-fit flex-1 items-center pr-3 max-md:h-11">

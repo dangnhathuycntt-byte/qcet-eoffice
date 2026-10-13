@@ -1510,9 +1510,9 @@ export function UnifiedTaskToolbar({
             <Pressable
               onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
               aria-label="Mở menu"
-              className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-foreground/80 hover:bg-accent hover:text-foreground md:hidden"
+              className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:hidden"
             >
-              <IconSidebarPanel size={18} />
+              <IconSidebarPanel size={14} />
             </Pressable>
             {leftContent}
           </div>
