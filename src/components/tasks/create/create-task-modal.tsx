@@ -28,6 +28,8 @@ import {
 import { Pressable } from "@/components/ui/pressable";
 import { SheetKeyboardSync } from "@/components/ui/menu";
 import { useIsPhone } from "@/hooks/use-is-phone";
+import { useFeedback } from "@/components/ui/feedback-layer";
+import { SourceDocumentChip, linkTaskToDocument, type SourceDocumentOption } from "@/components/tasks/create/source-document-chip";
 
 // Re-export types for downstream consumers
 export type { CreateTaskPriority } from "@/hooks/use-create-task-form";
@@ -79,6 +81,8 @@ export interface CreateTaskModalProps {
   onSubmitSuccess?: (task: unknown) => void;
   /** Nhận nhiệm vụ vừa tạo từ server (có `id`), dùng khi cần liên kết ngay sau khi tạo. */
   onCreated?: (task: { id: string }) => void;
+  /** Mở từ chính văn bản (văn bản tự gắn sau khi tạo): không hiện chip chọn văn bản nguồn. */
+  hideSourceDocument?: boolean;
   onSubmit?: (data: any, result?: any) => void | Promise<void>;
   initialDepartmentCode?: string;
   initialTitle?: string;
@@ -97,6 +101,7 @@ export function CreateTaskModal({
   onClose,
   onSubmitSuccess,
   onCreated,
+  hideSourceDocument = false,
   onSubmit,
   initialDepartmentCode,
   initialTitle,
@@ -106,6 +111,14 @@ export function CreateTaskModal({
   initialLeadAssigneeId,
   initialDueDate,
 }: CreateTaskModalProps) {
+  // Văn bản nguồn chọn trong hộp: gắn vào nhiệm vụ ngay sau khi tạo xong (hộp đóng ngay nên đọc qua ref)
+  const [sourceDocument, setSourceDocument] = React.useState<SourceDocumentOption | null>(null);
+  const sourceDocumentRef = React.useRef<SourceDocumentOption | null>(null);
+  sourceDocumentRef.current = sourceDocument;
+  const { showToast } = useFeedback();
+  React.useEffect(() => {
+    if (!isOpen) setSourceDocument(null);
+  }, [isOpen]);
   const form = useCreateTaskForm({
     initialLevel,
     initialTitle,
@@ -113,7 +126,21 @@ export function CreateTaskModal({
     initialDueDate,
     initialDepartmentCode,
     parentTaskId: initialParentTaskId,
-    onSuccess: (task) => onCreated?.(task as { id: string }),
+    onSuccess: (task) => {
+      const created = task as { id: string };
+      const doc = sourceDocumentRef.current;
+      if (doc) {
+        void linkTaskToDocument(doc.id, created.id).then((ok) => {
+          if (ok) return;
+          showToast({
+            variant: "warning",
+            message: `Đã tạo nhiệm vụ nhưng chưa gắn được văn bản ${doc.number}. Văn bản có thể đã gắn nhiệm vụ khác hoặc bạn chưa có quyền.`,
+            action: { label: "Mở nhiệm vụ", onClick: () => window.location.assign(`/tasks/${created.id}`) },
+          });
+        });
+      }
+      onCreated?.(created);
+    },
   });
 
   // ── Local UI state ──────────────────────────────────────────
@@ -658,6 +685,16 @@ export function CreateTaskModal({
                   }
                   placeholder="Hạn hoàn thành"
                 />
+
+                {/* 3.5 Văn bản nguồn (chỉ nhiệm vụ gốc, và khi không mở từ chính văn bản) */}
+                {!hideSourceDocument && !initialParentTaskId ? (
+                  <SourceDocumentChip
+                    value={sourceDocument}
+                    onChange={setSourceDocument}
+                    open={openDropdown === "document"}
+                    onOpenChange={(open) => setOpenDropdown(open ? "document" : null)}
+                  />
+                ) : null}
               </div>
 
               {/* ── Modal Bottom Footer ──────────────────────── */}

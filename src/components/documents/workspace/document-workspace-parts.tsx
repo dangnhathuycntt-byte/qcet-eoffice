@@ -426,6 +426,7 @@ function LinkedTaskCreateSection({ vm, onLinked, inline }: { vm: DocumentViewMod
           onClose={() => setCreating(false)}
           initialTitle={vm.title}
           onCreated={(created) => void link(created.id)}
+          hideSourceDocument
         />
       ) : null}
     </>
