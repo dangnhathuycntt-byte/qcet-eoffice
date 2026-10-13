@@ -27,7 +27,7 @@ import {
 /** Nút icon trên thanh công cụ danh sách (bộ lọc, hiển thị) */
 export function listToolbarIconButtonClass(active = false) {
   return cn(
-    "inline-flex size-7 max-md:size-11 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation",
+    "inline-flex size-7 max-md:size-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation",
     active ? "border-border bg-accent/60 text-foreground hover:bg-accent" : "border-border/80 bg-background text-foreground hover:bg-accent"
   );
 }
@@ -179,7 +179,7 @@ export function ListToolbarPopover({
                 width,
                 "max-w-[calc(100vw-1rem)]",
                 scrollable && "max-h-[min(360px,var(--available-height))] overflow-y-auto",
-                flush && "p-0 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xl",
+                flush && "p-0 overflow-hidden",
                 SHEET_POPUP_CLASS,
                 "max-md:border-0 max-md:bg-popover"
               )}
@@ -260,7 +260,7 @@ export function ListToolbarFilterPopover({
       <MenuPortal>
         <MenuBackdrop className={SHEET_BACKDROP_CLASS} />
         <MenuPositioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className={cn("z-50 outline-none", SHEET_POSITIONER_CLASS)}>
-          <MenuPopup className={cn(MENU_POPUP_CLASS, "w-52", SHEET_POPUP_CLASS)}>
+          <MenuPopup className={cn(MENU_POPUP_CLASS, "w-56", SHEET_POPUP_CLASS)}>
             <MenuSheetHeader title={ariaLabel} />
             <div className="space-y-px">
               {categories.map((c) => (

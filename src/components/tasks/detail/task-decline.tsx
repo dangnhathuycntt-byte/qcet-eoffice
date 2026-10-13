@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +13,9 @@ interface DeclineState {
   canDecline: boolean;
   version: number;
 }
+
+// Tạm ẩn thao tác từ chối (người dùng chốt 13/10/2026, chờ thiết kế bước sau khi từ chối). Thông báo đã từ chối có sẵn vẫn hiện.
+const DECLINE_ENTRY_ENABLED = false;
 
 async function readError(res: Response, fallback: string): Promise<string> {
   const json = await res.json().catch(() => null);
@@ -39,7 +43,7 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
 
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}/actions/decline`, { cache: "no-store" });
+      const res = await fetchWithRetry(`/api/tasks/${taskId}/actions/decline`, { cache: "no-store" });
       if (!res.ok) throw new Error(await readError(res, "Không tải được trạng thái nhận việc"));
       setState(await res.json());
     } catch {
@@ -74,7 +78,7 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
   };
 
   if (!state) return null;
-  if (!state.declined && !state.canDecline) return null;
+  if (!state.declined && !(DECLINE_ENTRY_ENABLED && state.canDecline)) return null;
   const declineForm = (
     <div className="space-y-1.5">
       <Textarea

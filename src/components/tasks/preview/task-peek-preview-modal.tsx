@@ -13,7 +13,10 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { formatDetailDate, getRelativeDueTime } from "@/lib/task-detail-helpers";
+import { formatDetailDate } from "@/lib/task-detail-helpers";
+import { getDueIndicator, getSlaBadgeStatus } from "@/components/tasks/table/utils/table-date-helpers";
+import { getStatusDisplay } from "@/domain/tasks/display-config";
+import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
 import { Pressable } from "@/components/ui/pressable";
@@ -148,8 +151,8 @@ export function TaskPeekPreviewModal({
   const leadAvatar = isSchool ? schoolTask?.leadAssigneeAvatar : undefined;
 
   const departmentName = isSchool
-    ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
-    : staffTask?.assignedToDepartmentName || staffTask?.department || "Tổ chuyên môn";
+    ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Chưa có đơn vị"
+    : staffTask?.assignedToDepartmentName || staffTask?.department || "Chưa có đơn vị";
 
   const subTasks = isSchool && Array.isArray(schoolTask?.subTasks)
     ? Array.from(new Map(schoolTask.subTasks.map((subtask) => [subtask.id, subtask])).values())
@@ -166,16 +169,18 @@ export function TaskPeekPreviewModal({
     ? schoolTask?.parentTaskTitle || schoolTask?.parentTask?.title
     : staffTask?.parentSchoolTaskTitle || staffTask?.parentTask?.title;
 
-  const relativeDue = getRelativeDueTime(task.dueDate);
+  // Hạn: cùng cách tính với hàng trong danh sách (ngày nghiệp vụ, đã đóng thì không báo trễ)
+  const sla = getSlaBadgeStatus(task.dueDate, task.status);
+  const dueIndicator = getDueIndicator({
+    status: task.status,
+    isOverdue: sla.isOverdue,
+    isToday: sla.isToday,
+    daysRemaining: sla.daysRemaining,
+    label: sla.label,
+  });
 
-  const statusLabel =
-    task.status === "COMPLETED"
-      ? "Hoàn thành"
-      : task.status === "IN_PROGRESS"
-      ? "Đang thực hiện"
-      : task.status === "WAITING_APPROVAL" || task.status === "NEEDS_REVIEW"
-      ? "Chờ duyệt"
-      : "Chưa bắt đầu";
+  // Nhãn trạng thái dùng chung với danh sách (Mới, Đang thực hiện, Chờ duyệt, Hoàn thành, Đã hủy)
+  const statusLabel = getStatusDisplay(normalizeDisplayStatus(task.status)).label;
 
   const statusDotColor =
     task.status === "COMPLETED"
@@ -311,14 +316,16 @@ export function TaskPeekPreviewModal({
             <span className="text-muted-foreground/30 select-none" aria-hidden="true">·</span>
             <span className="inline-flex items-center gap-1.5 text-foreground/75">
               <span>{formatDetailDate(task.dueDate)}</span>
-              {relativeDue && (
+              {dueIndicator.hint && dueIndicator.icon !== "closed" && (
                 <span className={cn(
                   "text-xs",
-                  relativeDue.text.includes("Trễ hạn")
+                  dueIndicator.tone === "danger"
                     ? "text-destructive font-medium"
+                    : dueIndicator.tone === "warn"
+                    ? "text-warning font-medium"
                     : "text-muted-foreground/60"
                 )}>
-                  {relativeDue.text}
+                  {dueIndicator.hint}
                 </span>
               )}
             </span>

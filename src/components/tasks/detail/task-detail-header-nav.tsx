@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, Link2, PanelRight } from "lucide-react";
+import { Link2 } from "lucide-react";
+import { IconSidebarPanelRight } from "@/components/layout/sidebar-rounded-icons";
+import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { cn } from "@/lib/utils";
 import { getTaskDetailUrl } from "@/lib/tasks/task-detail-navigation";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import { useFeedback } from "@/components/ui/feedback-layer";
 
 export interface TaskDetailHeaderNavProps {
   taskId: string;
+  /** Tên nhiệm vụ hiện trong đường dẫn ở hàng trên khi màn hẹp */
+  taskTitle?: string;
   showInspector?: boolean;
   onToggleInspector?: () => void;
   isDrawerOpen?: boolean;
@@ -22,6 +25,7 @@ export interface TaskDetailHeaderNavProps {
 
 export function TaskDetailHeaderNav({
   taskId,
+  taskTitle,
   showInspector,
   onToggleInspector,
   isDrawerOpen = false,
@@ -30,13 +34,6 @@ export function TaskDetailHeaderNav({
   className,
 }: TaskDetailHeaderNavProps) {
   const feedback = useFeedback();
-  const router = useRouter();
-
-  // Có lịch sử trong app thì quay lại đúng danh sách (giữ tab/bộ lọc); mở thẳng từ liên kết thì về /tasks
-  const handleBack = React.useCallback(() => {
-    if (window.history.length > 1) router.back();
-    else router.push("/tasks");
-  }, [router]);
 
   const handleCopyLink = React.useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -52,66 +49,63 @@ export function TaskDetailHeaderNav({
     <header
       data-slot="task-detail-header-nav"
       className={cn(
-        "h-10 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)] w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
+        "h-10 w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
+        // Màn hẹp (<1024px) kiểu Linear: hàng 1 nút mở menu + tên nhiệm vụ + liên kết, hàng 2 tab + tiến độ + nút thuộc tính
+        "max-lg:grid max-lg:h-auto max-lg:grid-cols-[minmax(0,1fr)_auto_auto] max-lg:gap-x-1.5 max-lg:pt-[env(safe-area-inset-top,0px)]",
         className
       )}
     >
       {/* Bên trái: tab; breadcrumb do layout quản lý */}
-      <div className="flex min-w-0 items-center">
-        {/* Chỉ dưới md: topbar chung đã nhường chỗ cho header này */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="-ml-2 md:hidden"
-          onClick={handleBack}
-          aria-label="Quay lại danh sách nhiệm vụ"
-        >
-          <ChevronLeft />
-        </Button>
-        {leading}
+      <div className="flex min-w-0 items-center max-lg:contents">
+        {/* Chỉ dưới lg: topbar chung đã nhường chỗ, nút mở sidebar như trang danh sách (Linear: Menu) */}
+        <div className="flex min-w-0 items-center lg:hidden max-lg:[grid-area:1/1/2/3]">
+          <MobileMenuButton className="-ml-1.5" />
+          {taskTitle && (
+            <span className="ml-3 min-w-0 truncate text-compact font-medium text-foreground">{taskTitle}</span>
+          )}
+        </div>
+        <div className="min-w-0 max-lg:[grid-area:2/1]">{leading}</div>
       </div>
 
       {/* Right actions */}
-      <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0 max-lg:contents">
         {/* Cập nhật tiến độ */}
         {onOpenProgressModal && (
           <Pressable
             onClick={onOpenProgressModal}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors max-lg:[grid-area:2/2] max-lg:whitespace-nowrap"
             title="Cập nhật tiến độ nhiệm vụ"
           >
             <span className="text-xs">Cập nhật tiến độ</span>
           </Pressable>
         )}
 
-        {/* Copy link — subtle direct icon, visible on hover/focus and touch */}
-        <button
-          type="button"
+        {/* Copy link: nút icon, luôn hiện */}
+        <Button
+          variant="ghost"
+          size="icon-md"
           onClick={handleCopyLink}
-          className="inline-flex items-center justify-center size-8 max-md:size-11 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+          className="max-lg:[grid-area:1/3]"
           title="Sao chép liên kết"
           aria-label="Sao chép liên kết"
         >
           <Link2 className="size-3.5" />
-        </button>
+        </Button>
 
         {/* Properties toggle — hidden when child drawer is open */}
         {onToggleInspector && !isDrawerOpen && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-md"
             onClick={onToggleInspector}
-            className={cn(
-              "inline-flex items-center justify-center size-8 max-md:size-11 rounded-lg transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
-              showInspector
-                ? "bg-muted/80 text-foreground"
-                : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
-            )}
+            // Đang mở thể hiện bằng icon tô nửa phải, không thêm nền
+            className={cn("max-lg:[grid-area:2/3]", showInspector && "text-foreground")}
             title={showInspector ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
             aria-label={showInspector ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
-            aria-expanded={showInspector}
+            aria-pressed={showInspector}
           >
-            <PanelRight className="size-3.5" />
-          </button>
+            <IconSidebarPanelRight size={14} active={showInspector} />
+          </Button>
         )}
       </div>
     </header>

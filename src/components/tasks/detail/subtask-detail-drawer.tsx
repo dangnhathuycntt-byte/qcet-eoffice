@@ -63,6 +63,13 @@ export function SubtaskDetailDrawer({
     setSubtask(initialSubtask);
   }, [initialSubtask]);
 
+  // Kết quả lưu có thể về sau khi người dùng đã chuyển sang việc con khác: chỉ cập nhật khung đang mở khi
+  // vẫn đúng việc con đó (không đè việc con mới chọn), còn danh sách ở trang cha thì luôn được cập nhật.
+  const commitSubtask = (updated: StaffTask) => {
+    setSubtask((prev) => (prev && prev.id === updated.id ? updated : prev));
+    onSubtaskUpdated?.(updated);
+  };
+
   // Dưới 1024px khung phủ toàn màn hình (có lớp nền) → coi như modal
   const [isMobileOverlay, setIsMobileOverlay] = React.useState(false);
   React.useEffect(() => {
@@ -172,6 +179,15 @@ export function SubtaskDetailDrawer({
   }, [onPeekWidthChange]);
 
 
+  // Quyền theo từng thao tác, cùng điều kiện máy chủ kiểm: sửa tên/mô tả cần task.update_metadata,
+  // đổi người phụ trách cần task.reassign, đổi hạn chót cần task.assign (ngày bắt đầu chỉ cần task.update_metadata).
+  // `canEdit` (thực hiện) giữ cho trạng thái.
+  const subtaskActions = (subtask as { availableActions?: unknown } | null)?.availableActions;
+  const allows = (action: string) => canEdit && (!Array.isArray(subtaskActions) || subtaskActions.includes(action));
+  const canEditContent = allows("task.update_metadata");
+  const canReassign = allows("task.reassign");
+  const canChangeDueDate = allows("task.assign");
+
   // Hiển thị tên người phụ trách; chức danh không thay thế tên
   const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
 
@@ -208,8 +224,7 @@ export function SubtaskDetailDrawer({
     const data = await res.json().catch(() => null);
     const nextVersion = data?.data?.version ?? data?.task?.version ?? (currentVersion ? currentVersion + 1 : 1);
     const updated = { ...subtask, title: cleaned, version: nextVersion };
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
+    commitSubtask(updated);
   };
 
   const handleDescriptionChange = async (newDesc: string) => {
@@ -240,8 +255,7 @@ export function SubtaskDetailDrawer({
     const data = await res.json().catch(() => null);
     const nextVersion = data?.data?.version ?? data?.task?.version ?? (currentVersion ? currentVersion + 1 : 1);
     const updated = { ...subtask, deliverableDescription: trimmed, description: trimmed, version: nextVersion } as StaffTask;
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
+    commitSubtask(updated);
   };
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
@@ -255,8 +269,7 @@ export function SubtaskDetailDrawer({
 
     const nextVersion = (res.data as any)?.version ?? (res.data as any)?.data?.version ?? (currentVersion ? currentVersion + 1 : 1);
     const updated = { ...subtask, status: newStatus, version: nextVersion };
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
+    commitSubtask(updated);
     notifySuccess("Đã cập nhật trạng thái việc thành phần");
   };
 
@@ -278,8 +291,7 @@ export function SubtaskDetailDrawer({
       assigneeName: person.name,
       version: nextVersion,
     } as StaffTask;
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
+    commitSubtask(updated);
     notifySuccess("Đã cập nhật người phụ trách việc thành phần");
   };
 
@@ -293,8 +305,7 @@ export function SubtaskDetailDrawer({
 
     const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (subtask as any).version;
     const updated = { ...subtask, startDate: newStartDate, version: nextVersion } as StaffTask;
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
+    commitSubtask(updated);
     notifySuccess("Đã cập nhật ngày bắt đầu việc con");
   };
 
@@ -308,8 +319,7 @@ export function SubtaskDetailDrawer({
 
     const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (subtask as any).version;
     const updated = { ...subtask, dueDate: newDueDate, version: nextVersion };
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
+    commitSubtask(updated);
     notifySuccess("Đã cập nhật hạn hoàn thành việc con");
   };
 
@@ -472,7 +482,7 @@ export function SubtaskDetailDrawer({
             <DirectInlineEditor
               value={subtask.title}
               onSave={handleTitleChange}
-              canEdit={canEdit}
+              canEdit={canEditContent}
               as="h2"
               multiline={false}
               submitOnEnter={true}
@@ -480,6 +490,7 @@ export function SubtaskDetailDrawer({
               placeholder="Nhập tên việc thành phần..."
               viewClassName="text-xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
               editorClassName="text-xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
+              largeText
             />
           </div>
 
@@ -497,7 +508,7 @@ export function SubtaskDetailDrawer({
               assigneeId={(subtask as any).assigneeId}
               assigneeName={subtask.assigneeName}
               displayName={assigneeDisplay}
-              disabled={!canEdit || isReassigning}
+              disabled={!canReassign || isReassigning}
               pending={isReassigning}
               onSelect={handleAssigneeChange}
             />
@@ -507,7 +518,7 @@ export function SubtaskDetailDrawer({
                 <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   <TaskIconCollaborators className="size-4 shrink-0" />
                   <span className="truncate">
-                    {subtask.coAssignees.map((co: any) => co.name).join(", ")}
+                    {subtask.coAssignees.map((co: any) => (typeof co === "string" ? co : co?.name)).filter(Boolean).join(", ")}
                   </span>
                 </div>
               </>
@@ -518,14 +529,14 @@ export function SubtaskDetailDrawer({
             <TaskDateRange
               startDateIso={startDateIso}
               dueDateIso={dueDateIso}
-              canEdit={canEdit}
-              onStartDateChange={handleStartDateChange}
-              onDueDateChange={handleDueDateChange}
+              canEdit={canEditContent || canChangeDueDate}
+              onStartDateChange={canEditContent ? handleStartDateChange : undefined}
+              onDueDateChange={canChangeDueDate ? handleDueDateChange : undefined}
             />
           </section>
 
           <section className="mt-3 flex flex-1 flex-col">
-            {!description && !canEdit && (
+            {!description && !canEditContent && (
               <p className="text-xs text-muted-foreground/50 italic px-1 mb-1.5">Chưa có mô tả.</p>
             )}
             <TaskBlockEditor
@@ -534,7 +545,7 @@ export function SubtaskDetailDrawer({
               taskId={subtask.id}
               initialDescription={description}
               onSaveContent={handleDescriptionChange}
-              canEdit={canEdit}
+              canEdit={canEditContent}
               globalFileDrop={false}
             />
           </section>

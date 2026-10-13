@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,7 +73,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
 
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}/extensions`, { cache: "no-store" });
+      const res = await fetchWithRetry(`/api/tasks/${taskId}/extensions`, { cache: "no-store" });
       if (!res.ok) throw new Error(await readError(res, "Không tải được yêu cầu gia hạn"));
       setView(await res.json());
       setError(null);
@@ -102,7 +103,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
       });
       if (!res.ok) throw new Error(await readError(res, fallback));
       const json = await res.json();
-      const next = await fetch(`/api/tasks/${taskId}/extensions`, { cache: "no-store" });
+      const next = await fetchWithRetry(`/api/tasks/${taskId}/extensions`, { cache: "no-store" });
       if (next.ok) {
         const fresh: ExtensionView = await next.json();
         setView(fresh);
@@ -116,13 +117,8 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
     }
   };
 
-  if (!view) {
-    return error ? (
-      <p role="alert" className="px-4 text-xs text-destructive">
-        {error}
-      </p>
-    ) : null;
-  }
+  // Chưa tải được (kể cả sau khi tự thử lại lúc quá tải) thì không chiếm chỗ, như các khối tùy chọn khác
+  if (!view) return null;
 
   const active = view.active;
   if (!active && !view.canRequest) return null;

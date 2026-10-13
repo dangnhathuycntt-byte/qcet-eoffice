@@ -14,9 +14,8 @@ import {
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 
 import { formatDisplayName } from "@/components/layout/app-sidebar";
-import { Pressable } from "@/components/ui/pressable";
 import { Button } from "@/components/ui/button";
-import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
+import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 
 export function getInitials(name?: string | null): string {
   const cleanName = formatDisplayName(name);
@@ -128,7 +127,7 @@ export function MobileTopbarActions({ children }: { children: React.ReactNode })
 /**
  * Mobile-only topbar (< 768px): nút mở sidebar, tên trang, nút tìm, cùng mẫu header riêng của Nhiệm vụ/Hộp thư (như Linear).
  */
-export function AppTopbar() {
+export function AppTopbar({ showSearch = true }: { showSearch?: boolean } = {}) {
   const pathname = usePathname();
   const { badgeCounts } = useSidebar();
 
@@ -138,39 +137,35 @@ export function AppTopbar() {
     window.dispatchEvent(new CustomEvent("qcet:open-command-search", { detail: { open: true } }));
   }, []);
 
-  const handleOpenMobileMenu = React.useCallback(() => {
-    window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"));
-  }, []);
-
   return (
     <header
       data-slot="app-topbar"
       className="md:hidden sticky top-0 z-30 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-full shrink-0 items-center gap-1 border-b border-border/60 bg-card/95 px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md select-none"
     >
       {/* Hộp thư có thông báo chưa đọc: chấm trên nút mở sidebar, số nằm ở mục Hộp thư trong sidebar */}
-      <Pressable
-        onClick={handleOpenMobileMenu}
+      <MobileMenuButton
         aria-label={unreadCount > 0 ? `Mở menu, ${unreadCount} thông báo chưa đọc` : "Mở menu"}
-        className="relative -ml-1.5 mr-1 flex size-8 max-md:size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="relative -ml-1.5 mr-1"
       >
-        <IconSidebarPanel size={14} />
         {unreadCount > 0 && (
           <span aria-hidden className="absolute right-1 top-1 size-2 rounded-full bg-primary ring-2 ring-card" />
         )}
-      </Pressable>
+      </MobileMenuButton>
 
       <Suspense fallback={<MobileHeaderTitleFallback pathname={pathname} />}>
         <MobileHeaderTitle pathname={pathname} />
       </Suspense>
 
-      {/* Nút tìm và nút của trang cùng cỡ 32px với nút mở sidebar */}
-      <Button variant="ghost" size="icon-xs" className="ml-auto size-8 max-md:size-11 rounded-md text-foreground/80" onClick={handleOpenSearch} aria-label="Tìm kiếm" title="Tìm kiếm (⌘K)">
-        <Search className="size-4" />
-      </Button>
+      {/* Nút tìm và nút của trang cùng cỡ 32px với nút mở sidebar; trang không có gì để tìm (showSearch=false) thì bỏ */}
+      {showSearch && (
+        <Button variant="ghost" size="icon-xs" className="ml-auto size-8 rounded-md text-foreground/80" onClick={handleOpenSearch} aria-label="Tìm kiếm" title="Tìm kiếm (⌘K)">
+          <Search className="size-4" />
+        </Button>
+      )}
       {/* Nút của trang (vd. "+") gắn vào qua MobileTopbarActions */}
       <div
         id={TOPBAR_ACTIONS_ID}
-        className="-mr-1.5 flex items-center empty:hidden [&>button]:size-8 [&>button]:max-md:size-11 [&>button]:rounded-md [&>button]:text-foreground/80 [&_svg]:size-4!"
+        className={cn("-mr-1.5 flex items-center empty:hidden [&>button]:size-8 [&>button]:rounded-md [&>button]:text-foreground/80 [&_svg]:size-4!", !showSearch && "ml-auto")}
       />
     </header>
   );

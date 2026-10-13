@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { Popover } from "@base-ui/react/popover";
+import { Combobox } from "@base-ui/react/combobox";
+import { Select } from "@base-ui/react/select";
 import { Dialog } from "@base-ui/react/dialog";
 import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import type { CreateTaskLevel } from "@/lib/adapters/create-task-mapper";
@@ -31,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { foldVietnamese } from "@/lib/search/vietnamese-search";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 import { SourceDocumentChip, linkTaskToDocument, type SourceDocumentOption } from "@/components/tasks/create/source-document-chip";
 
 // Re-export types for downstream consumers
@@ -263,9 +264,10 @@ export function CreateTaskModal({
     return form.isLoadingDepartments ? "Đang tải…" : "Chưa có đơn vị";
   }, [form.availableDepartments, form.formData.selectedDeptCode, form.isLoadingDepartments]);
 
-  const fieldErrorText = [form.fieldErrors.lead, form.fieldErrors.startDate, form.fieldErrors.dueDate]
-    .filter(Boolean)
-    .join(" ");
+  // Thiếu chủ trì/hạn: chip tự đỏ lên, chữ lỗi chỉ dành cho trình đọc màn hình.
+  // Ngày bắt đầu sau hạn thì cần chữ hiện ra mới biết sai ở đâu.
+  const requiredErrorText = [form.fieldErrors.lead, form.fieldErrors.dueDate].filter(Boolean).join(" ");
+  const fieldErrorText = form.fieldErrors.startDate;
 
   // Submission error message for banner
   const errorMessage = form.submissionOutcome === "rejected" || form.submissionOutcome === "unknown"
@@ -311,13 +313,17 @@ export function CreateTaskModal({
 
                   {/* Department selector */}
                   {form.availableDepartments.length > 1 ? (
-                    <Popover.Root
+                    <Select.Root
+                      value={form.formData.selectedDeptCode}
                       open={openDropdown === "dept"}
                       onOpenChange={(open) => setOpenDropdown(open ? "dept" : null)}
+                      onValueChange={(code) => {
+                        if (!code || code === form.formData.selectedDeptCode) return;
+                        form.setField("selectedDeptCode", code);
+                        form.setField("leadAssigneeId", "");
+                      }}
                     >
-                      <div className="relative inline-block min-w-0 text-left">
-                        <Popover.Trigger
-                          type="button"
+                        <Select.Trigger
                           className={cn(
                             "inline-flex max-w-full items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
                             openDropdown === "dept"
@@ -332,40 +338,28 @@ export function CreateTaskModal({
                               openDropdown === "dept" && "rotate-180 text-foreground",
                             )}
                           />
-                        </Popover.Trigger>
+                        </Select.Trigger>
 
-                        <Popover.Portal>
-                          <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
-                          <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
-                            <Popover.Popup
+                        <Select.Portal>
+                          <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
+                          <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12} alignItemWithTrigger={false}>
+                            <Select.Popup
                               style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                              className={cn("w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
+                              className={cn("w-64", MENU_POPUP_CLASS, SHEET_POPUP_CLASS)}
                               aria-label="Chọn đơn vị phòng ban"
                             >
                               <MenuSheetHeader title="Đơn vị" />
-                              {form.availableDepartments.map((dept) => (
-                                <Pressable
-                                  key={dept.code}
-                                  onClick={() => {
-                                    form.setField("selectedDeptCode", dept.code);
-                                    form.setField("leadAssigneeId", "");
-                                    setOpenDropdown(null);
-                                  }}
-                                  className={cn(
-                                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] max-md:min-h-10 max-md:text-compact",
-                                    form.formData.selectedDeptCode === dept.code
-                                      ? "font-semibold text-foreground bg-accent"
-                                      : "text-foreground hover:bg-accent/70",
-                                  )}
-                                >
-                                  <span className="truncate">{dept.name}</span>
-                                </Pressable>
-                              ))}
-                            </Popover.Popup>
-                          </Popover.Positioner>
-                        </Popover.Portal>
-                      </div>
-                    </Popover.Root>
+                              <Select.List>
+                                {form.availableDepartments.map((dept) => (
+                                  <Select.Item key={dept.code} value={dept.code} className={MENU_OPTION_ROW_CLASS}>
+                                    <Select.ItemText className="truncate">{dept.name}</Select.ItemText>
+                                  </Select.Item>
+                                ))}
+                              </Select.List>
+                            </Select.Popup>
+                          </Select.Positioner>
+                        </Select.Portal>
+                    </Select.Root>
                   ) : (
                     <span className="min-w-0 truncate font-semibold text-foreground px-1.5 py-0.5 rounded bg-accent/40 max-md:max-w-[200px]">
                       {currentDeptName}
@@ -410,7 +404,7 @@ export function CreateTaskModal({
                   </div>
                   <Pressable
                     onClick={form.handleClearDraft}
-                    className="inline-flex shrink-0 items-center whitespace-nowrap max-md:min-h-11 text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
+                    className="inline-flex shrink-0 items-center whitespace-nowrap max-md:min-h-8 text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
                   >
                     Xóa bản nháp
                   </Pressable>
@@ -503,13 +497,15 @@ export function CreateTaskModal({
               {/* 3. Thuộc tính: dưới phần soạn, luôn thấy kể cả khi mô tả dài */}
               <div className="flex flex-wrap items-center gap-1.5 px-5 sm:px-6 pb-3 shrink-0 max-md:gap-2">
                 {/* 3.1 Priority Chip */}
-                <Popover.Root
+                <Select.Root
+                  value={form.formData.priority}
                   open={openDropdown === "priority"}
                   onOpenChange={(open) => setOpenDropdown(open ? "priority" : null)}
+                  onValueChange={(p) => {
+                    if (p) form.setField("priority", p);
+                  }}
                 >
-                  <div className="relative">
-                    <Popover.Trigger
-                      type="button"
+                    <Select.Trigger
                       aria-label={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
                       title={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
                       className={cn(
@@ -528,55 +524,60 @@ export function CreateTaskModal({
                           openDropdown === "priority" && "rotate-180 text-foreground",
                         )}
                       />
-                    </Popover.Trigger>
+                    </Select.Trigger>
 
-                    <Popover.Portal>
-                      <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
-                      <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
-                        <Popover.Popup
+                    <Select.Portal>
+                      <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
+                      <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12} alignItemWithTrigger={false}>
+                        <Select.Popup
                           style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                          className={cn("w-40 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
+                          className={cn("w-56", MENU_POPUP_CLASS, SHEET_POPUP_CLASS)}
                           aria-label="Chọn mức độ ưu tiên"
                         >
                           <MenuSheetHeader title="Mức ưu tiên" />
-                          {PRIORITY_KEYS.map((p) => (
-                            <Pressable
-                              key={p}
-                              onClick={() => {
-                                form.setField("priority", p);
-                                setOpenDropdown(null);
-                              }}
-                              className={cn(
-                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] max-md:min-h-10 max-md:text-compact",
-                                form.formData.priority === p
-                                  ? "bg-accent font-medium text-foreground"
-                                  : "text-foreground hover:bg-accent",
-                              )}
-                            >
-                              <div className="flex items-center gap-2">
+                          <Select.List>
+                            {PRIORITY_KEYS.map((p) => (
+                              <Select.Item key={p} value={p} className={MENU_OPTION_ROW_CLASS}>
                                 <PrioritySignalBars priority={toSignalPriority(p)} className="shrink-0" />
-                                <span>{PRIORITY_CONFIG[p].label}</span>
-                              </div>
-                            </Pressable>
-                          ))}
-                        </Popover.Popup>
-                      </Popover.Positioner>
-                    </Popover.Portal>
-                  </div>
-                </Popover.Root>
+                                <Select.ItemText>{PRIORITY_CONFIG[p].label}</Select.ItemText>
+                              </Select.Item>
+                            ))}
+                          </Select.List>
+                        </Select.Popup>
+                      </Select.Positioner>
+                    </Select.Portal>
+                </Select.Root>
 
                 {/* 3.2 Lead Assignee (DRI) Chip (P0 Field) */}
-                <Popover.Root
+                <Combobox.Root
+                  items={form.availablePersonnel}
+                  value={form.availablePersonnel.find((p) => p.id === form.formData.leadAssigneeId) ?? null}
                   open={openDropdown === "dri"}
                   onOpenChange={(open) => {
                     setOpenDropdown(open ? "dri" : null);
                     if (!open) setPersonQuery("");
                   }}
+                  inputValue={personQuery}
+                  onInputValueChange={setPersonQuery}
+                  // Gõ không dấu vẫn tìm ra ("hung" → "Hùng")
+                  filter={(person, query) => {
+                    const q = foldVietnamese(query);
+                    return !q || [person.name, person.email].some((t) => foldVietnamese(t).includes(q));
+                  }}
+                  itemToStringLabel={(person) => person.name}
+                  itemToStringValue={(person) => person.id}
+                  isItemEqualToValue={(a, b) => a.id === b.id}
+                  onValueChange={(person) => {
+                    if (!person) return;
+                    form.setField("leadAssigneeId", person.id);
+                    if (form.fieldErrors.lead) form.setFieldErrors((prev) => ({ ...prev, lead: undefined }));
+                    setPersonQuery("");
+                    setOpenDropdown(null);
+                  }}
+                  autoHighlight
                 >
-                  <div className="relative">
-                    <Popover.Trigger
+                    <Combobox.Trigger
                       ref={leadTriggerRef}
-                      type="button"
                       aria-required="true"
                       aria-invalid={Boolean(form.fieldErrors.lead)}
                       aria-label={leadAssigneeDisplayName ? undefined : "Chủ trì"}
@@ -605,78 +606,39 @@ export function CreateTaskModal({
                           openDropdown === "dri" && "rotate-180 text-foreground",
                         )}
                       />
-                    </Popover.Trigger>
+                    </Combobox.Trigger>
 
-                    <Popover.Portal>
-                      <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
-                      <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
-                        <Popover.Popup
-                          style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                          className={cn("w-60 p-1 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
+                    <Combobox.Portal>
+                      <Combobox.Backdrop className={SHEET_BACKDROP_CLASS} />
+                      <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12}>
+                        <Combobox.Popup
                           aria-label="Chọn người chủ trì"
+                          className={cn("w-64 max-w-[var(--available-width)]", MENU_POPUP_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
                         >
                           <MenuSheetHeader title="Người chủ trì" />
-                          <Input
-                            compact
-                            value={personQuery}
-                            onChange={(e) => setPersonQuery(e.target.value)}
-                            placeholder="Tìm người…"
-                            aria-label="Tìm người chủ trì"
-                            className="mb-1 text-xs max-md:h-8"
-                          />
-                          <div className="max-h-56 space-y-0.5 overflow-y-auto overscroll-contain">
-                            {form.availablePersonnel.length === 0 ? (
-                              <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                                {form.isLoadingDepartments ? "Đang tải danh sách…" : "Chưa có nhân sự trong đơn vị này"}
-                              </div>
-                            ) : (
-                              (() => {
-                                // Gõ không dấu vẫn tìm ra ("hung" → "Hùng")
-                                const q = foldVietnamese(personQuery);
-                                const list = q
-                                  ? form.availablePersonnel.filter((p) =>
-                                      [p.name, p.email].some((t) => foldVietnamese(t).includes(q)),
-                                    )
-                                  : form.availablePersonnel;
-                                if (list.length === 0) {
-                                  return (
-                                    <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                                      Không tìm thấy người phù hợp
-                                    </div>
-                                  );
-                                }
-                                return list.map((person) => (
-                                  <Pressable
-                                    key={person.id}
-                                    onClick={() => {
-                                      form.setField("leadAssigneeId", person.id);
-                                      if (form.fieldErrors.lead) {
-                                        form.setFieldErrors((prev) => ({ ...prev, lead: undefined }));
-                                      }
-                                      setPersonQuery("");
-                                      setOpenDropdown(null);
-                                    }}
-                                    className={cn(
-                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 transition-colors max-md:min-h-10 max-md:text-compact",
-                                      form.formData.leadAssigneeId === person.id
-                                        ? "bg-accent font-medium"
-                                        : "hover:bg-accent/70",
-                                    )}
-                                  >
-                                    <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
-                                    <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground max-md:text-compact">
-                                      {person.name}
-                                    </span>
-                                  </Pressable>
-                                ));
-                              })()
+                          <Combobox.Input aria-label="Tìm người chủ trì" placeholder="Tìm người…" render={<Input variant="menu" />} />
+                          <div aria-hidden className="-mx-1 my-1 h-px bg-border" />
+                          <Combobox.Empty>
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                              {form.availablePersonnel.length === 0
+                                ? form.isLoadingDepartments
+                                  ? "Đang tải danh sách…"
+                                  : "Chưa có nhân sự trong đơn vị này"
+                                : "Không tìm thấy người phù hợp"}
+                            </div>
+                          </Combobox.Empty>
+                          <Combobox.List className="max-h-56 overflow-y-auto overscroll-contain outline-none data-[empty]:p-0 max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
+                            {(person: (typeof form.availablePersonnel)[number]) => (
+                              <Combobox.Item key={person.id} value={person} className={MENU_OPTION_ROW_CLASS}>
+                                <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
+                                <span className="min-w-0 flex-1 truncate">{person.name}</span>
+                              </Combobox.Item>
                             )}
-                          </div>
-                        </Popover.Popup>
-                      </Popover.Positioner>
-                    </Popover.Portal>
-                  </div>
-                </Popover.Root>
+                          </Combobox.List>
+                        </Combobox.Popup>
+                      </Combobox.Positioner>
+                    </Combobox.Portal>
+                </Combobox.Root>
 
                 {/* 3.3 Start Date Chip */}
                 <VietnameseDatePicker
@@ -685,7 +647,7 @@ export function CreateTaskModal({
                   onChange={(val) => form.setField("startDate", val)}
                   label={form.formData.startDate ? "Bắt đầu:" : undefined}
                   variant="chip"
-                  triggerClassName="h-7"
+                  triggerClassName={cn("h-7", !form.fieldErrors.startDate && "text-foreground")}
                   compactWhenEmpty
                   error={Boolean(form.fieldErrors.startDate)}
                   icon={<Calendar className="size-3 text-muted-foreground max-md:size-3.5" />}
@@ -705,7 +667,7 @@ export function CreateTaskModal({
                   }}
                   label={form.formData.dueDate ? "Hạn:" : undefined}
                   variant="chip"
-                  triggerClassName="h-7"
+                  triggerClassName={cn("h-7", !form.fieldErrors.dueDate && "text-foreground")}
                   compactWhenEmpty
                   error={Boolean(form.fieldErrors.dueDate)}
                   icon={
@@ -729,6 +691,11 @@ export function CreateTaskModal({
                   />
                 ) : null}
               </div>
+              {requiredErrorText && (
+                <p role="alert" className="sr-only">
+                  {requiredErrorText}
+                </p>
+              )}
               {fieldErrorText && (
                 <p role="alert" className="px-5 sm:px-6 pb-3 -mt-1 shrink-0 text-xs font-medium text-destructive">
                   {fieldErrorText}

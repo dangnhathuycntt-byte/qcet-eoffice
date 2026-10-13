@@ -23,7 +23,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
 import { getStatusLabel } from "@/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
-import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
+import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { InkIllustration, type IllustrationName } from "@/components/ui/empty-state";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
@@ -539,13 +539,7 @@ export function InboxView() {
         >
           {/* Điện thoại: header riêng thay topbar chung (nút mở sidebar, chừa safe area) như trang Nhiệm vụ */}
           <div className="flex h-10 shrink-0 items-center gap-1 px-3 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:border-b max-md:border-border/60 max-md:px-4 max-md:pt-[env(safe-area-inset-top,0px)]">
-            <Pressable
-              onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
-              aria-label="Mở menu"
-              className="-ml-1.5 mr-1 flex size-8 max-md:size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:hidden"
-            >
-              <IconSidebarPanel size={14} />
-            </Pressable>
+            <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
             <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
             <MenuRoot>
               <MenuTrigger

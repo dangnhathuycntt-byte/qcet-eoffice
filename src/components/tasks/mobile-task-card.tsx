@@ -157,7 +157,7 @@ export function getMobilePriorityBadgeConfig(
 /**
  * MobileTaskCard - hàng nhiệm vụ di động gọn kiểu Linear (hàng phẳng, không thẻ).
  *
- * - Cả hàng chạm được để mở chi tiết (min-h-[48px], touch-manipulation), không có nút lẻ bên trong
+ * - Cả hàng chạm được để mở chi tiết (hàng một dòng 40px, touch-manipulation), không có nút lẻ bên trong
  * - Một dòng: icon trạng thái, tiêu đề; bên phải icon ưu tiên (khẩn cấp, cao), ngày hạn (đỏ khi trễ, cam khi sắp tới) và avatar
  * - Mã, người phụ trách, đơn vị, trạng thái chữ nằm ở aria-label và văn bản dành cho trình đọc màn hình
  */
@@ -274,7 +274,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       aria-label={`Nhiệm vụ ${formattedCode}: ${title}. Trạng thái ${statusConfig.label}`}
       className={cn(
         // Lùi 8px hai bên, bo góc: nền khi chạm/chọn không tràn mép (như Linear)
-        "group relative mx-2 flex min-h-[48px] items-center gap-3 rounded-lg px-2 py-2",
+        "group relative mx-2 flex min-h-10 items-center gap-3 rounded-lg px-2 py-1.5",
         "touch-manipulation cursor-pointer select-none [-webkit-touch-callout:none] active:bg-muted/50 transition-colors duration-100",
         className
       )}

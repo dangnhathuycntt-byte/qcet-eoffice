@@ -7,13 +7,14 @@ import { badgeVariants } from "../src/components/ui/badge";
 import { Input } from "../src/components/ui/input";
 import { UserAvatar } from "../src/components/ui/user-avatar";
 import { InlineAlert } from "../src/components/ui/inline-alert";
+import { Tabs, TabsList, TabsTrigger } from "../src/components/ui/tabs";
 import { getInitials } from "../src/lib/utils";
 
 describe("UI Components Ergonomics & Touch Targets", () => {
   describe("Button Component Ergonomics", () => {
-    it("should have h-11, px-3.5, py-1.5, and text-sm for default size", () => {
+    it("should have h-9 (36px mobile), px-3.5, py-1.5, and text-sm for default size", () => {
       const defaultClasses = buttonVariants({ size: "default" });
-      assert.match(defaultClasses, /\bh-11\b/, "Button default size should have h-11 (44px touch target)");
+      assert.match(defaultClasses, /\bh-9\b/, "Button default size should be h-9 (36px) on mobile");
       assert.match(defaultClasses, /\bpx-3\.5\b/, "Button default size should have px-3.5");
       assert.match(defaultClasses, /\bpy-1\.5\b/, "Button default size should have py-1.5");
       assert.ok(defaultClasses.includes("sm:h-8.5"), "Desktop button height must be 34px");
@@ -44,9 +45,9 @@ describe("UI Components Ergonomics & Touch Targets", () => {
   });
 
   describe("Input Component Ergonomics", () => {
-    it("should enforce h-12, px-3.5, py-2, and text-sm", () => {
+    it("should enforce h-10 (40px mobile), px-3.5, py-2, and text-sm", () => {
       const html = renderToStaticMarkup(React.createElement(Input));
-      assert.match(html, /\bh-12\b/, "Input should have h-12 (48px mobile height)");
+      assert.match(html, /\bh-10\b/, "Input should have h-10 (40px mobile height)");
       assert.match(html, /\bpx-3\.5\b/, "Input should have px-3.5 padding");
       assert.match(html, /\bpy-2\b/, "Input should have py-2 padding");
       assert.ok(html.includes("sm:h-9"), "Desktop input height must be 36px");
@@ -93,6 +94,21 @@ describe("UI Components Ergonomics & Touch Targets", () => {
       assert.ok(html.includes('aria-label="Thử lại"'), "Action button must have aria-label");
       assert.ok(html.includes("focus-visible:outline-2"), "Action button must have focus-visible");
       assert.ok(html.includes("before:-inset-2"), "Action button must expand touch area");
+    });
+  });
+
+  describe("Tabs Component", () => {
+    it("gắn data-horizontal trên gốc để biến thể chiều cao h-7/h-8 của TabsList có hiệu lực", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(
+          Tabs,
+          { value: "a" },
+          React.createElement(TabsList, { size: "sm" }, React.createElement(TabsTrigger, { value: "a" }, "A"))
+        )
+      );
+      assert.match(html, /data-slot="tabs"[^>]*data-horizontal=""/);
+      assert.ok(html.includes("group-data-horizontal/tabs:h-7"), "TabsList sm cao 28px");
+      assert.doesNotMatch(html, /\sdata-vertical=/, "Tabs ngang không gắn data-vertical");
     });
   });
 });

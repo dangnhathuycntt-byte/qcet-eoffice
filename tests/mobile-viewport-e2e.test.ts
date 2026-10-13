@@ -79,7 +79,11 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
 
   test("Viewport themeColor is configured for pure light mode", () => {
     assert.equal(viewport.colorScheme, "light", "colorScheme must be light");
-    assert.equal(viewport.themeColor, "#fbfbfb", "themeColor must be #fbfbfb");
+    // Desktop: thanh tiêu đề PWA trùng màu sidebar (--gray-1); di động: nền sáng của topbar
+    assert.deepEqual(viewport.themeColor, [
+      { media: "(min-width: 768px)", color: "#EFEFF0" },
+      { color: "#fbfbfb" },
+    ]);
   });
 
   test("Viewport configures interactiveWidget so the virtual keyboard resizes content", () => {

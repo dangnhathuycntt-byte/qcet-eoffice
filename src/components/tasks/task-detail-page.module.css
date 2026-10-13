@@ -192,6 +192,8 @@
 /* Bỏ khe 36px bên trái của trình soạn: tay nắm kéo khối vốn lùi ra ngoài khối (-ml-7) nên nằm ở lề canvas,
    chữ mô tả thẳng hàng tiêu đề (kiểu Notion). Lề canvas nhỏ nhất 24px vẫn chứa đủ tay nắm 24px. */
 .content > [data-slot='task-block-editor'] [data-slate-editor] { padding-left: 0; }
+/* Ngăn việc con dùng cùng quy tắc: mô tả thẳng hàng tên việc con, lề 24px của ngăn chứa tay nắm kéo khối */
+.peekSurface [data-slot='task-block-editor'] [data-slate-editor] { padding-left: 0; }
 /* Mô tả đứng ngay dưới tiêu đề, các khối nghiệp vụ theo sau: không giãn hết chiều cao, vùng bấm cuối thu lại */
 .content > [data-slot='task-block-editor']:not(:last-child) { flex: none; }
 .content > [data-slot='task-block-editor']:not(:last-child) [data-slate-editor] { flex: none; padding-bottom: 16px; }
@@ -203,6 +205,35 @@
   flex-direction: column;
   gap: 8px;
 }
+/* Màn hẹp: cột thuộc tính là panel nổi (peek) phủ lên nội dung, neo ngay dưới thanh trên (kiểu Linear).
+   Neo cao 0 và dính đầu vùng cuộn nên panel luôn ở mép trên dù đã cuộn. */
+.inspectorPeekAnchor {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 0;
+}
+.inspectorPeek {
+  position: absolute;
+  /* Đo theo Linear mobile: dính sát dưới header, cách mép phải màn hình 8px, rộng 338px */
+  right: calc(8px - var(--canvas-pad-x, 16px));
+  width: min(338px, calc(100% + 2 * var(--canvas-pad-x, 16px) - 16px));
+  top: 0;
+  max-height: min(72dvh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: peek-reveal 160ms ease-out;
+}
+/* Không shadow như yêu cầu: card trắng viền 0,5px nổi trên nền nội dung xám nhạt (Linear giao diện sáng) */
+.workspace .inspectorPeek [data-slot='task-properties-sidebar'] > div {
+  border-width: 0.5px;
+  background: var(--background);
+}
+@keyframes peek-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Mỗi khối (Thuộc tính, Việc con) là một thẻ trắng viền mảnh trên khay xám */
 .workspace [data-slot='task-properties-sidebar'] > div {
   margin: 0;
@@ -313,8 +344,8 @@
   .content { padding-top: 24px; }
 }
 @media (max-width: 1023px) {
-  /* Đáy cuộn chừa safe area */
-  .canvas { padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+  /* Đáy cuộn chừa safe area; --canvas-pad-x để panel thuộc tính neo theo mép màn hình */
+  .canvas { --canvas-pad-x: 16px; padding: 0 var(--canvas-pad-x) calc(env(safe-area-inset-bottom, 0px) + 24px); scrollbar-gutter: auto; }
   .content { padding-top: 24px; }
   .workspace > nav[role='tablist'] { flex-wrap: wrap; }
   .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] {
@@ -323,11 +354,95 @@
   .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] > div {
     top: 6px;
   }
+  /* Header hai hàng đo theo Linear mobile: đệm 8px, hàng 44px, chỉ kẻ mảnh dưới hàng 1; nút icon 32px bo góc như nút menu trang Nhiệm vụ */
+  .workspace [data-slot='task-detail-header-nav'] {
+    padding-inline: 8px;
+    border-bottom: 0;
+    grid-template-rows: 44px 44px;
+  }
+  .workspace [data-slot='task-detail-header-nav']::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 44px);
+    border-top: 0.5px solid var(--border);
+    pointer-events: none;
+  }
+  .workspace [data-slot='task-detail-header-nav'] button[aria-label] {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .workspace [data-slot='task-detail-header-nav'] button[aria-expanded='true'] {
+    background: var(--accent);
+    color: var(--foreground);
+  }
+  /* Tab dạng pill như Linear (đo ở giao diện sáng): cao 32px, mục chưa chọn nền trắng không viền nổi trên nền
+     header xám, mục đang chọn nền xám đậm hơn; bỏ gạch chân. Số đếm không có nền riêng. */
+  .workspace [data-slot='task-detail-header-nav'] [data-slot='tabs-list'] {
+    padding: 0;
+    gap: 4px;
+  }
+  .workspace [data-slot='task-detail-header-nav'] [data-slot='tabs-trigger'] {
+    height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--background);
+  }
+  .workspace [data-slot='task-detail-header-nav'] [data-slot='tabs-trigger'] > span > span {
+    margin-left: 4px;
+    padding: 0;
+    background: transparent;
+  }
+  .workspace [data-slot='task-detail-header-nav'] [data-slot='tabs-trigger'][data-active] {
+    border-color: transparent;
+    background: var(--accent);
+    font-weight: 500;
+  }
+  .workspace [data-slot='task-detail-header-nav'] [data-slot='tabs-trigger'][data-active]::after {
+    display: none;
+  }
+  /* Thuộc tính kiểu Linear mobile: tiêu đề xám vừa, mỗi hàng đều 36px, nhãn và giá trị cùng canh giữa dọc.
+     Điều khiển giá trị (ô ngày, chọn: cao 44px ở <768px) về 28px dạng viên thuốc để các hàng không lệch nhịp. */
+  .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:first-child > span {
+    color: var(--muted-foreground);
+    font-size: var(--text-compact);
+    font-weight: 500;
+  }
+  /* Card Việc con: tiêu đề cùng kiểu "Thuộc tính", nút Thêm 28px như các nút trong card */
+  .workspace [data-slot='task-properties-sidebar'] > div:nth-child(2) > div > div:first-child > div:first-child > span:first-child {
+    color: var(--muted-foreground);
+    font-weight: 500;
+  }
+  .workspace [data-slot='task-properties-sidebar'] > div:nth-child(2) > div > div:first-child > button {
+    height: 28px;
+    border-radius: 9999px;
+  }
+  /* Hàng đầu cách mép trên card 41px như Linear */
+  .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:first-child {
+    margin-block-end: 7px;
+  }
+  /* Cột nhãn 90px liền kề nút giá trị (nút tự có đệm 6px) nên icon cách nhãn 96px như Linear */
+  .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:nth-child(2) > div {
+    grid-template-columns: 90px minmax(0, 1fr);
+    column-gap: 0;
+    align-items: center;
+    min-height: 36px;
+    padding-block: 0;
+  }
+  .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:nth-child(2) > div button {
+    height: 28px;
+    min-height: 28px;
+    border-radius: 9999px;
+  }
 }
 
 @container (max-width: 1100px) {
-  .canvas { padding-inline: 24px; }
+  .canvas { --canvas-pad-x: 24px; padding-inline: var(--canvas-pad-x); }
 }
 @container (max-width: 480px) {
-  .canvas { padding-inline: 12px; }
+  .canvas { --canvas-pad-x: 12px; padding-inline: var(--canvas-pad-x); }
 }

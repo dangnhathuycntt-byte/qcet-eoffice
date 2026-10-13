@@ -11,6 +11,9 @@ import { foldVietnamese } from "@/lib/search/vietnamese-search";
 export interface MentionCandidate {
   id: string;
   name: string;
+  avatarUrl?: string | null;
+  /** false: người cùng đơn vị chưa có vai trò; nhắc tên sẽ thêm họ làm người theo dõi. */
+  inTask?: boolean;
 }
 
 /** Từ đang gõ sau "@" ngay trước con trỏ, hoặc null nếu không ở trong một lần nhắc. */
@@ -45,4 +48,25 @@ export function resolveMentionIds(text: string, chosen: MentionCandidate[]): str
     if (text.includes(`@${candidate.name}`)) ids.add(candidate.id);
   }
   return [...ids];
+}
+
+/**
+ * Tách nội dung bình luận thành đoạn thường và đoạn "@Tên" (chỉ những tên đã biết) để tô màu khi hiển thị.
+ * Tên dài khớp trước ("@Nguyễn Văn An" không bị cắt thành "@Nguyễn Văn").
+ */
+export function splitMentions(text: string, names: string[]): Array<{ text: string; mention: boolean }> {
+  const unique = [...new Set(names.map((n) => n.trim()).filter(Boolean))].sort((a, b) => b.length - a.length);
+  if (unique.length === 0 || !text.includes("@")) return [{ text, mention: false }];
+  const escaped = unique.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`(^|\\s)(@(?:${escaped.join("|")}))(?=$|[\\s.,;:!?)])`, "gu");
+  const parts: Array<{ text: string; mention: boolean }> = [];
+  let last = 0;
+  for (const match of text.matchAll(re)) {
+    const start = (match.index ?? 0) + match[1].length;
+    if (start > last) parts.push({ text: text.slice(last, start), mention: false });
+    parts.push({ text: match[2], mention: true });
+    last = start + match[2].length;
+  }
+  if (last < text.length) parts.push({ text: text.slice(last), mention: false });
+  return parts;
 }

@@ -2,14 +2,7 @@
 
 import type { SelectionGroupPosition } from "@/lib/selection-group";
 import * as React from "react";
-import {
-  Check,
-  Calendar,
-  CalendarCheck,
-  CalendarClock,
-  CalendarX2,
-  Ellipsis,
-} from "lucide-react";
+import { Check, Ellipsis } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
@@ -25,7 +18,13 @@ import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 import { getCategoryBadgeConfig, TASK_COLUMN_CLASS } from "../constants";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
-import { TaskIconStatusOverdue } from "@/lib/icons/task-icons";
+import {
+  TaskIconDue,
+  TaskIconDueClosed,
+  TaskIconDueOverdue,
+  TaskIconDueSoon,
+  TaskIconStatusOverdue,
+} from "@/lib/icons/task-icons";
 
 function formatShortTableDate(dateStr?: string | Date | null): string {
   if (!dateStr) return "-";
@@ -158,8 +157,8 @@ function TaskDateValue({
   srText?: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 tabular-nums text-xs" title={title}>
-      {Icon && <Icon className={cn("size-3.5 shrink-0", iconClassName)} strokeWidth={1.5} aria-hidden="true" />}
+    <div className="flex items-center gap-2 tabular-nums text-xs" title={title}>
+      {Icon && <Icon className={cn("size-4 shrink-0", iconClassName)} aria-hidden="true" />}
       <span className={textClassName}>{formatShortTableDate(value)}</span>
       {srText && <span className="sr-only">{srText}</span>}
     </div>
@@ -247,10 +246,10 @@ export const TaskRow = React.memo(function TaskRow({
   const dueTone = dueIndicator.tone;
   const dueHint = dueIndicator.hint;
   const DueIcon = {
-    closed: CalendarCheck,
-    overdue: CalendarX2,
-    soon: CalendarClock,
-    default: Calendar,
+    closed: TaskIconDueClosed,
+    overdue: TaskIconDueOverdue,
+    soon: TaskIconDueSoon,
+    default: TaskIconDue,
   }[dueIndicator.icon];
 
   const isWaitingApproval =
@@ -392,14 +391,14 @@ export const TaskRow = React.memo(function TaskRow({
             />
             {isSelected ? (
               <div
-                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-[opacity,transform] active:scale-[0.98] pointer-events-none"
+                className="size-3.5 rounded-[3px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-[opacity,transform] active:scale-[0.98] pointer-events-none"
                 aria-hidden="true"
               >
-                <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+                <Check className="size-2.5 text-primary-foreground" />
               </div>
             ) : (
               <div
-                className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-[opacity,transform,border-color,background-color] duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
+                className="size-3.5 rounded-[3px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-[opacity,transform,border-color,background-color] duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
                 aria-hidden="true"
               />
             )}
@@ -497,7 +496,7 @@ export const TaskRow = React.memo(function TaskRow({
       {/* 3. Ưu tiên Column */}
       {visibleColumns?.priority !== false && (
         <td className={cn("align-middle whitespace-nowrap px-3 py-1.5", TASK_COLUMN_CLASS.priority)}>
-          <div className="inline-flex items-center">
+          <div className="flex items-center">
             <PrioritySignalBars priority={task.priority} />
           </div>
         </td>
@@ -512,9 +511,9 @@ export const TaskRow = React.memo(function TaskRow({
                 <UserAvatar
                   name={driInfo.primaryName}
                   avatarUrl={task.leadAssigneeAvatar}
-                  size="sm"
+                  size="xs"
                 />
-                <span className="min-w-0 truncate text-xs font-medium text-foreground">
+                <span className="min-w-0 truncate text-xs text-foreground">
                   {driInfo.primaryName}
                 </span>
               </>
@@ -531,7 +530,7 @@ export const TaskRow = React.memo(function TaskRow({
           {coAssigneesList.length > 0 && (
             <div className="flex items-center -space-x-1" title={coAssigneesList.join(", ")}>
               {coAssigneeEntries.slice(0, 3).map((entry) => (
-                <UserAvatar key={entry.name} name={entry.name} avatarUrl={entry.avatarUrl} size="sm" />
+                <UserAvatar key={entry.name} name={entry.name} avatarUrl={entry.avatarUrl} size="xs" />
               ))}
               {coAssigneesList.length > 3 && (
                 <span className="ml-2.5 text-xs text-muted-foreground tabular-nums">
@@ -585,7 +584,9 @@ export const TaskRow = React.memo(function TaskRow({
                     ? "text-warning"
                     : "text-muted-foreground/70"
                 }
-                textClassName={dueTone === "muted" ? "text-muted-foreground font-medium" : "text-foreground font-semibold"}
+                textClassName={cn(
+                  dueTone === "danger" ? "text-destructive" : dueTone === "warn" ? "text-warning" : "text-muted-foreground"
+                )}
                 title={`${formatTableDate(task.dueDate)} · ${dueHint}`}
                 srText={dueHint}
               />
@@ -614,13 +615,13 @@ export const TaskRow = React.memo(function TaskRow({
       {/* Trạng thái Column */}
       {visibleColumns?.status === true && (
         <td className={cn("align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-1.5", TASK_COLUMN_CLASS.status)}>
-          <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
             {statusLabel === "Trễ hạn" ? (
               <TaskIconStatusOverdue className="size-4 shrink-0 text-destructive" />
             ) : (
               <TaskStatusCircle status={task.status} />
             )}
-            <span className={cn("truncate font-medium", statusLabel === "Trễ hạn" && "font-semibold text-destructive")}>{statusLabel}</span>
+            <span className={cn("truncate", statusLabel === "Trễ hạn" && "font-semibold text-destructive")}>{statusLabel}</span>
           </span>
         </td>
       )}

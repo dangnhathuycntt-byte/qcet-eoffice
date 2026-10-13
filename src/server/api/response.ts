@@ -95,6 +95,10 @@ export function apiError(
   if (!responseHeaders.has('x-request-id')) {
     responseHeaders.set('x-request-id', requestId);
   }
+  // 429: báo client chờ bao lâu (chuẩn HTTP) để tự thử lại thay vì hiện lỗi
+  if (status === 429 && typeof errObj.retryAfter === 'number' && !responseHeaders.has('Retry-After')) {
+    responseHeaders.set('Retry-After', String(errObj.retryAfter));
+  }
 
   if (legacyCompat) {
     const rawBody = body as Record<string, any>;

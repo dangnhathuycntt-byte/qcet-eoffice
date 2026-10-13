@@ -3,9 +3,8 @@
 // Unified Task Toolbar Component — Unified control toolbar for task views
 import * as React from "react";
 import { Plus, RotateCcw } from "lucide-react";
-import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
+import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import {
-  HealthSubAll,
   HealthSubOnTrack,
   HealthSubAtRisk,
   HealthSubOverdue,
@@ -15,32 +14,33 @@ import {
   FilterIconProgress,
   FilterIconLead,
   FilterIconCollaborator,
-  FilterIconCategory,
-  FilterIconDept,
   FilterIconDeadline,
-  FilterIconOrigin,
 } from "./task-filter-icons";
 import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
 import { MENU_POPUP_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import {
-  TaskIconPriorityUrgent,
-  TaskIconPriorityHigh,
-  TaskIconPriorityNormal,
-} from "@/components/tasks/task-action-icons";
-import {
   TaskIconAssignee,
-  TaskIconCollaborators,
   TaskIconDepartment,
-  TaskIconPriority,
-  TaskIconStatus,
   TaskIconDeadline,
   TaskIconTime,
   TaskIconStatusNew,
   TaskIconSearch,
 } from "@/lib/icons/task-icons";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
+import { Input } from "@/components/ui/input";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import {
+  parsePersonFilter,
+  PERSON_FILTER_ME,
+  PERSON_FILTER_NONE,
+  type FilterPersonOption,
+  type TaskFilterFacetKey,
+  type TaskFilterFacets,
+} from "@/domain/tasks/task-filter-facets";
 import { ListToolbarFilterButton, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
 import {
   NO_TASK_TIME_FILTER,
@@ -55,6 +55,8 @@ import {
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
 import {
   getAcademicMonthsForYear,
+  getAcademicYear,
+  getSystemReferenceDate,
 } from "@/lib/academic-calendar";
 import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
 import { filterTasksByRole, matchesUser } from "@/lib/role-task-filter";
@@ -220,11 +222,14 @@ export interface UnifiedTaskToolbarProps {
   selectedHealth?: string | null;
   onHealthChange?: (health: string | null) => void;
 
-  selectedOrigin?: string | null;
-  onOriginChange?: (origin: string | null) => void;
-
   selectedCollaborator?: string | null;
   onCollaboratorChange?: (collaborator: string | null) => void;
+
+  /** Người chủ trì: token `me`, `none` hoặc khóa người (xem `task-filter-facets`) */
+  selectedLead?: string | null;
+  onLeadChange?: (lead: string | null) => void;
+  /** Danh sách người và số đếm cho menu lọc (tính ở workspace bằng chính hàm lọc của bảng) */
+  filterFacets?: TaskFilterFacets;
 
   selectedAcademicMonth?: number | "ALL";
   onAcademicMonthChange?: (month: number | "ALL") => void;
@@ -315,8 +320,9 @@ export const CATEGORY_FILTER_OPTIONS: { id: string; label: string }[] = [
 export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "ALL", label: "Tất cả mức độ" },
   { id: "URGENT", label: "Khẩn cấp" },
-  { id: "HIGH", label: "Ưu tiên cao" },
+  { id: "HIGH", label: "Cao" },
   { id: "NORMAL", label: "Bình thường" },
+  { id: "LOW", label: "Thấp" },
 ];
 
 /** Số giá trị đang lọc của một nhóm (0 khi đang là "Tất cả"). */
@@ -325,20 +331,23 @@ function countFilterValues(raw: string | undefined | null, allToken: string): nu
   return raw.split(",").map((v) => v.trim()).filter((v) => v && v.toLowerCase() !== allToken.toLowerCase()).length;
 }
 
-function toggleMultiValue(
-  selectedList: string[],
-  isAll: boolean,
-  selected: boolean,
-  value: string,
-  allToken: string
-): string[] {
-  if (isAll) return [value];
-  if (selected) {
-    const next = selectedList.filter((v) => v !== value && v !== allToken);
-    return next.length === 0 ? [allToken] : next;
-  }
-  return [...selectedList.filter((v) => v !== allToken), value];
+/** Giá trị đang chọn của một nhóm lọc nhiều lựa chọn, bỏ token "tất cả" */
+function splitFilterTokens(raw: string | undefined | null, allToken: string): string[] {
+  if (!raw) return [];
+  return raw.split(",").map((v) => v.trim()).filter((v) => v && v.toLowerCase() !== allToken.toLowerCase());
 }
+
+/** Bật/tắt một lựa chọn; bỏ hết thì trả `null` (không lọc nhóm này) */
+function toggleFilterToken(selectedList: string[], value: string): string | null {
+  const next = selectedList.includes(value) ? selectedList.filter((v) => v !== value) : [...selectedList, value];
+  return next.length > 0 ? next.join(",") : null;
+}
+
+const STATUS_FILTER_ALIASES: Record<string, string[]> = {
+  new: ["new", "not_started", "assigned"],
+  waiting_approval: ["waiting_approval", "review", "pending_executive_approval", "needs_review"],
+  review: ["waiting_approval", "review", "pending_executive_approval", "needs_review"],
+};
 
 // Helper: filterTasksByScope (backward compatibility & unified scopes)
 
@@ -443,6 +452,94 @@ export function resetTaskToolbarFilters(callbacks: Pick<UnifiedTaskToolbarProps,
   (callbacks.onMonthChange || callbacks.onAcademicMonthChange)?.("ALL");
 }
 
+/**
+ * Menu con lọc theo người (kiểu Linear): ô tìm ở đầu, "Tôi", "chưa có ai", rồi từng người kèm avatar và số nhiệm vụ.
+ * Chọn nhiều người (HOẶC); đang chọn = nền accent + chữ đậm. Bỏ hết thì không lọc nhóm này.
+ */
+function PersonFilterOptions({
+  facet,
+  value,
+  onChange,
+  people,
+  counts,
+  viewer,
+  noneLabel,
+  searchLabel,
+}: {
+  facet: "lead" | "collaborator";
+  value?: string | null;
+  onChange: (next: string | null) => void;
+  people: FilterPersonOption[];
+  counts?: Record<string, number>;
+  viewer?: AuthUser | null;
+  noneLabel: string;
+  searchLabel: string;
+}) {
+  const [query, setQuery] = React.useState("");
+  const selected = parsePersonFilter(value);
+  const toggle = (token: string) => onChange(toggleFilterToken(selected, token));
+  const q = foldVietnamese(query.trim());
+  const matches = (name: string) => !q || foldVietnamese(name).includes(q);
+  const visiblePeople = people.filter((person) => matches(person.name));
+  const showMe = Boolean(viewer) && matches(`Tôi ${viewer?.name ?? ""}`);
+  const showNone = matches(noneLabel);
+
+  return (
+    <div data-slot={`person-filter-${facet}`}>
+      <Input
+        variant="menu"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        // Không để menu bắt phím gõ (typeahead); mũi tên, Esc, Enter vẫn điều hướng menu
+        onKeyDown={(e) => {
+          if (!["ArrowDown", "ArrowUp", "Escape", "Enter", "Tab"].includes(e.key)) e.stopPropagation();
+        }}
+        placeholder="Tìm người…"
+        aria-label={searchLabel}
+        className="mb-1 border-b border-border/60"
+      />
+      <div className="max-h-72 space-y-px overflow-y-auto">
+        {showMe && viewer ? (
+          <MenuOptionItem
+            onClick={() => toggle(PERSON_FILTER_ME)}
+            selected={selected.includes(PERSON_FILTER_ME)}
+            hint={counts?.[PERSON_FILTER_ME]}
+            leading={<UserAvatar name={viewer.name} avatarUrl={viewer.avatar} size="sm" />}
+          >
+            Tôi
+          </MenuOptionItem>
+        ) : null}
+        {showNone ? (
+          <MenuOptionItem
+            onClick={() => toggle(PERSON_FILTER_NONE)}
+            selected={selected.includes(PERSON_FILTER_NONE)}
+            hint={counts?.[PERSON_FILTER_NONE]}
+            leading={<TaskIconStatusNew className="size-4 text-muted-foreground" />}
+          >
+            {noneLabel}
+          </MenuOptionItem>
+        ) : null}
+        {visiblePeople.length > 0 && (showMe || showNone) ? <MenuSeparator className="my-1 border-t border-border/40" /> : null}
+        {visiblePeople.map((person) => (
+          <MenuOptionItem
+            key={person.key}
+            onClick={() => toggle(person.key)}
+            selected={selected.includes(person.key)}
+            hint={counts?.[person.key]}
+            title={person.name}
+            leading={<UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />}
+          >
+            {person.name}
+          </MenuOptionItem>
+        ))}
+        {!showMe && !showNone && visiblePeople.length === 0 ? (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">Không tìm thấy người phù hợp</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function UnifiedTaskToolbar({
   quiet = false,
   scope,
@@ -478,17 +575,19 @@ export function UnifiedTaskToolbar({
   onPriorityChange,
   selectedHealth: propSelectedHealth,
   onHealthChange,
-  selectedOrigin: propSelectedOrigin,
-  onOriginChange,
   selectedCollaborator: propSelectedCollaborator,
   onCollaboratorChange,
+  selectedLead = null,
+  onLeadChange,
+  filterFacets,
   selectedAcademicMonth = "ALL",
   onAcademicMonthChange,
   selectedMonth,
   onMonthChange,
   selectedTimeFilter,
   onTimeFilterChange,
-  academicYear = "2026-2027",
+  // Mặc định năm học của hôm nay (giờ Việt Nam), trùng với năm học mà bộ lọc tháng dùng để khớp hạn
+  academicYear = getAcademicYear(getSystemReferenceDate()),
   monthlyTaskCounts,
   showAcademicMonthBar = false,
   onResetFilters,
@@ -553,20 +652,12 @@ export function UnifiedTaskToolbar({
   }, [onSearchChange]);
 
   const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
-  const [selectedLead, setSelectedLead] = React.useState<string | null>(null);
   const [internalHealth, setInternalHealth] = React.useState<string | null>(null);
   const selectedHealth = propSelectedHealth !== undefined ? propSelectedHealth : internalHealth;
   const handleHealthChange = React.useCallback((val: string | null) => {
     if (onHealthChange) onHealthChange(val);
     else setInternalHealth(val);
   }, [onHealthChange]);
-
-  const [internalOrigin, setInternalOrigin] = React.useState<string | null>(null);
-  const selectedOrigin = propSelectedOrigin !== undefined ? propSelectedOrigin : internalOrigin;
-  const handleOriginChange = React.useCallback((val: string | null) => {
-    if (onOriginChange) onOriginChange(val);
-    else setInternalOrigin(val);
-  }, [onOriginChange]);
 
   const [internalCollaborator, setInternalCollaborator] = React.useState<string | null>(null);
   const selectedCollaborator = propSelectedCollaborator !== undefined ? propSelectedCollaborator : internalCollaborator;
@@ -732,7 +823,6 @@ export function UnifiedTaskToolbar({
   );
 
   const statusOptions = React.useMemo(() => [
-    { value: "all", label: "Tất cả trạng thái" },
     { value: "new", label: "Mới" },
     { value: "in_progress", label: "Đang thực hiện" },
     { value: isExecutiveRole ? "waiting_approval" : "review", label: isExecutiveRole ? "Cần tôi duyệt" : "Cần chỉnh sửa" },
@@ -755,53 +845,48 @@ export function UnifiedTaskToolbar({
     return "all";
   }, [selectedDeadline, activeTab]);
 
-  const deadlineOptions = React.useMemo(() => [
-    { value: "all", label: "Tất cả thời hạn" },
-    { value: "today", label: "Đến hạn hôm nay", count: tabCounts?.today },
-    { value: "this_week", label: "Trong tuần này", count: tabCounts?.this_week },
-    { value: "overdue", label: "Trễ hạn", count: tabCounts?.overdue },
-  ], [tabCounts]);
-
-  const showDepartmentFilter = React.useMemo(() => {
-    return normalizedScope === "school" && availableDepartments.length > 1;
-  }, [normalizedScope, availableDepartments.length]);
+  const deadlineOptions = [
+    { value: "overdue", label: "Trễ hạn" },
+    { value: "today", label: "Đến hạn hôm nay" },
+    { value: "this_week", label: "Trong tuần này" },
+  ];
+  /** Số nhiệm vụ của một lựa chọn (đã tính ở workspace); không có dữ liệu thì không hiện */
+  const facetHint = (facet: TaskFilterFacetKey, value: string) => filterFacets?.counts[facet]?.[value];
 
   const isMonthActive = effectiveTimeFilter.kind !== "none";
   const isStatusActive = Boolean(effectiveStatus && effectiveStatus.toLowerCase() !== "all");
   const isDeadlineActive = Boolean(effectiveDeadline && effectiveDeadline !== "all");
   const isPriorityActive = Boolean(selectedPriority && selectedPriority !== "ALL");
-  const isCategoryActive = Boolean(selectedCategory && selectedCategory !== "ALL");
-  const isDepartmentActive = Boolean(selectedDepartment && selectedDepartment !== "ALL");
   const isSearchActive = Boolean(localSearch && localSearch.trim().length > 0);
   const isHealthActive = Boolean(selectedHealth && selectedHealth !== "all");
-  const isLeadActive = Boolean((selectedLead && selectedLead !== "all") || (selectedLead === "my" && activeTab === "my"));
-  const isOriginActive = Boolean(selectedOrigin && selectedOrigin !== "all");
-  const isCollaboratorActive = Boolean(selectedCollaborator && selectedCollaborator !== "all");
+  const isLeadActive = parsePersonFilter(selectedLead).length > 0;
+  const isCollaboratorActive = parsePersonFilter(selectedCollaborator).length > 0;
   const activeFilterCount = [
     isStatusActive,
     isPriorityActive,
     isDeadlineActive,
     isMonthActive,
-    isCategoryActive,
-    showDepartmentFilter && isDepartmentActive,
     isHealthActive,
     isLeadActive,
-    isOriginActive,
     isCollaboratorActive,
   ].filter(Boolean).length;
 
-  // Optional 12 month cycle list for year
-  const academicMonths = React.useMemo(() => {
-    return getAcademicMonthsForYear(academicYear);
+  // Lưới "Kỳ tháng" chia theo năm dương lịch của năm học: T9–T12 năm đầu, T1–T8 năm sau (khớp `matchesDueDate`)
+  const academicMonthGroups = React.useMemo(() => {
+    const startYear = Number(academicYear.slice(0, 4));
+    return [
+      { year: startYear, months: [9, 10, 11, 12] },
+      { year: startYear + 1, months: [1, 2, 3, 4, 5, 6, 7, 8] },
+    ];
   }, [academicYear]);
+  const currentMonthKey = getSystemReferenceDate().slice(0, 7);
 
   // Reset all filters (Only clears supplementary filters, retains Scope & User Department)
   const handleResetFilters = () => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setLocalSearch("");
-    setSelectedLead(null);
+    onLeadChange?.(null);
     handleHealthChange(null);
-    handleOriginChange(null);
     handleCollaboratorChange(null);
     resetTaskToolbarFilters({
       onResetFilters, onSearchChange, onTabChange, onStatusChange,
@@ -836,22 +921,8 @@ export function UnifiedTaskToolbar({
       isActive: isPriorityActive,
       icon: FilterIconPriority,
     },
-    {
-      key: "category",
-      group: "core",
-      label: "Danh mục",
-      isActive: isCategoryActive,
-      icon: FilterIconCategory,
-    },
 
-    // 2. Nhóm đơn vị & nhân sự
-    {
-      key: "dept",
-      group: "team",
-      label: "Đơn vị",
-      isActive: isDepartmentActive,
-      icon: FilterIconDept,
-    },
+    // 2. Nhóm nhân sự (người trong phạm vi đang xem)
     {
       key: "lead",
       group: "team",
@@ -882,75 +953,52 @@ export function UnifiedTaskToolbar({
       isActive: isHealthActive,
       icon: FilterIconProgress,
     },
-    {
-      key: "origin",
-      group: "time",
-      label: "Nguồn gốc",
-      isActive: isOriginActive,
-      icon: FilterIconOrigin,
-    },
   ], [
     isStatusActive,
     isPriorityActive,
-    isCategoryActive,
-    isDepartmentActive,
     isLeadActive,
     isCollaboratorActive,
     isDeadlineActive,
     isMonthActive,
     isHealthActive,
-    isOriginActive,
   ]);
 
   const renderCategorySubmenuItems = (categoryKey: string) => {
     switch (categoryKey) {
       case "status": {
-        const selectedList = (effectiveStatus || "all").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("all");
-
+        const selectedList = splitFilterTokens(effectiveStatus, "all");
         return (
           <div className="space-y-px">
             {statusOptions.map((opt) => {
-              const selected = opt.value === "all"
-                ? isAll
-                : opt.value === "new"
-                  ? selectedList.includes("new") || selectedList.includes("not_started") || selectedList.includes("assigned")
-                  : opt.value === "waiting_approval" || opt.value === "review"
-                    ? selectedList.includes("waiting_approval") || selectedList.includes("review") || selectedList.includes("pending_executive_approval") || selectedList.includes("needs_review")
-                    : selectedList.includes(opt.value);
-
+              const aliases = STATUS_FILTER_ALIASES[opt.value] ?? [opt.value];
+              const selected = aliases.some((alias) => selectedList.includes(alias));
               const handleToggle = () => {
-                if (opt.value === "all") {
-                  if (onStatusChange) onStatusChange("all");
-                  else onTabChange?.("all");
-                  return;
-                }
-                const nextList = toggleMultiValue(selectedList, isAll, selected, opt.value, "all");
-                const nextStr = nextList.join(",");
+                const next = selected
+                  ? selectedList.filter((value) => !aliases.includes(value))
+                  : [...selectedList, opt.value];
+                const nextStr = next.length > 0 ? next.join(",") : "all";
                 if (onStatusChange) onStatusChange(nextStr);
                 else onTabChange?.(nextStr);
               };
-
               return (
                 <MenuOptionItem
                   key={opt.value}
                   onClick={handleToggle}
                   selected={selected}
-                  leading={opt.value === "all" ? (
-                      <TaskIconStatus className="size-4 text-muted-foreground" />
-                    ) : (
-                      <TaskStatusCircle
-                        status={
-                          opt.value === "new"
-                            ? "NOT_STARTED"
-                            : opt.value === "in_progress"
-                              ? "IN_PROGRESS"
-                              : opt.value === "completed"
-                                ? "COMPLETED"
-                                : "WAITING_APPROVAL"
-                        }
-                      />
-                    )}
+                  hint={facetHint("status", opt.value)}
+                  leading={
+                    <TaskStatusCircle
+                      status={
+                        opt.value === "new"
+                          ? "NOT_STARTED"
+                          : opt.value === "in_progress"
+                            ? "IN_PROGRESS"
+                            : opt.value === "completed"
+                              ? "COMPLETED"
+                              : "WAITING_APPROVAL"
+                      }
+                    />
+                  }
                 >
                   {opt.label}
                 </MenuOptionItem>
@@ -960,260 +1008,70 @@ export function UnifiedTaskToolbar({
         );
       }
       case "priority": {
-        const selectedList = (selectedPriority || "ALL").split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
-
+        const selectedList = splitFilterTokens(selectedPriority, "ALL").map((p) => p.toUpperCase());
         return (
           <div className="space-y-px">
-            {PRIORITY_FILTER_OPTIONS.map((opt) => {
-              const selected = opt.id === "ALL" ? isAll : selectedList.includes(opt.id);
-              const level = opt.id === "URGENT" ? 3 : opt.id === "HIGH" ? 2 : opt.id === "NORMAL" ? 1 : 0;
-
-              const handleToggle = () => {
-                if (opt.id === "ALL") {
-                  onPriorityChange?.("ALL");
-                  return;
-                }
-                const nextList = toggleMultiValue(selectedList, isAll, selected, opt.id, "ALL");
-                onPriorityChange?.(nextList.join(","));
-              };
-
-              return (
-                <MenuOptionItem
-                  key={opt.id}
-                  onClick={handleToggle}
-                  selected={selected}
-                  leading={opt.id === "URGENT" ? (
-                      <TaskIconPriorityUrgent className="size-4 text-destructive" />
-                    ) : opt.id === "HIGH" ? (
-                      <TaskIconPriorityHigh className="size-4 text-foreground/70" />
-                    ) : opt.id === "NORMAL" ? (
-                      <TaskIconPriorityNormal className="size-4 text-muted-foreground" />
-                    ) : (
-                      <TaskIconPriority className="size-4 text-muted-foreground" />
-                    )}
-                >
-                  {opt.label}
-                </MenuOptionItem>
-              );
-            })}
-          </div>
-        );
-      }
-      case "category": {
-        const selectedList = (selectedCategory || "ALL").split(",").map((c) => c.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
-
-        return (
-          <div className="space-y-px">
-            {CATEGORY_FILTER_OPTIONS.map((cat) => {
-              const selected = cat.id === "ALL" ? isAll : selectedList.includes(cat.id);
-
-              const handleToggle = () => {
-                if (cat.id === "ALL") {
-                  onCategoryChange?.("ALL");
-                  return;
-                }
-                const nextList = toggleMultiValue(selectedList, isAll, selected, cat.id, "ALL");
-                onCategoryChange?.(nextList.join(","));
-              };
-
-              return (
-                <MenuOptionItem
-                  key={cat.id}
-                  onClick={handleToggle}
-                  selected={selected}
-                >
-                  {cat.label}
-                </MenuOptionItem>
-              );
-            })}
-          </div>
-        );
-      }
-      case "dept": {
-        const selectedList = (selectedDepartment || "ALL").split(",").map((d) => d.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
-
-        const facultyDepts = availableDepartments.filter(
-          (d) => d.code !== "ALL" && (d.name.startsWith("Khoa") || ["CNTT", "KINH_TE", "KY_THUAT"].includes(d.code))
-        );
-        const adminDepts = availableDepartments.filter(
-          (d) => d.code !== "ALL" && !d.name.startsWith("Khoa") && !["CNTT", "KINH_TE", "KY_THUAT"].includes(d.code)
-        );
-
-        const isFacultyActive = Boolean(
-          !isAll && facultyDepts.some((d) => selectedList.includes(d.code))
-        );
-        const isAdminActive = Boolean(
-          !isAll && adminDepts.some((d) => selectedList.includes(d.code))
-        );
-
-        const handleDeptToggle = (deptCode: string) => {
-          if (deptCode === "ALL") {
-            onDepartmentChange?.("ALL");
-            return;
-          }
-          const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(deptCode), deptCode, "ALL");
-          onDepartmentChange?.(nextList.join(","));
-        };
-
-        return (
-          <div className="space-y-px">
-            {/* Tất cả đơn vị */}
-            <MenuOptionItem
-              onClick={() => handleDeptToggle("ALL")}
-              selected={isAll}
-              leading={<FilterIconDept className="size-4 text-muted-foreground" />}
-            >
-              Tất cả đơn vị
-            </MenuOptionItem>
-
-            <MenuSeparator className="h-px bg-border/40 my-1" />
-
-            {/* Sub-dropdown cấp 2: Khoa chuyên môn */}
-            <MenuSubmenu
-              icon={<TaskIconDepartment className="size-4 text-muted-foreground" />}
-              label="Khoa đào tạo"
-              active={isFacultyActive}
-              popupClassName="min-w-[210px]"
-            >
-              <div className="space-y-px">
-                {facultyDepts.map((dept) => (
-                  <MenuOptionItem
-                    key={dept.code}
-                    onClick={() => handleDeptToggle(dept.code)}
-                    selected={!isAll && selectedList.includes(dept.code)}
-                    leading={<TaskIconDepartment className="size-4 text-muted-foreground" />}
-                  >
-                    {dept.name}
-                  </MenuOptionItem>
-                ))}
-              </div>
-            </MenuSubmenu>
-
-            {/* Sub-dropdown cấp 2: Khối Hành chính & Phòng ban */}
-            <MenuSubmenu
-              icon={<TaskIconDepartment className="size-4 text-muted-foreground" />}
-              label="Phòng ban hành chính"
-              active={isAdminActive}
-              popupClassName="min-w-[210px]"
-            >
-              <div className="space-y-px">
-                {adminDepts.map((dept) => (
-                  <MenuOptionItem
-                    key={dept.code}
-                    onClick={() => handleDeptToggle(dept.code)}
-                    selected={!isAll && selectedList.includes(dept.code)}
-                    leading={<TaskIconDepartment className="size-4 text-muted-foreground" />}
-                  >
-                    {dept.name}
-                  </MenuOptionItem>
-                ))}
-              </div>
-            </MenuSubmenu>
-          </div>
-        );
-      }
-      case "lead": {
-        const leadOptions = [
-          { value: "all", label: "Tất cả người chủ trì" },
-          { value: "my", label: "Giao cho tôi (Tôi chủ trì)" },
-          { value: "bgh", label: "Lãnh đạo / Ban Giám hiệu" },
-          { value: "assigned", label: "Đã phân công người chủ trì" },
-          { value: "unassigned", label: "Chưa phân công người chủ trì" },
-        ];
-        return (
-          <div className="space-y-px">
-            {leadOptions.map((opt) => {
-              const selected = selectedLead === opt.value || (opt.value === "all" && !selectedLead && activeTab !== "my") || (opt.value === "my" && activeTab === "my");
-              return (
-                <MenuOptionItem
-                  key={opt.value}
-                  onClick={() => {
-                    if (opt.value === "my") {
-                      onTabChange?.("my");
-                      setSelectedLead("my");
-                    } else if (opt.value === "all") {
-                      setSelectedLead(null);
-                      if (activeTab === "my") onTabChange?.("all");
-                    } else {
-                      setSelectedLead(opt.value);
-                    }
-                  }}
-                  selected={selected}
-                  leading={opt.value === "my" ? (
-                      <FilterIconLead className="size-4 text-muted-foreground" />
-                    ) : opt.value === "bgh" ? (
-                      <FilterIconDept className="size-4 text-muted-foreground" />
-                    ) : opt.value === "assigned" ? (
-                      <FilterIconLead className="size-4 text-muted-foreground" />
-                    ) : opt.value === "unassigned" ? (
-                      <TaskIconStatusNew className="size-4 text-muted-foreground" />
-                    ) : (
-                      <TaskIconCollaborators className="size-4 text-muted-foreground" />
-                    )}
-                >
-                  {opt.label}
-                </MenuOptionItem>
-              );
-            })}
-          </div>
-        );
-      }
-      case "collaborator": {
-        const collabOptions = [
-          { value: "all", label: "Tất cả nhiệm vụ" },
-          { value: "has_collab", label: "Có đơn vị / người phối hợp" },
-          { value: "single", label: "Đơn vị tự thực hiện (không phối hợp)" },
-        ];
-        return (
-          <div className="space-y-px">
-            {collabOptions.map((opt) => {
-              const selected = selectedCollaborator === opt.value || (opt.value === "all" && !selectedCollaborator);
-              return (
-                <MenuOptionItem
-                  key={opt.value}
-                  onClick={() => {
-                    handleCollaboratorChange(opt.value === "all" ? null : opt.value);
-                  }}
-                  selected={selected}
-                  leading={opt.value === "has_collab" ? (
-                      <FilterIconCollaborator className="size-4 text-muted-foreground" />
-                    ) : opt.value === "single" ? (
-                      <FilterIconLead className="size-4 text-muted-foreground" />
-                    ) : (
-                      <TaskIconCollaborators className="size-4 text-muted-foreground" />
-                    )}
-                >
-                  {opt.label}
-                </MenuOptionItem>
-              );
-            })}
-          </div>
-        );
-      }
-      case "dates": {
-        // Cấp 2 theo menu "Đổi hạn hoàn thành": nhãn trái, gợi ý phải, hàng đang chọn nền accent đậm.
-        // Cấp 3 là "Kỳ tháng" (lưới tháng) và "Chọn ngày khác" (lịch dùng chung với menu chuột phải).
-        return (
-          <div className="space-y-px">
-            {deadlineOptions.map((opt) => (
+            {PRIORITY_FILTER_OPTIONS.filter((opt) => opt.id !== "ALL").map((opt) => (
               <MenuOptionItem
-                key={opt.value}
-                selected={
-                  effectiveDeadline === opt.value ||
-                  (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"))
-                }
-                hint={opt.count !== undefined && opt.count > 0 ? opt.count : undefined}
-                onClick={() => {
-                  if (onDeadlineChange) onDeadlineChange(opt.value);
-                  else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-                }}
+                key={opt.id}
+                onClick={() => onPriorityChange?.(toggleFilterToken(selectedList, opt.id) ?? "ALL")}
+                selected={selectedList.includes(opt.id)}
+                hint={facetHint("priority", opt.id)}
+                leading={<PrioritySignalBars priority={opt.id} />}
               >
                 {opt.label}
               </MenuOptionItem>
             ))}
+          </div>
+        );
+      }
+      case "lead":
+        return (
+          <PersonFilterOptions
+            facet="lead"
+            value={selectedLead}
+            onChange={(next) => onLeadChange?.(next)}
+            people={filterFacets?.leadPeople ?? []}
+            counts={filterFacets?.counts.lead}
+            viewer={user}
+            noneLabel="Chưa có người chủ trì"
+            searchLabel="Tìm người chủ trì"
+          />
+        );
+      case "collaborator":
+        return (
+          <PersonFilterOptions
+            facet="collaborator"
+            value={selectedCollaborator}
+            onChange={handleCollaboratorChange}
+            people={filterFacets?.collaboratorPeople ?? []}
+            counts={filterFacets?.counts.collaborator}
+            viewer={user}
+            noneLabel="Không có người phối hợp"
+            searchLabel="Tìm người phối hợp"
+          />
+        );
+      case "dates": {
+        // Hạn theo mốc (chọn một; bấm lại để bỏ), rồi Kỳ tháng và Chọn ngày khác ở cấp 3
+        return (
+          <div className="space-y-px">
+            {deadlineOptions.map((opt) => {
+              const selected = effectiveDeadline === opt.value;
+              return (
+                <MenuOptionItem
+                  key={opt.value}
+                  selected={selected}
+                  hint={facetHint("deadline", opt.value)}
+                  onClick={() => {
+                    const next = selected ? "all" : opt.value;
+                    if (onDeadlineChange) onDeadlineChange(next);
+                    else onTabChange?.(next);
+                  }}
+                >
+                  {opt.label}
+                </MenuOptionItem>
+              );
+            })}
 
             <MenuSeparator className="my-1 border-t border-border/40" />
 
@@ -1222,31 +1080,40 @@ export function UnifiedTaskToolbar({
               label="Kỳ tháng"
               hint={effectiveTimeFilter.kind === "month" ? `T${effectiveTimeFilter.month}` : undefined}
               title={`Năm học ${academicYear}`}
-              popupClassName="w-52"
             >
-              <MenuOptionItem
-                selected={effectiveTimeFilter.kind === "none"}
-                onClick={() => handleTimeFilterChange(NO_TASK_TIME_FILTER)}
-              >
-                Tất cả các tháng
-              </MenuOptionItem>
-              <div className="grid grid-cols-4 gap-0.5 pt-1">
-                {academicMonths.map((period) => {
-                  const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-                  return (
-                    <MenuItem
-                      key={period.monthNumber}
-                      closeOnClick={false}
-                      aria-current={selected ? "true" : undefined}
-                      aria-label={`Tháng ${period.monthNumber}`}
-                      onClick={() => handleTimeFilterChange({ kind: "month", month: period.monthNumber })}
-                      className={cn(MENU_ROW_CLASS, "justify-center px-0", selected && "bg-accent font-medium")}
-                    >
-                      T{period.monthNumber}
-                    </MenuItem>
-                  );
-                })}
-              </div>
+              {academicMonthGroups.map((group) => (
+                <div key={group.year} role="group" aria-label={`Năm ${group.year}`}>
+                  <div className="px-2 pt-1 pb-1 text-xs text-muted-foreground tabular-nums select-none" aria-hidden="true">
+                    {group.year}
+                  </div>
+                  <div className="grid grid-cols-4 gap-0.5">
+                    {group.months.map((month) => {
+                      const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === month;
+                      // Tháng hiện tại: chữ màu chính (khác nền accent của tháng đang chọn)
+                      const isCurrent = currentMonthKey === `${group.year}-${String(month).padStart(2, "0")}`;
+                      const label = `Tháng ${month}/${group.year}${isCurrent ? " (tháng này)" : ""}`;
+                      return (
+                        <MenuItem
+                          key={month}
+                          closeOnClick={false}
+                          aria-current={selected ? "true" : undefined}
+                          aria-label={label}
+                          title={label}
+                          onClick={() => handleTimeFilterChange(selected ? NO_TASK_TIME_FILTER : { kind: "month", month })}
+                          className={cn(
+                            MENU_ROW_CLASS,
+                            "justify-center px-0 tabular-nums",
+                            isCurrent && "font-medium text-primary",
+                            selected && "bg-accent font-medium"
+                          )}
+                        >
+                          T{month}
+                        </MenuItem>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </MenuSubmenu>
 
             <MenuSubmenu
@@ -1265,87 +1132,25 @@ export function UnifiedTaskToolbar({
       }
       case "health": {
         const healthOptions = [
-          { value: "all", label: "Tất cả tiến độ" },
-          { value: "on_track", label: "Đúng tiến độ (Bình thường)" },
-          { value: "at_risk", label: "Có nguy cơ trễ hạn (≤ 7 ngày)" },
-          { value: "overdue", label: "Trễ hạn / Trễ hạn" },
-          { value: "completed", label: "Đã hoàn thành 100%" },
+          { value: "on_track", label: "Đúng tiến độ", icon: HealthSubOnTrack },
+          { value: "at_risk", label: "Sắp tới hạn (≤ 7 ngày)", icon: HealthSubAtRisk },
+          { value: "overdue", label: "Trễ hạn", icon: HealthSubOverdue },
+          { value: "completed", label: "Hoàn thành", icon: HealthSubCompleted },
         ];
-        const selectedList = (selectedHealth || "all").toLowerCase().split(",").map((h) => h.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("all");
-
-        const handleHealthToggle = (val: string) => {
-          if (val === "all") {
-            handleHealthChange("all");
-            return;
-          }
-          const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(val), val, "all");
-          handleHealthChange(nextList.join(","));
-        };
-
+        const selectedList = splitFilterTokens(selectedHealth, "all").map((h) => h.toLowerCase());
         return (
           <div className="space-y-px">
-            {healthOptions.map((opt) => {
-              const selected = opt.value === "all" ? isAll : selectedList.includes(opt.value);
-              return (
-                <MenuOptionItem
-                  key={opt.value}
-                  onClick={() => handleHealthToggle(opt.value)}
-                  selected={selected}
-                  leading={opt.value === "on_track" ? (
-                      <HealthSubOnTrack className="size-4 text-muted-foreground" />
-                    ) : opt.value === "at_risk" ? (
-                      <HealthSubAtRisk className="size-4 text-muted-foreground" />
-                    ) : opt.value === "overdue" ? (
-                      <HealthSubOverdue className="size-4 text-muted-foreground" />
-                    ) : opt.value === "completed" ? (
-                      <HealthSubCompleted className="size-4 text-muted-foreground" />
-                    ) : (
-                      <HealthSubAll className="size-4 text-muted-foreground" />
-                    )}
-                >
-                  {opt.label}
-                </MenuOptionItem>
-              );
-            })}
-          </div>
-        );
-      }
-      case "origin": {
-        const originOptions = [
-          { value: "all", label: "Tất cả nguồn gốc" },
-          { value: "KE_HOACH_NAM", label: "Kế hoạch năm học" },
-          { value: "NGHI_QUYET", label: "Nghị quyết Đảng ủy / BGH" },
-          { value: "GIAO_BAN", label: "Kết luận họp giao ban" },
-          { value: "DON_VI", label: "Đơn vị đề xuất" },
-        ];
-        const selectedList = (selectedOrigin || "all").split(",").map((o) => o.trim()).filter(Boolean);
-        const isAll = selectedList.length === 0 || selectedList.includes("all");
-
-        const handleOriginToggle = (val: string) => {
-          if (val === "all") {
-            handleOriginChange(null);
-            return;
-          }
-          const nextList = toggleMultiValue(selectedList, isAll, selectedList.includes(val), val, "all");
-          handleOriginChange(nextList.join(","));
-        };
-
-        return (
-          <div className="space-y-px">
-            {originOptions.map((opt) => {
-              const selected = opt.value === "all" ? isAll : selectedList.includes(opt.value);
-              return (
-                <MenuOptionItem
-                  key={opt.value}
-                  onClick={() => handleOriginToggle(opt.value)}
-                  selected={selected}
-                  leading={<FilterIconOrigin className="size-4 text-muted-foreground" />}
-                >
-                  {opt.label}
-                </MenuOptionItem>
-              );
-            })}
+            {healthOptions.map((opt) => (
+              <MenuOptionItem
+                key={opt.value}
+                onClick={() => handleHealthChange(toggleFilterToken(selectedList, opt.value))}
+                selected={selectedList.includes(opt.value)}
+                hint={facetHint("health", opt.value)}
+                leading={<opt.icon className="size-4 text-muted-foreground" />}
+              >
+                {opt.label}
+              </MenuOptionItem>
+            ))}
           </div>
         );
       }
@@ -1358,8 +1163,8 @@ export function UnifiedTaskToolbar({
     switch (key) {
       case "status": return countFilterValues(effectiveStatus, "all");
       case "priority": return countFilterValues(selectedPriority, "ALL");
-      case "category": return countFilterValues(selectedCategory, "ALL");
-      case "dept": return countFilterValues(selectedDepartment, "ALL");
+      case "lead": return parsePersonFilter(selectedLead).length;
+      case "collaborator": return parsePersonFilter(selectedCollaborator).length;
       case "dates": return (isDeadlineActive ? 1 : 0) + (isMonthActive ? 1 : 0);
       default: return isActive ? 1 : 0;
     }
@@ -1375,7 +1180,9 @@ export function UnifiedTaskToolbar({
         active={category.isActive}
         hint={activeCount > 0 ? activeCount : undefined}
         title={category.label}
-        popupClassName={category.key === "dates" ? "min-w-[232px]" : undefined}
+        popupClassName={
+          category.key === "dates" ? "min-w-[232px]" : category.key === "lead" || category.key === "collaborator" ? "w-60" : undefined
+        }
       >
         {renderCategorySubmenuItems(category.key)}
       </MenuSubmenu>
@@ -1392,7 +1199,7 @@ export function UnifiedTaskToolbar({
       onClick={() => handlePrimaryAction()}
       title="Tạo việc mới"
       aria-label="Tạo việc mới"
-      className={cn(listToolbarPrimaryButtonClass, "rounded-full border-transparent bg-transparent shadow-none max-md:size-11 max-md:px-0")}
+      className={cn(listToolbarPrimaryButtonClass, "rounded-full border-transparent bg-transparent shadow-none max-md:size-8 max-md:px-0")}
     >
       <Plus className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="hidden md:inline">{primaryActionLabel}</span>
@@ -1507,13 +1314,7 @@ export function UnifiedTaskToolbar({
         <div className="-mx-4 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-[calc(100%+32px)] min-w-0 items-center justify-between gap-3 border-b border-border/60 px-4 pt-[env(safe-area-inset-top,0px)] md:-mx-[18px] md:h-11 md:w-[calc(100%+36px)] md:px-[18px] md:pt-0">
           <div className="flex min-w-0 items-center gap-2">
             {/* Điện thoại: nút mở sidebar thay cho thanh trên cùng (như Linear) */}
-            <Pressable
-              onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
-              aria-label="Mở menu"
-              className="-ml-1.5 flex size-8 max-md:size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:hidden"
-            >
-              <IconSidebarPanel size={14} />
-            </Pressable>
+            <MobileMenuButton className="-ml-1.5 md:hidden" />
             {leftContent}
           </div>
           {createCta}
@@ -1565,7 +1366,7 @@ export function UnifiedTaskToolbar({
           <MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className={cn("z-50 outline-none", SHEET_POSITIONER_CLASS)}>
             <MenuPopup
               data-slot="task-filter-menu"
-              className={cn(MENU_POPUP_CLASS, "w-52", SHEET_POPUP_CLASS)}
+              className={cn(MENU_POPUP_CLASS, "w-56", SHEET_POPUP_CLASS)}
             >
               <MenuSheetHeader title="Bộ lọc" />
               <div className="space-y-px">

@@ -22,6 +22,22 @@ import { workspaceScopeToTaskScope } from "@/lib/unified-task-hub";
 import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
 import { parseWorkspaceQuery } from "@/lib/workspace-query";
 import { matchesTaskTab, resolveTaskTab, type TaskTab } from "@/domain/tasks/task-tabs";
+import {
+  collectCollaboratorOptions,
+  collectLeadOptions,
+  countFacetOptions,
+  getPersonFilterLabel,
+  matchesCollaboratorFilter,
+  matchesLeadFilter,
+  parsePersonFilter,
+  PERSON_FILTER_ME,
+  PERSON_FILTER_NONE,
+  resolveViewerUnitId,
+  withRoster,
+  type RosterPerson,
+  type TaskFilterFacets,
+} from "@/domain/tasks/task-filter-facets";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
@@ -46,10 +62,11 @@ import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { useTaskShortcuts } from "@/hooks/use-task-shortcuts";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
-import { applyOptimisticStatusChange, applyOptimisticTaskPatch } from "./utils/task-workspace-mutations";
-import { updateTaskAssignee, updateTaskDueDate, updateTaskPriority, updateTaskStatus } from "@/lib/tasks/task-actions";
+import { applyOptimisticStatusChange, applyOptimisticTaskPatch, revertOptimisticStatusChange } from "./utils/task-workspace-mutations";
+import { remindTask, updateTaskAssignee, updateTaskDueDate, updateTaskPriority, updateTaskStatus } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { cn } from "@/lib/utils";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
 import {
   filterTasksByTime,
   NO_TASK_TIME_FILTER,
@@ -84,7 +101,7 @@ export { type WorkspaceScope, matchesUser };
   import {
     isTaskWaitingApproval,
     isActiveTaskStatus,
-    isTaskOverdueOrHasOverdueSubtask,
+    isOpenTaskOverdue,
     isTaskAssignedToUser,
     isTaskAssignedToUserOrUnit,
     computeWorkspaceTabCounts,
@@ -94,7 +111,7 @@ export { type WorkspaceScope, matchesUser };
 export {
   isTaskWaitingApproval,
   isActiveTaskStatus,
-  isTaskOverdueOrHasOverdueSubtask,
+  isOpenTaskOverdue,
   isTaskAssignedToUserOrUnit,
 };
 
@@ -116,7 +133,10 @@ export interface FilterDisplayedTasksOptions {
   referenceDate?: string;
   health?: "on_track" | "at_risk" | "overdue" | "completed" | "all" | string | null;
   origin?: string | null;
-  collaborator?: "has_collab" | "single" | "all" | string | null;
+  /** Người chủ trì: token `me`, `none` hoặc khóa người (xem `task-filter-facets`), cách nhau dấu phẩy */
+  lead?: string | null;
+  /** Người phối hợp: token `me`, `none` hoặc `name:<tên>`, cách nhau dấu phẩy */
+  collaborator?: string | null;
   /** View của trang (Đang thực hiện, Trễ hạn, Hoàn thành…); "all" hoặc vắng = không lọc */
   taskTab?: TaskTab;
 }
@@ -145,7 +165,7 @@ function matchesSingleStatus(t: SchoolTask, st: string, user: AuthUser | null | 
     return t.status === "COMPLETED" || (t.status as string) === "completed";
   }
   if (st === "overdue") {
-    return isTaskOverdueOrHasOverdueSubtask(t, refDate);
+    return isOpenTaskOverdue(t, refDate);
   }
   if (st === "today") {
     return Boolean(t.dueDate && t.dueDate.startsWith(refDate));
@@ -182,7 +202,7 @@ function matchesSingleHealth(t: SchoolTask, h: string, refDate: string): boolean
   h = h.toLowerCase().trim();
   if (h === "all") return true;
   if (h === "overdue") {
-    return isTaskOverdueOrHasOverdueSubtask(t, refDate);
+    return isOpenTaskOverdue(t, refDate);
   }
   if (h === "at_risk") {
     const soon = new Date(refDate);
@@ -200,7 +220,7 @@ function matchesSingleHealth(t: SchoolTask, h: string, refDate: string): boolean
     soon.setDate(soon.getDate() + 7);
     const soonStr = soon.toISOString().split("T")[0];
     if (t.status === "COMPLETED") return false;
-    if (isTaskOverdueOrHasOverdueSubtask(t, refDate)) return false;
+    if (isOpenTaskOverdue(t, refDate)) return false;
     const due = t.dueDate;
     if (due && due >= refDate && due <= soonStr) return false;
     return true;
@@ -226,6 +246,7 @@ export function filterDisplayedTasks({
   referenceDate,
   health,
   origin,
+  lead,
   collaborator,
   taskTab,
 }: FilterDisplayedTasksOptions): SchoolTask[] {
@@ -236,23 +257,25 @@ export function filterDisplayedTasks({
 
   // 0. View của trang: tập nền trước các bộ lọc khác ("Trễ hạn" cùng định nghĩa với bộ lọc thời hạn "Trễ hạn")
   if (taskTab && taskTab !== "all") {
-    result = result.filter((t) => matchesTaskTab(t, taskTab, (task) => isTaskOverdueOrHasOverdueSubtask(task, activeRefDate)));
+    result = result.filter((t) => matchesTaskTab(t, taskTab, (task) => isOpenTaskOverdue(task, activeRefDate)));
   }
 
   // 1. Search Query
   if (search && search.trim()) {
-    const q = search.trim().toLowerCase();
+    // Bỏ dấu cả hai phía: gõ "nhiem vu" vẫn ra "nhiệm vụ"
+    const q = foldVietnamese(search);
+    const has = (value?: string | null) => foldVietnamese(value).includes(q);
     result = result.filter(
       (t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.code?.toLowerCase().includes(q) ||
-        t.leadAssigneeName?.toLowerCase().includes(q) ||
-        t.assignedTo?.toLowerCase().includes(q) ||
+        has(t.title) ||
+        has(t.code) ||
+        has(t.leadAssigneeName) ||
+        has(t.assignedTo) ||
         t.subTasks?.some(
           (s) =>
-            s.title.toLowerCase().includes(q) ||
-            s.assigneeName?.toLowerCase().includes(q) ||
-            (s as any).assignedTo?.toLowerCase().includes(q)
+            has(s.title) ||
+            has(s.assigneeName) ||
+            has((s as any).assignedTo)
         )
     );
   }
@@ -289,7 +312,7 @@ export function filterDisplayedTasks({
         );
       });
     } else if (deadline === "overdue") {
-      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
+      result = result.filter((t) => isOpenTaskOverdue(t, refDate));
     }
   }
 
@@ -331,7 +354,7 @@ export function filterDisplayedTasks({
         return isTaskAssignedToUser(t, user);
       });
     } else if (wb === "overdue" || wb === "urgent_overdue") {
-      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, activeRefDate));
+      result = result.filter((t) => isOpenTaskOverdue(t, activeRefDate));
     } else if (wb === "completed") {
       result = result.filter((t) => t.status === "COMPLETED" || t.progressPercent === 100);
     }
@@ -362,7 +385,7 @@ export function filterDisplayedTasks({
 
   // 7. Overdue flag
   if (overdue) {
-    result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, activeRefDate));
+    result = result.filter((t) => isOpenTaskOverdue(t, activeRefDate));
   }
 
   // 8. Health / Tiến độ (Single or Multi-select)
@@ -385,26 +408,56 @@ export function filterDisplayedTasks({
     }
   }
 
-  // 10. Collaborator / Phối hợp
-  if (collaborator && collaborator !== "all") {
-    if (collaborator === "has_collab") {
-      result = result.filter((t) =>
-        Boolean(
-          (t.coDepartmentCodes && t.coDepartmentCodes.length > 0) ||
-          (t.coAssignees && t.coAssignees.length > 0)
-        )
-      );
-    } else if (collaborator === "single") {
-      result = result.filter((t) =>
-        (!t.coDepartmentCodes || t.coDepartmentCodes.length === 0) &&
-        (!t.coAssignees || t.coAssignees.length === 0)
-      );
-    }
+  // 10. Người chủ trì / Người phối hợp (nhiều người = HOẶC)
+  const leadTokens = parsePersonFilter(lead);
+  if (leadTokens.length > 0) {
+    result = result.filter((t) => matchesLeadFilter(t, leadTokens, user));
+  }
+  const collaboratorTokens = parsePersonFilter(collaborator);
+  if (collaboratorTokens.length > 0) {
+    result = result.filter((t) => matchesCollaboratorFilter(t, collaboratorTokens, user));
   }
 
   // API payloads may contain the same child both flattened and nested. React rows
   // need one stable identity; keep the first canonical occurrence at this boundary.
   return Array.from(new Map(result.map((task) => [task.id, task])).values());
+}
+
+/**
+ * Danh sách người và số đếm cho menu lọc. Mỗi số = số dòng bảng sẽ hiện nếu nhóm đó chỉ chọn lựa chọn ấy
+ * (các nhóm khác giữ nguyên), tính bằng chính `filterDisplayedTasks`.
+ */
+export function computeFilterFacets(options: FilterDisplayedTasksOptions, unitRoster: RosterPerson[] = []): TaskFilterFacets {
+  const count = (patch: Partial<FilterDisplayedTasksOptions>) => filterDisplayedTasks({ ...options, ...patch }).length;
+  const viewer = options.user;
+  const topLevel = options.tasks.filter((t) => !t.parentTaskId);
+  // Người có trong nhiệm vụ đang xem + toàn bộ cán bộ đơn vị của người xem
+  const leadPeople = withRoster(collectLeadOptions(topLevel, viewer), unitRoster, (p) => p.id, viewer);
+  const collaboratorPeople = withRoster(collectCollaboratorOptions(topLevel, viewer), unitRoster, (p) => `name:${p.name.trim()}`, viewer);
+  // Thời hạn "Trễ hạn" còn ghi cờ trễ hạn và hộp việc "overdue": bỏ cả hai khi đếm các lựa chọn thời hạn khác
+  const deadlinePatch = (deadline: string) => ({
+    deadline,
+    overdue: false,
+    workbox: options.workbox === "overdue" ? "ALL" : options.workbox,
+  });
+  return {
+    leadPeople,
+    collaboratorPeople,
+    counts: {
+      status: countFacetOptions(["new", "in_progress", "waiting_approval", "review", "completed"], (status) => count({ status })),
+      priority: countFacetOptions(["URGENT", "HIGH", "NORMAL", "LOW"], (priority) => count({ priority })),
+      deadline: countFacetOptions(["today", "this_week", "overdue"], (deadline) => count(deadlinePatch(deadline))),
+      health: countFacetOptions(["on_track", "at_risk", "overdue", "completed"], (health) => count({ health })),
+      lead: countFacetOptions(
+        [PERSON_FILTER_ME, PERSON_FILTER_NONE, ...leadPeople.map((p) => p.key)],
+        (lead) => count({ lead })
+      ),
+      collaborator: countFacetOptions(
+        [PERSON_FILTER_ME, PERSON_FILTER_NONE, ...collaboratorPeople.map((p) => p.key)],
+        (collaborator) => count({ collaborator })
+      ),
+    },
+  };
 }
 
 export function normalizeTasksFromApi(rawTasks: any[]): SchoolTask[] {
@@ -654,8 +707,8 @@ function UnifiedAdaptiveWorkspaceInner({
       setCurrentPriority("ALL");
       setCurrentCategory("ALL");
       setHealthFilter(null);
-      setOriginFilter(null);
       setCollaboratorFilter(null);
+      setLeadFilter(null);
       if (newScope !== "unit") {
         setInternalDept("ALL");
       }
@@ -777,8 +830,8 @@ function UnifiedAdaptiveWorkspaceInner({
   );
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
   const [healthFilter, setHealthFilter] = React.useState<string | null>(null);
-  const [originFilter, setOriginFilter] = React.useState<string | null>(null);
   const [collaboratorFilter, setCollaboratorFilter] = React.useState<string | null>(null);
+  const [leadFilter, setLeadFilter] = React.useState<string | null>(null);
 
   // Controlled props take absolute precedence when defined; undefined delegates to internal state (uncontrolled)
   const currentDept = selectedDepartment !== undefined ? selectedDepartment : (internalDept ?? "ALL");
@@ -1382,8 +1435,7 @@ function UnifiedAdaptiveWorkspaceInner({
   );
 
   // Filter tasks based on search, smart status, deadline, workbox, category, priority, month, and overdue criteria
-  const displayedTasks = React.useMemo(() => {
-    return filterDisplayedTasks({
+  const filterOptions = React.useMemo<FilterDisplayedTasksOptions>(() => ({
       tasks: scopedTasks,
       search: currentSearch,
       status: currentStatus,
@@ -1396,11 +1448,10 @@ function UnifiedAdaptiveWorkspaceInner({
       overdue: currentOverdue,
       user,
       health: healthFilter,
-      origin: originFilter,
+      lead: leadFilter,
       collaborator: collaboratorFilter,
       taskTab: effectiveTaskTab,
-    });
-  }, [
+  }), [
     effectiveTaskTab,
     scopedTasks,
     currentSearch,
@@ -1414,9 +1465,17 @@ function UnifiedAdaptiveWorkspaceInner({
     currentOverdue,
     user,
     healthFilter,
-    originFilter,
+    leadFilter,
     collaboratorFilter,
   ]);
+  const displayedTasks = React.useMemo(() => filterDisplayedTasks(filterOptions), [filterOptions]);
+  // Menu lọc: danh sách người và số đếm từng lựa chọn (cùng hàm lọc của bảng nên số khớp số dòng)
+  const viewerUnitId = React.useMemo(() => resolveViewerUnitId(scopedTasks, user?.department), [scopedTasks, user?.department]);
+  const { personnel: unitPersonnel } = usePersonnelList({ enabled: Boolean(viewerUnitId), departmentId: viewerUnitId });
+  const filterFacets = React.useMemo(
+    () => computeFilterFacets(filterOptions, viewerUnitId ? unitPersonnel : []),
+    [filterOptions, viewerUnitId, unitPersonnel]
+  );
 
   const handlePeekNext = React.useCallback(() => {
     if (!peekTask || displayedTasks.length === 0) return;
@@ -1512,8 +1571,8 @@ function UnifiedAdaptiveWorkspaceInner({
     setCurrentPriority("ALL");
     setCurrentMonth("ALL");
     setHealthFilter(null);
-    setOriginFilter(null);
     setCollaboratorFilter(null);
+    setLeadFilter(null);
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -1773,37 +1832,6 @@ function UnifiedAdaptiveWorkspaceInner({
 
   // Task-creation reconciliation (T73 / Server-Truth-Wins).
   //
-  // Status mutation handler with optimistic UI and rollback
-  const handleStatusChange = React.useCallback(
-    async (taskId: string, newStatus: TaskStatus, note?: string) => {
-      if (onStatusChange) {
-        await onStatusChange(taskId, newStatus, note);
-        return;
-      }
-      const currentTask =
-        internalTasks.find((task) => task.id === taskId) ??
-        internalTasks.flatMap((task) => task.subTasks || []).find((task) => task.id === taskId);
-      const previousData = internalTasks;
-      setInternalTasks((prev) => applyOptimisticStatusChange(prev, taskId, newStatus));
-
-      const res = await updateTaskStatus(taskId, newStatus, note, currentTask?.version);
-      if (!res.ok) {
-        setInternalTasks(previousData);
-      } else if (res.data?.version !== undefined) {
-        setInternalTasks((prev) => prev.map((task) => {
-          if (task.id === taskId) return { ...task, version: res.data!.version };
-          return {
-            ...task,
-            subTasks: task.subTasks.map((subTask) =>
-              subTask.id === taskId ? { ...subTask, version: res.data!.version } : subTask
-            ),
-          };
-        }));
-      }
-    },
-    [onStatusChange, internalTasks]
-  );
-
   // Sửa nhanh từ menu thao tác của hàng: cập nhật ngay trên bảng, lưu qua API; lỗi thì trả đúng nhiệm vụ đó về giá trị cũ và báo lỗi.
   const feedback = useFeedback();
 
@@ -1814,19 +1842,56 @@ function UnifiedAdaptiveWorkspaceInner({
     [internalTasks]
   );
 
+  // Đổi trạng thái: cập nhật ngay trên bảng; lỗi thì chỉ trả đúng nhiệm vụ đó về trạng thái cũ (đổi hàng loạt chạy song song) và báo lỗi.
+  // `silent`: đổi hàng loạt tự gom một thông báo tổng hợp, nên lỗi được ném ra thay vì báo lẻ từng dòng.
+  const handleStatusChange = React.useCallback(
+    async (taskId: string, newStatus: TaskStatus, note?: string, options?: { silent?: boolean }) => {
+      if (onStatusChange) {
+        await onStatusChange(taskId, newStatus, note);
+        return;
+      }
+      const currentTask = findTaskForEdit(taskId) as (SchoolTask & { version?: number }) | undefined;
+      const previous = { status: currentTask?.status as TaskStatus, progressPercent: currentTask?.progressPercent };
+      setInternalTasks((prev) => applyOptimisticStatusChange(prev, taskId, newStatus));
+
+      const res = await updateTaskStatus(taskId, newStatus, note, currentTask?.version);
+      if (!res.ok) {
+        if (previous.status) setInternalTasks((prev) => revertOptimisticStatusChange(prev, taskId, previous));
+        const message = res.error || "Không thể chuyển trạng thái nhiệm vụ";
+        if (options?.silent) throw new Error(message);
+        feedback.notifyError(message, "Không thể đổi trạng thái");
+        return;
+      }
+      const confirmed = res.data;
+      if (confirmed?.version !== undefined) {
+        // Áp đúng kết quả máy chủ: trạng thái, version và tiến độ (vd gửi duyệt thì tiến độ thành 100%)
+        const patch = {
+          version: confirmed.version,
+          ...(confirmed.status ? { status: confirmed.status } : {}),
+          ...(typeof confirmed.progressPercent === "number" ? { progressPercent: confirmed.progressPercent } : {}),
+        };
+        setInternalTasks((prev) => applyOptimisticTaskPatch(prev, taskId, patch as Partial<SchoolTask>, patch));
+      }
+    },
+    [onStatusChange, findTaskForEdit, feedback]
+  );
+
   const commitTaskEdit = React.useCallback(
     async (
       taskId: string,
       optimistic: { patch: Partial<SchoolTask>; subTaskPatch: Record<string, unknown> },
       rollback: { patch: Partial<SchoolTask>; subTaskPatch: Record<string, unknown> },
       save: (version?: number) => ReturnType<typeof updateTaskPriority>,
-      failureMessage: string
+      failureMessage: string,
+      options?: { silent?: boolean }
     ) => {
       const version = (findTaskForEdit(taskId) as { version?: number } | undefined)?.version;
       setInternalTasks((prev) => applyOptimisticTaskPatch(prev, taskId, optimistic.patch, optimistic.subTaskPatch));
       const res = await save(version);
       if (!res.ok) {
         setInternalTasks((prev) => applyOptimisticTaskPatch(prev, taskId, rollback.patch, rollback.subTaskPatch));
+        // Thao tác hàng loạt tự gom một thông báo nên cần biết dòng nào lỗi
+        if (options?.silent) throw new Error(res.error || failureMessage);
         feedback.notifyError(res.error || failureMessage, "Lỗi cập nhật");
         return;
       }
@@ -1855,14 +1920,15 @@ function UnifiedAdaptiveWorkspaceInner({
   );
 
   const handleRowDueDateChange = React.useCallback(
-    async (taskId: string, newDueDate: string) => {
+    async (taskId: string, newDueDate: string, options?: { silent?: boolean }) => {
       const previous = (findTaskForEdit(taskId) as { dueDate?: string } | undefined)?.dueDate ?? "";
       await commitTaskEdit(
         taskId,
         { patch: { dueDate: newDueDate }, subTaskPatch: { dueDate: newDueDate } },
         { patch: { dueDate: previous }, subTaskPatch: { dueDate: previous } },
         (version) => updateTaskDueDate(taskId, newDueDate, version),
-        "Không thể cập nhật hạn hoàn thành"
+        "Không thể cập nhật hạn hoàn thành",
+        options
       );
     },
     [commitTaskEdit, findTaskForEdit]
@@ -1885,28 +1951,26 @@ function UnifiedAdaptiveWorkspaceInner({
     [commitTaskEdit, findTaskForEdit]
   );
 
-  // Urge notification trigger
+  // Đôn đốc: gửi nhắc nhở chính thức qua action `remind` (có nhật ký và thông báo tới người thực hiện)
   const handleUrge = React.useCallback(
     async (taskId: string, taskTitle: string, assigneeName: string) => {
       if (onSendReminder) {
         onSendReminder(assigneeName, `Đôn đốc tiến độ thực hiện nhiệm vụ: ${taskTitle}`);
         return;
       }
-      try {
-        await fetch("/api/notifications/push/test", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: "Đôn đốc công việc",
-            body: `Nhiệm vụ "${taskTitle}" cần được đẩy nhanh tiến độ.`,
-            data: { taskId, assigneeName },
-          }),
-        });
-      } catch {
-        // transient
+      const version = (findTaskForEdit(taskId) as { version?: number } | undefined)?.version;
+      const res = await remindTask(taskId, Number(version ?? 0));
+      if (!res.ok) {
+        feedback.notifyError(res.error || "Không gửi được nhắc nhở", "Lỗi đôn đốc");
+        return;
       }
+      if (res.data?.version !== undefined) {
+        const patch = { version: res.data.version };
+        setInternalTasks((prev) => applyOptimisticTaskPatch(prev, taskId, patch as Partial<SchoolTask>, patch));
+      }
+      feedback.notifySuccess("Đã gửi nhắc nhở tới người thực hiện");
     },
-    [onSendReminder]
+    [onSendReminder, findTaskForEdit, feedback]
   );
 
   const effectiveIsRefreshing = isRefreshing || isRefreshingInternal;
@@ -1959,9 +2023,9 @@ function UnifiedAdaptiveWorkspaceInner({
         onRemoveCategory={() => handleCategoryChange("ALL")}
         health={healthFilter}
         onRemoveHealth={() => setHealthFilter(null)}
-        origin={originFilter}
-        onRemoveOrigin={() => setOriginFilter(null)}
-        collaborator={collaboratorFilter}
+        lead={getPersonFilterLabel(leadFilter, filterFacets.leadPeople, "Chưa có người chủ trì")}
+        onRemoveLead={() => setLeadFilter(null)}
+        collaborator={getPersonFilterLabel(collaboratorFilter, filterFacets.collaboratorPeople, "Không có người phối hợp")}
         onRemoveCollaborator={() => setCollaboratorFilter(null)}
       />
   );
@@ -2158,10 +2222,11 @@ function UnifiedAdaptiveWorkspaceInner({
           onPriorityChange={handlePriorityChange}
           selectedHealth={healthFilter}
           onHealthChange={setHealthFilter}
-          selectedOrigin={originFilter}
-          onOriginChange={setOriginFilter}
           selectedCollaborator={collaboratorFilter}
           onCollaboratorChange={setCollaboratorFilter}
+          selectedLead={leadFilter}
+          onLeadChange={setLeadFilter}
+          filterFacets={filterFacets}
           selectedAcademicMonth={currentMonth}
           selectedTimeFilter={timeFilter}
           onTimeFilterChange={(next) => {

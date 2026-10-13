@@ -148,8 +148,17 @@ describe('computeRawSubTaskAggregates', () => {
   test('skips null/undefined entries', () => {
     const subs = [null, undefined, { id: 's1', status: 'COMPLETED' }] as any[];
     const result = computeRawSubTaskAggregates(subs);
-    assert.equal(result.totalSubTasks, 3);
+    assert.equal(result.totalSubTasks, 1);
     assert.equal(result.completedSubTasks, 1);
+  });
+
+  test('việc con đã hủy không tính vào tổng, như tiến độ việc cha ở server', () => {
+    const subs = [
+      { id: 's1', status: 'COMPLETED' },
+      { id: 's2', status: 'CANCELLED' },
+      { id: 's3', status: 'IN_PROGRESS' },
+    ];
+    assert.deepEqual(computeRawSubTaskAggregates(subs), { totalSubTasks: 2, completedSubTasks: 1 });
   });
 });
 

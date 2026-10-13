@@ -106,6 +106,8 @@ export interface DirectInlineEditorProps {
   minRows?: number;
   /** Hiển thị trạng thái lưu nhẹ nhàng */
   showSaveIndicator?: boolean;
+  /** Chữ từ 16px trở lên (tên nhiệm vụ): khi sửa trên điện thoại giữ đúng cỡ, không bị quy tắc chống phóng trang ép về 16px */
+  largeText?: boolean;
 }
 
 export function DirectInlineEditor({
@@ -123,6 +125,7 @@ export function DirectInlineEditor({
   submitOnEnter = !multiline,
   minRows = 1,
   showSaveIndicator = true,
+  largeText = false,
 }: DirectInlineEditorProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
@@ -336,6 +339,7 @@ export function DirectInlineEditor({
             onCompositionEnd={handleCompositionEnd}
             aria-label={ariaLabel}
             placeholder={placeholder}
+            data-large-text={largeText || undefined}
             className={cn(
               "block w-full bg-transparent p-0 m-0 border-0 outline-none focus:outline-none focus:ring-0 resize-none overflow-hidden cursor-text whitespace-pre-wrap break-words",
               editorClassName

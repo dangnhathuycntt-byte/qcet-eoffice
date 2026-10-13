@@ -7,7 +7,7 @@ import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks
 import {
   UnifiedAdaptiveWorkspace,
   filterDisplayedTasks,
-  isTaskOverdueOrHasOverdueSubtask,
+  isOpenTaskOverdue,
   isTaskWaitingApproval,
 } from "../src/components/workspace/unified-adaptive-workspace";
 import { getSystemReferenceDate } from "../src/lib/academic-calendar";
@@ -282,25 +282,25 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
     },
   ];
 
-  describe("Requirement 2b & 4: Overdue filter with isTaskPastDue and subtask propagation", () => {
-    test("isTaskOverdueOrHasOverdueSubtask identifies overdue parent tasks", () => {
+  describe("Requirement 2b & 4: Overdue filter with isTaskPastDue on the task's own due date", () => {
+    test("isOpenTaskOverdue identifies overdue parent tasks", () => {
       const task1 = mockTasks.find((t) => t.id === "task-overdue-user")!;
-      assert.equal(isTaskOverdueOrHasOverdueSubtask(task1, refDate), true);
+      assert.equal(isOpenTaskOverdue(task1, refDate), true);
     });
 
-    test("isTaskOverdueOrHasOverdueSubtask excludes completed parent tasks even if dueDate is past", () => {
+    test("isOpenTaskOverdue excludes completed parent tasks even if dueDate is past", () => {
       const task2 = mockTasks.find((t) => t.id === "task-overdue-completed")!;
-      assert.equal(isTaskOverdueOrHasOverdueSubtask(task2, refDate), false);
+      assert.equal(isOpenTaskOverdue(task2, refDate), false);
     });
 
-    test("isTaskOverdueOrHasOverdueSubtask identifies uncompleted subtask overdue when parent is not completed", () => {
+    test("isOpenTaskOverdue ignores an overdue subtask when the parent's own due date is still ahead", () => {
       const task3 = mockTasks.find((t) => t.id === "task-parent-future-subtask-overdue")!;
-      assert.equal(isTaskOverdueOrHasOverdueSubtask(task3, refDate), true);
+      assert.equal(isOpenTaskOverdue(task3, refDate), false);
     });
 
-    test("isTaskOverdueOrHasOverdueSubtask excludes parent if parent is completed, even if subtask had past dueDate", () => {
+    test("isOpenTaskOverdue excludes parent if parent is completed, even if subtask had past dueDate", () => {
       const task4 = mockTasks.find((t) => t.id === "task-parent-completed-subtask-overdue")!;
-      assert.equal(isTaskOverdueOrHasOverdueSubtask(task4, refDate), false);
+      assert.equal(isOpenTaskOverdue(task4, refDate), false);
     });
 
     test("When currentOverdue = true, only overdue tasks are included and completed tasks are excluded", () => {
@@ -312,11 +312,11 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
       });
 
       const filteredIds = filtered.map((t) => t.id);
-      // Expected included: task-overdue-user and task-parent-future-subtask-overdue
+      // Chỉ hạn của chính nhiệm vụ: việc cha còn hạn nhưng có việc con trễ thì không vào Trễ hạn
       assert.ok(filteredIds.includes("task-overdue-user"), "Overdue parent task must be included");
       assert.ok(
-        filteredIds.includes("task-parent-future-subtask-overdue"),
-        "Task with overdue subtask must be included"
+        !filteredIds.includes("task-parent-future-subtask-overdue"),
+        "An overdue subtask must not pull its on-time parent into Trễ hạn"
       );
 
       // Expected excluded:
@@ -337,7 +337,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
         "Non-overdue other user task must be excluded"
       );
 
-      assert.equal(filtered.length, 2, "Only exactly 2 overdue tasks should match");
+      assert.equal(filtered.length, 1, "Only the task whose own due date has passed should match");
     });
   });
 
@@ -466,8 +466,8 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
 
       const filteredIds = filtered.map((t) => t.id);
       assert.ok(filteredIds.includes("task-overdue-user"));
-      assert.ok(filteredIds.includes("task-parent-future-subtask-overdue"));
-      assert.equal(filtered.length, 2);
+      assert.ok(!filteredIds.includes("task-parent-future-subtask-overdue"));
+      assert.equal(filtered.length, 1);
     });
 
     test("When currentWorkbox = 'ALL' and currentOverdue = false, all scoped tasks are displayed", () => {

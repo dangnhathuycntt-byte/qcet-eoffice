@@ -22,7 +22,8 @@ import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
 import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
-import { TaskOptionalSections } from "@/components/tasks/detail/task-add-chip";
+import { TaskOptionalMenu, TaskOptionalMenuProvider, TaskOptionalSections } from "@/components/tasks/detail/task-add-chip";
+import { TaskDeliverables, toTaskDeliverableItems, type TaskDeliverableItem } from "@/components/tasks/detail/task-deliverables";
 import { TaskDecline } from "@/components/tasks/detail/task-decline";
 import { TaskExtension } from "@/components/tasks/detail/task-extension";
 import { TaskPeople } from "@/components/tasks/detail/task-people";
@@ -47,6 +48,7 @@ import {
 } from "@/components/tasks/detail/task-detail-state";
 
 export type DetailTab = "overview" | "activity";
+const DETAIL_TABS: DetailTab[] = ["overview", "activity"];
 
 export interface TaskDetailPageProps {
   task: SchoolTask | StaffTask;
@@ -100,8 +102,7 @@ export function TaskDetailPage({
 
   // Sub-Tabs URL sync (REQ-14)
   const tabParam = searchParams.get("tab");
-  const validTab: DetailTab =
-    tabParam === "activity" ? tabParam : "overview";
+  const validTab: DetailTab = DETAIL_TABS.includes(tabParam as DetailTab) ? (tabParam as DetailTab) : "overview";
 
   const [activeTab, setActiveTab] = React.useState<DetailTab>(validTab);
   const canvasRef = React.useRef<HTMLDivElement>(null);
@@ -109,7 +110,7 @@ export function TaskDetailPage({
     if (canvasRef.current) canvasRef.current.scrollTop = 0;
   }, [activeTab]);
   React.useEffect(() => {
-    if (tabParam === "activity" || tabParam === "overview") {
+    if (DETAIL_TABS.includes(tabParam as DetailTab)) {
       setActiveTab(tabParam as DetailTab);
     }
   }, [tabParam]);
@@ -212,17 +213,18 @@ export function TaskDetailPage({
   }, [auditEvents]);
 
   // Deliverables / Resources state
-  const initialDeliverables = (task as any).deliverables || [];
-  const [deliverables, setDeliverables] = React.useState<
-    Array<{ id: string; title: string; fileUrl?: string; notes?: string }>
-  >(initialDeliverables);
+  const [deliverables, setDeliverables] = React.useState<TaskDeliverableItem[]>(() =>
+    toTaskDeliverableItems((task as any).deliverables)
+  );
+  const taskActions = (task as any).availableActions;
+  const hasTaskAction = (action: string) => Array.isArray(taskActions) && taskActions.includes(action);
   const deliverablesSnapshotRef = React.useRef(deliverables);
   deliverablesSnapshotRef.current = deliverables;
   React.useEffect(() => {
     setTask(initialTask);
     setAuditEvents(initialAuditEvents);
     if (Array.isArray((initialTask as any).deliverables)) {
-      setDeliverables((initialTask as any).deliverables);
+      setDeliverables(toTaskDeliverableItems((initialTask as any).deliverables));
     }
   }, [initialTask, initialAuditEvents]);
 
@@ -272,7 +274,32 @@ export function TaskDetailPage({
 
   // Cột thuộc tính luôn hiện, trừ khi drawer việc con đang mở (drawer thay vào chỗ đó)
   const showInspector = !activeSubtask;
+  // Màn hẹp: cột thuộc tính là panel nổi (peek) bật bằng nút ở thanh trên, mặc định đóng để nội dung lên trước
+  const [peekOpen, setPeekOpen] = React.useState(false);
+  const togglePeek = React.useCallback(() => setPeekOpen((open) => !open), []);
   const stacked = useStackedTaskDetail();
+
+  // Việc con đổi trạng thái hay nộp/xóa minh chứng làm server tăng version (có thể đổi cả trạng thái, tiến độ)
+  // của nhiệm vụ này: lấy lại để hiển thị đúng và lần sửa kế tiếp không bị báo xung đột phiên bản.
+  const syncTaskMetaFromServer = React.useCallback(async () => {
+    const requestedId = taskIdRef.current;
+    const res = await fetch(`/api/tasks/${requestedId}`, { cache: "no-store" }).catch(() => null);
+    if (!res?.ok) return;
+    const json = await res.json().catch(() => null);
+    const dto = json?.data ?? json?.task;
+    if (!dto || typeof dto.version !== "number") return;
+    setTask((prev) => {
+      // Bỏ phản hồi đến muộn: đã chuyển sang nhiệm vụ khác, hoặc một thao tác sau đã có version mới hơn
+      const prevVersion = (prev as { version?: unknown }).version;
+      if (prev.id !== requestedId || (typeof prevVersion === "number" && dto.version < prevVersion)) return prev;
+      return {
+        ...prev,
+        version: dto.version,
+        ...(typeof dto.status === "string" && dto.status ? { status: dto.status } : {}),
+        ...(typeof dto.progress === "number" ? { progressPercent: dto.progress } : {}),
+      } as typeof prev;
+    });
+  }, []);
 
   const handleSubtaskUpdated = React.useCallback((updated: StaffTask) => {
     setTask((prev) => {
@@ -290,8 +317,8 @@ export function TaskDetailPage({
         updated.status,
       );
     });
-
-  }, []);
+    void syncTaskMetaFromServer();
+  }, [syncTaskMetaFromServer]);
 
   // Số liệu thô của server (cả việc con không được xem), không chỉ danh sách đã lọc quyền
   const { total: totalSubtasks, completed: completedSubtasks } = resolveSubtaskAggregates({
@@ -313,10 +340,13 @@ export function TaskDetailPage({
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle, expectedVersion: (task as any).version }),
+        body: JSON.stringify({ title: newTitle, expectedVersion: taskVersionRef.current }),
       });
 
-      if (!res.ok) throw new Error("Không thể lưu tiêu đề");
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null);
+        throw new Error(errBody?.error || errBody?.message || "Không thể lưu tiêu đề");
+      }
       if (res.ok) {
         const payload = await res.json().catch(() => null);
         setTask((prev) => {
@@ -412,7 +442,8 @@ export function TaskDetailPage({
     }));
 
     try {
-      const res = await updateTaskStatus(taskId, newStatus, note, (task as any).version);
+      // Đọc version qua ref: callback này không phụ thuộc `task` nên biến `task` ở đây là bản của lần render đầu.
+      const res = await updateTaskStatus(taskId, newStatus, note, taskVersionRef.current as number | undefined);
       if (!res.ok) {
         // Rollback state
         if (previousTask) setTask(previousTask);
@@ -460,7 +491,7 @@ export function TaskDetailPage({
 
   // Priority change handler (REQ-20)
   const handlePriorityChange = React.useCallback(async (taskId: string, newPriority: TaskPriority) => {
-    const res = await updateTaskPriority(taskId, newPriority, (task as any).version);
+    const res = await updateTaskPriority(taskId, newPriority, taskVersionRef.current as number | undefined);
     if (!res.ok) {
       notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
       return;
@@ -553,7 +584,7 @@ export function TaskDetailPage({
 
     setTask((prev) => ({
       ...prev,
-      // Server tăng version khi đổi người chủ trì nhưng không trả lại: tự cộng để thao tác sau không bị 412
+      // Server tăng version đúng 1 khi đổi người chủ trì (cũng trả lại trong data.version)
       version: expectedVersion + 1,
       assignedTo: personName,
       leadAssigneeName: personName,
@@ -592,16 +623,15 @@ export function TaskDetailPage({
   }, [currentUser?.name]);
 
   // Deliverables add handler
-  const handleAddDeliverable = React.useCallback(async (title: string, fileUrl?: string, notes?: string) => {
-    const created = await createDeliverable(taskIdRef.current, { title, fileUrl, notes });
+  const handleAddDeliverable = React.useCallback(async (title: string, fileUrl: string) => {
+    const created = await createDeliverable(taskIdRef.current, { title, fileUrl });
 
     setDeliverables((prev) => [
       ...prev,
       {
         id: created.id,
         title: created.title || title.trim(),
-        fileUrl: created.fileUrl || fileUrl?.trim(),
-        notes: created.notes ?? undefined,
+        fileUrl: created.fileUrl || fileUrl.trim(),
         reviewStatus: created.reviewStatus,
         createdAt: created.createdAt,
       },
@@ -617,7 +647,8 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
-  }, [currentUser?.name]);
+    void syncTaskMetaFromServer();
+  }, [currentUser?.name, syncTaskMetaFromServer]);
 
   // Deliverables delete handler
   const handleDeleteDeliverable = React.useCallback(async (deliverableId: string) => {
@@ -637,12 +668,13 @@ export function TaskDetailPage({
         },
         ...prev,
       ]);
+      void syncTaskMetaFromServer();
     } catch (error: unknown) {
       // Rollback on failure
       setDeliverables(previousDeliverables);
       notifyError(error instanceof Error ? error.message : String(error) || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
-  }, [currentUser?.name, notifyError]);
+  }, [currentUser?.name, notifyError, syncTaskMetaFromServer]);
 
   // Click canvas padding (empty space below content) → focus editor at end
   // Kéo chọn khối được phép bắt đầu từ cả sidebar và thanh trên
@@ -718,6 +750,22 @@ export function TaskDetailPage({
     [activeSubtask, peekWidth]
   );
 
+  // Cột thuộc tính đang hiện (màn rộng, hoặc màn hẹp đã mở) thì "+ Thêm"/"Từ chối nhận việc" nằm ở đó, không thì nằm dưới trình soạn thảo
+  const inspectorVisible = showInspector && (!stacked || peekOpen);
+  const taskActionRow = activeTab === "overview" ? (
+    <>
+      <TaskOptionalMenu />
+      {/* Thao tác ngược (không phải "thêm") đứng cuối */}
+      <TaskDecline
+        taskId={task.id}
+        version={Number((task as any).version ?? 0)}
+        status={String((task as any).status ?? "")}
+        onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
+        className={inspectorVisible ? "basis-full pl-2 pr-0" : undefined}
+      />
+    </>
+  ) : null;
+
   // Một thể hiện duy nhất: cột phải ở màn rộng, hoặc ngay dưới tiêu đề ở màn hẹp (< 1024px)
   const inspectorNode = (
                 <aside aria-label="Cột thuộc tính nhiệm vụ" className={styles.inspector} style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
@@ -739,6 +787,7 @@ export function TaskDetailPage({
                 activeSubtaskId={selectedSubtaskId}
                 onSelectSubtask={handleOpenSubtaskDrawer}
                 onAddSubtask={handleAddSubtask}
+                actions={inspectorVisible ? taskActionRow : null}
               />
             </aside>
   );
@@ -762,14 +811,17 @@ export function TaskDetailPage({
           {/* Header Navigation Bar */}
           <TaskDetailHeaderNav
             taskId={task.id}
+            taskTitle={task.title}
             isDrawerOpen={Boolean(activeSubtask)}
+            showInspector={peekOpen}
+            onToggleInspector={stacked && activeTab === "overview" ? togglePeek : undefined}
             onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
             leading={
               <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as DetailTab)}>
-                <TabsList className="bg-transparent p-0 h-7" aria-label="Các phân mục chi tiết nhiệm vụ">
+                <TabsList size="sm" className="bg-transparent p-0" aria-label="Các phân mục chi tiết nhiệm vụ">
                   <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                   <TabsTrigger value="activity">
-                    Hoạt động
+                    Lịch sử
                     {feedActivityEvents.length > 0 && (
                       <span className="ml-1.5 rounded-full bg-muted px-1.5 text-xs font-normal tabular-nums text-muted-foreground">
                         {feedActivityEvents.length}
@@ -790,10 +842,18 @@ export function TaskDetailPage({
             onMouseDownCapture={handleCanvasMouseDownCapture}
             onClick={handleCanvasClick}
           >
+            <TaskOptionalMenuProvider>
             <TaskDetailSplitLayout
               inspectorOpen={showInspector && !stacked}
               inspector={inspectorNode}
         >
+          {stacked && showInspector && peekOpen && activeTab === "overview" && (
+            <div className={styles.inspectorPeekAnchor}>
+              <div className={styles.inspectorPeek} data-slot="task-properties-peek">
+                {inspectorNode}
+              </div>
+            </div>
+          )}
           <main
             role="tabpanel"
             id={`panel-${activeTab}`}
@@ -806,21 +866,19 @@ export function TaskDetailPage({
                 task={task}
                 currentUser={currentUser}
                 canEdit={canEdit}
-                deliverables={deliverables}
                 onStatusChange={handleStatusChange}
                 onPriorityChange={handlePriorityChange}
                 onTitleChange={handleTitleChange}
                 onStartDateChange={handleStartDateChange}
                 onDueDateChange={handleDueDateChange}
                 onReassignLead={handleReassignLead}
-                onAddDeliverable={handleAddDeliverable}
-                onDeleteDeliverable={handleDeleteDeliverable}
-                showInlineProperties={!showInspector}
+                // Màn hẹp không lặp thuộc tính dưới tên (đã có nút mở cột Thuộc tính ở thanh trên);
+                // chỉ hiện khi đang mở việc con trên màn rộng (cột Thuộc tính của nhiệm vụ cha bị ẩn)
+                showInlineProperties={!showInspector && !stacked}
               />
 
-              {stacked && showInspector && inspectorNode}
-
-
+              {/* Bình luận kiểu Notion ngay dưới tên nhiệm vụ: mô tả dài không đẩy bình luận khuất xuống */}
+              <TaskComments taskId={task.id} className="mb-4 mt-6 border-b border-border/60 pb-3" />
 
               <TaskBlockEditor
                 selectionContainerSelector="body"
@@ -835,6 +893,15 @@ export function TaskDetailPage({
 
               {/* Khối tùy chọn: khối có dữ liệu chiếm cả hàng; khối trống thu thành chip dồn về một hàng cuối */}
               <TaskOptionalSections>
+              {/* Minh chứng: thêm cần task.submit_result, xóa cần task.update_execution (như API deliverables) */}
+              <TaskDeliverables
+                deliverables={deliverables}
+                canSubmit={hasTaskAction("task.submit_result")}
+                canDelete={hasTaskAction("task.update_execution")}
+                onAdd={handleAddDeliverable}
+                onDelete={handleDeleteDeliverable}
+              />
+
               <TaskExtension
                 taskId={task.id}
                 version={Number((task as any).version ?? 0)}
@@ -858,20 +925,13 @@ export function TaskDetailPage({
                 onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
               />
 
-              {/* Thao tác ngược (không phải "thêm") đứng cuối hàng chip */}
-              <TaskDecline
-                taskId={task.id}
-                version={Number((task as any).version ?? 0)}
-                status={String((task as any).status ?? "")}
-                onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
-              />
+              {!inspectorVisible && taskActionRow}
               </TaskOptionalSections>
             </>
           )}
 
           {activeTab === "activity" && (
             <div className="space-y-4">
-              <TaskComments taskId={task.id} className="max-w-3xl" />
               <section className="max-w-3xl space-y-3">
                 <div className="px-2">
                   <h2 className="text-compact font-semibold text-foreground tracking-tight">
@@ -895,6 +955,7 @@ export function TaskDetailPage({
                 </main>
 
         </TaskDetailSplitLayout>
+            </TaskOptionalMenuProvider>
       </div>
 
     </div>
@@ -952,6 +1013,7 @@ export function TaskDetailPage({
               completedSubtasks={completedSubtasks}
               totalSubtasks={totalSubtasks}
               canEdit={canEdit}
+              expectedVersion={typeof (task as any).version === "number" ? (task as any).version : undefined}
               onProgressUpdated={handleProgressModalUpdate}
               onStatusChange={handleProgressModalStatusChange}
             />

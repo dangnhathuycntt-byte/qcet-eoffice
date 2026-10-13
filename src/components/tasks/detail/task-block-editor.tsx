@@ -1003,9 +1003,9 @@ function AttachmentEl({ attributes, children, element }: any) {
   }, [editor, element, uploadCtx]);
 
   const inner = (
-    <div className="inline-flex items-center gap-1.5 py-0.5 px-1.5 my-0.5 rounded-md bg-muted/40 hover:bg-muted/70 border border-border/40 transition-colors text-xs max-w-full group/file">
+    <div className="inline-flex min-w-0 items-center gap-1.5 py-0.5 px-1.5 my-0.5 rounded-md bg-muted/40 hover:bg-muted/70 border border-border/40 transition-colors text-xs max-w-full group/file">
       <FileText className="size-3.5 text-muted-foreground shrink-0" />
-      <span className="font-medium text-foreground truncate">{fileName || "Tệp"}</span>
+      <span className="min-w-0 font-medium text-foreground truncate" title={fileName || undefined}>{fileName || "Tệp"}</span>
       {meta && <span className="text-muted-foreground shrink-0 font-mono">{meta}</span>}
       {url && <ExternalLink className="size-3 text-muted-foreground opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0" />}
     </div>
@@ -1014,11 +1014,12 @@ function AttachmentEl({ attributes, children, element }: any) {
     <div {...attributes}>
       <div contentEditable={false} className="py-0.5">
         {url ? (
-          <a href={url} target="_blank" rel="noreferrer" className="block w-fit">
+          // w-fit + max-w-full: thẻ tệp co theo tên nhưng không vượt khung (màn hẹp, ngăn việc con), tên dài cắt "…"
+          <a href={url} target="_blank" rel="noreferrer" className="flex w-fit max-w-full">
             {inner}
           </a>
         ) : (
-          <div className="flex items-center gap-2 py-1 px-2.5 rounded-lg bg-muted/30 border border-dashed border-border/70 text-xs w-fit">
+          <div className="flex max-w-full items-center gap-2 py-1 px-2.5 rounded-lg bg-muted/30 border border-dashed border-border/70 text-xs w-fit">
             <FileText className="size-3.5 text-muted-foreground" />
             <label className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer font-medium">
               {isUploading ? <Loader2 className="size-3 animate-spin" /> : <UploadCloud className="size-3" />}

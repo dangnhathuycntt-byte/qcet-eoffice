@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
-import { isTaskWaitingApproval, isActiveTaskStatus, isTaskOverdueOrHasOverdueSubtask, isTaskAssignedToUser, isTaskAssignedToUserOrUnit, computeWorkspaceTabCounts } from "../src/lib/workspace-metrics-aggregator";
+import { isTaskWaitingApproval, isActiveTaskStatus, isOpenTaskOverdue, isTaskAssignedToUser, isTaskAssignedToUserOrUnit, computeWorkspaceTabCounts } from "../src/lib/workspace-metrics-aggregator";
 import {
   deriveAdaptiveWorkspaceData,
   type WorkspaceMetrics,

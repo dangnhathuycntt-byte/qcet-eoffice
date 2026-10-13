@@ -6,12 +6,11 @@ import {
   Loader2,
   Check,
   Edit2,
-  MessageSquare,
-  Smile,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types/dashboard";
 import type { ProgressResult } from "./task-detail-state";
+import { updateTaskProgress } from "@/lib/tasks/task-actions";
 
 export interface TaskProgressComposerProps {
   taskId: string;
@@ -22,6 +21,8 @@ export interface TaskProgressComposerProps {
   completedSubtasks?: number;
   totalSubtasks?: number;
   canEdit?: boolean;
+  /** Version hiện tại của nhiệm vụ; có thì server từ chối khi nhiệm vụ đã đổi ở nơi khác (412). */
+  expectedVersion?: number;
   onProgressUpdated?: (result: ProgressResult, note?: string) => Promise<void> | void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
   className?: string;
@@ -36,6 +37,7 @@ export function TaskProgressComposer({
   completedSubtasks = 0,
   totalSubtasks = 0,
   canEdit = true,
+  expectedVersion,
   onProgressUpdated,
   onStatusChange,
   className,
@@ -69,28 +71,11 @@ export function TaskProgressComposer({
     setFeedback(null);
 
     try {
-      const res = await fetch(`/api/tasks/${taskId}/actions/update-progress`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          progressPercent: progress,
-          note: note.trim() || undefined,
-        }),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        const errMsg =
-          errJson?.error?.message ||
-          errJson?.message ||
-          (res.status === 403
-            ? "Bạn không có quyền cập nhật tiến độ cho nhiệm vụ này (403 Forbidden)"
-            : "Có lỗi xảy ra khi cập nhật tiến độ");
-        throw new Error(errMsg);
-      }
+      const res = await updateTaskProgress(taskId, progress, note.trim() || undefined, expectedVersion);
+      if (!res.ok) throw new Error(res.error || "Có lỗi xảy ra khi cập nhật tiến độ");
 
       if (onProgressUpdated) {
-        const payload = await res.json().catch(() => null);
+        const payload = res.data as { data?: ProgressResult } | undefined;
         const result: ProgressResult = payload?.data ?? { progressPercent: progress };
         await onProgressUpdated(result, note.trim() || undefined);
       }
@@ -154,13 +139,8 @@ export function TaskProgressComposer({
                   progress === 100 ? "bg-emerald-600" : progress > 0 ? "bg-blue-600" : "bg-muted-foreground"
                 )}
               />
-              <span>
-                {progress === 100
-                  ? "Hoàn thành"
-                  : progress > 0
-                  ? `${progress}% hoàn thành`
-                  : "Chưa bắt đầu"}
-              </span>
+              {/* 100% chỉ là gửi duyệt (update-progress chuyển sang Chờ duyệt), không phải đã hoàn thành */}
+              <span>{progress > 0 ? `Tiến độ ${progress}%` : "Chưa cập nhật"}</span>
             </span>
 
             {/* Author */}
@@ -171,8 +151,6 @@ export function TaskProgressComposer({
               <span>{leadName}</span>
             </div>
 
-            <span className="text-muted-foreground/40 select-none">•</span>
-            <span className="text-muted-foreground text-xs">Hôm nay</span>
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -181,33 +159,10 @@ export function TaskProgressComposer({
               : "Cập nhật thủ công"}
           </p>
 
-          {/* Update Note Content */}
-          <p className="text-xs text-foreground/90 leading-relaxed font-sans pl-0.5">
-            {latestNote ||
-              (progress === 100
-                ? "Nhiệm vụ đã hoàn thành toàn bộ nội dung theo yêu cầu."
-                : progress > 0
-                  ? "Đang triển khai thực hiện theo kế hoạch phân công."
-                  : "Nhiệm vụ chưa bắt đầu thực hiện.")}
-          </p>
-
-          {/* Reaction & Activity Footer */}
-          <div className="flex items-center gap-2 pt-1 text-muted-foreground">
-            <button
-              type="button"
-              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-              title="Thêm phản hồi"
-            >
-              <Smile className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-              title="Bình luận"
-            >
-              <MessageSquare className="size-3.5" />
-            </button>
-          </div>
+          {/* Chỉ hiện ghi chú thật; không tự chế câu mô tả theo phần trăm */}
+          {latestNote && (
+            <p className="text-xs text-foreground/90 leading-relaxed font-sans pl-0.5">{latestNote}</p>
+          )}
         </div>
       ) : (
         /* 3. Inline Composer Form */
@@ -258,6 +213,9 @@ export function TaskProgressComposer({
                 </button>
               ))}
             </div>
+            {progress === 100 && (
+              <p className="text-xs text-muted-foreground">Lưu 100% sẽ gửi nhiệm vụ sang Chờ duyệt.</p>
+            )}
           </div>
 
           {/* Note Input */}

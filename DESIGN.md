@@ -39,14 +39,14 @@ Hover (`accent`) và đang chọn (`selected`) là hai trạng thái khác nhau.
 
 **Bo góc:** `--radius-chip` 8px · `--radius-control` 12px · `--radius-card` 14px · `--radius-panel` 16px · `--radius-menu` 14px. Utility Tailwind `rounded-sm/md/lg/xl` = 8/12/14/16px.
 
-**Kích thước control:** `--control-height` 34px · `--control-height-sm` 28px · `--touch-target` 44px · avatar 20 (bảng) / 24 / 32px · sidebar 254px / 64px khi thu gọn.
+**Kích thước control:** `--control-height` 34px · `--control-height-sm` 28px · `--touch-target` 44px · avatar 16 (hàng bảng) / 20 / 24 / 32px · sidebar 254px / 64px khi thu gọn.
 
 ## Component nền
 
 - [Button](src/components/ui/button.tsx): mobile luôn cao 44px; desktop `default` 34px (`text-sm`), `sm`/`xs` 28px (`text-xs`), `icon` 34px, `icon-sm`/`icon-xs` 28px.
 - [Pressable](src/components/ui/pressable.tsx): vùng bấm không mang kiểu nút (hàng, ô lịch, thẻ, tab tự dựng). Chỉ gắn `type="button"`, focus ring như Button và con trỏ; kích thước do nơi dùng quyết định.
 - [Input](src/components/ui/input.tsx): bo 12px, nền `bg-secondary`, không viền; thường 48px mobile / 36px desktop, `compact` 44 / 28px (`text-compact`).
-- **Kích thước bảng:** hàng một dòng 40px, hàng hai dòng 48px; tiêu đề cột bảng Nhiệm vụ 32px (thấp hơn hàng); item popover/menu ≤ 32px.
+- **Kích thước bảng:** hàng bảng Nhiệm vụ 48px (như bảng Projects của Linear); bảng khác một dòng 40px, hai dòng 48px; tiêu đề cột bảng Nhiệm vụ 32px (thấp hơn hàng); item popover/menu ≤ 32px.
 - **Ưu tiên / mức khẩn:** chỉ mức cao nhất (Khẩn cấp, Hỏa tốc, Thượng khẩn) dùng `text-destructive`; Khẩn của văn bản dùng `text-warning`; các mức khác trung tính. Áp cho cả bảng lẫn form tạo nhiệm vụ.
 - Trạng thái nhiệm vụ: [TaskStatusCircle](src/components/tasks/task-status-circle.tsx). Ưu tiên / mức khẩn: [PrioritySignalBars](src/components/tasks/priority-signal-bars.tsx). Icon nghiệp vụ: [task-icons.tsx](src/lib/icons/task-icons.tsx). Không tự vẽ chấm hay thay bằng icon lucide.
 - Icon lucide nét 1,5px, đặt một lần bằng `LucideProvider` ở `src/app/layout.tsx`; không truyền `strokeWidth` (lint chặn giá trị khác).

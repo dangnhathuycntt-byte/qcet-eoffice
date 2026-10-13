@@ -31,9 +31,28 @@ describe("TaskAddChip", () => {
 
     const page = read("src/components/tasks/task-detail-page.tsx");
     const region = page.slice(page.indexOf("<TaskOptionalSections>"), page.indexOf("</TaskOptionalSections>"));
-    for (const name of ["<TaskExtension", "<TaskPeople", "<TaskApprovalProcess", "<TaskBackupReviewer", "<TaskUnitRequests", "<TaskCriteria", "<TaskDecline"]) {
+    for (const name of ["<TaskExtension", "<TaskPeople", "<TaskApprovalProcess", "<TaskBackupReviewer", "<TaskUnitRequests", "<TaskCriteria"]) {
       assert.ok(region.includes(name), name);
     }
+  });
+
+  test("\"+ Thêm\" và \"Từ chối nhận việc\" nằm ở cột Thuộc tính; cột đó ẩn thì về dưới trình soạn thảo", () => {
+    const page = read("src/components/tasks/task-detail-page.tsx");
+    const row = page.slice(page.indexOf("const taskActionRow"), page.indexOf("const inspectorNode"));
+    assert.ok(row.includes("<TaskOptionalMenu />") && row.includes("<TaskDecline"));
+    assert.ok(page.includes("actions={inspectorVisible ? taskActionRow : null}"));
+    const region = page.slice(page.indexOf("<TaskOptionalSections>"), page.indexOf("</TaskOptionalSections>"));
+    assert.ok(region.includes("{!inspectorVisible && taskActionRow}"));
+    // Provider bọc cả cột thuộc tính để nút trong cột đó thấy các khối đã đăng ký
+    assert.ok(page.indexOf("<TaskOptionalMenuProvider>") < page.indexOf("<TaskDetailSplitLayout"));
+  });
+
+  test("menu \"+ Thêm\" tạm chỉ còn Phối hợp liên đơn vị; Xin gia hạn mở từ ô Hạn hoàn thành; tạm ẩn từ chối nhận việc", () => {
+    const chip = read("src/components/tasks/detail/task-add-chip.tsx");
+    assert.match(chip, /const ENTRY_ORDER: TaskOptionalKey\[\] = \["unit-request"\];/);
+    const sidebar = read("src/components/tasks/detail/task-properties-sidebar.tsx");
+    assert.ok(sidebar.includes('useTaskOptionalEntry("extension")') && sidebar.includes("extensionEntry.open(e.currentTarget)"));
+    assert.match(read("src/components/tasks/detail/task-decline.tsx"), /const DECLINE_ENTRY_ENABLED = false;/);
   });
 
   test("văn bản gốc chỉ hiện một lần: cột Thuộc tính, hoặc dưới tiêu đề khi cột đó ẩn", () => {

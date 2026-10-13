@@ -123,7 +123,7 @@ export function TaskTableHeader({
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-medium text-muted-foreground")}>
+      <tr className={cn(rowHeightClass, "text-xs font-normal text-muted-foreground")}>
         {/* Optional Selection Checkbox (only rendered when explicitly enabled for batch ops) */}
         {showSelection && (
           <th
@@ -174,7 +174,7 @@ export function TaskTableHeader({
                 scope="col"
                 aria-sort={ariaSortValue}
                 className={cn(
-                  "align-middle font-medium transition-colors group/th text-left",
+                  "align-middle font-normal transition-colors group/th text-left",
                   col.widthClass,
                   leadingPaddingClass
                 )}
@@ -198,18 +198,18 @@ export function TaskTableHeader({
                     >
                       {indeterminate || allSelected ? (
                         <div
-                          className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-[opacity,transform] active:scale-[0.98] pointer-events-none"
+                          className="size-3.5 rounded-[3px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-[opacity,transform] active:scale-[0.98] pointer-events-none"
                           aria-hidden="true"
                         >
                           {allSelected ? (
-                            <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+                            <Check className="size-2.5 text-primary-foreground" />
                           ) : (
                             <span className="w-2 h-0.5 bg-primary-foreground rounded-full" />
                           )}
                         </div>
                       ) : (
                         <div
-                          className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-[opacity,transform,border-color,background-color] duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
+                          className="size-3.5 rounded-[3px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-[opacity,transform,border-color,background-color] duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
                           aria-hidden="true"
                         />
                       )}
@@ -243,7 +243,7 @@ export function TaskTableHeader({
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "align-middle font-medium whitespace-nowrap transition-colors group/th",
+                "align-middle font-normal whitespace-nowrap transition-colors group/th",
                 col.widthClass,
                 col.align === "right"
                   ? "text-right"

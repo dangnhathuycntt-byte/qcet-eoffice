@@ -120,6 +120,7 @@ model User {
   sessions              Session[]
   tasksCreated          Task[]                @relation("TaskCreatedBy")
   taskComments          TaskComment[]         @relation("TaskCommentAuthor")
+  taskCommentReactions  TaskCommentReaction[] @relation("TaskCommentReactor")
   checkedCriteria       TaskAcceptanceCriterion[] @relation("CriterionCheckedBy")
   extensionsRequested   TaskExtensionRequest[] @relation("ExtensionRequester")
   extensionsDecided     TaskExtensionRequest[] @relation("ExtensionDecider")
@@ -1606,10 +1607,25 @@ model TaskComment {
   createdAt DateTime  @default(now()) @map("created_at")
   editedAt  DateTime? @map("edited_at")
   deletedAt DateTime? @map("deleted_at")
+  reactions TaskCommentReaction[]
 
   @@index([taskId, createdAt])
   @@index([authorId])
   @@map("task_comments")
+}
+
+/// Emoji thả vào bình luận nhiệm vụ: mỗi người một lần cho mỗi emoji (bộ emoji cố định ở src/domain/tasks/comment-reactions.ts).
+model TaskCommentReaction {
+  commentId String      @map("comment_id")
+  comment   TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String      @map("user_id")
+  user      User        @relation("TaskCommentReactor", fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String      @db.VarChar(16)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@id([commentId, userId, emoji])
+  @@index([userId])
+  @@map("task_comment_reactions")
 }
 
 model TaskRelation {

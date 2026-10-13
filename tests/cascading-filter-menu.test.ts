@@ -49,14 +49,14 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
 
     // 1. Root positioner must have z-50 to avoid being clipped by sticky headers
     assert.ok(
-      source.includes('MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-50 outline-none"'),
+      source.includes('MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className={cn("z-50 outline-none", SHEET_POSITIONER_CLASS)}'),
       "Root MenuPositioner must have z-50 outline-none"
     );
 
     // 2. Submenu positioner nằm trong MenuSubmenu dùng chung: side=left, sideOffset=2, z-50 outline-none
     const menuSource = fs.readFileSync(path.resolve(process.cwd(), "src/components/ui/menu.tsx"), "utf-8");
     assert.ok(
-      menuSource.includes('side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none"'),
+      /side="left"\s+align="start"\s+sideOffset=\{2\}\s+alignOffset=\{-4\}\s+collisionPadding=\{12\}\s+className=\{cn\("z-50 outline-none", SHEET_POSITIONER_CLASS\)\}/.test(menuSource),
       "Shared MenuSubmenu positioner must have side=left and z-50 outline-none to avoid overlapping root menu"
     );
     assert.ok(source.includes("<MenuSubmenu"), "Toolbar must build nested filter menus from the shared MenuSubmenu");
@@ -94,12 +94,13 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     // 1. Menu lọc gọn như menu chuột phải: không có ô tìm ở đầu
     assert.ok(!source.includes('placeholder="Thêm bộ lọc..."'), "Filter menu must not render a search header");
 
-    // 2. Contains expanded categories: Lead team, Lead, Collaborators, Health, Origin
-    assert.ok(source.includes('label: "Đơn vị"'), "Must include lead team category");
-    assert.ok(source.includes('label: "Người chủ trì"'), "Must include lead assignee category");
-    assert.ok(source.includes('label: "Người phối hợp"'), "Must include collaborator category");
-    assert.ok(source.includes('label: "Tiến độ"'), "Must include health/progress category");
-    assert.ok(source.includes('label: "Nguồn gốc"'), "Must include origin category");
+    // 2. Nhóm lọc: Trạng thái, Mức ưu tiên, Người chủ trì, Người phối hợp, Mốc thời gian, Tiến độ (không còn Danh mục, Đơn vị, Nguồn gốc)
+    for (const label of ["Trạng thái", "Mức ưu tiên", "Người chủ trì", "Người phối hợp", "Mốc thời gian", "Tiến độ"]) {
+      assert.ok(source.includes(`label: "${label}"`), `Must include ${label} category`);
+    }
+    for (const key of ["category", "dept", "origin"]) {
+      assert.ok(!source.includes(`key: "${key}"`), `Filter menu must not include ${key}`);
+    }
   });
 
   test("Linear-style 3-tier cascading dates sub-dropdowns matching Linear 1:1", async () => {
@@ -110,8 +111,8 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "utf-8"
     );
 
-    // 1. Root menu hẹp (w-52) dùng khung chuẩn MENU_POPUP_CLASS
-    assert.ok(source.includes('cn(MENU_POPUP_CLASS, "w-52")'), "Root menu must use shared popup class at w-52");
+    // 1. Root menu 224px (popover 224–256px) dùng khung chuẩn MENU_POPUP_CLASS
+    assert.ok(source.includes('cn(MENU_POPUP_CLASS, "w-56", SHEET_POPUP_CLASS)'), "Root menu must use shared popup class at w-56");
 
     // 2. Linear-style 3-tier dates category in root menu
     assert.ok(source.includes('label: "Mốc thời gian"'), "Root menu must contain 'Mốc thời gian' (Dates)");
@@ -237,24 +238,20 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     assert.equal(originResult2.length, 1);
     assert.equal(originResult2[0].id, "t-4");
 
-    // 3. Collaborator filter
+    // 3. Collaborator filter (theo người; "none" = không có người phối hợp)
     const collabResult = filterDisplayedTasks({
       tasks: sampleTasks,
-      collaborator: "has_collab",
+      collaborator: "name:GV. Nguyen Van A",
       referenceDate: refDate,
     });
-    assert.equal(collabResult.length, 2); // t-1 and t-3
-    assert.ok(collabResult.some((t) => t.id === "t-1"));
-    assert.ok(collabResult.some((t) => t.id === "t-3"));
+    assert.deepEqual(collabResult.map((t) => t.id), ["t-1"]);
 
-    const singleResult = filterDisplayedTasks({
+    const noneResult = filterDisplayedTasks({
       tasks: sampleTasks,
-      collaborator: "single",
+      collaborator: "none",
       referenceDate: refDate,
     });
-    assert.equal(singleResult.length, 2); // t-2 and t-4
-    assert.ok(singleResult.some((t) => t.id === "t-2"));
-    assert.ok(singleResult.some((t) => t.id === "t-4"));
+    assert.deepEqual(noneResult.map((t) => t.id), ["t-2", "t-3", "t-4"]);
   });
 
   test("Cascading direction: All submenus open to side='left' to prevent overlapping parent/grandparent menus (Linear pattern)", async () => {

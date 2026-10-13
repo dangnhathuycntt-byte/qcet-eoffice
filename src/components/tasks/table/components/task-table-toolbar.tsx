@@ -47,11 +47,11 @@ export const DISPLAY_PROPERTY_OPTIONS: Array<{
 
 export const DEFAULT_DISPLAY_PROPERTIES: TableColumnVisibility = {
   code: false,
-  department: true,
+  department: false,
   priority: true,
   leadAssignee: true,
   createdAt: true,
-  startDate: true,
+  startDate: false,
   dueDate: true,
   subtasks: true,
   coAssignees: false,
@@ -73,9 +73,9 @@ import { getSystemReferenceDate } from "../utils/table-date-helpers";
 import {
   isTaskAssignedToUser,
   isTaskOrSubtaskDueToday,
-  isTaskOrSubtaskOverdue,
   isTaskOrSubtaskPendingReview,
 } from "../utils/table-filter-engine";
+import { isOpenTaskOverdue } from "@/lib/workspace-metrics-aggregator";
 import {
   filterTasksByAcademicMonthStrict,
   ACADEMIC_MONTH_ORDER,
@@ -115,6 +115,7 @@ export function aggregateFilterCounts(
   }
 ): Record<SmartFilterTab, number> {
   const refDate = options?.referenceDate || getSystemReferenceDate();
+  const refDateIso = refDate instanceof Date ? refDate.toISOString().slice(0, 10) : refDate;
   const sourceTasks =
     options?.month !== undefined &&
     options?.month !== "ALL" &&
@@ -142,7 +143,7 @@ export function aggregateFilterCounts(
     ) {
       counts.my_tasks++;
     }
-    if (isTaskOrSubtaskOverdue(task, refDate)) {
+    if (isOpenTaskOverdue(task, refDateIso)) {
       counts.overdue++;
     }
     if (isTaskOrSubtaskPendingReview(task)) {
@@ -263,7 +264,7 @@ export function TaskTableViewOptionsPopover({
       ariaLabel={ariaLabel}
       title="Tùy chọn hiển thị (View options)"
       sheetTitle="Hiển thị"
-      width="w-[280px]"
+      width="w-64"
       flush
       scrollable={false}
       trigger={
@@ -382,13 +383,10 @@ export function TaskTableViewOptionsPopover({
                 </div>
 
                 {/* 4. Footer: Reset & Default */}
-                <div className="flex items-center justify-end px-3 py-2.5 border-t border-border/50 text-xs">
-                  <Pressable
-                    onClick={onReset}
-                    className="text-foreground/80 hover:text-foreground transition-colors"
-                  >
+                <div className="flex items-center justify-end px-2 py-1.5 border-t border-border/50">
+                  <Button variant="ghost" size="xs" onClick={onReset}>
                     Đặt lại
-                  </Pressable>
+                  </Button>
                 </div>
       </div>
     </ListToolbarPopover>
@@ -421,7 +419,7 @@ function CustomSelectMenu<T extends string>({
       onValueChange={(next) => {
         if (next) onChange(next as T);
       }}
-      className="w-32"
+      className="w-32 text-xs"
       positionerClassName="z-50"
     />
   );
@@ -609,7 +607,7 @@ export function TaskTableToolbar({
       {/* 1. GIAO DIỆN DI ĐỘNG (< 768px / md:hidden): Streamlined Mobile Task Bar  */}
       {/* ========================================================================= */}
       <div className="md:hidden flex flex-col gap-2.5">
-        {/* Hàng 1: Ô tìm kiếm di động tối ưu cảm ứng (min-h-[44px]) */}
+        {/* Hàng 1: Ô tìm kiếm di động */}
         <div className="relative w-full">
           {loading ? (
             <Loader2
@@ -627,20 +625,22 @@ export function TaskTableToolbar({
             placeholder="Tìm theo tên, mã nhiệm vụ..."
             disabled={loading}
             aria-label="Tìm kiếm nhiệm vụ"
-            className="w-full min-h-[44px] h-11 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
+            className="w-full h-9 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
           />
           {localQuery && (
-            <Pressable
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={handleClearSearch}
               aria-label="Xóa từ khóa tìm kiếm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+              className="absolute right-1 top-1/2 -translate-y-1/2"
             >
-              <X className="size-4" />
-            </Pressable>
+              <X />
+            </Button>
           )}
         </div>
 
-        {/* Hàng 2: Quick Filter Chips cuộn ngang mượt mà (Apple HIG / WCAG 2.2 min 44px) */}
+        {/* Hàng 2: Quick Filter Chips cuộn ngang mượt mà  */}
         <div
           role="tablist"
           aria-label="Lọc nhanh nhiệm vụ trên di động"
@@ -652,7 +652,7 @@ export function TaskTableToolbar({
             aria-selected={activeTab === "all"}
             onClick={() => onTabChange("all")}
             className={cn(
-              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
+              "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
               activeTab === "all"
                 ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
@@ -670,7 +670,7 @@ export function TaskTableToolbar({
             aria-selected={activeTab === "my_tasks"}
             onClick={() => onTabChange("my_tasks")}
             className={cn(
-              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
+              "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
               activeTab === "my_tasks"
                 ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
@@ -688,7 +688,7 @@ export function TaskTableToolbar({
             aria-selected={activeTab === "review"}
             onClick={() => onTabChange("review")}
             className={cn(
-              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
+              "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
               activeTab === "review"
                 ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
@@ -707,7 +707,7 @@ export function TaskTableToolbar({
               aria-selected={activeTab === "overdue"}
               onClick={() => onTabChange("overdue")}
               className={cn(
-                "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
+                "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
                 activeTab === "overdue"
                   ? "bg-destructive text-destructive-foreground font-semibold shadow-2xs"
                   : "border border-destructive/20 bg-danger-soft text-destructive font-medium"
@@ -721,14 +721,14 @@ export function TaskTableToolbar({
           )}
         </div>
 
-        {/* Hàng 3: Thanh nút bấm chức năng di động (min 44px touch targets) */}
+        {/* Hàng 3: Thanh nút bấm chức năng di động  */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex items-center gap-1.5">
             {/* Nút Bộ lọc mở Bottom Sheet */}
             <Pressable
               onClick={() => setIsMobileFilterOpen(true)}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation active:scale-[0.98] shadow-2xs",
+                "inline-flex items-center justify-center gap-1.5 min-h-8 px-3.5 rounded-xl border text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation active:scale-[0.98] shadow-2xs",
                 activeAdvancedFilterCount > 0
                   ? "border-primary/40 bg-primary/10 text-primary font-semibold"
                   : "border-border/80 bg-card text-foreground hover:bg-muted"
@@ -758,7 +758,7 @@ export function TaskTableToolbar({
               isCustomized={isDisplayCustomized}
               onReset={handleResetDisplayProperties}
               ariaLabel="Tùy chọn hiển thị"
-              triggerClassName="inline-flex size-[44px] min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs relative"
+              triggerClassName="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs relative"
             />
 
             {/* Nút Sắp xếp nhanh di động */}
@@ -773,7 +773,7 @@ export function TaskTableToolbar({
                       : "dueDate";
                   onSort(nextSort);
                 }}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation active:scale-[0.98] shadow-2xs hover:bg-muted"
+                className="inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation active:scale-[0.98] shadow-2xs hover:bg-muted"
                 aria-label="Sắp xếp danh sách công việc"
               >
                 <ArrowUpDown className="size-4 text-muted-foreground" />
@@ -796,7 +796,7 @@ export function TaskTableToolbar({
             {canCreateTask && onAddTask && (
               <Pressable
                 onClick={onAddTask}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-colors hover:bg-muted touch-manipulation"
+                className="inline-flex items-center justify-center gap-1.5 min-h-8 px-3.5 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-colors hover:bg-muted touch-manipulation"
                 aria-label="Tạo việc mới"
               >
                 <Plus className="size-4 text-muted-foreground" />
@@ -834,7 +834,7 @@ export function TaskTableToolbar({
                 </div>
                 <Pressable
                   onClick={() => setIsMobileFilterOpen(false)}
-                  className="inline-flex size-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label="Đóng bảng bộ lọc"
                 >
                   <X className="size-5" />
@@ -852,7 +852,7 @@ export function TaskTableToolbar({
                       key={tab.id}
                       onClick={() => onTabChange(tab.id)}
                       className={cn(
-                        "inline-flex items-center justify-between min-h-[44px] px-3 rounded-xl border text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation active:scale-[0.98]",
+                        "inline-flex items-center justify-between min-h-8 px-3 rounded-xl border text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation active:scale-[0.98]",
                         activeTab === tab.id
                           ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
                           : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
@@ -880,7 +880,7 @@ export function TaskTableToolbar({
                     <select
                       value={selectedDepartment}
                       onChange={(e) => onDepartmentChange(e.target.value)}
-                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                      className="w-full min-h-8 pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                     >
                       {departmentOptions.map((dept) => (
                         <option key={dept.id} value={dept.id}>
@@ -907,7 +907,7 @@ export function TaskTableToolbar({
                         const val = e.target.value;
                         activeOnMonthChange(val === "ALL" ? "ALL" : Number(val));
                       }}
-                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                      className="w-full min-h-8 pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                     >
                       <option value="ALL">Cả năm học (Tất cả các tháng)</option>
                       {ACADEMIC_MONTH_ORDER.map((m) => {
@@ -938,7 +938,7 @@ export function TaskTableToolbar({
                         const [field] = e.target.value.split("_");
                         onSort(field);
                       }}
-                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                      className="w-full min-h-8 pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                     >
                       <option value="dueDate_asc">Hạn chót (Tăng dần - Sớm nhất)</option>
                       <option value="dueDate_desc">Hạn chót (Giảm dần - Muộn nhất)</option>
@@ -952,19 +952,13 @@ export function TaskTableToolbar({
 
               {/* Footer Actions */}
               <div className="flex items-center gap-2 pt-2 border-t border-border/60">
-                <Pressable
-                  onClick={handleResetMobileFilters}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors active:scale-[0.98]"
-                >
-                  <RotateCcw className="size-3.5 text-muted-foreground" />
+                <Button variant="secondary" size="sm" className="flex-1" onClick={handleResetMobileFilters}>
+                  <RotateCcw className="text-muted-foreground" />
                   <span>Đặt lại bộ lọc</span>
-                </Pressable>
-                <Pressable
-                  onClick={() => setIsMobileFilterOpen(false)}
-                  className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/95 transition-colors active:scale-[0.98]"
-                >
-                  <span>Áp dụng</span>
-                </Pressable>
+                </Button>
+                <Button size="sm" className="flex-1" onClick={() => setIsMobileFilterOpen(false)}>
+                  Áp dụng
+                </Button>
               </div>
             </div>
           </div>

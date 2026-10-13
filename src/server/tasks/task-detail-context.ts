@@ -144,17 +144,17 @@ export function authorizeSubTasks(
 /**
  * Compute aggregate progress/count from raw (unfiltered) sub-tasks.
  * These numbers reflect the real business state, not the user's access scope.
+ * Việc con đã hủy không tính, cùng cách với recalculateParentTaskProgress ở server.
  */
 export function computeRawSubTaskAggregates(rawSubTasks: any[]): {
   totalSubTasks: number;
   completedSubTasks: number;
 } {
-  const totalSubTasks = rawSubTasks.length;
-  const completedSubTasks = rawSubTasks.filter((st: any) => {
-    if (!st || typeof st !== 'object') return false;
-    const s = String(st.status || '').toUpperCase();
-    return s === 'COMPLETED';
-  }).length;
+  const active = rawSubTasks.filter(
+    (st: any) => st && typeof st === 'object' && String(st.status || '').toUpperCase() !== 'CANCELLED'
+  );
+  const totalSubTasks = active.length;
+  const completedSubTasks = active.filter((st: any) => String(st.status || '').toUpperCase() === 'COMPLETED').length;
 
   return { totalSubTasks, completedSubTasks };
 }

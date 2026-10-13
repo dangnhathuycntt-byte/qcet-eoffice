@@ -11,6 +11,38 @@ export interface TaskActionResult<T = unknown> {
 }
 
 /**
+ * Lỗi từ API thao tác nhiệm vụ: đọc được cả dạng `{ error, message }` lẫn Problem Details (`detail`, `title`)
+ * mà các route hành động trả về. Xung đột phiên bản (412) đổi sang câu tiếng Việt thay cho thông điệp kỹ thuật.
+ */
+async function readActionError(res: Response, fallback: string): Promise<TaskActionResult<never>> {
+  const json = await res.json().catch(() => ({} as Record<string, any>));
+  const nested = typeof json?.error === "object" && json.error ? json.error : null;
+  const code: string | undefined = json?.code || nested?.code;
+  let error: string =
+    (typeof json?.reason === "string" && json.reason) ||
+    (typeof json?.detail === "string" && json.detail) ||
+    (typeof json?.error === "string" && json.error) ||
+    nested?.message ||
+    json?.message ||
+    json?.title ||
+    `${fallback} (${res.status})`;
+  if (res.status === 412) {
+    error = "Nhiệm vụ vừa được cập nhật ở nơi khác. Vui lòng tải lại trang rồi thử lại.";
+  } else if (code === "VALIDATION_ERROR") {
+    const first = json?.fieldErrors ? Object.values(json.fieldErrors as Record<string, string[]>).flat()[0] : undefined;
+    error = first || json?.invalidParams?.[0]?.reason || "Dữ liệu gửi lên không hợp lệ";
+  }
+  return {
+    ok: false,
+    error,
+    code,
+    fromStatus: json?.fromStatus,
+    toStatus: json?.toStatus,
+    reason: json?.reason,
+  };
+}
+
+/**
  * Shared Task Action Layer (Plan v2 §13 / REQ-20 / Task Actions Engine)
  * Consolidates all task mutations into dedicated, typed domain commands.
  * All surfaces (Table, Context Menu, Detail View, Kanban) route through this layer.
@@ -49,17 +81,7 @@ export async function updateTaskStatus(
       }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.reason || errJson.message || `Lỗi cập nhật trạng thái (${res.status})`,
-        code: errJson.code,
-        fromStatus: errJson.fromStatus,
-        toStatus: errJson.toStatus,
-        reason: errJson.reason,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi cập nhật trạng thái");
 
     const json = await res.json().catch(() => ({}));
     return { ok: true, data: json.data || json };
@@ -98,14 +120,7 @@ export async function submitTaskResult(
       body: JSON.stringify(payload),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi nộp kết quả (${res.status})`,
-        code: errJson.code,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi nộp kết quả");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -146,14 +161,7 @@ export async function approveTask(
       body: JSON.stringify(options || {}),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi phê duyệt nhiệm vụ (${res.status})`,
-        code: errJson.code,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi phê duyệt nhiệm vụ");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -182,14 +190,7 @@ export async function cancelTask(
       body: JSON.stringify({ reason, expectedVersion }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi hủy nhiệm vụ (${res.status})`,
-        code: errJson.code,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi hủy nhiệm vụ");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -218,14 +219,7 @@ export async function startTask(
       body: JSON.stringify({ note, expectedVersion }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi bắt đầu nhiệm vụ (${res.status})`,
-        code: errJson.code,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi bắt đầu nhiệm vụ");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -261,14 +255,7 @@ export async function updateTaskProgress(
       }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi cập nhật tiến độ (${res.status})`,
-        code: errJson.code,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi cập nhật tiến độ");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -297,13 +284,7 @@ export async function updateTaskPriority(
       }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi cập nhật độ ưu tiên (${res.status})`,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi cập nhật độ ưu tiên");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -332,13 +313,7 @@ export async function updateTaskAssignee(
       }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi phân công người chủ trì (${res.status})`,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi phân công người chủ trì");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -371,19 +346,7 @@ export async function updateTaskStartDate(
       }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      const errorMessage =
-        (typeof errJson?.error === 'object' && errJson?.error?.message) ||
-        (typeof errJson?.error === 'string' && errJson.error) ||
-        errJson?.message ||
-        `Lỗi thay đổi ngày bắt đầu (${res.status})`;
-      return {
-        ok: false,
-        error: errorMessage,
-        code: errJson?.code || errJson?.error?.code,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi thay đổi ngày bắt đầu");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
@@ -416,22 +379,32 @@ export async function updateTaskDueDate(
       }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      const errorMessage =
-        (typeof errJson?.error === 'object' && errJson?.error?.message) ||
-        (typeof errJson?.error === 'string' && errJson.error) ||
-        errJson?.message ||
-        `Lỗi thay đổi hạn hoàn thành (${res.status})`;
-      return {
-        ok: false,
-        error: errorMessage,
-        code: errJson?.code || errJson?.error?.code,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi thay đổi hạn hoàn thành");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
+/** POST /api/tasks/[id]/actions/remind — đôn đốc: gửi nhắc nhở chính thức tới người thực hiện (có nhật ký, tăng version). */
+export async function remindTask(
+  taskId: string,
+  expectedVersion: number
+): Promise<TaskActionResult<{ taskId: string; version: number }>> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/actions/remind`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expectedVersion }),
+    });
+    if (!res.ok) return readActionError(res, "Lỗi gửi nhắc nhở");
+    const json = await res.json().catch(() => ({}));
+    return { ok: true, data: json.data || json };
   } catch (err) {
     return {
       ok: false,
@@ -455,13 +428,7 @@ export async function deleteTask(
       }),
     });
 
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      return {
-        ok: false,
-        error: errJson.error || errJson.message || `Lỗi lưu trữ nhiệm vụ (${res.status})`,
-      };
-    }
+    if (!res.ok) return readActionError(res, "Lỗi lưu trữ nhiệm vụ");
 
     const data = await res.json().catch(() => ({}));
     return { ok: true, data };

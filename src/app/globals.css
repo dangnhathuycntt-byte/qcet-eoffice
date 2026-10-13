@@ -799,10 +799,25 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* iPhone tự phóng trang khi chạm ô nhập dưới 16px: ép ô nhập lên 16px. Ô vốn chữ to hơn (tên nhiệm vụ 20px)
+     gắn data-large-text để giữ cỡ của nó, không bị ép nhỏ lại khi đang sửa. */
   @media (max-width: 639px) {
-    input, select, textarea {
+    input:not([data-large-text]), select, textarea:not([data-large-text]) {
       font-size: 16px !important;
     }
+  }
+}
+
+/* Toast trên điện thoại: giữ giữa đáy màn hình (vùng ngón cái, như Material snackbar) nhưng là viên gọn co theo
+   nội dung thay vì trải hết bề ngang. Bộ chọn dài hơn của sonner để thắng CSS sonner chèn lúc chạy. */
+@media (max-width: 600px) {
+  [data-sonner-toaster][data-x-position='center'] [data-sonner-toast] {
+    width: fit-content;
+    max-width: calc(100% - var(--mobile-offset-left) * 2);
+    margin-inline: auto;
+  }
+  [data-sonner-toaster][data-x-position='center'] [data-sonner-toast][data-styled='true'] {
+    padding: 10px 14px;
   }
 }
 

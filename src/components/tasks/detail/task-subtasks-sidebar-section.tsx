@@ -155,7 +155,7 @@ export function TaskSubtasksSidebarSection({
           <button
             type="button"
             onClick={onAddSubtask}
-            className="inline-flex items-center gap-1 h-7 max-md:h-11 px-1.5 -mr-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+            className="inline-flex items-center gap-1 h-7 px-1.5 -mr-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             title="Tạo việc con"
           >
             <Plus className="size-3.5" />

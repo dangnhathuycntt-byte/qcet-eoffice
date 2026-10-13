@@ -120,6 +120,12 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
     assert.equal(isRouteActive("/", "/", new URLSearchParams("zone=tasks")), false);
   });
 
+  test("resolveBreadcrumb: trang con tĩnh của Nhiệm vụ hiện tên riêng, chi tiết nhiệm vụ vẫn là Nhiệm vụ", () => {
+    assert.deepStrictEqual(resolveBreadcrumb("/tasks/unit-requests"), ["QCET E-Office", "Yêu cầu phối hợp"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/tasks/templates/"), ["QCET E-Office", "Mẫu và lặp lại"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/tasks/cmv59mo6d000lvioh2fm0435u"), ["QCET E-Office", CANONICAL_ROUTES.find((r) => r.href === "/tasks")?.label]);
+  });
+
   test("resolveBreadcrumb: maps routes and query states to clean Vietnamese titles", () => {
     // T88: the breadcrumb title is the canonical registry label for the route,
     // read from the registry here so the expectation can never drift again.

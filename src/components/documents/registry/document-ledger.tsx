@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
-import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check, ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
 import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import type { OfficialDocument } from "@/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -19,8 +19,19 @@ import {
 } from "@/components/ui/list-toolbar";
 import { ActiveFilterBar, FilterSegmentChip } from "@/components/workspace/components/active-filter-breadcrumb";
 import { FilterIconDept, FilterIconMonth, FilterIconPriority, FilterIconStatus } from "@/components/dashboard/task-filter-icons";
-import { TaskIconDepartment, TaskIconDisplay, TaskIconPriority, TaskIconSearch, TaskIconStatus, TaskIconTime } from "@/lib/icons/task-icons";
-import { IconSidebarPanel } from "@/components/layout/sidebar-rounded-icons";
+import {
+  TaskIconDepartment,
+  TaskIconDisplay,
+  TaskIconDue,
+  TaskIconDueClosed,
+  TaskIconDueOverdue,
+  TaskIconDueSoon,
+  TaskIconPriority,
+  TaskIconSearch,
+  TaskIconStatus,
+  TaskIconTime,
+} from "@/lib/icons/task-icons";
+import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { cn } from "@/lib/utils";
 import { getSelectionGroupPositions, type SelectionGroupPosition } from "@/lib/selection-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -336,13 +347,7 @@ export function DocumentLedgerToolbar({
     // Điện thoại (< md) hai hàng như Linear / trang Nhiệm vụ: [menu · tiêu đề · +] rồi [nhóm · tìm · lọc]; thứ tự đổi bằng order
     <div data-slot="document-ledger-toolbar" className="flex items-center gap-1.5 max-md:flex-wrap max-md:gap-y-0">
       {/* Điện thoại: nút mở sidebar thay cho thanh trên cùng (như Linear) */}
-      <Pressable
-        onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
-        aria-label="Mở menu"
-        className="-ml-1.5 flex size-8 max-md:size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:hidden"
-      >
-        <IconSidebarPanel size={14} />
-      </Pressable>
+      <MobileMenuButton className="-ml-1.5 md:hidden" />
       {/* Tiêu đề không bị cắt: pane hẹp thì ô tìm co lại trước (min 96px), không phải tiêu đề */}
       <div className="flex min-w-fit flex-1 items-center pr-3 max-md:h-11">
         <h1 className="whitespace-nowrap text-compact font-semibold text-foreground select-none">{title}</h1>
@@ -352,7 +357,7 @@ export function DocumentLedgerToolbar({
         onClick={onPrimaryAction}
         aria-label={primaryActionLabel}
         title={primaryActionLabel}
-        className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-11 max-md:rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
+        className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-8 max-md:rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
       >
         <Plus className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="max-md:sr-only">{primaryActionLabel}</span>
@@ -366,7 +371,7 @@ export function DocumentLedgerToolbar({
           <MenuRoot open={isViewOpen} onOpenChange={setIsViewOpen}>
             <MenuTrigger
               aria-label={`Nhóm văn bản: ${currentView.label}`}
-              className="inline-flex h-7 max-md:h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-foreground outline-none touch-manipulation"
+              className="inline-flex h-7 max-md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-foreground outline-none touch-manipulation"
             >
               <span>{currentView.label}</span>
               <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -606,13 +611,11 @@ function EmptyCell({ label }: { label: string }) {
 function DueCell({ doc, today, filterYear }: { doc: OfficialDocument; today: string; filterYear?: number }) {
   if (!doc.dueDate) return <EmptyCell label="Chưa có hạn xử lý" />;
   const note = getLedgerDueNote(doc.dueDate, isLedgerDone(doc.status), today);
-  const Icon = !note ? CalendarCheck : note.tone === "danger" ? CalendarX2 : note.tone === "warning" ? CalendarClock : Calendar;
+  const Icon = !note ? TaskIconDueClosed : note.tone === "danger" ? TaskIconDueOverdue : note.tone === "warning" ? TaskIconDueSoon : TaskIconDue;
   return (
-    <span className="inline-flex min-w-0 items-center gap-1 tabular-nums text-xs" title={`Hạn ${formatLedgerDate(doc.dueDate)}${note ? ` · ${note.text}` : ""}`}>
+    <span className="inline-flex min-w-0 items-center gap-2 tabular-nums text-xs" title={`Hạn ${formatLedgerDate(doc.dueDate)}${note ? ` · ${note.text}` : ""}`}>
       <Icon
-        className={cn("size-3.5 shrink-0", note?.tone === "danger" ? "text-destructive" : note?.tone === "warning" ? "text-warning" : "text-muted-foreground/70")}
-        strokeWidth={1.5}
-        aria-hidden="true"
+        className={cn("size-4 shrink-0", note?.tone === "danger" ? "text-destructive" : note?.tone === "warning" ? "text-warning" : "text-muted-foreground/70")}
       />
       <span className={cn("truncate font-medium", note ? "text-foreground" : "text-muted-foreground")}>{formatLedgerCellDate(doc.dueDate, filterYear)}</span>
       {note ? <span className="sr-only">{note.text}</span> : null}

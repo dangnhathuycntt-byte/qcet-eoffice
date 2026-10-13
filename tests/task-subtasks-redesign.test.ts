@@ -124,10 +124,20 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
     });
   });
 
-  describe("2. Tabs — Only Tổng quan + Hoạt động", () => {
+  describe("2. Tabs — Tổng quan + Lịch sử", () => {
     it("has overview and activity tabs", () => {
       assert.ok(detailPageContent.includes('activeTab === "overview"'));
       assert.ok(detailPageContent.includes('activeTab === "activity"'));
+    });
+
+    it("bình luận kiểu Notion ngay dưới tên nhiệm vụ, trước mô tả; tab Lịch sử chỉ còn nhật ký", () => {
+      const overview = detailPageContent.slice(detailPageContent.indexOf('activeTab === "overview"'), detailPageContent.indexOf('activeTab === "activity" && ('));
+      const identity = overview.indexOf("<TaskIdentityBlock");
+      const comments = overview.indexOf("<TaskComments");
+      const editor = overview.indexOf("<TaskBlockEditor");
+      assert.ok(identity >= 0 && identity < comments && comments < editor);
+      const history = detailPageContent.slice(detailPageContent.indexOf('activeTab === "activity" && ('));
+      assert.ok(!history.includes("<TaskComments"));
     });
 
     it("does NOT have subtasks tab", () => {

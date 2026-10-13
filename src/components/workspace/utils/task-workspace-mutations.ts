@@ -165,9 +165,7 @@ export function applyOptimisticStatusChange(
 ): SchoolTask[] {
   const updatedTasks = tasks.map((st) => {
     if (st.id === taskId) {
-      const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
-        newStatus === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS";
-      return { ...st, status: schoolStatus };
+      return { ...st, status: newStatus };
     }
     const updatedSubs = (st.subTasks || []).map((sub) =>
       sub.id === taskId ? { ...sub, status: newStatus } : sub
@@ -176,6 +174,20 @@ export function applyOptimisticStatusChange(
   });
 
   return updatedTasks.map((t) => computeSchoolTaskRollup(t));
+}
+
+/**
+ * Hoàn tác `applyOptimisticStatusChange` cho đúng một nhiệm vụ/nhiệm vụ con (các dòng khác giữ nguyên,
+ * kể cả thay đổi lạc quan đang chờ của chúng khi đổi trạng thái hàng loạt), rồi tính lại tiến độ tổng hợp.
+ */
+export function revertOptimisticStatusChange(
+  tasks: SchoolTask[],
+  taskId: string,
+  previous: { status: TaskStatus; progressPercent?: number }
+): SchoolTask[] {
+  const patch: Partial<SchoolTask> = { status: previous.status };
+  if (previous.progressPercent !== undefined) patch.progressPercent = previous.progressPercent;
+  return applyOptimisticTaskPatch(tasks, taskId, patch, { status: previous.status }).map((t) => computeSchoolTaskRollup(t));
 }
 
 /**

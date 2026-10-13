@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
@@ -34,7 +35,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
 
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}/people`, { cache: "no-store" });
+      const res = await fetchWithRetry(`/api/tasks/${taskId}/people`, { cache: "no-store" });
       if (!res.ok) {
         setView(null);
         return;

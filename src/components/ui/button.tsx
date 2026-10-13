@@ -28,13 +28,15 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "h-11 sm:h-8.5 gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-md has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
-        xs: "h-11 sm:h-7 gap-1 px-2.5 text-xs font-medium rounded-sm has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        sm: "h-11 sm:h-7 gap-1.5 rounded-lg px-3 text-xs font-medium has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
+          "h-9 sm:h-8.5 gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-md has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+        xs: "h-8 sm:h-7 gap-1 px-2.5 text-xs font-medium rounded-sm has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-8 sm:h-7 gap-1.5 rounded-lg px-3 text-xs font-medium has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-11 gap-2 px-6 text-base font-medium rounded-md has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
-        icon: "size-11 sm:size-8.5 rounded-md",
-        "icon-xs": "size-11 sm:size-7 rounded-sm [&_svg:not([class*='size-'])]:size-3.5",
-        "icon-sm": "size-11 sm:size-7 rounded-sm",
+        icon: "size-9 sm:size-8.5 rounded-md",
+        "icon-xs": "size-8 sm:size-7 rounded-sm [&_svg:not([class*='size-'])]:size-3.5",
+        "icon-sm": "size-8 sm:size-7 rounded-sm",
+        // Nút icon trên header trang (mở menu, liên kết, panel thuộc tính): 32px, icon 14px, chuẩn theo trang Nhiệm vụ
+        "icon-md": "size-8 rounded-md [&_svg:not([class*='size-'])]:size-3.5",
         "icon-lg": "size-11 rounded-md",
       },
     },

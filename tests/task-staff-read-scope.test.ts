@@ -8,7 +8,8 @@ import { AssignmentStatus, JobCatalogGroup, TaskActorRole, TaskScope, TaskStatus
 import { prisma } from '../src/lib/prisma';
 import { loadAuthorizationContext } from '../src/server/authorization/authorization-context-service';
 import { buildTaskReadWhere } from '../src/server/tasks/task-query-service';
-import { canReadTask, dbReadScope } from '../src/server/tasks/staff-read-scope';
+import { canReadTask, dbReadScope, readableTaskIds } from '../src/server/tasks/staff-read-scope';
+import { authorizeOnTask } from '../src/server/tasks/authorize-on-task';
 
 const runId = `t11_${Date.now()}`;
 const u: Record<string, string> = {};
@@ -115,6 +116,21 @@ describe('T-11 / D07 người thường chỉ thấy phần của mình', () => 
 
     const ctxHead = await loadAuthorizationContext(u.head);
     assert.equal(await canReadTask(ctxHead, (await rawTask('childA')) as never, dbReadScope(ctxHead)), true);
+  });
+
+  test('GET chi tiết việc cha chỉ trả việc con đọc được (không lộ việc con của người khác)', async () => {
+    const children = [await rawTask('childA'), await rawTask('childB')];
+    const ctxB = await loadAuthorizationContext(u.b);
+    assert.deepEqual([...(await readableTaskIds(ctxB, children, dbReadScope(ctxB)))], [t.childB]);
+    const ctxA = await loadAuthorizationContext(u.a);
+    assert.deepEqual([...(await readableTaskIds(ctxA, children, dbReadScope(ctxA)))].sort(), [t.childA, t.childB].sort());
+  });
+
+  test('bình luận, tiêu chí… (authorizeOnTask task.read) áp cùng phạm vi đọc', async () => {
+    await assert.rejects(authorizeOnTask({ id: u.c } as never, t.parent, 'task.read'), /mình tham gia/);
+    await assert.rejects(authorizeOnTask({ id: u.b } as never, t.childA, 'task.read'), /mình tham gia/);
+    assert.equal((await authorizeOnTask({ id: u.b } as never, t.parent, 'task.read')).id, t.parent);
+    assert.equal((await authorizeOnTask({ id: u.head } as never, t.childA, 'task.read')).id, t.childA);
   });
 });
 

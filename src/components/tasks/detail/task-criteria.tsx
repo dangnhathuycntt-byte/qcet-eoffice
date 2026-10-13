@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -56,7 +57,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
 
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}/criteria`, { cache: "no-store" });
+      const res = await fetchWithRetry(`/api/tasks/${taskId}/criteria`, { cache: "no-store" });
       if (!res.ok) throw new Error(await readError(res, "Không tải được tiêu chí hoàn thành"));
       setView(await res.json());
       setError(null);
@@ -114,13 +115,8 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
     }
   };
 
-  if (!view) {
-    return error ? (
-      <p role="alert" className="px-4 text-xs text-destructive">
-        {error}
-      </p>
-    ) : null;
-  }
+  // Chưa tải được (kể cả sau khi tự thử lại lúc quá tải) thì không chiếm chỗ, như các khối tùy chọn khác
+  if (!view) return null;
 
   // Không có tiêu chí và không ai thêm được thì không chiếm chỗ trên trang.
   if (view.criteria.length === 0 && !view.canEdit && !editing) return null;

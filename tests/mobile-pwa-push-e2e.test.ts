@@ -351,8 +351,8 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       `Unexpected start_url: ${manifest.start_url}`
     );
     assert.ok(
-      ['#1e3a8a', '#fbfbfb', '#0f172a'].includes(manifest.theme_color as string),
-      'Theme color must be standard blue, slate-900, or light #fbfbfb'
+      manifest.theme_color === '#EFEFF0',
+      'Theme color must match the sidebar canvas (--gray-1 #EFEFF0)'
     );
 
     // Check icons

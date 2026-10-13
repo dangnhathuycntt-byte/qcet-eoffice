@@ -63,6 +63,13 @@ export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientP
     setDept(nextDept !== "ALL" ? nextDept : null, { shallow: true, replace: true });
   };
 
+  // Tải lại qua trang server (cùng nguồn dữ liệu đầy đủ với lần tải đầu: ngày bắt đầu, việc con…);
+  // API danh sách chỉ trả DTO rút gọn nên nếu tự fetch thì các cột đó bị trống sau khi lưu trữ/đổi phạm vi.
+  const [isRefreshing, startRefresh] = React.useTransition();
+  const handleRefresh = React.useCallback(() => {
+    startRefresh(() => router.refresh());
+  }, [router]);
+
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
       router.push(`/tasks/${task.id}`);
@@ -79,6 +86,8 @@ export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientP
         onDepartmentChange={handleDepartmentChange}
         onSelectTask={handleSelectTask}
         initialTasks={initialTasks}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
         workspaceQuery={workspaceQuery}
         defaultTaskTab="active"
       />

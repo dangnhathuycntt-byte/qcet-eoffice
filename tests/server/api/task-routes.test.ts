@@ -615,9 +615,9 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
           cookie: `${SESSION_COOKIE_NAME}=${leaderAToken}`,
           origin: 'http://localhost:3000',
         },
+        // Tiến độ không đi qua PATCH (dùng actions/update-progress); PATCH chỉ sửa metadata
         body: JSON.stringify({
           title: 'Nhiệm vụ phòng A (Đã cập nhật)',
-          progress: 60,
           expectedVersion: currentVersion,
         }),
       });
@@ -626,7 +626,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       const json = await res.json();
       assert.strictEqual(json.success, true);
       assert.strictEqual(json.task.title, 'Nhiệm vụ phòng A (Đã cập nhật)');
-      assert.strictEqual(json.task.progress, 60);
+      assert.strictEqual(json.task.version, currentVersion + 1);
     });
   });
 

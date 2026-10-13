@@ -45,14 +45,14 @@ describe("view trang Nhiệm vụ", () => {
     assert.equal(isUnfinishedTask({ status: "CANCELLED" }), false);
   });
 
-  test("matchesTaskTab: trễ hạn dùng đúng định nghĩa do nơi gọi cấp", () => {
+  test("matchesTaskTab: trễ hạn dùng đúng định nghĩa do nơi gọi cấp; Đang thực hiện không chứa việc trễ", () => {
     const overdue = { status: "IN_PROGRESS", late: true };
     const onTime = { status: "NOT_STARTED", late: false };
     const done = { status: "COMPLETED", late: false };
     const isOverdue = (t: { late: boolean }) => t.late;
 
     assert.deepEqual([overdue, onTime, done].filter((t) => matchesTaskTab(t, "all", isOverdue)).length, 3);
-    assert.deepEqual([overdue, onTime, done].filter((t) => matchesTaskTab(t, "active", isOverdue)), [overdue, onTime]);
+    assert.deepEqual([overdue, onTime, done].filter((t) => matchesTaskTab(t, "active", isOverdue)), [onTime]);
     assert.deepEqual([overdue, onTime, done].filter((t) => matchesTaskTab(t, "overdue", isOverdue)), [overdue]);
     assert.deepEqual([overdue, onTime, done].filter((t) => matchesTaskTab(t, "done", isOverdue)), [done]);
   });
@@ -77,7 +77,7 @@ describe("view trang Nhiệm vụ", () => {
       filterDisplayedTasks({ tasks, taskTab, deadline, referenceDate: refDate }).map((t) => t.id);
 
     assert.deepEqual(ids("all"), ["new", "late", "done", "cancel"]);
-    assert.deepEqual(ids("active"), ["new", "late"], "chưa hoàn thành, gồm cả việc Mới");
+    assert.deepEqual(ids("active"), ["new"], "chưa hoàn thành và chưa trễ, gồm cả việc Mới");
     assert.deepEqual(ids("done"), ["done"]);
     assert.deepEqual(ids("overdue"), ids(undefined, "overdue"), "view Trễ hạn = bộ lọc thời hạn Trễ hạn");
     assert.deepEqual(ids("overdue"), ["late"]);

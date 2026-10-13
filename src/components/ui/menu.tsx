@@ -14,6 +14,11 @@ import { useIsPhone } from "@/hooks/use-is-phone";
 export const MENU_ROW_CLASS =
   "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors duration-75 outline-none hover:bg-accent focus-visible:bg-accent";
 
+/**
+ * Hàng chọn giá trị trong Select/Combobox (danh sách có điều hướng phím): mục đang trỏ tới (chuột/phím) nền nhạt,
+ * mục đã chọn nền accent + chữ đậm, không tick. Hai trạng thái khác màu để không lẫn khi trỏ vào mục khác.
+ */
+export const MENU_OPTION_ROW_CLASS = `${MENU_ROW_CLASS} hover:bg-transparent data-[highlighted]:bg-muted data-[selected]:bg-accent data-[selected]:font-medium`;
 /** Khung popup menu: bo góc theo token, không viền, bóng menu. Chuyển động do `MenuPopup` (motion) đảm nhiệm. */
 export const MENU_POPUP_CLASS =
   "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] data-[closed]:hidden";
@@ -237,7 +242,7 @@ export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, 
           <MenuPopup
             className={cn(
               MENU_POPUP_CLASS,
-              "w-auto min-w-[176px] max-w-[320px] max-h-[min(26rem,var(--available-height))] overflow-y-auto",
+              "w-auto min-w-56 max-w-[320px] max-h-[min(26rem,var(--available-height))] overflow-y-auto",
               popupClassName,
               SHEET_POPUP_CLASS
             )}

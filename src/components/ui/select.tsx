@@ -37,7 +37,7 @@ export interface SelectProps {
   "aria-invalid"?: boolean;
   /** Lớp cho Positioner (mặc định `z-30`); truyền `z-50` khi dùng trong modal. */
   positionerClassName?: string;
-  /** compact: 28px trên desktop (44px trên điện thoại), chữ 13px, mục menu ≤ 32px. Mặc định giữ nguyên. */
+  /** compact: 28px trên desktop (32px trên điện thoại), chữ 13px, mục menu ≤ 32px. Mặc định giữ nguyên. */
   compact?: boolean;
 }
 
@@ -49,7 +49,7 @@ function renderItem(option: SelectOption, compact = false) {
       disabled={option.disabled}
       className={cn(
         "flex cursor-pointer items-center rounded-lg px-2.5 text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        compact ? "min-h-11 py-1 text-xs sm:min-h-7" : "py-2 text-sm sm:py-1.5",
+        compact ? "min-h-8 py-1 text-xs sm:min-h-7" : "py-2 text-sm sm:py-1.5",
       )}
     >
       <BaseSelect.ItemText className="min-w-0 truncate">
@@ -122,7 +122,7 @@ export function Select({
         aria-invalid={invalid || ariaInvalid || undefined}
         className={cn(
           "flex w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-secondary outline-none select-none",
-          compact ? "h-11 px-2 text-compact sm:h-7" : "h-12 px-3 text-base sm:h-9 sm:text-sm",
+          compact ? "h-8 px-2 text-compact sm:h-7" : "h-10 px-3 text-base sm:h-9 sm:text-sm",
           "transition-colors duration-100 motion-reduce:transition-none",
           `hover:bg-accent focus-visible:bg-selected ${fieldFocusRingClass} data-[popup-open]:bg-selected`,
           "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",

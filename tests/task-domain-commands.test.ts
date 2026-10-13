@@ -1015,7 +1015,16 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       const json = await res.json();
       assert.strictEqual(json.success, false);
       assert.strictEqual(json.code, "CANONICAL_COMMAND_REQUIRED");
-      assert.match(json.error, /Cấm cập nhật trực tiếp trạng thái.*canonical domain action/);
+      assert.match(json.error, /Cấm cập nhật trực tiếp trạng thái, tiến độ.*canonical domain action/);
+    });
+
+    test("rejects PATCH progress (bypasses update-progress lifecycle) with 400", async () => {
+      for (const body of [{ progress: 100 }, { progressPercent: 100 }]) {
+        const req = makeRequest(`http://localhost:3000/api/tasks/${testTask.id}`, body, creatorToken);
+        const res = await taskPatchRoute(req, { params: Promise.resolve({ id: testTask.id }) });
+        assert.strictEqual(res.status, 400);
+        assert.strictEqual((await res.json()).code, "CANONICAL_COMMAND_REQUIRED");
+      }
     });
 
     test("rejects PATCH approved or resolution manipulation with 400", async () => {

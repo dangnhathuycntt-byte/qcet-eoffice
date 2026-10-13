@@ -29,6 +29,14 @@ export function dbReadScope(ctx: AuthorizationContext): ReadScope {
   };
 }
 
+/** Mã các việc con đọc được (engine + phạm vi D07), cùng điều kiện với trang chi tiết. */
+export async function readableTaskIds(ctx: AuthorizationContext, tasks: Array<{ id: string }>, readScope?: ReadScope): Promise<Set<string>> {
+  const engineAllowed = tasks.filter((t) => authorize(ctx, "task.read", buildTaskResource(t)).allowed);
+  const viaBase = readScope ? engineAllowed.filter((t) => readsViaStaffBase(ctx, t)).map((t) => t.id) : [];
+  const scoped = viaBase.length > 0 && readScope ? await readScope(viaBase) : new Set<string>();
+  return new Set(engineAllowed.filter((t) => !viaBase.includes(t.id) || scoped.has(t.id)).map((t) => t.id));
+}
+
 /** Nhiệm vụ này có được đọc không, tính cả phạm vi D07. `readScope` vắng thì chỉ theo engine. */
 export async function canReadTask(ctx: AuthorizationContext, task: { id: string }, readScope?: ReadScope): Promise<boolean> {
   if (!authorize(ctx, "task.read", buildTaskResource(task)).allowed) return false;

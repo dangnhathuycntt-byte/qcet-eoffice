@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import { AlertOctagon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -38,8 +37,8 @@ export function DestructiveConfirmDialog({
   isConfirming = false,
 }: DestructiveConfirmDialogProps) {
   const handleConfirm = async () => { await onConfirm(); };
-  // Mặc định rơi vào nút an toàn: Enter không vô tình xác nhận xóa.
-  const cancelRef = React.useRef<HTMLButtonElement>(null);
+  // Focus ban đầu vào khung (không phải nút): Enter không vô tình xác nhận xóa, cũng không hiện viền focus dày trên nút Hủy.
+  const panelRef = React.useRef<HTMLDivElement>(null);
 
   return (
     <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -48,41 +47,35 @@ export function DestructiveConfirmDialog({
           className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
         />
         <AlertDialog.Popup
-          initialFocus={cancelRef}
+          initialFocus={panelRef}
           className="fixed inset-0 z-40 flex items-center justify-center p-4 outline-none motion-reduce:transition-none"
         >
-          <div className="bg-card rounded-2xl shadow-dialog border-0 max-w-md w-full p-4 sm:p-6 flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <div className="size-8 rounded-full bg-danger-soft text-destructive flex items-center justify-center shrink-0">
-                <AlertOctagon className="size-4" />
-              </div>
-              <div className="flex flex-col gap-1 min-w-0">
-                <AlertDialog.Title className="text-sm font-semibold text-foreground">
-                  {title}
-                </AlertDialog.Title>
-                <AlertDialog.Description className="text-xs text-muted-foreground leading-relaxed">
-                  {entityName && (
-                    <>{entityLabel}{" "}<span className="font-semibold text-foreground">&ldquo;{entityName}&rdquo;</span>{" "}</>
-                  )}
-                  {description}
-                  {irreversible && (
-                    <span className="block mt-1 text-destructive font-medium">Hành động này không thể hoàn tác.</span>
-                  )}
-                </AlertDialog.Description>
-                {children}
-              </div>
+          {/* Gọn kiểu Linear: không icon, câu "không thể hoàn tác" là chữ phụ cùng đoạn; chỉ nút xác nhận mang màu đỏ */}
+          <div ref={panelRef} tabIndex={-1} className="bg-card rounded-xl shadow-dialog border-0 max-w-sm w-full p-4 flex flex-col gap-4 outline-none">
+            <div className="flex flex-col gap-1 min-w-0">
+              <AlertDialog.Title className="text-sm font-semibold text-foreground">
+                {title}
+              </AlertDialog.Title>
+              <AlertDialog.Description className="text-compact text-muted-foreground leading-relaxed">
+                {entityName && (
+                  <>{entityLabel}{" "}<span className="font-medium text-foreground">&ldquo;{entityName}&rdquo;</span>{" "}</>
+                )}
+                {description}
+                {irreversible && <>{description || entityName ? " " : ""}Không thể hoàn tác.</>}
+              </AlertDialog.Description>
+              {children}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-0">
+            <div className="flex items-center justify-end gap-2">
               <AlertDialog.Close
-                render={<Button ref={cancelRef} variant="secondary" size="default" />}
+                render={<Button variant="ghost" size="sm" />}
                 disabled={isConfirming}
               >
                 {cancelLabel}
               </AlertDialog.Close>
               <Button
                 variant="destructive"
-                size="default"
+                size="sm"
                 onClick={handleConfirm}
                 disabled={isConfirming}
                 className={cn(isConfirming && "opacity-70")}
