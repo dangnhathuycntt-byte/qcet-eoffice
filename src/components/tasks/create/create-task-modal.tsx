@@ -27,6 +27,7 @@ import {
 } from "@/hooks/use-create-task-form";
 import { Pressable } from "@/components/ui/pressable";
 import { SheetKeyboardSync } from "@/components/ui/menu";
+import { useIsPhone } from "@/hooks/use-is-phone";
 
 // Re-export types for downstream consumers
 export type { CreateTaskPriority } from "@/hooks/use-create-task-form";
@@ -118,6 +119,14 @@ export function CreateTaskModal({
   // ── Local UI state ──────────────────────────────────────────
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
   const [personQuery, setPersonQuery] = React.useState("");
+  const isPhone = useIsPhone();
+  // Điện thoại: mở menu ưu tiên/đơn vị (không có ô nhập) thì bỏ focus ô đang gõ để bàn phím không che menu.
+  // Menu chủ trì có ô tìm riêng nên giữ nguyên.
+  React.useEffect(() => {
+    if (!isPhone || !openDropdown || openDropdown === "dri") return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active.matches("input, textarea")) active.blur();
+  }, [isPhone, openDropdown]);
   // Đọc nền tảng sau khi mount để không lệch HTML giữa server và client
   const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
   React.useEffect(() => setModKey(getPlatformModifierKey()), []);

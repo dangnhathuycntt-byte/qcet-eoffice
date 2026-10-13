@@ -16,6 +16,7 @@ import {
 import { Popover } from "@base-ui/react/popover";
 import { fieldFocusRingClass, focusRingClass } from "@/components/ui/focus-ring";
 import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { useIsPhone } from "@/hooks/use-is-phone";
 
 export type DateGranularity = "day" | "month" | "quarter" | "half-year" | "year";
 
@@ -110,6 +111,14 @@ export function VietnameseDatePicker({
   compactWhenEmpty = false,
 }: VietnameseDatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  // Điện thoại: lịch là sheet chỉ để chạm chọn; không tự focus ô ngày (sẽ bật bàn phím che lịch)
+  const isPhone = useIsPhone();
+  React.useEffect(() => {
+    if (!isOpen || !isPhone) return;
+    const active = document.activeElement;
+    // Ô nhập ở nơi gọi (vd. tiêu đề hộp tạo) còn focus sẽ giữ bàn phím mở che lịch: bỏ focus
+    if (active instanceof HTMLElement && active.matches("input, textarea, [contenteditable='true']")) active.blur();
+  }, [isOpen, isPhone]);
   const [mode, setMode] = React.useState<DateGranularity>("day");
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -380,6 +389,7 @@ export function VietnameseDatePicker({
       <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side={side} align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
       <Popover.Popup
         aria-label="Chọn ngày trên lịch"
+        initialFocus={!isPhone}
         className="w-[290px] max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto p-4 text-foreground rounded-2xl border-0 bg-popover shadow-menu max-md:w-full! max-md:max-w-none! max-md:max-h-[80dvh]! max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-4 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+16px)]"
       >
         {/* Điện thoại: thanh kéo + tiêu đề của sheet; desktop dùng nhãn nhỏ bên dưới */}
@@ -394,8 +404,9 @@ export function VietnameseDatePicker({
           <input
             type="text"
             readOnly
+            inputMode="none"
             value={headerInputValue}
-            placeholder="Select date..."
+            placeholder="Chưa chọn ngày"
             className="w-full h-8 px-2.5 text-xs font-sans text-foreground bg-secondary rounded-lg border-0 outline-none focus:bg-selected"
           />
           {hasValue && clearable && (
