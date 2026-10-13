@@ -339,7 +339,7 @@ export function DocumentLedgerToolbar({
       <Pressable
         onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"))}
         aria-label="Mở menu"
-        className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:hidden"
+        className="-ml-1.5 flex size-8 max-md:size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:hidden"
       >
         <IconSidebarPanel size={14} />
       </Pressable>
@@ -352,7 +352,7 @@ export function DocumentLedgerToolbar({
         onClick={onPrimaryAction}
         aria-label={primaryActionLabel}
         title={primaryActionLabel}
-        className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-8 max-md:rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
+        className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-11 max-md:rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
       >
         <Plus className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="max-md:sr-only">{primaryActionLabel}</span>
@@ -366,7 +366,7 @@ export function DocumentLedgerToolbar({
           <MenuRoot open={isViewOpen} onOpenChange={setIsViewOpen}>
             <MenuTrigger
               aria-label={`Nhóm văn bản: ${currentView.label}`}
-              className="inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-foreground outline-none touch-manipulation"
+              className="inline-flex h-7 max-md:h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-foreground outline-none touch-manipulation"
             >
               <span>{currentView.label}</span>
               <ChevronDown className="size-3.5 text-muted-foreground" />

@@ -1,7 +1,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  describeCreateTaskFailure,
   isCreateTaskFormDirty,
+  restoreCreateTaskDraft,
   validateCreateTaskForm,
   type CreateTaskFormData,
 } from "../src/hooks/use-create-task-form";
@@ -71,5 +73,95 @@ describe("isCreateTaskFormDirty — hỏi trước khi đóng", () => {
     const prefilled = { ...blank, title: "Nhiệm vụ từ văn bản", leadAssigneeId: "u-hung", dueDate: "2026-10-30" };
     assert.equal(isCreateTaskFormDirty(prefilled, prefilled), false);
     assert.equal(isCreateTaskFormDirty({ ...prefilled, title: "Nhiệm vụ đã sửa" }, prefilled), true);
+  });
+});
+
+describe("validateCreateTaskForm — cặp ngày", () => {
+  test("ngày bắt đầu sau hạn chót là lỗi, cùng ngày hoặc trước thì hợp lệ", () => {
+    assert.equal(
+      validateCreateTaskForm({ ...valid, startDate: "2026-11-01", dueDate: "2026-10-30" }).startDate,
+      "Ngày bắt đầu không được sau hạn chót.",
+    );
+    assert.equal(validateCreateTaskForm({ ...valid, startDate: "2026-10-30" }).startDate, undefined);
+    assert.equal(validateCreateTaskForm({ ...valid, startDate: "2026-10-01" }).startDate, undefined);
+  });
+
+  test("không có ngày bắt đầu hoặc chuỗi lạ thì không báo lỗi cặp ngày", () => {
+    assert.equal(validateCreateTaskForm({ ...valid, startDate: "" }).startDate, undefined);
+    assert.equal(validateCreateTaskForm({ ...valid, startDate: "không phải ngày" }).startDate, undefined);
+  });
+});
+
+describe("restoreCreateTaskDraft — nháp từ sessionStorage", () => {
+  const fresh: CreateTaskFormData = { ...blank, selectedDeptCode: "CNTT", parentTaskId: "cha-1" };
+
+  test("nháp hợp lệ cùng ngữ cảnh được khôi phục, trường thiếu lấy từ form mới", () => {
+    const restored = restoreCreateTaskDraft(
+      { title: "Soạn kế hoạch", parentTaskId: "cha-1", priority: "HIGH", dueDate: "2026-10-30" },
+      fresh,
+      "cha-1",
+    );
+    assert.equal(restored?.title, "Soạn kế hoạch");
+    assert.equal(restored?.priority, "HIGH");
+    assert.equal(restored?.dueDate, "2026-10-30");
+    assert.equal(restored?.description, "");
+    assert.equal(restored?.parentTaskId, "cha-1");
+  });
+
+  test("nháp của ngữ cảnh khác bị bỏ: không gắn nhầm nhiệm vụ cha, không biến việc con thành nhiệm vụ gốc", () => {
+    const subtaskDraft = { title: "Việc con dở dang", parentTaskId: "cha-1" };
+    assert.equal(restoreCreateTaskDraft(subtaskDraft, { ...blank }, undefined), null);
+    assert.equal(restoreCreateTaskDraft({ title: "Nhiệm vụ gốc dở dang" }, fresh, "cha-1"), null);
+    assert.equal(restoreCreateTaskDraft(subtaskDraft, { ...fresh, parentTaskId: "cha-2" }, "cha-2"), null);
+  });
+
+  test("dữ liệu hỏng hoặc sai kiểu không làm sập form", () => {
+    assert.equal(restoreCreateTaskDraft(null, blank), null);
+    assert.equal(restoreCreateTaskDraft("chuỗi", blank), null);
+    assert.equal(restoreCreateTaskDraft({ title: 42 }, blank), null);
+    assert.equal(restoreCreateTaskDraft({ title: "" }, blank), null);
+    const restored = restoreCreateTaskDraft(
+      { title: "Họp giao ban", description: 7, priority: "KHẨN", level: "ADMIN", leadAssigneeId: null },
+      blank,
+    );
+    assert.equal(restored?.description, "", "trường sai kiểu quay về giá trị mới, không phải undefined/số");
+    assert.equal(restored?.priority, "MEDIUM");
+    assert.equal(restored?.level, "DON_VI");
+    assert.equal(restored?.leadAssigneeId, "");
+  });
+});
+
+describe("describeCreateTaskFailure — thông báo lỗi tiếng Việt", () => {
+  test("lỗi tiếng Anh của máy chủ được thay bằng câu tiếng Việt theo mã trạng thái", () => {
+    const cases: Array<[number, RegExp]> = [
+      [401, /đăng nhập/],
+      [403, /không có quyền/],
+      [404, /Không tìm thấy/],
+      [409, /đã được ghi nhận|đang xử lý/],
+      [429, /quá nhanh/],
+      [500, /Máy chủ gặp lỗi/],
+      [400, /chưa hợp lệ/],
+    ];
+    for (const [status, pattern] of cases) {
+      const message = describeCreateTaskFailure({ reason: "rejected", status, error: "Validation failed" });
+      assert.match(message, pattern, `status ${status}`);
+      assert.doesNotMatch(message, /Validation failed|status \d+/);
+    }
+  });
+
+  test("lỗi nghiệp vụ đã là tiếng Việt được giữ nguyên", () => {
+    const error = "Hạn nhiệm vụ con không được vượt quá hạn nhiệm vụ cha.";
+    assert.equal(describeCreateTaskFailure({ reason: "rejected", status: 400, error }), error);
+  });
+
+  test("lỗi kiểm tra cục bộ của adapter (không có status) và lỗi lạ không lộ tiếng Anh", () => {
+    assert.match(
+      describeCreateTaskFailure({ reason: "validation", error: "CreateTaskDraft.dueDate is required to create a task." }),
+      /chưa hợp lệ/,
+    );
+    assert.equal(
+      describeCreateTaskFailure({ reason: "rejected", status: 418, error: "I'm a teapot" }),
+      "Máy chủ từ chối tạo nhiệm vụ.",
+    );
   });
 });

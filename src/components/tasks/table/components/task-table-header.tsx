@@ -198,7 +198,7 @@ export function TaskTableHeader({
                     >
                       {indeterminate || allSelected ? (
                         <div
-                          className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
+                          className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-[opacity,transform] active:scale-[0.98] pointer-events-none"
                           aria-hidden="true"
                         >
                           {allSelected ? (
@@ -209,7 +209,7 @@ export function TaskTableHeader({
                         </div>
                       ) : (
                         <div
-                          className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
+                          className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-[opacity,transform,border-color,background-color] duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
                           aria-hidden="true"
                         />
                       )}

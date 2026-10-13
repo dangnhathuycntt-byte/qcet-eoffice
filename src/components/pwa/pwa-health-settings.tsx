@@ -220,16 +220,16 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
       )}
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-selected border border-primary/20 flex items-center justify-center text-primary shrink-0">
             <HardDrive className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-slate-900 tracking-tight">
+            <h3 className="text-base font-semibold text-foreground tracking-tight">
               Ứng dụng & Ngoại tuyến
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Quản lý tài nguyên ngoại tuyến, đồng bộ dữ liệu và thông số PWA trên thiết bị
             </p>
           </div>
@@ -243,7 +243,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : connectionState === "DEGRADED"
                 ? "bg-warning/10 text-warning border-warning/30"
-                : "bg-slate-100 text-slate-700 border-slate-300"
+                : "bg-secondary text-foreground border-border"
             )}
           >
             {connectionState === "ONLINE" ? (
@@ -265,18 +265,18 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
       {/* Grid of Diagnostics & Settings Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Card 1: Phiên bản & Service Worker */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3 flex flex-col justify-between">
+        <div className="rounded-lg border border-border bg-card/50 p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">
+              <span className="text-xs font-semibold text-muted-foreground">
                 Phiên bản hệ thống
               </span>
-              <Badge variant="outline" className="text-xs font-mono bg-white border-slate-200">
+              <Badge variant="outline" className="text-xs font-mono bg-white border-border">
                 v{appVersion}
               </Badge>
             </div>
             <div className="flex items-center gap-2 pt-1">
-              <span className="text-xs text-slate-500">Service Worker:</span>
+              <span className="text-xs text-muted-foreground">Service Worker:</span>
               <span
                 className={cn(
                   "text-xs font-medium px-2 py-0.5 rounded",
@@ -284,7 +284,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                     ? "bg-emerald-100 text-emerald-800"
                     : swStatus === "waiting"
                     ? "bg-warning/15 text-warning"
-                    : "bg-slate-200 text-slate-700"
+                    : "bg-border text-foreground"
                 )}
               >
                 {swStatus === "active"
@@ -299,7 +299,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               </span>
             </div>
             {updateFeedback && (
-              <p className="text-xs text-slate-600 bg-white border border-slate-200 rounded p-2 mt-1">
+              <p className="text-xs text-muted-foreground bg-white border border-border rounded p-2 mt-1">
                 {updateFeedback}
               </p>
             )}
@@ -309,7 +309,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             size="sm"
             onClick={handleCheckUpdate}
             disabled={isCheckingUpdate}
-            className="w-full min-h-[44px] justify-center text-xs font-medium border-slate-300 hover:bg-slate-100"
+            className="w-full min-h-[44px] justify-center text-xs font-medium border-border hover:bg-accent"
           >
             {isCheckingUpdate ? (
               <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
@@ -321,10 +321,10 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         </div>
 
         {/* Card 2: Trạng thái cài đặt & Màn hình chính */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3 flex flex-col justify-between">
+        <div className="rounded-lg border border-border bg-card/50 p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">
+              <span className="text-xs font-semibold text-muted-foreground">
                 Cài đặt ứng dụng
               </span>
               <span
@@ -332,7 +332,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                   "text-xs font-medium px-2 py-0.5 rounded",
                   isStandalone || isInstalled
                     ? "bg-blue-100 text-blue-800"
-                    : "bg-slate-200 text-slate-700"
+                    : "bg-border text-foreground"
                 )}
               >
                 {isStandalone
@@ -342,7 +342,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                   : "Trình duyệt Web"}
               </span>
             </div>
-            <p className="text-xs text-slate-500 pt-1">
+            <p className="text-xs text-muted-foreground pt-1">
               {isStandalone
                 ? "Ứng dụng đang chạy ở chế độ chuyên dụng độc lập không thanh địa chỉ."
                 : isInstallable
@@ -355,23 +355,23 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               variant="default"
               size="sm"
               onClick={() => installApp()}
-              className="w-full min-h-[44px] justify-center text-xs font-medium bg-blue-700 hover:bg-blue-800 text-white"
+              className="w-full min-h-[44px] justify-center text-xs font-medium bg-primary hover:bg-primary-hover text-primary-foreground"
             >
               <Smartphone className="w-4 h-4 mr-1.5" />
               Cài đặt lên thiết bị
             </Button>
           ) : (
-            <div className="min-h-[44px] flex items-center justify-center text-xs text-slate-500 border border-dashed border-slate-200 rounded">
+            <div className="min-h-[44px] flex items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded">
               {isStandalone ? "Đang chạy ứng dụng độc lập" : "Sẵn sàng hoạt động"}
             </div>
           )}
         </div>
 
         {/* Card 3: Thông báo hệ thống (Push Notifications) */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3 flex flex-col justify-between">
+        <div className="rounded-lg border border-border bg-card/50 p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">
+              <span className="text-xs font-semibold text-muted-foreground">
                 Thông báo đẩy (Web Push)
               </span>
               <span
@@ -381,7 +381,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                     ? "bg-emerald-100 text-emerald-800"
                     : pushPermission === "denied"
                     ? "bg-destructive/15 text-destructive"
-                    : "bg-slate-200 text-slate-700"
+                    : "bg-border text-foreground"
                 )}
               >
                 {pushPermission === "granted" && isPushSubscribed
@@ -393,7 +393,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                   : "Chưa đăng ký"}
               </span>
             </div>
-            <p className="text-xs text-slate-500 pt-1">
+            <p className="text-xs text-muted-foreground pt-1">
               {pushPermission === "granted" && isPushSubscribed
                 ? "Thiết bị nhận được thông báo văn bản, lịch trình và công việc mới."
                 : pushPermission === "denied"
@@ -410,7 +410,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               }
             }}
             disabled={!isPushSupported || isPushLoading}
-            className="w-full min-h-[44px] justify-center text-xs font-medium border-slate-300 hover:bg-slate-100"
+            className="w-full min-h-[44px] justify-center text-xs font-medium border-border hover:bg-accent"
           >
             <Bell className="w-4 h-4 mr-1.5" />
             Cấu hình thông báo
@@ -423,12 +423,12 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-blue-700" />
-              <h4 className="text-sm font-semibold text-slate-900">
+              <Database className="w-4 h-4 text-primary" />
+              <h4 className="text-sm font-semibold text-foreground">
                 Dung lượng bộ nhớ ngoại tuyến & Lưu trữ
               </h4>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Chỉ số dung lượng đệm dữ liệu được cấp phát từ trình duyệt cho QCET E-Office
             </p>
           </div>
@@ -439,7 +439,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               "text-xs px-2.5 py-1 font-medium w-fit max-w-full whitespace-normal text-left flex items-center gap-1.5",
               estimate.isPersisted
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-slate-100 text-slate-600 border-slate-200"
+                : "bg-secondary text-muted-foreground border-border"
             )}
           >
             <Lock className="w-3 h-3" />
@@ -451,12 +451,12 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
 
         {/* Quota Progress & Stats */}
         <div className="space-y-2 pt-2">
-          <div className="flex justify-between text-xs text-slate-600 font-medium">
+          <div className="flex justify-between text-xs text-muted-foreground font-medium">
             <span>Đã sử dụng: {estimate.usageFormatted}</span>
             <span>Hạn mức tối đa: {estimate.quotaFormatted}</span>
           </div>
 
-          <div className="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden">
+          <div className="h-2.5 w-full bg-border rounded-full overflow-hidden">
             <div
               className={cn(
                 "h-full transition-all duration-300 rounded-full",
@@ -464,13 +464,13 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                   ? "bg-destructive"
                   : estimate.percentUsed > 50
                   ? "bg-warning"
-                  : "bg-blue-600"
+                  : "bg-primary"
               )}
               style={{ width: `${Math.min(Math.max(estimate.percentUsed, 0.5), 100)}%` }}
             />
           </div>
 
-          <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Tỷ lệ chiếm dụng: {estimate.percentUsed}%</span>
             {estimate.breakdown?.indexedDbBytes ? (
               <span>Cơ sở dữ liệu: ~{estimate.usageFormatted}</span>
@@ -479,8 +479,8 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         </div>
 
         {persistFeedback && (
-          <div className="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg p-3 flex items-center gap-2">
-            <Info className="w-4 h-4 text-blue-700 shrink-0" />
+          <div className="text-xs bg-white border border-border text-foreground rounded-lg p-3 flex items-center gap-2">
+            <Info className="w-4 h-4 text-primary shrink-0" />
             <span>{persistFeedback}</span>
           </div>
         )}
@@ -493,7 +493,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               size="sm"
               onClick={handleRequestPersistence}
               disabled={isRequestingPersist}
-              className="min-h-[44px] h-auto whitespace-normal text-xs font-medium border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="min-h-[44px] h-auto whitespace-normal text-xs font-medium border-primary/30 text-primary hover:bg-accent"
             >
               {isRequestingPersist ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
@@ -509,7 +509,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             size="sm"
             onClick={() => setShowClearConfirm(true)}
             disabled={isClearing}
-            className="min-h-[44px] text-xs font-medium border-slate-300 text-destructive hover:bg-danger-soft hover:border-destructive/30"
+            className="min-h-[44px] text-xs font-medium border-border text-destructive hover:bg-danger-soft hover:border-destructive/30"
           >
             {isClearing ? (
               <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
@@ -524,7 +524,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             size="sm"
             onClick={() => refreshStorage()}
             disabled={isStorageLoading}
-            className="min-h-[44px] text-xs text-slate-600 hover:text-slate-900 ml-auto"
+            className="min-h-[44px] text-xs text-muted-foreground hover:text-foreground ml-auto"
           >
             <RefreshCw
               className={cn("w-3.5 h-3.5 mr-1.5", isStorageLoading && "animate-spin")}
@@ -567,7 +567,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowClearConfirm(false)}
-                className="min-h-[44px] text-xs text-slate-600 hover:text-slate-900"
+                className="min-h-[44px] text-xs text-muted-foreground hover:text-foreground"
               >
                 Hủy
               </Button>
@@ -591,12 +591,12 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-blue-700" />
-              <h4 className="text-sm font-semibold text-slate-900">
+              <RefreshCw className="w-4 h-4 text-primary" />
+              <h4 className="text-sm font-semibold text-foreground">
                 Hàng đợi đồng bộ hóa ngoại tuyến (Outbox Queue)
               </h4>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Các thao tác điều hành được ghi nhận ngoại tuyến sẽ tự động gửi lên máy chủ khi có
               kết nối
             </p>
@@ -608,7 +608,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
               size="sm"
               onClick={handleManualSync}
               disabled={isFlushing || pendingCount === 0 || !isOnline}
-              className="min-h-[44px] text-xs font-medium bg-blue-700 hover:bg-blue-800 text-white"
+              className="min-h-[44px] text-xs font-medium bg-primary hover:bg-primary-hover text-primary-foreground"
             >
               {isFlushing ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
@@ -621,8 +621,8 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         </div>
 
         <div className="flex flex-wrap gap-4 pt-1">
-          <div className="flex items-center gap-2 text-xs bg-white border border-slate-200 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Thao tác chờ gửi:</span>
+          <div className="flex items-center gap-2 text-xs bg-white border border-border rounded-lg px-3 py-2">
+            <span className="text-muted-foreground">Thao tác chờ gửi:</span>
             <span
               className={cn(
                 "font-semibold px-2 py-0.5 rounded",
@@ -633,21 +633,21 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs bg-white border border-slate-200 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Xung đột phiên bản:</span>
+          <div className="flex items-center gap-2 text-xs bg-white border border-border rounded-lg px-3 py-2">
+            <span className="text-muted-foreground">Xung đột phiên bản:</span>
             <span
               className={cn(
                 "font-semibold px-2 py-0.5 rounded",
-                conflictCount > 0 ? "bg-destructive/15 text-destructive" : "bg-slate-100 text-slate-700"
+                conflictCount > 0 ? "bg-destructive/15 text-destructive" : "bg-secondary text-foreground"
               )}
             >
               {conflictCount}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs bg-white border border-slate-200 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Trạng thái tổng thể:</span>
-            <span className="font-medium text-slate-800">
+          <div className="flex items-center gap-2 text-xs bg-white border border-border rounded-lg px-3 py-2">
+            <span className="text-muted-foreground">Trạng thái tổng thể:</span>
+            <span className="font-medium text-foreground">
               {conflictCount > 0
                 ? "Có xung đột cần xử lý thủ công"
                 : pendingCount > 0
