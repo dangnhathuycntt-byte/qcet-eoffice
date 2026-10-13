@@ -483,8 +483,8 @@ export function PushOnboardingSheet({
         {/* Content Body */}
         <div className="py-5 space-y-5">
           {error && (
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-sm font-medium">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-danger-soft border border-destructive/30 text-destructive text-sm font-medium">
+              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}

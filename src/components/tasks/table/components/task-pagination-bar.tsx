@@ -209,7 +209,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
             aria-haspopup="listbox"
             disabled={disabled || totalItems === 0}
             className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2.5 py-0.5 text-xs font-medium text-foreground shadow-2xs transition-all hover:bg-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex h-7 items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2.5 py-0.5 text-xs font-medium text-foreground shadow-2xs transition-[background-color,border-color,box-shadow,opacity] hover:bg-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
               isSizeMenuOpen && "border-primary ring-1 ring-primary bg-muted/40"
             )}
           >

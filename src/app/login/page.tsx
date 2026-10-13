@@ -410,7 +410,7 @@ function LoginFormContent() {
                   className="flex w-full items-center gap-3 rounded-2xl bg-muted p-3 text-left transition-all duration-150 active:scale-[0.98] hover:bg-bg-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {acc.avatar ? (
-                    <img src={acc.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={acc.avatar} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-foreground" style={{ background: bgColor }}>
                       {initial}
@@ -469,7 +469,7 @@ function LoginFormContent() {
             className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-border bg-white p-3 text-left shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-150 active:scale-[0.98] hover:border-[var(--gray-7)] hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)] cursor-pointer disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {lastUser.avatar ? (
-              <img src={lastUser.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
+              <img src={lastUser.avatar} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
             ) : (
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-foreground bg-[var(--avatar-initial-bg)]">
                 {initial}

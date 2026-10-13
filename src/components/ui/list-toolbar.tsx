@@ -27,7 +27,7 @@ import {
 /** Nút icon trên thanh công cụ danh sách (bộ lọc, hiển thị) */
 export function listToolbarIconButtonClass(active = false) {
   return cn(
-    "inline-flex size-7 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation",
+    "inline-flex size-7 max-md:size-11 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation",
     active ? "border-border bg-accent/60 text-foreground hover:bg-accent" : "border-border/80 bg-background text-foreground hover:bg-accent"
   );
 }

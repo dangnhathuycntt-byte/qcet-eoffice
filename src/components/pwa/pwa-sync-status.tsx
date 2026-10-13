@@ -188,7 +188,7 @@ export function PWASyncStatusBar({
     statusVariant = "offline";
     statusText = OFFLINE_STATE_LABELS["local-only"];
     statusDetail = `${pendingItems.length} thay đổi được lưu an toàn tại thiết bị`;
-    statusIcon = <WifiOff className="h-4 w-4 text-slate-600 shrink-0" />;
+    statusIcon = <WifiOff className="h-4 w-4 text-muted-foreground shrink-0" />;
   } else if (displayState === "unknown-after-timeout") {
     statusVariant = "degraded";
     statusText = OFFLINE_STATE_LABELS.queued;
@@ -198,7 +198,7 @@ export function PWASyncStatusBar({
     statusVariant = "offline";
     statusText = "Ngoại tuyến";
     statusDetail = "Không có kết nối mạng";
-    statusIcon = <WifiOff className="h-4 w-4 text-slate-600 shrink-0" />;
+    statusIcon = <WifiOff className="h-4 w-4 text-muted-foreground shrink-0" />;
   } else if (isDegraded) {
     statusVariant = "degraded";
     statusText = hasPending ? OFFLINE_STATE_LABELS.queued : "Kết nối máy chủ gián đoạn";
@@ -222,7 +222,7 @@ export function PWASyncStatusBar({
     online: "bg-white border-emerald-300 text-emerald-950 shadow-sm",
     syncing: "bg-white border-sky-300 text-sky-950 shadow-sm",
     degraded: "bg-white border-warning/40 text-warning shadow-sm",
-    offline: "bg-white border-slate-300 text-slate-900 shadow-sm",
+    offline: "bg-white border-border text-foreground shadow-sm",
     conflict: "bg-white border-destructive/40 text-destructive shadow-sm",
   };
 
@@ -230,7 +230,7 @@ export function PWASyncStatusBar({
     online: "bg-emerald-50 text-emerald-800 border-emerald-200",
     syncing: "bg-sky-50 text-sky-800 border-sky-200",
     degraded: "bg-warning/10 text-warning border-warning/30",
-    offline: "bg-slate-100 text-slate-800 border-slate-200",
+    offline: "bg-secondary text-foreground border-border",
     conflict: "bg-danger-soft text-destructive border-destructive/30",
   };
 
@@ -261,10 +261,10 @@ export function PWASyncStatusBar({
               {statusIcon}
             </span>
             <div className="truncate flex flex-col">
-              <span className="font-semibold truncate text-slate-900 leading-tight">
+              <span className="font-semibold truncate text-foreground leading-tight">
                 {statusText}
               </span>
-              <span className="text-xs text-slate-500 font-normal truncate">
+              <span className="text-xs text-muted-foreground font-normal truncate">
                 {statusDetail}
               </span>
             </div>
@@ -288,11 +288,11 @@ export function PWASyncStatusBar({
                 size="sm"
                 onClick={handleManualSync}
                 disabled={isSyncing}
-                className="min-h-[44px] px-3 font-semibold text-xs rounded-lg border-slate-300 text-slate-800 hover:bg-slate-50 bg-white"
+                className="min-h-[44px] px-3 font-semibold text-xs rounded-lg border-border text-foreground hover:bg-accent bg-white"
               >
                 {isSyncing ? (
                   <>
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1 text-slate-600" />
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1 text-muted-foreground" />
                     Đang gửi
                   </>
                 ) : (
@@ -302,7 +302,7 @@ export function PWASyncStatusBar({
             )}
 
             {isOffline && hasPending && (
-              <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200">
+              <span className="inline-flex items-center px-2 py-1 rounded bg-secondary text-foreground text-xs font-medium border border-border">
                 {pendingItems.length} chờ gửi
               </span>
             )}

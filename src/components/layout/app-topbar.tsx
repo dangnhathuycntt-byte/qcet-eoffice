@@ -151,7 +151,7 @@ export function AppTopbar() {
       <Pressable
         onClick={handleOpenMobileMenu}
         aria-label={unreadCount > 0 ? `Mở menu, ${unreadCount} thông báo chưa đọc` : "Mở menu"}
-        className="relative -ml-1.5 mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="relative -ml-1.5 mr-1 flex size-8 max-md:size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
       >
         <IconSidebarPanel size={14} />
         {unreadCount > 0 && (
@@ -164,13 +164,13 @@ export function AppTopbar() {
       </Suspense>
 
       {/* Nút tìm và nút của trang cùng cỡ 32px với nút mở sidebar */}
-      <Button variant="ghost" size="icon-xs" className="ml-auto size-8 rounded-md text-foreground/80" onClick={handleOpenSearch} aria-label="Tìm kiếm" title="Tìm kiếm (⌘K)">
+      <Button variant="ghost" size="icon-xs" className="ml-auto size-8 max-md:size-11 rounded-md text-foreground/80" onClick={handleOpenSearch} aria-label="Tìm kiếm" title="Tìm kiếm (⌘K)">
         <Search className="size-4" />
       </Button>
       {/* Nút của trang (vd. "+") gắn vào qua MobileTopbarActions */}
       <div
         id={TOPBAR_ACTIONS_ID}
-        className="-mr-1.5 flex items-center empty:hidden [&>button]:size-8 [&>button]:rounded-md [&>button]:text-foreground/80 [&_svg]:size-4!"
+        className="-mr-1.5 flex items-center empty:hidden [&>button]:size-8 [&>button]:max-md:size-11 [&>button]:rounded-md [&>button]:text-foreground/80 [&_svg]:size-4!"
       />
     </header>
   );

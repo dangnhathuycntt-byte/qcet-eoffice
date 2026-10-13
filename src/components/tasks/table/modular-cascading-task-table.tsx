@@ -1327,7 +1327,7 @@ export function ModularCascadingTaskTable({
         priorOverdueBacklog.length > 0 && (
           <section
             aria-label="Prior Overdue Backlog - Nhiệm vụ tồn đọng kỳ trước"
-            className="border-b border-warning/40 bg-warning/10 text-xs transition-all select-none"
+            className="border-b border-warning/40 bg-warning/10 text-xs transition-colors select-none"
           >
             {/* Sleek Hairline Section Header */}
             <div

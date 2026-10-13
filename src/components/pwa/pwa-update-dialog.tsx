@@ -46,7 +46,7 @@ export function PWAUpdateDialog({
           "rounded-xl border p-4 shadow-xl backdrop-blur-md transition-all",
           hasUnsavedChanges
             ? "bg-warning/10 border-warning/40 text-warning shadow-warning/10"
-            : "bg-white/95 border-border text-foreground shadow-slate-900/10"
+            : "bg-white/95 border-border text-foreground shadow-foreground/10"
         )}
       >
         <div className="flex items-start gap-3">

@@ -309,6 +309,8 @@ export function MobileAppInstallModal({
                   <img
                     src={qrCodeDataUrl}
                     alt="Mã QR mở ứng dụng trên điện thoại"
+                    width={180}
+                    height={180}
                     className="size-[180px] rounded-lg block"
                   />
                 )}
@@ -347,7 +349,7 @@ export function MobileAppInstallModal({
                                 "px-1.5 py-0.5 rounded text-xs uppercase font-semibold",
                                 selectedUrlType === "tailscale"
                                   ? "bg-card/20 text-white"
-                                  : "bg-secondary0/15 text-foreground"
+                                  : "bg-secondary text-foreground"
                               )}
                             >
                               Khuyên dùng
@@ -542,7 +544,7 @@ export function MobileAppInstallModal({
                     Thao tác nhanh: <strong>Nhấn biểu tượng Chia sẻ &rarr; Thêm vào Màn hình chính</strong>.
                   </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-secondary0/10 border-0 text-emerald-700 text-xs flex items-center gap-2">
+                <div className="p-2.5 rounded-lg bg-secondary border-0 text-emerald-700 text-xs flex items-center gap-2">
                   <CheckCircle2 size={15} className="shrink-0" />
                   <span>
                     App sẽ xuất hiện trên màn hình chính của iPhone với biểu tượng QCET, chạy toàn màn hình và nhận thông báo đẩy (Push Notifications) như app App Store!
@@ -580,7 +582,7 @@ export function MobileAppInstallModal({
                     </p>
                   </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-secondary0/10 border-0 text-emerald-700 text-xs flex items-center gap-2">
+                <div className="p-2.5 rounded-lg bg-secondary border-0 text-emerald-700 text-xs flex items-center gap-2">
                   <CheckCircle2 size={15} className="shrink-0" />
                   <span>
                     Ứng dụng được cài đặt vào ngăn chứa ứng dụng của Android, hỗ trợ thông báo chuông và rung độc lập.

@@ -30,7 +30,7 @@ export function Spinner({ size = "sm", tone = "currentColor", label, className }
     <Loader2
       aria-hidden="true"
       data-slot="spinner"
-      className={cn("shrink-0 animate-spin motion-reduce:animate-none", sizeClass[size], toneClass[tone], !label && className)}
+      className={cn("shrink-0 animate-spin", sizeClass[size], toneClass[tone], !label && className)}
     />
   );
   if (!label) return icon;

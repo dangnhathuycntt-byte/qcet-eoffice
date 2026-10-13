@@ -88,7 +88,7 @@ export function TaskDetailHeaderNav({
         <button
           type="button"
           onClick={handleCopyLink}
-          className="inline-flex items-center justify-center size-8 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+          className="inline-flex items-center justify-center size-8 max-md:size-11 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
           title="Sao chép liên kết"
           aria-label="Sao chép liên kết"
         >
@@ -101,7 +101,7 @@ export function TaskDetailHeaderNav({
             type="button"
             onClick={onToggleInspector}
             className={cn(
-              "inline-flex items-center justify-center size-8 rounded-lg transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
+              "inline-flex items-center justify-center size-8 max-md:size-11 rounded-lg transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
               showInspector
                 ? "bg-muted/80 text-foreground"
                 : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"

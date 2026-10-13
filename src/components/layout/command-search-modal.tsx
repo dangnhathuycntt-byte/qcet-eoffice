@@ -803,8 +803,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         onKeyDown={handleKeyDownInList}
       >
         {/* Search Header Input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200 bg-white">
-          <Search className="w-5 h-5 text-neutral-400 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-white">
+          <Search className="w-5 h-5 text-muted-foreground shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -817,16 +817,16 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
               setSelectedIndex(0);
             }}
             placeholder="Tìm theo tên việc, mã số, văn bản, viết tắt khoa (cntt, vb)..."
-            className="flex-1 bg-transparent text-sm sm:text-base font-normal text-neutral-900 placeholder:text-neutral-400 focus:outline-hidden"
+            className="flex-1 bg-transparent text-sm sm:text-base font-normal text-foreground placeholder:text-muted-foreground focus:outline-hidden"
           />
-          {isLoading && <Loader2 className="w-4 h-4 text-neutral-400 animate-spin shrink-0" />}
+          {isLoading && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
           {query && !isLoading && (
             <Pressable
               onClick={() => {
                 setQuery("");
                 inputRef.current?.focus();
               }}
-              className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               aria-label="Xóa nội dung tìm kiếm"
             >
               <X className="w-4 h-4" />
@@ -834,7 +834,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           )}
           <Pressable
             onClick={handleClose}
-            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-muted-foreground bg-secondary hover:bg-accent rounded border border-border transition-colors"
           >
             ESC
           </Pressable>
@@ -843,7 +843,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         {/* Intent tabs (T39) */}
         <div
           ref={tabsRef}
-          className="flex items-center gap-1.5 px-4 py-2 bg-neutral-50/70 border-b border-neutral-100 text-xs overflow-x-auto"
+          className="flex items-center gap-1.5 px-4 py-2 bg-card/70 border-b border-border/60 text-xs overflow-x-auto"
         >
           <Pressable
             onClick={() => {
@@ -853,8 +853,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap",
               activeTab === "all"
-                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+                ? "bg-white text-foreground shadow-2xs border border-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
             Tất cả
@@ -867,11 +867,11 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
               activeTab === "navigation"
-                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+                ? "bg-white text-foreground shadow-2xs border border-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
-            <LayoutDashboard className="w-3.5 h-3.5 text-neutral-600" />
+            <LayoutDashboard className="w-3.5 h-3.5 text-muted-foreground" />
             Đi tới
           </Pressable>
           <Pressable
@@ -882,8 +882,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
               activeTab === "tasks"
-                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+                ? "bg-white text-foreground shadow-2xs border border-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
             <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
@@ -897,8 +897,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
               activeTab === "documents"
-                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+                ? "bg-white text-foreground shadow-2xs border border-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
             <FileText className="w-3.5 h-3.5 text-warning" />
@@ -912,8 +912,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
               activeTab === "commands"
-                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+                ? "bg-white text-foreground shadow-2xs border border-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
             <Zap className="w-3.5 h-3.5 text-violet-600" />
@@ -927,8 +927,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
               activeTab === "people"
-                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+                ? "bg-white text-foreground shadow-2xs border border-border"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
             <Users className="w-3.5 h-3.5 text-emerald-600" />
@@ -945,11 +945,11 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Empty State */}
           {!isLoading && flatItems.length === 0 && (
             <div className="py-12 px-4 text-center">
-              <Search className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-neutral-700">
+              <Search className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground">
                 Không tìm thấy kết quả phù hợp cho &ldquo;{query}&rdquo;
               </p>
-              <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
                 Thử tìm theo mã công việc (ví dụ: NV-2026), số văn bản (ví dụ: 125/QĐ), viết tắt khoa (cntt, dbcl) hoặc họ tên cán bộ.
               </p>
             </div>
@@ -959,13 +959,13 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {showRecent && (
             <div>
               <div className="flex items-center justify-between px-2.5 py-1 mb-1">
-                <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 text-neutral-400" />
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-muted-foreground" />
                   {COMMAND_INTENT_LABELS.recent}
                 </span>
                 <Pressable
                   onClick={clearRecentSearches}
-                  className="text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                 >
                   <Trash2 className="w-3 h-3" />
                   Xóa lịch sử
@@ -983,22 +983,22 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
                         isSelected
-                          ? "bg-neutral-100 text-neutral-900 font-medium"
-                          : "text-neutral-700 hover:bg-neutral-50"
+                          ? "bg-selected text-foreground font-medium"
+                          : "text-foreground hover:bg-accent"
                       )}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <Clock className="w-4 h-4 text-neutral-400 shrink-0" />
+                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
                         <div className="min-w-0 flex-1 truncate">
-                          <span className="text-sm text-neutral-800">{item.title}</span>
+                          <span className="text-sm text-foreground">{item.title}</span>
                           {item.subtitle && (
-                            <span className="text-xs text-neutral-400 ml-2">
+                            <span className="text-xs text-muted-foreground ml-2">
                               {item.subtitle}
                             </span>
                           )}
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0" />
                     </div>
                   );
                 })}
@@ -1009,7 +1009,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Đi tới (navigation intent) */}
           {displayNavigation.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400">
+              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                 {COMMAND_INTENT_LABELS.navigation}
               </div>
               <div className="space-y-0.5">
@@ -1029,8 +1029,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
                         isSelected
-                          ? "bg-neutral-100 text-neutral-900 font-medium"
-                          : "text-neutral-700 hover:bg-neutral-50"
+                          ? "bg-selected text-foreground font-medium"
+                          : "text-foreground hover:bg-accent"
                       )}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -1039,27 +1039,27 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                             "w-7 h-7 rounded-md flex items-center justify-center shrink-0",
                             action.category === "action"
                               ? "bg-blue-50 text-blue-600"
-                              : "bg-neutral-100 text-neutral-600"
+                              : "bg-secondary text-muted-foreground"
                           )}
                         >
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm text-neutral-800">
+                          <p className="text-sm text-foreground">
                             <HighlightedText text={action.title} query={query} />
                           </p>
-                          <p className="text-xs text-neutral-400 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             <HighlightedText text={action.description} query={query} />
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">
                         {action.shortcut && (
-                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-white rounded border border-neutral-200">
+                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-muted-foreground bg-white rounded border border-border">
                             {action.shortcut}
                           </kbd>
                         )}
-                        <ArrowRight className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500" />
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
                       </div>
                     </div>
                   );
@@ -1071,9 +1071,9 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Tasks */}
           {displayTasks.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between">
+              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground flex items-center justify-between">
                 <span>{COMMAND_INTENT_LABELS.task} ({displayTasks.length})</span>
-                <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
+                <span className="text-xs text-muted-foreground lowercase">phím ↵ để mở</span>
               </div>
               <div className="space-y-1">
                 {displayTasks.map((task) => {
@@ -1091,25 +1091,25 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       className={cn(
                         "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
                         isSelected
-                          ? "bg-neutral-50/90 border-neutral-300 shadow-2xs"
-                          : "border-transparent hover:bg-neutral-50/60 hover:border-neutral-200"
+                          ? "bg-selected border-border shadow-2xs"
+                          : "border-transparent hover:bg-accent hover:border-border"
                       )}
                     >
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <CheckSquare className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono font-medium text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200">
+                            <span className="text-xs font-mono font-medium text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border">
                               <HighlightedText text={task.code} query={query} />
                             </span>
-                            <span className="text-sm font-medium text-neutral-900 truncate">
+                            <span className="text-sm font-medium text-foreground truncate">
                               <HighlightedText text={task.title} query={query} />
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                             {task.department && (
-                              <span className="flex items-center gap-1 text-neutral-600">
-                                <Building2 className="w-3 h-3 text-neutral-400" />
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <Building2 className="w-3 h-3 text-muted-foreground" />
                                 <HighlightedText
                                   text={task.department.shortName || task.department.name}
                                   query={query}
@@ -1125,7 +1125,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
                         <span>Chi tiết</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </div>
@@ -1139,12 +1139,12 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Documents */}
           {displayDocuments.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between">
+              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-warning" />
                   {COMMAND_INTENT_LABELS.document} ({displayDocuments.length})
                 </span>
-                <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
+                <span className="text-xs text-muted-foreground lowercase">phím ↵ để mở</span>
               </div>
               <div className="space-y-1">
                 {displayDocuments.map((doc) => {
@@ -1162,8 +1162,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       className={cn(
                         "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
                         isSelected
-                          ? "bg-neutral-50/90 border-neutral-300 shadow-2xs"
-                          : "border-transparent hover:bg-neutral-50/60 hover:border-neutral-200"
+                          ? "bg-selected border-border shadow-2xs"
+                          : "border-transparent hover:bg-accent hover:border-border"
                       )}
                     >
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
@@ -1173,28 +1173,28 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                             <span className="text-xs font-mono font-bold text-warning bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20">
                               <HighlightedText text={doc.originalNumber || "VB-QCET"} query={query} />
                             </span>
-                            <span className="text-xs font-semibold text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">
+                            <span className="text-xs font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
                               {doc.category || "Văn bản"}
                             </span>
-                            <span className="text-sm font-medium text-neutral-900 truncate">
+                            <span className="text-sm font-medium text-foreground truncate">
                               <HighlightedText text={doc.summary} query={query} />
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                             {doc.issuingAuthority && (
-                              <span className="text-neutral-600">
+                              <span className="text-muted-foreground">
                                 {doc.issuingAuthority}
                               </span>
                             )}
                             {doc.issuedDate && (
-                              <span className="text-neutral-400">
+                              <span className="text-muted-foreground">
                                 Ngày: {new Date(doc.issuedDate).toLocaleDateString("vi-VN")}
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
                         <span>Xem</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </div>
@@ -1208,9 +1208,9 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Users */}
           {displayUsers.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between">
+              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground flex items-center justify-between">
                 <span>{COMMAND_INTENT_LABELS.user} ({displayUsers.length})</span>
-                <span className="text-xs text-neutral-400 lowercase">phím ↵ để liên hệ</span>
+                <span className="text-xs text-muted-foreground lowercase">phím ↵ để liên hệ</span>
               </div>
               <div className="space-y-1">
                 {displayUsers.map((user) => {
@@ -1228,8 +1228,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       className={cn(
                         "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
                         isSelected
-                          ? "bg-neutral-50/90 border-neutral-300 shadow-2xs"
-                          : "border-transparent hover:bg-neutral-50/60 hover:border-neutral-200"
+                          ? "bg-selected border-border shadow-2xs"
+                          : "border-transparent hover:bg-accent hover:border-border"
                       )}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -1238,38 +1238,38 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-neutral-900">
+                            <span className="text-sm font-semibold text-foreground">
                               <HighlightedText text={user.name} query={query} />
                             </span>
                             {user.title && (
-                              <span className="text-xs text-neutral-500">
+                              <span className="text-xs text-muted-foreground">
                                 {user.title}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-500 flex-wrap">
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
                             {user.department && (
-                              <span className="flex items-center gap-1 text-neutral-600">
-                                <Building2 className="w-3 h-3 text-neutral-400" />
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <Building2 className="w-3 h-3 text-muted-foreground" />
                                 {user.department.name}
                               </span>
                             )}
                             {user.email && (
                               <span className="flex items-center gap-1">
-                                <Mail className="w-3 h-3 text-neutral-400" />
+                                <Mail className="w-3 h-3 text-muted-foreground" />
                                 <HighlightedText text={user.email} query={query} />
                               </span>
                             )}
                             {user.phone && (
                               <span className="flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-neutral-400" />
+                                <Phone className="w-3 h-3 text-muted-foreground" />
                                 {user.phone}
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
                         <span>Email</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </div>
@@ -1283,7 +1283,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Hành động (command intent) */}
           {displayCommands.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400">
+              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                 {COMMAND_INTENT_LABELS.command}
               </div>
               <div className="space-y-0.5">
@@ -1303,8 +1303,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
                         isSelected
-                          ? "bg-neutral-100 text-neutral-900 font-medium"
-                          : "text-neutral-700 hover:bg-neutral-50"
+                          ? "bg-selected text-foreground font-medium"
+                          : "text-foreground hover:bg-accent"
                       )}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -1312,21 +1312,21 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm text-neutral-800">
+                          <p className="text-sm text-foreground">
                             <HighlightedText text={action.title} query={query} />
                           </p>
-                          <p className="text-xs text-neutral-400 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             <HighlightedText text={action.description} query={query} />
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">
                         {action.shortcut && (
-                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-white rounded border border-neutral-200">
+                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-muted-foreground bg-white rounded border border-border">
                             {action.shortcut}
                           </kbd>
                         )}
-                        <ArrowRight className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500" />
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
                       </div>
                     </div>
                   );
@@ -1337,35 +1337,35 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         </div>
 
         {/* Footer shortcuts hint bar */}
-        <div className="px-4 py-2.5 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
+        <div className="px-4 py-2.5 bg-card border-t border-border flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-4 flex-wrap">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
                 ↵
               </kbd>
               <span>Mở</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
                 ⌘↵
               </kbd>
               <span>Mở tab mới</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
                 ← →
               </kbd>
               <span>Chuyển nhóm</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
                 ↑↓
               </kbd>
               <span>Di chuyển</span>
             </span>
           </div>
-          <div className="flex items-center gap-1 text-neutral-400">
-            <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
               Esc
             </kbd>
             <span>Đóng</span>

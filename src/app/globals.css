@@ -818,15 +818,66 @@
   z-index: 1;
 }
 
+/* Reduced motion: bỏ chuyển động không gian (trượt, zoom, xoay, co giãn), giữ chuyển màu và opacity ngắn để hover/focus/selected/mở-đóng vẫn rõ. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transition-property: opacity, color, background-color, border-color, outline-color, fill, stroke, text-decoration-color !important;
+    transition-duration: 120ms !important;
+    transition-delay: 0s !important;
+    transition-timing-function: ease-out !important;
+    animation-duration: 120ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
   }
+
+  /* Sheet, popover, menu, dialog của Base UI: trạng thái vào/ra chỉ fade, không trượt/scale. */
+  [data-starting-style],
+  [data-ending-style] {
+    translate: none !important;
+    transform: none !important;
+    scale: none !important;
+    rotate: none !important;
+    opacity: 0 !important;
+  }
+
+  /* Fade-in có trượt nhẹ và tw-animate (animate-in + zoom/slide): chỉ còn opacity. */
+  .animate-fade-in {
+    animation-name: motion-reduced-fade !important;
+  }
+
+  .animate-in {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-enter-blur: 0 !important;
+  }
+
+  .animate-out {
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-exit-rotate: 0 !important;
+    --tw-exit-blur: 0 !important;
+  }
+
+  /* Ping (chấm thông báo) là xung scale lặp vô hạn: giữ chấm tĩnh. */
+  .animate-ping {
+    animation: none !important;
+  }
+
+  /* Spinner báo đang tải: vẫn quay nhưng chậm, để trạng thái loading còn nhìn thấy. */
+  .animate-spin {
+    animation: spin-slow 3s linear infinite !important;
+  }
+}
+
+@keyframes motion-reduced-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 
