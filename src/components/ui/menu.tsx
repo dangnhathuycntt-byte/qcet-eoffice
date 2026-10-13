@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { popoverVariants } from "@/lib/motion/variants";
 import { Pressable } from "@/components/ui/pressable";
 import { useVirtualKeyboard } from "@/hooks/use-virtual-keyboard";
+import { useIsPhone } from "@/hooks/use-is-phone";
 
 /** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
 export const MENU_ROW_CLASS =
@@ -197,16 +198,18 @@ export interface MenuSubmenuProps {
 }
 
 /**
- * Hàng mở menu con thả sang trái: rê chuột là mở ngay (delay 0), đóng sau 80ms.
+ * Hàng mở menu con thả sang trái: rê chuột là mở ngay (delay 0), đóng sau 80ms; trên điện thoại chỉ mở khi bấm.
  * Không mũi tên; hàng mở có nền accent. Dùng chung cho mọi bộ lọc nhiều cấp.
  */
 export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, children }: MenuSubmenuProps) {
   // Điều khiển trạng thái mở để nút "Quay lại" của bottom sheet (điện thoại) đóng được riêng menu con.
   const [open, setOpen] = React.useState(false);
+  // Điện thoại: submenu là sheet phủ lên, chỉ mở khi bấm; rê chuột (trình giả lập, chuột gắn máy) không được tự nhảy sang
+  const isPhone = useIsPhone();
   return (
     <BaseMenu.SubmenuRoot open={open} onOpenChange={setOpen}>
       <BaseMenu.SubmenuTrigger
-        openOnHover
+        openOnHover={!isPhone}
         delay={0}
         closeDelay={80}
         className={cn(MENU_ROW_CLASS, "group select-none data-[popup-open]:bg-accent")}
