@@ -168,11 +168,13 @@ export interface SidebarNavListProps {
   /** Gọi khi bấm một mục điều hướng (drawer mobile dùng để tự đóng). */
   onNavigate?: () => void;
   onMaintenance?: (item: SidebarNavSubItem) => void;
+  /** Drawer mobile: icon 14px, cách chữ 6px như sidebar di động của Linear (desktop giữ 16px). */
+  compact?: boolean;
   className?: string;
 }
 
 /** Danh sách điều hướng dùng chung cho sidebar desktop và drawer mobile: cùng nhóm, icon, menu con (không hiện số đếm). */
-export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance, className }: SidebarNavListProps) {
+export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance, compact = false, className }: SidebarNavListProps) {
   const { badgeCounts } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -258,7 +260,7 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                             "group relative flex items-center transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
                             isCollapsed
                               ? "size-10 mx-auto justify-center rounded-xl p-0"
-                              : "gap-2 px-2 h-7 rounded-sm text-compact",
+                              : cn(compact ? "gap-1.5" : "gap-2", "px-2 h-7 rounded-sm text-compact"),
                             !isCollapsed && children && "pr-7",
                             active
                               ? "bg-sidebar-accent text-foreground font-medium"
@@ -267,12 +269,12 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                         >
                           <span className={cn(
                             "shrink-0 flex items-center justify-center",
-                            isCollapsed ? "size-6" : "size-4"
+                            isCollapsed ? "size-6" : compact ? "size-3.5" : "size-4"
                           )}>
                             <Icon
-                              size={isCollapsed ? 18 : 16}
+                              size={isCollapsed ? 18 : compact ? 14 : 16}
                               className={cn(
-                                isCollapsed ? "size-4.5" : "size-4",
+                                isCollapsed ? "size-4.5" : compact ? "size-3.5" : "size-4",
                                 "shrink-0 transition-colors",
                                 active
                                   ? "text-foreground"
@@ -313,7 +315,7 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                     ) : null}
                     </div>
                     {children && !isCollapsed && isExpanded ? (
-                      <div className="ml-[15px] border-l border-border/60 pl-1.5 space-y-px">
+                      <div className={cn(compact ? "ml-[14px]" : "ml-[15px]", "border-l border-border/60 pl-1.5 space-y-px")}>
                         {children.map((child) => {
                           const childActive = isChildActive(child);
                           return (

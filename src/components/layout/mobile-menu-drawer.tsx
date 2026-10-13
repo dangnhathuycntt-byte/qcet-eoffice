@@ -22,7 +22,7 @@ export interface MobileMenuDrawerProps {
 
 /** Cùng kiểu hàng với mục điều hướng của sidebar desktop (h-7, chữ compact, nền sidebar-accent khi chạm). */
 const ROW_CLASS =
-  "flex h-7 w-full items-center gap-2 rounded-sm px-2 text-compact font-medium text-muted-foreground outline-none touch-manipulation transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:bg-sidebar-accent active:bg-sidebar-accent";
+  "flex h-7 w-full items-center gap-1.5 rounded-sm px-2 text-compact font-medium text-muted-foreground outline-none touch-manipulation transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:bg-sidebar-accent active:bg-sidebar-accent";
 const ICON_CLASS = "size-3.5 shrink-0";
 
 /**
@@ -71,7 +71,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto thin-scrollbar">
-            <SidebarNavList onNavigate={close} className="flex-none overflow-visible" />
+            <SidebarNavList onNavigate={close} compact className="flex-none overflow-visible" />
 
             <div className="space-y-0.5 px-2.5 pt-3 pb-3">
               <div className="flex items-center gap-2 px-2 pt-1 pb-1.5">
