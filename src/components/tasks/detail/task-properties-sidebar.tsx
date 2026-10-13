@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { TaskIconDeadline, TaskIconDepartment } from "@/lib/icons/task-icons";
+import { TaskIconCollaborators, TaskIconDeadline, TaskIconDepartment } from "@/lib/icons/task-icons";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
@@ -21,6 +21,9 @@ import { PropertyRow } from "@/components/ui/property-row";
 import { UserAvatar, UserAvatarGroup } from "@/components/ui/user-avatar";
 import { TaskSubtasksSidebarSection } from "./task-subtasks-sidebar-section";
 import { TaskSourceDocumentBadge } from "./task-source-document-badge";
+import { useTaskOptionalEntry } from "./task-add-chip";
+import { Pressable } from "@/components/ui/pressable";
+import { propertyTriggerVariants } from "@/components/ui/property-control-styles";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   taskStateMachine,
@@ -56,6 +59,8 @@ export interface TaskPropertiesSidebarProps {
   activeSubtaskId?: string | null;
   onSelectSubtask?: (subtask: StaffTask) => void;
   onAddSubtask?: () => void;
+  /** Thao tác thêm/từ chối của nhiệm vụ, hiện ở cuối thẻ Thuộc tính. */
+  actions?: React.ReactNode;
 }
 
 /**
@@ -121,6 +126,7 @@ export function TaskPropertiesSidebar({
   activeSubtaskId,
   onSelectSubtask,
   onAddSubtask,
+  actions,
 }: TaskPropertiesSidebarProps) {
   const isSchool = isSchoolTask(task);
   const schoolTask = isSchool ? (task as SchoolTask) : null;
@@ -254,7 +260,11 @@ export function TaskPropertiesSidebar({
   // Đổi hạn trực tiếp cần task.assign; người thực hiện dùng Xin gia hạn (T-01).
   const taskActions = (task as { availableActions?: unknown }).availableActions;
   const canChangeDueDate = canChangeDueDateProp ?? (!Array.isArray(taskActions) || taskActions.includes("task.assign"));
+  // Đổi người chủ trì cần task.reassign (máy chủ từ chối nếu chỉ có quyền sửa thông tin)
+  const canReassign = !Array.isArray(taskActions) || taskActions.includes("task.reassign");
   const dueStatus = computeDueStatus(task.dueDate);
+  // Không được đổi hạn nhưng xin gia hạn được (khối Gia hạn đã đăng ký) thì bấm ô hạn mở form xin gia hạn
+  const extensionEntry = useTaskOptionalEntry("extension");
 
   // Allowed transitions validation via domain State Machine
   const actorContext = React.useMemo(() => buildActorContext(currentUser), [currentUser]);
@@ -379,7 +389,7 @@ export function TaskPropertiesSidebar({
           </PropertyRow>
 
           {/* Lead / DRI Row — @base-ui Combobox via TaskAssigneePicker */}
-          <PropertyRow label="Phụ trách" interactive={canEdit}>
+          <PropertyRow label="Phụ trách" interactive={canEdit && canReassign}>
             <TaskAssigneePicker
               items={personnelList}
               loading={personnelLoading}
@@ -387,7 +397,7 @@ export function TaskPropertiesSidebar({
               assigneeName={leadName}
               assigneeAvatarUrl={leadAvatar}
               displayName={leadParsed.displayName}
-              disabled={!canEdit}
+              disabled={!canEdit || !canReassign}
               pending={isReassigning}
               onSelect={async (person) => {
                 await handleSelectLead(person.id, person.name);
@@ -417,7 +427,10 @@ export function TaskPropertiesSidebar({
                   title={collaborators.map((c) => c.name).join(", ")}
                 />
               ) : (
-                <div className="inline-flex h-7 items-center px-1.5 text-xs text-muted-foreground/70 select-none">
+                <div className="inline-flex h-7 items-center gap-1.5 px-1.5 text-xs text-muted-foreground select-none">
+                  <span className="flex size-4 shrink-0 items-center justify-center">
+                    <TaskIconCollaborators className="size-4" />
+                  </span>
                   Chưa có
                 </div>
               )}
@@ -486,6 +499,24 @@ export function TaskPropertiesSidebar({
                   showPresets={true}
                   align="right"
                 />
+              ) : extensionEntry ? (
+                <Pressable
+                  title="Xin gia hạn"
+                  aria-label={`Hạn hoàn thành ${dueDateIso ? formatDisplayDate(dueDateIso) : "chưa đặt"}, xin gia hạn`}
+                  onClick={(e) => extensionEntry.open(e.currentTarget)}
+                  className={cn(
+                    propertyTriggerVariants(),
+                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-destructive"
+                  )}
+                >
+                  <TaskIconDeadline
+                    className={cn(
+                      "size-4 shrink-0",
+                      dueStatus.isOverdue && normalizedStatus !== "COMPLETED" ? "text-destructive" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="tabular-nums">{dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt"}</span>
+                </Pressable>
               ) : (
                 <div
                   title="Hạn hoàn thành"
@@ -554,6 +585,13 @@ export function TaskPropertiesSidebar({
             </PropertyRow>
           )}
         </div>
+
+        {/* Ẩn cả hàng (kể cả đường kẻ) khi không có nút/thông báo nào; lùi -ml-2 bằng px của chip để chữ thẳng cột với nhãn */}
+        {actions && (
+          <div className="hidden border-t border-border/60 pt-2 has-[button,section]:block">
+            <div className="-ml-2 flex flex-wrap items-center gap-1">{actions}</div>
+          </div>
+        )}
       </div>
 
       {subTasks && onSelectSubtask && (

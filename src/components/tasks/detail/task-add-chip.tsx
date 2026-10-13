@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Building2, CalendarClock, ClipboardCheck, GitBranch, Plus, ShieldCheck, Users } from "lucide-react";
+import { Building2, CalendarClock, ClipboardCheck, GitBranch, Paperclip, Plus, ShieldCheck, Users } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
@@ -23,9 +23,12 @@ const PANEL_CLASS = cn(
 const PANEL_TITLE_CLASS = "mb-2 text-xs font-medium text-foreground";
 
 /** Các khối tùy chọn có thể gom vào menu "+ Thêm" của chi tiết nhiệm vụ. */
-export type TaskOptionalKey = "extension" | "people" | "backup" | "unit-request" | "criteria" | "approval";
-const ENTRY_ORDER: TaskOptionalKey[] = ["criteria", "people", "unit-request", "backup", "approval", "extension"];
+export type TaskOptionalKey = "evidence" | "extension" | "people" | "backup" | "unit-request" | "criteria" | "approval";
+// Tạm chỉ liệt kê Phối hợp liên đơn vị (người dùng chốt 13/10/2026: menu đủ nhiều thì rối). Khối khác vẫn đăng ký và vẫn hiện khi đã có dữ liệu;
+// Xin gia hạn mở từ ô "Hạn hoàn thành" (useTaskOptionalEntry). Thêm lại key vào đây để hiện lại trong menu.
+const ENTRY_ORDER: TaskOptionalKey[] = ["unit-request"];
 const ENTRY_ICON: Record<TaskOptionalKey, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
+  evidence: Paperclip,
   criteria: ClipboardCheck,
   people: Users,
   "unit-request": Building2,
@@ -36,13 +39,16 @@ const ENTRY_ICON: Record<TaskOptionalKey, React.ComponentType<{ className?: stri
 
 interface Entry {
   label: string;
-  open: () => void;
+  /** `anchor`: neo form tại phần tử khác nút "+ Thêm" (vd. ô Hạn hoàn thành). */
+  open: (anchor?: HTMLElement | null) => void;
 }
 
 interface OptionalMenuContextValue {
   register: (key: TaskOptionalKey, entry: Entry) => void;
   unregister: (key: TaskOptionalKey) => void;
+  entries: Partial<Record<TaskOptionalKey, Entry>>;
   anchor: HTMLElement | null;
+  setAnchor: (anchor: HTMLElement | null) => void;
 }
 
 const OptionalMenuContext = React.createContext<OptionalMenuContextValue | null>(null);
@@ -50,10 +56,10 @@ const OptionalMenuContext = React.createContext<OptionalMenuContextValue | null>
 /**
  * Gom các khối tùy chọn còn trống của chi tiết nhiệm vụ vào một nút "+ Thêm" (progressive disclosure, kiểu "+ Add property").
  * Khối có dữ liệu tự hiện trên trang; khối trống chỉ là một mục trong menu, chọn mục thì form mở trong popover neo tại nút.
+ * Provider bọc cả nội dung lẫn cột thuộc tính để nút (`TaskOptionalMenu`) đặt được ở cột thuộc tính.
  */
-export function TaskOptionalSections({ children, className }: { children: React.ReactNode; className?: string }) {
+export function TaskOptionalMenuProvider({ children }: { children: React.ReactNode }) {
   const [entries, setEntries] = React.useState<Partial<Record<TaskOptionalKey, Entry>>>({});
-  const [menuOpen, setMenuOpen] = React.useState(false);
   const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
 
   const register = React.useCallback((key: TaskOptionalKey, entry: Entry) => {
@@ -67,75 +73,93 @@ export function TaskOptionalSections({ children, className }: { children: React.
       return next;
     });
   }, []);
-  const value = React.useMemo(() => ({ register, unregister, anchor }), [register, unregister, anchor]);
+  const value = React.useMemo(() => ({ register, unregister, entries, anchor, setAnchor }), [register, unregister, entries, anchor]);
+
+  return <OptionalMenuContext.Provider value={value}>{children}</OptionalMenuContext.Provider>;
+}
+
+/** Khung các khối tùy chọn đã có dữ liệu: mỗi khối chiếm cả hàng; chip lẻ (nếu có) dồn về hàng cuối. */
+export function TaskOptionalSections({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      data-slot="task-optional-sections"
+      className={cn("flex flex-wrap items-center gap-x-1 gap-y-4 [&>section]:basis-full [&>p]:basis-full", className)}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Mục đã đăng ký của một khối tùy chọn (khối còn trống và người dùng có quyền thêm), để mở form từ chỗ khác ngoài menu. */
+export function useTaskOptionalEntry(key: TaskOptionalKey): Entry | undefined {
+  return React.useContext(OptionalMenuContext)?.entries[key];
+}
+
+/** Nút "+ Thêm" liệt kê các khối còn trống; ẩn khi không còn khối nào để thêm. */
+export function TaskOptionalMenu() {
+  const ctx = React.useContext(OptionalMenuContext);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  if (!ctx) return null;
+  const { entries, setAnchor } = ctx;
   const available = ENTRY_ORDER.filter((key) => entries[key]);
+  if (available.length === 0) return null;
 
   return (
-    <OptionalMenuContext.Provider value={value}>
-      <div
-        data-slot="task-optional-sections"
-        className={cn("flex flex-wrap items-center gap-x-1 gap-y-4 [&>section]:basis-full [&>p]:basis-full", className)}
+    <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+      <Popover.Trigger
+        ref={setAnchor}
+        type="button"
+        data-slot="task-optional-menu"
+        title="Thêm minh chứng, tiêu chí, người tham gia, phối hợp…"
+        className={cn(CHIP_CLASS, "order-1")}
       >
-        {children}
-        {available.length > 0 ? (
-          <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-            <Popover.Trigger
-              ref={setAnchor}
-              type="button"
-              data-slot="task-optional-menu"
-              title="Thêm tiêu chí, người tham gia, phối hợp…"
-              className={cn(CHIP_CLASS, "order-1")}
-            >
-              <Plus className="size-3.5" aria-hidden="true" />
-              Thêm
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
-                <Popover.Popup
-                  aria-label="Thêm thông tin cho nhiệm vụ"
-                  role="menu"
-                  className={MENU_CLASS}
-                  onKeyDown={(e) => {
-                    // Mũi tên lên/xuống đổi mục như menu thật
-                    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-                    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-                    const at = items.indexOf(document.activeElement as HTMLElement);
-                    const next = e.key === "ArrowDown" ? (at + 1) % items.length : (at - 1 + items.length) % items.length;
-                    e.preventDefault();
-                    items[next]?.focus();
+        <Plus className="size-3.5" aria-hidden="true" />
+        Thêm
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+          <Popover.Popup
+            aria-label="Thêm thông tin cho nhiệm vụ"
+            role="menu"
+            className={MENU_CLASS}
+            onKeyDown={(e) => {
+              // Mũi tên lên/xuống đổi mục như menu thật
+              if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+              const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+              const at = items.indexOf(document.activeElement as HTMLElement);
+              const next = e.key === "ArrowDown" ? (at + 1) % items.length : (at - 1 + items.length) % items.length;
+              e.preventDefault();
+              items[next]?.focus();
+            }}
+          >
+            <p className="px-2 pb-1 pt-0.5 text-xs text-muted-foreground">Thêm vào nhiệm vụ</p>
+            {available.map((key) => {
+              const Icon = ENTRY_ICON[key];
+              return (
+                <Pressable
+                  key={key}
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    entries[key]?.open();
                   }}
+                  className={MENU_ROW_CLASS}
                 >
-                  <p className="px-2 pb-1 pt-0.5 text-xs text-muted-foreground">Thêm vào nhiệm vụ</p>
-                  {available.map((key) => {
-                    const Icon = ENTRY_ICON[key];
-                    return (
-                      <Pressable
-                        key={key}
-                        role="menuitem"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          entries[key]?.open();
-                        }}
-                        className={MENU_ROW_CLASS}
-                      >
-                        <Icon className="size-4 shrink-0 text-muted-foreground" />
-                        {entries[key]?.label}
-                      </Pressable>
-                    );
-                  })}
-                </Popover.Popup>
-              </Popover.Positioner>
-            </Popover.Portal>
-          </Popover.Root>
-        ) : null}
-      </div>
-    </OptionalMenuContext.Provider>
+                  <Icon className="size-4 shrink-0 text-muted-foreground" />
+                  {entries[key]?.label}
+                </Pressable>
+              );
+            })}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
 /**
  * Khối tùy chọn còn trống: đăng ký một mục vào menu "+ Thêm"; form mở trong popover neo tại nút đó.
- * Dùng ngoài `TaskOptionalSections` thì tự hiện thành chip riêng.
+ * Dùng ngoài `TaskOptionalMenuProvider` thì tự hiện thành chip riêng.
  */
 export function TaskAddPanel({
   entry,
@@ -155,7 +179,11 @@ export function TaskAddPanel({
   React.useEffect(() => {
     onOpenChangeRef.current = onOpenChange;
   });
-  const openEntry = React.useCallback(() => onOpenChangeRef.current(true), []);
+  const [anchorOverride, setAnchorOverride] = React.useState<HTMLElement | null>(null);
+  const openEntry = React.useCallback((anchor?: HTMLElement | null) => {
+    setAnchorOverride(anchor ?? null);
+    onOpenChangeRef.current(true);
+  }, []);
   const register = ctx?.register;
   const unregister = ctx?.unregister;
 
@@ -174,9 +202,9 @@ export function TaskAddPanel({
   }
 
   return (
-    <Popover.Root open={open && Boolean(ctx.anchor)} onOpenChange={(next) => onOpenChange(next)}>
+    <Popover.Root open={open && Boolean(anchorOverride ?? ctx.anchor)} onOpenChange={(next) => onOpenChange(next)}>
       <Popover.Portal>
-        <Popover.Positioner anchor={ctx.anchor} className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+        <Popover.Positioner anchor={anchorOverride ?? ctx.anchor} className="z-50" align="start" sideOffset={4} collisionPadding={12}>
           <Popover.Popup data-slot="task-add-chip-panel" style={{ maxHeight: "var(--available-height)" }} className={PANEL_CLASS}>
             <p className={PANEL_TITLE_CLASS}>{label}</p>
             {panel}

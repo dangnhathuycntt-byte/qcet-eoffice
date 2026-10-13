@@ -75,6 +75,12 @@ describe("Đổi trạng thái việc con: dịch chuyển số thô", () => {
     assert.equal(applySubtaskStatusToAggregates(parent, "NEW", "IN_PROGRESS"), parent);
   });
 
+  it("hủy việc con thì bớt khỏi tổng, mở lại thì cộng lại (như tiến độ việc cha ở server)", () => {
+    assert.deepEqual(applySubtaskStatusToAggregates({ completedSubTasks: 1, totalSubTasks: 3 }, "IN_PROGRESS", "CANCELLED"), { completedSubTasks: 1, totalSubTasks: 2 });
+    assert.deepEqual(applySubtaskStatusToAggregates({ completedSubTasks: 1, totalSubTasks: 2 }, "CANCELLED", "COMPLETED"), { completedSubTasks: 2, totalSubTasks: 3 });
+    assert.deepEqual(resolveSubtaskAggregates({ subTasks: [{ status: "COMPLETED" }, { status: "CANCELLED" }] }), { total: 1, completed: 1 });
+  });
+
   it("không tạo số liệu khi server không gửi số thô", () => {
     const parent = { completedSubTasks: undefined };
     assert.equal(applySubtaskStatusToAggregates(parent, "NEW", "COMPLETED").completedSubTasks, undefined);

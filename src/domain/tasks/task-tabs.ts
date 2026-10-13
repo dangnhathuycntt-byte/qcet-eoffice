@@ -45,11 +45,14 @@ export function isUnfinishedTask(task: TabTask): boolean {
   return task.status !== "COMPLETED" && task.status !== "CANCELLED";
 }
 
-/** Nhiệm vụ có thuộc view không. `isOverdue` do nơi gọi cấp để dùng đúng định nghĩa "Trễ hạn" của bộ lọc thời hạn. */
+/**
+ * Nhiệm vụ có thuộc view không. `isOverdue` do nơi gọi cấp để dùng đúng định nghĩa "Trễ hạn" của bộ lọc thời hạn.
+ * Đang thực hiện và Trễ hạn tách rời: việc đã trễ chỉ nằm ở Trễ hạn.
+ */
 export function matchesTaskTab<T extends TabTask>(task: T, tab: TaskTab, isOverdue: (task: T) => boolean): boolean {
   switch (tab) {
     case "active":
-      return isUnfinishedTask(task);
+      return isUnfinishedTask(task) && !isOverdue(task);
     case "overdue":
       return isOverdue(task);
     case "done":

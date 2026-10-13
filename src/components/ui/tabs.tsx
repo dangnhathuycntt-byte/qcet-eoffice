@@ -76,6 +76,9 @@ function Tabs({
       <div
         data-slot="tabs"
         data-orientation={orientation}
+        // Biến thể `group-data-horizontal/tabs:` / `group-data-vertical/tabs:` của List/Trigger đọc hai thuộc tính này
+        data-horizontal={orientation === "horizontal" ? "" : undefined}
+        data-vertical={orientation === "vertical" ? "" : undefined}
         className={cn(
           "group/tabs flex gap-2",
           orientation === "horizontal" ? "flex-col" : "flex-row",

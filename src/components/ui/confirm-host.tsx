@@ -64,16 +64,17 @@ export function ConfirmHost() {
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
         <AlertDialog.Popup className="fixed inset-0 z-40 flex items-center justify-center p-4 outline-none motion-reduce:transition-none">
-          <div className="bg-card rounded-2xl shadow-dialog border-0 max-w-md w-full p-4 sm:p-6 flex flex-col gap-4">
+          {/* Cùng khung với hộp xác nhận xóa (DestructiveConfirmDialog) */}
+          <div className="bg-card rounded-xl shadow-dialog border-0 max-w-sm w-full p-4 flex flex-col gap-4">
             <div className="flex flex-col gap-1 min-w-0">
               <AlertDialog.Title className="text-sm font-semibold text-foreground">{current?.title}</AlertDialog.Title>
               {current?.description ? (
-                <AlertDialog.Description className="text-xs text-muted-foreground leading-relaxed">{current.description}</AlertDialog.Description>
+                <AlertDialog.Description className="text-compact text-muted-foreground leading-relaxed">{current.description}</AlertDialog.Description>
               ) : null}
             </div>
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button variant="secondary" onClick={() => settle(false)}>{current?.cancelLabel ?? "Hủy"}</Button>
-              <Button onClick={() => settle(true)}>{current?.confirmLabel ?? "Đồng ý"}</Button>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => settle(false)}>{current?.cancelLabel ?? "Hủy"}</Button>
+              <Button size="sm" onClick={() => settle(true)}>{current?.confirmLabel ?? "Đồng ý"}</Button>
             </div>
           </div>
         </AlertDialog.Popup>

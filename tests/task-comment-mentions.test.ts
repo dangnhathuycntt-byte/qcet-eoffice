@@ -6,6 +6,7 @@ import {
   findMentionQuery,
   insertMention,
   resolveMentionIds,
+  splitMentions,
 } from '../src/domain/tasks/comment-mentions';
 
 const people = [
@@ -37,5 +38,19 @@ describe('T-03 nhắc tên', () => {
   test('chỉ giữ người còn được nhắc trong nội dung cuối cùng', () => {
     const ids = resolveMentionIds('Nhờ @Đặng Nhật Huy kiểm tra', [people[0], people[1]]);
     assert.deepEqual(ids, ['b']);
+  });
+
+  test('tách "@Tên" đã biết để tô màu; tên dài khớp trước; email và tên lạ giữ nguyên', () => {
+    const names = ['Đặng Nhật Huy', 'Đặng Nhật', 'Trần Văn Hải'];
+    assert.deepEqual(splitMentions('@Đặng Nhật Huy và @Trần Văn Hải, xem giúp.', names), [
+      { text: '@Đặng Nhật Huy', mention: true },
+      { text: ' và ', mention: false },
+      { text: '@Trần Văn Hải', mention: true },
+      { text: ', xem giúp.', mention: false },
+    ]);
+    assert.deepEqual(splitMentions('gửi a@Trần Văn Hải.vn và @Người Lạ', names), [
+      { text: 'gửi a@Trần Văn Hải.vn và @Người Lạ', mention: false },
+    ]);
+    assert.deepEqual(splitMentions('không nhắc ai', names), [{ text: 'không nhắc ai', mention: false }]);
   });
 });

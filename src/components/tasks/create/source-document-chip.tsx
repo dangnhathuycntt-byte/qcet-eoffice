@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Popover } from "@base-ui/react/popover";
-import { ChevronDown, FileText } from "lucide-react";
+import { Combobox } from "@base-ui/react/combobox";
+import { ChevronDown, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Pressable } from "@/components/ui/pressable";
-import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 export interface SourceDocumentOption {
   id: string;
@@ -25,6 +24,8 @@ interface ApiDocumentRow {
   documentYear?: number | null;
   summary?: string | null;
 }
+
+const UNLINK_OPTION: SourceDocumentOption = { id: "__unlink__", number: "", summary: "" };
 
 // Văn bản đã hoàn thành/lưu theo dõi là bất biến: server từ chối gắn, nên không mời chọn
 const UNLINKABLE_STATUSES = new Set(["DA_HOAN_THANH", "LUU_THEO_DOI"]);
@@ -68,8 +69,8 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
   const [options, setOptions] = React.useState<SourceDocumentOption[]>([]);
   const [status, setStatus] = React.useState<"idle" | "loading" | "error">("idle");
 
+  // Tải ngay khi chip hiện (không chờ mở) và tải lại mỗi lần mở/gõ: Combobox cần sẵn danh sách lúc bấm mở
   React.useEffect(() => {
-    if (!open) return;
     const ctrl = new AbortController();
     setStatus("loading");
     const timer = window.setTimeout(async () => {
@@ -93,97 +94,96 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
   }, [open, query]);
 
   const label = value ? value.number : "Văn bản";
+  // Mục "Bỏ gắn" đứng đầu danh sách (chọn được bằng bàn phím), chỉ có khi đã gắn văn bản
+  const items = React.useMemo(() => (value ? [UNLINK_OPTION, ...options] : options), [value, options]);
 
   return (
-    <Popover.Root
+    <Combobox.Root
+      items={items}
+      value={value}
       open={open}
       onOpenChange={(next) => {
         onOpenChange(next);
         if (!next) setQuery("");
       }}
+      inputValue={query}
+      onInputValueChange={setQuery}
+      // Server đã lọc theo từ khóa
+      filter={null}
+      onValueChange={(next) => {
+        onChange(!next || next.id === UNLINK_OPTION.id ? null : next);
+        onOpenChange(false);
+      }}
+      itemToStringLabel={(opt) => opt.number}
+      itemToStringValue={(opt) => opt.id}
+      isItemEqualToValue={(a, b) => a.id === b.id}
+      autoHighlight
     >
-      <div className="relative">
-        <Popover.Trigger
-          type="button"
-          aria-label={value ? `Văn bản nguồn: ${value.number}` : "Văn bản nguồn"}
-          title={value ? `Văn bản nguồn: ${value.number}` : "Gắn văn bản nguồn"}
+      <Combobox.Trigger
+        aria-label={value ? `Văn bản nguồn: ${value.number}` : "Văn bản nguồn"}
+        className={cn(
+          "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
+          !value && "max-md:size-7 max-md:justify-center max-md:gap-0 max-md:rounded-full max-md:px-0",
+          open ? "border-border bg-accent text-foreground shadow-2xs" : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
+        )}
+      >
+        <FileText className="size-3 shrink-0 text-muted-foreground max-md:size-3.5" />
+        <span className={cn("max-w-[140px] truncate", !value && "max-md:hidden")}>{label}</span>
+        <ChevronDown
           className={cn(
-            "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
-            !value && "max-md:size-7 max-md:justify-center max-md:gap-0 max-md:rounded-full max-md:px-0",
-            open ? "border-border bg-accent text-foreground shadow-2xs" : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
+            "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+            !value && "max-md:hidden",
+            open && "rotate-180 text-foreground",
           )}
-        >
-          <FileText className="size-3 shrink-0 text-muted-foreground max-md:size-3.5" />
-          <span className={cn("max-w-[140px] truncate", !value && "text-muted-foreground max-md:hidden")}>{label}</span>
-          <ChevronDown
-            className={cn(
-              "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
-              !value && "max-md:hidden",
-              open && "rotate-180 text-foreground",
-            )}
-          />
-        </Popover.Trigger>
+        />
+      </Combobox.Trigger>
 
-        <Popover.Portal>
-          <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
-          <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
-            <Popover.Popup
-              style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-              className={cn("w-72 p-1 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
-              aria-label="Chọn văn bản nguồn"
-            >
-              <MenuSheetHeader title="Văn bản nguồn" />
-              <Input
-                compact
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Tìm số, ký hiệu, trích yếu…"
-                aria-label="Tìm văn bản đến"
-                className="mb-1 text-xs max-md:h-8"
-              />
-              <div className="max-h-60 space-y-0.5 overflow-y-auto overscroll-contain">
-                {value ? (
-                  <Pressable
-                    onClick={() => {
-                      onChange(null);
-                      onOpenChange(false);
-                    }}
-                    className="w-full rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent/70 max-md:min-h-10 max-md:text-compact"
-                  >
-                    Bỏ văn bản nguồn
-                  </Pressable>
-                ) : null}
-                {status === "loading" && options.length === 0 ? (
-                  <div className="px-3 py-3 text-center text-xs text-muted-foreground">Đang tải văn bản…</div>
-                ) : status === "error" ? (
-                  <div className="px-3 py-3 text-center text-xs text-destructive">Không tải được danh sách văn bản</div>
-                ) : options.length === 0 ? (
-                  <div className="px-3 py-3 text-center text-xs text-muted-foreground">
-                    Không có văn bản đến nào chưa gắn nhiệm vụ
-                  </div>
-                ) : (
-                  options.map((opt) => (
-                    <Pressable
-                      key={opt.id}
-                      onClick={() => {
-                        onChange(opt);
-                        onOpenChange(false);
-                      }}
-                      className={cn(
-                        "flex w-full flex-col gap-0.5 rounded-lg px-2 py-1.5 text-left transition-colors max-md:min-h-10",
-                        value?.id === opt.id ? "bg-accent" : "hover:bg-accent/70",
-                      )}
-                    >
-                      <span className={cn("truncate text-xs text-foreground max-md:text-compact", value?.id === opt.id && "font-medium")}>{opt.number}</span>
-                      {opt.summary ? <span className="line-clamp-2 text-xs text-muted-foreground">{opt.summary}</span> : null}
-                    </Pressable>
-                  ))
-                )}
+      <Combobox.Portal>
+        <Combobox.Backdrop className={SHEET_BACKDROP_CLASS} />
+        <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12}>
+          {/* Rộng hơn menu thường (384px) vì trích yếu là nội dung chính cần đọc được */}
+          <Combobox.Popup
+            aria-label="Chọn văn bản nguồn"
+            className={cn("w-96 max-w-[var(--available-width)]", MENU_POPUP_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
+          >
+            {open && <SheetKeyboardSync />}
+            <MenuSheetHeader title="Văn bản nguồn" />
+            <Combobox.Input
+              aria-label="Tìm văn bản đến"
+              placeholder="Tìm số, ký hiệu, trích yếu…"
+              render={<Input variant="menu" />}
+            />
+            <div aria-hidden className="-mx-1 my-1 h-px bg-border" />
+            <Combobox.Empty>
+              <div className={cn("px-2 py-1.5 text-xs", status === "error" ? "text-destructive" : "text-muted-foreground")}>
+                {status === "loading"
+                  ? "Đang tải văn bản…"
+                  : status === "error"
+                    ? "Không tải được danh sách văn bản"
+                    : query.trim()
+                      ? "Không tìm thấy văn bản phù hợp"
+                      : "Không có văn bản đến nào chưa gắn nhiệm vụ"}
               </div>
-            </Popover.Popup>
-          </Popover.Positioner>
-        </Popover.Portal>
-      </div>
-    </Popover.Root>
+            </Combobox.Empty>
+            <Combobox.List className="max-h-64 overflow-y-auto overscroll-contain outline-none data-[empty]:p-0 max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
+              {(opt: SourceDocumentOption) =>
+                opt.id === UNLINK_OPTION.id ? (
+                  <Combobox.Item key={opt.id} value={opt} className={cn(MENU_OPTION_ROW_CLASS, "text-muted-foreground")}>
+                    <X className="size-4 shrink-0" />
+                    <span>Bỏ gắn văn bản</span>
+                  </Combobox.Item>
+                ) : (
+                  <Combobox.Item key={opt.id} value={opt} className={cn(MENU_OPTION_ROW_CLASS, "h-auto flex-col items-start gap-0.5 py-1.5")}>
+                    {/* Trích yếu là tên văn bản: dòng chính, tối đa 2 dòng; số ký hiệu nhỏ mờ bên dưới */}
+                    <span className="line-clamp-2 w-full break-words">{opt.summary || "Chưa có trích yếu"}</span>
+                    <span className="w-full truncate text-muted-foreground tabular-nums">{opt.number}</span>
+                  </Combobox.Item>
+                )
+              }
+            </Combobox.List>
+          </Combobox.Popup>
+        </Combobox.Positioner>
+      </Combobox.Portal>
+    </Combobox.Root>
   );
 }

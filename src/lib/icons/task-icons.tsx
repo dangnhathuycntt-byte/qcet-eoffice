@@ -10,10 +10,16 @@ export interface TaskActionIconProps extends React.SVGProps<SVGSVGElement> {
  * Bộ icon nhiệm vụ (nguồn chuẩn duy nhất cho trạng thái, ưu tiên, thuộc tính và thao tác):
  * cùng ngôn ngữ với icon sidebar
  * (lưới 19x19, nét 1.5, đầu nét tròn, chỉ viền, góc bo lớn, tô bằng currentColor).
+ * Trạng thái, ưu tiên và ngày hạn theo hình học của Linear: lưới 16x16 (`LINEAR_GRID`),
+ * trạng thái là lục giác 14px có lề 1px (`LINEAR_STATUS_GRID`).
  */
+const LINEAR_GRID = "0 0 16 16";
+const LINEAR_STATUS_GRID = "-1 -1 16 16";
+
 function TaskActionSvg({
   size = 16,
   strokeWidth = 1.5,
+  viewBox = "0 0 19 19",
   className,
   children,
   ...props
@@ -22,7 +28,7 @@ function TaskActionSvg({
     <svg
       width={size}
       height={size}
-      viewBox="0 0 19 19"
+      viewBox={viewBox}
       fill="none"
       stroke="currentColor"
       strokeWidth={strokeWidth}
@@ -136,33 +142,40 @@ export function TaskIconTrash(props: TaskActionIconProps) {
   );
 }
 
-/* ── Trạng thái nhiệm vụ (4 bậc: chưa bắt đầu → đang làm → chờ duyệt → hoàn thành) ── */
+/* ── Trạng thái nhiệm vụ (4 bậc: chưa bắt đầu → đang làm → chờ duyệt → hoàn thành) ──
+ * Lục giác đỉnh nhọn bán kính 6 trên lưới 14 (vẽ trong ô 16px), nét 1.5, góc vát như cột Status
+ * của danh sách Projects trên Linear; tiến độ là hình quạt bán kính 3.5 ở tâm.
+ */
 
-/** Mới / chưa bắt đầu: lục giác bo góc nét đứt, chưa tô */
+const STATUS_HEX = "M7 1L12.2 4V10L7 13L1.8 10V4Z";
+/** Lục giác đặc lớn hơn nửa nét để cùng cỡ với lục giác viền */
+const STATUS_HEX_SOLID = "M7 0.4L12.72 3.7V10.3L7 13.6L1.28 10.3V3.7Z";
+
+/** Mới / chưa bắt đầu: lục giác nét đứt, chưa tô */
 export function TaskIconStatusNew(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <path d="M8.03 2.65Q9.5 1.8 10.97 2.65L14.7 4.8Q16.17 5.65 16.17 7.35L16.17 11.65Q16.17 13.35 14.7 14.2L10.97 16.35Q9.5 17.2 8.03 16.35L4.3 14.2Q2.83 13.35 2.83 11.65L2.83 7.35Q2.83 5.65 4.3 4.8Z" strokeDasharray="2.6 2.4" />
+    <TaskActionSvg viewBox={LINEAR_STATUS_GRID} {...props}>
+      <path d={STATUS_HEX} strokeLinejoin="bevel" strokeLinecap="butt" strokeDasharray="1.65 1.35" strokeDashoffset="0.825" />
     </TaskActionSvg>
   );
 }
 
-/** Đang thực hiện: lục giác, nửa trong được tô */
+/** Đang thực hiện: lục giác, nửa hình quạt ở tâm */
 export function TaskIconStatusInProgress(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <path d="M8.03 2.65Q9.5 1.8 10.97 2.65L14.7 4.8Q16.17 5.65 16.17 7.35L16.17 11.65Q16.17 13.35 14.7 14.2L10.97 16.35Q9.5 17.2 8.03 16.35L4.3 14.2Q2.83 13.35 2.83 11.65L2.83 7.35Q2.83 5.65 4.3 4.8Z" />
-      <path d="M9.5 5.3L13.1 7.4V11.6L9.5 13.7Z" fill="currentColor" stroke="none" />
+    <TaskActionSvg viewBox={LINEAR_STATUS_GRID} {...props}>
+      <path d={STATUS_HEX} strokeLinejoin="bevel" />
+      <path d="M7 3.5A3.5 3.5 0 0 1 7 10.5Z" fill="currentColor" stroke="none" />
     </TaskActionSvg>
   );
 }
 
-/** Chờ duyệt: lục giác, ba phần tư phần trong được tô */
+/** Chờ duyệt: lục giác, ba phần tư hình quạt ở tâm */
 export function TaskIconStatusReview(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <path d="M8.03 2.65Q9.5 1.8 10.97 2.65L14.7 4.8Q16.17 5.65 16.17 7.35L16.17 11.65Q16.17 13.35 14.7 14.2L10.97 16.35Q9.5 17.2 8.03 16.35L4.3 14.2Q2.83 13.35 2.83 11.65L2.83 7.35Q2.83 5.65 4.3 4.8Z" />
-      <path d="M9.5 9.5L5.9 9.5V11.6L9.5 13.7L13.1 11.6V7.4L9.5 5.3Z" fill="currentColor" stroke="none" />
+    <TaskActionSvg viewBox={LINEAR_STATUS_GRID} {...props}>
+      <path d={STATUS_HEX} strokeLinejoin="bevel" />
+      <path d="M7 7V3.5A3.5 3.5 0 1 1 3.5 7Z" fill="currentColor" stroke="none" />
     </TaskActionSvg>
   );
 }
@@ -170,10 +183,10 @@ export function TaskIconStatusReview(props: TaskActionIconProps) {
 /** Trễ hạn: lục giác viền, dấu chấm than ở giữa (khác hẳn các bậc trạng thái tiến độ) */
 export function TaskIconStatusOverdue(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <path d="M8.03 2.65Q9.5 1.8 10.97 2.65L14.7 4.8Q16.17 5.65 16.17 7.35L16.17 11.65Q16.17 13.35 14.7 14.2L10.97 16.35Q9.5 17.2 8.03 16.35L4.3 14.2Q2.83 13.35 2.83 11.65L2.83 7.35Q2.83 5.65 4.3 4.8Z" />
-      <path d="M9.5 6.1V10" />
-      <path d="M9.5 12.4H9.51" />
+    <TaskActionSvg viewBox={LINEAR_STATUS_GRID} {...props}>
+      <path d={STATUS_HEX} strokeLinejoin="bevel" />
+      <path d="M7 4.4V7.6" />
+      <path d="M7 9.7H7.01" />
     </TaskActionSvg>
   );
 }
@@ -181,37 +194,41 @@ export function TaskIconStatusOverdue(props: TaskActionIconProps) {
 /** Hoàn thành: lục giác đặc, dấu tick khoét rỗng */
 export function TaskIconStatusDone(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
+    <TaskActionSvg viewBox={LINEAR_STATUS_GRID} {...props}>
       <path
         fill="currentColor"
         fillRule="evenodd"
         clipRule="evenodd"
         stroke="none"
-        d="M8.03 2.65Q9.5 1.8 10.97 2.65L14.7 4.8Q16.17 5.65 16.17 7.35L16.17 11.65Q16.17 13.35 14.7 14.2L10.97 16.35Q9.5 17.2 8.03 16.35L4.3 14.2Q2.83 13.35 2.83 11.65L2.83 7.35Q2.83 5.65 4.3 4.8ZM5.2 9.7L6.3 8.6L8.3 10.6L12.7 6L13.8 7.1L8.3 12.8Z"
+        d={`${STATUS_HEX_SOLID}M4 7.1L4.9 6.2L6.2 7.5L9.1 4.6L10 5.5L6.2 9.3Z`}
       />
     </TaskActionSvg>
   );
 }
 
-/* ── Mức độ ưu tiên (khẩn cấp + 3 cột tín hiệu) ── */
+/* ── Mức độ ưu tiên (khẩn cấp + 3 cột tín hiệu), hình học như Linear ── */
 
-/** Khẩn cấp */
+/** Khẩn cấp: ô vuông bo góc đặc, dấu chấm than khoét rỗng (nền hàng lộ qua, hợp cả hàng đang chọn) */
 export function TaskIconPriorityUrgent(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <rect x="2" y="2" width="15" height="15" rx="4" fill="currentColor" stroke="none" />
-      <path d="M9.5 5.7V10" stroke="white" strokeWidth={1.5} />
-      <path d="M9.5 12.8H9.51" stroke="white" strokeWidth={1.5} />
+    <TaskActionSvg viewBox={LINEAR_GRID} {...props}>
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        clipRule="evenodd"
+        stroke="none"
+        d="M3 1H13A2 2 0 0 1 15 3V13A2 2 0 0 1 13 15H3A2 2 0 0 1 1 13V3A2 2 0 0 1 3 1ZM7.2 3.9V9.3H8.8V3.9ZM7.2 10.6V12.2H8.8V10.6Z"
+      />
     </TaskActionSvg>
   );
 }
 
 function PriorityBars({ level, ...props }: TaskActionIconProps & { level: 1 | 2 | 3 }) {
   return (
-    <TaskActionSvg {...props}>
-      <rect x="2.4" y="10.2" width="3.6" height="6" rx="1.2" fill="currentColor" stroke="none" />
-      <rect x="7.7" y="6.4" width="3.6" height="9.8" rx="1.2" fill="currentColor" stroke="none" fillOpacity={level >= 2 ? 1 : 0.25} />
-      <rect x="13" y="2.6" width="3.6" height="13.6" rx="1.2" fill="currentColor" stroke="none" fillOpacity={level >= 3 ? 1 : 0.25} />
+    <TaskActionSvg viewBox={LINEAR_GRID} {...props}>
+      <rect x="1.5" y="8" width="3" height="6" rx="1" fill="currentColor" stroke="none" />
+      <rect x="6.5" y="5" width="3" height="9" rx="1" fill="currentColor" stroke="none" fillOpacity={level >= 2 ? 1 : 0.4} />
+      <rect x="11.5" y="2" width="3" height="12" rx="1" fill="currentColor" stroke="none" fillOpacity={level >= 3 ? 1 : 0.4} />
     </TaskActionSvg>
   );
 }
@@ -234,14 +251,64 @@ export function TaskIconPriorityLow(props: TaskActionIconProps) {
 /** Hủy: lục giác đặc, dấu X khoét rỗng */
 export function TaskIconStatusCancelled(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
+    <TaskActionSvg viewBox={LINEAR_STATUS_GRID} {...props}>
       <path
         fill="currentColor"
         fillRule="evenodd"
         clipRule="evenodd"
         stroke="none"
-        d="M8.03 2.65Q9.5 1.8 10.97 2.65L14.7 4.8Q16.17 5.65 16.17 7.35L16.17 11.65Q16.17 13.35 14.7 14.2L10.97 16.35Q9.5 17.2 8.03 16.35L4.3 14.2Q2.83 13.35 2.83 11.65L2.83 7.35Q2.83 5.65 4.3 4.8ZM6.9 6.1L9.5 8.7L12.1 6.1L12.9 6.9L10.3 9.5L12.9 12.1L12.1 12.9L9.5 10.3L6.9 12.9L6.1 12.1L8.7 9.5L6.1 6.9Z"
+        d={`${STATUS_HEX_SOLID}M4.6 5.52L5.52 4.6L7 6.08L8.48 4.6L9.4 5.52L7.92 7L9.4 8.48L8.48 9.4L7 7.92L5.52 9.4L4.6 8.48L6.08 7Z`}
       />
+    </TaskActionSvg>
+  );
+}
+
+/* ── Hạn hoàn thành theo tình trạng (lịch có dải đầu đặc, như cột Target date của Linear) ── */
+
+/** Khung lịch hở góc dưới phải để đặt dấu phụ */
+const DUE_FRAME_OPEN = "M8.5 13.25H4.75A2 2 0 0 1 2.75 11.25V5.25A2 2 0 0 1 4.75 3.25H11.25A2 2 0 0 1 13.25 5.25V8.5";
+const DUE_HEADER = "M2 5.25A2.75 2.75 0 0 1 4.75 2.5H11.25A2.75 2.75 0 0 1 14 5.25V6.5H2Z";
+
+/** Hạn: còn thời gian */
+export function TaskIconDue(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg viewBox={LINEAR_GRID} {...props}>
+      <rect x="2.75" y="3.25" width="10.5" height="10" rx="2" />
+      <path d={DUE_HEADER} fill="currentColor" stroke="none" />
+    </TaskActionSvg>
+  );
+}
+
+/** Hạn: sắp tới (đồng hồ ở góc) */
+export function TaskIconDueSoon(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg viewBox={LINEAR_GRID} {...props}>
+      <path d={DUE_FRAME_OPEN} />
+      <path d={DUE_HEADER} fill="currentColor" stroke="none" />
+      <circle cx="12.25" cy="12.25" r="2.75" />
+      <path d="M12.25 11.1V12.4L13.05 13" />
+    </TaskActionSvg>
+  );
+}
+
+/** Hạn: trễ (dấu X ở góc) */
+export function TaskIconDueOverdue(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg viewBox={LINEAR_GRID} {...props}>
+      <path d={DUE_FRAME_OPEN} />
+      <path d={DUE_HEADER} fill="currentColor" stroke="none" />
+      <path d="M10.75 10.75L14.25 14.25M14.25 10.75L10.75 14.25" />
+    </TaskActionSvg>
+  );
+}
+
+/** Hạn: đã xong (dấu tick trong lịch) */
+export function TaskIconDueClosed(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg viewBox={LINEAR_GRID} {...props}>
+      <rect x="2.75" y="3.25" width="10.5" height="10" rx="2" />
+      <path d={DUE_HEADER} fill="currentColor" stroke="none" />
+      <path d="M5.75 9.75L7.25 11.1L10.25 8.25" />
     </TaskActionSvg>
   );
 }

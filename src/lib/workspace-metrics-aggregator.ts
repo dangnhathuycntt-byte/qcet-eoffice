@@ -178,9 +178,10 @@ export function isActiveTaskStatus(
 }
 
 /**
- * Checks whether a task or any of its uncompleted subtasks is overdue.
+ * Định nghĩa "Trễ hạn" duy nhất cho tab, bộ lọc thời hạn và bộ đếm: nhiệm vụ chưa xong, chưa hủy
+ * và hạn của chính nó đã qua. Việc con trễ không kéo nhiệm vụ cha vào Trễ hạn.
  */
-export function isTaskOverdueOrHasOverdueSubtask(
+export function isOpenTaskOverdue(
   t: SchoolTask,
   refDate: string = getSystemReferenceDate()
 ): boolean {
@@ -188,18 +189,7 @@ export function isTaskOverdueOrHasOverdueSubtask(
     return false;
   }
   if (t.isOverdue) return true;
-
-  const parentOverdue = Boolean(t.dueDate && isTaskPastDue(t.dueDate, refDate));
-  const subtaskOverdue = Boolean(
-    t.subTasks?.some(
-      (st) =>
-        st.status !== "COMPLETED" &&
-        (st.status as string) !== "CANCELLED" &&
-        Boolean(st.dueDate && isTaskPastDue(st.dueDate, refDate))
-    )
-  );
-
-  return parentOverdue || subtaskOverdue;
+  return Boolean(t.dueDate && isTaskPastDue(t.dueDate, refDate));
 }
 
 // ============================================================================
@@ -270,7 +260,7 @@ export function computeWorkspaceTabCounts({
         ).length;
 
   const overdue = activeTasks.filter((t) =>
-    isTaskOverdueOrHasOverdueSubtask(t, referenceDate)
+    isOpenTaskOverdue(t, referenceDate)
   ).length;
 
   const today = activeTasks.filter((t) =>

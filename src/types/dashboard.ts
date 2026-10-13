@@ -54,6 +54,8 @@ export interface DeliverableItem {
   name: string;
   url?: string;
   fileType?: string;
+  /** Trạng thái duyệt (PENDING, APPROVED, REVISION_REQUIRED) */
+  status?: string;
   submittedAt?: string;
 }
 

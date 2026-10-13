@@ -184,16 +184,6 @@ export function getHealthDisplayLabel(health: string): string {
   return getSingleHealthDisplayLabel(health);
 }
 
-function getLeadDisplayLabel(lead: string): string {
-  switch (lead) {
-    case "my": return "Tôi chủ trì";
-    case "bgh": return "Lãnh đạo BGH";
-    case "assigned": return "Đã phân công";
-    case "unassigned": return "Chưa phân công";
-    default: return lead;
-  }
-}
-
 function getSingleOriginDisplayLabel(origin: string): string {
   switch (origin) {
     case "KE_HOACH_NAM": return "Kế hoạch năm";
@@ -213,14 +203,6 @@ export function getOriginDisplayLabel(origin: string): string {
       .join(", ");
   }
   return getSingleOriginDisplayLabel(origin);
-}
-
-function getCollaboratorDisplayLabel(collaborator: string): string {
-  switch (collaborator) {
-    case "has_collab": return "Có phối hợp";
-    case "single": return "Tự thực hiện";
-    default: return collaborator;
-  }
 }
 
 /** Linear-style segmented filter chip (Property | Value | ✕) */
@@ -276,8 +258,10 @@ export interface ActiveFilterBreadcrumbProps {
   priority?: string;
   category?: string;
   health?: string | null;
+  /** Nhãn đã tra tên người (workspace tính từ token bộ lọc) */
   lead?: string | null;
   origin?: string | null;
+  /** Nhãn đã tra tên người phối hợp */
   collaborator?: string | null;
   totalFilteredCount?: number;
   totalCount?: number;
@@ -339,10 +323,13 @@ export function ActiveFilterBreadcrumb({
   className = "",
 }: ActiveFilterBreadcrumbProps) {
   const hasDept = Boolean(department && department !== "ALL");
-  const hasWorkbox = Boolean(workbox && workbox !== "ALL");
+  const hasDeadlineOverdue = deadline === "overdue";
+  // Thời hạn "Trễ hạn" cũng ghi attention=overdue nên Hộp việc tự thành "overdue": chỉ hiện một chip (Thời hạn)
+  const hasWorkbox = Boolean(workbox && workbox !== "ALL" && !(workbox === "overdue" && hasDeadlineOverdue));
+  const hasOverdue = Boolean(overdue && workbox !== "overdue" && !hasDeadlineOverdue);
   const hasSearch = Boolean(search && search.trim().length > 0);
   const hasStatus = Boolean(status && status !== "ALL" && status !== "all");
-  const hasOverdue = Boolean(overdue && workbox !== "overdue");
+
   const hasTimeFilter = Boolean(timeFilter && timeFilter.kind !== "none");
   const hasDeadline = Boolean(deadline && deadline !== "all" && deadline !== "ALL");
   const hasPriority = Boolean(priority && priority !== "ALL");
@@ -486,7 +473,7 @@ export function ActiveFilterBreadcrumb({
             dataSlot="filter-chip-lead"
             icon={FilterIconLead}
             label="Chủ trì"
-            value={getLeadDisplayLabel(lead!)}
+            value={lead!}
             onRemove={(onRemoveLead || onRemoveFilter) ? () => handleRemove(onRemoveLead, "lead") : undefined}
             removeAriaLabel={`Xóa lọc người chủ trì: ${lead}`}
           />
@@ -508,7 +495,7 @@ export function ActiveFilterBreadcrumb({
             dataSlot="filter-chip-collaborator"
             icon={FilterIconCollaborator}
             label="Phối hợp"
-            value={getCollaboratorDisplayLabel(collaborator!)}
+            value={collaborator!}
             onRemove={(onRemoveCollaborator || onRemoveFilter) ? () => handleRemove(onRemoveCollaborator, "collaborator") : undefined}
             removeAriaLabel={`Xóa lọc phối hợp: ${collaborator}`}
           />

@@ -15,6 +15,7 @@ import {
   updateTaskAssignee,
   updateTaskDueDate,
   deleteTask,
+  type TaskActionResult,
 } from "@/lib/tasks/task-actions";
 import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
 import {
@@ -355,50 +356,67 @@ export function TaskContextMenu({
     }
   };
 
-  const handleToggleStar = async () => {
-    const nextPriority: TaskPriority = currentPriority === "URGENT" ? "NORMAL" : "URGENT";
-    if (onPriorityChange) {
-      await onPriorityChange(task.id, nextPriority);
-    } else {
-      await updateTaskPriority(task.id, nextPriority);
+  const version = (task as { version?: number }).version;
+
+  // Chạy một thao tác sửa nhanh: handler của nơi giữ dữ liệu (có thể ném lỗi) hoặc gọi API trực tiếp;
+  // lỗi nào cũng báo cho người dùng thay vì nuốt mất, rồi mới đóng menu.
+  const runEdit = async (
+    viaHandler: (() => Promise<void> | void) | undefined,
+    viaApi: () => Promise<TaskActionResult>,
+    failureMessage: string
+  ) => {
+    try {
+      if (viaHandler) {
+        await viaHandler();
+      } else {
+        const res = await viaApi();
+        if (!res.ok) feedback.notifyError(res.error || failureMessage, "Lỗi cập nhật");
+      }
+    } catch (err) {
+      feedback.notifyError(err instanceof Error ? err.message : failureMessage, "Lỗi cập nhật");
     }
     onClose();
+  };
+
+  const handleToggleStar = async () => {
+    const nextPriority: TaskPriority = currentPriority === "URGENT" ? "NORMAL" : "URGENT";
+    await runEdit(
+      onPriorityChange && (() => onPriorityChange(task.id, nextPriority)),
+      () => updateTaskPriority(task.id, nextPriority),
+      "Không thể cập nhật độ ưu tiên"
+    );
   };
 
   const handleStatusSelect = async (status: TaskStatus) => {
-    if (onStatusChange) {
-      await onStatusChange(task.id, status);
-    } else {
-      await updateTaskStatus(task.id, status, undefined, (task as any).version);
-    }
-    onClose();
+    await runEdit(
+      onStatusChange && (() => onStatusChange(task.id, status)),
+      () => updateTaskStatus(task.id, status, undefined, version),
+      "Không thể chuyển trạng thái nhiệm vụ"
+    );
   };
 
   const handlePrioritySelect = async (priority: TaskPriority) => {
-    if (onPriorityChange) {
-      await onPriorityChange(task.id, priority);
-    } else {
-      await updateTaskPriority(task.id, priority);
-    }
-    onClose();
+    await runEdit(
+      onPriorityChange && (() => onPriorityChange(task.id, priority)),
+      () => updateTaskPriority(task.id, priority),
+      "Không thể cập nhật độ ưu tiên"
+    );
   };
 
   const handleAssigneeSelect = async (personId: string, personName: string) => {
-    if (onAssigneeChange) {
-      await onAssigneeChange(task.id, personId, personName);
-    } else {
-      await updateTaskAssignee(task.id, personId, personName, (task as any).version);
-    }
-    onClose();
+    await runEdit(
+      onAssigneeChange && (() => onAssigneeChange(task.id, personId, personName)),
+      () => updateTaskAssignee(task.id, personId, personName, version),
+      "Không thể phân công người chủ trì"
+    );
   };
 
   const handleSetDueDate = async (dateStr: string) => {
-    if (onDueDateChange) {
-      await onDueDateChange(task.id, dateStr);
-    } else {
-      await updateTaskDueDate(task.id, dateStr);
-    }
-    onClose();
+    await runEdit(
+      onDueDateChange && (() => onDueDateChange(task.id, dateStr)),
+      () => updateTaskDueDate(task.id, dateStr),
+      "Không thể cập nhật hạn hoàn thành"
+    );
   };
 
   const handleDeleteTask = () => {

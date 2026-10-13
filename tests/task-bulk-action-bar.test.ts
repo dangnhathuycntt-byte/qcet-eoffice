@@ -271,6 +271,10 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       // +30 days
       assert.equal(calculateExtendedDeadline(30, baseDate), "2026-10-09");
     });
+
+    it("cộng vào hạn hiện tại (hạn đã ở tương lai thì không bị rút ngắn về hôm nay + N)", () => {
+      assert.equal(calculateExtendedDeadline(3, "2026-12-30"), "2027-01-02");
+    });
   });
 
   describe("4. TaskBulkActionBar Accessibility & Presentation", () => {

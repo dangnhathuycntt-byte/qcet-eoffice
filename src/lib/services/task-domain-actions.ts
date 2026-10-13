@@ -1637,6 +1637,8 @@ export class TaskDomainActionService {
         primaryDRI,
         newAssigneeId: validated.newAssigneeId,
         role: TaskActorRole.DRI,
+        // Version đã lưu sau khi setTaskDRI tăng, để client gửi đúng ở thao tác kế tiếp
+        version: (await tx.task.findUniqueOrThrow({ where: { id: taskId }, select: { version: true } })).version,
       };
     });
 

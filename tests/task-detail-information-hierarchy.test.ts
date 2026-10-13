@@ -39,10 +39,10 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
   });
 
   describe("2. Properties under Title (Conditional & Compact Summary)", () => {
-    it("renders compact properties under title conditionally only when right sidebar is collapsed", () => {
+    it("renders compact properties under title only on wide screens while a subtask hides the sidebar; never on narrow screens", () => {
       assert.ok(
-        taskDetailPageContent.includes("showInlineProperties={!showInspector}"),
-        "TaskDetailPage must only show inline compact properties when right sidebar is collapsed"
+        taskDetailPageContent.includes("showInlineProperties={!showInspector && !stacked}"),
+        "Màn hẹp không lặp thuộc tính dưới tên (người dùng chốt 13/10/2026; mở cột Thuộc tính bằng nút ở thanh trên)"
       );
     });
 

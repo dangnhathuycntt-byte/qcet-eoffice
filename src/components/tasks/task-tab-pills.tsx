@@ -19,7 +19,7 @@ export function TaskTabPills({ value, onChange }: { value: TaskTab; onChange: (t
       <MenuRoot open={open} onOpenChange={setOpen}>
         <MenuTrigger
           aria-label={`Chế độ xem nhiệm vụ: ${current.label}`}
-          className="inline-flex h-7 max-md:h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-foreground outline-none touch-manipulation md:hidden"
+          className="inline-flex h-7 max-md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent px-3 text-xs font-medium text-foreground outline-none touch-manipulation md:hidden"
         >
           <span>{current.label}</span>
           <ChevronDown className="size-3.5 text-muted-foreground" />

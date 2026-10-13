@@ -119,6 +119,9 @@ describe('T-12 giao việc liên đơn vị qua trưởng đơn vị', () => {
     assert.equal((await prisma.task.findUniqueOrThrow({ where: { id } })).version, version, 'bị chặn thì không đổi phiên bản');
     const moved = await taskDomainActionService.reassign(session('assigner'), id, { newAssigneeId: u.staffA, expectedVersion: version } as never);
     assert.equal(moved.newAssigneeId, u.staffA);
+    // Trả version mới để client gửi đúng ở thao tác kế tiếp (không bị xung đột phiên bản)
+    assert.equal(moved.version, version + 1);
+    assert.equal((await prisma.task.findUniqueOrThrow({ where: { id } })).version, moved.version);
   });
 
   test('chỉ người giao gửi yêu cầu; không gửi cho đơn vị chủ trì; một yêu cầu chờ mỗi đơn vị', async () => {

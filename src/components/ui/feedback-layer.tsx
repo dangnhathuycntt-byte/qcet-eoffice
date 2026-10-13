@@ -358,6 +358,9 @@ export function ToastContainer({
 
 const FeedbackContext = React.createContext<FeedbackContextValue | null>(null);
 
+/** Cùng loại và nội dung thì dùng chung id: bấm lại (vd. "Đã sao chép liên kết") làm mới toast cũ, không chồng thêm. */
+const toastKey = (variant: string, text: string) => `${variant}:${text}`;
+
 
 /** Toast lỗi và cảnh báo giữ chung khung với toast thường; chỉ icon và tiêu đề theo màu tín hiệu, hiện lâu hơn để kịp đọc. */
 const SIGNAL_TOAST_OPTIONS = {
@@ -389,6 +392,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
           : sonnerToast.info;
 
       const toastId = fn(item.title || item.message, {
+        id: toastKey(item.variant ?? "info", item.title || item.message),
         description: item.title ? item.message : undefined,
         ...(item.variant === "error" || item.variant === "warning" ? SIGNAL_TOAST_OPTIONS[item.variant] : {}),
         duration: item.durationMs ?? (item.variant === "error" || item.variant === "warning" ? SIGNAL_TOAST_OPTIONS[item.variant].duration : 4000),
@@ -408,6 +412,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     (m: string, t?: string) =>
       String(
         sonnerToast.success(t || m, {
+          id: toastKey("success", t || m),
           description: t ? m : undefined,
         })
       ),
@@ -418,6 +423,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     (m: string, t?: string) =>
       String(
         sonnerToast.error(t || m, {
+          id: toastKey("error", t || m),
           description: t ? m : undefined,
           ...SIGNAL_TOAST_OPTIONS.error,
         })
@@ -429,6 +435,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     (m: string, t?: string) =>
       String(
         sonnerToast.warning(t || m, {
+          id: toastKey("warning", t || m),
           description: t ? m : undefined,
           ...SIGNAL_TOAST_OPTIONS.warning,
         })
@@ -440,6 +447,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     (m: string, t?: string) =>
       String(
         sonnerToast.info(t || m, {
+          id: toastKey("info", t || m),
           description: t ? m : undefined,
         })
       ),

@@ -123,8 +123,9 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("!e.nativeEvent.isComposing"), "Enter ở ô tên phải bỏ qua khi đang soạn IME");
     // Tìm người chủ trì gõ không dấu vẫn ra
     assert.ok(source.includes("foldVietnamese"), "Tìm người chủ trì phải bỏ dấu tiếng Việt");
-    // Lỗi chủ trì/ngày có chữ, không chỉ đổi màu
-    assert.ok(source.includes("fieldErrorText"), "Lỗi chủ trì/ngày phải hiện thành chữ");
+    // Thiếu chủ trì/hạn: chip đỏ, chữ lỗi chỉ cho trình đọc màn hình; ngày bắt đầu sau hạn vẫn hiện chữ
+    assert.ok(source.includes("requiredErrorText") && source.includes('className="sr-only"'), "Lỗi thiếu chủ trì/hạn phải còn cho trình đọc màn hình");
+    assert.ok(source.includes("fieldErrorText = form.fieldErrors.startDate"), "Lỗi ngày bắt đầu sau hạn phải hiện thành chữ");
     // Danh sách đơn vị rỗng sau khi đã tải xong không được hiện "Đang tải"
     assert.ok(source.includes("Chưa có đơn vị"), "Phải phân biệt đang tải với không có đơn vị");
   });

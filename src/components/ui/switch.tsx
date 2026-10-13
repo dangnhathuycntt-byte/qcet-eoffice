@@ -8,7 +8,7 @@ export type SwitchProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "typ
 
 export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
   ({ className, ...props }, ref) => (
-    <span className="relative inline-flex min-h-11 items-center sm:min-h-6">
+    <span className="relative inline-flex min-h-8 items-center sm:min-h-6">
       <input
         {...props}
         ref={ref}

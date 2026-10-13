@@ -3,8 +3,9 @@ import { cva } from "class-variance-authority";
 import { motionDuration, motionEase } from "@/lib/motion/tokens";
 import { focusRingClass } from "@/components/ui/focus-ring";
 
+// Không có quyền sửa (disabled) thì hiện như giá trị chỉ đọc, giống "Phối hợp"/"Đơn vị": chỉ tắt tương tác, không làm mờ
 export const propertyTriggerVariants = cva(
-  `inline-flex h-7 max-md:h-11 max-w-full items-center gap-1.5 rounded-md px-1.5 text-xs font-normal whitespace-nowrap select-none cursor-pointer outline-none transition-[background-color,color] duration-[var(--property-press-duration)] ease-[var(--property-ease)] hover:bg-accent data-[popup-open]:bg-accent data-[state=open]:bg-accent ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:transform-none`,
+  `inline-flex h-7 max-w-full items-center gap-1.5 rounded-md px-1.5 text-xs font-normal whitespace-nowrap select-none cursor-pointer outline-none transition-[background-color,color] duration-[var(--property-press-duration)] ease-[var(--property-ease)] hover:bg-accent data-[popup-open]:bg-accent data-[state=open]:bg-accent ${focusRingClass} disabled:pointer-events-none motion-reduce:transition-none motion-reduce:transform-none`,
   {
     variants: {
       variant: {

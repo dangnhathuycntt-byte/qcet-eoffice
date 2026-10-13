@@ -42,7 +42,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: "light",
-  themeColor: "#fbfbfb",
+  // Thanh tiêu đề cửa sổ PWA trùng màu sidebar (--gray-1) như Linear; dưới md là topbar di động nền sáng
+  themeColor: [
+    { media: "(min-width: 768px)", color: "#EFEFF0" },
+    { color: "#fbfbfb" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,

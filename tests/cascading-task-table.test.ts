@@ -707,6 +707,34 @@ describe("Linear Table Redesign: Collapsible Grouped Sections", () => {
     assert.ok(html.includes("Phòng Đào tạo"), "Must render group header for 'Phòng Đào tạo'");
   });
 
+  it("nhóm ưu tiên/trạng thái dùng nhãn tiếng Việt chuẩn và thứ tự chuẩn (NORMAL, MEDIUM, NOT_STARTED không lộ mã)", () => {
+    const extra = [
+      { ...sampleGroupTasks[0], id: "g-normal", priority: "NORMAL", status: "NOT_STARTED" },
+      { ...sampleGroupTasks[0], id: "g-medium", priority: "MEDIUM", status: "COMPLETED" },
+    ] as SchoolTask[];
+    const render = (groupingField: string) =>
+      renderToStaticMarkup(
+        React.createElement(ModularCascadingTaskTable, { tasks: [...sampleGroupTasks, ...extra], groupingField, hideToolbar: false })
+      );
+    const labelsOf = (html: string) =>
+      [...html.matchAll(/data-slot="group-header"[\s\S]*?text-compact font-medium text-foreground">([^<]+)</g)].map((m) => m[1]);
+
+    assert.deepEqual(labelsOf(render("priority")), ["Khẩn cấp", "Cao", "Bình thường", "Thấp"]);
+    assert.deepEqual(labelsOf(render("status")), ["Mới", "Đang thực hiện", "Chờ duyệt", "Hoàn thành"]);
+  });
+
+  it("mọi kiểu nhóm mặc định thu gọn hết, không hiện hàng nhiệm vụ", () => {
+    for (const groupingField of ["department", "status", "priority"]) {
+      const html = renderToStaticMarkup(
+        React.createElement(ModularCascadingTaskTable, { tasks: sampleGroupTasks, groupingField, hideToolbar: false })
+      );
+      const headers = html.match(/data-slot="group-header"[^>]*/g) ?? [];
+      assert.ok(headers.length > 0, groupingField);
+      assert.ok(headers.every((h) => h.includes("data-collapsed")), `Nhóm theo ${groupingField} thu gọn hết`);
+      assert.ok(!html.includes('data-slot="task-row"'), `Nhóm theo ${groupingField} không hiện hàng`);
+    }
+  });
+
   it("renders clean flat table without group headers when groupingField='none'", () => {
     const html = renderToStaticMarkup(
       React.createElement(ModularCascadingTaskTable, {

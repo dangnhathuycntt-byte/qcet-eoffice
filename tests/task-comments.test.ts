@@ -11,6 +11,7 @@ import {
   createTaskComment,
   deleteTaskComment,
   listTaskComments,
+  setTaskCommentReaction,
   updateTaskComment,
 } from '../src/server/tasks/task-comment-service';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
@@ -152,6 +153,31 @@ describe('T-03 bình luận nhiệm vụ', () => {
     assert.ok(await prisma.auditEvent.findFirst({ where: { entityId: taskId, action: 'COMMENT' } }));
 
     await assert.rejects(updateTaskComment(session('follower'), taskId, c.id, { body: 'Hồi sinh' }), NotFoundError);
+  });
+
+  test('thả emoji: bật tắt idempotent, đếm theo emoji, giữ khi sửa; người quan sát không thả được; chặn emoji lạ và bình luận đã xóa', async () => {
+    const c = await createTaskComment(session('dri'), taskId, { body: 'Thả emoji vào đây' });
+    await setTaskCommentReaction(session('collab'), taskId, c.id, { emoji: '👍', active: true });
+    await setTaskCommentReaction(session('collab'), taskId, c.id, { emoji: '👍', active: true }); // gửi lại không nhân đôi
+    const afterCreator = await setTaskCommentReaction(session('creator'), taskId, c.id, { emoji: '👍', active: true });
+    assert.deepEqual(afterCreator.reactions.map((r) => [r.emoji, r.count, r.reacted]), [['👍', 2, true]]);
+
+    const forDri = (await listTaskComments(session('dri'), taskId)).comments.find((x) => x.id === c.id);
+    assert.equal(forDri?.reactions[0]?.reacted, false);
+    assert.deepEqual(forDri?.reactions[0]?.names, [`${runId} collab`, `${runId} creator`]);
+
+    const edited = await updateTaskComment(session('dri'), taskId, c.id, { body: 'Đã sửa' });
+    assert.equal(edited.reactions[0]?.count, 2, 'sửa bình luận không làm mất emoji');
+
+    const off = await setTaskCommentReaction(session('collab'), taskId, c.id, { emoji: '👍', active: false });
+    assert.equal(off.reactions[0]?.count, 1);
+
+    await assert.rejects(setTaskCommentReaction(session('observer'), taskId, c.id, { emoji: '👍', active: true }), forbidden);
+    await assert.rejects(setTaskCommentReaction(session('stranger'), taskId, c.id, { emoji: '👍', active: true }), forbidden);
+    await assert.rejects(setTaskCommentReaction(session('collab'), taskId, c.id, { emoji: '💩' as never, active: true }), ZodError);
+
+    await deleteTaskComment(session('dri'), taskId, c.id);
+    await assert.rejects(setTaskCommentReaction(session('collab'), taskId, c.id, { emoji: '🎉', active: true }), NotFoundError);
   });
 
   test('không bình luận trên nhiệm vụ đã lưu trữ', async () => {

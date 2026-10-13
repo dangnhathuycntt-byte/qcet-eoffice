@@ -28,7 +28,7 @@ describe("Task 5: Web App Manifest Audit, Stable Identity, Maskable Icons & Shor
 
     it("uses standardized theme and background colors aligned with light theme", () => {
       assert.strictEqual(manifestData.background_color, "#f8fafc");
-      assert.strictEqual(manifestData.theme_color, "#0f172a");
+      assert.strictEqual(manifestData.theme_color, "#EFEFF0");
     });
 
     it("includes relevant application categories", () => {

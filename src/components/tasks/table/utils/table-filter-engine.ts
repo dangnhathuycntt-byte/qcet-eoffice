@@ -1,13 +1,14 @@
 import { getTaskContentPreview } from "@/lib/task-content-preview";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
 import type {
   SchoolTask,
   TaskCategory,
 } from "@/types/dashboard";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import { matchesUser } from "@/lib/role-task-filter";
+import { isOpenTaskOverdue } from "@/lib/workspace-metrics-aggregator";
 import { filterTasksByAcademicMonthStrict } from "@/lib/academic-calendar";
 import {
-  isTaskPastDue,
   isTaskDueToday,
   getSystemReferenceDate,
   extractIsoDateString,
@@ -191,43 +192,6 @@ export function isTaskAssignedToUser(
 }
 
 /**
- * Kiểm tra xem nhiệm vụ hoặc bất kỳ việc con nào có bị trễ hạn SLA không
- */
-export function isTaskOrSubtaskOverdue(
-  task: SchoolTask,
-  referenceDate: string | Date = getSystemReferenceDate()
-): boolean {
-  // Nếu cả nhiệm vụ cha đã hoàn thành hoặc hủy thì không coi là trễ hạn
-  if (task.status === "COMPLETED" || task.status === "CANCELLED") {
-    return false;
-  }
-
-  // 1. Kiểm tra chính nhiệm vụ cha
-  if (
-    task.isOverdue ||
-    isTaskPastDue(task.dueDate, referenceDate)
-  ) {
-    return true;
-  }
-
-  // 2. Kiểm tra các việc con chưa hoàn thành
-  if (task.subTasks && task.subTasks.length > 0) {
-    const hasOverdueSubtask = task.subTasks.some((sub) => {
-      if (sub.status === "COMPLETED" || sub.status === "CANCELLED") {
-        return false;
-      }
-      return (
-        isTaskPastDue(sub.dueDate, referenceDate)
-      );
-    });
-
-    if (hasOverdueSubtask) return true;
-  }
-
-  return false;
-}
-
-/**
  * Kiểm tra xem nhiệm vụ hoặc việc con có đang cần xét duyệt / nghiệm thu
  */
 export function isTaskOrSubtaskPendingReview(task: SchoolTask): boolean {
@@ -336,7 +300,7 @@ export function filterTasks(
         break;
       case "overdue":
         result = result.filter((task) =>
-          isTaskOrSubtaskOverdue(task, refDate)
+          isOpenTaskOverdue(task, refDate)
         );
         break;
       case "review":
@@ -359,38 +323,22 @@ export function filterTasks(
   }
 
   // 5. Tìm kiếm từ khóa (Search Query)
-  const query = options.searchQuery?.trim().toLowerCase();
+  // Bỏ dấu cả hai phía: gõ "nhiem vu" vẫn ra "nhiệm vụ"
+  const query = foldVietnamese(options.searchQuery);
   if (query) {
+    const has = (value?: string | null) => foldVietnamese(value).includes(query);
     result = result.filter((task) => {
-      const matchTitle = task.title.toLowerCase().includes(query);
-      const matchId = task.id.toLowerCase().includes(query);
-      const matchCode = (task.code || (task as any).taskCode || "")
-        .toLowerCase()
-        .includes(query);
-      const matchLead = (task.leadAssigneeName || "")
-        .toLowerCase()
-        .includes(query);
-      const matchDesc = task.description
-        ? getTaskContentPreview(task.description).toLowerCase().includes(query)
-        : false;
-      const matchCo = task.coAssignees?.some((name) =>
-        name.toLowerCase().includes(query)
-      );
-      const matchDacum =
-        (task.dacumTaskDef?.code &&
-          task.dacumTaskDef.code.toLowerCase().includes(query)) ||
-        (task.dacumTaskDef?.title &&
-          task.dacumTaskDef.title.toLowerCase().includes(query));
+      const matchTitle = has(task.title);
+      const matchId = has(task.id);
+      const matchCode = has(task.code || (task as any).taskCode);
+      const matchLead = has(task.leadAssigneeName);
+      const matchDesc = task.description ? has(getTaskContentPreview(task.description)) : false;
+      const matchCo = task.coAssignees?.some((name) => has(name));
+      const matchDacum = has(task.dacumTaskDef?.code) || has(task.dacumTaskDef?.title);
 
-      const matchSubtasks = task.subTasks?.some((sub) => {
-        const subCode = (sub.code || (sub as any).taskCode || "").toLowerCase();
-        return (
-          sub.title.toLowerCase().includes(query) ||
-          sub.id.toLowerCase().includes(query) ||
-          subCode.includes(query) ||
-          sub.assigneeName.toLowerCase().includes(query)
-        );
-      });
+      const matchSubtasks = task.subTasks?.some(
+        (sub) => has(sub.title) || has(sub.id) || has(sub.code || (sub as any).taskCode) || has(sub.assigneeName)
+      );
 
       return Boolean(
         matchTitle ||

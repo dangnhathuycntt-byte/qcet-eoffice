@@ -1,4 +1,5 @@
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import { addCalendarDays, getAcademicYear, getDaysInMonth, parseStrictDateOnly } from "@/lib/academic-calendar";
 
 export type TaskTimePreset = "today" | "this_week" | "this_month" | "overdue";
 
@@ -28,32 +29,34 @@ export function getTaskTimeFilterLabel(filter: TaskTimeFilter): string {
   return "Thời gian";
 }
 
-function localISODate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+/** Ngày hôm nay theo giờ Việt Nam (Asia/Ho_Chi_Minh), không theo múi giờ của trình duyệt. */
+function ictDateOnly(date: Date): string {
+  return parseStrictDateOnly(date) ?? date.toISOString().slice(0, 10);
 }
 
 function getBounds(filter: Exclude<TaskTimeFilter, { kind: "none" } | { kind: "month" }>, now: Date) {
-  const today = localISODate(now);
+  const today = ictDateOnly(now);
   if (filter.kind === "range") return { from: filter.from, to: filter.to };
   if (filter.preset === "today" || filter.preset === "overdue") return { from: today, to: today };
   if (filter.preset === "this_month") {
-    const from = localISODate(new Date(now.getFullYear(), now.getMonth(), 1));
-    const to = localISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-    return { from, to };
+    const [year, month] = today.split("-").map(Number);
+    const prefix = today.slice(0, 8);
+    return { from: `${prefix}01`, to: `${prefix}${String(getDaysInMonth(year, month)).padStart(2, "0")}` };
   }
-  const mondayOffset = (now.getDay() + 6) % 7;
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
-  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
-  return { from: localISODate(monday), to: localISODate(sunday) };
+  const mondayOffset = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7;
+  const monday = addCalendarDays(today, -mondayOffset) ?? today;
+  return { from: monday, to: addCalendarDays(monday, 6) ?? monday };
 }
 
 function matchesDueDate(task: SchoolTask | StaffTask, filter: TaskTimeFilter, now: Date): boolean {
   if (!task.dueDate) return false;
   const due = String(task.dueDate).slice(0, 10);
-  if (filter.kind === "month") return Number(due.slice(5, 7)) === filter.month;
+  if (filter.kind === "month") {
+    // Tháng thuộc năm học hiện tại (T9–T12 năm đầu, T1–T8 năm sau), không khớp cùng tháng của năm khác
+    const startYear = Number(getAcademicYear(ictDateOnly(now)).slice(0, 4));
+    const year = filter.month >= 9 ? startYear : startYear + 1;
+    return due.slice(0, 7) === `${year}-${String(filter.month).padStart(2, "0")}`;
+  }
   if (filter.kind === "none") return true;
   const { from, to } = getBounds(filter, now);
   if (filter.kind === "preset" && filter.preset === "overdue") {

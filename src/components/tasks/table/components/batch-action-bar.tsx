@@ -29,7 +29,7 @@ import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/d
 import { Pressable } from "@/components/ui/pressable";
 
 /**
- * Tính ngày gia hạn hạn chót an toàn theo chuẩn UTC
+ * Cộng `daysToAdd` ngày vào `baseDate` (hạn hiện tại; mặc định hôm nay) theo UTC để không lệch ngày.
  */
 export function calculateExtendedDeadline(
   daysToAdd: number,
@@ -49,7 +49,8 @@ export interface BatchActionBarProps {
   totalCount?: number;
   onClearSelection: () => void;
   onBulkStatusChange?: (status: TaskStatus) => Promise<void> | void;
-  onBulkExtendDeadline?: (newDueDate: string) => Promise<void> | void;
+  /** Gia hạn thêm `days` ngày, cộng vào hạn hiện tại của từng nhiệm vụ (không tính từ hôm nay để khỏi rút ngắn hạn). */
+  onBulkExtendDeadline?: (days: number) => Promise<void> | void;
   onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
   /** Đổi ưu tiên hàng loạt (T-08): quyền và version kiểm riêng từng dòng ở máy chủ. */
   onBulkPriorityChange?: (priority: BulkPriority) => Promise<void> | void;
@@ -84,7 +85,7 @@ const APPROVAL_BEARING_TARGETS: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
 /** Lifecycle targets the status dropdown may offer, in display order. */
 const BULK_STATUS_OPTIONS: ReadonlyArray<{ value: TaskStatus; label: string }> =
   STATUS_DISPLAY_CONFIG.filter((c) =>
-    (['IN_PROGRESS', 'WAITING_APPROVAL', 'NEEDS_REVIEW', 'COMPLETED', 'CANCELLED'] as string[]).includes(c.value),
+    (['IN_PROGRESS', 'WAITING_APPROVAL', 'COMPLETED', 'CANCELLED'] as string[]).includes(c.value),
   );
 
 /** Các mức gia hạn hạn chót hàng loạt. */
@@ -107,12 +108,6 @@ export function getPermittedBulkStatusOptions(
       ? allowedLifecycleTargets.includes(option.value)
       : !APPROVAL_BEARING_TARGETS.has(option.value)
   );
-}
-
-/** 2026-10-08 → 08/10 */
-function formatShortIso(iso: string): string {
-  const [, m, d] = iso.split("-");
-  return d && m ? `${d}/${m}` : iso;
 }
 
 function BulkMenu({
@@ -354,27 +349,25 @@ export function BatchActionBar({
             ariaLabel="Gia hạn thời hạn hàng loạt"
             icon={<TaskIconDeadline className={icon} />}
             label="Gia hạn"
-            header="Gia hạn hạn chót thêm…"
+            header="Gia hạn thêm, tính từ hạn hiện tại"
             disabled={isLoading}
             triggerClassName={btn}
             onDigit={(digit) => {
               const option = BULK_DEADLINE_OPTIONS[digit - 1];
               if (!option) return false;
-              onBulkExtendDeadline(calculateExtendedDeadline(option.days));
+              onBulkExtendDeadline(option.days);
               return true;
             }}
           >
             {BULK_DEADLINE_OPTIONS.map((option) => {
-              const newDate = calculateExtendedDeadline(option.days);
               return (
                 <MenuItem
                   key={option.days}
                   className={menuItemCls}
-                  onClick={() => onBulkExtendDeadline(newDate)}
+                  onClick={() => onBulkExtendDeadline(option.days)}
                 >
                   <span>{option.label}</span>
                   <span className="flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
-                    {formatShortIso(newDate)}
                     <kbd className="font-sans">{BULK_DEADLINE_OPTIONS.indexOf(option) + 1}</kbd>
                   </span>
                 </MenuItem>

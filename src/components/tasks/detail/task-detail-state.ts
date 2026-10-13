@@ -29,7 +29,8 @@ interface AggregateInput {
 
 /** Ưu tiên số liệu thô của server; chỉ fallback về danh sách đã lọc quyền khi thiếu. */
 export function resolveSubtaskAggregates(input: AggregateInput): { total: number; completed: number } {
-  const total = input.totalSubTasks ?? input.subTasks.length;
+  // Việc con đã hủy không tính (như recalculateParentTaskProgress ở server)
+  const total = input.totalSubTasks ?? input.subTasks.filter((st) => st.status !== "CANCELLED").length;
   const completed =
     input.completedSubTasks ?? input.subTasks.filter((st) => st.status === "COMPLETED").length;
   return { total, completed };
@@ -44,12 +45,20 @@ export function computeProgressFromSubtasks(total: number, completed: number): n
  * Cập nhật số hoàn thành thô khi một việc con đổi trạng thái (không tải lại trang).
  * Chỉ dịch chuyển theo chênh lệch COMPLETED, không đếm lại toàn bộ danh sách đã lọc.
  */
-export function applySubtaskStatusToAggregates<T extends { completedSubTasks?: number }>(
+export function applySubtaskStatusToAggregates<T extends { completedSubTasks?: number; totalSubTasks?: number }>(
   parent: T,
   previousStatus: string | undefined,
   nextStatus: string | undefined,
 ): T {
   const delta = (nextStatus === "COMPLETED" ? 1 : 0) - (previousStatus === "COMPLETED" ? 1 : 0);
-  if (delta === 0 || parent.completedSubTasks === undefined) return parent;
-  return { ...parent, completedSubTasks: Math.max(0, parent.completedSubTasks + delta) };
+  // Hủy việc con thì bớt khỏi tổng, mở lại việc đã hủy thì cộng lại
+  const totalDelta = (previousStatus === "CANCELLED" ? 1 : 0) - (nextStatus === "CANCELLED" ? 1 : 0);
+  let next = parent;
+  if (delta !== 0 && parent.completedSubTasks !== undefined) {
+    next = { ...next, completedSubTasks: Math.max(0, parent.completedSubTasks + delta) };
+  }
+  if (totalDelta !== 0 && parent.totalSubTasks !== undefined) {
+    next = { ...next, totalSubTasks: Math.max(0, parent.totalSubTasks + totalDelta) };
+  }
+  return next;
 }

@@ -89,4 +89,18 @@ describe("ActiveFilterBreadcrumb Component & Logic", () => {
 
     assert.ok(!html.includes("dark:"), "Must not contain dark: classes");
   });
+
+  test("Thời hạn Trễ hạn chỉ hiện một chip (không kèm Hộp việc/Trạng thái Trễ hạn)", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ActiveFilterBreadcrumb, {
+        workbox: "overdue",
+        overdue: true,
+        deadline: "overdue",
+        onRemoveFilter: () => {},
+      })
+    );
+    assert.ok(html.includes('data-slot="filter-chip-deadline"'));
+    assert.ok(!html.includes('data-slot="filter-chip-workbox"'));
+    assert.ok(!html.includes('data-slot="filter-chip-overdue"'));
+  });
 });

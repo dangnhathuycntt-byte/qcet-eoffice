@@ -93,6 +93,7 @@ export interface PrismaTaskWithRelations {
     id: string;
     title: string;
     fileUrl: string;
+    fileType?: string | null;
     reviewStatus: string;
     createdAt?: Date | string;
     submittedAt?: Date | string;
@@ -273,7 +274,7 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     NEEDS_REVIEW: 'NEEDS_REVIEW',
     COMPLETED: 'COMPLETED',
     BLOCKED: 'BLOCKED',
-    CANCELLED: 'BLOCKED'
+    CANCELLED: 'CANCELLED'
   };
 
   const status: TaskStatus = statusMap[raw.status] || 'IN_PROGRESS';
@@ -307,18 +308,22 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     departmentCode: raw.leadUnit?.code || raw.leadUnit?.id || undefined,
     departmentId: raw.leadUnit?.id || undefined,
     deliverableDescription: raw.description || '',
+    // Không tự điền loại tệp hay ngày nộp khi dữ liệu thiếu
     deliverables: (raw.deliverables || []).map((d: any) => ({
       id: d.id,
       name: d.title,
       url: d.fileUrl,
-      fileType: 'application/pdf',
-      submittedAt: formatLocalDate(d.createdAt || d.submittedAt || new Date())
+      fileType: d.fileType || undefined,
+      status: d.reviewStatus,
+      submittedAt: d.createdAt || d.submittedAt ? formatLocalDate(d.createdAt || d.submittedAt) : undefined,
     })),
     requiresReview: (raw.dacumTaskDefId != null) || raw.scope === 'SCHOOL',
     collaborators,
     coAssignees: collaborators.map((c: any) => c.name),
     progressPercent: raw.progressPercent ?? 0,
     sourceDocument: mapLinkedDocument(raw),
+    // Version để các thao tác trên việc con (drawer, đổi trạng thái…) gửi đúng expectedVersion
+    version: typeof raw.version === 'number' ? raw.version : 1,
   };
 }
 
@@ -457,5 +462,15 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     isOverdue: isTaskOverdue(raw.status, raw.dueDate, referenceDate || getSystemReferenceDateStr()),
     version: typeof raw.version === 'number' ? raw.version : 1,
     sourceDocument: mapLinkedDocument(raw),
+    // Minh chứng để trang chi tiết hiện cho người duyệt (danh sách không tải nên để undefined)
+    deliverables: raw.deliverables
+      ? raw.deliverables.map((d) => ({
+          id: d.id,
+          title: d.title,
+          fileUrl: d.fileUrl,
+          status: d.reviewStatus,
+          submittedAt: d.createdAt || d.submittedAt ? formatLocalDate(d.createdAt || d.submittedAt) : undefined,
+        }))
+      : undefined,
   };
 }

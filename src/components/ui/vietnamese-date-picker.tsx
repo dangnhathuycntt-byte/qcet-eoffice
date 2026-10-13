@@ -304,7 +304,7 @@ export function VietnameseDatePicker({
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "group inline-flex items-center gap-1.5 py-0.5 max-md:min-h-11 px-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent hover:bg-muted/50 shadow-none whitespace-nowrap focus-visible:outline-hidden",
+            "group inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent hover:bg-muted/50 shadow-none whitespace-nowrap focus-visible:outline-hidden",
             hasValue ? "text-foreground" : "text-muted-foreground",
             isOpen && "text-foreground",
             disabled && "opacity-50 cursor-not-allowed",
@@ -345,7 +345,7 @@ export function VietnameseDatePicker({
         >
           {icon !== null && (icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" />)}
           {label && <span className={cn(error ? "text-destructive" : "text-muted-foreground font-normal", compactWhenEmpty && !hasValue && "max-md:hidden")}>{label}</span>}
-          <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : error ? "text-destructive" : "text-muted-foreground", compactWhenEmpty && !hasValue && "max-md:hidden")}>
+          <span className={cn("tabular-nums", hasValue && "text-foreground font-medium", compactWhenEmpty && !hasValue && "max-md:hidden")}>
             {hasValue ? displayDate : placeholder}
           </span>
         </Popover.Trigger>
@@ -390,7 +390,7 @@ export function VietnameseDatePicker({
       <Popover.Popup
         aria-label="Chọn ngày trên lịch"
         initialFocus={!isPhone}
-        className={cn(SHEET_MOTION_CLASS, "w-[290px] max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto p-4 text-foreground rounded-2xl border-0 bg-popover shadow-menu max-md:w-full! max-md:max-w-none! max-md:max-h-[80dvh]! max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-4 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+16px)]")}
+        className={cn(SHEET_MOTION_CLASS, "w-[290px] max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto p-4 text-foreground rounded-[var(--radius-menu)] border-0 bg-popover shadow-menu max-md:w-full! max-md:max-w-none! max-md:max-h-[80dvh]! max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-4 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+16px)]")}
       >
         {/* Điện thoại: thanh kéo + tiêu đề của sheet; desktop dùng nhãn nhỏ bên dưới */}
         <MenuSheetHeader title={title || label || placeholder || "Chọn ngày"} />
@@ -407,7 +407,7 @@ export function VietnameseDatePicker({
             inputMode="none"
             value={headerInputValue}
             placeholder="Chưa chọn ngày"
-            className="w-full h-8 px-2.5 text-xs font-sans text-foreground bg-secondary rounded-lg border-0 outline-none focus:bg-selected"
+            className="w-full h-8 px-2.5 text-xs font-sans text-foreground bg-secondary rounded-lg border-0 outline-none focus:bg-accent"
           />
           {hasValue && clearable && (
             <button

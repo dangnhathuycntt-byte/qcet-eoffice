@@ -1,4 +1,4 @@
-import { canReadTask, dbReadScope } from '@/server/tasks/staff-read-scope';
+import { canReadTask, dbReadScope, readableTaskIds } from '@/server/tasks/staff-read-scope';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import {
@@ -64,6 +64,14 @@ export async function GET(req: Request, routeContext: RouteContext) {
     if (!taskDto) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
+    // Chỉ trả việc con người xem đọc được, như trang chi tiết (không lộ việc con của người khác cùng đơn vị).
+    const rawSubTasks = Array.isArray((rawTask as { subTasks?: unknown }).subTasks)
+      ? ((rawTask as { subTasks: Array<{ id: string }> }).subTasks)
+      : [];
+    if (taskDto.subTasks && rawSubTasks.length > 0) {
+      const readable = await readableTaskIds(authContext, rawSubTasks, dbReadScope(authContext));
+      taskDto.subTasks = taskDto.subTasks.filter((st) => readable.has(st.id));
+    }
 
     const availableActions = computeAvailableActions(authContext, taskResource);
     const taskDetail = {
@@ -110,10 +118,11 @@ async function assertNoDirectWorkflowMutation(
 
   if (!body || typeof body !== 'object' || Array.isArray(body)) return;
 
-  const forbiddenFields = ['status', 'approved', 'resolution'];
+  // Tiến độ đi qua actions/update-progress: lệnh đó giữ vòng đời (100% → chờ duyệt) và quyền task.update_execution.
+  const forbiddenFields = ['status', 'approved', 'resolution', 'progress', 'progressPercent'];
   if (forbiddenFields.some((field) => Object.prototype.hasOwnProperty.call(body, field))) {
     throw new ValidationError(
-      'Cấm cập nhật trực tiếp trạng thái hoặc quyết định phê duyệt qua PATCH; hãy dùng canonical domain action.',
+      'Cấm cập nhật trực tiếp trạng thái, tiến độ hoặc quyết định phê duyệt qua PATCH; hãy dùng canonical domain action.',
       undefined,
       'CANONICAL_COMMAND_REQUIRED'
     );
@@ -178,7 +187,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
           );
         } else {
           throw new ConflictError(
-            `xung đột phiên bản (conflict): Dữ liệu nhiệm vụ đã được thay đổi bởi người dùng khác (phiên bản hiệệện tại: ${currentVersion}, phiên bản gửi lên: ${expectedVersion}). Vui lòng tải lại trang.`
+            `xung đột phiên bản (conflict): Dữ liệu nhiệm vụ đã được thay đổi bởi người dùng khác (phiên bản hiện tại: ${currentVersion}, phiên bản gửi lên: ${expectedVersion}). Vui lòng tải lại trang.`
           );
         }
       }
@@ -249,7 +258,6 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       startDate: validatedBody.startDate,
       dueDate: validatedBody.dueDate,
       priority: validatedBody.priority,
-      progress: validatedBody.progress,
       expectedVersion,
     });
 

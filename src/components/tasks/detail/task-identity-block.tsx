@@ -98,6 +98,11 @@ export function TaskIdentityBlock({
       : new Date(rawDueDate).toISOString().slice(0, 10)
     : "";
 
+  // Quyền theo từng thao tác (cùng quy tắc với cột Thuộc tính): đổi người chủ trì cần task.reassign, đổi hạn cần task.assign
+  const taskActions = (task as { availableActions?: unknown }).availableActions;
+  const canReassign = !Array.isArray(taskActions) || taskActions.includes("task.reassign");
+  const canChangeDueDate = !Array.isArray(taskActions) || taskActions.includes("task.assign");
+
   // Reassign lead state
   const [isReassigning, setIsReassigning] = React.useState(false);
 
@@ -141,6 +146,7 @@ export function TaskIdentityBlock({
               placeholder="Nhập tên nhiệm vụ..."
               viewClassName="text-xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
               editorClassName="text-xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
+              largeText
             />
           </div>
         </div>
@@ -152,7 +158,8 @@ export function TaskIdentityBlock({
 
       {showInlineProperties && (
       /* 2. Compact Properties Summary khi Sidebar đóng (Trạng thái · Người phụ trách · Hạn hoàn thành) */
-      <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground font-normal select-none">
+      <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground font-normal select-none max-lg:flex-nowrap max-lg:overflow-x-auto max-lg:scrollbar-none max-lg:[&>*]:shrink-0">
+        {/* Màn hẹp: một dòng cuộn ngang như hàng Properties của Linear */}
 
         {/* Status — @base-ui/react Select */}
         <TaskStatusSelect
@@ -171,7 +178,7 @@ export function TaskIdentityBlock({
           assigneeId={(task as any).leadAssigneeId}
           assigneeName={leadName}
           displayName={leadName}
-          disabled={!canEdit}
+          disabled={!canEdit || !canReassign}
           pending={isReassigning}
           onSelect={async (person) => {
             setIsReassigning(true);
@@ -191,7 +198,7 @@ export function TaskIdentityBlock({
           dueDateIso={dueDateIso}
           canEdit={canEdit}
           onStartDateChange={onStartDateChange ? (newDate) => onStartDateChange(task.id, newDate) : undefined}
-          onDueDateChange={onDueDateChange ? (newDate) => onDueDateChange(task.id, newDate) : undefined}
+          onDueDateChange={onDueDateChange && canChangeDueDate ? (newDate) => onDueDateChange(task.id, newDate) : undefined}
         />
       </div>
       )}

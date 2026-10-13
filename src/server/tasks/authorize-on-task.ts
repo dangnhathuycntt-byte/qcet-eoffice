@@ -9,6 +9,7 @@ import { loadCachedAuthorizationContext } from "@/server/authorization/authoriza
 import { buildTaskResource } from "@/server/authorization/available-actions";
 import type { CapabilityAction } from "@/server/authorization/capability";
 import { ForbiddenError, NotFoundError } from "@/server/api/errors";
+import { canReadTask, dbReadScope } from "./staff-read-scope";
 
 export async function loadTaskWithActors(taskId: string) {
   const task = await prisma.task.findUnique({ where: { id: taskId }, include: { actors: true } });
@@ -23,9 +24,14 @@ export async function can(session: SessionPayload, action: CapabilityAction, tas
 
 export async function authorizeOnTask(session: SessionPayload, taskId: string, action: CapabilityAction) {
   const task = await loadTaskWithActors(taskId);
-  const decision = await can(session, action, task);
+  const context = await loadCachedAuthorizationContext(session.id);
+  const decision = authorize(context, action, buildTaskResource(task));
   if (!decision.allowed) {
     throw new ForbiddenError(decision.reason || "Bạn không có quyền thực hiện thao tác này");
+  }
+  // D07: đọc phần con (bình luận, tiêu chí, người liên quan…) cùng phạm vi với GET /api/tasks/[id].
+  if (action === "task.read" && !(await canReadTask(context, task, dbReadScope(context)))) {
+    throw new ForbiddenError("Bạn chỉ xem được phần nhiệm vụ mình tham gia");
   }
   return task;
 }

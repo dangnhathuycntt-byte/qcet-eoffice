@@ -7,7 +7,7 @@ import {
   getMobileBottomNavItems,
   getMobileDrawerItems,
 } from "../src/lib/navigation/canonical-navigation-registry.js";
-import { isRouteActive } from "../src/lib/navigation/active-matcher.js";
+import { isRouteActive, isTaskDetailPath, isTaskSubPagePath } from "../src/lib/navigation/active-matcher.js";
 
 describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
   test("Canonical navigation registry defines single canonical routes for Desk and Tasks", () => {
@@ -97,4 +97,18 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     assert.equal(desk.href, "/", "Desk must point to '/'");
   });
 
+});
+
+describe("Nhận diện trang chi tiết nhiệm vụ", () => {
+  test("/tasks/[id] là chi tiết; trang con tĩnh dưới /tasks dùng layout trang thường", () => {
+    assert.equal(isTaskDetailPath("/tasks/cmv59mo6d000lvioh2fm0435u"), true);
+    assert.equal(isTaskDetailPath("/tasks/cmv59mo6d000lvioh2fm0435u?subtaskId=x"), true);
+    assert.equal(isTaskDetailPath("/tasks/unit-requests"), false);
+    assert.equal(isTaskDetailPath("/tasks/templates/"), false);
+    assert.equal(isTaskDetailPath("/tasks"), false);
+    assert.equal(isTaskDetailPath(null), false);
+    assert.equal(isTaskSubPagePath("/tasks/templates"), true);
+    assert.equal(isTaskSubPagePath("/tasks/unit-requests/"), true);
+    assert.equal(isTaskSubPagePath("/tasks/cmv59mo6d000lvioh2fm0435u"), false);
+  });
 });

@@ -10,9 +10,11 @@ import {
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar, DesktopTopbar } from "@/components/layout/app-topbar";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
+import { MobileMenuOpenContext } from "@/components/layout/mobile-menu-button";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@/lib/login-helpers";
+import { isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
 import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { useTransform } from "motion/react";
@@ -70,13 +72,15 @@ function MobileAppInstallModalContainer() {
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const { sidebarWidth, sidebarWidthMotion } = useSidebarLayout();
   const pathname = usePathname();
-  const isTaskDetail = /^\/tasks\/[^/]+$/.test(pathname ?? "");
+  const isTaskDetail = isTaskDetailPath(pathname);
   // Hộp thư tự chiếm toàn bộ khung nội dung (danh sách + chi tiết), không đệm
   const isInbox = pathname === "/inbox";
   // Sổ văn bản dùng cùng khung workspace với chi tiết nhiệm vụ: chiều cao cố định, các thẻ tự cuộn
-  const isWorkspaceShell = isTaskDetail || pathname === "/documents";
+  // Trang con tĩnh của Nhiệm vụ tự dựng khung một thẻ (WorkspacePageCard) nên cũng dùng khung workspace, không bọc thêm thẻ ngoài
+  const isTaskSubPage = isTaskSubPagePath(pathname);
+  const isWorkspaceShell = isTaskDetail || isTaskSubPage || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
-  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isInbox || pathname === "/documents";
+  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isTaskSubPage || isInbox || pathname === "/documents";
   const isTasksList = pathname === "/tasks";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -137,6 +141,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       // Chi tiết nhiệm vụ: chiều cao cố định để vùng nội dung co theo khung, không giãn theo nội dung
       isWorkspaceShell ? "h-[100dvh]" : "min-h-[100dvh]"
     )}>
+      {/* Nút mở menu ở header các trang đọc trạng thái này để tô nửa icon khi menu đang mở */}
+      <MobileMenuOpenContext.Provider value={isMobileMenuOpen}>
       {/* Desktop Sidebar (Fixed width) */}
       <React.Suspense fallback={<aside className="hidden md:flex shrink-0 bg-sidebar" style={{ width: `${sidebarWidth}px` }} />}>
         <AppSidebar />
@@ -148,7 +154,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
         {/* Mobile Header (chỉ dưới md); danh sách, chi tiết nhiệm vụ, hộp thư và sổ văn bản tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
-        {!isTasksList && !isTaskDetail && !isInbox && pathname !== "/documents" && <AppTopbar />}
+        {!isTasksList && !isTaskDetail && !isInbox && pathname !== "/documents" && <AppTopbar showSearch={!isTaskSubPage} />}
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
         {!hideDesktopTopbar && <DesktopTopbar />}
@@ -203,6 +209,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       <CommandSearchModal />
       <GlobalShortcutsModal />
       <HelpGuideModal />
+      </MobileMenuOpenContext.Provider>
     </div>
   );
 }

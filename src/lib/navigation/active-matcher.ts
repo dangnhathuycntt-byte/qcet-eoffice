@@ -20,6 +20,27 @@ export function normalizePath(path: string): string {
   return stripped || "/";
 }
 
+/** Trang con tĩnh dưới /tasks (không phải /tasks/[id]) và tên hiện trên thanh tiêu đề, trùng nhãn mục con ở sidebar */
+const TASK_SUB_PAGES = new Map([
+  ["unit-requests", "Yêu cầu phối hợp"],
+  ["templates", "Mẫu và lặp lại"],
+]);
+
+/**
+ * Trang chi tiết một nhiệm vụ (/tasks/[id]). Các trang con tĩnh như /tasks/unit-requests dùng layout trang
+ * thường (topbar điện thoại, khung cuộn), không phải khung chi tiết.
+ */
+export function isTaskDetailPath(pathname: string | null | undefined): boolean {
+  const match = /^\/tasks\/([^/]+)$/.exec(normalizePath(pathname ?? ""));
+  return Boolean(match && !TASK_SUB_PAGES.has(match[1]));
+}
+
+/** Trang con tĩnh của Nhiệm vụ (Yêu cầu phối hợp, Mẫu và lặp lại): dùng khung một thẻ như Sổ văn bản. */
+export function isTaskSubPagePath(pathname: string | null | undefined): boolean {
+  const match = /^\/tasks\/([^/]+)$/.exec(normalizePath(pathname ?? ""));
+  return Boolean(match && TASK_SUB_PAGES.has(match[1]));
+}
+
 /**
  * Determines whether a given navigation route is active based on
  * current pathname, search parameters, and route aliases.
@@ -187,6 +208,11 @@ export function resolveBreadcrumb(
   }
   if (cleanPath.startsWith("/maintenance")) return ["QCET E-Office", "Bảo trì & Nâng cấp"];
   if (cleanPath.startsWith("/login")) return ["QCET E-Office", "Đăng nhập"];
+
+  // Trang con tĩnh của Nhiệm vụ có tên riêng, không kế thừa "Nhiệm vụ" từ tiền tố /tasks
+  const taskSubPage = /^\/tasks\/([^/]+)$/.exec(cleanPath);
+  const taskSubPageTitle = taskSubPage ? TASK_SUB_PAGES.get(taskSubPage[1]) : undefined;
+  if (taskSubPageTitle) return ["QCET E-Office", taskSubPageTitle];
 
   const matchedRoute =
     getRouteByPath(cleanPath) ??

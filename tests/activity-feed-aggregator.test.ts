@@ -236,4 +236,8 @@ describe("Activity Feed Aggregator & Consolidation Engine Suite", () => {
     assert.equal(feed.length, 1);
     assert.equal(feed[0].description, "Cập nhật thông tin nhiệm vụ");
   });
+
+  it("có nhãn tiếng Việt cho người duyệt dự phòng, luồng duyệt và lưu trữ", () => {
+    assert.equal(getAuditActionLabel("TASK_BACKUP_REVIEWER_SET"), "Đặt người duyệt dự phòng");
+  });
 });
