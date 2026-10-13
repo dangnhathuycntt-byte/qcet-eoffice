@@ -49,6 +49,8 @@ export interface CreateTaskSubmissionResult {
 }
 
 export interface UseCreateTaskFormOptions {
+  /** Hộp luôn được gắn sẵn ở nhiều trang: form dựng lại theo props hiện tại mỗi lần mở. Mặc định coi như đang mở. */
+  isOpen?: boolean;
   initialLevel?: CreateTaskLevel;
   initialTitle?: string;
   initialAssigneeId?: string;
@@ -71,6 +73,14 @@ export function validateSubtaskDueDate(parentDueDate: string, subtaskDueDate: st
   const subtaskTime = new Date(subtaskDueDate).getTime();
   if (Number.isNaN(parentTime) || Number.isNaN(subtaskTime)) return false;
   return subtaskTime <= parentTime;
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
+
+/** So theo ngày (yyyy-mm-dd); chuỗi không đúng dạng thì bỏ qua để máy chủ quyết định. */
+function isStartAfterDue(startDate: string, dueDate: string): boolean {
+  if (!ISO_DAY.test(startDate) || !ISO_DAY.test(dueDate)) return false;
+  return startDate.slice(0, 10) > dueDate.slice(0, 10);
 }
 
 function formatDateVi(isoDate: string): string {
@@ -96,6 +106,10 @@ export function validateCreateTaskForm(
 
   if (!data.dueDate) {
     errors.dueDate = "Vui lòng chọn thời hạn.";
+  }
+
+  if (data.startDate && data.dueDate && isStartAfterDue(data.startDate, data.dueDate)) {
+    errors.startDate = "Ngày bắt đầu không được sau hạn chót.";
   }
 
   if (
@@ -148,6 +162,41 @@ export async function performCreateTaskSubmission(
   };
 }
 
+// ─── Failure messages ─────────────────────────────────────────
+// Máy chủ/adapter trả lỗi tiếng Anh ("Validation failed", "Create task rejected with status 500."): người dùng cần câu
+// tiếng Việt nói rõ chuyện gì xảy ra và làm gì tiếp. Câu đã là tiếng Việt (lỗi nghiệp vụ cụ thể) giữ nguyên.
+const VIETNAMESE_TEXT =
+  /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i;
+
+export function describeCreateTaskFailure(failure: {
+  reason: "validation" | "rejected" | "unknown";
+  status?: number;
+  error?: string;
+}): string {
+  const raw = failure.error?.trim() ?? "";
+  if (raw && VIETNAMESE_TEXT.test(raw)) return raw;
+  const { status } = failure;
+  if (status === 401) {
+    return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại; nội dung đang soạn được giữ lại.";
+  }
+  if (status === 403) return "Bạn không có quyền tạo nhiệm vụ trong đơn vị này.";
+  if (status === 404) {
+    return "Không tìm thấy nhiệm vụ cha hoặc đơn vị đã chọn. Hãy tải lại trang rồi thử lại.";
+  }
+  if (status === 409) {
+    return "Yêu cầu trước đó đã được ghi nhận hoặc đang xử lý. Kiểm tra danh sách nhiệm vụ; chưa thấy thì đóng hộp và tạo lại.";
+  }
+  if (status === 413) return "Nội dung quá lớn để gửi. Hãy rút gọn phần mô tả.";
+  if (status === 429) return "Thao tác quá nhanh. Chờ vài giây rồi thử lại.";
+  if (status !== undefined && status >= 500) {
+    return "Máy chủ gặp lỗi. Nội dung đã nhập vẫn được giữ, hãy thử lại sau ít phút.";
+  }
+  if (status === 400 || status === 422 || failure.reason === "validation") {
+    return "Nội dung chưa hợp lệ. Kiểm tra tên (3–255 ký tự), người chủ trì và hạn hoàn thành rồi thử lại.";
+  }
+  return "Máy chủ từ chối tạo nhiệm vụ.";
+}
+
 // ─── Draft helpers ────────────────────────────────────────────
 interface DraftPayload extends CreateTaskFormData {
   timestamp: number;
@@ -162,16 +211,52 @@ function saveDraft(data: CreateTaskFormData): void {
   }
 }
 
-function loadDraft(): CreateTaskFormData | null {
+function loadDraft(): unknown {
   try {
     const stored = sessionStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!stored) return null;
-    const parsed: DraftPayload = JSON.parse(stored);
-    if (!parsed || !parsed.title) return null;
-    return parsed;
+    return stored ? JSON.parse(stored) : null;
   } catch {
     return null;
   }
+}
+
+const DRAFT_PRIORITIES: readonly CreateTaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
+const DRAFT_LEVELS: readonly CreateTaskLevel[] = ["TRUONG", "DON_VI", "STAFF"];
+
+/**
+ * Bản nháp đọc từ sessionStorage chỉ là gợi ý: từng trường phải đúng kiểu (JSON hỏng hoặc bản cũ không được làm sập
+ * form), và nháp thuộc ngữ cảnh khác (nhiệm vụ gốc so với việc con của nhiệm vụ cha khác) thì bỏ qua, không gắn nhầm cha.
+ */
+export function restoreCreateTaskDraft(
+  raw: unknown,
+  fresh: CreateTaskFormData,
+  parentTaskId?: string,
+): CreateTaskFormData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const draft = raw as Record<string, unknown>;
+  if (typeof draft.title !== "string" || !draft.title) return null;
+  const draftParent = typeof draft.parentTaskId === "string" && draft.parentTaskId ? draft.parentTaskId : undefined;
+  if (draftParent !== (parentTaskId || undefined)) return null;
+
+  const text = (key: keyof CreateTaskFormData): string =>
+    typeof draft[key] === "string" ? (draft[key] as string) : (fresh[key] as string);
+  return {
+    ...fresh,
+    title: draft.title,
+    summary: text("summary"),
+    description: text("description"),
+    selectedDeptCode: text("selectedDeptCode"),
+    leadAssigneeId: text("leadAssigneeId"),
+    startDate: text("startDate"),
+    dueDate: text("dueDate"),
+    category: text("category"),
+    priority: DRAFT_PRIORITIES.includes(draft.priority as CreateTaskPriority)
+      ? (draft.priority as CreateTaskPriority)
+      : fresh.priority,
+    level: DRAFT_LEVELS.includes(draft.level as CreateTaskLevel)
+      ? (draft.level as CreateTaskLevel)
+      : fresh.level,
+  };
 }
 
 function clearDraftStorage(): void {
@@ -196,7 +281,7 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
   );
 
   // ── Department + Personnel ──────────────────────────────────
-  const { departments: allDepartments } = useDepartmentList({
+  const { departments: allDepartments, isLoading: isLoadingDepartments } = useDepartmentList({
     includePersonnel: true,
   });
 
@@ -273,6 +358,11 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
       setFormData((prev) => ({ ...prev, [field]: value }));
       // Clear field error on edit
       setFieldErrors((prev) => {
+        // Lỗi "bắt đầu sau hạn chót" nằm ở startDate nhưng đổi hạn chót cũng giải quyết được nó
+        if (field === "dueDate" && prev.startDate) {
+          const { startDate: _s, dueDate: _d, ...rest } = prev;
+          return rest;
+        }
         if (field === "leadAssigneeId" && prev.lead) {
           const { lead: _, ...rest } = prev;
           return rest;
@@ -321,34 +411,52 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
     [formData],
   );
 
-  // ── Draft restore on mount ──────────────────────────────────
-  const didRestoreDraftRef = React.useRef(false);
-  React.useEffect(() => {
-    if (didRestoreDraftRef.current) return;
-    if (options.initialTitle) return; // explicit init takes precedence
-
-    const draft = loadDraft();
-    if (draft) {
-      // Enforce policy on restored draft
-      if (!isExecutive && draft.level === "TRUONG") {
-        draft.level = "DON_VI";
-      }
-      if (!isExecutive && userDeptCode) {
-        draft.selectedDeptCode = userDeptCode;
-      }
-      setFormData(draft);
-      setHasRestoredDraft(true);
+  // ── Mở hộp ─────────────────────────────────────────────────
+  // Hộp được gắn sẵn ở lịch, workspace và trang chi tiết nên state sống qua nhiều lần mở: dựng lại theo props hiện tại
+  // ngay khi mở (trước khi vẽ) để ngày từ lịch, nhiệm vụ cha, đơn vị không bị giữ từ lần trước, rồi mới thử khôi phục
+  // nháp. Không dựng lại lúc đóng để nội dung không biến mất giữa hiệu ứng thoát. Không đụng sessionStorage: nháp chỉ
+  // xóa khi người dùng chủ động.
+  const isOpen = options.isOpen ?? true;
+  const wasOpenRef = React.useRef(false);
+  React.useLayoutEffect(() => {
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      return;
     }
-    didRestoreDraftRef.current = true;
-  }, [options.initialTitle, isExecutive, userDeptCode]);
+    if (wasOpenRef.current) return;
+    wasOpenRef.current = true;
+
+    const fresh = buildInitialData();
+    initialSnapshot.current = fresh;
+    idempotencyKeyRef.current = null;
+    setFieldErrors({});
+    setSubmissionOutcome(null);
+    setSubmissionMessage(null);
+
+    let next = fresh;
+    let restored = false;
+    // explicit init takes precedence
+    if (!options.initialTitle) {
+      const draft = restoreCreateTaskDraft(loadDraft(), fresh, options.parentTaskId);
+      if (draft) {
+        // Enforce policy on restored draft
+        if (!isExecutive && draft.level === "TRUONG") draft.level = "DON_VI";
+        if (!isExecutive && userDeptCode) draft.selectedDeptCode = userDeptCode;
+        next = draft;
+        restored = true;
+      }
+    }
+    setFormData(next);
+    setHasRestoredDraft(restored);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Draft auto-save (debounced) ─────────────────────────────
   React.useEffect(() => {
-    if (!isDirty) return;
+    if (!isOpen || !isDirty) return;
 
     const timeout = setTimeout(() => saveDraft(formData), DRAFT_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [isDirty, formData]);
+  }, [isOpen, isDirty, formData]);
 
   // ── handleClearDraft ────────────────────────────────────────
   const handleClearDraft = React.useCallback(() => {
@@ -378,8 +486,9 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
   }, [buildInitialData]);
 
   // ── handleSubmit ────────────────────────────────────────────
-  const handleSubmit = React.useCallback(async () => {
-    if (isSubmittingLockRef.current || isSubmitting) return;
+  /** Trả về lỗi kiểm tra (để hộp đưa focus tới ô sai đầu tiên); `null` khi đã gửi hoặc đang gửi dở. */
+  const handleSubmit = React.useCallback(async (): Promise<CreateTaskFormErrors | null> => {
+    if (isSubmittingLockRef.current || isSubmitting) return null;
 
     // Validate
     const errors = validateCreateTaskForm(formData, {
@@ -388,7 +497,7 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      return;
+      return errors;
     }
 
     setFieldErrors({});
@@ -460,14 +569,13 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
       } else {
         // Rejected
         setSubmissionOutcome("rejected");
-        setSubmissionMessage(
-          outcome.message || "Máy chủ từ chối tạo nhiệm vụ.",
-        );
+        setSubmissionMessage(describeCreateTaskFailure(outcome.result));
       }
     } finally {
       setIsSubmitting(false);
       isSubmittingLockRef.current = false;
     }
+    return null;
   }, [
     isSubmitting,
     formData,
@@ -489,6 +597,7 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
     hasRestoredDraft,
     isExecutive,
     availableDepartments,
+    isLoadingDepartments,
     availablePersonnel,
     handleSubmit,
     handleClearDraft,

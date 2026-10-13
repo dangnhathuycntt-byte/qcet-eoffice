@@ -87,7 +87,7 @@ describe("Compact Composer Modal - Production Specification", () => {
 
     // Title & Summary Inputs (title uses ternary for subtask vs task placeholder)
     assert.ok(source.includes('"Tên nhiệm vụ"'), "Source must have task title placeholder");
-    assert.ok(source.includes('Thêm mô tả ngắn hoặc kết quả kỳ vọng'), "Source must have summary input");
+    assert.ok(!source.includes('Thêm mô tả ngắn hoặc kết quả kỳ vọng'), "Ô mô tả ngắn đã bỏ khỏi hộp tạo nhiệm vụ");
 
     // Description Canvas
     assert.ok(
@@ -107,6 +107,26 @@ describe("Compact Composer Modal - Production Specification", () => {
     // Thuộc tính nằm dưới phần mô tả (kiểu Linear), không chen giữa tiêu đề và nội dung
     assert.ok(source.indexOf('id="create-task-description"') < source.indexOf('aria-label="Chọn mức độ ưu tiên"'), "Property chips must follow the description");
     assert.ok(source.includes('aria-label="Đóng"'), "Header must expose a visible close button");
+  });
+
+  test("Làm cứng: phím tắt gửi, IME, lỗi và tìm người", () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, "..", "src", "components", "tasks", "create", "create-task-modal.tsx"),
+      "utf-8"
+    );
+    // Hộp gắn sẵn ở nhiều trang: form phải biết lúc mở để dựng lại theo props hiện tại
+    assert.ok(/useCreateTaskForm\(\{\s*isOpen,/.test(source), "Hook phải nhận isOpen để dựng lại form mỗi lần mở");
+    // Trình nghe Cmd/Ctrl+Enter gắn một lần: phải gọi qua ref, không giữ closure lúc mở (form rỗng)
+    assert.ok(source.includes("submitRef.current()"), "Cmd/Ctrl+Enter phải gọi bản gửi mới nhất qua ref");
+    assert.ok(source.includes("e.isComposing"), "Cmd/Ctrl+Enter không được chốt khi đang gõ IME");
+    // Enter ở ô tên chỉ chuyển ô khi không đang gõ Telex/IME
+    assert.ok(source.includes("!e.nativeEvent.isComposing"), "Enter ở ô tên phải bỏ qua khi đang soạn IME");
+    // Tìm người chủ trì gõ không dấu vẫn ra
+    assert.ok(source.includes("foldVietnamese"), "Tìm người chủ trì phải bỏ dấu tiếng Việt");
+    // Lỗi chủ trì/ngày có chữ, không chỉ đổi màu
+    assert.ok(source.includes("fieldErrorText"), "Lỗi chủ trì/ngày phải hiện thành chữ");
+    // Danh sách đơn vị rỗng sau khi đã tải xong không được hiện "Đang tải"
+    assert.ok(source.includes("Chưa có đơn vị"), "Phải phân biệt đang tải với không có đơn vị");
   });
 
   test("When closed (isOpen=false), modal renders nothing (null)", () => {

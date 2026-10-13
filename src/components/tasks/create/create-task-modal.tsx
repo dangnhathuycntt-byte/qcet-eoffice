@@ -29,6 +29,7 @@ import { useIsPhone } from "@/hooks/use-is-phone";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { foldVietnamese } from "@/lib/search/vietnamese-search";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 import { SourceDocumentChip, linkTaskToDocument, type SourceDocumentOption } from "@/components/tasks/create/source-document-chip";
@@ -72,6 +73,10 @@ const PRIORITY_CONFIG: Record<
 };
 
 const PRIORITY_KEYS: CreateTaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
+
+// Khớp CreateTaskInputSchema (title tối đa 255): dán dài hơn bị cắt, nên báo trước khi chạm giới hạn
+const TITLE_MAX_LENGTH = 255;
+const TITLE_COUNTER_FROM = 200;
 
 // Biểu mẫu dùng MEDIUM, bảng dùng NORMAL: chuẩn hóa để icon tín hiệu khớp với bảng danh sách
 const toSignalPriority = (p: CreateTaskPriority) => (p === "MEDIUM" ? "NORMAL" : p);
@@ -122,6 +127,7 @@ export function CreateTaskModal({
     if (!isOpen) setSourceDocument(null);
   }, [isOpen]);
   const form = useCreateTaskForm({
+    isOpen,
     initialLevel,
     initialTitle,
     initialAssigneeId: initialLeadAssigneeId,
@@ -160,8 +166,32 @@ export function CreateTaskModal({
   const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
   React.useEffect(() => setModKey(getPlatformModifierKey()), []);
 
-  const titleInputRef = React.useRef<HTMLInputElement>(null);
+  const titleInputRef = React.useRef<HTMLTextAreaElement>(null);
   const descriptionTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const leadTriggerRef = React.useRef<HTMLButtonElement>(null);
+
+  // Tên dài (tiếng Việt thường 100+ ký tự) xuống dòng thay vì cuộn ngang trong ô một dòng
+  const fitTitleHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+  // Hộp mở sau khi gắn: ô chỉ có mặt khi Popup đã mount, nên đo cả lúc gắn ref (bản nháp khôi phục) lẫn khi gõ
+  const setTitleRef = React.useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      titleInputRef.current = el;
+      fitTitleHeight(el);
+    },
+    [fitTitleHeight],
+  );
+  React.useLayoutEffect(() => fitTitleHeight(titleInputRef.current), [form.formData.title, fitTitleHeight]);
+  // Xoay màn hình hoặc đổi cỡ cửa sổ làm đổi chỗ ngắt dòng: đo lại để không cắt dòng cuối
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const refit = () => fitTitleHeight(titleInputRef.current);
+    window.addEventListener("resize", refit);
+    return () => window.removeEventListener("resize", refit);
+  }, [isOpen, fitTitleHeight]);
 
   // Autofocus title input when modal opens
   React.useEffect(() => {
@@ -171,20 +201,21 @@ export function CreateTaskModal({
     }
   }, [isOpen]);
 
-  // Cmd/Ctrl+Enter to submit
+  // Cmd/Ctrl+Enter to submit. Trình nghe gắn một lần khi mở nên gọi qua ref: closure lúc mở còn giữ form rỗng.
+  const submitRef = React.useRef<() => void>(() => {});
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return;
+      if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
-        handleFormSubmit();
+        submitRef.current();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // ── Handlers ────────────────────────────────────────────────
   const handleRequestClose = React.useCallback(() => {
@@ -194,13 +225,16 @@ export function CreateTaskModal({
     onClose();
   }, [form, onClose]);
 
+  // Kiểm tra không qua thì đưa focus tới ô sai đầu tiên (người dùng bàn phím/đọc màn hình không thấy chip đổi màu)
   const handleFormSubmit = React.useCallback(async () => {
-    const result = await form.handleSubmit();
-    if (result === undefined) {
-      // handleSubmit returns void; check submissionOutcome after it completes
-      // The hook sets submissionOutcome internally — we check it via effect below
-    }
+    const errors = await form.handleSubmit();
+    if (!errors) return;
+    if (errors.title) titleInputRef.current?.focus();
+    else if (errors.lead) leadTriggerRef.current?.focus();
+    else if (errors.startDate) document.getElementById("create-task-start-date")?.focus();
+    else if (errors.dueDate) document.getElementById("create-task-due-date")?.focus();
   }, [form]);
+  submitRef.current = handleFormSubmit;
 
   // React to submission outcome
   React.useEffect(() => {
@@ -224,8 +258,14 @@ export function CreateTaskModal({
 
   const currentDeptName = React.useMemo(() => {
     const dept = form.availableDepartments.find((d) => d.code === form.formData.selectedDeptCode);
-    return dept?.name ?? "Đang tải...";
-  }, [form.availableDepartments, form.formData.selectedDeptCode]);
+    if (dept) return dept.name;
+    // Danh sách rỗng sau khi đã tải xong (tài khoản chưa gắn đơn vị, hoặc tải lỗi) không phải đang tải
+    return form.isLoadingDepartments ? "Đang tải…" : "Chưa có đơn vị";
+  }, [form.availableDepartments, form.formData.selectedDeptCode, form.isLoadingDepartments]);
+
+  const fieldErrorText = [form.fieldErrors.lead, form.fieldErrors.startDate, form.fieldErrors.dueDate]
+    .filter(Boolean)
+    .join(" ");
 
   // Submission error message for banner
   const errorMessage = form.submissionOutcome === "rejected" || form.submissionOutcome === "unknown"
@@ -363,66 +403,82 @@ export function CreateTaskModal({
 
               {/* ── Restored Draft Banner ────────────────────── */}
               {form.hasRestoredDraft && (
-                <div className="flex items-center justify-between px-5 sm:px-6 py-1.5 bg-muted/40 border-b border-border/60 text-xs text-muted-foreground shrink-0">
+                <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-1.5 bg-muted/40 border-b border-border/60 text-xs text-muted-foreground shrink-0">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
                     <span>Đã tự động khôi phục bản nháp chưa lưu từ phiên làm việc trước.</span>
                   </div>
                   <Pressable
                     onClick={form.handleClearDraft}
-                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
+                    className="inline-flex shrink-0 items-center whitespace-nowrap max-md:min-h-11 text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
                   >
                     Xóa bản nháp
                   </Pressable>
                 </div>
               )}
 
-              {/* ── Modal Scrollable Form Area ───────────────── */}
-              <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 flex flex-col space-y-2.5 min-h-0">
-                {/* Error banner */}
-                {errorMessage && (
-                  <InlineAlert variant="error" aria-live="assertive" className="shrink-0">
+              {/* Lỗi gửi: nằm ngoài vùng cuộn để luôn thấy dù đang cuộn mô tả dài */}
+              {errorMessage && (
+                <div className="px-5 sm:px-6 pt-3 shrink-0">
+                  <InlineAlert variant="error" aria-live="assertive">
                     {errorMessage}
                   </InlineAlert>
-                )}
+                </div>
+              )}
+
+              {/* ── Modal Scrollable Form Area ───────────────── */}
+              <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 flex flex-col space-y-2.5 min-h-0">
 
                 {/* 1. Task Title (P0 Field) */}
                 <div className="space-y-0.5 shrink-0">
                   <label htmlFor="create-task-title" className="sr-only">
                     {initialParentTaskId ? "Tên việc con" : "Tên nhiệm vụ"}
                   </label>
-                  <input
+                  {/* design-lint-ignore no-raw-control: tiêu đề không viền hòa vào trang, ui/Textarea ép nền, đệm và bộ đếm */}
+                  <textarea
                     id="create-task-title"
-                    ref={titleInputRef}
-                    type="text"
+                    ref={setTitleRef}
+                    rows={1}
                     name="task-title"
                     autoComplete="off"
                     value={form.formData.title}
-                    maxLength={255}
+                    maxLength={TITLE_MAX_LENGTH}
                     aria-required="true"
                     aria-invalid={Boolean(form.fieldErrors.title)}
                     aria-describedby={form.fieldErrors.title ? "create-task-title-error" : undefined}
                     onChange={(e) => {
-                      form.setField("title", e.target.value);
+                      form.setField("title", e.target.value.replace(/\s*\n+\s*/g, " "));
                       if (form.fieldErrors.title) {
                         form.setFieldErrors((prev) => ({ ...prev, title: undefined }));
                       }
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
+                      // Gõ Telex/IME: Enter chốt âm tiết đang soạn, không phải lệnh chuyển ô
+                      if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.nativeEvent.isComposing) {
                         e.preventDefault();
                         descriptionTextareaRef.current?.focus();
                       }
                     }}
                     placeholder={initialParentTaskId ? "Tên việc con" : "Tên nhiệm vụ"}
                     className={cn(
-                      "w-full text-lg font-semibold text-foreground placeholder:text-muted-foreground/60 bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug",
+                      "block w-full resize-none overflow-hidden text-lg font-semibold text-foreground placeholder:text-muted-foreground/60 bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug max-md:text-base",
                       form.fieldErrors.title && "placeholder:text-destructive/60 text-destructive",
                     )}
                   />
                   {form.fieldErrors.title && (
                     <p id="create-task-title-error" role="alert" className="text-xs text-destructive font-medium">
                       {form.fieldErrors.title}
+                    </p>
+                  )}
+                  {form.formData.title.length >= TITLE_COUNTER_FROM && (
+                    <p
+                      aria-live="polite"
+                      className={cn(
+                        "text-xs tabular-nums",
+                        form.formData.title.length >= TITLE_MAX_LENGTH ? "text-destructive" : "text-muted-foreground",
+                      )}
+                    >
+                      {form.formData.title.length}/{TITLE_MAX_LENGTH} ký tự
                     </p>
                   )}
                 </div>
@@ -519,8 +575,10 @@ export function CreateTaskModal({
                 >
                   <div className="relative">
                     <Popover.Trigger
+                      ref={leadTriggerRef}
                       type="button"
                       aria-required="true"
+                      aria-invalid={Boolean(form.fieldErrors.lead)}
                       aria-label={leadAssigneeDisplayName ? undefined : "Chủ trì"}
                       className={cn(
                         "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
@@ -569,14 +627,15 @@ export function CreateTaskModal({
                           <div className="max-h-56 space-y-0.5 overflow-y-auto overscroll-contain">
                             {form.availablePersonnel.length === 0 ? (
                               <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                                Chưa có nhân sự trong đơn vị này
+                                {form.isLoadingDepartments ? "Đang tải danh sách…" : "Chưa có nhân sự trong đơn vị này"}
                               </div>
                             ) : (
                               (() => {
-                                const q = personQuery.trim().toLocaleLowerCase("vi");
+                                // Gõ không dấu vẫn tìm ra ("hung" → "Hùng")
+                                const q = foldVietnamese(personQuery);
                                 const list = q
                                   ? form.availablePersonnel.filter((p) =>
-                                      [p.name, p.email].some((t) => t?.toLocaleLowerCase("vi").includes(q)),
+                                      [p.name, p.email].some((t) => foldVietnamese(t).includes(q)),
                                     )
                                   : form.availablePersonnel;
                                 if (list.length === 0) {
@@ -621,18 +680,21 @@ export function CreateTaskModal({
 
                 {/* 3.3 Start Date Chip */}
                 <VietnameseDatePicker
+                  id="create-task-start-date"
                   value={form.formData.startDate}
                   onChange={(val) => form.setField("startDate", val)}
                   label={form.formData.startDate ? "Bắt đầu:" : undefined}
                   variant="chip"
                   triggerClassName="h-7"
                   compactWhenEmpty
+                  error={Boolean(form.fieldErrors.startDate)}
                   icon={<Calendar className="size-3 text-muted-foreground max-md:size-3.5" />}
                   placeholder="Bắt đầu"
                 />
 
                 {/* 3.4 Target Due Date Chip (P0 Field) */}
                 <VietnameseDatePicker
+                  id="create-task-due-date"
                   value={form.formData.dueDate}
                   required
                   onChange={(val) => {
@@ -667,6 +729,11 @@ export function CreateTaskModal({
                   />
                 ) : null}
               </div>
+              {fieldErrorText && (
+                <p role="alert" className="px-5 sm:px-6 pb-3 -mt-1 shrink-0 text-xs font-medium text-destructive">
+                  {fieldErrorText}
+                </p>
+              )}
 
               {/* ── Modal Bottom Footer ──────────────────────── */}
               <footer className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-t border-border/60 bg-muted/20 shrink-0">
@@ -679,7 +746,7 @@ export function CreateTaskModal({
                     disabled={!form.formData.title.trim()}
                     aria-keyshortcuts="Meta+Enter Control+Enter"
                     title={`${modKey} + Enter`}
-                    className="max-md:h-9 max-md:px-4"
+                    className="max-md:px-4"
                   >
                     <span>{form.isSubmitting ? (initialParentTaskId ? "Đang giao việc…" : "Đang tạo…") : initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
                     {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
