@@ -15,7 +15,7 @@ import {
 } from "@/lib/format/date";
 import { Popover } from "@base-ui/react/popover";
 import { fieldFocusRingClass, focusRingClass } from "@/components/ui/focus-ring";
-import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_MOTION_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 import { useIsPhone } from "@/hooks/use-is-phone";
 
 export type DateGranularity = "day" | "month" | "quarter" | "half-year" | "year";
@@ -390,7 +390,7 @@ export function VietnameseDatePicker({
       <Popover.Popup
         aria-label="Chọn ngày trên lịch"
         initialFocus={!isPhone}
-        className="w-[290px] max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto p-4 text-foreground rounded-2xl border-0 bg-popover shadow-menu max-md:w-full! max-md:max-w-none! max-md:max-h-[80dvh]! max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-4 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+16px)]"
+        className={cn(SHEET_MOTION_CLASS, "w-[290px] max-w-[var(--available-width)] max-h-[var(--available-height)] overflow-y-auto p-4 text-foreground rounded-2xl border-0 bg-popover shadow-menu max-md:w-full! max-md:max-w-none! max-md:max-h-[80dvh]! max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-4 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+16px)]")}
       >
         {/* Điện thoại: thanh kéo + tiêu đề của sheet; desktop dùng nhãn nhỏ bên dưới */}
         <MenuSheetHeader title={title || label || placeholder || "Chọn ngày"} />

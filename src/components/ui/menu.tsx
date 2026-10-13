@@ -27,8 +27,15 @@ export const SHEET_BACKDROP_CLASS =
   "fixed inset-0 z-[55] bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none md:hidden";
 export const SHEET_POSITIONER_CLASS =
   "max-md:fixed! max-md:inset-x-0! max-md:top-auto! max-md:bottom-[var(--keyboard-height,0px)]! max-md:transform-none! max-md:z-[56]";
+/**
+ * Chuyển động của sheet: trượt lên từ đáy khi mở, trượt xuống khi đóng (nhanh hơn, ease thoát). Dùng thuộc tính `translate`
+ * riêng với `transform` của motion nên không đè hiệu ứng mờ/scale của `MenuPopup`. Menu ẩn ngay khi đóng
+ * (`data-[closed]:hidden`) nên phải giữ hiển thị trong lúc trượt xuống.
+ */
+export const SHEET_MOTION_CLASS =
+  "max-md:transition-[translate] max-md:duration-[var(--motion-duration-panel)] max-md:ease-[var(--motion-ease-enter)] max-md:data-[starting-style]:translate-y-full max-md:data-[ending-style]:translate-y-full max-md:data-[ending-style]:duration-[var(--motion-duration-normal)] max-md:data-[ending-style]:ease-[var(--motion-ease-exit)] max-md:data-[closed]:block! motion-reduce:max-md:transition-none";
 export const SHEET_POPUP_CLASS =
-  "max-md:w-full! max-md:max-w-none! max-md:min-w-0! max-md:max-h-[calc(80dvh-var(--keyboard-height,0px))]! max-md:overflow-y-auto max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-2 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+8px)] max-md:text-compact max-md:has-[[data-popup-open]]:invisible max-md:[&_[role=menuitem]]:h-10 max-md:[&_[role=menuitem]]:px-3 max-md:[&_[role=menuitem]]:text-compact max-md:[&_[role=option]]:min-h-10 max-md:[&_[role=option]]:px-3 max-md:[&_[role=option]]:text-compact";
+  `${SHEET_MOTION_CLASS} max-md:w-full! max-md:max-w-none! max-md:min-w-0! max-md:max-h-[calc(80dvh-var(--keyboard-height,0px))]! max-md:overflow-y-auto max-md:rounded-t-2xl max-md:rounded-b-none max-md:px-2 max-md:pt-0 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+8px)] max-md:text-compact max-md:has-[[data-popup-open]]:invisible max-md:[&_[role=menuitem]]:h-10 max-md:[&_[role=menuitem]]:px-3 max-md:[&_[role=menuitem]]:text-compact max-md:[&_[role=option]]:min-h-10 max-md:[&_[role=option]]:px-3 max-md:[&_[role=option]]:text-compact`;
 
 /** Gắn vào sheet có ô nhập: khi bàn phím ảo mở, `--keyboard-height` nâng sheet lên trên bàn phím (iOS không co khung nhìn). */
 export function SheetKeyboardSync() {

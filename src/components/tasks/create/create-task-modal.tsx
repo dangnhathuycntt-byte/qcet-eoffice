@@ -218,7 +218,7 @@ export function CreateTaskModal({
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
           />
           <Dialog.Popup
-            className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-2 sm:p-4 md:p-6 outline-none max-md:p-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+47px)] max-md:pb-[max(calc(env(safe-area-inset-bottom,0px)+47px),calc(var(--keyboard-height,0px)+8px))]"
+            className="group/dlg pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-2 sm:p-4 md:p-6 outline-none max-md:p-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+47px)] max-md:pb-[max(calc(env(safe-area-inset-bottom,0px)+47px),calc(var(--keyboard-height,0px)+8px))]"
           >
             {/* Điện thoại: đẩy hộp lên khi bàn phím ảo hiện (như sheet chọn thuộc tính) */}
             {isOpen ? <SheetKeyboardSync /> : null}
@@ -231,6 +231,8 @@ export function CreateTaskModal({
                 // Điện thoại: thẻ cao gần hết màn hình như hộp tạo mới của Linear
                 "max-md:h-full max-md:max-h-none max-md:min-h-0",
                 "animate-in fade-in zoom-in-95",
+                // Điện thoại: trượt lên từ đáy như sheet (dự án không nạp tw-animate nên dùng data-starting-style của Dialog)
+                "max-md:transition-[translate,opacity] max-md:duration-[var(--motion-duration-panel)] max-md:ease-[var(--motion-ease-enter)] max-md:group-data-[starting-style]/dlg:translate-y-10 max-md:group-data-[starting-style]/dlg:opacity-0 max-md:group-data-[ending-style]/dlg:translate-y-10 max-md:group-data-[ending-style]/dlg:opacity-0 max-md:group-data-[ending-style]/dlg:duration-[var(--motion-duration-normal)] max-md:group-data-[ending-style]/dlg:ease-[var(--motion-ease-exit)] motion-reduce:max-md:transition-none",
               )}
             >
               {/* ── Modal Top Header ──────────────────────────── */}
