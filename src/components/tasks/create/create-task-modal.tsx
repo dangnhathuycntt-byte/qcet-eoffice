@@ -5,11 +5,9 @@ import {
   Building2,
   Calendar,
   CheckCircle2,
-  AlertCircle,
   ChevronDown,
   ChevronRight,
   User,
-  Check,
   CalendarClock,
   X,
 } from "lucide-react";
@@ -29,6 +27,10 @@ import { Pressable } from "@/components/ui/pressable";
 import { SheetKeyboardSync } from "@/components/ui/menu";
 import { useIsPhone } from "@/hooks/use-is-phone";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 import { SourceDocumentChip, linkTaskToDocument, type SourceDocumentOption } from "@/components/tasks/create/source-document-chip";
 
 // Re-export types for downstream consumers
@@ -150,7 +152,7 @@ export function CreateTaskModal({
   // Điện thoại: mở menu ưu tiên/đơn vị (không có ô nhập) thì bỏ focus ô đang gõ để bàn phím không che menu.
   // Menu chủ trì có ô tìm riêng nên giữ nguyên.
   React.useEffect(() => {
-    if (!isPhone || !openDropdown || openDropdown === "dri") return;
+    if (!isPhone || !openDropdown || openDropdown === "dri" || openDropdown === "document") return;
     const active = document.activeElement;
     if (active instanceof HTMLElement && active.matches("input, textarea")) active.blur();
   }, [isPhone, openDropdown]);
@@ -294,12 +296,14 @@ export function CreateTaskModal({
                         </Popover.Trigger>
 
                         <Popover.Portal>
-                          <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                          <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
+                          <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
                             <Popover.Popup
                               style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                              className="w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl"
+                              className={cn("w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
                               aria-label="Chọn đơn vị phòng ban"
                             >
+                              <MenuSheetHeader title="Đơn vị" />
                               {form.availableDepartments.map((dept) => (
                                 <Pressable
                                   key={dept.code}
@@ -309,16 +313,13 @@ export function CreateTaskModal({
                                     setOpenDropdown(null);
                                   }}
                                   className={cn(
-                                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99]",
+                                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] max-md:min-h-10 max-md:text-compact",
                                     form.formData.selectedDeptCode === dept.code
                                       ? "font-semibold text-foreground bg-accent"
                                       : "text-foreground hover:bg-accent/70",
                                   )}
                                 >
                                   <span className="truncate">{dept.name}</span>
-                                  {form.formData.selectedDeptCode === dept.code && (
-                                    <Check className="size-3.5 text-foreground shrink-0" />
-                                  )}
                                 </Pressable>
                               ))}
                             </Popover.Popup>
@@ -349,15 +350,16 @@ export function CreateTaskModal({
                   </Dialog.Title>
                 </div>
 
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={handleRequestClose}
                   aria-label="Đóng"
                   title="Đóng (Esc)"
-                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-md:size-8"
+                  className="shrink-0 max-md:size-8"
                 >
-                  <X className="size-4" />
-                </button>
+                  <X />
+                </Button>
               </header>
 
               {/* ── Restored Draft Banner ────────────────────── */}
@@ -380,14 +382,9 @@ export function CreateTaskModal({
               <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 flex flex-col space-y-2.5 min-h-0">
                 {/* Error banner */}
                 {errorMessage && (
-                  <div
-                    role="alert"
-                    aria-live="assertive"
-                    className="flex items-center gap-2 p-2 rounded-md bg-danger-soft border border-destructive/20 text-xs text-destructive shrink-0"
-                  >
-                    <AlertCircle className="size-4 shrink-0 text-destructive" aria-hidden="true" />
-                    <span className="flex-1 font-medium">{errorMessage}</span>
-                  </div>
+                  <InlineAlert variant="error" aria-live="assertive" className="shrink-0">
+                    {errorMessage}
+                  </InlineAlert>
                 )}
 
                 {/* 1. Task Title (P0 Field) */}
@@ -503,12 +500,14 @@ export function CreateTaskModal({
                     </Popover.Trigger>
 
                     <Popover.Portal>
-                      <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                      <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
+                      <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
                         <Popover.Popup
                           style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                          className="w-40 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl"
+                          className={cn("w-40 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
                           aria-label="Chọn mức độ ưu tiên"
                         >
+                          <MenuSheetHeader title="Mức ưu tiên" />
                           {PRIORITY_KEYS.map((p) => (
                             <Pressable
                               key={p}
@@ -517,9 +516,9 @@ export function CreateTaskModal({
                                 setOpenDropdown(null);
                               }}
                               className={cn(
-                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99]",
+                                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] max-md:min-h-10 max-md:text-compact",
                                 form.formData.priority === p
-                                  ? "font-medium text-foreground hover:bg-accent"
+                                  ? "bg-accent font-medium text-foreground"
                                   : "text-foreground hover:bg-accent",
                               )}
                             >
@@ -527,9 +526,6 @@ export function CreateTaskModal({
                                 <PrioritySignalBars priority={toSignalPriority(p)} className="shrink-0" />
                                 <span>{PRIORITY_CONFIG[p].label}</span>
                               </div>
-                              {form.formData.priority === p && (
-                                <Check className="size-3 text-foreground shrink-0" />
-                              )}
                             </Pressable>
                           ))}
                         </Popover.Popup>
@@ -579,18 +575,21 @@ export function CreateTaskModal({
                     </Popover.Trigger>
 
                     <Popover.Portal>
-                      <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                      <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
+                      <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
                         <Popover.Popup
                           style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                          className="w-60 p-1 rounded-xl border border-border bg-popover shadow-2xl"
+                          className={cn("w-60 p-1 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
                           aria-label="Chọn người chủ trì"
                         >
-                          <input
+                          <MenuSheetHeader title="Người chủ trì" />
+                          <Input
+                            compact
                             value={personQuery}
                             onChange={(e) => setPersonQuery(e.target.value)}
-                            placeholder="Tìm người..."
+                            placeholder="Tìm người…"
                             aria-label="Tìm người chủ trì"
-                            className="mb-1 h-7 w-full rounded-md bg-muted/60 px-2 text-xs outline-none placeholder:text-muted-foreground focus:bg-muted"
+                            className="mb-1 text-xs max-md:h-8"
                           />
                           <div className="max-h-56 space-y-0.5 overflow-y-auto overscroll-contain">
                             {form.availablePersonnel.length === 0 ? (
@@ -624,19 +623,16 @@ export function CreateTaskModal({
                                       setOpenDropdown(null);
                                     }}
                                     className={cn(
-                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 transition-colors",
+                                      "w-full text-left px-2 py-1 rounded-lg text-xs flex items-center gap-2 transition-colors max-md:min-h-10 max-md:text-compact",
                                       form.formData.leadAssigneeId === person.id
-                                        ? "bg-accent"
+                                        ? "bg-accent font-medium"
                                         : "hover:bg-accent/70",
                                     )}
                                   >
                                     <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
-                                    <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                                    <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground max-md:text-compact">
                                       {person.name}
                                     </span>
-                                    {form.formData.leadAssigneeId === person.id && (
-                                      <Check className="size-3.5 text-foreground shrink-0" />
-                                    )}
                                   </Pressable>
                                 ));
                               })()
@@ -701,28 +697,23 @@ export function CreateTaskModal({
               <footer className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-t border-border/60 bg-muted/20 shrink-0">
                 {/* Chỉ nút chính; đóng bằng Esc hoặc nhấn ra ngoài */}
                 <div className="flex items-center gap-2 ml-auto">
-                  <Pressable
+                  <Button
+                    size="sm"
                     onClick={handleFormSubmit}
-                    disabled={form.isSubmitting || !form.formData.title.trim()}
+                    loading={form.isSubmitting}
+                    disabled={!form.formData.title.trim()}
                     aria-keyshortcuts="Meta+Enter Control+Enter"
                     title={`${modKey} + Enter`}
-                    className="h-7 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 inline-flex items-center gap-1.5 max-md:h-9 max-md:px-4"
+                    className="max-md:h-9 max-md:px-4"
                   >
-                    {form.isSubmitting ? (
-                      <>
-                        <span className="size-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin inline-block" />
-                        <span>{initialParentTaskId ? "Đang giao việc..." : "Đang tạo..."}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
-                        {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
-                        <kbd className="hidden sm:inline font-sans text-xs text-primary-foreground/60" aria-hidden="true">
-                          {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
-                        </kbd>
-                      </>
+                    <span>{form.isSubmitting ? (initialParentTaskId ? "Đang giao việc…" : "Đang tạo…") : initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
+                    {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
+                    {form.isSubmitting ? null : (
+                      <kbd className="hidden sm:inline font-sans text-xs text-primary-foreground/60" aria-hidden="true">
+                        {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
+                      </kbd>
                     )}
-                  </Pressable>
+                  </Button>
 
                 </div>
               </footer>

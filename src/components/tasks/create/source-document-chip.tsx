@@ -6,6 +6,7 @@ import { ChevronDown, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
+import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 export interface SourceDocumentOption {
   id: string;
@@ -124,12 +125,14 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
         </Popover.Trigger>
 
         <Popover.Portal>
-          <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+          <Popover.Backdrop className={SHEET_BACKDROP_CLASS} />
+          <Popover.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} align="start" sideOffset={4} collisionPadding={12}>
             <Popover.Popup
               style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-              className="w-72 p-1 rounded-xl border border-border bg-popover shadow-2xl"
+              className={cn("w-72 p-1 rounded-xl border border-border bg-popover shadow-2xl", SHEET_POPUP_CLASS, "max-md:border-0")}
               aria-label="Chọn văn bản nguồn"
             >
+              <MenuSheetHeader title="Văn bản nguồn" />
               <Input
                 compact
                 value={query}
@@ -145,7 +148,7 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
                       onChange(null);
                       onOpenChange(false);
                     }}
-                    className="w-full rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent/70"
+                    className="w-full rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent/70 max-md:min-h-10 max-md:text-compact"
                   >
                     Bỏ văn bản nguồn
                   </Pressable>
@@ -167,11 +170,11 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
                         onOpenChange(false);
                       }}
                       className={cn(
-                        "flex w-full flex-col gap-0.5 rounded-lg px-2 py-1.5 text-left transition-colors",
+                        "flex w-full flex-col gap-0.5 rounded-lg px-2 py-1.5 text-left transition-colors max-md:min-h-10",
                         value?.id === opt.id ? "bg-accent" : "hover:bg-accent/70",
                       )}
                     >
-                      <span className={cn("truncate text-xs text-foreground", value?.id === opt.id && "font-medium")}>{opt.number}</span>
+                      <span className={cn("truncate text-xs text-foreground max-md:text-compact", value?.id === opt.id && "font-medium")}>{opt.number}</span>
                       {opt.summary ? <span className="line-clamp-2 text-xs text-muted-foreground">{opt.summary}</span> : null}
                     </Pressable>
                   ))
