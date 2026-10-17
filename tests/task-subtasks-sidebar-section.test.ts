@@ -82,7 +82,7 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
     assert.ok(html.includes("Xem thêm 3"), "Must show 'Xem thêm 3 việc con'");
   });
 
-  it("marks selected row with bg-muted/40", () => {
+  it("marks selected row with bg-selected (cùng màu sidebar đang chọn)", () => {
     const subs = [
       makeSubtask({ id: "s1", title: "First" }),
       makeSubtask({ id: "s2", title: "Second" }),
@@ -94,12 +94,13 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
         onSelectSubtask: () => {},
       })
     );
-    // The active row should have bg-muted/40
+    // The active row should have bg-selected
     const s2Idx = html.indexOf("Second");
     assert.ok(s2Idx > 0, "Must render Second subtask");
-    // Find the button containing "Second" and check it has bg-muted/40
+    // Find the button containing "Second" and check it has bg-selected
     const beforeS2 = html.slice(Math.max(0, s2Idx - 300), s2Idx);
-    assert.ok(beforeS2.includes("bg-muted/40"), "Active row must have bg-muted/40 class");
+    assert.ok(beforeS2.includes("bg-selected"), "Active row must have bg-selected class");
+    assert.equal(html.match(/bg-selected/g)?.length, 1, "Only the active row is selected");
   });
 
   it("renders + button calling onAddSubtask", () => {
@@ -193,15 +194,15 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
         onSelectSubtask: () => {},
       })
     );
-    // UserAvatar (Base UI Avatar) chỉ thay chữ cái bằng ảnh sau khi ảnh tải xong ở client,
-    // nên SSR hiển thị avatar 20px có tên người phụ trách + chữ cái làm fallback.
+    // UserAvatar (Base UI Avatar) chỉ thay hình người xám bằng ảnh sau khi ảnh tải xong ở client,
+    // nên SSR hiển thị avatar 20px có tên người phụ trách + hình người xám làm fallback.
     assert.ok(
-      html.includes('title="Nguyễn Văn A"') && html.includes("size-5") && html.includes(">NA<"),
-      "Must render the shared UserAvatar (20px) for the assignee with initials fallback"
+      html.includes('title="Nguyễn Văn A"') && html.includes("size-5") && html.includes('data-slot="avatar-placeholder"'),
+      "Must render the shared UserAvatar (20px) for the assignee with placeholder fallback"
     );
   });
 
-  it("renders assignee initials when assigneeName is present without avatar image", () => {
+  it("renders assignee placeholder avatar when assigneeName is present without avatar image", () => {
     const sub = makeSubtask({
       id: "s-init",
       title: "Việc con với initials",
@@ -218,8 +219,8 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       "Must have title attribute with assigneeName"
     );
     assert.ok(
-      html.includes(">TB<") && html.includes("rounded-full"),
-      "Must render a round avatar with the assignee initials"
+      html.includes('data-slot="avatar-placeholder"') && html.includes("rounded-full") && !html.includes(">TB<"),
+      "Must render a round placeholder avatar instead of the assignee initials"
     );
   });
 });

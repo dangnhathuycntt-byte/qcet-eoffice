@@ -1,79 +1,26 @@
-"use client";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { auth } from "@/auth";
+import { getSessionFromRequest } from "@/lib/jwt-session";
+import { OrgDirectoryView } from "@/components/org/org-directory-view";
 
-import * as React from "react";
-import { Network } from "lucide-react";
-import { OrganizationTree } from "@/components/org/organization-tree";
-import { useOrgDepartments } from "@/hooks/use-org-departments";
+export const dynamic = "force-dynamic";
 
-/**
- * Org / Directory surface contract (C7 / C15 / D12 / T56).
- *
- * Primary work     : find a person or unit and understand organizational relationships.
- * Primary context  : toàn trường.
- * Primary action   : search the directory. It is owned by <OrganizationTree/>, which
- *                    opens on the directory/tree view by default.
- * Secondary controls: print / export are owned by the single OrganizationTree toolbar.
- *                    This page renders no duplicate toolbar, no page-level search,
- *                    and no timeout-only "refresh" control.
- *
- * Data-source audit (T57):
- * Organizational metadata comes from QCET_ORG_UNITS (static config) merged
- * with personnel from the /api/departments endpoint via useOrgDepartments().
- * The counts below are derived from that merged dataset.
- *
- * Removed by this migration:
- * - the hard-coded digital-identity coverage claim (T61 — unproven static metric);
- * - the presentation-only refresh control that pretended a server reload (T60/P1-07);
- * - the page-level duplicate print/export actions (single control point, rule ui.md #7).
- */
-export default function OrgPage() {
-  const { departments } = useOrgDepartments();
+export const metadata: Metadata = { title: "Cơ cấu & Danh bạ" };
 
-  const totals = React.useMemo(
-    () => ({
-      units: departments.length,
-      staff: departments.reduce(
-        (acc, dept) => acc + dept.members.length,
-        0
-      ),
-    }),
-    [departments]
-  );
+export default async function OrgPage() {
+  const authSession = await auth();
+  const cookieStore = await cookies();
+  const jwtSession = !authSession?.user?.id
+    ? await getSessionFromRequest({ cookies: cookieStore })
+    : null;
 
-  return (
-    <div
-      className="max-w-[1440px] w-full mx-auto space-y-5 pb-6 md:pb-10"
-      data-slot="org-page"
-    >
-      {/* Page header: identity + primary context. No metric cards, no duplicate actions.
-          Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
-      <div className="flex flex-col gap-2 max-md:sr-only">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-            <Network className="size-3" />
-            <span>CƠ CẤU BỘ MÁY & DANH BẠ QCET</span>
-          </span>
-          <span className="text-xs text-muted-foreground font-medium">
-            • Toàn trường
-          </span>
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-            Cơ cấu Tổ chức & Danh bạ Cán bộ
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Sơ đồ bộ máy tổ chức, các đơn vị phòng ban, khoa chuyên môn và danh bạ
-            liên hệ toàn trường QCET
-          </p>
-          <p className="text-xs text-muted-foreground/80 mt-1 font-mono tabular-nums">
-            Danh bạ toàn trường · {totals.units} đơn vị · {totals.staff} cán bộ,
-            giảng viên
-          </p>
-        </div>
-      </div>
+  const userId = authSession?.user?.id ?? jwtSession?.id;
 
-      {/* Primary surface: directory/tree. Search-first, state-preserving. */}
-      <OrganizationTree persistContext />
-    </div>
-  );
+  if (!userId) {
+    redirect("/login?returnTo=/org");
+  }
+
+  return <OrgDirectoryView />;
 }

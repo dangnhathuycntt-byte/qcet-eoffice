@@ -17,7 +17,6 @@ export interface DestructiveConfirmDialogProps {
   /** Nội dung phụ dưới mô tả, vd danh sách các mục sắp xóa. */
   children?: React.ReactNode;
   confirmLabel?: string;
-  cancelLabel?: string;
   irreversible?: boolean;
   isConfirming?: boolean;
 }
@@ -32,7 +31,6 @@ export function DestructiveConfirmDialog({
   description,
   children,
   confirmLabel = "Xóa",
-  cancelLabel = "Hủy",
   irreversible = true,
   isConfirming = false,
 }: DestructiveConfirmDialogProps) {
@@ -71,7 +69,7 @@ export function DestructiveConfirmDialog({
                 render={<Button variant="ghost" size="sm" />}
                 disabled={isConfirming}
               >
-                {cancelLabel}
+                Hủy
               </AlertDialog.Close>
               <Button
                 variant="destructive"

@@ -6,6 +6,7 @@ import {
   TaskIconPriorityHigh,
   TaskIconPriorityNormal,
   TaskIconPriorityLow,
+  TaskIconPriorityNone,
 } from "@/lib/icons/task-icons";
 
 export interface PrioritySignalBarsProps {
@@ -22,6 +23,7 @@ export interface PrioritySignalBarsProps {
  * - Cao: 3 cột sáng (đậm)
  * - Bình thường: 2 cột sáng, 1 cột mờ
  * - Thấp: 1 cột sáng, 2 cột mờ
+ * - Không ưu tiên: ba gạch ngang
  */
 export function PrioritySignalBars({
   priority = "NORMAL",
@@ -33,6 +35,7 @@ export function PrioritySignalBars({
   const isUrgent = p === "URGENT";
   const isHigh = p === "HIGH";
   const isNormal = p === "NORMAL";
+  const isNone = p === "NONE";
 
   const label = isUrgent
     ? "Khẩn cấp"
@@ -40,6 +43,8 @@ export function PrioritySignalBars({
     ? "Cao"
     : isNormal
     ? "Bình thường"
+    : isNone
+    ? "Không ưu tiên"
     : "Thấp";
 
   return (
@@ -59,6 +64,8 @@ export function PrioritySignalBars({
         <TaskIconPriorityHigh className="size-4" />
       ) : isNormal ? (
         <TaskIconPriorityNormal className="size-4" />
+      ) : isNone ? (
+        <TaskIconPriorityNone className="size-4" />
       ) : (
         <TaskIconPriorityLow className="size-4" />
       )}

@@ -49,7 +49,7 @@ export function TaskPropertiesDrawer({
     >
       <VaulDrawer.Portal>
         <VaulDrawer.Overlay
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-200"
+          className="fixed inset-0 z-50 bg-overlay transition-opacity duration-200"
         />
         <VaulDrawer.Content
           data-slot="task-properties-drawer"

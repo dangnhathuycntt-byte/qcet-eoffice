@@ -1,22 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import type { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus, DocumentItem } from "@/types/document";
 import { Button } from "@/components/ui/button";
+import { CreateButtonWithHint } from "@/components/ui/onboarding-hint";
 import { useDocumentUrlFilters } from "@/hooks/use-document-url-filters";
 import { useDocumentPane } from "@/hooks/use-document-pane";
 import { PaneResizeHandle } from "@/components/ui/pane-resize-handle";
 import { cn } from "@/lib/utils";
+import { preloadWhenIdle } from "@/lib/idle-preload";
 import { readScroll, writeScroll } from "@/lib/documents/list-scroll-memory";
 import { PANE_DEFAULT, PANE_MAX, PANE_MIN, nextWidthForKey, parseStoredPaneWidth, resolvePaneLayout, type PaneMode } from "@/lib/documents/document-pane-layout";
 import { DocumentLedgerToolbar, DocumentActiveFilters, DocumentLedgerTable, DocumentCardList, DocumentBulkToolbar, DEFAULT_LEDGER_COLUMNS, getLedgerEmptyCopy, type LedgerColumnVisibility } from "./registry";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { DocumentQuickView } from "./workspace/document-quick-view";
 import { DocumentQuickEntryModal } from "./document-quick-entry-modal";
+import { ComposeOutgoingDialog } from "./compose-outgoing-dialog";
 import { DigitalSignatureDialog } from "./digital-signature-dialog";
 import { TaskPaginationBar } from "@/components/tasks/table/components/task-pagination-bar";
-import { InboundDocumentFeatureGuide } from "@/components/feature-guide/feature-guide";
 
 const PANE_WIDTH_KEY = "qcet_document_pane_width";
 
@@ -92,8 +93,13 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
   };
 }
 
-export function DocumentRegistryView() {
-  const router = useRouter();
+// Trình xem PDF nạp qua hai lớp dynamic() nối tiếp; nạp sẵn lúc rảnh để lần mở văn bản đầu không chờ mạng
+const DOCUMENT_VIEWER_PRELOAD = [
+  { key: "document-pdf-viewer", load: () => import("./document-pdf-viewer") },
+  { key: "pdf-document-canvas", load: () => import("./pdf-document-canvas") },
+];
+
+export function DocumentRegistryView({ canComposeOutgoing = false }: { canComposeOutgoing?: boolean }) {
   const pane = useDocumentPane();
 
   // URL state management
@@ -113,6 +119,7 @@ export function DocumentRegistryView() {
 
   // Modals & Dialogs
   const [isQuickEntryOpen, setIsQuickEntryOpen] = React.useState(false);
+  const [isComposeOutgoingOpen, setIsComposeOutgoingOpen] = React.useState(false);
   const [signatureDoc, setSignatureDoc] = React.useState<OfficialDocument | null>(null);
   const [isSignatureOpen, setIsSignatureOpen] = React.useState(false);
 
@@ -180,6 +187,10 @@ export function DocumentRegistryView() {
     fetchDocuments(ctrl.signal);
     return () => ctrl.abort();
   }, [fetchDocuments]);
+
+  React.useEffect(() => {
+    preloadWhenIdle(DOCUMENT_VIEWER_PRELOAD);
+  }, []);
 
   React.useEffect(() => {
     try {
@@ -315,7 +326,7 @@ export function DocumentRegistryView() {
   const statusLabels: Record<string, string> = { pending_assignment: "Chờ bút phê", processing: "Đang xử lý", approved: "Chờ phê duyệt", completed: "Đã lập hồ sơ" };
 
   const primaryAction = filters.type === "outbox"
-    ? { label: "Soạn văn bản đi", run: () => router.push("/documents/outgoing/compose") }
+    ? canComposeOutgoing ? { label: "Soạn văn bản đi", run: () => setIsComposeOutgoingOpen(true) } : null
     : filters.type === "inbox"
     ? { label: "Vào sổ văn bản đến", run: () => setIsQuickEntryOpen(true) }
     : { label: filters.type === "submission" ? "Soạn tờ trình" : "Soạn văn bản", run: () => setIsQuickEntryOpen(true) };
@@ -338,19 +349,24 @@ export function DocumentRegistryView() {
   // "Xóa lọc" ở hàng chip bỏ mọi chip đang hiện, kể cả từ khóa (như trang Nhiệm vụ); vẫn giữ loại sổ và nhóm ở sidebar
   const clearFiltersAndSearch = () => setFilters({ search: "", status: "ALL", urgency: "ALL", leadUnitId: "", documentYear: undefined });
   const emptyCopy = getLedgerEmptyCopy({ isResultFiltered, search: filters.search, type: filters.type, bucket: filters.bucket });
+  // Sổ chưa có văn bản (không lọc, không lỗi): thanh công cụ chỉ còn tiêu đề và nút chính
+  const isColdStartEmpty = !isLoading && !fetchError && documents.length === 0 && !isResultFiltered;
+  // Sổ chưa có văn bản, xem cả sổ: nút chính kèm thẻ hướng dẫn bước đầu (mỗi tài khoản thấy một lần).
+  // Đang xem một nhóm (Chờ xử lý, Đã xử lý…) thì sổ có thể đã có văn bản ở nhóm khác: không hướng dẫn "đầu tiên".
   const emptyAction = isResultFiltered ? (
-    <Button size="sm" variant="outline" onClick={clearFiltersAndSearch}>
+    <Button size="pill" onClick={clearFiltersAndSearch}>
       {!filters.search.trim() ? "Xóa bộ lọc" : activeFilters.some((f) => f.id !== "search" && f.id !== "bucket") ? "Xóa từ khóa và bộ lọc" : "Xóa từ khóa"}
     </Button>
-  ) : filters.bucket === "pending" ? null : (
-    // Từ md đã có mũi tên chỉ lên nút chính ở thanh công cụ: không lặp nút ở giữa
-    <Button size="sm" variant="outline" className="md:hidden" onClick={primaryAction.run}>{primaryAction.label}</Button>
+  ) : filters.bucket === "pending" || !primaryAction ? null : isColdStartEmpty && !filters.bucket ? (
+    <DocumentOnboardingActions
+      type={filters.type}
+      primaryLabel={primaryAction.label}
+      onPrimary={primaryAction.run}
+    />
+  ) : (
+    // Từ md nút chính đã ở thanh công cụ: không lặp nút ở giữa
+    <Button size="pill" className="md:hidden" onClick={primaryAction.run}>{primaryAction.label}</Button>
   );
-  // Sổ chưa có văn bản (không lọc, không lỗi): thanh công cụ chỉ còn tiêu đề và nút chính, mũi tên chỉ vào nút đó
-  const isColdStartEmpty = !isLoading && !fetchError && documents.length === 0 && !isResultFiltered;
-  const emptyArrow = isColdStartEmpty
-    ? ({ inbox: "curve", outbox: "squiggle", submission: "zigzag" } as const)[filters.type as "inbox" | "outbox" | "submission"] ?? "spiral"
-    : undefined;
 
   const quickViewProps = pane.docId
     ? {
@@ -393,8 +409,8 @@ export function DocumentRegistryView() {
                 onStatusChange={(v) => setFilter("status", v)}
                 year={filters.documentYear}
                 onYearChange={(y) => setFilter("documentYear", y)}
-                primaryActionLabel={primaryAction.label}
-                onPrimaryAction={primaryAction.run}
+                primaryActionLabel={primaryAction?.label}
+                onPrimaryAction={primaryAction?.run}
                 onClearFilters={clearFilters}
                 leadUnitId={filters.leadUnitId}
                 leadUnitLabel={leadUnitName}
@@ -425,40 +441,38 @@ export function DocumentRegistryView() {
               data-slot="document-list-region"
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-0 pb-6 pt-1 outline-none sm:px-4 sm:pt-4 md:pb-8"
             >
-              <InboundDocumentFeatureGuide>
-                <div>
-                  {/* Văn bản đang xem không thuộc kết quả của bộ lọc/trang hiện tại: nói rõ, không tự chuyển sang dòng khác */}
-                  {pane.docId && !paneDoc && !isLoading && !fetchError ? (
-                    <p role="status" className="flex h-8 items-center px-2 text-xs text-muted-foreground">
-                      Văn bản đang xem nằm ngoài kết quả hiện tại.
-                    </p>
-                  ) : null}
-                  <div className="hidden sm:block">
-                    <DocumentLedgerTable
-                      documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
-                      numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
-                      visibleColumns={visibleColumns} filterYear={filters.documentYear} isFiltered={isResultFiltered} emptyCopy={emptyCopy}
-                      emptyAction={emptyAction} emptyArrow={emptyArrow}
-                      isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
-                      onOpen={handleOpenDetail} onNavigate={handleNavigate} onFocusDetail={handleFocusDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
-                    />
-                  </div>
-                  <div className="block sm:hidden">
-                    <DocumentCardList
-                      documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
-                      emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description} emptyIllustration={emptyCopy.illustration}
-                      emptyAction={emptyAction}
-                      onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect}
-                      isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
-                    />
-                  </div>
-                  <TaskPaginationBar
-                    itemLabel="văn bản"
-                    currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
-                    onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
+              <div>
+                {/* Văn bản đang xem không thuộc kết quả của bộ lọc/trang hiện tại: nói rõ, không tự chuyển sang dòng khác */}
+                {pane.docId && !paneDoc && !isLoading && !fetchError ? (
+                  <p role="status" className="flex h-8 items-center px-2 text-xs text-muted-foreground">
+                    Văn bản đang xem nằm ngoài kết quả hiện tại.
+                  </p>
+                ) : null}
+                <div className="hidden sm:block">
+                  <DocumentLedgerTable
+                    documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
+                    numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
+                    visibleColumns={visibleColumns} filterYear={filters.documentYear} isFiltered={isResultFiltered} emptyCopy={emptyCopy}
+                    emptyAction={emptyAction}
+                    isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
+                    onOpen={handleOpenDetail} onNavigate={handleNavigate} onFocusDetail={handleFocusDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
                   />
                 </div>
-              </InboundDocumentFeatureGuide>
+                <div className="block sm:hidden">
+                  <DocumentCardList
+                    documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
+                    emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description} emptyIllustration={emptyCopy.illustration}
+                    emptyAction={emptyAction}
+                    onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect}
+                    isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
+                  />
+                </div>
+                <TaskPaginationBar
+                  itemLabel="văn bản"
+                  currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
+                  onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
+                />
+              </div>
             </div>
           </section>
 
@@ -498,6 +512,11 @@ export function DocumentRegistryView() {
         lockType={filters.type !== "all"}
       />
 
+      <ComposeOutgoingDialog
+        open={isComposeOutgoingOpen} onClose={() => setIsComposeOutgoingOpen(false)}
+        onCreated={(doc) => { fetchDocuments(); pane.open(doc.id); }}
+      />
+
       <DigitalSignatureDialog
         open={isSignatureOpen} onOpenChange={setIsSignatureOpen}
         documentData={signatureDoc}
@@ -506,5 +525,27 @@ export function DocumentRegistryView() {
         existingSignature={(signatureDoc?.signatures?.[0] as any) || null}
       />
     </div>
+  );
+}
+
+/** Nút chính ở trang trống của sổ kèm thẻ hướng dẫn bước đầu (mỗi tài khoản thấy một lần cho mỗi loại sổ), nói bước đầu theo loại sổ. */
+function DocumentOnboardingActions({ type, primaryLabel, onPrimary }: { type: string; primaryLabel: string; onPrimary: () => void }) {
+  return (
+    <>
+      <CreateButtonWithHint
+        hintId={`documents-${type}`}
+        label={primaryLabel}
+        onClick={onPrimary}
+        title={`${primaryLabel} đầu tiên`}
+        description={
+          type === "inbox"
+            ? `Bấm ${primaryLabel} để nhập văn bản nhận được, rồi giao đơn vị xử lý.`
+            : type === "outbox"
+            ? `Bấm ${primaryLabel} để soạn, trình duyệt, ký và phát hành.`
+            : `Bấm ${primaryLabel} để soạn và trình lãnh đạo xem xét.`
+        }
+        guideButton
+      />
+    </>
   );
 }

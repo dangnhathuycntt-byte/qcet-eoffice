@@ -8,6 +8,7 @@ import {
   getSidebarNavItems,
 } from "../src/lib/navigation/canonical-navigation-registry";
 import { isRouteActive, resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
+import { getInboxEmptyCopy } from "../src/components/inbox/inbox-view";
 import {
   formatNotificationContent,
   filterNotificationsByTab,
@@ -137,6 +138,19 @@ describe("QCET App Shell & Inbox Test Suite", () => {
       assert.equal(items[1].id, "tasks");
       assert.equal(items[2].id, "calendar");
       assert.equal(items[3].id, "inbox");
+    });
+  });
+
+  describe("Hộp thư trống", () => {
+    test("nói đúng lý do và việc làm tiếp: lỗi tải ưu tiên, rồi lọc không ra, đã đọc hết, chưa có thông báo", () => {
+      const pick = (o: Parameters<typeof getInboxEmptyCopy>[0]) => {
+        const c = getInboxEmptyCopy(o);
+        return [c.illustration, c.title, c.action ?? null];
+      };
+      assert.deepEqual(pick({ failed: true, hasCondition: true, unreadOnly: true }), ["load-error", "Không tải được hộp thư", "retry"]);
+      assert.deepEqual(pick({ failed: false, hasCondition: true, unreadOnly: true }), ["no-results", "Không có thông báo phù hợp", "clear"]);
+      assert.deepEqual(pick({ failed: false, hasCondition: false, unreadOnly: true }), ["all-done", "Đã đọc hết", "show-all"]);
+      assert.deepEqual(pick({ failed: false, hasCondition: false, unreadOnly: false }), ["inbox", "Không có thông báo", null]);
     });
   });
 });

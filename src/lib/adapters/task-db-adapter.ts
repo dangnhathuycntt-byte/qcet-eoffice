@@ -18,7 +18,7 @@ export interface SchoolTask {
   dueDate: string;
   assignedDate?: string;
   status: 'not_started' | 'in_progress' | 'waiting_approval' | 'completed' | 'overdue' | 'cancelled' | string;
-  priority: 'urgent' | 'high' | 'medium' | 'low' | string;
+  priority: 'urgent' | 'high' | 'medium' | 'low' | 'none' | string;
   progress: number;
   progressPercent?: number;
   academicMonth: number;
@@ -131,7 +131,7 @@ export interface PrismaTaskCreateInput {
   description: string | null;
   scope: 'SCHOOL' | 'DEPARTMENT' | 'INDIVIDUAL';
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'WAITING_APPROVAL' | 'COMPLETED' | 'CANCELLED';
-  priority: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
+  priority: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW' | 'NONE';
   progressPercent: number;
   academicMonth: number;
   academicYear: string;
@@ -190,6 +190,7 @@ const STAFF_PRIORITY_MAP: Record<string, TaskPriority> = {
   NORMAL: 'NORMAL',
   MEDIUM: 'NORMAL',
   LOW: 'LOW',
+  NONE: 'NONE',
 };
 
 /** Độ ưu tiên của nhiệm vụ đơn vị: lấy đúng từ DB, không mặc định cứng "Bình thường" */
@@ -360,6 +361,8 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     medium: 'NORMAL',
     normal: 'NORMAL',
     low: 'LOW',
+    NONE: 'NONE',
+    none: 'NONE',
   };
 
   const isoDueDate = formatLocalDate(raw.dueDate);

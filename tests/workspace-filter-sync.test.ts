@@ -253,8 +253,8 @@ describe("Task 2: Workspace Filter Synchronization, Empty States & Drill-Down In
         "Không có bộ lọc thì không được hiện nút reset"
       );
       assert.ok(
-        html.includes("Tạo nhiệm vụ mới"),
-        "Phải hiện nút tạo nhiệm vụ phù hợp quyền"
+        html.includes(">Tạo việc</button>"),
+        "Phải hiện nút tạo việc phù hợp quyền"
       );
     });
 

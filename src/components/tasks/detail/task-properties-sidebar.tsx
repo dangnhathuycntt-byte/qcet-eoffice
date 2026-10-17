@@ -369,7 +369,7 @@ export function TaskPropertiesSidebar({
         {/* 2-Column Key-Value Table */}
         <div className="text-xs">
           {/* Status Row — @base-ui Select via TaskStatusSelect */}
-          <PropertyRow label="Trạng thái" interactive={canEdit}>
+          <PropertyRow label="Trạng thái">
             <TaskStatusSelect
               value={normalizedStatus}
               options={statusOptions}
@@ -379,7 +379,7 @@ export function TaskPropertiesSidebar({
           </PropertyRow>
 
           {/* Priority Row — @base-ui Select via TaskPrioritySelect */}
-          <PropertyRow label="Ưu tiên" interactive={canEdit}>
+          <PropertyRow label="Ưu tiên">
             <TaskPrioritySelect
               value={normalizedPriority}
               options={PRIORITY_DISPLAY_CONFIG as any}
@@ -389,7 +389,7 @@ export function TaskPropertiesSidebar({
           </PropertyRow>
 
           {/* Lead / DRI Row — @base-ui Combobox via TaskAssigneePicker */}
-          <PropertyRow label="Phụ trách" interactive={canEdit && canReassign}>
+          <PropertyRow label="Phụ trách">
             <TaskAssigneePicker
               items={personnelList}
               loading={personnelLoading}
@@ -438,7 +438,7 @@ export function TaskPropertiesSidebar({
           </PropertyRow>
 
           {/* Row 5: Start Date */}
-          <PropertyRow label="Ngày bắt đầu" interactive>
+          <PropertyRow label="Ngày bắt đầu">
             <div className="flex items-center text-xs shrink-0 min-w-0">
               {canEdit && onStartDateChange ? (
                 <VietnameseDatePicker
@@ -472,7 +472,7 @@ export function TaskPropertiesSidebar({
           </PropertyRow>
 
           {/* Row 6: Due Date / Target Date */}
-          <PropertyRow label="Hạn hoàn thành" interactive>
+          <PropertyRow label="Hạn hoàn thành">
             <div className="flex items-center text-xs shrink-0 min-w-0">
               {canEdit && canChangeDueDate && onDueDateChange ? (
                 <VietnameseDatePicker
@@ -546,7 +546,7 @@ export function TaskPropertiesSidebar({
           </PropertyRow>
 
           {/* Row 7: Department */}
-          <PropertyRow label="Đơn vị" interactive>
+          <PropertyRow label="Đơn vị">
             <div
               className="inline-flex items-start gap-1.5 px-1.5 py-0.5 rounded min-w-0 text-foreground text-xs leading-snug"
               style={{
@@ -577,7 +577,7 @@ export function TaskPropertiesSidebar({
 
           {/* Row 8: Source Document */}
           {isSchoolTask(task) && task.sourceDocument && (
-            <PropertyRow label="Văn bản gốc" interactive valueClassName="justify-start">
+            <PropertyRow label="Văn bản gốc" valueClassName="justify-start">
               <TaskSourceDocumentBadge
                 sourceDocument={task.sourceDocument}
                 compact

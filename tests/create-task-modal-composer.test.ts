@@ -2,7 +2,7 @@
  * tests/create-task-modal-composer.test.ts
  *
  * Kiểm thử toàn diện Compact Task Composer & Modal UX/UI:
- * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Description Canvas -> Property Chips -> Footer
+ * 1. Modal layout hierarchy (Linear New project): Breadcrumb -> Title -> Property Chips -> Description Canvas -> Footer
  * 2. Visual density & restraint: No redundant sections, compact properties bar (wrap max 2 rows)
  * 3. Scope integrity: No fake AI Agent or "+ Thêm đầu việc" in create modal (subtasks created at task detail)
  * 4. Footer contract: Sticky footer with Cancel + "Tạo nhiệm vụ" action & shortcut hint
@@ -82,8 +82,9 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("Dialog.Portal"), "Source must use Base UI Dialog.Portal");
 
     // Dimensions
-    assert.ok(source.includes("min-h-[360px] max-h-[85vh]"), "Source must let the composer grow between 360px and 85vh");
-    assert.ok(source.includes("max-w-[680px]"), "Source must define max-w-[680px] compact composer width");
+    // Theo hộp New project của Linear (người dùng chọn 16/10/2026): rộng 920px, cao hết màn trừ 6vh trên/dưới
+    assert.ok(source.includes("py-[6vh]"), "Popup must keep 6vh top/bottom margins like Linear's project modal");
+    assert.ok(source.includes("max-w-[920px]"), "Source must define max-w-[920px] composer width");
 
     // Title & Summary Inputs (title uses ternary for subtask vs task placeholder)
     assert.ok(source.includes('"Tên nhiệm vụ"'), "Source must have task title placeholder");
@@ -101,11 +102,16 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("Tạo nhiệm vụ"), "Source must have submit button labeled 'Tạo nhiệm vụ'");
 
     // Property chips
-    assert.ok(source.includes("Chủ trì"), "Source must have DRI (Chủ trì) property chip");
+    // Chip chủ trì là PersonPillPicker (tách ra để việc con dùng chung, 16/10/2026)
+    const pickerSource = fs.readFileSync(
+      path.join(__dirname, "..", "src", "components", "tasks", "create", "person-pill-picker.tsx"),
+      "utf-8"
+    );
+    assert.ok(source.includes("<PersonPillPicker") && pickerSource.includes('"Chủ trì"'), "Source must have DRI (Chủ trì) property chip");
     assert.ok(source.includes("Bắt đầu:"), "Source must have Start date property chip");
     assert.ok(source.includes("Hạn:"), "Source must have Due date property chip");
-    // Thuộc tính nằm dưới phần mô tả (kiểu Linear), không chen giữa tiêu đề và nội dung
-    assert.ok(source.indexOf('id="create-task-description"') < source.indexOf('aria-label="Chọn mức độ ưu tiên"'), "Property chips must follow the description");
+    // Hàng thuộc tính nằm ngay dưới tên, trên mô tả, như hộp New project của Linear (đổi theo yêu cầu 16/10/2026)
+    assert.ok(source.indexOf('aria-label="Chọn mức độ ưu tiên"') < source.indexOf('id="create-task-description"'), "Property chips must sit between the title and the description");
     assert.ok(source.includes('aria-label="Đóng"'), "Header must expose a visible close button");
   });
 
@@ -122,7 +128,11 @@ describe("Compact Composer Modal - Production Specification", () => {
     // Enter ở ô tên chỉ chuyển ô khi không đang gõ Telex/IME
     assert.ok(source.includes("!e.nativeEvent.isComposing"), "Enter ở ô tên phải bỏ qua khi đang soạn IME");
     // Tìm người chủ trì gõ không dấu vẫn ra
-    assert.ok(source.includes("foldVietnamese"), "Tìm người chủ trì phải bỏ dấu tiếng Việt");
+    const pickerSource = fs.readFileSync(
+      path.join(__dirname, "..", "src", "components", "tasks", "create", "person-pill-picker.tsx"),
+      "utf-8"
+    );
+    assert.ok(source.includes("<PersonPillPicker") && pickerSource.includes("foldVietnamese"), "Tìm người chủ trì phải bỏ dấu tiếng Việt");
     // Thiếu chủ trì/hạn: chip đỏ, chữ lỗi chỉ cho trình đọc màn hình; ngày bắt đầu sau hạn vẫn hiện chữ
     assert.ok(source.includes("requiredErrorText") && source.includes('className="sr-only"'), "Lỗi thiếu chủ trì/hạn phải còn cho trình đọc màn hình");
     assert.ok(source.includes("fieldErrorText = form.fieldErrors.startDate"), "Lỗi ngày bắt đầu sau hạn phải hiện thành chữ");

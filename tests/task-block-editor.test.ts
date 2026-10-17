@@ -443,11 +443,10 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
   });
 
   describe("5. Slash Menu Collision Handling & Safe Viewport Auto-Scroll", () => {
-    it("implements smooth auto-scroll on slash menu open with block: 'nearest'", () => {
+    it("auto-scrolls the active slash item with block: 'nearest', instantly (giữ phím mũi tên không trễ, không giật)", () => {
       assert.ok(
-        componentContent.includes('block: "nearest"') &&
-          componentContent.includes('behavior: "smooth"'),
-        "Must use scrollIntoView with block: 'nearest' and behavior: 'smooth'"
+        componentContent.includes('scrollIntoView({ block: "nearest" })'),
+        "Must use scrollIntoView with block: 'nearest' and no smooth behavior"
       );
     });
 

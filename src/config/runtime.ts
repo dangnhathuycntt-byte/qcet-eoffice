@@ -26,6 +26,7 @@ export interface PublicRuntimeFeatures {
   outgoingDocuments: boolean;
   internalDocuments: boolean;
   userProvisioning: boolean;
+  taskAgent: boolean;
   [key: string]: boolean;
 }
 
@@ -118,6 +119,11 @@ export function getPublicRuntimeConfig(): PublicRuntimeConfig {
 
   const offlineSupport = isFeatureEnabled("offlineMutations");
 
+  // Agent soạn nhiệm vụ chỉ bật khi cờ bật và server đã có địa chỉ, khóa gateway
+  const taskAgent =
+    isFeatureEnabled("taskAgent") &&
+    Boolean(process.env.TASK_AGENT_BASE_URL && process.env.TASK_AGENT_API_KEY);
+
   const config: PublicRuntimeConfig = {
     environment,
     features: {
@@ -126,6 +132,7 @@ export function getPublicRuntimeConfig(): PublicRuntimeConfig {
       webPush,
       academicCalendarSync: true,
       offlineSupport,
+      taskAgent,
     },
     version,
     buildId,

@@ -12,8 +12,6 @@ describe("Task 12: Legacy Portal Cleanup, Modal Hierarchy & Unified Feedback", (
       const mod = await import("@/components/ui/feedback-layer");
       assert.ok(typeof mod.InlineAlertBanner === "function", "InlineAlertBanner must be a component function");
       assert.ok(typeof mod.FormValidationSummary === "function", "FormValidationSummary must be a component function");
-      assert.ok(typeof mod.FeedbackToast === "function", "FeedbackToast must be a component function");
-      assert.ok(typeof mod.ToastContainer === "function", "ToastContainer must be a component function");
       assert.ok(typeof mod.FeedbackProvider === "function", "FeedbackProvider must be a component function");
       assert.ok(typeof mod.useFeedback === "function", "useFeedback hook must be exported");
     });

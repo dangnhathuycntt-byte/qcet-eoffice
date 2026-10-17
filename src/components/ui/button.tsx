@@ -22,15 +22,20 @@ const buttonVariants = cva(
         premium:
           "bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:bg-primary-hover",
         link: "text-primary underline-offset-4 hover:underline",
-        // Nút trên thanh công cụ danh sách (Tạo việc, Soạn văn bản, Lọc): viền mảnh, nền trắng.
+        // Nút phụ nền trắng như Linear (Documentation, Add filter): vòng 0,5px thay viền và bóng rất nhẹ (đo trên linear.app 14/10/2026).
         toolbar:
-          "border border-border/80 bg-background text-foreground hover:bg-accent",
+          "bg-background text-foreground shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)] hover:bg-accent",
       },
       size: {
         default:
           "h-9 sm:h-8.5 gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-md has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         xs: "h-8 sm:h-7 gap-1 px-2.5 text-xs font-medium rounded-sm has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        sm: "h-8 sm:h-7 gap-1.5 rounded-lg px-3 text-xs font-medium has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
+        // Kích thước nút của Linear (đo 14/10/2026): cao 28px, chữ 12px đậm 500, lề 10px, có icon đầu thì lề trái 8px, icon 14px cách chữ 6px
+        sm: "h-8 sm:h-7 gap-1.5 rounded-lg px-2.5 text-xs font-medium has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
+        // Nút bo tròn hẳn như Linear ở header, thanh công cụ và trang trống (Create new project, New project): cùng số đo với `sm`
+        pill: "h-8 sm:h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
+        // Pill nhỏ trong header hộp thoại (Create with Agent, Hide của Linear đo 16/10/2026): cao 24px, lề 8px, có icon đầu thì lề trái 6px
+        "pill-xs": "h-8 sm:h-6 gap-1 rounded-full px-2 text-xs font-medium has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-11 gap-2 px-6 text-base font-medium rounded-md has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
         icon: "size-9 sm:size-8.5 rounded-md",
         "icon-xs": "size-8 sm:size-7 rounded-sm [&_svg:not([class*='size-'])]:size-3.5",
@@ -69,7 +74,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       });
     }
 
-    const spinnerSize = size === "xs" || size === "sm" || size === "icon-xs" || size === "icon-sm" ? "xs" : "sm";
+    const spinnerSize = size === "xs" || size === "sm" || size === "pill" || size === "icon-xs" || size === "icon-sm" ? "xs" : "sm";
     return (
       <button
         ref={ref}
@@ -88,4 +93,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-export { Button, buttonVariants };
+// Chip thuộc tính mở menu/lịch (trigger Select, Combobox, Popover) như hàng thuộc tính hộp New project của Linear
+// (đo 16/10/2026): pill 24px nền trắng viền 0,5px, chữ 12px đậm 500 (Linear Inter 450; Be Vietnam Pro nét mảnh hơn nên 400 trông nhạt,
+// 500 mới ra cùng độ đậm, so ảnh Retina 17/10/2026), icon đầu cách lề 6px; đang mở = nền selected, lỗi = aria-invalid
+const PROPERTY_PILL_CLASS = cn(buttonVariants({ variant: "toolbar", size: "pill-xs" }), "pl-1.5 data-[popup-open]:bg-selected");
+
+export { Button, buttonVariants, PROPERTY_PILL_CLASS };

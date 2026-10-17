@@ -17,7 +17,7 @@ export const TemplateBodySchema = z
     unitId: z.string().trim().min(1),
     title: z.string().trim().min(1, "Cần tiêu đề nhiệm vụ").max(500),
     description: z.string().trim().max(5000).nullable().optional(),
-    priority: z.enum(["URGENT", "HIGH", "NORMAL", "LOW"]).default("NORMAL"),
+    priority: z.enum(["URGENT", "HIGH", "NORMAL", "LOW", "NONE"]).default("NORMAL"),
     dueDay: z.number().int().min(1).max(28).default(28),
     criteria: z.array(z.string().trim().min(1).max(300)).max(MAX_TEMPLATE_ITEMS).default([]),
     subtasks: z.array(z.string().trim().min(1).max(500)).max(MAX_TEMPLATE_ITEMS).default([]),

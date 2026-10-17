@@ -41,6 +41,13 @@ export function isTaskSubPagePath(pathname: string | null | undefined): boolean 
   return Boolean(match && TASK_SUB_PAGES.has(match[1]));
 }
 
+/** Trang tự dựng khung một thẻ (`WorkspacePageCard`): Tổng quan, Cơ cấu & Danh bạ, Báo cáo và các trang trong menu "Thêm". */
+const CARD_PAGES = new Set(["/", "/org", "/reports", "/settings", "/delegations", "/search", "/admin/users", "/admin/audit", "/admin/dossiers"]);
+
+export function isCardPagePath(pathname: string | null | undefined): boolean {
+  return CARD_PAGES.has(normalizePath(pathname ?? ""));
+}
+
 /**
  * Determines whether a given navigation route is active based on
  * current pathname, search parameters, and route aliases.
@@ -132,8 +139,8 @@ export function isRouteActive(
  * Resolves breadcrumb titles [rootTitle, pageTitle] from current pathname and search params.
  */
 const NON_CANONICAL_TITLES: readonly (readonly [string, string])[] = [
-  ["/admin/audit", "Nhật ký kiểm toán"],
-  ["/admin/users", "Danh bạ nhân sự"],
+  ["/admin/audit", "Nhật ký hệ thống"],
+  ["/admin/users", "Tài khoản và vai trò"],
   ["/admin/dossiers", "Hồ sơ chờ xóa hẳn"],
   ["/dossiers", "Hồ sơ công việc"],
   ["/reports", "Báo cáo thống kê"],

@@ -12,13 +12,15 @@ const blank: CreateTaskFormData = {
   title: "",
   summary: "",
   description: "",
-  priority: "MEDIUM",
+  // Form mới mở mặc định Không ưu tiên (như Linear), không phải Bình thường
+  priority: "NONE",
   level: "DON_VI",
   selectedDeptCode: "CNTT",
   leadAssigneeId: "",
   startDate: "",
   dueDate: "",
   category: "CHUYEN_DOI_SO",
+  subtasks: [],
 };
 
 const valid: CreateTaskFormData = {
@@ -61,6 +63,7 @@ describe("isCreateTaskFormDirty — hỏi trước khi đóng", () => {
     assert.equal(isCreateTaskFormDirty({ ...blank, dueDate: "2026-10-30" }, blank), true);
     assert.equal(isCreateTaskFormDirty({ ...blank, leadAssigneeId: "u-hung" }, blank), true);
     assert.equal(isCreateTaskFormDirty({ ...blank, priority: "HIGH" }, blank), true);
+    assert.equal(isCreateTaskFormDirty({ ...blank, priority: "MEDIUM" }, blank), true, "chọn Bình thường cũng là thay đổi so với Không ưu tiên");
   });
 
   test("chỉ thêm khoảng trắng hoặc sửa rồi hoàn tác thì không dirty", () => {
@@ -103,6 +106,7 @@ describe("restoreCreateTaskDraft — nháp từ sessionStorage", () => {
     );
     assert.equal(restored?.title, "Soạn kế hoạch");
     assert.equal(restored?.priority, "HIGH");
+    assert.equal(restoreCreateTaskDraft({ title: "Họp", priority: "NONE" }, { ...blank, priority: "MEDIUM" })?.priority, "NONE", "nháp Không ưu tiên giữ nguyên");
     assert.equal(restored?.dueDate, "2026-10-30");
     assert.equal(restored?.description, "");
     assert.equal(restored?.parentTaskId, "cha-1");
@@ -125,9 +129,34 @@ describe("restoreCreateTaskDraft — nháp từ sessionStorage", () => {
       blank,
     );
     assert.equal(restored?.description, "", "trường sai kiểu quay về giá trị mới, không phải undefined/số");
-    assert.equal(restored?.priority, "MEDIUM");
+    assert.equal(restored?.priority, "NONE", "ưu tiên lạ quay về mặc định của form mới (Không ưu tiên)");
     assert.equal(restored?.level, "DON_VI");
     assert.equal(restored?.leadAssigneeId, "");
+  });
+});
+
+describe("Việc con tạo kèm — nháp, dirty, hạn", () => {
+  const item = { id: "s1", title: "Chuẩn bị số liệu", description: "", assigneeId: "", dueDate: "" };
+
+  test("thêm việc con là đã sửa form (hỏi trước khi đóng)", () => {
+    assert.equal(isCreateTaskFormDirty({ ...blank, subtasks: [item] }, blank), true);
+  });
+
+  test("hạn việc con sau hạn nhiệm vụ bị chặn trước khi gửi (hạn cha có thể bị dời sớm hơn sau khi thêm)", () => {
+    const late = { ...valid, subtasks: [{ ...item, dueDate: "2026-11-02" }] };
+    assert.match(validateCreateTaskForm(late).subtasks ?? "", /Chuẩn bị số liệu.*30\/10\/2026/);
+    assert.equal(validateCreateTaskForm({ ...valid, subtasks: [{ ...item, dueDate: "2026-10-30" }] }).subtasks, undefined);
+    assert.equal(validateCreateTaskForm({ ...valid, subtasks: [item] }).subtasks, undefined, "để trống thì theo hạn nhiệm vụ");
+  });
+
+  test("nháp giữ việc con đúng dạng, bỏ mục hỏng thay vì làm sập form", () => {
+    const restored = restoreCreateTaskDraft(
+      { title: "Soạn kế hoạch", subtasks: [item, null, "chuỗi", { title: "   " }, { title: 7 }, { title: "Viết báo cáo", dueDate: 5 }] },
+      blank,
+    );
+    assert.deepEqual(restored?.subtasks.map((s) => s.title), ["Chuẩn bị số liệu", "Viết báo cáo"]);
+    assert.equal(restored?.subtasks[1].dueDate, "", "trường sai kiểu thành chuỗi rỗng");
+    assert.deepEqual(restoreCreateTaskDraft({ title: "Soạn kế hoạch", subtasks: "không phải mảng" }, blank)?.subtasks, []);
   });
 });
 

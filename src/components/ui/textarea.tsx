@@ -36,11 +36,11 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ) => {
     const internalRef = React.useRef<HTMLTextAreaElement | null>(null);
     const limit = maxCharacters ?? maxLength;
-    const [charCount, setCharCount] = React.useState<number>(() => {
-      if (typeof value === "string") return value.length;
-      if (typeof defaultValue === "string") return defaultValue.length;
-      return 0;
-    });
+    const [typedCount, setTypedCount] = React.useState<number>(() =>
+      typeof defaultValue === "string" ? defaultValue.length : 0,
+    );
+    // Có `value` thì đếm theo value: form tự xóa nội dung sau khi gửi hoặc dữ liệu tải về sau vẫn ra đúng số
+    const charCount = value != null ? String(value).length : typedCount;
 
     React.useImperativeHandle(ref, () => internalRef.current!);
 
@@ -56,7 +56,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     }, [value, adjustHeight]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setCharCount(e.target.value.length);
+      setTypedCount(e.target.value.length);
       adjustHeight();
       onChange?.(e);
     };

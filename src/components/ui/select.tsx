@@ -135,7 +135,7 @@ export function Select({
           className="truncate data-[placeholder]:text-muted-foreground"
         />
         <BaseSelect.Icon className="text-muted-foreground">
-          <ChevronsUpDown className={compact ? "size-3.5" : "size-4"} strokeWidth={compact ? 1.5 : undefined} />
+          <ChevronsUpDown className={compact ? "size-3.5" : "size-4"} />
         </BaseSelect.Icon>
       </BaseSelect.Trigger>
       <BaseSelect.Portal>

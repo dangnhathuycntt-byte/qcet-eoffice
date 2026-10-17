@@ -21,12 +21,12 @@ export function PropertyToggleChip({ pressed, onPressedChange, variant = "defaul
         `px-2.5 h-6 inline-flex items-center rounded-full text-xs transition-colors cursor-pointer select-none outline-none ${focusRingClass}`,
         quiet
           ? pressed
-            ? "bg-accent text-foreground font-medium"
+            ? "bg-selected text-foreground font-medium"
             : "text-muted-foreground font-normal hover:bg-accent/60 hover:text-foreground"
           : cn(
               "border",
               pressed
-                ? "bg-muted border-border text-foreground font-medium"
+                ? "bg-selected border-transparent text-foreground font-medium"
                 : "bg-card border-border/70 text-muted-foreground font-normal hover:bg-muted/50 hover:text-foreground"
             ),
         className

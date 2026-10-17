@@ -480,7 +480,7 @@ model Task {
   originLevel         TaskOriginLevel      @default(SCHOOL) @map("origin_level")
   scope               TaskScope            @default(SCHOOL) // View filter compat
   status              TaskStatus           @default(NOT_STARTED)
-  priority            TaskPriority         @default(NORMAL)
+  priority            TaskPriority         @default(NORMAL) // URGENT | HIGH | NORMAL | LOW | NONE (Không ưu tiên, từ 17/10/2026)
   progressPercent     Int                  @default(0) @map("progress_percent")
   
   // Thời gian học vụ & Lịch công tác

@@ -243,6 +243,15 @@ describe("CreateOutgoingDraftSchema validation", () => {
     assert.ok(result.success);
   });
 
+  test("nhận hạn xử lý của dự thảo", () => {
+    const result = CreateOutgoingDraftSchema.safeParse({
+      title: "V/v triển khai kế hoạch tuyển sinh",
+      summary: "V/v triển khai kế hoạch tuyển sinh",
+      dueDate: "2026-10-20T00:00:00.000Z",
+    });
+    assert.ok(result.success);
+  });
+
   test("rejects title shorter than 3 chars", () => {
     const result = CreateOutgoingDraftSchema.safeParse({
       title: "AB",

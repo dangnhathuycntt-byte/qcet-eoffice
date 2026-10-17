@@ -16,6 +16,8 @@ Xuất từ canvas QCET E-Office, trang "Đăng nhập & onboarding", bản 308 
 
 ## Quyết định
 
+> **Cập nhật 14/10/2026 (người dùng chốt):** bỏ hẳn Feature guide (3 thẻ 1/3–3/3), hộp "Hướng dẫn sử dụng" và mục Trợ giúp → Hướng dẫn. Hướng dẫn bước đầu giờ là thẻ gợi ý ở trang trống (`src/components/ui/onboarding-hint.tsx`), bật bằng nút "Hướng dẫn" cạnh nút tạo mới. Quyết định 1 (không có onboarding toàn màn hình) và 3 vẫn giữ; phần Feature guide ở quyết định 1, 2, 4 và dòng Feature guide trong bảng đối chiếu bên dưới không còn áp dụng.
+
 1. **Không còn onboarding toàn màn hình.** Sau đăng nhập vào thẳng nơi đang định tới (mặc định Nhiệm vụ). Hướng dẫn là Feature guide: tối đa 3 thẻ mỗi màn hình, chỉ hiện lần đầu mở màn hình đó, tắt bằng Xong, bấm ra ngoài hoặc Esc; tắt rồi không hiện lại; xem lại ở Trợ giúp → Hướng dẫn.
 2. **Ba thẻ đầu tiên:** Văn bản đến ("Ký ngay trên văn bản."), Nhiệm vụ ("Việc gần hạn nằm trên cùng."), Ủy quyền ("Vắng mặt? Ủy quyền cho người khác."). Trên di động thẻ nằm ở đáy màn hình.
 3. **Quyền thông báo** không hỏi trong hướng dẫn; hỏi khi có việc đầu tiên sắp đến hạn.
@@ -40,7 +42,7 @@ Xuất từ canvas QCET E-Office, trang "Đăng nhập & onboarding", bản 308 
 | Hạng mục | Repo | Việc |
 |---|---|---|
 | Trang đăng nhập | `src/app/login/page.tsx` đã có startGoogle, `prompt`, đăng nhập nhanh bằng `login_hint`, luồng account_not_found / AccessDenied gửi yêu cầu, server_error | Rà từng trạng thái trong bảng Login, Login2; chưa kiểm: chặn trình duyệt trong ứng dụng chat, phiên hết hạn giữ bản nháp, tài khoản bị khóa |
-| Onboarding | `src/app/onboarding/page.tsx` vẫn hiện `OnboardingFlow` toàn màn hình; `app-shell.tsx` còn tham chiếu `/onboarding` | Bỏ chuyển hướng lần đầu sang `/onboarding`; `/onboarding` chuyển về Nhiệm vụ hoặc Trợ giúp → Hướng dẫn |
+| Onboarding | `src/app/onboarding/page.tsx` vẫn hiện `OnboardingFlow` toàn màn hình; `app-shell.tsx` còn tham chiếu `/onboarding` | Bỏ chuyển hướng lần đầu sang `/onboarding`; `/onboarding` chuyển về Nhiệm vụ (mục Trợ giúp → Hướng dẫn đã bỏ 14/10/2026) |
 | Feature guide | `src/components/feature-guide/feature-guide.tsx` có `FeatureGuideCard` (lưu đã xem trong localStorage `qcet_fg_*`) nhưng chưa màn hình nào dùng | Gắn 3 thẻ ở Văn bản đến, Nhiệm vụ, Ủy quyền; thêm mục Trợ giúp → Hướng dẫn. Đề xuất lưu đã xem vào `User.onboardingData` để đồng bộ nhiều máy (không bắt buộc) |
 | Hàng đợi cấp quyền | Missing (Bản đồ 01) | Theo Quy trình 1, model AccessRequest cần ADR |
 

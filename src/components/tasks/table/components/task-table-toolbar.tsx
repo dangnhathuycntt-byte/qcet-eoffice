@@ -854,7 +854,7 @@ export function TaskTableToolbar({
                       className={cn(
                         "inline-flex items-center justify-between min-h-8 px-3 rounded-xl border text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation active:scale-[0.98]",
                         activeTab === tab.id
-                          ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
+                          ? "border-transparent bg-selected text-foreground font-semibold"
                           : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
                       )}
                     >
@@ -1033,7 +1033,7 @@ export function TaskTableToolbar({
               }}
               className={cn(
                 "h-8.5 gap-1.5 text-xs font-medium border-border/80 bg-card text-foreground hover:bg-muted shadow-2xs transition-[color,background-color,border-color,box-shadow]",
-                isDesktopFilterOpen && "border-primary/50 bg-primary/5 text-primary"
+                isDesktopFilterOpen && "bg-selected"
               )}
             >
               <Filter className="size-3.5 text-muted-foreground" />

@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Inbox as InboxIcon,
   ArrowLeft,
   ArrowUpRight,
   Calendar,
@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TaskStatusIcon } from "@/components/ui/task-status-icon";
 import { PriorityIndicator } from "@/components/ui/priority-indicator";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -24,7 +25,8 @@ import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } fro
 import { getStatusLabel } from "@/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
-import { InkIllustration, type IllustrationName } from "@/components/ui/empty-state";
+import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
+import { WelcomeNotification } from "@/components/inbox/welcome-notification";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
   getTypeBadge,
@@ -66,6 +68,35 @@ const CATEGORY_OPTIONS: { id: NotificationTriageTab; label: string }[] = [
   { id: "action_required", label: "Việc cần làm" },
   { id: "reminders", label: "Nhắc hạn" },
 ];
+
+export interface InboxEmptyCopy {
+  illustration: IllustrationName;
+  title: string;
+  description: string;
+  action?: "retry" | "clear" | "show-all";
+}
+
+/** Hộp thư không có dòng nào: nói rõ vì sao (lỗi tải, lọc không ra, đã đọc hết, chưa có thông báo) và việc làm tiếp. */
+export function getInboxEmptyCopy({
+  failed,
+  hasCondition,
+  unreadOnly,
+}: {
+  failed: boolean;
+  hasCondition: boolean;
+  unreadOnly: boolean;
+}): InboxEmptyCopy {
+  if (failed) {
+    return { illustration: "load-error", title: "Không tải được hộp thư", description: "Có lỗi khi tải thông báo. Thử lại sau ít phút.", action: "retry" };
+  }
+  if (hasCondition) {
+    return { illustration: "no-results", title: "Không có thông báo phù hợp", description: "Thử từ khóa khác hoặc bỏ bớt bộ lọc.", action: "clear" };
+  }
+  if (unreadOnly) {
+    return { illustration: "all-done", title: "Đã đọc hết", description: "Không còn thông báo nào chưa đọc.", action: "show-all" };
+  }
+  return { illustration: "inbox", title: "Không có thông báo", description: "Thông báo gửi tới Thầy/Cô sẽ hiện ở đây." };
+}
 
 function parseCategory(value: string | null): NotificationTriageTab {
   const tab = parseTriageTab(value);
@@ -514,6 +545,25 @@ export function InboxView() {
 
   const showList = isWide || !selectedId;
   const showDetail = isWide || Boolean(selectedId);
+  // Danh sách không có dòng nào: màn hình rộng hiện một trạng thái trống ở khung bên phải (không lặp tranh ở hai khung,
+  // không bảo "chọn một thông báo" khi không có gì để chọn); hẹp thì khung phải ẩn nên hiện ngay trong danh sách
+  const emptyCopy =
+    status === "error" || (status === "ready" && visibleGroups.length === 0)
+      ? getInboxEmptyCopy({ failed: status === "error", hasCondition, unreadOnly: readFilter === "unread" })
+      : null;
+  const emptyAction =
+    emptyCopy?.action === "retry"
+      ? { label: "Thử lại", run: () => void loadList("reset") }
+      : emptyCopy?.action === "clear"
+        ? { label: "Xóa bộ lọc", run: clearConditions }
+        : emptyCopy?.action === "show-all"
+          ? { label: "Xem tất cả", run: () => navigate({ filter: "all" }) }
+          : null;
+  const emptyActionButton = emptyAction ? (
+    <Button size="pill" onClick={emptyAction.run}>
+      {emptyAction.label}
+    </Button>
+  ) : undefined;
   const activeCategoryLabel = CATEGORY_OPTIONS.find((opt) => opt.id === category)?.label;
 
   return (
@@ -532,50 +582,91 @@ export function InboxView() {
           data-slot="inbox-list-pane"
           className={cn(
             "flex min-h-0 flex-col",
-            isWide ? "w-[440px] shrink-0 border-r border-border/60" : "w-full",
+            isWide ? "w-[400px] shrink-0 border-r border-border/60" : "w-full",
             // Điện thoại: nền trắng tràn mép như Linear
             "max-md:bg-card"
           )}
         >
           {/* Điện thoại: header riêng thay topbar chung (nút mở sidebar, chừa safe area) như trang Nhiệm vụ */}
-          <div className="flex h-10 shrink-0 items-center gap-1 px-3 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:border-b max-md:border-border/60 max-md:px-4 max-md:pt-[env(safe-area-inset-top,0px)]">
+          <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
             <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
-            <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
-            <MenuRoot>
-              <MenuTrigger
-                render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" title="Tùy chọn" />}
-              >
-                <MoreHorizontal />
-              </MenuTrigger>
-              <MenuContent align="start" className="w-60">
-                <MenuActionItem
-                  disabled={!unreadCount || isMarkingAll || pendingIds.size > 0}
-                  onClick={() => void markAllRead()}
-                  leading={<CheckCheck />}
-                >
-                  Đánh dấu tất cả đã đọc
-                </MenuActionItem>
-                <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
-                <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
-                  Làm mới
-                </MenuActionItem>
-              </MenuContent>
-            </MenuRoot>
+            {searchOpen ? (
+              // Tìm ngay trên hàng tiêu đề như Linear: không thêm hàng, không khung viền
+              <>
+                <Search aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+                <Input
+                  ref={searchInputRef}
+                  variant="menu"
+                  type="text"
+                  value={queryInput}
+                  maxLength={100}
+                  onChange={(e) => setQueryInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Escape") return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (queryInput) setQueryInput("");
+                    else setSearchOpen(false);
+                  }}
+                  placeholder="Tìm trong hộp thư"
+                  aria-label="Tìm kiếm thông báo"
+                  className="h-7 min-w-0 flex-1 px-1.5 text-compact sm:h-7 sm:text-compact"
+                />
+              </>
+            ) : (
+              <>
+                <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
+                <MenuRoot>
+                  <MenuTrigger
+                    render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" title="Tùy chọn" />}
+                  >
+                    <MoreHorizontal />
+                  </MenuTrigger>
+                  <MenuContent align="start" className="w-60">
+                    <MenuActionItem
+                      disabled={!unreadCount || isMarkingAll || pendingIds.size > 0}
+                      onClick={() => void markAllRead()}
+                      leading={<CheckCheck />}
+                    >
+                      Đánh dấu tất cả đã đọc
+                    </MenuActionItem>
+                    <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
+                    <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
+                      Làm mới
+                    </MenuActionItem>
+                  </MenuContent>
+                </MenuRoot>
+              </>
+            )}
 
-            <div className="ml-auto flex items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Tìm kiếm thông báo"
-                title="Tìm kiếm (Ctrl/⌘ F)"
-                aria-pressed={searchOpen}
-                onClick={() => {
-                  setSearchOpen((open) => !open);
-                  requestAnimationFrame(() => searchInputRef.current?.focus());
-                }}
-              >
-                <Search />
-              </Button>
+            <div className="ml-auto flex shrink-0 items-center gap-0.5">
+              {searchOpen ? (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Đóng tìm kiếm"
+                  title="Đóng tìm kiếm (Esc)"
+                  onClick={() => {
+                    setQueryInput("");
+                    setSearchOpen(false);
+                  }}
+                >
+                  <X />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Tìm kiếm thông báo"
+                  title="Tìm kiếm (Ctrl/⌘ F)"
+                  onClick={() => {
+                    setSearchOpen(true);
+                    requestAnimationFrame(() => searchInputRef.current?.focus());
+                  }}
+                >
+                  <Search />
+                </Button>
+              )}
               <MenuRoot>
                 <MenuTrigger
                   render={
@@ -610,42 +701,8 @@ export function InboxView() {
             </div>
           </div>
 
-          {searchOpen && (
-            <div className="relative shrink-0 px-3 pb-2">
-              <Search
-                className="pointer-events-none absolute left-5 top-3.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={queryInput}
-                maxLength={100}
-                onChange={(e) => setQueryInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== "Escape") return;
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (queryInput) setQueryInput("");
-                  else setSearchOpen(false);
-                }}
-                placeholder="Tìm trong hộp thư"
-                aria-label="Tìm kiếm thông báo"
-                className="h-7 w-full rounded-md bg-secondary pl-7 pr-7 text-xs text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              {queryInput && (
-                <Pressable
-                  onClick={() => setQueryInput("")}
-                  aria-label="Xóa từ khóa"
-                  className="absolute right-3 top-0 flex size-7 items-center justify-center text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-3.5" />
-                </Pressable>
-              )}
-            </div>
-          )}
-
           {(readFilter === "unread" || category !== "all") && (
-            <div className="flex shrink-0 flex-wrap items-center gap-1 px-3 pb-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-1 px-4 pb-2 pt-2">
               {readFilter === "unread" && (
                 <FilterChip label="Chưa đọc" onRemove={() => navigate({ filter: "all" })} />
               )}
@@ -656,7 +713,7 @@ export function InboxView() {
           )}
 
           {refreshError && (
-            <div className="flex shrink-0 items-center gap-2 px-3 pb-2 text-xs text-muted-foreground">
+            <div className="flex shrink-0 items-center gap-2 px-4 pb-2 pt-2 text-xs text-muted-foreground">
               <span className="flex-1">Chưa cập nhật được hộp thư.</span>
               <Button variant="ghost" size="xs" onClick={() => void loadList("refresh")}>
                 Thử lại
@@ -664,12 +721,12 @@ export function InboxView() {
             </div>
           )}
 
-          <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
+          <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
             {status === "loading" ? (
               <div aria-hidden className="space-y-0.5">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex animate-pulse items-center gap-2.5 py-1.5 pl-3 pr-2.5">
-                    <div className="size-5 rounded-full bg-muted" />
+                  <div key={i} className="flex animate-pulse items-center gap-3 py-2.5 pl-3 pr-2">
+                    <div className="size-8 rounded-full bg-muted" />
                     <div className="flex-1 space-y-1.5">
                       <div className="h-3 w-2/3 rounded bg-muted" />
                       <div className="h-2.5 w-1/3 rounded bg-muted/60" />
@@ -677,19 +734,16 @@ export function InboxView() {
                   </div>
                 ))}
               </div>
-            ) : status === "error" ? (
-              <QuietState
-                title="Không tải được hộp thư"
-                illustration="load-error"
-                action={{ label: "Thử lại", onClick: () => void loadList("reset") }}
-              />
-            ) : visibleGroups.length === 0 ? (
-              hasCondition ? (
-                <QuietState title="Không có kết quả" action={{ label: "Xóa bộ lọc", onClick: clearConditions }} />
-              ) : readFilter === "unread" ? (
-                <QuietState title="Đã đọc hết" illustration="all-done" action={{ label: "Xem tất cả", onClick: () => navigate({ filter: "all" }) }} />
-              ) : (
-                <QuietState title="Không có thông báo" illustration="inbox" />
+            ) : emptyCopy ? (
+              // Rộng và chưa chọn thông báo: trạng thái trống đã ở khung phải; đang mở một thông báo (vd. vừa đọc nốt thư cuối) thì vẫn hiện ở đây
+              isWide && detailState === "none" ? null : (
+                <EmptyState
+                  density="compact"
+                  illustration={emptyCopy.illustration}
+                  title={emptyCopy.title}
+                  description={emptyCopy.description}
+                  action={emptyActionButton}
+                />
               )
             ) : (
               <>
@@ -724,13 +778,28 @@ export function InboxView() {
       {showDetail && (
         <section data-slot="inbox-detail-pane" className="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
           {detailState === "none" ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-              <InboxIcon className="size-6 text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground">Chọn một thông báo để xem</p>
-            </div>
+            emptyCopy ? (
+              <EmptyState
+                density="page"
+                className="flex-1"
+                illustration={emptyCopy.illustration}
+                title={emptyCopy.title}
+                description={emptyCopy.description}
+                action={emptyActionButton}
+              />
+            ) : status === "loading" ? null : (
+              // Có thông báo nhưng chưa chọn: tranh cỡ trang, nhân vật chỉ tay sang danh sách bên trái
+              <EmptyState
+                density="page"
+                className="flex-1"
+                illustration="inbox-select"
+                title="Chọn một thông báo để xem"
+                description={unreadCount ? `Còn ${unreadCount} thông báo chưa đọc.` : undefined}
+              />
+            )
           ) : (
             <>
-              <header className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border/60 px-3 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
+              <header className="flex h-11 shrink-0 items-center gap-1.5 border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
                 {!isWide && (
                   <Button variant="ghost" size="icon-xs" onClick={closeDetail} aria-label="Quay lại hộp thư">
                     <ArrowLeft />
@@ -766,12 +835,16 @@ export function InboxView() {
                     <div className="h-3 w-1/3 rounded bg-muted/60" />
                   </div>
                 ) : (
-                  <QuietState
+                  <EmptyState
+                    density="compact"
+                    illustration={detailState === "missing" ? undefined : "load-error"}
                     title={detailState === "missing" ? "Không thể mở thông báo này" : "Không tải được thông báo"}
                     action={
-                      detailState === "missing"
-                        ? { label: "Quay lại hộp thư", onClick: () => navigate({ id: null }) }
-                        : { label: "Thử lại", onClick: () => setRemoteAttempt((n) => n + 1) }
+                      detailState === "missing" ? (
+                        <Button size="pill" onClick={() => navigate({ id: null })}>Quay lại hộp thư</Button>
+                      ) : (
+                        <Button size="pill" onClick={() => setRemoteAttempt((n) => n + 1)}>Thử lại</Button>
+                      )
                     }
                   />
                 )}
@@ -805,9 +878,14 @@ function InboxRow({
   const unread = group.unreadIds.length > 0;
   const title = getNotificationDisplayTitle(n);
   const event = getNotificationEventLabel(n.type);
-  const secondary = [event, n.hasActor ? n.actorName : null, group.items.length > 1 ? `${group.items.length} cập nhật` : null]
-    .filter(Boolean)
-    .join(" · ");
+  const isWelcome = n.type === "welcome";
+  // Thông báo không có người gửi (hệ thống, lời chào): dòng phụ là đoạn đầu nội dung như Linear, không lặp nhãn sự kiện
+  const excerpt = !n.hasActor ? (n.body ?? "").trim().split(/\r?\n/)[0] : "";
+  const secondary =
+    excerpt ||
+    [event, n.hasActor ? n.actorName : null, group.items.length > 1 ? `${group.items.length} cập nhật` : null]
+      .filter(Boolean)
+      .join(" · ");
   const absolute = formatNotificationAbsoluteTime(n.createdAt);
   const TypeIcon = getTypeBadge(n.type).icon;
 
@@ -822,26 +900,35 @@ function InboxRow({
       onFocus={onFocus}
       onKeyDown={onKeyDown}
       className={cn(
-        "relative flex cursor-pointer items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "bg-selected" : "hover:bg-accent"
+        // Hàng hai dòng 58px như Linear Inbox (cao gấp ~2,07 hàng sidebar 28px, đo ảnh 14/10/2026): avatar 32px, tiêu đề 13px, dòng phụ 12px kèm thời gian bên phải
+        "relative flex cursor-pointer items-center gap-3 rounded-lg py-3 pl-3 pr-2 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+        selected ? "bg-selected" : "hover:bg-accent/60"
       )}
     >
-      {unread && (
-        <span aria-hidden className="absolute left-1 top-1/2 size-1.5 -translate-y-1/2 rounded-full bg-primary" />
-      )}
       {n.hasActor ? (
-        <UserAvatar name={n.actorName} size="sm" />
+        <UserAvatar name={n.actorName} size="lg" />
+      ) : isWelcome ? (
+        <Image src="/logo-qcet.png" alt="" aria-hidden width={32} height={32} className="size-8 shrink-0 rounded-full object-contain" />
       ) : (
         <span
           aria-hidden
-          className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
         >
-          <TypeIcon size={12} strokeWidth={1.5} />
+          <TypeIcon size={16} strokeWidth={1.5} />
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className={cn("truncate text-compact", unread ? "font-medium text-foreground" : "text-foreground/80")}>
-          {title}
+        {/* Tên thư luôn đậm vừa và màu chữ chính (người dùng chốt 14/10/2026); chưa đọc = chấm màu chính ngay trước tên, như Linear.
+            Chấm luôn được render để khi mở thư (đã đọc) nó thu nhỏ, mờ dần và tên trượt về trái thay vì biến mất đột ngột. */}
+        <p className="flex items-center text-compact font-medium text-foreground">
+          <span
+            aria-hidden
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full bg-primary transition-[width,margin,opacity,scale] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
+              unread ? "mr-1.5" : "mr-0 w-0 scale-0 opacity-0"
+            )}
+          />
+          <span className="truncate">{title}</span>
         </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">{secondary}</span>
@@ -892,6 +979,15 @@ function InboxDetail({
   const title = getNotificationDisplayTitle(n);
   const body = (n.body ?? "").trim();
   const task = ctx?.state === "ready" ? ctx.task : undefined;
+
+  // Lời chào hệ thống là một bức thư giới thiệu có bố cục riêng, không dùng khung tiêu đề + dòng meta chung
+  if (n.type === "welcome") {
+    return (
+      <article className="mx-auto w-full max-w-3xl px-6 pb-10 pt-8">
+        <WelcomeNotification title={title} />
+      </article>
+    );
+  }
 
   return (
     <article className="mx-auto w-full max-w-3xl px-6 pb-10 pt-6">
@@ -1002,27 +1098,5 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
         <X className="size-3" />
       </Pressable>
     </span>
-  );
-}
-
-function QuietState({
-  title,
-  illustration,
-  action,
-}: {
-  title: string;
-  illustration?: IllustrationName;
-  action?: { label: string; onClick: () => void };
-}) {
-  return (
-    <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-      {illustration ? <InkIllustration name={illustration} className="mb-2" /> : null}
-      <p className="text-xs text-muted-foreground">{title}</p>
-      {action && (
-        <Button variant="ghost" size="xs" onClick={action.onClick}>
-          {action.label}
-        </Button>
-      )}
-    </div>
   );
 }

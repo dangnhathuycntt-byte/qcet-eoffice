@@ -4,7 +4,7 @@ import type { UserRole } from "./auth";
 export type WorkspaceRole = UserRole;
 export type WorkspaceScope = "school" | "unit" | "my";
 
-export type TaskPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+export type TaskPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT" | "NONE";
 
 export type ApprovalDecision = "approved" | "revision_requested" | "rejected";
 

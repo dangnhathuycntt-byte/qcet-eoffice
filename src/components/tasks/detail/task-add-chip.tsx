@@ -10,7 +10,7 @@ import { MENU_POPUP_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu";
 const CHIP_CLASS = cn(
   "order-last inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors",
   "hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-  "data-[popup-open]:bg-accent data-[popup-open]:text-foreground",
+  "data-[popup-open]:bg-selected data-[popup-open]:text-foreground",
 );
 
 // Menu "+ Thêm" dùng khung và hàng chuẩn của ui/menu.

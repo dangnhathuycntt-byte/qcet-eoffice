@@ -31,7 +31,7 @@ export type DomainTaskStatus =
   | 'OVERDUE'
   | 'CANCELLED';
 
-export type DomainTaskPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+export type DomainTaskPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | 'NONE';
 
 export type DomainAssigneeRole = 'PRIMARY_OWNER' | 'COLLABORATOR';
 

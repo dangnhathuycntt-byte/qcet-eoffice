@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { LucideProvider } from "lucide-react";
 import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
@@ -10,6 +11,7 @@ import { ConfirmHost } from "@/components/ui/confirm-host";
 import { AppShell } from "@/components/layout/app-shell";
 import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
 import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
+import { parseSidebarCollapsed, SIDEBAR_COLLAPSED_COOKIE } from "@/lib/navigation/sidebar-state";
 
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -55,11 +57,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Đọc ở server để sidebar thu gọn đúng ngay lần vẽ đầu (đọc localStorage sau hydrate làm sidebar co lại mỗi lần tải trang)
+  const cookieStore = await cookies();
+  const initialSidebarCollapsed = parseSidebarCollapsed(cookieStore.get(SIDEBAR_COLLAPSED_COOKIE)?.value) === true;
+
   return (
     <html
       lang="vi"
@@ -97,7 +103,7 @@ export default function RootLayout({
                   >
                     Chuyển đến nội dung chính
                   </a>
-                  <AppShell>{children}</AppShell>
+                  <AppShell initialSidebarCollapsed={initialSidebarCollapsed}>{children}</AppShell>
                   <PWAServiceWorkerManager />
                   <WebVitalsReporter />
                   <ConfirmHost />

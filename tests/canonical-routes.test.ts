@@ -14,7 +14,7 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     const desk = CANONICAL_ROUTES.find((r) => r.id === "desk");
     assert.ok(desk, "Desk route must exist");
     assert.equal(desk.href, "/", "Desk must point to root '/'");
-    assert.equal(desk.label, "Bàn làm việc");
+    assert.equal(desk.label, "Tổng quan");
     assert.ok(desk.aliases?.includes("/dashboard"), "Desk must alias /dashboard");
 
     const tasks = CANONICAL_ROUTES.find((r) => r.id === "tasks");
@@ -47,7 +47,7 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     const deskRoute = CANONICAL_ROUTES.find((r) => r.id === "desk");
     assert.ok(deskRoute, "Desk route must exist");
     assert.equal(deskRoute.href, "/", "Workbench must point to '/'");
-    assert.equal(deskRoute.label, "Bàn làm việc");
+    assert.equal(deskRoute.label, "Tổng quan");
 
     const tasksRoute = CANONICAL_ROUTES.find((r) => r.id === "tasks");
     assert.ok(tasksRoute, "Tasks route must exist");
@@ -56,7 +56,7 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
 
     const sidebarItems = getSidebarNavItems();
     const deskItem = sidebarItems.find((item) => item.id === "desk" || item.href === "/");
-    assert.ok(deskItem, "Item 'Bàn làm việc' must exist in sidebar items");
+    assert.ok(deskItem, "Item 'Tổng quan' must exist in sidebar items");
     assert.equal(deskItem.href, "/");
 
     const taskItem = sidebarItems.find((item) => item.id === "tasks" || item.href === "/tasks");

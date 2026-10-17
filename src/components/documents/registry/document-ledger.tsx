@@ -7,7 +7,7 @@ import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components
 import type { OfficialDocument } from "@/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
-import { ArrowHint, EmptyState, type ArrowHintVariant, type IllustrationName } from "@/components/ui/empty-state";
+import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import {
@@ -233,8 +233,9 @@ export interface DocumentLedgerToolbarProps {
   leadUnitLabel?: string;
   leadUnitOptions: LedgerFilterOption[];
   onLeadUnitChange: (leadUnitId: string) => void;
-  primaryActionLabel: string;
-  onPrimaryAction: () => void;
+  /** Không có thì thanh công cụ không có nút tạo (vd. soạn văn bản đi khi cờ triển khai đang tắt). */
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
   onClearFilters: () => void;
   visibleColumns: LedgerColumnVisibility;
   onVisibleColumnsChange: (columns: LedgerColumnVisibility) => void;
@@ -353,8 +354,10 @@ export function DocumentLedgerToolbar({
         <h1 className="whitespace-nowrap text-compact font-semibold text-foreground select-none">{title}</h1>
       </div>
       {/* Điện thoại: "+" trơn ở góc phải hàng đầu (nhãn đọc qua aria-label) */}
+      {primaryActionLabel && onPrimaryAction ? (
       <Pressable
         onClick={onPrimaryAction}
+        data-slot="list-toolbar-create"
         aria-label={primaryActionLabel}
         title={primaryActionLabel}
         className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-8 max-md:rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
@@ -362,6 +365,7 @@ export function DocumentLedgerToolbar({
         <Plus className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="max-md:sr-only">{primaryActionLabel}</span>
       </Pressable>
+      ) : null}
       {!quiet && (
         <>
       {/* Điện thoại: đường kẻ dưới hàng đầu, tràn hết bề ngang header */}
@@ -646,8 +650,6 @@ export interface DocumentLedgerTableProps {
   /** Nội dung trạng thái rỗng theo ngữ cảnh (`getLedgerEmptyCopy`); bỏ trống thì suy từ `isFiltered`. */
   emptyCopy?: LedgerEmptyCopy;
   emptyAction?: React.ReactNode;
-  /** Có mũi tên chỉ lên nút chính ở thanh công cụ (sổ chưa có văn bản, không lọc). */
-  emptyArrow?: ArrowHintVariant;
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -734,7 +736,8 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelect
       }}
       className={cn(
         GRID,
-        "group cursor-pointer select-none text-foreground transition-colors outline-none",
+        // Điện thoại: hàng 48px như danh sách nhiệm vụ và Projects của Linear mobile (máy tính giữ 40px)
+        "group cursor-pointer select-none text-foreground transition-colors outline-none max-md:min-h-12",
         "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
         !selected || groupPosition === "only" || !groupPosition ? "rounded-md" : groupPosition === "first" ? "rounded-t-md" : groupPosition === "last" ? "rounded-b-md" : "rounded-none",
@@ -797,7 +800,6 @@ export function DocumentLedgerTable({
   isFiltered,
   emptyCopy,
   emptyAction,
-  emptyArrow,
   isLoading,
   error,
   onRetry,
@@ -840,7 +842,7 @@ export function DocumentLedgerTable({
       <div role="table" aria-busy="true" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger" style={wrapperStyle}>
         {header}
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex h-10 items-center gap-2 px-2 animate-pulse">
+          <div key={i} className="flex h-10 items-center gap-2 px-2 animate-pulse max-md:h-12">
             <div className="size-4 shrink-0 rounded-[4px] bg-muted/50" />
             <div className="h-3 rounded bg-muted/70" style={{ width: `${40 + ((i * 17) % 35)}%` }} />
           </div>
@@ -862,10 +864,9 @@ export function DocumentLedgerTable({
     // Đặt giữa vùng danh sách như trạng thái rỗng của Nhiệm vụ, không dạt lên đầu để lại khoảng trắng lớn
     return (
       <div data-slot="document-ledger-table" className="relative flex min-h-[48vh] items-center justify-center">
-        {emptyArrow ? <ArrowHint variant={emptyArrow} className="-top-4 right-14" /> : null}
         <EmptyState
           role="status"
-          density="compact"
+          density="page"
           icon={isFiltered ? <SearchX /> : <Inbox />}
           illustration={copy.illustration}
           title={copy.title}

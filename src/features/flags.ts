@@ -32,7 +32,8 @@ export type FeatureFlagKey =
   | "digitalSignature"
   | "outgoingDocuments"
   | "internalDocuments"
-  | "userProvisioning";
+  | "userProvisioning"
+  | "taskAgent";
 
 export interface FeatureFlagDefinition {
   readonly key: FeatureFlagKey;
@@ -171,6 +172,15 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
     description:
       "Phased rollout flag for user account provisioning (create/edit/disable). " +
       "Disabled until RBAC provisioning design and HR data source integration are approved.",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  taskAgent: {
+    key: "taskAgent",
+    description:
+      "Agent soạn nháp nhiệm vụ trong hộp Tạo nhiệm vụ (gọi mô hình qua TASK_AGENT_* ở server). " +
+      "Chỉ điền form, người dùng tự bấm Tạo. Tắt mặc định.",
     defaultValue: false,
     isKillSwitch: false,
     isPublic: true,

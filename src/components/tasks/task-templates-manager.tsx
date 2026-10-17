@@ -217,7 +217,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
         {templates && templates.length === 0 && !form && (
           <EmptyState
             role="status"
-            density="compact"
+            density="page"
             illustration="templates"
             title="Chưa có mẫu nào"
             description={
@@ -227,8 +227,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
             }
             action={
               canManage ? (
-                <Button size="sm" onClick={() => openForm(null)}>
-                  <Plus aria-hidden="true" />
+                <Button size="pill" onClick={() => openForm(null)}>
                   Tạo mẫu đầu tiên
                 </Button>
               ) : undefined

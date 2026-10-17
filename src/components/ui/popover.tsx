@@ -45,6 +45,8 @@ export interface PopoverContentProps
   backdropClassName?: string;
   positionerClassName?: string;
   arrow?: boolean;
+  /** Phần tử neo thay cho nút mở (vd. cả cụm nút); mặc định là nút mở. */
+  anchor?: React.ComponentPropsWithoutRef<typeof BasePopover.Positioner>["anchor"];
   /** Điện thoại (< md): hiện thành bottom sheet bám đáy kèm lớp tối; từ md giữ popup neo. */
   mobileSheet?: boolean;
   /** Tiêu đề trên sheet (chỉ điện thoại). */
@@ -74,6 +76,7 @@ export const PopoverContent = React.forwardRef<
       arrow = false,
       mobileSheet = false,
       sheetTitle,
+      anchor,
       children,
       ...props
     },
@@ -91,6 +94,7 @@ export const PopoverContent = React.forwardRef<
           />
         )}
         <BasePopover.Positioner
+          anchor={anchor}
           side={side}
           align={align}
           sideOffset={sideOffset}

@@ -98,6 +98,7 @@ function normalizeTaskPriority(rawPriority?: string | null): TaskPriority | null
     NORMAL: TaskPriority.NORMAL,
     MEDIUM: TaskPriority.NORMAL,
     LOW: TaskPriority.LOW,
+    NONE: TaskPriority.NONE,
   };
   return priorityMap[upper] || null;
 }

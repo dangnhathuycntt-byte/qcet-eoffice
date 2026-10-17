@@ -2,11 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import {
-  FeedbackToast,
-  ToastContainer,
-  type ToastItem,
-} from "@/components/ui/feedback-layer";
+import { type ToastItem } from "@/components/ui/feedback-layer";
 import { CircleCheckIcon } from "@/components/icons/circle-check";
 
 describe("Wave 2 - Agent E: Feedback / Toast Layer & Icon Pilot Motion Invariants", () => {
@@ -44,10 +40,6 @@ describe("Wave 2 - Agent E: Feedback / Toast Layer & Icon Pilot Motion Invariant
         action: { label: "Hoàn tác", onClick: () => {} },
       };
       assert.ok(toast.action?.label === "Hoàn tác", "Action label preserved");
-    });
-
-    it("preserves ToastContainer export for backward compat", () => {
-      assert.ok(typeof ToastContainer === "function", "ToastContainer export must exist");
     });
   });
 });

@@ -364,6 +364,8 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
   HIGH: 3,
   NORMAL: 2,
   LOW: 1,
+  // Không ưu tiên xếp sau Thấp
+  NONE: 0,
 };
 
 /**

@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { fadeVariants } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/components/ui/confirm-host";
 import { DossierDisposalPanel } from "./dossier-disposal-panel";
 import { getDocumentHref } from "@/lib/documents/document-view-model";
 
@@ -244,7 +245,7 @@ export function DossierDetailView({
     body: Record<string, unknown>,
     confirmMsg: string,
   ) {
-    if (!window.confirm(confirmMsg)) return;
+    if (!(await confirmAction({ title: confirmMsg }))) return;
     setPendingAction(actionPath);
     try {
       const res = await fetch(

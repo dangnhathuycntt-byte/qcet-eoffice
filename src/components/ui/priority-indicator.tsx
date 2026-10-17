@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export type PriorityLevel = "LOW" | "NORMAL" | "MEDIUM" | "HIGH" | "URGENT" | "low" | "normal" | "medium" | "high" | "urgent" | (string & {});
+export type PriorityLevel = "LOW" | "NORMAL" | "MEDIUM" | "HIGH" | "URGENT" | "NONE" | "low" | "normal" | "medium" | "high" | "urgent" | "none" | (string & {});
 
 export interface PriorityIndicatorProps extends React.HTMLAttributes<HTMLDivElement> {
   priority: PriorityLevel;
@@ -15,6 +15,7 @@ export interface PriorityIndicatorProps extends React.HTMLAttributes<HTMLDivElem
  * - MEDIUM/NORMAL: 2 vạch
  * - HIGH: 3 vạch
  * - URGENT: 4 vạch đỏ #B91C1C
+ * - NONE: 4 vạch mờ (Không ưu tiên)
  */
 export function PriorityIndicator({
   priority,
@@ -26,10 +27,12 @@ export function PriorityIndicator({
   const isUrgent = norm === "URGENT";
 
   const activeBars =
-    norm === "LOW" ? 1 : norm === "MEDIUM" || norm === "NORMAL" ? 2 : norm === "HIGH" ? 3 : 4;
+    norm === "NONE" ? 0 : norm === "LOW" ? 1 : norm === "MEDIUM" || norm === "NORMAL" ? 2 : norm === "HIGH" ? 3 : 4;
 
   const label =
-    norm === "LOW"
+    norm === "NONE"
+      ? "Không ưu tiên"
+      : norm === "LOW"
       ? "Thấp"
       : norm === "MEDIUM" || norm === "NORMAL"
         ? "Trung bình"

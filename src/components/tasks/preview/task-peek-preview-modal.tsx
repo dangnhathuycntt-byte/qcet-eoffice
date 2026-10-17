@@ -1,25 +1,27 @@
 "use client";
 
 import * as React from "react";
-import {
-  X,
-  CheckCircle2,
-  ArrowRight,
-  ChevronUp,
-  ChevronDown,
-} from "lucide-react";
+import { X, ArrowRight, ChevronUp, ChevronDown } from "lucide-react";
 import { StandardDialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { InspectorRow } from "@/components/documents/document-detail-parts";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
+import { TaskIconDue, TaskIconDueClosed, TaskIconDueOverdue, TaskIconDueSoon } from "@/lib/icons/task-icons";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { getDueIndicator, getSlaBadgeStatus } from "@/components/tasks/table/utils/table-date-helpers";
-import { getStatusDisplay } from "@/domain/tasks/display-config";
+import { PRIORITY_DISPLAY_CONFIG, getStatusDisplay } from "@/domain/tasks/display-config";
 import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
-import { Pressable } from "@/components/ui/pressable";
+
+const DUE_ICONS = { closed: TaskIconDueClosed, overdue: TaskIconDueOverdue, soon: TaskIconDueSoon, default: TaskIconDue } as const;
+const DUE_TONE_CLASS = { danger: "text-destructive", warn: "text-warning", muted: "text-muted-foreground" } as const;
+const MAX_SUBTASKS_SHOWN = 4;
 
 export interface TaskPeekPreviewModalProps {
   task: SchoolTask | StaffTask | null;
@@ -45,6 +47,8 @@ export function TaskPeekPreviewModal({
   hasNext = true,
 }: TaskPeekPreviewModalProps) {
   const openedAtRef = React.useRef<number>(0);
+  // Mở bằng Space thì focus vào tiêu đề (đọc được bằng trình đọc màn hình), không rơi vào nút ↑ kèm viền focus
+  const titleRef = React.useRef<HTMLHeadingElement>(null);
 
   // Track open time for hold-to-peek & debounce
   React.useEffect(() => {
@@ -144,10 +148,7 @@ export function TaskPeekPreviewModal({
     (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
     task.id.slice(0, 8).toUpperCase();
 
-  const leadName = isSchool
-    ? schoolTask?.leadAssigneeName || "Chưa phân công"
-    : staffTask?.assigneeName || "Chưa phân công";
-
+  const leadName = isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName;
   const leadAvatar = isSchool ? schoolTask?.leadAssigneeAvatar : undefined;
 
   const departmentName = isSchool
@@ -169,7 +170,7 @@ export function TaskPeekPreviewModal({
     ? schoolTask?.parentTaskTitle || schoolTask?.parentTask?.title
     : staffTask?.parentSchoolTaskTitle || staffTask?.parentTask?.title;
 
-  // Hạn: cùng cách tính với hàng trong danh sách (ngày nghiệp vụ, đã đóng thì không báo trễ)
+  // Hạn: cùng cách tính, icon và màu với cột Hạn của danh sách (ngày nghiệp vụ, đã đóng thì không báo trễ)
   const sla = getSlaBadgeStatus(task.dueDate, task.status);
   const dueIndicator = getDueIndicator({
     status: task.status,
@@ -178,35 +179,14 @@ export function TaskPeekPreviewModal({
     daysRemaining: sla.daysRemaining,
     label: sla.label,
   });
+  const DueIcon = DUE_ICONS[dueIndicator.icon];
+  const dueToneClass = DUE_TONE_CLASS[dueIndicator.tone];
 
   // Nhãn trạng thái dùng chung với danh sách (Mới, Đang thực hiện, Chờ duyệt, Hoàn thành, Đã hủy)
   const statusLabel = getStatusDisplay(normalizeDisplayStatus(task.status)).label;
 
-  const statusDotColor =
-    task.status === "COMPLETED"
-      ? "bg-emerald-500"
-      : task.status === "IN_PROGRESS"
-      ? "bg-blue-500"
-      : task.status === "WAITING_APPROVAL" || task.status === "NEEDS_REVIEW"
-      ? "bg-warning"
-      : "bg-muted-foreground/40";
-
-  const priorityVal = (task as any).priority || "NORMAL";
-  const priorityLabel =
-    priorityVal === "URGENT"
-      ? "Khẩn cấp"
-      : priorityVal === "HIGH"
-      ? "Cao"
-      : priorityVal === "LOW"
-      ? "Thấp"
-      : "Bình thường";
-
-  const priorityColorClass =
-    priorityVal === "URGENT"
-      ? "text-destructive font-medium"
-      : priorityVal === "HIGH"
-      ? "text-warning font-medium"
-      : "text-muted-foreground/75";
+  const priorityVal = task.priority || "NORMAL";
+  const priorityLabel = PRIORITY_DISPLAY_CONFIG.find((p) => p.value === priorityVal)?.label ?? "Bình thường";
 
   const completedSubtasks = subTasks.filter((s) => s.status === "COMPLETED").length;
 
@@ -221,174 +201,134 @@ export function TaskPeekPreviewModal({
       size="lg"
       showCloseButton={false}
       showHeader={false}
-      className="max-w-2xl p-5 space-y-3.5 max-h-[85vh] overflow-hidden flex flex-col"
+      initialFocus={titleRef}
+      className="gap-3 overflow-hidden px-5 pt-3 pb-3 sm:px-5 sm:pt-3 sm:pb-3"
     >
-      {/* Header cực gọn: ID · Đơn vị bên trái, controls tối thiểu bên phải */}
-      <div className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground/70">
-          <span className="font-mono font-medium text-muted-foreground/90 select-all tracking-wider">
-            {taskCode}
-          </span>
-          <span className="text-muted-foreground/30 select-none">/</span>
-          <span className="truncate max-w-[280px] font-normal" title={departmentName}>
+      {/* Header như Quick View văn bản: mã (chữ số đều cột) · đơn vị bên trái, chuyển việc và đóng bên phải */}
+      <div className="flex min-h-8 shrink-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground">
+          <span className="shrink-0 tabular-nums text-foreground/80 select-all">{taskCode}</span>
+          <span aria-hidden="true" className="text-muted-foreground/50">·</span>
+          {/* Tên đơn vị không ghi tắt: hẹp thì xuống tối đa 2 dòng */}
+          <span className="line-clamp-2 break-words" title={departmentName}>
             {departmentName}
           </span>
         </div>
 
-        <div className="flex items-center gap-0.5 shrink-0 text-muted-foreground/50">
+        <div className="flex shrink-0 items-center gap-0.5">
           {onNavigatePrev && (
-            <Pressable
-              onClick={onNavigatePrev}
-              disabled={!hasPrev}
-              title="Nhiệm vụ trước (↑)"
-              className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-              aria-label="Nhiệm vụ trước"
-            >
-              <ChevronUp className="size-3.5" />
-            </Pressable>
+            <Button variant="ghost" size="icon-xs" onClick={onNavigatePrev} disabled={!hasPrev} title="Nhiệm vụ trước (↑)" aria-label="Nhiệm vụ trước">
+              <ChevronUp />
+            </Button>
           )}
           {onNavigateNext && (
-            <Pressable
-              onClick={onNavigateNext}
-              disabled={!hasNext}
-              title="Nhiệm vụ kế tiếp (↓)"
-              className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-              aria-label="Nhiệm vụ kế tiếp"
-            >
-              <ChevronDown className="size-3.5" />
-            </Pressable>
+            <Button variant="ghost" size="icon-xs" onClick={onNavigateNext} disabled={!hasNext} title="Nhiệm vụ kế tiếp (↓)" aria-label="Nhiệm vụ kế tiếp">
+              <ChevronDown />
+            </Button>
           )}
-          <Pressable
-            onClick={onClose}
-            title="Đóng (Esc)"
-            className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors ml-1"
-            aria-label="Đóng"
-          >
-            <X className="size-3.5" />
-          </Pressable>
+          <Button variant="ghost" size="icon-xs" onClick={onClose} title="Đóng (Esc)" aria-label="Đóng">
+            <X />
+          </Button>
         </div>
       </div>
 
-      {(parentTaskTitle || parentTaskCode) && (
-        <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground/70" aria-label="Công việc chính">
-          <span className="shrink-0">Công việc chính</span>
-          <span aria-hidden="true">·</span>
-          {parentTaskCode && <span className="shrink-0 font-mono text-muted-foreground/90">{parentTaskCode}</span>}
-          {parentTaskTitle && <span className="truncate text-foreground/70" title={parentTaskTitle}>{parentTaskTitle}</span>}
+      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+        <div className="flex flex-col gap-1">
+          {(parentTaskTitle || parentTaskCode) && (
+            <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="shrink-0">Việc con của</span>
+              {parentTaskCode && <span className="shrink-0 tabular-nums">{parentTaskCode}</span>}
+              {parentTaskTitle && <span className="truncate text-foreground/80" title={parentTaskTitle}>{parentTaskTitle}</span>}
+            </p>
+          )}
+          {/* Tiêu đề 16/24 như trích yếu ở Quick View văn bản */}
+          <h2 ref={titleRef} tabIndex={-1} className="line-clamp-3 break-words text-base leading-6 font-semibold tracking-tight text-foreground outline-none">
+            {task.title}
+          </h2>
         </div>
-      )}
 
-      {/* Title — trọng tâm chính, leading thoáng, 2-3 dòng */}
-      <h2 className="text-lg font-semibold text-foreground leading-snug tracking-tight line-clamp-3">
-        {task.title}
-      </h2>
-
-      {/* Metadata inline nhẹ: trạng thái · ưu tiên · phụ trách · hạn (không pill/card) */}
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground/80">
-        {/* Status */}
-        <span className="inline-flex items-center gap-1.5 font-medium text-foreground/90">
-          <span className={cn("size-1.5 rounded-full shrink-0", statusDotColor)} />
-          <span>{statusLabel}</span>
-        </span>
-
-        <span className="text-muted-foreground/30 select-none" aria-hidden="true">·</span>
-
-        {/* Priority */}
-        <span className={priorityColorClass}>
-          {priorityLabel}
-        </span>
-
-        <span className="text-muted-foreground/30 select-none" aria-hidden="true">·</span>
-
-        {/* Lead assignee */}
-        <span className="inline-flex items-center gap-1.5 font-medium text-foreground/90">
-          <UserAvatar
-            name={leadName}
-            avatarUrl={leadAvatar}
-            size="xs"
-            className="ring-1 ring-border/60"
-          />
-          <span className="truncate max-w-[130px]">{leadName}</span>
-        </span>
-
-        {task.dueDate && (
-          <>
-            <span className="text-muted-foreground/30 select-none" aria-hidden="true">·</span>
-            <span className="inline-flex items-center gap-1.5 text-foreground/75">
-              <span>{formatDetailDate(task.dueDate)}</span>
-              {dueIndicator.hint && dueIndicator.icon !== "closed" && (
-                <span className={cn(
-                  "text-xs",
-                  dueIndicator.tone === "danger"
-                    ? "text-destructive font-medium"
-                    : dueIndicator.tone === "warn"
-                    ? "text-warning font-medium"
-                    : "text-muted-foreground/60"
-                )}>
-                  {dueIndicator.hint}
-                </span>
-              )}
+        {/* Thuộc tính là lưới nhãn–giá trị căn thẳng cột (nhãn như panel chi tiết), rộng thì hai cột */}
+        <div role="group" aria-label="Thuộc tính chính" className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+          <InspectorRow label="Trạng thái">
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <TaskStatusCircle status={task.status} className="size-3.5" />
+              {statusLabel}
             </span>
-          </>
+          </InspectorRow>
+          <InspectorRow label="Ưu tiên">
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <PrioritySignalBars priority={priorityVal} ariaLabel={`Độ ưu tiên: ${priorityLabel}`} />
+              <span className={cn(priorityVal === "URGENT" && "font-medium text-destructive")}>{priorityLabel}</span>
+            </span>
+          </InspectorRow>
+          <InspectorRow label="Phụ trách">
+            {leadName ? (
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <UserAvatar name={leadName} avatarUrl={leadAvatar} size="xs" />
+                <span className="truncate">{leadName}</span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground">Chưa phân công</span>
+            )}
+          </InspectorRow>
+          {task.dueDate && (
+            <InspectorRow label="Hạn hoàn thành">
+              <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 tabular-nums">
+                <DueIcon className={cn("size-3.5 shrink-0", dueToneClass)} aria-hidden="true" />
+                <span className={cn(dueIndicator.tone !== "muted" && dueToneClass)}>{formatDetailDate(task.dueDate)}</span>
+                {dueIndicator.hint && dueIndicator.icon !== "closed" && (
+                  // Dấu chấm và ghi chú xuống dòng cùng nhau khi cột hẹp
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span aria-hidden="true" className="text-muted-foreground/50">·</span>
+                    <span className={cn(dueToneClass, dueIndicator.tone === "danger" && "font-medium")}>{dueIndicator.hint}</span>
+                  </span>
+                )}
+              </span>
+            </InspectorRow>
+          )}
+        </div>
+
+        {/* Mô tả: chỉ hiện khi có, như trường trống ở Quick View văn bản */}
+        {taskDescription && (
+          <p className="line-clamp-4 border-t border-border/60 pt-3 text-compact leading-relaxed whitespace-pre-line text-foreground/80">
+            {taskDescription}
+          </p>
+        )}
+
+        {subTasks.length > 0 && (
+          <section aria-label="Việc con" className="border-t border-border/60 pt-2">
+            <h3 className="flex h-6 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              Việc con
+              <span className="font-normal tabular-nums">{completedSubtasks}/{subTasks.length}</span>
+            </h3>
+            <ul>
+              {subTasks.slice(0, MAX_SUBTASKS_SHOWN).map((st) => (
+                <li key={st.id} className="flex h-7 items-center gap-2 text-compact text-foreground">
+                  <TaskStatusCircle status={st.status} className="size-3.5" />
+                  <span className={cn("truncate", st.status === "COMPLETED" && "text-muted-foreground line-through")} title={st.title}>
+                    {st.title}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {subTasks.length > MAX_SUBTASKS_SHOWN && (
+              <p className="pl-5.5 text-xs text-muted-foreground">+{subTasks.length - MAX_SUBTASKS_SHOWN} việc khác</p>
+            )}
+          </section>
         )}
       </div>
 
-      {/* Description: phẳng, trực tiếp, không bọc box */}
-      {taskDescription ? (
-        <p className="text-compact text-foreground/75 leading-relaxed line-clamp-4 whitespace-pre-line">
-          {taskDescription}
-        </p>
-      ) : (
-        <p className="text-xs italic text-muted-foreground/40">Chưa có mô tả chi tiết.</p>
-      )}
-
-      {/* Subtasks (nếu có): danh sách phẳng tối giản */}
-      {subTasks.length > 0 && (
-        <div className="space-y-1 pt-1">
-          <div className="flex items-center justify-between text-xs text-muted-foreground/60 font-medium">
-            <span>Việc thành phần</span>
-            <span className="font-mono tabular-nums">{completedSubtasks}/{subTasks.length}</span>
-          </div>
-          <div className="space-y-0.5">
-            {subTasks.slice(0, 3).map((st) => (
-              <div key={st.id} className="flex items-center gap-2 py-0.5 text-xs text-foreground/80">
-                <CheckCircle2
-                  className={cn(
-                    "size-3 shrink-0",
-                    st.status === "COMPLETED" ? "text-emerald-600" : "text-muted-foreground/30"
-                  )}
-                />
-                <span className={cn("truncate", st.status === "COMPLETED" && "line-through text-muted-foreground/50")}>
-                  {st.title}
-                </span>
-              </div>
-            ))}
-            {subTasks.length > 3 && (
-              <span className="text-xs text-muted-foreground/50 pl-5">
-                +{subTasks.length - 3} việc khác
-              </span>
-            )}
-          </div>
+      {/* Footer: phím tắt (ẩn trên điện thoại vì không có bàn phím) và Mở chi tiết */}
+      <div className="flex h-8 shrink-0 items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs text-muted-foreground select-none max-md:h-auto">
+        <div className="flex items-center gap-3 max-md:hidden" aria-hidden="true">
+          <span><kbd className="font-sans text-foreground/70">Space</kbd> Đóng</span>
+          <span><kbd className="font-sans text-foreground/70">↑↓</kbd> Chuyển</span>
+          <span><kbd className="font-sans text-foreground/70">Enter</kbd> Mở chi tiết</span>
         </div>
-      )}
-
-      {/* Footer: phím tắt cực mờ/gọn, không CTA đen nặng nề */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs text-muted-foreground/45 select-none shrink-0">
-        <div className="flex items-center gap-1.5">
-          <span>Space Đóng</span>
-          <span className="text-muted-foreground/30">·</span>
-          <span>↑↓ Chuyển</span>
-          <span className="text-muted-foreground/30">·</span>
-          <span>Enter Mở chi tiết</span>
-        </div>
-
-        <Pressable
-          onClick={() => onOpenDetail(task)}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-foreground transition-colors font-normal"
-        >
-          <span>Mở chi tiết</span>
-          <ArrowRight className="size-3" />
-        </Pressable>
+        <Button variant="ghost" size="xs" onClick={() => onOpenDetail(task)} className="ml-auto">
+          Mở chi tiết
+          <ArrowRight data-icon="inline-end" />
+        </Button>
       </div>
     </StandardDialog>
   );

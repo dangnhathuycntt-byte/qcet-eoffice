@@ -21,7 +21,7 @@ import {
 import { workspaceScopeToTaskScope } from "@/lib/unified-task-hub";
 import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
 import { parseWorkspaceQuery } from "@/lib/workspace-query";
-import { matchesTaskTab, resolveTaskTab, type TaskTab } from "@/domain/tasks/task-tabs";
+import { matchesTaskTab, resolveTaskTab, TASK_TABS, type TaskTab } from "@/domain/tasks/task-tabs";
 import {
   collectCollaboratorOptions,
   collectLeadOptions,
@@ -445,7 +445,7 @@ export function computeFilterFacets(options: FilterDisplayedTasksOptions, unitRo
     collaboratorPeople,
     counts: {
       status: countFacetOptions(["new", "in_progress", "waiting_approval", "review", "completed"], (status) => count({ status })),
-      priority: countFacetOptions(["URGENT", "HIGH", "NORMAL", "LOW"], (priority) => count({ priority })),
+      priority: countFacetOptions(["NONE", "URGENT", "HIGH", "NORMAL", "LOW"], (priority) => count({ priority })),
       deadline: countFacetOptions(["today", "this_week", "overdue"], (deadline) => count(deadlinePatch(deadline))),
       health: countFacetOptions(["on_track", "at_risk", "overdue", "completed"], (health) => count({ health })),
       lead: countFacetOptions(
@@ -1544,20 +1544,34 @@ function UnifiedAdaptiveWorkspaceInner({
     };
   }, [displayedTasks]);
 
-  // Chưa có nhiệm vụ nào và không bộ lọc nào đang áp dụng: trang trống yên tĩnh, thanh công cụ chỉ còn nút tạo việc.
+  // Phạm vi đang xem chưa có nhiệm vụ nào và không bộ lọc nào đang áp dụng: trang trống yên tĩnh,
+  // ẩn cả view lẫn tìm/lọc/hiển thị (không có gì để chuyển hay lọc), chỉ còn nút tạo việc.
   const isNoFilterValue = (v: unknown) => v === undefined || v === null || v === "" || v === "ALL" || v === "all";
+  const isTasksLoading = initialLoading || isLoading || isInternalLoading;
+  const hasSearchText = Boolean(currentSearch && String(currentSearch).trim());
   const isColdStartEmpty =
-    tasks.length === 0 &&
-    !initialLoading &&
-    !isLoading &&
-    !isInternalLoading &&
-    !(currentSearch && String(currentSearch).trim()) &&
+    scopedTasks.length === 0 &&
+    !isTasksLoading &&
+    !hasSearchText &&
     isNoFilterValue(currentStatus) &&
     isNoFilterValue(currentDept) &&
     isNoFilterValue(currentCategory) &&
     isNoFilterValue(currentPriority) &&
     isNoFilterValue(currentMonth) &&
     isNoFilterValue(effectiveActiveTab);
+
+  // Số nhiệm vụ của từng view khi chưa áp bộ lọc (cùng hàm lọc của bảng nên khớp số dòng).
+  const taskTabCounts = React.useMemo(() => {
+    const counts = {} as Record<TaskTab, number>;
+    for (const { id } of TASK_TABS) counts[id] = filterDisplayedTasks({ tasks: scopedTasks, user, taskTab: id }).length;
+    return counts;
+  }, [scopedTasks, user]);
+  // View đang chọn trống dù không lọc gì (vd. mọi việc đều trễ hạn nên "Đang thực hiện" trống): giữ các view để chuyển,
+  // ẩn tìm/lọc/hiển thị vì không có dòng nào để tác động; trang trống chỉ sang view còn việc.
+  const isTaskViewEmpty = !isColdStartEmpty && !isTasksLoading && !hasSearchText && taskTabCounts[effectiveTaskTab] === 0;
+  const suggestedTaskTab = isTaskViewEmpty
+    ? TASK_TABS.find(({ id }) => id !== "all" && id !== effectiveTaskTab && taskTabCounts[id] > 0)
+    : undefined;
 
   const handleResetFilters = React.useCallback(() => {
     setActiveViewId(null);
@@ -2068,11 +2082,20 @@ function UnifiedAdaptiveWorkspaceInner({
         category: currentCategory !== "ALL" ? currentCategory : undefined,
         priority: currentPriority !== "ALL" ? currentPriority : undefined,
         academicMonth: currentMonth,
-        taskTab: effectiveTaskTab,
+        // Phạm vi chưa có việc: nói "Chưa có nhiệm vụ nào" (kèm nút Tạo việc, Hướng dẫn), không nhắc view (view đang ẩn)
+        taskTab: isColdStartEmpty ? undefined : effectiveTaskTab,
+        suggestedView: suggestedTaskTab
+          ? {
+              id: suggestedTaskTab.id,
+              count: taskTabCounts[suggestedTaskTab.id],
+              onSelect: () => handleTaskTabChange(suggestedTaskTab.id),
+            }
+          : undefined,
         onResetFilters: handleResetFilters,
         onAddTask: () =>
           openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
-        canAddTask: true,
+        // Theo quyền thật như hai nhánh trang trống bên dưới: người không được tạo việc không thấy nút Tạo việc và thẻ hướng dẫn tự mở
+        canAddTask: createPolicy.canCreate,
       }}
     />
   );
@@ -2180,6 +2203,7 @@ function UnifiedAdaptiveWorkspaceInner({
           {!hideScopeSwitcher && (
             <UnifiedTaskToolbar
           quiet={isColdStartEmpty}
+          hideListControls={isTaskViewEmpty}
           // Tiêu đề trang ở góc trái; cũng đẩy nhóm điều khiển sang phải (không hiện tab phạm vi ở hàng này)
           leftContent={
             <h1 data-slot="task-page-title" className="text-compact font-medium text-foreground select-none">
@@ -2425,7 +2449,7 @@ function UnifiedAdaptiveWorkspaceInner({
           {isActionQueueOpen && (
             <div
               data-slot="action-queue-backdrop"
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in !m-0"
+              className="fixed inset-0 z-40 bg-overlay transition-opacity duration-300 animate-in fade-in !m-0"
               onClick={() => setIsActionQueueOpen(false)}
               aria-hidden="true"
             />

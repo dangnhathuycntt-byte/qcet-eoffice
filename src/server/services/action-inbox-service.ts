@@ -350,6 +350,7 @@ export class ActionInboxService {
       HIGH: 3,
       NORMAL: 2,
       LOW: 1,
+      NONE: 0,
     };
 
     items.sort((a, b) => {

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
-  verifySessionTokenEdge,
   SESSION_COOKIE_NAME,
   SECURE_SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
@@ -106,9 +105,9 @@ function extractTokenFromRequest(request: NextRequest): string | null {
  *    - Allow public endpoints: /api/health, /api/auth/*, /api/csp-report, /api/runtime-config
  * 2. Unauthenticated users accessing protected UI routes -> redirect to /login with returnTo.
  * 3. Authenticated users opening /login -> page asks /api/auth/me for server truth.
- * 4. Root '/' -> /tasks for verified JWT users, /login for unauthenticated users;
- *    opaque DB sessions pass through to app/page.tsx for server verification.
- * 5. Public assets, static chunks, and PWA manifest: Always accessible.
+ * 4. Root '/' (Tổng quan) -> /login for unauthenticated users; any session passes through to
+ *    app/page.tsx, which verifies it on the server.
+ * 5. Public assets, static chunks, PWA manifest, /portal and /docs (user guide): Always accessible.
  * 6. Canonical singular to plural redirects (/task -> /tasks).
  * 7. Defense in depth: this middleware is an early barrier only. Route
  *    Handlers / Services MUST keep `requireAuthenticated()` and
@@ -124,6 +123,9 @@ export async function middleware(request: NextRequest) {
     pathname.includes('.') || // Static files like favicon.ico, images, manifest.json
     pathname === '/portal' ||
     pathname.startsWith('/portal/') ||
+    // Tài liệu hướng dẫn: nội dung tĩnh, ai cũng đọc được (người dùng duyệt 14/10/2026), không gọi API cần đăng nhập.
+    pathname === '/docs' ||
+    pathname.startsWith('/docs/') ||
     // Bảng mẫu thành phần: chỉ tồn tại ở môi trường phát triển (production trả 404).
     (process.env.NODE_ENV !== 'production' && pathname === '/design')
   ) {
@@ -256,30 +258,15 @@ export async function middleware(request: NextRequest) {
   const token = extractTokenFromRequest(request);
   const hasToken = Boolean(token && token.trim().length > 0);
 
-  // 5. Cryptographic JWT / JWE validation on Edge for UI routes
-  let isVerifiedJwt = false;
-  if (hasToken) {
-    const trimmed = token!.trim();
-    const parts = trimmed.split('.');
-    if (parts.length === 3 || parts.length === 5) {
-      const session = await verifySessionTokenEdge(trimmed);
-      isVerifiedJwt = Boolean(session && session.id && session.email);
-    }
-  }
-
-  // 6. Handle Root '/' route
+  // 5-6. Root '/' = trang Tổng quan (từ 15/10/2026; trước đó chuyển thẳng sang /tasks). Chưa có phiên thì về /login;
+  // có phiên (JWT hay phiên DB) thì app/page.tsx kiểm phiên phía máy chủ rồi hiện Tổng quan hoặc chuyển ?zone= cũ tới trang tương ứng.
   if (pathname === '/') {
-    const url = request.nextUrl.clone();
-    if (isVerifiedJwt) {
-      url.pathname = '/tasks';
-      return redirectWithCorrelation(url);
-    } else if (!hasToken) {
+    if (!hasToken) {
+      const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.search = '';
       return redirectWithCorrelation(url);
     }
-    // If hasToken is true (opaque DB session), let request pass to app/page.tsx
-    // which verifies the DB session on the server.
     return nextWithCorrelation();
   }
 

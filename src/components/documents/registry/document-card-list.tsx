@@ -200,7 +200,7 @@ function DocumentMobileRow({
         // Lùi 8px hai bên, bo góc: nền khi chạm/chọn không tràn mép (như Linear)
         "mx-2 flex min-h-[52px] items-start gap-3 rounded-lg px-2 py-2 cursor-pointer select-none touch-manipulation [-webkit-touch-callout:none]",
         "transition-colors duration-100 active:bg-muted/50 outline-none focus-visible:bg-accent",
-        (selected || active) && "bg-accent"
+        (selected || active) && "bg-selected"
       )}
     >
       {selectionMode ? (

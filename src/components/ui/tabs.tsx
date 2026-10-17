@@ -239,7 +239,7 @@ function TabsTrigger({
         }
       }}
       className={cn(
-        `relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border-0 px-2.5 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer`,
+        `relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border-0 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-muted-foreground transition-colors group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer`,
         motionIndicator
           ? "data-active:text-foreground"
           : "data-active:bg-selected data-active:text-foreground",
@@ -290,7 +290,7 @@ function TabsContent({
       data-slot="tabs-content"
       role="tabpanel"
       data-state={isActive ? "active" : "inactive"}
-      className={cn("flex-1 text-sm outline-none", className)}
+      className={cn("flex-1 text-compact outline-none", className)}
       {...props}
     >
       {children}

@@ -22,6 +22,7 @@ import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "
 import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
 import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
+import { useIsPhone } from "@/hooks/use-is-phone";
 import { TaskOptionalMenu, TaskOptionalMenuProvider, TaskOptionalSections } from "@/components/tasks/detail/task-add-chip";
 import { TaskDeliverables, toTaskDeliverableItems, type TaskDeliverableItem } from "@/components/tasks/detail/task-deliverables";
 import { TaskDecline } from "@/components/tasks/detail/task-decline";
@@ -278,6 +279,7 @@ export function TaskDetailPage({
   const [peekOpen, setPeekOpen] = React.useState(false);
   const togglePeek = React.useCallback(() => setPeekOpen((open) => !open), []);
   const stacked = useStackedTaskDetail();
+  const isPhone = useIsPhone();
 
   // Việc con đổi trạng thái hay nộp/xóa minh chứng làm server tăng version (có thể đổi cả trạng thái, tiến độ)
   // của nhiệm vụ này: lấy lại để hiển thị đúng và lần sửa kế tiếp không bị báo xung đột phiên bản.
@@ -925,7 +927,8 @@ export function TaskDetailPage({
                 onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
               />
 
-              {!inspectorVisible && taskActionRow}
+              {/* Điện thoại: không đặt hàng "+ Thêm" dưới trình soạn thảo (người dùng chốt 14/10/2026) */}
+              {!inspectorVisible && !isPhone && taskActionRow}
               </TaskOptionalSections>
             </>
           )}
@@ -990,7 +993,7 @@ export function TaskDetailPage({
     {/* Modal Cập nhật tiến độ */}
     <ProgressDialog.Root open={isProgressModalOpen} onOpenChange={setIsProgressModalOpen}>
       <ProgressDialog.Portal keepMounted={isProgressModalOpen}>
-        <ProgressDialog.Backdrop className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
+        <ProgressDialog.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
         <ProgressDialog.Popup className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 outline-none rounded-2xl border border-border bg-popover p-5 shadow-xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
           <div className="flex items-center justify-between border-b border-border/50 pb-3">
             <ProgressDialog.Title className="text-sm font-semibold text-foreground">Cập nhật tiến độ nhiệm vụ</ProgressDialog.Title>

@@ -397,5 +397,68 @@ export function parseToPlateValue(raw?: string | null): PlateValue {
   return blocksToPlate(parseContentToBlocks(raw));
 }
 
+// ---------------------------------------------------------------------------
+// Chữ thuần ↔ nội dung khối (Agent soạn nhiệm vụ đọc/viết chữ thuần)
+// ---------------------------------------------------------------------------
+
+const BULLET_LINE = /^\s*[-*+•]\s+(.*)$/;
+const NUMBERED_LINE = /^\s*\d+[.)]\s+(.*)$/;
+
+/** Bỏ dấu in đậm/nghiêng kiểu markdown: định dạng chữ chưa được lưu nên giữ lại sẽ hiện nguyên dấu. */
+function stripInlineMarkdown(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/__(.+?)__/g, "$1").trim();
+}
+
+/**
+ * Chữ thuần (Agent trả về) → nội dung khối: dòng "- ", "* ", "+ ", "• " thành danh sách chấm (mục con dồn về một cấp
+ * vì khối chưa lưu thụt lề), "1. " thành danh sách số, còn lại là đoạn văn; dòng trống bỏ qua. Rỗng → "".
+ */
+export function plainTextToContent(text: string): string {
+  const blocks: ContentBlockItem[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const bullet = BULLET_LINE.exec(line);
+    const numbered = bullet ? null : NUMBERED_LINE.exec(line);
+    const type: ContentBlockItem["type"] = bullet ? "bulleted_list" : numbered ? "numbered_list" : "text";
+    const content = stripInlineMarkdown((bullet?.[1] ?? numbered?.[1] ?? line));
+    if (content) blocks.push({ id: nextBlockId("plain"), type, content });
+  }
+  return serializeBlocksToContent(blocks);
+}
+
+/** Nội dung khối → chữ thuần giữ ký hiệu danh sách ("- ", "1. ", "- [x] "), làm ngữ cảnh gửi Agent. */
+export function contentToPlainText(raw?: string | null): string {
+  if (!raw?.trim()) return "";
+  if (!raw.includes('"qcetBlocks":true')) return raw.trim();
+  let number = 0;
+  return parseContentToBlocks(raw)
+    .flatMap((block) => {
+      if (block.type !== "numbered_list") number = 0;
+      const text = (block.content || "").trim();
+      switch (block.type) {
+        case "bulleted_list":
+          return text ? [`- ${text}`] : [];
+        case "numbered_list":
+          number += 1;
+          return text ? [`${number}. ${text}`] : [];
+        case "checklist":
+          return text ? [`- [${block.checked ? "x" : " "}] ${text}`] : [];
+        case "quote":
+          return text ? [`> ${text}`] : [];
+        case "table":
+          return (block.rows ?? []).map((row) => row.cells.map((cell) => (cell.content || "").trim()).join(" | "));
+        case "image":
+        case "attachment":
+        case "divider":
+        case "media_embed":
+          return [];
+        default:
+          return text ? [text] : [];
+      }
+    })
+    .join("\n")
+    .trim();
+}
+
 // Re-export Plate node type constants for use in editor plugin config
 export { PT as PLATE_NODE_TYPES };

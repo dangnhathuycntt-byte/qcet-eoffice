@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Toast } from "@base-ui/react/toast";
 import { Toaster, toast as sonnerToast } from "sonner";
 import {
   CheckCircle2,
@@ -251,109 +250,7 @@ export function FormValidationSummary({
 }
 
 // ============================================================================
-// 3. Toast — Base UI powered (Modern Top-Center Floating Island)
-// ============================================================================
-
-const toastManager = Toast.createToastManager();
-
-const TOAST_VARIANT_CONFIG: Record<
-  FeedbackVariant,
-  {
-    iconBg: string;
-    iconColor: string;
-    icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  }
-> = {
-  info: {
-    iconBg: "bg-secondary",
-    iconColor: "text-primary",
-    icon: Info,
-  },
-  success: {
-    iconBg: "bg-secondary",
-    iconColor: "text-foreground",
-    icon: CheckCircle2,
-  },
-  warning: {
-    iconBg: "bg-secondary",
-    iconColor: "text-foreground",
-    icon: AlertTriangle,
-  },
-  error: {
-    iconBg: "bg-danger-soft",
-    iconColor: "text-destructive",
-    icon: AlertOctagon,
-  },
-};
-
-export interface FeedbackToastProps {
-  toast: ToastItem;
-  onDismiss: (id: string) => void;
-  rawToast?: any;
-}
-
-export function FeedbackToast({ toast, onDismiss: _onDismiss, rawToast }: FeedbackToastProps) {
-  const config = TOAST_VARIANT_CONFIG[toast.variant] || TOAST_VARIANT_CONFIG.info;
-  const IconComponent = config.icon;
-
-  return (
-    <Toast.Root
-      toast={rawToast}
-      className={cn(
-        "group pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-2xl border-0 bg-card p-4 shadow-menu transition-opacity duration-150"
-      )}
-    >
-      <div className={cn("size-6 rounded-full flex items-center justify-center shrink-0 mt-0.5", config.iconBg, config.iconColor)}>
-        <IconComponent className="size-3.5" strokeWidth={1.5} />
-      </div>
-
-      <div className="min-w-0 flex-1 text-xs">
-        {toast.title && (
-          <Toast.Title className="font-semibold text-foreground text-xs leading-snug tracking-tight">
-            {toast.title}
-          </Toast.Title>
-        )}
-        <Toast.Description className="font-normal text-muted-foreground leading-relaxed line-clamp-3 break-words mt-0.5">
-          {toast.message}
-        </Toast.Description>
-        {toast.action && (
-          <div className="mt-2">
-            <Toast.Action onClick={() => { toast.action?.onClick(); }}>
-              <button
-                type="button"
-                className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary-hover transition-colors cursor-pointer"
-              >
-                {toast.action.label}
-              </button>
-            </Toast.Action>
-          </div>
-        )}
-      </div>
-
-      <Toast.Close
-        aria-label="Đóng thông báo nổi"
-        className="size-6 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0 -mr-1 -mt-0.5"
-      >
-        <X className="size-3.5" />
-      </Toast.Close>
-    </Toast.Root>
-  );
-}
-
-export function ToastContainer({
-  toasts: _legacyToasts,
-  onDismiss: _legacyDismiss,
-  className: _className,
-}: {
-  toasts: ToastItem[];
-  onDismiss: (id: string) => void;
-  className?: string;
-}) {
-  return null;
-}
-
-// ============================================================================
-// 4. Feedback Context & Provider — Powered by Sonner
+// 3. Feedback Context & Provider — Powered by Sonner
 // ============================================================================
 
 const FeedbackContext = React.createContext<FeedbackContextValue | null>(null);
@@ -377,7 +274,6 @@ const SIGNAL_TOAST_OPTIONS = {
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const dismissToast = React.useCallback((id: string) => {
     sonnerToast.dismiss(id);
-    toastManager.close(id);
   }, []);
 
   const showToast = React.useCallback(
@@ -463,17 +359,20 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     <FeedbackContext.Provider value={contextValue}>
       {children}
       <Toaster
-        position="bottom-center"
-        offset={16}
+        // Theo toast của Linear: thẻ trắng 384px ở góc phải dưới, icon đặc + một dòng + nút đóng tròn. Chi tiết ở globals.css.
+        // Offset tính theo viền thẻ nội dung chính (cách mép cửa sổ 8px): toast nằm trong thẻ 16px bên phải, 24px phía dưới.
+        position="bottom-right"
+        offset={{ right: 24, bottom: 32 }}
+        closeButton
         /* Mobile: chừa safe area dưới */
         mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", left: 16, right: 16 }}
+        style={{ "--width": "384px" } as React.CSSProperties}
         toastOptions={{
-          className:
-            "rounded-2xl border-0 bg-card text-foreground font-sans shadow-menu text-xs",
+          className: "border-0 bg-popover text-foreground font-sans text-compact",
           style: {
             border: "none",
             "--normal-border": "transparent",
-            "--normal-bg": "var(--card)",
+            "--normal-bg": "var(--popover)",
             "--normal-text": "var(--foreground)",
           } as React.CSSProperties,
         }}

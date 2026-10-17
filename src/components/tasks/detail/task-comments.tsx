@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { revealAboveKeyboard } from "@/hooks/use-virtual-keyboard";
-import { COMMENT_REACTION_EMOJIS, type CommentReactionSummary } from "@/domain/tasks/comment-reactions";
+import { COMMENT_REACTION_EMOJIS, joinReactionNames, reactionNamesLabel, type CommentReactionSummary } from "@/domain/tasks/comment-reactions";
 
 interface CommentView {
   id: string;
@@ -134,7 +134,7 @@ function ReactionPicker({ onPick, pill = false }: { onPick: (emoji: CommentReact
       <Popover.Trigger
         render={
           pill ? (
-            <Pressable aria-label="Thả cảm xúc" className={cn(REACTION_PILL_CLASS, "w-7 justify-center px-0 text-muted-foreground hover:bg-accent hover:text-foreground data-[popup-open]:bg-accent")} />
+            <Pressable aria-label="Thả cảm xúc" className={cn(REACTION_PILL_CLASS, "w-7 justify-center px-0 text-muted-foreground hover:bg-accent hover:text-foreground data-[popup-open]:bg-selected")} />
           ) : (
             <Button variant="ghost" size="icon-xs" aria-label="Thả cảm xúc" className="size-6 sm:size-6" />
           )
@@ -194,6 +194,14 @@ type Viewer = { id: string; name: string; avatarUrl: string | null };
 
 /** Quá số này thì gập bình luận cũ, chỉ hiện các bình luận mới nhất để không đẩy mô tả xuống quá xa. */
 const VISIBLE_COMMENTS = 3;
+
+/**
+ * Thu gọn chỉ áp dụng khi đã có bình luận: nút "Bình luận" để mở lại chỉ hiện khi có bình luận, nên nhiệm vụ chưa có
+ * bình luận luôn phải thấy ô viết, kể cả khi người dùng từng thu gọn ở nhiệm vụ khác (lựa chọn lưu chung trong localStorage).
+ */
+export function isCommentListCollapsed(preferCollapsed: boolean, commentCount: number): boolean {
+  return preferCollapsed && commentCount > 0;
+}
 
 /**
  * Bình luận nhiệm vụ (T-03) kiểu Notion, đặt ngay dưới tên nhiệm vụ: cũ trước mới sau, đường nối dọc giữa các bình luận,
@@ -279,6 +287,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
     void load();
   }, [load]);
 
+  const listCollapsed = isCommentListCollapsed(collapsed, comments.length);
   const hiddenCount = showAll ? 0 : Math.max(0, comments.length - VISIBLE_COMMENTS);
   const visibleComments = comments.slice(hiddenCount);
 
@@ -345,6 +354,8 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
       setComments((prev) => [...prev, json.comment]);
       setDraft("");
       setChosen([]);
+      // Bình luận đầu tiên khi đang để chế độ thu gọn: giữ mở để thấy bình luận vừa gửi, không gập lại ngay
+      setCollapsed(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không gửi được bình luận");
     } finally {
@@ -375,8 +386,6 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
     const ok = await confirmAction({
       title: "Xóa bình luận?",
       description: "Nội dung bình luận sẽ bị gỡ, chỉ còn dòng \"Bình luận đã được xóa\".",
-      confirmLabel: "Xóa",
-      cancelLabel: "Hủy",
       destructive: true,
     });
     if (!ok) return;
@@ -444,7 +453,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
         </h2>
       )}
 
-      {!collapsed && (
+      {!listCollapsed && (
         <>
 
       {status === "error" && (
@@ -564,28 +573,37 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
 
                 {!c.deleted && editingId !== c.id && (c.reactions?.length ?? 0) > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    {c.reactions!.map((r) => (
-                      <Tooltip key={r.emoji}>
-                        <TooltipTrigger asChild>
-                          <Pressable
-                            aria-pressed={r.reacted}
-                            aria-label={`${r.emoji} ${r.count}: ${r.names.join(", ")}`}
-                            disabled={!canComment}
-                            onClick={() => void react(c.id, r.emoji, !r.reacted)}
-                            className={cn(
-                              REACTION_PILL_CLASS,
-                              "disabled:cursor-default",
-                              // Đã thả: nền xanh rất nhạt, số màu chính; chưa thả: nền xám nhạt, số màu phụ
-                              r.reacted ? "bg-primary/10 text-primary enabled:hover:bg-primary/15" : "text-muted-foreground enabled:hover:bg-accent"
-                            )}
-                          >
-                            <span className="text-xs leading-none">{r.emoji}</span>
-                            {r.count}
-                          </Pressable>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" sideOffset={4}>{r.names.join(", ")}</TooltipContent>
-                      </Tooltip>
-                    ))}
+                    {c.reactions!.map((r) => {
+                      const who = joinReactionNames(reactionNamesLabel(r, viewer?.name ?? "Bạn"));
+                      return (
+                        <Tooltip key={r.emoji}>
+                          <TooltipTrigger asChild>
+                            <Pressable
+                              aria-pressed={r.reacted}
+                              aria-label={`${r.emoji} ${r.count}: ${who}`}
+                              disabled={!canComment}
+                              onClick={() => void react(c.id, r.emoji, !r.reacted)}
+                              className={cn(
+                                REACTION_PILL_CLASS,
+                                "disabled:cursor-default",
+                                // Đã thả: nền xanh rất nhạt, số màu chính; chưa thả: nền xám nhạt, số màu phụ
+                                r.reacted ? "bg-primary/10 text-primary enabled:hover:bg-primary/15" : "text-muted-foreground enabled:hover:bg-accent"
+                              )}
+                            >
+                              <span className="text-xs leading-none">{r.emoji}</span>
+                              {r.count}
+                            </Pressable>
+                          </TooltipTrigger>
+                          {/* Ô emoji ở trên, dưới là "A, B và N người khác đã thả …"; nhiều người thì xuống dòng thay vì kéo dài một hàng */}
+                          <TooltipContent side="top" sideOffset={4} className="flex max-w-64 flex-col items-center gap-1.5 whitespace-normal px-3 py-2 text-center">
+                            <span aria-hidden className="flex size-7 items-center justify-center rounded-md bg-background text-compact leading-none">{r.emoji}</span>
+                            <span className="break-words leading-snug">
+                              {who} <span className="font-normal opacity-70">đã thả</span> {r.emoji}
+                            </span>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
                     {canComment && <ReactionPicker pill onPick={(emoji) => void react(c.id, emoji, true)} />}
                   </div>
                 )}

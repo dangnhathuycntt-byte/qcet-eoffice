@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { focusRingClass } from "@/components/ui/focus-ring";
 
 export interface PaneResizeHandleProps {
   /** Độ rộng pane hiện tại và khoảng cho phép. */
@@ -102,7 +103,7 @@ export function PaneResizeHandle({ value, min, max, onResize, onKey, onReset, la
       }}
       className={cn(
         "group/resize absolute -left-3 top-0 bottom-0 z-50 w-6 cursor-col-resize touch-none select-none bg-transparent outline-none",
-        "focus-visible:ring-2 focus-visible:ring-ring",
+        focusRingClass,
       )}
     >
       <ResizeGrip active={dragging} />

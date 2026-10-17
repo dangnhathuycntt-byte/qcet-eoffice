@@ -1,41 +1,15 @@
 "use client";
 
 /**
- * QCET E-Office - PWA Health & Offline Storage Settings
- *
- * Provides institutional configuration and inspection for:
- * 1. Application version and Service Worker lifecycle status.
- * 2. PWA installation state and launch mode.
- * 3. Web Push notification permission and topic preferences.
- * 4. Offline Storage Quota, Breakdown, and Persistence boundary.
- * 5. Outbox pending synchronization and conflict status.
- *
- * Invariants:
- * - Institutional light-only QCET UI (slate-900, institutional blue, zero dark classes).
- * - Zero emojis in all labels, messages, and tooltips.
- * - Minimum 44px touch targets for all interactive actions.
- * - Server truth wins; client-side storage is subordinate and user-controlled.
+ * Cài đặt ứng dụng trên thiết bị đang dùng (trang Cài đặt hệ thống): kết nối, phiên bản và bản cập nhật, cài lên thiết bị,
+ * thông báo đẩy, dung lượng và lưu trữ ngoại tuyến, hàng đợi đồng bộ, xóa dữ liệu ngoại tuyến.
+ * Bố cục kiểu trang cài đặt của Linear (dựng lại 15/10/2026): mỗi nhóm là một khung các hàng "nhãn + mô tả | trạng thái, nút".
+ * Dữ liệu máy chủ là chuẩn; dữ liệu trên thiết bị do người dùng tự quản lý. Xóa dữ liệu luôn qua bước xác nhận, mặc định giữ hộp thư đi.
  */
 
 import * as React from "react";
-import {
-  Smartphone,
-  HardDrive,
-  RefreshCw,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldCheck,
-  Trash2,
-  Wifi,
-  WifiOff,
-  Bell,
-  Database,
-  Lock,
-  Loader2,
-  Info,
-} from "lucide-react";
+import { CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { clientEnv } from "@/config/env.client";
 import { useStorageQuota, type ClearOfflineDataResult } from "@/lib/pwa/storage-manager";
 import { useConnectivity } from "@/lib/pwa/connectivity";
@@ -55,10 +29,77 @@ export interface PWAHealthSettingsProps {
   className?: string;
 }
 
+type Tone = "default" | "muted" | "warning" | "destructive";
+
+const TONE_CLASS: Record<Tone, string> = {
+  default: "text-foreground",
+  muted: "text-muted-foreground",
+  warning: "text-warning",
+  destructive: "text-destructive",
+};
+
+function SettingsSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  const id = React.useId();
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-2">
+      <div>
+        <h2 id={id} className="text-compact font-semibold text-foreground">
+          {title}
+        </h2>
+        {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
+      </div>
+      <div className="divide-y divide-border/70 rounded-lg border border-border bg-background">{children}</div>
+    </section>
+  );
+}
+
+/** Một hàng cài đặt: nhãn và mô tả bên trái; trạng thái và nút bên phải (điện thoại: xuống dòng dưới mô tả). */
+function SettingsRow({
+  label,
+  description,
+  status,
+  tone = "muted",
+  action,
+  children,
+}: {
+  label: string;
+  description?: React.ReactNode;
+  status?: React.ReactNode;
+  tone?: Tone;
+  action?: React.ReactNode;
+  /** Nội dung thêm dưới hàng (thanh dung lượng, khối xác nhận, kết quả thao tác). */
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 px-4 py-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className="min-w-0">
+          <p className="text-compact font-medium text-foreground">{label}</p>
+          {description ? <p className="mt-0.5 text-xs text-muted-foreground text-pretty">{description}</p> : null}
+        </div>
+        {status || action ? (
+          <div className="flex shrink-0 items-center gap-3">
+            {status ? <span className={cn("text-xs", TONE_CLASS[tone])}>{status}</span> : null}
+            {action}
+          </div>
+        ) : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const SW_STATUS: Record<"active" | "installing" | "waiting" | "unregistered" | "unsupported", { text: string; tone: Tone }> = {
+  active: { text: "Đã sẵn sàng dùng ngoại tuyến", tone: "muted" },
+  waiting: { text: "Có bản cập nhật, tải lại trang để áp dụng", tone: "warning" },
+  installing: { text: "Đang tải bản mới", tone: "muted" },
+  unregistered: { text: "Chưa bật dùng ngoại tuyến", tone: "muted" },
+  unsupported: { text: "Trình duyệt không hỗ trợ dùng ngoại tuyến", tone: "muted" },
+};
+
 export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSettingsProps) {
   const activeUserId = propUserId || getActiveUserId();
 
-  // 1. Storage Quota & Persistence Manager
   const {
     estimate,
     isLoading: isStorageLoading,
@@ -69,13 +110,8 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
     clearData,
   } = useStorageQuota({ userId: activeUserId, refreshIntervalMs: 30_000 });
 
-  // 2. Connectivity State Machine (ONLINE | DEGRADED | OFFLINE)
   const { connectionState, isOnline } = useConnectivity();
-
-  // 3. PWA Installation & Standalone detection
   const { isInstallable, isInstalled, isStandalone, installApp } = usePWAInstall();
-
-  // 4. Web Push Notification status
   const {
     isSupported: isPushSupported,
     permission: pushPermission,
@@ -83,7 +119,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
     isLoading: isPushLoading,
   } = usePushNotification();
 
-  // 5. Outbox Queue Status
+  // Hàng đợi thao tác ghi ngoại tuyến của người dùng hiện tại
   const [outboxItems, setOutboxItems] = React.useState<OfflineOutboxItem[]>([]);
   const [isFlushing, setIsFlushing] = React.useState(false);
 
@@ -92,29 +128,20 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
     getOutboxQueue(activeUserId).then((items) => {
       if (mounted) setOutboxItems(items);
     });
-
     const unsubscribe = subscribeOutbox((items) => {
-      if (mounted) {
-        const userItems = items.filter((item) => !item.userId || item.userId === activeUserId);
-        setOutboxItems(userItems);
-      }
+      if (mounted) setOutboxItems(items.filter((item) => !item.userId || item.userId === activeUserId));
     });
-
     return () => {
       mounted = false;
       unsubscribe();
     };
   }, [activeUserId]);
 
-  const pendingCount = outboxItems.filter(
-    (item) => item.status === "pending" || item.status === "syncing"
-  ).length;
+  const pendingCount = outboxItems.filter((item) => item.status === "pending" || item.status === "syncing").length;
   const conflictCount = outboxItems.filter((item) => item.status === "conflict").length;
 
-  // 6. Service Worker status inspection & manual update checking
-  const [swStatus, setSwStatus] = React.useState<
-    "active" | "installing" | "waiting" | "unregistered" | "unsupported"
-  >("unregistered");
+  // Service worker: trạng thái và kiểm tra bản cập nhật thủ công
+  const [swStatus, setSwStatus] = React.useState<keyof typeof SW_STATUS>("unregistered");
   const [isCheckingUpdate, setIsCheckingUpdate] = React.useState(false);
   const [updateFeedback, setUpdateFeedback] = React.useState<string | null>(null);
 
@@ -125,15 +152,10 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
     }
     try {
       const reg = await navigator.serviceWorker.getRegistration("/");
-      if (!reg) {
-        setSwStatus("unregistered");
-      } else if (reg.waiting) {
-        setSwStatus("waiting");
-      } else if (reg.installing) {
-        setSwStatus("installing");
-      } else if (reg.active) {
-        setSwStatus("active");
-      }
+      if (!reg) setSwStatus("unregistered");
+      else if (reg.waiting) setSwStatus("waiting");
+      else if (reg.installing) setSwStatus("installing");
+      else if (reg.active) setSwStatus("active");
     } catch {
       setSwStatus("unregistered");
     }
@@ -155,49 +177,44 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             setSwStatus("waiting");
             setUpdateFeedback("Đã có bản cập nhật mới. Đang chuẩn bị áp dụng.");
           } else {
-            setUpdateFeedback("Hệ thống đang chạy phiên bản mới nhất.");
+            setUpdateFeedback("Đang dùng phiên bản mới nhất.");
           }
         } else {
-          setUpdateFeedback("Service Worker chưa được đăng ký.");
+          setUpdateFeedback("Chưa bật dùng ngoại tuyến nên chưa kiểm tra được bản cập nhật.");
         }
       } else {
-        setUpdateFeedback("Trình duyệt không hỗ trợ Service Worker.");
+        setUpdateFeedback("Trình duyệt không hỗ trợ kiểm tra bản cập nhật.");
       }
       window.dispatchEvent(new CustomEvent("qcet:check-sw-update"));
     } catch {
-      setUpdateFeedback("Không thể kiểm tra cập nhật. Vui lòng thử lại sau.");
+      setUpdateFeedback("Chưa kiểm tra được bản cập nhật. Vui lòng thử lại sau.");
     } finally {
       setIsCheckingUpdate(false);
       inspectSW();
     }
   };
 
-  // 7. Manual Outbox Sync
   const handleManualSync = async () => {
     if (pendingCount === 0 || !isOnline) return;
     setIsFlushing(true);
     try {
       await flushOutbox(activeUserId);
-      const items = await getOutboxQueue(activeUserId);
-      setOutboxItems(items);
+      setOutboxItems(await getOutboxQueue(activeUserId));
       await refreshStorage();
     } finally {
       setIsFlushing(false);
     }
   };
 
-  // 8. Storage persistence toggle
   const [persistFeedback, setPersistFeedback] = React.useState<string | null>(null);
   const handleRequestPersistence = async () => {
     const granted = await requestPersist();
-    if (granted) {
-      setPersistFeedback("Đã kích hoạt lưu trữ vĩnh viễn cho thiết bị này.");
-    } else {
-      setPersistFeedback("Trình duyệt từ chối hoặc không hỗ trợ quyền lưu trữ vĩnh viễn.");
-    }
+    setPersistFeedback(
+      granted ? "Đã bật lưu trữ lâu dài trên thiết bị này." : "Trình duyệt từ chối hoặc không hỗ trợ lưu trữ lâu dài."
+    );
   };
 
-  // 9. Storage data clear with inline confirmation
+  // Xóa dữ liệu ngoại tuyến: khối xác nhận ngay trong hàng, mặc định giữ hộp thư đi
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [clearResult, setClearResult] = React.useState<ClearOfflineDataResult | null>(null);
 
@@ -205,460 +222,204 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
     setShowClearConfirm(false);
     const result = await clearData({ preserveOutbox, clearCaches: true });
     setClearResult(result);
-    const items = await getOutboxQueue(activeUserId);
-    setOutboxItems(items);
+    setOutboxItems(await getOutboxQueue(activeUserId));
     setTimeout(() => setClearResult(null), 5000);
   };
 
   const appVersion = clientEnv.NEXT_PUBLIC_APP_VERSION || "2026.09.09.1";
 
+  const connection: { text: string; tone: Tone } =
+    connectionState === "ONLINE"
+      ? { text: "Trực tuyến", tone: "muted" }
+      : connectionState === "DEGRADED"
+      ? { text: "Máy chủ đang gián đoạn", tone: "warning" }
+      : { text: "Ngoại tuyến", tone: "warning" };
+
+  const push: { text: string; tone: Tone; description: string } =
+    pushPermission === "granted" && isPushSubscribed
+      ? { text: "Đã bật", tone: "muted", description: "Thiết bị này nhận thông báo văn bản, lịch và công việc mới." }
+      : pushPermission === "denied"
+      ? { text: "Bị chặn", tone: "destructive", description: "Trình duyệt đã chặn thông báo của trang. Mở quyền thông báo trong cài đặt trình duyệt." }
+      : !isPushSupported
+      ? { text: "Không hỗ trợ", tone: "muted", description: "Trình duyệt này không nhận được thông báo đẩy." }
+      : { text: "Chưa bật", tone: "muted", description: "Bật để không bỏ lỡ chỉ đạo và văn bản khẩn." };
+
+  const install = isStandalone
+    ? "Đang chạy như ứng dụng"
+    : isInstalled
+    ? "Đã cài"
+    : "Đang mở trong trình duyệt";
+
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-6 text-foreground",
-        className
-      )}
-    >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-selected border border-primary/20 flex items-center justify-center text-primary shrink-0">
-            <HardDrive className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-semibold text-foreground tracking-tight">
-              Ứng dụng & Ngoại tuyến
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Quản lý tài nguyên ngoại tuyến, đồng bộ dữ liệu và thông số PWA trên thiết bị
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-xs px-2.5 py-1 font-medium flex items-center gap-1.5",
-              connectionState === "ONLINE"
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : connectionState === "DEGRADED"
-                ? "bg-warning/10 text-warning border-warning/30"
-                : "bg-secondary text-foreground border-border"
-            )}
-          >
-            {connectionState === "ONLINE" ? (
-              <Wifi className="w-3.5 h-3.5" />
-            ) : connectionState === "DEGRADED" ? (
-              <AlertTriangle className="w-3.5 h-3.5" />
-            ) : (
-              <WifiOff className="w-3.5 h-3.5" />
-            )}
-            {connectionState === "ONLINE"
-              ? "Trực tuyến (ONLINE)"
-              : connectionState === "DEGRADED"
-              ? "Gián đoạn máy chủ (DEGRADED)"
-              : "Ngoại tuyến (OFFLINE)"}
-          </Badge>
-        </div>
-      </div>
-
-      {/* Grid of Diagnostics & Settings Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Card 1: Phiên bản & Service Worker */}
-        <div className="rounded-lg border border-border bg-card/50 p-4 space-y-3 flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground">
-                Phiên bản hệ thống
-              </span>
-              <Badge variant="outline" className="text-xs font-mono bg-white border-border">
-                v{appVersion}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2 pt-1">
-              <span className="text-xs text-muted-foreground">Service Worker:</span>
-              <span
-                className={cn(
-                  "text-xs font-medium px-2 py-0.5 rounded",
-                  swStatus === "active"
-                    ? "bg-emerald-100 text-emerald-800"
-                    : swStatus === "waiting"
-                    ? "bg-warning/15 text-warning"
-                    : "bg-border text-foreground"
-                )}
-              >
-                {swStatus === "active"
-                  ? "Đang hoạt động"
-                  : swStatus === "waiting"
-                  ? "Bản cập nhật đang chờ"
-                  : swStatus === "installing"
-                  ? "Đang nạp bộ nhớ"
-                  : swStatus === "unsupported"
-                  ? "Không hỗ trợ"
-                  : "Chưa kích hoạt"}
-              </span>
-            </div>
-            {updateFeedback && (
-              <p className="text-xs text-muted-foreground bg-white border border-border rounded p-2 mt-1">
-                {updateFeedback}
-              </p>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCheckUpdate}
-            disabled={isCheckingUpdate}
-            className="w-full min-h-[44px] justify-center text-xs font-medium border-border hover:bg-accent"
-          >
-            {isCheckingUpdate ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-            ) : (
-              <RefreshCw className="w-4 h-4 mr-1.5" />
-            )}
-            Kiểm tra bản cập nhật
-          </Button>
-        </div>
-
-        {/* Card 2: Trạng thái cài đặt & Màn hình chính */}
-        <div className="rounded-lg border border-border bg-card/50 p-4 space-y-3 flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground">
-                Cài đặt ứng dụng
-              </span>
-              <span
-                className={cn(
-                  "text-xs font-medium px-2 py-0.5 rounded",
-                  isStandalone || isInstalled
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-border text-foreground"
-                )}
-              >
-                {isStandalone
-                  ? "Ứng dụng độc lập (Standalone)"
-                  : isInstalled
-                  ? "Đã cài đặt"
-                  : "Trình duyệt Web"}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground pt-1">
-              {isStandalone
-                ? "Ứng dụng đang chạy ở chế độ chuyên dụng độc lập không thanh địa chỉ."
-                : isInstallable
-                ? "Thiết bị đủ điều kiện cài đặt ứng dụng lên màn hình chính."
-                : "Truy cập thông qua trình duyệt web an toàn."}
-            </p>
-          </div>
-          {isInstallable && !isStandalone ? (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => installApp()}
-              className="w-full min-h-[44px] justify-center text-xs font-medium bg-primary hover:bg-primary-hover text-primary-foreground"
-            >
-              <Smartphone className="w-4 h-4 mr-1.5" />
-              Cài đặt lên thiết bị
+    <div className={cn("flex flex-col gap-8", className)}>
+      <SettingsSection title="Ứng dụng">
+        <SettingsRow
+          label="Kết nối"
+          description="Trạng thái kết nối tới máy chủ của thiết bị này."
+          status={connection.text}
+          tone={connection.tone}
+        />
+        <SettingsRow
+          label={`Phiên bản ${appVersion}`}
+          description={updateFeedback ?? SW_STATUS[swStatus].text}
+          action={
+            <Button variant="toolbar" size="sm" onClick={handleCheckUpdate} loading={isCheckingUpdate}>
+              Kiểm tra cập nhật
             </Button>
-          ) : (
-            <div className="min-h-[44px] flex items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded">
-              {isStandalone ? "Đang chạy ứng dụng độc lập" : "Sẵn sàng hoạt động"}
-            </div>
-          )}
-        </div>
+          }
+        />
+        <SettingsRow
+          label="Cài lên thiết bị"
+          description={
+            isStandalone
+              ? "Mở QCET E-Office như một ứng dụng riêng, không có thanh địa chỉ."
+              : isInstallable
+              ? "Thiết bị này cài được QCET E-Office lên màn hình chính."
+              : "Cài lên điện thoại để mở nhanh và nhận thông báo."
+          }
+          status={install}
+          action={
+            isInstallable && !isStandalone ? (
+              <Button variant="toolbar" size="sm" onClick={() => installApp()}>
+                Cài đặt
+              </Button>
+            ) : !isStandalone ? (
+              <Button variant="toolbar" size="sm" onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-install-modal"))}>
+                Cài trên điện thoại
+              </Button>
+            ) : null
+          }
+        />
+      </SettingsSection>
 
-        {/* Card 3: Thông báo hệ thống (Push Notifications) */}
-        <div className="rounded-lg border border-border bg-card/50 p-4 space-y-3 flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground">
-                Thông báo đẩy (Web Push)
-              </span>
-              <span
-                className={cn(
-                  "text-xs font-medium px-2 py-0.5 rounded",
-                  pushPermission === "granted" && isPushSubscribed
-                    ? "bg-emerald-100 text-emerald-800"
-                    : pushPermission === "denied"
-                    ? "bg-destructive/15 text-destructive"
-                    : "bg-border text-foreground"
-                )}
-              >
-                {pushPermission === "granted" && isPushSubscribed
-                  ? "Đã kích hoạt"
-                  : pushPermission === "denied"
-                  ? "Bị chặn"
-                  : !isPushSupported
-                  ? "Không hỗ trợ"
-                  : "Chưa đăng ký"}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground pt-1">
-              {pushPermission === "granted" && isPushSubscribed
-                ? "Thiết bị nhận được thông báo văn bản, lịch trình và công việc mới."
-                : pushPermission === "denied"
-                ? "Trình duyệt đã từ chối quyền gửi thông báo từ máy chủ."
-                : "Bật thông báo để không bỏ lỡ chỉ đạo và văn bản khẩn."}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
-              }
-            }}
-            disabled={!isPushSupported || isPushLoading}
-            className="w-full min-h-[44px] justify-center text-xs font-medium border-border hover:bg-accent"
+      <SettingsSection title="Thông báo">
+        <SettingsRow
+          label="Thông báo đẩy"
+          description={push.description}
+          status={push.text}
+          tone={push.tone}
+          action={
+            <Button
+              variant="toolbar"
+              size="sm"
+              onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"))}
+              disabled={!isPushSupported || isPushLoading}
+            >
+              Cấu hình
+            </Button>
+          }
+        />
+      </SettingsSection>
+
+      <SettingsSection
+        title="Dữ liệu ngoại tuyến"
+        description="Chỉ áp dụng cho trình duyệt trên thiết bị này, không đồng bộ sang máy khác."
+      >
+        <SettingsRow
+          label="Dung lượng đã dùng"
+          description={`${estimate.usageFormatted} trên hạn mức ${estimate.quotaFormatted} (${estimate.percentUsed}%)`}
+          action={
+            <Button variant="ghost" size="icon-xs" aria-label="Làm mới dung lượng" onClick={() => refreshStorage()} disabled={isStorageLoading}>
+              <RefreshCw className={cn(isStorageLoading && "motion-safe:animate-spin")} />
+            </Button>
+          }
+        >
+          <div
+            role="progressbar"
+            aria-label="Dung lượng ngoại tuyến đã dùng"
+            aria-valuenow={estimate.percentUsed}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"
           >
-            <Bell className="w-4 h-4 mr-1.5" />
-            Cấu hình thông báo
-          </Button>
-        </div>
-      </div>
-
-      {/* Row 2: Bộ nhớ ngoại tuyến & Lưu trữ vĩnh viễn */}
-      <div className="rounded-xl border border-border bg-muted/30 p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-primary" />
-              <h4 className="text-sm font-semibold text-foreground">
-                Dung lượng bộ nhớ ngoại tuyến & Lưu trữ
-              </h4>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Chỉ số dung lượng đệm dữ liệu được cấp phát từ trình duyệt cho QCET E-Office
-            </p>
-          </div>
-
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-xs px-2.5 py-1 font-medium w-fit max-w-full whitespace-normal text-left flex items-center gap-1.5",
-              estimate.isPersisted
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-secondary text-muted-foreground border-border"
-            )}
-          >
-            <Lock className="w-3 h-3" />
-            {estimate.isPersisted
-              ? "Lưu trữ vĩnh viễn (Đã kích hoạt)"
-              : "Lưu trữ tạm thời (Trình duyệt có thể xóa)"}
-          </Badge>
-        </div>
-
-        {/* Quota Progress & Stats */}
-        <div className="space-y-2 pt-2">
-          <div className="flex justify-between text-xs text-muted-foreground font-medium">
-            <span>Đã sử dụng: {estimate.usageFormatted}</span>
-            <span>Hạn mức tối đa: {estimate.quotaFormatted}</span>
-          </div>
-
-          <div className="h-2.5 w-full bg-border rounded-full overflow-hidden">
             <div
               className={cn(
-                "h-full transition-all duration-300 rounded-full",
-                estimate.percentUsed > 80
-                  ? "bg-destructive"
-                  : estimate.percentUsed > 50
-                  ? "bg-warning"
-                  : "bg-primary"
+                "h-full rounded-full",
+                estimate.percentUsed > 80 ? "bg-destructive" : estimate.percentUsed > 50 ? "bg-warning" : "bg-foreground/40"
               )}
               style={{ width: `${Math.min(Math.max(estimate.percentUsed, 0.5), 100)}%` }}
             />
           </div>
-
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Tỷ lệ chiếm dụng: {estimate.percentUsed}%</span>
-            {estimate.breakdown?.indexedDbBytes ? (
-              <span>Cơ sở dữ liệu: ~{estimate.usageFormatted}</span>
-            ) : null}
-          </div>
-        </div>
-
-        {persistFeedback && (
-          <div className="text-xs bg-white border border-border text-foreground rounded-lg p-3 flex items-center gap-2">
-            <Info className="w-4 h-4 text-primary shrink-0" />
-            <span>{persistFeedback}</span>
-          </div>
-        )}
-
-        {/* Storage Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3 pt-2">
-          {!estimate.isPersisted && (
+        </SettingsRow>
+        <SettingsRow
+          label="Lưu trữ lâu dài"
+          description={
+            persistFeedback ??
+            (estimate.isPersisted
+              ? "Trình duyệt không tự xóa dữ liệu ngoại tuyến của QCET E-Office."
+              : "Khi thiếu dung lượng, trình duyệt có thể tự xóa dữ liệu ngoại tuyến.")
+          }
+          status={estimate.isPersisted ? "Đã bật" : "Chưa bật"}
+          action={
+            !estimate.isPersisted ? (
+              <Button variant="toolbar" size="sm" onClick={handleRequestPersistence} loading={isRequestingPersist}>
+                Bật
+              </Button>
+            ) : null
+          }
+        />
+        <SettingsRow
+          label="Hàng đợi đồng bộ"
+          description={
+            conflictCount > 0
+              ? "Có thao tác bị xung đột phiên bản, cần xử lý thủ công."
+              : pendingCount > 0
+              ? isOnline
+                ? "Thao tác làm khi ngoại tuyến đang chờ gửi lên máy chủ."
+                : "Thao tác sẽ tự gửi khi có kết nối."
+              : "Mọi thao tác đã được gửi lên máy chủ."
+          }
+          status={`${pendingCount} chờ gửi${conflictCount > 0 ? ` · ${conflictCount} xung đột` : ""}`}
+          tone={conflictCount > 0 ? "destructive" : pendingCount > 0 ? "warning" : "muted"}
+          action={
             <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRequestPersistence}
-              disabled={isRequestingPersist}
-              className="min-h-[44px] h-auto whitespace-normal text-xs font-medium border-primary/30 text-primary hover:bg-accent"
-            >
-              {isRequestingPersist ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-              ) : (
-                <ShieldCheck className="w-4 h-4 mr-1.5" />
-              )}
-              Bật lưu trữ vĩnh viễn (Không tự động xóa)
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowClearConfirm(true)}
-            disabled={isClearing}
-            className="min-h-[44px] text-xs font-medium border-border text-destructive hover:bg-danger-soft hover:border-destructive/30"
-          >
-            {isClearing ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-            ) : (
-              <Trash2 className="w-4 h-4 mr-1.5" />
-            )}
-            Xóa dữ liệu ngoại tuyến
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => refreshStorage()}
-            disabled={isStorageLoading}
-            className="min-h-[44px] text-xs text-muted-foreground hover:text-foreground ml-auto"
-          >
-            <RefreshCw
-              className={cn("w-3.5 h-3.5 mr-1.5", isStorageLoading && "animate-spin")}
-            />
-            Làm mới chỉ số
-          </Button>
-        </div>
-
-        {/* Clear Confirmation Inline Modal */}
-        {showClearConfirm && (
-          <div className="rounded-lg border border-destructive/30 bg-danger-soft/50 p-4 space-y-3 mt-3">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-              <div className="text-xs text-destructive space-y-1">
-                <p className="font-semibold">Xác nhận xóa bộ đệm dữ liệu ngoại tuyến</p>
-                <p className="text-destructive leading-relaxed">
-                  Thao tác này sẽ dọn dẹp các trang đã đọc và biểu mẫu tạm thời trên thiết bị này.
-                  Dữ liệu đang chờ gửi (hộp thư đi) có thể được giữ lại để tránh mất chỉ đạo.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleConfirmClear(true)}
-                className="min-h-[44px] text-xs bg-destructive hover:bg-destructive/90 text-white"
-              >
-                Xóa bộ đệm (Giữ lại hộp thư đi)
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleConfirmClear(false)}
-                className="min-h-[44px] text-xs border-destructive/40 text-destructive hover:bg-destructive/15"
-              >
-                Xóa toàn bộ (Kể cả hộp thư đi)
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowClearConfirm(false)}
-                className="min-h-[44px] text-xs text-muted-foreground hover:text-foreground"
-              >
-                Hủy
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {clearResult && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>
-              Đã xóa dữ liệu thành công ({clearResult.readCacheCleared} bản ghi đọc,{" "}
-              {clearResult.draftsCleared} bản nháp, {clearResult.outboxCleared} thao tác outbox).
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Row 3: Hàng đợi đồng bộ hóa ngoại tuyến (Outbox Sync) */}
-      <div className="rounded-xl border border-border bg-muted/30 p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-primary" />
-              <h4 className="text-sm font-semibold text-foreground">
-                Hàng đợi đồng bộ hóa ngoại tuyến (Outbox Queue)
-              </h4>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Các thao tác điều hành được ghi nhận ngoại tuyến sẽ tự động gửi lên máy chủ khi có
-              kết nối
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="default"
+              variant="toolbar"
               size="sm"
               onClick={handleManualSync}
-              disabled={isFlushing || pendingCount === 0 || !isOnline}
-              className="min-h-[44px] text-xs font-medium bg-primary hover:bg-primary-hover text-primary-foreground"
+              loading={isFlushing}
+              disabled={pendingCount === 0 || !isOnline}
             >
-              {isFlushing ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-1.5" />
-              )}
               Đồng bộ ngay
             </Button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-4 pt-1">
-          <div className="flex items-center gap-2 text-xs bg-white border border-border rounded-lg px-3 py-2">
-            <span className="text-muted-foreground">Thao tác chờ gửi:</span>
-            <span
-              className={cn(
-                "font-semibold px-2 py-0.5 rounded",
-                pendingCount > 0 ? "bg-warning/15 text-warning" : "bg-emerald-100 text-emerald-800"
-              )}
-            >
-              {pendingCount}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs bg-white border border-border rounded-lg px-3 py-2">
-            <span className="text-muted-foreground">Xung đột phiên bản:</span>
-            <span
-              className={cn(
-                "font-semibold px-2 py-0.5 rounded",
-                conflictCount > 0 ? "bg-destructive/15 text-destructive" : "bg-secondary text-foreground"
-              )}
-            >
-              {conflictCount}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs bg-white border border-border rounded-lg px-3 py-2">
-            <span className="text-muted-foreground">Trạng thái tổng thể:</span>
-            <span className="font-medium text-foreground">
-              {conflictCount > 0
-                ? "Có xung đột cần xử lý thủ công"
-                : pendingCount > 0
-                ? isOnline
-                  ? "Sẵn sàng đồng bộ"
-                  : "Đang chờ kết nối máy chủ"
-                : "Đã đồng bộ hoàn toàn"}
-            </span>
-          </div>
-        </div>
-      </div>
+          }
+        />
+        <SettingsRow
+          label="Xóa dữ liệu ngoại tuyến"
+          description="Dọn trang đã đọc và bản nháp lưu trên thiết bị này. Dữ liệu trên máy chủ không bị ảnh hưởng."
+          action={
+            !showClearConfirm ? (
+              <Button variant="destructive" size="sm" onClick={() => setShowClearConfirm(true)} loading={isClearing}>
+                Xóa…
+              </Button>
+            ) : null
+          }
+        >
+          {showClearConfirm ? (
+            <div role="group" aria-label="Xác nhận xóa dữ liệu ngoại tuyến" className="flex flex-col gap-3 rounded-md border border-destructive/25 px-3 py-3">
+              <p className="text-xs text-destructive text-pretty">
+                Chọn cách xóa. Hộp thư đi là các thao tác làm khi ngoại tuyến và chưa gửi lên máy chủ; xóa hộp thư đi thì các thao tác đó mất hẳn.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="destructive" size="sm" onClick={() => handleConfirmClear(true)}>
+                  Xóa bộ đệm, giữ hộp thư đi
+                </Button>
+                <Button variant="toolbar" size="sm" className="text-destructive" onClick={() => handleConfirmClear(false)}>
+                  Xóa toàn bộ, kể cả hộp thư đi
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowClearConfirm(false)}>
+                  Hủy
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {clearResult ? (
+            <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle2 className="size-3.5 shrink-0" />
+              Đã xóa {clearResult.readCacheCleared} bản ghi đọc, {clearResult.draftsCleared} bản nháp, {clearResult.outboxCleared} thao tác chờ gửi.
+            </p>
+          ) : null}
+        </SettingsRow>
+      </SettingsSection>
     </div>
   );
 }

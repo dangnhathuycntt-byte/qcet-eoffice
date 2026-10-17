@@ -10,6 +10,11 @@ export interface DepartmentPersonnel {
   role?: string;
   title?: string;
   avatarUrl?: string | null;
+  phone?: string | null;
+  /** Chức vụ theo PositionDefinition (vd. "Trưởng khoa / Trưởng bộ môn trực thuộc"). */
+  position?: string | null;
+  positionCode?: string | null;
+  isLeadership?: boolean;
 }
 
 export interface DepartmentOption {
@@ -17,6 +22,12 @@ export interface DepartmentOption {
   name: string;
   code: string;
   color?: string | null;
+  /** `UnitType` của OrganizationalUnit: SCHOOL, FACULTY, DEPARTMENT, CENTER, SECTION, OTHER. */
+  type?: string;
+  parentId?: string | null;
+  shortName?: string | null;
+  description?: string | null;
+  displayOrder?: number | null;
   personnel?: DepartmentPersonnel[];
 }
 

@@ -42,7 +42,7 @@ describe("TaskAddChip", () => {
     assert.ok(row.includes("<TaskOptionalMenu />") && row.includes("<TaskDecline"));
     assert.ok(page.includes("actions={inspectorVisible ? taskActionRow : null}"));
     const region = page.slice(page.indexOf("<TaskOptionalSections>"), page.indexOf("</TaskOptionalSections>"));
-    assert.ok(region.includes("{!inspectorVisible && taskActionRow}"));
+    assert.ok(region.includes("{!inspectorVisible && !isPhone && taskActionRow}"), "điện thoại không có hàng + Thêm dưới trình soạn thảo");
     // Provider bọc cả cột thuộc tính để nút trong cột đó thấy các khối đã đăng ký
     assert.ok(page.indexOf("<TaskOptionalMenuProvider>") < page.indexOf("<TaskDetailSplitLayout"));
   });
@@ -53,6 +53,7 @@ describe("TaskAddChip", () => {
     const sidebar = read("src/components/tasks/detail/task-properties-sidebar.tsx");
     assert.ok(sidebar.includes('useTaskOptionalEntry("extension")') && sidebar.includes("extensionEntry.open(e.currentTarget)"));
     assert.match(read("src/components/tasks/detail/task-decline.tsx"), /const DECLINE_ENTRY_ENABLED = false;/);
+    assert.match(read("src/components/tasks/detail/task-people.tsx"), /const PEOPLE_BLOCK_ENABLED = false;/);
   });
 
   test("văn bản gốc chỉ hiện một lần: cột Thuộc tính, hoặc dưới tiêu đề khi cột đó ẩn", () => {

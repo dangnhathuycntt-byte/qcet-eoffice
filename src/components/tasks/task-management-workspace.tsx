@@ -9,6 +9,7 @@ import {
 } from "@/components/workspace/unified-adaptive-workspace";
 import type { UnifiedAdaptiveWorkspaceProps } from "@/components/workspace/types";
 import type { UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
+import { preloadWhenIdle } from "@/lib/idle-preload";
 import {
   filterTasksByScope,
   applyOptimisticStatusChange,
@@ -27,6 +28,12 @@ export interface TaskManagementWorkspaceProps extends Partial<UnifiedAdaptiveWor
   initialTasks?: SchoolTask[];
   workspaceQuery?: UseWorkspaceQueryReturn;
 }
+
+// Chi tiết nhiệm vụ là chunk dynamic() riêng (cùng specifier trong unified-adaptive-workspace);
+// nạp sẵn lúc rảnh để lần mở nhiệm vụ đầu không chờ mạng
+const TASK_DETAIL_PRELOAD = [
+  { key: "task-detail-view", load: () => import("@/components/tasks/detail/task-detail-view") },
+];
 
 /**
  * TaskManagementWorkspace - Canonical Forwarding Facade.
@@ -65,6 +72,11 @@ export function TaskManagementWorkspace(props: TaskManagementWorkspaceProps) {
     initialTasks,
     ...rest,
   };
+
+  const preloadDetail = !rest.disableInternalDetail;
+  React.useEffect(() => {
+    if (preloadDetail) preloadWhenIdle(TASK_DETAIL_PRELOAD);
+  }, [preloadDetail]);
 
   // Dùng Controlled variant khi caller là canonical owner của workspaceQuery
   // → không tạo listener popstate thứ hai bên trong UAW.

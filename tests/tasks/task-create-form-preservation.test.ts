@@ -261,8 +261,15 @@ describe("CreateTaskModal rendered form (T21 / T23 / SK-03 / SK-04)", () => {
     // Primary fields live inside Dialog.Portal, which is invisible to
     // renderToStaticMarkup but renders on client hydration.
     assert.ok(modalSource.includes('id="create-task-title"'), "primary title field must render");
-    assert.ok(modalSource.includes('aria-label="Chọn người chủ trì"'), "primary assignee picker must render");
-    assert.ok(modalSource.includes('placeholder="Hạn hoàn thành"'), "primary due-date field must render");
+    const pickerSource = fs.readFileSync(
+      path.resolve(__dirname, "..", "..", "src", "components", "tasks", "create", "person-pill-picker.tsx"),
+      "utf-8"
+    );
+    assert.ok(
+      modalSource.includes("<PersonPillPicker") && pickerSource.includes('aria-label="Chọn người chủ trì"'),
+      "primary assignee picker must render",
+    );
+    assert.ok(modalSource.includes('id="create-task-due-date"') && modalSource.includes('title="Hạn hoàn thành"'), "primary due-date field must render with its full name");
   });
 
   test("no free-text custom assignee affordance (identity by ID, SK-03/T24)", () => {
@@ -326,6 +333,7 @@ describe("Task Decomposition UI & Validation Logic", () => {
       dueDate,
       category: "CHUYEN_DOI_SO",
       parentTaskId: "parent-task-1",
+      subtasks: [],
     });
 
     test("subtask due date cannot exceed the parent due date (message names the parent date)", () => {

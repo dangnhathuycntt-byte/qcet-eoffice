@@ -109,7 +109,7 @@ export function UnitRequestInbox({ className }: { className?: string }) {
       {rows && rows.length === 0 && (
         <EmptyState
           role="status"
-          density="compact"
+          density="page"
           illustration="unit-request"
           title="Không có yêu cầu nào đang chờ"
           description="Yêu cầu phối hợp gửi đến đơn vị sẽ hiện ở đây."

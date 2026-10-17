@@ -1,18 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Search, Users, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { readUserDirectoryResponse } from "@/lib/admin/api-response";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface DepartmentDTO {
-  id: string;
-  code: string;
-  name: string;
-}
+import { WorkspacePageCard } from "@/components/workspace/page-card";
+import { ListToolbarSearch } from "@/components/ui/list-toolbar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 interface UserPublicDTO {
   id: string;
@@ -20,282 +19,176 @@ interface UserPublicDTO {
   email: string;
   role: string;
   position: string | null;
-  phone: string | null;
   avatarUrl: string | null;
-  departmentId: string | null;
-  department: DepartmentDTO | null;
-  createdAt: string;
-  updatedAt: string;
+  department: { id: string; code: string; name: string } | null;
 }
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
+/** Vai trò theo enum `UserRole` (prisma/schema.prisma). */
 const ROLE_LABELS: Record<string, string> = {
-  ADMIN: "Quản trị viên",
   BAN_GIAM_HIEU: "Ban Giám hiệu",
   TRUONG_PHONG: "Trưởng phòng",
   CHUYEN_VIEN: "Chuyên viên",
-  GIANG_VIEN: "Giảng viên",
   VAN_THU: "Văn thư",
-  STAFF: "Nhân viên",
-  MANAGER: "Quản lý",
+  ADMIN: "Quản trị hệ thống",
 };
+
+const ROLE_TABS = [{ key: "", label: "Tất cả" }, ...Object.entries(ROLE_LABELS).map(([key, label]) => ({ key, label }))];
 
 const PAGE_SIZE = 20;
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
+/**
+ * Tài khoản và vai trò (`/admin/users`, nhóm "Quản trị" trong menu "Thêm"): tài khoản đang có chức vụ ở đơn vị đang hoạt động
+ * (`GET /api/users`), chỉ xem. Dựng lại 15/10/2026 theo khung một thẻ; tạo, khóa tài khoản và đổi vai trò chưa có trên giao diện.
+ */
 export function UserDirectoryView() {
   const [users, setUsers] = React.useState<UserPublicDTO[]>([]);
+  const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [unauthorized, setUnauthorized] = React.useState(false);
   const [page, setPage] = React.useState(1);
-  const [totalPages, setTotalPages] = React.useState(1);
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState("");
   const [retryKey, setRetryKey] = React.useState(0);
 
-  // Debounce search input (300ms)
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search);
+      setDebouncedSearch(search.trim());
       setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch users
   React.useEffect(() => {
-    let cancelled = false;
-
-    async function fetchUsers() {
-      setLoading(true);
-      setError(null);
-      setUnauthorized(false);
-
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("pageSize", String(PAGE_SIZE));
-      if (debouncedSearch.trim()) {
-        params.set("q", debouncedSearch.trim());
-      }
-      if (roleFilter) {
-        params.set("role", roleFilter);
-      }
-
-      try {
-        const res = await fetch(`/api/users?${params.toString()}`);
-
-        if (cancelled) return;
-
-        if (res.status === 401) {
-          setUnauthorized(true);
-          setLoading(false);
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error(`Lỗi ${res.status}: Không thể tải danh sách nhân sự`);
-        }
-
+    const ctrl = new AbortController();
+    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+    if (debouncedSearch) params.set("q", debouncedSearch);
+    if (roleFilter) params.set("role", roleFilter);
+    setLoading(true);
+    setError(null);
+    fetch(`/api/users?${params.toString()}`, { signal: ctrl.signal })
+      .then(async (res) => {
+        if (res.status === 401) throw new Error("Phiên đăng nhập đã hết hạn. Thầy/Cô đăng nhập lại để xem danh sách tài khoản.");
+        if (res.status === 429) throw new Error("Tìm quá nhiều lần trong thời gian ngắn. Thầy/Cô thử lại sau ít phút.");
+        if (!res.ok) throw new Error("Chưa tải được danh sách tài khoản.");
         const response = readUserDirectoryResponse<UserPublicDTO>(await res.json());
-
-        if (!cancelled) {
-          setUsers(response.users);
-          setTotalPages(Math.max(1, Math.ceil(response.total / PAGE_SIZE)));
-          setLoading(false);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu");
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchUsers();
-    return () => {
-      cancelled = true;
-    };
+        setUsers(response.users);
+        setTotal(response.total);
+      })
+      .catch((err: unknown) => {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Mất kết nối khi tải danh sách tài khoản.");
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [page, debouncedSearch, roleFilter, retryKey]);
 
-  // --- Unauthorized state ---
-  if (unauthorized) {
-    return (
-      <div className="rounded-xl border border-border bg-muted/50 p-8 text-center">
-        <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground/60" />
-        <p className="mt-3 text-sm font-medium text-foreground">
-          Phiên đăng nhập đã hết hạn
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Vui lòng đăng nhập lại để xem danh bạ nhân sự.
-        </p>
-      </div>
-    );
-  }
-
-  // --- Error state ---
-  if (error && !loading) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-red-800">{error}</p>
-            <button
-              type="button"
-              onClick={() => setRetryKey((k) => k + 1)}
-              className="mt-3 inline-flex items-center rounded-lg border border-red-300 bg-background px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Thử lại
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-4">
-      {/* Search bar + Role filter */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm theo tên hoặc email..."
-            className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 min-h-[44px] sm:min-h-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent"
-          />
-        </div>
-        <select
+    <WorkspacePageCard
+      title="Tài khoản và vai trò"
+      description="Tài khoản đang có chức vụ tại đơn vị, kèm vai trò trong hệ thống · chỉ xem"
+      hideTitleOnMobile
+      className="max-w-5xl"
+      actions={
+        <ListToolbarSearch value={search} onChange={setSearch} placeholder="Tìm tên hoặc email…" aria-label="Tìm tài khoản" />
+      }
+    >
+      <div className="flex flex-col gap-4 pb-6">
+        <Tabs
           value={roleFilter}
-          onChange={(e) => {
-            setRoleFilter(e.target.value);
+          onValueChange={(next) => {
+            setRoleFilter(String(next));
             setPage(1);
           }}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground min-h-[44px] sm:min-h-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent"
+          className="max-w-full overflow-x-auto"
         >
-          <option value="">Tất cả vai trò</option>
-          {Object.entries(ROLE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
+          <TabsList variant="pill" size="sm" aria-label="Lọc theo vai trò">
+            {ROLE_TABS.map((tab) => (
+              <TabsTrigger key={tab.key || "all"} value={tab.key}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-border bg-background">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/60 bg-muted/50/80">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Họ tên</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
-                Chức vụ
-              </th>
-              <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
-                Đơn vị
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vai trò</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/60">
-            {loading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-3">
-                      <div className="h-4 w-32 rounded bg-muted animate-pulse" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="h-4 w-40 rounded bg-muted animate-pulse" />
-                    </td>
-                    <td className="hidden md:table-cell px-4 py-3">
-                      <div className="h-4 w-24 rounded bg-muted animate-pulse" />
-                    </td>
-                    <td className="hidden md:table-cell px-4 py-3">
-                      <div className="h-4 w-28 rounded bg-muted animate-pulse" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-                    </td>
-                  </tr>
-                ))
-              : users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="transition-colors hover:bg-muted/50/60"
-                  >
-                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
-                      {user.name}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{user.email}</td>
-                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
-                      {user.position ?? "—"}
-                    </td>
-                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
-                      {user.department?.name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                        {ROLE_LABELS[user.role] ?? user.role}
-                      </span>
-                    </td>
-                  </tr>
+        {error ? (
+          <InlineAlert actionLabel="Thử lại" onAction={() => setRetryKey((k) => k + 1)}>
+            {error}
+          </InlineAlert>
+        ) : loading && users.length === 0 ? (
+          <div aria-busy className="flex flex-col gap-3">
+            {Array.from({ length: 6 }, (_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : users.length === 0 ? (
+          <EmptyState
+            density="compact"
+            title="Không có tài khoản phù hợp"
+            description={debouncedSearch || roleFilter ? "Thử từ khóa khác hoặc chọn vai trò khác." : "Chưa có tài khoản nào đang có chức vụ tại đơn vị."}
+          />
+        ) : (
+          <>
+            <Table density="two-line" aria-busy={loading || undefined} className="min-w-[680px] table-fixed">
+              <TableHeader>
+                <TableRow className="border-b border-border/60">
+                  <TableHead className="w-[34%]">Họ tên</TableHead>
+                  <TableHead className="w-[22%]">Chức vụ</TableHead>
+                  <TableHead className="w-[26%]">Đơn vị</TableHead>
+                  <TableHead className="w-[18%]">Vai trò</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className={loading ? "opacity-60" : undefined}>
+                {users.map((user) => (
+                  <TableRow key={user.id} className="border-b border-border/40">
+                    <TableCell>
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="sm" />
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate font-medium">{user.name}</span>
+                          <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="truncate" title={user.position ?? undefined}>
+                      {user.position ?? <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell>
+                      <span className="line-clamp-2 text-pretty">{user.department?.name ?? <span className="text-muted-foreground">—</span>}</span>
+                    </TableCell>
+                    <TableCell className="truncate text-xs">{ROLE_LABELS[user.role] ?? user.role}</TableCell>
+                  </TableRow>
                 ))}
-          </tbody>
-        </table>
-
-        {/* Empty state */}
-        {!loading && users.length === 0 && (
-          <div className="py-16 text-center">
-            <Users className="mx-auto h-8 w-8 text-muted-foreground/40" />
-            <p className="mt-3 text-sm text-muted-foreground">Không tìm thấy nhân sự phù hợp</p>
-          </div>
+              </TableBody>
+            </Table>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs tabular-nums text-muted-foreground">
+                {total} tài khoản · Trang {page}/{totalPages}
+              </p>
+              {totalPages > 1 ? (
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                    <ChevronLeft />
+                    Trước
+                  </Button>
+                  <Button variant="ghost" size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((p) => p + 1)}>
+                    Sau
+                    <ChevronRight />
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          </>
         )}
+
+        <p className="text-xs text-muted-foreground">
+          Tạo tài khoản, khóa tài khoản và đổi vai trò do Chủ sở hữu hệ thống thực hiện; giao diện cho các thao tác này chưa có.
+        </p>
       </div>
-
-      {/* Pagination */}
-      {!loading && users.length > 0 && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">Trang {page} / {totalPages}</p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground min-h-[44px] sm:min-h-0 transition-colors hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Trước
-            </button>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground min-h-[44px] sm:min-h-0 transition-colors hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Sau
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Admin note */}
-      <p className="text-xs text-muted-foreground/60 mt-4">
-        Việc tạo mới, kích hoạt, vô hiệu hóa tài khoản và thay đổi vai trò là thẩm quyền của Chủ
-        sở hữu hệ thống (Owner). Chức năng quản trị tài khoản sẽ được triển khai khi hoàn tất
-        thiết kế RBAC provisioning.
-      </p>
-    </div>
+    </WorkspacePageCard>
   );
 }

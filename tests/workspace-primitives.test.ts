@@ -93,7 +93,7 @@ test("parseZoneParam defaults to 'dashboard' when param is null or undefined (B�
   assert.equal(parseZoneParam("calendar"), "calendar");
 });
 
-test("resolveBreadcrumb for root path '/' resolves to 'Bàn làm việc'", () => {
+test("resolveBreadcrumb for root path '/' resolves to 'Tổng quan'", () => {
   const crumbs = resolveBreadcrumb("/");
-  assert.deepEqual(crumbs, ["QCET E-Office", "Bàn làm việc"]);
+  assert.deepEqual(crumbs, ["QCET E-Office", "Tổng quan"]);
 });

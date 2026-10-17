@@ -141,7 +141,7 @@ export interface ModularCascadingTaskTableProps {
   onBulkStatusChange?: (status: TaskStatus) => Promise<void> | void;
   onBulkExtendDeadline?: (days: number) => Promise<void> | void;
   onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
-  onBulkPriorityChange?: (priority: "URGENT" | "HIGH" | "NORMAL" | "LOW") => Promise<void> | void;
+  onBulkPriorityChange?: (priority: "URGENT" | "HIGH" | "NORMAL" | "LOW" | "NONE") => Promise<void> | void;
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   /** `silent`: gia hạn hàng loạt gom một thông báo, nên lỗi được ném ra thay vì báo lẻ. */
@@ -715,7 +715,7 @@ export function ModularCascadingTaskTable({
   // Đổi ưu tiên hàng loạt (T-08): một lệnh có Idempotency-Key, máy chủ kiểm quyền, version và trạng thái từng dòng.
   const effectiveOnBulkPriorityChange = React.useMemo(() => {
     if (onBulkPriorityChange) return onBulkPriorityChange;
-    return async (priority: "URGENT" | "HIGH" | "NORMAL" | "LOW") => {
+    return async (priority: "URGENT" | "HIGH" | "NORMAL" | "LOW" | "NONE") => {
       const ids = Array.from(tableState.selectedIds);
       const items = ids.map((id) => ({ id, expectedVersion: Number(tasks.find((t) => t.id === id)?.version ?? 0) }));
       try {
@@ -747,14 +747,10 @@ export function ModularCascadingTaskTable({
 
   const effectiveOnBulkDelete = React.useMemo(() => {
     return async (ids: string[]) => {
-      const titleOf = (id: string) => tasks.find((t) => t.id === id)?.title ?? "Nhiệm vụ";
-      const preview = ids.slice(0, 3).map((id) => `“${titleOf(id)}”`).join(", ");
-      const more = ids.length > 3 ? ` và ${ids.length - 3} nhiệm vụ khác` : "";
+      // Ngắn gọn như mọi hộp xác nhận xóa: tiêu đề đã nói rõ số lượng, không liệt kê tên từng việc
       const ok = await confirmAction({
         title: ids.length === 1 ? "Xóa nhiệm vụ?" : `Xóa ${ids.length} nhiệm vụ?`,
-        description: `${preview}${more} sẽ được lưu trữ và không còn hiển thị trong danh sách nhiệm vụ đang hoạt động.`,
-        confirmLabel: ids.length === 1 ? "Xóa nhiệm vụ" : `Xóa ${ids.length} nhiệm vụ`,
-        cancelLabel: "Giữ lại",
+        description: ids.length === 1 ? "Nhiệm vụ sẽ được lưu trữ và ẩn khỏi danh sách." : "Các nhiệm vụ sẽ được lưu trữ và ẩn khỏi danh sách.",
         destructive: true,
       });
       if (!ok) return;
@@ -949,7 +945,9 @@ export function ModularCascadingTaskTable({
         groupsMap.get(p)!.push(task);
       }
 
-      return PRIORITY_DISPLAY_CONFIG.filter((opt) => groupsMap.has(opt.value)).map((opt) => ({
+      // Nhóm "Không ưu tiên" xuống cuối để việc có ưu tiên nằm trên (menu thì để đầu như Linear)
+      const groupOrder = [...PRIORITY_DISPLAY_CONFIG.filter((opt) => opt.value !== "NONE"), ...PRIORITY_DISPLAY_CONFIG.filter((opt) => opt.value === "NONE")];
+      return groupOrder.filter((opt) => groupsMap.has(opt.value)).map((opt) => ({
         key: `priority-${opt.value}`,
         label: opt.label,
         icon: <PrioritySignalBars priority={opt.value} />,
@@ -1510,6 +1508,7 @@ export function ModularCascadingTaskTable({
           category={emptyStateProps?.category ?? activeCategory}
           priority={emptyStateProps?.priority}
           taskTab={emptyStateProps?.taskTab}
+          suggestedView={emptyStateProps?.suggestedView}
           userName={emptyStateProps?.userName}
           onResetFilters={emptyStateProps?.onResetFilters ?? handleResetFilters}
           onAddTask={emptyStateProps?.onAddTask ?? onAddTask}

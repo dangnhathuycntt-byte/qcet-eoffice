@@ -123,6 +123,8 @@ function getSinglePriorityDisplayLabel(priority: string): string {
       return "Bình thường";
     case "LOW":
       return "Thấp";
+    case "NONE":
+      return "Không ưu tiên";
     default:
       return priority;
   }

@@ -353,9 +353,9 @@ export const TaskRow = React.memo(function TaskRow({
         // State 3: Focus (WCAG 2.2 AA Focus visible)
         "focus-visible:[--row-ring-w:2px] focus-visible:[--row-ring-c:var(--color-primary)]",
         // State 4: Previewing (Peek preview)
-        isPreviewing && "[&>td]:bg-blue-50/70 [--row-ring-w:1px] [--row-ring-c:color-mix(in_srgb,var(--color-blue-500)_40%,transparent)]",
+        isPreviewing && "[&>td]:bg-selected/70",
         // State 5: Opened / Active detail
-        isActive && !isPreviewing && !isSelected && "[&>td]:bg-primary/[0.08] [--row-ring-w:1px] [--row-ring-c:color-mix(in_srgb,var(--color-primary)_40%,transparent)]",
+        isActive && !isPreviewing && !isSelected && "[&>td]:bg-selected",
         // State 6: Đích của menu chuột phải (giữ bôi nền khi menu mở, vì con trỏ đã rời dòng)
         isContextMenuTarget && !isSelected && !isPreviewing && "[&>td]:bg-accent",
         isExpanded && "[&>td]:bg-muted/20",

@@ -163,15 +163,29 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
     });
   });
 
+  describe("3b. Public user guide (/docs)", () => {
+    test("unauthenticated user can open /docs and doc articles", async () => {
+      for (const path of ["/docs", "/docs/dang-nhap"]) {
+        const res = await middleware(createRequest(`https://eoffice.qcet.edu.vn${path}`));
+        assert.equal(res?.status, 200, path);
+        assert.equal(res?.headers.get("location"), null, path);
+      }
+    });
+
+    test("routes that only share the /docs prefix stay protected", async () => {
+      const res = await middleware(createRequest("https://eoffice.qcet.edu.vn/docsx"));
+      assert.equal(res?.status, 307);
+      assert.equal(new URL(res!.headers.get("location")!).pathname, "/login");
+    });
+  });
+
   describe("4. Root route '/' routing", () => {
-    test("authenticated user accessing '/' redirects to /tasks", async () => {
+    test("authenticated user accessing '/' reaches the Tổng quan page (no redirect)", async () => {
       const req = createRequest("https://eoffice.qcet.edu.vn/", validToken);
       const res = await middleware(req);
 
-      assert.equal(res?.status, 307);
-      const location = res?.headers.get("location");
-      assert.ok(location);
-      assert.equal(new URL(location).pathname, "/tasks");
+      assert.equal(res?.status, 200);
+      assert.equal(res?.headers.get("location"), null);
     });
 
     test("unauthenticated user accessing '/' redirects to /login", async () => {

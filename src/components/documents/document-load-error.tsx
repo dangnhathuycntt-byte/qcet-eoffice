@@ -9,13 +9,15 @@ export interface DocumentLoadErrorProps {
   /** Mã yêu cầu của Next.js, chỉ hiện khi có. */
   digest?: string;
   onRetry?: () => void;
+  /** Nhãn nút gọi `onRetry`, mặc định "Thử lại". */
+  retryLabel?: string;
   /** Nút phụ cạnh "Thử lại", ví dụ liên kết về danh sách. */
   children?: React.ReactNode;
   className?: string;
 }
 
 /** Lỗi tải dữ liệu phân hệ Văn bản: dùng chung cho sổ, thẻ điện thoại và các route lỗi. */
-export function DocumentLoadError({ title, message, digest, onRetry, children, className }: DocumentLoadErrorProps) {
+export function DocumentLoadError({ title, message, digest, onRetry, retryLabel = "Thử lại", children, className }: DocumentLoadErrorProps) {
   return (
     <EmptyState
       role="alert"
@@ -34,7 +36,7 @@ export function DocumentLoadError({ title, message, digest, onRetry, children, c
             {onRetry ? (
               <Button variant="outline" size="sm" onClick={onRetry}>
                 <RefreshCw />
-                Thử lại
+                {retryLabel}
               </Button>
             ) : null}
             {children}

@@ -179,7 +179,7 @@ export function CalendarWeekView({
                 className={cn(
                   "py-2.5 px-1 sm:px-2 flex flex-col items-center justify-center gap-0.5 transition-colors text-center focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring min-h-[44px]",
                   day.isToday && "bg-muted/40 font-semibold",
-                  isSelected && "bg-muted/60",
+                  isSelected && "bg-selected",
                   !day.isToday && !isSelected && "hover:bg-muted/40"
                 )}
                 aria-label={`${day.dayLabelVi} ${day.displayDate}`}

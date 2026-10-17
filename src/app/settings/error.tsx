@@ -17,8 +17,8 @@ export default function SettingsError({
       logLabel="Settings"
       title="Đã xảy ra lỗi khi tải Cài đặt"
       fallbackMessage="Không thể tải trang cài đặt hệ thống. Vui lòng thử lại hoặc quay về bàn làm việc."
-      backHref="/dashboard"
-      backLabel="Bàn làm việc"
+      backHref="/"
+      backLabel="Tổng quan"
     />
   );
 }

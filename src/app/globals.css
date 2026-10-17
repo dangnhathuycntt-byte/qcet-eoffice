@@ -104,7 +104,7 @@
   --color-bg-panel: var(--gray-2);
   --color-bg-control: var(--gray-3);
   --color-bg-hover: var(--gray-4);
-  --color-bg-selected: var(--accent-3);
+  --color-bg-selected: var(--selected);
   --color-action: var(--accent-9);
   --color-action-hover: var(--accent-10);
   --color-on-action: #FAFAFA;
@@ -127,6 +127,13 @@
   --text-compact--line-height: 18px;
   --text-hero: 28px;
   --text-hero--line-height: 36px;
+  /* Tài liệu hướng dẫn /docs (đo linear.app/docs 14/10/2026): thân bài 15/24, tiêu đề trang 32/36, tiêu đề trang chủ docs 40/44 */
+  --text-docs: 15px;
+  --text-docs--line-height: 24px;
+  --text-docs-title: 32px;
+  --text-docs-title--line-height: 36px;
+  --text-docs-display: 40px;
+  --text-docs-display--line-height: 44px;
   --spacing-inset-xs: 4px;
   --spacing-inset-sm: 8px;
   --spacing-inset-md: 12px;
@@ -229,7 +236,7 @@
   --control-edge: #888D96; /* nét điều khiển rỗng: 3.4:1 trên trắng, 3.03:1 trên #F2F4F7 (WCAG 1.4.11) */
 
   /* Accent ramp (xanh trường). Màu hành động và vùng đang chọn; chỉ thông tin mới dùng màu khác. */
-  --accent-3: #E1EBF8; /* vùng đang chọn */
+  --accent-3: #E1EBF8; /* xanh nhạt; vùng đang chọn đã chuyển sang xám trung tính (--selected), hiện không còn nơi dùng */
   --accent-9: #0058A0; /* nút chính, ô tick, chuyển đổi */
   --accent-10: #004A88; /* nút chính khi di chuột */
 
@@ -249,7 +256,7 @@
   --muted-foreground: var(--gray-11);
   --accent: var(--gray-4);
   --accent-foreground: var(--gray-12);
-  --selected: var(--accent-3);
+  --selected: #EBEBEC; /* vùng đang chọn trên panel #F9F9FA: hàng Inbox đang chọn của Linear (đo ảnh chụp 14/10/2026), cùng độ đậm với hàng sidebar #E1E1E2 trên canvas */
   --destructive: #B91C1C;
   --destructive-foreground: #FFFFFF;
   --danger-soft: #FBEDED; /* #FBEDED */
@@ -392,7 +399,7 @@
   --sidebar-foreground: var(--gray-12);
   --sidebar-primary: var(--gray-9);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: #E1E1E2; /* hàng sidebar đang chọn/hover, đo từ Linear; --gray-4 gần trùng canvas #EFEFF0 nên không dùng được */
+  --sidebar-accent: #E1E1E2; /* hàng sidebar đang chọn/hover trên canvas #EFEFF0 (đo từ Linear); Linear tối hơn nền cùng một nấc nên đậm hơn --selected trên panel */
   --sidebar-accent-foreground: var(--gray-12);
   --sidebar-border: var(--gray-4);
   --sidebar-ring: var(--gray-8);
@@ -573,6 +580,125 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Tranh trạng thái trống: hiện một lần, tranh đang nhấc lên và nghiêng thì đặt về chỗ (0,7s ease-out, như khối lập phương
+   rơi vào chỗ ở minh họa trống của Linear). Xoay quanh đáy tranh để giống vật được đặt xuống. */
+@keyframes illustration-settle {
+  from { opacity: 0; transform: translateY(-10px) rotate(-5deg); }
+  35%  { opacity: 1; }
+  to   { opacity: 1; transform: none; }
+}
+
+.animate-illustration-settle {
+  transform-origin: 50% 100%;
+  animation: illustration-settle 0.7s ease-out both;
+}
+
+/* Nhấn giữ hàng nhiệm vụ trên điện thoại: nền lan từ chỗ chạm (--press-at, đặt ở nơi dùng) sang hai bên.
+   `round` giữ hai đầu mép đang lan cũng bo góc như hàng (rounded-lg = --radius-lg) thay vì cắt thẳng */
+@keyframes long-press-fill {
+  from { clip-path: inset(0 calc(100% - var(--press-at, 50%)) 0 var(--press-at, 50%) round var(--radius-lg)); opacity: 0.5; }
+  to   { clip-path: inset(0 0 0 0 round var(--radius-lg)); opacity: 1; }
+}
+
+/* Giữ đủ giờ: nền đã đầy nở viền ra rồi tan. Dùng box-shadow (bo theo góc phần tử) thay vì kéo giãn để không méo radius */
+@keyframes long-press-done {
+  from { clip-path: none; box-shadow: 0 0 0 0 color-mix(in oklab, var(--foreground) 5%, transparent); opacity: 1; }
+  to   { clip-path: none; box-shadow: 0 0 0 5px color-mix(in oklab, var(--foreground) 5%, transparent); opacity: 0; }
+}
+
+/* Thư chào mừng: 4 cảnh nét mực thay nhau (mỗi cảnh 1/4 chu kỳ, lệch nhau bằng animation-delay ở nơi dùng).
+   Hiện dần kèm trôi nhẹ lên, giữ yên, rồi mờ đi đúng lúc cảnh sau hiện. Chấm tiến trình dùng chung nhịp. */
+@keyframes welcome-scene {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.985); }
+  4%   { opacity: 1; transform: none; }
+  24%  { opacity: 1; transform: none; }
+  28%  { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes welcome-dot {
+  /* 0% là trạng thái tắt: chấm chưa tới lượt (còn trong animation-delay) không sáng sẵn */
+  0%, 28%, 100% { background-color: var(--border); width: 6px; }
+  3%, 25% { background-color: var(--foreground); width: 16px; }
+}
+
+/* Thư chào mừng, ảnh động "Cài ứng dụng trên điện thoại" (welcome-install-demo.tsx), chu kỳ 12s, màn hình 180×360:
+   chạm Chia sẻ (18%) → bảng Chia sẻ, chạm Thêm vào MH chính (40%) → màn hình chính, biểu tượng hiện (55%)
+   → chạm biểu tượng (65%), ứng dụng mở → thông báo việc mới (80%) → tan về Safari. Các bước bên cạnh sáng theo 1/4 chu kỳ. */
+@keyframes welcome-phone-tap {
+  0%, 15%   { opacity: 0; transform: translate(76px, 324px) scale(1.3); }
+  18%       { opacity: 1; transform: translate(76px, 324px) scale(1); }
+  21%       { opacity: 0; transform: translate(76px, 324px) scale(0.8); }
+  37%       { opacity: 0; transform: translate(76px, 274px) scale(1.3); }
+  40%       { opacity: 1; transform: translate(76px, 274px) scale(1); }
+  43%       { opacity: 0; transform: translate(76px, 274px) scale(0.8); }
+  62%       { opacity: 0; transform: translate(98px, 96px) scale(1.3); }
+  65%       { opacity: 1; transform: translate(98px, 96px) scale(1); }
+  68%, 100% { opacity: 0; transform: translate(98px, 96px) scale(0.8); }
+}
+@keyframes welcome-phone-dim {
+  0%, 21%, 50%, 100% { opacity: 0; }
+  25%, 46%           { opacity: 1; }
+}
+@keyframes welcome-phone-sheet {
+  0%, 21%, 50%, 100% { transform: translateY(100%); }
+  26%, 46%           { transform: none; }
+}
+@keyframes welcome-phone-row {
+  0%, 38%, 46%, 100% { background-color: transparent; }
+  40%, 44%           { background-color: var(--accent); }
+}
+@keyframes welcome-phone-home {
+  0%, 45%  { opacity: 0; }
+  50%, 95% { opacity: 1; }
+  100%     { opacity: 0; }
+}
+@keyframes welcome-phone-icon {
+  0%, 51%  { opacity: 0; transform: scale(0.3); }
+  55%      { opacity: 1; transform: scale(1.08); }
+  58%, 64% { opacity: 1; transform: none; }
+  66%      { opacity: 1; transform: scale(0.9); }
+  68%, 100% { opacity: 1; transform: none; }
+}
+@keyframes welcome-phone-app {
+  0%, 67%  { opacity: 0; transform: scale(0.2); }
+  72%, 95% { opacity: 1; transform: none; }
+  100%     { opacity: 0; transform: none; }
+}
+@keyframes welcome-phone-banner {
+  0%, 77%   { opacity: 0; transform: translateY(-120%); }
+  81%, 92%  { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: translateY(-120%); }
+}
+@keyframes welcome-phone-step {
+  /* 0% là trạng thái tắt: bước chưa tới lượt (còn trong animation-delay) không sáng sẵn */
+  0%, 26%, 100% { color: var(--muted-foreground); }
+  2%, 23%       { color: var(--foreground); }
+}
+
+/* Thẻ hướng dẫn bước đầu (CreateButtonWithHint): trượt xuống từ nút tạo mới trên thanh công cụ, rồi cảnh minh họa chạy hai vòng (4,4s mỗi vòng) và dừng ở cảnh danh sách */
+@keyframes onboarding-hint-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+/* Con trỏ đi từ góc dưới trái lên nút tạo mới ở góc phải trên (đúng chỗ nút thật), bấm (46%), rồi tan để lộ danh sách */
+@keyframes onboarding-hint-cursor {
+  0% { opacity: 0; transform: translate(-112px, 64px); }
+  10% { opacity: 1; transform: translate(-112px, 64px); }
+  40% { transform: translate(0, 0) scale(1); }
+  46% { transform: translate(0, 0) scale(0.82); }
+  52% { opacity: 1; transform: translate(0, 0) scale(1); }
+  62%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+@keyframes onboarding-hint-press {
+  0%, 42%, 52%, 100% { transform: none; background-color: transparent; }
+  47% { transform: scale(0.9); background-color: var(--accent); }
+}
+/* Dòng danh sách trải ra sau cú bấm (52%, mỗi dòng trễ 260ms ≈ 6%), giữ tới gần cuối vòng rồi tan */
+@keyframes onboarding-hint-row {
+  0%, 50% { opacity: 0; transform: translateY(-6px) scaleY(0.4); }
+  57%, 88% { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: none; }
+}
 @keyframes spin-slow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -580,6 +706,82 @@
 
 .animate-spin-slow {
   animation: spin-slow 3s linear infinite;
+}
+
+/* Chữ "Đang suy nghĩ…" của Agent: dải sáng chạy ngang qua chữ như "Thinking..." của Linear; giảm chuyển động thì đứng yên */
+@keyframes text-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+.animate-text-shimmer {
+  background: linear-gradient(90deg, var(--muted-foreground) 35%, var(--foreground) 50%, var(--muted-foreground) 65%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-text-shimmer {
+    animation: none;
+    background: none;
+    color: var(--muted-foreground);
+  }
+}
+
+/* Nền trống của Agent như Linear: lưới icon Nhiệm vụ của sidebar (SVG làm mask nên lấy màu chữ), mờ dần lên trên,
+   một icon đậm ở ô giữa hàng cuối ngay trên tiêu đề. Lớp sáng hiện quanh con trỏ (--agent-spot-x/y), rời chuột thì tắt dần. */
+@property --agent-spot-x {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --agent-spot-y {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.agent-pattern {
+  transition: --agent-spot-x 90ms var(--motion-ease-enter), --agent-spot-y 90ms var(--motion-ease-enter);
+}
+
+.agent-pattern-base,
+.agent-pattern-spot,
+.agent-pattern-featured {
+  background-color: currentColor;
+  mask-composite: intersect;
+}
+
+.agent-pattern-featured {
+  mask: url("/design/patterns/agent-grid.svg") 0 0 / 24px 24px no-repeat;
+}
+
+/* Lớp nền: mờ dần lên trên và ra hai bên như Linear */
+.agent-pattern-base {
+  mask-image:
+    url("/design/patterns/agent-grid.svg"),
+    radial-gradient(50% 100% at 50% 85%, #000, rgb(0 0 0 / 0.85) 12%, rgb(0 0 0 / 0.5) 30%, rgb(0 0 0 / 0.15) 55%, transparent 82%);
+  mask-size: 24px 24px, 100% 100%;
+  mask-repeat: repeat, no-repeat;
+}
+
+/* Lớp sáng: chỉ mờ ở mép trên để vùng nào con trỏ đến cũng hiện rõ, không lộ cạnh khối lưới */
+.agent-pattern-spot {
+  mask-image:
+    url("/design/patterns/agent-grid.svg"),
+    radial-gradient(circle 112px at var(--agent-spot-x) var(--agent-spot-y), #000, rgb(0 0 0 / 0.35) 45%, transparent),
+    linear-gradient(transparent, #000 72px);
+  mask-size: 24px 24px, 100% 100%, 100% 100%;
+  mask-repeat: repeat, no-repeat, no-repeat;
+  opacity: 0;
+  transition: opacity 200ms var(--motion-ease-enter);
+}
+
+.agent-pattern[data-tracking] .agent-pattern-spot {
+  opacity: 0.5;
 }
 
 @keyframes progress-indeterminate {
@@ -808,16 +1010,70 @@
   }
 }
 
+/* Toast theo số đo của toast Linear (đo trên linear.app): thẻ 384px bo 12px, padding 12px, khoảng cách 8px, icon đặc 16px,
+   chữ 13px đậm vừa cao 16px, nút đóng tròn 24px kèm X 12px nằm cuối hàng. Bóng gồm viền 0,5px và ba lớp rất nhạt.
+   Bộ chọn dài hơn CSS sonner chèn lúc chạy nên không cần !important. */
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  min-height: 0;
+  padding: 12px;
+  gap: 8px;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.09),
+    0 6px 18px rgb(0 0 0 / 0.02),
+    0 3px 9px rgb(0 0 0 / 0.04),
+    0 1px 1px rgb(0 0 0 / 0.04);
+  --toast-icon-margin-start: 0px;
+  --toast-icon-margin-end: 0px;
+  --toast-svg-margin-start: 0px;
+  --toast-svg-margin-end: 0px;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-icon] {
+  color: var(--muted-foreground);
+}
+[data-sonner-toaster] [data-sonner-toast] [data-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
+  font-weight: 500;
+  line-height: 16px;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-close-button] {
+  position: static;
+  order: 2;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin: -4px -4px -4px auto;
+  transform: none;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-close-button] svg {
+  width: 12px;
+  height: 12px;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled='true']:hover [data-close-button]:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
 /* Toast trên điện thoại: giữ giữa đáy màn hình (vùng ngón cái, như Material snackbar) nhưng là viên gọn co theo
-   nội dung thay vì trải hết bề ngang. Bộ chọn dài hơn của sonner để thắng CSS sonner chèn lúc chạy. */
+   nội dung thay vì trải hết bề ngang; bỏ nút đóng vì đã vuốt để tắt. */
 @media (max-width: 600px) {
-  [data-sonner-toaster][data-x-position='center'] [data-sonner-toast] {
+  [data-sonner-toaster] [data-sonner-toast] {
     width: fit-content;
     max-width: calc(100% - var(--mobile-offset-left) * 2);
     margin-inline: auto;
   }
-  [data-sonner-toaster][data-x-position='center'] [data-sonner-toast][data-styled='true'] {
+  [data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
     padding: 10px 14px;
+  }
+  [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-close-button] {
+    display: none;
   }
 }
 
@@ -858,8 +1114,9 @@
     opacity: 0 !important;
   }
 
-  /* Fade-in có trượt nhẹ và tw-animate (animate-in + zoom/slide): chỉ còn opacity. */
-  .animate-fade-in {
+  /* Fade-in có trượt nhẹ, tranh trạng thái trống và tw-animate (animate-in + zoom/slide): chỉ còn opacity. */
+  .animate-fade-in,
+  .animate-illustration-settle {
     animation-name: motion-reduced-fade !important;
   }
 

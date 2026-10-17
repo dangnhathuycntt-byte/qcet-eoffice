@@ -8,6 +8,11 @@ import { FileText, Building2, LayoutDashboard, Calendar, CheckSquare, Inbox, typ
 import { WorkspaceZone } from "@/types/workspace";
 import { animate, useMotionValue, type MotionValue } from "motion/react";
 import { motionTransition } from "@/lib/motion/tokens";
+import {
+  SIDEBAR_COLLAPSED_COOKIE,
+  readSidebarCollapsedFromCookieString,
+  serializeSidebarCollapsedCookie,
+} from "@/lib/navigation/sidebar-state";
 
 export type NavigationModule = "work" | "documents" | "org";
 export type NavigationSection = "work" | "org" | "operations" | "personal" | "workspace";
@@ -138,7 +143,7 @@ export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
   docsPending: 0,
 };
 
-export const SIDEBAR_STORAGE_KEY = "qcet_sidebar_collapsed";
+export const SIDEBAR_STORAGE_KEY = SIDEBAR_COLLAPSED_COOKIE;
 export const SIDEBAR_EXPANDED_WIDTH = 247; // bằng sidebar Linear (đo trên app web)
 export const SIDEBAR_COLLAPSED_WIDTH = 64;
 
@@ -172,9 +177,24 @@ export interface SidebarContextType extends SidebarLayoutContextType, SidebarBad
 export const SidebarLayoutContext = React.createContext<SidebarLayoutContextType | undefined>(undefined);
 export const SidebarBadgeContext = React.createContext<SidebarBadgeContextType | undefined>(undefined);
 
-export function SidebarLayoutProvider({ children }: { children?: React.ReactNode }) {
+function persistSidebarCollapsed(collapsed: boolean) {
+  try {
+    document.cookie = serializeSidebarCollapsedCookie(collapsed);
+  } catch {
+    // safe fallback
+  }
+}
+
+export function SidebarLayoutProvider({
+  children,
+  initialCollapsed = false,
+}: {
+  children?: React.ReactNode;
+  /** Đọc từ cookie ở server để lần vẽ đầu đã đúng độ rộng, không co/giãn sau hydrate. */
+  initialCollapsed?: boolean;
+}) {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = React.useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = React.useState<boolean>(initialCollapsed);
   const [isMobileOpen, setIsMobileOpen] = React.useState<boolean>(false);
   const [isMounted, setIsMounted] = React.useState<boolean>(false);
   const [breadcrumbItems, setBreadcrumbItems] = React.useState<
@@ -191,10 +211,15 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
 
   React.useEffect(() => {
     setIsMounted(true);
+    // Chuyển trạng thái cũ từ localStorage sang cookie một lần; từ lần tải sau server đã render đúng
+    if (readSidebarCollapsedFromCookieString(document.cookie) !== null) return;
     try {
       const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
       if (saved !== null) {
-        setIsCollapsed(saved === "true");
+        const collapsed = saved === "true";
+        setIsCollapsed(collapsed);
+        persistSidebarCollapsed(collapsed);
+        localStorage.removeItem(SIDEBAR_STORAGE_KEY);
       }
     } catch {
       // safe fallback if storage unavailable
@@ -204,30 +229,21 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
   const toggleCollapse = React.useCallback(() => {
     setIsCollapsed((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
-      } catch {
-        // safe fallback
-      }
+      persistSidebarCollapsed(next);
       return next;
     });
   }, []);
 
   const setCollapsed = React.useCallback((val: boolean) => {
     setIsCollapsed(val);
-    try {
-      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(val));
-    } catch {
-      // safe fallback
-    }
+    persistSidebarCollapsed(val);
   }, []);
 
   const toggleMobile = React.useCallback(() => {
     setIsMobileOpen((prev) => !prev);
   }, []);
 
-  const effectiveCollapsed = isMounted ? isCollapsed : false;
-  const sidebarWidth = effectiveCollapsed
+  const sidebarWidth = isCollapsed
     ? SIDEBAR_COLLAPSED_WIDTH
     : SIDEBAR_EXPANDED_WIDTH;
   const sidebarWidthMotion = useMotionValue(sidebarWidth);
@@ -239,7 +255,7 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
 
   const value = React.useMemo<SidebarLayoutContextType>(
     () => ({
-      isCollapsed: effectiveCollapsed,
+      isCollapsed,
       toggleCollapse,
       setCollapsed,
       isMobileOpen,
@@ -254,7 +270,7 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
       setBreadcrumbItems,
     }),
     [
-      effectiveCollapsed,
+      isCollapsed,
       toggleCollapse,
       setCollapsed,
       isMobileOpen,
@@ -299,9 +315,15 @@ export function SidebarBadgeProvider({
   );
 }
 
-export function SidebarProvider({ children }: { children?: React.ReactNode }) {
+export function SidebarProvider({
+  children,
+  initialCollapsed,
+}: {
+  children?: React.ReactNode;
+  initialCollapsed?: boolean;
+}) {
   return (
-    <SidebarLayoutProvider>
+    <SidebarLayoutProvider initialCollapsed={initialCollapsed}>
       <SidebarBadgeProvider>{children}</SidebarBadgeProvider>
     </SidebarLayoutProvider>
   );

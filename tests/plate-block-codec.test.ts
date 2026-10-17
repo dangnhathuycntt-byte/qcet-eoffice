@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { blocksToPlate, plateToBlocks, parseContentToBlocks, serializeBlocksToContent, parseToPlateValue, isMeaningfulBlock, PLATE_NODE_TYPES as PT } from "../src/components/tasks/detail/plate-block-codec";
+import { blocksToPlate, plateToBlocks, parseContentToBlocks, serializeBlocksToContent, parseToPlateValue, isMeaningfulBlock, plainTextToContent, contentToPlainText, PLATE_NODE_TYPES as PT } from "../src/components/tasks/detail/plate-block-codec";
 import type { ContentBlockItem } from "../src/components/tasks/detail/task-block-editor";
 
 // ---------------------------------------------------------------------------
@@ -297,5 +297,36 @@ describe("plate-block-codec", () => {
       assert.equal(el.type, "p");
       assert.equal(el.checked, true);
     });
+  });
+});
+
+describe("chữ thuần ↔ nội dung khối (Agent soạn nhiệm vụ)", () => {
+  it("dòng '- ', '+ ' thành danh sách chấm, '1. ' thành danh sách số, bỏ dấu ** và dòng trống", () => {
+    const content = plainTextToContent("- **Mục tiêu**: Đảm bảo phối hợp\n- Việc cần làm:\n  + Tiếp nhận yêu cầu\n\n1. Bước một\nKết thúc");
+    const blocks = parseContentToBlocks(content);
+    assert.deepEqual(
+      blocks.map((b) => [b.type, b.content]),
+      [
+        ["bulleted_list", "Mục tiêu: Đảm bảo phối hợp"],
+        ["bulleted_list", "Việc cần làm:"],
+        ["bulleted_list", "Tiếp nhận yêu cầu"],
+        ["numbered_list", "Bước một"],
+        ["text", "Kết thúc"],
+      ],
+    );
+    assert.equal(plainTextToContent("  \n "), "");
+  });
+
+  it("nội dung khối → chữ thuần giữ ký hiệu danh sách; chữ thuần cũ giữ nguyên", () => {
+    const content = serializeBlocksToContent([
+      makeBlock({ type: "text", content: "Mở đầu" }),
+      makeBlock({ type: "bulleted_list", content: "Ý một" }),
+      makeBlock({ type: "numbered_list", content: "Bước một" }),
+      makeBlock({ type: "numbered_list", content: "Bước hai" }),
+      makeBlock({ type: "checklist", content: "Nộp báo cáo", checked: true }),
+    ]);
+    assert.equal(contentToPlainText(content), "Mở đầu\n- Ý một\n1. Bước một\n2. Bước hai\n- [x] Nộp báo cáo");
+    assert.equal(contentToPlainText("  Mô tả cũ  "), "Mô tả cũ");
+    assert.equal(contentToPlainText(""), "");
   });
 });

@@ -228,20 +228,7 @@ export function GlobalShortcutsModal() {
           <span>
             Nhấn <kbd className="px-1 py-0.5 font-mono text-xs bg-background rounded border border-border/80 text-foreground">?</kbd> bất cứ lúc nào để mở bảng này
           </span>
-          <div className="flex items-center gap-3">
-            <Pressable
-              onClick={() => {
-                setIsOpen(false);
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
-                }
-              }}
-              className="text-primary hover:underline font-medium"
-            >
-              Hướng dẫn sử dụng
-            </Pressable>
-            <span className="font-mono text-xs">QCET E-Office</span>
-          </div>
+          <span className="font-mono text-xs">QCET E-Office</span>
         </div>
       </div>
     </StandardDialog>

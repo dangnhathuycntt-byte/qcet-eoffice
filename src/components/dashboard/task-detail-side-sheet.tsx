@@ -925,7 +925,7 @@ export function TaskDetailSideSheet({
           initial="initial"
           animate="animate"
           exit="exit"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs sm:backdrop-blur-sm !m-0"
+          className="fixed inset-0 z-50 bg-overlay !m-0"
           onClick={onClose}
           aria-hidden="true"
         />

@@ -4,39 +4,18 @@ import * as React from "react";
 import { Avatar } from "@base-ui/react/avatar";
 import { User } from "lucide-react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn, getInitials } from "@/lib/utils";
-
-export const PASTEL_PALETTE = [
-  "bg-blue-500/10 text-blue-700",
-  "bg-emerald-500/10 text-emerald-800",
-  "bg-warning/10 text-warning",
-  "bg-violet-500/10 text-violet-700",
-  "bg-destructive/10 text-destructive",
-  "bg-sky-500/10 text-sky-800",
-];
-
-export function getPastelColor(name?: string | null): string {
-  if (!name || name.trim().toLowerCase() === "chưa phân công") {
-    return "bg-muted text-muted-foreground font-medium";
-  }
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % PASTEL_PALETTE.length;
-  return `${PASTEL_PALETTE[index]} font-semibold`;
-}
+import { cn } from "@/lib/utils";
 
 const avatarVariants = cva(
   "inline-flex shrink-0 rounded-full overflow-hidden select-none",
   {
     variants: {
       size: {
-        xs: "size-4 text-xs font-semibold", // 16px (bảng phụ, deadlines)
-        sm: "size-5 text-xs font-semibold", // 20px (bảng chính, sidebar)
-        md: "size-6 text-xs font-semibold", // 24px (hoạt động, preview)
-        lg: "size-8 text-sm font-semibold", // 32px (hồ sơ, topbar)
-        xl: "size-[60px] text-2xl font-bold", // 60px (onboarding, profile hero)
+        xs: "size-4", // 16px (bảng phụ, deadlines)
+        sm: "size-5", // 20px (bảng chính, sidebar)
+        md: "size-6", // 24px (hoạt động, preview)
+        lg: "size-8", // 32px (hồ sơ, topbar)
+        xl: "size-[60px]", // 60px (onboarding, profile hero)
       },
     },
     defaultVariants: { size: "sm" },
@@ -100,12 +79,11 @@ export interface UserAvatarProps
 }
 
 /**
- * Accessible avatar with image + initials fallback & optional presence indicator.
+ * Accessible avatar with image + placeholder silhouette fallback (no initials) & optional presence indicator.
  *
  * Dependencies leveraged:
  * - `@base-ui/react/avatar` — headless, accessible, auto-fallback
  * - `cva` — size variants
- * - `getInitials` from `@/lib/utils` — Vietnamese-aware initials
  */
 export function UserAvatar({
   name,
@@ -133,13 +111,8 @@ export function UserAvatar({
           referrerPolicy="no-referrer"
         />
       )}
-      <Avatar.Fallback
-        className={cn(
-          "flex size-full items-center justify-center font-medium tabular-nums",
-          getPastelColor(name)
-        )}
-      >
-        {isUnassigned ? (
+      {isUnassigned ? (
+        <Avatar.Fallback className="flex size-full items-center justify-center bg-muted text-muted-foreground">
           <User
             className={cn(
               size === "xs" && "size-2.5",
@@ -149,10 +122,16 @@ export function UserAvatar({
               size === "xl" && "size-8"
             )}
           />
-        ) : (
-          getInitials(name ?? "")
-        )}
-      </Avatar.Fallback>
+        </Avatar.Fallback>
+      ) : (
+        // Chưa có ảnh: hình người xám (avatar khung trống) thay cho chữ viết tắt; tên vẫn ở title/aria-label
+        <Avatar.Fallback data-slot="avatar-placeholder" className="flex size-full bg-muted text-muted-foreground/45">
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="size-full" fill="currentColor">
+            <circle cx="12" cy="9.5" r="4.5" />
+            <path d="M3 24c0-5.2 4-9 9-9s9 3.8 9 9z" />
+          </svg>
+        </Avatar.Fallback>
+      )}
     </Avatar.Root>
   );
 
