@@ -108,6 +108,7 @@ const EVENT_LABELS: Record<string, string> = {
   progress: "Cập nhật",
   upload: "Tệp mới",
   created: "Tạo mới",
+  welcome: "Chào mừng",
 };
 
 /** Nhãn ngắn của loại sự kiện; type chưa biết dùng nhãn trung tính. */

@@ -7,9 +7,7 @@ import { GlobalSearchView } from "@/components/search/global-search-view";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Tìm kiếm - QCET E-Office" };
-}
+export const metadata: Metadata = { title: "Tìm kiếm" };
 
 export default async function SearchPage() {
   const authSession = await auth();

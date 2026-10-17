@@ -53,7 +53,7 @@ const COLORS_GRAY: Array<[string, string, string, string]> = [
   ["Bậc 2 · bg-panel", "--gray-2", "#F9F9FA", "Thẻ nội dung, bảng"],
   ["Bậc 3 · bg-control", "--gray-3", "#F2F4F7", "Ô nhập, nút phụ, chip"],
   ["Bậc 4 · bg-hover", "--gray-4", "#EAEDF1", "Di chuột dòng, nút"],
-  ["Bậc 5 · bg-selected", "--accent-3", "#E1EBF8", "Dòng đang chọn, tiêu điểm"],
+  ["Bậc 5 · bg-selected", "--selected", "#EBEBEC", "Dòng đang chọn, tiêu điểm (trên panel)"],
   ["Bậc 6 · bg-mark", "--gray-6", "#DADDE2", "Ô chọn chưa tick, thanh mảnh"],
   ["Bậc 7 · fg-faint", "--gray-7", "#C9CDD3", "Tay nắm, dấu chia, icon mờ"],
   ["Bậc 8 · fg-disabled", "--gray-8", "#9AA0A9", "Chữ, icon vô hiệu"],
@@ -66,7 +66,7 @@ const COLORS_GRAY: Array<[string, string, string, string]> = [
 const COLORS_SEMANTIC: Array<[string, string, string, string]> = [
   ["Hành động chính", "--accent-9", "#0058A0", "Xanh trường: nút chính, CTA, focus ring"],
   ["Hành động hover", "--accent-10", "#004A88", "Di chuột nút chính"],
-  ["Vùng đang chọn", "--accent-3", "#E1EBF8", "Nền dòng/khối được chọn"],
+  ["Vùng đang chọn", "--selected", "#EBEBEC", "Nền dòng/khối được chọn trên panel; sidebar dùng #E1E1E2"],
   ["Nguy hiểm / Trễ hạn", "--destructive", "#B91C1C", "Trễ hạn, lỗi, xóa"],
   ["Nền lỗi / Xóa", "--danger-soft", "#FBEDED", "Nền ô lỗi, nút xóa"],
   ["Nhấn tranh / Icon", "--icon-accent", "#C0D0F4", "Nền chip icon nghiệp vụ"],

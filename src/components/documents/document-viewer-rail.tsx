@@ -15,7 +15,7 @@ import { SheetKeyboardSync } from "@/components/ui/menu";
 const RAIL_BUTTON = cn(
   "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md",
   "text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-  "hover:bg-muted/60 data-[popup-open]:bg-muted/60 data-[popup-open]:text-foreground",
+  "hover:bg-muted/60 data-[popup-open]:bg-selected data-[popup-open]:text-foreground",
   "disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4",
 );
 
@@ -53,7 +53,7 @@ export function RailButton({
 const RAIL_TILE = cn(
   "flex w-9 cursor-pointer flex-col items-center justify-center rounded-md text-muted-foreground",
   "outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-  "hover:bg-muted/60 data-[popup-open]:bg-muted/60",
+  "hover:bg-muted/60 data-[popup-open]:bg-selected",
 );
 
 function RailDivider() {
@@ -388,7 +388,7 @@ export function FilesMenu({
         <PopoverTrigger
           aria-label={`Tệp ${files.length}`}
           data-popup-open={open || undefined}
-          className="inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[popup-open]:bg-muted/60 data-[popup-open]:text-foreground"
+          className="inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[popup-open]:bg-selected data-[popup-open]:text-foreground"
         >
           <Files className="size-3.5" aria-hidden />
           <span className="tabular-nums">Tệp {files.length}</span>

@@ -60,11 +60,11 @@ export const CreateExecutiveResolutionSchema = z
       .optional()
       .nullable(),
     priority: z
-      .enum(['URGENT', 'HIGH', 'NORMAL', 'MEDIUM', 'LOW'])
+      .enum(['URGENT', 'HIGH', 'NORMAL', 'MEDIUM', 'LOW', 'NONE'])
       .optional()
       .nullable(),
     taskPriority: z
-      .enum(['URGENT', 'HIGH', 'NORMAL', 'MEDIUM', 'LOW'])
+      .enum(['URGENT', 'HIGH', 'NORMAL', 'MEDIUM', 'LOW', 'NONE'])
       .optional()
       .nullable(),
     version: z.coerce.number().int().nonnegative().optional(),

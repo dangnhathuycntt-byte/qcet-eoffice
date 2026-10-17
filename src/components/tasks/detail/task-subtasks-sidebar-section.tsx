@@ -52,7 +52,7 @@ function SubtaskRow({
         onClick={() => onSelect(subtask)}
         className={cn(
           "w-full group/sub flex items-center gap-2.5 min-h-8 px-2 py-1 rounded-lg text-left text-compact leading-snug transition-colors cursor-pointer hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
-          isActive ? "bg-muted/40 ring-1 ring-inset ring-border/60" : ""
+          isActive ? "bg-selected" : ""
         )}
         title={subtask.title}
       >

@@ -548,6 +548,73 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       assert.strictEqual(subtask.academicYear, '2026-2027');
     });
 
+    test('createSubtasks: việc con kế thừa hạn, ưu tiên, chủ trì của việc cha; việc lỗi không hủy việc cha (như T-09)', async () => {
+      // Việc cha riêng để không đổi tiến độ của nhiệm vụ gốc mà các test sau dùng
+      const parentDue = new Date('2026-11-20T17:00:00.000Z');
+      const parent = await taskCommandService.createTask(
+        { user: adminUser },
+        {
+          title: 'Nhiệm vụ kèm việc con tạo một lần',
+          leadUnitId: testDept1Id,
+          dueDate: parentDue,
+          priority: 'high',
+          scope: 'department',
+          assigneeId: staffUser1.id,
+        }
+      );
+      createdTaskIds.push(parent.id);
+
+      const result = await taskCommandService.createSubtasks(
+        { user: adminUser },
+        { id: parent.id, leadUnitId: parent.leadUnitId, dueDate: parentDue, priority: 'high', assigneeId: staffUser1.id },
+        [
+          { title: 'Việc con kế thừa' },
+          { title: 'Việc con trễ hơn cha', dueDate: '2026-12-01' },
+          { title: 'Việc con giao người khác', assigneeId: staffUser2.id, dueDate: '2026-11-10' },
+        ]
+      );
+      createdTaskIds.push(...result.created.map((c) => c.id));
+
+      assert.deepStrictEqual(result.created.map((c) => c.title), ['Việc con kế thừa', 'Việc con giao người khác']);
+      assert.deepStrictEqual(result.failed.map((f) => f.title), ['Việc con trễ hơn cha']);
+      assert.match(result.failed[0].message, /không thể sau hạn chót của nhiệm vụ cha/);
+
+      const children = await prisma.task.findMany({ where: { parentTaskId: parent.id }, include: { actors: true } });
+      assert.strictEqual(children.length, 2);
+      const inherited = children.find((c) => c.title === 'Việc con kế thừa');
+      assert.ok(inherited);
+      assert.strictEqual(inherited.dueDate.toISOString(), parentDue.toISOString());
+      assert.strictEqual(inherited.priority, TaskPriority.HIGH);
+      assert.strictEqual(inherited.leadUnitId, testDept1Id);
+      assert.strictEqual(inherited.actors.find((a) => a.role === TaskActorRole.DRI)?.userId, staffUser1.id);
+      const reassigned = children.find((c) => c.title === 'Việc con giao người khác');
+      assert.strictEqual(reassigned?.actors.find((a) => a.role === TaskActorRole.DRI)?.userId, staffUser2.id);
+
+      assert.ok(await prisma.task.findUnique({ where: { id: parent.id } }), 'Việc cha vẫn còn khi một việc con lỗi');
+    });
+
+    test('createTask/updateTask: Không ưu tiên (NONE) lưu đúng, không bị ép về Bình thường; bỏ trống vẫn mặc định NORMAL', async () => {
+      const due = new Date('2026-11-25T17:00:00.000Z');
+      const none = await taskCommandService.createTask(
+        { user: adminUser },
+        { title: 'Nhiệm vụ không ưu tiên', leadUnitId: testDept1Id, dueDate: due, priority: 'NONE', scope: 'department', assigneeId: staffUser1.id }
+      );
+      createdTaskIds.push(none.id);
+      assert.strictEqual(none.priority, TaskPriority.NONE);
+
+      const omitted = await taskCommandService.createTask(
+        { user: adminUser },
+        { title: 'Nhiệm vụ không gửi ưu tiên', leadUnitId: testDept1Id, dueDate: due, scope: 'department', assigneeId: staffUser1.id }
+      );
+      createdTaskIds.push(omitted.id);
+      assert.strictEqual(omitted.priority, TaskPriority.NORMAL);
+
+      const raised = await taskCommandService.updateTask({ user: adminUser }, none.id, { priority: 'high' });
+      assert.strictEqual(raised.priority, TaskPriority.HIGH);
+      const cleared = await taskCommandService.updateTask({ user: adminUser }, none.id, { priority: 'none' });
+      assert.strictEqual(cleared.priority, TaskPriority.NONE);
+    });
+
     test('updateTask: updates progress, priority, and assigns new DRI atomically', async () => {
       const updated = await taskCommandService.updateTask(
         { user: managerUser },

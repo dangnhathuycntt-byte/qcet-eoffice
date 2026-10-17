@@ -546,7 +546,8 @@ export function DossierRegistryView() {
             searchQuery || statusFilter || classificationFilter ? (
               <EmptyState
                 role="status"
-                density="compact"
+                density="page"
+                className="min-h-[48vh]"
                 icon={<FolderOpen />}
                 title="Không tìm thấy hồ sơ nào"
                 description="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."
@@ -554,7 +555,8 @@ export function DossierRegistryView() {
             ) : (
               <EmptyState
                 role="status"
-                density="compact"
+                density="page"
+                className="min-h-[48vh]"
                 illustration="dossier"
                 title="Chưa có hồ sơ công việc"
                 description="Hồ sơ công việc đã lập sẽ hiện ở đây."

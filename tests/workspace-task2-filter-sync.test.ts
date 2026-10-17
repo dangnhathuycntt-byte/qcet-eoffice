@@ -140,7 +140,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
       assert.ok(html.includes("Không có nhiệm vụ nào trễ hạn"));
     });
 
-    test("renders primary CTA to create task when canAddTask is true", () => {
+    test("renders create button when canAddTask is true", () => {
       const html = renderToStaticMarkup(
         React.createElement(TaskEmptyState, {
           canAddTask: true,
@@ -148,7 +148,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
         })
       );
 
-      assert.ok(html.includes("Tạo nhiệm vụ mới"));
+      assert.ok(html.includes(">Tạo việc</button>"));
     });
   });
 

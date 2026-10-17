@@ -75,7 +75,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
         assert.ok(!html.includes("72%"), "Compact card must not repeat the progress percentage");
         // Touch manipulation; hàng một dòng 40px (bỏ mức 48px theo yêu cầu thu gọn mobile)
         assert.ok(html.includes("touch-manipulation"), "Card must have touch-manipulation");
-        assert.ok(html.includes("min-h-10"), "Card must be a 40px one-line row (min-h-10)");
+        assert.ok(html.includes("min-h-12"), "Card must be a 48px one-line row (min-h-12), like Linear mobile Projects");
       });
     });
 

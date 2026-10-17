@@ -587,9 +587,8 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       // 3. Đơn vị & Chủ trì (Phụ trách)
       assert.ok(html.includes("Khoa CNTT"), "Should render department");
       assert.ok(html.includes("Nguyễn Tiến Phong"), "Should render DRI name");
-      // Base UI Avatar.Image does not render <img> in SSR; check fallback initials instead
-      // "ThS. Nguyễn Tiến Phong" → parseLeadAssignee strips prefix → "Nguyễn Tiến Phong" → getInitials → "NP"
-      assert.ok(html.includes("NP"), "Should render avatar fallback initials (NP) in SSR");
+      // Base UI Avatar.Image does not render <img> in SSR; check the placeholder fallback carries the DRI name instead
+      assert.ok(html.includes('data-slot="avatar-placeholder"'), "Should render avatar placeholder fallback in SSR");
 
       // 4. Hạn (SLA formatted date)
       assert.ok(html.includes("30/09/2026") || html.includes("30/09"), "Should render SLA formatted date");
@@ -601,7 +600,7 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       assert.ok(html.includes('aria-label="Thao tác nhanh"') || html.includes('data-task-id'), "Should render overflow menu button or row identifier");
     });
 
-    it("renders initials placeholder when DRI avatar is not provided", () => {
+    it("renders silhouette placeholder when DRI avatar is not provided", () => {
       const taskNoAvatar = { ...mockTask, leadAssigneeAvatar: undefined };
       const html = renderToStaticMarkup(
         React.createElement("table", null,
@@ -610,7 +609,8 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
           )
         )
       );
-      assert.ok(html.includes("NP"), "Initials of Nguyễn Tiến Phong should be NP");
+      assert.ok(html.includes('data-slot="avatar-placeholder"'), "Avatar without image shows the silhouette placeholder");
+      assert.ok(!html.includes(">NP<"), "Avatar no longer shows initials");
     });
 
     it("highlights overdue tasks in red with SLA badge", () => {

@@ -248,6 +248,17 @@ export function TaskIconPriorityLow(props: TaskActionIconProps) {
   return <PriorityBars level={1} {...props} />;
 }
 
+/** Không ưu tiên: ba gạch ngang ở giữa, cùng cột với tín hiệu (như "No priority" của Linear) */
+export function TaskIconPriorityNone(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg viewBox={LINEAR_GRID} {...props}>
+      <rect x="1.5" y="7.25" width="3" height="1.5" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="6.5" y="7.25" width="3" height="1.5" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="11.5" y="7.25" width="3" height="1.5" rx="0.5" fill="currentColor" stroke="none" />
+    </TaskActionSvg>
+  );
+}
+
 /** Hủy: lục giác đặc, dấu X khoét rỗng */
 export function TaskIconStatusCancelled(props: TaskActionIconProps) {
   return (

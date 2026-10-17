@@ -24,8 +24,6 @@ import { apiError } from "../src/server/api/response";
 // Import all route loading and error components
 import TasksLoading from "../src/app/tasks/loading";
 import TasksError from "../src/app/tasks/error";
-import DashboardLoading from "../src/app/dashboard/loading";
-import DashboardError from "../src/app/dashboard/error";
 import DocumentsLoading from "../src/app/documents/loading";
 import DocumentsError from "../src/app/documents/error";
 import CalendarLoading from "../src/app/calendar/loading";
@@ -34,6 +32,7 @@ import OrgLoading from "../src/app/org/loading";
 import OrgError from "../src/app/org/error";
 import NotificationsLoading from "../src/app/notifications/loading";
 import NotificationsError from "../src/app/notifications/error";
+import DossierError from "../src/app/dossiers/[id]/error";
 
 describe("Phase 20: Canonical Error Contract", () => {
   const testRequestId = "req-audit-7788";
@@ -191,7 +190,6 @@ describe("Phase 20: Canonical Error Contract", () => {
 describe("Phase 9: Route-level Loading & Error Architecture", () => {
   const routes = [
     { name: "/tasks", dir: "src/app/tasks" },
-    { name: "/dashboard", dir: "src/app/dashboard" },
     { name: "/documents", dir: "src/app/documents" },
     { name: "/calendar", dir: "src/app/calendar" },
     { name: "/org", dir: "src/app/org" },
@@ -201,7 +199,6 @@ describe("Phase 9: Route-level Loading & Error Architecture", () => {
   describe("Structural Validity of Loading Components", () => {
     const loadingComponents = [
       { name: "TasksLoading", Component: TasksLoading },
-      { name: "DashboardLoading", Component: DashboardLoading },
       { name: "DocumentsLoading", Component: DocumentsLoading },
       { name: "CalendarLoading", Component: CalendarLoading },
       { name: "OrgLoading", Component: OrgLoading },
@@ -232,11 +229,11 @@ describe("Phase 9: Route-level Loading & Error Architecture", () => {
   describe("Structural Validity of Error Components", () => {
     const errorComponents = [
       { name: "TasksError", Component: TasksError },
-      { name: "DashboardError", Component: DashboardError },
       { name: "DocumentsError", Component: DocumentsError },
       { name: "CalendarError", Component: CalendarError },
       { name: "OrgError", Component: OrgError },
       { name: "NotificationsError", Component: NotificationsError },
+      { name: "DossierError", Component: DossierError },
     ];
 
     for (const { name, Component } of errorComponents) {
@@ -271,5 +268,25 @@ describe("Phase 9: Route-level Loading & Error Architecture", () => {
         );
       });
     }
+
+    it("lỗi phía server (có digest) hiện lời của trang thay cho câu tiếng Anh Next.js thay vào ở production", () => {
+      const masked = Object.assign(
+        new Error(
+          "An error occurred in the Server Components render. The specific message is omitted in production builds to avoid leaking sensitive details.",
+        ),
+        { digest: "123456789" },
+      );
+      const html = renderToStaticMarkup(React.createElement(OrgError, { error: masked, reset: () => {} }));
+      assert.ok(html.includes("Không thể tải cơ cấu và danh bạ"));
+      assert.ok(!html.includes("Server Components"));
+      assert.ok(html.includes("123456789"));
+    });
+
+    it("lỗi phía trình duyệt (không có digest) vẫn hiện nội dung lỗi", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(OrgError, { error: new Error("Thầy/Cô không có quyền xem đơn vị này."), reset: () => {} }),
+      );
+      assert.ok(html.includes("Thầy/Cô không có quyền xem đơn vị này."));
+    });
   });
 });

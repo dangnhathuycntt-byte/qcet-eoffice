@@ -1,31 +1,23 @@
 "use client";
 
 import * as React from "react";
-import {
-  Shield,
-  Users,
-  Calendar,
-  RefreshCw,
-  Search,
-  UserCheck,
-  Clock,
-  XCircle,
-} from "lucide-react";
-import * as m from "motion/react-m";
+import { WorkspacePageCard } from "@/components/workspace/page-card";
+import { ListToolbarSearch } from "@/components/ui/list-toolbar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { daysUntil } from "@/lib/format/relative-date";
 import { cn } from "@/lib/utils";
-import { fadeVariants } from "@/lib/motion/variants";
-import { DelegationFeatureGuide } from "@/components/feature-guide/feature-guide";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type DelegationStatus = "ACTIVE" | "EXPIRED" | "REVOKED";
 
 interface DelegationAssignment {
   user: { name: string };
-  unit: { name: string };
-  positionDefinition: { title: string };
+  unit: { name: string } | null;
+  positionDefinition: { title: string } | null;
 }
 
 interface DelegationItem {
@@ -45,21 +37,12 @@ type StatusFilterKey = "ALL" | DelegationStatus;
 
 const PAGE_SIZE = 20;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatDate(raw: string | null | undefined): string {
-  if (!raw) return "—";
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
+const STATUS_TABS: { key: StatusFilterKey; label: string }[] = [
+  { key: "ACTIVE", label: "Có hiệu lực" },
+  { key: "EXPIRED", label: "Hết hiệu lực" },
+  { key: "REVOKED", label: "Đã thu hồi" },
+  { key: "ALL", label: "Tất cả" },
+];
 
 const STATUS_LABELS: Record<DelegationStatus, string> = {
   ACTIVE: "Có hiệu lực",
@@ -67,76 +50,74 @@ const STATUS_LABELS: Record<DelegationStatus, string> = {
   REVOKED: "Đã thu hồi",
 };
 
-const STATUS_STYLES: Record<DelegationStatus, string> = {
-  ACTIVE: "bg-emerald-500/8 text-emerald-700 border-emerald-500/15",
-  EXPIRED: "bg-muted/60 text-muted-foreground border-border/40",
-  REVOKED: "bg-red-500/8 text-red-700 border-red-500/15",
+/** Nhóm nghiệp vụ của quyền được ủy quyền (mã quyền dạng `task.approve`, `document.outgoing.sign`…). */
+const ACTION_DOMAIN: Record<string, string> = {
+  task: "Nhiệm vụ",
+  document: "Văn bản",
+  meeting: "Cuộc họp",
+  dossier: "Hồ sơ",
 };
 
-const STATUS_FILTER_TABS: { key: StatusFilterKey; label: string }[] = [
-  { key: "ALL", label: "Tất cả" },
-  { key: "ACTIVE", label: "Có hiệu lực" },
-  { key: "EXPIRED", label: "Hết hiệu lực" },
-  { key: "REVOKED", label: "Đã thu hồi" },
-];
+const DATE = new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Ho_Chi_Minh" });
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+function formatDate(raw: string | null | undefined) {
+  if (!raw) return "—";
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? raw : DATE.format(d);
+}
 
+/** "01/10 – 15/10/2026" khi cùng năm (như bảng Delegation), khác năm thì ghi đủ hai ngày. */
+function formatRange(from: string, until: string) {
+  const a = formatDate(from);
+  const b = formatDate(until);
+  return a.slice(6) === b.slice(6) && a.length === 10 ? `${a.slice(0, 5)} – ${b}` : `${a} – ${b}`;
+}
+
+function assignmentLine(a: DelegationAssignment) {
+  return [a.positionDefinition?.title, a.unit?.name].filter(Boolean).join(" · ");
+}
+
+/** Bỏ dấu để tìm không phân biệt dấu (gõ "nguyen" vẫn ra "Nguyễn"). */
+function fold(text: string) {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+}
+
+/**
+ * Ủy quyền tác nghiệp (`/delegations`, mục "Thêm" ở sidebar): danh sách ủy quyền xử lý thay mặt, chỉ để xem.
+ * Dựng lại 15/10/2026 theo bảng Delegation: khung một thẻ, bảng một hàng mỗi ủy quyền, trạng thái bằng chữ.
+ * Phạm vi xem do API quyết định (bản thân và đơn vị mình; Ban Giám hiệu xem toàn trường).
+ */
 export function DelegationRegistryView() {
-  // Data
   const [items, setItems] = React.useState<DelegationItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
-
-  // Filters
-  const [statusFilter, setStatusFilter] =
-    React.useState<StatusFilterKey>("ALL");
-  const [searchInput, setSearchInput] = React.useState("");
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilterKey>("ACTIVE");
+  const [search, setSearch] = React.useState("");
   const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE);
 
-  // Debounced search
-  React.useEffect(() => {
-    const t = setTimeout(() => {
-      setSearchQuery(searchInput);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
-  // Fetch data
   const fetchDelegations = React.useCallback(
     async (signal?: AbortSignal) => {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const p = new URLSearchParams();
-        if (statusFilter !== "ALL") p.set("status", statusFilter);
-
-        const res = await fetch(`/api/delegations?${p.toString()}`, {
-          signal,
-        });
+        // Luôn gửi `status`: thiếu tham số thì API chỉ trả ủy quyền đang có hiệu lực, kể cả khi chọn "Tất cả"
+        const res = await fetch(`/api/delegations?status=${statusFilter}`, { signal });
         if (!res.ok) {
-          setFetchError("Không thể tải danh sách ủy quyền từ máy chủ");
+          setFetchError("Chưa tải được danh sách ủy quyền.");
           return;
         }
         const json = await res.json();
-        if (json.data) {
-          setItems(Array.isArray(json.data) ? json.data : []);
-        } else {
-          setFetchError("Phản hồi không hợp lệ từ máy chủ");
-        }
-      } catch (err: unknown) {
-        if ((err as { name?: string })?.name !== "AbortError") {
-          console.error("Fetch delegations error:", err);
-          setFetchError("Lỗi kết nối máy chủ khi tải danh sách ủy quyền");
-        }
+        // API trả thẳng mảng; vẫn nhận dạng bọc `{ data }` của các API cũ
+        const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : null;
+        if (list) setItems(list);
+        else setFetchError("Chưa đọc được danh sách ủy quyền từ máy chủ.");
+      } catch (err) {
+        if ((err as { name?: string })?.name !== "AbortError") setFetchError("Mất kết nối khi tải danh sách ủy quyền.");
       } finally {
         if (!signal?.aborted) setIsLoading(false);
       }
     },
-    [statusFilter],
+    [statusFilter]
   );
 
   React.useEffect(() => {
@@ -145,337 +126,138 @@ export function DelegationRegistryView() {
     return () => ctrl.abort();
   }, [fetchDelegations]);
 
-  // Client-side search filter
-  const filteredItems = React.useMemo(() => {
-    if (!searchQuery.trim()) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(
-      (d) =>
-        d.grantorAssignment.user.name.toLowerCase().includes(q) ||
-        d.granteeAssignment.user.name.toLowerCase().includes(q) ||
-        d.action.toLowerCase().includes(q) ||
-        (d.sourceDocumentNumber ?? "").toLowerCase().includes(q),
+  const filtered = React.useMemo(() => {
+    const q = fold(search.trim());
+    if (!q) return items;
+    return items.filter((d) =>
+      [d.grantorAssignment.user.name, d.granteeAssignment.user.name, d.action, d.resourceScope ?? "", d.sourceDocumentNumber ?? ""].some((field) =>
+        fold(field).includes(q)
+      )
     );
-  }, [items, searchQuery]);
-
-  // Stats
-  const stats = React.useMemo(() => {
-    const active = items.filter((i) => i.status === "ACTIVE").length;
-    const expired = items.filter((i) => i.status === "EXPIRED").length;
-    const revoked = items.filter((i) => i.status === "REVOKED").length;
-    return { total: items.length, active, expired, revoked };
-  }, [items]);
-
-  const handleRefresh = () => fetchDelegations();
-
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
+  }, [items, search]);
 
   return (
-    <m.div
-      className="mx-auto w-full max-w-[1440px] space-y-5 pb-6 md:pb-10"
-      data-slot="delegation-registry-view"
-      variants={fadeVariants}
-      initial="initial"
-      animate="animate"
+    <WorkspacePageCard
+      title="Ủy quyền tác nghiệp"
+      description="Ai ủy quyền cho ai xử lý thay, trong phạm vi nào và đến khi nào"
+      hideTitleOnMobile
+      className="max-w-5xl"
+      actions={
+        <ListToolbarSearch
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setVisibleCount(PAGE_SIZE);
+          }}
+          placeholder="Tìm người, phạm vi, căn cứ…"
+          aria-label="Tìm ủy quyền"
+        />
+      }
     >
-      {/* Header */}
-      <div>
-        <div className="flex flex-col gap-3 border-b border-border/40 pb-4 max-md:border-b-0 max-md:pb-0 sm:flex-row sm:items-center sm:justify-between">
-          {/* Điện thoại: tên trang đã nằm trên thanh trên cùng, chỉ giữ cho trình đọc màn hình */}
-          <div className="max-md:sr-only">
-            <div className="mb-1 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
-                <Shield className="size-3" /> Ủy quyền
-              </span>
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-              Ủy quyền tác nghiệp
-            </h1>
-            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
-              Quản lý phân quyền thay mặt xử lý công việc
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <DelegationFeatureGuide>
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={isLoading}
-                className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium shadow-2xs transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-9"
-              >
-                <RefreshCw
-                  className={cn("size-3.5", isLoading && "animate-spin")}
-                />
-                Làm mới
-              </button>
-            </DelegationFeatureGuide>
-          </div>
-        </div>
-      </div>
+      <div className="flex flex-col gap-4 pb-6">
+        <Tabs
+          value={statusFilter}
+          onValueChange={(next) => {
+            setStatusFilter(next as StatusFilterKey);
+            setVisibleCount(PAGE_SIZE);
+          }}
+          className="max-w-full overflow-x-auto"
+        >
+          <TabsList variant="pill" size="sm" aria-label="Lọc theo trạng thái">
+            {STATUS_TABS.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {(
-          [
-            {
-              label: "Tổng ủy quyền",
-              value: stats.total,
-              icon: Shield,
-              color: "text-foreground",
-            },
-            {
-              label: "Có hiệu lực",
-              value: stats.active,
-              icon: UserCheck,
-              color: "text-emerald-600",
-            },
-            {
-              label: "Hết hiệu lực",
-              value: stats.expired,
-              icon: Clock,
-              color: "text-muted-foreground",
-            },
-            {
-              label: "Đã thu hồi",
-              value: stats.revoked,
-              icon: XCircle,
-              color: "text-red-600",
-            },
-          ] as const
-        ).map((s) => (
-          <div
-            key={s.label}
-            className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-2xs"
-          >
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <s.icon
-                className={cn("size-3.5", s.color)}
-                strokeWidth={1.5}
-              />
-              {s.label}
-            </div>
-            <div className="mt-1 text-xl font-bold tracking-tight text-foreground">
-              {s.value}
-            </div>
+        {fetchError ? (
+          <InlineAlert actionLabel="Thử lại" onAction={() => fetchDelegations()}>
+            {fetchError}
+          </InlineAlert>
+        ) : isLoading ? (
+          <div aria-busy className="flex flex-col gap-3">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* Filter Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Status filter tabs — flat breadcrumb style */}
-        <div className="flex items-center gap-1 rounded-lg bg-muted/40 p-1">
-          {STATUS_FILTER_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setStatusFilter(tab.key)}
-              className={cn(
-                "min-h-[44px] rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring sm:min-h-0",
-                statusFilter === tab.key
-                  ? "bg-background text-foreground shadow-2xs"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative max-w-xs w-full sm:w-auto">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            density="compact"
+            title={search.trim() ? "Không có ủy quyền phù hợp" : statusFilter === "ACTIVE" ? "Chưa có ủy quyền nào đang có hiệu lực" : "Không có ủy quyền nào"}
+            description={
+              search.trim()
+                ? "Thử từ khóa khác hoặc xem trạng thái khác."
+                : "Ủy quyền liên quan tới Thầy/Cô hoặc đơn vị của Thầy/Cô sẽ hiện ở đây."
+            }
           />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Tìm theo tên, phạm vi…"
-            className="h-9 w-full rounded-xl border border-border/70 bg-background pl-9 pr-3 text-xs shadow-2xs outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-ring focus:ring-2 focus:ring-ring focus-visible:ring-2 focus-visible:ring-ring sm:w-64"
-          />
-        </div>
+        ) : (
+          <>
+            <Table density="two-line" className="min-w-[760px] table-fixed">
+              <TableHeader>
+                <TableRow className="border-b border-border/60">
+                  <TableHead className="w-[21%]">Người ủy quyền</TableHead>
+                  <TableHead className="w-[21%]">Người được ủy quyền</TableHead>
+                  <TableHead className="w-[19%]">Phạm vi</TableHead>
+                  <TableHead className="w-[10%]">Căn cứ</TableHead>
+                  <TableHead className="w-[15%]">Thời gian</TableHead>
+                  <TableHead className="w-[14%]">Trạng thái</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.slice(0, visibleCount).map((d) => {
+                  const left = daysUntil(d.validUntil);
+                  const expiringSoon = d.status === "ACTIVE" && left !== null && left >= 0 && left <= 7;
+                  return (
+                    <TableRow key={d.id} className="border-b border-border/40">
+                      <TableCell>
+                        <PersonCell assignment={d.grantorAssignment} />
+                      </TableCell>
+                      <TableCell>
+                        <PersonCell assignment={d.granteeAssignment} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex min-w-0 flex-col" title={d.resourceScope ? `${d.action} · ${d.resourceScope}` : d.action}>
+                          <span className="truncate">
+                            {ACTION_DOMAIN[d.action.split(".")[0]] ?? "Khác"}
+                            {d.resourceScope ? ` · ${d.resourceScope}` : ""}
+                          </span>
+                          <span className="truncate font-mono text-xs text-muted-foreground">{d.action}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="truncate whitespace-nowrap tabular-nums" title={d.sourceDocumentNumber ?? undefined}>
+                        {d.sourceDocumentNumber || <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="truncate whitespace-nowrap text-xs tabular-nums">
+                        {formatRange(d.validFrom, d.validUntil)}
+                      </TableCell>
+                      <TableCell className={cn("truncate whitespace-nowrap text-xs", d.status === "ACTIVE" ? (expiringSoon ? "text-warning" : "text-foreground") : "text-muted-foreground")}>
+                        {expiringSoon ? (left === 0 ? "Hết hạn hôm nay" : `Hết hạn sau ${left} ngày`) : STATUS_LABELS[d.status]}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            {filtered.length > visibleCount ? (
+              <Button variant="ghost" size="sm" className="self-start" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
+                Xem thêm {filtered.length - visibleCount} ủy quyền
+              </Button>
+            ) : null}
+          </>
+        )}
       </div>
+    </WorkspacePageCard>
+  );
+}
 
-      {/* Error state */}
-      {fetchError && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-700">
-          {fetchError}
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-border/50 bg-card shadow-2xs">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/40 text-left">
-              <th className="px-4 py-3 text-xs font-medium text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Users className="size-3" />
-                  Người ủy quyền
-                </div>
-              </th>
-              <th className="px-4 py-3 text-xs font-medium text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <UserCheck className="size-3" />
-                  Người nhận ủy quyền
-                </div>
-              </th>
-              <th className="px-4 py-3 text-xs font-medium text-muted-foreground">
-                Phạm vi
-              </th>
-              <th className="hidden px-4 py-3 text-xs font-medium text-muted-foreground md:table-cell">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="size-3" />
-                  Hiệu lực từ
-                </div>
-              </th>
-              <th className="hidden px-4 py-3 text-xs font-medium text-muted-foreground md:table-cell">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="size-3" />
-                  Hiệu lực đến
-                </div>
-              </th>
-              <th className="px-4 py-3 text-xs font-medium text-muted-foreground">
-                Trạng thái
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              /* Loading skeleton */
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr
-                  key={`skel-${i}`}
-                  className="border-b border-border/20 animate-pulse"
-                >
-                  <td className="px-4 py-3">
-                    <div className="space-y-1.5">
-                      <div className="h-3.5 w-28 rounded bg-muted/60" />
-                      <div className="h-3 w-20 rounded bg-muted/40" />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="space-y-1.5">
-                      <div className="h-3.5 w-28 rounded bg-muted/60" />
-                      <div className="h-3 w-20 rounded bg-muted/40" />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="h-3.5 w-24 rounded bg-muted/50" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="h-3.5 w-20 rounded bg-muted/50" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="h-3.5 w-20 rounded bg-muted/50" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="h-5 w-16 rounded-full bg-muted/50" />
-                  </td>
-                </tr>
-              ))
-            ) : filteredItems.length === 0 ? (
-              /* Empty state */
-              <tr>
-                <td colSpan={6} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <Shield
-                      className="size-10 text-muted-foreground/30"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Không tìm thấy ủy quyền nào
-                    </p>
-                    {searchQuery && (
-                      <p className="text-xs text-muted-foreground/60">
-                        Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
-                      </p>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              filteredItems.slice(0, visibleCount).map((d) => (
-                <tr
-                  key={d.id}
-                  className="border-b border-border/20 transition-colors hover:bg-muted/30"
-                >
-                  {/* Người ủy quyền */}
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-foreground text-sm">
-                      {d.grantorAssignment.user.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {d.grantorAssignment.positionDefinition.title}
-                      {d.grantorAssignment.unit.name &&
-                        ` — ${d.grantorAssignment.unit.name}`}
-                    </div>
-                  </td>
-
-                  {/* Người nhận ủy quyền */}
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-foreground text-sm">
-                      {d.granteeAssignment.user.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {d.granteeAssignment.positionDefinition.title}
-                      {d.granteeAssignment.unit.name &&
-                        ` — ${d.granteeAssignment.unit.name}`}
-                    </div>
-                  </td>
-
-                  {/* Phạm vi */}
-                  <td className="px-4 py-3 text-sm text-foreground">
-                    {d.action}
-                    {d.resourceScope && (
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {d.resourceScope}
-                      </div>
-                    )}
-                  </td>
-
-                  {/* Hiệu lực từ */}
-                  <td className="hidden px-4 py-3 text-sm text-foreground tabular-nums md:table-cell">
-                    {formatDate(d.validFrom)}
-                  </td>
-
-                  {/* Hiệu lực đến */}
-                  <td className="hidden px-4 py-3 text-sm text-foreground tabular-nums md:table-cell">
-                    {formatDate(d.validUntil)}
-                  </td>
-
-                  {/* Trạng thái */}
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-                        STATUS_STYLES[d.status],
-                      )}
-                    >
-                      {STATUS_LABELS[d.status]}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Load more */}
-      {filteredItems.length > visibleCount && (
-        <div className="flex justify-center pt-2">
-          <button
-            type="button"
-            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-background px-4 py-2 text-xs font-medium shadow-2xs transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-0"
-          >
-            Xem thêm ({filteredItems.length - visibleCount} còn lại)
-          </button>
-        </div>
-      )}
-    </m.div>
+function PersonCell({ assignment }: { assignment: DelegationAssignment }) {
+  const line = assignmentLine(assignment);
+  return (
+    <div className="flex min-w-0 flex-col">
+      <span className="truncate font-medium">{assignment.user.name}</span>
+      {line ? <span className="truncate text-xs text-muted-foreground">{line}</span> : null}
+    </div>
   );
 }

@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BookOpen,
+  ChevronDown,
   User,
   Settings,
   Smartphone,
-  HelpCircle,
   LogOut,
 } from "lucide-react";
 import { SidebarNavList } from "@/components/layout/sidebar-nav-list";
@@ -33,7 +33,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
-import { MENU_POPUP_CLASS, MenuActionItem } from "@/components/ui/menu";
+import { MENU_POPUP_CLASS, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
   { ssr: false }
@@ -251,13 +251,6 @@ export function AppSidebar() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleOpenSearch, toggleCollapse, router]);
 
-  const userRoleLabel =
-    user?.role === "ADMIN"
-      ? "Ban Giám hiệu"
-      : user?.role === "MANAGER"
-      ? "Trưởng đơn vị"
-      : "Chuyên viên";
-
   return (
     <TooltipProvider>
       <>
@@ -269,51 +262,9 @@ export function AppSidebar() {
           className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-sidebar text-foreground select-none group/sidebar overflow-hidden"
         >
           {/* ========================================================= */}
-          {/* 1. SIDEBAR TOP HEADER: QCET LOGO + QCET E-OFFICE          */}
+          {/* 1. SIDEBAR TOP HEADER: TÀI KHOẢN (AVATAR + TÊN) MỞ MENU    */}
           {/* ========================================================= */}
-          <div className="shrink-0 w-full pt-3.5 pb-2.5 px-3">
-            <div className={cn(
-              "flex items-center",
-              isCollapsed ? "justify-center" : "justify-between"
-            )}>
-              <Link
-                href="/"
-                className={cn(
-                  "flex items-center gap-2.5 rounded-lg py-1 transition-opacity hover:opacity-90 outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  isCollapsed ? "justify-center px-0" : "px-1.5"
-                )}
-                title="QCET E-Office"
-              >
-                <Image
-                  src="/logo-qcet.png"
-                  alt="QCET"
-                  width={24}
-                  height={24}
-                  className="size-6 rounded-full object-contain shrink-0"
-                  priority
-                />
-                {!isCollapsed && (
-                  <span className="font-semibold text-compact tracking-tight text-foreground truncate select-none">
-                    QCET E-Office
-                  </span>
-                )}
-              </Link>
-
-            </div>
-          </div>
-
-          {/* ========================================================= */}
-          {/* 2. NAVIGATION ITEMS BODY                                  */}
-          {/* ========================================================= */}
-          <SidebarNavList
-            isCollapsed={isCollapsed}
-            onMaintenance={(item) => setMaintenanceDialog({ isOpen: true, title: item.label, feature: item.id })}
-          />
-
-          {/* ========================================================= */}
-          {/* 3. SIDEBAR BOTTOM FOOTER: USER ACCOUNT PROFILE CARD       */}
-          {/* ========================================================= */}
-          <div className="shrink-0 w-full px-3 pt-1.5 pb-2.5 mt-auto">
+          <div className={cn("shrink-0 w-full pt-3.5 pb-2.5 px-3 flex", isCollapsed && "justify-center")}>
             <Menu.Root
               open={isProfileDropdownOpen && Boolean(user)}
               onOpenChange={(open) => setIsProfileDropdownOpen(open)}
@@ -325,13 +276,12 @@ export function AppSidebar() {
                   "flex items-center transition-colors cursor-pointer text-left outline-none focus-visible:bg-sidebar-accent",
                   isCollapsed
                     ? "size-7 mx-auto justify-center rounded-sm p-0"
-                    : "w-full gap-2 px-2 h-7 rounded-sm",
+                    : "max-w-full gap-1.5 px-1.5 h-7 rounded-sm",
                   isProfileDropdownOpen
                     ? "bg-sidebar-accent"
                     : "hover:bg-sidebar-accent/60"
                 )}
                 aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
-                title={userRoleLabel || undefined}
                 aria-expanded={isProfileDropdownOpen}
               >
                 <UserAvatar
@@ -343,18 +293,19 @@ export function AppSidebar() {
 
                 {!isCollapsed && (
                   <>
-                    <span className="min-w-0 flex-1 truncate text-compact text-foreground">
+                    <span className="min-w-0 truncate text-compact font-medium text-foreground">
                       {formatDisplayName(user?.name)}
                     </span>
+                    <ChevronDown aria-hidden className="size-3 shrink-0 text-muted-foreground" />
                   </>
                 )}
               </Menu.Trigger>
 
-              {/* Account Dropdown Menu via Base UI Popover (Bay lên trên vì ở đáy) */}
+              {/* Menu tài khoản mở xuống dưới, như menu workspace góc trên trái của Linear */}
               <Menu.Portal>
                 <Menu.Positioner
                   className="z-50"
-                  side="top"
+                  side="bottom"
                   align="start"
                   sideOffset={8}
                   collisionPadding={12}
@@ -371,43 +322,37 @@ export function AppSidebar() {
                   >
                     {user && (
                       <div>
-                        {userRoleLabel ? (
-                          <div className="px-2 pb-1 pt-0.5 text-xs text-muted-foreground truncate">{userRoleLabel}</div>
-                        ) : null}
+                        {/* Đầu menu: chỉ email (tên đã có ở nút ngay trên; không ghi chức vụ vì vai trò phân quyền không phải chức vụ thật) */}
+                        {user.email ? <p className="truncate px-2 pb-1.5 pt-1 text-muted-foreground">{user.email}</p> : null}
                         {isOfflineReadOnly && (
-                          <div className="mb-1.5 p-1.5 rounded-md bg-warning/10 border border-warning/40 text-xs text-warning font-medium leading-relaxed">
+                          <div className="mb-1 rounded-md bg-warning/10 px-2 py-1.5 text-xs text-warning">
                             Chế độ chỉ xem từ bộ nhớ tạm.
                           </div>
                         )}
 
-                        {/* Menu Items */}
-                        <div className="space-y-px">
-                          <MenuActionItem leading={<User />} onClick={() => setIsProfileModalOpen(true)}>
-                            Hồ sơ cá nhân
-                          </MenuActionItem>
-                          <MenuActionItem leading={<Settings />} render={<Link href="/settings" />}>
-                            Cài đặt hệ thống
-                          </MenuActionItem>
-                          <MenuActionItem
-                            leading={<Smartphone />}
-                            onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-install-modal"))}
-                          >
-                            Cài đặt ứng dụng di động
-                          </MenuActionItem>
-                          <MenuActionItem
-                            leading={<HelpCircle />}
-                            onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-help-guide"))}
-                          >
-                            Trợ giúp &amp; Hướng dẫn
-                          </MenuActionItem>
-                        </div>
+                        <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+                        <MenuActionItem leading={<User />} onClick={() => setIsProfileModalOpen(true)}>
+                          Hồ sơ cá nhân
+                        </MenuActionItem>
+                        <MenuActionItem leading={<Settings />} render={<Link href="/settings" />}>
+                          Cài đặt hệ thống
+                        </MenuActionItem>
 
-                        {/* Logout */}
-                        <div className="border-t border-border/40 pt-1 mt-1">
-                          <MenuActionItem leading={<LogOut />} destructive onClick={() => logout()}>
-                            Đăng xuất
-                          </MenuActionItem>
-                        </div>
+                        <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+                        <MenuActionItem leading={<BookOpen />} render={<Link href="/docs" />}>
+                          Tài liệu hướng dẫn
+                        </MenuActionItem>
+                        <MenuActionItem
+                          leading={<Smartphone />}
+                          onClick={() => window.dispatchEvent(new CustomEvent("qcet:open-install-modal"))}
+                        >
+                          Cài ứng dụng trên điện thoại
+                        </MenuActionItem>
+
+                        <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+                        <MenuActionItem leading={<LogOut />} destructive onClick={() => logout()}>
+                          Đăng xuất
+                        </MenuActionItem>
                       </div>
                     )}
                   </Menu.Popup>
@@ -415,6 +360,15 @@ export function AppSidebar() {
               </Menu.Portal>
             </Menu.Root>
           </div>
+
+          {/* ========================================================= */}
+          {/* 2. NAVIGATION ITEMS BODY                                  */}
+          {/* ========================================================= */}
+          <SidebarNavList
+            isCollapsed={isCollapsed}
+            onMaintenance={(item) => setMaintenanceDialog({ isOpen: true, title: item.label, feature: item.id })}
+          />
+
         </m.aside>
 
         {/* Collapse toggle — mỏng, dính mép sidebar, grip luôn hiện để người dùng biết bấm/thu gọn được */}

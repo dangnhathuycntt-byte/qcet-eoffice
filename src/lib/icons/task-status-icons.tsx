@@ -14,6 +14,7 @@ import {
   TaskIconPriorityHigh,
   TaskIconPriorityNormal,
   TaskIconPriorityLow,
+  TaskIconPriorityNone,
   type TaskActionIconProps,
 } from "./task-icons";
 
@@ -26,6 +27,7 @@ export const PrioritySubUrgent = TaskIconPriorityUrgent;
 export const PrioritySubHigh = TaskIconPriorityHigh;
 export const PrioritySubNormal = TaskIconPriorityNormal;
 export const PrioritySubLow = TaskIconPriorityLow;
+export const PrioritySubNone = TaskIconPriorityNone;
 
 /** Theo mức cũ: 3 = khẩn cấp, 2 = cao, 1 = bình thường, 0 = (tất cả) ba cột trung tính. */
 export const PrioritySubBars = ({

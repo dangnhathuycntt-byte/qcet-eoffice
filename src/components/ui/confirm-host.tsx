@@ -8,8 +8,8 @@ import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-di
 interface ConfirmRequest {
   title: string;
   description?: string;
+  /** Nhãn nút đồng ý: xóa thì để mặc định "Xóa", việc khác nói đúng hành động ("Vẫn phê duyệt"). Nút hủy luôn là "Hủy". */
   confirmLabel?: string;
-  cancelLabel?: string;
   /** Hành động xóa/không đảo ngược: dùng hộp thoại cảnh báo đỏ, mặc định focus vào nút Hủy. */
   destructive?: boolean;
 }
@@ -54,7 +54,6 @@ export function ConfirmHost() {
         title={current.title}
         description={current.description}
         confirmLabel={current.confirmLabel ?? "Xóa"}
-        cancelLabel={current.cancelLabel ?? "Hủy"}
       />
     );
   }
@@ -73,7 +72,7 @@ export function ConfirmHost() {
               ) : null}
             </div>
             <div className="flex items-center justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => settle(false)}>{current?.cancelLabel ?? "Hủy"}</Button>
+              <Button variant="ghost" size="sm" onClick={() => settle(false)}>Hủy</Button>
               <Button size="sm" onClick={() => settle(true)}>{current?.confirmLabel ?? "Đồng ý"}</Button>
             </div>
           </div>

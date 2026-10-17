@@ -11,6 +11,7 @@ import {
   TaskIconPriorityHigh,
   TaskIconPriorityNormal,
   TaskIconPriorityLow,
+  TaskIconPriorityNone,
 } from "@/lib/icons/task-icons";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import type { TaskStatus, TaskPriority } from "@/types/dashboard";
@@ -228,6 +229,7 @@ const PRIORITY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   HIGH: TaskIconPriorityHigh,
   NORMAL: TaskIconPriorityNormal,
   LOW: TaskIconPriorityLow,
+  NONE: TaskIconPriorityNone,
 };
 
 // Cùng quy tắc màu với PrioritySignalBars: khẩn cấp đỏ, cao đậm, còn lại mờ
@@ -236,6 +238,7 @@ const PRIORITY_ICON_COLOR: Record<string, string> = {
   HIGH: "text-foreground/70",
   NORMAL: "text-muted-foreground",
   LOW: "text-muted-foreground",
+  NONE: "text-muted-foreground",
 };
 
 export function TaskPrioritySelect({ value, options, disabled, onValueChange }: {

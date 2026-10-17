@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { CreateTaskInputSchema } from '@/contracts/tasks';
+import { CreateTaskInputSchema, CreateTaskWithSubtasksInputSchema, CREATE_TASK_MAX_SUBTASKS } from '@/contracts/tasks';
 import type { TaskDetailDTO } from '@/server/dto/task-dto';
 import {
   buildCreateTaskPayload,
@@ -354,5 +354,62 @@ describe('submitCreateTask — idempotency & reconciliation (T27)', () => {
     assert.strictEqual(result.reason, 'validation');
     assert.strictEqual(result.attempts, 0);
     assert.strictEqual(calls.length, 0);
+  });
+});
+
+describe('Việc con tạo kèm nhiệm vụ (như Milestones của Linear, mặc định theo T-09)', () => {
+  const base = { title: 'Nhiệm vụ có việc con', dueDate: '2026-09-30' };
+
+  it('C1 giữ nguyên: CreateTaskInputSchema vẫn từ chối `subtasks`; schema của route nhận tối đa 20', () => {
+    const subtasks = Array.from({ length: CREATE_TASK_MAX_SUBTASKS }, (_, i) => ({ title: `Việc con số ${i + 1}` }));
+    assert.strictEqual(CreateTaskInputSchema.safeParse({ ...base, subtasks }).success, false);
+    assert.strictEqual(CreateTaskWithSubtasksInputSchema.safeParse({ ...base, subtasks }).success, true);
+    assert.strictEqual(
+      CreateTaskWithSubtasksInputSchema.safeParse({ ...base, subtasks: [...subtasks, { title: 'Việc con thừa' }] }).success,
+      false
+    );
+  });
+
+  it('từng việc con: tên tối thiểu 3 ký tự, không nhận trường đặc quyền', () => {
+    assert.strictEqual(CreateTaskWithSubtasksInputSchema.safeParse({ ...base, subtasks: [{ title: 'AB' }] }).success, false);
+    assert.strictEqual(
+      CreateTaskWithSubtasksInputSchema.safeParse({ ...base, subtasks: [{ title: 'Việc con', createdById: 'usr_x' }] }).success,
+      false
+    );
+  });
+
+  it('payload mang việc con đã cắt khoảng trắng, bỏ việc không tên và trường rỗng', () => {
+    const payload = buildCreateTaskPayload(
+      makeDraft({
+        parentTaskId: undefined,
+        subtasks: [
+          { title: '  Chuẩn bị số liệu  ', description: '', assigneeId: 'usr_col_002', dueDate: '' },
+          { title: '   ' },
+          { title: 'Viết báo cáo', dueDate: '2026-09-20' },
+        ],
+      }),
+      { personnel: PERSONNEL }
+    );
+    assert.deepStrictEqual(payload.subtasks, [
+      { title: 'Chuẩn bị số liệu', assigneeId: 'usr_col_002' },
+      { title: 'Viết báo cáo', dueDate: '2026-09-20' },
+    ]);
+    assert.ok(!('subtasks' in buildCreateTaskPayload(makeDraft({ parentTaskId: undefined }), { personnel: PERSONNEL })));
+  });
+
+  it('đọc kết quả việc con từ phản hồi; không gửi kèm thì là null', async () => {
+    const serverTask = makeServerTask();
+    const subtasks = { created: [{ id: 'task_c1', code: 'NV-2026-0002', title: 'Chuẩn bị số liệu' }], failed: [{ title: 'Viết báo cáo', message: 'Hạn chót của nhiệm vụ con không thể sau hạn chót của nhiệm vụ cha' }] };
+    const { fetchImpl } = createFetchMock(async () =>
+      new Response(JSON.stringify({ success: true, task: serverTask, data: serverTask, subtasks }), { status: 201 })
+    );
+    const result = await submitCreateTask(makeDraft({ parentTaskId: undefined, subtasks: [{ title: 'Chuẩn bị số liệu' }, { title: 'Viết báo cáo' }] }), { personnel: PERSONNEL, fetchImpl });
+    assert.ok(result.ok);
+    assert.deepStrictEqual(result.subtasks, subtasks);
+
+    const plain = createFetchMock(async () => new Response(JSON.stringify({ success: true, data: serverTask }), { status: 201 }));
+    const plainResult = await submitCreateTask(makeDraft(), { personnel: PERSONNEL, fetchImpl: plain.fetchImpl });
+    assert.ok(plainResult.ok);
+    assert.strictEqual(plainResult.subtasks, null);
   });
 });

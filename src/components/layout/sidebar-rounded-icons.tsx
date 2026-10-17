@@ -128,6 +128,16 @@ export function IconSidebarPeople(props: SidebarIconProps) {
   );
 }
 
+/** 9b. Báo cáo: khung bo có ba cột số liệu (như icon Insights của Linear) */
+export function IconSidebarChart(props: SidebarIconProps) {
+  return (
+    <SidebarSvg {...props}>
+      <rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5" />
+      <path d="M5.25 11.25v-2.5M8 11.25v-6.5M10.75 11.25v-4" />
+    </SidebarSvg>
+  );
+}
+
 /** 10. Thêm: ba chấm */
 export function IconSidebarMore(props: SidebarIconProps) {
   return (

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Drawer as VaulDrawer } from "vaul";
-import { Bell, BellOff, Download, HelpCircle, Loader2, LogOut, Smartphone, User, Volume2 } from "lucide-react";
+import { Bell, BellOff, Download, Loader2, LogOut, Smartphone, User, Volume2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { SidebarNavList } from "@/components/layout/sidebar-nav-list";
 import { formatDisplayName } from "@/components/layout/app-sidebar";
@@ -160,18 +160,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   <span className="flex-1 truncate text-left">Hướng dẫn cài đặt iOS</span>
                 </Pressable>
               ) : null}
-
-              <Pressable
-                onClick={() => {
-                  triggerHaptic("light");
-                  close();
-                  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
-                }}
-                className={ROW_CLASS}
-              >
-                <HelpCircle className={ICON_CLASS} />
-                <span className="flex-1 truncate text-left">Trợ giúp và hướng dẫn</span>
-              </Pressable>
             </div>
           </div>
 

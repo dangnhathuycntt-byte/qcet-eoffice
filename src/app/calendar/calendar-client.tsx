@@ -799,7 +799,7 @@ function CalendarRouteContent({
                       key={value}
                       onClick={() => setLevelFilter(value)}
                       aria-pressed={levelFilter === value}
-                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", levelFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
+                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", levelFilter === value ? "bg-selected border-transparent text-foreground font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
                     </Pressable>
@@ -816,7 +816,7 @@ function CalendarRouteContent({
                       key={value}
                       onClick={() => setStatusFilter(value)}
                       aria-pressed={statusFilter === value}
-                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", statusFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
+                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", statusFilter === value ? "bg-selected border-transparent text-foreground font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
                     </Pressable>
@@ -839,7 +839,7 @@ function CalendarRouteContent({
             aria-label="Tùy chọn hiển thị"
             className={cn(
               "inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg transition-colors",
-              isSecondaryOpen ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              isSecondaryOpen ? "bg-selected text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             )}
           >
             <MoreHorizontal className="size-4" />

@@ -9,8 +9,8 @@ import {
 } from '@/server/api/validation';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
-import { ForbiddenError } from '@/server/api/errors';
-import { TaskQueryParamsSchema, CreateTaskInputSchema } from '@/contracts/tasks';
+import { ForbiddenError, ValidationError } from '@/server/api/errors';
+import { TaskQueryParamsSchema, CreateTaskWithSubtasksInputSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
@@ -166,7 +166,11 @@ export async function POST(req: Request) {
 
     await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
-    const validatedBody = await parseAndValidateJson(req, CreateTaskInputSchema);
+    const validatedBody = await parseAndValidateJson(req, CreateTaskWithSubtasksInputSchema);
+    const subtaskInputs = validatedBody.subtasks ?? [];
+    if (subtaskInputs.length > 0 && validatedBody.parentTaskId) {
+      throw new ValidationError('Việc con chỉ tạo kèm nhiệm vụ gốc, không tạo kèm khi đang giao việc con.');
+    }
 
     // Canonical object authorization: Check whether user can create a task for the specified department
     const authContext = await loadAuthorizationContext(authUser.id);
@@ -202,10 +206,26 @@ export async function POST(req: Request) {
         parentTaskId: validatedBody.parentTaskId,
       });
 
-      return toTaskDetailDTO(newTask);
+      // Việc con chạy trong cùng khóa idempotency: gửi lại cùng khóa không tạo việc con lần hai
+      const subtasks =
+        subtaskInputs.length > 0
+          ? await taskCommandService.createSubtasks(
+              context,
+              {
+                id: newTask.id,
+                leadUnitId: newTask.leadUnitId,
+                dueDate: validatedBody.dueDate,
+                priority: validatedBody.priority,
+                assigneeId: validatedBody.assigneeId,
+              },
+              subtaskInputs
+            )
+          : null;
+
+      return { task: toTaskDetailDTO(newTask), subtasks };
     };
 
-    const taskDetail = idempotencyKey
+    const { task: taskDetail, subtasks } = idempotencyKey
       ? await withIdempotency(
           {
             userId: authUser.id,
@@ -222,6 +242,7 @@ export async function POST(req: Request) {
         success: true,
         task: taskDetail,
         data: taskDetail,
+        ...(subtasks ? { subtasks } : {}),
       },
       {
         status: 201,

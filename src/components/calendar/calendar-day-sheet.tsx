@@ -296,7 +296,7 @@ export function CalendarDaySheet({
   return (
     <BaseDialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <BaseDialog.Portal keepMounted={isOpen}>
-        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-150 motion-safe:transition-opacity motion-safe:duration-150" />
+        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 motion-safe:transition-opacity motion-safe:duration-150" />
         <BaseDialog.Popup
           data-slot="calendar-day-sheet-panel"
           className={cn(

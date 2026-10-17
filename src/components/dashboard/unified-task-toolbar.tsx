@@ -155,6 +155,8 @@ export interface ViewModeOption {
 export interface UnifiedTaskToolbarProps {
   /** Chưa có nhiệm vụ nào: chỉ giữ tiêu đề và nút tạo việc, ẩn tìm kiếm, bộ lọc và tùy chọn hiển thị. */
   quiet?: boolean;
+  /** View đang chọn trống khi chưa lọc gì: giữ các view để chuyển, ẩn tìm kiếm, bộ lọc và tùy chọn hiển thị. */
+  hideListControls?: boolean;
   // Scope (supports both "school" | "unit" | "my" and "SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS")
   scope: WorkspaceScope | TaskScope | string;
   onScopeChange: (scope: any) => void;
@@ -319,6 +321,7 @@ export const CATEGORY_FILTER_OPTIONS: { id: string; label: string }[] = [
 
 export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "ALL", label: "Tất cả mức độ" },
+  { id: "NONE", label: "Không ưu tiên" },
   { id: "URGENT", label: "Khẩn cấp" },
   { id: "HIGH", label: "Cao" },
   { id: "NORMAL", label: "Bình thường" },
@@ -542,6 +545,7 @@ function PersonFilterOptions({
 
 export function UnifiedTaskToolbar({
   quiet = false,
+  hideListControls = false,
   scope,
   onScopeChange,
   user,
@@ -1196,6 +1200,7 @@ export function UnifiedTaskToolbar({
   };
   const createCta = (leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction ? (
     <Pressable
+      data-slot="list-toolbar-create"
       onClick={() => handlePrimaryAction()}
       title="Tạo việc mới"
       aria-label="Tạo việc mới"
@@ -1258,7 +1263,7 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors select-none",
                       isActive
-                        ? "bg-muted text-foreground font-semibold"
+                        ? "bg-selected text-foreground font-semibold"
                         : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     )}
                   >
@@ -1297,6 +1302,7 @@ export function UnifiedTaskToolbar({
           {/* Right: Primary Page Action Button (Tạo nhiệm vụ - Linear Understated Style) */}
           {canCreateTask && handlePrimaryAction && (
             <Pressable
+              data-slot="list-toolbar-create"
               onClick={() => handlePrimaryAction()}
               title="Tạo nhiệm vụ"
               aria-label="Tạo nhiệm vụ"
@@ -1324,6 +1330,8 @@ export function UnifiedTaskToolbar({
       {!quiet && (
         <div className="flex h-11 w-full min-w-0 items-center gap-1.5">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-hidden no-scrollbar py-0.5">{viewTabs}</div>
+      {!hideListControls && (
+        <>
       {/* 1. Search: icon thu gọn, bấm hoặc nhấn "/" để mở ô */}
       {searchExpanded ? (
         <ListToolbarSearch
@@ -1407,6 +1415,8 @@ export function UnifiedTaskToolbar({
         onReset={handleResetDisplayProperties}
         triggerClassName="inline-flex h-7 w-7 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border border-border/80 bg-background text-foreground hover:bg-accent text-xs font-medium transition-colors touch-manipulation"
       />
+        </>
+      )}
 
         </div>
       )}

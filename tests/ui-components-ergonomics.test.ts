@@ -22,11 +22,12 @@ describe("UI Components Ergonomics & Touch Targets", () => {
       assert.ok(defaultClasses.includes("motion-reduce:transition-none"), "Button must respect motion-reduce");
     });
 
-    it("should have h-7, rounded-lg, px-3, text-xs, and font-medium for sm size", () => {
+    // Số đo nút của Linear (DOM linear.app 14/10/2026): cao 28px, lề ngang 10px, chữ 12px đậm 500
+    it("should have h-7, rounded-lg, px-2.5, text-xs, and font-medium for sm size", () => {
       const smClasses = buttonVariants({ size: "sm" });
       assert.match(smClasses, /\bh-7\b/, "Button sm size should have h-7 (28px)");
       assert.match(smClasses, /\brounded-lg\b/, "Button sm size should have rounded-lg");
-      assert.match(smClasses, /\bpx-3\b/, "Button sm size should have px-3");
+      assert.match(smClasses, /\bpx-2\.5\b/, "Button sm size should have px-2.5 (10px như Linear)");
       assert.match(smClasses, /\btext-xs\b/, "Button sm size should have text-xs (12px)");
       assert.match(smClasses, /\bfont-medium\b/, "Button sm size should have font-medium");
     });

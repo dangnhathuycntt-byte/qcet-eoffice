@@ -44,7 +44,7 @@ function MoreActionsMenu({
   return (
     <MenuRoot open={open} onOpenChange={setOpen} modal={false}>
       <MenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Thao tác khác" title="Thao tác khác" className="text-muted-foreground hover:text-foreground data-[popup-open]:bg-muted">
+        <Button variant="ghost" size="icon-sm" aria-label="Thao tác khác" title="Thao tác khác" className="text-muted-foreground hover:text-foreground data-[popup-open]:bg-selected">
           <Ellipsis className="size-4" />
         </Button>
       </MenuTrigger>

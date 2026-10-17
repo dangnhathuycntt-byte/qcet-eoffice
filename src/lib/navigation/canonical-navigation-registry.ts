@@ -21,8 +21,8 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
   {
     id: "desk",
     href: "/",
-    label: "Bàn làm việc",
-    shortLabel: "Bàn làm việc",
+    label: "Tổng quan",
+    shortLabel: "Tổng quan",
     section: "work",
     iconName: "LayoutDashboard",
     zone: "dashboard",

@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Plus, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ArrowHint, InkIllustration } from "@/components/ui/empty-state";
+import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
+import { CreateButtonWithHint } from "@/components/ui/onboarding-hint";
 import type { SmartFilterTab } from "../types";
-import { Pressable } from "@/components/ui/pressable";
+import { Button } from "@/components/ui/button";
 import type { TaskTab } from "@/domain/tasks/task-tabs";
 
 export interface TaskEmptyStateProps {
@@ -23,11 +24,24 @@ export interface TaskEmptyStateProps {
   /** View đang chọn của trang (Đang thực hiện, Trễ hạn, Hoàn thành); view không phải bộ lọc nên không đếm vào bộ lọc */
   taskTab?: TaskTab;
   userName?: string;
+  /** View khác còn việc khi view đang chọn trống: nêu số việc và nút chuyển sang. */
+  suggestedView?: { id: TaskTab; count: number; onSelect: () => void };
   onResetFilters?: () => void;
   onAddTask?: () => void;
   canAddTask?: boolean;
   className?: string;
 }
+
+/**
+ * Câu và nút khi view đang chọn trống nhưng view khác còn việc. Đang thực hiện và Trễ hạn tách rời, và view được gợi ý là view
+ * còn việc đầu tiên theo thứ tự Đang thực hiện → Trễ hạn → Hoàn thành: gợi ý Trễ hạn nghĩa là mọi việc chưa xong đều đã quá hạn,
+ * gợi ý Hoàn thành nghĩa là không còn việc dang dở (việc đã hủy không thuộc view nào trong ba view này).
+ */
+const SUGGESTED_VIEW_COPY: Partial<Record<TaskTab, { describe: (count: number) => string; action: string }>> = {
+  overdue: { describe: (n) => `Việc chưa xong đều đã quá hạn: ${n} nhiệm vụ đang ở Trễ hạn.`, action: "Xem việc trễ hạn" },
+  active: { describe: (n) => `${n} nhiệm vụ đang thực hiện.`, action: "Xem việc đang thực hiện" },
+  done: { describe: (n) => `Không còn việc dang dở: ${n} nhiệm vụ đã hoàn thành.`, action: "Xem việc đã hoàn thành" },
+};
 
 // ---------------------------------------------------------------------------
 // Main Component
@@ -46,6 +60,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   priority,
   taskTab,
   userName,
+  suggestedView,
   onResetFilters,
   onAddTask,
   canAddTask = false,
@@ -53,6 +68,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
 }: TaskEmptyStateProps) {
   let displayTitle = title;
   let displayDescription = description;
+  let isIntro = false;
   const isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
 
   const activeFiltersCount = [
@@ -119,76 +135,80 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       displayTitle = "Không có nhiệm vụ phù hợp";
       displayDescription = "Thử thay đổi hoặc xóa bộ lọc hiện tại";
     } else {
-      // Chưa từng có dữ liệu (không bộ lọc): nói bảng này dùng để làm gì và bước tiếp theo, không dùng thuật ngữ kỹ thuật.
+      // Chưa từng có dữ liệu (không bộ lọc): câu chữ người dùng chốt 14/10/2026; người không được tạo việc chỉ nghe việc sẽ hiện ở đây.
+      isIntro = true;
       displayTitle = "Chưa có nhiệm vụ nào";
       displayDescription = canAddTask
-        ? "Nhiệm vụ Thầy/Cô giao hoặc được giao sẽ hiện ở đây."
-        : "Nhiệm vụ được giao cho Thầy/Cô sẽ hiện ở đây khi có người giao việc.";
+        ? "Tạo nhiệm vụ đầu tiên để phân công, theo dõi tiến độ và quản lý công việc tại một nơi."
+        : "Nhiệm vụ được giao cho Thầy/Cô sẽ hiện ở đây để theo dõi tiến độ và cập nhật kết quả.";
     }
   }
 
-  // Chưa có gì và được phép tạo việc: mũi tên chỉ lên nút "Tạo việc" ở thanh công cụ (chỉ từ md trở lên, nơi nút ở góc phải); nút giữa trang luôn hiện kèm phím tắt C.
-  const pointsToCreate = !hasFilterActive && !(taskTab && taskTab !== "all") && canAddTask && Boolean(onAddTask);
+  // View trống nhưng view khác còn việc: nói việc đang ở đâu thay cho câu chung chung.
+  const suggestedCopy = suggestedView && !hasFilterActive && !title ? SUGGESTED_VIEW_COPY[suggestedView.id] : undefined;
+  if (suggestedCopy && suggestedView) {
+    displayDescription = suggestedCopy.describe(suggestedView.count);
+  }
+
+  // Tranh theo ngữ cảnh: lọc rỗng → kính lúp; việc chưa xong đều trễ → đồng hồ báo thức; không có việc trễ hoặc mọi việc đã xong → nằm võng
+  const illustration: IllustrationName = hasFilterActive
+    ? "no-results"
+    : suggestedCopy && suggestedView?.id === "overdue"
+      ? "overdue"
+      : taskTab === "overdue" || (suggestedCopy && suggestedView?.id === "done")
+        ? "all-done"
+        : "tasks";
+
+  // Chưa có gì và được phép tạo việc: nút "Tạo việc" kèm thẻ hướng dẫn bước đầu (mỗi tài khoản thấy một lần).
+  const pointsToCreate = isIntro && canAddTask && Boolean(onAddTask);
 
   return (
-    <div className="relative w-full">
-    {pointsToCreate ? (
-      <ArrowHint variant="loop" className="top-1 right-10" />
-    ) : null}
-    <div
+    <>
+    {/* Bố cục trang trống kiểu Linear (EmptyState density="page"); tranh chọn theo ngữ cảnh ở `illustration` */}
+    <EmptyState
       data-slot="workspace-empty-state"
       role="status"
       aria-live="polite"
-      className={cn(
-        "flex flex-col items-center justify-center min-h-[66vh] py-8 px-4 sm:px-6 text-center select-none max-w-4xl mx-auto w-full",
-        className
-      )}
-    >
-      {/* Tranh nét mực: kính lúp khi bộ lọc loại hết kết quả; bảng nhiệm vụ khi chưa có việc (không dựng dữ liệu giả) */}
-      <InkIllustration name={hasFilterActive ? "no-results" : "tasks"} className="mb-4" />
-
-      {/* Title */}
-      <h3 className="text-compact font-semibold text-foreground tracking-tight max-w-md text-balance">
-        {displayTitle}
-      </h3>
-
-      {/* Description */}
-      <p className="mt-1 text-xs text-muted-foreground max-w-md leading-relaxed text-balance">
-        {displayDescription}
-      </p>
-      {filterNote ? <p className="mt-1 text-xs text-muted-foreground max-w-md">{filterNote}</p> : null}
-
-      {/* Action Buttons */}
-      <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
-        {hasFilterActive && onResetFilters && (
-          <Pressable
-            onClick={onResetFilters}
-            title="Đặt lại bộ lọc"
-            aria-label="Xóa bộ lọc"
-            className="inline-flex h-7 items-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-medium text-background hover:bg-foreground/90 active:scale-[0.98] transition-colors"
-          >
-            <RotateCcw className="size-3.5" />
-            <span>Xóa bộ lọc</span>
-          </Pressable>
-        )}
-
-        {canAddTask && onAddTask && (
-          <Pressable
-            onClick={onAddTask}
-            className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium active:scale-[0.98] transition-colors",
-              hasFilterActive && onResetFilters
-                ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-                : "border border-border bg-card text-foreground hover:bg-muted"
+      density="page"
+      illustration={illustration}
+      // Từ md: cao gần hết vùng nội dung (chừa thanh lọc và đệm dưới để trang không cuộn), pt-24 kéo khối xuống gần giữa vùng như Linear
+      className={cn("min-h-[66vh] select-none md:min-h-[calc(100dvh-8.5rem)] md:pt-24", className)}
+      title={displayTitle}
+      description={
+        <>
+          {displayDescription}
+          {filterNote ? <span className="block">{filterNote}</span> : null}
+        </>
+      }
+      action={
+        pointsToCreate ? (
+          // Nút Tạo việc (chỉ chữ, không icon hay phím tắt) kèm thẻ hướng dẫn bước đầu cạnh nút tạo mới trên thanh công cụ; nút phụ Hướng dẫn mở lại thẻ
+          <CreateButtonWithHint
+            hintId="tasks"
+            label="Tạo việc"
+            onClick={onAddTask!}
+            title="Tạo nhiệm vụ đầu tiên"
+            description="Bấm Tạo việc để giao việc, chọn người chủ trì và hạn hoàn thành."
+            guideButton
+          />
+        ) : suggestedCopy || (hasFilterActive && onResetFilters) ? (
+          <>
+            {suggestedCopy && suggestedView && (
+              <Button size="pill" onClick={suggestedView.onSelect}>
+                {suggestedCopy.action}
+              </Button>
             )}
-          >
-            <Plus className="size-3.5" />
-            <span>Tạo nhiệm vụ mới</span>
-            {pointsToCreate ? <kbd className="ml-1 font-sans text-xs text-muted-foreground/80">C</kbd> : null}
-          </Pressable>
-        )}
-      </div>
-    </div>
-    </div>
+
+            {hasFilterActive && onResetFilters && (
+              <Button size="pill" onClick={onResetFilters} title="Đặt lại bộ lọc">
+                <RotateCcw data-icon="inline-start" />
+                Xóa bộ lọc
+              </Button>
+            )}
+          </>
+        ) : null
+      }
+    />
+    </>
   );
 });

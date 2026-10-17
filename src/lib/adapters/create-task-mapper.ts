@@ -20,7 +20,11 @@
  * - The strict `CreateTaskInputSchema` is consumed as-is and never widened.
  */
 
-import { CreateTaskInputSchema, type CreateTaskInput, type TaskPriorityInput } from '@/contracts/tasks';
+import {
+  CreateTaskWithSubtasksInputSchema,
+  type CreateTaskWithSubtasksInput,
+  type TaskPriorityInput,
+} from '@/contracts/tasks';
 import type { TaskDetailDTO } from '@/server/dto/task-dto';
 
 /** Visual/creation level exposed by the create-task UI. */
@@ -50,6 +54,19 @@ export const TASK_LEVEL_TO_SCOPE = {
  * they are intentionally NOT persisted through POST /api/tasks because the strict
  * canonical schema rejects them (widening it is forbidden without domain proof).
  */
+export interface CreateTaskSubtaskDraft {
+  title: string;
+  description?: string;
+  assigneeId?: string;
+  dueDate?: string;
+}
+
+/** Máy chủ báo việc con nào đã tạo, việc nào chưa (việc cha vẫn được giữ). */
+export interface CreateTaskSubtaskSummary {
+  created: Array<{ id: string; code: string; title: string }>;
+  failed: Array<{ title: string; message: string }>;
+}
+
 export interface CreateTaskDraft {
   level: CreateTaskLevel;
   title: string;
@@ -62,6 +79,8 @@ export interface CreateTaskDraft {
   coAssignees?: string[];
   parentTaskId?: string;
   priority?: TaskPriorityInput;
+  /** Việc con tạo kèm (chỉ với nhiệm vụ gốc); trường bỏ trống kế thừa việc cha ở máy chủ. */
+  subtasks?: CreateTaskSubtaskDraft[];
   /* Legacy / UI-only fields — deliberately not persisted by this adapter. */
   category?: string;
   internalDueDate?: string;
@@ -170,7 +189,7 @@ function dedupeCollaboratorIds(ids: readonly string[], primaryAssigneeId?: strin
 export function buildCreateTaskPayload(
   draft: CreateTaskDraft,
   options: MapCreateTaskDraftOptions = {}
-): CreateTaskInput {
+): CreateTaskWithSubtasksInput {
   if (!draft || typeof draft !== 'object') {
     throw new Error('buildCreateTaskPayload requires a CreateTaskDraft.');
   }
@@ -217,7 +236,23 @@ export function buildCreateTaskPayload(
   const parentTaskId = trimOrUndefined(draft.parentTaskId);
   if (parentTaskId) payload.parentTaskId = parentTaskId;
 
-  return CreateTaskInputSchema.parse(payload);
+  const subtasks = (draft.subtasks ?? [])
+    .map((item) => {
+      const title = trimOrUndefined(item.title);
+      if (!title) return null;
+      const subtask: Record<string, string> = { title };
+      const subDescription = trimOrUndefined(item.description);
+      if (subDescription) subtask.description = subDescription;
+      const subAssigneeId = trimOrUndefined(item.assigneeId);
+      if (subAssigneeId) subtask.assigneeId = subAssigneeId;
+      const subDueDate = trimOrUndefined(item.dueDate);
+      if (subDueDate) subtask.dueDate = subDueDate;
+      return subtask;
+    })
+    .filter((item): item is Record<string, string> => item !== null);
+  if (subtasks.length > 0) payload.subtasks = subtasks;
+
+  return CreateTaskWithSubtasksInputSchema.parse(payload);
 }
 
 export interface ReconcileCreatedTaskResult {
@@ -276,6 +311,8 @@ export type CreateTaskSubmitResult =
   | {
       ok: true;
       task: TaskDetailDTO;
+      /** Chỉ có khi gửi kèm việc con. */
+      subtasks: CreateTaskSubtaskSummary | null;
       idempotencyKey: string;
       attempts: number;
       replacedTempId: string | null;
@@ -300,6 +337,16 @@ function defaultCreateKey(): string {
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
   return String(error);
+}
+
+function extractSubtaskSummary(body: unknown): CreateTaskSubtaskSummary | null {
+  if (!body || typeof body !== 'object') return null;
+  const summary = (body as Record<string, unknown>).subtasks as Partial<CreateTaskSubtaskSummary> | undefined;
+  if (!summary || typeof summary !== 'object') return null;
+  return {
+    created: Array.isArray(summary.created) ? summary.created : [],
+    failed: Array.isArray(summary.failed) ? summary.failed : [],
+  };
 }
 
 function extractServerTask(body: unknown): TaskDetailDTO | null {
@@ -327,7 +374,7 @@ export async function submitCreateTask(
   const idempotencyKey =
     trimOrUndefined(options.idempotencyKey) ?? (options.createKey ?? defaultCreateKey)();
 
-  let payload: CreateTaskInput;
+  let payload: CreateTaskWithSubtasksInput;
   try {
     payload = buildCreateTaskPayload(draft, options);
   } catch (error) {
@@ -416,6 +463,7 @@ export async function submitCreateTask(
     return {
       ok: true,
       task: reconciled.task,
+      subtasks: extractSubtaskSummary(body),
       idempotencyKey,
       attempts,
       replacedTempId: reconciled.replacedTempId,

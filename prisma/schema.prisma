@@ -62,6 +62,8 @@ enum TaskPriority {
   HIGH
   NORMAL
   LOW
+  // Không ưu tiên (như "No priority" của Linear): hộp tạo việc mặc định mức này; xếp sau LOW. Mặc định cột vẫn là NORMAL cho các luồng khác.
+  NONE
 }
 
 enum DeliverableReviewStatus {

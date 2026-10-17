@@ -1,26 +1,13 @@
 "use client";
 
 import * as React from "react";
-import {
-  Smartphone,
-  QrCode,
-  Copy,
-  Check,
-  Share,
-  PlusSquare,
-  Sparkles,
-  X,
-  Laptop,
-  CheckCircle2,
-  Loader2,
-  Wifi,
-  Network,
-  Download,
-} from "lucide-react";
+import { Check, Copy, Download, MoreHorizontal, MoreVertical, PlusSquare, Share } from "lucide-react";
 import QRCode from "qrcode";
-import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { cn } from "@/lib/utils";
-import { Pressable } from "@/components/ui/pressable";
+import { checkIsIOS, usePWAInstall } from "@/hooks/use-pwa-install";
+import { pwaOnboardingCoordinator } from "@/lib/pwa/onboarding-coordinator";
+import { Button } from "@/components/ui/button";
+import { StandardDialog } from "@/components/ui/dialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export interface MobileAppInstallModalProps {
   isOpen?: boolean;
@@ -35,65 +22,111 @@ interface NetworkInfo {
   lanUrl: string | null;
 }
 
-export function MobileAppInstallModal({
-  isOpen: propIsOpen,
-  onClose: propOnClose,
-}: MobileAppInstallModalProps) {
+type UrlType = "tailscale" | "lan" | "current";
+/** Thiết bị đang mở hộp này; quyết định hiện nút Cài đặt hay các bước thủ công. */
+type Platform = "ios" | "android" | "mac-safari" | "desktop";
+
+const URL_HINT: Record<UrlType, string> = {
+  tailscale: "Cần bật Tailscale",
+  lan: "Cần cùng Wi-Fi",
+  current: "Cần mở được địa chỉ này",
+};
+
+function detectPlatform(): Platform {
+  if (checkIsIOS()) return "ios";
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return "android";
+  if (/Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua)) return "mac-safari";
+  return "desktop";
+}
+
+/** Ký hiệu nút của trình duyệt, đặt trong dòng chữ hướng dẫn. */
+function Key({ icon: Icon, children }: { icon?: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+  return (
+    <span className="mx-0.5 inline-flex h-5 items-center gap-1 rounded-sm bg-muted px-1.5 align-middle text-xs leading-none text-foreground">
+      {Icon ? <Icon className="size-3 text-muted-foreground" /> : null}
+      {children}
+    </span>
+  );
+}
+
+const B = ({ children }: { children: React.ReactNode }) => <strong className="font-medium">{children}</strong>;
+
+/**
+ * Các bước thủ công khi trình duyệt không có nút cài (iOS, Safari trên Mac) hoặc chưa cho cài.
+ * iOS 26: nút Chia sẻ có thể nằm trong menu ⋯ tùy cách bố trí tab; ứng dụng trên màn hình chính có bộ nhớ riêng nên phải đăng nhập lại.
+ */
+const STEPS: Record<Platform, React.ReactNode[]> = {
+  ios: [
+    <>Mở trang này bằng <B>Safari</B>.</>,
+    <>Nhấn <Key icon={Share}>Chia sẻ</Key>. Không thấy thì nhấn <Key icon={MoreHorizontal}>Thêm</Key> trước.</>,
+    <>Chọn <Key icon={PlusSquare}>Thêm vào MH chính</Key>, giữ bật mở dưới dạng ứng dụng web, rồi nhấn <B>Thêm</B>.</>,
+    <>Mở QCET E-Office từ màn hình chính, đăng nhập lại một lần để nhận thông báo.</>,
+  ],
+  android: [
+    <>Mở trang này bằng <B>Chrome</B>.</>,
+    <>Nhấn <Key icon={MoreVertical}>Menu</Key> ở góc trên bên phải.</>,
+    <>Chọn <B>Cài đặt ứng dụng</B> (hoặc Thêm vào màn hình chính) rồi xác nhận.</>,
+  ],
+  "mac-safari": [<>Trên thanh menu, chọn <B>File → Add to Dock</B>.</>, <>Nhấn <B>Add</B>; QCET E-Office mở trong cửa sổ riêng từ Dock.</>],
+  desktop: [
+    <>Mở trang này bằng <B>Chrome</B> hoặc <B>Edge</B>.</>,
+    <>Bấm biểu tượng <Key icon={Download}>Cài đặt</Key> ở cuối thanh địa chỉ rồi chọn <B>Cài đặt</B>.</>,
+  ],
+};
+
+function Steps({ items }: { items: React.ReactNode[] }) {
+  return (
+    <ol className="space-y-2">
+      {items.map((item, index) => (
+        <li key={index} className="flex items-start gap-3 text-compact leading-6 text-foreground">
+          <span className="w-3 shrink-0 text-right tabular-nums text-muted-foreground">{index + 1}</span>
+          <span className="min-w-0">{item}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * Hộp "Cài ứng dụng" (PWA), mở bằng sự kiện `qcet:open-install-modal`. Gọn theo đúng thiết bị đang dùng:
+ * - Đã cài: một dòng báo đã cài.
+ * - Trình duyệt cho cài (Chrome/Edge, Chrome Android): nút Cài đặt ở chân hộp.
+ * - Không có nút cài (iOS, Safari trên Mac…): các bước của riêng thiết bị đó.
+ * Máy tính có thêm hàng "Cài trên điện thoại" (mã QR + chép địa chỉ); quét xong, hộp này trên điện thoại tự hiện đúng các bước.
+ * Chọn Tailscale / Wi-Fi nội bộ chỉ có khi chạy ở localhost (môi trường phát triển), bản thật dùng tên miền đang mở.
+ */
+export function MobileAppInstallModal({ isOpen: propIsOpen, onClose: propOnClose }: MobileAppInstallModalProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const isOpen = propIsOpen !== undefined ? propIsOpen : internalOpen;
   const handleClose = React.useCallback(() => {
-    if (propOnClose) {
-      propOnClose();
-    } else {
-      setInternalOpen(false);
-    }
+    if (propOnClose) propOnClose();
+    else setInternalOpen(false);
   }, [propOnClose]);
 
   const { isInstallable, isStandalone, installApp } = usePWAInstall();
+  const [platform, setPlatform] = React.useState<Platform>("desktop");
+  const [isPhone, setIsPhone] = React.useState(false);
+  const [canPrompt, setCanPrompt] = React.useState(false);
+  const [isLocalHost, setIsLocalHost] = React.useState(false);
   const [networkInfo, setNetworkInfo] = React.useState<NetworkInfo | null>(null);
-  const [selectedUrlType, setSelectedUrlType] = React.useState<
-    "tailscale" | "lan" | "current"
-  >("tailscale");
-  const [qrCodeDataUrl, setQrCodeDataUrl] = React.useState<string>("");
+  const [urlType, setUrlType] = React.useState<UrlType>("current");
+  const [qrCodeDataUrl, setQrCodeDataUrl] = React.useState("");
   const [copied, setCopied] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<"ios" | "android" | "desktop">(
-    "ios"
-  );
-  const [isGeneratingQr, setIsGeneratingQr] = React.useState(false);
-  const [isMobileDevice, setIsMobileDevice] = React.useState(false);
 
   React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const checkMobile = () => {
-      const isMobileWidth = window.innerWidth < 768;
-      const isMobileUA =
-        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      setIsMobileDevice(isMobileWidth || isMobileUA);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    const detected = detectPlatform();
+    setPlatform(detected);
+    setIsPhone(detected === "ios" || detected === "android");
+    setIsLocalHost(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname));
   }, []);
 
+  // Hộp mở muộn hơn sự kiện beforeinstallprompt: hỏi bộ điều phối PWA đang giữ sự kiện đó
   React.useEffect(() => {
-    if (typeof navigator !== "undefined") {
-      const isIOS =
-        /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      if (isIOS) {
-        setActiveTab("ios");
-      } else if (isAndroid) {
-        setActiveTab("android");
-      }
-    }
-  }, []);
+    if (isOpen) setCanPrompt(isInstallable || pwaOnboardingCoordinator.hasInstallPrompt());
+  }, [isOpen, isInstallable]);
 
-  // Global event listener to open modal from anywhere.
-  // When a parent controls `isOpen` (e.g. AppShell's container that owns the
-  // listener), the parent owns the trigger — registering a second listener here
-  // would duplicate the open path (T68).
+  // Mở từ bất kỳ đâu. Khi cha điều khiển `isOpen` (AppShell giữ listener) thì không đăng ký thêm, tránh mở hai đường (T68).
   React.useEffect(() => {
     if (propIsOpen !== undefined) return;
     const handleOpen = () => setInternalOpen(true);
@@ -101,551 +134,154 @@ export function MobileAppInstallModal({
     return () => window.removeEventListener("qcet:open-install-modal", handleOpen);
   }, [propIsOpen]);
 
-  // Fetch local network & Tailscale info
+  // Chỉ môi trường phát triển (localhost) mới cần địa chỉ Tailscale / mạng nội bộ để điện thoại mở được
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isLocalHost) return;
     let isMounted = true;
-
-    async function fetchNetwork() {
+    (async () => {
       try {
         const res = await fetch("/api/system/network-info");
-        if (res.ok) {
-          const data: NetworkInfo = await res.json();
-          if (isMounted) {
-            setNetworkInfo(data);
-            if (data.tailscaleUrl) {
-              setSelectedUrlType("tailscale");
-            } else if (data.lanUrl) {
-              setSelectedUrlType("lan");
-            } else {
-              setSelectedUrlType("current");
-            }
-          }
-        }
+        if (!res.ok) return;
+        const data: NetworkInfo = await res.json();
+        if (!isMounted) return;
+        setNetworkInfo(data);
+        setUrlType(data.tailscaleUrl ? "tailscale" : data.lanUrl ? "lan" : "current");
       } catch {
-        // Fallback to current window origin
+        // Không lấy được thì dùng địa chỉ hiện tại
       }
-    }
-
-    fetchNetwork();
+    })();
     return () => {
       isMounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, isLocalHost]);
 
-  // Compute the current active URL to encode into QR code
-  const activeUrl = React.useMemo(() => {
-    if (typeof window === "undefined") return "";
-    if (selectedUrlType === "tailscale" && networkInfo?.tailscaleUrl) {
-      return networkInfo.tailscaleUrl;
-    }
-    if (selectedUrlType === "lan" && networkInfo?.lanUrl) {
-      return networkInfo.lanUrl;
-    }
-    return window.location.origin;
-  }, [selectedUrlType, networkInfo]);
+  const urlOptions = React.useMemo(() => {
+    const options: { type: UrlType; label: string; url: string }[] = [];
+    if (networkInfo?.tailscaleUrl) options.push({ type: "tailscale", label: "Tailscale", url: networkInfo.tailscaleUrl });
+    if (networkInfo?.lanUrl) options.push({ type: "lan", label: "Wi-Fi nội bộ", url: networkInfo.lanUrl });
+    if (typeof window !== "undefined") options.push({ type: "current", label: "Địa chỉ này", url: window.location.origin });
+    return options;
+  }, [networkInfo]);
+  const activeUrl = urlOptions.find((o) => o.type === urlType)?.url ?? urlOptions[urlOptions.length - 1]?.url ?? "";
 
-  // Generate QR code whenever activeUrl changes
   React.useEffect(() => {
-    if (!activeUrl) return;
+    if (!isOpen || isPhone || !activeUrl) return;
     let isMounted = true;
-    setIsGeneratingQr(true);
-
-    QRCode.toDataURL(activeUrl, {
-      width: 240,
-      margin: 2,
-      color: {
-        dark: "#0f172a",
-        light: "#ffffff",
-      },
-    })
+    QRCode.toDataURL(activeUrl, { width: 192, margin: 1, color: { dark: "#1a1d23", light: "#ffffff" } })
       .then((url) => {
-        if (isMounted) {
-          setQrCodeDataUrl(url);
-          setIsGeneratingQr(false);
-        }
+        if (isMounted) setQrCodeDataUrl(url);
       })
-      .catch(() => {
-        if (isMounted) setIsGeneratingQr(false);
-      });
-
+      .catch(() => {});
     return () => {
       isMounted = false;
     };
-  }, [activeUrl]);
-
-  // Escape key handler
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, handleClose]);
+  }, [isOpen, isPhone, activeUrl]);
 
   const handleCopyLink = async () => {
-    if (!activeUrl) return;
     try {
       await navigator.clipboard.writeText(activeUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      // ignore
+      // Trình duyệt chặn clipboard: địa chỉ vẫn hiện để chọn tay
     }
   };
 
-  if (!isOpen) return null;
+  const install = async () => {
+    const outcome = await installApp();
+    if (outcome === "accepted") handleClose();
+    else setCanPrompt(pwaOnboardingCoordinator.hasInstallPrompt());
+  };
+
+  const showSteps = !isStandalone && !canPrompt;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="install-modal-title"
+    <StandardDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+      title="Cài ứng dụng QCET E-Office"
+      description="Cài QCET E-Office để mở như ứng dụng và nhận thông báo khi có việc mới."
+      size="sm"
+      showHeader={false}
+      className="gap-5 p-5 sm:p-5"
     >
-      <div
-        className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl border-0 bg-card text-card-foreground shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-0 bg-muted/20 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-secondary text-primary border-0">
-              <Smartphone size={18} />
-            </div>
-            <div>
-              <h2
-                id="install-modal-title"
-                className="text-sm sm:text-base font-semibold text-foreground leading-tight"
-              >
-                Cài đặt Ứng dụng QCET E-Office
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Hoạt động như ứng dụng di động độc lập (PWA), nhận thông báo chuông tức thì
-              </p>
+      {/* Không có đầu hộp: tiêu đề/mô tả chỉ cho trình đọc màn hình; nội dung và nút ở chân hộp đã đủ nói hộp này làm gì */}
+      {isStandalone ? (
+        <p className="flex items-center gap-2 text-compact text-foreground">
+          <Check className="size-4 text-muted-foreground" />
+          Bạn đang dùng ứng dụng đã cài.
+        </p>
+      ) : null}
+      {canPrompt && !isStandalone && isPhone ? (
+        <p className="text-compact text-foreground">Thêm QCET E-Office vào màn hình chính để nhận thông báo khi có việc mới.</p>
+      ) : null}
+      {showSteps ? <Steps items={STEPS[platform]} /> : null}
+
+      {!isPhone ? (
+        <section aria-labelledby="install-on-phone" className="flex items-center gap-4">
+          <div className="size-16 shrink-0 overflow-hidden rounded-md bg-white">
+            {qrCodeDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrCodeDataUrl} alt="Mã QR mở QCET E-Office trên điện thoại" width={64} height={64} className="size-full" />
+            ) : null}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 id="install-on-phone" className="text-compact font-medium text-foreground">
+              Cài trên điện thoại
+            </h3>
+            <p className="text-xs text-muted-foreground">Quét mã bằng camera điện thoại.</p>
+            <div className="mt-0.5 flex min-w-0 items-center gap-0.5">
+              <span className="min-w-0 truncate font-mono text-xs text-muted-foreground" title={activeUrl}>
+                {activeUrl.replace(/^https?:\/\//, "")}
+              </span>
+              <Button size="icon-xs" variant="ghost" onClick={handleCopyLink} aria-label={copied ? "Đã chép địa chỉ" : "Chép địa chỉ"}>
+                {copied ? <Check /> : <Copy />}
+              </Button>
             </div>
           </div>
-          <Pressable
-            onClick={handleClose}
-            className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
-            aria-label="Đóng"
+        </section>
+      ) : null}
+
+      {/* Môi trường phát triển: chọn địa chỉ điện thoại mở được */}
+      {!isPhone && isLocalHost && urlOptions.length > 1 ? (
+        <div className="-mt-2 flex items-center gap-2">
+          <ToggleGroup
+            aria-label="Địa chỉ mở trên điện thoại"
+            size="xs"
+            value={[urlType]}
+            onValueChange={(next) => {
+              if (next[0]) setUrlType(next[0] as UrlType);
+            }}
           >
-            <X size={18} />
-          </Pressable>
+            {urlOptions.map((option) => (
+              <ToggleGroupItem key={option.type} value={option.type}>
+                {option.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <span className="truncate text-xs text-muted-foreground">{URL_HINT[urlType]}</span>
         </div>
+      ) : null}
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {isMobileDevice ? (
-            /* Direct Mobile Install / Quick Action Card */
-            <div className="p-4 rounded-xl border-0 bg-primary/5 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Smartphone size={16} className="text-primary shrink-0" />
-                    <h4 className="text-sm font-semibold text-foreground">
-                      {isStandalone
-                        ? "Ứng dụng đã được cài đặt"
-                        : "Cài đặt ứng dụng trên thiết bị này"}
-                    </h4>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {isStandalone
-                      ? "Bạn đang sử dụng QCET E-Office ở chế độ App toàn màn hình với hiệu năng tối ưu."
-                      : "Trải nghiệm mượt mà, khởi chạy từ màn hình chính và nhận thông báo công việc tức thì."}
-                  </p>
-                </div>
-
-                {isInstallable && !isStandalone && (
-                  <Pressable
-                    onClick={async () => {
-                      await installApp();
-                      handleClose();
-                    }}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-none hover:bg-primary-hover active:scale-[0.98] transition-all shrink-0"
-                  >
-                    <Download size={14} />
-                    <span>Cài đặt ứng dụng</span>
-                  </Pressable>
-                )}
-              </div>
-
-              {/* Copy URL Row for Mobile */}
-              <div className="flex items-center gap-2 pt-2 border-0">
-                <input
-                  type="text"
-                  readOnly
-                  value={activeUrl}
-                  className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all truncate"
-                />
-                <Pressable
-                  onClick={handleCopyLink}
-                  className={cn(
-                    "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all shrink-0",
-                    copied
-                      ? "bg-emerald-600 text-white"
-                      : "bg-card hover:bg-muted border-0 text-foreground"
-                  )}
-                >
-                  {copied ? <Check size={12} /> : <Copy size={12} />}
-                  <span>{copied ? "Đã chép" : "Chép liên kết"}</span>
-                </Pressable>
-              </div>
-            </div>
-          ) : (
-            /* QR Code & Direct Connect Section */
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center p-4 rounded-xl border-0 bg-primary/5">
-            {/* Left: QR Display */}
-            <div className="md:col-span-5 flex flex-col items-center justify-center text-center">
-              <div className="relative p-2.5 bg-card rounded-xl shadow-none border-0 inline-flex items-center justify-center">
-                {isGeneratingQr || !qrCodeDataUrl ? (
-                  <div className="size-[180px] flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <Loader2 size={24} className="animate-spin text-primary" />
-                    <span className="text-xs font-medium">Đang tạo mã QR...</span>
-                  </div>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={qrCodeDataUrl}
-                    alt="Mã QR mở ứng dụng trên điện thoại"
-                    width={180}
-                    height={180}
-                    className="size-[180px] rounded-lg block"
-                  />
-                )}
-              </div>
-              <p className="mt-2 text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <QrCode size={13} className="text-primary" />
-                <span>Quét bằng Camera điện thoại</span>
-              </p>
-            </div>
-
-            {/* Right: Network Address Options & Copy */}
-            <div className="md:col-span-7 space-y-3">
-              <div>
-                <span className="text-xs font-semibold text-muted-foreground">
-                  Chọn kênh kết nối đến điện thoại:
-                </span>
-                <div className="mt-1.5 space-y-1.5">
-                  {/* Tailscale Option */}
-                  {networkInfo?.tailscaleUrl && (
-                    <Pressable
-                      onClick={() => setSelectedUrlType("tailscale")}
-                      className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
-                        selectedUrlType === "tailscale"
-                          ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
-                          : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Network size={14} className="shrink-0" />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="truncate">Mạng Tailscale VPN</span>
-                            <span
-                              className={cn(
-                                "px-1.5 py-0.5 rounded text-xs uppercase font-semibold",
-                                selectedUrlType === "tailscale"
-                                  ? "bg-card/20 text-white"
-                                  : "bg-secondary text-foreground"
-                              )}
-                            >
-                              Khuyên dùng
-                            </span>
-                          </div>
-                          <p
-                            className={cn(
-                              "text-xs font-mono truncate",
-                              selectedUrlType === "tailscale"
-                                ? "text-white/80"
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            {networkInfo.tailscaleUrl}
-                          </p>
-                        </div>
-                      </div>
-                      {selectedUrlType === "tailscale" && (
-                        <CheckCircle2 size={14} className="shrink-0 ml-2" />
-                      )}
-                    </Pressable>
-                  )}
-
-                  {/* LAN Wi-Fi Option */}
-                  {networkInfo?.lanUrl && (
-                    <Pressable
-                      onClick={() => setSelectedUrlType("lan")}
-                      className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
-                        selectedUrlType === "lan"
-                          ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
-                          : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Wifi size={14} className="shrink-0" />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="truncate">Wi-Fi nội bộ (Cùng mạng)</span>
-                          </div>
-                          <p
-                            className={cn(
-                              "text-xs font-mono truncate",
-                              selectedUrlType === "lan"
-                                ? "text-white/80"
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            {networkInfo.lanUrl}
-                          </p>
-                        </div>
-                      </div>
-                      {selectedUrlType === "lan" && (
-                        <CheckCircle2 size={14} className="shrink-0 ml-2" />
-                      )}
-                    </Pressable>
-                  )}
-
-                  {/* Current / Localhost Option */}
-                  <Pressable
-                    onClick={() => setSelectedUrlType("current")}
-                    className={cn(
-                      "w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-medium transition-all text-left",
-                      selectedUrlType === "current"
-                        ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
-                        : "bg-card hover:bg-muted/70 border-border/60 text-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Laptop size={14} className="shrink-0" />
-                      <div className="min-w-0">
-                        <span className="truncate">Địa chỉ hiện tại</span>
-                        <p
-                          className={cn(
-                            "text-xs font-mono truncate",
-                            selectedUrlType === "current"
-                              ? "text-white/80"
-                              : "text-muted-foreground"
-                          )}
-                        >
-                          {typeof window !== "undefined" ? window.location.origin : "http://localhost:3001"}
-                        </p>
-                      </div>
-                    </div>
-                    {selectedUrlType === "current" && (
-                      <CheckCircle2 size={14} className="shrink-0 ml-2" />
-                    )}
-                  </Pressable>
-                </div>
-              </div>
-
-              {/* Copy URL Row */}
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="text"
-                  readOnly
-                  value={activeUrl}
-                  className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all"
-                />
-                <Pressable
-                  onClick={handleCopyLink}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                    copied
-                      ? "bg-emerald-600 text-white"
-                      : "bg-secondary text-foreground hover:bg-secondary/80 border-0"
-                  )}
-                >
-                  {copied ? <Check size={13} /> : <Copy size={13} />}
-                  <span>{copied ? "Đã chép" : "Chép link"}</span>
-                </Pressable>
-              </div>
-            </div>
-          </div>
-        )}
-
-          {/* Platform Installation Guide Tabs */}
-          <div>
-            <div className="flex items-center gap-1.5 border-0 pb-2 overflow-x-auto">
-              <Pressable
-                onClick={() => setActiveTab("ios")}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
-                  activeTab === "ios"
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <span>iPhone / iPad (iOS)</span>
-              </Pressable>
-              <Pressable
-                onClick={() => setActiveTab("android")}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
-                  activeTab === "android"
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <span>Điện thoại Android</span>
-              </Pressable>
-              <Pressable
-                onClick={() => setActiveTab("desktop")}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors shrink-0",
-                  activeTab === "desktop"
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <span>Máy tính (Desktop App)</span>
-              </Pressable>
-            </div>
-
-            {/* iOS Guide */}
-            {activeTab === "ios" && (
-              <div className="pt-3 space-y-2.5">
-                <div className="p-3 rounded-xl border-0 bg-muted/20 space-y-2 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                      1
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      Mở <strong>Safari</strong> trên iPhone/iPad và truy cập vào địa chỉ hệ thống (hoặc quét mã QR ở trên).
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                      2
-                    </span>
-                    <div className="text-foreground leading-relaxed flex items-center gap-1 flex-wrap">
-                      <span>Nhấn biểu tượng</span>
-                      <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border-0">
-                        <Share size={12} className="text-primary" /> Chia sẻ (Share)
-                      </strong>
-                      <span>ở thanh công cụ dưới đáy Safari.</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                      3
-                    </span>
-                    <div className="text-foreground leading-relaxed flex items-center gap-1 flex-wrap">
-                      <span>Chọn</span>
-                      <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border-0">
-                        <PlusSquare size={12} className="text-primary" /> Thêm vào MH chính (Add to Home Screen)
-                      </strong>
-                      <span>rồi nhấn <strong>Thêm (Add)</strong>.</span>
-                    </div>
-                  </div>
-                  <div className="mt-1 pt-1.5 border-0 text-xs text-muted-foreground">
-                    Thao tác nhanh: <strong>Nhấn biểu tượng Chia sẻ &rarr; Thêm vào Màn hình chính</strong>.
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-secondary border-0 text-emerald-700 text-xs flex items-center gap-2">
-                  <CheckCircle2 size={15} className="shrink-0" />
-                  <span>
-                    App sẽ xuất hiện trên màn hình chính của iPhone với biểu tượng QCET, chạy toàn màn hình và nhận thông báo đẩy (Push Notifications) như app App Store!
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Android Guide */}
-            {activeTab === "android" && (
-              <div className="pt-3 space-y-2.5">
-                <div className="p-3 rounded-xl border-0 bg-muted/20 space-y-2 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                      1
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      Mở trình duyệt <strong>Google Chrome</strong> trên điện thoại Android và mở liên kết Tailscale (hoặc quét mã QR).
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                      2
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      Bấm vào biểu tượng menu <strong>3 dấu chấm (⋮)</strong> ở góc trên bên phải màn hình.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                      3
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      Chọn <strong>&ldquo;Cài đặt ứng dụng&rdquo;</strong> (hoặc &ldquo;Thêm vào Màn hình chính&rdquo;) $\rightarrow$ Xác nhận <strong>Cài đặt</strong>.
-                    </p>
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-secondary border-0 text-emerald-700 text-xs flex items-center gap-2">
-                  <CheckCircle2 size={15} className="shrink-0" />
-                  <span>
-                    Ứng dụng được cài đặt vào ngăn chứa ứng dụng của Android, hỗ trợ thông báo chuông và rung độc lập.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Desktop Guide */}
-            {activeTab === "desktop" && (
-              <div className="pt-3 space-y-2.5">
-                <div className="p-3 rounded-xl border-0 bg-muted/20 space-y-3 text-xs">
-                  {isStandalone ? (
-                    <div className="flex items-center gap-2 text-foreground font-semibold">
-                      <CheckCircle2 size={16} />
-                      <span>QCET E-Office đã được cài đặt và đang chạy ở chế độ Desktop App độc lập.</span>
-                    </div>
-                  ) : isInstallable ? (
-                    <div className="space-y-2">
-                      <p className="text-foreground leading-relaxed">
-                        Trình duyệt hiện tại sẵn sàng cài đặt ứng dụng QCET E-Office trực tiếp lên máy tính của bạn:
-                      </p>
-                      <Pressable
-                        onClick={async () => {
-                          await installApp();
-                          handleClose();
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary-hover transition-all shadow-none active:scale-[0.98]"
-                      >
-                        <Laptop size={15} />
-                        <span>Cài đặt ngay lên máy tính này</span>
-                      </Pressable>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <p className="text-foreground leading-relaxed">
-                        Trên trình duyệt <strong>Google Chrome</strong> hoặc <strong>Microsoft Edge</strong>:
-                      </p>
-                      <p className="text-muted-foreground leading-relaxed">
-                        Nhìn vào góc bên phải của thanh địa chỉ URL (gần biểu tượng Dấu sao Bookmark), bấm vào biểu tượng <strong>Cài đặt ứng dụng</strong> (hình màn hình máy tính có mũi tên tải xuống).
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-0 bg-muted/10 flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Sparkles size={13} className="text-primary" />
-            <span>Đồng bộ thời gian thực qua Tailscale &amp; Web Push</span>
-          </div>
-          <Pressable
-            onClick={handleClose}
-            className="px-4 py-2 min-h-[44px] rounded-lg border-0 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors flex items-center justify-center"
-          >
+      <div className="flex justify-end gap-2">
+        {canPrompt && !isStandalone ? (
+          <>
+            <Button variant="ghost" size="sm" onClick={handleClose}>
+              Để sau
+            </Button>
+            <Button size="sm" onClick={install}>
+              <Download />
+              {isPhone ? "Cài đặt" : "Cài trên máy này"}
+            </Button>
+          </>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={handleClose}>
             Đóng
-          </Pressable>
-        </div>
+          </Button>
+        )}
       </div>
-    </div>
+    </StandardDialog>
   );
 }

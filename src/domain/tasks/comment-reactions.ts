@@ -32,3 +32,39 @@ export function summarizeCommentReactions(
     return [{ emoji, count: hits.length, reacted: hits.some((row) => row.userId === viewerId), names: hits.map((row) => row.userName) }];
   });
 }
+
+/** Số tên tối đa hiện trong chú thích; người còn lại gộp thành "và N người khác". */
+export const REACTION_NAMES_SHOWN = 6;
+
+export interface ReactionNamesLabel {
+  /** Tên hiện từng cái (đã đổi người xem thành "Bạn", đứng đầu). */
+  shown: string[];
+  /** Số người không hiện tên. */
+  rest: number;
+}
+
+/**
+ * Danh sách người đã thả cho chú thích: "Bạn" đứng đầu, còn lại theo thứ tự thả, quá `limit` thì gộp phần dư.
+ * Chỉ để hiển thị; số lượng thật vẫn là `count` của tóm tắt.
+ */
+export function reactionNamesLabel(
+  summary: Pick<CommentReactionSummary, "names" | "reacted">,
+  viewerName: string,
+  limit: number = REACTION_NAMES_SHOWN
+): ReactionNamesLabel {
+  const others = [...summary.names];
+  const viewerAt = summary.reacted ? others.indexOf(viewerName) : -1;
+  if (viewerAt >= 0) others.splice(viewerAt, 1);
+  const all = viewerAt >= 0 ? ["Bạn", ...others] : others;
+  // Chừa chỗ cho dòng "và N người khác": không rút gọn khi chỉ dư đúng một người (nói thẳng tên cho gọn).
+  if (all.length <= limit + 1) return { shown: all, rest: 0 };
+  return { shown: all.slice(0, limit), rest: all.length - limit };
+}
+
+/** "A", "A và B", "A, B và C", "A, B, C, D, E, F và 3 người khác". */
+export function joinReactionNames({ shown, rest }: ReactionNamesLabel): string {
+  const tail = rest > 0 ? `${rest} người khác` : null;
+  const parts = tail ? [...shown, tail] : shown;
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} và ${parts[parts.length - 1]}`;
+}

@@ -71,7 +71,7 @@ export function Combobox({
     >
       <BaseCombobox.InputGroup
         className={cn(
-          "flex h-7 w-full items-center rounded-md border border-border/60 bg-background text-xs text-foreground shadow-2xs transition-colors hover:border-border focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-50",
+          "flex h-7 w-full items-center rounded-md border border-border/60 bg-background text-xs text-foreground shadow-2xs transition-colors hover:border-border has-[input:focus-visible]:outline-1 has-[input:focus-visible]:outline-solid has-[input:focus-visible]:outline-primary has-[input:focus-visible]:-outline-offset-1 has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-50",
           invalid && "border-destructive bg-danger-soft text-destructive",
           className,
         )}
@@ -104,7 +104,7 @@ export function Combobox({
         </BaseCombobox.Trigger>
       </BaseCombobox.InputGroup>
       <BaseCombobox.Portal>
-        <BaseCombobox.Positioner sideOffset={4} collisionPadding={12} className="z-30 outline-none">
+        <BaseCombobox.Positioner sideOffset={4} collisionPadding={12} className="z-50 outline-none">
           <BaseCombobox.Popup
             render={<m.div variants={popoverVariants} initial="initial" animate="animate" />}
             className={cn(MENU_POPUP_CLASS, "w-[var(--anchor-width)] max-w-[var(--available-width)]")}

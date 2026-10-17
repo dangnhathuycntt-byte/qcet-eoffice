@@ -81,33 +81,8 @@ function ProgressIndicator({
   );
 }
 
-function ProgressLabel({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="progress-label"
-      className={cn("text-sm font-medium", className)}
-      {...props}
-    />
-  );
-}
-
-function ProgressValue({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="progress-value"
-      className={cn(
-        "ml-auto text-sm text-muted-foreground tabular-nums",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
 export {
   Progress,
   ProgressTrack,
   ProgressIndicator,
-  ProgressLabel,
-  ProgressValue,
 };

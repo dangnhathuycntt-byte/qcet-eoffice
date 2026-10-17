@@ -300,6 +300,8 @@ export const CreateOutgoingDraftSchema = z
     draftingDeptId: z.string().trim().max(64).optional(),
     authorizedSignerId: z.string().trim().max(64).optional(),
     recipientList: z.string().trim().max(1000).optional(),
+    // Hạn xử lý dự thảo (cột `dueDate` sẵn có của văn bản)
+    dueDate: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
     fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional(),
     fileName: z.string().trim().max(255).optional(),
     fileSize: z.number().int().nonnegative().max(100 * 1024 * 1024).optional(),

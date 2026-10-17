@@ -32,6 +32,7 @@ import {
   PrioritySubHigh,
   PrioritySubNormal,
   PrioritySubLow,
+  PrioritySubNone,
 } from '@/lib/icons/task-status-icons';
 
 /* ── Status Display ──────────────────────────────────────────────── */
@@ -177,7 +178,15 @@ export interface PriorityDisplayConfig {
   icon: React.ComponentType<any>;
 }
 
+/** Thứ tự menu như Linear: Không ưu tiên (phím 0) rồi Khẩn cấp…Thấp (phím 1–4). Sắp xếp theo ưu tiên thì Không ưu tiên đứng sau Thấp. */
 export const PRIORITY_DISPLAY_CONFIG: ReadonlyArray<PriorityDisplayConfig> = [
+  {
+    value: 'NONE',
+    label: 'Không ưu tiên',
+    colorClass: 'text-muted-foreground bg-muted/30 border-border/30 font-normal',
+    iconClass: 'text-muted-foreground/50',
+    icon: PrioritySubNone,
+  },
   {
     value: 'URGENT',
     label: 'Khẩn cấp',

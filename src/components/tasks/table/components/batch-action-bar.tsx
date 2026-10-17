@@ -41,7 +41,7 @@ export function calculateExtendedDeadline(
   return d.toISOString().slice(0, 10);
 }
 
-export type BulkPriority = "URGENT" | "HIGH" | "NORMAL" | "LOW";
+export type BulkPriority = "URGENT" | "HIGH" | "NORMAL" | "LOW" | "NONE";
 
 export interface BatchActionBarProps {
   selectedCount: number;
@@ -136,7 +136,7 @@ function BulkMenu({
       <MenuTrigger
         disabled={disabled}
         aria-label={ariaLabel}
-        className={cn(triggerClassName, "data-[popup-open]:bg-muted")}
+        className={cn(triggerClassName, "data-[popup-open]:bg-selected")}
       >
         {icon}
         <span className="hidden sm:inline">{label}</span>
@@ -147,7 +147,7 @@ function BulkMenu({
           <MenuPopup
             className="min-w-56 rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none animate-in fade-in-0 zoom-in-95 duration-100"
             onKeyDown={(e) => {
-              if (onDigit && /^[1-9]$/.test(e.key) && onDigit(Number(e.key))) {
+              if (onDigit && /^[0-9]$/.test(e.key) && onDigit(Number(e.key))) {
                 e.preventDefault();
                 setOpen(false);
               }
@@ -328,7 +328,8 @@ export function BatchActionBar({
             disabled={isLoading}
             triggerClassName={btn}
             onDigit={(digit) => {
-              const option = PRIORITY_DISPLAY_CONFIG[digit - 1];
+              // Phím 0 = Không ưu tiên (đứng đầu danh sách), 1–4 như cũ
+              const option = PRIORITY_DISPLAY_CONFIG[digit];
               if (!option) return false;
               onBulkPriorityChange(option.value as BulkPriority);
               return true;
@@ -337,7 +338,7 @@ export function BatchActionBar({
             {PRIORITY_DISPLAY_CONFIG.map((option, index) => (
               <MenuItem key={option.value} className={menuItemCls} onClick={() => onBulkPriorityChange(option.value as BulkPriority)}>
                 <span>{option.label}</span>
-                <kbd className="font-sans text-xs tabular-nums text-muted-foreground">{index + 1}</kbd>
+                <kbd className="font-sans text-xs tabular-nums text-muted-foreground">{index}</kbd>
               </MenuItem>
             ))}
           </BulkMenu>

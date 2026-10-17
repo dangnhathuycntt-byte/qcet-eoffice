@@ -146,6 +146,7 @@ import {
   PLATE_NODE_TYPES as PT,
 } from "./plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
+import { MENU_POPUP_CLASS } from "@/components/ui/menu";
 import { foldVietnamese } from "@/lib/search/vietnamese-search";
 
 /** Props chung cho mọi element renderer trong QCET Plate editor */
@@ -225,6 +226,14 @@ export interface TaskBlockEditorProps {
   onSelectSubtask?: (subtask: StaffTask) => void;
   onOpenCreateSubtask?: () => void;
   className?: string;
+  /**
+   * compose: ô mô tả trong hộp tạo việc. Không có tay kéo khối (không chừa lề trái), ⌘/Ctrl+Enter để hộp gửi
+   * (không chèn dòng thoát khối), báo nội dung ngay sau mỗi thay đổi (không debounce) để bấm Tạo không mất chữ cuối,
+   * tệp tải lên chưa gắn nhiệm vụ (nhiệm vụ chưa có).
+   */
+  variant?: "page" | "compose";
+  /** Nhãn truy cập của vùng soạn (contenteditable). */
+  ariaLabel?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +325,13 @@ export function resolveUrlMetadata(rawUrl: string, currentTaskTitle?: string): U
     };
   }
 }
+
+/**
+ * Thanh nút trên ảnh (độ rộng, xóa): hiện khi rê chuột hoặc focus vào ảnh;
+ * màn cảm ứng không có hover nên luôn hiện (cùng cách với nút thao tác ở hàng bảng nhiệm vụ).
+ */
+const IMAGE_TOOLBAR_REVEAL =
+  "opacity-0 transition-opacity group-hover/image:opacity-100 group-focus-within/image:opacity-100 [@media(hover:none)]:opacity-100";
 
 // ---------------------------------------------------------------------------
 // Menu item options for Slash command & Quick action
@@ -510,11 +526,11 @@ function TableRowEl({ attributes, children }: Pick<ElProps, "attributes" | "chil
 }
 
 function TableCellEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
-  return <td {...attributes} className="border-r border-border/30 last:border-r-0 px-3 py-2 min-w-[100px] min-h-[36px] align-top text-foreground leading-relaxed relative group/cell [&[data-selected]]:bg-primary/[0.06]">{children}</td>;
+  return <td {...attributes} className="border-r border-border/30 last:border-r-0 px-3 py-2 min-w-[100px] min-h-[36px] align-top text-foreground leading-relaxed relative group/cell [&[data-selected]]:bg-selected">{children}</td>;
 }
 
 function TableCellHeaderEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
-  return <th {...attributes} className="border-r border-border/30 last:border-r-0 bg-muted/30 px-3 py-2 min-w-[100px] min-h-[36px] align-top font-semibold text-foreground leading-relaxed select-none relative [&[data-selected]]:bg-primary/[0.06]">{children}</th>;
+  return <th {...attributes} className="border-r border-border/30 last:border-r-0 bg-muted/30 px-3 py-2 min-w-[100px] min-h-[36px] align-top font-semibold text-foreground leading-relaxed select-none relative [&[data-selected]]:bg-selected">{children}</th>;
 }
 
 // ---------------------------------------------------------------------------
@@ -861,7 +877,7 @@ function ImageEl({ attributes, children, element }: any) {
                 </div>
               )}
               {!editor.api.isReadOnly() && !imageLoadError && (
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                <div className={cn("absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60", IMAGE_TOOLBAR_REVEAL)}>
                   {[25, 50, 75, 100].map((w) => (
                     <Pressable
                       key={w}
@@ -869,14 +885,14 @@ function ImageEl({ attributes, children, element }: any) {
                         const p = editor.api.findPath(element);
                         if (p) editor.tf.setNodes({ imageWidth: w } as any, { at: p });
                       }}
-                      className={"px-1.5 py-0.5 text-xs rounded" + (imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}
+                      className={cn("px-1.5 py-0.5 text-xs rounded", imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}
                     >
                       {w}%
                     </Pressable>
                   ))}
                 </div>
               )}
-              <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
+              <div className={cn("absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60", IMAGE_TOOLBAR_REVEAL)}>
                 <Pressable
                   onClick={() => {
                     if (!editor.api.isReadOnly()) {
@@ -892,6 +908,9 @@ function ImageEl({ attributes, children, element }: any) {
               </div>
             </div>
             {!editor.api.isReadOnly() ? (
+              // Điện thoại: CSS chung ép ô nhập 16px để iPhone không phóng trang khi chạm; giữ 16px thật nhưng thu hình còn 12px
+              // (scale 0.75, rộng bù 133% và lùi lề để vẫn căn giữa đúng bề rộng ảnh), nên chú thích không to hơn chữ phụ
+              <div style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }}>
               <input
                 type="text"
                 value={captionValue}
@@ -905,9 +924,9 @@ function ImageEl({ attributes, children, element }: any) {
                     (ev.target as HTMLElement).blur();
                   }
                 }}
-                className="block w-full mt-1.5 text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40"
-                style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }}
+                className="block w-full text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40 max-sm:-mx-[16.667%] max-sm:-my-1 max-sm:w-[133.333%] max-sm:max-w-none max-sm:scale-75"
               />
+              </div>
             ) : caption ? (
               <p
                 className="block w-full mt-1.5 text-xs text-muted-foreground text-center italic"
@@ -1301,13 +1320,13 @@ function FixedToolbar({ editor }: { editor: any }) {
       <div className="w-px h-4 bg-border/60 mx-0.5" />
 
       {/* ── Inline marks: Bold / Italic / Underline / Highlight ── */}
-      <Pressable title="In đậm (⌘B)" onMouseDown={(e) => { e.preventDefault(); toggleMark("bold"); }} className={cn(tbBtn, isMarkActive("bold") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+      <Pressable title="In đậm (⌘B)" onMouseDown={(e) => { e.preventDefault(); toggleMark("bold"); }} className={cn(tbBtn, isMarkActive("bold") ? "bg-selected text-foreground" : tbBtnIdle)}>
         <Bold className="size-3.5" />
       </Pressable>
-      <Pressable title="In nghiêng (⌘I)" onMouseDown={(e) => { e.preventDefault(); toggleMark("italic"); }} className={cn(tbBtn, isMarkActive("italic") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+      <Pressable title="In nghiêng (⌘I)" onMouseDown={(e) => { e.preventDefault(); toggleMark("italic"); }} className={cn(tbBtn, isMarkActive("italic") ? "bg-selected text-foreground" : tbBtnIdle)}>
         <Italic className="size-3.5" />
       </Pressable>
-      <Pressable title="Gạch chân (⌘U)" onMouseDown={(e) => { e.preventDefault(); toggleMark("underline"); }} className={cn(tbBtn, isMarkActive("underline") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+      <Pressable title="Gạch chân (⌘U)" onMouseDown={(e) => { e.preventDefault(); toggleMark("underline"); }} className={cn(tbBtn, isMarkActive("underline") ? "bg-selected text-foreground" : tbBtnIdle)}>
         <Underline className="size-3.5" />
       </Pressable>
       <Pressable title="Đánh dấu nổi bật (⌘⇧H)" onMouseDown={(e) => { e.preventDefault(); toggleMark("highlight"); }} className={cn(tbBtn, isMarkActive("highlight") ? "bg-warning/15 text-warning" : tbBtnIdle)}>
@@ -1471,7 +1490,7 @@ function FloatingToolbar({ editor }: { editor: any }) {
           onMouseDown={(e) => { e.preventDefault(); toggleMark(key); }}
           className={cn(
             "size-7 flex items-center justify-center rounded-md text-xs transition-colors",
-            isMarkActive(key) ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            isMarkActive(key) ? "bg-selected text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
           <Icon className="size-3.5" strokeWidth={1.5} />
@@ -1738,7 +1757,7 @@ function SlashInputElement({ attributes, children, element }: any) {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const filteredOptions = React.useMemo(() => {
-    const q = foldVietnamese(query.trim().replace(/^\//, ""));
+    const q = foldVietnamese(query.trim());
     if (!q) return MENU_OPTIONS;
     return MENU_OPTIONS.filter((opt) =>
       foldVietnamese(opt.title).includes(q) || foldVietnamese(opt.description).includes(q) ||
@@ -1779,11 +1798,18 @@ function SlashInputElement({ attributes, children, element }: any) {
         <input
           ref={setInputRef}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          // Dấu "/" đã hiện sẵn bên trái ô; gõ thêm "/" ở đầu (nhấn đúp, giữ phím, dán "/image") sẽ thành "//" nên bỏ đi
+          onChange={(e) => setQuery(e.target.value.replace(/^\/+/, ""))}
           onKeyDown={(e) => {
             // Xóa hết chữ rồi Backspace: đóng menu
             if (e.key === "Backspace" && query === "") {
               e.preventDefault();
+              closeInput();
+            }
+            // Esc đóng menu ngay tại ô nhập: trong hộp thoại (hộp tạo việc), Dialog chặn Esc trước khi tới trình nghe ở window
+            if (e.key === "Escape" && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              e.stopPropagation();
               closeInput();
             }
           }}
@@ -1842,7 +1868,7 @@ function SlashMenu({
         padding: 14,
         apply({ availableHeight, elements }) {
           Object.assign(elements.floating.style, {
-            maxHeight: `${Math.min(availableHeight, 320)}px`,
+            maxHeight: `${Math.min(availableHeight, 360)}px`,
           });
         },
       }),
@@ -1868,10 +1894,12 @@ function SlashMenu({
   }, [filteredOptions]);
 
   React.useEffect(() => {
-    const el = menuItemRefs.current.get(activeIndex);
-    if (el) {
-      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    // Mục đầu: cuộn về đỉnh để thấy cả tên nhóm. Không dùng smooth: giữ phím mũi tên bị trễ và giật
+    if (activeIndex === 0) {
+      menuListRef.current?.parentElement?.scrollTo({ top: 0 });
+      return;
     }
+    menuItemRefs.current.get(activeIndex)?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
   React.useEffect(() => {
@@ -1924,7 +1952,7 @@ function SlashMenu({
     <div
       ref={refs.setFloating}
       style={floatingStyles}
-      className="z-50 w-64 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-1 text-xs shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
+      className={cn(MENU_POPUP_CLASS, "w-64 max-w-[calc(100vw-28px)] overflow-y-auto overscroll-contain animate-in fade-in-0 zoom-in-95 duration-100")}
     >
       <div ref={menuListRef} role="listbox" aria-label="Chèn khối nội dung">
         {filteredOptions.map((opt, idx) => {
@@ -1943,24 +1971,24 @@ function SlashMenu({
                 role="option"
                 aria-selected={isSelected}
                 title={opt.description}
-                onMouseEnter={() => setActiveIndex(idx)}
+                onMouseMove={() => setActiveIndex((prev) => (prev === idx ? prev : idx))}
                 onClick={() => onSelect(opt)}
                 className={cn(
                   "flex h-7 w-full items-center gap-2 px-2 rounded-md text-left transition-colors",
-                  isSelected ? "bg-accent text-foreground" : "text-foreground"
+                  isSelected ? "bg-accent font-medium text-foreground" : "text-foreground"
                 )}
               >
                 <Icon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1 min-w-0 truncate">{opt.title}</span>
                 {opt.shortcut && (
-                  <span className="font-mono text-xs text-muted-foreground">{opt.shortcut}</span>
+                  <span className="font-mono text-xs font-normal text-muted-foreground/80">{opt.shortcut}</span>
                 )}
               </Pressable>
             </React.Fragment>
           );
         })}
         {filteredOptions.length === 0 && (
-          <div className="px-3 py-4 text-center text-muted-foreground">Không có kết quả phù hợp</div>
+          <div className="px-3 py-4 text-center text-muted-foreground">Không có khối nào khớp “{searchQuery.trim()}”</div>
         )}
       </div>
     </div>,
@@ -1985,7 +2013,10 @@ export function TaskBlockEditor({
   onSelectSubtask,
   onOpenCreateSubtask,
   className,
+  variant = "page",
+  ariaLabel,
 }: TaskBlockEditorProps) {
+  const compose = variant === "compose";
   // Global file drop state
   const [isGlobalDragging, setIsGlobalDragging] = React.useState(false);
   const dragCounterRef = React.useRef(0);
@@ -2046,8 +2077,9 @@ export function TaskBlockEditor({
       MentionInputPlugin.withComponent(MentionInputElement),
       MediaEmbedPlugin.withComponent(MediaEmbedEl),
       TocPlugin.withComponent(TocEl),
+      // compose: ⌘/Ctrl+Enter thuộc về hộp tạo việc (Tạo nhiệm vụ), không chèn dòng thoát khối
       ExitBreakPlugin.configure({
-        shortcuts: { insert: { keys: "mod+enter" }, insertBefore: { keys: "mod+shift+enter" } },
+        shortcuts: compose ? {} : { insert: { keys: "mod+enter" }, insertBefore: { keys: "mod+shift+enter" } },
       }),
       QcetAlignPlugin,
       QcetImagePlugin.withComponent(ImageEl),
@@ -2068,6 +2100,8 @@ export function TaskBlockEditor({
         options: { enableScroller: true },
         render: {
           aboveNodes: ({ element, editor }) => {
+            // compose: không có tay kéo khối nên không cần chừa lề trái
+            if (compose) return;
             const path = editor.api.findPath(element);
             if (path?.length !== 1) return;
             return (props) => <BlockRowDraggable {...props} />;
@@ -2118,7 +2152,8 @@ export function TaskBlockEditor({
     }
     const form = new FormData();
     form.append("file", file);
-    if (taskId) {
+    // compose: nhiệm vụ chưa được tạo nên tệp chưa gắn với nhiệm vụ nào
+    if (taskId && !compose) {
       form.append("taskId", taskId);
     }
     let res: Response;
@@ -2146,7 +2181,7 @@ export function TaskBlockEditor({
     const data = json?.data ?? json;
     if (!data?.fileUrl) throw new Error("Máy chủ không trả về đường dẫn tệp");
     return data;
-  }, [taskId]);
+  }, [taskId, compose]);
 
   const triggerAutoSave = React.useCallback(
     (plateValue: PlateValue) => {
@@ -2156,6 +2191,14 @@ export function TaskBlockEditor({
       // Filter out blocks with blob: URLs (still uploading) instead of skipping entire save
       const savableBlocks = contentBlocks.filter((b) => !b.url?.startsWith("blob:"));
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      // compose: báo ngay (đồng bộ) để ⌘/Ctrl+Enter ngay sau khi gõ vẫn gửi đủ nội dung
+      if (compose) {
+        const payload = serializeBlocksToContent(savableBlocks);
+        if (payload === lastSavedContentRef.current) return;
+        lastSavedContentRef.current = payload;
+        void Promise.resolve(onSaveRef.current(payload)).catch(() => {});
+        return;
+      }
       debounceTimerRef.current = setTimeout(async () => {
         debounceTimerRef.current = null;
         try {
@@ -2169,7 +2212,7 @@ export function TaskBlockEditor({
         }
       }, 800);
     },
-    [],
+    [compose],
   );
 
   const uploadContextValue = React.useMemo<TaskEditorUploadContextValue>(
@@ -2491,7 +2534,7 @@ export function TaskBlockEditor({
       >
         {showFixedToolbar && <FixedToolbar editor={editor} />}
 
-        <div className="flex flex-1 min-h-0 flex-col px-1 py-1">
+        <div className={cn("flex flex-1 min-h-0 flex-col", !compose && "px-1 py-1")}>
           <PlateDndContainer>
             <Plate
               editor={editor}
@@ -2507,8 +2550,9 @@ export function TaskBlockEditor({
               >
                 <PlateContent
                   readOnly={!canEdit}
+                  aria-label={ariaLabel}
                   placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
-                  className="outline-none text-sm leading-relaxed pl-8 sm:pl-9 pr-4 pb-32 flex-1"
+                  className={cn("outline-none text-sm leading-relaxed flex-1", compose ? "pb-4" : "pl-8 sm:pl-9 pr-4 pb-32")}
                   onBlur={() => {
                     // Xoá block rỗng (heading, list, etc.) khi editor mất focus
                     // Giữ lại paragraph rỗng vì đó là block mặc định

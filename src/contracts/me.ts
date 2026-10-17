@@ -81,7 +81,7 @@ export const ActionInboxItemSchema = z.object({
   title: z.string(),
   requiredAction: z.string(),
   reasonWhyMe: z.string(),
-  priority: z.enum(['URGENT', 'HIGH', 'NORMAL', 'LOW']),
+  priority: z.enum(['URGENT', 'HIGH', 'NORMAL', 'LOW', 'NONE']),
   deadline: z.string().nullable().optional(),
   createdAt: z.string(),
   classification: z.nativeEnum(DataClassification).optional(),

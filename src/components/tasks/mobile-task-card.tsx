@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useLongPress } from "@/hooks/use-long-press";
+import { LONG_PRESS_MS, useLongPress } from "@/hooks/use-long-press";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { TaskStatusCircle } from "./task-status-circle";
 import { TaskIconPriorityHigh, TaskIconPriorityUrgent } from "./task-action-icons";
@@ -157,7 +157,7 @@ export function getMobilePriorityBadgeConfig(
 /**
  * MobileTaskCard - hàng nhiệm vụ di động gọn kiểu Linear (hàng phẳng, không thẻ).
  *
- * - Cả hàng chạm được để mở chi tiết (hàng một dòng 40px, touch-manipulation), không có nút lẻ bên trong
+ * - Cả hàng chạm được để mở chi tiết (hàng một dòng 48px như danh sách Projects của Linear mobile, touch-manipulation), không có nút lẻ bên trong
  * - Một dòng: icon trạng thái, tiêu đề; bên phải icon ưu tiên (khẩn cấp, cao), ngày hạn (đỏ khi trễ, cam khi sắp tới) và avatar
  * - Mã, người phụ trách, đơn vị, trạng thái chữ nằm ở aria-label và văn bản dành cho trình đọc màn hình
  */
@@ -243,7 +243,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
     (anchor: HTMLElement) => onOpenActions?.(task as unknown as SchoolTask | StaffTask, anchor),
     [onOpenActions, task]
   );
-  const { handlers: longPressHandlers, consumeClick } = useLongPress<HTMLElement>(onOpenActions ? openActions : undefined);
+  const { handlers: longPressHandlers, consumeClick, press } = useLongPress<HTMLElement>(onOpenActions ? openActions : undefined);
 
   const handleCardClick = React.useCallback(() => {
     if (consumeClick()) return;
@@ -273,12 +273,41 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       data-task-id={task.id}
       aria-label={`Nhiệm vụ ${formattedCode}: ${title}. Trạng thái ${statusConfig.label}`}
       className={cn(
-        // Lùi 8px hai bên, bo góc: nền khi chạm/chọn không tràn mép (như Linear)
-        "group relative mx-2 flex min-h-10 items-center gap-3 rounded-lg px-2 py-1.5",
+        // Lùi 8px hai bên, bo góc: nền khi chạm/chọn không tràn mép (như Linear).
+        // Đo Linear mobile (388px): hàng 48px, icon đầu và icon cuối cách mép 20px (8 + 12), icon cách tiêu đề 10px
+        "group relative isolate mx-2 flex min-h-12 items-center gap-2.5 rounded-lg px-3 py-1.5",
         "touch-manipulation cursor-pointer select-none [-webkit-touch-callout:none] active:bg-muted/50 transition-colors duration-100",
         className
       )}
     >
+      {/* Đang nhấn giữ: nền nhạt lan dần từ chỗ chạm sang hai bên (clip-path nên góc bo không méo) và đầy đúng lúc menu hiện;
+          đầy rồi thì nở nhẹ ra và tan, thả sớm thì đứng yên tại chỗ và mờ dần. Trễ 90ms để chạm nhanh không nháy */}
+      {press ? (
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-0 -z-10 transition-opacity duration-200 ease-out motion-reduce:hidden",
+            press.releasing && !press.completed && "opacity-0"
+          )}
+        >
+          <span
+            className="absolute inset-0 rounded-lg bg-foreground/5"
+            style={
+              {
+                "--press-at": `${press.at * 100}%`,
+                // Viết từng thuộc tính riêng (không dùng `animation` rút gọn): React cảnh báo khi trộn với animationPlayState
+                animationName: press.completed ? "long-press-done" : "long-press-fill",
+                animationDuration: press.completed ? "280ms" : `${LONG_PRESS_MS - 90}ms`,
+                animationTimingFunction: press.completed ? "cubic-bezier(0.2, 0.8, 0.2, 1)" : "cubic-bezier(0.25, 0.1, 0.25, 1)",
+                animationDelay: press.completed ? "0ms" : "90ms",
+                animationFillMode: "both",
+                animationPlayState: press.releasing && !press.completed ? "paused" : "running",
+              } as React.CSSProperties
+            }
+          />
+        </span>
+      ) : null}
+
       <TaskStatusCircle status={task.status} className="size-4" />
 
       <h3 className="min-w-0 flex-1 truncate text-compact font-normal text-foreground">{title}</h3>

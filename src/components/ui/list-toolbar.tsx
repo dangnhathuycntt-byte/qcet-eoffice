@@ -7,6 +7,7 @@ import { TaskIconFilter, TaskIconSearch } from "@/lib/icons/task-icons";
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
 import { Pressable } from "@/components/ui/pressable";
+import { fieldFocusRingClass, focusRingClass } from "@/components/ui/focus-ring";
 import { useIsPhone } from "@/hooks/use-is-phone";
 import {
   MENU_POPUP_CLASS,
@@ -38,7 +39,7 @@ export const LIST_TOOLBAR_SEARCH_EXPANDED = "w-[200px] sm:w-[240px]";
 
 /** Nút chính trên thanh công cụ (Tạo việc, Soạn văn bản) */
 export const listToolbarPrimaryButtonClass =
-  "inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent text-foreground px-2.5 text-xs font-medium transition-colors shadow-2xs active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation";
+  `inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent text-foreground px-2.5 text-xs font-medium transition-colors shadow-2xs outline-none ${focusRingClass} disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation`;
 
 export interface ListToolbarSearchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
   value: string;
@@ -92,7 +93,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
           onBlur?.(e);
         }}
         className={cn(
-          "h-8 sm:h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 transition-colors",
+          `h-8 sm:h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border outline-none ${fieldFocusRingClass} focus-visible:-outline-offset-1 transition-colors`,
           className
         )}
         {...inputProps}

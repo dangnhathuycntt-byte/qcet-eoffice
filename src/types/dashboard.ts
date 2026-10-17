@@ -18,7 +18,7 @@ export type TaskCategory =
   | 'BAO_CAO'
   | 'KHAC';
 
-export type TaskPriority = 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW' | 'MEDIUM';
+export type TaskPriority = 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW' | 'MEDIUM' | 'NONE';
 
 export type AIRiskStatus = 'CLEAN' | 'NEEDS_ATTENTION' | 'HIGH_RISK';
 export type AISuggestedAction = 'QUICK_APPROVE' | 'REQUEST_CHANGES' | 'MANUAL_INSPECT';

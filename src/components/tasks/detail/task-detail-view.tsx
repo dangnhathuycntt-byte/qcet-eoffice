@@ -154,7 +154,7 @@ export function TaskDetailView({
     if (onPriorityChange) {
       await onPriorityChange(taskId, newPriority);
     }
-    const cleanPriority: "URGENT" | "HIGH" | "NORMAL" | "LOW" =
+    const cleanPriority: "URGENT" | "HIGH" | "NORMAL" | "LOW" | "NONE" =
       newPriority === "MEDIUM" ? "NORMAL" : newPriority;
     setTask((prev) => ({
       ...prev,

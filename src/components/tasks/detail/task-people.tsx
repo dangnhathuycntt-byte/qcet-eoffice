@@ -20,6 +20,9 @@ async function readError(res: Response, fallback: string): Promise<string> {
   return (json && (json.detail || json.error || json.title || json.message)) || fallback;
 }
 
+// Tạm ẩn khối "Người tham gia" ở trình soạn thảo (người dùng chốt 14/10/2026). Người được nhắc tên trong bình luận vẫn tự thành người theo dõi.
+const PEOPLE_BLOCK_ENABLED = false;
+
 /**
  * Người tham gia nhiệm vụ (T-07): người giao thêm, bớt người phối hợp (cùng đơn vị chủ trì) và người theo dõi.
  * Người của đơn vị khác phải qua khối "Phối hợp liên đơn vị" (T-12).
@@ -49,7 +52,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
   }, [taskId, onVersionChange]);
 
   React.useEffect(() => {
-    void load();
+    if (PEOPLE_BLOCK_ENABLED) void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 
@@ -74,7 +77,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
     }
   };
 
-  if (!view || (view.people.length === 0 && !view.canManage)) return null;
+  if (!PEOPLE_BLOCK_ENABLED || !view || (view.people.length === 0 && !view.canManage)) return null;
   const existing = new Set(view.people.map((p) => p.userId));
   // Chỉ có người chủ trì/giao (đã hiện ở cột thuộc tính): thu thành chip thay vì lặp lại danh sách
   const addForm = (

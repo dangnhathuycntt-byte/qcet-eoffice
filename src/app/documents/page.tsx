@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getSessionFromRequest } from "@/lib/jwt-session";
+import { isFeatureEnabled } from "@/features/flags";
 import { DocumentRegistryView } from "@/components/documents/document-registry-view";
 import { DocumentRegistrySkeleton } from "@/components/documents/registry/document-ledger-skeleton";
 
@@ -33,7 +34,8 @@ export default async function DocumentsPage() {
       <React.Suspense
         fallback={<DocumentRegistrySkeleton />}
       >
-        <DocumentRegistryView />
+        {/* Soạn văn bản đi còn theo cờ triển khai: cờ tắt thì sổ Văn bản đi không có nút soạn */}
+        <DocumentRegistryView canComposeOutgoing={isFeatureEnabled("outgoingDocuments")} />
       </React.Suspense>
     </div>
   );

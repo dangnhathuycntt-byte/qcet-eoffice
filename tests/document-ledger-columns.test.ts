@@ -125,6 +125,7 @@ describe("hàng sổ văn bản (SPEC §17.4)", () => {
   it("hàng tối thiểu 40px (Carbon medium); trích yếu cắt cuối, cơ quan/chủ trì xuống dòng thay vì ghi tắt", () => {
     const html = renderTable();
     assert.ok(rowTag(html, "a").includes("min-h-10"));
+    assert.ok(rowTag(html, "a").includes("max-md:min-h-12"), "điện thoại: hàng 48px như danh sách nhiệm vụ");
     assert.ok(html.includes("truncate text-compact font-medium"));
     assert.ok(html.includes("break-words text-xs leading-5 text-muted-foreground line-clamp-2"));
     // line-clamp (display: -webkit-box) không được nằm cùng thẻ với `hidden` của ô chỉ-hiện-khi-rộng

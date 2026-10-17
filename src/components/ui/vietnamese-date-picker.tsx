@@ -15,6 +15,7 @@ import {
 } from "@/lib/format/date";
 import { Popover } from "@base-ui/react/popover";
 import { fieldFocusRingClass, focusRingClass } from "@/components/ui/focus-ring";
+import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_MOTION_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 import { useIsPhone } from "@/hooks/use-is-phone";
 
@@ -33,8 +34,8 @@ export interface VietnameseDatePickerProps {
   placeholder?: string;
   /** Icon hiển thị phía trước */
   icon?: React.ReactNode;
-  /** Chế độ hiển thị: "chip" (compact style), "input" (Standard form style) hoặc "inline" (Minimalist text link) */
-  variant?: "chip" | "input" | "inline";
+  /** Chế độ hiển thị: "chip" (compact style), "pill" (chip thuộc tính kiểu Linear, `PROPERTY_PILL_CLASS`), "input" (Standard form style) hoặc "inline" (Minimalist text link) */
+  variant?: "chip" | "pill" | "input" | "inline";
   /** Bắt buộc chọn hay không */
   required?: boolean;
   /** Cho phép xóa giá trị đang chọn. Mặc định giữ nguyên hành vi hiện có. */
@@ -319,6 +320,29 @@ export function VietnameseDatePicker({
           <span className="tabular-nums font-normal">
             {hasValue ? displayDate : placeholder}
           </span>
+        </Popover.Trigger>
+      ) : variant === "pill" ? (
+        <Popover.Trigger
+          type="button"
+          id={id}
+          title={title || undefined}
+          aria-label={compactWhenEmpty && !hasValue ? title || label || placeholder : undefined}
+          aria-invalid={error ? true : undefined}
+          disabled={disabled}
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
+          data-state={isOpen ? "open" : "closed"}
+          className={cn(
+            PROPERTY_PILL_CLASS,
+            "tabular-nums",
+            !hasValue && "text-muted-foreground",
+            compactWhenEmpty && !hasValue && "max-md:aspect-square max-md:gap-0 max-md:px-0",
+            triggerClassName
+          )}
+        >
+          {icon !== null && (icon || <CalendarIcon className="text-muted-foreground" />)}
+          {label && <span className={cn("font-normal", !error && "text-muted-foreground", compactWhenEmpty && !hasValue && "max-md:hidden")}>{label}</span>}
+          <span className={cn(compactWhenEmpty && !hasValue && "max-md:hidden")}>{hasValue ? displayDate : placeholder}</span>
         </Popover.Trigger>
       ) : variant === "chip" ? (
         <Popover.Trigger

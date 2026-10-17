@@ -11,11 +11,13 @@ export const TaskPrioritySchema = z.enum([
   'NORMAL',
   'HIGH',
   'URGENT',
+  'NONE',
   'low',
   'medium',
   'normal',
   'high',
   'urgent',
+  'none',
 ]);
 export type TaskPriorityInput = z.infer<typeof TaskPrioritySchema>;
 
@@ -103,11 +105,13 @@ export const TaskQueryParamsSchema = PaginationQuerySchema.extend({
       'NORMAL',
       'HIGH',
       'URGENT',
+      'NONE',
       'low',
       'medium',
       'normal',
       'high',
       'urgent',
+      'none',
       'all',
     ])
     .optional(),
@@ -215,6 +219,38 @@ export const CreateTaskInputSchema = z
   .strict();
 
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
+
+/** Tối đa việc con tạo kèm một nhiệm vụ (bằng giới hạn việc con của mẫu nhiệm vụ, T-09). */
+export const CREATE_TASK_MAX_SUBTASKS = 20;
+
+/**
+ * Việc con tạo kèm khi tạo nhiệm vụ. Trường bỏ trống kế thừa việc cha như lịch lặp lại (T-09):
+ * đơn vị, mức ưu tiên, hạn và người chủ trì. Mỗi việc con vẫn qua `createTask` (quyền, cùng đơn vị, hạn ≤ hạn cha).
+ */
+export const CreateTaskSubtaskInputSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(3, 'Title must be at least 3 characters')
+      .max(255, 'Title cannot exceed 255 characters'),
+    description: z.string().max(5000, 'Description cannot exceed 5000 characters').optional().nullable(),
+    assigneeId: z.string().trim().max(128, 'Assignee ID cannot exceed 128 characters').optional().nullable(),
+    dueDate: z.union([IsoDateStringSchema, z.string().min(1)]).optional().nullable(),
+  })
+  .strict();
+
+export type CreateTaskSubtaskInput = z.infer<typeof CreateTaskSubtaskInputSchema>;
+
+/** Thân `POST /api/tasks`: C1 giữ nguyên, thêm danh sách việc con tùy chọn (không dùng cùng `parentTaskId`). */
+export const CreateTaskWithSubtasksInputSchema = CreateTaskInputSchema.extend({
+  subtasks: z
+    .array(CreateTaskSubtaskInputSchema)
+    .max(CREATE_TASK_MAX_SUBTASKS, `Cannot create more than ${CREATE_TASK_MAX_SUBTASKS} subtasks at once`)
+    .optional(),
+});
+
+export type CreateTaskWithSubtasksInput = z.infer<typeof CreateTaskWithSubtasksInputSchema>;
 
 /**
  * Canonical UpdateTaskInputSchema.

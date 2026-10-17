@@ -31,6 +31,7 @@ import {
   TaskIconPriorityHigh,
   TaskIconPriorityNormal,
   TaskIconPriorityLow,
+  TaskIconPriorityNone,
 } from "@/components/tasks/task-action-icons";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
@@ -51,7 +52,7 @@ import {
 
 /** Điện thoại: menu con không bay ngang mà thay thế nội dung trong bottom sheet (có nút quay lại ở đầu sheet). */
 const MOBILE_INLINE_PANEL =
-  "max-md:static! max-md:m-0! max-md:w-full! max-md:max-h-none! max-md:overflow-visible! max-md:bg-transparent max-md:p-0 max-md:shadow-none max-md:animate-none";
+  "max-md:static! max-md:m-0! max-md:w-full! max-md:max-h-none! max-md:overflow-visible! max-md:rounded-none! max-md:bg-transparent! max-md:p-0 max-md:shadow-none! max-md:animate-none";
 const SUBMENU_ONLY_ON_MOBILE = {
   status: "max-md:[&>*:not([data-submenu=status]):not([data-sheet-header])]:hidden",
   priority: "max-md:[&>*:not([data-submenu=priority]):not([data-sheet-header])]:hidden",
@@ -59,8 +60,12 @@ const SUBMENU_ONLY_ON_MOBILE = {
   dueDate: "max-md:[&>*:not([data-submenu=dueDate]):not([data-sheet-header])]:hidden",
 } as const;
 
+/** Rê chuột mở/đóng menu con chỉ hợp ở popover desktop; ở bottom sheet (dưới md) menu con thay cả nội dung nên chỉ mở khi bấm. */
+const isDesktopPopover = () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
+
+/** Phím tắt chỉ có nghĩa với bàn phím: điện thoại (bottom sheet) ẩn đi cho hàng thoáng. */
 function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="font-sans text-xs tabular-nums text-muted-foreground/80">{children}</kbd>;
+  return <kbd className="font-sans text-xs tabular-nums text-muted-foreground/80 max-md:hidden">{children}</kbd>;
 }
 
 /** Hàng thao tác ở menu chính: icon · nhãn · phím tắt. */
@@ -137,6 +142,7 @@ function SubmenuRow({
       onMouseEnter={cancelLeave}
       onMouseLeave={() => {
         cancelLeave();
+        if (!isDesktopPopover()) return;
         leaveTimer.current = setTimeout(onLeave, 200);
       }}
     >
@@ -145,7 +151,7 @@ function SubmenuRow({
         aria-haspopup="true"
         aria-expanded={expanded}
         onPointerEnter={(e) => {
-          if (e.pointerType === "mouse") onOpen();
+          if (e.pointerType === "mouse" && isDesktopPopover()) onOpen();
         }}
         onClick={onToggle}
         className={cn(ROW, expanded && "bg-accent")}
@@ -177,12 +183,15 @@ function OptionRow({
   leading,
   label,
   hint,
+  hintIsKey,
   selected,
   onClick,
 }: {
   leading?: React.ReactNode;
   label: React.ReactNode;
   hint?: React.ReactNode;
+  /** `hint` là phím số tắt (chỉ có nghĩa với bàn phím): điện thoại ẩn đi; gợi ý khác (vd ngày) vẫn hiện. */
+  hintIsKey?: boolean;
   selected?: boolean;
   onClick: () => void;
 }) {
@@ -195,7 +204,8 @@ function OptionRow({
     >
       {leading ? <span className="flex size-4 shrink-0 items-center justify-center">{leading}</span> : null}
       <span className="flex-1 truncate">{label}</span>
-      {hint ? <span className="text-xs tabular-nums text-muted-foreground/80">{hint}</span> : null}
+      {/* hint 0 (phím Không ưu tiên) vẫn phải hiện */}
+      {hint != null && hint !== "" ? <span className={cn("text-xs tabular-nums text-muted-foreground/80", hintIsKey && "max-md:hidden")}>{hint}</span> : null}
       {selected ? <Check className="size-3.5 shrink-0 text-foreground" /> : null}
     </Pressable>
   );
@@ -319,7 +329,7 @@ export function TaskContextMenu({
       else if (key === "p") { e.preventDefault(); toggleSubmenu("priority"); }
       else if (key === "a") { e.preventDefault(); toggleSubmenu("assignee"); }
       else if (key === "d" && canChangeDueDate) { e.preventDefault(); toggleSubmenu("dueDate"); }
-      else if (/^[1-9]$/.test(e.key) && digitSelectRef.current) { digitSelectRef.current(Number(e.key)); }
+      else if (/^[0-9]$/.test(e.key) && digitSelectRef.current) { digitSelectRef.current(Number(e.key)); }
       else if (e.key === "Enter") { e.preventDefault(); onClose(); onOpenDetail?.(task); }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -455,7 +465,9 @@ export function TaskContextMenu({
     }
   };
 
+  // Phím 0 = Không ưu tiên, 1–4 = Khẩn cấp…Thấp (như Linear)
   const PRIORITY_OPTIONS: Array<{ priority: TaskPriority; label: string; icon: React.ComponentType<any>; color: string }> = [
+    { priority: "NONE", label: "Không ưu tiên", icon: TaskIconPriorityNone, color: "text-muted-foreground/50" },
     { priority: "URGENT", label: "Khẩn cấp", icon: TaskIconPriorityUrgent, color: "text-destructive" },
     { priority: "HIGH", label: "Ưu tiên cao", icon: TaskIconPriorityHigh, color: "text-foreground/70" },
     { priority: "NORMAL", label: "Bình thường", icon: TaskIconPriorityNormal, color: "text-muted-foreground" },
@@ -467,7 +479,7 @@ export function TaskContextMenu({
       const opt = CORE_STATUS_OPTIONS[digit - 1];
       if (opt) handleStatusSelect(opt.value);
     } else if (activeSubmenu === "priority") {
-      const opt = PRIORITY_OPTIONS[digit - 1];
+      const opt = PRIORITY_OPTIONS[digit];
       if (opt) handlePrioritySelect(opt.priority);
     }
   };
@@ -536,6 +548,7 @@ export function TaskContextMenu({
             leading={<TaskStatusCircle status={opt.value} />}
             label={opt.label}
             hint={index + 1}
+            hintIsKey
             selected={currentStatus === opt.value}
             onClick={() => handleStatusSelect(opt.value)}
           />
@@ -562,7 +575,8 @@ export function TaskContextMenu({
               key={opt.priority}
               leading={<Icon className={cn("size-4", opt.color)} />}
               label={opt.label}
-              hint={index + 1}
+              hint={index}
+              hintIsKey
               selected={currentPriority === opt.priority}
               onClick={() => handlePrioritySelect(opt.priority)}
             />
@@ -697,9 +711,7 @@ export function TaskContextMenu({
         onConfirm={handleConfirmDelete}
         title="Xóa nhiệm vụ?"
         entityName={taskTitle}
-        description="sẽ được lưu trữ và không còn hiển thị trong danh sách nhiệm vụ đang hoạt động."
-        confirmLabel="Xóa nhiệm vụ"
-        cancelLabel="Giữ lại"
+        description="sẽ được lưu trữ và ẩn khỏi danh sách."
         irreversible
         isConfirming={isDeleting}
       />

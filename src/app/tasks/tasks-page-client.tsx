@@ -9,7 +9,6 @@ import {
   TaskManagementWorkspace,
   type WorkspaceScope,
 } from "@/components/tasks/task-management-workspace";
-import { TaskSortFeatureGuide } from "@/components/feature-guide/feature-guide";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type { TaskView } from "@/domain/tasks";
 
@@ -78,19 +77,17 @@ export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientP
   );
 
   return (
-    <TaskSortFeatureGuide>
-      <TaskManagementWorkspace
-        scope={activeScope}
-        onScopeChange={onScopeChange}
-        selectedDepartment={currentDept}
-        onDepartmentChange={handleDepartmentChange}
-        onSelectTask={handleSelectTask}
-        initialTasks={initialTasks}
-        onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
-        workspaceQuery={workspaceQuery}
-        defaultTaskTab="active"
-      />
-    </TaskSortFeatureGuide>
+    <TaskManagementWorkspace
+      scope={activeScope}
+      onScopeChange={onScopeChange}
+      selectedDepartment={currentDept}
+      onDepartmentChange={handleDepartmentChange}
+      onSelectTask={handleSelectTask}
+      initialTasks={initialTasks}
+      onRefresh={handleRefresh}
+      isRefreshing={isRefreshing}
+      workspaceQuery={workspaceQuery}
+      defaultTaskTab="active"
+    />
   );
 }

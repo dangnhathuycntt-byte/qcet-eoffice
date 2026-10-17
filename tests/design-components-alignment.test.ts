@@ -142,19 +142,15 @@ describe("Design Components & Foundation Alignment Suite", () => {
     });
   });
 
-  describe("10. UserAvatar Pastel Color System (qcet-nhiem-vu.html)", () => {
-    it("generates deterministic soft pastel backgrounds based on user name", () => {
-      const { getPastelColor, UserAvatar } = require("../src/components/ui/user-avatar");
-
-      const color1 = getPastelColor("Đặng Nhật Huy");
-      const color2 = getPastelColor("Nguyễn Thị Hồng Trinh");
-
-      assert.ok(color1.startsWith("bg-"), "Pastel color must have bg- prefix");
-      assert.ok(color2.startsWith("bg-"), "Pastel color must have bg- prefix");
+  describe("10. UserAvatar placeholder khi chưa có ảnh", () => {
+    it("hiện hình người xám (avatar khung trống) thay cho chữ viết tắt, vẫn giữ tên cho trình đọc màn hình", () => {
+      const { UserAvatar } = require("../src/components/ui/user-avatar");
 
       const htmlAvatar = renderToStaticMarkup(React.createElement(UserAvatar, { name: "Đặng Nhật Huy" }));
-      assert.ok(htmlAvatar.includes("ĐH"), "Fallback displays initials");
-      assert.ok(htmlAvatar.includes(color1), "Fallback applies pastel color");
+      assert.ok(htmlAvatar.includes('data-slot="avatar-placeholder"'), "Fallback is the silhouette placeholder");
+      assert.ok(htmlAvatar.includes("bg-muted"), "Placeholder uses the neutral muted surface");
+      assert.ok(!htmlAvatar.includes("ĐH"), "Fallback no longer shows initials");
+      assert.ok(htmlAvatar.includes('aria-label="Đặng Nhật Huy"') && htmlAvatar.includes('title="Đặng Nhật Huy"'), "Name stays accessible");
     });
   });
 });

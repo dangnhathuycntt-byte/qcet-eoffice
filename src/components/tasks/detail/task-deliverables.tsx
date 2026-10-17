@@ -162,8 +162,6 @@ export function TaskDeliverables({
                     const ok = await confirmAction({
                       title: "Xóa minh chứng?",
                       description: `Minh chứng “${item.title}” sẽ bị gỡ khỏi nhiệm vụ.`,
-                      confirmLabel: "Xóa minh chứng",
-                      cancelLabel: "Giữ lại",
                       destructive: true,
                     });
                     if (ok) void onDelete(item.id);

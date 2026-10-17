@@ -587,6 +587,11 @@ export class PWAOnboardingCoordinator {
    * On Chromium: triggers native prompt
    * On iOS Safari: opens step-by-step guidance modal
    */
+  /** Trình duyệt đã cho phép cài (đã giữ `beforeinstallprompt`): giao diện mở muộn vẫn biết để hiện nút Cài đặt. */
+  public hasInstallPrompt(): boolean {
+    return this.deferredPrompt !== null;
+  }
+
   public async promptInstall(): Promise<"accepted" | "dismissed" | "ios_guided" | "not_eligible" | null> {
     const isStandalone = checkIsStandalone();
     if (isStandalone) {

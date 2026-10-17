@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CHUNK_ERROR_MESSAGE, useChunkLoadRecovery } from "@/lib/chunk-load-recovery";
 
 export interface RouteErrorProps {
   error: Error & { digest?: string };
@@ -32,6 +33,14 @@ export function RouteError({
     console.error(`${logLabel} error boundary caught error:`, error);
   }, [error, logLabel]);
 
+  // Lỗi chunk (thường do vừa cập nhật bản mới): tự tải lại một lần; còn lỗi thì "Thử lại" phải tải lại cả trang
+  const isChunkError = useChunkLoadRecovery(error);
+
+  // Lỗi phía server có `digest`: ở production Next.js thay nội dung bằng một câu tiếng Anh chung chung, nên hiện lời của trang
+  const message = isChunkError
+    ? CHUNK_ERROR_MESSAGE
+    : error?.digest ? fallbackMessage : error?.message || fallbackMessage;
+
   return (
     <div className={containerClassName} role="alert">
       <div className="rounded-xl border border-destructive/20 bg-card p-6 text-center max-w-md mx-auto space-y-4 shadow-sm">
@@ -40,7 +49,7 @@ export function RouteError({
         </div>
         <div>
           <h2 className="text-base font-semibold text-foreground font-heading">{title}</h2>
-          <p className="text-xs text-muted-foreground mt-1">{error?.message || fallbackMessage}</p>
+          <p className="text-xs text-muted-foreground mt-1">{message}</p>
           {error?.digest && (
             <p className="mt-2 text-xs font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/40 inline-block">
               Mã yêu cầu: {error.digest}
@@ -51,11 +60,11 @@ export function RouteError({
           <Button
             variant="outline"
             size="sm"
-            onClick={reset}
+            onClick={isChunkError ? () => window.location.reload() : reset}
             className="gap-1.5 text-xs font-medium"
           >
             <RefreshCw className="size-3.5" />
-            <span>Thử lại</span>
+            <span>{isChunkError ? "Tải lại trang" : "Thử lại"}</span>
           </Button>
           <Button variant="secondary" size="sm" asChild className="gap-1.5 text-xs font-medium">
             <Link href={backHref}>

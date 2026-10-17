@@ -7,9 +7,7 @@ import { ReportsOverviewView } from "@/components/reports/reports-overview-view"
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Báo cáo thống kê - QCET E-Office" };
-}
+export const metadata: Metadata = { title: "Báo cáo thống kê" };
 
 export default async function ReportsPage() {
   const authSession = await auth();

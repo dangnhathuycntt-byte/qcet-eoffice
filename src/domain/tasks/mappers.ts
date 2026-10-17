@@ -179,6 +179,8 @@ export function toTaskDomainModel(raw: any, referenceDate?: string): TaskDomainM
       ? 'HIGH'
       : raw.priority === 'LOW' || raw.priority === 'low'
       ? 'LOW'
+      : raw.priority === 'NONE' || raw.priority === 'none'
+      ? 'NONE'
       : 'NORMAL';
 
   const parentTask = raw.parentTask
@@ -320,10 +322,12 @@ export function toTaskViewModel(task: TaskDomainModel | TaskDTO | any): TaskView
     HIGH: 'high',
     NORMAL: 'medium',
     LOW: 'low',
+    NONE: 'none',
     urgent: 'urgent',
     high: 'high',
     normal: 'medium',
     low: 'low',
+    none: 'none',
   };
 
   const primaryName = domain.primaryOwner?.userName || 'Chưa phân công';

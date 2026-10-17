@@ -17,6 +17,7 @@ import {
 // Phase 9: AssigneeRole removed — TaskAssignee table dropped. TaskActor is sole authority.
 import type { ApiRequestContext, AuthenticatedUser } from '@/server/api/request-context';
 import {
+  ApiError,
   AuthenticationError,
   AuthorizationError,
   NotFoundError,
@@ -43,6 +44,7 @@ import {
   SubmitDeliverableInputSchema,
   ReviewDeliverableInputSchema,
   ApproveTaskInputSchema,
+  type CreateTaskSubtaskInput,
 } from '@/contracts/tasks';
 import { buildTaskContext, taskStateMachine } from '@/domain/tasks/state-machine';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
@@ -334,6 +336,12 @@ async function releaseLinkedDocuments(
   }
 }
 
+/** Kết quả tạo việc con kèm nhiệm vụ: việc đã tạo và việc chưa tạo được (kèm lý do để báo người dùng). */
+export interface CreateSubtasksResult {
+  created: Array<{ id: string; code: string; title: string }>;
+  failed: Array<{ title: string; message: string }>;
+}
+
 export class TaskCommandService {
   /**
    * Canonical creation of a Task derived from a Meeting Resolution (Invariant 5.5).
@@ -543,6 +551,7 @@ export class TaskCommandService {
       if (p === 'urgent') taskPriority = TaskPriority.URGENT;
       else if (p === 'high') taskPriority = TaskPriority.HIGH;
       else if (p === 'low') taskPriority = TaskPriority.LOW;
+      else if (p === 'none') taskPriority = TaskPriority.NONE;
     }
 
     const validAssigneeId =
@@ -838,6 +847,45 @@ export class TaskCommandService {
   }
 
   /**
+   * Tạo các việc con kèm nhiệm vụ vừa tạo, từng việc qua `createTask` (quyền, cùng đơn vị, hạn ≤ hạn cha).
+   * Như lịch lặp lại (T-09): trường bỏ trống kế thừa việc cha; việc con lỗi không hủy việc cha mà nằm trong `failed`.
+   */
+  async createSubtasks(
+    ctx: ApiRequestContext | { user: AuthenticatedUser | null },
+    parent: {
+      id: string;
+      leadUnitId: string | null;
+      dueDate: CreateTaskInput['dueDate'];
+      priority?: CreateTaskInput['priority'];
+      assigneeId?: string | null;
+    },
+    items: readonly CreateTaskSubtaskInput[]
+  ): Promise<CreateSubtasksResult> {
+    const created: CreateSubtasksResult['created'] = [];
+    const failed: CreateSubtasksResult['failed'] = [];
+    for (const item of items) {
+      try {
+        const task = await this.createTask(ctx, {
+          title: item.title,
+          description: item.description || undefined,
+          leadUnitId: parent.leadUnitId ?? undefined,
+          dueDate: item.dueDate || parent.dueDate,
+          priority: parent.priority,
+          assigneeId: item.assigneeId || parent.assigneeId || undefined,
+          parentTaskId: parent.id,
+        });
+        created.push({ id: task.id, code: task.code, title: task.title });
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          console.error('[createSubtasks] subtask failed', { parentTaskId: parent.id, error: error instanceof Error ? error.message : String(error) });
+        }
+        failed.push({ title: item.title, message: error instanceof ApiError ? error.message : 'Chưa tạo được việc con này.' });
+      }
+    }
+    return { created, failed };
+  }
+
+  /**
    * Cập nhật nhiệm vụ với kiểm tra thẩm quyền, phân tách nhiệm vụ (SoD) và đồng bộ quan hệ.
    */
   async updateTask(
@@ -1055,10 +1103,12 @@ export class TaskCommandService {
         medium: TaskPriority.NORMAL,
         normal: TaskPriority.NORMAL,
         low: TaskPriority.LOW,
+        none: TaskPriority.NONE,
         URGENT: TaskPriority.URGENT,
         HIGH: TaskPriority.HIGH,
         NORMAL: TaskPriority.NORMAL,
         LOW: TaskPriority.LOW,
+        NONE: TaskPriority.NONE,
       };
       const mappedPriority = priorityMap[priority];
       if (mappedPriority) {

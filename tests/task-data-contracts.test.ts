@@ -333,6 +333,17 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
       assert.strictEqual(viewModel.totalSubTasks, 2);
       assert.strictEqual(viewModel.completedSubTasks, 1);
     });
+
+    test('Không ưu tiên (NONE): schema nhận, mapper giữ nguyên, không ép về Bình thường; C1 bỏ trống vẫn MEDIUM', () => {
+      assert.ok(TaskPrioritySchema.safeParse('NONE').success);
+      assert.ok(TaskPrioritySchema.safeParse('none').success);
+      const omitted = CreateTaskInputSchema.parse({ title: 'Họp giao ban tháng', dueDate: '2026-10-30' });
+      assert.strictEqual(omitted.priority, 'MEDIUM');
+
+      const domain = toTaskDomainModel({ ...samplePrismaTask, priority: 'NONE' });
+      assert.strictEqual(domain.priority, 'NONE');
+      assert.strictEqual(toTaskViewModel(domain).priority, 'none');
+    });
   });
 
   describe('3. Data Correctness & Task Metrics (src/lib/task-metrics.ts)', () => {

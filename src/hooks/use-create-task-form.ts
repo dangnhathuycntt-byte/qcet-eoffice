@@ -11,13 +11,16 @@ import {
   type CreateTaskDraft,
   type CreateTaskLevel,
   type CreateTaskSubmitResult,
+  type CreateTaskSubtaskSummary,
 } from "@/lib/adapters/create-task-mapper";
 import { isExecutiveUser } from "@/domain/tasks/create-task-policy";
+import { CREATE_TASK_MAX_SUBTASKS } from "@/contracts/tasks";
 import { useAuth } from "@/lib/auth-context";
 import { toCanonicalUnitCode } from "@/lib/departments";
 
 // ─── Types ────────────────────────────────────────────────────
-export type CreateTaskPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
+/** NONE = Không ưu tiên: mặc định khi mở hộp tạo việc (như Linear), không tự gán Bình thường */
+export type CreateTaskPriority = "NONE" | "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
 export interface CreateTaskFormData {
   title: string;
@@ -31,6 +34,17 @@ export interface CreateTaskFormData {
   dueDate: string;
   category: string;
   parentTaskId?: string;
+  /** Việc con tạo kèm (chỉ nhiệm vụ gốc); trống thì kế thừa chủ trì và hạn của việc cha. */
+  subtasks: CreateTaskSubtaskFormItem[];
+}
+
+export interface CreateTaskSubtaskFormItem {
+  /** Khóa phía client để dựng danh sách, không gửi lên máy chủ. */
+  id: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  dueDate: string;
 }
 
 export interface CreateTaskFormErrors {
@@ -58,7 +72,8 @@ export interface UseCreateTaskFormOptions {
   initialDepartmentCode?: string;
   parentTaskId?: string;
   parentTaskDueDate?: string;
-  onSuccess?: (task: unknown) => void;
+  /** `subtasks` chỉ có khi gửi kèm việc con: việc nào đã tạo, việc nào chưa (việc cha vẫn được giữ). */
+  onSuccess?: (task: unknown, extra: { subtasks: CreateTaskSubtaskSummary | null }) => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────
@@ -120,6 +135,14 @@ export function validateCreateTaskForm(
     errors.dueDate = `Thời hạn nhiệm vụ con không được vượt quá hạn nhiệm vụ cha (${formatDateVi(options.parentDueDate)}).`;
   }
 
+  // Hạn việc cha có thể bị dời sớm hơn sau khi đã thêm việc con: chặn trước khi gửi thay vì để máy chủ từ chối từng việc
+  const lateSubtask = data.dueDate
+    ? data.subtasks.find((item) => item.dueDate && !validateSubtaskDueDate(data.dueDate, item.dueDate))
+    : undefined;
+  if (lateSubtask) {
+    errors.subtasks = `Hạn của việc con "${lateSubtask.title}" sau hạn nhiệm vụ (${formatDateVi(data.dueDate)}).`;
+  }
+
   return errors;
 }
 
@@ -134,9 +157,10 @@ export function isCreateTaskFormDirty(
     current.description.trim() !== "" ||
     current.dueDate !== initial.dueDate ||
     current.startDate !== "" ||
-    current.priority !== "MEDIUM" ||
+    current.priority !== "NONE" ||
     current.category !== "CHUYEN_DOI_SO" ||
-    current.leadAssigneeId !== initial.leadAssigneeId
+    current.leadAssigneeId !== initial.leadAssigneeId ||
+    current.subtasks.length > 0
   );
 }
 
@@ -220,7 +244,7 @@ function loadDraft(): unknown {
   }
 }
 
-const DRAFT_PRIORITIES: readonly CreateTaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
+const DRAFT_PRIORITIES: readonly CreateTaskPriority[] = ["NONE", "URGENT", "HIGH", "MEDIUM", "LOW"];
 const DRAFT_LEVELS: readonly CreateTaskLevel[] = ["TRUONG", "DON_VI", "STAFF"];
 
 /**
@@ -256,7 +280,25 @@ export function restoreCreateTaskDraft(
     level: DRAFT_LEVELS.includes(draft.level as CreateTaskLevel)
       ? (draft.level as CreateTaskLevel)
       : fresh.level,
+    subtasks: restoreSubtasks(draft.subtasks),
   };
+}
+
+/** Việc con trong nháp: giữ mục đúng dạng (tên là chuỗi khác rỗng), bỏ mục hỏng thay vì làm sập form. */
+function restoreSubtasks(raw: unknown): CreateTaskSubtaskFormItem[] {
+  if (!Array.isArray(raw)) return [];
+  const str = (value: unknown) => (typeof value === "string" ? value : "");
+  return raw
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .filter((item) => typeof item.title === "string" && item.title.trim().length > 0)
+    .slice(0, CREATE_TASK_MAX_SUBTASKS)
+    .map((item, index) => ({
+      id: str(item.id) || `restored-${index}`,
+      title: str(item.title),
+      description: str(item.description),
+      assigneeId: str(item.assigneeId),
+      dueDate: str(item.dueDate),
+    }));
 }
 
 function clearDraftStorage(): void {
@@ -310,7 +352,7 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
       title: options.initialTitle ?? "",
       summary: "",
       description: "",
-      priority: "MEDIUM",
+      priority: "NONE",
       level: effectiveLevel,
       selectedDeptCode: defaultDeptCode,
       leadAssigneeId: options.initialAssigneeId ?? "",
@@ -318,6 +360,7 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
       dueDate: options.initialDueDate ?? "",
       category: "CHUYEN_DOI_SO",
       parentTaskId: options.parentTaskId,
+      subtasks: [],
     };
   }, [
     isExecutive,
@@ -359,8 +402,8 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
       // Clear field error on edit
       setFieldErrors((prev) => {
         // Lỗi "bắt đầu sau hạn chót" nằm ở startDate nhưng đổi hạn chót cũng giải quyết được nó
-        if (field === "dueDate" && prev.startDate) {
-          const { startDate: _s, dueDate: _d, ...rest } = prev;
+        if (field === "dueDate" && (prev.startDate || prev.subtasks)) {
+          const { startDate: _s, dueDate: _d, subtasks: _st, ...rest } = prev;
           return rest;
         }
         if (field === "leadAssigneeId" && prev.lead) {
@@ -539,6 +582,10 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
           parentTaskId: formData.parentTaskId,
           priority: formData.priority,
           category: formData.category,
+          // Đang giao việc con thì không tạo kèm việc con (máy chủ cũng từ chối)
+          subtasks: formData.parentTaskId
+            ? undefined
+            : formData.subtasks.map(({ title, description, assigneeId, dueDate }) => ({ title, description, assigneeId, dueDate })),
         },
         {
           personnel: availablePersonnel.map((p) => ({
@@ -558,7 +605,7 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
         idempotencyKeyRef.current = null;
         setSubmissionOutcome("created");
         setSubmissionMessage(null);
-        options.onSuccess?.(outcome.result.task);
+        options.onSuccess?.(outcome.result.task, { subtasks: outcome.result.subtasks });
       } else if (outcome.status === "unknown") {
         // Unknown: keep draft + the same idempotency key for a safe retry
         idempotencyKeyRef.current = outcome.result.idempotencyKey;

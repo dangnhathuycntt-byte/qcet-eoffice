@@ -8,6 +8,7 @@ import {
   Edit2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import type { TaskStatus } from "@/types/dashboard";
 import type { ProgressResult } from "./task-detail-state";
 import { updateTaskProgress } from "@/lib/tasks/task-actions";
@@ -145,9 +146,7 @@ export function TaskProgressComposer({
 
             {/* Author */}
             <div className="flex items-center gap-1 text-foreground font-medium">
-              <span className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                {leadName.charAt(0).toUpperCase()}
-              </span>
+              <UserAvatar name={leadName} size="sm" />
               <span>{leadName}</span>
             </div>
 

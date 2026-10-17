@@ -69,6 +69,7 @@ export interface CreateOutgoingDraftInput {
   draftingDeptId?: string;
   authorizedSignerId?: string;
   recipientList?: string;
+  dueDate?: string | Date | null;
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -262,6 +263,7 @@ export class OutgoingDocumentService {
           registeredById: user.id,
           // Phase 9: draftingDeptId dropped from Document
           recipientList: input.recipientList,
+          dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
           version: 1,
         },
       });

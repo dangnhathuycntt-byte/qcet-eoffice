@@ -220,7 +220,7 @@ export function DetailsPopover({ rows, title = "Chi tiết văn bản" }: { rows
   if (visible.length === 0) return null;
   return (
     <PopoverRoot open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="-mx-1 inline-flex h-6 cursor-pointer items-center gap-0.5 rounded-md px-1.5 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[popup-open]:bg-muted data-[popup-open]:text-foreground">
+      <PopoverTrigger className="-mx-1 inline-flex h-6 cursor-pointer items-center gap-0.5 rounded-md px-1.5 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[popup-open]:bg-selected data-[popup-open]:text-foreground">
         Chi tiết
         <ChevronDown className="size-3" aria-hidden />
       </PopoverTrigger>

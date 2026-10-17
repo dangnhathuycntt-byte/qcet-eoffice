@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { Combobox } from "@base-ui/react/combobox";
-import { ChevronDown, FileText, X } from "lucide-react";
+import { FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
@@ -121,21 +122,10 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
     >
       <Combobox.Trigger
         aria-label={value ? `Văn bản nguồn: ${value.number}` : "Văn bản nguồn"}
-        className={cn(
-          "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
-          !value && "max-md:size-7 max-md:justify-center max-md:gap-0 max-md:rounded-full max-md:px-0",
-          open ? "border-border bg-accent text-foreground shadow-2xs" : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
-        )}
+        className={cn(PROPERTY_PILL_CLASS, !value && "text-muted-foreground max-md:aspect-square max-md:gap-0 max-md:px-0")}
       >
-        <FileText className="size-3 shrink-0 text-muted-foreground max-md:size-3.5" />
+        <FileText className="text-muted-foreground" />
         <span className={cn("max-w-[140px] truncate", !value && "max-md:hidden")}>{label}</span>
-        <ChevronDown
-          className={cn(
-            "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
-            !value && "max-md:hidden",
-            open && "rotate-180 text-foreground",
-          )}
-        />
       </Combobox.Trigger>
 
       <Combobox.Portal>
