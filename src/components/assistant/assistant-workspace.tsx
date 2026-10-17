@@ -208,6 +208,9 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                 onScroll={onThreadScroll}
                 context={activeContext}
                 pending={pending}
+                onOpenProposal={({ replyKey, index, proposal }) =>
+                  openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))
+                }
               />
             )}
 

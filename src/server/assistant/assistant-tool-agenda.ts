@@ -9,7 +9,7 @@ import type { AuthorizationContext } from "@/server/authorization/authorization-
 import { ActionInboxService } from "@/server/services/action-inbox-service";
 import { MeetingService } from "@/server/services/meeting-service";
 import { assistantSourceHref } from "@/domain/assistant/assistant-sources";
-import { clip, ictDate, ictDateTime, redactContact, ToolFailure } from "./assistant-tool-shared";
+import { CalendarDate, clip, ictDate, ictDateTime, isCalendarDate, redactContact, ToolFailure } from "./assistant-tool-shared";
 import { isRestrictedDocument } from "./assistant-tool-documents";
 
 /** Số việc tối đa trong hộp việc. */
@@ -35,20 +35,6 @@ const MEETING_STATUS_LABEL: Record<string, string> = {
 };
 
 export const InboxArgs = z.object({}).strict();
-
-function isCalendarDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
-  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
-}
-
-const CalendarDate = z
-  .string()
-  .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "phải theo dạng YYYY-MM-DD" })
-  .refine(isCalendarDate, { message: "phải là ngày có thật" });
 
 export const ListMeetingsArgs = z
   .object({

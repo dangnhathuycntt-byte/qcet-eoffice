@@ -2,8 +2,8 @@
  * Phần dùng chung của công cụ Trợ lý: kiểu, lỗi có kiểm soát, ngày theo giờ Việt Nam, cắt chữ và giới hạn kích thước kết quả.
  * Không chứa truy vấn: mọi công cụ đọc dữ liệu qua service đã kiểm quyền.
  */
-import type { z } from "zod";
-import type { AssistantSourceRef, AssistantStep } from "@/contracts/assistant";
+import { z } from "zod";
+import type { AssistantSourceRef, AssistantStep, AssistantTaskProposal } from "@/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { ApiError } from "@/server/api/errors";
 
@@ -35,6 +35,8 @@ export interface AssistantToolOutcome {
   sources: AssistantSourceRef[];
   /** true chỉ với get_task / get_document thành công. */
   detailed: boolean;
+  /** Chỉ propose_task: đề xuất đã làm sạch để giao diện hiện thẻ. */
+  proposal?: AssistantTaskProposal;
 }
 
 /** Kết quả thành công của một tool trước khi đóng gói thành outcome. */
@@ -47,6 +49,7 @@ export interface ToolRun {
   detailed: boolean;
   /** Nhãn bước riêng sau khi đọc xong (ví dụ có mã nhiệm vụ). */
   label?: string;
+  proposal?: AssistantTaskProposal;
 }
 
 /** Lỗi nghiệp vụ có câu trả lời để gửi cho model; không ghi log. */
@@ -86,6 +89,22 @@ function toValidDate(value: Date | string | null | undefined): Date | null {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
+
+/** "YYYY-MM-DD" là ngày có thật (2026-02-30 thì không). */
+export function isCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+/** Tham số ngày của tool: YYYY-MM-DD và là ngày có thật. */
+export const CalendarDate = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "phải theo dạng YYYY-MM-DD" })
+  .refine(isCalendarDate, { message: "phải là ngày có thật" });
 
 /** Ngày theo giờ Việt Nam, dạng YYYY-MM-DD; null khi không có hoặc không hợp lệ. */
 export function ictDate(value: Date | string | null | undefined): string | null {

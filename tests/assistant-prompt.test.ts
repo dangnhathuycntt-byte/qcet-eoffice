@@ -92,6 +92,14 @@ describe("buildAssistantSystemPrompt: lời nhắc hệ thống", () => {
     assert.match(prompt, /không tìm thấy hoặc không có quyền/);
   });
 
+  it("tạo nhiệm vụ: soạn đề xuất qua propose_task, không nói đã tạo, không tự đặt hạn hay người (ADR-010)", () => {
+    const prompt = buildAssistantSystemPrompt(baseInput());
+    assert.match(prompt, /gọi propose_task để soạn đề xuất/);
+    assert.match(prompt, /Không bao giờ nói đã tạo hay đã giao/);
+    assert.match(prompt, /chỉ điền khi người hỏi nêu rõ/);
+    assert.match(prompt, /Trợ lý không làm được/);
+  });
+
   it("quy tắc định dạng và xưng hô: không bảng, liên kết, ảnh, khối mã; Trễ hạn; Thầy/Cô", () => {
     const prompt = buildAssistantSystemPrompt(baseInput());
     assert.match(prompt, /Không dùng bảng, liên kết, ảnh hay khối mã/);

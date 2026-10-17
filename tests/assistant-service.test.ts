@@ -776,6 +776,53 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     assert.equal(conv?.contextType, null);
   });
 
+  it('propose_task: phát proposal ngay sau bước, tối đa 3 thẻ mỗi lượt, đề xuất không lưu vào tin và audit', async () => {
+    const { runAssistantTool } = await import('@/server/assistant/assistant-tools');
+    const secret = `Chuẩn bị hội thảo ${runId}`;
+    const call = (n: number) => ({
+      id: `p${n}`,
+      name: 'propose_task',
+      arguments: JSON.stringify({ title: `${secret} đợt ${n}`, dueDate: '2026-10-30', startDate: '2026-11-02', leadAssigneeName: 'chị Lan' }),
+    });
+    const { events, gateway } = await runTurn(
+      [
+        () => completion('', [call(1), call(2), call(3), call(4)], 'tool_calls'),
+        () => completion('Tôi đã soạn ba đề xuất, Thầy/Cô mở hộp tạo nhiệm vụ để xem lại.'),
+      ],
+      { message: 'Tạo bốn nhiệm vụ hội thảo' },
+      { runTool: runAssistantTool },
+    );
+
+    const proposals = events.flatMap((e) => (e.type === 'proposal' ? [e.proposal] : []));
+    assert.equal(proposals.length, ASSISTANT_LIMITS.maxProposalsPerTurn);
+    // Ngày bắt đầu sau hạn bị bỏ; tên người giữ đúng như người hỏi nêu (giao diện khớp với nhân sự)
+    assert.deepEqual(proposals[0], { title: `${secret} đợt 1`, dueDate: '2026-10-30', leadAssigneeName: 'chị Lan' });
+    // Mỗi thẻ đứng ngay sau bước của nó
+    const types = events.map((e) => e.type).filter((type) => type === 'step' || type === 'proposal');
+    assert.deepEqual(types, ['step', 'proposal', 'step', 'proposal', 'step', 'proposal', 'step']);
+    const steps = events.flatMap((e) => (e.type === 'step' ? [e.step] : []));
+    assert.deepEqual(steps.map((step) => [step.tool, step.ok]), [
+      ['propose_task', true],
+      ['propose_task', true],
+      ['propose_task', true],
+      ['propose_task', false],
+    ]);
+    // Đề xuất thứ tư: mô hình nhận lỗi giới hạn, không phải "đã soạn"
+    const toolMessages = gateway.calls[1].messages.filter((m) => m.role === 'tool');
+    assert.equal(toolMessages.length, 4);
+    assert.match(String(toolMessages[3].content), /tối đa 3 đề xuất/);
+    assert.match(String(toolMessages[0].content), /"created":false/);
+
+    const conversationId = convIds[convIds.length - 1];
+    const rows = await assistantRowsOf(conversationId);
+    const reply = rows[rows.length - 1];
+    assert.equal(reply.content.includes('"proposal"'), false);
+    assert.equal(JSON.stringify(reply.sources), '[]');
+    const audit = await prisma.auditEvent.findFirst({ where: { entityId: conversationId, action: AuditAction.ASSISTANT_TURN } });
+    assert.ok(audit);
+    assert.equal(JSON.stringify(audit.metadata).includes(secret), false, 'audit không ghi tiêu đề đề xuất');
+  });
+
   it('ghi audit ASSISTANT_TURN với nguồn đã đọc, không chứa câu hỏi hay câu trả lời', async () => {
     const secret = `bí-mật-${runId}`;
     const { events } = await runTurn(

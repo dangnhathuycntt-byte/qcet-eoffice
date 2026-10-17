@@ -12,6 +12,7 @@ import {
   ASSISTANT_ATTACHMENT_ONLY_PROMPT,
   ASSISTANT_RETRY_ATTACHMENTS_GONE,
   describeContextTarget,
+  markProposalCreated,
   markReplyAborted,
   markReplyInterrupted,
   questionMessageBefore,
@@ -20,6 +21,7 @@ import {
   streamingThreadMessage,
   threadMessageFromDto,
   userThreadMessage,
+  type AssistantProposalTask,
   type ThreadMessage,
 } from "@/components/assistant/assistant-model";
 import { useAgentModel } from "@/components/agent-chat/agent-models";
@@ -144,13 +146,20 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   }, [releasePreviews]);
 
   const openConversation = React.useCallback(async (id: string) => {
-    // Tải lại đúng cuộc đang mở (khung chat nổi quay lại): giữ tệp đã gửi trong phiên theo mã tin, để còn ảnh trên câu
-    // hỏi và "Thử lại" vẫn gửi kèm tệp. Máy chủ không lưu tệp nên bản tải về không có.
-    const carried = new Map<string, ChatAttachment[]>();
+    // Tải lại đúng cuộc đang mở (khung chat nổi quay lại): giữ tệp đã gửi và thẻ đề xuất nhiệm vụ trong phiên theo mã
+    // tin, để còn ảnh trên câu hỏi, "Thử lại" vẫn gửi kèm tệp và thẻ vẫn mở được. Máy chủ không lưu hai thứ này.
+    const carried = new Map<string, Pick<ThreadMessage, "attachments" | "proposals" | "proposalTasks">>();
     if (id === activeIdRef.current) {
-      for (const message of threadRef.current) if (message.id && message.attachments) carried.set(message.id, message.attachments);
+      for (const { id: messageId, attachments: sent, proposals, proposalTasks } of threadRef.current) {
+        if (!messageId || (!sent && !proposals)) continue;
+        carried.set(messageId, {
+          ...(sent ? { attachments: sent } : {}),
+          ...(proposals ? { proposals } : {}),
+          ...(proposalTasks ? { proposalTasks } : {}),
+        });
+      }
     }
-    releasePreviews([...carried.values()].flat());
+    releasePreviews([...carried.values()].flatMap((kept) => kept.attachments ?? []));
     turnRef.current?.abort();
     turnRef.current = null;
     detailRef.current?.abort();
@@ -173,8 +182,8 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
       setThread(
         detail.messages.map((dto) => {
           const message = threadMessageFromDto(dto);
-          const sent = carried.get(dto.id);
-          return sent ? { ...message, attachments: sent } : message;
+          const kept = carried.get(dto.id);
+          return kept ? { ...message, ...kept } : message;
         }),
       );
       setDetailStatus("ready");
@@ -344,6 +353,11 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     void send(question.content, restoreDraft, question.attachments ?? []);
   };
 
+  /** Người dùng đã tạo nhiệm vụ từ thẻ đề xuất: thẻ chuyển sang "Đã tạo" (chỉ trong phiên, như thẻ). */
+  const proposalCreated = React.useCallback((replyKey: string, index: number, task: AssistantProposalTask) => {
+    setThread((prev) => markProposalCreated(prev, replyKey, index, task));
+  }, []);
+
   return {
     activeId,
     activeTitle,
@@ -363,6 +377,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     clearAttachments,
     send,
     retry,
+    proposalCreated,
     stop,
     reload,
     readActiveId,

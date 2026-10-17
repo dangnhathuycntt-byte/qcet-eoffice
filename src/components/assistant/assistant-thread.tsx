@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import type { AssistantSourceRef } from "@/contracts/assistant";
+import type { AssistantSourceRef, AssistantTaskProposal } from "@/contracts/assistant";
 import { agentReplyToPlainText } from "@/domain/tasks/agent-reply-format";
 import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
 import { AttachmentCard } from "@/components/agent-chat/agent-attachments";
@@ -14,6 +14,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { cn } from "@/lib/utils";
 import { ASSISTANT_NO_ANSWER_MESSAGE, type ThreadMessage } from "@/components/assistant/assistant-model";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
+import { AssistantTaskProposalCard } from "@/components/assistant/assistant-task-proposal-card";
 
 const MAX_SHOWN_SOURCES = 6;
 const ENTER_MOTION = "motion-safe:animate-[fade-in_0.3s_cubic-bezier(0.16,1,0.3,1)]";
@@ -32,6 +33,14 @@ export interface AssistantThreadProps {
   pending?: boolean;
   /** Khung chat nổi 400px: lề ngang 16px, không căn giữa theo cột 752px. */
   compact?: boolean;
+  /** Mở hộp tạo nhiệm vụ đã điền theo thẻ đề xuất thứ `index` của tin `replyKey`; không truyền thì thẻ không có nút. */
+  onOpenProposal?: (target: ProposalTarget) => void;
+}
+
+export interface ProposalTarget {
+  replyKey: string;
+  index: number;
+  proposal: AssistantTaskProposal;
 }
 
 /** Cột tin của cuộc đang mở: cuộn được, căn giữa, rộng tối đa 720px. Màn đầu (chưa có tin) do khung cha lo. */
@@ -46,6 +55,7 @@ export function AssistantThread({
   context = null,
   pending = false,
   compact = false,
+  onOpenProposal,
 }: AssistantThreadProps) {
   return (
     <div ref={listRef} onScroll={onScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto" data-slot="assistant-thread">
@@ -78,7 +88,13 @@ export function AssistantThread({
           message.role === "user" ? (
             <UserTurn key={message.key} message={message} />
           ) : (
-            <ReplyTurn key={message.key} message={message} onRetry={() => onRetry(message.key)} pending={pending} />
+            <ReplyTurn
+              key={message.key}
+              message={message}
+              onRetry={() => onRetry(message.key)}
+              pending={pending}
+              onOpenProposal={onOpenProposal}
+            />
           ),
         )}
       </div>
@@ -97,14 +113,33 @@ function UserTurn({ message }: { message: ThreadMessage }) {
   );
 }
 
+/** Lượt chỉ soạn đề xuất (có thể kèm đọc tệp gửi kèm) thì ghi "soạn đề xuất" thay cho "đọc dữ liệu". */
+function onlyProposes(message: ThreadMessage): boolean {
+  const work = message.steps.filter((step) => step.tool !== "attachment");
+  return work.length > 0 && work.every((step) => step.tool === "propose_task");
+}
+
 function workLabel(message: ThreadMessage): string {
   const seconds = message.durationMs === null ? null : Math.max(1, Math.round(message.durationMs / 1000));
-  if (message.steps.length > 0) return seconds === null ? "Đã đọc dữ liệu" : `Đã đọc dữ liệu trong ${seconds} giây`;
+  if (message.steps.length > 0) {
+    const done = onlyProposes(message) ? "Đã soạn đề xuất" : "Đã đọc dữ liệu";
+    return seconds === null ? done : `${done} trong ${seconds} giây`;
+  }
   return seconds === null ? "Đã suy nghĩ" : `Đã suy nghĩ trong ${seconds} giây`;
 }
 
 /** Tin Trợ lý: chữ toàn chiều rộng cột, không bong bóng. Nút sao chép hiện khi rê chuột hoặc có tiêu điểm (luôn hiện trên điện thoại). */
-function ReplyTurn({ message, onRetry, pending }: { message: ThreadMessage; onRetry: () => void; pending: boolean }) {
+function ReplyTurn({
+  message,
+  onRetry,
+  pending,
+  onOpenProposal,
+}: {
+  message: ThreadMessage;
+  onRetry: () => void;
+  pending: boolean;
+  onOpenProposal?: (target: ProposalTarget) => void;
+}) {
   const streaming = message.status === "streaming";
   // Chữ hiện dần kể cả khi gateway gửi cả cục; tin mở từ lịch sử hiện ngay
   const reply = useSmoothText(message.content, streaming);
@@ -141,7 +176,9 @@ function ReplyTurn({ message, onRetry, pending }: { message: ThreadMessage; onRe
 
       {streaming ? (
         <div className="flex flex-col gap-1.5">
-          <p className="w-fit animate-text-shimmer text-compact">{stepLabels.length > 0 ? "Đang đọc dữ liệu…" : "Đang suy nghĩ…"}</p>
+          <p className="w-fit animate-text-shimmer text-compact">
+            {stepLabels.length === 0 ? "Đang suy nghĩ…" : onlyProposes(message) ? "Đang soạn đề xuất…" : "Đang đọc dữ liệu…"}
+          </p>
           {lastStep ? (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <FileText className="size-3.5 shrink-0" />
@@ -150,6 +187,20 @@ function ReplyTurn({ message, onRetry, pending }: { message: ThreadMessage; onRe
               </span>
             </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* Thẻ đề xuất hiện cùng nguồn, sau khi chữ chạy xong, để câu dẫn của Trợ lý đứng trước thẻ */}
+      {settled && message.proposals?.length ? (
+        <div className="flex flex-col gap-2">
+          {message.proposals.map((proposal, index) => (
+            <AssistantTaskProposalCard
+              key={index}
+              proposal={proposal}
+              created={message.proposalTasks?.[index] ?? null}
+              onOpen={onOpenProposal ? () => onOpenProposal({ replyKey: message.key, index, proposal }) : undefined}
+            />
+          ))}
         </div>
       ) : null}
 

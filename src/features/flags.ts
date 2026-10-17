@@ -189,7 +189,8 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
   assistant: {
     key: "assistant",
     description:
-      "Trang Trợ lý (/assistant): hỏi đáp chỉ đọc về nhiệm vụ, văn bản, lịch họp trong quyền của người hỏi, có lịch sử chat. " +
+      "Trang Trợ lý (/assistant): hỏi đáp chỉ đọc về nhiệm vụ, văn bản, lịch họp trong quyền của người hỏi, có lịch sử chat; " +
+      "soạn đề xuất nhiệm vụ để người dùng tự tạo trong hộp tạo nhiệm vụ (ADR-010). " +
       "Dùng chung gateway TASK_AGENT_* ở server. Tắt mặc định.",
     defaultValue: false,
     isKillSwitch: false,

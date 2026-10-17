@@ -22,6 +22,7 @@ import {
   describeContextTarget,
   isSendKey,
   isStopKey,
+  markProposalCreated,
   markReplyAborted,
   markReplyInterrupted,
   parseAssistantContextParam,
@@ -143,6 +144,68 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
     const done: ThreadMessage = { ...streaming, status: "complete" };
     assert.equal(markReplyInterrupted(done), done);
     assert.equal(markReplyAborted(done), done);
+  });
+
+  test("đề xuất nhiệm vụ: gom theo thứ tự, thẻ hiện khi chữ xong và có nút mở hộp; lượt chỉ soạn ghi \"Đã soạn đề xuất\"", () => {
+    const proposal = {
+      title: "Chuẩn bị hội thảo chuyển đổi số",
+      dueDate: "2026-10-30",
+      leadAssigneeName: "chị Lan",
+      priority: "HIGH" as const,
+      subtasks: [{ title: "Đặt hội trường", assigneeName: "anh Minh" }],
+    };
+    let reply = streamingThreadMessage("reply-p");
+    reply = reduceAssistantReply(reply, { type: "step", step: { tool: "propose_task", label: "Soạn đề xuất “Chuẩn bị hội thảo”", count: null, ok: true } });
+    reply = reduceAssistantReply(reply, { type: "proposal", proposal });
+    reply = reduceAssistantReply(reply, { type: "proposal", proposal: { title: "Gửi giấy mời dự hội thảo" } });
+    const opened: Array<{ replyKey: string; index: number; title: string }> = [];
+    const onOpen = (target: { replyKey: string; index: number; proposal: { title: string } }) =>
+      void opened.push({ replyKey: target.replyKey, index: target.index, title: target.proposal.title });
+    const render = (message: ThreadMessage, onOpenProposal?: typeof onOpen) =>
+      renderToStaticMarkup(
+        React.createElement(AssistantThread, {
+          thread: [userThreadMessage("u1", "Tạo nhiệm vụ hội thảo"), message],
+          detailStatus: "ready",
+          detailError: null,
+          onRetry: () => undefined,
+          onNewChat: () => undefined,
+          listRef: { current: null },
+          onScroll: () => undefined,
+          onOpenProposal,
+        }),
+      );
+    const streamingHtml = render(reply, onOpen);
+    assert.ok(streamingHtml.includes("Đang soạn đề xuất…"));
+    assert.equal(streamingHtml.includes("Xem lại và tạo"), false, "đang chạy thì chưa hiện thẻ");
+
+    reply = reduceAssistantReply(reply, { type: "text", delta: "Tôi đã soạn đề xuất." });
+    reply = reduceAssistantReply(reply, { type: "done", messageId: "m-p", status: "complete", durationMs: 2000 });
+    assert.deepEqual(reply.proposals?.map((item) => item.title), ["Chuẩn bị hội thảo chuyển đổi số", "Gửi giấy mời dự hội thảo"]);
+    const html = render(reply, onOpen);
+    for (const text of ["Đã soạn đề xuất trong 2 giây", "Đề xuất nhiệm vụ", "Chưa tạo", "30/10/2026", "chị Lan", "Cao", "Việc con", "Đặt hội trường", "anh Minh"]) {
+      assert.ok(html.includes(text), text);
+    }
+    assert.equal((html.match(/Xem lại và tạo/g) ?? []).length, 2);
+    assert.equal((html.match(/Chưa chọn/g) ?? []).length, 2, "đề xuất thiếu hạn và chủ trì ghi rõ để chọn trong hộp");
+    assert.ok(html.includes("Còn thiếu hạn và người chủ trì, chọn trong hộp."), "trường bắt buộc còn thiếu ghi bằng lời");
+    assert.ok(html.includes("Mở hộp tạo nhiệm vụ để xem lại rồi bấm Tạo."), "đủ trường thì chỉ nhắc xem lại");
+    assert.equal(render(reply).includes("Xem lại và tạo"), false, "không có nơi mở hộp thì thẻ không có nút");
+
+    // Tạo xong từ thẻ thứ hai: thẻ đó báo "Đã tạo" kèm mã và lối mở, không còn nút; thẻ đầu giữ nguyên
+    const created = markProposalCreated([reply], "reply-p", 1, { id: "t-9", code: "NV-2026-10-009" })[0];
+    assert.equal(markProposalCreated([reply], "khac", 1, { id: "t-9", code: null })[0], reply, "tin khác không đổi");
+    const createdHtml = render(created, onOpen);
+    assert.equal((createdHtml.match(/Xem lại và tạo/g) ?? []).length, 1);
+    assert.ok(createdHtml.includes("Đã tạo nhiệm vụ NV-2026-10-009") && createdHtml.includes('href="/tasks/t-9"') && createdHtml.includes("Mở nhiệm vụ"));
+    assert.ok(createdHtml.includes('role="status"'), "trạng thái đã tạo được đọc cho trình đọc màn hình");
+    assert.equal((createdHtml.match(/Chưa tạo/g) ?? []).length, 1, "thẻ đã tạo thu gọn, chỉ thẻ còn lại ghi Chưa tạo");
+    assert.ok(createdHtml.includes('aria-label="Đã tạo nhiệm vụ: Gửi giấy mời dự hội thảo"'));
+    assert.equal(createdHtml.includes("Còn thiếu hạn và người chủ trì"), false, "thẻ đã tạo thu gọn, không còn lưới và chân thẻ");
+    // Lượt đọc tệp gửi kèm rồi soạn đề xuất vẫn ghi "Đã soạn đề xuất"
+    const withFile = { ...reply, steps: [{ tool: "attachment" as const, label: "Đọc tệp qd.pdf", count: null, ok: true }, ...reply.steps] };
+    assert.ok(render(withFile).includes("Đã soạn đề xuất trong 2 giây"));
+    // Thẻ chỉ có trong phiên: tin tải lại từ máy chủ không có đề xuất
+    assert.equal(threadMessageFromDto({ id: "m-p", role: "assistant", content: "x", status: "complete", sources: [], steps: [], durationMs: 1, createdAt: "2026-10-18T00:00:00Z" }).proposals, undefined);
   });
 
   test("hoàn tất với status error và không có chữ: tin hiện câu lỗi và nút 'Thử lại'", () => {
@@ -306,8 +369,13 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     assert.ok(launcher.includes("createTaskMounted ? (") && launcher.includes("isOpen={createTaskOpen}"), "gắn từ lần bấm đầu, đóng còn hiệu ứng");
     assert.ok(launcher.includes('label: "Mở nhiệm vụ"'), "tạo xong có lối mở nhiệm vụ");
     assert.ok(read("src/components/assistant/assistant-workspace.tsx").includes("useCreateTaskLauncher()"));
-    // Khung chat nổi đã bỏ chip gợi ý (17/10) nên không mở hộp tạo nhiệm vụ
-    assert.equal(read("src/components/assistant/assistant-dock.tsx").includes("useCreateTaskLauncher"), false);
+    // Khung chat nổi không có chip gợi ý (17/10) nhưng thẻ đề xuất nhiệm vụ mở hộp ngay trên trang đang xem (ADR-010)
+    const dock = read("src/components/assistant/assistant-dock.tsx");
+    // Tạo xong thì thẻ của đúng đề xuất đó chuyển sang "Đã tạo"
+    const opensProposal = "openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))";
+    assert.ok(dock.includes("useCreateTaskLauncher()") && dock.includes(opensProposal) && dock.includes("{createTaskModal}"));
+    assert.ok(read("src/components/assistant/assistant-workspace.tsx").includes(opensProposal));
+    assert.ok(launcher.includes("notifyCard({ id: task.id, code: task.code ?? null });\n          return;"), "mở từ thẻ: báo cho thẻ, không thêm toast trùng");
   });
 
   test("ô soạn màn đầu có giới hạn độ dài, chip mục đang hỏi và chân trang chỉ đọc", () => {
@@ -420,7 +488,10 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     assert.equal(retryMissesAttachments(userThreadMessage("u1", "Việc trễ hạn?"), { ...reply, steps: [] }), false, "câu hỏi không kèm tệp");
     const chat = read("src/components/assistant/use-assistant-chat.ts");
     assert.ok(chat.includes("setSendError(ASSISTANT_RETRY_ATTACHMENTS_GONE);"), "báo đính kèm lại thay vì gửi");
-    assert.ok(chat.includes("if (id === activeIdRef.current) {") && chat.includes("carried.set(message.id, message.attachments)"), "tải lại đúng cuộc thì giữ tệp đã gửi trong phiên");
+    assert.ok(
+      chat.includes("if (id === activeIdRef.current) {") && chat.includes("...(sent ? { attachments: sent } : {})") && chat.includes("...(proposals ? { proposals } : {})"),
+      "tải lại đúng cuộc thì giữ tệp đã gửi và thẻ đề xuất trong phiên",
+    );
   });
 
   test("Agent tạo nhiệm vụ dùng chung bộ chọn model và thẻ tệp với Trợ lý", () => {

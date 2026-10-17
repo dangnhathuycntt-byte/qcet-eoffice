@@ -5,7 +5,7 @@ import { Ellipsis, Maximize2, Minus, Trash2, X } from "lucide-react";
 import { AgentEmptyPattern } from "@/components/agent-chat/agent-chat-parts";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
 import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
-import { AssistantThread } from "@/components/assistant/assistant-thread";
+import { AssistantThread, type ProposalTarget } from "@/components/assistant/assistant-thread";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
 import type { ThreadMessage } from "@/components/assistant/assistant-model";
 import type { AssistantSourceRef } from "@/contracts/assistant";
@@ -40,6 +40,8 @@ export interface AssistantDockPanelProps {
   onDraftChange: (value: string) => void;
   onSubmit: () => void;
   onRetry: (replyKey: string) => void;
+  /** Mở hộp tạo nhiệm vụ đã điền theo thẻ đề xuất (ADR-010). */
+  onOpenProposal: (target: ProposalTarget) => void;
   onStop: () => void;
   sendError: string | null;
   /** Ảnh/tệp chờ gửi ở ô soạn (giữ trong `useAssistantChat` của `AssistantDock`). */
@@ -72,6 +74,7 @@ export function AssistantDockPanel({
   onDraftChange,
   onSubmit,
   onRetry,
+  onOpenProposal,
   onStop,
   sendError,
   attachments,
@@ -166,6 +169,7 @@ export function AssistantDockPanel({
           detailStatus={detailStatus}
           detailError={detailError}
           onRetry={onRetry}
+          onOpenProposal={onOpenProposal}
           onNewChat={onNewChat}
           listRef={listRef}
           onScroll={onThreadScroll}

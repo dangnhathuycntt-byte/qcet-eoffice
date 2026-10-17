@@ -1,6 +1,6 @@
 /**
- * Vòng hội thoại của Trợ lý (chỉ đọc): ghi câu hỏi, nạp lịch sử, gọi mô hình qua gateway có công cụ đọc dữ liệu,
- * phát sự kiện NDJSON, rồi lưu tin trả lời và ghi audit. Không ném lỗi: mọi lỗi thành sự kiện `error` và trạng thái tin.
+ * Vòng hội thoại của Trợ lý (chỉ đọc): ghi câu hỏi, nạp lịch sử, gọi mô hình qua gateway có công cụ đọc dữ liệu (và
+ * propose_task chỉ soạn đề xuất nhiệm vụ, ADR-010), phát sự kiện NDJSON, rồi lưu tin trả lời và ghi audit. Không ném lỗi: mọi lỗi thành sự kiện `error` và trạng thái tin.
  * Không ghi câu hỏi, câu trả lời hay dữ liệu công cụ vào log hay audit.
  */
 import type { AssistantConversation, AssistantMessage } from "@prisma/client";
@@ -13,6 +13,7 @@ import {
   type AssistantSourceRef,
   type AssistantStep,
   type AssistantStreamEvent,
+  type AssistantTaskProposal,
   type AssistantToolName,
 } from "@/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
@@ -55,6 +56,8 @@ export const ASSISTANT_LIMITS = {
   turnTimeoutMs: 300_000,
   historyMessages: 12,
   historyChars: 16_000,
+  /** Số đề xuất nhiệm vụ (thẻ) tối đa trong một lượt; quá thì mô hình nhận lỗi, không hiện thêm thẻ. */
+  maxProposalsPerTurn: 3,
 } as const;
 
 const EMPTY_ANSWER_MESSAGE = "Trợ lý chưa trả lời được câu này. Thầy/Cô thử hỏi lại cụ thể hơn.";
@@ -65,6 +68,9 @@ const TRUNCATED_MESSAGE = "Câu trả lời bị cắt vì quá dài. Thầy/Cô
 const FINAL_ROUND_NOTE =
   "Không đọc thêm dữ liệu nữa. Trả lời ngay câu hỏi của Thầy/Cô bằng dữ liệu đã có ở trên, theo đúng các quy tắc; thiếu dữ liệu thì nói rõ phần chưa đọc được.";
 const TOOL_FAILED_CONTENT = '{"error":"Lỗi đọc dữ liệu, thử lại sau."}';
+const PROPOSAL_LIMIT_CONTENT = JSON.stringify({
+  error: `Mỗi lượt chỉ soạn tối đa ${ASSISTANT_LIMITS.maxProposalsPerTurn} đề xuất. Đề xuất này chưa được soạn; Thầy/Cô hỏi tiếp ở lượt sau.`,
+});
 const TOO_MANY_TOOLS_CONTENT = '{"error":"Quá nhiều công cụ trong một lượt, hãy gọi ít hơn."}';
 const TOOL_BUDGET_CONTENT = '{"error":"Đã đọc đủ dữ liệu cho lượt này, hãy trả lời với dữ liệu đã có."}';
 const CONTEXT_FORBIDDEN_MESSAGE = "Không tìm thấy hoặc Thầy/Cô không có quyền xem mục này.";
@@ -114,6 +120,7 @@ interface ToolRun {
   sources: AssistantSourceRef[];
   detailed: boolean;
   ok: boolean;
+  proposal?: AssistantTaskProposal;
 }
 
 interface DescribedContext {
@@ -181,7 +188,14 @@ function untilAborted<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
 async function runToolSafely(deps: AssistantTurnDeps, call: GatewayToolCall, ctx: AssistantToolContext, signal: AbortSignal): Promise<ToolRun> {
   try {
     const outcome = await untilAborted(deps.runTool(call.name, call.arguments, ctx), signal);
-    return { content: outcome.content, step: outcome.step, sources: outcome.sources, detailed: outcome.detailed, ok: outcome.ok };
+    return {
+      content: outcome.content,
+      step: outcome.step,
+      sources: outcome.sources,
+      detailed: outcome.detailed,
+      ok: outcome.ok,
+      ...(outcome.proposal ? { proposal: outcome.proposal } : {}),
+    };
   } catch {
     return {
       content: TOOL_FAILED_CONTENT,
@@ -353,6 +367,7 @@ async function runTurn(
     const steps: AssistantStep[] = [];
     let answer = "";
     let toolChars = 0;
+    let proposals = 0;
     // Ngân sách ký tự công cụ của cả lượt: hết (đủ trần, hoặc một kết quả đã bị loại vì vượt) thì các lần đọc sau không chạy nữa
     let budgetUsed = false;
     let rounds = 0;
@@ -448,12 +463,15 @@ async function runTurn(
       // Cả batch vẫn chạy song song; kết quả chỉ được gửi theo thứ tự gọi khi còn trong ngân sách của cả lượt
       const runs = await Promise.all(batch.map((call) => (budgetUsed ? null : runToolSafely(deps, call, toolCtx, turn.signal))));
       for (const [index, call] of batch.entries()) {
-        const run = runs[index];
+        let run = runs[index];
         // Kết quả vượt phần còn lại không gửi cho mô hình, không thêm bước và nguồn của nó
         if (!run || budgetUsed || toolChars + run.content.length > ASSISTANT_LIMITS.maxToolCharsPerTurn) {
           budgetUsed = true;
           messages.push({ role: "tool", tool_call_id: call.id, content: TOOL_BUDGET_CONTENT });
           continue;
+        }
+        if (run.proposal && proposals >= ASSISTANT_LIMITS.maxProposalsPerTurn) {
+          run = { ...run, ok: false, proposal: undefined, content: PROPOSAL_LIMIT_CONTENT, step: { ...run.step, ok: false } };
         }
         toolChars += run.content.length;
         budgetUsed = toolChars >= ASSISTANT_LIMITS.maxToolCharsPerTurn;
@@ -463,6 +481,11 @@ async function runTurn(
         if (run.ok) {
           read.push(...run.sources);
           if (run.detailed) detailed.push(...run.sources);
+          // Thẻ đề xuất hiện ngay dưới bước của nó; chỉ có trong phiên, không lưu cùng tin trả lời
+          if (run.proposal) {
+            proposals += 1;
+            emit({ type: "proposal", proposal: run.proposal });
+          }
         }
       }
       for (const call of overflow) messages.push({ role: "tool", tool_call_id: call.id, content: TOO_MANY_TOOLS_CONTENT });

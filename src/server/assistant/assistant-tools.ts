@@ -1,5 +1,6 @@
 /**
- * Bộ công cụ chỉ đọc của Trợ lý. Danh tính và quyền chỉ lấy từ ctx (server); tham số của model được kiểm bằng zod `.strict()`.
+ * Bộ công cụ chỉ đọc của Trợ lý, cộng propose_task chỉ soạn đề xuất (không ghi). Danh tính và quyền chỉ lấy từ ctx (server);
+ * tham số của model được kiểm bằng zod `.strict()`.
  * `runAssistantTool` không bao giờ ném lỗi: mọi lỗi thành JSON `{ "error": … }` gửi lại cho model.
  */
 import { z } from "zod";
@@ -61,6 +62,7 @@ import {
   readInbox,
   type ListMeetingsInput,
 } from "./assistant-tool-agenda";
+import { PROPOSE_TASK_DESCRIPTION, ProposeTaskArgs, proposeTask } from "./assistant-tool-proposal";
 
 export { ASSISTANT_TOOL_RESULT_MAX_CHARS, RESTRICTED_MESSAGE, ToolFailure } from "./assistant-tool-shared";
 export type { AssistantToolContext, AssistantToolOutcome } from "./assistant-tool-shared";
@@ -100,6 +102,7 @@ function register<A extends z.ZodType>(name: AssistantToolName, spec: ToolSpec<A
         step: { tool: name, label: run.label ?? label, count: run.count, ok: true },
         sources: run.sources,
         detailed: run.detailed,
+        ...(run.proposal ? { proposal: run.proposal } : {}),
       };
     } catch (error) {
       return failure(name, label, toolErrorMessage(error, name));
@@ -309,9 +312,16 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
       };
     },
   }),
+  propose_task: register("propose_task", {
+    description: PROPOSE_TASK_DESCRIPTION,
+    schema: ProposeTaskArgs,
+    failLabel: "Soạn đề xuất nhiệm vụ",
+    label: (args) => `Soạn đề xuất ${quotedLabel(args.title)}`,
+    run: async (args) => proposeTask(args),
+  }),
 };
 
-/** Đủ 7 tool theo ASSISTANT_TOOL_NAMES; tham số lấy từ zod nên khớp với lúc kiểm. */
+/** Đủ tool theo ASSISTANT_TOOL_NAMES; tham số lấy từ zod nên khớp với lúc kiểm. */
 export const ASSISTANT_TOOL_DEFINITIONS: GatewayToolDefinition[] = ASSISTANT_TOOL_NAMES.map((name) => {
   const tool = TOOLS[name];
   const parameters = z.toJSONSchema(tool.schema, { io: "input" }) as Record<string, unknown>;

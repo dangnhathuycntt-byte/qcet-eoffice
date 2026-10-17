@@ -3,6 +3,7 @@
  * Dùng chung cho route, service và giao diện; không chứa logic truy vấn.
  */
 import { z } from "zod";
+import type { TaskAgentPriority } from "@/domain/tasks/task-agent-draft";
 
 /** Thời hạn lưu cuộc trò chuyện (ngày). Quá hạn: ẩn khỏi danh sách, không gửi lại cho mô hình, cron xóa hẳn. */
 export const ASSISTANT_RETENTION_DAYS = 90;
@@ -20,6 +21,7 @@ export const ASSISTANT_TOOL_NAMES = [
   "get_document",
   "my_inbox",
   "list_meetings",
+  "propose_task",
 ] as const;
 export type AssistantToolName = (typeof ASSISTANT_TOOL_NAMES)[number];
 
@@ -79,6 +81,31 @@ export interface AssistantStep {
   ok: boolean;
 }
 
+/**
+ * Đề xuất nhiệm vụ Trợ lý soạn qua `propose_task` (ADR-010): chưa tạo gì. Giao diện hiện thẻ, người dùng mở hộp tạo
+ * nhiệm vụ đã điền sẵn rồi tự bấm Tạo. Người là tên người hỏi nêu (mô hình không có danh sách nhân sự), hộp khớp tên
+ * với nhân sự của đơn vị, không khớp thì để trống. Chỉ có trong phiên, không lưu cùng tin trả lời.
+ */
+export interface AssistantTaskProposal {
+  title: string;
+  description?: string;
+  priority?: TaskAgentPriority;
+  /** YYYY-MM-DD */
+  startDate?: string;
+  /** YYYY-MM-DD */
+  dueDate?: string;
+  leadAssigneeName?: string;
+  subtasks?: AssistantTaskProposalSubtask[];
+}
+
+export interface AssistantTaskProposalSubtask {
+  title: string;
+  description?: string;
+  assigneeName?: string;
+  /** YYYY-MM-DD, không sau hạn nhiệm vụ. */
+  dueDate?: string;
+}
+
 export type AssistantMessageRole = "user" | "assistant";
 export type AssistantMessageStatus = "complete" | "error" | "aborted";
 
@@ -123,6 +150,7 @@ export type AssistantStreamEvent =
   | { type: "thinking"; delta: string }
   | { type: "text"; delta: string }
   | { type: "sources"; sources: AssistantSourceRef[] }
+  | { type: "proposal"; proposal: AssistantTaskProposal }
   | { type: "done"; messageId: string; status: AssistantMessageStatus; durationMs: number }
   | { type: "error"; error: { code: string; message: string }; messageId?: string };
 

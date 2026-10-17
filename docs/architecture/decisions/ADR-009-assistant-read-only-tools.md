@@ -17,7 +17,7 @@ Rủi ro cần chặn: mô hình đọc dữ liệu vượt quyền người h�
 3. **Chỉ văn bản THUONG không hạn chế.** Văn bản bị loại khi `securityLevel` khác THUONG, khi ghi chú chứa `restricted`, `giới hạn` hoặc `gioi_han`, hoặc khi phân loại ứng dụng là RESTRICTED hay PERSONAL_DATA (`isRestrictedDocument`). Quy tắc áp dụng cả khi người hỏi có quan hệ trực tiếp với văn bản. Danh sách trả `excludedRestricted`; mở chi tiết văn bản bị loại trả câu riêng. Phần ghi chú và mức mật dùng chung với giao diện (`src/domain/assistant/assistant-document-eligibility.ts`): menu "Hỏi Trợ lý" của văn bản chỉ hiện khi văn bản qua được quy tắc này. Mở cuộc mới với ngữ cảnh là văn bản người hỏi đọc được nhưng bị loại thì nhận câu riêng, không phải câu "không có quyền".
 4. **Không lưu kết quả công cụ.** Lưu: chữ câu hỏi và câu trả lời, trạng thái, nguồn (loại, id, mã, tiêu đề, đường dẫn), và các bước (tên công cụ, nhãn, số đếm, ok). Không lưu payload công cụ, suy nghĩ của mô hình hay `thought_signature`. Lượt sau chỉ gửi lại chữ; mô hình gọi lại công cụ nếu cần dữ liệu mới.
 5. **Ngữ cảnh mở từ nhiệm vụ hoặc văn bản phải đọc được.** `context` chỉ được nhận khi tạo cuộc mới, và server đọc lại bằng cùng hàm mô tả. Không đọc được thì không tạo cuộc. Cuộc có sẵn mô tả lại ở mỗi lượt; mất quyền thì bỏ ngữ cảnh.
-6. **Chỉ đọc, có giới hạn cứng.** Không có công cụ ghi, gửi hay gọi ra ngoài. Thẻ "Tạo nhiệm vụ" ở màn đầu chỉ mở hộp tạo nhiệm vụ chuẩn của app: người dùng tự điền và bấm Tạo, máy chủ kiểm quyền `task.create` như mọi nơi khác; Trợ lý không tham gia. Kết quả công cụ và ngữ cảnh được prompt coi là dữ liệu, không phải chỉ dẫn. Đây là biện pháp mềm; ranh giới thật là không công cụ nào đổi dữ liệu. Giới hạn (`ASSISTANT_LIMITS`):
+6. **Chỉ đọc, có giới hạn cứng.** Không có công cụ ghi, gửi hay gọi ra ngoài. Thẻ "Tạo nhiệm vụ" ở màn đầu chỉ mở hộp tạo nhiệm vụ chuẩn của app: người dùng tự điền và bấm Tạo, máy chủ kiểm quyền `task.create` như mọi nơi khác; Trợ lý không tham gia. Từ 18/10/2026 có thêm `propose_task`: công cụ chỉ soạn đề xuất để mở hộp đó đã điền sẵn, không ghi gì ([ADR-010](ADR-010-assistant-task-proposals.md)). Kết quả công cụ và ngữ cảnh được prompt coi là dữ liệu, không phải chỉ dẫn. Đây là biện pháp mềm; ranh giới thật là không công cụ nào đổi dữ liệu. Giới hạn (`ASSISTANT_LIMITS`):
 
    | Mục | Giá trị |
    |---|---|
@@ -29,6 +29,7 @@ Rủi ro cần chặn: mô hình đọc dữ liệu vượt quyền người h�
    | Câu hỏi / thân yêu cầu | 4.000 ký tự / 32 KB |
    | Tệp người hỏi gửi kèm mỗi lượt | 5 tệp, 10 MB (multipart tối đa 11 MB); loại và cỡ từng tệp như Agent tạo nhiệm vụ |
    | Tần suất | 6 lượt mỗi phút mỗi người dùng (`AI_CHAT`) |
+   | Đề xuất nhiệm vụ mỗi lượt | 3 (ADR-010) |
 
    Gateway chặn (HTTP 502, `tool_contract_error`) khi mô hình gọi công cụ chưa khai báo. Việc này xảy ra cả khi lịch sử còn tool call mà vòng không gửi `tools`, và mô hình bỏ qua `tool_choice: "none"` (thử 17/10/2026). Vì vậy vòng cuối gom kết quả công cụ thành tin có rào `<ket_qua_cong_cu>`. Nếu gateway chặn ở vòng giữa (mã `AGENT_TOOL_CONTRACT`), lượt chuyển ngay sang vòng chữ thuần đó thay vì báo lỗi.
 
@@ -42,7 +43,7 @@ Rủi ro cần chặn: mô hình đọc dữ liệu vượt quyền người h�
 
 1. **Nạp sẵn dữ liệu liên quan vào prompt.** Bị bác: gửi nhiều dữ liệu hơn câu hỏi cần, tốn token, và khó giữ giới hạn ký tự theo từng câu.
 2. **Công cụ nhận `userId`, hoặc chạy bằng quyền hệ thống.** Bị bác: mô hình có thể bị dẫn dụ đổi danh tính. Quyền phải lấy từ phiên.
-3. **Công cụ ghi (giao việc, đổi trạng thái) ngay ở giai đoạn 1.** Ngoài phạm vi; cần ADR riêng về xác nhận của người dùng và kiểm soát ghi.
+3. **Công cụ ghi (giao việc, đổi trạng thái) ngay ở giai đoạn 1.** Ngoài phạm vi; cần ADR riêng về xác nhận của người dùng và kiểm soát ghi. Tạo nhiệm vụ đi theo hướng đề xuất, người dùng tự tạo ([ADR-010](ADR-010-assistant-task-proposals.md)), không phải công cụ ghi.
 4. **Lưu kết quả công cụ để lượt sau không gọi lại.** Bị bác: thành bản sao dữ liệu nghiệp vụ, và lịch sử lệch với quyền hiện tại.
 
 ## Consequences
@@ -56,7 +57,7 @@ Rủi ro cần chặn: mô hình đọc dữ liệu vượt quyền người h�
 - Lịch sử vẫn hiện câu trả lời cũ cho chủ nhân sau khi họ mất quyền với mục đó. Chấp nhận, vì chỉ chủ nhân xem và có hạn 90 ngày.
 - Lọc văn bản mật một phần dựa vào ghi chú dạng chuỗi. Ghi chú chứa cụm "giới hạn" thì văn bản bị loại dù không thực sự hạn chế. Sai theo hướng an toàn hơn.
 - Mỗi câu hỏi trung bình 3,3 vòng gọi mô hình. Đo 17/10/2026 trên 30 câu hỏi có dữ liệu mẫu (gemini-3.8-flash, ngân sách suy nghĩ 65536): p50 khoảng 19 giây, p95 khoảng 40 giây.
-- Câu trả lời có thể sai. Giao diện ghi rõ điều này và yêu cầu kiểm tra ở nguồn.
+- Câu trả lời có thể sai. Giao diện ghi rõ điều này và yêu cầu kiểm tra ở nguồn, nhưng chỉ ở chân trang màn đầu của trang Trợ lý. Khung chat nổi không có câu này vì người dùng yêu cầu bỏ cho gọn (17/10/2026), nên người chỉ dùng khung nổi không thấy cảnh báo. Giữ theo yêu cầu đó; ghi nhận đánh đổi ngày 18/10/2026.
 - Không đọc nội dung tệp đính kèm của nhiệm vụ, văn bản trong hệ thống; chỉ đọc tệp người hỏi gửi kèm lượt hỏi.
 - Tệp người hỏi gửi chỉ có ở lượt đó. Lượt sau hỏi tiếp chi tiết trong tệp thì phải gửi lại; prompt dặn mô hình đề nghị gửi lại, không đoán.
 

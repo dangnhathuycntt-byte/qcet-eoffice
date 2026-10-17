@@ -10,6 +10,7 @@ import { ConversationRowsSkeleton } from "@/components/assistant/conversation-ro
 import { AssistantDockPanel } from "@/components/assistant/assistant-dock-panel";
 import { ASSISTANT_CONVERSATION_EVENT, type AssistantConversationEventDetail } from "@/components/assistant/assistant-model";
 import { useAssistantChat } from "@/components/assistant/use-assistant-chat";
+import { useCreateTaskLauncher } from "@/components/assistant/use-create-task-launcher";
 import { useStickToBottom } from "@/components/assistant/use-stick-to-bottom";
 import { IconSidebarAssistant, IconSidebarHistory } from "@/components/layout/sidebar-rounded-icons";
 import { isAssistantPath } from "@/lib/navigation/active-matcher";
@@ -105,6 +106,9 @@ export function AssistantDock() {
   const composerRef = React.useRef<HTMLTextAreaElement>(null);
   const chipRef = React.useRef<HTMLButtonElement>(null);
   const agentRef = React.useRef<HTMLButtonElement>(null);
+
+  // Thẻ đề xuất nhiệm vụ trong khung mở hộp tạo nhiệm vụ của app ngay trên trang đang xem (ADR-010)
+  const { openCreateTask, createTaskModal } = useCreateTaskLauncher();
 
   const chat = useAssistantChat({
     conversationId: activated ? dock?.id : undefined,
@@ -296,6 +300,9 @@ export function AssistantDock() {
             stickToBottomRef.current = true;
             chat.retry(replyKey, restoreDraft);
           }}
+          onOpenProposal={({ replyKey, index, proposal }) =>
+            openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))
+          }
           onStop={chat.stop}
           sendError={chat.sendError}
           attachments={chat.attachments}
@@ -331,6 +338,7 @@ export function AssistantDock() {
         irreversible
         isConfirming={deleting}
       />
+      {createTaskModal}
     </>
   );
 }

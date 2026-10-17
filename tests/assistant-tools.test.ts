@@ -98,7 +98,7 @@ function parsed(outcome: AssistantToolOutcome): Record<string, unknown> {
 }
 
 describe('Trợ lý: định nghĩa tool và tham số', () => {
-  it('đủ bảy tool theo ASSISTANT_TOOL_NAMES, tham số đóng và không kèm $schema', () => {
+  it('đủ tool theo ASSISTANT_TOOL_NAMES, tham số đóng và không kèm $schema', () => {
     assert.deepEqual(
       ASSISTANT_TOOL_DEFINITIONS.map((definition) => definition.function.name).sort(),
       [...ASSISTANT_TOOL_NAMES].sort()

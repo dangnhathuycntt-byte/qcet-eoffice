@@ -12,6 +12,7 @@ import {
   type AssistantSourceRef,
   type AssistantStep,
   type AssistantStreamEvent,
+  type AssistantTaskProposal,
 } from "@/contracts/assistant";
 import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
 
@@ -104,6 +105,25 @@ export interface ThreadMessage {
   errorMessage: string | null;
   /** Ảnh/tệp gửi kèm câu hỏi, chỉ có trong phiên đang mở (máy chủ không lưu tệp). */
   attachments?: ChatAttachment[];
+  /** Đề xuất nhiệm vụ của lượt trả lời (propose_task), chỉ có trong phiên đang mở, không lưu cùng tin. */
+  proposals?: AssistantTaskProposal[];
+  /** Nhiệm vụ đã tạo từ đề xuất thứ i (người dùng bấm Tạo trong hộp), để thẻ báo "Đã tạo" kèm lối mở. */
+  proposalTasks?: Record<number, AssistantProposalTask>;
+}
+
+/** Nhiệm vụ vừa tạo từ một thẻ đề xuất. */
+export interface AssistantProposalTask {
+  id: string;
+  code: string | null;
+}
+
+/** Ghi nhận đề xuất thứ `index` của tin `replyKey` đã thành nhiệm vụ; tin không còn trong luồng thì giữ nguyên. */
+export function markProposalCreated(thread: ThreadMessage[], replyKey: string, index: number, task: AssistantProposalTask): ThreadMessage[] {
+  return thread.map((message) =>
+    message.key === replyKey && message.proposals?.[index]
+      ? { ...message, proposalTasks: { ...message.proposalTasks, [index]: task } }
+      : message,
+  );
 }
 
 function baseMessage(key: string, role: AssistantMessageRole): ThreadMessage {
@@ -144,6 +164,8 @@ export function reduceAssistantReply(reply: ThreadMessage, event: AssistantStrea
       return { ...reply, content: reply.content + event.delta };
     case "sources":
       return { ...reply, sources: event.sources };
+    case "proposal":
+      return { ...reply, proposals: [...(reply.proposals ?? []), event.proposal] };
     case "done":
       return { ...reply, id: event.messageId, status: event.status, durationMs: event.durationMs };
     case "error":
