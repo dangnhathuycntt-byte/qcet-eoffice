@@ -303,6 +303,7 @@ export function AssistantDock() {
           onOpenProposal={({ replyKey, index, proposal }) =>
             openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))
           }
+          onDismissProposal={chat.proposalDismissed}
           onStop={chat.stop}
           sendError={chat.sendError}
           attachments={chat.attachments}

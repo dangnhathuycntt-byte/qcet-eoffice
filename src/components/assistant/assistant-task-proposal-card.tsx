@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Check, ListPlus } from "lucide-react";
+import { ArrowUpRight, Check, ListPlus, Minus } from "lucide-react";
 import type { AssistantTaskProposal } from "@/contracts/assistant";
 import { formatDisplayDate } from "@/lib/format/date";
 import { Badge } from "@/components/ui/badge";
@@ -13,29 +13,88 @@ import type { AssistantProposalTask } from "@/components/assistant/assistant-mod
 /** Số việc con hiện trên thẻ; còn lại gộp thành "và n việc con khác" (hộp tạo nhiệm vụ có đủ). */
 const SHOWN_SUBTASKS = 5;
 
-/** Trường bắt buộc của hộp tạo nhiệm vụ mà đề xuất còn thiếu: chỉ nhắc một lần ở chân thẻ, lưới không ghi "Chưa chọn". */
+/**
+ * Trường bắt buộc của hộp tạo nhiệm vụ mà đề xuất còn thiếu: chỉ nhắc một lần ở chân thẻ, lưới không ghi "Chưa chọn". Như
+ * bản nháp issue của GitHub Copilot, nhắn thêm trong chat cũng được để Trợ lý soạn lại.
+ */
 function missingRequired(proposal: AssistantTaskProposal): string | null {
   const missing = [proposal.dueDate ? null : "hạn", proposal.leadAssigneeName ? null : "người chủ trì"].filter(Boolean);
-  return missing.length > 0 ? `Cần chọn ${missing.join(" và ")} khi tạo.` : null;
+  return missing.length > 0 ? `Cần chọn ${missing.join(" và ")} khi tạo, hoặc nhắn thêm để Trợ lý soạn lại.` : null;
 }
 
 /**
- * Thẻ đề xuất nhiệm vụ dưới câu trả lời (propose_task, ADR-010), theo mẫu xem trước hành động của agent: tên đối tượng,
- * giá trị nguyên văn theo nhãn, nội dung dài thu gọn, nút ghi rõ việc sẽ làm, trạng thái ghi bằng chữ (Microsoft Learn,
- * agentconsent.dev; người dùng yêu cầu cải thiện 18/10/2026). Chưa tạo gì: nút mở hộp tạo nhiệm vụ đã điền sẵn, người
- * dùng xem lại và tự bấm Tạo. Tạo xong thì thẻ thu gọn còn tiêu đề và lối mở nhiệm vụ (thay cho toast), không còn nút
- * để khỏi tạo trùng.
+ * Thẻ đề xuất nhiệm vụ dưới câu trả lời (propose_task, ADR-010), theo mẫu xem trước hành động của agent (người dùng yêu
+ * cầu cải thiện bằng tra cứu 18/10/2026; nguồn trong DESIGN.md): tên đối tượng, giá trị nguyên văn theo nhãn, nội dung
+ * dài thu gọn, nút ghi rõ việc sẽ làm cùng một nút từ chối nhẹ, trạng thái ghi bằng chữ. Chưa tạo gì: nút
+ * mở hộp tạo nhiệm vụ đã điền sẵn, người dùng xem lại và tự bấm Tạo. Tạo xong hoặc bỏ qua thì thẻ thu gọn một hàng.
  */
 export function AssistantTaskProposalCard({
   proposal,
   created = null,
+  dismissed = false,
   onOpen,
+  onDismissedChange,
 }: {
   proposal: AssistantTaskProposal;
   created?: AssistantProposalTask | null;
+  dismissed?: boolean;
   onOpen?: () => void;
+  onDismissedChange?: (dismissed: boolean) => void;
 }) {
-  if (created) return <CreatedProposalCard title={proposal.title} task={created} />;
+  // Bỏ qua / Hoàn tác làm mất nút vừa bấm: chuyển tiêu điểm sang nút đối ứng, chỉ khi do chính người dùng bấm
+  const focusNext = React.useRef<"undo" | "open" | null>(null);
+  const undoRef = React.useRef<HTMLButtonElement>(null);
+  const openRef = React.useRef<HTMLButtonElement>(null);
+  React.useLayoutEffect(() => {
+    if (focusNext.current === "undo" && dismissed) undoRef.current?.focus();
+    if (focusNext.current === "open" && !dismissed) openRef.current?.focus();
+    focusNext.current = null;
+  }, [dismissed]);
+
+  if (created) {
+    return (
+      <CompactProposalRow
+        label={`Đã tạo nhiệm vụ: ${proposal.title}`}
+        icon={<Check className="size-3.5 text-foreground" />}
+        title={proposal.title}
+        status={`Đã tạo nhiệm vụ${created.code ? ` ${created.code}` : ""}`}
+      >
+        <Button asChild variant="ghost" size="sm" className="shrink-0 text-foreground max-md:min-h-11">
+          <Link href={`/tasks/${encodeURIComponent(created.id)}`}>
+            Mở nhiệm vụ
+            <ArrowUpRight aria-hidden />
+          </Link>
+        </Button>
+      </CompactProposalRow>
+    );
+  }
+  if (dismissed) {
+    return (
+      <CompactProposalRow
+        label={`Đã bỏ qua đề xuất: ${proposal.title}`}
+        icon={<Minus className="size-3.5 text-muted-foreground" />}
+        title={proposal.title}
+        status="Đã bỏ qua đề xuất"
+        muted
+      >
+        {onDismissedChange ? (
+          <Button
+            ref={undoRef}
+            variant="ghost"
+            size="sm"
+            className="shrink-0 max-md:min-h-11"
+            onClick={() => {
+              focusNext.current = "open";
+              onDismissedChange(false);
+            }}
+          >
+            Hoàn tác
+          </Button>
+        ) : null}
+      </CompactProposalRow>
+    );
+  }
+
   const subtasks = proposal.subtasks ?? [];
   const hidden = subtasks.length - SHOWN_SUBTASKS;
   const missing = missingRequired(proposal);
@@ -65,7 +124,7 @@ export function AssistantTaskProposalCard({
         ) : null}
       </div>
 
-      {/* Chỉ trường có giá trị; trường bắt buộc còn thiếu nhắc một lần ở chân thẻ (người dùng thấy lặp ba lần, 18/10/2026) */}
+      {/* Chỉ trường có giá trị; trường bắt buộc còn thiếu nhắc một lần dưới lưới (người dùng thấy lặp ba lần, 18/10/2026) */}
       {hasFields ? (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 text-xs">
           {proposal.dueDate ? (
@@ -124,39 +183,61 @@ export function AssistantTaskProposalCard({
       ) : null}
 
       {onOpen ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <Button size="sm" className="max-md:min-h-11" onClick={onOpen}>
-            Xem lại và tạo
-          </Button>
-          <p className="text-xs text-muted-foreground">{missing ?? "Mở hộp tạo nhiệm vụ để xem lại rồi bấm Tạo."}</p>
+        <div className="flex flex-col gap-2">
+          {missing ? <p className="text-xs text-muted-foreground">{missing}</p> : null}
+          {/* Tối đa hai thao tác: làm (nút chính, tên nút đã nói phải xem lại) và từ chối nhẹ (ghost) */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button ref={openRef} size="sm" className="max-md:min-h-11" onClick={onOpen}>
+              Xem lại và tạo
+            </Button>
+            {onDismissedChange ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="max-md:min-h-11"
+                onClick={() => {
+                  focusNext.current = "undo";
+                  onDismissedChange(true);
+                }}
+              >
+                Bỏ qua
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </section>
   );
 }
 
-/** Thẻ sau khi tạo: một khối gọn, trạng thái bằng chữ và lối mở nhiệm vụ (đọc cho trình đọc màn hình khi đổi). */
-function CreatedProposalCard({ title, task }: { title: string; task: AssistantProposalTask }) {
+/** Thẻ đã trả lời (đã tạo, đã bỏ qua): một hàng gọn, trạng thái bằng chữ đọc cho trình đọc màn hình khi đổi. */
+function CompactProposalRow({
+  label,
+  icon,
+  title,
+  status,
+  muted = false,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  title: string;
+  status: string;
+  muted?: boolean;
+  children?: React.ReactNode;
+}) {
   return (
-    <section
-      aria-label={`Đã tạo nhiệm vụ: ${title}`}
-      className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
-    >
+    <section aria-label={label} className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5">
       <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted" aria-hidden>
-        <Check className="size-3.5 text-foreground" />
+        {icon}
       </span>
       <div role="status" className="flex min-w-0 flex-1 flex-col">
-        <p className="truncate text-compact font-medium text-foreground" title={title}>
+        <p className={muted ? "truncate text-compact text-muted-foreground" : "truncate text-compact font-medium text-foreground"} title={title}>
           {title}
         </p>
-        <p className="text-xs text-muted-foreground">Đã tạo nhiệm vụ{task.code ? ` ${task.code}` : ""}</p>
+        <p className="text-xs text-muted-foreground">{status}</p>
       </div>
-      <Button asChild variant="ghost" size="sm" className="shrink-0 text-foreground max-md:min-h-11">
-        <Link href={`/tasks/${encodeURIComponent(task.id)}`}>
-          Mở nhiệm vụ
-          <ArrowUpRight aria-hidden />
-        </Link>
-      </Button>
+      {children}
     </section>
   );
 }

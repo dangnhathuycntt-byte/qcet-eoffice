@@ -35,6 +35,8 @@ export interface AssistantThreadProps {
   compact?: boolean;
   /** Mở hộp tạo nhiệm vụ đã điền theo thẻ đề xuất thứ `index` của tin `replyKey`; không truyền thì thẻ không có nút. */
   onOpenProposal?: (target: ProposalTarget) => void;
+  /** Bỏ qua (hoặc hoàn tác bỏ qua) thẻ đề xuất thứ `index` của tin `replyKey`; không truyền thì thẻ không có nút Bỏ qua. */
+  onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
 }
 
 export interface ProposalTarget {
@@ -56,6 +58,7 @@ export function AssistantThread({
   pending = false,
   compact = false,
   onOpenProposal,
+  onDismissProposal,
 }: AssistantThreadProps) {
   return (
     <div ref={listRef} onScroll={onScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto" data-slot="assistant-thread">
@@ -94,6 +97,7 @@ export function AssistantThread({
               onRetry={() => onRetry(message.key)}
               pending={pending}
               onOpenProposal={onOpenProposal}
+              onDismissProposal={onDismissProposal}
             />
           ),
         )}
@@ -134,11 +138,13 @@ function ReplyTurn({
   onRetry,
   pending,
   onOpenProposal,
+  onDismissProposal,
 }: {
   message: ThreadMessage;
   onRetry: () => void;
   pending: boolean;
   onOpenProposal?: (target: ProposalTarget) => void;
+  onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
 }) {
   const streaming = message.status === "streaming";
   // Chữ hiện dần kể cả khi gateway gửi cả cục; tin mở từ lịch sử hiện ngay
@@ -198,7 +204,9 @@ function ReplyTurn({
               key={index}
               proposal={proposal}
               created={message.proposalTasks?.[index] ?? null}
+              dismissed={message.dismissedProposals?.includes(index) ?? false}
               onOpen={onOpenProposal ? () => onOpenProposal({ replyKey: message.key, index, proposal }) : undefined}
+              onDismissedChange={onDismissProposal ? (dismissed) => onDismissProposal(message.key, index, dismissed) : undefined}
             />
           ))}
         </div>

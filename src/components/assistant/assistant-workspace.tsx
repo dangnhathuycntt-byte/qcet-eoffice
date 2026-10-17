@@ -211,6 +211,7 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                 onOpenProposal={({ replyKey, index, proposal }) =>
                   openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))
                 }
+                onDismissProposal={chat.proposalDismissed}
               />
             )}
 

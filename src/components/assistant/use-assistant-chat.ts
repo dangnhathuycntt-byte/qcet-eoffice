@@ -18,6 +18,7 @@ import {
   questionMessageBefore,
   reduceAssistantReply,
   retryMissesAttachments,
+  setProposalDismissed,
   streamingThreadMessage,
   threadMessageFromDto,
   userThreadMessage,
@@ -148,14 +149,15 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   const openConversation = React.useCallback(async (id: string) => {
     // Tải lại đúng cuộc đang mở (khung chat nổi quay lại): giữ tệp đã gửi và thẻ đề xuất nhiệm vụ trong phiên theo mã
     // tin, để còn ảnh trên câu hỏi, "Thử lại" vẫn gửi kèm tệp và thẻ vẫn mở được. Máy chủ không lưu hai thứ này.
-    const carried = new Map<string, Pick<ThreadMessage, "attachments" | "proposals" | "proposalTasks">>();
+    const carried = new Map<string, Pick<ThreadMessage, "attachments" | "proposals" | "proposalTasks" | "dismissedProposals">>();
     if (id === activeIdRef.current) {
-      for (const { id: messageId, attachments: sent, proposals, proposalTasks } of threadRef.current) {
+      for (const { id: messageId, attachments: sent, proposals, proposalTasks, dismissedProposals } of threadRef.current) {
         if (!messageId || (!sent && !proposals)) continue;
         carried.set(messageId, {
           ...(sent ? { attachments: sent } : {}),
           ...(proposals ? { proposals } : {}),
           ...(proposalTasks ? { proposalTasks } : {}),
+          ...(dismissedProposals ? { dismissedProposals } : {}),
         });
       }
     }
@@ -358,6 +360,11 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     setThread((prev) => markProposalCreated(prev, replyKey, index, task));
   }, []);
 
+  /** "Bỏ qua" hoặc "Hoàn tác" trên thẻ đề xuất; không gửi gì cho máy chủ (đề xuất chưa tạo gì). */
+  const proposalDismissed = React.useCallback((replyKey: string, index: number, dismissed: boolean) => {
+    setThread((prev) => setProposalDismissed(prev, replyKey, index, dismissed));
+  }, []);
+
   return {
     activeId,
     activeTitle,
@@ -378,6 +385,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     send,
     retry,
     proposalCreated,
+    proposalDismissed,
     stop,
     reload,
     readActiveId,

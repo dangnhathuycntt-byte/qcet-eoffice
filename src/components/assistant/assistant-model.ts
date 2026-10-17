@@ -109,12 +109,23 @@ export interface ThreadMessage {
   proposals?: AssistantTaskProposal[];
   /** Nhiệm vụ đã tạo từ đề xuất thứ i (người dùng bấm Tạo trong hộp), để thẻ báo "Đã tạo" kèm lối mở. */
   proposalTasks?: Record<number, AssistantProposalTask>;
+  /** Vị trí các đề xuất người dùng bấm "Bỏ qua" (thẻ thu gọn, hoàn tác được). */
+  dismissedProposals?: number[];
 }
 
 /** Nhiệm vụ vừa tạo từ một thẻ đề xuất. */
 export interface AssistantProposalTask {
   id: string;
   code: string | null;
+}
+
+/** Bỏ qua hoặc hoàn tác bỏ qua đề xuất thứ `index` của tin `replyKey`. */
+export function setProposalDismissed(thread: ThreadMessage[], replyKey: string, index: number, dismissed: boolean): ThreadMessage[] {
+  return thread.map((message) => {
+    if (message.key !== replyKey || !message.proposals?.[index]) return message;
+    const others = (message.dismissedProposals ?? []).filter((item) => item !== index);
+    return { ...message, dismissedProposals: dismissed ? [...others, index] : others };
+  });
 }
 
 /** Ghi nhận đề xuất thứ `index` của tin `replyKey` đã thành nhiệm vụ; tin không còn trong luồng thì giữ nguyên. */

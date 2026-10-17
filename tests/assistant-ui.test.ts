@@ -28,6 +28,7 @@ import {
   parseAssistantContextParam,
   questionMessageBefore,
   retryMissesAttachments,
+  setProposalDismissed,
   ASSISTANT_ATTACHMENT_ONLY_PROMPT,
   reduceAssistantReply,
   shouldApplyRenamedTitle,
@@ -161,6 +162,7 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
     const opened: Array<{ replyKey: string; index: number; title: string }> = [];
     const onOpen = (target: { replyKey: string; index: number; proposal: { title: string } }) =>
       void opened.push({ replyKey: target.replyKey, index: target.index, title: target.proposal.title });
+    const onDismissProposal = () => undefined;
     const render = (message: ThreadMessage, onOpenProposal?: typeof onOpen) =>
       renderToStaticMarkup(
         React.createElement(AssistantThread, {
@@ -172,6 +174,7 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
           listRef: { current: null },
           onScroll: () => undefined,
           onOpenProposal,
+          onDismissProposal: onOpenProposal ? onDismissProposal : undefined,
         }),
       );
     const streamingHtml = render(reply, onOpen);
@@ -186,12 +189,25 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
       assert.ok(html.includes(text), text);
     }
     assert.equal((html.match(/Xem lại và tạo/g) ?? []).length, 2);
-    // Trường bắt buộc còn thiếu chỉ nhắc một lần ở chân thẻ; lưới chỉ có trường có giá trị (người dùng thấy lặp, 18/10/2026)
+    // Hai thao tác như mẫu xác nhận của agent: làm và từ chối nhẹ (tra cứu 18/10/2026)
+    assert.equal((html.match(/>Bỏ qua</g) ?? []).length, 2);
+    // Trường bắt buộc còn thiếu chỉ nhắc một lần ở chân thẻ, kèm lối soạn lại bằng chat; lưới chỉ có trường có giá trị
     assert.equal(html.includes("Chưa chọn"), false);
-    assert.equal((html.match(/Cần chọn hạn và người chủ trì khi tạo\./g) ?? []).length, 1);
+    assert.equal((html.match(/Cần chọn hạn và người chủ trì khi tạo, hoặc nhắn thêm để Trợ lý soạn lại\./g) ?? []).length, 1);
     assert.equal((html.match(/<dl/g) ?? []).length, 1, "đề xuất chỉ có tiêu đề thì không có lưới thuộc tính");
-    assert.ok(html.includes("Mở hộp tạo nhiệm vụ để xem lại rồi bấm Tạo."), "đủ trường thì chỉ nhắc xem lại");
-    assert.equal(render(reply).includes("Xem lại và tạo"), false, "không có nơi mở hộp thì thẻ không có nút");
+    assert.equal(html.includes("Mở hộp tạo nhiệm vụ để xem lại"), false, "đủ trường thì không thêm câu lặp lại tên nút");
+    const readOnly = render(reply);
+    assert.equal(readOnly.includes("Xem lại và tạo") || readOnly.includes("Bỏ qua") || readOnly.includes("Cần chọn"), false, "không có nơi mở hộp thì thẻ không có nút");
+
+    // Bỏ qua thẻ đầu: thu gọn một hàng "Đã bỏ qua đề xuất", có Hoàn tác; hoàn tác thì thẻ đầy đủ trở lại
+    const dismissed = setProposalDismissed([reply], "reply-p", 0, true)[0];
+    assert.deepEqual(dismissed.dismissedProposals, [0]);
+    assert.equal(setProposalDismissed([reply], "reply-p", 5, true)[0], reply, "đề xuất không có thì không đổi");
+    const dismissedHtml = render(dismissed, onOpen);
+    assert.ok(dismissedHtml.includes('aria-label="Đã bỏ qua đề xuất: Chuẩn bị hội thảo chuyển đổi số"') && dismissedHtml.includes("Hoàn tác"));
+    assert.equal((dismissedHtml.match(/Xem lại và tạo/g) ?? []).length, 1);
+    assert.equal(dismissedHtml.includes("Đặt hội trường"), false, "thẻ đã bỏ qua không còn lưới");
+    assert.deepEqual(setProposalDismissed([dismissed], "reply-p", 0, false)[0].dismissedProposals, []);
 
     // Tạo xong từ thẻ thứ hai: thẻ đó báo "Đã tạo" kèm mã và lối mở, không còn nút; thẻ đầu giữ nguyên
     const created = markProposalCreated([reply], "reply-p", 1, { id: "t-9", code: "NV-2026-10-009" })[0];
@@ -377,6 +393,12 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     const opensProposal = "openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))";
     assert.ok(dock.includes("useCreateTaskLauncher()") && dock.includes(opensProposal) && dock.includes("{createTaskModal}"));
     assert.ok(read("src/components/assistant/assistant-workspace.tsx").includes(opensProposal));
+    // Bỏ qua thẻ được ở cả hai nơi, giữ khi tải lại đúng cuộc đang mở
+    for (const file of ["assistant-dock.tsx", "assistant-workspace.tsx"]) {
+      assert.ok(read(`src/components/assistant/${file}`).includes("onDismissProposal={chat.proposalDismissed}"), file);
+    }
+    assert.ok(read("src/components/assistant/assistant-dock-panel.tsx").includes("onDismissProposal={onDismissProposal}"));
+    assert.ok(read("src/components/assistant/use-assistant-chat.ts").includes("...(dismissedProposals ? { dismissedProposals } : {})"));
     assert.ok(launcher.includes("notifyCard({ id: task.id, code: task.code ?? null });\n          return;"), "mở từ thẻ: báo cho thẻ, không thêm toast trùng");
   });
 
