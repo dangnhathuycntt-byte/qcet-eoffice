@@ -16,7 +16,7 @@ Người dùng muốn Trợ lý "tạo nhiệm vụ các kiểu". ADR-009 giữ 
 4. **Không tự đặt hạn hay người.** Hạn, ngày bắt đầu, người chủ trì, người nhận việc con chỉ điền khi người hỏi nêu rõ. Thiếu thì vẫn soạn; thẻ ghi "Chưa chọn" ở hạn và chủ trì (hai trường bắt buộc), và mô hình nhắc chọn trong hộp.
 5. **Làm sạch ở máy chủ, kiểm lại ở hộp.** Tham số kiểm bằng zod `.strict()`, ngày phải có thật. `normalizeTaskProposal` làm tiêu đề thành một dòng. Hàm này bỏ ngày bắt đầu sau hạn, bỏ hạn việc con sau hạn nhiệm vụ, bỏ việc con trùng tên và giữ tối đa 20 việc con. Hộp áp đề xuất qua cùng đường với nháp của Agent (`applyAgentDraft`), nên người chủ trì ngoài đơn vị hoặc hạn việc con sai đều bị bỏ. Đề xuất không kiểm quyền tạo trước; quyền kiểm lúc bấm Tạo.
 6. **Chỉ trong phiên.** Sự kiện `proposal` không lưu cùng tin trả lời. Mở lại cuộc từ lịch sử thì không còn thẻ; tải lại đúng cuộc đang mở thì thẻ vẫn giữ theo mã tin, như tệp gửi kèm. Tạo xong từ thẻ thì thẻ thu gọn thành "Đã tạo nhiệm vụ <mã>" kèm lối mở (cũng chỉ trong phiên, thay cho toast), không còn nút để khỏi tạo trùng. Audit ghi bước `propose_task` (tên, ok), không ghi tiêu đề hay nội dung đề xuất.
-7. **Giới hạn.** Tối đa 3 đề xuất mỗi lượt (`ASSISTANT_LIMITS.maxProposalsPerTurn`). Đề xuất thứ tư nhận lỗi giới hạn và không hiện thẻ. Tham số nằm trong trần 4.000 ký tự của mọi công cụ, mô tả tối đa 3.000 ký tự.
+7. **Giới hạn.** Tối đa 3 đề xuất mỗi lượt (`ASSISTANT_LIMITS.maxProposalsPerTurn`). Đề xuất thứ tư nhận lỗi giới hạn và không hiện thẻ. Tham số nằm trong trần 4.000 ký tự của mọi công cụ, mô tả tối đa 3.000 ký tự. Trần này tính cả JSON tham số, nên đề xuất có nhiều việc con kèm mô tả sẽ bị từ chối ("nội dung quá dài") trước khi tới 20 việc con. Chạy thật mới thử tới 3 việc con không mô tả.
 8. **Không thêm cờ.** Đề xuất đi theo cờ `assistant`; không thêm biến môi trường. Thẻ không gắn nhãn "AI" riêng vì chân trang đã ghi Trợ lý có thể sai. Thẻ mở hộp ở trang Trợ lý và ở khung chat nổi (khung chat nổi gắn lại `useCreateTaskLauncher`).
 
 ## Alternatives Considered
@@ -35,7 +35,8 @@ Người dùng muốn Trợ lý "tạo nhiệm vụ các kiểu". ADR-009 giữ 
 - Tên trùng (hai người tên Lan) hoặc tên viết khác trong danh bạ thì để trống, người dùng phải tự chọn.
 - Người cùng tên ở đơn vị khác đơn vị đang chọn không khớp; đổi đơn vị trong hộp không khớp lại tên.
 - Thẻ mất khi mở lại cuộc từ lịch sử; câu trả lời vẫn còn chữ mô tả đề xuất.
-- Mô hình đôi khi nói một câu dẫn trước khi gọi công cụ ("Tôi sẽ soạn…"), như với các công cụ đọc.
+- Mô hình đôi khi nói một câu dẫn trước khi gọi công cụ ("Tôi sẽ soạn…"), như với các công cụ đọc. Prompt đã dặn không viết, nhưng sonnet-4.6 vẫn viết ở 2/3 câu thử ngày 18/10/2026; gemini-3.8-flash thì không.
+- Quyền tạo chỉ kiểm lúc bấm Tạo. Người không có quyền tạo ở đơn vị đang chọn vẫn thấy thẻ và hộp điền sẵn, rồi mới nhận lỗi của `POST /api/tasks` trong hộp.
 
 ### Phát hiện có sẵn, ngoài phạm vi
 - `taskCommandService.createTask` vẫn đọc `creatorId` và `code` từ input thô (`src/server/tasks/task-command-service.ts`, dòng 482–487, 566, 652). `POST /api/tasks` ánh xạ trường tường minh, không truyền hai trường này, nên hiện không khai thác được. Nơi gọi mới phải giữ nguyên cách ánh xạ đó.
