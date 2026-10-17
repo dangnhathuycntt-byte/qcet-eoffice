@@ -13,10 +13,10 @@ import type { AssistantProposalTask } from "@/components/assistant/assistant-mod
 /** Số việc con hiện trên thẻ; còn lại gộp thành "và n việc con khác" (hộp tạo nhiệm vụ có đủ). */
 const SHOWN_SUBTASKS = 5;
 
-/** Trường bắt buộc của hộp tạo nhiệm vụ mà đề xuất còn thiếu, ghi bằng lời ở chân thẻ. */
+/** Trường bắt buộc của hộp tạo nhiệm vụ mà đề xuất còn thiếu: chỉ nhắc một lần ở chân thẻ, lưới không ghi "Chưa chọn". */
 function missingRequired(proposal: AssistantTaskProposal): string | null {
   const missing = [proposal.dueDate ? null : "hạn", proposal.leadAssigneeName ? null : "người chủ trì"].filter(Boolean);
-  return missing.length > 0 ? `Còn thiếu ${missing.join(" và ")}, chọn trong hộp.` : null;
+  return missing.length > 0 ? `Cần chọn ${missing.join(" và ")} khi tạo.` : null;
 }
 
 /**
@@ -39,6 +39,8 @@ export function AssistantTaskProposalCard({
   const subtasks = proposal.subtasks ?? [];
   const hidden = subtasks.length - SHOWN_SUBTASKS;
   const missing = missingRequired(proposal);
+  const priority = proposal.priority && proposal.priority !== "NONE" ? proposal.priority : null;
+  const hasFields = Boolean(proposal.dueDate || proposal.startDate || proposal.leadAssigneeName || priority || subtasks.length > 0);
   return (
     <section
       aria-label={`Đề xuất nhiệm vụ: ${proposal.title}`}
@@ -63,55 +65,63 @@ export function AssistantTaskProposalCard({
         ) : null}
       </div>
 
-      {/* Hạn và chủ trì là trường bắt buộc của hộp: luôn hiện, thiếu thì ghi để Thầy/Cô biết cần chọn */}
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 text-xs">
-        <dt className="text-muted-foreground">Hạn</dt>
-        <dd className={proposal.dueDate ? "text-foreground tabular-nums" : "text-muted-foreground"}>
-          {proposal.dueDate ? formatDisplayDate(proposal.dueDate) : "Chưa chọn"}
-        </dd>
-        {proposal.startDate ? (
-          <>
-            <dt className="text-muted-foreground">Bắt đầu</dt>
-            <dd className="text-foreground tabular-nums">{formatDisplayDate(proposal.startDate)}</dd>
-          </>
-        ) : null}
-        <dt className="text-muted-foreground">Chủ trì</dt>
-        <dd className={proposal.leadAssigneeName ? "truncate text-foreground" : "text-muted-foreground"} title={proposal.leadAssigneeName}>
-          {proposal.leadAssigneeName ?? "Chưa chọn"}
-        </dd>
-        {proposal.priority && proposal.priority !== "NONE" ? (
-          <>
-            <dt className="text-muted-foreground">Ưu tiên</dt>
-            <dd className="flex">
-              {/* Hộp dùng MEDIUM, chỉ báo dùng NORMAL (như toSignalPriority của hộp tạo nhiệm vụ) */}
-              <PrioritySignalBars priority={proposal.priority === "MEDIUM" ? "NORMAL" : proposal.priority} showLabel />
-            </dd>
-          </>
-        ) : null}
-        {subtasks.length > 0 ? (
-          <>
-            <dt className="self-start text-muted-foreground">Việc con</dt>
-            <dd className="flex min-w-0 flex-col gap-0.5">
-              <ul className="flex flex-col gap-0.5">
-                {subtasks.slice(0, SHOWN_SUBTASKS).map((item) => (
-                  // Người và hạn đứng ngay sau tên việc (không đẩy ra mép phải thẻ rộng)
-                  <li key={item.title} className="flex min-w-0 items-baseline gap-2">
-                    <span className="min-w-0 truncate text-foreground" title={item.title}>
-                      {item.title}
-                    </span>
-                    {item.assigneeName || item.dueDate ? (
-                      <span className="shrink-0 text-muted-foreground tabular-nums">
-                        {[item.assigneeName, item.dueDate ? formatDisplayDate(item.dueDate) : null].filter(Boolean).join(", ")}
+      {/* Chỉ trường có giá trị; trường bắt buộc còn thiếu nhắc một lần ở chân thẻ (người dùng thấy lặp ba lần, 18/10/2026) */}
+      {hasFields ? (
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 text-xs">
+          {proposal.dueDate ? (
+            <>
+              <dt className="text-muted-foreground">Hạn</dt>
+              <dd className="text-foreground tabular-nums">{formatDisplayDate(proposal.dueDate)}</dd>
+            </>
+          ) : null}
+          {proposal.startDate ? (
+            <>
+              <dt className="text-muted-foreground">Bắt đầu</dt>
+              <dd className="text-foreground tabular-nums">{formatDisplayDate(proposal.startDate)}</dd>
+            </>
+          ) : null}
+          {proposal.leadAssigneeName ? (
+            <>
+              <dt className="text-muted-foreground">Chủ trì</dt>
+              <dd className="truncate text-foreground" title={proposal.leadAssigneeName}>
+                {proposal.leadAssigneeName}
+              </dd>
+            </>
+          ) : null}
+          {priority ? (
+            <>
+              <dt className="text-muted-foreground">Ưu tiên</dt>
+              <dd className="flex">
+                {/* Hộp dùng MEDIUM, chỉ báo dùng NORMAL (như toSignalPriority của hộp tạo nhiệm vụ) */}
+                <PrioritySignalBars priority={priority === "MEDIUM" ? "NORMAL" : priority} showLabel />
+              </dd>
+            </>
+          ) : null}
+          {subtasks.length > 0 ? (
+            <>
+              <dt className="self-start text-muted-foreground">Việc con</dt>
+              <dd className="flex min-w-0 flex-col gap-0.5">
+                <ul className="flex flex-col gap-0.5">
+                  {subtasks.slice(0, SHOWN_SUBTASKS).map((item) => (
+                    // Người và hạn đứng ngay sau tên việc (không đẩy ra mép phải thẻ rộng)
+                    <li key={item.title} className="flex min-w-0 items-baseline gap-2">
+                      <span className="min-w-0 truncate text-foreground" title={item.title}>
+                        {item.title}
                       </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-              {hidden > 0 ? <span className="text-muted-foreground">và {hidden} việc con khác</span> : null}
-            </dd>
-          </>
-        ) : null}
-      </dl>
+                      {item.assigneeName || item.dueDate ? (
+                        <span className="shrink-0 text-muted-foreground tabular-nums">
+                          {[item.assigneeName, item.dueDate ? formatDisplayDate(item.dueDate) : null].filter(Boolean).join(", ")}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+                {hidden > 0 ? <span className="text-muted-foreground">và {hidden} việc con khác</span> : null}
+              </dd>
+            </>
+          ) : null}
+        </dl>
+      ) : null}
 
       {onOpen ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">

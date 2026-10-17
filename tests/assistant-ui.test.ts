@@ -186,8 +186,10 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
       assert.ok(html.includes(text), text);
     }
     assert.equal((html.match(/Xem lại và tạo/g) ?? []).length, 2);
-    assert.equal((html.match(/Chưa chọn/g) ?? []).length, 2, "đề xuất thiếu hạn và chủ trì ghi rõ để chọn trong hộp");
-    assert.ok(html.includes("Còn thiếu hạn và người chủ trì, chọn trong hộp."), "trường bắt buộc còn thiếu ghi bằng lời");
+    // Trường bắt buộc còn thiếu chỉ nhắc một lần ở chân thẻ; lưới chỉ có trường có giá trị (người dùng thấy lặp, 18/10/2026)
+    assert.equal(html.includes("Chưa chọn"), false);
+    assert.equal((html.match(/Cần chọn hạn và người chủ trì khi tạo\./g) ?? []).length, 1);
+    assert.equal((html.match(/<dl/g) ?? []).length, 1, "đề xuất chỉ có tiêu đề thì không có lưới thuộc tính");
     assert.ok(html.includes("Mở hộp tạo nhiệm vụ để xem lại rồi bấm Tạo."), "đủ trường thì chỉ nhắc xem lại");
     assert.equal(render(reply).includes("Xem lại và tạo"), false, "không có nơi mở hộp thì thẻ không có nút");
 
@@ -200,7 +202,7 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
     assert.ok(createdHtml.includes('role="status"'), "trạng thái đã tạo được đọc cho trình đọc màn hình");
     assert.equal((createdHtml.match(/Chưa tạo/g) ?? []).length, 1, "thẻ đã tạo thu gọn, chỉ thẻ còn lại ghi Chưa tạo");
     assert.ok(createdHtml.includes('aria-label="Đã tạo nhiệm vụ: Gửi giấy mời dự hội thảo"'));
-    assert.equal(createdHtml.includes("Còn thiếu hạn và người chủ trì"), false, "thẻ đã tạo thu gọn, không còn lưới và chân thẻ");
+    assert.equal(createdHtml.includes("Cần chọn hạn và người chủ trì"), false, "thẻ đã tạo thu gọn, không còn lưới và chân thẻ");
     // Lượt đọc tệp gửi kèm rồi soạn đề xuất vẫn ghi "Đã soạn đề xuất"
     const withFile = { ...reply, steps: [{ tool: "attachment" as const, label: "Đọc tệp qd.pdf", count: null, ok: true }, ...reply.steps] };
     assert.ok(render(withFile).includes("Đã soạn đề xuất trong 2 giây"));
