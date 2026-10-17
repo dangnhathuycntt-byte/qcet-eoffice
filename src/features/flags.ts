@@ -33,7 +33,8 @@ export type FeatureFlagKey =
   | "outgoingDocuments"
   | "internalDocuments"
   | "userProvisioning"
-  | "taskAgent";
+  | "taskAgent"
+  | "assistant";
 
 export interface FeatureFlagDefinition {
   readonly key: FeatureFlagKey;
@@ -181,6 +182,15 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
     description:
       "Agent soạn nháp nhiệm vụ trong hộp Tạo nhiệm vụ (gọi mô hình qua TASK_AGENT_* ở server). " +
       "Chỉ điền form, người dùng tự bấm Tạo. Tắt mặc định.",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  assistant: {
+    key: "assistant",
+    description:
+      "Trang Trợ lý (/assistant): hỏi đáp chỉ đọc về nhiệm vụ, văn bản, lịch họp trong quyền của người hỏi, có lịch sử chat. " +
+      "Dùng chung gateway TASK_AGENT_* ở server. Tắt mặc định.",
     defaultValue: false,
     isKillSwitch: false,
     isPublic: true,

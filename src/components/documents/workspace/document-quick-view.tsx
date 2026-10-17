@@ -16,6 +16,9 @@ import { useIsPhone } from "@/hooks/use-is-phone";
 import { hasOpenDetailsPopover, useTrackOpenPopover } from "../popover-escape-guard";
 import { DocumentInfoSections, DocumentSummaryBlock } from "./document-workspace-parts";
 import { AddDocumentFileButton, DocumentEditDialog, useAddDocumentFiles } from "./document-edit";
+import { AgentIcon } from "@/components/icons/agent-icon";
+import { useRuntimeFeature } from "@/lib/runtime-features";
+import { isAssistantEligibleDocument } from "@/domain/assistant/assistant-document-eligibility";
 
 /** Chỉ in khối chi tiết (`document-quick-body`); phần còn lại của trang bị ẩn khi in. */
 const PRINT_DETAIL_CSS = `@media print {
@@ -33,11 +36,14 @@ function MoreActionsMenu({
   onViewSignature,
   onEdit,
   onAddFiles,
+  askAssistantHref,
 }: {
   onPrint: () => void;
   onViewSignature?: () => void;
   onEdit?: () => void;
   onAddFiles?: () => void;
+  /** Có khi cờ Trợ lý bật: đường dẫn mở Trợ lý với văn bản này làm ngữ cảnh. */
+  askAssistantHref?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   useTrackOpenPopover(open);
@@ -49,6 +55,14 @@ function MoreActionsMenu({
         </Button>
       </MenuTrigger>
       <MenuContent align="end" positionerClassName="z-[60]" className="z-[60] w-56 min-w-0">
+        {askAssistantHref ? (
+          <>
+            <MenuActionItem leading={<AgentIcon className="size-4" />} render={<Link href={askAssistantHref} />}>
+              Hỏi Trợ lý
+            </MenuActionItem>
+            <MenuSeparator className="my-1 border-t border-border/40" />
+          </>
+        ) : null}
         {onEdit ? (
           <MenuActionItem leading={<Pencil />} onClick={onEdit}>Sửa thông tin</MenuActionItem>
         ) : null}
@@ -107,11 +121,15 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
   const { state, refresh } = useDocumentDetail(docId);
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const rootRef = React.useRef<HTMLElement>(null);
+  // Cờ Trợ lý: chỉ hiện "Hỏi Trợ lý" trong menu Thao tác khác khi bật
+  const assistantOn = useRuntimeFeature("assistant");
 
   const item = state.docId === docId && (state.status === "ready" || state.status === "loading") ? state.item : null;
   const vm: DocumentViewModel | null = item ? fromDocumentItem(item) : seed && seed.id === docId ? fromOfficialDocument(seed) : null;
   const error = state.docId === docId && state.status === "error" ? state : null;
   const canEdit = Boolean(item?.canEdit);
+  // Trợ lý chỉ đọc văn bản Thường không có ghi chú hạn chế: văn bản mật không hiện lối vào (chờ chi tiết tải xong mới biết độ mật và ghi chú)
+  const canAskAssistant = assistantOn && item !== null && isAssistantEligibleDocument(item);
   const [editing, setEditing] = React.useState(false);
   const afterChange = () => {
     refresh();
@@ -199,6 +217,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
         <MoreActionsMenu
+          askAssistantHref={canAskAssistant ? `/assistant?context=document:${encodeURIComponent(docId)}` : undefined}
           onPrint={() => window.print()}
           onViewSignature={vm?.hasSignature && onViewSignature ? () => onViewSignature(item) : undefined}
           onEdit={canEdit ? () => setEditing(true) : undefined}

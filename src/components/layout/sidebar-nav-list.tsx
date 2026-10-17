@@ -16,6 +16,7 @@ import {
   IconSidebarPeople,
   IconSidebarChart,
   IconSidebarMore,
+  IconSidebarAssistant,
 } from "@/components/layout/sidebar-rounded-icons";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
@@ -23,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Pressable } from "@/components/ui/pressable";
 import { MENU_POPUP_CLASS, Menu, MenuActionItem, MenuGroup, MenuGroupLabel, MenuPopup, MenuSeparator } from "@/components/ui/menu";
 import { useAuth } from "@/lib/auth-context";
+import { useRuntimeFeature } from "@/lib/runtime-features";
 import { cn } from "@/lib/utils";
 
 export interface SidebarNavSubItem {
@@ -36,6 +38,8 @@ export interface SidebarNavSubItem {
   children?: SidebarNavChild[];
   /** Mục "Thêm": bấm mở menu các trang ít dùng (`SIDEBAR_MORE_ITEMS`) như mục "More" ở sidebar Linear, không điều hướng. */
   more?: boolean;
+  /** Chỉ hiện khi cờ công khai của server bật (đọc từ `/api/runtime-config`). */
+  feature?: "assistant";
 }
 
 export interface SidebarNavChild {
@@ -93,6 +97,13 @@ export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
         href: "/calendar",
         icon: IconSidebarCalendar,
         aliases: ["/meetings"],
+      },
+      {
+        id: "assistant",
+        label: "Trợ lý",
+        href: "/assistant",
+        icon: IconSidebarAssistant,
+        feature: "assistant",
       },
     ],
   },
@@ -406,6 +417,12 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const canViewApprovalReport = Number(badgeCounts?.docsApprovalReport) === 1;
+  const assistantEnabled = useRuntimeFeature("assistant");
+  // Mục theo cờ: ẩn khi cờ tắt (desktop và ngăn kéo điện thoại dùng chung danh sách này)
+  const navGroups = SIDEBAR_NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.feature || (item.feature === "assistant" && assistantEnabled)),
+  }));
 
   // Quản lý trạng thái mở/đóng của các nhóm collapsible
   const [collapsedGroups, setCollapsedGroups] = React.useState<Record<string, boolean>>({});
@@ -428,7 +445,7 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
 
   return (
     <div className={cn("overflow-y-auto flex-1 px-3 pt-1.5 pb-2 space-y-3 thin-scrollbar", className)}>
-      {SIDEBAR_NAV_GROUPS.map((group) => {
+      {navGroups.map((group) => {
         const isGroupCollapsed = Boolean(collapsedGroups[group.id]);
 
         return (

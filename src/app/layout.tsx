@@ -12,6 +12,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
 import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
 import { parseSidebarCollapsed, SIDEBAR_COLLAPSED_COOKIE } from "@/lib/navigation/sidebar-state";
+import { getPublicRuntimeConfig } from "@/config/runtime";
 
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -65,6 +66,12 @@ export default async function RootLayout({
   // Đọc ở server để sidebar thu gọn đúng ngay lần vẽ đầu (đọc localStorage sau hydrate làm sidebar co lại mỗi lần tải trang)
   const cookieStore = await cookies();
   const initialSidebarCollapsed = parseSidebarCollapsed(cookieStore.get(SIDEBAR_COLLAPSED_COOKIE)?.value) === true;
+  // Cờ Trợ lý đọc ở server, cùng nguồn với trang /assistant (cờ và gateway đủ cấu hình): khung trang chừa chỗ thanh dưới
+  // ngay lần vẽ đầu (đọc cờ sau hydrate làm mọi trang co lại)
+  const runtimeConfig = getPublicRuntimeConfig();
+  const assistantEnabled = runtimeConfig.features.assistant;
+  // Model chọn được ở ô soạn của Trợ lý và Agent tạo nhiệm vụ, cùng danh sách máy chủ dùng để kiểm
+  const agentModels = runtimeConfig.agentModels ?? null;
 
   return (
     <html
@@ -103,7 +110,9 @@ export default async function RootLayout({
                   >
                     Chuyển đến nội dung chính
                   </a>
-                  <AppShell initialSidebarCollapsed={initialSidebarCollapsed}>{children}</AppShell>
+                  <AppShell initialSidebarCollapsed={initialSidebarCollapsed} assistantEnabled={assistantEnabled} agentModels={agentModels}>
+                    {children}
+                  </AppShell>
                   <PWAServiceWorkerManager />
                   <WebVitalsReporter />
                   <ConfirmHost />

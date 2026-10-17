@@ -1,4 +1,3 @@
-import { canReadTask, dbReadScope, readableTaskIds } from '@/server/tasks/staff-read-scope';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import {
@@ -18,12 +17,10 @@ import {
 } from '@/server/api/errors';
 import { ArchiveTaskSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
+import { readTaskForUser } from '@/server/tasks/read-task-for-user';
 import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
-import {
-  computeAvailableActions,
-  buildTaskResource,
-} from '@/server/authorization/available-actions';
+import { buildTaskResource } from '@/server/authorization/available-actions';
 import { toTaskDetailDTO } from '@/server/dto/task-dto';
 
 interface RouteContext {
@@ -39,43 +36,10 @@ export async function GET(req: Request, routeContext: RouteContext) {
     const authUser = requireAuthenticated(context);
 
     const { id } = await Promise.resolve(routeContext.params);
-    const [rawTask, authContext] = await Promise.all([
-      taskQueryService.getTaskEntityForInternalUse(id),
-      loadCachedAuthorizationContext(authUser.id),
-    ]);
-
-    if (!rawTask) {
-      throw new NotFoundError('Không tìm thấy nhiệm vụ');
-    }
-
-    const taskResource = buildTaskResource(rawTask);
-
-    // Canonical object authorization check (BOLA protection)
-    const readDecision = authorize(authContext, 'task.read', taskResource);
-    if (!readDecision.allowed) {
-      throw new ForbiddenError(readDecision.reason || 'Bạn không có quyền xem nhiệm vụ này');
-    }
-    // D07: người thường chỉ đọc phần mình tham gia, cùng điều kiện với danh sách.
-    if (!(await canReadTask(authContext, rawTask as { id: string }, dbReadScope(authContext)))) {
-      throw new ForbiddenError('Bạn chỉ xem được phần nhiệm vụ mình tham gia');
-    }
-
-    const taskDto = toTaskDetailDTO(rawTask);
-    if (!taskDto) {
-      throw new NotFoundError('Không tìm thấy nhiệm vụ');
-    }
-    // Chỉ trả việc con người xem đọc được, như trang chi tiết (không lộ việc con của người khác cùng đơn vị).
-    const rawSubTasks = Array.isArray((rawTask as { subTasks?: unknown }).subTasks)
-      ? ((rawTask as { subTasks: Array<{ id: string }> }).subTasks)
-      : [];
-    if (taskDto.subTasks && rawSubTasks.length > 0) {
-      const readable = await readableTaskIds(authContext, rawSubTasks, dbReadScope(authContext));
-      taskDto.subTasks = taskDto.subTasks.filter((st) => readable.has(st.id));
-    }
-
-    const availableActions = computeAvailableActions(authContext, taskResource);
+    const authContext = await loadCachedAuthorizationContext(authUser.id);
+    const { task, availableActions } = await readTaskForUser(authContext, id);
     const taskDetail = {
-      ...taskDto,
+      ...task,
       availableActions,
     };
 

@@ -31,6 +31,7 @@ import { SourceDocumentChip, linkTaskToDocument, type SourceDocumentOption } fro
 import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { CreateTaskSubtasks, nextSubtaskDraftId } from "@/components/tasks/create/create-task-subtasks";
 import { CREATE_TASK_MAX_SUBTASKS } from "@/contracts/tasks";
+import type { CreateTaskSubtaskSummary } from "@/lib/adapters/create-task-mapper";
 import { TaskAgentPanel, useTaskAgentAvailable } from "@/components/tasks/create/task-agent-panel";
 import { AgentIcon } from "@/components/icons/agent-icon";
 import { TASK_AGENT_DESCRIPTION_MAX, type TaskAgentDraft } from "@/domain/tasks/task-agent-draft";
@@ -119,8 +120,9 @@ export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: (task: unknown) => void;
-  /** Nhận nhiệm vụ vừa tạo từ server (có `id`), dùng khi cần liên kết ngay sau khi tạo. */
-  onCreated?: (task: { id: string }) => void;
+  /** Nhận nhiệm vụ vừa tạo từ server (có `id`), dùng khi cần liên kết ngay sau khi tạo; `subtasks` cho biết việc con lỗi
+   *  một phần (hộp đã tự báo cảnh báo). */
+  onCreated?: (task: { id: string }, extra: { subtasks: CreateTaskSubtaskSummary | null }) => void;
   /** Mở từ chính văn bản (văn bản tự gắn sau khi tạo): không hiện chip chọn văn bản nguồn. */
   hideSourceDocument?: boolean;
   onSubmit?: (data: any, result?: any) => void | Promise<void>;
@@ -189,7 +191,7 @@ export function CreateTaskModal({
           });
         });
       }
-      onCreated?.(created);
+      onCreated?.(created, { subtasks });
     },
   });
 

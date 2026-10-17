@@ -73,13 +73,15 @@ export const TooltipContent = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement> & {
     side?: "top" | "right" | "bottom" | "left";
     sideOffset?: number;
+    /** Căn theo nút: `start` giữ tooltip trong phía nút đứng, không tràn sang vùng bên cạnh (thanh điều hướng). */
+    align?: "start" | "center" | "end";
     hidden?: boolean;
   }
->(({ className, side = "right", sideOffset = 8, hidden = false, children, ...props }, ref) => {
+>(({ className, side = "right", sideOffset = 8, align = "center", hidden = false, children, ...props }, ref) => {
   if (hidden) return null;
   return (
     <BaseTooltip.Portal>
-      <BaseTooltip.Positioner side={SIDE_MAP[side]} sideOffset={sideOffset} className="z-60">
+      <BaseTooltip.Positioner side={SIDE_MAP[side]} sideOffset={sideOffset} align={align} className="z-60">
         <BaseTooltip.Popup
           ref={ref}
           className={cn(

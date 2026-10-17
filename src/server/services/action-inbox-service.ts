@@ -320,7 +320,7 @@ export class ActionInboxService {
         resourceCode: d.code,
         title: d.title,
         requiredAction: 'Thẩm định và tiếp nhận hồ sơ nộp lưu',
-        reasonWhyMe: 'Hồ sơ công việc đã hoàn thành và được nộp lưu vào Lưu tr�� cơ quan',
+        reasonWhyMe: 'Hồ sơ công việc đã hoàn thành và được nộp lưu vào Lưu trữ cơ quan',
         priority: 'NORMAL',
         createdAt: d.createdAt.toISOString(),
         classification: d.classification,

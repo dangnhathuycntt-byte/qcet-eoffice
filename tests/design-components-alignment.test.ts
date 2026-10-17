@@ -57,6 +57,22 @@ describe("Design Components & Foundation Alignment Suite", () => {
       assert.ok(html.includes("text-destructive"), "Warning color text-destructive must be applied when < 20 chars");
       assert.ok(html.includes("Còn 15 ký tự nữa là hết chỗ"), "Displays warning message for remaining characters");
     });
+
+    it("giữ cùng cấu trúc cây khi bộ đếm ẩn (countOnlyNearLimit) hay hiện, nên ô đang gõ không bị remount", () => {
+      const render = (value: string) =>
+        renderToStaticMarkup(React.createElement(Textarea, { value, maxLength: 100, countOnlyNearLimit: true, onChange: () => {} }));
+      const far = render("a".repeat(50));
+      const near = render("a".repeat(90));
+      for (const html of [far, near]) {
+        assert.ok(html.startsWith("<div"), "gốc luôn là lớp bọc");
+        assert.ok(html.includes("<textarea"), "ô luôn nằm trong lớp bọc");
+      }
+      assert.equal(far.includes("Còn "), false, "chưa gần giới hạn thì không có dòng đếm");
+      assert.ok(near.includes("Còn 10 ký tự nữa là hết chỗ"), "gần giới hạn thì hiện dòng đếm");
+      // Lớp bọc giống hệt ở hai trạng thái: không `contents` (làm mất margin space-y-* của thẻ cha), không nhảy bố cục
+      assert.equal(far.match(/<div[^>]*>/)?.[0], near.match(/<div[^>]*>/)?.[0]);
+      assert.equal(far.includes('class="contents"'), false);
+    });
   });
 
   describe("4. InlineAlert Component (Components2.dc.html)", () => {

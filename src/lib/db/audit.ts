@@ -103,6 +103,10 @@ export const AuditAction = {
   DOCUMENT_SIGNATURE_VERIFIED: "DOCUMENT_SIGNATURE_VERIFIED",
   OUTGOING_INITIAL_SIGNED: "OUTGOING_INITIAL_SIGNED",
   OUTGOING_RECEIPT_CONFIRMED: "OUTGOING_RECEIPT_CONFIRMED",
+
+  // Trợ lý (chỉ đọc): một sự kiện mỗi lượt hỏi, chỉ ghi tham chiếu bản ghi đã đọc, không ghi nội dung chat
+  ASSISTANT_TURN: "ASSISTANT_TURN",
+  ASSISTANT_CONVERSATION_DELETED: "ASSISTANT_CONVERSATION_DELETED",
 } as const;
 
 export type AuditActionType =
@@ -155,6 +159,7 @@ export const AuditEntityType = {
   ORGANIZATIONAL_UNIT: "OrganizationalUnit",
   ORGANIZATIONAL_BODY: "OrganizationalBody",
   BODY_MEMBERSHIP: "BodyMembership",
+  ASSISTANT_CONVERSATION: "AssistantConversation",
 } as const;
 
 /**

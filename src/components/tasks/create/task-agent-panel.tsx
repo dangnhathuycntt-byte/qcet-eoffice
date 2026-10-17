@@ -1,48 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUp, Check, Copy, FileText, Paperclip, Play, Square, X } from "lucide-react";
+import { ArrowUp, FileText, Paperclip, Square, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatBytes } from "@/lib/pwa/storage-manager";
+import { useRuntimeFeature } from "@/lib/runtime-features";
 import { Button } from "@/components/ui/button";
-import { Pressable } from "@/components/ui/pressable";
 import { Textarea } from "@/components/ui/textarea";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { AgentIcon } from "@/components/icons/agent-icon";
-import { FileTypeIcon } from "@/components/documents/file-type-icon";
+import { AgentEmptyPattern, AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
+import { AttachmentCard, createChatAttachment, type ChatAttachment } from "@/components/agent-chat/agent-attachments";
+import { AgentModelPicker } from "@/components/agent-chat/agent-model-picker";
+import { useAgentModel } from "@/components/agent-chat/agent-models";
 import type { TaskAgentDraft, TaskAgentPerson } from "@/domain/tasks/task-agent-draft";
-import {
-  TASK_AGENT_ATTACHMENT_ACCEPT,
-  checkTaskAgentAttachments,
-  getTaskAgentAttachmentKind,
-  type TaskAgentAttachmentKind,
-} from "@/domain/tasks/task-agent-attachments";
+import { TASK_AGENT_ATTACHMENT_ACCEPT, checkTaskAgentAttachments } from "@/domain/tasks/task-agent-attachments";
 import { parseTaskAgentStreamEvent, splitNdjson, type TaskAgentStreamResult } from "@/domain/tasks/task-agent-stream";
-import { agentReplyToPlainText, parseAgentReply, type AgentReplyInline } from "@/domain/tasks/agent-reply-format";
+import { agentReplyToPlainText } from "@/domain/tasks/agent-reply-format";
 
 // ─── Bật/tắt theo cấu hình server ──────────────────────────────
-let availability: Promise<boolean> | null = null;
-
-function loadAgentAvailability(): Promise<boolean> {
-  availability ??= fetch("/api/runtime-config", { credentials: "same-origin" })
-    .then((res) => (res.ok ? res.json() : null))
-    .then((config: { features?: { taskAgent?: boolean } } | null) => Boolean(config?.features?.taskAgent))
-    .catch(() => false);
-  return availability;
-}
-
 /** Agent chỉ hiện khi cờ `taskAgent` bật và server có cấu hình gateway (đọc một lần từ /api/runtime-config). */
 export function useTaskAgentAvailable(enabled: boolean): boolean {
-  const [available, setAvailable] = React.useState(false);
-  React.useEffect(() => {
-    if (!enabled) return;
-    let alive = true;
-    void loadAgentAvailability().then((value) => alive && setAvailable(value));
-    return () => {
-      alive = false;
-    };
-  }, [enabled]);
-  return available;
+  return useRuntimeFeature("taskAgent", enabled);
 }
 
 // ─── Panel ─────────────────────────────────────────────────────
@@ -67,14 +45,6 @@ const SUGGESTIONS: Array<{ label: string; prompt: string }> = [
 ];
 
 const timeFormat = new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" });
-
-interface ChatAttachment {
-  id: string;
-  file: File;
-  kind: TaskAgentAttachmentKind;
-  /** Ảnh xem trước (object URL), thu hồi khi bỏ tệp hoặc đóng panel. */
-  previewUrl?: string;
-}
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -116,178 +86,6 @@ async function readErrorMessage(res: Response): Promise<string> {
   return body?.detail || body?.message || "Agent chưa trả lời được. Thầy/Cô thử lại sau.";
 }
 
-/** Thẻ ảnh/tệp như Linear: ảnh hiện hình thu nhỏ, tệp hiện icon loại tệp, tên và dung lượng. */
-function AttachmentCard({ attachment, onRemove, compact = false }: { attachment: ChatAttachment; onRemove?: () => void; compact?: boolean }) {
-  const { file } = attachment;
-  const remove = onRemove ? (
-    <Button
-      variant="toolbar"
-      size="icon-xs"
-      onClick={onRemove}
-      aria-label={`Bỏ tệp ${file.name}`}
-      title="Bỏ tệp"
-      className="absolute -top-1.5 -right-1.5 size-5 rounded-full sm:size-5 [&_svg:not([class*='size-'])]:size-3"
-    >
-      <X />
-    </Button>
-  ) : null;
-  if (attachment.kind === "image" && attachment.previewUrl) {
-    return (
-      <div className="relative shrink-0">
-        {/* Ảnh cục bộ (object URL) nên không qua next/image */}
-        <img src={attachment.previewUrl} alt={file.name} title={file.name} className={cn("rounded-lg object-cover", RING, compact ? "size-14" : "size-24")} />
-        {remove}
-      </div>
-    );
-  }
-  return (
-    <div className={cn("relative flex min-w-0 items-center gap-2 rounded-lg bg-background px-2.5 py-2", RING, compact ? "w-[calc(50%-0.1875rem)]" : "w-60 max-w-full")}>
-      <FileTypeIcon fileName={file.name} mimeType={file.type} className="size-6" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-compact text-foreground" title={file.name}>
-          {file.name}
-        </p>
-        <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(file.size)}</p>
-      </div>
-      {remove}
-    </div>
-  );
-}
-
-function ReplyInline({ parts }: { parts: AgentReplyInline[] }) {
-  return parts.map((part, i) => (part.bold ? <strong key={i} className="font-semibold">{part.text}</strong> : <React.Fragment key={i}>{part.text}</React.Fragment>));
-}
-
-/**
- * Câu trả lời có định dạng (đoạn, tiêu đề, danh sách, chữ đậm) theo nhịp của Linear (đo ảnh 16/10/2026):
- * chữ 13px dòng ~21px, đoạn cách 16px, tiêu đề sát danh sách 6px, mục cách 6px, thụt 24px.
- */
-function AgentReplyText({ text }: { text: string }) {
-  const blocks = React.useMemo(() => parseAgentReply(text), [text]);
-  return (
-    <div className="flex flex-col gap-4 text-compact leading-relaxed text-foreground">
-      {blocks.map((block, i) =>
-        block.type === "heading" ? (
-          <p key={i} className="-mb-2.5 font-semibold">
-            <ReplyInline parts={block.inline} />
-          </p>
-        ) : block.type === "list" ? (
-          <ul key={i} className={cn("flex flex-col gap-1.5 pl-6 marker:text-muted-foreground", block.ordered ? "list-decimal" : "list-disc")}>
-            {block.items.map((item, j) => (
-              <li key={j} className="pl-0.5">
-                <ReplyInline parts={item} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p key={i} className="whitespace-pre-wrap">
-            <ReplyInline parts={block.inline} />
-          </p>
-        ),
-      )}
-    </div>
-  );
-}
-
-/** "Đã suy nghĩ trong N giây ▸" như "Worked for N seconds ▸" của Linear: bấm mở suy nghĩ và các bước. */
-function AgentWorkLog({ seconds, thinking, steps }: { seconds: number; thinking?: string; steps: string[] }) {
-  const [open, setOpen] = React.useState(false);
-  const label = thinking ? `Đã suy nghĩ trong ${seconds} giây` : `Đã soạn trong ${seconds} giây`;
-  if (!thinking && steps.length === 0) return <p className="text-xs font-medium text-muted-foreground">{label}</p>;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Pressable
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="-ml-1 inline-flex w-fit items-center gap-1 rounded-sm px-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        {label}
-        <Play className={cn("size-2 fill-current transition-transform duration-150 motion-reduce:transition-none", open && "rotate-90")} />
-      </Pressable>
-      {open && (
-        <div className="flex flex-col gap-1.5 text-xs leading-relaxed text-muted-foreground motion-safe:animate-[fade-in_0.2s_ease-out]">
-          {thinking && <p className="whitespace-pre-wrap border-l-2 border-border pl-3">{thinking}</p>}
-          {steps.map((step, i) => (
-            <p key={i} className="flex items-center gap-1.5">
-              <FileText className="size-3.5 shrink-0" />
-              <span className="min-w-0 truncate" title={step}>
-                {step}
-              </span>
-            </p>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CopyMessageButton({ text }: { text: string }) {
-  const [copied, setCopied] = React.useState(false);
-  React.useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 1500);
-    return () => clearTimeout(timer);
-  }, [copied]);
-  return (
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      aria-label={copied ? "Đã sao chép" : "Sao chép câu trả lời"}
-      title={copied ? "Đã sao chép" : "Sao chép"}
-      onClick={() => void navigator.clipboard?.writeText(text).then(() => setCopied(true), () => undefined)}
-      className="-ml-1.5 rounded-full"
-    >
-      {copied ? <Check /> : <Copy />}
-    </Button>
-  );
-}
-
-/**
- * Nền trống kiểu Linear, đặt ngay trên tiêu đề: lưới 24px mờ dần lên trên, icon đậm ở ô giữa hàng cuối
- * (CSS `.agent-pattern*` trong globals.css). Vùng quanh con trỏ chuột trong `trackRef` sáng hơn; rời vùng thì tắt dần.
- */
-function AgentEmptyPattern({ trackRef }: { trackRef: React.RefObject<HTMLElement | null> }) {
-  const patternRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const area = trackRef.current;
-    const pattern = patternRef.current;
-    if (!area || !pattern) return;
-    let frame = 0;
-    const move = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const rect = pattern.getBoundingClientRect();
-        pattern.style.setProperty("--agent-spot-x", `${e.clientX - rect.left}px`);
-        pattern.style.setProperty("--agent-spot-y", `${e.clientY - rect.top}px`);
-        pattern.dataset.tracking = "";
-      });
-    };
-    // Giữ vị trí cuối để vệt sáng mờ đi tại chỗ
-    const leave = () => {
-      cancelAnimationFrame(frame);
-      delete pattern.dataset.tracking;
-    };
-    area.addEventListener("pointermove", move);
-    area.addEventListener("pointerleave", leave);
-    return () => {
-      cancelAnimationFrame(frame);
-      area.removeEventListener("pointermove", move);
-      area.removeEventListener("pointerleave", leave);
-    };
-  }, [trackRef]);
-
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute -inset-x-4 bottom-full h-66 overflow-hidden">
-      <div ref={patternRef} className="agent-pattern absolute inset-y-0 left-1/2 w-138 -translate-x-1/2 text-foreground">
-        <div className="agent-pattern-base absolute inset-0 opacity-20" />
-        <div className="agent-pattern-spot absolute inset-0" />
-        <div className="agent-pattern-featured absolute bottom-0 left-1/2 size-6 -translate-x-1/2" />
-      </div>
-    </div>
-  );
-}
-
 export function TaskAgentPanel({
   departmentName,
   parentTaskTitle,
@@ -313,6 +111,8 @@ export function TaskAgentPanel({
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const previewUrls = React.useRef(new Set<string>());
+  // Model chọn ở ô soạn, chung với Trợ lý; không có danh sách thì để máy chủ dùng model mặc định
+  const { model } = useAgentModel();
 
   // Đóng hộp thì hủy lượt đang chờ và thu hồi ảnh xem trước
   React.useEffect(
@@ -344,18 +144,7 @@ export function TaskAgentPanel({
         return;
       }
       setError(null);
-      setFiles((prev) => [
-        ...prev,
-        ...incoming.map((file) => {
-          const kind = getTaskAgentAttachmentKind(file.name) ?? "text";
-          let previewUrl: string | undefined;
-          if (kind === "image") {
-            previewUrl = URL.createObjectURL(file);
-            previewUrls.current.add(previewUrl);
-          }
-          return { id: crypto.randomUUID(), file, kind, previewUrl };
-        }),
-      ]);
+      setFiles((prev) => [...prev, ...incoming.map((file) => createChatAttachment(file, previewUrls.current))]);
       inputRef.current?.focus();
     },
     [files, messages],
@@ -398,6 +187,7 @@ export function TaskAgentPanel({
         personnel: personnel.slice(0, 200),
         draft,
         attachments: recent.flatMap((m, messageIndex) => (m.attachments ?? []).map(() => ({ messageIndex }))),
+        ...(model ? { model } : {}),
       };
       let body: BodyInit;
       const headers: Record<string, string> = {};
@@ -463,7 +253,7 @@ export function TaskAgentPanel({
         inputRef.current?.focus();
       }
     },
-    [departmentName, draft, files, messages, onApply, parentTaskTitle, pending, personnel],
+    [departmentName, draft, files, messages, model, onApply, parentTaskTitle, pending, personnel],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -634,10 +424,12 @@ export function TaskAgentPanel({
             maxLength={2000}
             countOnlyNearLimit
             placeholder="Tả việc cần giao cho Agent…"
-            className="max-h-40 bg-transparent px-1 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
+            className="max-h-40 overflow-y-auto bg-transparent px-1 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
           />
-          {/* Như Linear: ghim cạnh nút gửi ở bên phải */}
+          {/* Như Linear: model, ghim cạnh nút gửi ở bên phải */}
           <div className="flex items-center justify-end gap-2">
+            {/* Panel nằm trong hộp Tạo nhiệm vụ (z-50): menu cùng lớp với hộp như các Select của hộp */}
+            <AgentModelPicker positionerClassName="z-50" />
             <Button
               variant="ghost"
               size="icon-xs"

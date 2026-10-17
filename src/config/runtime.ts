@@ -4,6 +4,7 @@
  */
 
 import { getPublicFeatureFlags, isFeatureEnabled } from "@/features/flags";
+import { parseAgentModels, type AgentModelCatalog } from "@/domain/agent/agent-models";
 
 export interface PublicRuntimeFeatures {
   googleAuth: boolean;
@@ -27,6 +28,7 @@ export interface PublicRuntimeFeatures {
   internalDocuments: boolean;
   userProvisioning: boolean;
   taskAgent: boolean;
+  assistant: boolean;
   [key: string]: boolean;
 }
 
@@ -37,6 +39,13 @@ export interface PublicRuntimeConfig {
   buildId: string;
   appUrl?: string;
   referenceDate?: string;
+  /** Model chọn được ở ô soạn của Trợ lý và Agent tạo nhiệm vụ (khi bật một trong hai); mã model không phải bí mật. */
+  agentModels?: AgentModelCatalog;
+}
+
+/** Danh sách model của hai Agent từ môi trường: `TASK_AGENT_MODEL` (mặc định) và `TASK_AGENT_MODELS`. Máy chủ kiểm theo đây. */
+export function getAgentModelCatalog(): AgentModelCatalog | null {
+  return parseAgentModels(process.env.TASK_AGENT_MODELS, process.env.TASK_AGENT_MODEL);
 }
 
 const FORBIDDEN_SECRET_KEY_PATTERNS = [
@@ -124,6 +133,11 @@ export function getPublicRuntimeConfig(): PublicRuntimeConfig {
     isFeatureEnabled("taskAgent") &&
     Boolean(process.env.TASK_AGENT_BASE_URL && process.env.TASK_AGENT_API_KEY);
 
+  // Trợ lý dùng chung gateway với Agent soạn nhiệm vụ nên cần đủ địa chỉ, khóa và model
+  const assistant =
+    isFeatureEnabled("assistant") &&
+    Boolean(process.env.TASK_AGENT_BASE_URL && process.env.TASK_AGENT_API_KEY && process.env.TASK_AGENT_MODEL);
+
   const config: PublicRuntimeConfig = {
     environment,
     features: {
@@ -133,6 +147,7 @@ export function getPublicRuntimeConfig(): PublicRuntimeConfig {
       academicCalendarSync: true,
       offlineSupport,
       taskAgent,
+      assistant,
     },
     version,
     buildId,
@@ -143,6 +158,10 @@ export function getPublicRuntimeConfig(): PublicRuntimeConfig {
   }
   if (process.env.NEXT_PUBLIC_REFERENCE_DATE) {
     config.referenceDate = process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  }
+  if (assistant || taskAgent) {
+    const catalog = getAgentModelCatalog();
+    if (catalog) config.agentModels = catalog;
   }
 
   // Pre-flight validation ensuring no secrets were accidentally attached

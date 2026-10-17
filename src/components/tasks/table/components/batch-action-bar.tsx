@@ -235,7 +235,7 @@ export function BatchActionBar({
       aria-live="polite"
       aria-busy={isLoading}
       className={cn(
-        "hidden sm:block fixed bottom-6 inset-x-0 md:left-[var(--sidebar-w,0px)] mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max",
+        "hidden sm:block fixed bottom-6 md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] inset-x-0 md:left-[var(--sidebar-w,0px)] mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max",
         "animate-in fade-in slide-in-from-bottom-3 duration-200",
         className
       )}

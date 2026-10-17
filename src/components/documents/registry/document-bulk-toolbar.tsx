@@ -235,7 +235,7 @@ export function DocumentBulkToolbar({
             }}
             className={cn(
               // Điện thoại: thanh rộng gần hết màn, hàng 1 = số đã chọn + bỏ chọn, hàng 2 = ba thao tác chia đều
-              "fixed bottom-6 inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max select-none max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+12px)] max-sm:w-[calc(100vw-24px)]",
+              "fixed bottom-6 md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max select-none max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+12px)] max-sm:w-[calc(100vw-24px)]",
               className
             )}
           >

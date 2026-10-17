@@ -221,7 +221,7 @@ export function CreateTaskSubtasks({ items, onChange, people, loadingPeople, par
                 maxLength={5000}
                 placeholder="Thêm mô tả…"
                 onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-                className="max-h-32 bg-transparent pl-5.5 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
+                className="max-h-32 overflow-y-auto bg-transparent pl-5.5 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
               />
               <div className="mt-1 flex flex-wrap items-center gap-2 pl-5.5">
                 <PersonPillPicker

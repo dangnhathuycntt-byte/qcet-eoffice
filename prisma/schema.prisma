@@ -159,6 +159,7 @@ model User {
   leaderDirectives      DocumentDirective[]   @relation("LeaderDirectives")
   pushSubscriptions     PushSubscription[]
   notifications         Notification[]
+  assistantConversations AssistantConversation[]
   positionAssignments   PositionAssignment[]  @relation("UserPositionAssignments")
   bodyMemberships       BodyMembership[]
   taskActors            TaskActor[]
@@ -1614,6 +1615,44 @@ model TaskComment {
   @@index([taskId, createdAt])
   @@index([authorId])
   @@map("task_comments")
+}
+
+/// Cuộc trò chuyện với Trợ lý (chỉ đọc). Riêng tư: chỉ chủ nhân xem; quá hạn lưu (`ASSISTANT_RETENTION_DAYS`) thì ẩn và bị cron xóa.
+/// Gắn ngữ cảnh (nhiệm vụ/văn bản) khi mở từ màn đó, để liệt kê "cuộc chat về mục này".
+model AssistantConversation {
+  id            String             @id @default(cuid())
+  userId        String             @map("user_id")
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String             @db.VarChar(120)
+  titleEdited   Boolean            @default(false) @map("title_edited")
+  contextType   String?            @map("context_type") @db.VarChar(16)
+  contextId     String?            @map("context_id") @db.VarChar(64)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  lastMessageAt DateTime           @default(now()) @map("last_message_at")
+  messages      AssistantMessage[]
+
+  @@index([userId, lastMessageAt(sort: Desc)])
+  @@index([userId, contextType, contextId])
+  @@index([lastMessageAt])
+  @@map("assistant_conversations")
+}
+
+/// Tin trong cuộc trò chuyện với Trợ lý. Không lưu kết quả tool hay suy nghĩ của mô hình: chỉ chữ, nguồn (tham chiếu) và các bước.
+model AssistantMessage {
+  id             String                @id @default(cuid())
+  conversationId String                @map("conversation_id")
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String                @db.VarChar(16)
+  content        String
+  status         String                @default("complete") @db.VarChar(16)
+  sources        Json?
+  steps          Json?
+  durationMs     Int?                  @map("duration_ms")
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("assistant_messages")
 }
 
 /// Emoji thả vào bình luận nhiệm vụ: mỗi người một lần cho mỗi emoji (bộ emoji cố định ở src/domain/tasks/comment-reactions.ts).

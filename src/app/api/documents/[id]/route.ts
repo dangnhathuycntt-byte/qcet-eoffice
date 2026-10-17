@@ -10,7 +10,6 @@ import {
 } from "@/server/api/validation";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import {
-  canReadDocument,
   canUpdateDocument,
   canDeleteDocument,
 } from "@/server/policies/document-policy";
@@ -42,8 +41,7 @@ import {
   buildDocumentResource,
   authorize,
 } from "@/server/authorization";
-import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
-import { isApprovalParticipant } from "@/server/documents/submission-approval-service";
+import { readDocumentForUser } from "@/server/documents/read-document-for-user";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -61,25 +59,8 @@ export async function GET(
 
     const { id } = await Promise.resolve(context.params);
 
-    const [document, authContext] = await Promise.all([
-      getDocumentById(id),
-      loadAuthorizationContext(authUser.id),
-    ]);
-    if (!document) {
-      throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
-    }
-
-    const docResource = buildDocumentResource(document);
-    const readDecision = authorize(authContext, 'document.read', docResource);
-    // Người tham gia luồng duyệt tờ trình được đọc tờ trình đó dù không liên quan theo chính sách chung.
-    const headedUnitIds = authContext.positions.filter((p) => isUnitLeaderPosition(p.positionCode)).map((p) => p.unitId);
-    const isParticipant =
-      document.type === 'TO_TRINH_NOI_BO' && (await isApprovalParticipant(authUser.id, headedUnitIds, id));
-    if (!isParticipant && (!readDecision.allowed || !canReadDocument(authContext, document))) {
-      throw new ForbiddenError(
-        readDecision.reason || "Bạn không có quyền truy cập văn bản này (Forbidden)"
-      );
-    }
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const { document, docResource } = await readDocumentForUser(authContext, id);
 
     const availableActions = computeAvailableActions(
       authContext,
