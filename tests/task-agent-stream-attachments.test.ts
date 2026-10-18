@@ -159,6 +159,31 @@ describe("Đọc tệp đính kèm ở server", () => {
     await assert.rejects(() => prepareTaskAgentAttachment("bom.docx", bomb), (e: unknown) => e instanceof ApiError && e.statusCode === 400);
   });
 
+  test("tệp nén bom khai kích thước nhỏ trong ZIP: đếm byte giải nén thật và dừng sớm, không giải hết", async () => {
+    const zip = new JSZip();
+    zip.file("word/document.xml", Buffer.alloc(60 * MB));
+    const bomb = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+    // Sửa kích thước giải nén khai trong local header (offset 22) và central directory (offset 24) thành 1000 byte
+    for (let i = 0; i + 4 <= bomb.length; i += 1) {
+      const signature = bomb.readUInt32LE(i);
+      if (signature === 0x04034b50) bomb.writeUInt32LE(1000, i + 22);
+      else if (signature === 0x02014b50) bomb.writeUInt32LE(1000, i + 24);
+    }
+    // Không có bộ đếm thì JSZip giải hết 60MB rồi mới báo "uncompressed data size mismatch"
+    await assert.rejects(() => extractDocxText(bomb), /ZIP_ENTRY_TOO_LARGE/);
+  });
+
+  test("XLSX liệt kê nhiều trang cùng trỏ một trang: mỗi trang đọc một lần", async () => {
+    const zip = new JSZip();
+    zip.file("[Content_Types].xml", "<Types/>");
+    const sheets = Array.from({ length: 60 }, (_, i) => `<sheet name="T${i}" sheetId="${i + 1}" r:id="rId1"/>`).join("");
+    zip.file("xl/workbook.xml", `<workbook xmlns:r="r"><sheets>${sheets}</sheets></workbook>`);
+    zip.file("xl/_rels/workbook.xml.rels", `<Relationships><Relationship Id="rId1" Type="ws" Target="worksheets/sheet1.xml"/></Relationships>`);
+    zip.file("xl/worksheets/sheet1.xml", `<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Việc</t></is></c></row></sheetData></worksheet>`);
+    const text = await extractXlsxText(await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
+    assert.equal(text, "## T0\nViệc");
+  });
+
   test("ảnh và PDF gửi nguyên dạng data URI, CSV trích chữ", async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
     const image = await prepareTaskAgentAttachment("anh.png", png);

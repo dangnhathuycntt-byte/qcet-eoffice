@@ -12,7 +12,11 @@ import {
 
 /** Một mục trong tệp nén giải ra quá cỡ này thì từ chối (chặn zip bomb). */
 const MAX_ZIP_ENTRY_BYTES = 20 * 1024 * 1024;
+/** Tổng byte giải nén của mọi mục đọc từ một tệp: XLSX đọc nhiều mục nên giới hạn từng mục chưa đủ. */
+const MAX_ZIP_TOTAL_BYTES = 40 * 1024 * 1024;
 const MAX_XLSX_ROWS = 2000;
+/** Workbook liệt kê quá nhiều trang tính (có thể cùng trỏ một trang) thì chỉ đọc chừng này trang đầu. */
+const MAX_XLSX_SHEETS = 50;
 
 const XML_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
 
@@ -26,18 +30,56 @@ function decodeXml(text: string): string {
 
 const readAttr = (tag: string, name: string) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
 
-async function readZipEntry(zip: JSZip, path: string): Promise<string | null> {
+/** Byte giải nén còn được dùng cho một tệp (dùng chung cho mọi mục của tệp đó). */
+interface ZipBudget {
+  remaining: number;
+}
+
+const newZipBudget = (): ZipBudget => ({ remaining: MAX_ZIP_TOTAL_BYTES });
+
+/**
+ * Đọc một mục dạng UTF-8, đếm byte giải nén thật và dừng khi vượt giới hạn: kích thước khai trong ZIP do tệp tự ghi
+ * (tệp nén bom khai 1KB mà giải ra hàng GB), JSZip chỉ so khớp sau khi đã giải nén hết.
+ */
+async function readZipEntry(zip: JSZip, path: string, budget: ZipBudget): Promise<string | null> {
   const entry = zip.file(path);
   if (!entry) return null;
-  // JSZip chỉ lộ kích thước giải nén qua `_data`; không biết cỡ thì coi như không an toàn
+  // Khai quá cỡ thì từ chối ngay, khỏi giải nén; khai nhỏ vẫn phải đếm thật bên dưới
   const size = (entry as unknown as { _data?: { uncompressedSize?: number } })._data?.uncompressedSize;
   if (typeof size !== "number" || size > MAX_ZIP_ENTRY_BYTES) throw new Error("ZIP_ENTRY_TOO_LARGE");
-  return entry.async("string");
+  return new Promise<string>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    let settled = false;
+    // Luồng Node của JSZip: ngừng đọc thì worker giải nén cũng dừng (không giải tiếp vào bộ nhớ)
+    const stream = entry.nodeStream("nodebuffer") as NodeJS.ReadableStream & { destroy?: () => void };
+    const fail = (error: unknown) => {
+      if (settled) return;
+      settled = true;
+      stream.pause();
+      stream.removeAllListeners("data");
+      stream.destroy?.();
+      reject(error);
+    };
+    stream.on("data", (chunk: Buffer) => {
+      if (settled) return;
+      total += chunk.length;
+      budget.remaining -= chunk.length;
+      if (total > MAX_ZIP_ENTRY_BYTES || budget.remaining < 0) return fail(new Error("ZIP_ENTRY_TOO_LARGE"));
+      chunks.push(chunk);
+    });
+    stream.on("error", fail);
+    stream.on("end", () => {
+      if (settled) return;
+      settled = true;
+      resolve(Buffer.concat(chunks).toString("utf8"));
+    });
+  });
 }
 
 export async function extractDocxText(bytes: Buffer): Promise<string> {
   const zip = await JSZip.loadAsync(bytes);
-  const xml = await readZipEntry(zip, "word/document.xml");
+  const xml = await readZipEntry(zip, "word/document.xml", newZipBudget());
   if (xml === null) throw new Error("DOCX_WITHOUT_DOCUMENT");
   const text = xml
     .replace(/<w:tab\b[^>]*\/>/g, "\t")
@@ -60,27 +102,33 @@ function readXlsxCell(attrs: string, inner: string, sharedStrings: string[]): st
 /** Mỗi trang tính thành "## Tên trang" rồi từng hàng nối ô bằng " | ". Ngày giữ số sê-ri của Excel. */
 export async function extractXlsxText(bytes: Buffer): Promise<string> {
   const zip = await JSZip.loadAsync(bytes);
-  const shared = await readZipEntry(zip, "xl/sharedStrings.xml");
+  const budget = newZipBudget();
+  const shared = await readZipEntry(zip, "xl/sharedStrings.xml", budget);
   const sharedStrings = shared
     ? [...shared.matchAll(/<si>([\s\S]*?)<\/si>/g)].map((si) =>
         decodeXml([...si[1].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => t[1]).join("")),
       )
     : [];
-  const workbook = (await readZipEntry(zip, "xl/workbook.xml")) ?? "";
-  const rels = (await readZipEntry(zip, "xl/_rels/workbook.xml.rels")) ?? "";
+  const workbook = (await readZipEntry(zip, "xl/workbook.xml", budget)) ?? "";
+  const rels = (await readZipEntry(zip, "xl/_rels/workbook.xml.rels", budget)) ?? "";
   const targets = new Map(
     [...rels.matchAll(/<Relationship\b[^>]*>/g)].map((m) => [readAttr(m[0], "Id"), readAttr(m[0], "Target")] as const),
   );
-  const sheets = [...workbook.matchAll(/<sheet\b[^>]*>/g)].map((m) => {
-    const target = targets.get(readAttr(m[0], "r:id")) ?? "";
-    return { name: decodeXml(readAttr(m[0], "name") ?? ""), path: target.startsWith("/") ? target.slice(1) : `xl/${target}` };
-  });
+  // Mỗi trang tính đọc một lần (workbook có thể liệt kê nhiều mục cùng trỏ một trang), tối đa MAX_XLSX_SHEETS trang
+  const seenPaths = new Set<string>();
+  const sheets = [...workbook.matchAll(/<sheet\b[^>]*>/g)]
+    .map((m) => {
+      const target = targets.get(readAttr(m[0], "r:id")) ?? "";
+      return { name: decodeXml(readAttr(m[0], "name") ?? ""), path: target.startsWith("/") ? target.slice(1) : `xl/${target}` };
+    })
+    .filter((sheet) => !seenPaths.has(sheet.path) && Boolean(seenPaths.add(sheet.path)))
+    .slice(0, MAX_XLSX_SHEETS);
 
   const out: string[] = [];
   let rows = 0;
   let length = 0;
   for (const sheet of sheets) {
-    const xml = await readZipEntry(zip, sheet.path);
+    const xml = await readZipEntry(zip, sheet.path, budget);
     if (!xml) continue;
     out.push(`## ${sheet.name}`);
     for (const row of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
