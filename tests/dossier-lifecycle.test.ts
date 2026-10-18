@@ -152,6 +152,8 @@ describe("Sprint 6: Work Dossier Lifecycle & Archival Domain (Nghị định 30/
         summary: "Kế hoạch phát triển nhân lực công nghệ cao và CNTT giai đoạn 2026-2030",
         urgency: DocumentUrgency.THUONG,
         registeredById: archivistUser.id,
+        // Người lập hồ sơ thụ lý văn bản: gắn văn bản vào hồ sơ yêu cầu đọc được văn bản (như GET /api/documents/[id]).
+        leadUserId: officerUser.id,
       },
     });
     sampleDocId = doc.id;
