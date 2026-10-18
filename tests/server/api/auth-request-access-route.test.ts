@@ -11,6 +11,7 @@ import {
   getRateLimitBackendInfo,
 } from "@/server/security/rate-limit";
 import { POST as postRequestAccess } from "@/app/api/auth/request-access/route";
+import { SESSION_COOKIE_NAME, signSessionToken } from "@/lib/jwt-session";
 
 /**
  * Test đặc tả POST /api/auth/request-access — endpoint công khai trước đăng nhập.
@@ -42,9 +43,11 @@ describe("POST /api/auth/request-access", () => {
   };
 
   let reqSeq = 0;
-  function makeRequest(opts: { ip?: string; body?: string; contentType?: string | null } = {}) {
+  function makeRequest(
+    opts: { ip?: string; body?: string; contentType?: string | null; headers?: Record<string, string> } = {}
+  ) {
     const requestId = `tra-${runId}-${++reqSeq}`;
-    const headers = new Headers({ "x-request-id": requestId });
+    const headers = new Headers({ "x-request-id": requestId, ...opts.headers });
     if (opts.ip) headers.set("x-real-ip", opts.ip);
     if (opts.contentType !== null) headers.set("Content-Type", opts.contentType ?? "application/json");
     return {
@@ -140,6 +143,32 @@ describe("POST /api/auth/request-access", () => {
       assert.ok(!Number.isNaN(Date.parse(String(metadata.timestamp))));
       // Không còn bản ghi theo dạng email chưa chuẩn hóa
       assert.equal((await accessAudits(`  ${normalized.toUpperCase()}  `)).length, 0);
+    });
+
+    test("còn phiên cũ không hợp lệ (tài khoản bị khóa, token hỏng): vẫn 200 và ghi yêu cầu (trước là 401)", async () => {
+      const disabled = await prisma.user.create({
+        data: { email: email("disabled-user"), name: `RA disabled ${runId}`, isActive: false },
+      });
+      try {
+        const staleToken = signSessionToken({ id: disabled.id, email: disabled.email, name: disabled.name, role: disabled.role });
+        const cases: Array<[string, Record<string, string>]> = [
+          ["cookie-disabled", { Cookie: `${SESSION_COOKIE_NAME}=${staleToken}` }],
+          ["bearer-disabled", { Authorization: `Bearer ${staleToken}` }],
+          ["bearer-malformed", { Authorization: "Bearer khong-phai-jwt" }],
+        ];
+        for (const [tag, headers] of cases) {
+          const requested = email(tag);
+          const { req, requestId } = makeRequest({ ip: nextIp(), headers, body: jsonBody({ email: requested }) });
+          const res = await postRequestAccess(req);
+          assert.equal(res.status, 200, tag);
+          assert.equal(res.headers.get("x-request-id"), requestId, `${tag}: giữ request id của client`);
+          assert.deepEqual(await res.json(), { success: true, message: SUCCESS_MESSAGE });
+          assert.equal((await accessAudits(requested)).length, 1, `${tag}: có audit ACCESS_REQUESTED`);
+        }
+      } finally {
+        await prisma.auditEvent.deleteMany({ where: { actorId: disabled.id } });
+        await prisma.user.delete({ where: { id: disabled.id } });
+      }
     });
 
     test("name bỏ trống hoặc chỉ khoảng trắng: metadata không có khóa name", async () => {
