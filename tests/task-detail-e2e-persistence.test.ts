@@ -248,7 +248,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/app/tasks/[id]/page.tsx đọc dữ liệu thật từ bảng audit_events và map actorName từ User", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/app/tasks/[id]/page.tsx"),
+        path.join(process.cwd(), "src/server/tasks/task-page-data.ts"),
         "utf8"
       );
 

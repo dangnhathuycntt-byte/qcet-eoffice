@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { getSessionFromRequest } from "@/lib/jwt-session";
-import prisma from "@/lib/prisma";
+import { readMeetingDetailPageData, readMeetingTitle } from "@/server/services/meeting-detail-page-data";
 
 import { MeetingDetailView } from "@/components/meetings/meeting-detail-view";
 
@@ -22,12 +22,9 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const meeting = await prisma.meeting.findUnique({
-    where: { id },
-    select: { title: true },
-  });
+  const title = await readMeetingTitle(id);
 
-  return { title: meeting?.title ?? "Cuộc họp" };
+  return { title: title ?? "Cuộc họp" };
 }
 
 /* ------------------------------------------------------------------ */
@@ -57,49 +54,9 @@ export default async function MeetingDetailPage({ params }: PageProps) {
   };
 
   /* Fetch -------------------------------------------------------------- */
-  const meeting = await prisma.meeting.findUnique({
-    where: { id },
-    include: {
-      unit: { select: { name: true, code: true } },
-      organizer: { select: { name: true, email: true } },
-      participants: {
-        include: {
-          user: { select: { name: true, email: true } },
-        },
-        orderBy: { role: "asc" },
-      },
-      resolutions: {
-        include: {
-          leadUnit: { select: { name: true } },
-          leadUser: { select: { name: true } },
-        },
-        orderBy: { code: "asc" },
-      },
-    },
-  });
+  const serialized = await readMeetingDetailPageData(id);
 
-  if (!meeting) notFound();
-
-  /* Serialize ---------------------------------------------------------- */
-  const serialized = {
-    ...meeting,
-    startTime: meeting.startTime.toISOString(),
-    endTime: meeting.endTime?.toISOString() ?? null,
-    minutesConfirmedAt: meeting.minutesConfirmedAt?.toISOString() ?? null,
-    createdAt: meeting.createdAt.toISOString(),
-    updatedAt: meeting.updatedAt.toISOString(),
-    participants: meeting.participants.map((p) => ({
-      ...p,
-      createdAt: p.createdAt.toISOString(),
-      updatedAt: p.updatedAt.toISOString(),
-    })),
-    resolutions: meeting.resolutions.map((r) => ({
-      ...r,
-      deadline: r.deadline?.toISOString() ?? null,
-      createdAt: r.createdAt.toISOString(),
-      updatedAt: r.updatedAt.toISOString(),
-    })),
-  };
+  if (!serialized) notFound();
 
   return <MeetingDetailView meeting={serialized} currentUser={currentUser} />;
 }
