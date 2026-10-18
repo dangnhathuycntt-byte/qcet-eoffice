@@ -217,9 +217,12 @@ export async function authorizeFileObjectDownload({
     }
 
     if (!hasAuthorizedResource) {
+      // Ảnh nhúng lúc soạn nhiệm vụ mới (chưa có taskId để gắn metadata): chỉ tính nhiệm vụ do chính người tải tệp
+      // lên tạo, để dán UUID tệp của người khác vào mô tả không tự cấp quyền tải tệp đó.
       const taskWithFile = await prisma.task.findFirst({
         where: {
           description: { contains: file.id },
+          createdById: file.uploadedById,
           ...taskReadWhere,
         },
         select: { id: true },

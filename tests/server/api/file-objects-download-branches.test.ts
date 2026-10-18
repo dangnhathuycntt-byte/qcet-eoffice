@@ -31,7 +31,17 @@ describe("GET /api/file-objects/[id]: tệp ngoài đính kèm văn bản", () =
 
   const users = {} as Record<Role, { id: string; token: string }>;
   const files = {} as Record<
-    "deliverable" | "metadata" | "description" | "dossier" | "meeting" | "orphan" | "archived" | "missingOnDisk" | "sizeMismatch" | "infected",
+    | "deliverable"
+    | "metadata"
+    | "description"
+    | "foreignDescription"
+    | "dossier"
+    | "meeting"
+    | "orphan"
+    | "archived"
+    | "missingOnDisk"
+    | "sizeMismatch"
+    | "infected",
     FixtureFile
   >;
   let unitId = "";
@@ -123,6 +133,8 @@ describe("GET /api/file-objects/[id]: tệp ngoài đính kèm văn bản", () =
     // DB ghi "text/plain" (không charset) khác giá trị suy từ đuôi .txt, để thấy route dùng mimeType đã kiểm kê.
     await createFile("metadata", { name: "ke-hoach.txt", mimeType: "text/plain", uploadedBy: "dri" });
     await createFile("description", { name: "hinh-mo-ta.pdf", mimeType: "application/pdf", uploadedBy: "dri" });
+    // Tệp của người khác bị dán UUID vào mô tả nhiệm vụ do dri tạo.
+    await createFile("foreignDescription", { name: "tep-nguoi-khac.pdf", mimeType: "application/pdf", uploadedBy: "outsider" });
     await createFile("dossier", { name: "bien-ban.pdf", mimeType: "application/pdf", uploadedBy: "contributor" });
     await createFile("meeting", { name: "tai-lieu-hop.pdf", mimeType: "application/pdf", uploadedBy: "dossierOwner" });
     await createFile("orphan", { name: "mo-coi.pdf", mimeType: "application/pdf", uploadedBy: "outsider" });
@@ -135,7 +147,7 @@ describe("GET /api/file-objects/[id]: tệp ngoài đính kèm văn bản", () =
       data: {
         code: `FOB-${tag}`,
         title: `Nhiem vu tep ${runId}`,
-        description: `Xem hình minh họa: /api/file-objects/${files.description.id}`,
+        description: `Xem hình minh họa: /api/file-objects/${files.description.id} và /api/file-objects/${files.foreignDescription.id}`,
         scope: TaskScope.DEPARTMENT,
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
@@ -145,7 +157,13 @@ describe("GET /api/file-objects/[id]: tệp ngoài đính kèm văn bản", () =
         dueDate: new Date(Date.now() + 7 * DAY),
         createdById: users.dri.id,
         leadUnitId: unitId,
-        actors: { create: [{ userId: users.dri.id, role: TaskActorRole.DRI, isPrimaryDRI: true }] },
+        actors: {
+          create: [
+            { userId: users.dri.id, role: TaskActorRole.DRI, isPrimaryDRI: true },
+            // Người phối hợp đọc được nhiệm vụ nhưng không tải tệp nào lên.
+            { userId: users.participant.id, role: TaskActorRole.COLLABORATOR },
+          ],
+        },
       },
     });
     taskId = task.id;
@@ -286,8 +304,16 @@ describe("GET /api/file-objects/[id]: tệp ngoài đính kèm văn bản", () =
       await assertDownloaded(await download(files.description.id, "dri"), files.description);
     });
 
+    test("người phối hợp (không tải tệp lên) đọc được ảnh người tạo nhúng: 200", async () => {
+      await assertDownloaded(await download(files.description.id, "participant"), files.description);
+    });
+
     test("người ngoài nhiệm vụ: 403 FORBIDDEN", async () => {
       await assertDenied(await download(files.description.id, "outsider"), 403, "FORBIDDEN", files.description);
+    });
+
+    test("tệp của người khác dán vào mô tả: người thực hiện nhiệm vụ nhận 403 (người tải lên không tạo nhiệm vụ)", async () => {
+      await assertDenied(await download(files.foreignDescription.id, "dri"), 403, "FORBIDDEN", files.foreignDescription);
     });
   });
 
