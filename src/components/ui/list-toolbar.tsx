@@ -25,10 +25,10 @@ import {
   MenuTrigger,
 } from "@/components/ui/menu";
 
-/** Nút icon trên thanh công cụ danh sách (bộ lọc, hiển thị) */
+/** Nút icon trên thanh công cụ danh sách (tìm, bộ lọc, hiển thị); icon 16px như icon sidebar, nơi gọi truyền cỡ nào cũng vậy */
 export function listToolbarIconButtonClass(active = false) {
   return cn(
-    "inline-flex size-7 max-md:size-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation",
+    "inline-flex size-7 max-md:size-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation [&_svg]:size-4",
     active ? "border-border bg-accent/60 text-foreground hover:bg-accent" : "border-border/80 bg-background text-foreground hover:bg-accent"
   );
 }

@@ -12,6 +12,7 @@ export interface TaskActionIconProps extends React.SVGProps<SVGSVGElement> {
  * (lưới 19x19, nét 1.5, đầu nét tròn, chỉ viền, góc bo lớn, tô bằng currentColor).
  * Trạng thái, ưu tiên và ngày hạn theo hình học của Linear: lưới 16x16 (`LINEAR_GRID`),
  * trạng thái là lục giác 14px có lề 1px (`LINEAR_STATUS_GRID`).
+ * Ba icon nút tròn của thanh công cụ (tìm, lọc, hiển thị) dùng lưới 16, nét 1,25 như icon sidebar.
  */
 const LINEAR_GRID = "0 0 16 16";
 const LINEAR_STATUS_GRID = "-1 -1 16 16";
@@ -643,33 +644,39 @@ export function TaskIconBlockDivider(props: TaskActionIconProps) {
   );
 }
 
-/** Tìm kiếm (ba icon thanh công cụ dùng chung khung 12,5/19, tâm 9,5 để cân thị giác) */
+/**
+ * Ba icon nút tròn của thanh công cụ (tìm, lọc, hiển thị) vẽ như icon sidebar (`layout/sidebar-rounded-icons`) để
+ * cùng một nét với sidebar (người dùng yêu cầu 18/10/2026): lưới 16, nét 1,25, hình nằm trong 1,75–14,25, góc bo lớn.
+ */
+const TOOLBAR_STROKE = 1.25;
+
+/** Tìm kiếm: kính lúp, cán chạm góc khung */
 export function TaskIconSearch(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <circle cx="8.25" cy="8.25" r="5" />
-      <path d="M11.9 11.9L15.75 15.75" />
+    <TaskActionSvg viewBox={LINEAR_GRID} strokeWidth={TOOLBAR_STROKE} {...props}>
+      <circle cx="7.25" cy="7.25" r="5.25" />
+      <path d="M11 11L14.25 14.25" />
     </TaskActionSvg>
   );
 }
 
-/** Bộ lọc: phễu */
+/** Bộ lọc: phễu bo cả sáu góc */
 export function TaskIconFilter(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <path d="M4.1 4H14.9A.75.75 0 0 1 15.47 5.24L11.35 9.98A1.5 1.5 0 0 0 11 10.94V15H8V10.94A1.5 1.5 0 0 0 7.65 9.98L3.53 5.24A.75.75 0 0 1 4.1 4Z" />
+    <TaskActionSvg viewBox={LINEAR_GRID} strokeWidth={TOOLBAR_STROKE} {...props}>
+      <path d="M3.1 2.75H12.9Q14 2.75 13.3 3.6L10.07 7.55Q9.5 8.25 9.5 9.15V13.3Q9.5 13.9 8.96 13.63L7.04 12.67Q6.5 12.4 6.5 11.8V9.15Q6.5 8.25 5.93 7.55L2.7 3.6Q2 2.75 3.1 2.75Z" />
     </TaskActionSvg>
   );
 }
 
-/** Tùy chọn hiển thị: hai thanh trượt, núm viền */
+/** Tùy chọn hiển thị: hai thanh trượt, núm viền chạm thanh */
 export function TaskIconDisplay(props: TaskActionIconProps) {
   return (
-    <TaskActionSvg {...props}>
-      <path d="M3.25 6H4.75M8.75 6H15.75" />
-      <circle cx="6.75" cy="6" r="2" />
-      <path d="M3.25 13H10.25M14.25 13H15.75" />
-      <circle cx="12.25" cy="13" r="2" />
+    <TaskActionSvg viewBox={LINEAR_GRID} strokeWidth={TOOLBAR_STROKE} {...props}>
+      <path d="M1.75 4.75H3.5M7.5 4.75H14.25" />
+      <circle cx="5.5" cy="4.75" r="2" />
+      <path d="M1.75 11.25H8.5M12.5 11.25H14.25" />
+      <circle cx="10.5" cy="11.25" r="2" />
     </TaskActionSvg>
   );
 }
