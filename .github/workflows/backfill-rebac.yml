@@ -7,7 +7,7 @@
 #   (any other)    → FAIL: unknown role
 #
 # Security pattern: identical to migrate-production.yml.
-#   - Container pinned: exact name qcet-eoffice-app / network qcet-network
+#   - Container pinned: exact name qcet-eoffice-api / network qcet-network
 #   - DATABASE_URL extracted via Python stdlib urlsplit/unquote (PY_URL_PARSER env)
 #   - ::add-mask:: on full URL and password immediately after extraction
 #   - All DB connection via --env-file (chmod 600); PGPASSWORD never in CLI args
@@ -113,7 +113,7 @@ jobs:
         id: app
         run: |
           set -euo pipefail
-          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_APP="qcet-eoffice-api"
           EXPECTED_NET="qcet-network"
 
           APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)

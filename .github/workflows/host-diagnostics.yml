@@ -1,7 +1,7 @@
 # Host Diagnostics — Read-Only Identity Verification
 #
 # Captures independently verified facts about the self-hosted runner environment.
-# Pinned target: qcet-eoffice-app on qcet-network. No fallback to other containers.
+# Pinned target: qcet-eoffice-api on qcet-network. No fallback to other containers.
 # Rules:
 #   - Never prints DATABASE_URL, .env, or any secret value.
 #   - All env var inspection: key names only, values replaced with <REDACTED>.
@@ -49,7 +49,7 @@ jobs:
         id: app
         run: |
           set -euo pipefail
-          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_APP="qcet-eoffice-api"
           EXPECTED_NET="qcet-network"
 
           APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
@@ -219,7 +219,7 @@ jobs:
             --entrypoint sh \
             --network none \
             "$IMAGE_ID" \
-            -c "cat /app/.next/BUILD_ID 2>/dev/null || echo '(not found)'" 2>/dev/null \
+            -c "cat /app/apps/api/.next/BUILD_ID 2>/dev/null || echo '(not found)'" 2>/dev/null \
             || echo "ERROR_RUNNING")
           echo "BUILD_ID: $BUILD_ID"
 

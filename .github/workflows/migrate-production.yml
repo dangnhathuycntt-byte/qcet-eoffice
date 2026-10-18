@@ -74,7 +74,7 @@ jobs:
           # Pin to the exact expected container name. Fallback only to detect
           # a renamed container; any fallback is treated as a hard error requiring
           # explicit investigation — never silently migrate against an unknown target.
-          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_APP="qcet-eoffice-api"
           EXPECTED_NET="qcet-network"
 
           APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)

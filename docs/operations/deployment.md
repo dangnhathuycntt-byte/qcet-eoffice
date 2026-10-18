@@ -153,6 +153,8 @@ server {
 
 ## 4. Production Deployment Execution
 
+> Từ khi tách web/api, production chạy hai dịch vụ compose `qcet-api` và `qcet-web`; các bước và cách quay lại ở [split-rollback.md](split-rollback.md). Lệnh `docker run` một container dưới đây là mô tả cũ.
+
 ### 4.1 Automated Docker Build & Run
 QCET E-Office utilizes the Next.js `standalone` output mode to minimize container footprint (<150MB):
 

@@ -15,5 +15,5 @@ fi
 
 echo "[QCET E-Office] Áp dụng migration thành công."
 
-echo "[QCET E-Office] Khởi động máy chủ Next.js 15 Standalone tại cổng 3000..."
-exec node server.js
+echo "[QCET E-Office] Khởi động qcet-api (Next.js 15 Standalone) tại cổng 3000..."
+exec node apps/api/server.js

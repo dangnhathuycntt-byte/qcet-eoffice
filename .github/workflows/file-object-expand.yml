@@ -140,7 +140,7 @@ jobs:
         id: app
         run: |
           set -euo pipefail
-          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_APP="qcet-eoffice-api"
           EXPECTED_NET="qcet-network"
 
           APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)

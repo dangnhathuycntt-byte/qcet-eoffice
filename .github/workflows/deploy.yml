@@ -103,6 +103,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_APP_VERSION: ${{ needs.metadata.outputs.short_sha }}
           NEXT_PUBLIC_DEPLOY_TIMESTAMP: ${{ needs.metadata.outputs.timestamp }}
+          # Địa chỉ qcet-api mà web chuyển tiếp /api tới (rewrites chốt khi build, như apps/web/Dockerfile)
+          API_INTERNAL_URL: "http://qcet-api:3000"
         run: npm run build
 
       - name: Emit Deployment Receipt
@@ -159,6 +161,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_APP_VERSION: ${{ needs.metadata.outputs.release_tag != 'none' && needs.metadata.outputs.release_tag || needs.metadata.outputs.short_sha }}
           NEXT_PUBLIC_DEPLOY_TIMESTAMP: ${{ needs.metadata.outputs.timestamp }}
+          # Địa chỉ qcet-api mà web chuyển tiếp /api tới (rewrites chốt khi build, như apps/web/Dockerfile)
+          API_INTERNAL_URL: "http://qcet-api:3000"
         run: npm run build
 
       - name: Emit Immutable Release Manifest
