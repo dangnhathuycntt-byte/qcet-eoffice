@@ -49,17 +49,14 @@ import {
 } from "@/lib/task-time-filter";
 import type { AuthUser } from "@/types/auth";
 import type { SchoolTask } from "@/types/dashboard";
-import {
-  isExecutiveUser,
-} from "@/components/layout/scope-switcher";
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
 import {
   getAcademicMonthsForYear,
   getAcademicYear,
   getSystemReferenceDate,
 } from "@/lib/academic-calendar";
-import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
-import { filterTasksByRole, matchesUser } from "@/lib/role-task-filter";
+import { isExecutiveUser } from "@/lib/role-task-filter";
+import type { TaskScope, TaskViewMode } from "@/lib/unified-task-hub";
 import {
   MenuRoot,
   MenuTrigger,
@@ -135,9 +132,7 @@ export {
 // 1. Interfaces & Types
 // ============================================================================
 
-export type TaskScope = "MY_TASKS" | "SCHOOL_TASKS" | "UNIT_TASKS";
 export type WorkspaceScope = "school" | "unit" | "my";
-export type TaskViewMode = "table" | "kanban" | "calendar" | "department" | "executive";
 export type TableDensity = "compact" | "comfortable";
 
 export interface ScopeTab {
@@ -351,71 +346,6 @@ const STATUS_FILTER_ALIASES: Record<string, string[]> = {
   waiting_approval: ["waiting_approval", "review", "pending_executive_approval", "needs_review"],
   review: ["waiting_approval", "review", "pending_executive_approval", "needs_review"],
 };
-
-// Helper: filterTasksByScope (backward compatibility & unified scopes)
-
-export function filterTasksByScope(
-  tasks: SchoolTask[],
-  scope: TaskScope | WorkspaceScope | string,
-  user?: AuthUser | null,
-  departmentCode?: string
-): SchoolTask[] {
-  const normScope =
-    scope === "my" || scope === "MY_TASKS"
-      ? "MY_TASKS"
-      : scope === "unit" || scope === "UNIT_TASKS"
-      ? "UNIT_TASKS"
-      : "SCHOOL_TASKS";
-
-  if (normScope === "MY_TASKS") {
-    if (!user) return tasks;
-    return tasks.filter((t) => {
-      if ((t as any).viewerContext?.relation) return true;
-      const isCreator = Boolean(
-        user.id &&
-          ((t as any).createdById === user.id ||
-            (t as any).assignedById === user.id ||
-            (t as any).createdBy === user.id ||
-            (Array.isArray((t as any).actors) && (t as any).actors.some((a: any) => a.userId === user.id)))
-      );
-      const isLead =
-        t.leadAssigneeName === user.name ||
-        matchesUser(t.leadAssigneeName, user) ||
-        (user.id && (t.leadAssigneeId === user.id || t.assignedTo === user.id));
-      const hasSub = t.subTasks?.some(
-        (s) =>
-          s.assigneeName === user.name ||
-          matchesUser(s.assigneeName, user) ||
-          (user.id && (s.assigneeId === user.id || s.assignedTo === user.id))
-      );
-      const isCo = Boolean(
-        t.coAssignees?.some((ca) => matchesUser(ca, user))
-      );
-      return Boolean(isLead || hasSub || isCo || isCreator);
-    });
-  }
-
-  if (normScope === "SCHOOL_TASKS") {
-    if (!user || user.role === "ADMIN" || isExecutiveUser(user)) {
-      return [...tasks];
-    }
-    return filterTasksByRole(tasks, user);
-  }
-
-  if (normScope === "UNIT_TASKS") {
-    const targetDept =
-      departmentCode && departmentCode !== "ALL"
-        ? departmentCode
-        : user?.departmentCode || (user as any)?.departmentId || user?.department || (isExecutiveUser(user) ? "BGH" : undefined);
-
-    if (targetDept && targetDept !== "ALL") {
-      return filterTasksForTable(tasks, "ALL", "", targetDept);
-    }
-    return tasks.filter((t) => t.subTasks && t.subTasks.length > 0);
-  }
-
-  return tasks;
-}
 
 // Re-export academic calendar helpers
 export { getAcademicMonthsForYear };

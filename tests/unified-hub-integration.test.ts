@@ -1,9 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
-import { filterTasksByScope } from "../src/components/dashboard/unified-task-toolbar";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
-import { parseScopeParam, scopeToParam, parseViewModeParam, getDefaultScopeForRole, getDefaultViewModeForRole, filterTasksByWorkbox, filterTasksHub, workspaceScopeToTaskScope } from "../src/lib/unified-task-hub";
+import { filterTasksByScope, parseScopeParam, scopeToParam, parseViewModeParam, getDefaultScopeForRole, getDefaultViewModeForRole, filterTasksByWorkbox, filterTasksHub, workspaceScopeToTaskScope } from "../src/lib/unified-task-hub";
 
 describe("Unified Task Hub Integration", () => {
   const payload = getMockDashboardPayload();

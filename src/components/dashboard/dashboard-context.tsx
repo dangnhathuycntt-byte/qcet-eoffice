@@ -11,9 +11,8 @@ import type {
   DashboardPayload,
 } from "@/types/dashboard";
 import type { WorkspaceZone, DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
-import type { TaskScope, TaskViewMode } from "@/components/dashboard/unified-task-toolbar";
+import type { TaskScope, TaskViewMode, WorkboxFilter } from "@/lib/unified-task-hub";
 import type { AuthUser } from "@/types/auth";
-import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import type { ExecutiveFilter, ExecutiveActionStats, DepartmentHealthSummary, ExecutiveActionItem } from "@/lib/executive-matrix-aggregator";
 import type { DelegationRule } from "@/types/delegation";
 import type { AcademicMonthInfo } from "@/lib/academic-calendar";

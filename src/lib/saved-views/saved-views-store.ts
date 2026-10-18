@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { AuthUser, UserRole } from "@/types/auth";
-import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
+import { isExecutiveUser, isManagerUser } from "@/lib/role-task-filter";
 import {
   type TaskUrlParams,
   parseTaskUrlParams,

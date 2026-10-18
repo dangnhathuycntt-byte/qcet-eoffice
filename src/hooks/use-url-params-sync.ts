@@ -3,13 +3,14 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WorkspaceZone, parseZoneParam } from "@/types/workspace";
-import type { TaskScope, TaskViewMode } from "@/components/dashboard/unified-task-toolbar";
 import {
   getDefaultScopeForRole,
   getDefaultViewModeForRole,
   parseScopeParam,
   scopeToParam,
   parseViewModeParam,
+  type TaskScope,
+  type TaskViewMode,
 } from "@/lib/unified-task-hub";
 import type { UserRole } from "@/types/auth";
 

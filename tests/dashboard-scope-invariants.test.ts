@@ -12,7 +12,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { filterTasksByScope } from "../src/components/dashboard/unified-task-toolbar";
+import { filterTasksByScope } from "../src/lib/unified-task-hub";
 import type { AuthUser } from "../src/types/auth";
 import type { SchoolTask } from "../src/types/dashboard";
 

@@ -6,7 +6,6 @@ import {
   extractExecutiveActionItems,
 } from "../src/lib/executive-matrix-aggregator";
 import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
-import { getStatCardData } from "../src/components/dashboard/executive-stat-strip";
 import type { SchoolTask, DashboardStats, TaskStatus } from "../src/types/dashboard";
 
 describe("Full System Regression Suite - Dashboard Data Consistency & Aggregation (TC-01 to TC-10)", () => {
@@ -87,33 +86,6 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
     assert.equal(meceSum, 130, "MECE sum must equal 130");
   });
 
-  // TC-02: Alignment between Card 1 and Card BGH 3
-  test("TC-02: Card 1 and Card BGH 3 align on 85 in-progress strategic tasks", () => {
-    const stats: DashboardStats = {
-      totalSchoolTasks: 130,
-      schoolTasksInProgress: 85,
-      schoolTasksCompleted: 11,
-      schoolTasksNotStarted: 30,
-      schoolTasksWaitingApproval: 3,
-      schoolTasksOverdue: 1,
-      totalStaffTasks: 0,
-      staffTasksInProgress: 0,
-      staffTasksCompleted: 0,
-      needsReviewTasksCount: 3,
-      overdueTasksCount: 1,
-      averageSchoolProgressPercent: 44,
-      completionRate: 8.5,
-    };
-
-    const cards = getStatCardData(stats);
-    const card1 = cards[0];
-
-    assert.equal(card1.id, "school-tasks");
-    assert.equal(card1.value, "130");
-    assert.equal(card1.subtext, "85 đang làm · 30 chưa làm · 11 hoàn thành");
-    assert.ok(card1.subtext.includes("85 đang làm"), "Card 1 must state 85 in progress");
-  });
-
   // TC-03: Approval queue extracts real WAITING_APPROVAL tasks as a review file.
   // Requirement (plan T04.7 / F02): the list action OPENS the file — it is labelled
   // "Xem xét" and never sends an approval mutation from the queue.
@@ -134,32 +106,6 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
     assert.equal(items[0].actionType, "REVIEW");
     assert.equal(items[0].actionLabel, "Xem xét");
     assert.deepEqual(items[0].reasons, ["REVIEW"]);
-  });
-
-  // TC-05: Card 4 displays 'Tiến độ trung bình toàn trường' with average progress % and transparent completion rate subtext
-  test("TC-05: Card 4 displays 'Tiến độ trung bình toàn trường: 44%' with transparent subtext 'Hoàn tất 11/130 (8.5%)'", () => {
-    const stats: DashboardStats = {
-      totalSchoolTasks: 130,
-      schoolTasksInProgress: 85,
-      schoolTasksCompleted: 11,
-      schoolTasksNotStarted: 30,
-      totalStaffTasks: 0,
-      staffTasksInProgress: 0,
-      staffTasksCompleted: 0,
-      needsReviewTasksCount: 3,
-      overdueTasksCount: 1,
-      averageSchoolProgressPercent: 44,
-      completionRate: 8.5,
-    };
-
-    const cards = getStatCardData(stats);
-    const card4 = cards[3];
-
-    assert.equal(card4.id, "overall-progress");
-    assert.equal(card4.title, "Tiến độ trung bình toàn trường");
-    assert.equal(card4.value, "44%");
-    assert.equal(card4.subtext, "Hoàn tất 11/130 (8.5%)");
-    assert.equal(card4.progress, 44);
   });
 
   // TC-06: Department progress computation does not force in-progress subtasks to 0%

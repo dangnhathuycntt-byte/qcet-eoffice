@@ -76,7 +76,7 @@ describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () =
   ];
 
   test("renders monthly indicator in table header for specific month and ALL", async () => {
-    const { CascadingTaskTable } = await import("@/components/tasks/cascading-task-table");
+    const { ModularCascadingTaskTable: CascadingTaskTable } = await import("@/components/tasks/table/modular-cascading-task-table");
 
     // Month 9
     const markupMonth9 = renderToStaticMarkup(
@@ -100,7 +100,7 @@ describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () =
   });
 
   test("renders Prior Overdue Backlog section when month !== ALL and backlog exists", async () => {
-    const { CascadingTaskTable } = await import("@/components/tasks/cascading-task-table");
+    const { ModularCascadingTaskTable: CascadingTaskTable } = await import("@/components/tasks/table/modular-cascading-task-table");
 
     const markup = renderToStaticMarkup(
       React.createElement(CascadingTaskTable, {
@@ -125,7 +125,7 @@ describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () =
   });
 
   test("does NOT render Prior Overdue Backlog section when selectedAcademicMonth is ALL", async () => {
-    const { CascadingTaskTable } = await import("@/components/tasks/cascading-task-table");
+    const { ModularCascadingTaskTable: CascadingTaskTable } = await import("@/components/tasks/table/modular-cascading-task-table");
 
     const markup = renderToStaticMarkup(
       React.createElement(CascadingTaskTable, {
@@ -140,7 +140,7 @@ describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () =
   });
 
   test("does NOT render Prior Overdue Backlog section when backlog is empty", async () => {
-    const { CascadingTaskTable } = await import("@/components/tasks/cascading-task-table");
+    const { ModularCascadingTaskTable: CascadingTaskTable } = await import("@/components/tasks/table/modular-cascading-task-table");
 
     const markup = renderToStaticMarkup(
       React.createElement(CascadingTaskTable, {
@@ -155,7 +155,7 @@ describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () =
   });
 
   test("subtasks indicate whether they are due within active academic month (zero-leak)", async () => {
-    const { CascadingTaskTable } = await import("@/components/tasks/cascading-task-table");
+    const { ModularCascadingTaskTable: CascadingTaskTable } = await import("@/components/tasks/table/modular-cascading-task-table");
 
     const markup = renderToStaticMarkup(
       React.createElement(CascadingTaskTable, {

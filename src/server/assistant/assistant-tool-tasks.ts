@@ -6,7 +6,7 @@ import type { TaskActorRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AssistantSourceRef } from "@/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
-import { contentToPlainText } from "@/components/tasks/detail/plate-block-codec";
+import { contentToPlainText } from "@/lib/tasks/plate-block-codec";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { assistantSourceHref } from "@/domain/assistant/assistant-sources";
 import { taskQueryService } from "@/server/tasks/task-query-service";

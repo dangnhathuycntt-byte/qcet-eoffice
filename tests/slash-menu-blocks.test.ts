@@ -6,7 +6,7 @@ import {
   serializeBlocksToContent,
   parseContentToBlocks,
   TOGGLE_PLACEHOLDER,
-} from "../src/components/tasks/detail/plate-block-codec";
+} from "../src/lib/tasks/plate-block-codec";
 import type { ContentBlockItem, ContentBlockType } from "../src/components/tasks/detail/task-block-editor";
 import { readFileSync } from "node:fs";
 

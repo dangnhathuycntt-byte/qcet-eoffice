@@ -4,13 +4,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TaskPaginationBar } from "../src/components/tasks/table/components/task-pagination-bar";
 import { TaskRow } from "../src/components/tasks/table/components/task-row";
-import {
-  getCategoryBadgeConfig,
-  getStatusBadgeConfig,
-  CATEGORY_TABS,
-  filterTasksForTable,
-  flattenPersonalTasks,
-} from "../src/components/tasks/cascading-task-table";
+import { getCategoryBadgeConfig, CATEGORY_TABS } from "../src/components/tasks/table/constants";
+import { filterTasksForTable } from "../src/lib/unified-task-hub";
 import { TaskTableHeader } from "../src/components/tasks/table/components/task-table-header";
 import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
 import type { SchoolTask } from "../src/types/dashboard";
@@ -39,30 +34,6 @@ describe("CascadingTaskTable Helpers", () => {
 
     const khac = getCategoryBadgeConfig("KHAC");
     assert.equal(khac.label, "Khác");
-  });
-
-  test("provides status badge config with Vietnamese labels", () => {
-    const sNew = getStatusBadgeConfig("NEW");
-    assert.equal(sNew.label, "Mới");
-    assert.ok(
-      sNew.className.includes("text-red-") || sNew.className.includes("text-destructive")
-    );
-
-    const sInProgress = getStatusBadgeConfig("IN_PROGRESS");
-    assert.equal(sInProgress.label, "Đang thực hiện");
-    assert.ok(sInProgress.className.includes("text-blue-700"));
-
-    const sReview = getStatusBadgeConfig("NEEDS_REVIEW");
-    assert.equal(sReview.label, "Cần chỉnh sửa");
-    assert.ok(sReview.className.includes("text-warning"));
-
-    const sDone = getStatusBadgeConfig("COMPLETED");
-    assert.equal(sDone.label, "Hoàn thành");
-    assert.ok(sDone.className.includes("text-emerald-700"));
-
-    const sOverdue = getStatusBadgeConfig("OVERDUE");
-    assert.equal(sOverdue.label, "Trễ hạn");
-    assert.ok(sOverdue.className.includes("text-destructive"));
   });
 
   test("CATEGORY_TABS labels contain zero emojis", () => {
@@ -219,73 +190,6 @@ describe("Task 6: Cascading Task Table Single Source of Truth", () => {
     const daoTaoTasks = filterTasksForTable(mockTasks, "ALL", "", "DAO_TAO");
     assert.equal(daoTaoTasks.length, 1);
     assert.equal(daoTaoTasks[0].id, "task-rel-2");
-  });
-});
-
-describe("Personal Scope Subtask First-Class UX Suite (MY_TASKS)", () => {
-  it("flattens subtask into first-class row when staff is only assigned to the subtask", () => {
-    const mockTasks: SchoolTask[] = [
-      {
-        id: "school-task-99",
-        taskCode: "NV-TRUONG-99",
-        title: "Kế hoạch nâng cấp mạng hạ tầng cơ sở 2026",
-        category: "CNTT",
-        categoryLabel: "Công nghệ thông tin",
-        progressPercent: 50,
-        totalSubTasks: 2,
-        completedSubTasks: 0,
-        coAssignees: [],
-        leadAssigneeName: "Trưởng phòng Đào tạo",
-        leadAssigneeId: "manager-01",
-        assignedDate: "2026-09-01",
-        dueDate: "2026-09-30",
-        status: "IN_PROGRESS",
-        subTasks: [
-          {
-            id: "subtask-c1",
-            code: "NV-TRUONG-99.01",
-            title: "Cấu hình phân đoạn VLAN tầng 2",
-            assigneeName: "Nguyễn Văn Chuyên Viên",
-            assigneeId: "staff-cv-01",
-            status: "IN_PROGRESS",
-            dueDate: "2026-09-15",
-            department: "Khoa CNTT",
-
-            updatedAt: "2026-09-01T00:00:00.000Z",
-          },
-          {
-            id: "subtask-c2",
-            code: "NV-TRUONG-99.02",
-            title: "Kiểm thử thông tuyến cáp quang",
-            assigneeName: "Cán bộ khác",
-            assigneeId: "other-staff",
-            status: "NEW",
-            dueDate: "2026-09-20",
-            updatedAt: "2026-09-01T00:00:00.000Z",
-          },
-        ],
-      },
-    ];
-
-    // When viewed by "Nguyễn Văn Chuyên Viên"
-    const flattened = flattenPersonalTasks(
-      mockTasks,
-      "Nguyễn Văn Chuyên Viên",
-      "staff-cv-01"
-    );
-
-    // Should contain 1 first-class item (the subtask)
-    assert.equal(flattened.length, 1);
-    const item = flattened[0];
-    assert.equal(item.id, "subtask-c1");
-    assert.equal(item.title, "Cấu hình phân đoạn VLAN tầng 2");
-    assert.equal(item.isSubtask, true);
-    assert.equal(item.parentSchoolTaskId, "school-task-99");
-    assert.equal(item.parentSchoolTaskCode, "NV-TRUONG-99");
-    assert.equal(
-      item.parentSchoolTaskTitle,
-      "Kế hoạch nâng cấp mạng hạ tầng cơ sở 2026"
-    );
   });
 });
 

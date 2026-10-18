@@ -144,7 +144,9 @@ import {
   serializeBlocksToContent,
   isMeaningfulBlock,
   PLATE_NODE_TYPES as PT,
-} from "./plate-block-codec";
+  type ContentBlockItem,
+  type ContentBlockType,
+} from "@/lib/tasks/plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
 import { MENU_POPUP_CLASS } from "@/components/ui/menu";
 import { foldVietnamese } from "@/lib/search/vietnamese-search";
@@ -170,46 +172,7 @@ type ElProps = RenderElementProps & {
 // Re-exports (public API unchanged)
 // ---------------------------------------------------------------------------
 
-export type ContentBlockType =
-  | "text"
-  | "heading"
-  | "bulleted_list"
-  | "numbered_list"
-  | "checklist"
-  | "quote"
-  | "callout"
-  | "divider"
-  | "image"
-  | "attachment"
-  | "link"
-  | "bookmark"
-  | "table"
-  | "toggle"
-  | "media_embed";
-
-export interface ContentBlockItem {
-  id: string;
-  type: ContentBlockType;
-  content: string;
-  checked?: boolean;
-  level?: 1 | 2 | 3;
-  url?: string;
-  fileName?: string;
-  fileSize?: string;
-  fileType?: string;
-  caption?: string;
-  imageWidth?: number;
-  description?: string;
-  favicon?: string;
-  thumbnailUrl?: string;
-  isInternalQcet?: boolean;
-  entityType?: string;
-  align?: "left" | "center" | "right" | "justify";
-  open?: boolean;
-  rows?: Array<{ cells: Array<{ content: string; isHeader?: boolean; children?: any[] }> }>;
-  providerType?: string;
-}
-
+export type { ContentBlockItem, ContentBlockType };
 export { isMeaningfulBlock, parseContentToBlocks, serializeBlocksToContent };
 
 export interface TaskBlockEditorProps {

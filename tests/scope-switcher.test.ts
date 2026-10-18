@@ -6,9 +6,8 @@ import {
   buildScopeUrl,
   resolveDepartment,
   formatDepartmentLabel,
-  isExecutiveUser,
-  isManagerUser,
 } from "@/components/layout/scope-switcher";
+import { isExecutiveUser, isManagerUser } from "@/lib/role-task-filter";
 
 describe("Scope Switcher Logic & Parameter Suite", () => {
   describe("TaskHub Scope Helpers", () => {
