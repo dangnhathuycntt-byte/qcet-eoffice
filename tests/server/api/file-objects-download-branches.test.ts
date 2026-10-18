@@ -312,8 +312,10 @@ describe("GET /api/file-objects/[id]: tệp ngoài đính kèm văn bản", () =
       await assertDenied(await download(files.description.id, "outsider"), 403, "FORBIDDEN", files.description);
     });
 
-    test("tệp của người khác dán vào mô tả: người thực hiện nhiệm vụ nhận 403 (người tải lên không tạo nhiệm vụ)", async () => {
+    test("tệp của người khác dán vào mô tả: người đọc nhiệm vụ nhận 403 (người tải lên không tạo nhiệm vụ)", async () => {
+      // Quyền đọc nhiệm vụ không đủ: cả người tạo (dri) lẫn người phối hợp đều bị từ chối.
       await assertDenied(await download(files.foreignDescription.id, "dri"), 403, "FORBIDDEN", files.foreignDescription);
+      await assertDenied(await download(files.foreignDescription.id, "participant"), 403, "FORBIDDEN", files.foreignDescription);
     });
   });
 
