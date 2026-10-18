@@ -923,7 +923,7 @@ describe("Trợ lý UI: điều hướng và khung trang", () => {
   test("hai trang server đều chặn khi cờ tắt và kiểm đăng nhập", () => {
     for (const rel of ["src/app/assistant/page.tsx", "src/app/assistant/[id]/page.tsx"]) {
       const src = read(rel);
-      assert.ok(src.includes("getPublicRuntimeConfig().features.assistant"), `${rel}: thiếu kiểm cờ`);
+      assert.ok(src.includes("(await getRuntimeConfig())?.features.assistant"), `${rel}: thiếu kiểm cờ`);
       assert.ok(src.includes("notFound()"), `${rel}: thiếu notFound`);
       assert.ok(src.includes("redirect("), `${rel}: thiếu chuyển hướng đăng nhập`);
     }
@@ -1048,8 +1048,8 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
     assert.ok(shell.includes("{assistantEnabled ? <AssistantDock /> : null}"), "luôn gắn khi bật cờ để lượt đang chạy không bị hủy khi sang trang Trợ lý");
     const layout = read("src/app/layout.tsx");
     assert.ok(
-      layout.includes("const runtimeConfig = getPublicRuntimeConfig();") &&
-        layout.includes("const assistantEnabled = runtimeConfig.features.assistant;") &&
+      layout.includes("const runtimeConfig = await getRuntimeConfig();") &&
+        layout.includes("const assistantEnabled = runtimeConfig?.features.assistant ?? false;") &&
         layout.includes("assistantEnabled={assistantEnabled}"),
       "cờ đọc ở server cùng nguồn với trang Trợ lý, không giật bố cục sau hydrate",
     );

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { getSessionFromRequest } from "@/lib/jwt-session";
+import { getWebSession } from "@/lib/server-api";
 import { OverviewView } from "@/components/overview/overview-view";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +24,7 @@ function greetingFor(now: Date) {
 /** Trang Tổng quan. Đường dẫn cũ `/?zone=…` vẫn chuyển tới trang tương ứng. */
 export default async function RootPage({ searchParams }: RootPageProps) {
   const resolvedParams = searchParams ? await searchParams : {};
-  const cookieStore = await cookies();
-  const session = await getSessionFromRequest({ cookies: cookieStore });
+  const session = await getWebSession();
 
   if (!session) {
     redirect("/login");

@@ -12,7 +12,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
 import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
 import { parseSidebarCollapsed, SIDEBAR_COLLAPSED_COOKIE } from "@/lib/navigation/sidebar-state";
-import { getPublicRuntimeConfig } from "@/config/runtime";
+import { getRuntimeConfig } from "@/lib/server-api";
 
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -68,10 +68,11 @@ export default async function RootLayout({
   const initialSidebarCollapsed = parseSidebarCollapsed(cookieStore.get(SIDEBAR_COLLAPSED_COOKIE)?.value) === true;
   // Cờ Trợ lý đọc ở server, cùng nguồn với trang /assistant (cờ và gateway đủ cấu hình): khung trang chừa chỗ thanh dưới
   // ngay lần vẽ đầu (đọc cờ sau hydrate làm mọi trang co lại)
-  const runtimeConfig = getPublicRuntimeConfig();
-  const assistantEnabled = runtimeConfig.features.assistant;
+  // Đọc qua GET /api/runtime-config; API lỗi thì coi như tắt Trợ lý (khung trang không chừa thanh dưới)
+  const runtimeConfig = await getRuntimeConfig();
+  const assistantEnabled = runtimeConfig?.features.assistant ?? false;
   // Model chọn được ở ô soạn của Trợ lý và Agent tạo nhiệm vụ, cùng danh sách máy chủ dùng để kiểm
-  const agentModels = runtimeConfig.agentModels ?? null;
+  const agentModels = runtimeConfig?.agentModels ?? null;
 
   return (
     <html

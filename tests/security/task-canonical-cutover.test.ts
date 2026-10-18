@@ -58,8 +58,9 @@ describe("Issue #13 canonical Task cutover", () => {
   });
 
   test("SSR list and detail use the canonical Task query service", () => {
-    const listPage = read("src/app/tasks/page.tsx");
-    const detailPage = read("src/app/tasks/[id]/page.tsx");
+    // Trang đọc qua GET /api/page-data/tasks và /api/page-data/tasks/[id]
+    const listPage = read("src/app/api/page-data/tasks/route.ts");
+    const detailPage = read("src/app/api/page-data/tasks/[id]/route.ts");
     assert.match(listPage, /taskQueryService\.queryTasks/);
     assert.doesNotMatch(listPage, /getLiveDashboardData/);
     assert.match(detailPage, /taskQueryService\.getTaskEntityForInternalUse/);

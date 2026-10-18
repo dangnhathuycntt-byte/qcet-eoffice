@@ -1,10 +1,7 @@
 import * as React from "react";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { getSessionFromRequest } from "@/lib/jwt-session";
-import { isFeatureEnabled } from "@/features/flags";
+import { getRuntimeConfig, getWebSession } from "@/lib/server-api";
 import { DocumentRegistryView } from "@/components/documents/document-registry-view";
 import { DocumentRegistrySkeleton } from "@/components/documents/registry/document-ledger-skeleton";
 
@@ -17,17 +14,13 @@ export const metadata: Metadata = {
 };
 
 export default async function DocumentsPage() {
-  const authSession = await auth();
-  const cookieStore = await cookies();
-  const jwtSession = !authSession?.user?.id
-    ? await getSessionFromRequest({ cookies: cookieStore })
-    : null;
+  const session = await getWebSession();
 
-  const userId = authSession?.user?.id ?? jwtSession?.id;
-
-  if (!userId) {
+  if (!session) {
     redirect(`/login?returnTo=${encodeURIComponent("/documents")}`);
   }
+
+  const runtimeConfig = await getRuntimeConfig();
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
@@ -35,7 +28,7 @@ export default async function DocumentsPage() {
         fallback={<DocumentRegistrySkeleton />}
       >
         {/* Soạn văn bản đi còn theo cờ triển khai: cờ tắt thì sổ Văn bản đi không có nút soạn */}
-        <DocumentRegistryView canComposeOutgoing={isFeatureEnabled("outgoingDocuments")} />
+        <DocumentRegistryView canComposeOutgoing={runtimeConfig?.features.outgoingDocuments ?? false} />
       </React.Suspense>
     </div>
   );

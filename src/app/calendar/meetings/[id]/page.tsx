@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { auth } from "@/auth";
-import { getSessionFromRequest } from "@/lib/jwt-session";
-import { readMeetingDetailPageData } from "@/server/services/meeting-detail-page-data";
+import { fetchPageData } from "@/lib/server-api";
+import { MeetingDetailPageDataSchema } from "@qcet/contracts/page-data";
 
 import { MeetingDetailView } from "@/components/meetings/meeting-detail-view";
 
@@ -32,29 +30,18 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MeetingDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  /* Auth --------------------------------------------------------------- */
-  const authSession = await auth();
-  const cookieStore = await cookies();
-  const jwtSession = !authSession?.user?.id
-    ? await getSessionFromRequest({ cookies: cookieStore })
-    : null;
+  /* Fetch: API xác thực và kiểm meeting.read; không có quyền -> 404 -> notFound() */
+  const result = await fetchPageData(`/api/page-data/meetings/${encodeURIComponent(id)}`, MeetingDetailPageDataSchema);
 
-  const userId = authSession?.user?.id ?? jwtSession?.id;
-
-  if (!userId) {
-    redirect(`/login?returnTo=${encodeURIComponent(`/calendar/meetings/${id}`)}`);
+  if (!result.ok) {
+    if (result.status === 401) {
+      redirect(`/login?returnTo=${encodeURIComponent(`/calendar/meetings/${id}`)}`);
+    }
+    if (result.status === 404) notFound();
+    throw new Error(`GET /api/page-data/meetings/[id] trả ${result.status}`);
   }
 
-  const currentUser = {
-    id: userId,
-    name: authSession?.user?.name ?? jwtSession?.name ?? "Người dùng",
-    role: (authSession?.user as any)?.role ?? jwtSession?.role ?? "CHUYEN_VIEN",
-  };
-
-  /* Fetch (kiểm meeting.read; không có quyền -> null -> notFound()) ------- */
-  const serialized = await readMeetingDetailPageData(id, userId);
-
-  if (!serialized) notFound();
+  const { meeting: serialized, currentUser } = result.data;
 
   return <MeetingDetailView meeting={serialized} currentUser={currentUser} />;
 }

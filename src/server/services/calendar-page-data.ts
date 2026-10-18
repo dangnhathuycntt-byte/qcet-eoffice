@@ -5,7 +5,7 @@ import {
   getAcademicMonthInfo,
 } from '@qcet/shared/lib/academic-calendar';
 
-// Dữ liệu ban đầu cho trang Lịch (src/app/calendar/page.tsx): nhiệm vụ và cuộc họp của tháng học hiện tại.
+// Dữ liệu ban đầu cho trang Lịch (GET /api/page-data/calendar, trang src/app/calendar/page.tsx gọi): nhiệm vụ và cuộc họp của tháng học hiện tại.
 // Không có userId thì trả hai danh sách rỗng, không gọi DB; lỗi từng nguồn trả danh sách rỗng.
 export async function loadCalendarPageData(userId: string | undefined) {
   // Compute current academic month period for the initial fetch

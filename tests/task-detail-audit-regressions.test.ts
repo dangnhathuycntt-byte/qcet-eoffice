@@ -8,11 +8,18 @@ const readSource = (relativePath: string) =>
 
 describe("Task detail audit regressions", () => {
   it("enforces authentication and object-level read authorization before rendering", () => {
-    const source = readSource("src/app/tasks/[id]/page.tsx");
+    // Trang gọi GET /api/page-data/tasks/[id]: 401 chuyển tới đăng nhập, kiểm quyền và map nằm ở route
+    const page = readSource("src/app/tasks/[id]/page.tsx");
+    const source = readSource("src/app/api/page-data/tasks/[id]/route.ts");
 
-    assert.match(source, /if \(!session\)[\s\S]*redirect\(/);
+    assert.match(page, /if \(result\.status === 401\)[\s\S]*redirect\(/);
+    assert.match(source, /const user = requireAuthenticated\(ctx\)/);
     // Authorization refactored to service pattern: loadAuthorizationContext + resolveTaskDetailContext
-    assert.match(source, /loadAuthorizationContext\(session\.id\)/);
+    assert.match(source, /loadAuthorizationContext\(user\.id\)/);
+    assert.ok(
+      source.indexOf("requireAuthenticated(") < source.indexOf("loadAuthorizationContext("),
+      "authentication must run before loading the authorization context"
+    );
     assert.match(source, /resolveTaskDetailContext\(/);
     assert.ok(
       source.indexOf("loadAuthorizationContext") < source.indexOf("resolveTaskDetailContext"),

@@ -2,8 +2,8 @@ import { prisma } from "@qcet/db/prisma";
 import { getAuditActionLabel } from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 import type { RawTaskEntity } from "@/server/tasks/task-detail-context";
 
-// Dữ liệu đọc cho trang chi tiết nhiệm vụ (src/app/tasks/[id]/page.tsx).
-// Trang gọi hàm này sau khi đã xác thực và resolveTaskDetailContext cho phép hiển thị.
+// Dữ liệu đọc cho trang chi tiết nhiệm vụ (GET /api/page-data/tasks/[id], trang src/app/tasks/[id]/page.tsx gọi).
+// Route gọi hàm này sau khi đã xác thực và resolveTaskDetailContext cho phép hiển thị.
 
 function formatAuditDescription(event: {
   action: string;

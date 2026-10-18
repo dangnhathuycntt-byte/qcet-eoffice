@@ -1,13 +1,9 @@
 import * as React from "react";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { TasksPageClient } from "./tasks-page-client";
 import { type WorkspaceScope } from "@/components/tasks/task-management-workspace";
-import { getSessionFromRequest } from "@/lib/jwt-session";
-import { taskQueryService } from "@/server/tasks";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
-import { buildTaskResource, computeAvailableActions } from "@/server/authorization/available-actions";
-import type { SchoolTask } from "@qcet/contracts/types/dashboard";
+import { fetchPageData } from "@/lib/server-api";
+import { TasksPageDataSchema } from "@qcet/contracts/page-data";
 import type { TaskView } from "@qcet/shared/domain/tasks";
 
 export default async function TasksPage(props: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
@@ -42,31 +38,26 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
     redirect(`/tasks?${nextParams.toString()}`);
   }
 
-  const cookieStore = await cookies();
-  const session = await getSessionFromRequest({ cookies: cookieStore });
-  if (!session) {
-    const qs = searchParams.toString();
-    const returnUrl = `/tasks${qs ? `?${qs}` : ""}`;
-    redirect(`/login?returnTo=${encodeURIComponent(returnUrl)}`);
+  // Nhiệm vụ gốc theo góc nhìn, kèm thao tác được phép (GET /api/page-data/tasks)
+  const result = await fetchPageData(
+    `/api/page-data/tasks${canonicalView ? `?view=${canonicalView}` : ""}`,
+    TasksPageDataSchema,
+  );
+  if (!result.ok) {
+    if (result.status === 401) {
+      const qs = searchParams.toString();
+      const returnUrl = `/tasks${qs ? `?${qs}` : ""}`;
+      redirect(`/login?returnTo=${encodeURIComponent(returnUrl)}`);
+    }
+    throw new Error(`GET /api/page-data/tasks trả ${result.status}`);
   }
 
   const scope: WorkspaceScope | undefined =
     canonicalView === "related" ? "my" : canonicalView === "unit" ? "unit" : canonicalView === "all" ? "school" : undefined;
 
-  const authorizationContext = await loadAuthorizationContext(session.id);
-  const { tasks } = await taskQueryService.queryTasks(authorizationContext, {
-    all: true,
-    parentTaskId: 'root',
-    view: canonicalView,
-  });
-  const authorizedTasks = tasks.map((task) => ({
-    ...task,
-    availableActions: computeAvailableActions(authorizationContext, buildTaskResource(task)),
-  }));
-
   return (
     <TasksPageClient
-      initialTasks={authorizedTasks as unknown as SchoolTask[]}
+      initialTasks={result.data.tasks}
       initialScope={scope}
       initialTaskView={canonicalView}
     />

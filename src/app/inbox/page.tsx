@@ -1,9 +1,7 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { getSessionFromRequest } from "@/lib/jwt-session";
+import { getWebSession } from "@/lib/server-api";
 import { InboxView } from "@/components/inbox/inbox-view";
 
 export const dynamic = "force-dynamic";
@@ -14,15 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default async function InboxPage() {
-  const authSession = await auth();
-  const cookieStore = await cookies();
-  const jwtSession = !authSession?.user?.id
-    ? await getSessionFromRequest({ cookies: cookieStore })
-    : null;
+  const session = await getWebSession();
 
-  const userId = authSession?.user?.id ?? jwtSession?.id;
-
-  if (!userId) {
+  if (!session) {
     redirect(`/login?returnTo=${encodeURIComponent("/inbox")}`);
   }
 

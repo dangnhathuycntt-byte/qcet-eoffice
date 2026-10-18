@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { getPublicRuntimeConfig } from "@/config/runtime";
-import { getSessionFromRequest } from "@/lib/jwt-session";
+import { getRuntimeConfig, getWebSession } from "@/lib/server-api";
 import { AssistantWorkspace } from "@/components/assistant/assistant-workspace";
 import { parseAssistantContextParam } from "@/components/assistant/assistant-model";
 
@@ -20,12 +17,9 @@ interface AssistantPageProps {
 
 export default async function AssistantPage({ searchParams }: AssistantPageProps) {
   // Cờ tắt thì trang không tồn tại (đồng nhất với API trả 503 FEATURE_DISABLED)
-  if (!getPublicRuntimeConfig().features.assistant) notFound();
+  if (!(await getRuntimeConfig())?.features.assistant) notFound();
 
-  const authSession = await auth();
-  const cookieStore = await cookies();
-  const jwtSession = !authSession?.user?.id ? await getSessionFromRequest({ cookies: cookieStore }) : null;
-  if (!(authSession?.user?.id ?? jwtSession?.id)) {
+  if (!(await getWebSession())) {
     redirect(`/login?returnTo=${encodeURIComponent("/assistant")}`);
   }
 

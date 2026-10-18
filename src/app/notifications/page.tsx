@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { auth } from "@/auth";
-import { getSessionFromRequest } from "@/lib/jwt-session";
+import { getWebSession } from "@/lib/server-api";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 
 export const dynamic = "force-dynamic";
@@ -12,15 +10,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function NotificationsPage() {
-  const authSession = await auth();
-  const cookieStore = await cookies();
-  const jwtSession = !authSession?.user?.id
-    ? await getSessionFromRequest({ cookies: cookieStore })
-    : null;
+  const session = await getWebSession();
 
-  const userId = authSession?.user?.id ?? jwtSession?.id;
-
-  if (!userId) {
+  if (!session) {
     redirect("/login?returnTo=/notifications");
   }
 

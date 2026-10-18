@@ -1,8 +1,7 @@
 import * as React from "react";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSessionFromRequest } from "@/lib/jwt-session";
+import { getWebSession } from "@/lib/server-api";
 import { WorkspacePageCard } from "@/components/workspace/page-card";
 import { UnitRequestInbox } from "@/components/tasks/unit-request-inbox";
 
@@ -10,8 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Yêu cầu phối hợp" };
 
 export default async function UnitRequestsPage() {
-  const cookieStore = await cookies();
-  const session = await getSessionFromRequest({ cookies: cookieStore });
+  const session = await getWebSession();
   if (!session) redirect(`/login?returnTo=${encodeURIComponent("/tasks/unit-requests")}`);
 
   return (

@@ -5,43 +5,10 @@
 
 import { getPublicFeatureFlags, isFeatureEnabled } from "@/features/flags";
 import { parseAgentModels, type AgentModelCatalog } from "@qcet/shared/domain/agent/agent-models";
+import type { PublicRuntimeConfig, PublicRuntimeFeatures } from "@qcet/contracts/page-data";
 
-export interface PublicRuntimeFeatures {
-  googleAuth: boolean;
-  webPush: boolean;
-  academicCalendarSync: boolean;
-  offlineSupport: boolean;
-  pushNotifications: boolean;
-  externalGoogleLogin: boolean;
-  offlineMutations: boolean;
-  largeExcelExport: boolean;
-  taskWorkspaceV2: boolean;
-  mobileAgenda: boolean;
-  newExecutiveDashboard: boolean;
-  uxTasksV5: boolean;
-  uxCalendarV5: boolean;
-  uxNotificationsV5: boolean;
-  uxDocumentsV5: boolean;
-  uxOrgV5: boolean;
-  digitalSignature: boolean;
-  outgoingDocuments: boolean;
-  internalDocuments: boolean;
-  userProvisioning: boolean;
-  taskAgent: boolean;
-  assistant: boolean;
-  [key: string]: boolean;
-}
-
-export interface PublicRuntimeConfig {
-  environment: "development" | "production" | "test";
-  features: PublicRuntimeFeatures;
-  version: string;
-  buildId: string;
-  appUrl?: string;
-  referenceDate?: string;
-  /** Model chọn được ở ô soạn của Trợ lý và Agent tạo nhiệm vụ (khi bật một trong hai); mã model không phải bí mật. */
-  agentModels?: AgentModelCatalog;
-}
+// Kiểu cấu hình công khai nằm ở @qcet/contracts để web đọc qua GET /api/runtime-config.
+export type { PublicRuntimeConfig, PublicRuntimeFeatures };
 
 /** Danh sách model của hai Agent từ môi trường: `TASK_AGENT_MODEL` (mặc định) và `TASK_AGENT_MODELS`. Máy chủ kiểm theo đây. */
 export function getAgentModelCatalog(): AgentModelCatalog | null {
