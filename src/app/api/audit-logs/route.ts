@@ -1,7 +1,7 @@
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { authorize } from "@/server/authorization/authorization-engine";
-import { AuthorizationError } from "@/server/api/errors";
+import { AuthorizationError, ValidationError } from "@/server/api/errors";
 import { AuditLogQuerySchema } from "@/contracts/audit-logs";
 import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
@@ -32,11 +32,7 @@ export async function GET(req: Request) {
     if (query.from || query.to) {
       const range = normalizeIctDateRange(query.from, query.to);
       if (range.error) {
-        return apiError(
-          { message: range.error, statusCode: 400 },
-          context.requestId,
-          { headers: { 'Cache-Control': 'private, no-store' } }
-        );
+        throw new ValidationError(range.error, { from: [range.error] });
       }
       createdRange = range;
     }
