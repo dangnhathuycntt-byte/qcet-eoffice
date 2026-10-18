@@ -1,12 +1,13 @@
 // Kiểm tay sau khi triển khai web + api tách rời: trang (qcet-web), /api (qcet-api qua cloudflared hoặc rewrite),
 // phiên đăng nhập, tạo nhiệm vụ, tải tệp và stream Trợ lý không bị gom.
 //
-//   QCET_SMOKE_COOKIE='__Secure-authjs.session-token=…' node scripts/smoke-split.mjs --base https://qcet.example [--write [--unit <mã đơn vị>]] [--chat]
+//   QCET_SMOKE_COOKIE='__Secure-authjs.session-token=…' node scripts/smoke-split.mjs --base https://qcet.example [--write [--unit <id đơn vị>]] [--chat]
 //
 // Đăng nhập chỉ qua Google nên phiên lấy từ cookie của trình duyệt đã đăng nhập (DevTools > Application > Cookies);
 // script không in cookie. Mặc định chỉ đọc. --write: tạo nhiệm vụ "[SMOKE]…" (đơn vị chủ trì từ --unit hoặc đơn vị
 // của tài khoản), tải một tệp nhỏ gắn vào đó, tải lại, rồi lưu trữ nhiệm vụ (DELETE là lưu trữ; nhiệm vụ và tệp vẫn còn
-// trong CSDL). --chat: một lượt Trợ lý (tốn lượt gọi gateway), xóa cuộc trò chuyện sau đó.
+// trong CSDL). Đây là nhiệm vụ thật: có thể sinh thông báo và sự kiện outbox cho người của đơn vị chủ trì, nên trên
+// production chọn --unit là một đơn vị thử. --chat: một lượt Trợ lý (tốn lượt gọi gateway), xóa cuộc trò chuyện sau đó.
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
   const i = args.indexOf(name);
@@ -62,7 +63,7 @@ async function main() {
   report(tasksPage.status === 200, "trang /tasks đọc dữ liệu qua API", String(tasksPage.status));
 
   const leadUnitId = arg("--unit", me.user?.departmentId || "");
-  if (WRITE && !leadUnitId) skip("tạo nhiệm vụ, tải tệp", "tài khoản chưa có đơn vị; thêm --unit <mã đơn vị>");
+  if (WRITE && !leadUnitId) skip("tạo nhiệm vụ, tải tệp", "tài khoản chưa có đơn vị; thêm --unit <id đơn vị>");
   else if (WRITE) {
     const dueDate = new Date(Date.now() + 7 * 86_400_000).toISOString();
     const created = await fetch(`${BASE}/api/tasks`, {

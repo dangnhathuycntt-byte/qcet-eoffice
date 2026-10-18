@@ -8,7 +8,8 @@ import { GET as getLoginAs, POST as postLoginAs } from "@/app/api/dev/login-as/r
 
 /**
  * Test đặc tả /api/dev/login-as — ranh giới bảo mật: chỉ mở khi NODE_ENV === "development"
- * và Host là localhost/127.0.0.1/[::1] (có thể kèm cổng); mọi trường hợp khác trả 404 rỗng, không cấp cookie.
+ * và Host là localhost/127.0.0.1/[::1] (có thể kèm cổng), `x-forwarded-host` (Host gốc qua rewrite của web) nếu có cũng
+ * phải cục bộ; mọi trường hợp khác trả 404 rỗng, không cấp cookie.
  *
  * `isLocalDev()` đọc `process.env.NODE_ENV` lúc xử lý request (không phải lúc nạp module), nên test đổi
  * NODE_ENV trong từng ca và luôn khôi phục đúng giá trị ban đầu trong finally/after.
@@ -37,15 +38,17 @@ describe("/api/dev/login-as", () => {
     }
   }
 
-  function getRequest(host: string | null) {
+  function getRequest(host: string | null, forwardedHost?: string) {
     const headers = new Headers();
     if (host !== null) headers.set("host", host);
+    if (forwardedHost !== undefined) headers.set("x-forwarded-host", forwardedHost);
     return new NextRequest("http://localhost:3000/api/dev/login-as", { headers });
   }
 
-  function postRequest(host: string | null, body: string) {
+  function postRequest(host: string | null, body: string, forwardedHost?: string) {
     const headers = new Headers({ "Content-Type": "application/json" });
     if (host !== null) headers.set("host", host);
+    if (forwardedHost !== undefined) headers.set("x-forwarded-host", forwardedHost);
     return new NextRequest("http://localhost:3000/api/dev/login-as", { method: "POST", headers, body });
   }
 
@@ -129,6 +132,15 @@ describe("/api/dev/login-as", () => {
       });
     });
 
+    test("NODE_ENV=development, Host cục bộ nhưng x-forwarded-host (Host gốc qua rewrite của web) không cục bộ: GET và POST 404", async () => {
+      await withNodeEnv("development", async () => {
+        for (const forwardedHost of ["192.168.1.10:3000", "qcet.dixxie.store", "localhost.evil.example", ""]) {
+          await assertBlocked(await getLoginAs(getRequest("localhost:3100", forwardedHost)));
+          await assertBlocked(await postLoginAs(postRequest("localhost:3100", JSON.stringify({ userId: activeId }), forwardedHost)));
+        }
+      });
+    });
+
     test("NODE_ENV=development nhưng thiếu header Host: GET và POST 404", async () => {
       await withNodeEnv("development", async () => {
         await assertBlocked(await getLoginAs(getRequest(null)));
@@ -167,6 +179,12 @@ describe("/api/dev/login-as", () => {
           const body = await res.json();
           assert.ok(body.users.some((u: { id: string }) => u.id === activeId), `Host=${host} thiếu user fixture`);
         }
+      });
+    });
+
+    test("GET qua rewrite của web chạy cục bộ (Host api + x-forwarded-host localhost): 200", async () => {
+      await withNodeEnv("development", async () => {
+        assert.equal((await getLoginAs(getRequest("localhost:3100", "localhost:3000"))).status, 200);
       });
     });
 

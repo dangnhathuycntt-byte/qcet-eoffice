@@ -113,4 +113,13 @@ describe('outbox lease (locked_at)', () => {
     assert.equal((await prisma.outboxEvent.findUniqueOrThrow({ where: { id: listed.id } })).status, OutboxStatus.PENDING);
     assert.equal((await prisma.outboxEvent.findUniqueOrThrow({ where: { id: other.id } })).status, OutboxStatus.PROCESSING);
   });
+
+  test('danh sách id rỗng không thu hồi gì (không hiểu thành mọi sự kiện)', async () => {
+    const stuck = await processingEvent('empty_ids', { lockedAt: minutesBefore(30), availableAt: minutesBefore(31) });
+
+    const result = await recoverExpiredOutboxLeases(prisma, { leaseMs: LEASE_MS, maxRetries: 5, now: NOW, ids: [] });
+
+    assert.deepEqual(result, { requeued: 0, deadLettered: 0 });
+    assert.equal((await prisma.outboxEvent.findUniqueOrThrow({ where: { id: stuck.id } })).status, OutboxStatus.PROCESSING);
+  });
 });

@@ -6,7 +6,6 @@ import {
   LEGACY_SESSION_COOKIE_NAME,
 } from '@/lib/jwt-edge';
 import { verifySessionTokenAsync } from '@/lib/jwt-session';
-import { sanitizeRedirectUrl } from '@qcet/shared/lib/login-helpers';
 
 /**
  * Next.js Middleware runtime (official API for the installed Next.js 15.5:
@@ -152,15 +151,6 @@ export async function middleware(request: NextRequest) {
       status,
       headers: { 'x-request-id': requestId },
     });
-  }
-
-  /** Redirect response that echoes the correlation ID header. */
-  function redirectWithCorrelation(url: URL | string, statusCode?: number) {
-    const res = statusCode
-      ? NextResponse.redirect(url, statusCode)
-      : NextResponse.redirect(url);
-    res.headers.set('x-request-id', requestId);
-    return res;
   }
 
   // 2. Centralized API route defense-in-depth protection

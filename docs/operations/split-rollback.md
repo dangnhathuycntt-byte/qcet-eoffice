@@ -14,7 +14,7 @@ không hạ CSDL khi đang có sự cố.
 | Cổng host `127.0.0.1:${PORT:-3001}` | `qcet-app` | `qcet-web` (`/api` gọi vào cổng này được web chuyển tiếp tới api) |
 | Tunnel | mọi đường dẫn tới `qcet-app:3000` | `^/api(/|$)` tới `qcet-api:3000`, còn lại tới `qcet-web:3000`, cho cả 3 hostname |
 | Biến môi trường mới | | không có biến bắt buộc mới trong `.env.production`; compose tự đặt `API_INTERNAL_URL=http://qcet-api:3000` và `SERVICE_NAME` |
-| CSDL | | một migration cộng thêm: cột `outbox_events.locked_at` (timestamptz, cho phép null) và chỉ mục, để thu hồi sự kiện kẹt ở `PROCESSING` |
+| CSDL | | một migration cộng thêm: cột `outbox_events.locked_at` (timestamptz, cho phép null, không thêm chỉ mục), để thu hồi sự kiện kẹt ở `PROCESSING` |
 
 Workflow vận hành (`migrate-production`, `host-diagnostics`, `db-inspect`, `file-object-expand`, `backfill-*`, `start-clamav`)
 nay ghim container `qcet-eoffice-api`.
@@ -59,7 +59,9 @@ Không dùng `--remove-orphans` cho tới khi quyết định bỏ hẳn bản c
 
    Kiểm: trang đăng nhập, `/api/health`, Auth.js providers, `/api/auth/me`, trang `/tasks`, tạo nhiệm vụ `[SMOKE]…`,
    tải tệp, tải lại, lưu trữ nhiệm vụ, một lượt Trợ lý với sự kiện stream tới rải theo thời gian (không bị gom).
-3. Log: `docker logs qcet-eoffice-api 2>&1 | grep '"service":"qcet-api"' | tail` và tương tự cho web.
+   `--write` tạo nhiệm vụ thật (có thể gửi thông báo cho người của đơn vị chủ trì): thêm `--unit <id đơn vị thử>`.
+3. Log: `docker logs qcet-eoffice-api 2>&1 | grep '"service":"qcet-api"' | tail`. Web chỉ ghi dòng JSON khi vẽ trang lỗi
+   (`app.request.error`, `"service":"qcet-web"`, kèm `requestId`); còn lại là log khởi động của Next.
 4. Worker: chỉ `qcet-eoffice-api` ghi log outbox/quét tệp; `docker compose ps` chỉ có một `qcet-api`.
 
 ## 5. Quay lại bản một ứng dụng
@@ -85,6 +87,8 @@ docker compose -f /tmp/compose.pre-split.yml --project-directory . up -d --no-bu
 ### CSDL khi quay lại
 
 - Không hạ migration. Cột `outbox_events.locked_at` chỉ cộng thêm và cho phép null; bản cũ (Prisma chọn cột tường minh) bỏ qua nó.
+- Container cũ chạy `prisma migrate deploy` khi khởi động với thư mục migrations cũ (thiếu `20261019090000_outbox_locked_at`):
+  Prisma báo `No pending migrations to apply` và thoát 0 (đã thử trên CSDL thử, Prisma 6.19), nên bản cũ khởi động bình thường.
 - Sự kiện đang `PROCESSING` lúc dừng `qcet-api` sẽ không được bản cũ thu hồi (bản cũ không có lease). Trước khi bật bản cũ:
 
   ```sql

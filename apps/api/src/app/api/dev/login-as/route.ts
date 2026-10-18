@@ -9,9 +9,16 @@ const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 /**
  * Chỉ mở khi chạy `next dev` trên máy cục bộ: bản production (`NODE_ENV=production`) luôn 404,
  * và Host phải là localhost để một dev server lỡ mở ra mạng không thành cửa sau.
+ * Qua rewrite của web, Host là địa chỉ api (localhost) còn Host gốc nằm ở `x-forwarded-host` (web ghi đè giá trị
+ * client gửi), nên header này nếu có cũng phải là localhost.
  */
 function isLocalDev(req: NextRequest): boolean {
-  return process.env.NODE_ENV === "development" && LOCAL_HOST.test(req.headers.get("host") ?? "");
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  return (
+    process.env.NODE_ENV === "development" &&
+    LOCAL_HOST.test(req.headers.get("host") ?? "") &&
+    (forwardedHost === null || LOCAL_HOST.test(forwardedHost))
+  );
 }
 
 const notFound = () => new NextResponse(null, { status: 404 });

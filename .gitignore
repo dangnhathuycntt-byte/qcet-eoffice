@@ -61,6 +61,11 @@ qcet-backend-api/
 /uploads/
 /test_storage_*/
 /test_uploads_*/
+# test của từng app chạy với cwd apps/<app> (scripts/run-tests.mjs)
+/apps/*/storage/
+/apps/*/uploads/
+/apps/*/test_storage_*/
+/apps/*/test_uploads_*/
 
 # Ephemeral agent artifacts and temporary backups
 /artifacts/

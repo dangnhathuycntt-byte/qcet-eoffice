@@ -515,7 +515,7 @@ export interface RecoverExpiredOutboxLeasesOptions {
   /** Cùng giới hạn với worker: lần thu hồi chạm giới hạn thì FAILED thay vì lặp mãi (handler làm sập tiến trình). */
   maxRetries: number;
   now?: Date;
-  /** Chỉ xét các sự kiện này (chạy thử theo id); bỏ trống: mọi sự kiện. */
+  /** Chỉ xét các sự kiện này (chạy thử theo id); không truyền: mọi sự kiện; mảng rỗng: không xét sự kiện nào. */
   ids?: string[];
 }
 
@@ -528,12 +528,14 @@ export async function recoverExpiredOutboxLeases(
   client: DbClient,
   options: RecoverExpiredOutboxLeasesOptions
 ): Promise<{ requeued: number; deadLettered: number }> {
+  // Danh sách id rỗng là "không có gì để xét", không phải "mọi sự kiện": tránh thu hồi lease của cả bảng do nhầm
+  if (options.ids && options.ids.length === 0) return { requeued: 0, deadLettered: 0 };
   const db = client ?? defaultPrisma;
   const now = options.now ?? new Date();
   const cutoff = new Date(now.getTime() - options.leaseMs);
   const expired: Prisma.OutboxEventWhereInput = {
     status: OutboxStatus.PROCESSING,
-    ...(options.ids?.length ? { id: { in: options.ids } } : {}),
+    ...(options.ids ? { id: { in: options.ids } } : {}),
     OR: [{ lockedAt: { lt: cutoff } }, { lockedAt: null, availableAt: { lt: cutoff } }],
   };
   const lastError = `Lease hết hạn sau ${options.leaseMs} ms: worker dừng khi đang xử lý`;
