@@ -8,8 +8,8 @@
  * Emits one JSON line: { volume, iterations, p50, p75, p95, min, max }.
  */
 import { NextRequest } from "next/server";
-import { GET as getTasks } from "../../src/app/api/tasks/route";
-import { signSessionToken, SESSION_COOKIE_NAME } from "../../src/lib/jwt-session";
+import { GET as getTasks } from "../../apps/api/src/app/api/tasks/route";
+import { signSessionToken, SESSION_COOKIE_NAME } from "../../apps/api/src/lib/jwt-session";
 import { prisma } from "../../packages/db/src/prisma";
 import { TaskScope } from "@prisma/client";
 

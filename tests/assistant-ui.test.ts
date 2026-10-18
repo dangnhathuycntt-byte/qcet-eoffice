@@ -38,20 +38,20 @@ import {
   ASSISTANT_NO_ANSWER_MESSAGE,
   ASSISTANT_SERVER_ERROR_MESSAGE,
   type ThreadMessage,
-} from "../src/components/assistant/assistant-model";
-import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "../src/components/agent-chat/agent-chat-parts";
-import { nextRevealCount, revealSpeed, safeRevealEnd } from "../src/components/agent-chat/use-smooth-text";
-import { AssistantRequestError } from "../src/components/assistant/assistant-client";
-import { AssistantComposer, AssistantFootnote } from "../src/components/assistant/assistant-composer";
-import { AgentModelsProvider } from "../src/components/agent-chat/agent-models";
+} from "../apps/web/src/components/assistant/assistant-model";
+import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "../apps/web/src/components/agent-chat/agent-chat-parts";
+import { nextRevealCount, revealSpeed, safeRevealEnd } from "../apps/web/src/components/agent-chat/use-smooth-text";
+import { AssistantRequestError } from "../apps/web/src/components/assistant/assistant-client";
+import { AssistantComposer, AssistantFootnote } from "../apps/web/src/components/assistant/assistant-composer";
+import { AgentModelsProvider } from "../apps/web/src/components/agent-chat/agent-models";
 import { parseAgentModels } from "@qcet/shared/domain/agent/agent-models";
 import { TASK_AGENT_ATTACHMENT_ACCEPT } from "@qcet/shared/domain/tasks/task-agent-attachments";
-import { AssistantThread } from "../src/components/assistant/assistant-thread";
-import { AssistantHeader } from "../src/components/assistant/assistant-header";
-import { AssistantStartList } from "../src/components/assistant/assistant-start";
-import { listErrorText } from "../src/components/assistant/use-assistant-history";
-import { isAssistantPath, isRouteActive, resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
-import { CANONICAL_ROUTES } from "../src/lib/navigation/canonical-navigation-registry";
+import { AssistantThread } from "../apps/web/src/components/assistant/assistant-thread";
+import { AssistantHeader } from "../apps/web/src/components/assistant/assistant-header";
+import { AssistantStartList } from "../apps/web/src/components/assistant/assistant-start";
+import { listErrorText } from "../apps/web/src/components/assistant/use-assistant-history";
+import { isAssistantPath, isRouteActive, resolveBreadcrumb } from "../apps/web/src/lib/navigation/active-matcher";
+import { CANONICAL_ROUTES } from "../apps/web/src/lib/navigation/canonical-navigation-registry";
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf8");
@@ -356,7 +356,7 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
   });
 
   test("màn đầu không có câu tiêu đề lớn, chỉ ô soạn và danh sách như Linear Agent", () => {
-    for (const rel of ["src/components/assistant/assistant-start.tsx", "src/components/assistant/assistant-workspace.tsx"]) {
+    for (const rel of ["apps/web/src/components/assistant/assistant-start.tsx", "apps/web/src/components/assistant/assistant-workspace.tsx"]) {
       const src = read(rel);
       assert.equal(src.includes("Thầy/Cô cần tìm gì trong công việc?"), false, `${rel}: người dùng đã bỏ câu tiêu đề`);
       assert.equal(src.includes("AssistantStartHeading"), false, rel);
@@ -372,7 +372,7 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
       assert.ok(html.includes(example.title) && html.includes(example.description), `thiếu thẻ: ${example.title}`);
     }
     assert.equal(html.includes("Cuộc trò chuyện gần đây"), false);
-    const src = read("src/components/assistant/assistant-start.tsx");
+    const src = read("apps/web/src/components/assistant/assistant-start.tsx");
     assert.ok(src.includes('"create-task": IconSidebarTasks') && src.includes('"pending-documents": IconSidebarInboxIn'), "icon cùng bộ với sidebar");
     assert.equal(/from "lucide-react"/.test(src) && /Calendar|TriangleAlert|Inbox/.test(src.split("\n").find((l) => l.includes("lucide-react")) ?? ""), false, "không còn icon Lucide của gợi ý cũ");
     assert.ok(src.includes("prompt ? onSuggest(prompt) : onCreateTask()"), "thẻ hỏi gửi câu, thẻ tạo nhiệm vụ mở hộp tạo");
@@ -395,23 +395,23 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
   });
 
   test("thẻ \"Tạo nhiệm vụ\" mở hộp tạo nhiệm vụ chuẩn, tải khi cần và báo đã tạo kèm lối mở", () => {
-    const launcher = read("src/components/assistant/use-create-task-launcher.tsx");
+    const launcher = read("apps/web/src/components/assistant/use-create-task-launcher.tsx");
     assert.ok(launcher.includes('import("@/components/tasks/create/create-task-modal")'), "tải hộp khi cần, không nặng lúc mở trang");
     assert.ok(launcher.includes("createTaskMounted ? (") && launcher.includes("isOpen={createTaskOpen}"), "gắn từ lần bấm đầu, đóng còn hiệu ứng");
     assert.ok(launcher.includes('label: "Mở nhiệm vụ"'), "tạo xong có lối mở nhiệm vụ");
-    assert.ok(read("src/components/assistant/assistant-workspace.tsx").includes("useCreateTaskLauncher()"));
+    assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes("useCreateTaskLauncher()"));
     // Khung chat nổi không có chip gợi ý (17/10) nhưng thẻ đề xuất nhiệm vụ mở hộp ngay trên trang đang xem (ADR-010)
-    const dock = read("src/components/assistant/assistant-dock.tsx");
+    const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");
     // Tạo xong thì thẻ của đúng đề xuất đó chuyển sang "Đã tạo"
     const opensProposal = "openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))";
     assert.ok(dock.includes("useCreateTaskLauncher()") && dock.includes(opensProposal) && dock.includes("{createTaskModal}"));
-    assert.ok(read("src/components/assistant/assistant-workspace.tsx").includes(opensProposal));
+    assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes(opensProposal));
     // Bỏ qua thẻ được ở cả hai nơi; trạng thái thẻ lưu ở máy chủ, bỏ qua lưu lỗi thì trả thẻ về
     for (const file of ["assistant-dock.tsx", "assistant-workspace.tsx"]) {
-      assert.ok(read(`src/components/assistant/${file}`).includes("onDismissProposal={chat.proposalDismissed}"), file);
+      assert.ok(read(`apps/web/src/components/assistant/${file}`).includes("onDismissProposal={chat.proposalDismissed}"), file);
     }
-    assert.ok(read("src/components/assistant/assistant-dock-panel.tsx").includes("onDismissProposal={onDismissProposal}"));
-    const chatHook = read("src/components/assistant/use-assistant-chat.ts");
+    assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onDismissProposal={onDismissProposal}"));
+    const chatHook = read("apps/web/src/components/assistant/use-assistant-chat.ts");
     assert.ok(chatHook.includes("saveProposal(replyKey, { index, taskId: task.id }") && chatHook.includes("saveProposal(replyKey, { index, dismissed }"));
     assert.ok(chatHook.includes("setThread((prev) => setProposalDismissed(prev, replyKey, index, !dismissed))"), "lưu lỗi thì hoàn lại");
     // Tên do mô hình đặt cập nhật thanh đầu (đúng cuộc đang mở) và danh sách
@@ -461,9 +461,9 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     assert.ok(picker.includes("Model: ") && picker.includes("Claude Sonnet 4.6"), "nút hiện model mặc định khi chưa chọn");
     assert.equal(composer(parseAgentModels(undefined, "sonnet-4.6")).includes("Model: "), false, "một model thì không có bộ chọn");
     assert.equal(composer(null).includes("Model: "), false, "Trợ lý tắt thì không có bộ chọn");
-    const chat = read("src/components/assistant/use-assistant-chat.ts");
+    const chat = read("apps/web/src/components/assistant/use-assistant-chat.ts");
     assert.ok(chat.includes("const { model } = useAgentModel();") && chat.includes("...(model ? { model } : {}),"), "lượt gửi mang model đã chọn");
-    const route = read("src/app/api/assistant/chat/route.ts");
+    const route = read("apps/api/src/app/api/assistant/chat/route.ts");
     assert.ok(route.includes("!isAllowedAgentModel(getAgentModelCatalog(), body.model)") && route.includes('"MODEL_NOT_ALLOWED"'), "máy chủ kiểm model theo danh sách cho phép");
   });
 
@@ -506,15 +506,15 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
       }),
     );
     assert.ok(thread.indexOf("ghi-chu.txt") < thread.indexOf("Tóm tắt giúp"), "tệp đã gửi hiện trên câu hỏi");
-    const chat = read("src/components/assistant/use-assistant-chat.ts");
+    const chat = read("apps/web/src/components/assistant/use-assistant-chat.ts");
     assert.ok(
       chat.includes("if (fromComposer && restored && attachmentsRef.current.length === 0) setAttachments(sentAttachments);"),
       "máy chủ từ chối thì trả tệp về ô soạn cùng chữ, chỉ khi ô soạn còn trống",
     );
-    assert.ok(read("src/components/assistant/assistant-workspace.tsx").includes("void chat.send(text, restoreDraft, []);"), "gợi ý không lấy tệp đang chờ");
-    const dock = read("src/components/assistant/assistant-dock.tsx");
+    assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes("void chat.send(text, restoreDraft, []);"), "gợi ý không lấy tệp đang chờ");
+    const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");
     assert.equal(dock.match(/chat\.clearAttachments\(\);/g)?.length, 2, "khung nổi bỏ tệp chờ cùng chữ nháp khi mở cuộc mới hoặc cuộc khác");
-    assert.ok(read("src/components/assistant/assistant-dock-panel.tsx").includes("onAddAttachments={onAddAttachments}"), "khung chat nổi cũng gửi được tệp");
+    assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onAddAttachments={onAddAttachments}"), "khung chat nổi cũng gửi được tệp");
   });
 
   test("Thử lại câu hỏi từng kèm tệp mà tệp không còn trong phiên thì không gửi thiếu tệp", () => {
@@ -527,7 +527,7 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     assert.equal(retryMissesAttachments(userThreadMessage("u1", "Ảnh này nói gì?"), reply), true, "mở lại từ lịch sử: tệp đã mất");
     assert.equal(retryMissesAttachments(userThreadMessage("u1", "Ảnh này nói gì?", [{ id: "a1", file, kind: "image" }]), reply), false, "còn tệp trong phiên");
     assert.equal(retryMissesAttachments(userThreadMessage("u1", "Việc trễ hạn?"), { ...reply, steps: [] }), false, "câu hỏi không kèm tệp");
-    const chat = read("src/components/assistant/use-assistant-chat.ts");
+    const chat = read("apps/web/src/components/assistant/use-assistant-chat.ts");
     assert.ok(chat.includes("setSendError(ASSISTANT_RETRY_ATTACHMENTS_GONE);"), "báo đính kèm lại thay vì gửi");
     assert.ok(
       chat.includes("if (id === activeIdRef.current) {") && chat.includes("return sent ? { ...message, attachments: sent } : message;"),
@@ -536,10 +536,10 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
   });
 
   test("Agent tạo nhiệm vụ dùng chung bộ chọn model và thẻ tệp với Trợ lý", () => {
-    const panel = read("src/components/tasks/create/task-agent-panel.tsx");
+    const panel = read("apps/web/src/components/tasks/create/task-agent-panel.tsx");
     assert.ok(panel.includes('<AgentModelPicker positionerClassName="z-50" />') && panel.includes("...(model ? { model } : {}),"), "chọn model ở ô soạn (menu nổi trên hộp z-50) và gửi kèm lượt");
     assert.ok(panel.includes('from "@/components/agent-chat/agent-attachments"') && !panel.includes("function AttachmentCard"), "thẻ tệp dùng chung");
-    const route = read("src/app/api/tasks/agent-draft/route.ts");
+    const route = read("apps/api/src/app/api/tasks/agent-draft/route.ts");
     assert.ok(route.includes("!isAllowedAgentModel(getAgentModelCatalog(), body.model)"), "máy chủ kiểm model theo cùng danh sách");
   });
 
@@ -566,7 +566,7 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     assert.ok(html.includes("Trợ lý AI chỉ đọc dữ liệu Thầy/Cô được xem và có thể sai. Kiểm tra lại ở nguồn."));
     assert.equal(html.includes("·"), false);
     // Chỉ ở màn đầu, ở đáy khung như ChatGPT (ngoài cụm căn giữa); đang chat thì ẩn, ô soạn có đệm dưới thay chỗ
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.ok(/<\/div>\s*\{\/\* Chân trang chỉ ở màn đầu[^}]*\*\/\}\s*\{start \? <AssistantFootnote \/> : null\}\s*<\/div>/.test(workspace), "chân trang là con trực tiếp của khung cuộn, sau cụm căn giữa, chỉ ở màn đầu");
     assert.ok(workspace.includes('!start && "pb-4"'), "đang chat: ô soạn cách đáy 16px");
   });
@@ -597,7 +597,7 @@ describe("Trợ lý UI: đường dẫn là nguồn chuẩn của cuộc đang m
   });
 
   test("dừng/hủy lượt trước khi có mã cuộc vẫn làm mới lịch sử, nhưng không làm mới sau khi đã rời trang", () => {
-    const chat = read("src/components/assistant/use-assistant-chat.ts");
+    const chat = read("apps/web/src/components/assistant/use-assistant-chat.ts");
     assert.ok(
       chat.includes("if (activeIdRef.current || (controller.signal.aborted && !unmountedRef.current)) void callbacksRef.current.onTurnSettled();"),
       "điều kiện làm mới phải gồm lượt đã dừng/hủy",
@@ -606,16 +606,16 @@ describe("Trợ lý UI: đường dẫn là nguồn chuẩn của cuộc đang m
   });
 
   test("khung làm việc lấy cuộc từ đường dẫn, Esc đi qua isStopKey, lượt mới luôn cuộn xuống", () => {
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.ok(workspace.includes("usePathname()") && workspace.includes("conversationIdFromPath(pathname)"), "cuộc đang mở phải theo đường dẫn");
     assert.ok((workspace.match(/stickToBottomRef\.current = true/g) ?? []).length >= 2, "gửi và gợi ý đều phải cuộn xuống");
-    const composer = read("src/components/assistant/assistant-composer.tsx");
+    const composer = read("apps/web/src/components/assistant/assistant-composer.tsx");
     assert.ok(composer.includes("isStopKey(event)"));
     assert.equal(/safe-area-inset-bottom/.test(composer), false, "đáy điện thoại đã do app-shell đệm, không đệm hai lần");
   });
 
   test("đổi tên kết thúc bằng phím thì trả tiêu điểm về nút '…'; bấm chỗ khác thì không cướp tiêu điểm", () => {
-    const header = read("src/components/assistant/assistant-header.tsx");
+    const header = read("apps/web/src/components/assistant/assistant-header.tsx");
     assert.ok(header.includes("restoreFocusRef.current = true"), "Enter/Esc phải đánh dấu trả tiêu điểm");
     assert.ok(header.includes("moreTriggerRef.current?.focus()"), "phải đưa tiêu điểm về nút '…'");
     assert.ok(header.includes("<MenuTrigger asChild ref={moreTriggerRef}>"), "nút '…' phải có ref");
@@ -624,31 +624,31 @@ describe("Trợ lý UI: đường dẫn là nguồn chuẩn của cuộc đang m
   });
 
   test("đổi tên so với tên lúc mở ô (không so với tiêu đề hiện tại), và 'Đổi tên' tắt khi tiêu đề thật chưa tải xong", () => {
-    const header = read("src/components/assistant/assistant-header.tsx");
+    const header = read("apps/web/src/components/assistant/assistant-header.tsx");
     assert.ok(header.includes("renameBaseRef.current = title ?? \"\""), "lưu tên lúc mở ô");
     assert.ok(header.includes("next !== renameBaseRef.current"), "so với tên đã lưu");
     assert.equal(/next !== title\b/.test(header), false, "không so với tiêu đề hiện tại");
     assert.ok(header.includes("disabled={titleLoading}"), "mục Đổi tên bị vô hiệu khi đang tải");
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.ok(workspace.includes("titleLoading={activeId !== null && activeTitle === null}"));
   });
 
   test("tên cuộc đổi xong không ghi đè tiêu đề khi người dùng đã mở cuộc khác", () => {
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.ok(workspace.includes("shouldApplyRenamedTitle(chat.readActiveId(), id)"), "phải kiểm cuộc đang mở sau await");
     assert.equal(/chat\.setActiveTitle\(updated\.title\)/.test(workspace), true);
   });
 
   test("vùng chạm điện thoại 44px cho nút bỏ mục, tải thêm, sao chép, thử lại và cuộc mới", () => {
-    const composer = read("src/components/assistant/assistant-composer.tsx");
+    const composer = read("apps/web/src/components/assistant/assistant-composer.tsx");
     assert.ok(composer.includes("max-md:size-11") && composer.includes("max-md:-my-3"), "nút bỏ mục đang hỏi");
     // Lịch sử trên điện thoại là bottom sheet của menu: mọi hàng (kể cả Tải thêm, Thử lại) cao 40px theo SHEET_POPUP_CLASS
-    assert.ok(read("src/components/assistant/assistant-history-menu.tsx").includes("mobileSheet"), "lịch sử điện thoại");
-    const thread = read("src/components/assistant/assistant-thread.tsx");
+    assert.ok(read("apps/web/src/components/assistant/assistant-history-menu.tsx").includes("mobileSheet"), "lịch sử điện thoại");
+    const thread = read("apps/web/src/components/assistant/assistant-thread.tsx");
     assert.ok(thread.includes("phoneTouchTarget"), "sao chép bật vùng chạm điện thoại");
     assert.ok(thread.includes('onClick={onNewChat} className="max-md:h-11"'), "nút cuộc mới khi lỗi");
     assert.ok(thread.includes("max-md:[&_button]:min-h-11"), "Thử lại của lượt lỗi");
-    const header = read("src/components/assistant/assistant-header.tsx");
+    const header = read("apps/web/src/components/assistant/assistant-header.tsx");
     assert.ok(header.includes("max-md:size-11") && header.includes("size-11 md:hidden"), "nút lịch sử, cuộc mới và menu trên điện thoại");
   });
 
@@ -687,7 +687,7 @@ describe("Trợ lý UI: đường dẫn là nguồn chuẩn của cuộc đang m
   });
 
   test("ô soạn ở cùng một vị trí trong cây giao diện cho cả hai trạng thái (không mất tiêu điểm khi có tin đầu)", () => {
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.equal((workspace.match(/<AssistantComposer/g) ?? []).length, 1, "chỉ một ô soạn, đổi biến thể bằng prop");
     assert.ok(workspace.includes('variant={start ? "hero" : "dock"}'));
   });
@@ -729,13 +729,13 @@ describe("Trợ lý UI: thanh đầu trang và menu lịch sử (như Linear Age
     const h1 = html.match(/<h1[^>]*>[\s\S]*?<\/h1>/)?.[0] ?? "";
     assert.ok(h1.includes("Lịch họp tuần này"));
     assert.ok(html.includes('aria-label="Thao tác với cuộc trò chuyện"'));
-    const header = read("src/components/assistant/assistant-header.tsx");
+    const header = read("apps/web/src/components/assistant/assistant-header.tsx");
     assert.ok(header.includes('className="w-56 min-w-0"'), 'menu "…" rộng như các menu "…" khác');
     assert.equal(header.includes('size="icon-sm"'), false, "nút icon cỡ header trang (icon-md) như trang Nhiệm vụ");
   });
 
   test("menu lịch sử: thả xuống từ tên cuộc, nhóm theo ngày, hàng 32px như menu ở thanh dưới; không có mục cuộc mới", () => {
-    const menu = read("src/components/assistant/assistant-history-menu.tsx");
+    const menu = read("apps/web/src/components/assistant/assistant-history-menu.tsx");
     assert.ok(menu.includes("<MenuRoot modal={false} onOpenChange={(open) => open && void refresh()}>"), "không khóa cuộn trang; mở thì làm mới");
     assert.ok(menu.includes('align="start"') && menu.includes('className="w-96 min-w-0 max-h-[min(30rem,var(--available-height))] overflow-y-auto overscroll-contain"'), "rộng 384px như menu ở thanh dưới, cuộn trong menu");
     assert.ok(menu.includes("mobileSheet") && menu.includes('sheetTitle="Lịch sử trò chuyện"'), "điện thoại là bottom sheet");
@@ -749,42 +749,42 @@ describe("Trợ lý UI: thanh đầu trang và menu lịch sử (như Linear Age
     assert.ok(menu.includes('{history.loadingMore ? "Đang tải…" : "Tải thêm"}') && menu.includes("<MenuOptionItem"), "tải thêm không đóng menu");
     assert.ok(menu.includes('{history.status === "error" ? ('), "chỉ lỗi trang đầu có Thử lại");
     assert.ok(menu.includes('<ConversationRowsSkeleton count={3} withTime rowClassName="h-8 pl-9 pr-3 max-md:h-10 max-md:px-3" />'), "skeleton cùng hình hàng");
-    const ui = read("src/components/ui/menu.tsx");
+    const ui = read("apps/web/src/components/ui/menu.tsx");
     assert.ok(ui.includes("export const MenuLinkItem") && ui.includes("<BaseMenu.LinkItem") && ui.includes("closeOnClick = true, ...props"), "ui/menu có hàng liên kết, bấm xong đóng menu");
   });
 
   test("rà soát đối kháng vòng 4 (17/10): mở lại menu không mất trang đã tải, lỗi được đọc, tiêu điểm không rơi, tên cắt có tooltip", () => {
-    const hook = read("src/components/assistant/use-assistant-history.ts");
+    const hook = read("apps/web/src/components/assistant/use-assistant-history.ts");
     assert.ok(hook.includes("setItems((prev) => appendUniqueById(page.items, prev));") && hook.includes("if (!loadedMoreRef.current) setNextCursor(page.nextCursor);"), "làm mới lặng lẽ gộp trang đầu, giữ các cuộc đã Tải thêm và con trỏ");
     assert.ok(/if \(!silent\) \{\n\s+\/\/[^\n]*\n\s+setStatus\("loading"\);\n\s+setError\(null\);/.test(hook), "Thử lại bỏ câu lỗi cũ");
-    const menu = read("src/components/assistant/assistant-history-menu.tsx");
+    const menu = read("apps/web/src/components/assistant/assistant-history-menu.tsx");
     assert.ok(menu.includes('<span className="sr-only">Lịch sử trò chuyện: </span>'), "tên nút nói rõ là mở lịch sử");
     assert.ok(menu.includes('<span role="alert">{history.error}</span>') && menu.includes('<p role="alert" className="px-3 py-1 text-xs text-destructive">'), "lỗi trong menu tự báo");
     assert.ok(menu.includes('popup?.hasAttribute("data-open") && (document.activeElement === document.body'), "Thử lại/Tải thêm mất đi thì tiêu điểm về khung menu");
     assert.ok(menu.includes('<TooltipContent side="top" hidden={!titleCut}>') && menu.includes("onPointerEnter={measure}"), "tên cắt có tooltip");
-    const start = read("src/components/assistant/assistant-start.tsx");
+    const start = read("apps/web/src/components/assistant/assistant-start.tsx");
     assert.ok(start.includes('const showExamples = !examplesHidden && recent.length === 0 && status === "ready";'), "tải lỗi thì chưa biết trống: không hiện thẻ");
     const errorHtml = renderToStaticMarkup(
       React.createElement(AssistantStartList, { items: [], status: "error", error: "Chưa tải được lịch sử.", onRetry: () => undefined, now: new Date(), onSuggest: () => undefined, onCreateTask: () => undefined }),
     );
     assert.ok(errorHtml.includes("Chưa tải được lịch sử.") && errorHtml.includes("Thử lại") && !errorHtml.includes("Bắt đầu với vài gợi ý"), "màn đầu báo lỗi kèm Thử lại");
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.ok(workspace.includes("if (isPhone || document.activeElement !== document.body) return;") && workspace.includes("}, [detailStatus, activeRouteId, isPhone]);"), "chọn cuộc xong tiêu điểm về ô soạn");
   });
 
   test("không còn panel lịch sử trái, xem nhanh hay drawer; màn đầu lấy cuộc gần đây từ cùng danh sách", () => {
-    assert.equal(fs.existsSync(path.join(ROOT, "src/components/assistant/assistant-history-drawer.tsx")), false);
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    assert.equal(fs.existsSync(path.join(ROOT, "apps/web/src/components/assistant/assistant-history-drawer.tsx")), false);
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     for (const gone of ["AssistantHistorySidebar", "AssistantHistorySheet", "useHistoryPeek", "panelOpen"]) {
       assert.equal(workspace.includes(gone), false, `còn ${gone}`);
     }
     assert.ok(workspace.includes("history={history}") && workspace.includes("items={history.items}"));
-    assert.equal(read("src/app/globals.css").includes("data-assistant-peek"), false);
-    assert.equal(read("src/components/layout/global-shortcuts-modal.tsx").includes("Tìm cuộc trò chuyện (trang Trợ lý)"), false, "không còn ô tìm nên bỏ phím /");
+    assert.equal(read("apps/web/src/app/globals.css").includes("data-assistant-peek"), false);
+    assert.equal(read("apps/web/src/components/layout/global-shortcuts-modal.tsx").includes("Tìm cuộc trò chuyện (trang Trợ lý)"), false, "không còn ô tìm nên bỏ phím /");
   });
 
   test("xóa cuộc đang mở từ menu '…': chỉ về cuộc mới khi vẫn đang ở cuộc vừa xóa", () => {
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     const confirm = workspace.slice(workspace.indexOf("const confirmDelete = "), workspace.indexOf("const requestDelete = "));
     assert.ok(confirm.includes("await history.remove(id)"));
     assert.ok(confirm.includes("if (chat.readActiveId() === id) {"), "đã mở cuộc khác trong lúc chờ thì giữ màn đang xem");
@@ -827,7 +827,7 @@ describe("Trợ lý UI: hiển thị trạng thái lượt và nguồn", () => {
   });
 
   test("gửi lại từ 'Thử lại' khi đang có lượt không xóa lỗi đang hiện (chặn trước khi xóa)", () => {
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     const suggest = workspace.slice(workspace.indexOf("const suggest = "), workspace.indexOf("const retry = "));
     const guardAt = suggest.indexOf("if (pending) return;");
     assert.ok(guardAt >= 0, "suggest phải kiểm pending");
@@ -895,7 +895,7 @@ describe("Trợ lý UI: điều hướng và khung trang", () => {
   });
 
   test("mục sidebar nằm sau Lịch công tác và chỉ hiện theo cờ", () => {
-    const src = read("src/components/layout/sidebar-nav-list.tsx");
+    const src = read("apps/web/src/components/layout/sidebar-nav-list.tsx");
     const calendarAt = src.indexOf('id: "calendar"');
     const assistantAt = src.indexOf('id: "assistant"');
     assert.ok(calendarAt > 0 && assistantAt > calendarAt, "Trợ lý phải đứng sau Lịch công tác");
@@ -905,7 +905,7 @@ describe("Trợ lý UI: điều hướng và khung trang", () => {
   });
 
   test("bảng lệnh chỉ thêm mục Trợ lý khi cờ bật và không gán phím tắt", () => {
-    const src = read("src/components/layout/command-search-modal.tsx");
+    const src = read("apps/web/src/components/layout/command-search-modal.tsx");
     const at = src.indexOf('id: "nav-assistant"');
     assert.ok(at > 0, "thiếu mục nav-assistant");
     const block = src.slice(at, at + 600);
@@ -914,14 +914,14 @@ describe("Trợ lý UI: điều hướng và khung trang", () => {
   });
 
   test("app-shell dùng nhánh khung cao cho Trợ lý ở cả bốn chỗ như Hộp thư", () => {
-    const src = read("src/components/layout/app-shell.tsx");
+    const src = read("apps/web/src/components/layout/app-shell.tsx");
     const uses = src.match(/isFullHeightPane/g) ?? [];
     assert.ok(uses.length >= 5, `cần ít nhất 5 chỗ dùng isFullHeightPane (có ${uses.length})`);
     assert.ok(src.includes("const isAssistant = assistantEnabled && isAssistantPath(pathname)"), "cờ tắt thì 404 dùng khung thường có thanh đầu");
   });
 
   test("hai trang server đều chặn khi cờ tắt và kiểm đăng nhập", () => {
-    for (const rel of ["src/app/assistant/page.tsx", "src/app/assistant/[id]/page.tsx"]) {
+    for (const rel of ["apps/web/src/app/assistant/page.tsx", "apps/web/src/app/assistant/[id]/page.tsx"]) {
       const src = read(rel);
       assert.ok(src.includes("(await getRuntimeConfig())?.features.assistant"), `${rel}: thiếu kiểm cờ`);
       assert.ok(src.includes("notFound()"), `${rel}: thiếu notFound`);
@@ -931,13 +931,13 @@ describe("Trợ lý UI: điều hướng và khung trang", () => {
 });
 
 describe("Trợ lý UI: quy tắc giao diện trong mã nguồn", () => {
-  const dir = path.join(ROOT, "src/components/assistant");
+  const dir = path.join(ROOT, "apps/web/src/components/assistant");
   const files = [
-    ...fs.readdirSync(dir).map((name) => path.join("src/components/assistant", name)),
-    "src/app/assistant/page.tsx",
-    "src/app/assistant/[id]/page.tsx",
-    "src/app/assistant/loading.tsx",
-    "src/app/assistant/error.tsx",
+    ...fs.readdirSync(dir).map((name) => path.join("apps/web/src/components/assistant", name)),
+    "apps/web/src/app/assistant/page.tsx",
+    "apps/web/src/app/assistant/[id]/page.tsx",
+    "apps/web/src/app/assistant/loading.tsx",
+    "apps/web/src/app/assistant/error.tsx",
   ];
 
   test("không có cỡ chữ lẻ, palette thô, cỡ chữ ngoài thang (text-sm/base/lg) hay chữ 'Quá hạn'", () => {
@@ -951,7 +951,7 @@ describe("Trợ lý UI: quy tắc giao diện trong mã nguồn", () => {
   });
 
   test("thành phần giao diện không import mã máy chủ", () => {
-    for (const rel of files.filter((f) => f.startsWith("src/components/"))) {
+    for (const rel of files.filter((f) => f.startsWith("apps/web/src/components/"))) {
       const src = read(rel);
       assert.equal(/from ["']@\/server\//.test(src), false, `${rel}: import máy chủ`);
       assert.equal(/from ["']@\/lib\/prisma["']/.test(src), false, `${rel}: import Prisma`);
@@ -960,18 +960,18 @@ describe("Trợ lý UI: quy tắc giao diện trong mã nguồn", () => {
 
   test("không còn file lịch sử cũ (cột, popover, panel trái); lịch sử điện thoại là bottom sheet, không phải hộp thoại", () => {
     for (const old of ["assistant-history-pane.tsx", "assistant-history-popover.tsx", "assistant-history-drawer.tsx"]) {
-      assert.equal(fs.existsSync(path.join(ROOT, "src/components/assistant", old)), false, old);
+      assert.equal(fs.existsSync(path.join(ROOT, "apps/web/src/components/assistant", old)), false, old);
     }
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.equal(workspace.includes("StandardDialog"), false);
   });
 
   test("rà soát đối kháng vòng 2 (17/10): điện thoại không bật bàn phím ảo, tạo nhiệm vụ báo đúng, tên cuộc gần đây có tooltip", () => {
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.ok(workspace.includes("onExamplesDismissed={isPhone ? undefined :") && workspace.includes("if (!isPhone) composerRef.current?.focus();"), "điện thoại không bật bàn phím ảo khi chạm X hay thẻ");
-    assert.ok(read("src/components/assistant/use-create-task-launcher.tsx").includes("if (subtasks && subtasks.failed.length > 0) return;"), "việc con lỗi thì không báo thêm \"đã tạo\"");
-    assert.ok(read("src/components/tasks/create/create-task-modal.tsx").includes("onCreated?.(created, { subtasks });"));
-    assert.ok(read("src/components/assistant/assistant-start.tsx").includes("<TooltipContent side=\"top\" hidden={!titleCut}>"), "tên cuộc gần đây bị cắt có tooltip");
+    assert.ok(read("apps/web/src/components/assistant/use-create-task-launcher.tsx").includes("if (subtasks && subtasks.failed.length > 0) return;"), "việc con lỗi thì không báo thêm \"đã tạo\"");
+    assert.ok(read("apps/web/src/components/tasks/create/create-task-modal.tsx").includes("onCreated?.(created, { subtasks });"));
+    assert.ok(read("apps/web/src/components/assistant/assistant-start.tsx").includes("<TooltipContent side=\"top\" hidden={!titleCut}>"), "tên cuộc gần đây bị cắt có tooltip");
   });
 });
 
@@ -1022,7 +1022,7 @@ describe("Chữ trả lời hiện dần (useSmoothText)", () => {
   });
 
   test("khung tin dùng chữ đã làm mượt và chỉ hiện nguồn, nút sao chép khi chữ đã hiện hết", () => {
-    const thread = read("src/components/assistant/assistant-thread.tsx");
+    const thread = read("apps/web/src/components/assistant/assistant-thread.tsx");
     assert.ok(thread.includes("const reply = useSmoothText(message.content, streaming)"));
     assert.ok(thread.includes("<AgentReplyText text={reply.text}"));
     // Khung suy nghĩ khi đang trả lời cũng chạy dần
@@ -1030,15 +1030,15 @@ describe("Chữ trả lời hiện dần (useSmoothText)", () => {
     assert.ok(thread.includes('<p className="whitespace-pre-wrap">{thinking.text}</p>'));
     assert.ok(thread.includes("const settled = !streaming && !reply.revealing"));
     assert.ok(thread.includes("{settled && message.content ? ("));
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
-    assert.ok(read("src/components/assistant/use-stick-to-bottom.ts").includes("new ResizeObserver("), "bám đáy khi chữ hiện dần làm cột cao lên");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
+    assert.ok(read("apps/web/src/components/assistant/use-stick-to-bottom.ts").includes("new ResizeObserver("), "bám đáy khi chữ hiện dần làm cột cao lên");
     assert.ok(workspace.includes("useStickToBottom(thread, activeId, !start)"), "trang Trợ lý dùng hook bám đáy chung với khung chat nổi");
   });
 });
 
 describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (như Linear)", () => {
   test("khung trang chừa chỗ thanh dưới theo cờ đọc ở server, trừ trang Trợ lý; điện thoại không có", () => {
-    const shell = read("src/components/layout/app-shell.tsx");
+    const shell = read("apps/web/src/components/layout/app-shell.tsx");
     assert.ok(shell.includes('const ASSISTANT_STATUSBAR_RESERVE = "1.75rem";'));
     assert.ok(shell.includes("const showAssistantBar = assistantEnabled && !isAssistant;"), "trang Trợ lý tự là khung chat");
     assert.ok(shell.includes('"--app-statusbar": showAssistantBar ? ASSISTANT_STATUSBAR_RESERVE : "0px"'));
@@ -1046,7 +1046,7 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
     assert.ok(shell.includes("md:h-[calc(100dvh-16px-var(--app-statusbar))]") && shell.includes("md:min-h-[calc(100dvh-44px-var(--app-statusbar))]"), "các khung cao cố định và khung thường đều trừ phần chừa");
     assert.ok(shell.includes('import("@/components/assistant/assistant-dock")') && shell.includes("ssr: false"), "tải sau, không nặng khung trang");
     assert.ok(shell.includes("{assistantEnabled ? <AssistantDock /> : null}"), "luôn gắn khi bật cờ để lượt đang chạy không bị hủy khi sang trang Trợ lý");
-    const layout = read("src/app/layout.tsx");
+    const layout = read("apps/web/src/app/layout.tsx");
     assert.ok(
       layout.includes("const runtimeConfig = await getRuntimeConfig();") &&
         layout.includes("const assistantEnabled = runtimeConfig?.features.assistant ?? false;") &&
@@ -1057,9 +1057,9 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
   });
 
   test("khung chat nổi dùng lại hook chat (không đổi URL), luồng tin, ô soạn; lịch sử chỉ tải khi mở menu", () => {
-    const dock = read("src/components/assistant/assistant-dock.tsx");
-    const panel = read("src/components/assistant/assistant-dock-panel.tsx");
-    assert.ok(read("src/components/assistant/use-assistant-chat.ts").includes("if (syncUrl) window.history.replaceState("), "trang khác không bị đổi URL");
+    const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");
+    const panel = read("apps/web/src/components/assistant/assistant-dock-panel.tsx");
+    assert.ok(read("apps/web/src/components/assistant/use-assistant-chat.ts").includes("if (syncUrl) window.history.replaceState("), "trang khác không bị đổi URL");
     assert.ok(dock.includes("syncUrl: false") && dock.includes("conversationId: activated ? dock?.id : undefined"), "chưa mở khung thì chưa tải chi tiết cuộc nhớ sẵn");
     assert.ok(dock.includes("{hidden ? null : (\n        <aside") && dock.includes("const hidden = isAssistantPath(pathname);"), "trang Trợ lý gỡ hẳn thanh: menu lịch sử đang mở đóng theo, không trôi lên góc trang");
     assert.ok(dock.includes('z-30 hidden h-9 items-center justify-end gap-0.5 bg-sidebar px-2 md:flex"'), "điện thoại không có thanh");
@@ -1076,16 +1076,16 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
       assert.equal(panel.includes(removed), false, `người dùng bỏ cho gọn (17/10): ${removed}`);
     }
     assert.ok(panel.includes("disabled={pending}>") || panel.includes("onClick={onExpand} disabled={pending}"), "đang trả lời thì chưa mở toàn trang");
-    assert.ok(read("src/components/agent-chat/agent-chat-parts.tsx").includes("export function AgentEmptyPattern("), "lưới nền dùng chung với Agent soạn nhiệm vụ");
+    assert.ok(read("apps/web/src/components/agent-chat/agent-chat-parts.tsx").includes("export function AgentEmptyPattern("), "lưới nền dùng chung với Agent soạn nhiệm vụ");
   });
 
   test("rà soát đối kháng vòng 3 (17/10): lớp nổi không bị che, cuộc của tab giữ trong tab, lượt đang chạy không bị bỏ ngang", () => {
-    for (const file of ["src/components/tasks/table/components/batch-action-bar.tsx", "src/components/documents/registry/document-bulk-toolbar.tsx", "src/components/pwa/pwa-sync-status.tsx"]) {
+    for (const file of ["apps/web/src/components/tasks/table/components/batch-action-bar.tsx", "apps/web/src/components/documents/registry/document-bulk-toolbar.tsx", "apps/web/src/components/pwa/pwa-sync-status.tsx"]) {
       assert.ok(read(file).includes("md:bottom-[calc(1.5rem+var(--app-statusbar,0px))]"), `${file}: nổi trên thanh dưới`);
     }
-    assert.ok(read("src/components/pwa/pwa-install-prompt.tsx").includes("md:bottom-[calc(1rem+var(--app-statusbar,0px))]"));
+    assert.ok(read("apps/web/src/components/pwa/pwa-install-prompt.tsx").includes("md:bottom-[calc(1rem+var(--app-statusbar,0px))]"));
 
-    const dock = read("src/components/assistant/assistant-dock.tsx");
+    const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");
     const store = dock.slice(dock.indexOf("function readDockRaw"), dock.indexOf("function parseDock"));
     assert.equal((store.match(/localStorage\.getItem/g) ?? []).length, 1, "bộ nhớ chỉ đọc một lần, sau đó dùng biến của tab");
     assert.ok(store.includes("if (dockValue === undefined)") && store.includes("dockValue = raw;"));
@@ -1095,28 +1095,28 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
     assert.ok(dock.includes("useStickToBottom(thread, activeId, panelOpen && !hidden && !start)"), "khung gắn lại sau trang Trợ lý vẫn bám đáy");
     assert.ok(dock.includes('const composerReady = panelOpen && !hidden && (detailStatus === "idle" || detailStatus === "ready");'), "chờ ô soạn mở khóa rồi mới đưa tiêu điểm");
     assert.ok(dock.includes("if (wasHiddenRef.current && !hidden) reload();"), "từ trang Trợ lý quay lại thì tải lại cuộc");
-    assert.ok(read("src/components/assistant/use-assistant-chat.ts").includes("if (id && !turnRef.current) void openConversation(id);"), "tải lại không chen vào lượt đang chạy");
+    assert.ok(read("apps/web/src/components/assistant/use-assistant-chat.ts").includes("if (id && !turnRef.current) void openConversation(id);"), "tải lại không chen vào lượt đang chạy");
 
-    const workspace = read("src/components/assistant/assistant-workspace.tsx");
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
     assert.ok(workspace.includes("announceConversationChange({ id, title: updated.title });") && workspace.includes("announceConversationChange({ id, deleted: true });"), "trang Trợ lý báo đổi tên, xóa");
     assert.ok(dock.includes("window.addEventListener(ASSISTANT_CONVERSATION_EVENT, onChange);") && dock.includes('if ("deleted" in detail) return newChat();'), "khung bỏ cuộc đã xóa, chip theo tên mới");
 
-    const panel = read("src/components/assistant/assistant-dock-panel.tsx");
+    const panel = read("apps/web/src/components/assistant/assistant-dock-panel.tsx");
     assert.ok(panel.includes("max-md:hidden"), "điện thoại không có khung (thanh dưới cũng ẩn)");
-    assert.ok(panel.includes("stopScope={panelRef}") && read("src/components/assistant/assistant-composer.tsx").includes("stopScope"), "Esc ở trang dưới không dừng lượt của khung");
+    assert.ok(panel.includes("stopScope={panelRef}") && read("apps/web/src/components/assistant/assistant-composer.tsx").includes("stopScope"), "Esc ở trang dưới không dừng lượt của khung");
     assert.ok(panel.includes('<div role="status" aria-live="polite" className="sr-only">'), "trình đọc màn hình biết lượt bắt đầu");
     assert.ok(dock.includes('className="flex h-8 w-full items-center gap-3 rounded-lg px-3'), "hàng lịch sử 32px theo thang");
     assert.ok(dock.includes('<IconSidebarHistory className="size-3.5" />') && !dock.includes('from "lucide-react"'), "icon thanh dưới cùng bộ icon sidebar (lưới 16, nét 1,25px)");
   });
 
   test("skeleton danh sách cuộc trò chuyện là vạch tên (và vạch giờ) như hàng thật, không phải khối xám kín hàng", () => {
-    const skeleton = read("src/components/assistant/conversation-rows-skeleton.tsx");
+    const skeleton = read("apps/web/src/components/assistant/conversation-rows-skeleton.tsx");
     assert.ok(skeleton.includes('<Skeleton className={cn("h-3", TITLE_WIDTHS[i % TITLE_WIDTHS.length])} />'), "vạch tên dài ngắn khác nhau");
     assert.ok(skeleton.includes('<Skeleton className="ml-auto h-2.5 w-8 shrink-0" />'), "vạch giờ bên phải");
     const uses = {
-      "src/components/assistant/assistant-dock.tsx": '<ConversationRowsSkeleton count={3} withTime rowClassName="h-8 px-3" />',
-      "src/components/assistant/assistant-history-menu.tsx": '<ConversationRowsSkeleton count={3} withTime rowClassName="h-8 pl-9 pr-3 max-md:h-10 max-md:px-3" />',
-      "src/components/assistant/assistant-start.tsx": '<ConversationRowsSkeleton count={RECENT_COUNT} withTime className="gap-0.5" rowClassName="h-8 px-4 max-md:h-11" />',
+      "apps/web/src/components/assistant/assistant-dock.tsx": '<ConversationRowsSkeleton count={3} withTime rowClassName="h-8 px-3" />',
+      "apps/web/src/components/assistant/assistant-history-menu.tsx": '<ConversationRowsSkeleton count={3} withTime rowClassName="h-8 pl-9 pr-3 max-md:h-10 max-md:px-3" />',
+      "apps/web/src/components/assistant/assistant-start.tsx": '<ConversationRowsSkeleton count={RECENT_COUNT} withTime className="gap-0.5" rowClassName="h-8 px-4 max-md:h-11" />',
     };
     for (const [file, use] of Object.entries(uses)) {
       const src = read(file);

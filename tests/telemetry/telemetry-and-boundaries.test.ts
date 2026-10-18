@@ -9,16 +9,16 @@ import {
 import {
   ServerLogger,
   serverLogger,
-} from "../../src/telemetry/server";
-import { getMetricRating, WEB_VITAL_THRESHOLDS } from "../../src/telemetry/web-vitals";
-import { ClientTelemetryQueue } from "../../src/telemetry/client";
+} from "../../apps/api/src/telemetry/server";
+import { getMetricRating, WEB_VITAL_THRESHOLDS } from "../../apps/web/src/telemetry/web-vitals";
+import { ClientTelemetryQueue } from "../../apps/web/src/telemetry/client";
 import {
   POST,
   OPTIONS,
-} from "../../src/app/api/telemetry/route";
+} from "../../apps/api/src/app/api/telemetry/route";
 import {
   parseTelemetryEvents,
-} from "../../src/telemetry/schemas";
+} from "../../apps/api/src/telemetry/schemas";
 
 describe("Telemetry & Error Boundaries Comprehensive Test Suite", () => {
   // =========================================================================

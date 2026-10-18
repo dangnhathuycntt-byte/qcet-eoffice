@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { getPrivateStorageDir, resolveSafePrivatePath, validateMimeType, detectMimeType, ALLOWED_MIME_TYPES } from "../../src/storage/private-files";
+import { getPrivateStorageDir, resolveSafePrivatePath, validateMimeType, detectMimeType, ALLOWED_MIME_TYPES } from "../../apps/api/src/storage/private-files";
 
 const TEST_STORAGE_ROOT = path.resolve("./test_storage_boundary_sandbox");
 const TEST_PRIVATE_DIR = path.join(TEST_STORAGE_ROOT, "private");
@@ -25,7 +25,7 @@ describe("Private / Public File Storage Boundary Tests", () => {
 
   describe("1. Audit public/ Directory Boundary (Zero Confidential Files)", () => {
     it("should ensure public/documents directory does not exist", () => {
-      const publicDocsPath = path.resolve(process.cwd(), "public/documents");
+      const publicDocsPath = path.resolve(process.cwd(), "apps/web/public/documents");
       assert.equal(
         fs.existsSync(publicDocsPath),
         false,
@@ -34,7 +34,7 @@ describe("Private / Public File Storage Boundary Tests", () => {
     });
 
     it("should ensure zero confidential or operational files (.doc, .docx, .xls, .xlsx, .pdf) in public/", () => {
-      const publicRoot = path.resolve(process.cwd(), "public");
+      const publicRoot = path.resolve(process.cwd(), "apps/web/public");
       const forbiddenExts = new Set([".doc", ".docx", ".xls", ".xlsx", ".pdf", ".env", ".key"]);
 
       function scanDir(dir: string): string[] {

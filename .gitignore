@@ -1,5 +1,5 @@
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 .yarn/cache
@@ -7,8 +7,8 @@
 # testing
 /coverage
 
-# next.js
-/.next/
+# next.js (gốc repo và từng app trong apps/)
+.next/
 /out/
 
 # production
@@ -93,11 +93,11 @@ ds-bundle/
 
 
 # Playwright E2E
-/.next-e2e/
+.next-e2e/
 /e2e/.tmp/
 /playwright/.auth/
 /test-results/
 /playwright-report/
 # Ảnh chụp và log của Playwright MCP khi kiểm giao diện
 /.playwright-mcp/
-/.next-build/
+.next-build/

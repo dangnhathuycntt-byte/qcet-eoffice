@@ -14,7 +14,7 @@ function findRoutes(dir, fileList = []) {
   return fileList;
 }
 
-const routes = findRoutes('src/app/api');
+const routes = findRoutes('apps/api/src/app/api');
 console.log(`Found ${routes.length} route files.`);
 
 let methodCount = 0;

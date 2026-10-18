@@ -39,7 +39,7 @@ describe("server-api: header chuyển sang API", () => {
 });
 
 describe("server-api: địa chỉ API nội bộ", () => {
-  const saved = { API_INTERNAL_URL: process.env.API_INTERNAL_URL, PORT: process.env.PORT };
+  const saved = { API_INTERNAL_URL: process.env.API_INTERNAL_URL, API_PORT: process.env.API_PORT, NODE_ENV: process.env.NODE_ENV };
   afterEach(() => {
     for (const [key, value] of Object.entries(saved)) {
       if (value === undefined) delete process.env[key];
@@ -52,9 +52,15 @@ describe("server-api: địa chỉ API nội bộ", () => {
     assert.equal(apiInternalUrl(), "http://qcet-api:3000");
   });
 
-  test("chưa đặt API_INTERNAL_URL thì gọi chính tiến trình qua PORT", () => {
+  test("dev chưa đặt API_INTERNAL_URL thì gọi API ở cổng API_PORT", () => {
     delete process.env.API_INTERNAL_URL;
-    process.env.PORT = "3001";
-    assert.equal(apiInternalUrl(), "http://127.0.0.1:3001");
+    process.env.API_PORT = "3101";
+    assert.equal(apiInternalUrl(), "http://127.0.0.1:3101");
+  });
+
+  test("production thiếu API_INTERNAL_URL thì báo lỗi, không tự gọi lại web", () => {
+    delete process.env.API_INTERNAL_URL;
+    (process.env as Record<string, string>).NODE_ENV = "production";
+    assert.throws(() => apiInternalUrl(), /API_INTERNAL_URL/);
   });
 });

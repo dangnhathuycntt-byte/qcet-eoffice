@@ -17,7 +17,7 @@ import path from "node:path";
 import { boundaryViolations } from "./architecture-boundaries.mjs";
 
 const ROOT_DIR = process.cwd();
-const SRC_DIR = path.join(ROOT_DIR, "src");
+const APPS_SRC_DIRS = ["web", "api"].map((app) => path.join(ROOT_DIR, "apps", app, "src"));
 const PACKAGES_DIR = path.join(ROOT_DIR, "packages");
 const SCRIPTS_DIR = path.join(ROOT_DIR, "scripts");
 const BASELINE_PATH = path.join(SCRIPTS_DIR, "design-lint-baseline.json");
@@ -74,7 +74,7 @@ const DESIGN_RULES = [
   {
     id: "icon-stroke-width",
     message:
-      "Lucide icon stroke is 1.5, set once by LucideProvider in src/app/layout.tsx. Drop the strokeWidth prop.",
+      "Lucide icon stroke is 1.5, set once by LucideProvider in apps/web/src/app/layout.tsx. Drop the strokeWidth prop.",
     test: (line) =>
       /strokeWidth=\{(?!1\.5\b)[\d.]+\}/.test(line) || /strokeWidth="(?!1\.5")[\d.]+"/.test(line),
   },
@@ -141,7 +141,7 @@ const DESIGN_RULES = [
     id: "no-raw-control",
     message:
       "Raw form control. Use Button / Input / Textarea / Select / Checkbox from @/components/ui (they carry size, focus ring and touch target); a custom hit area (row, cell, card, tab) is Pressable. If neither fits, add `design-lint-ignore no-raw-control: <reason>`.",
-    appliesTo: (relPath) => !relPath.startsWith("src/components/ui/"),
+    appliesTo: (relPath) => !relPath.startsWith("apps/web/src/components/ui/"),
     test: (line) =>
       /<(?:button|select|textarea)\b/.test(line) ||
       (/<input\b/.test(line) && !/type=["'](?:hidden|file)["']/.test(line)),
@@ -234,11 +234,11 @@ function lintFile(filePath) {
 
   const content = fs.readFileSync(filePath, "utf8");
   const lines = content.split("\n");
-  const isDesignSource = relPath.startsWith("src/") || /^packages\/[^/]+\/src\//.test(relPath);
+  const isDesignSource = /^(?:apps|packages)\/[^/]+\/src\//.test(relPath);
 
   const isClientComponent = /["']use client["']/.test(lines.slice(0, 5).join("\n"));
-  const isInsideComponents = relPath.startsWith("src/components");
-  const isInsideDomain = relPath.startsWith("src/domain") || relPath.startsWith("src/server/domain") || relPath.startsWith("packages/shared/src/domain");
+  const isInsideComponents = relPath.startsWith("apps/web/src/components");
+  const isInsideDomain = relPath.startsWith("apps/api/src/domain") || relPath.startsWith("apps/api/src/server/domain") || relPath.startsWith("packages/shared/src/domain");
 
   lines.forEach((lineText, idx) => {
     const lineNum = idx + 1;
@@ -273,8 +273,8 @@ function lintFile(filePath) {
     }
   });
 
-  // FE/BE boundary (file trong src/app không chạm DB, UI không import src/server,
-  // lib/domain/server không import UI, src/lib không chứa file server-only).
+  // Ranh giới web/api/package (scripts/architecture-boundaries.mjs): web không chạm mã server,
+  // route API không chạm DB trực tiếp, app không import app khác, package không import app.
   for (const violation of boundaryViolations(relPath.split(path.sep).join("/"), content)) {
     logError(filePath, violation.line, violation.message);
   }
@@ -293,7 +293,7 @@ if (ONLY_FILES) {
     if (fs.existsSync(fullPath) && /\.(ts|tsx|js|mjs|json)$/.test(fullPath)) lintFile(fullPath);
   }
 } else {
-  scanDirectory(SRC_DIR);
+  for (const dir of APPS_SRC_DIRS) scanDirectory(dir);
   scanDirectory(PACKAGES_DIR);
   scanDirectory(SCRIPTS_DIR);
 }

@@ -24,8 +24,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@qcet/db/prisma';
 import { UserRole } from '@prisma/client';
 
-import { middleware } from '../src/middleware';
-import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { middleware } from './helpers/split-middleware';
+import { signSessionToken, SESSION_COOKIE_NAME } from '../apps/api/src/lib/jwt-session';
 
 describe('QCET Centralized API Middleware Protection (Issue #27)', () => {
   const runId = `mw-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

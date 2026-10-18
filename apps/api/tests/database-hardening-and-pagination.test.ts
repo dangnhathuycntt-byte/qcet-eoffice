@@ -312,7 +312,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
   describe('1. Database Production Hardening & Indexes (Phase 12)', () => {
     test('Prisma schema defines required composite and foreign key indexes', () => {
-      const schemaPath = path.resolve(__dirname, '../packages/db/prisma/schema.prisma');
+      const schemaPath = path.resolve(__dirname, '../../../packages/db/prisma/schema.prisma');
       const schemaContent = fs.readFileSync(schemaPath, 'utf8');
 
       // Task indexes

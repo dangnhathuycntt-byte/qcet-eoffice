@@ -1,15 +1,15 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { GET as meGet } from "../src/app/api/auth/me/route";
+import { GET as meGet } from "../apps/api/src/app/api/auth/me/route";
 import { prisma } from "@qcet/db/prisma";
-import { SESSION_COOKIE_NAME, signSessionToken } from "../src/lib/jwt-session";
+import { SESSION_COOKIE_NAME, signSessionToken } from "../apps/api/src/lib/jwt-session";
 import {
   resolveSessionState,
   performSessionSync,
   AUTH_STORAGE_KEY,
   assertCanMutate,
-} from "../src/lib/auth-context";
+} from "../apps/web/src/lib/auth-context";
 import type {
   AuthState,
   CachedUser,

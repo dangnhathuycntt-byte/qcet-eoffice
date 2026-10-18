@@ -5,9 +5,9 @@ import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
-import { canUserDeleteDeliverable } from "@/server/tasks/task-policy";
-import { getTextOffsetInContainer } from "@/components/tasks/detail/direct-inline-editor";
+import { recalculateParentTaskProgress } from "../apps/api/src/server/tasks/task-command-service";
+import { canUserDeleteDeliverable } from "../apps/api/src/server/tasks/task-policy";
+import { getTextOffsetInContainer } from "../apps/web/src/components/tasks/detail/direct-inline-editor";
 import { TaskStatus } from "@prisma/client";
 
 describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () => {
@@ -210,7 +210,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
   describe("3. Codebase Audit: Zero Mock, Rollback & Validation Invariants", () => {
     it("src/components/tasks/detail/task-identity-block.tsx loại bỏ hoàn toàn ID ảo và form đính kèm trùng lặp", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/components/tasks/detail/task-identity-block.tsx"),
+        path.join(process.cwd(), "apps/web/src/components/tasks/detail/task-identity-block.tsx"),
         "utf8"
       );
 
@@ -229,7 +229,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/components/tasks/task-detail-page.tsx xử lý rollback khi API lỗi và không tạo state giả", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/components/tasks/task-detail-page.tsx"),
+        path.join(process.cwd(), "apps/web/src/components/tasks/task-detail-page.tsx"),
         "utf8"
       );
 
@@ -248,7 +248,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/app/tasks/[id]/page.tsx đọc dữ liệu thật từ bảng audit_events và map actorName từ User", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/server/tasks/task-page-data.ts"),
+        path.join(process.cwd(), "apps/api/src/server/tasks/task-page-data.ts"),
         "utf8"
       );
 
@@ -267,7 +267,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/lib/services/task-domain-actions.ts tự động chuyển NOT_STARTED sang IN_PROGRESS và đồng bộ cha", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/server/tasks/task-domain-actions.ts"),
+        path.join(process.cwd(), "apps/api/src/server/tasks/task-domain-actions.ts"),
         "utf8"
       );
 
@@ -283,7 +283,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/app/api/tasks/[id]/route.ts validate ngày bắt đầu không sau thời hạn trên dữ liệu merged", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/app/api/tasks/[id]/route.ts"),
+        path.join(process.cwd(), "apps/api/src/app/api/tasks/[id]/route.ts"),
         "utf8"
       );
 
@@ -300,7 +300,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
   describe("5. Status Transition Actions & Execution Authority", () => {
     it("src/lib/tasks/task-actions.ts phân tách command updateTaskStatus và submitTaskResult chuẩn domain", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/lib/tasks/task-actions.ts"),
+        path.join(process.cwd(), "apps/web/src/lib/tasks/task-actions.ts"),
         "utf8"
       );
 
@@ -316,7 +316,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/lib/auth/hybrid-authorization.ts cho phép DRI, Collaborator, Assigner, Lead Unit và Admin cập nhật tiến độ", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/server/authorization/hybrid-authorization.ts"),
+        path.join(process.cwd(), "apps/api/src/server/authorization/hybrid-authorization.ts"),
         "utf8"
       );
 
@@ -329,7 +329,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
     });
     it("src/lib/services/task-domain-actions.ts cho phép chuyển từ WAITING_APPROVAL về IN_PROGRESS", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/server/tasks/task-domain-actions.ts"),
+        path.join(process.cwd(), "apps/api/src/server/tasks/task-domain-actions.ts"),
         "utf8"
       );
 

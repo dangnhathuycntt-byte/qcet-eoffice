@@ -26,9 +26,9 @@ import {
   extractDerivedCollaborators,
   toTaskListDTO,
   toTaskDetailDTO,
-} from '../src/server/dto/task-dto';
+} from '../apps/api/src/server/dto/task-dto';
 import { mapPrismaTaskToSchoolTask } from '@qcet/shared/lib/adapters/task-db-adapter';
-import { buildCreateTaskPayload } from '../src/lib/adapters/create-task-mapper';
+import { buildCreateTaskPayload } from '../apps/web/src/lib/adapters/create-task-mapper';
 
 describe('Task Business Rules Refactor — Targeted Verification', () => {
   // ─────────────────────────────────────────────────────────────

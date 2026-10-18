@@ -1,26 +1,26 @@
 import { test, describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { handlers } from "@/auth";
-import { GET as nextAuthGet, POST as nextAuthPost } from "@/app/api/auth/[...nextauth]/route";
-import { GET as authMeGet } from "@/app/api/auth/me/route";
-import { POST as authLogoutPost } from "@/app/api/auth/logout/route";
-import { GET as googleInitGet } from "@/app/api/auth/google/route";
-import { middleware } from "@/middleware";
+import { handlers } from "../apps/api/src/auth";
+import { GET as nextAuthGet, POST as nextAuthPost } from "../apps/api/src/app/api/auth/[...nextauth]/route";
+import { GET as authMeGet } from "../apps/api/src/app/api/auth/me/route";
+import { POST as authLogoutPost } from "../apps/api/src/app/api/auth/logout/route";
+import { GET as googleInitGet } from "../apps/api/src/app/api/auth/google/route";
+import { middleware } from "./helpers/split-middleware";
 import {
   signSessionToken,
   SESSION_COOKIE_NAME,
   SECURE_SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
-} from "@/lib/jwt-session";
+} from "../apps/api/src/lib/jwt-session";
 import { prisma } from "@qcet/db/prisma";
 import {
   revokeSession,
   revokeAllUserSessions,
   clearRevocationStoreForTesting,
-} from "@/server/auth/session-policy";
+} from "../apps/api/src/server/auth/session-policy";
 import { resolveOAuthError } from "@qcet/shared/lib/login-helpers";
-import { setFeatureFlagOverride, resetFeatureFlagOverrides } from "@/features/flags";
+import { setFeatureFlagOverride, resetFeatureFlagOverrides } from "../apps/api/src/features/flags";
 
 describe("Regression Suite: Google Auth Consolidation & Login Loop Prevention", () => {
   const originalEnv = { ...process.env };
@@ -96,8 +96,8 @@ describe("Regression Suite: Google Auth Consolidation & Login Loop Prevention", 
 
   describe("2. Domain, Pre-provisioning, and Deactivation Policies", () => {
     test("Unauthorized domain is rejected at callback and redirects with domain_not_allowed", async () => {
-      const { authConfig } = await import("@/auth.config");
-      const { isAllowedDomain } = await import("@/server/auth/google-oauth");
+      const { authConfig } = await import("../apps/api/src/auth.config");
+      const { isAllowedDomain } = await import("../apps/api/src/server/auth/google-oauth");
 
       assert.strictEqual(isAllowedDomain("student@gmail.com"), false);
       assert.strictEqual(isAllowedDomain("attacker@fake-cdktcnqn.edu.vn"), false);

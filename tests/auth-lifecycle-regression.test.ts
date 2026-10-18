@@ -1,10 +1,10 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { middleware } from "../src/middleware";
-import { signSessionToken, SESSION_COOKIE_NAME, verifySessionToken } from "../src/lib/jwt-session";
-import { verifySessionTokenEdge } from "../src/lib/jwt-edge";
-import { POST as logoutPost, GET as logoutGet } from "../src/app/api/auth/logout/route";
+import { middleware } from "./helpers/split-middleware";
+import { signSessionToken, SESSION_COOKIE_NAME, verifySessionToken } from "../apps/api/src/lib/jwt-session";
+import { verifySessionTokenEdge } from "../apps/api/src/lib/jwt-edge";
+import { POST as logoutPost, GET as logoutGet } from "../apps/api/src/app/api/auth/logout/route";
 
 describe("Complete Authentication Lifecycle & Regression Suite (Login -> Logout -> Re-login)", () => {
   const userPayload = {

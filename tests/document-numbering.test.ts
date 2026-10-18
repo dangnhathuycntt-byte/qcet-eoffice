@@ -5,14 +5,14 @@ import {
   generateDocumentCode,
   simulateAtomicNumbering,
   getNextRegistrationNumber
-} from "../src/server/documents/numbering-engine";
+} from "../apps/api/src/server/documents/numbering-engine";
 import {
   createDocument,
   listDocuments,
   getDocumentById
-} from "../src/server/documents/document-service";
+} from "../apps/api/src/server/documents/document-service";
 import type { DocumentItem, DocumentType } from "@qcet/contracts/types/document";
-import { formatIsoDate, formatDisplayDate } from "@/lib/format";
+import { formatIsoDate, formatDisplayDate } from "../apps/web/src/lib/format";
 
 describe("Document Numbering Engine (ND 30/2020)", () => {
   test("formats incoming and outgoing document numbers properly", () => {

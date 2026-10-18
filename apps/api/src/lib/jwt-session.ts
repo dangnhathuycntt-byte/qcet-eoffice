@@ -1,14 +1,19 @@
 import jwt from "jsonwebtoken";
 import { decode } from "next-auth/jwt";
-import { UserRole } from "@qcet/contracts/types/auth";
+import {
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
+  type SessionPayload,
+} from "@qcet/contracts/session";
 import { serverEnv } from "@/config/env.server";
 import { prisma } from "@qcet/db/prisma";
 import { AuthenticationError } from "@/server/api/errors";
 import { isSessionExpired, isSessionRevoked, assertSessionPolicy } from "@/server/auth/session-policy";
 
-export const SESSION_COOKIE_NAME = "authjs.session-token";
-export const SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token";
-export const LEGACY_SESSION_COOKIE_NAME = "qcet_session";
+// Tên cookie và kiểu phiên dùng chung với web nằm ở @qcet/contracts/session
+export { SESSION_COOKIE_NAME, SECURE_SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME };
+export type { SessionPayload };
 // 30 days
 
 export function getJwtSecret(): string {
@@ -17,18 +22,6 @@ export function getJwtSecret(): string {
     throw new Error("AUTH_SECRET or JWT_SECRET environment variable is required");
   }
   return secret;
-}
-
-export interface SessionPayload {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole | "BAN_GIAM_HIEU" | "TRUONG_PHONG" | "CHUYEN_VIEN" | string;
-  departmentId?: string | null;
-  title?: string | null;
-  isActive?: boolean;
-  sessionId?: string;
-  jti?: string;
 }
 
 export function signSessionToken(payload: SessionPayload): string {

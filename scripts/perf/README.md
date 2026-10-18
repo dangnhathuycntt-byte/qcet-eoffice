@@ -10,7 +10,7 @@ The browser pipeline is the Wave-0 baseline pipeline (raw-CDP + the read-only
 same-origin cookie proxy). The proxy is **spawned** from
 `artifacts/ux-v5-1/baseline/tools/auth-proxy.mjs` — never copied, never edited
 (anti-owned). CWV thresholds are **read** from
-`src/telemetry/web-vitals.ts` — never redefined.
+`apps/web/src/telemetry/web-vitals.ts` — never redefined.
 
 Browser: `/usr/bin/chromium --headless=new --no-sandbox`. No Playwright/Puppeteer.
 

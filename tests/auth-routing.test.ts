@@ -6,8 +6,8 @@ const TEST_SECRET = "test-secret-key-for-authjs-v5-validation-32chars";
 process.env.AUTH_SECRET = TEST_SECRET;
 process.env.JWT_SECRET = TEST_SECRET;
 
-import { middleware } from "../src/middleware";
-import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { middleware } from "./helpers/split-middleware";
+import { signSessionToken, SESSION_COOKIE_NAME } from "../apps/api/src/lib/jwt-session";
 import { sanitizeRedirectUrl } from "@qcet/shared/lib/login-helpers";
 
 describe("QCET Authentication Routing & Middleware Invariants", () => {
@@ -101,7 +101,7 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
 
   describe("2. Cryptographic JWT Verification & Edge Runtime Invariants", () => {
     test("verifySessionToken strictly rejects tampered/invalid signature tokens", () => {
-      const { verifySessionToken } = require("../src/lib/jwt-session");
+      const { verifySessionToken } = require("../apps/api/src/lib/jwt-session");
       const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
       const payload = Buffer.from(
         JSON.stringify({
@@ -119,7 +119,7 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
     });
 
     test("verifySessionTokenEdge verifies valid tokens using WebCrypto without Node crypto", async () => {
-      const { verifySessionTokenEdge } = require("../src/lib/jwt-edge");
+      const { verifySessionTokenEdge } = require("../apps/api/src/lib/jwt-edge");
       const verified = await verifySessionTokenEdge(validToken);
       assert.ok(verified, "Must verify valid token");
       assert.equal(verified?.email, "test@cdktcnqn.edu.vn");
@@ -127,7 +127,7 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
     });
 
     test("verifySessionTokenEdge rejects tampered tokens", async () => {
-      const { verifySessionTokenEdge } = require("../src/lib/jwt-edge");
+      const { verifySessionTokenEdge } = require("../apps/api/src/lib/jwt-edge");
       const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
       const payload = Buffer.from(
         JSON.stringify({

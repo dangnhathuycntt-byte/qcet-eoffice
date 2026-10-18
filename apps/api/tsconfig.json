@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@qcet/contracts/*": ["../../packages/contracts/src/*"],
+      "@qcet/shared/*": ["../../packages/shared/src/*"],
+      "@qcet/db/*": ["../../packages/db/src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next-e2e/types/**/*.ts"],
+  "exclude": ["node_modules", "tests/incoming-documents-v2.test.ts", "tests/outgoing-documents-v2.test.ts"]
+}

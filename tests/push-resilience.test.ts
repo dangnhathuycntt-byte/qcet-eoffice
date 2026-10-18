@@ -1,13 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import manifest from "../src/app/manifest";
+import manifest from "../apps/web/src/app/manifest";
 import prisma from "@qcet/db/prisma";
 import {
   sendPushNotificationToUser,
   setPushSenderForTesting,
   ensureVapidConfigured,
-} from "../src/server/notifications/push-service";
-import { areServerKeysEqual } from "../src/hooks/use-push-notification";
+} from "../apps/api/src/server/notifications/push-service";
+import { areServerKeysEqual } from "../apps/web/src/hooks/use-push-notification";
 
 describe("Task 3: PWA & Service Worker Resilience", () => {
   it("manifest() includes id and scope properties for iOS/Android standalone mode", () => {

@@ -65,6 +65,8 @@
 }
 
 @import "tailwindcss";
+/* Class Tailwind trong mã dùng chung (icon, cấu hình hiển thị nhiệm vụ) nằm ngoài thư mục app */
+@source "../../../../packages/shared/src";
 
 @custom-variant dark (&:not(*));
 

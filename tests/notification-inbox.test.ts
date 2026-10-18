@@ -4,7 +4,7 @@ import {
   buildNotificationWhere,
   decodeNotificationCursor,
   encodeNotificationCursor,
-} from "../src/server/notifications/notification-query";
+} from "../apps/api/src/server/notifications/notification-query";
 import {
   formatNotificationAbsoluteTime,
   formatNotificationTime,
@@ -12,7 +12,7 @@ import {
   getNotificationEventLabel,
   groupNotificationsByTarget,
   resolveNotificationTarget,
-} from "../src/lib/notification-inbox";
+} from "../apps/web/src/lib/notification-inbox";
 import { filterNotificationsByTab, mapDbNotification } from "@qcet/shared/lib/notification-triage";
 
 const NOW = new Date("2026-10-09T16:30:00.000Z"); // 23:30 ICT

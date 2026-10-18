@@ -18,6 +18,8 @@ export interface StructuredLogEntry {
   timestamp: string;
   level: LogLevel;
   event: string;
+  /** Tên dịch vụ (`SERVICE_NAME`, vd. qcet-api) để phân biệt log khi web và api chạy riêng. */
+  service?: string;
   requestId?: string | null;
   durationMs?: number;
   route?: string;
@@ -234,10 +236,12 @@ export class StructuredLogger {
       metadata = redactSensitiveData(mergedMetadata) as Record<string, any>;
     }
 
+    const service = process.env.SERVICE_NAME?.trim();
     const entry: StructuredLogEntry = {
       timestamp,
       level,
       event,
+      ...(service ? { service } : {}),
       ...(requestId !== undefined ? { requestId } : {}),
       ...(durationMs !== undefined ? { durationMs } : {}),
       ...(route !== undefined ? { route } : {}),

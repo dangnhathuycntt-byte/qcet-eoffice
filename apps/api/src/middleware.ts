@@ -103,13 +103,8 @@ function extractTokenFromRequest(request: NextRequest): string | null {
  *      (`loadAuthorizationContext()` + `authorize()`). The middleware MUST NOT
  *      treat technical ADMIN/SYSTEM_ADMIN as statutory executive authority.
  *    - Allow public endpoints: /api/health, /api/auth/*, /api/csp-report, /api/runtime-config
- * 2. Unauthenticated users accessing protected UI routes -> redirect to /login with returnTo.
- * 3. Authenticated users opening /login -> page asks /api/auth/me for server truth.
- * 4. Root '/' (Tổng quan) -> /login for unauthenticated users; any session passes through to
- *    app/page.tsx, which verifies it on the server.
- * 5. Public assets, static chunks, PWA manifest, /portal and /docs (user guide): Always accessible.
- * 6. Canonical singular to plural redirects (/task -> /tasks).
- * 7. Defense in depth: this middleware is an early barrier only. Route
+ * 2. Các mục giao diện (chuyển hướng /login, '/', /task -> /tasks) nằm ở middleware của app web.
+ * 3. Defense in depth: this middleware is an early barrier only. Route
  *    Handlers / Services MUST keep `requireAuthenticated()` and
  *    object/business `authorize()` checks as the source of truth.
  */
@@ -236,61 +231,7 @@ export async function middleware(request: NextRequest) {
     return nextWithCorrelation();
   }
 
-  // 3. Canonical redirects (e.g. /task -> /tasks, /onboarding -> /tasks)
-  if (pathname === '/onboarding' || pathname.startsWith('/onboarding/')) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/tasks';
-    url.search = '';
-    return redirectWithCorrelation(url, 307);
-  }
-  if (pathname === '/task') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/tasks';
-    return redirectWithCorrelation(url, 308);
-  }
-  if (pathname.startsWith('/task/')) {
-    const url = request.nextUrl.clone();
-    url.pathname = pathname.replace(/^\/task\//, '/tasks/');
-    return redirectWithCorrelation(url, 308);
-  }
-
-  // 4. Extract session token cookie for UI routes
-  const token = extractTokenFromRequest(request);
-  const hasToken = Boolean(token && token.trim().length > 0);
-
-  // 5-6. Root '/' = trang Tổng quan (từ 15/10/2026; trước đó chuyển thẳng sang /tasks). Chưa có phiên thì về /login;
-  // có phiên (JWT hay phiên DB) thì app/page.tsx kiểm phiên phía máy chủ rồi hiện Tổng quan hoặc chuyển ?zone= cũ tới trang tương ứng.
-  if (pathname === '/') {
-    if (!hasToken) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.search = '';
-      return redirectWithCorrelation(url);
-    }
-    return nextWithCorrelation();
-  }
-
-  // 7. Handle /login route
-  if (pathname === '/login') {
-    // Middleware cannot check DB revocation or account status. Always let the login page
-    // ask /api/auth/me for server truth; an active session is redirected client-side.
-    return nextWithCorrelation();
-  }
-
-  // 8. Protected UI routes (e.g. /tasks, /documents, /calendar, /org, etc.)
-  if (!hasToken) {
-    // Completely unauthenticated request -> redirect to /login with returnTo
-    const originalPath = `${pathname}${request.nextUrl.search}`;
-    const safeReturnTo = sanitizeRedirectUrl(originalPath);
-
-    const loginUrl = new URL('/login', request.nextUrl.origin);
-    if (safeReturnTo && safeReturnTo !== '/tasks' && safeReturnTo !== '/') {
-      loginUrl.searchParams.set('returnTo', safeReturnTo);
-    }
-    return redirectWithCorrelation(loginUrl);
-  }
-
-  // If hasToken is true, let request through so Server Component / AppShell verifies DB session truth
+  // Phần giao diện (chuyển hướng chuẩn, /login, trang cần đăng nhập) nằm ở middleware của app web.
   return nextWithCorrelation();
 }
 

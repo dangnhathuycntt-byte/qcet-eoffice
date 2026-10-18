@@ -1,6 +1,6 @@
 /**
- * Chặn file mồ côi: file trong `src/` (ngoài `src/app/` và file cấp cao nhất) mà
- * không route, layout hay script nào import tới (trực tiếp hoặc gián tiếp).
+ * Chặn file mồ côi: file trong `apps/<app>/src/` (ngoài `src/app/` và file cấp cao nhất) và
+ * `packages/<tên>/src/` mà không route, layout hay script nào import tới (trực tiếp hoặc gián tiếp).
  *
  * File chỉ được test import vẫn tính là mồ côi: test không làm code sống lại,
  * và agent đọc thấy file cũ sẽ chép theo nó thay vì dùng bản đang chạy.
@@ -20,17 +20,27 @@ const ts = require("typescript");
 const ROOT = process.cwd();
 const BASELINE_PATH = path.join(ROOT, "scripts", "orphan-baseline.json");
 const UPDATE_BASELINE = process.argv.includes("--update-baseline");
-const CHECKED = /^(src\/(components|hooks|lib|types|server|domain|contracts|features|config|context|storage|telemetry)|packages\/[^/]+\/src)\//;
+const CHECKED = /^(apps\/[^/]+\/src\/(components|hooks|lib|types|server|domain|contracts|features|config|context|storage|telemetry)|packages\/[^/]+\/src)\//;
+const APP_SRC = /^apps\/([^/]+)\/src\//;
 const PACKAGE_SRC = /^packages\/[^/]+\/src\//;
 const CODE = /\.(tsx?|mjs|cjs|js)$/;
-const IS_TEST = (f) => /^(tests|e2e)\//.test(f) || /(^|\/)__tests__\//.test(f) || /\.(test|spec)\.[^.]+$/.test(f);
+const IS_TEST = (f) => /^(tests|e2e|apps\/[^/]+\/tests)\//.test(f) || /(^|\/)__tests__\//.test(f) || /\.(test|spec)\.[^.]+$/.test(f);
 
-const { options } = ts.parseJsonConfigFileContent(
-  ts.readConfigFile(path.join(ROOT, "tsconfig.json"), ts.sys.readFile).config,
-  ts.sys,
-  ROOT,
-);
-const host = ts.createCompilerHost(options);
+// Mỗi app phân giải `@/` theo tsconfig của nó; file ngoài apps/ theo tsconfig gốc.
+const compilerFor = new Map();
+function compilerOf(file) {
+  const app = file.match(/^apps\/([^/]+)\//)?.[1];
+  const dir = app ? path.join(ROOT, "apps", app) : ROOT;
+  if (!compilerFor.has(dir)) {
+    const { options } = ts.parseJsonConfigFileContent(
+      ts.readConfigFile(path.join(dir, "tsconfig.json"), ts.sys.readFile).config,
+      ts.sys,
+      dir,
+    );
+    compilerFor.set(dir, { options, host: ts.createCompilerHost(options) });
+  }
+  return compilerFor.get(dir);
+}
 
 const files = execSync("git ls-files --cached --others --exclude-standard", { encoding: "utf8" })
   .split("\n")
@@ -38,6 +48,7 @@ const files = execSync("git ls-files --cached --others --exclude-standard", { en
 
 function importsOf(file) {
   const { importedFiles } = ts.preProcessFile(fs.readFileSync(file, "utf8"), true, true);
+  const { options, host } = compilerOf(file);
   const out = [];
   for (const { fileName } of importedFiles) {
     const resolved = ts.resolveModuleName(fileName, path.join(ROOT, file), options, host).resolvedModule;
@@ -48,10 +59,13 @@ function importsOf(file) {
   return out;
 }
 
-// Gốc: mọi file trong src/app, file cấp cao nhất của src (middleware, auth…), và code ngoài src (scripts, prisma, config).
-// Mã nguồn package (packages/*/src) không phải gốc: chỉ sống khi app hoặc script import tới.
+// Gốc: mọi file trong apps/<app>/src/app, file cấp cao nhất của src mỗi app (middleware, auth, instrumentation…),
+// và code ngoài src của app (scripts, prisma, next.config). Mã nguồn package (packages/*/src) không phải gốc.
 const roots = files.filter(
-  (f) => !IS_TEST(f) && !PACKAGE_SRC.test(f) && (f.startsWith("src/app/") || /^src\/[^/]+$/.test(f) || !f.startsWith("src/")),
+  (f) =>
+    !IS_TEST(f) &&
+    !PACKAGE_SRC.test(f) &&
+    (/^apps\/[^/]+\/src\/app\//.test(f) || /^apps\/[^/]+\/src\/[^/]+$/.test(f) || !APP_SRC.test(f)),
 );
 const reachable = new Set();
 const stack = [...roots];

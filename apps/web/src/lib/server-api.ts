@@ -20,9 +20,12 @@ const FORWARDED_HEADERS = [
   "x-forwarded-proto",
 ] as const;
 
-/** Địa chỉ nội bộ của API (`API_INTERNAL_URL`); chưa đặt thì gọi chính tiến trình này qua cổng `PORT`. */
+/** Địa chỉ nội bộ của API (`API_INTERNAL_URL`, bắt buộc ở production); dev mặc định API ở cổng `API_PORT` (3100). */
 export function apiInternalUrl(): string {
-  const base = process.env.API_INTERNAL_URL || `http://127.0.0.1:${process.env.PORT || 3000}`;
+  const base =
+    process.env.API_INTERNAL_URL ||
+    (process.env.NODE_ENV === "production" ? "" : `http://127.0.0.1:${process.env.API_PORT || 3100}`);
+  if (!base) throw new Error("API_INTERNAL_URL chưa đặt");
   return base.replace(/\/+$/, "");
 }
 

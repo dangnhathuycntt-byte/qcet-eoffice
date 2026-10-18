@@ -6,16 +6,16 @@ import {
   getNextSecurityHeaders,
   applySecurityHeaders,
 } from "@qcet/shared/config/security-headers";
-import nextConfig from "../../next.config";
+import nextConfig from "../../apps/web/next.config";
 import {
   POST as cspReportPost,
   OPTIONS as cspReportOptions,
-} from "@/app/api/csp-report/route";
+} from "../../apps/api/src/app/api/csp-report/route";
 import {
   sanitizeCspUrl,
   sanitizeSample,
   extractViolations,
-} from "@/lib/security/csp-report";
+} from "../../apps/api/src/lib/security/csp-report";
 
 describe("Security Headers & CSP Engine", () => {
   describe("buildContentSecurityPolicy", () => {

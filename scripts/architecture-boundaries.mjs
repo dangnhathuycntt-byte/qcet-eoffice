@@ -1,11 +1,11 @@
 /**
- * Ranh giới FE/BE trong một repo (chuẩn bị tách apps/web và apps/api).
+ * Ranh giới giữa apps/web, apps/api và packages/*.
  * Dùng chung cho scripts/lint.mjs và tests/architecture-fitness.test.ts.
  *
  * Import được đọc từ AST (`ts.createSourceFile`): import, import type, export…from
  * (kể cả `export * as`), import x = require(), import(), require() và kiểu
- * `import("…")`; comment và chuỗi thường không tính. Đường dẫn tương đối được quy
- * về dạng `@/…` trước khi so luật.
+ * `import("…")`; comment và chuỗi thường không tính. Đường dẫn tương đối trong cùng app
+ * được quy về `@/…`; ra ngoài app thì về dạng `apps/…` hoặc đường dẫn gốc repo.
  */
 
 import path from "node:path";
@@ -15,28 +15,25 @@ const require = createRequire(import.meta.url);
 const ts = require("typescript");
 
 const DB_MODULE = /^(?:@prisma\/client(?:\/|$)|@qcet\/db(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$))/;
-const SERVER_MODULE = /^@\/server(?:\/|$)/;
 const UI_OR_APP_MODULE = /^@\/(?:components|app)(?:\/|$)/;
 /**
- * Dấu hiệu file chỉ chạy ở server: DB, bí mật server (`@/config/env.server`), mọi module Node có
+ * Dấu hiệu module chỉ chạy ở server: DB, bí mật server (`@/config/env.server`), mọi module Node có
  * tiền tố `node:`, thư viện server và mọi import vào src/server. Built-in không tiền tố (`crypto`)
- * không tính: file isomorphic có fallback (digital-signature-service) vẫn nằm trong src/lib.
+ * không tính: file isomorphic có fallback vẫn được dùng ở web.
  */
 const SERVER_ONLY_MODULE =
   /^(?:@prisma\/client(?:\/|$)|@qcet\/db(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$)|@\/config\/env\.server$|ioredis$|web-push$|jsonwebtoken$|bcryptjs$|node:[a-z0-9_]+(?:\/|$)|@\/server(?:\/|$))/;
 
-const APP_LAYER = /^src\/app\//;
-const UI_LAYER = /^src\/(?:components|hooks)\//;
-const CORE_LAYER = /^src\/(?:lib|domain|server)\//;
+/** Web: giao diện, không chạm DB/Redis/bí mật/mã server; dữ liệu qua API. */
+const WEB_FILE = /^apps\/web\/src\//;
+/** Route handler của API: đọc/ghi DB qua dịch vụ trong src/server. */
+const API_ROUTE_FILE = /^apps\/api\/src\/app\//;
+const API_CORE_FILE = /^apps\/api\/src\/(?:lib|domain|server)\//;
+const APP_FILE = /^apps\/([^/]+)\//;
 /** Package dùng chung: mã nguồn trong packages/<tên>/src và script của package (vd. packages/db/prisma). */
 const PACKAGE_FILE = /^packages\/[^/]+\//;
 /** @qcet/shared và @qcet/contracts chạy cả ở trình duyệt: không DB, không module Node, không bí mật server. */
 const PURE_PACKAGE_FILE = /^packages\/(?:shared|contracts)\//;
-
-/** File server-only còn được nằm trong src/lib. Gỡ ở bước 3. */
-export const SERVER_ONLY_LIB_ALLOWLIST = [
-  "src/lib/jwt-session.ts", // gỡ ở bước 3
-];
 
 /** Chuỗi module của một node import/export/require, nếu có. */
 function moduleSpecifierNode(node) {
@@ -69,8 +66,10 @@ export function importSpecifiers(relPath, content) {
       let spec = specNode.text;
       if (spec.startsWith(".")) {
         const target = path.posix.normalize(path.posix.join(path.posix.dirname(relPath), spec));
-        if (target.startsWith("src/")) spec = `@/${target.slice(4)}`;
-        else if (target.startsWith("apps/")) spec = target;
+        const ownApp = relPath.match(APP_FILE)?.[1];
+        const inApp = target.match(/^apps\/([^/]+)\/src\/(.*)$/);
+        if (inApp && inApp[1] === ownApp) spec = `@/${inApp[2]}`;
+        else if (target.startsWith("apps/") || target.startsWith("src/")) spec = target;
       }
       const line = sourceFile.getLineAndCharacterOfPosition(specNode.getStart(sourceFile)).line + 1;
       out.push({ spec, line });
@@ -81,38 +80,39 @@ export function importSpecifiers(relPath, content) {
   return out;
 }
 
-/** Vi phạm ranh giới của một file (`relPath` dạng `src/…` với dấu `/`). */
+/** Vi phạm ranh giới của một file (`relPath` tính từ gốc repo, dấu `/`). */
 export function boundaryViolations(relPath, content) {
-  if (PACKAGE_FILE.test(relPath) && /\.tsx?$/.test(relPath)) return packageViolations(relPath, content);
-  if (!/^src\/.+\.tsx?$/.test(relPath)) return [];
-  const isApp = APP_LAYER.test(relPath);
-  const isUi = UI_LAYER.test(relPath);
-  const isCore = CORE_LAYER.test(relPath);
-  const checkServerOnly = relPath.startsWith("src/lib/") && !SERVER_ONLY_LIB_ALLOWLIST.includes(relPath);
+  if (!/\.tsx?$/.test(relPath)) return [];
+  if (PACKAGE_FILE.test(relPath)) return packageViolations(relPath, content);
+  const ownApp = relPath.match(APP_FILE)?.[1];
+  if (!ownApp || !/^apps\/[^/]+\/src\//.test(relPath)) return [];
+  const isWeb = WEB_FILE.test(relPath);
+  const isApiRoute = API_ROUTE_FILE.test(relPath);
+  const isApiCore = API_CORE_FILE.test(relPath);
   const out = [];
   for (const { spec, line } of importSpecifiers(relPath, content)) {
-    if (isApp && DB_MODULE.test(spec)) {
-      out.push({ rule: "app-no-db", line, spec, message: `File trong src/app không import '${spec}'. Đọc/ghi DB qua service trong src/server.` });
+    if (/^apps\//.test(spec) && !spec.startsWith(`apps/${ownApp}/`)) {
+      out.push({ rule: "no-cross-app", line, spec, message: `App không import code của app khác ('${spec}'). Phần dùng chung đặt ở packages/; dữ liệu đi qua HTTP.` });
     }
-    if (isUi && SERVER_MODULE.test(spec)) {
-      out.push({ rule: "ui-no-server", line, spec, message: `Component/hook không import '${spec}'. Lấy dữ liệu qua API; kiểu dùng chung đặt ở src/contracts.` });
+    if (isWeb && SERVER_ONLY_MODULE.test(spec)) {
+      out.push({ rule: "web-no-server", line, spec, message: `Web không import '${spec}' (DB, bí mật, module Node, mã server). Lấy dữ liệu qua API; kiểu dùng chung đặt ở @qcet/contracts.` });
     }
-    if (isCore && UI_OR_APP_MODULE.test(spec)) {
-      out.push({ rule: "core-no-ui", line, spec, message: `lib/domain/server không import '${spec}'. Đưa phần dùng chung xuống src/lib hoặc src/domain.` });
+    if (isApiRoute && DB_MODULE.test(spec)) {
+      out.push({ rule: "app-no-db", line, spec, message: `Route handler không import '${spec}'. Đọc/ghi DB qua dịch vụ trong src/server.` });
     }
-    if (checkServerOnly && SERVER_ONLY_MODULE.test(spec)) {
-      out.push({ rule: "server-only-in-lib", line, spec, message: `File server-only (import '${spec}') không nằm trong src/lib. Chuyển vào src/server/<domain>.` });
+    if (isApiCore && UI_OR_APP_MODULE.test(spec)) {
+      out.push({ rule: "core-no-ui", line, spec, message: `lib/domain/server của API không import '${spec}'.` });
     }
   }
   return out;
 }
 
-/** Vi phạm của file trong packages/: không import app (alias @/ hoặc đường dẫn ra apps/, src/); shared/contracts phải thuần. */
+/** Vi phạm của file trong packages/: không import app (alias @/ hoặc đường dẫn ra apps/); shared/contracts phải thuần. */
 function packageViolations(relPath, content) {
   const out = [];
   const pure = PURE_PACKAGE_FILE.test(relPath);
   for (const { spec, line } of importSpecifiers(relPath, content)) {
-    if (/^@\//.test(spec) || /^apps\//.test(spec)) {
+    if (/^@\//.test(spec) || /^(?:apps|src)\//.test(spec)) {
       out.push({ rule: "package-no-app", line, spec, message: `Package không import code của app ('${spec}'). Đưa phần dùng chung vào package.` });
     }
     if (pure && SERVER_ONLY_MODULE.test(spec)) {

@@ -27,7 +27,7 @@ import {
   UnitType,
   UserRole,
 } from '@prisma/client';
-import { readMeetingDetailPageData } from '@/server/services/meeting-detail-page-data';
+import { readMeetingDetailPageData } from '../../apps/api/src/server/services/meeting-detail-page-data';
 
 const DAY_MS = 86_400_000;
 
@@ -168,7 +168,7 @@ describe('Trang chi tiết cuộc họp: kiểm quyền đọc theo đối tư�
 });
 
 describe('Trang chi tiết cuộc họp: metadata không đọc dữ liệu được bảo vệ', () => {
-  const source = fs.readFileSync(path.join(process.cwd(), 'src/app/calendar/meetings/[id]/page.tsx'), 'utf8');
+  const source = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/app/calendar/meetings/[id]/page.tsx'), 'utf8');
 
   test('generateMetadata trả tiêu đề tĩnh, không gọi service hay prisma', () => {
     const match = source.match(/export async function generateMetadata[\s\S]*?\n\}\n/);
@@ -180,7 +180,7 @@ describe('Trang chi tiết cuộc họp: metadata không đọc dữ liệu đư
 
   test('trang truyền người dùng hiện tại vào bước đọc dữ liệu có kiểm quyền', () => {
     // Bước đọc dữ liệu chuyển sang GET /api/page-data/meetings/[id]; trang gọi API đó
-    const route = fs.readFileSync(path.join(process.cwd(), 'src/app/api/page-data/meetings/[id]/route.ts'), 'utf8');
+    const route = fs.readFileSync(path.join(process.cwd(), 'apps/api/src/app/api/page-data/meetings/[id]/route.ts'), 'utf8');
     assert.ok(!source.includes('readMeetingTitle'), 'không còn đọc tiêu đề cuộc họp mà không kiểm quyền');
     assert.match(route, /readMeetingDetailPageData\(id, userId\)/);
   });

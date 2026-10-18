@@ -18,21 +18,21 @@ import {
   UnsupportedMediaTypeError,
   toApiErrorResponse,
   type ApiErrorResponse,
-} from "../src/server/api/errors";
-import { apiError } from "../src/server/api/response";
+} from "../apps/api/src/server/api/errors";
+import { apiError } from "../apps/api/src/server/api/response";
 
 // Import all route loading and error components
-import TasksLoading from "../src/app/tasks/loading";
-import TasksError from "../src/app/tasks/error";
-import DocumentsLoading from "../src/app/documents/loading";
-import DocumentsError from "../src/app/documents/error";
-import CalendarLoading from "../src/app/calendar/loading";
-import CalendarError from "../src/app/calendar/error";
-import OrgLoading from "../src/app/org/loading";
-import OrgError from "../src/app/org/error";
-import NotificationsLoading from "../src/app/notifications/loading";
-import NotificationsError from "../src/app/notifications/error";
-import DossierError from "../src/app/dossiers/[id]/error";
+import TasksLoading from "../apps/web/src/app/tasks/loading";
+import TasksError from "../apps/web/src/app/tasks/error";
+import DocumentsLoading from "../apps/web/src/app/documents/loading";
+import DocumentsError from "../apps/web/src/app/documents/error";
+import CalendarLoading from "../apps/web/src/app/calendar/loading";
+import CalendarError from "../apps/web/src/app/calendar/error";
+import OrgLoading from "../apps/web/src/app/org/loading";
+import OrgError from "../apps/web/src/app/org/error";
+import NotificationsLoading from "../apps/web/src/app/notifications/loading";
+import NotificationsError from "../apps/web/src/app/notifications/error";
+import DossierError from "../apps/web/src/app/dossiers/[id]/error";
 
 describe("Phase 20: Canonical Error Contract", () => {
   const testRequestId = "req-audit-7788";
@@ -189,11 +189,11 @@ describe("Phase 20: Canonical Error Contract", () => {
 
 describe("Phase 9: Route-level Loading & Error Architecture", () => {
   const routes = [
-    { name: "/tasks", dir: "src/app/tasks" },
-    { name: "/documents", dir: "src/app/documents" },
-    { name: "/calendar", dir: "src/app/calendar" },
-    { name: "/org", dir: "src/app/org" },
-    { name: "/notifications", dir: "src/app/notifications" },
+    { name: "/tasks", dir: "apps/web/src/app/tasks" },
+    { name: "/documents", dir: "apps/web/src/app/documents" },
+    { name: "/calendar", dir: "apps/web/src/app/calendar" },
+    { name: "/org", dir: "apps/web/src/app/org" },
+    { name: "/notifications", dir: "apps/web/src/app/notifications" },
   ];
 
   describe("Structural Validity of Loading Components", () => {

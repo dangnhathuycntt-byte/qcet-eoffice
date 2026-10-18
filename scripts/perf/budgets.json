@@ -6,7 +6,7 @@
   "baselineGitSha": "7363c4309007a776269f57cb3058bb64cf059c2e",
   "runs": 5,
   "headroomMultiplier": 1.25,
-  "thresholdsSource": "src/telemetry/web-vitals.ts",
+  "thresholdsSource": "apps/web/src/telemetry/web-vitals.ts",
   "cwvThresholds": {
     "LCP": {
       "good": 2500,
@@ -40,7 +40,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "home",
@@ -57,7 +57,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "home",
@@ -92,7 +92,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-table",
@@ -109,7 +109,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-table",
@@ -126,7 +126,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-table",
@@ -161,7 +161,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-kanban",
@@ -178,7 +178,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-kanban",
@@ -213,7 +213,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-detail",
@@ -230,7 +230,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-detail",
@@ -265,7 +265,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-open-detail",
@@ -282,7 +282,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-open-detail",
@@ -299,7 +299,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-open-detail",
@@ -334,7 +334,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-search",
@@ -351,7 +351,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-search",
@@ -368,7 +368,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-search",
@@ -403,7 +403,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-bulk",
@@ -420,7 +420,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-bulk",
@@ -437,7 +437,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-bulk",
@@ -472,7 +472,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "calendar",
@@ -489,7 +489,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "calendar",
@@ -506,7 +506,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "calendar",
@@ -541,7 +541,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "notifications",
@@ -558,7 +558,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "notifications",
@@ -593,7 +593,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "documents",
@@ -610,7 +610,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "documents",
@@ -645,7 +645,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "org",
@@ -662,7 +662,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "org",
@@ -697,7 +697,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "command-search",
@@ -714,7 +714,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "command-search",
@@ -731,7 +731,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "command-search",
@@ -766,7 +766,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "home",
@@ -783,7 +783,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "home",
@@ -818,7 +818,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-table",
@@ -835,7 +835,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-table",
@@ -852,7 +852,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-table",
@@ -887,7 +887,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-kanban",
@@ -904,7 +904,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-kanban",
@@ -939,7 +939,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-detail",
@@ -956,7 +956,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-detail",
@@ -991,7 +991,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-open-detail",
@@ -1008,7 +1008,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-open-detail",
@@ -1043,7 +1043,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-search",
@@ -1060,7 +1060,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-search",
@@ -1077,7 +1077,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-search",
@@ -1112,7 +1112,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-bulk",
@@ -1129,7 +1129,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "tasks-bulk",
@@ -1164,7 +1164,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "calendar",
@@ -1181,7 +1181,7 @@
       "metric": "INP",
       "tier": "cwv",
       "budget": 200,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "calendar",
@@ -1198,7 +1198,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "calendar",
@@ -1233,7 +1233,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "notifications",
@@ -1250,7 +1250,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "notifications",
@@ -1285,7 +1285,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "documents",
@@ -1302,7 +1302,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "documents",
@@ -1337,7 +1337,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "org",
@@ -1354,7 +1354,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "org",
@@ -1389,7 +1389,7 @@
       "metric": "LCP",
       "tier": "cwv",
       "budget": 2500,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "command-search",
@@ -1406,7 +1406,7 @@
       "metric": "CLS",
       "tier": "cwv",
       "budget": 0.1,
-      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+      "basis": "C16 good threshold (apps/web/src/telemetry/web-vitals.ts)"
     },
     {
       "route": "command-search",

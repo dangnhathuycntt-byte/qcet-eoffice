@@ -3,6 +3,9 @@ import path from "node:path";
 // Môi trường E2E dùng chung cho server (webServer) và global setup. Chỉ cho phép DB tách biệt.
 export const E2E_PORT = Number(process.env.E2E_PORT || 3101);
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
+/** Cổng server API riêng của E2E; web chuyển tiếp /api tới đây (API_INTERNAL_URL). */
+export const E2E_API_PORT = Number(process.env.E2E_API_PORT || 3102);
+export const E2E_API_URL = `http://127.0.0.1:${E2E_API_PORT}`;
 export const E2E_TMP = path.resolve(__dirname, ".tmp");
 export const E2E_UPLOADS = path.join(E2E_TMP, "uploads");
 export const E2E_AUTH_FILE = path.resolve(__dirname, "../playwright/.auth/user.json");

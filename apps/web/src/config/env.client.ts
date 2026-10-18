@@ -1,18 +1,11 @@
 import { z } from "zod";
+import { FORBIDDEN_SERVER_SECRETS } from "@qcet/shared/config/server-secret-names";
 
 /**
  * List of known forbidden secret names that must NEVER be leaked to the client.
+ * Danh sách nằm ở @qcet/shared để mã web không chứa tên biến bí mật server.
  */
-export const FORBIDDEN_SERVER_SECRETS = [
-  "DATABASE_URL",
-  "AUTH_SECRET",
-  "JWT_SECRET",
-  "GOOGLE_CLIENT_SECRET",
-  "VAPID_PRIVATE_KEY",
-  "POSTGRES_PASSWORD",
-  "POSTGRES_USER",
-  "NOTION_TOKEN",
-] as const;
+export { FORBIDDEN_SERVER_SECRETS };
 
 /**
  * Zod schema for client environment variables.

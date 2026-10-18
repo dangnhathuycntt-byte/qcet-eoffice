@@ -1,25 +1,50 @@
 import path from "node:path";
+import { loadEnvConfig } from "@next/env";
 import type { NextConfig } from "next";
-import { getNextSecurityHeaders } from "./packages/shared/src/config/security-headers";
+
+const repoRoot = path.resolve(__dirname, "../..");
+// Next nạp file này bằng requireFromString nên import tương đối được tìm theo thư mục chạy lệnh, không theo vị trí
+// file: nạp theo đường dẫn tuyệt đối để `next dev|start apps/<app>` chạy được cả từ gốc repo lẫn từ thư mục app.
+const { getNextSecurityHeaders }: typeof import("../../packages/shared/src/config/security-headers") = require(
+  path.join(repoRoot, "packages/shared/src/config/security-headers"),
+);
+// .env* nằm ở gốc repo, dùng chung hai app; Next chỉ tự nạp trong thư mục app. Không ghi đè biến đã có.
+loadEnvConfig(repoRoot, process.env.NODE_ENV !== "production");
 
 const isProduction = process.env.NODE_ENV === "production";
 const securityHeaders = getNextSecurityHeaders(isProduction);
+
+/**
+ * API nội bộ (D6). Trình duyệt gọi /api cùng tên miền; production định tuyến /api tới qcet-api ở cloudflared,
+ * còn lại (dev, gọi thẳng web) đi qua rewrite dưới đây. Rewrite chốt lúc build: image web build với
+ * API_INTERNAL_URL của mạng compose. Dev mặc định API ở cổng API_PORT (3100).
+ */
+const apiInternalUrl = (
+  process.env.API_INTERNAL_URL ||
+  (isProduction ? "" : `http://127.0.0.1:${process.env.API_PORT || 3100}`)
+).replace(/\/+$/, "");
+if (!apiInternalUrl) throw new Error("API_INTERNAL_URL chưa đặt (bắt buộc khi build/chạy production)");
 
 const nextConfig: NextConfig = {
   // E2E chạy server riêng với NEXT_DIST_DIR khác để không đụng .next của dev server đang mở
   distDir: process.env.NEXT_DIST_DIR || ".next",
   output: "standalone",
-  serverExternalPackages: ["web-push"],
-  outputFileTracingRoot: path.resolve(__dirname),
+  // Gốc repo: standalone mang theo packages/ dùng chung
+  outputFileTracingRoot: repoRoot,
   turbopack: {
-    root: path.resolve(__dirname),
+    root: repoRoot,
   },
+  transpilePackages: ["@qcet/contracts", "@qcet/shared"],
   experimental: {
+    // @qcet/* là mã nguồn TS ngoài thư mục app (tsconfig paths)
+    externalDir: true,
     optimizePackageImports: ["lucide-react", "qrcode", "vaul", "motion", "@base-ui/react"],
     // Middleware chạy Node runtime nên Next đệm body request và cắt ở 10MB (mặc định), làm
     // upload ~10MB lỗi "Failed to parse body as FormData". Chừa dư cho overhead multipart
-    // (giới hạn tệp thực tế 10MB vẫn do /api/upload kiểm tra).
+    // (giới hạn tệp thực tế 10MB vẫn do /api/upload kiểm tra). /api/* đi qua middleware này trước rewrite.
     middlewareClientMaxBodySize: "12mb",
+    // Rewrite /api chờ API tới 340 s: luồng chat của Trợ lý chạy tối đa 330 s (maxDuration của route, ADR-009)
+    proxyTimeout: 340_000,
   },
   images: {
     remotePatterns: [
@@ -53,6 +78,9 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
     ];
+  },
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${apiInternalUrl}/api/:path*` }];
   },
   async redirects() {
     return [

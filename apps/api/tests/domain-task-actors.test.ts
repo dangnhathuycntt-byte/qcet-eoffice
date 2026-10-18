@@ -26,7 +26,7 @@ import {
   MakerCheckerError,
   SegregationOfDutiesError,
 } from "../src/server/tasks/task-actor-service";
-import { migrateTaskRelations } from "../packages/db/prisma/seeds/migrate-task-relations";
+import { migrateTaskRelations } from "../../../packages/db/prisma/seeds/migrate-task-relations";
 import {
   TaskActorRole,
   TaskOriginLevel,

@@ -24,10 +24,10 @@ import crypto from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { prisma } from '@qcet/db/prisma';
 import { UserRole } from '@prisma/client';
-import { revokeSession, clearRevocationStoreForTesting } from '@/server/auth/session-policy';
+import { revokeSession, clearRevocationStoreForTesting } from '../apps/api/src/server/auth/session-policy';
 
-import { middleware } from '../src/middleware';
-import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { middleware } from './helpers/split-middleware';
+import { signSessionToken, SESSION_COOKIE_NAME } from '../apps/api/src/lib/jwt-session';
 
 /**
  * Issue #27 acceptance: opaque Auth.js/PrismaAdapter database sessions must

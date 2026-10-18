@@ -1,0 +1,17 @@
+{
+  "name": "@qcet/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Giao diện QCET E-Office (trang, component, PWA). Đọc phiên và dữ liệu qua apps/api; không chạm DB.",
+  "scripts": {
+    "dev": "next dev --turbopack -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-tests.mjs --workspace apps/web"
+  },
+  "dependencies": {
+    "@qcet/contracts": "*",
+    "@qcet/shared": "*"
+  }
+}

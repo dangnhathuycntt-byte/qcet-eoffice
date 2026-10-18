@@ -1,18 +1,18 @@
 import { describe, test, before } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest, NextResponse } from "next/server";
-import { middleware } from "@/middleware";
-import { POST as logoutPost, GET as logoutGet } from "@/app/api/auth/logout/route";
-import { GET as meGet } from "@/app/api/auth/me/route";
+import { middleware } from "./helpers/split-middleware";
+import { POST as logoutPost, GET as logoutGet } from "../apps/api/src/app/api/auth/logout/route";
+import { GET as meGet } from "../apps/api/src/app/api/auth/me/route";
 import {
   signSessionToken,
   SESSION_COOKIE_NAME,
   SECURE_SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
-} from "@/lib/jwt-session";
-import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
-import { authConfig } from "@/auth.config";
-import { auth, signIn, signOut } from "@/auth";
+} from "../apps/api/src/lib/jwt-session";
+import { getApiContext, requireAuthenticated } from "../apps/api/src/server/api/request-context";
+import { authConfig } from "../apps/api/src/auth.config";
+import { auth, signIn, signOut } from "../apps/api/src/auth";
 import { prisma } from "@qcet/db/prisma";
 
 describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
