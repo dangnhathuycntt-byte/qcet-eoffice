@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { getSessionFromRequest } from "@/lib/jwt-session";
-import { readMeetingDetailPageData, readMeetingTitle } from "@/server/services/meeting-detail-page-data";
+import { readMeetingDetailPageData } from "@/server/services/meeting-detail-page-data";
 
 import { MeetingDetailView } from "@/components/meetings/meeting-detail-view";
 
@@ -20,11 +20,9 @@ interface PageProps {
 /*  Metadata                                                           */
 /* ------------------------------------------------------------------ */
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const title = await readMeetingTitle(id);
-
-  return { title: title ?? "Cuộc họp" };
+// Không đọc dữ liệu cuộc họp ở metadata: bước này chạy trước xác thực và kiểm quyền theo đối tượng.
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: "Cuộc họp" };
 }
 
 /* ------------------------------------------------------------------ */
@@ -53,8 +51,8 @@ export default async function MeetingDetailPage({ params }: PageProps) {
     role: (authSession?.user as any)?.role ?? jwtSession?.role ?? "CHUYEN_VIEN",
   };
 
-  /* Fetch -------------------------------------------------------------- */
-  const serialized = await readMeetingDetailPageData(id);
+  /* Fetch (kiểm meeting.read; không có quyền -> null -> notFound()) ------- */
+  const serialized = await readMeetingDetailPageData(id, userId);
 
   if (!serialized) notFound();
 

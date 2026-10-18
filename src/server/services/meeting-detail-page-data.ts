@@ -1,19 +1,24 @@
 import prisma from "@/lib/prisma";
+import { ApiError } from "@/server/api/errors";
+import { MeetingService } from "@/server/services/meeting-service";
 
 // Dữ liệu đọc cho trang chi tiết cuộc họp (src/app/calendar/meetings/[id]/page.tsx).
-// Giữ nguyên truy vấn của trang: không kiểm meeting.read ở đây (trang chỉ yêu cầu đăng nhập).
+// Kiểm meeting.read qua MeetingService.getMeeting (cùng quy tắc với GET /api/meetings/[id]) trước khi đọc.
 
-export async function readMeetingTitle(id: string): Promise<string | null> {
-  const meeting = await prisma.meeting.findUnique({
-    where: { id },
-    select: { title: true },
-  });
+/**
+ * Cuộc họp kèm đơn vị, người tổ chức, người tham dự, kết luận; ngày giờ đã đổi sang ISO.
+ * `null` khi không có hoặc `userId` không có quyền đọc (trang trả notFound()).
+ */
+export async function readMeetingDetailPageData(id: string, userId: string) {
+  // getMeeting bỏ qua kiểm quyền khi không có người gọi, nên không có userId thì không đọc gì.
+  if (!userId) return null;
+  try {
+    await MeetingService.getMeeting(id, userId);
+  } catch (error) {
+    if (error instanceof ApiError && (error.statusCode === 403 || error.statusCode === 404)) return null;
+    throw error;
+  }
 
-  return meeting?.title ?? null;
-}
-
-/** Cuộc họp kèm đơn vị, người tổ chức, người tham dự, kết luận; ngày giờ đã đổi sang ISO. `null` khi không có. */
-export async function readMeetingDetailPageData(id: string) {
   const meeting = await prisma.meeting.findUnique({
     where: { id },
     include: {
