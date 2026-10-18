@@ -1,16 +1,18 @@
 /**
  * Đặc tả route `GET /api/documents/{id}/returns` (lịch sử trả lại và chuyển lại văn bản đến, V-01).
  *
- * Khóa hành vi hiện tại: xác thực → mã văn bản không rỗng → văn bản phải nằm trong phạm vi đọc
- * (`buildDocumentReadWhere`); ngoài phạm vi hoặc không tồn tại đều là 404 DOCUMENT_NOT_FOUND (RFC 9457).
+ * Xác thực → mã văn bản không rỗng → người xem phải mở được chi tiết văn bản như GET /api/documents/[id]
+ * (`readDocumentForUser`, gồm độ mật); không mở được hoặc không tồn tại đều là 404 DOCUMENT_NOT_FOUND
+ * (RFC 9457). Trước đây dùng điều kiện danh sách nên văn bản MAT vẫn lộ lịch sử trả lại.
  * Dữ liệu trả lại được tạo bằng dịch vụ có sẵn (`returnIncomingDocument`, `rerouteIncomingDocument`).
  * Chạy trên qcet_test; dữ liệu do test tự tạo theo runId và được dọn trong after().
  */
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { IncomingDocumentStatus, UserRole } from "@prisma/client";
+import { DocumentSecurityLevel, IncomingDocumentStatus, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { GET as getReturnsRoute } from "@/app/api/documents/[id]/returns/route";
+import { GET as getDocumentRoute } from "@/app/api/documents/[id]/route";
 import {
   rerouteIncomingDocument,
   returnIncomingDocument,
@@ -39,6 +41,8 @@ let docRerouted = "";
 let docTwice = "";
 /** Đang ở đơn vị A, chưa trả lại lần nào. */
 let docNoReturn = "";
+/** Văn bản đã bị trả lại một lần rồi nâng độ mật lên MAT: Văn thư và trưởng đơn vị A không mở được chi tiết. */
+let docMat = "";
 
 const session = (user: FixtureUser, role: string, departmentId?: string) => ({
   id: user.id,
@@ -80,6 +84,7 @@ describe("GET /api/documents/[id]/returns", () => {
     docRerouted = (await fx.document(assigned)).id;
     docTwice = (await fx.document(assigned)).id;
     docNoReturn = (await fx.document(assigned)).id;
+    docMat = (await fx.document(assigned)).id;
 
     const asHeadA = session(headA, "TRUONG_PHONG", unitA);
     const asHeadB = session(headB, "TRUONG_PHONG", unitB);
@@ -91,9 +96,12 @@ describe("GET /api/documents/[id]/returns", () => {
     await returnIncomingDocument(docTwice, { reason: "Lần trả thứ nhất" }, asHeadA);
     await rerouteIncomingDocument(docTwice, { leadUnitId: unitB }, asClerk);
     await returnIncomingDocument(docTwice, { reason: "Lần trả thứ hai" }, asHeadB);
+    await returnIncomingDocument(docMat, { reason: "Lý do trả lại văn bản mật" }, asHeadA);
+    // Không trả lại được văn bản mật, nên nâng độ mật sau khi đã trả lại (như văn bản được xác định mật về sau).
+    await prisma.document.update({ where: { id: docMat }, data: { securityLevel: DocumentSecurityLevel.MAT } });
 
     // Route chỉ đọc lịch sử; xóa ngay sự kiện outbox của fixture để worker của test khác không gửi thông báo.
-    await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: [docRerouted, docTwice] } } });
+    await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: [docRerouted, docTwice, docMat] } } });
   });
 
   after(async () => {
@@ -179,6 +187,16 @@ describe("GET /api/documents/[id]/returns", () => {
     assert.equal(first.fromUnit.id, unitA);
     assert.equal(first.toUnit.id, unitB);
     assert.ok(first.resolvedAt);
+  });
+
+  test("văn bản MAT mà chi tiết từ chối: Văn thư và trưởng đơn vị chủ trì nhận 404 (trước là 200 kèm lý do)", async () => {
+    assert.equal(await prisma.documentUnitReturn.count({ where: { documentId: docMat } }), 1, "fixture có một lần trả lại");
+    for (const user of [clerk, headA]) {
+      const detail = await getDocumentRoute(getRequest(`/api/documents/${docMat}`, bearer(user.token)), routeContext(docMat));
+      assert.equal(detail.status, 403, "chi tiết từ chối cùng người dùng");
+      const body = await assertProblem(await returnsOf(user, docMat), 404, "DOCUMENT_NOT_FOUND");
+      assert.ok(!JSON.stringify(body).includes("Lý do trả lại văn bản mật"), "không lộ lý do trả lại");
+    }
   });
 
   test("văn bản trong phạm vi nhưng chưa trả lại lần nào -> 200 với danh sách rỗng", async () => {
