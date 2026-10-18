@@ -1,11 +1,14 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { ValidationError } from '@/server/api/errors';
 import { parseAndValidateJson } from '@/server/api/validation';
 import { PushSubscriptionSchema } from '@/contracts/notifications';
 import { getVapidPublicKey } from '@/server/notifications/push-service';
+import {
+  revokePushSubscriptionByEndpoint,
+  upsertPushSubscription,
+} from '@/server/notifications/push-subscription-service';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { z } from 'zod';
@@ -53,29 +56,12 @@ export async function POST(request: NextRequest) {
     const deviceType = validated.deviceType || validated.platform || null;
     const userAgent = validated.userAgent || request.headers.get('user-agent') || null;
 
-    const subscription = await prisma.pushSubscription.upsert({
-      where: { endpoint: validated.endpoint },
-      update: {
-        userId: authUser.id,
-        p256dh: p256dh!,
-        auth: auth!,
-        deviceType: deviceType || null,
-        userAgent: userAgent || null,
-        status: 'ACTIVE',
-        failureCount: 0,
-        lastFailureCode: null,
-        updatedAt: new Date(),
-      },
-      create: {
-        userId: authUser.id,
-        endpoint: validated.endpoint,
-        p256dh: p256dh!,
-        auth: auth!,
-        deviceType: deviceType || null,
-        userAgent: userAgent || null,
-        status: 'ACTIVE',
-        failureCount: 0,
-      },
+    const subscription = await upsertPushSubscription(authUser.id, {
+      endpoint: validated.endpoint,
+      p256dh: p256dh!,
+      auth: auth!,
+      deviceType,
+      userAgent,
     });
 
     return apiSuccess(
@@ -106,16 +92,7 @@ export async function DELETE(request: NextRequest) {
 
     const body = await parseAndValidateJson(request, DeletePushSubscriptionSchema);
 
-    await prisma.pushSubscription.updateMany({
-      where: {
-        endpoint: body.endpoint,
-        userId: authUser.id,
-      },
-      data: {
-        status: 'REVOKED',
-        updatedAt: new Date(),
-      },
-    });
+    await revokePushSubscriptionByEndpoint(authUser.id, body.endpoint);
 
     return apiSuccess(
       { success: true },

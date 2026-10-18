@@ -1,10 +1,13 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { NotFoundError, AuthorizationError } from '@/server/api/errors';
 import { canReadNotification } from '@/server/policies/notification-policy';
 import { toNotificationDTO } from '@/server/dto/notification-dto';
+import {
+  findNotificationById,
+  setNotificationReadState,
+} from '@/server/notifications/notification-inbox-service';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { parseAndValidateJson } from '@/server/api/validation';
@@ -38,9 +41,7 @@ async function markNotificationAsRead(request: NextRequest, context: RouteContex
       throw new NotFoundError('Không tìm thấy thông báo');
     }
 
-    const existing = await prisma.notification.findUnique({
-      where: { id },
-    });
+    const existing = await findNotificationById(id);
 
     if (!existing) {
       throw new NotFoundError('Không tìm thấy thông báo');
@@ -53,13 +54,7 @@ async function markNotificationAsRead(request: NextRequest, context: RouteContex
     const reqBody = await parseAndValidateJson(request, MarkReadBodySchema, { allowEmpty: true });
     const isReadTarget = reqBody.isRead;
 
-    const updated = await prisma.notification.update({
-      where: { id },
-      data: {
-        isRead: isReadTarget,
-        readAt: isReadTarget ? new Date() : null,
-      },
-    });
+    const updated = await setNotificationReadState(id, isReadTarget);
 
     const dto = toNotificationDTO(updated);
 

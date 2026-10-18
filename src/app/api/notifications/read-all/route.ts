@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
+import { markAllNotificationsRead } from '@/server/notifications/notification-inbox-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,16 +19,7 @@ export async function POST(request: NextRequest) {
 
     await assertRateLimit(authUser.id, 'MUTATION');
 
-    const result = await prisma.notification.updateMany({
-      where: {
-        userId: authUser.id,
-        isRead: false,
-      },
-      data: {
-        isRead: true,
-        readAt: new Date(),
-      },
-    });
+    const result = await markAllNotificationsRead(authUser.id);
 
     return apiSuccess(
       {

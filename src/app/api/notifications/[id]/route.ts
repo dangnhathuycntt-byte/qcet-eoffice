@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { NotFoundError } from '@/server/api/errors';
 import { canReadNotification } from '@/server/policies/notification-policy';
 import { toNotificationDTO } from '@/server/dto/notification-dto';
+import { findNotificationById } from '@/server/notifications/notification-inbox-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const trimmedId = id?.trim();
     if (!trimmedId) throw new NotFoundError('Không tìm thấy thông báo');
 
-    const notification = await prisma.notification.findUnique({ where: { id: trimmedId } });
+    const notification = await findNotificationById(trimmedId);
     // Thông báo của người khác trả cùng lỗi với thông báo không tồn tại để không lộ sự tồn tại.
     if (!notification || !canReadNotification(authUser, notification)) {
       throw new NotFoundError('Không tìm thấy thông báo');
