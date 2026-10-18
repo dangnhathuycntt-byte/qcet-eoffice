@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { AssistantConversationSummaryDTO, AssistantContextRef } from "@/contracts/assistant";
+import type { AssistantConversationSummaryDTO, AssistantContextRef } from "@qcet/contracts/assistant";
 import {
   AssistantRequestError,
   deleteConversationRequest,

@@ -10,7 +10,7 @@
 import { NextRequest } from "next/server";
 import { GET as getTasks } from "../../src/app/api/tasks/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../../src/lib/jwt-session";
-import { prisma } from "../../src/lib/prisma";
+import { prisma } from "../../packages/db/src/prisma";
 import { TaskScope } from "@prisma/client";
 
 const arg = (name: string, def: string) => {

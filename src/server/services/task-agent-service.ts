@@ -6,7 +6,7 @@ import {
   type TaskAgentGatewayMessage,
   type TaskAgentMessage,
   type TaskAgentResult,
-} from "@/domain/tasks/task-agent-draft";
+} from "@qcet/shared/domain/tasks/task-agent-draft";
 import { callGateway, type GatewayConfig, type GatewayMessage } from "@/server/services/agent-gateway";
 
 /** Tin của Agent chỉ có chữ (tệp chỉ gắn vào tin người dùng), nên phần không phải chữ được bỏ qua. */

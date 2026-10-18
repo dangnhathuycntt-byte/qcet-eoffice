@@ -9,7 +9,7 @@ import {
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
 import { NotFoundError, ForbiddenError } from '@/server/api/errors';
-import { SubmitDeliverableInputSchema, ReviewDeliverableInputSchema } from '@/contracts/tasks';
+import { SubmitDeliverableInputSchema, ReviewDeliverableInputSchema } from '@qcet/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';

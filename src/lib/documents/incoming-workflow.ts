@@ -1,4 +1,4 @@
-import type { DocumentItem } from "@/types/document";
+import type { DocumentItem } from "@qcet/contracts/types/document";
 
 /**
  * Quy trình văn bản đến (FSM): REGISTERED → PRESENTED → DIRECTED → UNIT_ASSIGNED_PERSON → RESOLVED → FILED → ARCHIVED.

@@ -6,7 +6,7 @@ import {
   UniversalActionQueue,
   getActionQueueButtonMeta,
 } from "../src/components/workspace/components/universal-action-queue";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import type { UniversalActionQueueItems } from "../src/components/workspace/types";
 
 describe("UniversalActionQueue Authority Semantics & Action Badges", () => {

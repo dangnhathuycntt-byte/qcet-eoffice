@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import {
   filterTasksByScope,
   applyOptimisticStatusChange,

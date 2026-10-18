@@ -12,7 +12,7 @@ import {
   type UserSummaryDTO,
   type UserDepartmentDTO,
 } from './user-dto';
-import { isTaskOverdue } from '@/lib/academic-calendar';
+import { isTaskOverdue } from '@qcet/shared/lib/academic-calendar';
 import type {
   TaskSourceDocumentDTO,
   TaskSummaryDTO,
@@ -20,7 +20,7 @@ import type {
   TaskDeliverableDTO,
   TaskResolutionDTO,
   TaskDetailDTO,
-} from '@/contracts/tasks';
+} from '@qcet/contracts/tasks';
 import { extractDateString, extractVersion, toISOStringSafe } from './dto-helpers';
 
 export type {

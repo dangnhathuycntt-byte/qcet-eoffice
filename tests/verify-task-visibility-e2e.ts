@@ -1,4 +1,4 @@
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { GET as dashboardOverviewGET } from '../src/app/api/dashboard/overview/route';
 import { POST as taskPostRoute, GET as taskGetRoute } from '../src/app/api/tasks/route';

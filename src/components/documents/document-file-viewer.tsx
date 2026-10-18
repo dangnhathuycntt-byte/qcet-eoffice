@@ -17,7 +17,7 @@ import {
   findPreviewableAlternative,
   resolveActiveFileId,
   type FileStates,
-} from "@/lib/documents/file-viewer-state";
+} from "@qcet/shared/lib/documents/file-viewer-state";
 
 function formatSize(size?: number | string | null): string {
   if (size === undefined || size === null || size === "") return "";

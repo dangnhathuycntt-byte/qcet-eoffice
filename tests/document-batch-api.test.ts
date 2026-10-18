@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { POST as batchRoute } from "../src/app/api/documents/batch/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import {
@@ -15,8 +15,8 @@ import {
   UnitType,
   UserRole,
 } from "@prisma/client";
-import { AuditAction } from "../src/lib/db/audit";
-import { BatchDocumentRequestSchema } from "../src/contracts/documents";
+import { AuditAction } from "@qcet/db/audit";
+import { BatchDocumentRequestSchema } from "@qcet/contracts/documents";
 import {
   mapIncomingWorkflowStatusToDocumentStatus,
   mapOutgoingWorkflowStatusToDocumentStatus,

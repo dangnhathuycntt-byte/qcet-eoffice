@@ -9,7 +9,7 @@ import { buildDocumentResource } from "@/server/authorization/available-actions"
 import { canReadDocument } from "@/server/policies/document-policy";
 import { ForbiddenError, NotFoundError } from "@/server/api/errors";
 import { isApprovalParticipant } from "@/server/documents/submission-approval-service";
-import type { DocumentItem } from "@/types/document";
+import type { DocumentItem } from "@qcet/contracts/types/document";
 
 export async function readDocumentForUser(
   authContext: AuthorizationContext,

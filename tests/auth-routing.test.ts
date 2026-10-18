@@ -8,7 +8,7 @@ process.env.JWT_SECRET = TEST_SECRET;
 
 import { middleware } from "../src/middleware";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { sanitizeRedirectUrl } from "../src/lib/login-helpers";
+import { sanitizeRedirectUrl } from "@qcet/shared/lib/login-helpers";
 
 describe("QCET Authentication Routing & Middleware Invariants", () => {
   const originalEnv = { ...process.env };

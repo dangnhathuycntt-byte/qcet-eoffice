@@ -10,11 +10,11 @@ import {
   generateBaseEmail,
   removeVietnameseTones,
   type MitacoRawPersonnel,
-} from '../prisma/seeds/mitaco-personnel-seed';
-import { CANONICAL_16_UNITS, CANONICAL_SCHOOL_ROOT, CANONICAL_POSITION_DEFINITIONS } from '../prisma/seeds/canonical-org-seed';
+} from '../packages/db/prisma/seeds/mitaco-personnel-seed';
+import { CANONICAL_16_UNITS, CANONICAL_SCHOOL_ROOT, CANONICAL_POSITION_DEFINITIONS } from '../packages/db/prisma/seeds/canonical-org-seed';
 
 describe('Mitaco Personnel Seed & Mapping Suite', () => {
-  const jsonPath = path.join(process.cwd(), 'prisma', 'seeds', 'extracted_personnel_mitaco.json');
+  const jsonPath = path.join(process.cwd(), 'packages', 'db', 'prisma', 'seeds', 'extracted_personnel_mitaco.json');
 
   test('1. File extracted_personnel_mitaco.json tồn tại và có đúng 258 bản ghi duy nhất', () => {
     assert.ok(fs.existsSync(jsonPath), 'File extracted_personnel_mitaco.json phải tồn tại');

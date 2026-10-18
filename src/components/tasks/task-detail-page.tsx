@@ -8,8 +8,8 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Dialog as ProgressDialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
-import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
-import { isSchoolTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
+import { isSchoolTask } from "@qcet/contracts/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
 import { useSidebarLayout } from "@/components/layout/sidebar-context";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,7 @@ import { TaskDetailSplitLayout, useStackedTaskDetail } from "@/components/tasks/
 import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { createDeliverable, deleteDeliverable, updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
-import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
+import { consolidateActivityFeed } from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   applyProgressResult,

@@ -24,8 +24,8 @@ import {
   CreateTaskWithSubtasksInputSchema,
   type CreateTaskWithSubtasksInput,
   type TaskPriorityInput,
-} from '@/contracts/tasks';
-import type { TaskDetailDTO } from '@/contracts/tasks';
+} from '@qcet/contracts/tasks';
+import type { TaskDetailDTO } from '@qcet/contracts/tasks';
 
 /** Visual/creation level exposed by the create-task UI. */
 export type CreateTaskLevel = 'TRUONG' | 'DON_VI' | 'STAFF';

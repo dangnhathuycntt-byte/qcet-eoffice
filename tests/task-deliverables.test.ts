@@ -5,7 +5,7 @@ import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TaskDeliverables, toTaskDeliverableItems } from "../src/components/tasks/detail/task-deliverables";
-import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "../src/lib/adapters/task-db-adapter";
+import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "@qcet/shared/lib/adapters/task-db-adapter";
 
 const rawTask = {
   id: "t1",

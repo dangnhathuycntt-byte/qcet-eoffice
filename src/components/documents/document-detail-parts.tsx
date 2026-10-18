@@ -8,9 +8,9 @@ import { Collapsible } from "@base-ui/react/collapsible";
 import { cn } from "@/lib/utils";
 import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
-import { getStatusDisplay } from "@/domain/tasks/display-config";
+import { getStatusDisplay } from "@qcet/shared/domain/tasks/display-config";
 import { getDueIndicator, getSlaBadgeStatus } from "@/components/tasks/table/utils/table-date-helpers";
-import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
+import { formatCompactDate, formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { useTrackOpenPopover } from "./popover-escape-guard";
 
 /** Tiêu đề chính là trích yếu; số, ký hiệu và nguồn là dòng phụ. */

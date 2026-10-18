@@ -4,7 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AttentionBadge } from "../src/components/workspace/attention-badge";
 import { ActionQueueShell } from "../src/components/workspace/action-queue-shell";
-import { parseZoneParam } from "../src/types/workspace";
+import { parseZoneParam } from "@qcet/contracts/types/workspace";
 import { resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
 
 describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {

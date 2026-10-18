@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "../src/lib/adapters/task-db-adapter";
+import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "@qcet/shared/lib/adapters/task-db-adapter";
 
 const dri = (id: string, name: string, avatarUrl: string | null = null) => ({
   userId: id,

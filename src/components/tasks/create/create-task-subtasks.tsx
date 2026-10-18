@@ -12,7 +12,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { IconSidebarTasks } from "@/components/layout/sidebar-rounded-icons";
 import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
-import { CREATE_TASK_MAX_SUBTASKS } from "@/contracts/tasks";
+import { CREATE_TASK_MAX_SUBTASKS } from "@qcet/contracts/tasks";
 import { motionDuration, motionEase } from "@/lib/motion/tokens";
 import type { CreateTaskSubtaskFormItem } from "@/hooks/use-create-task-form";
 import type { DepartmentPersonnel } from "@/hooks/use-department-list";

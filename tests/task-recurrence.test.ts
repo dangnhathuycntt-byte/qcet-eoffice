@@ -6,7 +6,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, JobCatalogGroup, TaskActorRole, UnitType } from '@prisma/client';
 import { ZodError } from 'zod';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   STALE_CLAIM_MS,
   createRecurrence,
@@ -17,7 +17,7 @@ import {
   updateRecurrence,
   updateTemplate,
 } from '../src/server/tasks/task-recurrence-service';
-import { dueDateForPeriod, duePeriods, isPeriodDue, periodKeyOf, renderTitle } from '../src/domain/tasks/recurrence-rules';
+import { dueDateForPeriod, duePeriods, isPeriodDue, periodKeyOf, renderTitle } from '@qcet/shared/domain/tasks/recurrence-rules';
 import { ApiError } from '../src/server/api/errors';
 
 const runId = `t09_${Date.now()}`;

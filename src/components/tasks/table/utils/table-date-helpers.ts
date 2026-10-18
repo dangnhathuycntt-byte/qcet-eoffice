@@ -1,9 +1,9 @@
 import {
   getSystemReferenceDate,
   isTaskPastDue as calendarIsTaskPastDue,
-} from "@/lib/academic-calendar";
-import { DATE_FALLBACK } from "@/lib/format/date";
-import type { TaskStatus } from "@/types/dashboard";
+} from "@qcet/shared/lib/academic-calendar";
+import { DATE_FALLBACK } from "@qcet/shared/lib/format/date";
+import type { TaskStatus } from "@qcet/contracts/types/dashboard";
 import type { SlaBadgeStatus } from "../types";
 
 export { getSystemReferenceDate };

@@ -15,7 +15,7 @@ import {
   UnitType,
   UserRole,
 } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { GET as getDashboardOverview } from '@/app/api/dashboard/overview/route';
 

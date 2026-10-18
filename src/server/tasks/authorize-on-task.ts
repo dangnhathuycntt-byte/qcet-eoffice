@@ -2,7 +2,7 @@
  * Kiểm quyền trên một nhiệm vụ theo capability, dùng chung cho các dịch vụ con của
  * nhiệm vụ (bình luận, tiêu chí). Quyền đi qua authorize() (ADR-002); không kiểm role chuỗi.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";

@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { prisma as defaultPrisma } from "@/lib/prisma";
+import { prisma as defaultPrisma } from "@qcet/db/prisma";
 import type {
   DocumentItem,
   DocumentType,
@@ -8,7 +8,7 @@ import type {
   DocumentStatus,
   DocumentAttachmentItem,
   DocumentDirectiveItem,
-} from "@/types/document";
+} from "@qcet/contracts/types/document";
 import { getNextRegistrationNumber } from "./numbering-engine";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
@@ -20,7 +20,7 @@ import {
   mapOutgoingWorkflowStatusToDocumentStatus,
 } from "./state-machine";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
-import { DOCUMENT_DONE_STATUSES, type DocumentBucket } from "@/lib/documents/document-sidebar-buckets";
+import { DOCUMENT_DONE_STATUSES, type DocumentBucket } from "@qcet/shared/lib/documents/document-sidebar-buckets";
 import { buildDocumentBucketWhere } from "./document-bucket-where";
 import {
   assertCanLinkTask,
@@ -29,9 +29,9 @@ import {
   recordLinkedTaskChange,
   toLinkedTaskConflict,
 } from "./linked-task-link";
-import { logAuditEvent } from "@/lib/db/audit";
-import type { UpdateDocumentInput } from "@/contracts/documents";
-import type { DocumentTypeCode } from "@/domain/documents/document-type-param";
+import { logAuditEvent } from "@qcet/db/audit";
+import type { UpdateDocumentInput } from "@qcet/contracts/documents";
+import type { DocumentTypeCode } from "@qcet/shared/domain/documents/document-type-param";
 
 export {
   buildDocumentReadWhere,

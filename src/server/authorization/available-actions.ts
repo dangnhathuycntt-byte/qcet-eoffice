@@ -13,7 +13,7 @@ import type { AuthorizationContext } from './authorization-context';
 import type { CapabilityAction } from './capability';
 import type { AuthorizationResource } from './resource';
 import { authorize } from './authorization-engine';
-import { partitionTaskActorUserIds } from '@/domain/tasks/task-actor-roles';
+import { partitionTaskActorUserIds } from '@qcet/shared/domain/tasks/task-actor-roles';
 
 // ============================================================================
 // CANONICAL CANDIDATE ACTION LISTS

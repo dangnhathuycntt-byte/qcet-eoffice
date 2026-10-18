@@ -1,5 +1,5 @@
-import type { SchoolTask, DashboardStats } from "@/types/dashboard";
-import { getSystemReferenceDate, isTaskPastDue } from "@/lib/academic-calendar";
+import type { SchoolTask, DashboardStats } from "@qcet/contracts/types/dashboard";
+import { getSystemReferenceDate, isTaskPastDue } from "@qcet/shared/lib/academic-calendar";
 
 export function computeSchoolTaskRollup(task: SchoolTask): SchoolTask {
   const totalSubTasks = task.subTasks ? task.subTasks.length : 0;

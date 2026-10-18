@@ -13,7 +13,7 @@ import {
   type AssistantConversationSummaryDTO,
   type AssistantMessageDTO,
   type AssistantSourceRef,
-} from "../src/contracts/assistant";
+} from "@qcet/contracts/assistant";
 import {
   ASSISTANT_EXAMPLES,
   appendUniqueById,
@@ -44,8 +44,8 @@ import { nextRevealCount, revealSpeed, safeRevealEnd } from "../src/components/a
 import { AssistantRequestError } from "../src/components/assistant/assistant-client";
 import { AssistantComposer, AssistantFootnote } from "../src/components/assistant/assistant-composer";
 import { AgentModelsProvider } from "../src/components/agent-chat/agent-models";
-import { parseAgentModels } from "../src/domain/agent/agent-models";
-import { TASK_AGENT_ATTACHMENT_ACCEPT } from "../src/domain/tasks/task-agent-attachments";
+import { parseAgentModels } from "@qcet/shared/domain/agent/agent-models";
+import { TASK_AGENT_ATTACHMENT_ACCEPT } from "@qcet/shared/domain/tasks/task-agent-attachments";
 import { AssistantThread } from "../src/components/assistant/assistant-thread";
 import { AssistantHeader } from "../src/components/assistant/assistant-header";
 import { AssistantStartList } from "../src/components/assistant/assistant-start";

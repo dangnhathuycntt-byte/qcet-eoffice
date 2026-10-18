@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   getSystemReferenceDate as getAcademicReferenceDate,
   isTaskPastDue as isTaskPastDueAcademic,
-} from "../src/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import {
   getSystemReferenceDate as getHubReferenceDate,
   getSystemReferenceDateStr as getHubReferenceDateStr,
@@ -19,7 +19,7 @@ import { workspaceScopeToTaskScope, parseScopeParam, scopeToParam, getDefaultSco
 
 // 3. Pipeline Filtering Consistency
 import { filterTasksHub } from "../src/lib/unified-task-hub";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 // 4. Authority Semantics in Action Queue
 import {

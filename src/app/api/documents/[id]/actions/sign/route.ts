@@ -1,4 +1,4 @@
-import { SignDocumentSchema } from "@/contracts/documents";
+import { SignDocumentSchema } from "@qcet/contracts/documents";
 import { OutgoingDocumentService, type SignDocumentInput } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 

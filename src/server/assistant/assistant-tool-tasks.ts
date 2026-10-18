@@ -3,12 +3,12 @@
  */
 import { z } from "zod";
 import type { TaskActorRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import type { AssistantSourceRef } from "@/contracts/assistant";
+import { prisma } from "@qcet/db/prisma";
+import type { AssistantSourceRef } from "@qcet/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
-import { contentToPlainText } from "@/lib/tasks/plate-block-codec";
-import { getStatusDisplay } from "@/domain/tasks/display-config";
-import { assistantSourceHref } from "@/domain/assistant/assistant-sources";
+import { contentToPlainText } from "@qcet/shared/lib/tasks/plate-block-codec";
+import { getStatusDisplay } from "@qcet/shared/domain/tasks/display-config";
+import { assistantSourceHref } from "@qcet/shared/domain/assistant/assistant-sources";
 import { taskQueryService } from "@/server/tasks/task-query-service";
 import { findTaskIdByCode, readTaskForUser } from "@/server/tasks/read-task-for-user";
 import { LABEL as PEOPLE_ROLE_LABEL } from "@/server/tasks/task-people-view";

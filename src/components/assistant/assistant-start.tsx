@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
-import type { AssistantConversationSummaryDTO } from "@/contracts/assistant";
-import { formatConversationTime } from "@/domain/assistant/assistant-history";
+import type { AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
+import { formatConversationTime } from "@qcet/shared/domain/assistant/assistant-history";
 import { ASSISTANT_EXAMPLES, type AssistantExample } from "@/components/assistant/assistant-model";
 import { IconSidebarCalendar, IconSidebarInboxIn, IconSidebarTasks, type SidebarIconProps } from "@/components/layout/sidebar-rounded-icons";
 import { Button } from "@/components/ui/button";

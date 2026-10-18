@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   TaskStatus,
   TaskActorRole,
@@ -7,9 +7,9 @@ import {
   DossierStatus,
   DelegationStatus,
 } from '@prisma/client';
-import { ActionInboxItem, ActionInboxResponse } from '@/contracts/me';
-import { formatDisplayDate } from "@/lib/format/date";
-import { getDocumentHref } from "@/lib/documents/document-view-model";
+import { ActionInboxItem, ActionInboxResponse } from '@qcet/contracts/me';
+import { formatDisplayDate } from "@qcet/shared/lib/format/date";
+import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
 /** Trường văn bản mà hộp việc cần (số, trích yếu, độ mật). */
 const INBOX_DOCUMENT_SELECT = {

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import type { TaskStatus } from "@/types/dashboard";
+import type { TaskStatus } from "@qcet/contracts/types/dashboard";
 import type { ProgressResult } from "./task-detail-state";
 import { updateTaskProgress } from "@/lib/tasks/task-actions";
 

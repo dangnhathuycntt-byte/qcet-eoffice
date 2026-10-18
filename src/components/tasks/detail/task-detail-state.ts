@@ -1,6 +1,6 @@
 // Hàm thuần cho state chi tiết nhiệm vụ: tách khỏi component để test được.
 
-import type { TaskStatus } from "@/types/dashboard";
+import type { TaskStatus } from "@qcet/contracts/types/dashboard";
 
 /** Kết quả của POST /actions/update-progress (server là nguồn sự thật cho status và version). */
 export interface ProgressResult {

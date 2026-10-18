@@ -17,7 +17,7 @@ import {
   UnitType,
   UserRole,
 } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken } from "../src/lib/jwt-session";
 import { GET as getDocument, PATCH as patchDocument } from "../src/app/api/documents/[id]/route";
 import { GET as getAuditLogs } from "../src/app/api/documents/[id]/audit-logs/route";

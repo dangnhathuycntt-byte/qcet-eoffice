@@ -1,8 +1,8 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { Prisma, OutboxStatus } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
-import { publishOutboxEvent, fetchAvailableOutboxEvents, processOutboxEvent, processOutboxBatch, calculateExponentialBackoff, OutboxEventType, OutboxAggregateType, type OutboxEventHandler } from '../src/lib/db/outbox';
+import { prisma } from '@qcet/db/prisma';
+import { publishOutboxEvent, fetchAvailableOutboxEvents, processOutboxEvent, processOutboxBatch, calculateExponentialBackoff, OutboxEventType, OutboxAggregateType, type OutboxEventHandler } from '@qcet/db/outbox';
 
 describe('Task 10: Transactional Outbox Pattern & Model', () => {
   const testRunId = `outbox_test_${Date.now()}`;

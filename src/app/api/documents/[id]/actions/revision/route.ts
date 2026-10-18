@@ -1,4 +1,4 @@
-import { CreateDocumentRevisionSchema } from "@/contracts/documents";
+import { CreateDocumentRevisionSchema } from "@qcet/contracts/documents";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 

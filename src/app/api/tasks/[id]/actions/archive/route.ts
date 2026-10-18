@@ -1,4 +1,4 @@
-import { ArchiveTaskSchema } from "@/contracts/tasks";
+import { ArchiveTaskSchema } from "@qcet/contracts/tasks";
 import { taskCommandService } from "@/server/tasks";
 import { taskActionRoute } from "../shared";
 

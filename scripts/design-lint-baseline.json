@@ -1633,17 +1633,17 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/lib/notification-triage.ts",
+      "file": "packages/shared/src/lib/notification-triage.ts",
       "text": "bg: \"bg-slate-500/15\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/lib/notification-triage.ts",
+      "file": "packages/shared/src/lib/notification-triage.ts",
       "text": "ring: \"ring-slate-500/30\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/lib/notification-triage.ts",
+      "file": "packages/shared/src/lib/notification-triage.ts",
       "text": "text: \"text-slate-700\","
     }
   ]

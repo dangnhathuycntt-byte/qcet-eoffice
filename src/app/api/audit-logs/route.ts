@@ -2,7 +2,7 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { AuthorizationError, ValidationError } from "@/server/api/errors";
-import { AuditLogQuerySchema } from "@/contracts/audit-logs";
+import { AuditLogQuerySchema } from "@qcet/contracts/audit-logs";
 import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";

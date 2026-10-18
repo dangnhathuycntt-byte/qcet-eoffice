@@ -11,7 +11,7 @@ import {
   listDocuments,
   getDocumentById
 } from "../src/server/documents/document-service";
-import type { DocumentItem, DocumentType } from "../src/types/document";
+import type { DocumentItem, DocumentType } from "@qcet/contracts/types/document";
 import { formatIsoDate, formatDisplayDate } from "@/lib/format";
 
 describe("Document Numbering Engine (ND 30/2020)", () => {

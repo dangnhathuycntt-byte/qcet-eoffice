@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { taskCommandService } from '../src/server/tasks/task-command-service';
 import { taskQueryService } from '../src/server/tasks/task-query-service';
 import {
@@ -21,7 +21,7 @@ import {
   isTaskOverdue,
   getSystemReferenceDateStr,
   getIctReferenceDateStart,
-} from '../src/domain/tasks/deadlines';
+} from '@qcet/shared/domain/tasks/deadlines';
 
 describe('Task State Machine Integration & Executive OCC Tests', () => {
   let adminUser: any;

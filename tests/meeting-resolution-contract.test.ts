@@ -7,7 +7,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { CreateMeetingResolutionSchema } from "@/contracts/meeting";
+import { CreateMeetingResolutionSchema } from "@qcet/contracts/meeting";
 
 describe("CreateMeetingResolutionSchema validation boundaries", () => {
   test("accepts valid minimal input (title + content)", () => {

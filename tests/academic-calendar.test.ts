@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { getAcademicMonthInfo, getAcademicYear, getCalendarYear, getAcademicMonthsForYear, isDateInAcademicMonth, getAdjacentAcademicMonth, getQuarterFromMonth, isLeapYear, getDaysInMonth, type AcademicMonthPeriod } from "../src/lib/academic-calendar";
+import { getAcademicMonthInfo, getAcademicYear, getCalendarYear, getAcademicMonthsForYear, isDateInAcademicMonth, getAdjacentAcademicMonth, getQuarterFromMonth, isLeapYear, getDaysInMonth, type AcademicMonthPeriod } from "@qcet/shared/lib/academic-calendar";
 
 describe("Gregorian Solar Calendar & Time Period Engine Suite", () => {
   describe("1. Calendar Year & Academic Year Invariants", () => {

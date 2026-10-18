@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import type { UserRole } from "@/types/auth";
+import type { UserRole } from "@qcet/contracts/types/auth";
 import { resolveBreadcrumb } from "@/lib/navigation/active-matcher";
 import { FileText, Building2, LayoutDashboard, Calendar, CheckSquare, Inbox, type LucideIcon } from "lucide-react";
-import { WorkspaceZone } from "@/types/workspace";
+import { WorkspaceZone } from "@qcet/contracts/types/workspace";
 import { animate, useMotionValue, type MotionValue } from "motion/react";
 import { motionTransition } from "@/lib/motion/tokens";
 import {

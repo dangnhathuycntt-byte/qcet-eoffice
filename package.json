@@ -2,6 +2,10 @@
   "name": "qcet-eoffice",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -23,7 +27,7 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm test",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx packages/db/prisma/seed.ts",
     "db:migrate:status": "prisma migrate status",
     "db:drift:check": "node scripts/db-drift-check.mjs",
     "db:migrate:test-fresh": "node scripts/db-migrate-test-fresh.mjs",
@@ -96,7 +100,8 @@
     "typescript": "^5.7.3"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "schema": "packages/db/prisma/schema.prisma",
+    "seed": "tsx packages/db/prisma/seed.ts"
   },
   "overrides": {
     "postcss": "^8.5.28",

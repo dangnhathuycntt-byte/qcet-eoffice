@@ -1,5 +1,5 @@
 import { JobCatalogGroup } from '@prisma/client';
-import { UserContextResponse } from '@/contracts/me';
+import { UserContextResponse } from '@qcet/contracts/me';
 import { loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { AuthorizationContext } from '@/server/authorization/authorization-context';
 

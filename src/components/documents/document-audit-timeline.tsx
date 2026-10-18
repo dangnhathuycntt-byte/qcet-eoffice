@@ -3,8 +3,8 @@
 import * as React from "react";
 import { ChevronRight } from "lucide-react";
 import { Collapsible } from "@base-ui/react/collapsible";
-import { OfficialDocument } from "@/types/document";
-import type { DocumentAuditApiResponse, DocumentTimelineStep } from "@/types/document-audit";
+import { OfficialDocument } from "@qcet/contracts/types/document";
+import type { DocumentAuditApiResponse, DocumentTimelineStep } from "@qcet/contracts/types/document-audit";
 import { cn } from "@/lib/utils";
 import { fetchDocumentAuditTimeline, isEmptyTimeline } from "@/lib/documents/audit-timeline-client";
 import { formatShortDateTime } from "@/lib/documents/incoming-workflow";
@@ -13,7 +13,7 @@ export type {
   DocumentTimelineStep,
   DocumentAuditLogItem,
   DocumentAuditApiResponse,
-} from "@/types/document-audit";
+} from "@qcet/contracts/types/document-audit";
 
 export interface DocumentAuditTimelineProps {
   documentId: string;

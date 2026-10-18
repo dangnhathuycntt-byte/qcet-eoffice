@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { mapPrismaTaskToStaffTask, formatLocalDate, deriveSubtaskCollaborators } from "@/lib/adapters/task-db-adapter";
+import { prisma } from "@qcet/db/prisma";
+import { mapPrismaTaskToStaffTask, formatLocalDate, deriveSubtaskCollaborators } from "@qcet/shared/lib/adapters/task-db-adapter";
 import type {
   DashboardPayload,
   SchoolTask,
@@ -8,10 +8,10 @@ import type {
   UpcomingItem,
   ActivityEvent,
   TaskCategory,
-} from "@/types/dashboard";
-import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
+} from "@qcet/contracts/types/dashboard";
+import type { DepartmentHealthSummary } from "@qcet/shared/lib/executive-matrix-aggregator";
 import { TaskScope, TaskStatus } from "@prisma/client";
-import { getSystemReferenceDate, isTaskPastDue } from "@/lib/academic-calendar";
+import { getSystemReferenceDate, isTaskPastDue } from "@qcet/shared/lib/academic-calendar";
 
 export const VALID_TASK_CATEGORIES = new Set<string>([
   "CHUYEN_DOI_SO",

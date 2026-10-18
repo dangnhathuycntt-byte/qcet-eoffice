@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { encode } from "next-auth/jwt";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   getSessionFromRequest,
   signSessionToken,

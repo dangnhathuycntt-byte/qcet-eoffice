@@ -1,14 +1,14 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import JSZip from "jszip";
-import { buildTaskAgentMessages, buildTaskAgentSystemPrompt, parseTaskAgentOutput } from "../src/domain/tasks/task-agent-draft";
-import { createGatewaySseParser, parseTaskAgentStreamEvent, splitNdjson } from "../src/domain/tasks/task-agent-stream";
+import { buildTaskAgentMessages, buildTaskAgentSystemPrompt, parseTaskAgentOutput } from "@qcet/shared/domain/tasks/task-agent-draft";
+import { createGatewaySseParser, parseTaskAgentStreamEvent, splitNdjson } from "@qcet/shared/domain/tasks/task-agent-stream";
 import {
   TASK_AGENT_ATTACHMENT_TEXT_MAX,
   checkTaskAgentAttachments,
   getTaskAgentAttachmentKind,
   wrapTaskAgentAttachmentText,
-} from "../src/domain/tasks/task-agent-attachments";
+} from "@qcet/shared/domain/tasks/task-agent-attachments";
 import {
   extractDocxText,
   extractXlsxText,
@@ -16,7 +16,7 @@ import {
 } from "../src/server/services/task-agent-attachments";
 import { ApiError } from "../src/server/api/errors";
 import { cleanAttachmentFileName } from "../src/server/api/json-or-multipart";
-import { agentReplyToPlainText, parseAgentReply, parseAgentReplyInline } from "../src/domain/tasks/agent-reply-format";
+import { agentReplyToPlainText, parseAgentReply, parseAgentReplyInline } from "@qcet/shared/domain/tasks/agent-reply-format";
 
 const MB = 1024 * 1024;
 const ctx = { today: "2026-10-16", departmentName: "Trung tâm Số", personnel: [], draft: {} };

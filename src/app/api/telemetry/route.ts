@@ -13,7 +13,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { serverLogger } from "@/telemetry/server";
-import { sanitizeLogContext } from "@/telemetry/sanitize";
+import { sanitizeLogContext } from "@qcet/shared/telemetry/sanitize";
 import {
   MAX_PAYLOAD_BYTES,
   MAX_BATCH_EVENTS,

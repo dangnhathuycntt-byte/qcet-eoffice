@@ -7,8 +7,8 @@ import type {
   WorkspaceRole,
   StaffUrgencySummary,
   DepartmentHealthSummary,
-} from "../src/types/workspace";
-import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
+} from "@qcet/contracts/types/workspace";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { validateDeliverableSubmission, getDeliverableDraftKey, inferFileType, formatFileSize, SUPPORTED_FILE_TYPES } from "../src/components/portal/submit-deliverable-modal";
 import { validateReviewDecision, QUICK_COMMENT_TEMPLATES, DECISION_OPTIONS } from "../src/components/portal/review-action-dialog";

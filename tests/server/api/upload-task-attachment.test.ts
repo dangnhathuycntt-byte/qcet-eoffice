@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import { NextRequest } from "next/server";
 import { JobCatalogGroup, TaskActorRole, TaskPriority, TaskScope, TaskStatus, UnitType, UserRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken } from "@/lib/jwt-session";
 import { POST as upload } from "@/app/api/upload/route";
 import { GET as getFileObject } from "@/app/api/file-objects/[id]/route";

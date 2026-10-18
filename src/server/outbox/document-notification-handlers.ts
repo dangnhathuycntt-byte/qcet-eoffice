@@ -3,7 +3,7 @@
  * web push cho các sự kiện này. Người nhận tính khi xử lý, theo vai trò hiện tại.
  */
 import { AssignmentStatus } from "@prisma/client";
-import { OutboxEventType, type DbClient, type OutboxHandlerMap } from "@/lib/db/outbox";
+import { OutboxEventType, type DbClient, type OutboxHandlerMap } from "@qcet/db/outbox";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
 import { recipientsForPendingSteps } from "@/server/documents/submission-approval-service";

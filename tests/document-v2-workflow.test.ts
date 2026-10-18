@@ -13,7 +13,7 @@ import {
   SignatureVerificationStatus,
   UnitType,
 } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken } from "../src/lib/jwt-session";
 import {
   IncomingDocumentStateMachine,

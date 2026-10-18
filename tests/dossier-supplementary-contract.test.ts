@@ -12,7 +12,7 @@ import {
   FinalizeArchiveSchema,
   DossierNotesActionSchema,
   DossierItemIdSchema,
-} from "@/contracts/dossiers";
+} from "@qcet/contracts/dossiers";
 
 // ---------------------------------------------------------------------------
 // FinalizeArchiveSchema

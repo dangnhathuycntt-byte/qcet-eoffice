@@ -1,4 +1,4 @@
-import { getSystemReferenceDate, getTodayIctDate } from "@/lib/academic-calendar";
+import { getSystemReferenceDate, getTodayIctDate } from "@qcet/shared/lib/academic-calendar";
 
 export interface WeekDayItem {
   date: string;

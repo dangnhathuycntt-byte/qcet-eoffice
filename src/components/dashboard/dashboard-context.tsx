@@ -9,13 +9,13 @@ import type {
   TaskStatus,
   ActivityEvent,
   DashboardPayload,
-} from "@/types/dashboard";
-import type { WorkspaceZone, DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
+} from "@qcet/contracts/types/dashboard";
+import type { WorkspaceZone, DeliverableSubmissionPayload, ApprovalActionPayload } from "@qcet/contracts/types/workspace";
 import type { TaskScope, TaskViewMode, WorkboxFilter } from "@/lib/unified-task-hub";
-import type { AuthUser } from "@/types/auth";
-import type { ExecutiveFilter, ExecutiveActionStats, DepartmentHealthSummary, ExecutiveActionItem } from "@/lib/executive-matrix-aggregator";
-import type { DelegationRule } from "@/types/delegation";
-import type { AcademicMonthInfo } from "@/lib/academic-calendar";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { ExecutiveFilter, ExecutiveActionStats, DepartmentHealthSummary, ExecutiveActionItem } from "@qcet/shared/lib/executive-matrix-aggregator";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
+import type { AcademicMonthInfo } from "@qcet/shared/lib/academic-calendar";
 import { useModalState } from "@/hooks/use-modal-state";
 import { useDashboardState } from "@/hooks/use-dashboard-state";
 

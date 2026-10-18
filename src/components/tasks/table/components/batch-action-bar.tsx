@@ -21,11 +21,11 @@ import {
   TaskIconExport,
   TaskIconTrash,
   TaskIconClose,
-} from "@/lib/icons/task-icons";
-import type { TaskStatus } from "@/types/dashboard";
+} from "@qcet/shared/lib/icons/task-icons";
+import type { TaskStatus } from "@qcet/contracts/types/dashboard";
 import { cn } from "@/lib/utils";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
-import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
 import { Pressable } from "@/components/ui/pressable";
 
 /**

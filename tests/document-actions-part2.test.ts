@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { POST as presentRoute } from '@/app/api/documents/[id]/actions/present/route';
 import { POST as rejectContentRoute } from '@/app/api/documents/[id]/actions/reject-content/route';
 import { POST as resolveRoute } from '@/app/api/documents/[id]/actions/resolve/route';

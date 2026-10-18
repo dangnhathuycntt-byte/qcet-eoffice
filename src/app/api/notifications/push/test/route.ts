@@ -3,7 +3,7 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiError, apiSuccess } from '@/server/api/response';
 import { AuthorizationError } from '@/server/api/errors';
 import { parseAndValidateJson } from '@/server/api/validation';
-import { TestPushSchema } from '@/contracts/notifications';
+import { TestPushSchema } from '@qcet/contracts/notifications';
 import {
   formatTaskPushPayload,
   sendPushNotificationToUser,

@@ -6,7 +6,7 @@ import {
   LEGACY_SESSION_COOKIE_NAME,
 } from '@/lib/jwt-edge';
 import { verifySessionTokenAsync } from '@/lib/jwt-session';
-import { sanitizeRedirectUrl } from '@/lib/login-helpers';
+import { sanitizeRedirectUrl } from '@qcet/shared/lib/login-helpers';
 
 /**
  * Next.js Middleware runtime (official API for the installed Next.js 15.5:

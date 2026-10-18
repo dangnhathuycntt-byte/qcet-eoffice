@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAuditActionLabel, type ConsolidatedActivityItem } from "@/lib/tasks/activity-feed-aggregator";
+import { getAuditActionLabel, type ConsolidatedActivityItem } from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 import {
   TaskIconAssignee,
   TaskIconBlockAttachment,
@@ -12,7 +12,7 @@ import {
   TaskIconDeadline,
   TaskIconPriority,
   TaskIconStatus,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 
 const TZ = "Asia/Ho_Chi_Minh";
 

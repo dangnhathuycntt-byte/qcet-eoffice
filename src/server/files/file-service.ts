@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { FileScanStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   detectUploadMimeType,
   isAllowedFileExtension,

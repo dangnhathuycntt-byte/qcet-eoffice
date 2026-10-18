@@ -5,7 +5,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, JobCatalogGroup, TaskActorRole, TaskScope, TaskStatus, UnitType } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { loadAuthorizationContext } from '../src/server/authorization/authorization-context-service';
 import { buildTaskReadWhere } from '../src/server/tasks/task-query-service';
 import { canReadTask, dbReadScope, readableTaskIds } from '../src/server/tasks/staff-read-scope';

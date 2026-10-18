@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import type { SchoolTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import { filterTasksByScope } from "../src/components/workspace/utils/task-workspace-mutations";
 
 describe("Unified 3-Scopes (Cá nhân / Đơn vị / Toàn trường) Suite", () => {

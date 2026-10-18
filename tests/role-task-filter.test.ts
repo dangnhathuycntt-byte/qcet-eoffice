@@ -6,7 +6,7 @@ import {
   canAssignUnitTask,
   DEFAULT_DEMO_USERS,
 } from "../src/lib/role-task-filter";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("RBAC Task Filter Engine", () => {
   const sampleTasks: SchoolTask[] = [

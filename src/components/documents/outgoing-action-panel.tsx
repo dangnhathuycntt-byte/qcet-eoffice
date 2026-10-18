@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { StandardDialog } from "@/components/ui/dialog";
-import type { OutgoingDocumentStatus } from "@/contracts/documents";
+import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
 import { OUTGOING_STEP_ACTIONS } from "@/lib/documents/outgoing-step-actions";
 
 interface ActionDef {

@@ -1,7 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
 import { canUserApproveTask, isDelegationActive } from "../src/lib/delegation-authority-engine";
-import type { DelegationRule, ApprovalAuditLog } from "../src/types/delegation";
+import type { DelegationRule, ApprovalAuditLog } from "@qcet/contracts/types/delegation";
 
 describe("Task 4: Delegation Workflow & Governance Compliance", () => {
   describe("3. Quy chuan Quan tri Stanford & Nghi dinh 232: Separation of Duties", () => {

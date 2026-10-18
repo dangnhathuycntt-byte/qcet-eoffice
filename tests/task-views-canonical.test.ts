@@ -15,7 +15,7 @@ import {
   buildTaskViewWhere,
   computeTaskViewerContext,
 } from '../src/server/tasks/task-query-service';
-import type { TaskView } from '../src/domain/tasks';
+import type { TaskView } from '@qcet/shared/domain/tasks';
 import {
   AuthorizationContextModel,
   SystemRole,

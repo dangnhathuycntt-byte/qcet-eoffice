@@ -1,5 +1,5 @@
-import type { SchoolTask, TaskStatus } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
+import type { SchoolTask, TaskStatus } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import type { WorkspaceScope } from "../types";
 import { matchesUser } from "@/lib/role-task-filter";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";

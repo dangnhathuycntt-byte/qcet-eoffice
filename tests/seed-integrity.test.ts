@@ -2,12 +2,12 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { TaskActorRole } from '@prisma/client';
 
 describe('Seed Data Integrity and Verification', () => {
   test('seed script contains 11 QCET units, user accounts, and 40 realistic tasks with COLLABORATOR support', () => {
-    const seedPath = path.join(process.cwd(), 'prisma', 'seed.ts');
+    const seedPath = path.join(process.cwd(), 'packages', 'db', 'prisma', 'seed.ts');
     assert.strictEqual(fs.existsSync(seedPath), true, 'seed.ts must exist');
 
     const content = fs.readFileSync(seedPath, 'utf8');

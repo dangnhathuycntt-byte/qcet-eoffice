@@ -23,7 +23,7 @@ import {
   UnitType,
   UserRole,
 } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken } from "@/lib/jwt-session";
 import { resolveSafeFilePath } from "@/server/files/storage";
 

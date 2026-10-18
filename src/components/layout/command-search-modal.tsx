@@ -32,15 +32,15 @@ import { AgentIcon } from "@/components/icons/agent-icon";
 import {
   highlightMatchSegments,
   scoreVietnameseSearch,
-} from "@/lib/search/vietnamese-search";
+} from "@qcet/shared/lib/search/vietnamese-search";
 import type {
   SearchTaskResult,
   SearchUserResult,
   SearchDocumentResult,
-} from "@/contracts/search";
+} from "@qcet/contracts/search";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Pressable } from "@/components/ui/pressable";
-import { getDocumentHref } from "@/lib/documents/document-view-model";
+import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
 export interface QuickAction {
   id: string;

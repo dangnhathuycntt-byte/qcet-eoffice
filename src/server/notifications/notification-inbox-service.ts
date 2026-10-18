@@ -1,6 +1,6 @@
 import type { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import type { NotificationQuerySchema } from '@/contracts/notifications';
+import { prisma } from '@qcet/db/prisma';
+import type { NotificationQuerySchema } from '@qcet/contracts/notifications';
 import {
   buildNotificationWhere,
   decodeNotificationCursor,

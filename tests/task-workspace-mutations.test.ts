@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { applyOptimisticTaskPatch } from "../src/components/workspace/utils/task-workspace-mutations";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 const tasks = [
   { id: "t1", priority: "NORMAL", dueDate: "2026-10-20", subTasks: [{ id: "s1", priority: "LOW", dueDate: "2026-10-18" }] },

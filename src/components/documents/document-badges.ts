@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock, ShieldCheck } from "lucide-react";
-import type { DocumentStatus, DocumentUrgency } from "@/types/document";
+import type { DocumentStatus, DocumentUrgency } from "@qcet/contracts/types/document";
 
 /** Cấu hình hiển thị nhãn mức khẩn và trạng thái của văn bản (dùng ở bảng, thẻ danh sách). */
 export function getUrgencyBadgeConfig(urgency: DocumentUrgency): {

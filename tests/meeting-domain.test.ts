@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   MeetingStatus,
   MeetingParticipantRole,

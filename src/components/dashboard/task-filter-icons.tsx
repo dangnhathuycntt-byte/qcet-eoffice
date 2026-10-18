@@ -24,7 +24,7 @@ export {
   TaskIconAtRisk as ProgressSubAtRisk,
   TaskIconStatusOverdue as ProgressSubOverdue,
   TaskIconStatusDone as ProgressSubCompleted,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 
 export {
   StatusSubNew,
@@ -36,4 +36,4 @@ export {
   PrioritySubHigh,
   PrioritySubNormal,
   PrioritySubLow,
-} from "@/lib/icons/task-status-icons";
+} from "@qcet/shared/lib/icons/task-status-icons";

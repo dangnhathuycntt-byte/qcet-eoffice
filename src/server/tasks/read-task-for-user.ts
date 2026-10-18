@@ -2,7 +2,7 @@
  * Đọc chi tiết nhiệm vụ cho một người dùng, dùng chung cho GET /api/tasks/[id] và công cụ của Trợ lý.
  * Thứ tự kiểm quyền giữ nguyên như route: engine, rồi phạm vi D07, rồi lọc việc con.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { buildTaskResource, computeAvailableActions } from "@/server/authorization/available-actions";

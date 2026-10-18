@@ -1,6 +1,6 @@
 import {
   prisma,
-} from "@/lib/prisma";
+} from "@qcet/db/prisma";
 import {
   Prisma,
   TaskActor,
@@ -15,7 +15,7 @@ import {
   // Phase 9: AssigneeRole removed — TaskAssignee table dropped.
   AssignmentStatus,
 } from "@prisma/client";
-import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/domain/tasks/backup-reviewer-rules";
+import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@qcet/shared/domain/tasks/backup-reviewer-rules";
 
 export interface TaskActorContext {
   requestedById: string;

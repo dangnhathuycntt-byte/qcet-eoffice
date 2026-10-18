@@ -6,7 +6,7 @@ import type {
   DeliverableItem,
   CollaborationRequest,
   TaskStatus,
-} from "../src/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 
 describe("DACUM & Decree 232 Types Specification", () => {
   test("StaffTask supports all 5 statuses and deliverable attachments", () => {

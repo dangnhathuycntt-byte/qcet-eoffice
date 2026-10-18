@@ -1,4 +1,4 @@
-import type { DocumentItem, DocumentType } from "@/types/document";
+import type { DocumentItem, DocumentType } from "@qcet/contracts/types/document";
 
 /**
  * Returns Appendix IV (Nghị định 30/2020/NĐ-CP) official registry column headers.

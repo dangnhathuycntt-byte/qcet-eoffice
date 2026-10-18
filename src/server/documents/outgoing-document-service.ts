@@ -19,7 +19,7 @@
  * - Hybrid Authorization via assertAuthorized().
  */
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 import type { Prisma, Document, DocumentOutgoingWorkflow, SignatureRecord } from "@prisma/client";
 import {
@@ -37,8 +37,8 @@ import {
   type AuthorizationResource,
 } from "@/server/authorization/hybrid-authorization";
 import { resolveUserContext } from "@/server/documents/incoming-document-service";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import {
   InvalidTransitionError,
   NotFoundError,
@@ -48,7 +48,7 @@ import {
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
-import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@/config/institution";
+import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/config/institution";
 import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
 import {

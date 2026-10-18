@@ -10,15 +10,15 @@
  */
 import { z } from "zod";
 import { IncomingDocumentStatus, Prisma, UnitStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   assertAuthorized,
   HybridAuthorizationError,
   type AuthenticatedUserContext,
   type AuthorizationResource,
 } from "@/server/authorization/hybrid-authorization";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";

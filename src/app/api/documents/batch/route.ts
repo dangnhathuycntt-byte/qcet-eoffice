@@ -11,7 +11,7 @@ import { assertRateLimit } from "@/server/security/rate-limit";
 import {
   BatchDocumentRequestSchema,
   type BatchDocumentRequest,
-} from "@/contracts/documents";
+} from "@qcet/contracts/documents";
 import {
   ForbiddenError,
   NotFoundError,

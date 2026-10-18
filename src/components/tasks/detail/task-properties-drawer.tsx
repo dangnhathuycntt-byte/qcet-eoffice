@@ -7,8 +7,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
+import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import { TaskPropertiesSidebar, type AuditLogItem } from "./task-properties-sidebar";
 import { Pressable } from "@/components/ui/pressable";
 

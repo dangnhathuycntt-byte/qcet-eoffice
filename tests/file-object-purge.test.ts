@@ -9,7 +9,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { DocumentType, DossierItemType, DossierStatus, UnitType, UserRole } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { purgeDossier } from '../src/server/dossiers/dossier-disposal-service';
 import { purgeFileObject } from '../src/server/files/file-object-purge';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';

@@ -8,7 +8,7 @@ import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import type { DepartmentPersonnel } from "@/hooks/use-department-list";
 
 export interface PersonPillPickerProps {

@@ -6,7 +6,7 @@ import {
   settleOptimisticRead,
   mapDbNotification,
   type QCETNotification,
-} from "../../src/lib/notification-triage";
+} from "@qcet/shared/lib/notification-triage";
 
 function buildInbox(): QCETNotification[] {
   return [

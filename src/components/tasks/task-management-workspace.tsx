@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { SchoolTask } from "@/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 import {
   UnifiedAdaptiveWorkspace,
   UnifiedAdaptiveWorkspaceControlled,

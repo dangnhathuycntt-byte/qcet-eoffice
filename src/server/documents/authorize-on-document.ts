@@ -3,7 +3,7 @@
  * dịch vụ duyệt tờ trình. Không kiểm role chuỗi.
  */
 import { DocumentType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";

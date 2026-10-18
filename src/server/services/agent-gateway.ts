@@ -5,13 +5,13 @@
  */
 import { ApiError } from "@/server/api/errors";
 import { logger } from "@/server/observability/logger";
-import type { TaskAgentContentPart } from "@/domain/tasks/task-agent-draft";
+import type { TaskAgentContentPart } from "@qcet/shared/domain/tasks/task-agent-draft";
 import {
   createGatewaySseParser,
   parseGatewayToolCallDeltas,
   type GatewayDelta,
   type GatewayToolCallDelta,
-} from "@/domain/tasks/task-agent-stream";
+} from "@qcet/shared/domain/tasks/task-agent-stream";
 
 /** Giới hạn cho cả một lượt gọi gateway, kể cả lúc đọc phần trả lời. */
 export const AGENT_GATEWAY_TIMEOUT_MS = 45_000;

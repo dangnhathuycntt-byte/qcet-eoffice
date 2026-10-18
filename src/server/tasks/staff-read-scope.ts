@@ -9,7 +9,7 @@
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { buildTaskResource } from "@/server/authorization/available-actions";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { buildTaskReadWhere } from "./task-query-service";
 
 export type ReadScope = (ids: string[]) => Promise<Set<string>>;

@@ -12,7 +12,7 @@
  * - Batching uses navigator.sendBeacon during page unload and keepalive fetch during interaction.
  */
 
-import { sanitizeLogContext } from "./sanitize";
+import { sanitizeLogContext } from "@qcet/shared/telemetry/sanitize";
 
 export type TelemetryEventType =
   | "error"

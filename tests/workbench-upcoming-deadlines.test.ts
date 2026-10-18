@@ -10,7 +10,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { parseStrictDateOnly, addCalendarDays, isTaskPastDue } from "../src/lib/academic-calendar";
+import { parseStrictDateOnly, addCalendarDays, isTaskPastDue } from "@qcet/shared/lib/academic-calendar";
 import {
   SMALL_FIXTURE_TASKS,
   FIXTURE_REFERENCE_DATE,

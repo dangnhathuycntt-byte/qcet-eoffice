@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 
 export interface CurrentUser {
   id: string;

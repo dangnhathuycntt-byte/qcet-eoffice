@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { GET } from "../src/app/api/health/route";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 describe("API Healthcheck Route Handler", () => {
   it("should return JSON response with system status and uptime", async () => {

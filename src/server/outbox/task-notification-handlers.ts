@@ -15,8 +15,8 @@ import {
   type OutboxEventHandler,
   type OutboxHandlerContext,
   type OutboxHandlerMap,
-} from "@/lib/db/outbox";
-import { prisma } from "@/lib/prisma";
+} from "@qcet/db/outbox";
+import { prisma } from "@qcet/db/prisma";
 import {
   formatTaskPushPayload,
   sendPushNotificationToUser,

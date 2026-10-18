@@ -8,9 +8,9 @@
  */
 import { z } from "zod";
 import { AssignmentStatus, TaskActorRole, TaskStatus, TaskUnitRequestStatus, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { authorize, isExecutivePosition, isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { loadAuthorizationContext, loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";

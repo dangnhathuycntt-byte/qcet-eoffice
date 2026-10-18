@@ -12,9 +12,9 @@ import {
   Plus,
   User,
 } from "lucide-react";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import { cn } from "@/lib/utils";
-import { getTodayIctDate } from "@/lib/academic-calendar";
+import { getTodayIctDate } from "@qcet/shared/lib/academic-calendar";
 import {
   type CalendarAttentionState,
   getCalendarAttentionState,

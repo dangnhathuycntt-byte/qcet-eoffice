@@ -14,8 +14,8 @@ import {
   RotateCcw,
   ArrowUpDown,
 } from "lucide-react";
-import { TaskIconDisplay } from "@/lib/icons/task-icons";
-import type { SchoolTask, TaskCategory } from "@/types/dashboard";
+import { TaskIconDisplay } from "@qcet/shared/lib/icons/task-icons";
+import type { SchoolTask, TaskCategory } from "@qcet/contracts/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -80,7 +80,7 @@ import {
   filterTasksByAcademicMonthStrict,
   ACADEMIC_MONTH_ORDER,
   getAcademicMonthInfo,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import { Pressable } from "@/components/ui/pressable";
 
 /**

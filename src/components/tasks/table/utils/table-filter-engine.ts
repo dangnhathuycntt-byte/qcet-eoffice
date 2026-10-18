@@ -1,13 +1,13 @@
 import { getTaskContentPreview } from "@/lib/task-content-preview";
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import type {
   SchoolTask,
   TaskCategory,
-} from "@/types/dashboard";
-import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
+} from "@qcet/contracts/types/dashboard";
+import { resolveDepartmentId } from "@qcet/shared/lib/executive-matrix-aggregator";
 import { matchesUser } from "@/lib/role-task-filter";
 import { isOpenTaskOverdue } from "@/lib/workspace-metrics-aggregator";
-import { filterTasksByAcademicMonthStrict } from "@/lib/academic-calendar";
+import { filterTasksByAcademicMonthStrict } from "@qcet/shared/lib/academic-calendar";
 import {
   isTaskDueToday,
   getSystemReferenceDate,

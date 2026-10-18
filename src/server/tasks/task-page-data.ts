@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
+import { prisma } from "@qcet/db/prisma";
+import { getAuditActionLabel } from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 import type { RawTaskEntity } from "@/server/tasks/task-detail-context";
 
 // Dữ liệu đọc cho trang chi tiết nhiệm vụ (src/app/tasks/[id]/page.tsx).

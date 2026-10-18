@@ -10,7 +10,7 @@
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { DocumentSecurityLevel, IncomingDocumentStatus, UserRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { GET as getReturnsRoute } from "@/app/api/documents/[id]/returns/route";
 import { GET as getDocumentRoute } from "@/app/api/documents/[id]/route";
 import {

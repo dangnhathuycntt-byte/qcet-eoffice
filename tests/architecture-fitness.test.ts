@@ -55,7 +55,7 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
   });
 
   describe("2. Client / Server Boundary Invariants", () => {
-    const allSrcFiles = getAllFiles(SRC_DIR).filter((f) => /\.(ts|tsx)$/.test(f));
+    const allSrcFiles = [SRC_DIR, path.join(ROOT_DIR, "packages")].flatMap((dir) => getAllFiles(dir)).filter((f) => /\.(ts|tsx)$/.test(f));
 
     it("ensures no Client Component or UI Component imports Prisma directly", () => {
       const violations: string[] = [];
@@ -144,18 +144,28 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       assert.deepStrictEqual(violations, [], `lib/domain/server không import UI/app: ${violations.join(", ")}`);
     });
 
-    it("keeps server-only files out of src/lib except the 4 files removed in step 3", () => {
-      assert.deepStrictEqual(SERVER_ONLY_LIB_ALLOWLIST, [
-        "src/lib/prisma.ts",
-        "src/lib/jwt-session.ts",
-        "src/lib/db/audit.ts",
-        "src/lib/db/outbox.ts",
-      ]);
+    it("keeps server-only files out of src/lib except jwt-session (removed in step 3)", () => {
+      assert.deepStrictEqual(SERVER_ONLY_LIB_ALLOWLIST, ["src/lib/jwt-session.ts"]);
       for (const relPath of SERVER_ONLY_LIB_ALLOWLIST) {
         assert.ok(fs.existsSync(path.join(ROOT_DIR, relPath)), `${relPath} trong allowlist không còn tồn tại`);
       }
       const violations = boundaryViolationsFor("server-only-in-lib");
       assert.deepStrictEqual(violations, [], `File server-only phải nằm trong src/server: ${violations.join(", ")}`);
+    });
+
+    it("packages do not import apps; @qcet/shared and @qcet/contracts stay pure", () => {
+      const violations = [...boundaryViolationsFor("package-no-app"), ...boundaryViolationsFor("package-pure")];
+      assert.deepStrictEqual(violations, [], `Package import app hoặc module server: ${violations.join(", ")}`);
+
+      const rulesOf = (relPath: string, content: string) => boundaryViolations(relPath, content).map((v) => v.rule);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/lib/x.ts", 'import { y } from "@/lib/y";'), ["package-no-app"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/lib/x.ts", 'import { y } from "../../../../src/lib/y";'), ["package-no-app"]);
+      assert.deepStrictEqual(rulesOf("packages/contracts/src/x.ts", 'import { TaskStatus } from "@prisma/client";'), ["package-pure"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/x.ts", 'import { prisma } from "@qcet/db/prisma";'), ["package-pure"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/x.ts", 'import fs from "node:fs";'), ["package-pure"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/x.ts", 'import { z } from "@qcet/contracts/common";'), []);
+      assert.deepStrictEqual(rulesOf("packages/db/src/audit.ts", 'import { Prisma } from "@prisma/client";'), []);
+      assert.deepStrictEqual(rulesOf("packages/db/src/audit.ts", 'import { x } from "@/server/x";'), ["package-no-app"]);
     });
 
     it("detects every import form and ignores comments, strings and look-alike paths", () => {
@@ -186,7 +196,11 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       assert.deepStrictEqual(rulesOf("src/domain/x.ts", 'export * from "../app/tasks/page";'), ["core-no-ui"]);
       assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import fs from "node:fs";'), ["server-only-in-lib"]);
       assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { s } from "@/server/api/route-error";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/db/audit.ts", 'import { prisma } from "@/lib/prisma";'), []);
+      // Prisma client và audit/outbox đã chuyển sang @qcet/db: file như vậy trong src/lib lại là vi phạm.
+      assert.deepStrictEqual(rulesOf("src/lib/db/audit.ts", 'import { prisma } from "@/lib/prisma";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/jwt-session.ts", 'import { prisma } from "@qcet/db/prisma";'), []);
+      assert.deepStrictEqual(rulesOf("src/app/x/page.tsx", 'import { prisma } from "@qcet/db/prisma";'), ["app-no-db"]);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { writeAudit } from "@qcet/db/audit";'), ["server-only-in-lib"]);
       // app-no-db áp cho mọi file trong src/app, kể cả helper không theo tên route/page/layout.
       assert.deepStrictEqual(rulesOf("src/app/api/x/[id]/actions/shared.ts", 'import { prisma } from "@/lib/prisma";'), ["app-no-db"]);
       assert.deepStrictEqual(rulesOf("src/app/x/foo-client.tsx", 'import { TaskStatus } from "@prisma/client";'), ["app-no-db"]);
@@ -230,10 +244,10 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
 
   describe("4. Security Headers & Browser Defense", () => {
     it("ensures security headers configuration module exists and defines nosniff and frame-ancestors", async () => {
-      const secHeadersPath = path.join(SRC_DIR, "config", "security-headers.ts");
+      const secHeadersPath = path.join(ROOT_DIR, "packages", "shared", "src", "config", "security-headers.ts");
       assert.strictEqual(fs.existsSync(secHeadersPath), true);
 
-      const { getSecurityHeaders } = await import("@/config/security-headers");
+      const { getSecurityHeaders } = await import("@qcet/shared/config/security-headers");
       const headers = getSecurityHeaders();
 
       assert.strictEqual(headers["X-Content-Type-Options"], "nosniff");
@@ -293,8 +307,8 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
 
   describe("8. Domain Layer Isolation & Canonical Services (Phase 28)", () => {
     it("verifies src/domain/tasks/state-machine.ts exists and has zero imports from react, next, or src/components/", () => {
-      const stateMachinePath = path.join(SRC_DIR, "domain", "tasks", "state-machine.ts");
-      assert.strictEqual(fs.existsSync(stateMachinePath), true, "src/domain/tasks/state-machine.ts must exist");
+      const stateMachinePath = path.join(ROOT_DIR, "packages", "shared", "src", "domain", "tasks", "state-machine.ts");
+      assert.strictEqual(fs.existsSync(stateMachinePath), true, "packages/shared/src/domain/tasks/state-machine.ts must exist");
 
       const content = fs.readFileSync(stateMachinePath, "utf8");
       assert.doesNotMatch(
@@ -317,7 +331,7 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
     it("verifies canonical domain services layer exists", () => {
       const queryServicePath = path.join(SRC_DIR, "server", "tasks", "task-query-service.ts");
       const commandServicePath = path.join(SRC_DIR, "server", "tasks", "task-command-service.ts");
-      const stateMachinePath = path.join(SRC_DIR, "domain", "tasks", "state-machine.ts");
+      const stateMachinePath = path.join(ROOT_DIR, "packages", "shared", "src", "domain", "tasks", "state-machine.ts");
 
       assert.strictEqual(fs.existsSync(queryServicePath), true, "task-query-service.ts must exist");
       assert.strictEqual(fs.existsSync(commandServicePath), true, "task-command-service.ts must exist");

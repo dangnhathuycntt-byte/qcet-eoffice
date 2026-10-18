@@ -6,7 +6,7 @@ import { Check, Ellipsis } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
-import type { SchoolTask, TaskStatus } from "@/types/dashboard";
+import type { SchoolTask, TaskStatus } from "@qcet/contracts/types/dashboard";
 import type { TableDensity, TableColumnVisibility } from "../types";
 import {
   formatTableDate,
@@ -14,7 +14,7 @@ import {
   getSlaBadgeStatus,
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
-import { isDateInAcademicMonth } from "@/lib/academic-calendar";
+import { isDateInAcademicMonth } from "@qcet/shared/lib/academic-calendar";
 import { getCategoryBadgeConfig, TASK_COLUMN_CLASS } from "../constants";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -24,7 +24,7 @@ import {
   TaskIconDueOverdue,
   TaskIconDueSoon,
   TaskIconStatusOverdue,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 
 function formatShortTableDate(dateStr?: string | Date | null): string {
   if (!dateStr) return "-";

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { closeActiveProcessOnRevision, onApprovalStepAdvanced } from "@/server/tasks/task-approval-process-service";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 import {
   TaskStatus,
@@ -14,13 +14,13 @@ import {
   auditService,
   AuditAction,
   AuditEntityType,
-} from "@/lib/db/audit";
+} from "@qcet/db/audit";
 import {
   publishOutboxEvent,
   publishTaskCompletedEvent,
   OutboxEventType,
   OutboxAggregateType,
-} from "@/lib/db/outbox";
+} from "@qcet/db/outbox";
 import {
   setTaskDRI,
   executeApprovalStep,
@@ -47,7 +47,7 @@ import {
   PreconditionFailedError,
 } from "@/server/api/errors";
 import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
-import { partitionTaskActorUserIds } from "@/domain/tasks/task-actor-roles";
+import { partitionTaskActorUserIds } from "@qcet/shared/domain/tasks/task-actor-roles";
 import { assertCollaboratorInLeadUnit } from "@/server/tasks/task-unit-request-service";
 import { countUnmetCriteria } from "@/server/tasks/task-criteria-service";
 import {
@@ -55,7 +55,7 @@ import {
   buildActorContext,
   buildTaskContext,
   getStatusLabel,
-} from "@/domain/tasks/state-machine";
+} from "@qcet/shared/domain/tasks/state-machine";
 import { bumpTaskVersion } from "@/server/tasks/task-version";
 
 // ============================================================================

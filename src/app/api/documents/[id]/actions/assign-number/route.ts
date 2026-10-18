@@ -1,4 +1,4 @@
-import { AssignOutgoingNumberSchema } from "@/contracts/documents";
+import { AssignOutgoingNumberSchema } from "@qcet/contracts/documents";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 

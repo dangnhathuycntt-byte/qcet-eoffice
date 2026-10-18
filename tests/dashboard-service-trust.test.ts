@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getLiveDashboardData, VALID_TASK_CATEGORIES } from "../src/server/services/dashboard-service";
-import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
-import { prisma } from "../src/lib/prisma";
+import { getSystemReferenceDate, isTaskPastDue } from "@qcet/shared/lib/academic-calendar";
+import { prisma } from "@qcet/db/prisma";
 
 test("getLiveDashboardData returns valid structure with zero NaN", async () => {
   const data = await getLiveDashboardData();

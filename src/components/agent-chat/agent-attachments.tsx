@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/pwa/storage-manager";
 import { Button } from "@/components/ui/button";
 import { FileTypeIcon } from "@/components/documents/file-type-icon";
-import { getTaskAgentAttachmentKind, type TaskAgentAttachmentKind } from "@/domain/tasks/task-agent-attachments";
+import { getTaskAgentAttachmentKind, type TaskAgentAttachmentKind } from "@qcet/shared/domain/tasks/task-agent-attachments";
 
 /** Ảnh/tệp gửi kèm tin nhắn ở ô soạn của Agent tạo nhiệm vụ và Trợ lý; máy chủ không lưu tệp. */
 export interface ChatAttachment {

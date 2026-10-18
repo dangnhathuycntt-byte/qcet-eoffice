@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 // Hồ sơ của chính người đang đăng nhập: đọc, cập nhật thông tin cá nhân, hoàn tất onboarding.
 

@@ -7,14 +7,14 @@ import type {
   StaffTask,
   DashboardPayload,
   TaskStatus,
-} from "@/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 import {
   computeSchoolTaskRollup,
   computeDashboardStats,
 } from "@/lib/dashboard-aggregator";
-import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
-import type { DelegationRule } from "@/types/delegation";
-import type { AuthUser } from "@/types/auth";
+import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@qcet/contracts/types/workspace";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import { isOnline, enqueueOfflineMutation } from "@/lib/offline-sync";
 import { getSystemReferenceDateStr } from "@/lib/unified-task-hub";
 import { createLatestRequestGuard } from "@/lib/latest-request-guard";

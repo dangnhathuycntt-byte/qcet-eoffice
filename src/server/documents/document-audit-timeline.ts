@@ -2,8 +2,8 @@
  * Dòng thời gian xử lý và nhật ký thao tác của một văn bản (GET /api/documents/{id}/audit-logs).
  * Route kiểm tồn tại và quyền đọc giữa hai bước: nạp văn bản, rồi dựng dòng thời gian.
  */
-import { prisma } from "@/lib/prisma";
-import type { DocumentAuditLogItem, DocumentTimelineStep } from "@/types/document-audit";
+import { prisma } from "@qcet/db/prisma";
+import type { DocumentAuditLogItem, DocumentTimelineStep } from "@qcet/contracts/types/document-audit";
 
 /** Thông tin người thực hiện hiển thị trên dòng thời gian. */
 const ACTOR_SELECT = { id: true, name: true, role: true, title: true, avatarUrl: true } as const;

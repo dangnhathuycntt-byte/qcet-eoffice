@@ -3,7 +3,7 @@ import { MeetingService } from '@/server/services/meeting-service';
 import {
   getTodayIctDate,
   getAcademicMonthInfo,
-} from '@/lib/academic-calendar';
+} from '@qcet/shared/lib/academic-calendar';
 
 // Dữ liệu ban đầu cho trang Lịch (src/app/calendar/page.tsx): nhiệm vụ và cuộc họp của tháng học hiện tại.
 // Không có userId thì trả hai danh sách rỗng, không gọi DB; lỗi từng nguồn trả danh sách rỗng.

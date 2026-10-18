@@ -3,7 +3,7 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { joinReactionNames, reactionNamesLabel } from "../src/domain/tasks/comment-reactions";
+import { joinReactionNames, reactionNamesLabel } from "@qcet/shared/domain/tasks/comment-reactions";
 
 const label = (names: string[], reacted: boolean, limit?: number) =>
   joinReactionNames(reactionNamesLabel({ names, reacted }, "Huy", limit));

@@ -5,7 +5,7 @@ import {
   getSecurityHeaders,
   getNextSecurityHeaders,
   applySecurityHeaders,
-} from "@/config/security-headers";
+} from "@qcet/shared/config/security-headers";
 import nextConfig from "../../next.config";
 import {
   POST as cspReportPost,

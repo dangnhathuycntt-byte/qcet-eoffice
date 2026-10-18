@@ -5,7 +5,7 @@ import path from "node:path";
 import { NextRequest } from "next/server";
 import { GET } from "../src/app/api/files/[...path]/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 const TEST_UPLOADS_DIR = path.resolve("./test_uploads_sandbox");
 

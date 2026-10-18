@@ -4,7 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useFeedback } from "@/components/ui/feedback-layer";
-import type { AssistantTaskProposal } from "@/contracts/assistant";
+import type { AssistantTaskProposal } from "@qcet/contracts/assistant";
 
 /** Hộp tạo nhiệm vụ của app: tải khi bấm lần đầu, không nặng thêm lúc mở trang. */
 const CreateTaskModal = dynamic(() => import("@/components/tasks/create/create-task-modal").then((mod) => mod.CreateTaskModal), {

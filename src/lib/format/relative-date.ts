@@ -9,8 +9,8 @@
  * reference, otherwise the canonical system reference date is used.
  */
 
-import { getSystemReferenceDate } from "@/lib/academic-calendar";
-import { DATE_FALLBACK, formatDisplayDate, toIctDateTimeParts } from "./date";
+import { getSystemReferenceDate } from "@qcet/shared/lib/academic-calendar";
+import { DATE_FALLBACK, formatDisplayDate, toIctDateTimeParts } from "@qcet/shared/lib/format/date";
 
 /**
  * Highest diff (in days) still rendered as a relative count.

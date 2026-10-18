@@ -5,13 +5,13 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { DocumentType } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   isPlaceholderDocumentNumber,
   isSameIncomingDocument,
   normalizeDocumentNumber,
   normalizeIssuingAuthority,
-} from '../src/domain/documents/duplicate-key';
+} from '@qcet/shared/domain/documents/duplicate-key';
 import {
   assertNoSuspectedDuplicate,
   findSuspectedDuplicates,

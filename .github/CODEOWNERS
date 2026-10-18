@@ -13,11 +13,10 @@
 # 1. DATABASE & PERSISTENCE SUBSYSTEM
 # ------------------------------------------------------------------------------
 # Schema definitions, migrations, audit logging, transactions, database clients
-prisma/                               @qcet-data-team @cdktcnqn-admin
-prisma/schema.prisma                  @qcet-data-team @cdktcnqn-admin
-prisma/migrations/                    @qcet-data-team @cdktcnqn-admin
-src/lib/db/                           @qcet-data-team
-src/lib/prisma.ts                     @qcet-data-team
+packages/db/prisma/                   @qcet-data-team @cdktcnqn-admin
+packages/db/prisma/schema.prisma      @qcet-data-team @cdktcnqn-admin
+packages/db/prisma/migrations/        @qcet-data-team @cdktcnqn-admin
+packages/db/src/                      @qcet-data-team
 src/server/api/idempotency.ts         @qcet-data-team
 
 # ------------------------------------------------------------------------------
@@ -32,7 +31,7 @@ src/lib/jwt-session.ts                @qcet-security-team @cdktcnqn-admin
 src/server/auth/google-oauth.ts       @qcet-security-team
 src/lib/password.ts                   @qcet-security-team
 src/server/security/                  @qcet-security-team @cdktcnqn-admin
-src/config/security-headers.ts        @qcet-security-team
+packages/shared/src/config/security-headers.ts @qcet-security-team
 
 # ------------------------------------------------------------------------------
 # 3. ENVIRONMENT & RUNTIME CONFIGURATION

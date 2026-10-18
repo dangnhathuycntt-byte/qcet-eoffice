@@ -5,8 +5,8 @@
  * Nhiều bản app cùng chạy vẫn an toàn: processOutboxEvent nhận sự kiện bằng lệnh
  * cập nhật nguyên tử PENDING → PROCESSING. Sự kiện không có handler giữ PENDING.
  */
-import { processOutboxBatch, type DbClient, type ProcessOutboxBatchResult } from "@/lib/db/outbox";
-import { prisma } from "@/lib/prisma";
+import { processOutboxBatch, type DbClient, type ProcessOutboxBatchResult } from "@qcet/db/outbox";
+import { prisma } from "@qcet/db/prisma";
 import { registerShutdownHook } from "@/server/lifecycle/shutdown";
 import { logger } from "@/server/observability/logger";
 import { scanTaskReminders } from "@/server/tasks/task-reminder-scanner";

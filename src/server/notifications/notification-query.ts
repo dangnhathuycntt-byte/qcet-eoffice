@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { getTriageTypes, type NotificationTriageTab } from "@/lib/notification-triage";
+import { getTriageTypes, type NotificationTriageTab } from "@qcet/shared/lib/notification-triage";
 
 // Truy vấn danh sách thông báo phía server: con trỏ phân trang và bộ lọc Prisma.
 

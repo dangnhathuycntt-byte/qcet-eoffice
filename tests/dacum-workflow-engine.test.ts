@@ -1,8 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { validateDeliverableSubmission, transitionStaffTaskStatus } from "../src/lib/dacum-workflow-engine";
-import type { AuthUser } from "../src/types/auth";
-import type { StaffTask, SchoolTask, DeliverableItem } from "../src/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { StaffTask, SchoolTask, DeliverableItem } from "@qcet/contracts/types/dashboard";
 
 describe("DACUM Workflow & RBAC Engine", () => {
   const adminUser: AuthUser = {

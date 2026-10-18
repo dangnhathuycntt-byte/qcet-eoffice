@@ -7,13 +7,13 @@ import {
   CheckCircle2,
   CircleDot,
 } from "lucide-react";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import { cn } from "@/lib/utils";
 import {
   type AcademicMonthPeriod,
   generateAcademicMonthGrid,
   getTodayIctDate,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import {
   getCalendarAttentionState,
   getMonthCellPresentation,

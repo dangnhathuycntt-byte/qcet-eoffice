@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { getFileFamily, type FileFamily } from "@/lib/documents/file-viewer-state";
+import { getFileFamily, type FileFamily } from "@qcet/shared/lib/documents/file-viewer-state";
 
 const FILL: Record<FileFamily, string> = {
   pdf: "text-file-pdf",

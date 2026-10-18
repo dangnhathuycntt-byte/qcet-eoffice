@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SubtaskOutlineRail } from "../src/components/tasks/detail/subtask-outline-rail";
-import type { StaffTask } from "../src/types/dashboard";
+import type { StaffTask } from "@qcet/contracts/types/dashboard";
 
 const subs = [
   { id: "s1", title: "Soạn kế hoạch", status: "IN_PROGRESS", description: "Chuẩn bị bản nháp đầu tiên" },

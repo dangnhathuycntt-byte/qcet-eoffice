@@ -1,6 +1,6 @@
 import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   recordAuthorizationDecision,
   extractAuditFromDecision,

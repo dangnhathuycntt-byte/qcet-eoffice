@@ -6,8 +6,8 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { OutboxStatus, TaskActorRole } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from '../src/lib/db/outbox';
+import { prisma } from '@qcet/db/prisma';
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from '@qcet/db/outbox';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { STALE_EVENT_MAX_AGE_MS } from '../src/server/outbox/task-notification-handlers';
 

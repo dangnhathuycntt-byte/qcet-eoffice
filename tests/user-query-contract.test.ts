@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { UserQuerySchema, UpdateUserProfileSchema } from '@/contracts/users';
+import { UserQuerySchema, UpdateUserProfileSchema } from '@qcet/contracts/users';
 import { buildUserDirectoryQueryOptions } from '@/server/users/user-directory-query';
 import { buildOffsetPagination } from '@/server/api/pagination';
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import type { Notification } from '@prisma/client';
 import { UserRole } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '@/lib/jwt-session';
 import { GET as getNotificationDetailRoute } from '@/app/api/notifications/[id]/route';
 

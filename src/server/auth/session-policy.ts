@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { AuthenticationError } from '@/server/api/errors';
 import type { CurrentUser } from './current-user';
 

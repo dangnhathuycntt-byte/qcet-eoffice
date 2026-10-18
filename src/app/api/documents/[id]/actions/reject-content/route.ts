@@ -1,4 +1,4 @@
-import { RejectContentDocumentSchema } from "@/contracts/documents";
+import { RejectContentDocumentSchema } from "@qcet/contracts/documents";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 

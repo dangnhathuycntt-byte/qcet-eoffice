@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { AuditLogQuerySchema, type AuditLogEntryDTO } from '../src/contracts/audit-logs';
+import { AuditLogQuerySchema, type AuditLogEntryDTO } from '@qcet/contracts/audit-logs';
 import {
   SYSTEM_CAPABILITIES,
   NON_DELEGABLE_CAPABILITIES,

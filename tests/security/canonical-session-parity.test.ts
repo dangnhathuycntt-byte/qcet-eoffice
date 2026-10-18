@@ -23,7 +23,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { UserRole } from '@prisma/client';
 import {
   verifySessionTokenAsync,

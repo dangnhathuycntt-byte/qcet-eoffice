@@ -2,7 +2,7 @@
  * Tên cuộc trò chuyện do mô hình đặt (như ChatGPT): một lần gọi gateway riêng, không công cụ, không suy nghĩ, chạy song
  * song với lượt đầu của cuộc mới. Chỉ gửi câu hỏi đầu, nhãn mục đang hỏi và nhãn tệp gửi kèm; không gửi nội dung tệp.
  */
-import { cleanGeneratedTitle } from "@/domain/assistant/assistant-history";
+import { cleanGeneratedTitle } from "@qcet/shared/domain/assistant/assistant-history";
 import { callGateway, type GatewayConfig } from "@/server/services/agent-gateway";
 
 /** Đặt tên chậm hơn mức này thì thôi, giữ tên lấy từ câu hỏi. */

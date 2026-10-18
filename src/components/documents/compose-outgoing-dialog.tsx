@@ -12,7 +12,7 @@ import { Pressable } from "@/components/ui/pressable";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import { cn } from "@/lib/utils";
-import type { DocumentSecurityLevel, DocumentUrgency } from "@/types/document";
+import type { DocumentSecurityLevel, DocumentUrgency } from "@qcet/contracts/types/document";
 import { attachFileToDocument } from "./workspace/document-edit";
 
 /**

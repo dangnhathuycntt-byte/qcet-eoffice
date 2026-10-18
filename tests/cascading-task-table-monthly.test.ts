@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () => {
   const mockTasks: SchoolTask[] = [

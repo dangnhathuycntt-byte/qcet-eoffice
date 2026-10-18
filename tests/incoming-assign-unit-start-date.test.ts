@@ -13,7 +13,7 @@ import {
   UnitType,
   UserRole,
 } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { assignUnitWork } from "../src/server/documents/incoming-document-service";
 
 const runId = `incstart${Date.now()}${Math.floor(Math.random() * 1000)}`;

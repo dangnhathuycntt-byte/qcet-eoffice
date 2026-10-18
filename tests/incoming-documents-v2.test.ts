@@ -12,7 +12,7 @@ import {
   UnitType,
   JobCatalogGroup,
 } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   registerIncomingDocument,
   presentDocument,

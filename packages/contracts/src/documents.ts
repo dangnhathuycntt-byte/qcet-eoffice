@@ -1,0 +1,571 @@
+import { z } from 'zod';
+import { IncomingDocumentStatus } from './prisma-enums';
+import { PaginationQuerySchema, IsoDateStringSchema } from './common';
+import { isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE } from '@qcet/shared/lib/url-utils';
+
+/**
+ * Institutional document types according to Decree 30/2020/ND-CP.
+ */
+export const DocumentTypeSchema = z.enum([
+  'INCOMING',
+  'OUTGOING',
+  'INTERNAL',
+  'VAN_BAN_DEN',
+  'VAN_BAN_DI',
+  'TO_TRINH_NOI_BO',
+]);
+
+/**
+ * Document processing status.
+ */
+export const DocumentStatusSchema = z.enum([
+  'CHO_PHAN_CONG',
+  'DANG_XU_LY',
+  'CHO_PHE_DUYET',
+  'DA_HOAN_THANH',
+  'LUU_THEO_DOI',
+  'pending_assignment',
+  'processing',
+  'delegated',
+  'approved',
+  'completed',
+]);
+
+/**
+ * Outgoing document workflow status values (matches Prisma OutgoingDocumentStatus).
+ */
+export const OutgoingDocumentStatusSchema = z.enum([
+  'DRAFT',
+  'DEPARTMENT_REVIEW',
+  'LEGAL_REVIEW',
+  'EXECUTIVE_REVIEW',
+  'CONTENT_REVIEW',
+  'FORMAT_CHECK',
+  'AUTHORIZED_SIGN',
+  'NUMBERED',
+  'ORGANIZATION_SIGNED',
+  'PROMULGATED',
+  'ISSUED',
+  'DELIVERED',
+  'REJECTED',
+  'CANCELLED',
+  'FILED',
+  'ARCHIVED',
+  'RECALLED',
+]);
+export type OutgoingDocumentStatus = z.infer<typeof OutgoingDocumentStatusSchema>;
+
+/**
+ * Phân trang danh sách luồng văn bản đến/đi (`GET /api/documents/incoming`, `/outgoing`): cùng giới hạn với
+ * danh sách văn bản (`DocumentQuerySchema`); mặc định 50 bản ghi từ vị trí 0.
+ */
+export const WorkflowListPaginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const IncomingWorkflowListQuerySchema = WorkflowListPaginationSchema.extend({
+  status: z.nativeEnum(IncomingDocumentStatus).optional(),
+});
+
+/**
+ * Document query filters schema.
+ */
+export const DocumentQuerySchema = PaginationQuerySchema.extend({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  type: z
+    .enum([
+      'INCOMING',
+      'OUTGOING',
+      'INTERNAL',
+      'VAN_BAN_DEN',
+      'VAN_BAN_DI',
+      'TO_TRINH_NOI_BO',
+      'inbox',
+      'outbox',
+      'all',
+    ])
+    .optional(),
+  status: DocumentStatusSchema.optional(),
+  bucket: z.enum(['pending', 'done', 'issued', 'recalled']).optional(),
+  /**
+   * Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`).
+   * `departmentId` giữ lại như alias tương thích cho client cũ.
+   */
+  leadUnitId: z
+    .string()
+    .trim()
+    .max(64, 'Lead unit ID cannot exceed 64 characters')
+    .optional(),
+  departmentId: z
+    .string()
+    .trim()
+    .max(64, 'Department ID cannot exceed 64 characters')
+    .optional(),
+  search: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
+  q: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
+  urgency: z.string().trim().max(50).optional(),
+  securityLevel: z.string().trim().max(50).optional(),
+  documentYear: z.coerce
+    .number()
+    .int()
+    .min(2000, 'Year must be at least 2000')
+    .max(2100, 'Year cannot exceed 2100')
+    .optional(),
+  year: z.coerce
+    .number()
+    .int()
+    .min(2000, 'Year must be at least 2000')
+    .max(2100, 'Year cannot exceed 2100')
+    .optional(),
+  scope: z.string().trim().max(50).optional(),
+});
+
+/**
+ * Export document query schema.
+ */
+export const ExportDocumentQuerySchema = z.object({
+  type: z.enum(['VAN_BAN_DEN', 'VAN_BAN_DI', 'inbox', 'outbox']),
+  year: z.coerce.number().int().min(2000).max(2100).optional(),
+  documentYear: z.coerce.number().int().min(2000).max(2100).optional(),
+});
+
+const AttachmentInputSchema = z.object({
+  fileName: z.string().trim().max(255),
+  fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE),
+  fileSize: z.number().int().nonnegative().optional(),
+  mimeType: z.string().trim().max(128).optional(),
+  sha256Hash: z.string().trim().max(128).optional().nullable(),
+  isOriginal: z.boolean().optional(),
+});
+
+/**
+ * Create document contract.
+ * Strictly validates fields and prevents mass-assignment injection (e.g. spoofing registeredById).
+ */
+export const CreateDocumentSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(3, 'Title must be at least 3 characters')
+      .max(255, 'Title cannot exceed 255 characters')
+      .optional()
+      .nullable(),
+    summary: z
+      .string()
+      .trim()
+      .max(2000, 'Summary cannot exceed 2000 characters')
+      .optional()
+      .nullable(),
+    documentNumber: z
+      .string()
+      .trim()
+      .max(100, 'Document number cannot exceed 100 characters')
+      .optional()
+      .nullable(),
+    originalNumber: z
+      .string()
+      .trim()
+      .max(100, 'Original number cannot exceed 100 characters')
+      .optional()
+      .nullable(),
+    type: DocumentTypeSchema,
+    /**
+     * Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`).
+     * Phase 9: `draftingDeptId` / `leadDepartmentId` đã bị drop khỏi `Document`;
+     * `departmentId` giữ lại như alias tương thích cho client cũ.
+     */
+    leadUnitId: z
+      .string()
+      .trim()
+      .max(64, 'Lead unit ID cannot exceed 64 characters')
+      .optional()
+      .nullable(),
+    departmentId: z
+      .string()
+      .trim()
+      .max(64, 'Department ID cannot exceed 64 characters')
+      .optional()
+      .nullable(),
+    leadUserId: z
+      .string()
+      .trim()
+      .max(64, 'Lead user ID cannot exceed 64 characters')
+      .optional()
+      .nullable(),
+    fileUrl: z
+      .string()
+      .trim()
+      .max(1024, 'File URL cannot exceed 1024 characters')
+      .refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE)
+      .optional()
+      .nullable(),
+    urgency: z.string().trim().max(50).optional().nullable(),
+    securityLevel: z.string().trim().max(50).optional().nullable(),
+    issuedDate: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    registeredDate: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    dueDate: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    issuingAuthority: z
+      .string()
+      .trim()
+      .max(255, 'Issuing authority cannot exceed 255 characters')
+      .optional()
+      .nullable(),
+    category: z
+      .string()
+      .trim()
+      .max(100, 'Category cannot exceed 100 characters')
+      .optional()
+      .nullable(),
+    documentYear: z.coerce.number().int().min(2000).max(2100).optional().nullable(),
+    registrationNumber: z.coerce.number().int().optional().nullable(),
+    signerName: z.string().trim().max(255).optional().nullable(),
+    signerTitle: z.string().trim().max(255).optional().nullable(),
+    recipientList: z.string().trim().max(1000).optional().nullable(),
+    distributedCopies: z.coerce.number().int().optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+    attachments: z.array(AttachmentInputSchema).optional().nullable(),
+    /**
+     * Người ký thẩm quyền cho văn bản đi (VAN_BAN_DI).
+     * Bỏ qua với các loại văn bản khác.
+     */
+    authorizedSignerId: z
+      .string()
+      .trim()
+      .max(64)
+      .optional()
+      .nullable(),
+    /** Xác nhận vẫn vào sổ khi có văn bản đến trùng số ký hiệu và cơ quan ban hành. */
+    acknowledgeDuplicate: z.boolean().optional(),
+  })
+  .strict()
+  .refine(
+    (data) => Boolean((data.title && data.title.trim().length >= 2) || (data.summary && data.summary.trim().length >= 2)),
+    {
+      message: 'Tiêu đề hoặc trích yếu văn bản (title/summary) là bắt buộc',
+      path: ['summary'],
+    }
+  )
+  .refine(
+    (data) =>
+      Boolean(
+        (data.documentNumber && data.documentNumber.trim().length >= 1) ||
+        (data.originalNumber && data.originalNumber.trim().length >= 1)
+      ),
+    {
+      message: 'Số văn bản hoặc số ký hiệu gốc (documentNumber/originalNumber) là bắt buộc',
+      path: ['originalNumber'],
+    }
+  );
+
+/**
+ * HTTP contract for registering an incoming document. Legacy field aliases are
+ * accepted explicitly; arbitrary mass-assignment fields are rejected.
+ */
+export const RegisterIncomingDocumentSchema = z
+  .object({
+    registrationNumber: z.number().int().positive().optional(),
+    documentNumber: z.union([z.string().trim().max(100), z.number().int().positive()]).optional(),
+    originalNumber: z.string().trim().max(100).optional(),
+    originalDocNumber: z.string().trim().max(100).optional(),
+    title: z.string().trim().min(3).max(255),
+    // Legacy caller field; the endpoint itself determines the document type.
+    documentType: z.string().trim().max(100).optional(),
+    summary: z.string().trim().max(2000).optional(),
+    category: z.string().trim().max(100).optional(),
+    issuingAuthority: z.string().trim().max(255).optional(),
+    sender: z.string().trim().max(255).optional(),
+    issuedDate: z.union([IsoDateStringSchema, z.string().trim().max(100)]).optional(),
+    receivedDate: z.union([IsoDateStringSchema, z.string().trim().max(100)]).optional(),
+    securityLevel: z.enum(["THUONG", "MAT", "TOI_MAT", "TUYET_MAT"]).optional(),
+    urgency: z.enum(["THUONG", "KHAN", "THUONG_KHAN", "HOA_TOC"]).optional(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional(),
+    fileName: z.string().trim().max(255).optional(),
+    fileSize: z.number().int().nonnegative().max(100 * 1024 * 1024).optional(),
+    fileType: z.string().trim().max(128).optional(),
+    storageLocation: z.string().trim().max(255).optional(),
+    notes: z.string().trim().max(2000).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+    acknowledgeDuplicate: z.boolean().optional(),
+  })
+  .strict()
+  .refine((input) => Boolean(input.summary || input.title.trim()), {
+    message: "Trích yếu nội dung là bắt buộc",
+  })
+  .refine((input) => Boolean(input.issuingAuthority || input.sender), {
+    message: "Cơ quan ban hành là bắt buộc",
+    path: ["issuingAuthority"],
+  });
+
+export type RegisterIncomingDocumentInput = z.infer<typeof RegisterIncomingDocumentSchema>;
+
+/** HTTP contract for creating an outgoing-document draft. */
+export const CreateOutgoingDraftSchema = z
+  .object({
+    title: z.string().trim().min(3).max(255),
+    summary: z.string().trim().max(2000).optional(),
+    category: z.string().trim().max(100).optional(),
+    securityLevel: z.enum(["THUONG", "MAT", "TOI_MAT", "TUYET_MAT"]).optional(),
+    urgency: z.enum(["THUONG", "KHAN", "THUONG_KHAN", "HOA_TOC"]).optional(),
+    // Kept as a recognized compatibility field for existing clients; the route
+    // is specifically an outgoing-draft endpoint and does not use this value.
+    documentType: DocumentTypeSchema.optional(),
+    draftingDeptId: z.string().trim().max(64).optional(),
+    authorizedSignerId: z.string().trim().max(64).optional(),
+    recipientList: z.string().trim().max(1000).optional(),
+    // Hạn xử lý dự thảo (cột `dueDate` sẵn có của văn bản)
+    dueDate: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional(),
+    fileName: z.string().trim().max(255).optional(),
+    fileSize: z.number().int().nonnegative().max(100 * 1024 * 1024).optional(),
+    fileType: z.string().trim().max(128).optional(),
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+
+export const DeliverOutgoingDocumentSchema = z
+  .object({ deliveryNotes: z.string().trim().max(2000).optional().nullable() })
+  .strict();
+
+/**
+ * Update document contract.
+ * Bounded to updateable metadata fields only.
+ */
+export const UpdateDocumentSchema = z
+  .object({
+    title: z.string().trim().max(500).optional().nullable(),
+    summary: z.string().trim().max(2000).optional().nullable(),
+    documentNumber: z.string().trim().max(100).optional().nullable(),
+    originalNumber: z.string().trim().max(100).optional().nullable(),
+    type: DocumentTypeSchema.optional(),
+    /** Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`). */
+    leadUnitId: z.string().trim().max(64).optional().nullable(),
+    departmentId: z.string().trim().max(64).optional().nullable(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional().nullable(),
+    urgency: z.string().trim().max(50).optional().nullable(),
+    securityLevel: z.string().trim().max(50).optional().nullable(),
+    status: DocumentStatusSchema.optional().nullable(),
+    category: z.string().trim().max(100).optional().nullable(),
+    issuingAuthority: z.string().trim().max(255).optional().nullable(),
+    dueDate: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    signerName: z.string().trim().max(255).optional().nullable(),
+    signerTitle: z.string().trim().max(255).optional().nullable(),
+    leadUserId: z.string().trim().max(64).optional().nullable(),
+    recipientList: z.string().trim().max(1000).optional().nullable(),
+    distributedCopies: z.coerce.number().int().optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+    linkedTaskId: z.string().trim().max(64).optional().nullable(),
+  })
+  .strict();
+export type UpdateDocumentInput = z.infer<typeof UpdateDocumentSchema>;
+
+/**
+ * Create executive directive contract.
+ * Used when school executives issue actionable directives on documents.
+ */
+export const CreateDirectiveSchema = z
+  .object({
+    title: z.string().trim().max(255).optional().nullable(),
+    content: z.string().trim().max(5000).optional().nullable(),
+    instruction: z.string().trim().max(5000).optional().nullable(),
+    leaderId: z.string().trim().max(64).optional().nullable(),
+    /**
+     * Đơn vị chủ trì thực hiện chỉ đạo — canonical `OrganizationalUnit.id` (hoặc `code`).
+     * Phase 9: `assignedDeptId` / `assignedToDepartmentId` đã bị drop cùng model
+     * `Department`; giá trị này được resolve sang `Task.leadUnitId`.
+     */
+    leadUnitId: z.string().trim().max(64).optional().nullable(),
+    deadline: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    collaboratorIds: z
+      .union([
+        z.array(z.string().trim().max(128)),
+        z.string().trim().max(1000),
+      ])
+      .optional()
+      .nullable(),
+  })
+  .strict()
+  .refine(
+    (data) =>
+      Boolean(
+        (data.instruction && data.instruction.trim().length > 0) ||
+        (data.content && data.content.trim().length > 0)
+      ),
+    {
+      message: 'Nội dung chỉ đạo bút phê (instruction/content) là bắt buộc',
+      path: ['instruction'],
+    }
+  )
+  .refine((data) => Boolean(data.leadUnitId && data.leadUnitId.trim().length > 0), {
+    message: 'Đơn vị chủ trì thực hiện (leadUnitId) là bắt buộc',
+    path: ['leadUnitId'],
+  });
+
+/**
+ * Batch document action types.
+ * Hoàn tất hàng loạt (MARK_RESOLVED) đã bỏ: giải quyết văn bản cần báo cáo kết quả và hồ sơ như thao tác đơn lẻ.
+ */
+export const BatchDocumentActionSchema = z.enum([
+  'ASSIGN_LEAD_UNIT',
+  'FILE_DOCUMENTS',
+]);
+
+/**
+ * Batch document request schema.
+ * Mỗi văn bản được xử lý độc lập qua command đơn lẻ; lỗi từng văn bản trả về trong `failed`.
+ */
+export const BatchDocumentRequestSchema = z
+  .object({
+    action: BatchDocumentActionSchema,
+    documentIds: z
+      .array(z.string().trim().min(1, 'Mã văn bản không được để trống'))
+      .min(1, 'Danh sách văn bản không được để trống')
+      .max(100, 'Chỉ được thực hiện tối đa 100 văn bản trong một lần'),
+    // For ASSIGN_LEAD_UNIT
+    leadUnitId: z.string().trim().max(64).optional().nullable(),
+    leadershipInstruction: z.string().trim().max(5000).optional().nullable(),
+    instruction: z.string().trim().max(5000).optional().nullable(),
+    deadline: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    // For FILE_DOCUMENTS
+    dossierId: z.string().trim().max(100).optional().nullable(),
+    storageLocation: z.string().trim().max(255).optional().nullable(),
+    filingNotes: z.string().trim().max(2000).optional().nullable(),
+    archiveReason: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict()
+  .refine(
+    (data) => {
+      if (data.action === 'ASSIGN_LEAD_UNIT') {
+        return Boolean(data.leadUnitId && data.leadUnitId.trim().length > 0);
+      }
+      return true;
+    },
+    {
+      message: 'Đơn vị chủ trì (leadUnitId) là bắt buộc khi thực hiện gán đơn vị chủ trì',
+      path: ['leadUnitId'],
+    }
+  )
+  .refine(
+    (data) =>
+      data.action !== 'ASSIGN_LEAD_UNIT' ||
+      Boolean(data.leadershipInstruction?.trim() || data.instruction?.trim()),
+    {
+      message: 'Ý kiến chỉ đạo / bút phê (leadershipInstruction hoặc instruction) là bắt buộc',
+      path: ['leadershipInstruction'],
+    }
+  );
+
+export type BatchDocumentRequest = z.infer<typeof BatchDocumentRequestSchema>;
+
+/**
+ * Signature type enum schema (matches Prisma SignatureType).
+ */
+export const SignatureTypeSchema = z.enum([
+  'PERSONAL_DIGITAL',
+  'ORGANIZATION_DIGITAL',
+  'PHYSICAL',
+]);
+
+/**
+ * Present incoming document to leadership schema.
+ */
+export const PresentDocumentSchema = z
+  .object({
+    presenterNotes: z.string().trim().max(2000).optional().nullable(),
+    clerkNotes: z.string().trim().max(2000).optional().nullable(),
+    suggestedLeaderId: z.string().trim().max(64).optional().nullable(),
+  })
+  .strict();
+export type PresentDocumentInput = z.infer<typeof PresentDocumentSchema>;
+
+/**
+ * Reject outgoing document content schema.
+ */
+export const RejectContentDocumentSchema = z
+  .object({
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+
+/**
+ * Resolve incoming document schema.
+ */
+export const ResolveDocumentSchema = z
+  .object({
+    resolutionSummary: z
+      .string()
+      .trim()
+      .min(1, 'Nội dung/kết quả giải quyết văn bản không được để trống')
+      .max(5000, 'Nội dung giải quyết không được vượt quá 5000 ký tự'),
+    resolutionDocUrl: z.string().trim().max(1024).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type ResolveDocumentInput = z.infer<typeof ResolveDocumentSchema>;
+
+/**
+ * Create outgoing document revision schema.
+ */
+export const CreateDocumentRevisionSchema = z
+  .object({
+    changeReason: z
+      .string()
+      .trim()
+      .min(1, 'Lý do tạo bản sửa đổi văn bản là bắt buộc')
+      .max(2000, 'Lý do không được vượt quá 2000 ký tự'),
+    title: z.string().trim().max(500).optional().nullable(),
+    summary: z.string().trim().max(2000).optional().nullable(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional().nullable(),
+    fileName: z.string().trim().max(255).optional().nullable(),
+    fileSize: z.coerce.number().int().nonnegative().optional().nullable(),
+  })
+  .strict();
+export type CreateDocumentRevisionInput = z.infer<typeof CreateDocumentRevisionSchema>;
+
+/**
+ * Sign outgoing document schema.
+ */
+export const SignDocumentSchema = z
+  .object({
+    signingCapacity: z.string().trim().max(255).optional().nullable(),
+    signatureType: SignatureTypeSchema.optional().nullable(),
+    certificateMetadata: z.record(z.string(), z.unknown()).optional().nullable(),
+    signingNotes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type SignDocumentInput = z.infer<typeof SignDocumentSchema>;
+
+/**
+ * Assign outgoing number schema. Enum values match Prisma `DocumentSecurityLevel` /
+ * `DocumentUrgency` (same order as prisma/schema.prisma). Intentionally not `.strict()`.
+ */
+export const AssignOutgoingNumberSchema = z.object({
+  outgoingNumberStr: z.string().trim().max(100).optional().nullable(),
+  codeNotation: z.string().trim().max(100).optional().nullable(),
+  issuedDate: z.union([z.string().trim(), z.date()]).optional().nullable(),
+  securityLevel: z.enum(["THUONG", "MAT", "TOI_MAT", "TUYET_MAT"]).optional().nullable(),
+  urgency: z.enum(["THUONG", "KHAN", "THUONG_KHAN", "HOA_TOC"]).optional().nullable(),
+});
+
+/**
+ * Submit outgoing document for content review schema.
+ */
+export const SubmitContentReviewSchema = z
+  .object({
+    contentReviewerId: z.string().trim().max(64).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type SubmitContentReviewInput = z.infer<typeof SubmitContentReviewSchema>;
+
+/**
+ * Submit outgoing document for format check schema.
+ */
+export const SubmitFormatCheckSchema = z
+  .object({
+    formatReviewerId: z.string().trim().max(64).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type SubmitFormatCheckInput = z.infer<typeof SubmitFormatCheckSchema>;

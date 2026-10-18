@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { computeSchoolTaskRollup, computeDashboardStats } from "../src/lib/dashboard-aggregator";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
-import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
 
 describe("Dashboard Aggregator & Rollup Engine", () => {
   const sampleStaffTasks: StaffTask[] = [

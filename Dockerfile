@@ -10,6 +10,10 @@ WORKDIR /app
 # ==============================================================================
 FROM base AS deps
 COPY package.json package-lock.json* ./
+# npm workspaces: npm ci cần package.json của từng workspace để khớp lockfile
+COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/db/package.json ./packages/db/
 RUN npm ci
 
 # ==============================================================================
@@ -18,6 +22,9 @@ RUN npm ci
 FROM base AS proddeps
 WORKDIR /app
 COPY package.json package-lock.json* ./
+COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/db/package.json ./packages/db/
 RUN npm ci --omit=dev
 
 # ==============================================================================
@@ -55,7 +62,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Schema ở đường dẫn khai báo trong package.json#prisma.schema (standalone giữ package.json gốc)
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/prisma ./packages/db/prisma
 
 # Sao chép toàn bộ production node_modules phục vụ chạy migrate offline / airgapped.
 # Prisma CLI cần đầy đủ dependency closure (@prisma/config -> effect -> fast-check, c12, ...),

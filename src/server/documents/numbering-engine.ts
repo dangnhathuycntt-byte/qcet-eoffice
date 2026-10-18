@@ -1,5 +1,5 @@
-import { prisma as defaultPrisma } from "@/lib/prisma";
-import type { DocumentType } from "@/types/document";
+import { prisma as defaultPrisma } from "@qcet/db/prisma";
+import type { DocumentType } from "@qcet/contracts/types/document";
 
 /**
  * Formats a document registration number for display according to Decree 30/2020/ND-CP.

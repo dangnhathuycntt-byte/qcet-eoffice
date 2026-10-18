@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import type { AuditLogEntryDTO } from "@/contracts/audit-logs";
+import { prisma } from "@qcet/db/prisma";
+import type { AuditLogEntryDTO } from "@qcet/contracts/audit-logs";
 
 // Nhật ký kiểm toán hệ thống: một trang bản ghi đã lọc kèm tổng số.
 

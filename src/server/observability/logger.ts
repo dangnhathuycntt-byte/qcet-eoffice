@@ -10,7 +10,7 @@
  * - Next.js HTTP request logging helper.
  */
 
-import { sanitizeLogContext, sanitizeUrl } from '@/telemetry/sanitize';
+import { sanitizeLogContext, sanitizeUrl } from '@qcet/shared/telemetry/sanitize';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 

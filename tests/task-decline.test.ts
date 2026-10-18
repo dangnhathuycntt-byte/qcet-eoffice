@@ -6,7 +6,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { TaskActorRole, TaskStatus } from '@prisma/client';
 import { ZodError } from 'zod';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { declineTask, getDeclineState } from '../src/server/tasks/task-decline-service';
 import { setTaskDRI } from '../src/server/tasks/task-actor-service';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';

@@ -1,7 +1,7 @@
 import { test, describe, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { resetRateLimits } from '@/server/security/rate-limit';
 import { UserRole, TaskStatus, TaskPriority, TaskScope } from '@prisma/client';

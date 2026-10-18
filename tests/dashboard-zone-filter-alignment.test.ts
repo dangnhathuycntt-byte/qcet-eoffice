@@ -8,7 +8,7 @@ import {
 } from "../src/lib/unified-task-hub";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 const mockTasks: SchoolTask[] = [
   {

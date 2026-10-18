@@ -14,7 +14,7 @@ import {
   type AssistantStep,
   type AssistantStreamEvent,
   type AssistantTaskProposal,
-} from "@/contracts/assistant";
+} from "@qcet/contracts/assistant";
 import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
 
 /** Câu gửi khi chỉ đính kèm tệp, không gõ chữ (như Agent tạo nhiệm vụ). */
@@ -114,7 +114,7 @@ export interface ThreadMessage {
   dismissedProposals?: number[];
 }
 
-export type { AssistantProposalTask } from "@/contracts/assistant";
+export type { AssistantProposalTask } from "@qcet/contracts/assistant";
 
 /** Bỏ qua hoặc hoàn tác bỏ qua đề xuất thứ `index` của tin `replyKey`. */
 export function setProposalDismissed(thread: ThreadMessage[], replyKey: string, index: number, dismissed: boolean): ThreadMessage[] {

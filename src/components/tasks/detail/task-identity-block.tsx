@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
-import { isSchoolTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
+import { isSchoolTask } from "@qcet/contracts/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { getTaskUnitId } from "@/lib/tasks/task-unit";
+import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskSourceDocumentBadge } from "./task-source-document-badge";
 import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
@@ -15,9 +15,9 @@ import {
   taskStateMachine,
   buildActorContext,
   buildTaskContext,
-} from "@/domain/tasks/state-machine";
-import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
-import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
+} from "@qcet/shared/domain/tasks/state-machine";
+import { CORE_STATUS_OPTIONS } from "@qcet/shared/domain/tasks/display-config";
+import { normalizeDisplayStatus } from "@qcet/shared/domain/tasks/canonical-semantics";
 
 export interface TaskIdentityBlockProps {
   task: SchoolTask | StaffTask;

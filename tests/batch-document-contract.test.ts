@@ -7,7 +7,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { BatchDocumentRequestSchema } from "@/contracts/documents";
+import { BatchDocumentRequestSchema } from "@qcet/contracts/documents";
 
 describe("BatchDocumentRequestSchema validation", () => {
   test("rejects MARK_RESOLVED (hoàn tất hàng loạt đã bỏ khỏi API)", () => {

@@ -14,8 +14,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { computeDashboardSlices } from "../src/hooks/use-task-filters";
 import { createLatestRequestGuard } from "../src/lib/latest-request-guard";
-import type { AuthUser } from "../src/types/auth";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 const ACADEMIC_YEAR = "2026-2027";
 const REFERENCE_DATE = "2026-09-13";

@@ -212,7 +212,7 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
           # Repo migration directories count
-          REPO_DIRS=$(find prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
+          REPO_DIRS=$(find packages/db/prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
           echo "Migration directories in repo: $REPO_DIRS"
 
           # ClamAV check (TCP:3310 PING/PONG via docker exec + nc)
@@ -423,11 +423,11 @@ jobs:
 
             # Safety: validate migration name exists as a directory in repo
             # (prevents shell injection from unexpected DB values)
-            MIG_DIR="prisma/migrations/$MIG_NAME"
+            MIG_DIR="packages/db/prisma/migrations/$MIG_NAME"
             if [ ! -d "$MIG_DIR" ]; then
-              echo "ERROR: '$MIG_NAME' has no corresponding directory in prisma/migrations/." >&2
+              echo "ERROR: '$MIG_NAME' has no corresponding directory in packages/db/prisma/migrations/." >&2
               echo "  Known dirs:" >&2
-              ls prisma/migrations/ >&2
+              ls packages/db/prisma/migrations/ >&2
               echo "Blocking: $MIG_NAME is not in allowlist or has no repo directory." >&2
               BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
               continue
@@ -655,7 +655,7 @@ jobs:
           chmod 600 "$WORK_DIR/dbenv_deploy"
 
           # Resolve migration count in repo
-          REPO_DIRS=$(find prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
+          REPO_DIRS=$(find packages/db/prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
           echo "Applying from workspace: $REPO_DIRS migration directories"
 
           # If alpine_reinstall is needed, npm ci inside the container first

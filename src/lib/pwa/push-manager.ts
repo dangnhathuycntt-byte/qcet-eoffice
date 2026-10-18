@@ -15,7 +15,7 @@ import {
   syncServerPushPreferences,
   mapNotificationTypeToTopic,
   isTopicEnabled,
-} from "./push-preferences";
+} from "@qcet/shared/lib/pwa/push-preferences";
 
 export interface IOSPushStatus {
   isIOS: boolean;

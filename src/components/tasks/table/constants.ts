@@ -6,7 +6,7 @@ import {
   GraduationCap,
   Calendar,
 } from "lucide-react";
-import type { TaskCategory, TaskStatus } from "@/types/dashboard";
+import type { TaskCategory, TaskStatus } from "@qcet/contracts/types/dashboard";
 import type { CategoryTab, DepartmentOption, SmartFilterTabOption, TableDensity } from "./types";
 
 /**

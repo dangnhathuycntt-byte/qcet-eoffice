@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { CreateTaskInputSchema, CreateTaskWithSubtasksInputSchema, CREATE_TASK_MAX_SUBTASKS } from '@/contracts/tasks';
+import { CreateTaskInputSchema, CreateTaskWithSubtasksInputSchema, CREATE_TASK_MAX_SUBTASKS } from '@qcet/contracts/tasks';
 import type { TaskDetailDTO } from '@/server/dto/task-dto';
 import {
   buildCreateTaskPayload,

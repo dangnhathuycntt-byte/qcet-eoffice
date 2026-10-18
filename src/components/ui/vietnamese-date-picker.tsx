@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import {
   formatDisplayDate,
   toIctDateTimeParts,
-} from "@/lib/format/date";
+} from "@qcet/shared/lib/format/date";
 import { Popover } from "@base-ui/react/popover";
 import { fieldFocusRingClass, focusRingClass } from "@/components/ui/focus-ring";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";

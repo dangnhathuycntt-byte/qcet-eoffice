@@ -21,7 +21,7 @@ import {
   isSearchShortcut,
   aggregateFilterCounts,
 } from "../src/components/tasks/table/components/task-table-toolbar";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 
 describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Dock", () => {
   // Mock tasks fixture for testing

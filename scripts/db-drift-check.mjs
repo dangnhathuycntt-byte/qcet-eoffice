@@ -26,7 +26,7 @@ console.log('[db:drift:check] Checking schema drift against Prisma datamodel...'
 let diffSql = '';
 try {
   diffSql = execSync(
-    'npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script',
+    'npx prisma migrate diff --from-schema-datasource packages/db/prisma/schema.prisma --to-schema-datamodel packages/db/prisma/schema.prisma --script',
     {
       env: process.env,
       encoding: 'utf8',

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { INSTITUTION_CONFIG } from "@/config/institution";
+import { INSTITUTION_CONFIG } from "@qcet/shared/config/institution";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {

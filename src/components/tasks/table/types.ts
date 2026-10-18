@@ -4,7 +4,7 @@ import type {
   StaffTask,
   TaskCategory,
   TaskStatus,
-} from "@/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 
 /**
  * Mật độ hiển thị bảng công việc (Table Density)

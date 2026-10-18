@@ -14,7 +14,7 @@
  * Business reference date D = 2026-09-13 (the plan's stated D, ICT).
  */
 
-import type { SchoolTask, StaffTask } from "../../src/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 
 /** D — the business reference date every expectation below is written against. */
 export const FIXTURE_REFERENCE_DATE = "2026-09-13";

@@ -1,4 +1,4 @@
-import { ResolveDocumentSchema } from "@/contracts/documents";
+import { ResolveDocumentSchema } from "@qcet/contracts/documents";
 import { resolveDocument } from "@/server/documents/incoming-document-service";
 import { withIdempotency } from "@/server/api/idempotency";
 import { ValidationError } from "@/server/api/errors";

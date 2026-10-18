@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus } from "@/types/dashboard";
+import type { TaskPriority, TaskStatus } from "@qcet/contracts/types/dashboard";
 
 export interface TaskActionResult<T = unknown> {
   ok: boolean;

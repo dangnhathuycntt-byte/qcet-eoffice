@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { getAcademicMonthInfo, getAcademicMonthPeriod, getAcademicMonthsForYear, getAcademicYear, isDateInAcademicMonth, filterTasksByAcademicMonthStrict, computePriorOverdueBacklog, ACADEMIC_MONTH_ORDER } from "../src/lib/academic-calendar";
+import { getAcademicMonthInfo, getAcademicMonthPeriod, getAcademicMonthsForYear, getAcademicYear, isDateInAcademicMonth, filterTasksByAcademicMonthStrict, computePriorOverdueBacklog, ACADEMIC_MONTH_ORDER } from "@qcet/shared/lib/academic-calendar";
 import { CANONICAL_ROUTES } from "../src/lib/navigation/canonical-navigation-registry";
-import { computeDepartmentHealthMatrix } from "../src/lib/executive-matrix-aggregator";
-import type { SchoolTask } from "../src/types/dashboard";
+import { computeDepartmentHealthMatrix } from "@qcet/shared/lib/executive-matrix-aggregator";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("System-Wide Monthly Partitioning Full Verification & Regression Suite", () => {
   // Sample multi-month mock tasks for comprehensive lifecycle assertions

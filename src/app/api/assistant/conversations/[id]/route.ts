@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { AssistantRenameRequestSchema } from "@/contracts/assistant";
+import { AssistantRenameRequestSchema } from "@qcet/contracts/assistant";
 import { isFeatureEnabled } from "@/features/flags";
 import { ApiError, NotFoundError } from "@/server/api/errors";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";

@@ -9,7 +9,7 @@ import {
   getSystemReferenceDate,
   ACADEMIC_MONTH_ORDER,
   type CurrentAcademicPeriod,
-} from "../src/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import { TaskTableToolbar } from "../src/components/tasks/table/components/task-table-toolbar";
 
 // Pin reference date to 2026-09-09 for deterministic testing per invariants.md

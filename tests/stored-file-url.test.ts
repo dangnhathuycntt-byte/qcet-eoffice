@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { isAllowedStoredFileUrl } from "@/lib/url-utils";
-import { SubmitDeliverableInputSchema } from "@/contracts/tasks";
+import { isAllowedStoredFileUrl } from "@qcet/shared/lib/url-utils";
+import { SubmitDeliverableInputSchema } from "@qcet/contracts/tasks";
 
 describe("isAllowedStoredFileUrl — URL tệp/liên kết do client gửi", () => {
   it("chấp nhận đường dẫn nội bộ và URL http(s)", () => {

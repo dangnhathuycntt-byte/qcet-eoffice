@@ -1,8 +1,8 @@
 import * as webpush from "web-push";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { serverEnv } from "@/config/env.server";
 import { isFeatureEnabled } from "@/features/flags";
-import { isTopicEnabled, type PushPreferences } from "@/lib/pwa/push-preferences";
+import { isTopicEnabled, type PushPreferences } from "@qcet/shared/lib/pwa/push-preferences";
 
 export type TaskPushEventType =
   | "TASK_ASSIGNED"

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { DocumentItem } from "@/types/document";
+import type { DocumentItem } from "@qcet/contracts/types/document";
 
 /** Giới hạn của `POST /api/upload`: chặn sớm để báo đúng tên tệp. */
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;

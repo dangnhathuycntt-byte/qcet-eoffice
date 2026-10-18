@@ -13,7 +13,7 @@ import {
   groupNotificationsByTarget,
   resolveNotificationTarget,
 } from "../src/lib/notification-inbox";
-import { filterNotificationsByTab, mapDbNotification } from "../src/lib/notification-triage";
+import { filterNotificationsByTab, mapDbNotification } from "@qcet/shared/lib/notification-triage";
 
 const NOW = new Date("2026-10-09T16:30:00.000Z"); // 23:30 ICT
 

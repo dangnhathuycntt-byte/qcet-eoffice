@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { extractNotificationEntity, resolveActionableDeepLink, getNotificationDayGroup, groupNotificationsByDay, formatNotificationContent, type QCETNotification } from "../src/lib/notification-triage";
+import { extractNotificationEntity, resolveActionableDeepLink, getNotificationDayGroup, groupNotificationsByDay, formatNotificationContent, type QCETNotification } from "@qcet/shared/lib/notification-triage";
 import { QCET_ORG_UNITS } from "../src/lib/org/org-structure";
 
 describe("Sprint M5: Mobile Org Drill-Down & Actionable Notification Inbox", () => {

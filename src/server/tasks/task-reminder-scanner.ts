@@ -18,7 +18,7 @@
  * (cài đặt push); báo trễ và các mốc 4 ngày thì không tắt được.
  */
 import { ApprovalProcessStatus, AssignmentStatus, ExtensionRequestStatus, TaskStatus, TaskUnitRequestStatus, type Prisma } from "@prisma/client";
-import { prisma, type DbClient } from "@/lib/prisma";
+import { prisma, type DbClient } from "@qcet/db/prisma";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
 import {
@@ -31,12 +31,12 @@ import {
   isPastReminderHour,
   OVERDUE_LOOKBACK_DAYS,
   type ReminderKind,
-} from "@/domain/tasks/reminder-rules";
+} from "@qcet/shared/domain/tasks/reminder-rules";
 import { deliverTaskNotice } from "@/server/outbox/task-notification-handlers";
 import { findActiveDecline } from "./task-decline-service";
 import { syncStepReviewerActors } from "./task-approval-process-service";
 import { reconcileBackupReviewer, revokeStaleBackupReviewers } from "./task-backup-reviewer-service";
-import { formatDisplayDate } from "@/lib/format/date";
+import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 
 
 export interface ReminderScanResult {

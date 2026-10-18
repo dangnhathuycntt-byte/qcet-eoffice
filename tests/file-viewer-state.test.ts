@@ -13,7 +13,7 @@ import {
   patchFileState,
   resolveActiveFileId,
   sortDocumentFiles,
-} from "../src/lib/documents/file-viewer-state";
+} from "@qcet/shared/lib/documents/file-viewer-state";
 import { isAllowedDocxHref } from "../src/lib/documents/docx-links";
 
 const files = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `f${i + 1}` }));

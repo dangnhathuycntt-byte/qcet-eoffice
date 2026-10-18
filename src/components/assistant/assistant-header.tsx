@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
-import { ASSISTANT_TITLE_MAX } from "@/contracts/assistant";
+import { ASSISTANT_TITLE_MAX } from "@qcet/contracts/assistant";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { IconSidebarCompose } from "@/components/layout/sidebar-rounded-icons";
 import { AssistantHistoryMenu, type AssistantHistoryState } from "@/components/assistant/assistant-history-menu";

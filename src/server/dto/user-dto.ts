@@ -14,7 +14,7 @@ import {
 import type { AuthenticatedUser } from '@/server/api/request-context';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import { toISOStringSafe } from './dto-helpers';
-import type { UserSummaryDTO, UserDepartmentDTO } from '@/contracts/users';
+import type { UserSummaryDTO, UserDepartmentDTO } from '@qcet/contracts/users';
 
 export type UserViewerContext =
   | DirectoryViewerContext

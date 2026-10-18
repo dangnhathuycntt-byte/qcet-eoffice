@@ -11,7 +11,7 @@ import {
   SignatureVerificationStatus,
   UnitType,
 } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { OutgoingDocumentService } from "../src/server/documents/outgoing-document-service";
 import { signSessionToken } from "../src/lib/jwt-session";
 import { GET as listOutgoingRoute, POST as createDraftRoute } from "../src/app/api/documents/outgoing/route";

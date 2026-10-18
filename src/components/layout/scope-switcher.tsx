@@ -6,7 +6,7 @@ import { School, Building2, User } from "lucide-react";
 import { QCET_ORG_UNITS, type OrgUnitConfig } from "@/lib/org/org-structure";
 import { type DepartmentNode } from "@/components/org/organization-tree";
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import { isAdminTierUser, isManagerUser } from "@/lib/role-task-filter";
 
 export type ScopeType = "school" | "unit" | "my";

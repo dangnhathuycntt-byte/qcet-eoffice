@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TaskSubtasksSidebarSection } from "../src/components/tasks/detail/task-subtasks-sidebar-section";
-import type { StaffTask } from "../src/types/dashboard";
+import type { StaffTask } from "@qcet/contracts/types/dashboard";
 
 function makeSubtask(overrides: Partial<StaffTask> & { id: string; title: string }): StaffTask {
   return {

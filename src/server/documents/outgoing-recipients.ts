@@ -4,14 +4,14 @@
  */
 import { z } from "zod";
 import { OutgoingDocumentStatus, OutgoingRecipientKind, DocumentStatus, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { loadContext, canDo, assertCan } from "@/server/documents/authorize-on-document";
-import { evaluateRecall, evaluateReplacementTarget } from "@/domain/documents/recall-rules";
+import { evaluateRecall, evaluateReplacementTarget } from "@qcet/shared/domain/documents/recall-rules";
 
 export const RecipientInputSchema = z
   .object({

@@ -12,9 +12,9 @@ import {
   type CreateTaskFormData,
 } from "../../src/hooks/use-create-task-form";
 import type { CreateTaskDraft } from "../../src/lib/adapters/create-task-mapper";
-import { resolveCreateTaskPolicy } from "../../src/domain/tasks/create-task-policy";
-import type { AuthUser } from "../../src/types/auth";
-import type { StaffTask } from "../../src/types/dashboard";
+import { resolveCreateTaskPolicy } from "@qcet/shared/domain/tasks/create-task-policy";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { StaffTask } from "@qcet/contracts/types/dashboard";
 
 /**
  * Create-task form: draft preservation (T26), unknown-timeout safety (T27/T72),

@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import { AUTH_STORAGE_KEY } from "../src/lib/auth-context";
-import type { UserRole } from "../src/types/auth";
+import type { UserRole } from "@qcet/contracts/types/auth";
 
 describe("AuthContext Demo Credentials", () => {
   test("defines 3 distinct role viewpoints conforming to Section 7", () => {

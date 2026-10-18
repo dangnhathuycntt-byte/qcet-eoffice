@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "./auth.config";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { isFeatureEnabled } from "@/features/flags";
 import { isVerifiedGoogleWorkspaceIdentity } from "@/server/auth/google-oauth";
 

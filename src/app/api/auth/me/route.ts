@@ -4,7 +4,7 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { AuthenticationError, ValidationError } from "@/server/api/errors";
 import { assertCsrf } from "@/server/security/csrf";
 import { parseAndValidateJson } from "@/server/api/validation";
-import { UpdateUserProfileSchema } from "@/contracts/users";
+import { UpdateUserProfileSchema } from "@qcet/contracts/users";
 import { getCurrentUserProfile, updateCurrentUserProfile } from "@/server/users/user-profile-service";
 
 export async function GET(req: Request) {

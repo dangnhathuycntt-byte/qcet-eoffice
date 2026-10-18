@@ -14,15 +14,15 @@
  */
 import { Prisma, StorageProvider, type FileObject } from "@prisma/client";
 import fs from "node:fs/promises";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import {
   publishOutboxEvent,
   OutboxAggregateType,
   OutboxEventType,
   type DbClient,
   type OutboxHandlerMap,
-} from "@/lib/db/outbox";
+} from "@qcet/db/outbox";
 import { resolveSafeFilePath } from "@/server/files/storage";
 
 export type FileObjectPurgeOutcome = "deleted" | "missing" | "referenced" | "unsupported_provider";

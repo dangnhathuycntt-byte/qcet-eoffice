@@ -1,4 +1,4 @@
-import { SubmitFormatCheckSchema } from "@/contracts/documents";
+import { SubmitFormatCheckSchema } from "@qcet/contracts/documents";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 

@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { TaskStatus, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus, UserRole } from '@prisma/client';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { GET as getNotificationsRoute } from '@/app/api/notifications/route';

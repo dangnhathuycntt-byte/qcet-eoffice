@@ -1,6 +1,6 @@
-import type { AuthUser } from "@/types/auth";
-import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
-import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
+import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@qcet/contracts/types/workspace";
 
 export type WorkspaceScope = "school" | "unit" | "my";
 
@@ -56,7 +56,7 @@ export interface UnifiedAdaptiveWorkspaceProps {
   errorMessage?: string | null;
   hideScopeSwitcher?: boolean;
   /** View mặc định khi URL sạch (trang Nhiệm vụ truyền "active"); vắng = không lọc theo view */
-  defaultTaskTab?: import('@/domain/tasks/task-tabs').TaskTab;
+  defaultTaskTab?: import('@qcet/shared/domain/tasks/task-tabs').TaskTab;
   className?: string;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onReview?: (payload: ApprovalActionPayload) => Promise<void> | void;

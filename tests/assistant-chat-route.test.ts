@@ -17,11 +17,11 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('_test')) {
 
 import { NextRequest } from 'next/server';
 import { TaskActorRole, type User } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { resetRateLimits } from '@/server/security/rate-limit';
 import { setFeatureFlagOverride, resetFeatureFlagOverrides } from '@/features/flags';
-import { ASSISTANT_TOOL_NAMES, parseAssistantStreamEvent, type AssistantStreamEvent } from '@/contracts/assistant';
+import { ASSISTANT_TOOL_NAMES, parseAssistantStreamEvent, type AssistantStreamEvent } from '@qcet/contracts/assistant';
 import { POST as chatRoute } from '@/app/api/assistant/chat/route';
 import { GET as detailRoute } from '@/app/api/assistant/conversations/[id]/route';
 

@@ -1,5 +1,5 @@
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
-import { UserQuerySchema } from "@/contracts/users";
+import { UserQuerySchema } from "@qcet/contracts/users";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { toUserPublicDTOArray } from "@/server/dto";
 import { buildOffsetPagination } from "@/server/api/pagination";

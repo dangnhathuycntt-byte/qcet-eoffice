@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { DossierService } from "@/server/dossiers/dossier-service";
-import { CreateDossierSchema, DataClassificationSchema, DossierStatusSchema } from "@/contracts/dossiers";
+import { CreateDossierSchema, DataClassificationSchema, DossierStatusSchema } from "@qcet/contracts/dossiers";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";

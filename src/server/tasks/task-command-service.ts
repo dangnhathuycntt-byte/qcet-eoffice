@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { getFileObjectIdFromUrl } from '@/server/files/file-service';
 import {
   TaskScope,
@@ -29,15 +29,15 @@ import {
   logAuditEvent,
   AuditAction,
   AuditEntityType,
-} from '@/lib/db/audit';
+} from '@qcet/db/audit';
 import {
   publishOutboxEvent,
   publishTaskCompletedEvent,
   OutboxAggregateType,
-} from '@/lib/db/outbox';
+} from '@qcet/db/outbox';
 import { safeAfter, dispatchTaskAssignedPush } from '@/server/notifications/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
-import { getAcademicYear, getSystemReferenceDate, getCurrentAcademicPeriod } from '@/lib/academic-calendar';
+import { getAcademicYear, getSystemReferenceDate, getCurrentAcademicPeriod } from '@qcet/shared/lib/academic-calendar';
 import {
   CreateTaskInputSchema,
   UpdateTaskInputSchema,
@@ -45,8 +45,8 @@ import {
   ReviewDeliverableInputSchema,
   ApproveTaskInputSchema,
   type CreateTaskSubtaskInput,
-} from '@/contracts/tasks';
-import { buildTaskContext, taskStateMachine } from '@/domain/tasks/state-machine';
+} from '@qcet/contracts/tasks';
+import { buildTaskContext, taskStateMachine } from '@qcet/shared/domain/tasks/state-machine';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import { authorize, isExecutivePosition } from '@/server/authorization/authorization-engine';

@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { GET as getTask, PATCH as patchTask, DELETE as deleteTask } from '../src/app/api/tasks/[id]/route';
 import { GET as getFile } from '../src/app/api/files/[...path]/route';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { TaskScope, TaskPriority, TaskStatus, TaskActorRole } from '@prisma/client';
 

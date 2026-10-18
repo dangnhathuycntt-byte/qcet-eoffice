@@ -6,7 +6,7 @@ import { LONG_PRESS_MS, useLongPress } from "@/hooks/use-long-press";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { TaskStatusCircle } from "./task-status-circle";
 import { TaskIconPriorityHigh, TaskIconPriorityUrgent } from "./task-action-icons";
-import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
 import type { FlattenedPersonalTask } from "./table/types";
 import { getStatusBadgeConfig } from "./table/constants";
 import {

@@ -11,8 +11,8 @@
  * 4. Immutability: AuditEvent records are strictly append-only (WORM).
  */
 
-import type { DbClient } from '@/lib/db/audit';
-import { logAuditEvent } from '@/lib/db/audit';
+import type { DbClient } from '@qcet/db/audit';
+import { logAuditEvent } from '@qcet/db/audit';
 import { logger } from '@/server/observability/logger';
 import type { AuthorizationContext } from './authorization-context';
 import type { AuthorizationResult, RejectionCode, AuditRecord } from './resource';

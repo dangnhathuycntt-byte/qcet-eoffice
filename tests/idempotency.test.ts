@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { Prisma } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { withIdempotency, IdempotencyConflictError, getIdempotencyRecord, clearIdempotencyRecord } from '../src/server/api/idempotency';
 
 describe('Task 8: Idempotency Record Table & Helper', () => {

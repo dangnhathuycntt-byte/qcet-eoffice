@@ -3,10 +3,10 @@
 import * as React from "react";
 import { FileText, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TaskSourceDocument } from "@/types/dashboard";
-import { formatDisplayDate } from "@/lib/format/date";
+import type { TaskSourceDocument } from "@qcet/contracts/types/dashboard";
+import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { Tooltip } from "@base-ui/react/tooltip";
-import { getDocumentHref } from "@/lib/documents/document-view-model";
+import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
 interface TaskSourceDocumentBadgeProps {
   sourceDocument: TaskSourceDocument;

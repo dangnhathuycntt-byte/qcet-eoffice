@@ -1,5 +1,5 @@
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
-import { addCalendarDays, getAcademicYear, getDaysInMonth, parseStrictDateOnly } from "@/lib/academic-calendar";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
+import { addCalendarDays, getAcademicYear, getDaysInMonth, parseStrictDateOnly } from "@qcet/shared/lib/academic-calendar";
 
 export type TaskTimePreset = "today" | "this_week" | "this_month" | "overdue";
 

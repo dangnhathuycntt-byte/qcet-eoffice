@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { POST as postDeliverable, PATCH as patchDeliverable } from '../src/app/api/tasks/[id]/deliverables/route';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { ApprovalProcessStatus, TaskStatus, TaskPriority, TaskScope, TaskActorRole, UserRole, UnitType, JobCatalogGroup } from '@prisma/client';
-import { buildTaskContext, taskStateMachine } from '../src/domain/tasks/state-machine';
+import { buildTaskContext, taskStateMachine } from '@qcet/shared/domain/tasks/state-machine';
 
 describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   let staffUser: any;

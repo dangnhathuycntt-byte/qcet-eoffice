@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { AssignmentStatus, DossierStatus, JobCatalogGroup, UnitType, UserRole } from '@prisma/client';
 import { ZodError } from 'zod';
 import { NextRequest } from 'next/server';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '../src/lib/jwt-session';
 import { GET as getDossierItems } from '../src/app/api/dossiers/[id]/items/route';
 import { DossierService } from '../src/server/dossiers/dossier-service';

@@ -8,9 +8,9 @@ import {
   deriveAdaptiveWorkspaceData,
   type WorkspaceMetrics,
 } from "../src/components/workspace/hooks/use-adaptive-workspace-data";
-import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import { getSystemReferenceDate, isTaskPastDue } from "@qcet/shared/lib/academic-calendar";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () => {
   const mockUser: AuthUser = {

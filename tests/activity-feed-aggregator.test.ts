@@ -7,7 +7,7 @@ import {
   getEditCategory,
   getAuditActionLabel,
   type RawAuditLogItem,
-} from "@/lib/tasks/activity-feed-aggregator";
+} from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 
 describe("Activity Feed Aggregator & Consolidation Engine Suite", () => {
   const baseTime = new Date("2026-09-17T09:00:00.000Z").getTime();

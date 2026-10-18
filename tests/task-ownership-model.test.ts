@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import type { TaskOrigin, SchoolTask } from "../src/types/dashboard";
-import type { OwnershipRoleFilter, AssigneeWorkloadItem } from "../src/types/workspace";
+import type { TaskOrigin, SchoolTask } from "@qcet/contracts/types/dashboard";
+import type { OwnershipRoleFilter, AssigneeWorkloadItem } from "@qcet/contracts/types/workspace";
 
 describe("Task Ownership Model - Type Definitions", () => {
   test("supports TaskOrigin union values and backward compatibility", () => {
@@ -43,8 +43,8 @@ describe("Task Ownership Model - Type Definitions", () => {
     assert.equal(workload.completedCount, 1);
   });
 });
-import type { StaffTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { StaffTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 import { filterTasksByRole } from "../src/lib/role-task-filter";
 

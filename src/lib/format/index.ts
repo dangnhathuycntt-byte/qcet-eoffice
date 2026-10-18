@@ -12,6 +12,6 @@
  * in runtime; until then the in-repo copies they replace remain the de-facto renderers.
  */
 
-export * from "./date";
+export * from "@qcet/shared/lib/format/date";
 export * from "./relative-date";
 export * from "./personnel";

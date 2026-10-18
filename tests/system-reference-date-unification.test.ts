@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { getSystemReferenceDate, getSystemReferenceDateStr, isTaskPastDue } from "../src/lib/unified-task-hub";
-import { getSystemReferenceDate as getCanonicalReferenceDate } from "../src/lib/academic-calendar";
+import { getSystemReferenceDate as getCanonicalReferenceDate } from "@qcet/shared/lib/academic-calendar";
 
 /**
  * Requirement (plan T03.5, contract-map D4): there must be exactly ONE system

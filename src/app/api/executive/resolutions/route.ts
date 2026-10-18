@@ -9,7 +9,7 @@ import type { AuthorizationContext } from '@/server/authorization/authorization-
 import {
   CreateExecutiveResolutionSchema,
   ExecutiveResolutionQuerySchema,
-} from '@/contracts/executive';
+} from '@qcet/contracts/executive';
 import {
   toExecutiveResolutionDTO,
   toExecutiveResolutionDTOArray,

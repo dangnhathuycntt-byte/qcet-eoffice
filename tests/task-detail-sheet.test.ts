@@ -18,8 +18,8 @@ import {
 } from "../src/components/dashboard/task-detail-side-sheet";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { AuthUser } from "../src/types/auth";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 
 describe("TaskDetailSideSheet Type Guard and Helpers", () => {
   test("distinguishes SchoolTask from StaffTask", () => {

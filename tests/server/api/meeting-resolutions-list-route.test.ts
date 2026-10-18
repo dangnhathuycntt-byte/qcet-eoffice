@@ -23,9 +23,9 @@ import {
   UnitType,
   UserRole,
 } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '@/lib/jwt-session';
-import { getAcademicMonthInfo } from '@/lib/academic-calendar';
+import { getAcademicMonthInfo } from '@qcet/shared/lib/academic-calendar';
 import { GET as listResolutions } from '@/app/api/meetings/[id]/resolutions/route';
 
 const runId = `mres_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

@@ -3,14 +3,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
+import { isUserExecutive, isUserUnitHead } from "@qcet/shared/domain/tasks/attention-resolver";
 import { useWorkspaceQuery } from "@/hooks/use-workspace-query";
 import {
   TaskManagementWorkspace,
   type WorkspaceScope,
 } from "@/components/tasks/task-management-workspace";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
-import type { TaskView } from "@/domain/tasks";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
+import type { TaskView } from "@qcet/shared/domain/tasks";
 
 export type { WorkspaceScope, TaskView };
 

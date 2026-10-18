@@ -27,8 +27,8 @@ import type { CapabilityAction } from '@/server/authorization/capability';
 import {
   mapPrismaTaskToSchoolTask,
   mapPrismaTaskToStaffTask,
-} from '@/lib/adapters/task-db-adapter';
-import type { StaffTask } from '@/types/dashboard';
+} from '@qcet/shared/lib/adapters/task-db-adapter';
+import type { StaffTask } from '@qcet/contracts/types/dashboard';
 import { canReadTask, readsViaStaffBase, type ReadScope } from './staff-read-scope';
 
 // ---------------------------------------------------------------------------

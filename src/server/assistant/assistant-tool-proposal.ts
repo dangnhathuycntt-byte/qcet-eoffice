@@ -4,8 +4,8 @@
  * Mô hình không nhận danh sách nhân sự: người là tên người hỏi nêu, hộp tạo nhiệm vụ khớp tên ở trình duyệt.
  */
 import { z } from "zod";
-import { TASK_AGENT_PRIORITIES, TASK_AGENT_SUBTASKS_MAX, TASK_AGENT_TITLE_MAX } from "@/domain/tasks/task-agent-draft";
-import { normalizeTaskProposal } from "@/domain/assistant/assistant-task-proposal";
+import { TASK_AGENT_PRIORITIES, TASK_AGENT_SUBTASKS_MAX, TASK_AGENT_TITLE_MAX } from "@qcet/shared/domain/tasks/task-agent-draft";
+import { normalizeTaskProposal } from "@qcet/shared/domain/assistant/assistant-task-proposal";
 import { CalendarDate, type ToolRun } from "./assistant-tool-shared";
 
 const Title = z.string().trim().min(3).max(TASK_AGENT_TITLE_MAX);

@@ -1,7 +1,7 @@
 import test, { describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import {
   ApprovalProcessStatus,
@@ -12,7 +12,7 @@ import {
   UserRole,
   DeliverableReviewStatus,
 } from "@prisma/client";
-import { OutboxEventType } from "../src/lib/db/outbox";
+import { OutboxEventType } from "@qcet/db/outbox";
 
 // Import route handlers
 import { PATCH as taskPatchRoute } from "../src/app/api/tasks/[id]/route";

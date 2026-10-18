@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-import { getAcademicMonthPeriod, getAcademicMonthInfo } from "../src/lib/academic-calendar";
+import { getAcademicMonthPeriod, getAcademicMonthInfo } from "@qcet/shared/lib/academic-calendar";
 
 describe("Global Month Selector Component Invariants", () => {
 

@@ -6,7 +6,7 @@ import {
   getIncomingActions,
   getIncomingFlow,
 } from "../src/lib/documents/incoming-workflow";
-import type { DocumentItem } from "../src/types/document";
+import type { DocumentItem } from "@qcet/contracts/types/document";
 
 const keys = (status: string, role: string) => getIncomingActions(status, role).map((a) => a.key);
 

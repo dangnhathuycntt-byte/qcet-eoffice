@@ -23,7 +23,7 @@ import {
   toggleSetItem,
   getNextSortDirection,
 } from "../src/components/tasks/table/hooks/use-task-table-state";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 
 describe("Task Table Engine - Foundations & Utilities", () => {
   describe("Constants & Configuration", () => {

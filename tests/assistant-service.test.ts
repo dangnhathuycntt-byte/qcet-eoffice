@@ -16,14 +16,14 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('_test')) {
 }
 
 import type { User } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
-import { AuditAction } from '@/lib/db/audit';
+import { prisma } from '@qcet/db/prisma';
+import { AuditAction } from '@qcet/db/audit';
 import { ApiError } from '@/server/api/errors';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import type { GatewayCompletion, GatewayConfig, GatewayMessage, GatewayToolDefinition, GatewayCallOptions, callGateway } from '@/server/services/agent-gateway';
 import { runAssistantTurn, ASSISTANT_LIMITS, type AssistantTurnDeps, type AssistantTurnInput } from '@/server/assistant/assistant-service';
 import { RESTRICTED_MESSAGE, ToolFailure } from '@/server/assistant/assistant-tool-shared';
-import type { AssistantSourceRef, AssistantStreamEvent } from '@/contracts/assistant';
+import type { AssistantSourceRef, AssistantStreamEvent } from '@qcet/contracts/assistant';
 
 const runId = crypto.randomBytes(4).toString('hex');
 /** Thời điểm cố định: 10:00 ICT thứ Bảy 17/10/2026. */

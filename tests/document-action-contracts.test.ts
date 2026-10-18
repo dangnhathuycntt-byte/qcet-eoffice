@@ -15,7 +15,7 @@ import {
   DeliverOutgoingDocumentSchema,
   CreateOutgoingDraftSchema,
   PresentDocumentSchema,
-} from "@/contracts/documents";
+} from "@qcet/contracts/documents";
 
 describe("CreateDirectiveSchema validation", () => {
   test("accepts valid directive with instruction + leadUnitId", () => {

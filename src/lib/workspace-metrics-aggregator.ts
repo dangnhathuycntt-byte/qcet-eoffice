@@ -6,9 +6,9 @@
  * (SmartWorkbox, UnifiedAdaptiveWorkspace tab counts, ExecutiveStatStrip, PersonalWorkbench).
  */
 
-import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
-import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import { isTaskPastDue, getSystemReferenceDate } from "@qcet/shared/lib/academic-calendar";
 import { matchesUser } from "@/lib/role-task-filter";
 
 export type WorkspaceScope = "school" | "unit" | "my";

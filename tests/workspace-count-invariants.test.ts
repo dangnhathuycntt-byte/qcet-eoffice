@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import type { TaskStatus, SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { TaskStatus, SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import { deriveAdaptiveWorkspaceData } from "../src/components/workspace/hooks/use-adaptive-workspace-data";
 
 /**

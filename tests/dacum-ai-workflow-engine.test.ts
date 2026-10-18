@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import type { StaffTask, SchoolTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { StaffTask, SchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import { screenDeliverablesWithAI, transitionStaffTaskStatus } from "../src/lib/dacum-workflow-engine";
 
 describe("DACUM AI Executive Review Assistant", () => {

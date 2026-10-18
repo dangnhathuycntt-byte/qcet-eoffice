@@ -13,13 +13,13 @@ import {
   SECURE_SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
 } from "@/lib/jwt-session";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   revokeSession,
   revokeAllUserSessions,
   clearRevocationStoreForTesting,
 } from "@/server/auth/session-policy";
-import { resolveOAuthError } from "@/lib/login-helpers";
+import { resolveOAuthError } from "@qcet/shared/lib/login-helpers";
 import { setFeatureFlagOverride, resetFeatureFlagOverrides } from "@/features/flags";
 
 describe("Regression Suite: Google Auth Consolidation & Login Loop Prevention", () => {

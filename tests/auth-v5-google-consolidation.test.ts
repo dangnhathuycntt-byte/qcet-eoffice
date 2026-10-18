@@ -25,7 +25,7 @@ import { getApiContext } from "@/server/api/request-context";
 import { AuthenticationError } from "@/server/api/errors";
 import { loadFreshAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { SystemRole } from "@/server/authorization/authorization-context";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { UserRole } from "@prisma/client";
 
 describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test Suite", () => {

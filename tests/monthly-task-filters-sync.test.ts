@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import {
   computeDepartmentHealthMatrix,
   computeExecutiveActionStats,
-} from "../src/lib/executive-matrix-aggregator";
+} from "@qcet/shared/lib/executive-matrix-aggregator";
 import {
   filterTasksByAcademicMonthStrict,
   computePriorOverdueBacklog,
-} from "../src/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import { computeDashboardStats } from "../src/lib/dashboard-aggregator";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("Task 2: Functional Partitioning, Backlog & Department Health Scoping", () => {
     const mockTasks = [

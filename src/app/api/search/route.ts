@@ -3,7 +3,7 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiError, apiSuccess } from '@/server/api/response';
 import { ValidationError } from '@/server/api/errors';
 import { extractFieldErrors } from '@/server/api/validation';
-import { SearchQuerySchema } from '@/contracts/common';
+import { SearchQuerySchema } from '@qcet/contracts/common';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { searchGlobal } from '@/server/search/global-search-service';
 

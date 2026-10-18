@@ -10,9 +10,9 @@
  */
 import { z } from "zod";
 import { ExtensionRequestStatus, TaskStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import {
   ConflictError,
@@ -30,7 +30,7 @@ import {
   isRepeatedExtension,
   parseDueDateInput,
   validateRequestedDueDate,
-} from "@/domain/tasks/extension-rules";
+} from "@qcet/shared/domain/tasks/extension-rules";
 import { authorizeOnTask, can, loadTaskWithActors } from "./authorize-on-task";
 import { bumpTaskVersion } from "@/server/tasks/task-version";
 

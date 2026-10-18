@@ -11,8 +11,8 @@
  */
 import { z } from "zod";
 import { TaskStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { InvalidTransitionError, NotFoundError, PreconditionFailedError } from "@/server/api/errors";
 import { authorizeOnTask, can } from "./authorize-on-task";

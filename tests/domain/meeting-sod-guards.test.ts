@@ -27,7 +27,7 @@ import {
   assertTransition,
   assertMeetingNotFinalized,
   FinalizedMeetingError,
-} from '../../src/domain/meetings/state-machine';
+} from '@qcet/shared/domain/meetings/state-machine';
 
 const describe: any = (globalThis as any).describe || nodeTest.describe;
 const it: any = (globalThis as any).it || (globalThis as any).test || nodeTest.it;

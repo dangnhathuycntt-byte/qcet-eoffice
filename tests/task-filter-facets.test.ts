@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 import {
   collectCollaboratorOptions,
   collectLeadOptions,
@@ -8,7 +8,7 @@ import {
   matchesLeadFilter,
   resolveViewerUnitId,
   withRoster,
-} from "../src/domain/tasks/task-filter-facets";
+} from "@qcet/shared/domain/tasks/task-filter-facets";
 import { computeFilterFacets, filterDisplayedTasks } from "../src/components/workspace/unified-adaptive-workspace";
 
 const viewer = { id: "u-me", name: "Đặng Nhật Huy" } as any;

@@ -15,9 +15,9 @@ import {
   type DocumentApprovalStep,
   type DocumentApprovalWorkflow,
 } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { SeparationOfDutiesError } from "@/server/authorization/errors";
@@ -35,7 +35,7 @@ import {
   resolveOutcome,
   statusAfter,
   type ApprovalDecision,
-} from "@/domain/documents/submission-rules";
+} from "@qcet/shared/domain/documents/submission-rules";
 import { assertCan, canDo, loadContext, loadSubmissionDocument } from "./authorize-on-document";
 
 const READ_COMMITTED = { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted } as const;

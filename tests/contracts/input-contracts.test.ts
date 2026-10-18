@@ -2,16 +2,16 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 // Contract imports
-import { PaginationQuerySchema, SearchQuerySchema, IsoDateStringSchema } from '@/contracts/common';
-import { TaskQueryParamsSchema, CreateTaskInputSchema, UpdateTaskMetadataSchema, ApproveTaskInputSchema, SubmitDeliverableInputSchema } from '@/contracts/tasks';
+import { PaginationQuerySchema, SearchQuerySchema, IsoDateStringSchema } from '@qcet/contracts/common';
+import { TaskQueryParamsSchema, CreateTaskInputSchema, UpdateTaskMetadataSchema, ApproveTaskInputSchema, SubmitDeliverableInputSchema } from '@qcet/contracts/tasks';
 import {
   DocumentQuerySchema,
   CreateDocumentSchema,
   UpdateDocumentSchema,
   CreateDirectiveSchema,
-} from '@/contracts/documents';
-import { NotificationQuerySchema, TestPushSchema } from '@/contracts/notifications';
-import { UserQuerySchema } from '@/contracts/users';
+} from '@qcet/contracts/documents';
+import { NotificationQuerySchema, TestPushSchema } from '@qcet/contracts/notifications';
+import { UserQuerySchema } from '@qcet/contracts/users';
 
 describe('Shared Input Contracts & Strict Boundary Limits', () => {
   describe('Common Contracts (src/contracts/common.ts)', () => {

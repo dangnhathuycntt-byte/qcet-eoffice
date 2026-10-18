@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { NextRequest } from "next/server";
 import { DossierStatus, JobCatalogGroup, UnitType, UserRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { GET as listItems, POST as addItem, DELETE as removeItem } from "@/app/api/dossiers/[id]/items/route";
 

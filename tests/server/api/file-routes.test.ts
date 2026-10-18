@@ -5,7 +5,7 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import crypto from "node:crypto";
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { GET as getFileRoute } from "@/app/api/files/[...path]/route";
 import { GET as getFileObjectRoute } from "@/app/api/file-objects/[id]/route";

@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import type { UserQuery } from "@/contracts/users";
+import { prisma } from "@qcet/db/prisma";
+import type { UserQuery } from "@qcet/contracts/users";
 import type { buildUserDirectoryQueryOptions } from "@/server/users/user-directory-query";
 
 // Danh bạ người dùng: người đang hoạt động có phân công hiệu lực trong đơn vị đang hoạt động.

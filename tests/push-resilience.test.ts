@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import manifest from "../src/app/manifest";
-import prisma from "../src/lib/prisma";
+import prisma from "@qcet/db/prisma";
 import {
   sendPushNotificationToUser,
   setPushSenderForTesting,

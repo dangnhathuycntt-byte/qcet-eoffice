@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DocumentFilesRail, DocumentViewerRail, FilesMenu, type RailFile } from "../src/components/documents/document-viewer-rail";
-import { MAX_FILES_AS_TICKS } from "../src/lib/documents/file-viewer-state";
+import { MAX_FILES_AS_TICKS } from "@qcet/shared/lib/documents/file-viewer-state";
 
 const makeFiles = (n: number): RailFile[] => Array.from({ length: n }, (_, i) => ({ id: `f${i + 1}`, name: `tep-${i + 1}.pdf`, detail: `${i + 2} trang` }));
 

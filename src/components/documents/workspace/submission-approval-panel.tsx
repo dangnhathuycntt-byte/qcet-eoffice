@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { STEP_STATUS_LABEL, WORKFLOW_STATUS_LABEL } from "@/domain/documents/submission-rules";
+import { STEP_STATUS_LABEL, WORKFLOW_STATUS_LABEL } from "@qcet/shared/domain/documents/submission-rules";
 import { cn } from "@/lib/utils";
 
 type Decision = "APPROVE" | "REVISION" | "REJECT";

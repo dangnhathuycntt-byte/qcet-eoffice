@@ -1,10 +1,10 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { taskQueryService, taskCommandService, canUserCreateTask, canUserUpdateTask, canUserApproveTask, canUserDeleteTask, canUserSubmitDeliverable, canUserReviewDeliverable, canUserTransitionStatus, isPrivilegedUser, isDepartmentLeader } from '../src/server/tasks';
 import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, DeliverableReviewStatus, UserRole } from '@prisma/client';
 import type { AuthenticatedUser } from '../src/server/api/request-context';
-import { getSystemReferenceDate } from '../src/lib/academic-calendar';
+import { getSystemReferenceDate } from '@qcet/shared/lib/academic-calendar';
 
 describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => {
   let adminUser: AuthenticatedUser;

@@ -1,7 +1,7 @@
-import { SchoolTask, UpcomingItem } from "../types/dashboard";
-import { AuthUser, UserRole } from "../types/auth";
+import { SchoolTask, UpcomingItem } from "@qcet/contracts/types/dashboard";
+import { AuthUser, UserRole } from "@qcet/contracts/types/auth";
 
-export { type AuthUser, type UserRole } from "../types/auth";
+export { type AuthUser, type UserRole } from "@qcet/contracts/types/auth";
 
 export const DEFAULT_DEMO_USERS: AuthUser[] = [
   {

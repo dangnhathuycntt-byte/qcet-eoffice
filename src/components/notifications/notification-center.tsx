@@ -29,7 +29,7 @@ import {
   beginOptimisticRead,
   settleOptimisticRead,
   groupNotificationsByDay,
-} from "@/lib/notification-triage";
+} from "@qcet/shared/lib/notification-triage";
 import {
   fadeVariants,
   listItemVariants,

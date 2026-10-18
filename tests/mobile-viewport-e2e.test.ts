@@ -1,7 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
 import manifest from "../src/app/manifest";
-import { INSTITUTION_CONFIG } from "../src/config/institution";
+import { INSTITUTION_CONFIG } from "@qcet/shared/config/institution";
 import {
   useVirtualKeyboard,
   scrollActiveInputIntoView,

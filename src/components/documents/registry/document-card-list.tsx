@@ -2,14 +2,14 @@
 
 import * as React from "react";
 import { FileText } from "lucide-react";
-import { OfficialDocument, DocumentType } from "@/types/document";
+import { OfficialDocument, DocumentType } from "@qcet/contracts/types/document";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { cn } from "@/lib/utils";
-import { formatLedgerDate, getLedgerStepLabel } from "@/lib/documents/document-ledger-format";
+import { formatLedgerDate, getLedgerStepLabel } from "@qcet/shared/lib/documents/document-ledger-format";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
-import { TaskIconLink } from "@/lib/icons/task-icons";
+import { TaskIconLink } from "@qcet/shared/lib/icons/task-icons";
 import { useLongPress } from "@/hooks/use-long-press";
 import {
   getUrgencyBadgeConfig,

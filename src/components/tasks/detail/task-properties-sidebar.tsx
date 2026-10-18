@@ -1,21 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { TaskIconCollaborators, TaskIconDeadline, TaskIconDepartment } from "@/lib/icons/task-icons";
-import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
-import { isSchoolTask } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
+import { TaskIconCollaborators, TaskIconDeadline, TaskIconDepartment } from "@qcet/shared/lib/icons/task-icons";
+import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
+import { isSchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import { cn } from "@/lib/utils";
 import {
   formatDisplayDate,
   extractDateIso,
-} from "@/lib/format/date";
+} from "@qcet/shared/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { computeDueStatus } from "@/domain/tasks/deadlines";
-import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
-import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { computeDueStatus } from "@qcet/shared/domain/tasks/deadlines";
+import { normalizeDisplayStatus } from "@qcet/shared/domain/tasks/canonical-semantics";
+import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { getTaskUnitId } from "@/lib/tasks/task-unit";
+import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
 import { TaskStatusSelect, TaskAssigneePicker, TaskPrioritySelect } from "./task-property-controls";
 import { PropertyRow } from "@/components/ui/property-row";
 import { UserAvatar, UserAvatarGroup } from "@/components/ui/user-avatar";
@@ -29,7 +29,7 @@ import {
   taskStateMachine,
   buildActorContext,
   buildTaskContext,
-} from "@/domain/tasks/state-machine";
+} from "@qcet/shared/domain/tasks/state-machine";
 
 export interface AuditLogItem {
   id: string;

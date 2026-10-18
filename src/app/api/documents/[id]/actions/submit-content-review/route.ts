@@ -1,4 +1,4 @@
-import { SubmitContentReviewSchema } from "@/contracts/documents";
+import { SubmitContentReviewSchema } from "@qcet/contracts/documents";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 

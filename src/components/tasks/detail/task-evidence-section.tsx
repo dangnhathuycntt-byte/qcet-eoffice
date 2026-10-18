@@ -14,7 +14,7 @@ import {
 import { confirmAction } from "@/components/ui/confirm-host";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
-import { isSafeUrl } from "@/lib/url-utils";
+import { isSafeUrl } from "@qcet/shared/lib/url-utils";
 
 export interface DeliverableItem {
   id: string;

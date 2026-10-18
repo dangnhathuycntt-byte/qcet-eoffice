@@ -1,7 +1,7 @@
 import test, { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import {
   TaskStatus,
@@ -9,13 +9,13 @@ import {
   UserRole,
   TaskScope,
 } from "@prisma/client";
-import { OutboxEventType } from "../src/lib/db/outbox";
+import { OutboxEventType } from "@qcet/db/outbox";
 import {
   taskStateMachine,
   buildActorContext,
   buildTaskContext,
   getStatusLabel,
-} from "../src/domain/tasks/state-machine";
+} from "@qcet/shared/domain/tasks/state-machine";
 import { POST as updateStatusRoute } from "../src/app/api/tasks/[id]/actions/update-status/route";
 import { POST as submitResultRoute } from "../src/app/api/tasks/[id]/actions/submit-result/route";
 import { POST as startRoute } from "../src/app/api/tasks/[id]/actions/start/route";

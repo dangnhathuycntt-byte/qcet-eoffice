@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { resolveAgentModel, type AgentModelCatalog, type AgentModelOption } from "@/domain/agent/agent-models";
+import { resolveAgentModel, type AgentModelCatalog, type AgentModelOption } from "@qcet/shared/domain/agent/agent-models";
 
 /** Danh sách model đọc ở server (layout) cho ô soạn của Trợ lý (trang và khung chat nổi) và Agent tạo nhiệm vụ. */
 const AgentModelsContext = React.createContext<AgentModelCatalog | null>(null);

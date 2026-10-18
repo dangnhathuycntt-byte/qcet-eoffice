@@ -11,10 +11,10 @@
  */
 import { z } from "zod";
 import { TaskActorRole, TaskScope, type Prisma } from "@prisma/client";
-import { prisma, type DbClient } from "@/lib/prisma";
-import { auditService, AuditAction } from "@/lib/db/audit";
+import { prisma, type DbClient } from "@qcet/db/prisma";
+import { auditService, AuditAction } from "@qcet/db/audit";
 import type { SessionPayload } from "@/lib/jwt-session";
-import { getAcademicYear } from "@/lib/academic-calendar";
+import { getAcademicYear } from "@qcet/shared/lib/academic-calendar";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskResource } from "@/server/authorization/available-actions";
@@ -28,7 +28,7 @@ import {
   MAX_CATCH_UP_MONTHS,
   periodKeyOf,
   renderTitle,
-} from "@/domain/tasks/recurrence-rules";
+} from "@qcet/shared/domain/tasks/recurrence-rules";
 import { taskCommandService } from "./task-command-service";
 
 export { RecurrenceBodySchema, TemplateBodySchema };

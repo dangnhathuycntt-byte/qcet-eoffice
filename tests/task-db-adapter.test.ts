@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from '../src/lib/adapters/task-db-adapter';
+import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from '@qcet/shared/lib/adapters/task-db-adapter';
 
 describe('TaskDbAdapter Unit Tests', () => {
   test('maps full Prisma Task record to SchoolTask without data loss', () => {

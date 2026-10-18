@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toIctDateTimeParts } from "@/lib/format/date";
+import { toIctDateTimeParts } from "@qcet/shared/lib/format/date";
 
 const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 

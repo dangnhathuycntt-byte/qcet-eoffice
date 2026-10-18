@@ -29,7 +29,7 @@ import {
   MeetingStatus,
   MeetingParticipantRole,
 } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { MeetingService } from '@/server/services/meeting-service';
 
 function createContext(overrides: {

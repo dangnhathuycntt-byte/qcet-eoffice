@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { POST as loginRoute } from "../src/app/api/auth/login/route";
 import { GET as dashboardOverviewRoute } from "../src/app/api/dashboard/overview/route";
 import { getLiveDashboardData } from "../src/server/services/dashboard-service";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken } from "../src/lib/jwt-session";
 
 describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {

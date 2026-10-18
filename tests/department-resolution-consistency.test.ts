@@ -1,6 +1,6 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { resolveDepartmentId, QCET_DEPARTMENT_DEFINITIONS } from "../src/lib/executive-matrix-aggregator";
+import { resolveDepartmentId, QCET_DEPARTMENT_DEFINITIONS } from "@qcet/shared/lib/executive-matrix-aggregator";
 import { QCET_ORG_UNITS } from "../src/lib/org/org-structure";
 
 describe("QCET Department Resolution & Consistency Suite", () => {

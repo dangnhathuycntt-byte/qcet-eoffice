@@ -13,8 +13,8 @@ import {
   type CreateTaskSubmitResult,
   type CreateTaskSubtaskSummary,
 } from "@/lib/adapters/create-task-mapper";
-import { isExecutiveUser } from "@/domain/tasks/create-task-policy";
-import { CREATE_TASK_MAX_SUBTASKS } from "@/contracts/tasks";
+import { isExecutiveUser } from "@qcet/shared/domain/tasks/create-task-policy";
+import { CREATE_TASK_MAX_SUBTASKS } from "@qcet/contracts/tasks";
 import { useAuth } from "@/lib/auth-context";
 import { toCanonicalUnitCode } from "@/lib/departments";
 

@@ -11,7 +11,7 @@ import {
   getOriginDisplayLabel,
 } from "../src/components/workspace/components/active-filter-breadcrumb";
 import { filterDisplayedTasks } from "../src/components/workspace/unified-adaptive-workspace";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("Multi-Select Filter Enhancements", () => {
   test("combines multiple status values into Vietnamese labels", () => {

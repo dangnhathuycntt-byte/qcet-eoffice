@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Check, ListPlus, Minus } from "lucide-react";
-import type { AssistantTaskProposal } from "@/contracts/assistant";
-import { formatDisplayDate } from "@/lib/format/date";
+import type { AssistantTaskProposal } from "@qcet/contracts/assistant";
+import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { Button } from "@/components/ui/button";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import type { AssistantProposalTask } from "@/components/assistant/assistant-model";

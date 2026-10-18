@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 // Danh bạ đơn vị đang hoạt động (kèm nhân sự hiện nhiệm khi cần) cho /api/departments.
 

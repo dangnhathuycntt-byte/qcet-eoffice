@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { DocumentQuickView } from "../src/components/documents/workspace/document-quick-view";
 import { DocumentFileViewer } from "../src/components/documents/document-file-viewer";
 import { DocumentPdfViewer } from "../src/components/documents/document-pdf-viewer";
-import type { OfficialDocument } from "../src/types/document";
+import type { OfficialDocument } from "@qcet/contracts/types/document";
 
 const seed: OfficialDocument = {
   id: "doc-1",

@@ -7,7 +7,7 @@ import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/com
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTrackOpenPopover } from "./popover-escape-guard";
 import { FileTypeIcon } from "./file-type-icon";
-import type { FilePreviewKind } from "@/lib/documents/file-viewer-state";
+import type { FilePreviewKind } from "@qcet/shared/lib/documents/file-viewer-state";
 import { Pressable } from "@/components/ui/pressable";
 import { SheetKeyboardSync } from "@/components/ui/menu";
 

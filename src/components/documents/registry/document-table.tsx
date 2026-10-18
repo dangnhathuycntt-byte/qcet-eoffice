@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { OfficialDocument } from "@/types/document";
+import { OfficialDocument } from "@qcet/contracts/types/document";
 
 export interface DocumentTableProps {
   documents: OfficialDocument[];

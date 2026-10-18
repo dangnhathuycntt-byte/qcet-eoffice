@@ -4,7 +4,7 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { ValidationError } from "@/server/api/errors";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { getVapidPublicKey } from "@/server/notifications/push-service";
-import { DEFAULT_PUSH_PREFERENCES } from "@/lib/pwa/push-preferences";
+import { DEFAULT_PUSH_PREFERENCES } from "@qcet/shared/lib/pwa/push-preferences";
 import {
   getPushStatus,
   revokePushSubscriptions,

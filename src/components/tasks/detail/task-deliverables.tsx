@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { confirmAction } from "@/components/ui/confirm-host";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
-import { isSafeUrl } from "@/lib/url-utils";
+import { isSafeUrl } from "@qcet/shared/lib/url-utils";
 import { cn } from "@/lib/utils";
 import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
 

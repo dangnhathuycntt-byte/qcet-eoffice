@@ -1,16 +1,16 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { DocumentStatus, DocumentType, UserRole, UnitType, UnitStatus } from '@prisma/client';
-import { getIctReferenceDateStart } from '../src/domain/tasks/deadlines';
+import { getIctReferenceDateStart } from '@qcet/shared/domain/tasks/deadlines';
 import { scanAndDispatchDocumentDeadlines, resolveDocumentStakeholders, formatIctDate } from '../src/server/documents/document-deadline-scanner';
 import {
   formatDocumentPushPayload,
   setPushSenderForTesting,
 } from '../src/server/notifications/push-service';
 import { GET, POST } from '../src/app/api/cron/document-deadline-check/route';
-import { OutboxEventType } from '../src/lib/db/outbox';
+import { OutboxEventType } from '@qcet/db/outbox';
 
 describe('Document Overdue Cron Scanner & Web-Push Dispatcher (document-overdue-cron-scanner)', () => {
   const testRunId = `doc_cron_${Date.now()}`;

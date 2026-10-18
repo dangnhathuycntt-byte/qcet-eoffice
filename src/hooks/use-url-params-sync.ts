@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { WorkspaceZone, parseZoneParam } from "@/types/workspace";
+import { WorkspaceZone, parseZoneParam } from "@qcet/contracts/types/workspace";
 import {
   getDefaultScopeForRole,
   getDefaultViewModeForRole,
@@ -12,7 +12,7 @@ import {
   type TaskScope,
   type TaskViewMode,
 } from "@/lib/unified-task-hub";
-import type { UserRole } from "@/types/auth";
+import type { UserRole } from "@qcet/contracts/types/auth";
 
 export interface UrlParamsSyncReturn {
   activeZone: WorkspaceZone;

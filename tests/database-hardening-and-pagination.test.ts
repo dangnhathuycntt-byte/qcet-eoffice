@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { NextRequest } from 'next/server';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { taskQueryService } from '../src/server/tasks/task-query-service';
 import { GET as getTasksRoute } from '../src/app/api/tasks/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
@@ -312,7 +312,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
   describe('1. Database Production Hardening & Indexes (Phase 12)', () => {
     test('Prisma schema defines required composite and foreign key indexes', () => {
-      const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
+      const schemaPath = path.resolve(__dirname, '../packages/db/prisma/schema.prisma');
       const schemaContent = fs.readFileSync(schemaPath, 'utf8');
 
       // Task indexes

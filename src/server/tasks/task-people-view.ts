@@ -3,7 +3,7 @@
  * Chỉ người phối hợp và người theo dõi quản lý được; các vai trò khác hiện để tham khảo.
  */
 import { TaskActorRole, TaskStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { authorizeOnTask, can } from "./authorize-on-task";
 

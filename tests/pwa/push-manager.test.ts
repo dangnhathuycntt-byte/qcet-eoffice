@@ -9,7 +9,7 @@ import {
   isTopicEnabled,
   getPushPreferencesStorageKey,
   type PushPreferences,
-} from "../../src/lib/pwa/push-preferences";
+} from "@qcet/shared/lib/pwa/push-preferences";
 
 // Mock minimal browser globals for testing
 class MockLocalStorage {

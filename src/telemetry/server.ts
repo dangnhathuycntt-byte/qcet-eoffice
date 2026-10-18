@@ -8,7 +8,7 @@
  * - Adheres to Backend API Invariants rule 6 (Information Leak Prevention).
  */
 
-import { sanitizeLogContext, type SanitizeOptions } from "./sanitize";
+import { sanitizeLogContext, type SanitizeOptions } from "@qcet/shared/telemetry/sanitize";
 
 export { sanitizeLogContext, type SanitizeOptions };
 

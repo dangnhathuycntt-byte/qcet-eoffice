@@ -5,7 +5,7 @@ import { GET as getOverview } from "../src/app/api/dashboard/overview/route";
 import { PATCH as patchTask } from "../src/app/api/tasks/[id]/route";
 import { taskCommandService } from "../src/server/tasks";
 import { ForbiddenError } from "../src/server/api/errors";
-import prisma from "../src/lib/prisma";
+import prisma from "@qcet/db/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import {
   AssignmentStatus,

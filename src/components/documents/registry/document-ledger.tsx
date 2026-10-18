@@ -4,7 +4,7 @@ import * as React from "react";
 import type { CSSProperties } from "react";
 import { CalendarPlus, Check, ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
 import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components/ui/menu";
-import type { OfficialDocument } from "@/types/document";
+import type { OfficialDocument } from "@qcet/contracts/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
@@ -30,7 +30,7 @@ import {
   TaskIconSearch,
   TaskIconStatus,
   TaskIconTime,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { cn } from "@/lib/utils";
 import { getSelectionGroupPositions, type SelectionGroupPosition } from "@/lib/selection-group";
@@ -44,7 +44,7 @@ import {
   type LedgerStepKind,
   isLedgerDone,
   todayInVietnam,
-} from "@/lib/documents/document-ledger-format";
+} from "@qcet/shared/lib/documents/document-ledger-format";
 import { Pressable } from "@/components/ui/pressable";
 
 const URGENCY_OPTIONS = [

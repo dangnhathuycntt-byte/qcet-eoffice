@@ -1,9 +1,9 @@
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   DEFAULT_PUSH_PREFERENCES,
   type PushPreferences,
-} from "@/lib/pwa/push-preferences";
+} from "@qcet/shared/lib/pwa/push-preferences";
 
 // Đăng ký push và tùy chọn push của người dùng.
 // Client hiện tại POST /api/notifications/push/subscribe trước, chỉ quay về /api/notifications/push khi lỗi mạng

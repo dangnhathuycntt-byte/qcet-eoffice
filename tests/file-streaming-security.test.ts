@@ -10,7 +10,7 @@ import {
 } from "../src/server/files/storage";
 import { GET } from "../src/app/api/documents/download/route";
 import { signSessionToken } from "../src/lib/jwt-session";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 const TEST_UPLOADS_DIR = path.resolve("./test_storage_sandbox");
 

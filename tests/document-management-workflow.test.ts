@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert";
-import { OfficialDocument, DocumentUrgency, DocumentStatus } from "../src/types/document";
+import { OfficialDocument, DocumentUrgency, DocumentStatus } from "@qcet/contracts/types/document";
 import { MOCK_DOCUMENTS, getDocumentStats } from "./fixtures/document-fixtures";
 import {
   getUrgencyBadgeConfig,

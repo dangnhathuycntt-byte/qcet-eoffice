@@ -8,7 +8,7 @@ import {
   ictHour,
   isDueSoon,
   isOverdueNotifiable,
-} from '../src/domain/tasks/reminder-rules';
+} from '@qcet/shared/domain/tasks/reminder-rules';
 
 const at = (iso: string) => new Date(iso);
 

@@ -13,7 +13,7 @@ import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { DocumentStatus, UserRole } from "@prisma/client";
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { LEGACY_SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { DELETE as deleteDocumentRoute, GET as getDocumentRoute } from "@/app/api/documents/[id]/route";
 import {

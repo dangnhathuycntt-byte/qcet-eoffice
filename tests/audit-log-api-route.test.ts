@@ -18,7 +18,7 @@ import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { UserRole } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '@/lib/jwt-session';
 import { GET as listAuditLogs } from '@/app/api/audit-logs/route';
 

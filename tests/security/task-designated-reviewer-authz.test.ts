@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { authorize } from '@/server/authorization/authorization-engine';
 import { AuthorizationContextModel, type ActivePositionAssignment } from '@/server/authorization/authorization-context';
 import type { AuthorizationResource } from '@/server/authorization/resource';
-import { partitionTaskActorUserIds } from '@/domain/tasks/task-actor-roles';
+import { partitionTaskActorUserIds } from '@qcet/shared/domain/tasks/task-actor-roles';
 import { AssignmentStatus, AssignmentType, UnitStatus, UnitType } from '@prisma/client';
 
 const UNIT = 'unit_dt';

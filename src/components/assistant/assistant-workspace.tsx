@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import type { AssistantContextRef, AssistantConversationSummaryDTO } from "@/contracts/assistant";
+import type { AssistantContextRef, AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
 import {
   ASSISTANT_CONVERSATION_EVENT,
   contextTypeLabel,

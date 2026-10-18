@@ -5,7 +5,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, DocumentType, JobCatalogGroup, OutgoingDocumentStatus, SignatureType, UnitType, UserRole } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { initialSignOutgoing } from '../src/server/documents/outgoing-initial-sign';
 import { getSignatureState } from '../src/server/documents/signature-verification-service';
 import { ApiError, ConflictError } from '../src/server/api/errors';

@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import {
   computeExecutiveActionStats,
   computeDepartmentHealthMatrix,
@@ -8,7 +8,7 @@ import {
   extractExecutiveActionItems,
   filterTasksByExecutive,
   QCET_DEPARTMENT_DEFINITIONS,
-} from "../src/lib/executive-matrix-aggregator";
+} from "@qcet/shared/lib/executive-matrix-aggregator";
 import {
   filterTasksByAcademicMonth,
   computeMonthlyTaskCounts,

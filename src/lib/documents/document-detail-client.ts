@@ -1,4 +1,4 @@
-import type { DocumentItem } from "@/types/document";
+import type { DocumentItem } from "@qcet/contracts/types/document";
 
 export type DetailErrorKind = "forbidden" | "not_found" | "network" | "unknown";
 

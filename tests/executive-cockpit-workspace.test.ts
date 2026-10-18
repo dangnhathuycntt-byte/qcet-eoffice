@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 // Pin reference date to 2026-09-25 for deterministic testing per invariants.md
 process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-25";
-import type { SchoolBottleneckItem } from "../src/types/workspace";
+import type { SchoolBottleneckItem } from "@qcet/contracts/types/workspace";
 
 describe("Executive Unit Radar Dot Calculation", () => {
   it("phân loại đúng màu chấm theo số lượng tắc nghẽn và cảnh báo", () => {

@@ -22,7 +22,7 @@ const fontSans = Be_Vietnam_Pro({
   display: "swap",
 });
 
-import { INSTITUTION_CONFIG } from "@/config/institution";
+import { INSTITUTION_CONFIG } from "@qcet/shared/config/institution";
 
 export const metadata: Metadata = {
   applicationName: `${INSTITUTION_CONFIG.shortName} E-Office`,

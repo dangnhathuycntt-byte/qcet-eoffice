@@ -8,9 +8,9 @@
  */
 import { z } from "zod";
 import { OutgoingDocumentStatus, SignatureType, SignatureVerificationStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/server/api/errors";
 import { authorize } from "@/server/authorization/authorization-engine";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";

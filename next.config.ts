@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { NextConfig } from "next";
-import { getNextSecurityHeaders } from "./src/config/security-headers";
+import { getNextSecurityHeaders } from "./packages/shared/src/config/security-headers";
 
 const isProduction = process.env.NODE_ENV === "production";
 const securityHeaders = getNextSecurityHeaders(isProduction);

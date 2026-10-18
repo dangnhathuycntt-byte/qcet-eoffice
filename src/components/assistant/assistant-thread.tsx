@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import type { AssistantSourceRef, AssistantTaskProposal } from "@/contracts/assistant";
-import { agentReplyToPlainText } from "@/domain/tasks/agent-reply-format";
+import type { AssistantSourceRef, AssistantTaskProposal } from "@qcet/contracts/assistant";
+import { agentReplyToPlainText } from "@qcet/shared/domain/tasks/agent-reply-format";
 import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
 import { AttachmentCard } from "@/components/agent-chat/agent-attachments";
 import { useSmoothText } from "@/components/agent-chat/use-smooth-text";

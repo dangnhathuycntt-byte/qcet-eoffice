@@ -1,6 +1,6 @@
 # File-Object Expansion — Additive DDL Migration
 #
-# Applies prisma/migrations/20260928090000_file_object_expand/migration.sql.
+# Applies packages/db/prisma/migrations/20260928090000_file_object_expand/migration.sql.
 # This migration is PURELY ADDITIVE:
 #   - CREATE TYPE (3 new enums)
 #   - CREATE TABLE file_objects
@@ -118,7 +118,7 @@ jobs:
       - name: Verify migration SQL SHA256
         run: |
           set -euo pipefail
-          SQL_PATH="prisma/migrations/${MIGRATION_NAME}/migration.sql"
+          SQL_PATH="packages/db/prisma/migrations/${MIGRATION_NAME}/migration.sql"
           if [ ! -f "$SQL_PATH" ]; then
             echo "ERROR: Migration SQL not found at $SQL_PATH" >&2
             exit 1
@@ -425,7 +425,7 @@ jobs:
           PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
           PG_PASS=$(cat "$WORK_DIR/pg_pass")
-          SQL_PATH="prisma/migrations/${MIGRATION_NAME}/migration.sql"
+          SQL_PATH="packages/db/prisma/migrations/${MIGRATION_NAME}/migration.sql"
 
           # Determine backup file for rehearsal:
           # - In apply mode: use the fresh backup taken in step 6
@@ -800,7 +800,7 @@ jobs:
             echo "DDL already applied (ddl_only state) — skipping SQL apply, proceeding to Prisma reconciliation."
             echo "ddl_applied=skipped" >> "$GITHUB_OUTPUT"
           else
-            SQL_PATH="prisma/migrations/${MIGRATION_NAME}/migration.sql"
+            SQL_PATH="packages/db/prisma/migrations/${MIGRATION_NAME}/migration.sql"
             APPLY_STDERR="$WORK_DIR/apply_stderr.txt"
 
             # Build transaction-wrapped SQL: BEGIN + timeouts + migration SQL + COMMIT

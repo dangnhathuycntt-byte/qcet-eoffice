@@ -6,7 +6,7 @@ import {
   matchesTaskTab,
   parseTaskTab,
   resolveTaskTab,
-} from "../src/domain/tasks/task-tabs";
+} from "@qcet/shared/domain/tasks/task-tabs";
 import { parseWorkspaceQuery, serializeWorkspaceQuery } from "../src/lib/workspace-query";
 import { filterDisplayedTasks } from "../src/components/workspace/unified-adaptive-workspace";
 

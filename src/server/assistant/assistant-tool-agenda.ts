@@ -3,12 +3,12 @@
  * Hộp việc đi qua ActionInboxService; lịch họp đi qua MeetingService luôn có authz (buildMeetingReadWhere).
  */
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import type { AssistantSourceRef } from "@/contracts/assistant";
+import { prisma } from "@qcet/db/prisma";
+import type { AssistantSourceRef } from "@qcet/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { ActionInboxService } from "@/server/services/action-inbox-service";
 import { MeetingService } from "@/server/services/meeting-service";
-import { assistantSourceHref } from "@/domain/assistant/assistant-sources";
+import { assistantSourceHref } from "@qcet/shared/domain/assistant/assistant-sources";
 import { CalendarDate, clip, ictDate, ictDateTime, isCalendarDate, redactContact, ToolFailure } from "./assistant-tool-shared";
 import { isRestrictedDocument } from "./assistant-tool-documents";
 

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Prisma } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 
 describe('Task 11: Composite & Partial Indexes Audit', () => {
-  const schemaPath = path.join(process.cwd(), 'prisma/schema.prisma');
+  const schemaPath = path.join(process.cwd(), 'packages/db/prisma/schema.prisma');
   const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
 
-  const sqlPath = path.join(process.cwd(), 'prisma/migrations/indexes.sql');
+  const sqlPath = path.join(process.cwd(), 'packages/db/prisma/migrations/indexes.sql');
   const sqlContent = fs.existsSync(sqlPath) ? fs.readFileSync(sqlPath, 'utf-8') : '';
 
   describe('1. Prisma Schema & DMMF Composite Indexes', () => {
@@ -149,7 +149,7 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
     test('migration thực thi bất biến một DRI chính tồn tại và có guard fail-fast', () => {
       const migrationPath = path.join(
         process.cwd(),
-        'prisma/migrations/20260923000005_task_actor_single_primary_dri/migration.sql'
+        'packages/db/prisma/migrations/20260923000005_task_actor_single_primary_dri/migration.sql'
       );
       assert.ok(fs.existsSync(migrationPath), 'Migration bất biến DRI phải tồn tại');
 

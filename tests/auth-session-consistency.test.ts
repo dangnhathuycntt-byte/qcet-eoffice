@@ -7,7 +7,7 @@ import {
   AuthContext,
   type AuthContextType,
 } from "../src/lib/auth-context";
-import type { AuthUser } from "../src/types/auth";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 describe("Task 6: Session Consistency & Auth State Guard (P0-8)", () => {
   const mockServerUser = {

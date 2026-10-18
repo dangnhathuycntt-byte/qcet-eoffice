@@ -17,8 +17,8 @@ import {
   ACADEMIC_MONTH_ORDER,
   type AcademicMonthPeriod,
   type CurrentAcademicPeriod,
-} from './academic-calendar';
-import type { TaskMetricsDomain } from '@/domain/tasks/types';
+} from '@qcet/shared/lib/academic-calendar';
+import type { TaskMetricsDomain } from '@qcet/shared/domain/tasks/types';
 
 // Re-export calendar cycle definitions to provide single canonical access
 export {

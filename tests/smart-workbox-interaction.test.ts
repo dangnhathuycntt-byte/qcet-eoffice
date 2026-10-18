@@ -10,8 +10,8 @@ import { getWorkboxDisplayLabel } from "../src/components/workspace/components/a
 import {
   filterDisplayedTasks,
 } from "../src/components/workspace/unified-adaptive-workspace";
-import type { SchoolTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 describe("Smart Workbox & Linear-Style Interaction (Phase 6)", () => {
   const mockTasks = [

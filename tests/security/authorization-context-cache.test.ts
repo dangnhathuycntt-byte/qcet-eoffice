@@ -23,7 +23,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/qcet_eoffice
   );
 }
 
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   UserRole,
   AssignmentType,

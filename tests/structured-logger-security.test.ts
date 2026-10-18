@@ -17,7 +17,7 @@ import {
   redactSensitiveData,
   StructuredLogEntry,
 } from '@/server/observability/logger';
-import { sanitizeLogContext } from '@/telemetry/sanitize';
+import { sanitizeLogContext } from '@qcet/shared/telemetry/sanitize';
 
 async function testStructuredLogger() {
   console.log('--- Test: Sensitive Key Pattern Matching ---');

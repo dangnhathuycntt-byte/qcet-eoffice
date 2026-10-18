@@ -16,7 +16,7 @@
  * - Hybrid Authorization via assertAuthorized().
  */
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { Prisma, WorkDossier, DossierItem, RetentionRule } from "@prisma/client";
 import {
   DossierStatus,
@@ -30,8 +30,8 @@ import {
   type AuthorizationResource,
 } from "@/server/authorization/hybrid-authorization";
 import { resolveUserContext } from "@/server/documents/incoming-document-service";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import {
   ConflictError,
   InvalidTransitionError,

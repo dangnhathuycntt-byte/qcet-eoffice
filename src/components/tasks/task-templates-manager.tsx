@@ -9,12 +9,12 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { PRIORITY_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WorkspacePageCard } from "@/components/workspace/page-card";
 import { useAuth } from "@/lib/auth-context";
-import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
+import { isUserExecutive, isUserUnitHead } from "@qcet/shared/domain/tasks/attention-resolver";
 
 interface Template {
   id: string;

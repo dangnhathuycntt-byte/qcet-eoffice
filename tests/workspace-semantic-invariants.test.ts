@@ -4,8 +4,8 @@ import { AttentionBadge, type AttentionLevel } from "../src/components/workspace
 import { STATUS_BADGE_CONFIGS } from "../src/components/tasks/table/constants";
 import { deriveAdaptiveWorkspaceData } from "../src/components/workspace/hooks/use-adaptive-workspace-data";
 import { parseWorkspaceQuery, serializeWorkspaceQuery, type WorkspaceFilterState } from "../src/lib/workspace-query";
-import type { TaskStatus, SchoolTask, StaffTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { TaskStatus, SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
 

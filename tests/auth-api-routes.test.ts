@@ -219,7 +219,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
   });
 
   test("POST /api/auth/register rejects arbitrary role escalation and mass-assignment with status 403", async () => {
-    const { prisma } = await import("../src/lib/prisma");
+    const { prisma } = await import("@qcet/db/prisma");
     const roleEscalateEmail = "hacker@qcet.edu.vn";
 
     await prisma.user.deleteMany({
@@ -255,7 +255,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
   });
 
   test("POST /api/auth/login rejects inactive user (isActive: false) with status 403", async () => {
-    const { prisma } = await import("../src/lib/prisma");
+    const { prisma } = await import("@qcet/db/prisma");
     const inactiveEmail = "locked_user@qcet.edu.vn";
     const inactivePassword = "PasswordLocked123";
 

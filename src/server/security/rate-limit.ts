@@ -2,7 +2,7 @@ import Redis from 'ioredis';
 import os from 'node:os';
 import { ApiError, RateLimitError } from '@/server/api/errors';
 import { logger } from '@/server/observability/logger';
-import { logAuditEvent } from '@/lib/db/audit';
+import { logAuditEvent } from '@qcet/db/audit';
 import { isBuildPhase } from '@/config/env.server';
 
 // ---------------------------------------------------------------------------

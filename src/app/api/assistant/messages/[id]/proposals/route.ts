@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { AssistantProposalUpdateRequestSchema } from "@/contracts/assistant";
+import { AssistantProposalUpdateRequestSchema } from "@qcet/contracts/assistant";
 import { isFeatureEnabled } from "@/features/flags";
 import { ApiError } from "@/server/api/errors";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";

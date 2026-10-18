@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 // Truy vấn cho /api/dev/login-as (chỉ dev cục bộ; route tự chặn production).
 

@@ -2,7 +2,7 @@ import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/jwt-session";
 import { GET as getLoginAs, POST as postLoginAs } from "@/app/api/dev/login-as/route";
 

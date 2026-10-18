@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { assistantDateFrame, buildAssistantSystemPrompt, type AssistantPromptInput } from "../src/domain/assistant/assistant-prompt";
+import { assistantDateFrame, buildAssistantSystemPrompt, type AssistantPromptInput } from "@qcet/shared/domain/assistant/assistant-prompt";
 
 function baseInput(overrides: Partial<AssistantPromptInput> = {}): AssistantPromptInput {
   return {

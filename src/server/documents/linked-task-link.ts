@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { ApiError, ConflictError, ForbiddenError, NotFoundError } from "@/server/api/errors";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
-import { AuditAction, AuditEntityType, logAuditEvent } from "@/lib/db/audit";
+import { AuditAction, AuditEntityType, logAuditEvent } from "@qcet/db/audit";
 
 type Db = Pick<Prisma.TransactionClient, "task" | "document" | "auditEvent">;
 type TxClient = Pick<Prisma.TransactionClient, "$queryRaw">;

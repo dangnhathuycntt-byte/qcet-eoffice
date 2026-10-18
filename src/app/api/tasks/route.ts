@@ -10,7 +10,7 @@ import {
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
 import { ForbiddenError, ValidationError } from '@/server/api/errors';
-import { TaskQueryParamsSchema, CreateTaskWithSubtasksInputSchema } from '@/contracts/tasks';
+import { TaskQueryParamsSchema, CreateTaskWithSubtasksInputSchema } from '@qcet/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';

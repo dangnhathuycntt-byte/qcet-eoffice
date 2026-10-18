@@ -1,5 +1,5 @@
 import { after } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   sendPushNotificationToUser,
   formatTaskPushPayload,

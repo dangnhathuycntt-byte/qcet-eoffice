@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { GET as getAuditLogsRoute } from "../src/app/api/documents/[id]/audit-logs/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import {
@@ -11,7 +11,7 @@ import {
   DocumentSecurityLevel,
   IncomingDocumentStatus,
 } from "@prisma/client";
-import { auditService, AuditAction, AuditEntityType } from "../src/lib/db/audit";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 
 describe("Document Audit Timeline & Circulation History API Tests", () => {
   let seededUser: any;

@@ -1,4 +1,4 @@
-import { PresentDocumentSchema } from "@/contracts/documents";
+import { PresentDocumentSchema } from "@qcet/contracts/documents";
 import { presentDocument } from "@/server/documents/incoming-document-service";
 import { documentActionRoute } from "../shared";
 

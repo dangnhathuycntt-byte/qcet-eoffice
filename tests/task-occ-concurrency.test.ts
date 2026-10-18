@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { taskCommandService } from '../src/server/tasks/task-command-service';
 import { PreconditionFailedError } from '../src/server/api/errors';
 import { GET, PATCH } from '../src/app/api/tasks/[id]/route';

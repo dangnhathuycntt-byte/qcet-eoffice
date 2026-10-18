@@ -22,7 +22,7 @@ import { TaskStatusIcon } from "@/components/ui/task-status-icon";
 import { PriorityIndicator } from "@/components/ui/priority-indicator";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
-import { getStatusLabel } from "@/domain/tasks/state-machine";
+import { getStatusLabel } from "@qcet/shared/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
@@ -34,7 +34,7 @@ import {
   parseTriageTab,
   type NotificationTriageTab,
   type QCETNotification,
-} from "@/lib/notification-triage";
+} from "@qcet/shared/lib/notification-triage";
 import {
   formatNotificationAbsoluteTime,
   formatNotificationTime,

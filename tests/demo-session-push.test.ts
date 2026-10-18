@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { NextRequest } from 'next/server';
 import { POST as subscribeRoute, DELETE as unsubscribeRoute } from '../src/app/api/notifications/push/subscribe/route';
 import { POST as testPushRoute } from '../src/app/api/notifications/push/test/route';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '../src/lib/jwt-session';
 
 describe('Push Notification Authentication & Session Integration', () => {

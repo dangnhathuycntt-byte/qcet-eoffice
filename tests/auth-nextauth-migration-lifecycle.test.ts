@@ -13,7 +13,7 @@ import {
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { authConfig } from "@/auth.config";
 import { auth, signIn, signOut } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
   let activeUserToken: string;

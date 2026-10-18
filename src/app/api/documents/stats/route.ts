@@ -3,10 +3,10 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
-import { DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
+import { DOCUMENT_DONE_STATUSES } from "@qcet/shared/lib/documents/document-sidebar-buckets";
 import { getDocumentStatsRows } from "@/server/documents/document-service";
 import { canViewApprovalReport } from "@/server/documents/submission-approval-service";
-import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
+import { resolveDocumentTypeParam } from "@qcet/shared/domain/documents/document-type-param";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 
 export const dynamic = "force-dynamic";

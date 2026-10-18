@@ -9,7 +9,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { CreateTaskInputSchema, UpdateTaskMetadataSchema, ApproveTaskInputSchema, SubmitDeliverableInputSchema, ReviewDeliverableInputSchema, ArchiveTaskSchema, TaskDeliverableInputSchema } from "@/contracts/tasks";
+import { CreateTaskInputSchema, UpdateTaskMetadataSchema, ApproveTaskInputSchema, SubmitDeliverableInputSchema, ReviewDeliverableInputSchema, ArchiveTaskSchema, TaskDeliverableInputSchema } from "@qcet/contracts/tasks";
 
 // ---------------------------------------------------------------------------
 // CreateTaskInputSchema

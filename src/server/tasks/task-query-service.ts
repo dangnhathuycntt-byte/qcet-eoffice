@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma';
-import { mapPrismaTaskToSchoolTask, type SchoolTask, formatLocalDate } from '@/lib/adapters/task-db-adapter';
+import { prisma } from '@qcet/db/prisma';
+import { mapPrismaTaskToSchoolTask, type SchoolTask, formatLocalDate } from '@qcet/shared/lib/adapters/task-db-adapter';
 import {
   TaskScope,
   TaskStatus,
@@ -26,9 +26,9 @@ import {
   getIctReferenceDateStart,
   type TaskView,
   type TaskViewerContext,
-} from '@/domain/tasks';
+} from '@qcet/shared/domain/tasks';
 import { calculateTaskMetrics } from '@/lib/task-metrics';
-import { TaskQueryParamsSchema } from '@/contracts/tasks';
+import { TaskQueryParamsSchema } from '@qcet/contracts/tasks';
 import { toTaskDetailDTO, type TaskDetailDTO } from '@/server/dto/task-dto';
 
 export interface TaskQueryFilters {

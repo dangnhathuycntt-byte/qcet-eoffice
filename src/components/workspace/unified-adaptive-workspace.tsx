@@ -20,7 +20,7 @@ import {
 import { filterTasksByScope, workspaceScopeToTaskScope } from "@/lib/unified-task-hub";
 import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
 import { parseWorkspaceQuery } from "@/lib/workspace-query";
-import { matchesTaskTab, resolveTaskTab, TASK_TABS, type TaskTab } from "@/domain/tasks/task-tabs";
+import { matchesTaskTab, resolveTaskTab, TASK_TABS, type TaskTab } from "@qcet/shared/domain/tasks/task-tabs";
 import {
   collectCollaboratorOptions,
   collectLeadOptions,
@@ -35,13 +35,13 @@ import {
   withRoster,
   type RosterPerson,
   type TaskFilterFacets,
-} from "@/domain/tasks/task-filter-facets";
+} from "@qcet/shared/domain/tasks/task-filter-facets";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { isAdminTierUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
   getSystemReferenceDate,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActionQueueShell } from "./action-queue-shell";
@@ -52,11 +52,11 @@ import type { SortDirection, TableColumnVisibility, TaskSortField } from "@/comp
 import { getNextSortDirection } from "@/components/tasks/table/hooks/use-task-table-state";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/components/tasks/table/components/task-table-toolbar";
 import { TaskEmptyState } from "@/components/tasks/table/components/task-empty-state";
-import { resolveCreateTaskPolicy } from "@/domain/tasks/create-task-policy";
+import { resolveCreateTaskPolicy } from "@qcet/shared/domain/tasks/create-task-policy";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { Button } from "@/components/ui/button";
-import type { SchoolTask, StaffTask, TaskPriority, TaskStatus } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
+import type { SchoolTask, StaffTask, TaskPriority, TaskStatus } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { useTaskShortcuts } from "@/hooks/use-task-shortcuts";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
@@ -64,7 +64,7 @@ import { applyOptimisticStatusChange, applyOptimisticTaskPatch, revertOptimistic
 import { remindTask, updateTaskAssignee, updateTaskDueDate, updateTaskPriority, updateTaskStatus } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { cn } from "@/lib/utils";
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import {
   filterTasksByTime,
   NO_TASK_TIME_FILTER,

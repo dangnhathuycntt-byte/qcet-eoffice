@@ -1,13 +1,13 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-import type { AuthUser } from "../src/types/auth";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import type {
   SchoolTask,
   StaffTask,
   DeliverableItem,
   CollaborationRequest,
-} from "../src/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 import { validateDeliverableSubmission, transitionStaffTaskStatus, screenDeliverablesWithAI } from "../src/lib/dacum-workflow-engine";
 
 describe("DACUM Full 6-Phase E2E Lifecycle: AI Review, Triage Queue, and Escalation", () => {

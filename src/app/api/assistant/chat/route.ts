@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { AssistantChatRequestSchema, type AssistantStreamEvent } from "@/contracts/assistant";
+import { AssistantChatRequestSchema, type AssistantStreamEvent } from "@qcet/contracts/assistant";
 import { isFeatureEnabled } from "@/features/flags";
 import { ApiError, ValidationError } from "@/server/api/errors";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
@@ -13,8 +13,8 @@ import { ASSISTANT_TOOL_DEFINITIONS, describeAssistantContext, runAssistantTool 
 import { generateConversationTitle } from "@/server/assistant/assistant-title";
 import { callGateway, readGatewayConfig } from "@/server/services/agent-gateway";
 import { getAgentModelCatalog } from "@/config/runtime";
-import { isAllowedAgentModel } from "@/domain/agent/agent-models";
-import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "@/domain/tasks/task-agent-attachments";
+import { isAllowedAgentModel } from "@qcet/shared/domain/agent/agent-models";
+import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "@qcet/shared/domain/tasks/task-agent-attachments";
 import { prepareTaskAgentAttachment } from "@/server/services/task-agent-attachments";
 
 export const runtime = "nodejs";

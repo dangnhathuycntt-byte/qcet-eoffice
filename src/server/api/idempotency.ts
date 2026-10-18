@@ -1,11 +1,11 @@
 import crypto from "crypto";
 import { Prisma, type IdempotencyRecord } from "@prisma/client";
-import { prisma as defaultPrisma } from "@/lib/prisma";
+import { prisma as defaultPrisma } from "@qcet/db/prisma";
 
 /**
  * Supported database client types: standard PrismaClient or an interactive transaction client.
  */
-import type { DbClient } from "@/lib/prisma";
+import type { DbClient } from "@qcet/db/prisma";
 export type { DbClient };
 
 export interface IdempotencyConflictErrorParams {

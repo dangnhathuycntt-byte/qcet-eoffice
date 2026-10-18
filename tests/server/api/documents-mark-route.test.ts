@@ -9,7 +9,7 @@
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { DocumentSecurityLevel } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { LEGACY_SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { POST as markRoute } from "@/app/api/documents/[id]/actions/mark/route";
 import { GET as getDocumentRoute } from "@/app/api/documents/[id]/route";

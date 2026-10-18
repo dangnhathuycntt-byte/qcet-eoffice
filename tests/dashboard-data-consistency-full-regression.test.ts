@@ -4,9 +4,9 @@ import { computeDashboardStats, computeSchoolTaskRollup } from "../src/lib/dashb
 import {
   computeDepartmentHealthMatrix,
   extractExecutiveActionItems,
-} from "../src/lib/executive-matrix-aggregator";
-import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
-import type { SchoolTask, DashboardStats, TaskStatus } from "../src/types/dashboard";
+} from "@qcet/shared/lib/executive-matrix-aggregator";
+import { getSystemReferenceDate, isTaskPastDue } from "@qcet/shared/lib/academic-calendar";
+import type { SchoolTask, DashboardStats, TaskStatus } from "@qcet/contracts/types/dashboard";
 
 describe("Full System Regression Suite - Dashboard Data Consistency & Aggregation (TC-01 to TC-10)", () => {
   // Helper to build a standard school task

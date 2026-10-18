@@ -4,8 +4,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
-import { formatCompactDate } from "@/lib/format/date";
-import type { StaffTask } from "@/types/dashboard";
+import { formatCompactDate } from "@qcet/shared/lib/format/date";
+import type { StaffTask } from "@qcet/contracts/types/dashboard";
 
 export interface SubtaskOutlineRailProps {
   subTasks: StaffTask[];

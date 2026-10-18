@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { useTaskFilters, type TaskFiltersReturn } from "../src/hooks/use-task-filters";
 import { filterTasksHub } from "../src/lib/unified-task-hub";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("Task 4: React 19 useDeferredValue in useTaskFilters Performance Suite", () => {
   test("useTaskFilters is an exported function", () => {

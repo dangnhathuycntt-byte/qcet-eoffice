@@ -9,8 +9,8 @@ import {
   isAllowedAgentModel,
   parseAgentModels,
   resolveAgentModel,
-} from "../src/domain/agent/agent-models";
-import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "../src/domain/tasks/task-agent-attachments";
+} from "@qcet/shared/domain/agent/agent-models";
+import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "@qcet/shared/domain/tasks/task-agent-attachments";
 
 describe("Model của Trợ lý và Agent tạo nhiệm vụ", () => {
   test("model mặc định đứng đầu, bỏ trùng, bỏ mã sai dạng và khoảng trắng", () => {

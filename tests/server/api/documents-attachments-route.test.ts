@@ -18,7 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { NextRequest } from "next/server";
 import { DocumentStatus, FileScanStatus, UserRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { LEGACY_SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { POST as uploadRoute } from "@/app/api/upload/route";
 import { POST as addAttachmentRoute } from "@/app/api/documents/[id]/attachments/route";

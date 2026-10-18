@@ -3,9 +3,9 @@
  * hạn bảo quản. Mỗi nhắc nhở gắn khóa (hồ sơ, loại, mốc) với ràng buộc duy nhất nên không gửi trùng.
  */
 import { AssignmentStatus, DossierStatus, type Prisma } from "@prisma/client";
-import { prisma, type DbClient } from "@/lib/prisma";
-import { isRetentionExpired, isSubmitReminderDue, retentionEnd, submitDeadline } from "@/domain/dossiers/disposal-rules";
-import { formatDisplayDate } from "@/lib/format/date";
+import { prisma, type DbClient } from "@qcet/db/prisma";
+import { isRetentionExpired, isSubmitReminderDue, retentionEnd, submitDeadline } from "@qcet/shared/domain/dossiers/disposal-rules";
+import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 
 
 export interface DossierReminderResult {

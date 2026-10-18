@@ -5,7 +5,7 @@ import {
   sanitizeString,
   sanitizeUrl,
   isSensitiveKey,
-} from "../../src/telemetry/sanitize";
+} from "@qcet/shared/telemetry/sanitize";
 import {
   ServerLogger,
   serverLogger,

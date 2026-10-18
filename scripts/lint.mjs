@@ -18,6 +18,7 @@ import { boundaryViolations } from "./architecture-boundaries.mjs";
 
 const ROOT_DIR = process.cwd();
 const SRC_DIR = path.join(ROOT_DIR, "src");
+const PACKAGES_DIR = path.join(ROOT_DIR, "packages");
 const SCRIPTS_DIR = path.join(ROOT_DIR, "scripts");
 const BASELINE_PATH = path.join(SCRIPTS_DIR, "design-lint-baseline.json");
 const UPDATE_BASELINE = process.argv.includes("--update-baseline");
@@ -233,11 +234,11 @@ function lintFile(filePath) {
 
   const content = fs.readFileSync(filePath, "utf8");
   const lines = content.split("\n");
-  const isDesignSource = relPath.startsWith("src/");
+  const isDesignSource = relPath.startsWith("src/") || /^packages\/[^/]+\/src\//.test(relPath);
 
   const isClientComponent = /["']use client["']/.test(lines.slice(0, 5).join("\n"));
   const isInsideComponents = relPath.startsWith("src/components");
-  const isInsideDomain = relPath.startsWith("src/domain") || relPath.startsWith("src/server/domain");
+  const isInsideDomain = relPath.startsWith("src/domain") || relPath.startsWith("src/server/domain") || relPath.startsWith("packages/shared/src/domain");
 
   lines.forEach((lineText, idx) => {
     const lineNum = idx + 1;
@@ -293,6 +294,7 @@ if (ONLY_FILES) {
   }
 } else {
   scanDirectory(SRC_DIR);
+  scanDirectory(PACKAGES_DIR);
   scanDirectory(SCRIPTS_DIR);
 }
 

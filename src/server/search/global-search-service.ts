@@ -2,17 +2,17 @@
  * Tìm kiếm toàn cục (`GET /api/search`): nhiệm vụ trong phạm vi đọc, người dùng đang hoạt động, văn bản
  * trong phạm vi đọc (`buildDocumentReadWhere`); khớp cả dạng bỏ dấu, telex, từ viết tắt rồi chấm điểm tiếng Việt.
  */
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { TaskScope } from '@prisma/client';
 import type { z } from 'zod';
-import type { OperationalScopeSchema } from '@/contracts/common';
-import type { GlobalSearchPayload } from '@/contracts/search';
+import type { OperationalScopeSchema } from '@qcet/contracts/common';
+import type { GlobalSearchPayload } from '@qcet/contracts/search';
 import {
   foldVietnamese,
   normalizeTelexQuery,
   scoreVietnameseSearch,
   QCET_ACRONYMS,
-} from '@/lib/search/vietnamese-search';
+} from '@qcet/shared/lib/search/vietnamese-search';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { buildTaskReadWhere } from '@/server/tasks/task-query-service';
 import { buildDocumentReadWhere } from '@/server/policies/document-policy';

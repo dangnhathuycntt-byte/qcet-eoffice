@@ -62,7 +62,7 @@ import {
   TaskIconBlockBookmark,
   TaskIconBlockLink,
   TaskIconBlockDivider,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 import { SlashPlugin, SlashInputPlugin } from "@platejs/slash-command/react";
 import { BlockSelectionPlugin, useBlockSelectable, useBlockSelected } from "@platejs/selection/react";
 import { DndPlugin, useDraggable, useDropLine } from "@platejs/dnd";
@@ -133,7 +133,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePersonnelList, type PersonnelOption } from "@/hooks/use-personnel-list";
-import type { StaffTask } from "@/types/dashboard";
+import type { StaffTask } from "@qcet/contracts/types/dashboard";
 import {
   type PlateElement as PlateElemT,
   type PlateValue,
@@ -146,10 +146,10 @@ import {
   PLATE_NODE_TYPES as PT,
   type ContentBlockItem,
   type ContentBlockType,
-} from "@/lib/tasks/plate-block-codec";
+} from "@qcet/shared/lib/tasks/plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
 import { MENU_POPUP_CLASS } from "@/components/ui/menu";
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 
 /** Props chung cho mọi element renderer trong QCET Plate editor */
 type ElProps = RenderElementProps & {

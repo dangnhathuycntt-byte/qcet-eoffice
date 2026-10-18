@@ -1,6 +1,6 @@
 /** Handler outbox cho xét hủy hồ sơ (V-07): thông báo trong ứng dụng, người nhận tính khi xử lý. */
 import { AssignmentStatus } from "@prisma/client";
-import { OutboxEventType, type DbClient, type OutboxHandlerMap } from "@/lib/db/outbox";
+import { OutboxEventType, type DbClient, type OutboxHandlerMap } from "@qcet/db/outbox";
 import type { OutboxEvent } from "@prisma/client";
 
 function payloadOf(event: OutboxEvent): Record<string, unknown> {

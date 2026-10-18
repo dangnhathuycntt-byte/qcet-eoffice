@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { parseDocumentBucket } from "@/lib/documents/document-sidebar-buckets";
-import { toUrlSearchParams, type RawSearchParams } from "@/lib/url-utils";
+import { parseDocumentBucket } from "@qcet/shared/lib/documents/document-sidebar-buckets";
+import { toUrlSearchParams, type RawSearchParams } from "@qcet/shared/lib/url-utils";
 
 export type DocumentTabType = "all" | "inbox" | "outbox" | "submission";
 

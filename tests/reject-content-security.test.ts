@@ -1,6 +1,6 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { POST as rejectContentRoute } from "@/app/api/documents/[id]/actions/reject-content/route";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { NextRequest } from "next/server";

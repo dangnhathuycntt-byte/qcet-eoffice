@@ -6,7 +6,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { TaskActorRole, TaskPriority, TaskStatus } from '@prisma/client';
 import { ZodError } from 'zod';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { MAX_BULK_ITEMS, bulkUpdateTaskPriority } from '../src/server/tasks/task-bulk-service';
 import { withIdempotency } from '../src/server/api/idempotency';
 

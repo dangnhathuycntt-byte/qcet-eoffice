@@ -1,12 +1,12 @@
-import type { SchoolTask, TaskCategory } from "@/types/dashboard";
-import type { AuthUser, UserRole } from "@/types/auth";
-import type { WorkspaceScope } from "@/types/workspace";
+import type { SchoolTask, TaskCategory } from "@qcet/contracts/types/dashboard";
+import type { AuthUser, UserRole } from "@qcet/contracts/types/auth";
+import type { WorkspaceScope } from "@qcet/contracts/types/workspace";
 import { filterTasksByRole, isAdminTierUser, matchesUser } from "@/lib/role-task-filter";
-import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
+import { resolveDepartmentId } from "@qcet/shared/lib/executive-matrix-aggregator";
 import {
   isDateInAcademicMonth,
   getSystemReferenceDate as getCanonicalReferenceDateStr,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 
 export type TaskScope = "MY_TASKS" | "SCHOOL_TASKS" | "UNIT_TASKS";
 export type TaskViewMode = "table" | "kanban" | "calendar" | "department" | "executive";

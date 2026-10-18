@@ -1,4 +1,4 @@
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 
 /**
  * Mô hình trang Cơ cấu & Danh bạ (`/org`), dựng từ `GET /api/departments?includePersonnel=true`:

@@ -11,11 +11,11 @@
  * 4. Recipient Resolution: Resolves lead users, unit DRIs, department heads, and BGH leaders.
  */
 
-import { prisma as defaultPrisma } from "@/lib/prisma";
+import { prisma as defaultPrisma } from "@qcet/db/prisma";
 import { UserRole } from "@prisma/client";
-import { DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
-import { getIctReferenceDateStart } from "@/domain/tasks/deadlines";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType, type DbClient } from "@/lib/db/outbox";
+import { DOCUMENT_DONE_STATUSES } from "@qcet/shared/lib/documents/document-sidebar-buckets";
+import { getIctReferenceDateStart } from "@qcet/shared/domain/tasks/deadlines";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType, type DbClient } from "@qcet/db/outbox";
 import { formatDocumentPushPayload, type PushResult } from "@/server/notifications/push-service";
 
 export interface ScanDocumentDeadlinesOptions {

@@ -8,7 +8,7 @@ import {
   retentionEnd,
   submitDeadline,
   validateExtendYears,
-} from '../src/domain/dossiers/disposal-rules';
+} from '@qcet/shared/domain/dossiers/disposal-rules';
 
 const d = (iso: string) => new Date(iso);
 

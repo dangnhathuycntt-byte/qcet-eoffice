@@ -12,7 +12,7 @@
  */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
+import { resolveDocumentTypeParam } from "@qcet/shared/domain/documents/document-type-param";
 
 describe("Internal Document Workflow Contract", () => {
   test("TO_TRINH_NOI_BO is a recognized document type in the API type map", async () => {

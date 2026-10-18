@@ -8,7 +8,7 @@ import {
   extractTokenFromRequest,
 } from '@/server/auth/current-session';
 import { isSessionExpired } from '@/server/auth/session-policy';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 
 export type { CurrentSession };
 export { resolveCurrentSession, tryResolveCurrentSession };

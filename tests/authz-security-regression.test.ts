@@ -17,7 +17,7 @@ import { GET as downloadDoc } from "../src/app/api/documents/download/route";
 import { GET as searchGet } from "../src/app/api/search/route";
 import { GET as listDocumentsGet } from "../src/app/api/documents/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 void SESSION_COOKIE_NAME;
 

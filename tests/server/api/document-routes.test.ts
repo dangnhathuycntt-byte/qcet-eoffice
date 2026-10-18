@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '@/lib/jwt-session';
 import { resetRateLimits } from '@/server/security/rate-limit';
 import { JobCatalogGroup } from '@prisma/client';

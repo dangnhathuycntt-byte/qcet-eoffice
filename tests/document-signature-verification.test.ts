@@ -5,7 +5,7 @@
 import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, JobCatalogGroup, SignatureVerificationStatus, UnitType, UserRole } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { registerIncomingDocument } from '../src/server/documents/incoming-document-service';
 import {
   UnverifiedSignatureVerifier,

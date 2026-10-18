@@ -1,4 +1,4 @@
-import type { WorkspaceZone } from "@/types/workspace";
+import type { WorkspaceZone } from "@qcet/contracts/types/workspace";
 
 export type NavigationSection = "work" | "org" | "operations" | "personal" | "workspace";
 

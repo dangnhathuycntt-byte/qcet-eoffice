@@ -14,12 +14,12 @@
  */
 import { z } from "zod";
 import { TaskActorRole, TaskStatus, type Prisma } from "@prisma/client";
-import { prisma, type DbClient } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { prisma, type DbClient } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { InvalidTransitionError, NotFoundError, ValidationError } from "@/server/api/errors";
-import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/domain/tasks/backup-reviewer-rules";
-import { partitionTaskActorUserIds } from "@/domain/tasks/task-actor-roles";
+import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@qcet/shared/domain/tasks/backup-reviewer-rules";
+import { partitionTaskActorUserIds } from "@qcet/shared/domain/tasks/task-actor-roles";
 import { authorizeOnTask, can } from "./authorize-on-task";
 
 

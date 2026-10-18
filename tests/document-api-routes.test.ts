@@ -1,9 +1,9 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { validateDocumentCreatePayload, validateDocumentUpdatePayload } from "../src/lib/documents/document-validator";
-import { CreateDirectiveSchema } from "../src/contracts/documents";
+import { CreateDirectiveSchema } from "@qcet/contracts/documents";
 import { GET as listDocumentsRoute, POST as createDocumentRoute } from "../src/app/api/documents/route";
 import { GET as getDocumentRoute, PATCH as patchDocumentRoute } from "../src/app/api/documents/[id]/route";
 import { POST as postDirectiveRoute } from "../src/app/api/documents/[id]/directives/route";

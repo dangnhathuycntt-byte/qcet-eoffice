@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { isDelegationActive, canUserApproveTask } from "../src/lib/delegation-authority-engine";
-import type { DelegationRule } from "../src/types/delegation";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
 
 describe("Stanford Authority Delegation Engine", () => {
   const baseActiveRule: DelegationRule = {

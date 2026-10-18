@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { AuthUser, UserRole } from "@/types/auth";
+import type { AuthUser, UserRole } from "@qcet/contracts/types/auth";
 import { isAdminTierUser, isManagerUser } from "@/lib/role-task-filter";
 import {
   type TaskUrlParams,

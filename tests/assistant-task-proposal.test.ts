@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchPersonByName, normalizeTaskProposal, proposalToTaskDraft } from '../src/domain/assistant/assistant-task-proposal';
+import { matchPersonByName, normalizeTaskProposal, proposalToTaskDraft } from '@qcet/shared/domain/assistant/assistant-task-proposal';
 import { ASSISTANT_TOOL_DEFINITIONS, runAssistantTool, type AssistantToolContext } from '../src/server/assistant/assistant-tools';
-import { TASK_AGENT_SUBTASKS_MAX } from '../src/domain/tasks/task-agent-draft';
+import { TASK_AGENT_SUBTASKS_MAX } from '@qcet/shared/domain/tasks/task-agent-draft';
 
 // propose_task không đọc dữ liệu nên không cần ngữ cảnh phân quyền thật
 const CTX = { authz: undefined, userId: 'u-1', today: '2026-10-18' } as unknown as AssistantToolContext;

@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   getAppendixIVHeaders,
   formatDocumentRowForAppendixIV,
@@ -9,7 +9,7 @@ import {
 } from "../src/lib/documents/excel-export";
 import { GET as exportExcelRoute } from "../src/app/api/documents/export-excel/route";
 import { signSessionToken } from "../src/lib/jwt-session";
-import type { DocumentItem } from "../src/types/document";
+import type { DocumentItem } from "@qcet/contracts/types/document";
 
 describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
   test("returns 9 mandatory columns for incoming document registry (Sổ đến)", () => {

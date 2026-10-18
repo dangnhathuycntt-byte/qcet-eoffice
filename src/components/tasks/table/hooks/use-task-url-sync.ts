@@ -7,8 +7,8 @@ import type {
   SmartFilterTab,
   TaskViewMode,
 } from "../types";
-import type { TaskCategory } from "@/types/dashboard";
-import { toUrlSearchParams, type RawSearchParams } from "@/lib/url-utils";
+import type { TaskCategory } from "@qcet/contracts/types/dashboard";
+import { toUrlSearchParams, type RawSearchParams } from "@qcet/shared/lib/url-utils";
 
 /**
  * Trạng thái URL của bảng quản lý công việc

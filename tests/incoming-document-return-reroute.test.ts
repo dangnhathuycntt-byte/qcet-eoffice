@@ -13,7 +13,7 @@ import {
   UnitType,
 } from '@prisma/client';
 import { ZodError } from 'zod';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   listDocumentReturns,
   rerouteIncomingDocument,

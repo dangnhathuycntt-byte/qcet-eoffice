@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { AssistantConversationListQuerySchema } from "@/contracts/assistant";
+import { AssistantConversationListQuerySchema } from "@qcet/contracts/assistant";
 import { isFeatureEnabled } from "@/features/flags";
 import { ApiError, ValidationError } from "@/server/api/errors";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";

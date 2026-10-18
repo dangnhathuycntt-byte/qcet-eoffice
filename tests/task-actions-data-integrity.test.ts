@@ -2,7 +2,7 @@ import { describe, test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 import { updateTaskPriority, updateTaskStatus, remindTask } from "../src/lib/tasks/task-actions";
 import {
   applyOptimisticStatusChange,

@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { blocksToPlate, plateToBlocks, parseContentToBlocks, serializeBlocksToContent, parseToPlateValue, isMeaningfulBlock, plainTextToContent, contentToPlainText, PLATE_NODE_TYPES as PT } from "../src/lib/tasks/plate-block-codec";
+import { blocksToPlate, plateToBlocks, parseContentToBlocks, serializeBlocksToContent, parseToPlateValue, isMeaningfulBlock, plainTextToContent, contentToPlainText, PLATE_NODE_TYPES as PT } from "@qcet/shared/lib/tasks/plate-block-codec";
 import type { ContentBlockItem } from "../src/components/tasks/detail/task-block-editor";
 
 // ---------------------------------------------------------------------------

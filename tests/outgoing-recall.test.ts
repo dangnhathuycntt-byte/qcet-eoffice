@@ -6,12 +6,12 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, DocumentType, JobCatalogGroup, OutgoingDocumentStatus, UnitType, UserRole } from '@prisma/client';
 import { ZodError } from 'zod';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { OutgoingDocumentService } from '../src/server/documents/outgoing-document-service';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { confirmReceipt, getRecipientsState, recallOutgoing } from '../src/server/documents/outgoing-recipients';
 import { ApiError, ConflictError } from '../src/server/api/errors';
-import { evaluateRecall, evaluateReplacementTarget } from '../src/domain/documents/recall-rules';
+import { evaluateRecall, evaluateReplacementTarget } from '@qcet/shared/domain/documents/recall-rules';
 
 const runId = `v05_${Date.now()}`;
 const u: Record<string, string> = {};

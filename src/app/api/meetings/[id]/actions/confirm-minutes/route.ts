@@ -5,7 +5,7 @@
 
 import { idActionRoute } from '@/server/api/action-route';
 import { MeetingService } from '@/server/services/meeting-service';
-import { ConfirmMinutesSchema } from '@/contracts/meeting';
+import { ConfirmMinutesSchema } from '@qcet/contracts/meeting';
 
 export const POST = idActionRoute(
   ConfirmMinutesSchema,

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { AssistantContextRef, AssistantConversationSummaryDTO, AssistantSourceRef } from "@/contracts/assistant";
+import type { AssistantContextRef, AssistantConversationSummaryDTO, AssistantSourceRef } from "@qcet/contracts/assistant";
 import {
   AssistantRequestError,
   assistantErrorText,
@@ -29,7 +29,7 @@ import {
 } from "@/components/assistant/assistant-model";
 import { useAgentModel } from "@/components/agent-chat/agent-models";
 import { createChatAttachment, type ChatAttachment } from "@/components/agent-chat/agent-attachments";
-import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "@/domain/tasks/task-agent-attachments";
+import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "@qcet/shared/domain/tasks/task-agent-attachments";
 
 export type DetailStatus = "idle" | "loading" | "ready" | "error";
 

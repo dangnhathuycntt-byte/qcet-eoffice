@@ -3,7 +3,7 @@
  * Dùng cho /api/delegations và /api/delegations/[id]/revoke.
  */
 
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { ApiError, ForbiddenError, NotFoundError, ValidationError } from '@/server/api/errors';
 import { DelegationStatus, AssignmentStatus, Prisma } from '@prisma/client';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
@@ -11,7 +11,7 @@ import {
   isExecutiveAdministrator,
   isNonDelegableAction,
 } from '@/server/authorization/delegation-policy';
-import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
+import { logAuditEvent, AuditAction, AuditEntityType } from '@qcet/db/audit';
 import { authorizationContextCache } from '@/server/authorization/authorization-context-cache';
 
 const ASSIGNMENT_INCLUDE = {

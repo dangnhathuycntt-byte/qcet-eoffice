@@ -5,10 +5,10 @@ import type {
   UserAttentionType,
   TaskViewMode,
   CalendarViewMode,
-} from "@/contracts/workspace-semantic";
+} from "@qcet/contracts/workspace-semantic";
 import type { TaskTimePreset } from "@/lib/task-time-filter";
-import type { TaskView } from "@/domain/tasks";
-import { parseTaskTab, type TaskTab } from "@/domain/tasks/task-tabs";
+import type { TaskView } from "@qcet/shared/domain/tasks";
+import { parseTaskTab, type TaskTab } from "@qcet/shared/domain/tasks/task-tabs";
 export type {
   WorkspaceScopeType,
   TaskLifecycleStatus,

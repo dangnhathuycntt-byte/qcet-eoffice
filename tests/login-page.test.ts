@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { resolveOAuthError, sanitizeRedirectUrl, shouldShowLoginSkeleton } from "../src/lib/login-helpers";
+import { resolveOAuthError, sanitizeRedirectUrl, shouldShowLoginSkeleton } from "@qcet/shared/lib/login-helpers";
 
 describe("Issue #6: Single Centered Column Architecture & Institutional Copy Verification", () => {
   const loginPageSource = fs.readFileSync(

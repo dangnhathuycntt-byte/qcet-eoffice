@@ -1,12 +1,12 @@
 import type { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
+import { prisma } from '@qcet/db/prisma';
+import { logAuditEvent, AuditAction, AuditEntityType } from '@qcet/db/audit';
 import { NotFoundError } from '@/server/api/errors';
 import type {
   AddBodyMembershipSchema,
   CreateOrganizationalBodySchema,
   ListOrganizationalBodiesQuery,
-} from '@/contracts/meeting';
+} from '@qcet/contracts/meeting';
 
 // Hội đồng, ban chỉ đạo, tổ công tác: danh sách, chi tiết, tạo mới và bổ nhiệm thành viên.
 

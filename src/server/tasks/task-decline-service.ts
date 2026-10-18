@@ -7,9 +7,9 @@
  */
 import { z } from "zod";
 import { TaskActorRole, TaskStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ConflictError, InvalidTransitionError, PreconditionFailedError } from "@/server/api/errors";
 import { authorizeOnTask, can } from "./authorize-on-task";

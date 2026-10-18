@@ -4,9 +4,9 @@ import * as React from "react";
 import {
   FileText,
 } from "lucide-react";
-import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
-import { isSchoolTask } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
+import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
+import { isSchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import { cn } from "@/lib/utils";
 import { TaskDetailHeaderNav } from "./task-detail-header-nav";
 import { TaskIdentityBlock } from "./task-identity-block";
@@ -17,7 +17,7 @@ import { TaskPropertiesSidebar, type AuditLogItem } from "./task-properties-side
 import { TaskPropertiesDrawer } from "./task-properties-drawer";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { createDeliverable, deleteDeliverable, updateTaskStartDate } from "@/lib/tasks/task-actions";
-import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
+import { consolidateActivityFeed } from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { motionTransition } from "@/lib/motion/tokens";
 import { applyProgressResult, type ProgressResult } from "./task-detail-state";

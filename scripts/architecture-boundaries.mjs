@@ -14,7 +14,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
 
-const DB_MODULE = /^(?:@prisma\/client(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$))/;
+const DB_MODULE = /^(?:@prisma\/client(?:\/|$)|@qcet\/db(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$))/;
 const SERVER_MODULE = /^@\/server(?:\/|$)/;
 const UI_OR_APP_MODULE = /^@\/(?:components|app)(?:\/|$)/;
 /**
@@ -23,18 +23,19 @@ const UI_OR_APP_MODULE = /^@\/(?:components|app)(?:\/|$)/;
  * không tính: file isomorphic có fallback (digital-signature-service) vẫn nằm trong src/lib.
  */
 const SERVER_ONLY_MODULE =
-  /^(?:@prisma\/client(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$)|@\/config\/env\.server$|ioredis$|web-push$|jsonwebtoken$|bcryptjs$|node:[a-z0-9_]+(?:\/|$)|@\/server(?:\/|$))/;
+  /^(?:@prisma\/client(?:\/|$)|@qcet\/db(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$)|@\/config\/env\.server$|ioredis$|web-push$|jsonwebtoken$|bcryptjs$|node:[a-z0-9_]+(?:\/|$)|@\/server(?:\/|$))/;
 
 const APP_LAYER = /^src\/app\//;
 const UI_LAYER = /^src\/(?:components|hooks)\//;
 const CORE_LAYER = /^src\/(?:lib|domain|server)\//;
+/** Package dùng chung: mã nguồn trong packages/<tên>/src và script của package (vd. packages/db/prisma). */
+const PACKAGE_FILE = /^packages\/[^/]+\//;
+/** @qcet/shared và @qcet/contracts chạy cả ở trình duyệt: không DB, không module Node, không bí mật server. */
+const PURE_PACKAGE_FILE = /^packages\/(?:shared|contracts)\//;
 
 /** File server-only còn được nằm trong src/lib. Gỡ ở bước 3. */
 export const SERVER_ONLY_LIB_ALLOWLIST = [
-  "src/lib/prisma.ts", // gỡ ở bước 3
   "src/lib/jwt-session.ts", // gỡ ở bước 3
-  "src/lib/db/audit.ts", // gỡ ở bước 3
-  "src/lib/db/outbox.ts", // gỡ ở bước 3
 ];
 
 /** Chuỗi module của một node import/export/require, nếu có. */
@@ -69,6 +70,7 @@ export function importSpecifiers(relPath, content) {
       if (spec.startsWith(".")) {
         const target = path.posix.normalize(path.posix.join(path.posix.dirname(relPath), spec));
         if (target.startsWith("src/")) spec = `@/${target.slice(4)}`;
+        else if (target.startsWith("apps/")) spec = target;
       }
       const line = sourceFile.getLineAndCharacterOfPosition(specNode.getStart(sourceFile)).line + 1;
       out.push({ spec, line });
@@ -81,6 +83,7 @@ export function importSpecifiers(relPath, content) {
 
 /** Vi phạm ranh giới của một file (`relPath` dạng `src/…` với dấu `/`). */
 export function boundaryViolations(relPath, content) {
+  if (PACKAGE_FILE.test(relPath) && /\.tsx?$/.test(relPath)) return packageViolations(relPath, content);
   if (!/^src\/.+\.tsx?$/.test(relPath)) return [];
   const isApp = APP_LAYER.test(relPath);
   const isUi = UI_LAYER.test(relPath);
@@ -99,6 +102,21 @@ export function boundaryViolations(relPath, content) {
     }
     if (checkServerOnly && SERVER_ONLY_MODULE.test(spec)) {
       out.push({ rule: "server-only-in-lib", line, spec, message: `File server-only (import '${spec}') không nằm trong src/lib. Chuyển vào src/server/<domain>.` });
+    }
+  }
+  return out;
+}
+
+/** Vi phạm của file trong packages/: không import app (alias @/ hoặc đường dẫn ra apps/, src/); shared/contracts phải thuần. */
+function packageViolations(relPath, content) {
+  const out = [];
+  const pure = PURE_PACKAGE_FILE.test(relPath);
+  for (const { spec, line } of importSpecifiers(relPath, content)) {
+    if (/^@\//.test(spec) || /^apps\//.test(spec)) {
+      out.push({ rule: "package-no-app", line, spec, message: `Package không import code của app ('${spec}'). Đưa phần dùng chung vào package.` });
+    }
+    if (pure && SERVER_ONLY_MODULE.test(spec)) {
+      out.push({ rule: "package-pure", line, spec, message: `@qcet/shared và @qcet/contracts chạy cả ở trình duyệt, không import '${spec}'. Phần server đặt trong @qcet/db hoặc app api.` });
     }
   }
   return out;

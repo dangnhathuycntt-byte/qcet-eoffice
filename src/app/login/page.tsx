@@ -12,7 +12,7 @@ import {
   resolveOAuthError,
   sanitizeRedirectUrl,
   shouldShowLoginSkeleton,
-} from "@/lib/login-helpers";
+} from "@qcet/shared/lib/login-helpers";
 import { Pressable } from "@/components/ui/pressable";
 
 /* ─── Layout constants ─── */

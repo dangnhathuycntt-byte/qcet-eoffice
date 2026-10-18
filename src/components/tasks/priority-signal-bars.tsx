@@ -1,13 +1,13 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import type { TaskPriority } from "@/types/dashboard";
+import type { TaskPriority } from "@qcet/contracts/types/dashboard";
 import {
   TaskIconPriorityUrgent,
   TaskIconPriorityHigh,
   TaskIconPriorityNormal,
   TaskIconPriorityLow,
   TaskIconPriorityNone,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 
 export interface PrioritySignalBarsProps {
   priority?: TaskPriority | string;

@@ -36,7 +36,7 @@ import {
   syncServerPushPreferences,
   type PushPreferences,
   type PushTopic,
-} from "@/lib/pwa/push-preferences";
+} from "@qcet/shared/lib/pwa/push-preferences";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
 

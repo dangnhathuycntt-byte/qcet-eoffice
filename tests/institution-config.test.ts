@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "../src/config/institution";
+import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/config/institution";
 
 describe("Task 3.18 - Institutional Profile & Identity Configuration", () => {
   describe("1. Canonical Configuration Integrity", () => {

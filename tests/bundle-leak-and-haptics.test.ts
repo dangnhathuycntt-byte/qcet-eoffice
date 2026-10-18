@@ -1,7 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
 import { triggerHaptic, isHapticSupported, isHapticsEnabled } from "@/lib/haptics";
-import { isSchoolTask } from "@/types/dashboard";
+import { isSchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("Bundle Leak Prevention & Haptics Suite", () => {
   test("isSchoolTask correctly identifies school vs unit task objects", () => {

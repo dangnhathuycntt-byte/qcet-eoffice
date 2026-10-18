@@ -6,16 +6,16 @@
  * trong một transaction và gửi push sau khi transaction xong.
  */
 import type { z } from 'zod';
-import prisma from '@/lib/prisma';
+import prisma from '@qcet/db/prisma';
 import { ResolutionType, TaskPriority, TaskStatus } from '@prisma/client';
-import { logAuditEvent } from '@/lib/db/audit';
+import { logAuditEvent } from '@qcet/db/audit';
 import type { AuthenticatedUser } from '@/server/api/request-context';
 import { ForbiddenError, NotFoundError, PreconditionFailedError, ValidationError } from '@/server/api/errors';
 import { authorize } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import type { CapabilityAction } from '@/server/authorization/capability';
-import type { CreateExecutiveResolutionSchema } from '@/contracts/executive';
+import type { CreateExecutiveResolutionSchema } from '@qcet/contracts/executive';
 import { safeAfter, dispatchExecutiveDirectivePush } from '@/server/notifications/push-dispatch';
 
 /**

@@ -9,14 +9,14 @@ import {
   TaskQueryParamsSchema,
   TaskPrioritySchema,
   TaskStatusSchema,
-} from '@/contracts/tasks';
+} from '@qcet/contracts/tasks';
 import {
   toTaskDomainModel,
   toTaskDTO,
   toTaskViewModel,
   toTaskAssigneeDomain,
   toTaskDeliverableDomain,
-} from '@/domain/tasks';
+} from '@qcet/shared/domain/tasks';
 import {
   calculateTaskMetrics,
   isTaskOverdue,

@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { OUTGOING_STEP_ACTIONS } from '../src/lib/documents/outgoing-step-actions';
 import { OUTGOING_DOCUMENT_TRANSITIONS } from '../src/server/documents/state-machine';
-import type { OutgoingDocumentStatus } from '../src/contracts/documents';
+import type { OutgoingDocumentStatus } from '@qcet/contracts/documents';
 
 describe('thao tác theo bước của văn bản đi khớp máy trạng thái (V-05)', () => {
   it('mọi thao tác đổi trạng thái đều là bước chuyển hợp lệ', () => {

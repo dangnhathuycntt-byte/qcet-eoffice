@@ -9,7 +9,7 @@ import { PATCH as patchTask, DELETE as deleteTask } from "../src/app/api/tasks/[
 import { POST as postDirective } from "../src/app/api/documents/[id]/directives/route";
 import { GET as getNetworkInfo } from "../src/app/api/system/network-info/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 function createTestToken(payload: { id: string; role: string; departmentId?: string; name?: string; email?: string }) {
   return signSessionToken({

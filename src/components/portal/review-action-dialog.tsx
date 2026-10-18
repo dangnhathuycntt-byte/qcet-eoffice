@@ -13,9 +13,9 @@ import {
 import type {
   ApprovalDecision,
   ApprovalActionPayload,
-} from "@/types/workspace";
-import type { UserRole } from "@/types/auth";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+} from "@qcet/contracts/types/workspace";
+import type { UserRole } from "@qcet/contracts/types/auth";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StandardDialog } from "@/components/ui/dialog";

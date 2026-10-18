@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
 import {
   updateTaskStatus,
   updateTaskPriority,
@@ -17,7 +17,7 @@ import {
   deleteTask,
   type TaskActionResult,
 } from "@/lib/tasks/task-actions";
-import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
+import { CORE_STATUS_OPTIONS } from "@qcet/shared/domain/tasks/display-config";
 import {
   TaskIconStatus,
   TaskIconPriority,
@@ -39,7 +39,7 @@ import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { getTaskUnitId } from "@/lib/tasks/task-unit";
+import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
 import { useRuntimeFeature } from "@/lib/runtime-features";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";

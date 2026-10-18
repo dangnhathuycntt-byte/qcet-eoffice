@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { UnifiedTaskToolbar } from "../src/components/dashboard/unified-task-toolbar";
-import type { AuthUser } from "../src/types/auth";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 describe("Minimal Toolbar & Filter Menu UX Suite", () => {
   const mockUser: AuthUser = {

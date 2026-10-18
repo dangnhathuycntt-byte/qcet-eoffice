@@ -10,8 +10,8 @@ import {
 } from "../src/components/workspace/unified-adaptive-workspace";
 import { TaskManagementWorkspace } from "../src/components/tasks/task-management-workspace";
 import type { UseWorkspaceQueryReturn } from "../src/hooks/use-workspace-query";
-import type { SchoolTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 const mockRouter = {
   push: () => {},

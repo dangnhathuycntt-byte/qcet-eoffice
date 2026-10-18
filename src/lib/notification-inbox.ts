@@ -1,8 +1,8 @@
 import {
   formatNotificationContent,
   type QCETNotification,
-} from "@/lib/notification-triage";
-import { getDocumentHref } from "@/lib/documents/document-view-model";
+} from "@qcet/shared/lib/notification-triage";
+import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
 const ICT_TIME_ZONE = "Asia/Ho_Chi_Minh";
 

@@ -8,10 +8,10 @@
  * should update their imports to this module.
  */
 
-import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
-import { isSchoolTask } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
-import type { DelegationRule } from "@/types/delegation";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
+import { isSchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
 import {
   evaluateTaskCapabilityMatrix,
   type DelegationContract as TaskDelegationContract,
@@ -19,11 +19,11 @@ import {
   type TaskCapabilityMatrix,
   type TaskEntityContract,
   type TaskCapabilityEvaluationResult,
-} from "@/domain/tasks/contract";
+} from "@qcet/shared/domain/tasks/contract";
 import {
   mapDbStatusToLifecycle,
   type TaskLifecycleStatus,
-} from "@/domain/tasks/canonical-semantics";
+} from "@qcet/shared/domain/tasks/canonical-semantics";
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 

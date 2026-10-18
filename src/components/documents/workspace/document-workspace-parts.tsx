@@ -3,11 +3,11 @@
 import * as React from "react";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { cn } from "@/lib/utils";
-import type { DocumentItem } from "@/types/document";
-import type { LedgerStepKind } from "@/lib/documents/document-ledger-format";
-import { formatLedgerDate } from "@/lib/documents/document-ledger-format";
+import type { DocumentItem } from "@qcet/contracts/types/document";
+import type { LedgerStepKind } from "@qcet/shared/lib/documents/document-ledger-format";
+import { formatLedgerDate } from "@qcet/shared/lib/documents/document-ledger-format";
 import { buildIncomingQuotes } from "@/lib/documents/incoming-workflow";
-import { type DocumentViewModel } from "@/lib/documents/document-view-model";
+import { type DocumentViewModel } from "@qcet/shared/lib/documents/document-view-model";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { DocumentAuditTimeline } from "../document-audit-timeline";
 import { OutgoingActionPanel } from "../outgoing-action-panel";

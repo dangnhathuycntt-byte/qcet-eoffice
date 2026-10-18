@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { CalendarDays, UserRoundCheck } from "lucide-react";
-import type { ActionInboxItem, ActionInboxResponse } from "@/contracts/me";
+import type { ActionInboxItem, ActionInboxResponse } from "@qcet/contracts/me";
 import { WorkspacePageCard } from "@/components/workspace/page-card";
 import { formatDisplayName } from "@/components/layout/app-sidebar";
 import { EmptyState } from "@/components/ui/empty-state";

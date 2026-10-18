@@ -5,7 +5,7 @@
  * đơn lẻ, không ảnh hưởng văn bản khác.
  * Route đã kiểm vai trò, CSRF, giới hạn tần suất và validate payload trước khi gọi.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   DocumentType,
   DossierItemType,
@@ -13,7 +13,7 @@ import {
   OutgoingDocumentStatus,
 } from "@prisma/client";
 import type { AuthenticatedUser } from "@/server/api/request-context";
-import type { BatchDocumentRequest } from "@/contracts/documents";
+import type { BatchDocumentRequest } from "@qcet/contracts/documents";
 import {
   ConflictError,
   InvalidTransitionError,

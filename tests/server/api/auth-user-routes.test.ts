@@ -1,6 +1,6 @@
 import { test, describe, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { resetRateLimits } from '@/server/security/rate-limit';
 import { POST as loginPost } from '@/app/api/auth/login/route';

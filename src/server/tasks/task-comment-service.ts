@@ -14,9 +14,9 @@
  */
 import { z } from "zod";
 import { AssignmentStatus, TaskActorRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ForbiddenError, InvalidTransitionError, NotFoundError } from "@/server/api/errors";
 import { authorizeOnTask, can } from "./authorize-on-task";
@@ -24,7 +24,7 @@ import {
   isCommentReactionEmoji,
   summarizeCommentReactions,
   type CommentReactionSummary,
-} from "@/domain/tasks/comment-reactions";
+} from "@qcet/shared/domain/tasks/comment-reactions";
 
 const COMMENT_BODY = z
   .string()

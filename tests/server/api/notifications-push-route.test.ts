@@ -2,10 +2,10 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { Prisma, UserRole } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { getVapidPublicKey } from '@/server/notifications/push-service';
-import { DEFAULT_PUSH_PREFERENCES } from '@/lib/pwa/push-preferences';
+import { DEFAULT_PUSH_PREFERENCES } from '@qcet/shared/lib/pwa/push-preferences';
 import {
   GET as pushGetRoute,
   POST as pushPostRoute,

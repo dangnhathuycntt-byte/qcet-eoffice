@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
-import { CreateOutgoingDraftSchema, WorkflowListPaginationSchema } from "@/contracts/documents";
+import { CreateOutgoingDraftSchema, WorkflowListPaginationSchema } from "@qcet/contracts/documents";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";

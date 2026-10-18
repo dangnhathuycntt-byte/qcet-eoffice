@@ -12,7 +12,7 @@ import type {
   DocumentUrgency,
   DocumentSecurityLevel,
   DocumentItem,
-} from "@/types/document";
+} from "@qcet/contracts/types/document";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { Input } from "@/components/ui/input";

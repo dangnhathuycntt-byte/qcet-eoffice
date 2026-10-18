@@ -7,8 +7,8 @@ import { getSessionFromRequest } from "@/lib/jwt-session";
 import { taskQueryService } from "@/server/tasks";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskResource, computeAvailableActions } from "@/server/authorization/available-actions";
-import type { SchoolTask } from "@/types/dashboard";
-import type { TaskView } from "@/domain/tasks";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
+import type { TaskView } from "@qcet/shared/domain/tasks";
 
 export default async function TasksPage(props: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const resolved = props.searchParams ? await props.searchParams : {};

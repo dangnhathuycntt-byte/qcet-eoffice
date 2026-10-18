@@ -1,9 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { checkAntiSelfApproval, checkSeparationOfDuties, assertAntiSelfApproval, evaluateTaskCapabilityMatrix } from '../src/domain/tasks/contract';
-import { taskStateMachine } from '../src/domain/tasks/state-machine';
-import { isTaskMaker } from '../src/domain/tasks/attention-resolver';
+import { checkAntiSelfApproval, checkSeparationOfDuties, assertAntiSelfApproval, evaluateTaskCapabilityMatrix } from '@qcet/shared/domain/tasks/contract';
+import { taskStateMachine } from '@qcet/shared/domain/tasks/state-machine';
+import { isTaskMaker } from '@qcet/shared/domain/tasks/attention-resolver';
 import {
   authorize,
   assertAuthorized,

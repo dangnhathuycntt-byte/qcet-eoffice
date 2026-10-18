@@ -3,14 +3,14 @@ import {
   assertMeetingNotFinalized,
   isMeetingFinalized,
   canTransition,
-} from "@/domain/meetings";
+} from "@qcet/shared/domain/meetings";
 /**
  * QCET E-Office — Meeting & Institutional Resolutions Domain Service (Phase 8 / Task 5)
  * Implements workflow: DRAFT_AGENDA -> INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED
  * Handles Meeting Resolutions, automated Task derivation, and canonical authorization.
  */
 
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { getFileObjectIdFromUrl } from '@/server/files/file-service';
 import {
   MeetingStatus,
@@ -26,9 +26,9 @@ import {
   ConfirmMinutesInput,
   CreateMeetingResolutionInput,
   ListMeetingsQuery,
-} from '@/contracts/meeting';
-import { logAuditEvent, AuditAction } from '@/lib/db/audit';
-import { publishOutboxEvent } from '@/lib/db/outbox';
+} from '@qcet/contracts/meeting';
+import { logAuditEvent, AuditAction } from '@qcet/db/audit';
+import { publishOutboxEvent } from '@qcet/db/outbox';
 import { TaskCommandService } from '@/server/tasks/task-command-service';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';

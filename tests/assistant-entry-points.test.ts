@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as path from "path";
 import { parseAssistantContextParam } from "../src/components/assistant/assistant-model";
-import { isAssistantEligibleDocument } from "../src/domain/assistant/assistant-document-eligibility";
+import { isAssistantEligibleDocument } from "@qcet/shared/domain/assistant/assistant-document-eligibility";
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf8");
@@ -65,7 +65,7 @@ describe("Hỏi Trợ lý từ văn bản", () => {
     assert.ok(src.includes('import { useRuntimeFeature } from "@/lib/runtime-features"'));
     assert.ok(src.includes('const assistantOn = useRuntimeFeature("assistant")'));
     // Trợ lý không đọc văn bản mật (D1) hay văn bản Thường có ghi chú hạn chế: không mở lối vào dẫn tới câu từ chối
-    assert.ok(src.includes('import { isAssistantEligibleDocument } from "@/domain/assistant/assistant-document-eligibility"'));
+    assert.ok(src.includes('import { isAssistantEligibleDocument } from "@qcet/shared/domain/assistant/assistant-document-eligibility"'));
     assert.ok(src.includes("const canAskAssistant = assistantOn && item !== null && isAssistantEligibleDocument(item)"));
     assert.ok(
       src.includes(

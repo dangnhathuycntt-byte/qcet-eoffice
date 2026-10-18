@@ -1,4 +1,4 @@
-import { logAuditEvent, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { logAuditEvent, AuditAction, AuditEntityType } from "@qcet/db/audit";
 
 /** Ghi yêu cầu cấp quyền từ màn đăng nhập vào audit log (không transaction). */
 export async function recordAccessRequest({

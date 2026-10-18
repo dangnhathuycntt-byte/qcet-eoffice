@@ -1,5 +1,5 @@
 import { FileScanStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { scanPendingFileObject } from "@/server/files/file-service";
 import { logger } from "@/server/observability/logger";
 

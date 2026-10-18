@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert";
-import { prisma } from "@/lib/prisma";
-import { runAllDataMigrations } from "../prisma/data-migrations/run-all";
+import { prisma } from "@qcet/db/prisma";
+import { runAllDataMigrations } from "../packages/db/prisma/data-migrations/run-all";
 
 describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
   test("1. Backfill runner is fully idempotent, preserves non-speculative state, and surfaces unresolved records for audit", async () => {

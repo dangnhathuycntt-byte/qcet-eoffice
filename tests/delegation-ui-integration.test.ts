@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { canUserApproveTask } from "../src/lib/delegation-authority-engine";
-import type { DelegationRule } from "../src/types/delegation";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
 
 describe("Task 3: Stanford Authority Delegation UI Integration Tests", () => {
   describe("4. Business Logic Validation: canUserApproveTask", () => {

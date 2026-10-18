@@ -6,13 +6,13 @@
  * xác nhận bằng acknowledgeDuplicate thì vẫn vào sổ (quyết định Q4).
  */
 import { DocumentType, type Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { ConflictError } from "@/server/api/errors";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import {
   isPlaceholderDocumentNumber,
   isSameIncomingDocument,
-} from "@/domain/documents/duplicate-key";
+} from "@qcet/shared/domain/documents/duplicate-key";
 
 export interface DuplicateDocumentMatch {
   id: string;

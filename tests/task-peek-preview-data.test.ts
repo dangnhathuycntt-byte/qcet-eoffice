@@ -2,8 +2,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { getStatusDisplay } from "../src/domain/tasks/display-config";
-import { normalizeDisplayStatus } from "../src/domain/tasks/canonical-semantics";
+import { getStatusDisplay } from "@qcet/shared/domain/tasks/display-config";
+import { normalizeDisplayStatus } from "@qcet/shared/domain/tasks/canonical-semantics";
 import { getDueIndicator, getSlaBadgeStatus } from "../src/components/tasks/table/utils/table-date-helpers";
 
 // Dialog render qua portal nên kiểm tra nguồn dữ liệu của peek preview và các hàm nó dùng.

@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
-import { AddParticipantSchema } from '@/contracts/meeting';
+import { AddParticipantSchema } from '@qcet/contracts/meeting';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { parseAndValidateJson } from '@/server/api/validation';

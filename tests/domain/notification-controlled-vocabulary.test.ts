@@ -4,7 +4,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { NOTIFICATION_CATEGORIES, NOTIFICATION_TYPES, isValidNotificationCategory, isValidNotificationType, normalizeNotificationCategory } from '@/domain/notifications';
+import { NOTIFICATION_CATEGORIES, NOTIFICATION_TYPES, isValidNotificationCategory, isValidNotificationType, normalizeNotificationCategory } from '@qcet/shared/domain/notifications';
 import { ValidationError } from '@/server/api/errors';
 
 describe('WI-7.2: Notification Controlled Vocabulary (RFC-07)', () => {

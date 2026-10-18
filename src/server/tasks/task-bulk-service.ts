@@ -9,8 +9,8 @@
  */
 import { z } from "zod";
 import { TaskPriority, TaskStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ApiError } from "@/server/api/errors";
 import { can, loadTaskWithActors } from "./authorize-on-task";

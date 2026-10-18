@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
+import { getSystemReferenceDate, isTaskPastDue } from "@qcet/shared/lib/academic-calendar";
 
 test("getSystemReferenceDate returns current ICT date when env var is unset", () => {
   const originalEnv = process.env.NEXT_PUBLIC_REFERENCE_DATE;

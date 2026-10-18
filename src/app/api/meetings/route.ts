@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
-import { CreateMeetingSchema, ListMeetingsQuerySchema } from '@/contracts/meeting';
+import { CreateMeetingSchema, ListMeetingsQuerySchema } from '@qcet/contracts/meeting';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
 import { parseAndValidateJson } from '@/server/api/validation';

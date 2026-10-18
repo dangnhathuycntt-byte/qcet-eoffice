@@ -4,7 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LucideProvider } from "lucide-react";
 import { TaskActivityFeed } from "../src/components/tasks/detail/task-activity-feed";
-import type { ConsolidatedActivityItem } from "../src/lib/tasks/activity-feed-aggregator";
+import type { ConsolidatedActivityItem } from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 
 const ev = (id: string, action: string, timestamp: string, description?: string): ConsolidatedActivityItem =>
   ({ id, action, timestamp, actorName: "Đặng Nhật Huy", description, count: 1, firstTimestamp: timestamp, lastTimestamp: timestamp, isConsolidated: false, rawEvents: [] }) as ConsolidatedActivityItem;

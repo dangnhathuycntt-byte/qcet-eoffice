@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { NextRequest } from 'next/server';
 import { DossierStatus, FileScanStatus, UnitType, UserRole } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '../src/lib/jwt-session';
 import { GET as getFileObject } from '../src/app/api/file-objects/[id]/route';
 import { GET as getLegacyFile } from '../src/app/api/files/[...path]/route';

@@ -2,9 +2,9 @@
  * Trạng thái chữ ký số của văn bản (V-03): kiểm lại văn bản đến, đọc trạng thái.
  * Kiểm khi nhận nằm trong `registerIncomingDocument`. Văn thư (document.incoming.register) kiểm lại.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import { ConflictError, NotFoundError } from "@/server/api/errors";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { loadContext, canDo, assertCan } from "@/server/documents/authorize-on-document";

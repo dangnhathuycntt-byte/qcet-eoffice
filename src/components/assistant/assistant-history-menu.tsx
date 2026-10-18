@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import type { AssistantConversationSummaryDTO } from "@/contracts/assistant";
-import { formatConversationTime, groupConversationsByRecency } from "@/domain/assistant/assistant-history";
+import type { AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
+import { formatConversationTime, groupConversationsByRecency } from "@qcet/shared/domain/assistant/assistant-history";
 import { ConversationRowsSkeleton } from "@/components/assistant/conversation-rows-skeleton";
 import type { useAssistantHistory } from "@/components/assistant/use-assistant-history";
 import { Button } from "@/components/ui/button";

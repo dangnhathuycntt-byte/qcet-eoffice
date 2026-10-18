@@ -12,16 +12,16 @@ import {
   TaskIconPriorityNormal,
   TaskIconPriorityLow,
   TaskIconPriorityNone,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
-import type { TaskStatus, TaskPriority } from "@/types/dashboard";
+import type { TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
 import { cn } from "@/lib/utils";
-import { computeDueStatus } from "@/domain/tasks/deadlines";
-import { formatDisplayDate } from "@/lib/format/date";
+import { computeDueStatus } from "@qcet/shared/domain/tasks/deadlines";
+import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { propertyMotionStyle, propertyPopupClassName, propertyTriggerVariants } from "@/components/ui/property-control-styles";
-import type { PriorityDisplayConfig } from "@/domain/tasks/display-config";
+import type { PriorityDisplayConfig } from "@qcet/shared/domain/tasks/display-config";
 
 export interface TaskStatusChoice {
   value: TaskStatus;

@@ -3,7 +3,7 @@
  * trước khi route stream tệp.
  */
 import { FileScanStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/server/api/errors";
 import { canReadDocument } from "@/server/policies/document-policy";

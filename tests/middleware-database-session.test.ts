@@ -22,7 +22,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { UserRole } from '@prisma/client';
 import { revokeSession, clearRevocationStoreForTesting } from '@/server/auth/session-policy';
 

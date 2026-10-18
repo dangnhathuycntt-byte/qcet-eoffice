@@ -1,12 +1,12 @@
-import type { AuthUser } from "@/types/auth";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import type {
   WorkspaceScope,
   UniversalActionQueueItems,
 } from "../types";
 import { isAdminTierUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
-import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
-import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
+import { isTaskPastDue, getSystemReferenceDate } from "@qcet/shared/lib/academic-calendar";
+import { resolveDepartmentId } from "@qcet/shared/lib/executive-matrix-aggregator";
 
 export type {
   WorkspaceScope,

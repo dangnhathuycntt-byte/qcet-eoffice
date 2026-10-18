@@ -22,7 +22,7 @@ import { GET as googleAuthRoute } from "@/app/api/auth/google/route";
 import { GET as nextAuthRoute } from "@/app/api/auth/[...nextauth]/route";
 import { GET as exportExcelRoute } from "@/app/api/documents/export-excel/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
   const originalEnv = { ...process.env };

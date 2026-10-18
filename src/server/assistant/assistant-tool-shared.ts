@@ -3,7 +3,7 @@
  * Không chứa truy vấn: mọi công cụ đọc dữ liệu qua service đã kiểm quyền.
  */
 import { z } from "zod";
-import type { AssistantSourceRef, AssistantStep, AssistantTaskProposal } from "@/contracts/assistant";
+import type { AssistantSourceRef, AssistantStep, AssistantTaskProposal } from "@qcet/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { ApiError } from "@/server/api/errors";
 

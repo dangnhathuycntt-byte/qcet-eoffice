@@ -20,7 +20,8 @@ const ts = require("typescript");
 const ROOT = process.cwd();
 const BASELINE_PATH = path.join(ROOT, "scripts", "orphan-baseline.json");
 const UPDATE_BASELINE = process.argv.includes("--update-baseline");
-const CHECKED = /^src\/(components|hooks|lib|types|server|domain|contracts|features|config|context|storage|telemetry)\//;
+const CHECKED = /^(src\/(components|hooks|lib|types|server|domain|contracts|features|config|context|storage|telemetry)|packages\/[^/]+\/src)\//;
+const PACKAGE_SRC = /^packages\/[^/]+\/src\//;
 const CODE = /\.(tsx?|mjs|cjs|js)$/;
 const IS_TEST = (f) => /^(tests|e2e)\//.test(f) || /(^|\/)__tests__\//.test(f) || /\.(test|spec)\.[^.]+$/.test(f);
 
@@ -48,8 +49,9 @@ function importsOf(file) {
 }
 
 // Gốc: mọi file trong src/app, file cấp cao nhất của src (middleware, auth…), và code ngoài src (scripts, prisma, config).
+// Mã nguồn package (packages/*/src) không phải gốc: chỉ sống khi app hoặc script import tới.
 const roots = files.filter(
-  (f) => !IS_TEST(f) && (f.startsWith("src/app/") || /^src\/[^/]+$/.test(f) || !f.startsWith("src/")),
+  (f) => !IS_TEST(f) && !PACKAGE_SRC.test(f) && (f.startsWith("src/app/") || /^src\/[^/]+$/.test(f) || !f.startsWith("src/")),
 );
 const reachable = new Set();
 const stack = [...roots];

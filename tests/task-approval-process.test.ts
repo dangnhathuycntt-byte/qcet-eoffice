@@ -5,7 +5,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApprovalProcessStatus, ApprovalStepStatus, TaskActorRole, TaskStatus } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { taskDomainActionService } from '../src/server/tasks/task-domain-actions';
 import { scanTaskReminders } from '../src/server/tasks/task-reminder-scanner';
 import { authorizeOnTask } from '../src/server/tasks/authorize-on-task';

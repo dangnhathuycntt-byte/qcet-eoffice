@@ -5,7 +5,7 @@ with open("/tmp/generated_tasks.ts") as f:
     generated_tasks_code = f.read()
 
 # 2. Read seed.ts
-with open("prisma/seed.ts") as f:
+with open("packages/db/prisma/seed.ts") as f:
     seed_content = f.read()
 
 # 3. Add department leadership variables if not present
@@ -82,7 +82,7 @@ doc_anchor = '  const sampleDocuments: SampleDocumentItem[] = [\n'
 if '09/KH-CĐKTCNQN' not in seed_content:
     seed_content = seed_content.replace(doc_anchor, doc_anchor + doc_code)
 
-with open("prisma/seed.ts", "w") as f:
+with open("packages/db/prisma/seed.ts", "w") as f:
     f.write(seed_content)
 
-print("Successfully patched prisma/seed.ts!")
+print("Successfully patched packages/db/prisma/seed.ts!")

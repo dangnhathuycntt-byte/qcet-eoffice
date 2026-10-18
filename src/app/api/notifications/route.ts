@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
-import { NotificationQuerySchema } from '@/contracts/notifications';
+import { NotificationQuerySchema } from '@qcet/contracts/notifications';
 import { toNotificationDTOArray } from '@/server/dto/notification-dto';
 import { listNotificationsForUser } from '@/server/notifications/notification-inbox-service';
 

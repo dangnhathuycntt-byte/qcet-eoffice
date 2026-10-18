@@ -23,8 +23,8 @@ import {
   TASK_REJECTED,
   TASK_DEADLINE_CHANGED,
   DOCUMENT_DIRECTIVE_CREATED,
-} from '../src/lib/db/audit';
-import { prisma } from '../src/lib/prisma';
+} from '@qcet/db/audit';
+import { prisma } from '@qcet/db/prisma';
 
 describe('Phase 10 & 11: Observability, Structured Logging & Business Audit Event Model', () => {
   // ==========================================================================

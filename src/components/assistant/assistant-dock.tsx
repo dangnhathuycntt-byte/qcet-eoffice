@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { AssistantConversationSummaryDTO } from "@/contracts/assistant";
-import { formatConversationTime } from "@/domain/assistant/assistant-history";
+import type { AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
+import { formatConversationTime } from "@qcet/shared/domain/assistant/assistant-history";
 import { assistantErrorText, deleteConversationRequest, listConversationsRequest } from "@/components/assistant/assistant-client";
 import { ConversationRowsSkeleton } from "@/components/assistant/conversation-rows-skeleton";
 import { AssistantDockPanel } from "@/components/assistant/assistant-dock-panel";

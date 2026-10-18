@@ -8,7 +8,7 @@ import {
   setPushSenderForTesting,
   PushNotificationPayload,
 } from "../src/server/notifications/push-service";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 describe("Push Notification Copywriting & Truncation Suite", () => {
   test("truncatePushText enforces character budget strictly", () => {

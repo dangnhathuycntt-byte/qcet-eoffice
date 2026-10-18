@@ -1,7 +1,7 @@
 import { test, describe, before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { UserRole, UnitType, JobCatalogGroup, OrganizationalBodyType, BodyMemberRole } from '@prisma/client';
 
@@ -24,7 +24,7 @@ import {
   CAN_DELEGATE,
   CAN_DELETE,
   CAN_DOWNLOAD,
-} from '../src/domain/tasks/contract';
+} from '@qcet/shared/domain/tasks/contract';
 
 describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verification', () => {
   let dept: any;

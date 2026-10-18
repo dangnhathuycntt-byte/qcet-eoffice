@@ -4,7 +4,7 @@ import * as React from "react";
 import { ChevronDown } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components/ui/menu";
-import { TASK_TABS, parseTaskTab, type TaskTab } from "@/domain/tasks/task-tabs";
+import { TASK_TABS, parseTaskTab, type TaskTab } from "@qcet/shared/domain/tasks/task-tabs";
 
 /**
  * Các view của trang Nhiệm vụ. Từ md: dạng viên thuốc (như "All projects" của Linear).

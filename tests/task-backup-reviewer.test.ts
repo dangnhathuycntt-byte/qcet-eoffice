@@ -6,12 +6,12 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { TaskActorRole, TaskStatus } from '@prisma/client';
 import { ZodError } from 'zod';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { scanTaskReminders } from '../src/server/tasks/task-reminder-scanner';
 import { getBackupReviewer, setBackupReviewer } from '../src/server/tasks/task-backup-reviewer-service';
 import { authorizeOnTask } from '../src/server/tasks/authorize-on-task';
 import { ApiError } from '../src/server/api/errors';
-import { checkBackupCandidate, isBackupDue } from '../src/domain/tasks/backup-reviewer-rules';
+import { checkBackupCandidate, isBackupDue } from '@qcet/shared/domain/tasks/backup-reviewer-rules';
 
 const runId = `t05_${Date.now()}`;
 const u: Record<string, string> = {};

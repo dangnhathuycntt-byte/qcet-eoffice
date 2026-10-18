@@ -9,7 +9,7 @@ import {
   type ActorContext,
   type TaskContext,
   type TaskAuthorizationDecision,
-} from '../src/domain/tasks/state-machine';
+} from '@qcet/shared/domain/tasks/state-machine';
 
 describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phase 21)', () => {
   const staffActor: ActorContext = {

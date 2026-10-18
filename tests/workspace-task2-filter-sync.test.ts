@@ -9,7 +9,7 @@ import {
   type WorkspaceFilterState,
 } from "../src/lib/workspace-query";
 import { filterTasks } from "../src/components/tasks/table/utils/table-filter-engine";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 import {
   UnifiedTaskToolbar,
   areCriteriaEqual,

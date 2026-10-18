@@ -11,12 +11,12 @@
  */
 import { z } from "zod";
 import { ApprovalProcessStatus, ApprovalStepStatus, TaskActorRole, TaskStatus, type Prisma } from "@prisma/client";
-import { prisma, type DbClient } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { prisma, type DbClient } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ConflictError, InvalidTransitionError, ValidationError } from "@/server/api/errors";
-import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/domain/tasks/backup-reviewer-rules";
+import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@qcet/shared/domain/tasks/backup-reviewer-rules";
 import { initiateApprovalProcess, stepWaitingSince } from "@/server/tasks/task-actor-service";
 import { authorizeOnTask, can } from "./authorize-on-task";
 

@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SchoolTask, StaffTask, DashboardPayload, TaskStatus, isSchoolTask } from "@/types/dashboard";
+import { SchoolTask, StaffTask, DashboardPayload, TaskStatus, isSchoolTask } from "@qcet/contracts/types/dashboard";
 import {
   CalendarMonthGrid,
   type CalendarScope,
@@ -31,7 +31,7 @@ import {
   type CreateEventFormData,
 } from "@/components/calendar/create-event-modal";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
-import type { TaskLevel } from "@/domain/tasks/create-task-policy";
+import type { TaskLevel } from "@qcet/shared/domain/tasks/create-task-policy";
 import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
 import { useAuth } from "@/lib/auth-context";
 import { useDismissOnOutside } from "@/hooks/use-dismiss-on-outside";
@@ -45,7 +45,7 @@ import {
   getAdjacentAcademicMonth,
   isTaskPastDue,
   type AcademicMonthPeriod,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";

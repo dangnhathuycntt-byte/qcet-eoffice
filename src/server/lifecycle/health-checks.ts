@@ -2,7 +2,7 @@
  * Truy vấn kiểm tra CSDL cho probe /api/health và /api/health/ready. Route giữ phần đo thời gian,
  * xử lý lỗi, fallback và payload; các hàm này chỉ chạy truy vấn và ném lỗi nguyên trạng.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 
 export async function pingDatabase(): Promise<void> {
   await prisma.$queryRaw`SELECT 1`;

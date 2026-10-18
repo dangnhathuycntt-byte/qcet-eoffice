@@ -8,7 +8,7 @@ import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
 import { AssistantThread, type ProposalTarget } from "@/components/assistant/assistant-thread";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
 import type { ThreadMessage } from "@/components/assistant/assistant-model";
-import type { AssistantSourceRef } from "@/contracts/assistant";
+import type { AssistantSourceRef } from "@qcet/contracts/assistant";
 import { IconSidebarCompose } from "@/components/layout/sidebar-rounded-icons";
 import { Button } from "@/components/ui/button";
 import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";

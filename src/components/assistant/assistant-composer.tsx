@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ArrowUp, Paperclip, Square, X } from "lucide-react";
-import { ASSISTANT_MESSAGE_MAX } from "@/contracts/assistant";
+import { ASSISTANT_MESSAGE_MAX } from "@qcet/contracts/assistant";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { isSendKey, isStopKey } from "@/components/assistant/assistant-model";
 import { AgentModelPicker } from "@/components/agent-chat/agent-model-picker";
 import { AttachmentCard, type ChatAttachment } from "@/components/agent-chat/agent-attachments";
-import { TASK_AGENT_ATTACHMENT_ACCEPT } from "@/domain/tasks/task-agent-attachments";
+import { TASK_AGENT_ATTACHMENT_ACCEPT } from "@qcet/shared/domain/tasks/task-agent-attachments";
 
 /** Viền mảnh và bóng rất nhẹ của thẻ soạn, như thẻ ô soạn của Linear. */
 const COMPOSER_RING = "shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]";

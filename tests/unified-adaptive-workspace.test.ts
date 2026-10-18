@@ -16,8 +16,8 @@ import {
 import { parseTaskUrlParams, buildTaskUrlQuery } from "../src/hooks/use-task-filters";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
-import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import type { SchoolTask, StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 const mockRouter = {
   push: () => {},

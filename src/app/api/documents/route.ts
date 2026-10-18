@@ -11,7 +11,7 @@ import {
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { canReadDocument, canCreateDocument } from "@/server/policies/document-policy";
 import { toDocumentListDTOArray, toDocumentDetailDTO } from "@/server/dto/document-dto";
-import { DocumentQuerySchema, CreateDocumentSchema } from "@/contracts/documents";
+import { DocumentQuerySchema, CreateDocumentSchema } from "@qcet/contracts/documents";
 import {
   createDocument,
   listDocuments,
@@ -22,8 +22,8 @@ import {
 import { validateDocumentCreatePayload } from "@/lib/documents/document-validator";
 import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { AuthorizationError, ValidationError } from "@/server/api/errors";
-import type { DocumentType } from "@/types/document";
-import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
+import type { DocumentType } from "@qcet/contracts/types/document";
+import { resolveDocumentTypeParam } from "@qcet/shared/domain/documents/document-type-param";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 
 export async function GET(request: NextRequest) {

@@ -2,7 +2,7 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { GET as meGet } from "../src/app/api/auth/me/route";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { SESSION_COOKIE_NAME, signSessionToken } from "../src/lib/jwt-session";
 import {
   resolveSessionState,
@@ -15,7 +15,7 @@ import type {
   CachedUser,
   DemoIdentity,
   AuthUser,
-} from "../src/types/auth";
+} from "@qcet/contracts/types/auth";
 
 describe("Phase 8: Auth & Session Truth State Separation (P0-8)", () => {
   const mockServerUser = {

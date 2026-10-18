@@ -6,9 +6,9 @@ import { Check, Copy, FileText, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
-import type { AssistantSourceRef } from "@/contracts/assistant";
-import { linkSourceCodes } from "@/domain/assistant/assistant-sources";
-import { parseAgentReply, type AgentReplyInline } from "@/domain/tasks/agent-reply-format";
+import type { AssistantSourceRef } from "@qcet/contracts/assistant";
+import { linkSourceCodes } from "@qcet/shared/domain/assistant/assistant-sources";
+import { parseAgentReply, type AgentReplyInline } from "@qcet/shared/domain/tasks/agent-reply-format";
 
 /** Chữ trong một đoạn; có `sources` thì mã của nguồn thành link tới trang của nó. */
 function linkedNodes(text: string, sources?: AssistantSourceRef[]): React.ReactNode {

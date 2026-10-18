@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 
 export interface ModalStateReturn {
   selectedTask: SchoolTask | StaffTask | null;

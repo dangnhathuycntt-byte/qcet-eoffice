@@ -69,7 +69,7 @@ import {
 } from './errors';
 import { canAccessClassification } from './document-classification';
 import { logger } from '../observability/logger';
-import { checkSeparationOfDuties } from '@/domain/tasks/contract';
+import { checkSeparationOfDuties } from '@qcet/shared/domain/tasks/contract';
 
 // ============================================================================
 // HELPERS

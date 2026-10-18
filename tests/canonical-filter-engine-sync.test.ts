@@ -10,9 +10,9 @@ import {
   isOpenTaskOverdue,
   isTaskWaitingApproval,
 } from "../src/components/workspace/unified-adaptive-workspace";
-import { getSystemReferenceDate } from "../src/lib/academic-calendar";
-import type { SchoolTask } from "../src/types/dashboard";
-import type { AuthUser } from "../src/types/auth";
+import { getSystemReferenceDate } from "@qcet/shared/lib/academic-calendar";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 const mockRouter = {
   push: () => {},

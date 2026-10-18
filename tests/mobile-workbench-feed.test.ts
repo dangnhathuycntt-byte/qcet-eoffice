@@ -8,7 +8,7 @@ import {
   getMobileDueBadge,
 } from "../src/components/tasks/mobile-task-card";
 import { TaskTableToolbar } from "../src/components/tasks/table/components/task-table-toolbar";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("Mobile Workbench Feed & Task Workspace", () => {
 

@@ -1,5 +1,5 @@
 import { serverEnv } from "@/config/env.server";
-import { INSTITUTION_CONFIG } from "@/config/institution";
+import { INSTITUTION_CONFIG } from "@qcet/shared/config/institution";
 
 export interface GoogleTokens {
   access_token: string;

@@ -1,14 +1,14 @@
 import JSZip from "jszip";
 import { detectUploadMimeType } from "@/server/files/storage";
 import { ApiError } from "@/server/api/errors";
-import type { TaskAgentContentPart } from "@/domain/tasks/task-agent-draft";
+import type { TaskAgentContentPart } from "@qcet/shared/domain/tasks/task-agent-draft";
 import {
   TASK_AGENT_ATTACHMENT_TEXT_MAX,
   describeTaskAgentAttachmentStep,
   getTaskAgentAttachmentKind,
   wrapTaskAgentAttachmentText,
   type TaskAgentAttachmentKind,
-} from "@/domain/tasks/task-agent-attachments";
+} from "@qcet/shared/domain/tasks/task-agent-attachments";
 
 /** Một mục trong tệp nén giải ra quá cỡ này thì từ chối (chặn zip bomb). */
 const MAX_ZIP_ENTRY_BYTES = 20 * 1024 * 1024;

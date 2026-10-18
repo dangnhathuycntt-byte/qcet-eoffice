@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { registerIncomingDocument, listIncomingWorkflows } from "@/server/documents/incoming-document-service";
-import { IncomingWorkflowListQuerySchema, RegisterIncomingDocumentSchema } from "@/contracts/documents";
+import { IncomingWorkflowListQuerySchema, RegisterIncomingDocumentSchema } from "@qcet/contracts/documents";
 import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";

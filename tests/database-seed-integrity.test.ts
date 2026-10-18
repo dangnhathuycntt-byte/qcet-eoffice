@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 
 describe('Database Seed Integrity Contract', () => {
   test('cơ sở dữ liệu phải có đầy đủ người dùng, phòng ban, nhiệm vụ và sổ văn bản sau khi seed', async () => {

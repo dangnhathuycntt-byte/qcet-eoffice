@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import { decode } from "next-auth/jwt";
-import { UserRole } from "@/types/auth";
+import { UserRole } from "@qcet/contracts/types/auth";
 import { serverEnv } from "@/config/env.server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { AuthenticationError } from "@/server/api/errors";
 import { isSessionExpired, isSessionRevoked, assertSessionPolicy } from "@/server/auth/session-policy";
 

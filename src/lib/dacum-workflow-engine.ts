@@ -1,5 +1,5 @@
-import type { AuthUser } from "../types/auth";
-import type { StaffTask, SchoolTask, DeliverableItem, TaskStatus, AIRiskStatus, AISuggestedAction, AIFlagItem, AIReviewSummary } from "../types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { StaffTask, SchoolTask, DeliverableItem, TaskStatus, AIRiskStatus, AISuggestedAction, AIFlagItem, AIReviewSummary } from "@qcet/contracts/types/dashboard";
 
 export interface AssignmentCheckResult {
   allowed: boolean;

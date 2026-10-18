@@ -11,8 +11,8 @@ import {
   CheckCircle2,
   Trash2,
 } from "lucide-react";
-import type { DeliverableSubmissionPayload } from "@/types/workspace";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { DeliverableSubmissionPayload } from "@qcet/contracts/types/workspace";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";

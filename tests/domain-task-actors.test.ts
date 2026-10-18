@@ -11,7 +11,7 @@
 
 import test, { describe, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   setTaskDRI,
   addTaskCollaborator,
@@ -26,7 +26,7 @@ import {
   MakerCheckerError,
   SegregationOfDutiesError,
 } from "../src/server/tasks/task-actor-service";
-import { migrateTaskRelations } from "../prisma/seeds/migrate-task-relations";
+import { migrateTaskRelations } from "../packages/db/prisma/seeds/migrate-task-relations";
 import {
   TaskActorRole,
   TaskOriginLevel,

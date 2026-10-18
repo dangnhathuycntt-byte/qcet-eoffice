@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDateParts, getAcademicMonthInfo, getAcademicYear } from '../src/lib/academic-calendar';
-import { mapPrismaTaskToSchoolTask, formatLocalDate } from '../src/lib/adapters/task-db-adapter';
+import { parseDateParts, getAcademicMonthInfo, getAcademicYear } from '@qcet/shared/lib/academic-calendar';
+import { mapPrismaTaskToSchoolTask, formatLocalDate } from '@qcet/shared/lib/adapters/task-db-adapter';
 
 describe('Timezone and Null Safety Tests', () => {
   test('parseDateParts returns null gracefully when input is null, undefined, or invalid', () => {

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useSidebar } from "@/components/layout/sidebar-context";
-import type { SchoolTask, StaffTask, DashboardPayload } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, DashboardPayload } from "@qcet/contracts/types/dashboard";
 import { useUrlParamsSync, type UrlParamsSyncReturn } from "./use-url-params-sync";
 import { useTaskMutations, type TaskMutationsReturn } from "./use-task-mutations";
 import { useTaskFilters, type TaskFiltersReturn } from "./use-task-filters";

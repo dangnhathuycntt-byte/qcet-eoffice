@@ -35,16 +35,16 @@ import { DashboardModalContext } from "@/components/dashboard/dashboard-context"
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { fadeVariants, sideSheetVariants } from "@/lib/motion/variants";
-import { isSafeUrl } from "@/lib/url-utils";
+import { isSafeUrl } from "@qcet/shared/lib/url-utils";
 import {
   type SchoolTask,
   type StaffTask,
   type TaskStatus,
   type DeliverableItem,
   isSchoolTask,
-} from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
-import type { DelegationRule } from "@/types/delegation";
+} from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
 import { canUserApproveTask } from "@/lib/delegation-authority-engine";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -56,18 +56,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import { getSystemReferenceDate, isTaskOverdue } from "@/lib/academic-calendar";
+import { getSystemReferenceDate, isTaskOverdue } from "@qcet/shared/lib/academic-calendar";
 import {
   evaluateTaskCapabilityMatrix,
   type DelegationContract as TaskDelegationContract,
   type TaskActorContract,
   type TaskCapabilityMatrix,
   type TaskEntityContract,
-} from "@/domain/tasks/contract";
+} from "@qcet/shared/domain/tasks/contract";
 import {
   mapDbStatusToLifecycle,
   type TaskLifecycleStatus,
-} from "@/domain/tasks/canonical-semantics";
+} from "@qcet/shared/domain/tasks/canonical-semantics";
 import { Pressable } from "@/components/ui/pressable";
 import {
   formatDetailDate,

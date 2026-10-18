@@ -28,7 +28,7 @@ import {
 import {
   calculateSelectionState,
 } from "../src/components/tasks/table/hooks/use-task-table-state";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 
 // ── Fixtures ───��──────────────────────────────────────────────────────
 

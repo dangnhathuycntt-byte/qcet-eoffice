@@ -24,9 +24,9 @@ import {
   Search,
   X,
 } from "lucide-react";
-import type { SchoolTask, StaffTask, TaskCategory, TaskStatus } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskCategory, TaskStatus } from "@qcet/contracts/types/dashboard";
 import { cn } from "@/lib/utils";
-import { getSystemReferenceDate } from "@/lib/academic-calendar";
+import { getSystemReferenceDate } from "@qcet/shared/lib/academic-calendar";
 import {
   filterCalendarItems,
   getCalendarAttentionState,

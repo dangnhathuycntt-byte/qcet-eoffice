@@ -1,6 +1,6 @@
 import { Prisma, type AssistantConversation, type AssistantMessage } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { AuditAction, AuditEntityType, logAuditEvent } from "@/lib/db/audit";
+import { prisma } from "@qcet/db/prisma";
+import { AuditAction, AuditEntityType, logAuditEvent } from "@qcet/db/audit";
 import { logger } from "@/server/observability/logger";
 import { NotFoundError, ValidationError } from "@/server/api/errors";
 import {
@@ -21,9 +21,9 @@ import {
   type AssistantSourceRef,
   type AssistantSourceType,
   type AssistantStep,
-} from "@/contracts/assistant";
-import { retentionCutoff } from "@/domain/assistant/assistant-history";
-import { normalizeTaskProposal } from "@/domain/assistant/assistant-task-proposal";
+} from "@qcet/contracts/assistant";
+import { retentionCutoff } from "@qcet/shared/domain/assistant/assistant-history";
+import { normalizeTaskProposal } from "@qcet/shared/domain/assistant/assistant-task-proposal";
 import { ProposeTaskArgs } from "@/server/assistant/assistant-tool-proposal";
 
 /** Số tin và ký tự gần nhất đưa lại cho mô hình trong một lượt (đặc tả W1-C). */

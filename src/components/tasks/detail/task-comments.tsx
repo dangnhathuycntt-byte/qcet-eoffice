@@ -15,7 +15,7 @@ import {
   resolveMentionIds,
   splitMentions,
   type MentionCandidate,
-} from "@/domain/tasks/comment-mentions";
+} from "@qcet/shared/domain/tasks/comment-mentions";
 import { Pressable } from "@/components/ui/pressable";
 import { Popover } from "@/components/ui/popover";
 import {
@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { revealAboveKeyboard } from "@/hooks/use-virtual-keyboard";
-import { COMMENT_REACTION_EMOJIS, joinReactionNames, reactionNamesLabel, type CommentReactionSummary } from "@/domain/tasks/comment-reactions";
+import { COMMENT_REACTION_EMOJIS, joinReactionNames, reactionNamesLabel, type CommentReactionSummary } from "@qcet/shared/domain/tasks/comment-reactions";
 
 interface CommentView {
   id: string;

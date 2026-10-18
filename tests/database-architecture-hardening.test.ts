@@ -1,7 +1,7 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { Prisma, OutboxStatus, DocumentType } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   resetTaskCodeMemorySequences,
 } from "../src/lib/task-code-generator";
@@ -13,14 +13,14 @@ import {
   recordAuditEvent,
   logAuditEvent,
   getEntityAuditHistory,
-} from "../src/lib/db/audit";
+} from "@qcet/db/audit";
 import {
   publishOutboxEvent,
   fetchAvailableOutboxEvents,
   processOutboxEvent,
   calculateExponentialBackoff,
   OutboxEventType,
-} from "../src/lib/db/outbox";
+} from "@qcet/db/outbox";
 
 describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", () => {
   const testRunId = `DB_HARDEN_${Date.now()}`;

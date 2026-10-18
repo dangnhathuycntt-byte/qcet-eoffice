@@ -6,7 +6,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, JobCatalogGroup, TaskActorRole, TaskStatus, UnitType } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { createTaskComment, listTaskComments } from '../src/server/tasks/task-comment-service';
 import { ApiError } from '../src/server/api/errors';
 

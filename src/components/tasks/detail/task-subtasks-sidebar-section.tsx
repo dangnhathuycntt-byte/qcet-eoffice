@@ -4,13 +4,13 @@ import * as React from "react";
 import { Plus } from "lucide-react";
 import * as m from "motion/react-m";
 import { Collapsible } from "@base-ui/react/collapsible";
-import type { StaffTask } from "@/types/dashboard";
-import { getStatusDisplay } from "@/domain/tasks/display-config";
+import type { StaffTask } from "@qcet/contracts/types/dashboard";
+import { getStatusDisplay } from "@qcet/shared/domain/tasks/display-config";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { getDueIndicator, getSlaBadgeStatus } from "@/components/tasks/table/utils/table-date-helpers";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
+import { formatCompactDate, formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
 
 export interface TaskSubtasksSidebarSectionProps {

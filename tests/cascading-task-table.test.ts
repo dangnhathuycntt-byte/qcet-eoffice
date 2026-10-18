@@ -8,7 +8,7 @@ import { getCategoryBadgeConfig, CATEGORY_TABS } from "../src/components/tasks/t
 import { filterTasksForTable } from "../src/lib/unified-task-hub";
 import { TaskTableHeader } from "../src/components/tasks/table/components/task-table-header";
 import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("CascadingTaskTable Helpers", () => {
   test("provides distinct subtle badge styling for categories", () => {

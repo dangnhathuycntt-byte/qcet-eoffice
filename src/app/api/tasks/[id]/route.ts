@@ -15,7 +15,7 @@ import {
   PreconditionFailedError,
   ValidationError,
 } from '@/server/api/errors';
-import { ArchiveTaskSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
+import { ArchiveTaskSchema, UpdateTaskMetadataSchema } from '@qcet/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { readTaskForUser } from '@/server/tasks/read-task-for-user';
 import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';

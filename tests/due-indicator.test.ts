@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { getDueIndicator } from "../src/components/tasks/table/utils/table-date-helpers";
 import { computeWorkspaceTabCounts } from "../src/lib/workspace-metrics-aggregator";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("getDueIndicator: chỉ báo hạn dùng chung cho bảng và thẻ di động", () => {
   const base = { isOverdue: false, isToday: false };

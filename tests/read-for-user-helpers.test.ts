@@ -20,7 +20,7 @@ import {
   UnitType,
   UserRole,
 } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { readTaskForUser, findTaskIdByCode } from '@/server/tasks/read-task-for-user';
 import { readDocumentForUser } from '@/server/documents/read-document-for-user';

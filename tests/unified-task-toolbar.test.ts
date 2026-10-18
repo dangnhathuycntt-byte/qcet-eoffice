@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DEFAULT_AVAILABLE_DEPARTMENTS, CATEGORY_FILTER_OPTIONS, PRIORITY_FILTER_OPTIONS, UnifiedTaskToolbar, type ScopeTab, type ViewModeOption, type UnifiedTaskToolbarProps } from "../src/components/dashboard/unified-task-toolbar";
-import { getAcademicMonthsForYear } from "../src/lib/academic-calendar";
+import { getAcademicMonthsForYear } from "@qcet/shared/lib/academic-calendar";
 import {
   filterTasksByAcademicMonth,
   computeMonthlyTaskCounts,
@@ -12,7 +12,7 @@ import {
 } from "../src/lib/unified-task-hub";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS, matchesUser } from "../src/lib/role-task-filter";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
 import { TaskEmptyState } from "../src/components/tasks/table/components/task-empty-state";
 import { TaskTableToolbar } from "../src/components/tasks/table/components/task-table-toolbar";

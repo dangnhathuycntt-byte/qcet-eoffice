@@ -13,7 +13,7 @@ import {
   canDeleteDocument,
 } from "@/server/policies/document-policy";
 import { toDocumentDetailDTO } from "@/server/dto/document-dto";
-import { UpdateDocumentSchema } from "@/contracts/documents";
+import { UpdateDocumentSchema } from "@qcet/contracts/documents";
 import {
   applyDocumentPatch,
   deleteDocumentCascade,

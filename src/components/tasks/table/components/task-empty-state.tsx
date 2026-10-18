@@ -7,7 +7,7 @@ import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
 import { CreateButtonWithHint } from "@/components/ui/onboarding-hint";
 import type { SmartFilterTab } from "../types";
 import { Button } from "@/components/ui/button";
-import type { TaskTab } from "@/domain/tasks/task-tabs";
+import type { TaskTab } from "@qcet/shared/domain/tasks/task-tabs";
 
 export interface TaskEmptyStateProps {
   title?: string;

@@ -1,4 +1,4 @@
-import type { DocumentAuditApiResponse } from "@/types/document-audit";
+import type { DocumentAuditApiResponse } from "@qcet/contracts/types/document-audit";
 
 export type AuditTimelineResult =
   | { ok: true; data: DocumentAuditApiResponse }

@@ -16,7 +16,7 @@ import {
   FilterIconCollaborator,
   FilterIconDeadline,
 } from "./task-filter-icons";
-import type { TaskView } from "@/domain/tasks";
+import type { TaskView } from "@qcet/shared/domain/tasks";
 import { cn } from "@/lib/utils";
 import { MENU_POPUP_CLASS, MENU_ROW_CLASS } from "@/components/ui/menu";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -27,12 +27,12 @@ import {
   TaskIconTime,
   TaskIconStatusNew,
   TaskIconSearch,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
-import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import {
   parsePersonFilter,
   PERSON_FILTER_ME,
@@ -40,21 +40,21 @@ import {
   type FilterPersonOption,
   type TaskFilterFacetKey,
   type TaskFilterFacets,
-} from "@/domain/tasks/task-filter-facets";
+} from "@qcet/shared/domain/tasks/task-filter-facets";
 import { ListToolbarFilterButton, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
 import {
   NO_TASK_TIME_FILTER,
   getTaskTimeFilterLabel,
   type TaskTimeFilter,
 } from "@/lib/task-time-filter";
-import type { AuthUser } from "@/types/auth";
-import type { SchoolTask } from "@/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
 import {
   getAcademicMonthsForYear,
   getAcademicYear,
   getSystemReferenceDate,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import { isAdminTierUser } from "@/lib/role-task-filter";
 import type { TaskScope, TaskViewMode } from "@/lib/unified-task-hub";
 import {

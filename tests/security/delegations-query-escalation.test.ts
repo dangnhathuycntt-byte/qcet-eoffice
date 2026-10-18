@@ -17,7 +17,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/qcet_eoffice
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   UserRole,
   UnitType,

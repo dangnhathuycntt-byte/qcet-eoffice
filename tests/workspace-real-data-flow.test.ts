@@ -8,8 +8,8 @@ import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-ad
 import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
 import { UniversalActionQueue } from "../src/components/workspace/components/universal-action-queue";
 import { validateDeliverableSubmission } from "../src/components/portal/submit-deliverable-modal";
-import type { AuthUser } from "../src/types/auth";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 const mockRouter = {
   push: () => {},

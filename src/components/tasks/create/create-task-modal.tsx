@@ -30,15 +30,15 @@ import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SHEET_BACKDRO
 import { SourceDocumentChip, linkTaskToDocument, type SourceDocumentOption } from "@/components/tasks/create/source-document-chip";
 import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { CreateTaskSubtasks, nextSubtaskDraftId } from "@/components/tasks/create/create-task-subtasks";
-import { CREATE_TASK_MAX_SUBTASKS } from "@/contracts/tasks";
+import { CREATE_TASK_MAX_SUBTASKS } from "@qcet/contracts/tasks";
 import type { CreateTaskSubtaskSummary } from "@/lib/adapters/create-task-mapper";
 import { TaskAgentPanel, useTaskAgentAvailable } from "@/components/tasks/create/task-agent-panel";
 import { AgentIcon } from "@/components/icons/agent-icon";
-import { TASK_AGENT_DESCRIPTION_MAX, type TaskAgentDraft } from "@/domain/tasks/task-agent-draft";
-import { contentToPlainText, plainTextToContent } from "@/lib/tasks/plate-block-codec";
+import { TASK_AGENT_DESCRIPTION_MAX, type TaskAgentDraft } from "@qcet/shared/domain/tasks/task-agent-draft";
+import { contentToPlainText, plainTextToContent } from "@qcet/shared/lib/tasks/plate-block-codec";
 import { motionDuration } from "@/lib/motion/tokens";
-import type { AssistantTaskProposal } from "@/contracts/assistant";
-import { proposalToTaskDraft } from "@/domain/assistant/assistant-task-proposal";
+import type { AssistantTaskProposal } from "@qcet/contracts/assistant";
+import { proposalToTaskDraft } from "@qcet/shared/domain/assistant/assistant-task-proposal";
 
 const DESCRIPTION_PLACEHOLDER = "Nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu. Gõ / để chèn khối";
 

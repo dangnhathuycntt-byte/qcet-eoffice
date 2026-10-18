@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { DOCUMENT_DONE_STATUSES, type DocumentBucket } from "@/lib/documents/document-sidebar-buckets";
+import { DOCUMENT_DONE_STATUSES, type DocumentBucket } from "@qcet/shared/lib/documents/document-sidebar-buckets";
 
 // Quy trình 6: văn bản đến coi là đã xử lý từ bước "Hoàn thành" trở đi.
 const INCOMING_WF_DONE = ["RESOLVED", "FILED", "ARCHIVED"] as const;

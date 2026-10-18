@@ -1,13 +1,13 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import type { TaskStatus } from "@/types/dashboard";
+import type { TaskStatus } from "@qcet/contracts/types/dashboard";
 import {
   TaskIconStatusNew,
   TaskIconStatusInProgress,
   TaskIconStatusReview,
   TaskIconStatusDone,
   TaskIconStatusCancelled,
-} from "@/lib/icons/task-icons";
+} from "@qcet/shared/lib/icons/task-icons";
 
 /**
  * Chỉ báo trạng thái dùng bộ icon chuẩn của dự án (nét 1.5, bo tròn, chỉ viền).

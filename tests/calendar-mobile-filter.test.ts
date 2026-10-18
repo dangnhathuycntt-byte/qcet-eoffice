@@ -14,7 +14,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CalendarWeekView } from "../src/components/calendar/calendar-week-view";
-import { getSystemReferenceDate } from "../src/lib/academic-calendar";
+import { getSystemReferenceDate } from "@qcet/shared/lib/academic-calendar";
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
 

@@ -6,22 +6,22 @@ import type {
   StaffTask,
   UpcomingItem,
   DashboardStats,
-} from "@/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 import { computeDashboardStats } from "@/lib/dashboard-aggregator";
 import type {
   ExecutiveFilter,
   ExecutiveActionStats,
   DepartmentHealthSummary,
   ExecutiveActionItem,
-} from "@/lib/executive-matrix-aggregator";
+} from "@qcet/shared/lib/executive-matrix-aggregator";
 import {
   computeExecutiveActionStats,
   computeDepartmentHealthMatrix,
   filterTasksByExecutive,
   extractExecutiveActionItems,
-} from "@/lib/executive-matrix-aggregator";
-import { WorkspaceZone } from "@/types/workspace";
-import type { AuthUser } from "@/types/auth";
+} from "@qcet/shared/lib/executive-matrix-aggregator";
+import { WorkspaceZone } from "@qcet/contracts/types/workspace";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 import {
   filterTasksByRole,
   filterUpcomingByRole,
@@ -44,7 +44,7 @@ import {
   filterTasksByAcademicMonthStrict,
   computePriorOverdueBacklog,
   type AcademicMonthInfo,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 
 export interface TaskFiltersReturn {
   // Filter state

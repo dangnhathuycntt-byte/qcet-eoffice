@@ -1,8 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { isDelegationActive } from "../src/lib/delegation-authority-engine";
-import { mapPrismaTaskToSchoolTask } from "../src/lib/adapters/task-db-adapter";
-import type { DelegationRule } from "../src/types/delegation";
+import { mapPrismaTaskToSchoolTask } from "@qcet/shared/lib/adapters/task-db-adapter";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
 
 describe("DACUM & VTVL Framework (Nghị định 106/2020 & Ma trận DACUM)", () => {
 

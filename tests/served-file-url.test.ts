@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { toServedFileUrl } from "../src/lib/url-utils";
+import { toServedFileUrl } from "@qcet/shared/lib/url-utils";
 
 describe("toServedFileUrl", () => {
   test("đường dẫn trần đi qua route tệp có kiểm tra quyền", () => {

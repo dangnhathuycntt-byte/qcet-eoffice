@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
-import { AddBodyMembershipSchema } from '@/contracts/meeting';
+import { AddBodyMembershipSchema } from '@qcet/contracts/meeting';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { assertCanManageOrganizationalBodies, assertCanAppointBodyMember, canManageOrganizationalBodies } from '@/server/policies';
 import { assertCsrf } from '@/server/security/csrf';

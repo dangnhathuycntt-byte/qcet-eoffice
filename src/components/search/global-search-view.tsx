@@ -17,10 +17,10 @@ import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { getStatusBadgeConfig } from "@/components/tasks/table/constants";
 import { DUE_SOON_DAYS } from "@/components/tasks/table/utils/table-date-helpers";
 import { IconSidebarDocLines, IconSidebarInboxIn, IconSidebarSend } from "@/components/layout/sidebar-rounded-icons";
-import { getDocumentHref } from "@/lib/documents/document-view-model";
+import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 import { daysUntil, formatRelativeDate } from "@/lib/format/relative-date";
 import { cn } from "@/lib/utils";
-import type { GlobalSearchPayload, SearchDocumentResult, SearchTaskResult, SearchUserResult } from "@/contracts/search";
+import type { GlobalSearchPayload, SearchDocumentResult, SearchTaskResult, SearchUserResult } from "@qcet/contracts/search";
 
 type SearchResults = GlobalSearchPayload["results"];
 

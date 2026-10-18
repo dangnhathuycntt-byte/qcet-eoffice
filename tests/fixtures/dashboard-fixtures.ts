@@ -8,7 +8,7 @@ import {
   TaskCategory,
   TaskStatus,
   TaskOrigin,
-} from "../../src/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 import { computeSchoolTaskRollup, computeDashboardStats } from "../../src/lib/dashboard-aggregator";
 
 export const CATEGORY_LABELS: Record<TaskCategory, string> = {

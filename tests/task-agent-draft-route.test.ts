@@ -21,11 +21,11 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('_test')) {
 
 import { NextRequest } from 'next/server';
 import type { User } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { resetRateLimits } from '@/server/security/rate-limit';
 import { setFeatureFlagOverride, resetFeatureFlagOverrides } from '@/features/flags';
-import { parseTaskAgentStreamEvent, type TaskAgentStreamEvent } from '@/domain/tasks/task-agent-stream';
+import { parseTaskAgentStreamEvent, type TaskAgentStreamEvent } from '@qcet/shared/domain/tasks/task-agent-stream';
 import { POST as draftRoute } from '@/app/api/tasks/agent-draft/route';
 
 const runId = crypto.randomBytes(4).toString('hex');

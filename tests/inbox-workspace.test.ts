@@ -14,7 +14,7 @@ import {
   filterNotificationsByTab,
   mapDbNotification,
   type QCETNotification,
-} from "../src/lib/notification-triage";
+} from "@qcet/shared/lib/notification-triage";
 
 describe("QCET App Shell & Inbox Test Suite", () => {
   describe("1. Canonical Navigation Registry & Inbox Route", () => {

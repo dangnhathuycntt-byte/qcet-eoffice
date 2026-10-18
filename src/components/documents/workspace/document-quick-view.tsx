@@ -7,10 +7,10 @@ import { ChevronLeft, Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
-import type { DocumentItem, OfficialDocument } from "@/types/document";
+import type { DocumentItem, OfficialDocument } from "@qcet/contracts/types/document";
 import { useDocumentDetail } from "@/hooks/use-document-detail";
-import { fromDocumentItem, fromOfficialDocument, type DocumentViewModel } from "@/lib/documents/document-view-model";
-import { resolveActiveFileId } from "@/lib/documents/file-viewer-state";
+import { fromDocumentItem, fromOfficialDocument, type DocumentViewModel } from "@qcet/shared/lib/documents/document-view-model";
+import { resolveActiveFileId } from "@qcet/shared/lib/documents/file-viewer-state";
 import { DocumentFileRows, DocumentFileScreen, DocumentFileViewer } from "../document-file-viewer";
 import { useIsPhone } from "@/hooks/use-is-phone";
 import { hasOpenDetailsPopover, useTrackOpenPopover } from "../popover-escape-guard";
@@ -18,7 +18,7 @@ import { DocumentInfoSections, DocumentSummaryBlock } from "./document-workspace
 import { AddDocumentFileButton, DocumentEditDialog, useAddDocumentFiles } from "./document-edit";
 import { AgentIcon } from "@/components/icons/agent-icon";
 import { useRuntimeFeature } from "@/lib/runtime-features";
-import { isAssistantEligibleDocument } from "@/domain/assistant/assistant-document-eligibility";
+import { isAssistantEligibleDocument } from "@qcet/shared/domain/assistant/assistant-document-eligibility";
 
 /** Chỉ in khối chi tiết (`document-quick-body`); phần còn lại của trang bị ẩn khi in. */
 const PRINT_DETAIL_CSS = `@media print {

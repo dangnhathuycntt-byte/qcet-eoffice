@@ -9,23 +9,23 @@ import {
 } from "lucide-react";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
-import { TaskIconDepartment } from "@/lib/icons/task-icons";
-import { getStatusDisplay, PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
-import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
+import { TaskIconDepartment } from "@qcet/shared/lib/icons/task-icons";
+import { getStatusDisplay, PRIORITY_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
+import { normalizeDisplayStatus } from "@qcet/shared/domain/tasks/canonical-semantics";
 import type {
   SchoolTask,
   StaffTask,
   TaskCategory,
   TaskPriority,
   TaskStatus,
-} from "@/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
 import { canAssignUnitTask, matchesUser } from "@/lib/role-task-filter";
 import { useDisplayDensity } from "@/components/density-provider";
 import {
   getAcademicMonthPeriod,
   getSystemReferenceDate,
-} from "@/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-host";
 import { Badge } from "@/components/ui/badge";
@@ -71,11 +71,11 @@ import { TaskBulkActionBar, calculateExtendedDeadline } from "./components/batch
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   filterBulkTransitionTargets,
-} from "@/domain/tasks/bulk-lifecycle-capability";
+} from "@qcet/shared/domain/tasks/bulk-lifecycle-capability";
 import type {
   TaskActorContract,
   TaskEntityContract,
-} from "@/domain/tasks/contract";
+} from "@qcet/shared/domain/tasks/contract";
 import { Pressable } from "@/components/ui/pressable";
 
 /**

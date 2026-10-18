@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { GET as getDashboardOverview } from '../src/app/api/dashboard/overview/route';
 import { GET as getDocumentStats } from '../src/app/api/documents/stats/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 
 describe('Dashboard API Routes (Zero Mock Fallback)', () => {
   let token: string;

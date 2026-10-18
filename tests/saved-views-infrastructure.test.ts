@@ -19,7 +19,7 @@ import {
   type TaskViewCriteria,
   type SavedTaskView,
 } from "../src/lib/saved-views/saved-views-store";
-import type { AuthUser } from "../src/types/auth";
+import type { AuthUser } from "@qcet/contracts/types/auth";
 
 describe("Saved Views Infrastructure", () => {
   // Mock localStorage for node environment

@@ -1,4 +1,4 @@
-import type { UserQuery } from "@/contracts/users";
+import type { UserQuery } from "@qcet/contracts/users";
 
 type DirectoryQueryInput = Pick<
   UserQuery,

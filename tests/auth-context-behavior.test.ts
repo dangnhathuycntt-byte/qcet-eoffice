@@ -5,8 +5,8 @@ import {
   filterUpcomingByRole,
   matchesUser,
 } from "../src/lib/role-task-filter";
-import { SchoolTask, UpcomingItem } from "../src/types/dashboard";
-import type { UserRole } from "../src/types/auth";
+import { SchoolTask, UpcomingItem } from "@qcet/contracts/types/dashboard";
+import type { UserRole } from "@qcet/contracts/types/auth";
 
 describe("Task 3: Authentication Session Management & Removal of Auto-Login Demo", () => {
   describe("1. Role Checkers and Task Filters handle unauthenticated (null/undefined) safely", () => {

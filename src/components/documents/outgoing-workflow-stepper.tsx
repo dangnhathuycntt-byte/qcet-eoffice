@@ -16,7 +16,7 @@ import {
 import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
 import { staggerContainerVariants, listItemVariants } from "@/lib/motion/variants";
-import type { OutgoingDocumentStatus } from "@/contracts/documents";
+import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
 
 const OUTGOING_STEPS = [
   { key: "DRAFT" as const, label: "Dự thảo", icon: FilePen },

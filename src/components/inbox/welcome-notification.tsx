@@ -5,7 +5,7 @@ import Link from "next/link";
 import { WelcomeInstallDemo } from "@/components/inbox/welcome-install-demo";
 import { Pressable } from "@/components/ui/pressable";
 import { focusRingClass } from "@/components/ui/focus-ring";
-import { INSTITUTION_CONFIG } from "@/config/institution";
+import { INSTITUTION_CONFIG } from "@qcet/shared/config/institution";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 

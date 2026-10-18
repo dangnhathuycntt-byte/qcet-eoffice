@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { AssignmentStatus, AssignmentType, BodyStatus, DelegationStatus, UnitStatus, UserRole } from '@prisma/client';
 import {
   ActiveBodyMembership,

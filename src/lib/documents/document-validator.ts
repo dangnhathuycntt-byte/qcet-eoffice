@@ -3,7 +3,7 @@ import type {
   DocumentUrgency,
   DocumentSecurityLevel,
   DocumentStatus,
-} from "@/types/document";
+} from "@qcet/contracts/types/document";
 
 export interface ValidationResult {
   isValid: boolean;

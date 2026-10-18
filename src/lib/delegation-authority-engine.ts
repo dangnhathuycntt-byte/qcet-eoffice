@@ -1,4 +1,4 @@
-import type { DelegationRule, DelegationScope } from "../types/delegation";
+import type { DelegationRule, DelegationScope } from "@qcet/contracts/types/delegation";
 
 function normalizeDateString(date?: string | Date): string {
   if (!date) {

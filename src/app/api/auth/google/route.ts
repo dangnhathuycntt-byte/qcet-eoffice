@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppBaseUrl } from "@/server/auth/google-oauth";
-import { sanitizeRedirectUrl } from "@/lib/login-helpers";
+import { sanitizeRedirectUrl } from "@qcet/shared/lib/login-helpers";
 import { isFeatureEnabled } from "@/features/flags";
 
 export async function GET(req: NextRequest) {

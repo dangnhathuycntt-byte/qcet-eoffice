@@ -1,4 +1,4 @@
-import type { OutgoingDocumentStatus } from "@/contracts/documents";
+import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
 
 /**
  * Thao tác theo bước của văn bản đi: từ trạng thái nào gọi route nào và route đó chuyển sang trạng thái nào.

@@ -9,9 +9,9 @@
  */
 import { z } from "zod";
 import { DossierStatus, type DossierDisposalProposal } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { prisma } from "@qcet/db/prisma";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { SeparationOfDutiesError } from "@/server/authorization/errors";
@@ -19,7 +19,7 @@ import { authorize } from "@/server/authorization/authorization-engine";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import type { CapabilityAction } from "@/server/authorization/capability";
-import { isPermanent, isRetentionExpired, retentionEnd, validateExtendYears } from "@/domain/dossiers/disposal-rules";
+import { isPermanent, isRetentionExpired, retentionEnd, validateExtendYears } from "@qcet/shared/domain/dossiers/disposal-rules";
 import { requestFileObjectPurges } from "@/server/files/file-object-purge";
 
 export const ProposeDisposalSchema = z

@@ -21,7 +21,7 @@ process.env.JWT_SECRET = TEST_SECRET;
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { UserRole } from '@prisma/client';
 
 import { middleware } from '../src/middleware';

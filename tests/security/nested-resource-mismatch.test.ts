@@ -18,7 +18,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { UserRole, TaskScope, TaskPriority, TaskStatus, TaskActorRole, UnitType } from '@prisma/client';
 import { signSessionToken } from '@/lib/jwt-session';
 import { DELETE as deleteDeliverable } from '@/app/api/tasks/[id]/deliverables/route';

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { GET as getTasks } from '../src/app/api/tasks/route';
 import { DELETE as deleteTask } from '../src/app/api/tasks/[id]/route';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { TaskScope, TaskPriority, TaskStatus, TaskActorRole, DeliverableReviewStatus, ResolutionType } from '@prisma/client';
 

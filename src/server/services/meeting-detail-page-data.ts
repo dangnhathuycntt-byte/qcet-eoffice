@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import prisma from "@qcet/db/prisma";
 import { ApiError } from "@/server/api/errors";
 import { MeetingService } from "@/server/services/meeting-service";
 

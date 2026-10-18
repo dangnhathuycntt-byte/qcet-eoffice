@@ -4,8 +4,8 @@
  * `runAssistantTool` không bao giờ ném lỗi: mọi lỗi thành JSON `{ "error": … }` gửi lại cho model.
  */
 import { z } from "zod";
-import type { AssistantSourceRef, AssistantStep, AssistantToolName } from "@/contracts/assistant";
-import { ASSISTANT_TOOL_NAMES } from "@/contracts/assistant";
+import type { AssistantSourceRef, AssistantStep, AssistantToolName } from "@qcet/contracts/assistant";
+import { ASSISTANT_TOOL_NAMES } from "@qcet/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import type { GatewayToolDefinition } from "@/server/services/agent-gateway";
 import {

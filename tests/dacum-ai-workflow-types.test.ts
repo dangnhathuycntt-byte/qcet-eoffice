@@ -8,7 +8,7 @@ import type {
   TriageStatus,
   AIRiskStatus,
   AISuggestedAction,
-} from "../src/types/dashboard";
+} from "@qcet/contracts/types/dashboard";
 
 describe("DACUM AI Workflow Types Verification", () => {
   test("defines all required AI review and escalation types cleanly", () => {

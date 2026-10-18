@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DocumentViewerBar, DocumentViewerRail } from "./document-viewer-rail";
 import type { PdfCanvasController, PdfPosition } from "./pdf-document-canvas";
-import { isSafeUrl, toServedFileUrl } from "@/lib/url-utils";
-import { describeFileFormat, getPreviewKind } from "@/lib/documents/file-viewer-state";
+import { isSafeUrl, toServedFileUrl } from "@qcet/shared/lib/url-utils";
+import { describeFileFormat, getPreviewKind } from "@qcet/shared/lib/documents/file-viewer-state";
 
 // pdf.js cần API trình duyệt: chỉ nạp ở client, tách chunk riêng
 const PdfDocumentCanvas = dynamic(() => import("./pdf-document-canvas"), {

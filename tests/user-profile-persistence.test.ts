@@ -14,9 +14,9 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/qcet_eoffice?schema=public";
 }
 
-import { UpdateUserProfileSchema } from "../src/contracts/users";
+import { UpdateUserProfileSchema } from "@qcet/contracts/users";
 import { PATCH, GET } from "../src/app/api/auth/me/route";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { signSessionToken } from "../src/lib/jwt-session";
 
 describe("R7: User Profile Persistence & Security Suite", () => {

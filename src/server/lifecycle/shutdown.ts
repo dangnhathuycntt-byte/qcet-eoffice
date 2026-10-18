@@ -3,7 +3,7 @@
  * Handles SIGTERM and SIGINT signals cleanly in production containers.
  * Closes database connection pool and ensures in-flight operations finish safely.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import { logger } from "@/server/observability/logger";
 
 let shutdownRegistered = false;

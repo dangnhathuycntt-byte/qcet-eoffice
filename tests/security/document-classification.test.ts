@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import fs from 'node:fs';
 import path from 'node:path';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   UserRole,
   DocumentType,

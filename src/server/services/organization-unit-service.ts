@@ -10,7 +10,7 @@
  * 5. Audit Logging: Every structural and metadata mutation is immutably recorded via auditService.
  */
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import type { OrganizationalUnit, UnitClosurePath } from "@prisma/client";
 import { Prisma, UnitType, UnitStatus } from "@prisma/client";
 import {
@@ -19,7 +19,7 @@ import {
   type AuthorizationResource,
 } from "@/server/authorization/hybrid-authorization";
 import { resolveUserContext } from "@/server/documents/incoming-document-service";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import {
   NotFoundError,
   ValidationError,

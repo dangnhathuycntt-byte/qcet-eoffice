@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { ICT_TIME_ZONE, toIctDateTimeParts, formatIsoDate, formatDisplayDate, formatCompactDate, formatTime, formatDateTime, formatRelativeDate, daysUntil, RELATIVE_NEAR_TERM_MAX_DAYS } from "../src/lib/format";
-import { getSystemReferenceDate } from "../src/lib/academic-calendar";
+import { getSystemReferenceDate } from "@qcet/shared/lib/academic-calendar";
 
 describe("C19 — date/time formatting utilities (src/lib/format)", () => {
 

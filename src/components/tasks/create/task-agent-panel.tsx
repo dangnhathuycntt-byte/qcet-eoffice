@@ -12,10 +12,10 @@ import { AgentEmptyPattern, AgentReplyText, AgentWorkLog, CopyMessageButton } fr
 import { AttachmentCard, createChatAttachment, type ChatAttachment } from "@/components/agent-chat/agent-attachments";
 import { AgentModelPicker } from "@/components/agent-chat/agent-model-picker";
 import { useAgentModel } from "@/components/agent-chat/agent-models";
-import type { TaskAgentDraft, TaskAgentPerson } from "@/domain/tasks/task-agent-draft";
-import { TASK_AGENT_ATTACHMENT_ACCEPT, checkTaskAgentAttachments } from "@/domain/tasks/task-agent-attachments";
-import { parseTaskAgentStreamEvent, splitNdjson, type TaskAgentStreamResult } from "@/domain/tasks/task-agent-stream";
-import { agentReplyToPlainText } from "@/domain/tasks/agent-reply-format";
+import type { TaskAgentDraft, TaskAgentPerson } from "@qcet/shared/domain/tasks/task-agent-draft";
+import { TASK_AGENT_ATTACHMENT_ACCEPT, checkTaskAgentAttachments } from "@qcet/shared/domain/tasks/task-agent-attachments";
+import { parseTaskAgentStreamEvent, splitNdjson, type TaskAgentStreamResult } from "@qcet/shared/domain/tasks/task-agent-stream";
+import { agentReplyToPlainText } from "@qcet/shared/domain/tasks/agent-reply-format";
 
 // ─── Bật/tắt theo cấu hình server ──────────────────────────────
 /** Agent chỉ hiện khi cờ `taskAgent` bật và server có cấu hình gateway (đọc một lần từ /api/runtime-config). */

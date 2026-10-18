@@ -15,11 +15,11 @@ import {
   type AssistantStreamEvent,
   type AssistantTaskProposal,
   type AssistantToolName,
-} from "@/contracts/assistant";
+} from "@qcet/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import type { AssistantToolContext, describeAssistantContext, runAssistantTool } from "@/server/assistant/assistant-tools";
-import { AuditAction, AuditEntityType, logAuditEvent } from "@/lib/db/audit";
-import { formatIsoDate } from "@/lib/format/date";
+import { AuditAction, AuditEntityType, logAuditEvent } from "@qcet/db/audit";
+import { formatIsoDate } from "@qcet/shared/lib/format/date";
 import { ApiError } from "@/server/api/errors";
 import { logger } from "@/server/observability/logger";
 import { ToolFailure } from "@/server/assistant/assistant-tool-shared";
@@ -42,12 +42,12 @@ import {
   type GatewayToolCall,
   type GatewayToolDefinition,
 } from "@/server/services/agent-gateway";
-import { buildAssistantSystemPrompt, assistantDateFrame } from "@/domain/assistant/assistant-prompt";
-import { deriveConversationTitle } from "@/domain/assistant/assistant-history";
+import { buildAssistantSystemPrompt, assistantDateFrame } from "@qcet/shared/domain/assistant/assistant-prompt";
+import { deriveConversationTitle } from "@qcet/shared/domain/assistant/assistant-history";
 import { generateConversationTitle } from "@/server/assistant/assistant-title";
-import type { TaskAgentContentPart } from "@/domain/tasks/task-agent-draft";
-import type { TaskAgentAttachmentKind } from "@/domain/tasks/task-agent-attachments";
-import { dedupeSources, selectCitedSources } from "@/domain/assistant/assistant-sources";
+import type { TaskAgentContentPart } from "@qcet/shared/domain/tasks/task-agent-draft";
+import type { TaskAgentAttachmentKind } from "@qcet/shared/domain/tasks/task-agent-attachments";
+import { dedupeSources, selectCitedSources } from "@qcet/shared/domain/assistant/assistant-sources";
 
 /** Giới hạn của một lượt; đổi ở đây, không rải số trong luồng. */
 export const ASSISTANT_LIMITS = {

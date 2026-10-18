@@ -10,7 +10,7 @@ import {
   planUnitSteps,
   resolveOutcome,
   statusAfter,
-} from '../src/domain/documents/submission-rules';
+} from '@qcet/shared/domain/documents/submission-rules';
 
 describe('V-06 quy tắc luồng duyệt tờ trình', () => {
   test('người trình là trưởng đơn vị thì bỏ bước đơn vị đó nhưng giữ đơn vị liên quan khác', () => {

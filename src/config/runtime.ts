@@ -4,7 +4,7 @@
  */
 
 import { getPublicFeatureFlags, isFeatureEnabled } from "@/features/flags";
-import { parseAgentModels, type AgentModelCatalog } from "@/domain/agent/agent-models";
+import { parseAgentModels, type AgentModelCatalog } from "@qcet/shared/domain/agent/agent-models";
 
 export interface PublicRuntimeFeatures {
   googleAuth: boolean;

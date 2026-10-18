@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { setPushSenderForTesting, getVapidPublicKey } from '../src/server/notifications/push-service';
 import { GET as getKeyRoute } from '../src/app/api/notifications/push/key/route';

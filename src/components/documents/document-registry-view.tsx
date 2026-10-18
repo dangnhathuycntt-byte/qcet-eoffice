@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus, DocumentItem } from "@/types/document";
+import type { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus, DocumentItem } from "@qcet/contracts/types/document";
 import { Button } from "@/components/ui/button";
 import { CreateButtonWithHint } from "@/components/ui/onboarding-hint";
 import { useDocumentUrlFilters } from "@/hooks/use-document-url-filters";

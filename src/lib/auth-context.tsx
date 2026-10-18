@@ -9,7 +9,7 @@ import React, {
   ReactNode,
 } from "react";
 import { signOut } from "next-auth/react";
-import { AuthUser, CachedUser, UserRole, OnboardingData, AuthState } from "../types/auth";
+import { AuthUser, CachedUser, UserRole, OnboardingData, AuthState } from "@qcet/contracts/types/auth";
 import { purgeUserOfflineData } from "./pwa/offline-store";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";

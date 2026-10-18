@@ -12,9 +12,9 @@ import {
   CANONICAL_16_UNITS,
   resolvePositionCode,
   matchUnitCodeByTitle,
-} from '../prisma/seeds/canonical-org-seed';
+} from '../packages/db/prisma/seeds/canonical-org-seed';
 
-const src = fs.readFileSync(new URL('../prisma/seed.ts', import.meta.url), 'utf8');
+const src = fs.readFileSync(new URL('../packages/db/prisma/seed.ts', import.meta.url), 'utf8');
 const userRow =
   /\{ email: "([^"]+)", name: "([^"]+)", role: UserRole\.([A-Z_]+), title: "([^"]*)"/g;
 const units = CANONICAL_16_UNITS.map((u) => ({ code: u.code, name: u.name }));

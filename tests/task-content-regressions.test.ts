@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import { UpdateTaskInputSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
+import { UpdateTaskInputSchema, UpdateTaskMetadataSchema } from '@qcet/contracts/tasks';
 import { parseAndValidateJson, MAX_JSON_BODY_SIZE } from '@/server/api/validation';
 import { parseContentToBlocks, serializeBlocksToContent } from '@/components/tasks/detail/task-block-editor';
 

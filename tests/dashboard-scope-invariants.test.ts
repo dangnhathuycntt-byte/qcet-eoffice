@@ -13,8 +13,8 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { filterTasksByScope } from "../src/lib/unified-task-hub";
-import type { AuthUser } from "../src/types/auth";
-import type { SchoolTask } from "../src/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 function task(id: string, leadAssigneeName: string, leadDepartmentCode: string): SchoolTask {
   return {

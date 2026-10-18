@@ -2,7 +2,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { DocumentSecurityLevel, DocumentStatus, DocumentType, MeetingStatus, OutgoingDocumentStatus, TaskActorRole, TaskPriority, TaskScope, TaskStatus } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { loadAuthorizationContext } from '../src/server/authorization/authorization-context-service';
 import type { AuthorizationContext } from '../src/server/authorization/authorization-context';
 import {
@@ -23,7 +23,7 @@ import {
   OVERSIZE_MESSAGE,
   redactContact,
 } from '../src/server/assistant/assistant-tool-shared';
-import { ASSISTANT_TOOL_NAMES } from '../src/contracts/assistant';
+import { ASSISTANT_TOOL_NAMES } from '@qcet/contracts/assistant';
 
 const TODAY = '2026-10-17';
 const rand = crypto.randomBytes(4).toString('hex');

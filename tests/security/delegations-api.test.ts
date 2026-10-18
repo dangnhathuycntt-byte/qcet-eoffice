@@ -17,7 +17,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/qcet_eoffice
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   UserRole,
   UnitType,
@@ -29,7 +29,7 @@ import {
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { GET as getDelegationsRoute, POST as createDelegationRoute } from '@/app/api/delegations/route';
 import { POST as revokeDelegationRoute } from '@/app/api/delegations/[id]/revoke/route';
-import { AuditAction } from '@/lib/db/audit';
+import { AuditAction } from '@qcet/db/audit';
 
 describe('Task 2: Canonical Delegation API & Statutory Enforcement', () => {
   const runId = String(Date.now());

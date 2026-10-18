@@ -10,7 +10,7 @@ import {
   DocumentLedgerTable,
   type LedgerColumnVisibility,
 } from "../src/components/documents/registry/document-ledger";
-import type { OfficialDocument } from "../src/types/document";
+import type { OfficialDocument } from "@qcet/contracts/types/document";
 
 const ALL_OFF: LedgerColumnVisibility = {
   urgency: false,

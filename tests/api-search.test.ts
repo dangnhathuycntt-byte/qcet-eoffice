@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { GET } from "../src/app/api/search/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { prisma } from "../src/lib/prisma";
-import { getCurrentAcademicPeriod } from "../src/lib/academic-calendar";
+import { prisma } from "@qcet/db/prisma";
+import { getCurrentAcademicPeriod } from "@qcet/shared/lib/academic-calendar";
 import type {
   GlobalSearchPayload,
   SearchDocumentResult,
   SearchTaskResult,
   SearchUserResult,
-} from "../src/contracts/search";
+} from "@qcet/contracts/search";
 
 // Tập khóa lấy từ contract: thiếu hay thừa khóa so với contract là lỗi typecheck.
 const keysOf = <T,>(shape: Record<keyof T, true>) => Object.keys(shape).sort();

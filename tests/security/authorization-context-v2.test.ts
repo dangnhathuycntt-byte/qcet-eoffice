@@ -14,7 +14,7 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('_test')) {
   process.env.DATABASE_URL = process.env.DATABASE_URL.replace(/\/qcet_eoffice(\?.*)?$/, '/qcet_test$1');
 }
 
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   UserRole,
   AssignmentType,

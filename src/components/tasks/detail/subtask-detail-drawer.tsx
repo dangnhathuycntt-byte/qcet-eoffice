@@ -3,16 +3,16 @@
 import * as React from "react";
 import styles from "../task-detail-page.module.css";
 import { X, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { TaskIconCollaborators } from "@/lib/icons/task-icons";
+import { TaskIconCollaborators } from "@qcet/shared/lib/icons/task-icons";
 import { SubtaskOutlineRail } from "./subtask-outline-rail";
 import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
-import type { StaffTask, TaskStatus } from "@/types/dashboard";
-import type { AuthUser } from "@/types/auth";
-import { STATUS_OPTIONS } from "@/domain/tasks/display-config";
-import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
+import type { StaffTask, TaskStatus } from "@qcet/contracts/types/dashboard";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import { STATUS_OPTIONS } from "@qcet/shared/domain/tasks/display-config";
+import { normalizeDisplayStatus } from "@qcet/shared/domain/tasks/canonical-semantics";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { getTaskUnitId } from "@/lib/tasks/task-unit";
+import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { markSelectionStartTarget } from "./block-selection-canvas";
 import { TaskBlockEditor } from "./task-block-editor";
@@ -24,7 +24,7 @@ import {
   taskStateMachine,
   buildActorContext,
   buildTaskContext,
-} from "@/domain/tasks/state-machine";
+} from "@qcet/shared/domain/tasks/state-machine";
 
 export interface SubtaskDetailDrawerProps {
   isOpen: boolean;

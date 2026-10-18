@@ -17,8 +17,8 @@
  * - Reliable Outbox Event Publishing via publishOutboxEvent
  */
 
-import { prisma } from "@/lib/prisma";
-import { getCurrentAcademicPeriod } from "@/lib/academic-calendar";
+import { prisma } from "@qcet/db/prisma";
+import { getCurrentAcademicPeriod } from "@qcet/shared/lib/academic-calendar";
 import { generateTaskCodeAtomic } from "@/lib/task-code-generator";
 import { Prisma } from "@prisma/client";
 import type { Document, DocumentIncomingWorkflow, UnitWorkAssignment } from "@prisma/client";
@@ -41,8 +41,8 @@ import {
   type AuthorizationResource,
   HybridAuthorizationError,
 } from "@/server/authorization/hybrid-authorization";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import {
   ConflictError,
   InvalidTransitionError,

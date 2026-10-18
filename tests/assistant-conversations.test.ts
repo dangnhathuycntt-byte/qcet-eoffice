@@ -17,12 +17,12 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('_test')) {
 
 import { NextRequest } from 'next/server';
 import { TaskPriority, TaskScope, TaskStatus, type AssistantConversation, type AssistantMessage, type User } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
-import { AuditAction } from '@/lib/db/audit';
+import { prisma } from '@qcet/db/prisma';
+import { AuditAction } from '@qcet/db/audit';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { resetRateLimits } from '@/server/security/rate-limit';
 import { setFeatureFlagOverride, resetFeatureFlagOverrides } from '@/features/flags';
-import type { AssistantConversationListDTO, AssistantSourceRef } from '@/contracts/assistant';
+import type { AssistantConversationListDTO, AssistantSourceRef } from '@qcet/contracts/assistant';
 import { ValidationError } from '@/server/api/errors';
 import {
   appendMessage,

@@ -1,4 +1,4 @@
-import { isTaskOverdue } from "@/lib/academic-calendar";
+import { isTaskOverdue } from "@qcet/shared/lib/academic-calendar";
 
 export interface CalendarBaseEntry {
   id: string;

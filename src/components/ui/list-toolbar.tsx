@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
 import { Loader2, RotateCcw, X } from "lucide-react";
-import { TaskIconFilter, TaskIconSearch } from "@/lib/icons/task-icons";
+import { TaskIconFilter, TaskIconSearch } from "@qcet/shared/lib/icons/task-icons";
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
 import { Pressable } from "@/components/ui/pressable";

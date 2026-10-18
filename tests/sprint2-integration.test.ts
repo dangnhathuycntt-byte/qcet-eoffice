@@ -5,7 +5,7 @@ import path from "node:path";
 import {
   computeSchoolTaskRollup,
 } from "../src/lib/dashboard-aggregator";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
 
 describe("Sprint 2 Integration & Navigation", () => {
 

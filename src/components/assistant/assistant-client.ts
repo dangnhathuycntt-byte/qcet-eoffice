@@ -11,8 +11,8 @@ import {
   type AssistantMessageProposalDTO,
   type AssistantProposalUpdateRequest,
   type AssistantStreamEvent,
-} from "@/contracts/assistant";
-import { splitNdjson } from "@/domain/tasks/task-agent-stream";
+} from "@qcet/contracts/assistant";
+import { splitNdjson } from "@qcet/shared/domain/tasks/task-agent-stream";
 import { assistantHttpErrorMessage } from "@/components/assistant/assistant-model";
 
 export class AssistantRequestError extends Error {

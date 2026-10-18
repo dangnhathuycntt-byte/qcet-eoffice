@@ -1,4 +1,4 @@
-import { OfficialDocument, DocumentStats } from "../../src/types/document";
+import { OfficialDocument, DocumentStats } from "@qcet/contracts/types/document";
 
 export const MOCK_DOCUMENTS: OfficialDocument[] = [
   {

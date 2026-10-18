@@ -5,7 +5,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, JobCatalogGroup, TaskActorRole, TaskStatus, UnitType } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { scanTaskReminders } from '../src/server/tasks/task-reminder-scanner';
 
 const runId = `t06_${Date.now()}`;

@@ -9,8 +9,8 @@ import {
   FileCheck,
   CornerDownRight,
 } from "lucide-react";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
-import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
+import type { SchoolTask, StaffTask } from "@qcet/contracts/types/dashboard";
+import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@qcet/contracts/types/workspace";
 import type { UniversalActionQueueItems, WorkspaceScope } from "../types";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
