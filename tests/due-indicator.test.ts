@@ -54,21 +54,26 @@ describe("getDueIndicator: chỉ báo hạn dùng chung cho bảng và thẻ di 
 });
 
 describe("Thanh tóm tắt: số đếm theo nhiệm vụ cha không vượt tổng", () => {
+  // Trễ hạn chỉ xét hạn của chính nhiệm vụ (một định nghĩa cho tab, bộ lọc, bộ đếm): việc con trễ không kéo cha vào.
   test("việc con trễ hạn không làm số trễ hạn vượt số nhiệm vụ", () => {
-    const parent = (id: string, subDue: string[]): SchoolTask =>
+    const parent = (id: string, dueDate: string, subDue: string[]): SchoolTask =>
       ({
         id,
         title: id,
         status: "IN_PROGRESS",
-        dueDate: "2026-12-31",
+        dueDate,
         subTasks: subDue.map((d, i) => ({ id: `${id}-s${i}`, title: "sub", status: "IN_PROGRESS", dueDate: d })),
       }) as unknown as SchoolTask;
 
-    const tasks = [parent("a", ["2026-09-01", "2026-09-02", "2026-09-03"]), parent("b", ["2026-09-01"])];
+    const tasks = [
+      parent("a", "2026-12-31", ["2026-09-01", "2026-09-02", "2026-09-03"]),
+      parent("b", "2026-12-31", ["2026-09-01"]),
+      parent("c", "2026-09-05", []),
+    ];
     const counts = computeWorkspaceTabCounts({ scopedTasks: tasks, referenceDate: "2026-09-10" });
 
-    assert.equal(counts.all, 2);
-    assert.equal(counts.overdue, 2);
+    assert.equal(counts.all, 3);
+    assert.equal(counts.overdue, 1);
     assert.ok(counts.overdue <= counts.all);
   });
 });

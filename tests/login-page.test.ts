@@ -292,8 +292,9 @@ describe("Login Specification & Multi-State Compliance (Boards Login & Login2)",
     assert.ok(loginPageSource.includes("Chọn tài khoản"));
     assert.ok(loginPageSource.includes("Luôn hỏi trước khi vào, vì đây là máy dùng chung."));
 
-    // 6. Deep link redirect state
-    assert.ok(loginPageSource.includes("Đăng nhập để mở nhiệm vụ"));
+    // 6. Vào từ liên kết sâu: giữ đường dẫn đích đã làm sạch (chỉ cùng miền) để về đúng trang sau đăng nhập
+    assert.match(loginPageSource, /const targetUrl = React\.useMemo\(\(\) => sanitizeRedirectUrl\(\s*searchParams\.get\("returnTo"\)/);
+    assert.ok(loginPageSource.includes('signIn("google", { callbackUrl: targetUrl })'));
 
     // 7. Expired session & Logout
     assert.ok(loginPageSource.includes("Phiên đã hết hạn"));

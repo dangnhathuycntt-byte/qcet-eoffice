@@ -9,12 +9,12 @@ describe("Bộ icon thao tác nhiệm vụ (cùng ngôn ngữ với icon sidebar
 
   // Trạng thái, ưu tiên và ngày hạn theo hình học của Linear: lục giác 14px có lề 1px, còn lại lưới 16
   const LINEAR_STATUS = /^TaskIconStatus(New|InProgress|Review|Overdue|Done|Cancelled)$/;
-  const LINEAR_GRID = /^TaskIcon(Priority(Urgent|High|Normal|Low)|Due(Soon|Overdue|Closed)?)$/;
+  const LINEAR_GRID = /^TaskIcon(Priority(None|Urgent|High|Normal|Low)|Due(Soon|Overdue|Closed)?)$/;
   // Ba nút tròn của thanh công cụ vẽ như icon sidebar: lưới 16, nét 1,25
   const TOOLBAR = /^TaskIcon(Search|Filter|Display)$/;
 
-  it("xuất đủ 57 icon", () => {
-    assert.equal(entries.length, 57);
+  it("xuất đủ 58 icon", () => {
+    assert.equal(entries.length, 58);
   });
 
   for (const [name, Icon] of entries) {
