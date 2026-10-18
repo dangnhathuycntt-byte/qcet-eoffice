@@ -881,7 +881,8 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         },
       });
 
-      const req = new NextRequest("http://localhost:3000/api/documents/outgoing?limit=1000", {
+      // limit tối đa 100 như GET /api/documents (trước đây không có trần); văn bản của lần chạy này nằm ở trang đầu.
+      const req = new NextRequest("http://localhost:3000/api/documents/outgoing?limit=100", {
         headers: { Authorization: `Bearer ${drafterToken}` },
       });
       const res = await listOutgoingRoute(req);

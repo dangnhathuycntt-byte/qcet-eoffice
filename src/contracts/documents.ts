@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IncomingDocumentStatus } from '@prisma/client';
 import { PaginationQuerySchema, IsoDateStringSchema } from './common';
 import { isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE } from '@/lib/url-utils';
 
@@ -53,6 +54,19 @@ export const OutgoingDocumentStatusSchema = z.enum([
   'RECALLED',
 ]);
 export type OutgoingDocumentStatus = z.infer<typeof OutgoingDocumentStatusSchema>;
+
+/**
+ * Phân trang danh sách luồng văn bản đến/đi (`GET /api/documents/incoming`, `/outgoing`): cùng giới hạn với
+ * danh sách văn bản (`DocumentQuerySchema`); mặc định 50 bản ghi từ vị trí 0.
+ */
+export const WorkflowListPaginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const IncomingWorkflowListQuerySchema = WorkflowListPaginationSchema.extend({
+  status: z.nativeEnum(IncomingDocumentStatus).optional(),
+});
 
 /**
  * Document query filters schema.

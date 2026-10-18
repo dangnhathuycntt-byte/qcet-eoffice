@@ -1,12 +1,10 @@
 /**
  * Đặc tả tham số phân trang của `GET /api/documents/outgoing` (limit/offset).
  *
- * Khóa các trường hợp hiện có hành vi hợp lý: mặc định limit=50/offset=0, phân trang theo thứ tự tạo
- * workflow mới nhất trước, limit=0, tham số rỗng, offset vượt tổng, tổng số và danh sách chỉ trong phạm vi
- * đọc (không có văn bản tuyệt mật, không có văn bản của người khác). Lỗi theo RFC 9457.
- *
- * Không khóa các giá trị không phải số nguyên không âm (`abc`, âm, thập phân, `Infinity`, rất lớn): hiện
- * chúng ra 500 hoặc phân trang sai, đã ghi nhận là lỗi để sửa riêng.
+ * Mặc định limit=50/offset=0, phân trang theo thứ tự tạo workflow mới nhất trước, tham số rỗng, offset vượt
+ * tổng, tổng số và danh sách chỉ trong phạm vi đọc (không có văn bản tuyệt mật, không có văn bản của người
+ * khác). limit ngoài 1..100, offset âm hoặc giá trị không phải số nguyên trả 400 như GET /api/documents
+ * (trước đây vào thẳng Prisma: 500 hoặc phân trang sai). Lỗi theo RFC 9457.
  * Chạy trên qcet_test; dữ liệu do test tự tạo theo runId và được dọn trong after().
  */
 import { describe, test, before, after } from "node:test";
@@ -123,12 +121,23 @@ describe("GET /api/documents/outgoing — limit/offset", () => {
     assert.equal(body.total, 3);
   });
 
-  test("limit=0 -> danh sách rỗng nhưng tổng số vẫn đúng", async () => {
-    const { res, body } = await list("?limit=0");
+  // limit=0 trước đây trả 200 danh sách rỗng; nay thống nhất giới hạn 1..100 với GET /api/documents.
+  for (const query of ["?limit=0", "?limit=101", "?limit=abc", "?limit=-1", "?limit=1.5", "?limit=Infinity", "?offset=abc", "?offset=-1", "?offset=1.5"]) {
+    test(`${query} -> 400 VALIDATION_ERROR (RFC 9457), không có danh sách`, async () => {
+      const { res, body } = await list(query);
+      assert.equal(res.status, 400);
+      assert.equal(res.headers.get("content-type"), PROBLEM_JSON);
+      assert.equal(body.code, "VALIDATION_ERROR");
+      assert.equal(body.items, undefined);
+      assert.equal(body.total, undefined);
+    });
+  }
+
+  test("limit=100 (biên trên) -> 200, đủ văn bản trong phạm vi", async () => {
+    const { res, body } = await list("?limit=100");
     assert.equal(res.status, 200);
-    assert.equal(body.limit, 0);
-    assert.deepEqual(body.items, []);
-    assert.equal(body.total, 3);
+    assert.equal(body.limit, 100);
+    assert.deepEqual(idsOf(body.items), ownDocs);
   });
 
   test("tham số rỗng (limit=&offset=) -> dùng mặc định 50/0", async () => {

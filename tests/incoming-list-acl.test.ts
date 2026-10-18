@@ -186,6 +186,34 @@ describe("GET /api/documents/incoming: phạm vi đọc văn bản đến", () =
     assert.deepEqual((await visibleIncoming("leadUser")).ids, [docs.thuong]);
   });
 
+  it("tham số sai: 400 VALIDATION_ERROR sau bước xác thực (trước đây vào thẳng Prisma, trả 500)", async () => {
+    const unauthenticated = await listIncoming(null, { limit: "abc" });
+    assert.equal(unauthenticated.status, 401, "xác thực trước validate");
+    const invalid: Array<Record<string, string>> = [
+      { limit: "abc" },
+      { limit: "0" },
+      { limit: "101" },
+      { offset: "-1" },
+      { offset: "1.5" },
+      { status: "XYZ" },
+    ];
+    for (const params of invalid) {
+      const res = await listIncoming("memberA", params);
+      assert.equal(res.status, 400, JSON.stringify(params));
+      assert.match(res.headers.get("content-type") ?? "", /application\/problem\+json/);
+      const body = await res.json();
+      assert.equal(body.code, "VALIDATION_ERROR");
+      assert.equal(body.items, undefined);
+    }
+  });
+
+  it("trạng thái hợp lệ và tham số rỗng: 200 như không lọc", async () => {
+    const filtered = await visibleIncoming("memberA", { status: IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT });
+    assert.ok(filtered.ids.includes(docs.thuong));
+    const blank = await visibleIncoming("memberA", { status: "", limit: "", offset: "" });
+    assert.deepEqual([...blank.ids].sort(), [...(await visibleIncoming("memberA")).ids].sort());
+  });
+
   it("phân trang áp sau ACL: total là số văn bản người xem được đọc", async () => {
     const expected = await visibleInDocumentList("memberA");
     const page = await visibleIncoming("memberA", { limit: "1", offset: "0" });
