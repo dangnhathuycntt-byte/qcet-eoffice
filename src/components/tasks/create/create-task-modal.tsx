@@ -267,6 +267,12 @@ export function CreateTaskModal({
     [fitTitleHeight],
   );
   React.useLayoutEffect(() => fitTitleHeight(titleInputRef.current), [form.formData.title, fitTitleHeight]);
+  // Tên đã điền sẵn (thẻ đề xuất của Trợ lý, nháp khôi phục): con trỏ đứng cuối tên để gõ tiếp, không ở đầu dòng
+  const focusTitleEnd = React.useCallback(() => {
+    const el = titleInputRef.current;
+    el?.setSelectionRange(el.value.length, el.value.length);
+    return el;
+  }, []);
   // Xoay màn hình hoặc đổi cỡ cửa sổ làm đổi chỗ ngắt dòng: đo lại để không cắt dòng cuối
   React.useEffect(() => {
     if (!isOpen) return;
@@ -447,7 +453,7 @@ export function CreateTaskModal({
           />
           <Dialog.Popup
             // Mở hộp thì focus ngay ô tên (Base UI làm sau khi gắn), không chuyển focus giữa lúc hộp đang phóng to
-            initialFocus={titleInputRef}
+            initialFocus={focusTitleEnd}
             className={cn(
               "group/dlg pointer-events-none fixed inset-0 z-50 flex items-start justify-center px-3 py-[6vh] outline-none max-md:p-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+47px)] max-md:pb-[max(calc(env(safe-area-inset-bottom,0px)+47px),calc(var(--keyboard-height,0px)+8px))]",
               // Desktop: phóng từ 95% kèm hiện dần như hộp của Linear (đo 16/10/2026: scale 0,95 → 1, xong ~200ms); điện thoại trượt lên ở khung bên dưới

@@ -127,6 +127,8 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("e.isComposing"), "Cmd/Ctrl+Enter không được chốt khi đang gõ IME");
     // Enter ở ô tên chỉ chuyển ô khi không đang gõ Telex/IME
     assert.ok(source.includes("!e.nativeEvent.isComposing"), "Enter ở ô tên phải bỏ qua khi đang soạn IME");
+    // Tên điền sẵn (thẻ đề xuất của Trợ lý): mở hộp thì con trỏ ở cuối tên, không ở đầu dòng (người dùng báo 18/10/2026)
+    assert.ok(source.includes("initialFocus={focusTitleEnd}") && source.includes("el?.setSelectionRange(el.value.length, el.value.length);"));
     // Tìm người chủ trì gõ không dấu vẫn ra
     const pickerSource = fs.readFileSync(
       path.join(__dirname, "..", "src", "components", "tasks", "create", "person-pill-picker.tsx"),

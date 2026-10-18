@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ArrowUpRight, Check, ListPlus, Minus } from "lucide-react";
 import type { AssistantTaskProposal } from "@/contracts/assistant";
 import { formatDisplayDate } from "@/lib/format/date";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import type { AssistantProposalTask } from "@/components/assistant/assistant-model";
@@ -14,19 +13,10 @@ import type { AssistantProposalTask } from "@/components/assistant/assistant-mod
 const SHOWN_SUBTASKS = 5;
 
 /**
- * Trường bắt buộc của hộp tạo nhiệm vụ mà đề xuất còn thiếu: chỉ nhắc một lần ở chân thẻ, lưới không ghi "Chưa chọn". Như
- * bản nháp issue của GitHub Copilot, nhắn thêm trong chat cũng được để Trợ lý soạn lại.
- */
-function missingRequired(proposal: AssistantTaskProposal): string | null {
-  const missing = [proposal.dueDate ? null : "hạn", proposal.leadAssigneeName ? null : "người chủ trì"].filter(Boolean);
-  return missing.length > 0 ? `Cần chọn ${missing.join(" và ")} khi tạo, hoặc nhắn thêm để Trợ lý soạn lại.` : null;
-}
-
-/**
  * Thẻ đề xuất nhiệm vụ dưới câu trả lời (propose_task, ADR-010), theo mẫu xem trước hành động của agent (người dùng yêu
  * cầu cải thiện bằng tra cứu 18/10/2026; nguồn trong DESIGN.md): tên đối tượng, giá trị nguyên văn theo nhãn, nội dung
- * dài thu gọn, nút ghi rõ việc sẽ làm cùng một nút từ chối nhẹ, trạng thái ghi bằng chữ. Chưa tạo gì: nút
- * mở hộp tạo nhiệm vụ đã điền sẵn, người dùng xem lại và tự bấm Tạo. Tạo xong hoặc bỏ qua thì thẻ thu gọn một hàng.
+ * dài thu gọn, nút ghi rõ việc sẽ làm cùng một nút từ chối nhẹ. Chưa tạo gì: nút mở hộp tạo
+ * nhiệm vụ đã điền sẵn, người dùng xem lại, chọn trường còn thiếu và tự bấm Tạo. Tạo xong hoặc bỏ qua thì thẻ thu gọn một hàng.
  */
 export function AssistantTaskProposalCard({
   proposal,
@@ -97,7 +87,6 @@ export function AssistantTaskProposalCard({
 
   const subtasks = proposal.subtasks ?? [];
   const hidden = subtasks.length - SHOWN_SUBTASKS;
-  const missing = missingRequired(proposal);
   const priority = proposal.priority && proposal.priority !== "NONE" ? proposal.priority : null;
   const hasFields = Boolean(proposal.dueDate || proposal.startDate || proposal.leadAssigneeName || priority || subtasks.length > 0);
   return (
@@ -106,15 +95,10 @@ export function AssistantTaskProposalCard({
       className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3"
     >
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <ListPlus className="size-3.5 shrink-0" aria-hidden />
-            Đề xuất nhiệm vụ
-          </p>
-          <Badge variant="secondary" className="font-normal text-muted-foreground">
-            Chưa tạo
-          </Badge>
-        </div>
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ListPlus className="size-3.5 shrink-0" aria-hidden />
+          Đề xuất nhiệm vụ
+        </p>
         <p className="break-words text-compact font-medium text-foreground">{proposal.title}</p>
         {proposal.description ? (
           // Mô tả đầy đủ ở hộp tạo nhiệm vụ; thẻ chỉ giữ hai dòng để các trường dễ đọc lướt
@@ -124,7 +108,7 @@ export function AssistantTaskProposalCard({
         ) : null}
       </div>
 
-      {/* Chỉ trường có giá trị; trường bắt buộc còn thiếu nhắc một lần dưới lưới (người dùng thấy lặp ba lần, 18/10/2026) */}
+      {/* Chỉ trường có giá trị: không ghi "Chưa chọn", không nhắc trường thiếu (người dùng bỏ lời nhắc, 18/10/2026) */}
       {hasFields ? (
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 text-xs">
           {proposal.dueDate ? (
@@ -183,27 +167,24 @@ export function AssistantTaskProposalCard({
       ) : null}
 
       {onOpen ? (
-        <div className="flex flex-col gap-2">
-          {missing ? <p className="text-xs text-muted-foreground">{missing}</p> : null}
-          {/* Tối đa hai thao tác: làm (nút chính, tên nút đã nói phải xem lại) và từ chối nhẹ (ghost) */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button ref={openRef} size="sm" className="max-md:min-h-11" onClick={onOpen}>
-              Xem lại và tạo
+        // Bên phải như chân hộp thoại của app: từ chối nhẹ (ghost) trước, nút chính sát mép (người dùng yêu cầu 18/10/2026)
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {onDismissedChange ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="max-md:min-h-11"
+              onClick={() => {
+                focusNext.current = "undo";
+                onDismissedChange(true);
+              }}
+            >
+              Bỏ qua
             </Button>
-            {onDismissedChange ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="max-md:min-h-11"
-                onClick={() => {
-                  focusNext.current = "undo";
-                  onDismissedChange(true);
-                }}
-              >
-                Bỏ qua
-              </Button>
-            ) : null}
-          </div>
+          ) : null}
+          <Button ref={openRef} size="sm" className="max-md:min-h-11" onClick={onOpen}>
+            Xem lại và tạo
+          </Button>
         </div>
       ) : null}
     </section>

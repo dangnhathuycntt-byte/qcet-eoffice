@@ -185,19 +185,18 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
     reply = reduceAssistantReply(reply, { type: "done", messageId: "m-p", status: "complete", durationMs: 2000 });
     assert.deepEqual(reply.proposals?.map((item) => item.title), ["Chuẩn bị hội thảo chuyển đổi số", "Gửi giấy mời dự hội thảo"]);
     const html = render(reply, onOpen);
-    for (const text of ["Đã soạn đề xuất trong 2 giây", "Đề xuất nhiệm vụ", "Chưa tạo", "30/10/2026", "chị Lan", "Cao", "Việc con", "Đặt hội trường", "anh Minh"]) {
+    for (const text of ["Đã soạn đề xuất trong 2 giây", "Đề xuất nhiệm vụ", "30/10/2026", "chị Lan", "Cao", "Việc con", "Đặt hội trường", "anh Minh"]) {
       assert.ok(html.includes(text), text);
     }
     assert.equal((html.match(/Xem lại và tạo/g) ?? []).length, 2);
-    // Hai thao tác như mẫu xác nhận của agent: làm và từ chối nhẹ (tra cứu 18/10/2026)
+    // Hai thao tác như mẫu xác nhận của agent, bên phải như chân hộp thoại: Bỏ qua (ghost) rồi nút chính sát mép
     assert.equal((html.match(/>Bỏ qua</g) ?? []).length, 2);
-    // Trường bắt buộc còn thiếu chỉ nhắc một lần ở chân thẻ, kèm lối soạn lại bằng chat; lưới chỉ có trường có giá trị
-    assert.equal(html.includes("Chưa chọn"), false);
-    assert.equal((html.match(/Cần chọn hạn và người chủ trì khi tạo, hoặc nhắn thêm để Trợ lý soạn lại\./g) ?? []).length, 1);
+    assert.ok(html.indexOf(">Bỏ qua<") < html.indexOf("Xem lại và tạo"), "nút chính đứng sau, sát mép phải");
+    // Người dùng bỏ nhãn "Chưa tạo" và lời nhắc trường thiếu (18/10/2026); lưới chỉ có trường có giá trị
+    for (const text of ["Chưa tạo", "Chưa chọn", "Cần chọn", "nhắn thêm"]) assert.equal(html.includes(text), false, text);
     assert.equal((html.match(/<dl/g) ?? []).length, 1, "đề xuất chỉ có tiêu đề thì không có lưới thuộc tính");
-    assert.equal(html.includes("Mở hộp tạo nhiệm vụ để xem lại"), false, "đủ trường thì không thêm câu lặp lại tên nút");
     const readOnly = render(reply);
-    assert.equal(readOnly.includes("Xem lại và tạo") || readOnly.includes("Bỏ qua") || readOnly.includes("Cần chọn"), false, "không có nơi mở hộp thì thẻ không có nút");
+    assert.equal(readOnly.includes("Xem lại và tạo") || readOnly.includes("Bỏ qua"), false, "không có nơi mở hộp thì thẻ không có nút");
 
     // Bỏ qua thẻ đầu: thu gọn một hàng "Đã bỏ qua đề xuất", có Hoàn tác; hoàn tác thì thẻ đầy đủ trở lại
     const dismissed = setProposalDismissed([reply], "reply-p", 0, true)[0];
@@ -216,9 +215,8 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
     assert.equal((createdHtml.match(/Xem lại và tạo/g) ?? []).length, 1);
     assert.ok(createdHtml.includes("Đã tạo nhiệm vụ NV-2026-10-009") && createdHtml.includes('href="/tasks/t-9"') && createdHtml.includes("Mở nhiệm vụ"));
     assert.ok(createdHtml.includes('role="status"'), "trạng thái đã tạo được đọc cho trình đọc màn hình");
-    assert.equal((createdHtml.match(/Chưa tạo/g) ?? []).length, 1, "thẻ đã tạo thu gọn, chỉ thẻ còn lại ghi Chưa tạo");
     assert.ok(createdHtml.includes('aria-label="Đã tạo nhiệm vụ: Gửi giấy mời dự hội thảo"'));
-    assert.equal(createdHtml.includes("Cần chọn hạn và người chủ trì"), false, "thẻ đã tạo thu gọn, không còn lưới và chân thẻ");
+    assert.equal((createdHtml.match(/>Bỏ qua</g) ?? []).length, 1, "thẻ đã tạo thu gọn, không còn chân thẻ; thẻ đầu giữ nguyên");
     // Lượt đọc tệp gửi kèm rồi soạn đề xuất vẫn ghi "Đã soạn đề xuất"
     const withFile = { ...reply, steps: [{ tool: "attachment" as const, label: "Đọc tệp qd.pdf", count: null, ok: true }, ...reply.steps] };
     assert.ok(render(withFile).includes("Đã soạn đề xuất trong 2 giây"));
