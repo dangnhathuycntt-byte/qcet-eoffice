@@ -14,7 +14,7 @@ import { middleware } from "@/middleware";
 import { GET as logoutGet, POST as logoutPost } from "@/app/api/auth/logout/route";
 import { POST as passwordLogin } from "@/app/api/auth/login/route";
 import { POST as legacyGoogleVerify } from "@/app/api/auth/google/verify/route";
-import { isVerifiedGoogleWorkspaceIdentity } from "@/lib/google-oauth";
+import { isVerifiedGoogleWorkspaceIdentity } from "@/server/auth/google-oauth";
 
 const secret = "auth-hardening-regression-secret-32chars";
 process.env.AUTH_SECRET = secret;

@@ -97,7 +97,7 @@ describe("Regression Suite: Google Auth Consolidation & Login Loop Prevention", 
   describe("2. Domain, Pre-provisioning, and Deactivation Policies", () => {
     test("Unauthorized domain is rejected at callback and redirects with domain_not_allowed", async () => {
       const { authConfig } = await import("@/auth.config");
-      const { isAllowedDomain } = await import("@/lib/google-oauth");
+      const { isAllowedDomain } = await import("@/server/auth/google-oauth");
 
       assert.strictEqual(isAllowedDomain("student@gmail.com"), false);
       assert.strictEqual(isAllowedDomain("attacker@fake-cdktcnqn.edu.vn"), false);

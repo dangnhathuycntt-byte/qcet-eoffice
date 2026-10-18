@@ -5,11 +5,11 @@ import { ForbiddenError, NotFoundError } from "@/server/api/errors";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { resolveTaskSubresourceRequest } from "@/server/api/task-subresource-request";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
-import { prisma } from "@/lib/prisma";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { buildTaskResource } from "@/server/authorization/available-actions";
 import type { CapabilityAction } from "@/server/authorization/capability";
 import { taskQueryService } from "@/server/tasks";
+import { loadTaskActorRoles } from "@/server/tasks/authorize-on-task";
 
 export interface ActionRouteContext {
   params: Promise<{ id: string }>;
@@ -34,10 +34,7 @@ export async function resolveActionContext<T>(
   const authorizationContext = await loadCachedAuthorizationContext(session.id);
   // DTO không mang TaskActor nên người duyệt được chỉ định (REVIEWER/APPROVER) chưa nhận ra ở cổng route dù dịch vụ
   // bên dưới cho phép; bổ sung các vai trò từ nguồn thật để hai chỗ kiểm quyền cùng một kết luận.
-  const actors = await prisma.taskActor.findMany({
-    where: { taskId, userId: { not: null } },
-    select: { userId: true, role: true, isPrimaryDRI: true },
-  });
+  const actors = await loadTaskActorRoles(taskId);
   const decision = authorize(authorizationContext, action, buildTaskResource({ ...taskResult.task, actors }));
   if (!decision.allowed) {
     throw new ForbiddenError(decision.reason || "Bạn không có quyền thực hiện thao tác này");

@@ -17,6 +17,17 @@ export async function loadTaskWithActors(taskId: string) {
   return task;
 }
 
+/**
+ * Vai trò TaskActor có người dùng của một nhiệm vụ, để cổng route bổ sung REVIEWER/APPROVER
+ * vào resource dựng từ DTO (DTO không mang TaskActor).
+ */
+export function loadTaskActorRoles(taskId: string) {
+  return prisma.taskActor.findMany({
+    where: { taskId, userId: { not: null } },
+    select: { userId: true, role: true, isPrimaryDRI: true },
+  });
+}
+
 export async function can(session: SessionPayload, action: CapabilityAction, task: Awaited<ReturnType<typeof loadTaskWithActors>>) {
   const context = await loadCachedAuthorizationContext(session.id);
   return authorize(context, action, buildTaskResource(task));

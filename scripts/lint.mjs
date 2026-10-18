@@ -272,7 +272,7 @@ function lintFile(filePath) {
     }
   });
 
-  // FE/BE boundary (route/page không chạm DB, UI không import src/server,
+  // FE/BE boundary (file trong src/app không chạm DB, UI không import src/server,
   // lib/domain/server không import UI, src/lib không chứa file server-only).
   for (const violation of boundaryViolations(relPath.split(path.sep).join("/"), content)) {
     logError(filePath, violation.line, violation.message);

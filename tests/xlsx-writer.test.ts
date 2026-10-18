@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { buildXlsx, columnName } from '../src/lib/export/xlsx-writer';
+import { buildXlsx, columnName } from '../src/server/files/xlsx-writer';
 
 describe('ghi tệp .xlsx không cần thư viện ngoài (V-06)', () => {
   test('tên cột kiểu Excel', () => {

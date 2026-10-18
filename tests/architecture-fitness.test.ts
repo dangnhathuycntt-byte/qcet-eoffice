@@ -129,9 +129,9 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       return out;
     }
 
-    it("ensures API routes, pages and layouts do not import Prisma or @/lib/db", () => {
+    it("ensures files in src/app do not import Prisma or @/lib/db", () => {
       const violations = boundaryViolationsFor("app-no-db");
-      assert.deepStrictEqual(violations, [], `Route/page/layout phải đọc/ghi DB qua src/server: ${violations.join(", ")}`);
+      assert.deepStrictEqual(violations, [], `File trong src/app phải đọc/ghi DB qua src/server: ${violations.join(", ")}`);
     });
 
     it("ensures components and hooks do not import @/server", () => {
@@ -187,10 +187,24 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import fs from "node:fs";'), ["server-only-in-lib"]);
       assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { s } from "@/server/api/route-error";'), ["server-only-in-lib"]);
       assert.deepStrictEqual(rulesOf("src/lib/db/audit.ts", 'import { prisma } from "@/lib/prisma";'), []);
+      // app-no-db áp cho mọi file trong src/app, kể cả helper không theo tên route/page/layout.
+      assert.deepStrictEqual(rulesOf("src/app/api/x/[id]/actions/shared.ts", 'import { prisma } from "@/lib/prisma";'), ["app-no-db"]);
+      assert.deepStrictEqual(rulesOf("src/app/x/foo-client.tsx", 'import { TaskStatus } from "@prisma/client";'), ["app-no-db"]);
+      assert.deepStrictEqual(rulesOf("src/app/x/foo-client.tsx", 'import { x } from "@/lib/prisma-errors";'), []);
+      // server-only-in-lib: bí mật server và mọi module có tiền tố node:; built-in không tiền tố (file isomorphic) không tính.
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { serverEnv } from "@/config/env.server";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/a/x.ts", 'import { serverEnv } from "../../config/env.server";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { crc32 } from "node:zlib";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import http2 from "node:http2";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { readFile } from "node:fs/promises";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { clientEnv } from "@/config/env.client";'), []);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'const c = await import("crypto");\nimport { gzip } from "zlib";'), []);
+      assert.deepStrictEqual(rulesOf("src/lib/jwt-session.ts", 'import { serverEnv } from "@/config/env.server";'), []);
+      assert.deepStrictEqual(rulesOf("src/server/auth/x.ts", 'import { serverEnv } from "@/config/env.server";'), []);
 
       assert.deepStrictEqual(rulesOf("src/app/api/x/route.ts", '// import { prisma } from "@/lib/prisma";\nconst s = "@/lib/prisma";'), []);
       assert.deepStrictEqual(rulesOf("src/app/api/x/route.ts", 'import { x } from "@/lib/prisma-errors";\nimport { y } from "@/lib/dbx";'), []);
-      assert.deepStrictEqual(rulesOf("src/app/api/x/shared.ts", 'import { prisma } from "@/lib/prisma";'), []);
+      assert.deepStrictEqual(rulesOf("src/app/api/x/shared.ts", 'import { prisma } from "@/lib/prisma";'), ["app-no-db"]);
       assert.deepStrictEqual(rulesOf("src/components/x.tsx", 'import { z } from "@/server-utils";'), []);
       assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { z } from "@/lib/server-safe";'), []);
     });

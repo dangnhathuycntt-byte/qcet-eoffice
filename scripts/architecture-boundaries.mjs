@@ -17,11 +17,15 @@ const ts = require("typescript");
 const DB_MODULE = /^(?:@prisma\/client(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$))/;
 const SERVER_MODULE = /^@\/server(?:\/|$)/;
 const UI_OR_APP_MODULE = /^@\/(?:components|app)(?:\/|$)/;
-/** Dấu hiệu file chỉ chạy ở server: DB, thư viện Node/bí mật, và mọi import vào src/server. */
+/**
+ * Dấu hiệu file chỉ chạy ở server: DB, bí mật server (`@/config/env.server`), mọi module Node có
+ * tiền tố `node:`, thư viện server và mọi import vào src/server. Built-in không tiền tố (`crypto`)
+ * không tính: file isomorphic có fallback (digital-signature-service) vẫn nằm trong src/lib.
+ */
 const SERVER_ONLY_MODULE =
-  /^(?:@prisma\/client(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$)|ioredis$|web-push$|jsonwebtoken$|bcryptjs$|node:(?:fs|crypto|path|child_process)(?:\/|$)|@\/server(?:\/|$))/;
+  /^(?:@prisma\/client(?:\/|$)|@\/lib\/prisma$|@\/lib\/db(?:\/|$)|@\/config\/env\.server$|ioredis$|web-push$|jsonwebtoken$|bcryptjs$|node:[a-z0-9_]+(?:\/|$)|@\/server(?:\/|$))/;
 
-const ROUTE_PAGE_LAYOUT = /^src\/app\/(?:api\/.+\/route|(?:.+\/)?(?:page|layout))\.tsx?$/;
+const APP_LAYER = /^src\/app\//;
 const UI_LAYER = /^src\/(?:components|hooks)\//;
 const CORE_LAYER = /^src\/(?:lib|domain|server)\//;
 
@@ -78,14 +82,14 @@ export function importSpecifiers(relPath, content) {
 /** Vi phạm ranh giới của một file (`relPath` dạng `src/…` với dấu `/`). */
 export function boundaryViolations(relPath, content) {
   if (!/^src\/.+\.tsx?$/.test(relPath)) return [];
-  const isRoutePageLayout = ROUTE_PAGE_LAYOUT.test(relPath);
+  const isApp = APP_LAYER.test(relPath);
   const isUi = UI_LAYER.test(relPath);
   const isCore = CORE_LAYER.test(relPath);
   const checkServerOnly = relPath.startsWith("src/lib/") && !SERVER_ONLY_LIB_ALLOWLIST.includes(relPath);
   const out = [];
   for (const { spec, line } of importSpecifiers(relPath, content)) {
-    if (isRoutePageLayout && DB_MODULE.test(spec)) {
-      out.push({ rule: "app-no-db", line, spec, message: `Route/page/layout không import '${spec}'. Đọc/ghi DB qua service trong src/server.` });
+    if (isApp && DB_MODULE.test(spec)) {
+      out.push({ rule: "app-no-db", line, spec, message: `File trong src/app không import '${spec}'. Đọc/ghi DB qua service trong src/server.` });
     }
     if (isUi && SERVER_MODULE.test(spec)) {
       out.push({ rule: "ui-no-server", line, spec, message: `Component/hook không import '${spec}'. Lấy dữ liệu qua API; kiểu dùng chung đặt ở src/contracts.` });

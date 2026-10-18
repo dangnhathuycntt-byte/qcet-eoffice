@@ -3,7 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "./auth.config";
 import { prisma } from "@/lib/prisma";
 import { isFeatureEnabled } from "@/features/flags";
-import { isVerifiedGoogleWorkspaceIdentity } from "@/lib/google-oauth";
+import { isVerifiedGoogleWorkspaceIdentity } from "@/server/auth/google-oauth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
