@@ -21,7 +21,7 @@ describe("Issue #13 canonical Task cutover", () => {
 
   test("Task production services have no legacy authorization imports", () => {
     const command = read("src/server/tasks/task-command-service.ts");
-    const actions = read("src/lib/services/task-domain-actions.ts");
+    const actions = read("src/server/tasks/task-domain-actions.ts");
     for (const source of [command, actions]) {
       assert.doesNotMatch(source, /hybrid-authorization/);
       assert.doesNotMatch(source, /from ['\"].*task-policy/);

@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { Prisma, type IdempotencyRecord } from "@prisma/client";
-import { prisma as defaultPrisma } from "../prisma";
+import { prisma as defaultPrisma } from "@/lib/prisma";
 
 /**
  * Supported database client types: standard PrismaClient or an interactive transaction client.

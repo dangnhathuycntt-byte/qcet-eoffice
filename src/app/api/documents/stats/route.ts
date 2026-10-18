@@ -4,7 +4,8 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
-import { buildDocumentBucketWhere, DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
+import { DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
+import { buildDocumentBucketWhere } from "@/server/documents/document-bucket-where";
 import { canViewApprovalReport } from "@/server/documents/submission-approval-service";
 import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";

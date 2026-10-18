@@ -16,7 +16,7 @@ import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/serv
 import { authorize } from '@/server/authorization/authorization-engine';
 import { buildTaskResource, computeAvailableActions } from '@/server/authorization/available-actions';
 import { toTaskListDTOArray, toTaskDetailDTO } from '@/server/dto/task-dto';
-import { withIdempotency } from '@/lib/db/idempotency';
+import { withIdempotency } from '@/server/api/idempotency';
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();

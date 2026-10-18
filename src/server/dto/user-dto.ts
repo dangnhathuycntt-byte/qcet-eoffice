@@ -14,6 +14,7 @@ import {
 import type { AuthenticatedUser } from '@/server/api/request-context';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import { toISOStringSafe } from './dto-helpers';
+import type { UserSummaryDTO, UserDepartmentDTO } from '@/contracts/users';
 
 export type UserViewerContext =
   | DirectoryViewerContext
@@ -22,19 +23,7 @@ export type UserViewerContext =
   | null
   | undefined;
 
-export interface UserSummaryDTO {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatarUrl?: string | null;
-}
-
-export interface UserDepartmentDTO {
-  id: string;
-  code?: string | null;
-  name: string;
-}
+export type { UserSummaryDTO, UserDepartmentDTO };
 
 export interface UserPublicDTO {
   id: string;

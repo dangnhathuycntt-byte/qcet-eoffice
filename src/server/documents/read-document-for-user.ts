@@ -2,7 +2,7 @@
  * Đọc chi tiết văn bản cho một người dùng, dùng chung cho GET /api/documents/[id] và công cụ của Trợ lý.
  * Giữ nguyên thứ tự kiểm quyền của route, gồm nhánh người tham gia luồng duyệt tờ trình.
  */
-import { getDocumentById } from "@/lib/documents/document-service";
+import { getDocumentById } from "@/server/documents/document-service";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { authorize, isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { buildDocumentResource } from "@/server/authorization/available-actions";

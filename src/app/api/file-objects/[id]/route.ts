@@ -7,7 +7,7 @@ import {
   buildContentDisposition,
   resolveSafeFilePath,
   SECURE_FILE_HEADERS,
-} from "@/lib/storage";
+} from "@/server/files/storage";
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/server/api/response";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";

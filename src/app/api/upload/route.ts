@@ -4,7 +4,7 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { assertCsrf } from "@/server/security/csrf";
-import { storeUploadedFile } from "@/lib/services/file-service";
+import { storeUploadedFile } from "@/server/files/file-service";
 import { prisma } from "@/lib/prisma";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskReadWhere } from "@/server/tasks/task-query-service";

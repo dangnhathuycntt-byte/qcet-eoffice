@@ -484,7 +484,7 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
   });
 
   test('9. mapPrismaDocumentToItem ẩn nhiệm vụ đã lưu trữ (dữ liệu cũ vẫn còn linkedTaskId)', async () => {
-    const { mapPrismaDocumentToItem } = await import('@/lib/documents/document-service');
+    const { mapPrismaDocumentToItem } = await import('@/server/documents/document-service');
     const base = { id: 'd1', linkedTaskId: 't1', linkedTask: { id: 't1', code: 'NV-1', title: 'Văn bản ngày thường', archivedAt: null } };
     const live = mapPrismaDocumentToItem({ ...base } as any);
     assert.equal(live.linkedTaskId, 't1');

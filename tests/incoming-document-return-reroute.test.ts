@@ -18,7 +18,7 @@ import {
   listDocumentReturns,
   rerouteIncomingDocument,
   returnIncomingDocument,
-} from '../src/lib/services/incoming-document-routing-service';
+} from '../src/server/documents/incoming-document-routing-service';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { ApiError, ConflictError, ValidationError } from '../src/server/api/errors';
 

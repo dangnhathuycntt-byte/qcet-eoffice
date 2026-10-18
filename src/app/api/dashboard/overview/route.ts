@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getLiveDashboardData, LiveDashboardOptions } from '@/lib/server/dashboard-service';
+import { getLiveDashboardData, LiveDashboardOptions } from '@/server/services/dashboard-service';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { AuthenticationError } from '@/server/api/errors';

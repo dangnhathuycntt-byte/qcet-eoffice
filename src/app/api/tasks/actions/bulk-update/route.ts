@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { withIdempotency } from "@/lib/db/idempotency";
+import { withIdempotency } from "@/server/api/idempotency";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ValidationError } from "@/server/api/errors";
 import { apiError, apiSuccess } from "@/server/api/response";

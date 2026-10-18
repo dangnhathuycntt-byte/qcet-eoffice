@@ -23,7 +23,7 @@ import {
   type DbClient,
   type OutboxHandlerMap,
 } from "@/lib/db/outbox";
-import { resolveSafeFilePath } from "@/lib/storage";
+import { resolveSafeFilePath } from "@/server/files/storage";
 
 export type FileObjectPurgeOutcome = "deleted" | "missing" | "referenced" | "unsupported_provider";
 

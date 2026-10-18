@@ -25,7 +25,7 @@ import {
   type CreateTaskWithSubtasksInput,
   type TaskPriorityInput,
 } from '@/contracts/tasks';
-import type { TaskDetailDTO } from '@/server/dto/task-dto';
+import type { TaskDetailDTO } from '@/contracts/tasks';
 
 /** Visual/creation level exposed by the create-task UI. */
 export type CreateTaskLevel = 'TRUONG' | 'DON_VI' | 'STAFF';

@@ -40,7 +40,7 @@ import {
   type AuthenticatedUserContext,
   type AuthorizationResource,
   HybridAuthorizationError,
-} from "@/lib/auth/hybrid-authorization";
+} from "@/server/authorization/hybrid-authorization";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import {
@@ -51,13 +51,13 @@ import {
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
-import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { verifySignatureSafely } from "@/server/documents/signature-verifier";
-import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
+import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 import {
   IncomingDocumentStateMachine,
   mapIncomingWorkflowStatusToDocumentStatus,
-} from "@/lib/documents/state-machine";
+} from "@/server/documents/state-machine";
 import {
   UnitWorkAssignmentStatusValues,
   assertUnitAssignmentTransition,

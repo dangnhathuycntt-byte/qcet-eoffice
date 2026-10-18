@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { DossierService } from "@/lib/services/dossier-service";
+import { DossierService } from "@/server/dossiers/dossier-service";
 
 interface RouteContext {
   params: Promise<{ id: string }>;

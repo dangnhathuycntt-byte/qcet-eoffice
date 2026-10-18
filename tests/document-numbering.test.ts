@@ -5,12 +5,12 @@ import {
   generateDocumentCode,
   simulateAtomicNumbering,
   getNextRegistrationNumber
-} from "../src/lib/documents/numbering-engine";
+} from "../src/server/documents/numbering-engine";
 import {
   createDocument,
   listDocuments,
   getDocumentById
-} from "../src/lib/documents/document-service";
+} from "../src/server/documents/document-service";
 import type { DocumentItem, DocumentType } from "../src/types/document";
 import { formatIsoDate, formatDisplayDate } from "@/lib/format";
 

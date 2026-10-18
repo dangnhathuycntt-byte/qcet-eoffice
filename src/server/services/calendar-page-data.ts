@@ -1,4 +1,4 @@
-import { getLiveDashboardData } from '@/lib/server/dashboard-service';
+import { getLiveDashboardData } from '@/server/services/dashboard-service';
 import { MeetingService } from '@/server/services/meeting-service';
 import {
   getTodayIctDate,

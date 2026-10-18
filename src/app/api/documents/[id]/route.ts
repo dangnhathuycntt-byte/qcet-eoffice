@@ -18,15 +18,15 @@ import { UpdateDocumentSchema } from "@/contracts/documents";
 import {
   getDocumentById,
   updateDocument,
-} from "@/lib/documents/document-service";
-import { isDocumentImmutable } from "@/lib/documents/state-machine";
+} from "@/server/documents/document-service";
+import { isDocumentImmutable } from "@/server/documents/state-machine";
 import {
   assertCanLinkTask,
   lockDocumentRows,
   normalizeLinkedTaskId,
   recordLinkedTaskChange,
   toLinkedTaskConflict,
-} from "@/lib/documents/linked-task-link";
+} from "@/server/documents/linked-task-link";
 import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
 import { logAuditEvent } from "@/lib/db/audit";
 import {

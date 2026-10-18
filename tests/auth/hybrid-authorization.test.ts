@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { authorize, assertAuthorized, checkSeparationOfDuties, getResourceRelationships, isCapabilityAction, isSystemAdminUser, isExecutivePosition, isUnitLeaderPosition, SeparationOfPowersError, SeparationOfDutiesError, PortfolioMismatchError, DelegationExpiredError, NonDelegablePowerError, SingleDRIError, HybridAuthorizationError, TASK_CAPABILITIES, DOCUMENT_INCOMING_CAPABILITIES, DOCUMENT_OUTGOING_CAPABILITIES, DOSSIER_CAPABILITIES, SYSTEM_CAPABILITIES, NON_DELEGABLE_CAPABILITIES, type AuthenticatedUserContext, type AuthorizationResource, type AuthorizationContext, type ActiveDelegationGrantContext } from "../../src/lib/auth/hybrid-authorization";
+import { authorize, assertAuthorized, checkSeparationOfDuties, getResourceRelationships, isCapabilityAction, isSystemAdminUser, isExecutivePosition, isUnitLeaderPosition, SeparationOfPowersError, SeparationOfDutiesError, PortfolioMismatchError, DelegationExpiredError, NonDelegablePowerError, SingleDRIError, HybridAuthorizationError, TASK_CAPABILITIES, DOCUMENT_INCOMING_CAPABILITIES, DOCUMENT_OUTGOING_CAPABILITIES, DOSSIER_CAPABILITIES, SYSTEM_CAPABILITIES, NON_DELEGABLE_CAPABILITIES, type AuthenticatedUserContext, type AuthorizationResource, type AuthorizationContext, type ActiveDelegationGrantContext } from "../../src/server/authorization/hybrid-authorization";
 
 describe("Hybrid Authorization Engine (QCET E-Office)", () => {
   // Mock Base Users

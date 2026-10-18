@@ -14,7 +14,7 @@ import {
   TaskPriority,
 } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
-import { DossierService } from "../src/lib/services/dossier-service";
+import { DossierService } from "../src/server/dossiers/dossier-service";
 import { signSessionToken } from "../src/lib/jwt-session";
 import { GET as listDossiersRoute, POST as createDossierRoute } from "../src/app/api/dossiers/route";
 import { GET as getDossierDetailRoute } from "../src/app/api/dossiers/[id]/route";

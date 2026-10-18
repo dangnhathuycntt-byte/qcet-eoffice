@@ -1,4 +1,4 @@
-import { UpdateStatusInputSchema, taskDomainActionService } from "@/lib/services/task-domain-actions";
+import { UpdateStatusInputSchema, taskDomainActionService } from "@/server/tasks/task-domain-actions";
 import { taskActionRoute } from "../shared";
 
 export const POST = taskActionRoute(

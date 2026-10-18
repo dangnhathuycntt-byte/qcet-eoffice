@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { PaginationQuerySchema, IsoDateStringSchema } from './common';
 import { isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE } from '@/lib/url-utils';
+import type { TaskViewerContext } from '@/domain/tasks/types';
+import type { UserDepartmentDTO, UserSummaryDTO } from './users';
 
 /**
  * Task priority enum schema supporting canonical database values and client aliases.
@@ -503,3 +505,96 @@ export const ReviewDeliverableInputSchema = z
   .strict();
 
 export type ReviewDeliverableInput = z.infer<typeof ReviewDeliverableInputSchema>;
+
+// ---------------------------------------------------------------------------
+// Response DTO của nhiệm vụ (dùng chung FE/BE; mapper ở src/server/dto/task-dto.ts)
+// ---------------------------------------------------------------------------
+
+export interface TaskSourceDocumentDTO {
+  id: string;
+  originalNumber: string;     // Số/Ký hiệu văn bản (vd: 128/TCGDNN-VP)
+  summary: string;            // Trích yếu nội dung
+  type: string;               // VAN_BAN_DEN | VAN_BAN_DI
+  issuedDate: string;         // Ngày ban hành
+  issuingAuthority: string;   // Cơ quan ban hành
+  registrationNumber: number; // Số vào sổ
+  documentYear: number;
+  status: string;
+}
+
+export interface TaskSummaryDTO {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: string;
+  progress: number;
+  version: number;
+  isOverdue?: boolean;
+}
+
+export interface TaskListDTO {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: string;
+  progress: number;
+  department?: UserDepartmentDTO | null;
+  leadAssignee?: UserSummaryDTO | null;
+  collaborators?: UserSummaryDTO[];
+  assignees?: UserSummaryDTO[];
+  version: number;
+  isOverdue?: boolean;
+  viewerContext?: TaskViewerContext | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskDeliverableDTO {
+  id: string;
+  taskId?: string;
+  title: string;
+  fileUrl: string;
+  fileType?: string | null;
+  fileSize?: number | null;
+  reviewStatus: string;
+  reviewNote?: string | null;
+  uploadedBy?: UserSummaryDTO | null;
+  reviewer?: UserSummaryDTO | null;
+  reviewedAt?: string | null;
+  createdAt?: string;
+}
+
+export interface TaskResolutionDTO {
+  id: string;
+  taskId: string;
+  resolutionType: string;
+  directiveNote?: string | null;
+  grantedDays?: number | null;
+  previousDueDate?: string | null;
+  newDueDate?: string | null;
+  actor?: UserSummaryDTO | null;
+  createdAt?: string;
+}
+
+export interface TaskDetailDTO extends TaskListDTO {
+  description?: string | null;
+  scope?: string;
+  startDate?: string | null;
+  completedAt?: string | null;
+  createdBy?: UserSummaryDTO | null;
+  createdById?: string | null;
+  departmentId?: string | null;
+  parentTaskId?: string | null;
+  parentTask?: TaskSummaryDTO | null;
+  subTasks?: TaskSummaryDTO[];
+  deliverables?: TaskDeliverableDTO[];
+  resolutions?: TaskResolutionDTO[];
+  dacumTaskDefId?: string | null;
+  academicMonth?: number;
+  academicYear?: string;
+  sourceDocument?: TaskSourceDocumentDTO | null;
+}

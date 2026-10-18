@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { directDocument } from "@/lib/services/incoming-document-service";
+import { directDocument } from "@/server/documents/incoming-document-service";
 import { documentActionRoute } from "../shared";
 
 const DirectDocumentSchema = z

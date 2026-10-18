@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DocumentSecurityLevel, DocumentUrgency } from "@prisma/client";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 
 const AssignNumberSchema = z.object({

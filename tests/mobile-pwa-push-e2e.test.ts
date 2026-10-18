@@ -9,12 +9,12 @@ import {
   formatTaskPushPayload,
   sendPushNotificationToUser,
   TaskPushEventType,
-} from '../src/lib/push-service';
+} from '../src/server/notifications/push-service';
 import {
   dispatchTaskAssignedPush,
   safeAfter,
   flushSafeAfter,
-} from '../src/lib/push-dispatch';
+} from '../src/server/notifications/push-dispatch';
 import {
   GET as getPushSubscribe,
   POST as postPushSubscribe,

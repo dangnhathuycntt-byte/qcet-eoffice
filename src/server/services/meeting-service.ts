@@ -11,7 +11,7 @@ import {
  */
 
 import { prisma } from '@/lib/prisma';
-import { getFileObjectIdFromUrl } from '@/lib/services/file-service';
+import { getFileObjectIdFromUrl } from '@/server/files/file-service';
 import {
   MeetingStatus,
   MeetingParticipantRole,

@@ -12,8 +12,8 @@ import {
 } from "@/server/api/validation";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { canUpdateDocument } from "@/server/policies/document-policy";
-import { getDocumentById } from "@/lib/documents/document-service";
-import { isDocumentImmutable } from "@/lib/documents/state-machine";
+import { getDocumentById } from "@/server/documents/document-service";
+import { isDocumentImmutable } from "@/server/documents/state-machine";
 import { logAuditEvent } from "@/lib/db/audit";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization";

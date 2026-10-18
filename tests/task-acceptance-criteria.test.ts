@@ -12,7 +12,7 @@ import {
   replaceTaskCriteria,
   setTaskCriterionChecked,
 } from '../src/server/tasks/task-criteria-service';
-import { taskDomainActionService } from '../src/lib/services/task-domain-actions';
+import { taskDomainActionService } from '../src/server/tasks/task-domain-actions';
 import { ApiError, InvalidTransitionError, PreconditionFailedError } from '../src/server/api/errors';
 
 const runId = `t04_${Date.now()}`;

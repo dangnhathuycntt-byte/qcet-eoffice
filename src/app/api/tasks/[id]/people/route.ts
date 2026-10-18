@@ -3,7 +3,7 @@ import {
   AddPersonInputSchema,
   RemovePersonInputSchema,
   taskDomainActionService,
-} from "@/lib/services/task-domain-actions";
+} from "@/server/tasks/task-domain-actions";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { resolveTaskSubresourceRequest } from "@/server/api/task-subresource-request";
 import { getTaskPeople } from "@/server/tasks/task-people-view";

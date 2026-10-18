@@ -4,10 +4,10 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import {
   registerIncomingDocument,
   listIncomingWorkflows,
-} from "@/lib/services/incoming-document-service";
+} from "@/server/documents/incoming-document-service";
 import { IncomingDocumentStatus } from "@prisma/client";
 import { RegisterIncomingDocumentSchema } from "@/contracts/documents";
-import { assertNoSuspectedDuplicate } from "@/lib/documents/duplicate-check";
+import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";

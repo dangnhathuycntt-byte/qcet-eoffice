@@ -13,8 +13,8 @@ import { assertRateLimit } from "@/server/security/rate-limit";
 import { canReadDocument } from "@/server/policies/document-policy";
 import { toDocumentDirectiveDTOArray } from "@/server/dto/document-dto";
 import { CreateDirectiveSchema } from "@/contracts/documents";
-import { getDocumentById } from "@/lib/documents/document-service";
-import { directDocument } from "@/lib/services/incoming-document-service";
+import { getDocumentById } from "@/server/documents/document-service";
+import { directDocument } from "@/server/documents/incoming-document-service";
 import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import { AuthorizationError, NotFoundError, ValidationError } from "@/server/api/errors";
 

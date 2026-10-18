@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   resolveSafeFilePath,
   isAllowedFileExtension,
-} from "@/lib/storage";
+} from "@/server/files/storage";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError } from "@/server/api/response";
 import { streamLocalFile } from "@/server/api/file-response";

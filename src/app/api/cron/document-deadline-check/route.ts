@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { scanAndDispatchDocumentDeadlines } from "@/lib/documents/document-deadline-scanner";
+import { scanAndDispatchDocumentDeadlines } from "@/server/documents/document-deadline-scanner";
 import { isCronAuthorized } from "@/server/security/cron-auth";
 import { logger } from "@/server/observability/logger";
 

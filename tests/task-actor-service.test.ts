@@ -11,7 +11,7 @@ import {
   verifyTaskResult,
   initiateApprovalProcess,
   executeApprovalStep,
-} from "../src/lib/services/task-actor-service";
+} from "../src/server/tasks/task-actor-service";
 import { migrateTaskRelations } from "../prisma/seeds/migrate-task-relations";
 import {
   TaskActorRole,

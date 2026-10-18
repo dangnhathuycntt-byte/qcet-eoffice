@@ -8,7 +8,7 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { OUTGOING_DOCUMENT_TRANSITIONS, OutgoingDocumentStateMachine, isDocumentImmutable, mapOutgoingWorkflowStatusToDocumentStatus } from "../src/lib/documents/state-machine";
+import { OUTGOING_DOCUMENT_TRANSITIONS, OutgoingDocumentStateMachine, isDocumentImmutable, mapOutgoingWorkflowStatusToDocumentStatus } from "../src/server/documents/state-machine";
 import type { OutgoingDocumentStatus } from "@prisma/client";
 
 // ============================================================================

@@ -21,7 +21,7 @@ import {
   formatTaskPushPayload,
   sendPushNotificationToUser,
   type TaskPushEventType,
-} from "@/lib/push-service";
+} from "@/server/notifications/push-service";
 import { logger } from "@/server/observability/logger";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 

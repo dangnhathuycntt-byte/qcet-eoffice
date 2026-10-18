@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { setPushSenderForTesting, getVapidPublicKey } from '../src/lib/push-service';
+import { setPushSenderForTesting, getVapidPublicKey } from '../src/server/notifications/push-service';
 import { GET as getKeyRoute } from '../src/app/api/notifications/push/key/route';
 import { POST as subscribeRoute, DELETE as unsubscribeRoute } from '../src/app/api/notifications/push/subscribe/route';
 import { POST as testPushRoute } from '../src/app/api/notifications/push/test/route';

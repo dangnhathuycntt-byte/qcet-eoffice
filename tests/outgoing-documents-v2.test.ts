@@ -12,7 +12,7 @@ import {
   UnitType,
 } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
-import { OutgoingDocumentService } from "../src/lib/services/outgoing-document-service";
+import { OutgoingDocumentService } from "../src/server/documents/outgoing-document-service";
 import { signSessionToken } from "../src/lib/jwt-session";
 import { GET as listOutgoingRoute, POST as createDraftRoute } from "../src/app/api/documents/outgoing/route";
 import { POST as deliverOutgoingRoute } from "../src/app/api/documents/outgoing/[id]/actions/deliver/route";

@@ -17,7 +17,7 @@ import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/
 import type { SessionPayload } from "@/lib/jwt-session";
 import { ConflictError, InvalidTransitionError, ValidationError } from "@/server/api/errors";
 import { BACKUP_REJECTION_MESSAGE, checkBackupCandidate, isBackupDue } from "@/domain/tasks/backup-reviewer-rules";
-import { initiateApprovalProcess, stepWaitingSince } from "@/lib/services/task-actor-service";
+import { initiateApprovalProcess, stepWaitingSince } from "@/server/tasks/task-actor-service";
 import { authorizeOnTask, can } from "./authorize-on-task";
 
 export const MAX_APPROVAL_STEPS = 5;

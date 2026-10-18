@@ -20,7 +20,7 @@ import {
 } from '@/server/dto/executive-dto';
 import { logAuditEvent, AuditEntityType } from '@/lib/db/audit';
 import { assertCsrf } from '@/server/security/csrf';
-import { safeAfter, dispatchExecutiveDirectivePush } from '@/lib/push-dispatch';
+import { safeAfter, dispatchExecutiveDirectivePush } from '@/server/notifications/push-dispatch';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

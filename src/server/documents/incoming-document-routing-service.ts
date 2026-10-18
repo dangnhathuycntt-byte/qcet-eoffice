@@ -16,7 +16,7 @@ import {
   HybridAuthorizationError,
   type AuthenticatedUserContext,
   type AuthorizationResource,
-} from "@/lib/auth/hybrid-authorization";
+} from "@/server/authorization/hybrid-authorization";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/api/errors";
@@ -25,13 +25,13 @@ import type { AuthenticatedUser } from "@/server/api/request-context";
 import {
   IncomingDocumentStateMachine,
   mapIncomingWorkflowStatusToDocumentStatus,
-} from "@/lib/documents/state-machine";
+} from "@/server/documents/state-machine";
 import {
   UnitWorkAssignmentStatusValues,
   assertUnitAssignmentTransition,
   isValidUnitWorkAssignmentStatus,
 } from "@/domain/documents/unit-assignment-status";
-import { resolveUserContext } from "@/lib/services/incoming-document-service";
+import { resolveUserContext } from "@/server/documents/incoming-document-service";
 
 type Actor = AuthenticatedUserContext | SessionPayload | AuthenticatedUser;
 

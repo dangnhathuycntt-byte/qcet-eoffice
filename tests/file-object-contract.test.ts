@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { detectUploadMimeType } from "../src/lib/storage";
-import { getFileObjectIdFromUrl } from "../src/lib/services/file-service";
+import { detectUploadMimeType } from "../src/server/files/storage";
+import { getFileObjectIdFromUrl } from "../src/server/files/file-service";
 
 const UUID = "550e8400-e29b-41d4-a716-446655440000";
 

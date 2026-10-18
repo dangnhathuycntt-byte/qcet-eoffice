@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getApiContext } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
-import { getVapidPublicKey } from '@/lib/push-service';
+import { getVapidPublicKey } from '@/server/notifications/push-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

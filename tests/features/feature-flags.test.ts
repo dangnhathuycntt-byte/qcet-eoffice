@@ -17,7 +17,7 @@ import {
   FeatureFlagKey,
 } from "@/features/flags";
 import { getPublicRuntimeConfig, assertZeroSecrets } from "@/config/runtime";
-import { sendPushNotificationToUser } from "@/lib/push-service";
+import { sendPushNotificationToUser } from "@/server/notifications/push-service";
 import { GET as googleAuthRoute } from "@/app/api/auth/google/route";
 import { GET as nextAuthRoute } from "@/app/api/auth/[...nextauth]/route";
 import { GET as exportExcelRoute } from "@/app/api/documents/export-excel/route";

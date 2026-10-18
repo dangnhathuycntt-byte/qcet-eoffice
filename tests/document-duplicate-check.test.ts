@@ -16,7 +16,7 @@ import {
   assertNoSuspectedDuplicate,
   findSuspectedDuplicates,
   DUPLICATE_SUSPECT_CODE,
-} from '../src/lib/documents/duplicate-check';
+} from '../src/server/documents/duplicate-check';
 import { ConflictError } from '../src/server/api/errors';
 
 describe('V-02 chuẩn hóa khóa trùng', () => {

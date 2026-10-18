@@ -28,8 +28,8 @@ import {
   assertAuthorized,
   type AuthenticatedUserContext,
   type AuthorizationResource,
-} from "@/lib/auth/hybrid-authorization";
-import { resolveUserContext } from "@/lib/services/incoming-document-service";
+} from "@/server/authorization/hybrid-authorization";
+import { resolveUserContext } from "@/server/documents/incoming-document-service";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import {
@@ -45,7 +45,7 @@ import {
   assertTransition,
   assertDossierNotImmutable,
 } from "@/domain/dossiers/state-machine";
-import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
+import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 
 // ============================================================================
 // Types & Interfaces

@@ -26,7 +26,7 @@ import {
 } from "@prisma/client";
 
 // Authorization Policy Engine
-import { authorize, assertAuthorized, type AuthenticatedUserContext, type AuthorizationResource, SingleDRIError, SeparationOfDutiesError as PolicySoDError, HybridAuthorizationError } from "../src/lib/auth/hybrid-authorization";
+import { authorize, assertAuthorized, type AuthenticatedUserContext, type AuthorizationResource, SingleDRIError, SeparationOfDutiesError as PolicySoDError, HybridAuthorizationError } from "../src/server/authorization/hybrid-authorization";
 
 // Domain Task Actor & Workflow Service
 import {
@@ -41,7 +41,7 @@ import {
   SegregationOfDutiesError,
   MakerCheckerError,
   StepProgressionError,
-} from "../src/lib/services/task-actor-service";
+} from "../src/server/tasks/task-actor-service";
 
 describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
   // Test Entities

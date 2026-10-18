@@ -267,7 +267,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/lib/services/task-domain-actions.ts tự động chuyển NOT_STARTED sang IN_PROGRESS và đồng bộ cha", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/lib/services/task-domain-actions.ts"),
+        path.join(process.cwd(), "src/server/tasks/task-domain-actions.ts"),
         "utf8"
       );
 
@@ -316,7 +316,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
 
     it("src/lib/auth/hybrid-authorization.ts cho phép DRI, Collaborator, Assigner, Lead Unit và Admin cập nhật tiến độ", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/lib/auth/hybrid-authorization.ts"),
+        path.join(process.cwd(), "src/server/authorization/hybrid-authorization.ts"),
         "utf8"
       );
 
@@ -329,7 +329,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
     });
     it("src/lib/services/task-domain-actions.ts cho phép chuyển từ WAITING_APPROVAL về IN_PROGRESS", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/lib/services/task-domain-actions.ts"),
+        path.join(process.cwd(), "src/server/tasks/task-domain-actions.ts"),
         "utf8"
       );
 

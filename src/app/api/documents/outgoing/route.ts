@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { OutgoingDocumentService, OUTGOING_WORKFLOW_DETAIL_INCLUDE } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService, OUTGOING_WORKFLOW_DETAIL_INCLUDE } from "@/server/documents/outgoing-document-service";
 import { prisma } from "@/lib/prisma";
 import { OutgoingDocumentStatus } from "@prisma/client";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";

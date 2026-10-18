@@ -20,7 +20,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
+import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 import type { Prisma, Document, DocumentOutgoingWorkflow, SignatureRecord } from "@prisma/client";
 import {
   OutgoingDocumentStatus,
@@ -35,8 +35,8 @@ import {
   assertAuthorized,
   type AuthenticatedUserContext,
   type AuthorizationResource,
-} from "@/lib/auth/hybrid-authorization";
-import { resolveUserContext } from "@/lib/services/incoming-document-service";
+} from "@/server/authorization/hybrid-authorization";
+import { resolveUserContext } from "@/server/documents/incoming-document-service";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import {
@@ -48,13 +48,13 @@ import {
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@/config/institution";
-import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
   mapOutgoingWorkflowStatusToDocumentStatus,
-} from "@/lib/documents/state-machine";
+} from "@/server/documents/state-machine";
 
 // ============================================================================
 // Types & Input Interfaces

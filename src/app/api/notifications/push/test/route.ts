@@ -8,7 +8,7 @@ import {
   formatTaskPushPayload,
   sendPushNotificationToUser,
   truncatePushText,
-} from '@/lib/push-service';
+} from '@/server/notifications/push-service';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
 

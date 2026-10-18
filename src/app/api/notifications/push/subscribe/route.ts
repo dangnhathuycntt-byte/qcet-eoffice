@@ -5,7 +5,7 @@ import { apiError, apiSuccess } from '@/server/api/response';
 import { ValidationError } from '@/server/api/errors';
 import { parseAndValidateJson } from '@/server/api/validation';
 import { PushSubscriptionSchema } from '@/contracts/notifications';
-import { getVapidPublicKey } from '@/lib/push-service';
+import { getVapidPublicKey } from '@/server/notifications/push-service';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { z } from 'zod';

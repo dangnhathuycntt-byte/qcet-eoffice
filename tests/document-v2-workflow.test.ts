@@ -19,12 +19,12 @@ import {
   IncomingDocumentStateMachine,
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
-} from "../src/lib/documents/state-machine";
+} from "../src/server/documents/state-machine";
 import {
   getNextRegistrationNumber,
   formatDocumentDisplayNumber,
   generateDocumentCode,
-} from "../src/lib/documents/numbering-engine";
+} from "../src/server/documents/numbering-engine";
 import {
   validateDocumentUpdatePayload,
   isWorkflowControlledField,

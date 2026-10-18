@@ -24,7 +24,7 @@ import {
   canAccessClassification,
   type DocumentClassificationTarget,
 } from '@/server/authorization/document-classification';
-import { isDocumentImmutable } from '@/lib/documents/state-machine';
+import { isDocumentImmutable } from '@/server/documents/state-machine';
 import { isUnitLeaderPosition } from '@/server/authorization/authorization-engine';
 
 export interface DocumentEntity extends DocumentClassificationTarget {

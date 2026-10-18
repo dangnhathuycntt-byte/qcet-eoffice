@@ -5,7 +5,7 @@ import { getApiContext, requireAuthenticated } from "@/server/api/request-contex
 import { apiError, apiSuccess } from "@/server/api/response";
 import { ValidationError } from "@/server/api/errors";
 import { parseAndValidateJson } from "@/server/api/validation";
-import { getVapidPublicKey } from "@/lib/push-service";
+import { getVapidPublicKey } from "@/server/notifications/push-service";
 import {
   DEFAULT_PUSH_PREFERENCES,
   type PushPreferences,

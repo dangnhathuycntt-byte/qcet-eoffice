@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getDocumentById } from "@/lib/documents/document-service";
+import { getDocumentById } from "@/server/documents/document-service";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { canReadDocument } from "@/server/policies/document-policy";
 import { ForbiddenError, NotFoundError } from "@/server/api/errors";

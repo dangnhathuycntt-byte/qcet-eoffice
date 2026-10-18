@@ -22,7 +22,7 @@ import {
   fileDocument,
   getIncomingDocument,
   listIncomingWorkflows,
-} from "../src/lib/services/incoming-document-service";
+} from "../src/server/documents/incoming-document-service";
 import { AuthorizationError, ValidationError } from "../src/server/api/errors";
 import { signSessionToken } from "../src/lib/jwt-session";
 import { POST as incomingRegisterRoute } from "../src/app/api/documents/incoming/route";

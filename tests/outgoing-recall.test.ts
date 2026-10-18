@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { AssignmentStatus, DocumentType, JobCatalogGroup, OutgoingDocumentStatus, UnitType, UserRole } from '@prisma/client';
 import { ZodError } from 'zod';
 import { prisma } from '../src/lib/prisma';
-import { OutgoingDocumentService } from '../src/lib/services/outgoing-document-service';
+import { OutgoingDocumentService } from '../src/server/documents/outgoing-document-service';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { confirmReceipt, getRecipientsState, recallOutgoing } from '../src/server/documents/outgoing-recipients';
 import { ApiError, ConflictError } from '../src/server/api/errors';

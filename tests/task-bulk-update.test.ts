@@ -8,7 +8,7 @@ import { TaskActorRole, TaskPriority, TaskStatus } from '@prisma/client';
 import { ZodError } from 'zod';
 import { prisma } from '../src/lib/prisma';
 import { MAX_BULK_ITEMS, bulkUpdateTaskPriority } from '../src/server/tasks/task-bulk-service';
-import { withIdempotency } from '../src/lib/db/idempotency';
+import { withIdempotency } from '../src/server/api/idempotency';
 
 const runId = `t08_${Date.now()}`;
 const u: Record<string, string> = {};

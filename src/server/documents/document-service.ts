@@ -20,7 +20,8 @@ import {
   mapOutgoingWorkflowStatusToDocumentStatus,
 } from "./state-machine";
 import { NotFoundError, ValidationError } from "@/server/api/errors";
-import { buildDocumentBucketWhere, type DocumentBucket } from "./document-sidebar-buckets";
+import type { DocumentBucket } from "@/lib/documents/document-sidebar-buckets";
+import { buildDocumentBucketWhere } from "./document-bucket-where";
 
 export {
   buildDocumentReadWhere,

@@ -4,7 +4,7 @@ import {
   sendPushNotificationToUser,
   formatTaskPushPayload,
   PushResult,
-} from '@/lib/push-service';
+} from '@/server/notifications/push-service';
 import { UserRole } from '@prisma/client';
 
 let pendingBackgroundTasks: Promise<void>[] = [];

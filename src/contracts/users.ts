@@ -44,3 +44,18 @@ export const UpdateUserProfileSchema = z
     title: z.string().trim().max(100, "Chức danh không quá 100 ký tự").nullable().optional(),
   })
   .strict();
+
+/** Người dùng rút gọn và đơn vị trong response API (dùng chung FE/BE). */
+export interface UserSummaryDTO {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatarUrl?: string | null;
+}
+
+export interface UserDepartmentDTO {
+  id: string;
+  code?: string | null;
+  name: string;
+}

@@ -5,7 +5,7 @@ import { resolveTaskSubresourceRequest, type TaskSubresourceContext } from "@/se
 import { NotFoundError } from "@/server/api/errors";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { loadContext } from "@/server/documents/authorize-on-document";
-import { listDocumentReturns } from "@/lib/services/incoming-document-routing-service";
+import { listDocumentReturns } from "@/server/documents/incoming-document-routing-service";
 
 export const dynamic = "force-dynamic";
 

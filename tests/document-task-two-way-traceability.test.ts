@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { toTaskDetailDTO } from '@/server/dto/task-dto';
 import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from '@/lib/adapters/task-db-adapter';
-import { mapPrismaDocumentToItem } from '@/lib/documents/document-service';
+import { mapPrismaDocumentToItem } from '@/server/documents/document-service';
 
 describe('Document-Task Two-Way Traceability', () => {
   const mockLinkedDocument = {

@@ -8,7 +8,7 @@ import {
   buildNotificationWhere,
   decodeNotificationCursor,
   encodeNotificationCursor,
-} from '@/lib/notification-inbox';
+} from '@/server/notifications/notification-query';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

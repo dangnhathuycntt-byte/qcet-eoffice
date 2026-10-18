@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { fileDocument } from "@/lib/services/incoming-document-service";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { fileDocument } from "@/server/documents/incoming-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { prisma } from "@/lib/prisma";
 import { NotFoundError } from "@/server/api/errors";
 import { documentActionRoute } from "../shared";

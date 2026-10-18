@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 
 const OrganizationSignSchema = z.object({

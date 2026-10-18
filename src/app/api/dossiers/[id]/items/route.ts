@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { NotFoundError, ForbiddenError, ValidationError } from "@/server/api/errors";
-import { DossierService } from "@/lib/services/dossier-service";
+import { DossierService } from "@/server/dossiers/dossier-service";
 import { canReadDossier } from "@/server/policies/dossier-policy";
 import { prisma } from "@/lib/prisma";
 import { AddDossierItemSchema, DossierItemIdSchema } from "@/contracts/dossiers";

@@ -17,8 +17,8 @@ import {
   assertAuthorized,
   type AuthenticatedUserContext,
   type AuthorizationResource,
-} from "@/lib/auth/hybrid-authorization";
-import { resolveUserContext } from "@/lib/services/incoming-document-service";
+} from "@/server/authorization/hybrid-authorization";
+import { resolveUserContext } from "@/server/documents/incoming-document-service";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import {
   NotFoundError,
