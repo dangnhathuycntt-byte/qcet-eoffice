@@ -71,8 +71,9 @@ async function makeDoc(securityLevel: DocumentSecurityLevel, leadUserId?: string
       category: "Công văn",
       summary: `Công văn kiểm thử phạm vi đọc ${runId} ${securityLevel}`,
       securityLevel,
-      // Người vào sổ là thành viên đơn vị A: văn thư thấy văn bản nhờ vai trò VAN_THU, không nhờ nhánh registeredById.
-      registeredById: users.memberA.id,
+      // Người vào sổ là BGH (đã đọc được nhờ vai trò): văn thư và thành viên đơn vị chỉ thấy văn bản nhờ nhánh của
+      // chính mình (vai trò VAN_THU, đơn vị chủ trì), không nhờ nhánh registeredById.
+      registeredById: users.bgh.id,
       leadUserId,
       incomingWorkflow: {
         create: {
