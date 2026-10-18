@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
+import { completeOnboarding } from "@/server/users/user-profile-service";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertCsrf } from '@/server/security/csrf';
 
@@ -11,22 +11,7 @@ export async function POST(req: Request) {
     requestId = context.requestId;
     const authUser = requireAuthenticated(context);
 
-    const updatedUser = await prisma.user.update({
-      where: { id: authUser.id },
-      data: {
-        onboardedAt: new Date(),
-        onboardingData: {
-          hasSeenWelcome: true,
-          hasCompletedTour: true,
-        },
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        onboardedAt: true,
-      },
-    });
+    const updatedUser = await completeOnboarding(authUser.id);
 
     return apiSuccess(
       { success: true, user: updatedUser },

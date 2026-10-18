@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { toUserPublicDTO } from "@/server/dto";
 import { apiError, apiSuccess } from "@/server/api/response";
@@ -6,6 +5,7 @@ import { AuthenticationError, ValidationError } from "@/server/api/errors";
 import { assertCsrf } from "@/server/security/csrf";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { UpdateUserProfileSchema } from "@/contracts/users";
+import { getCurrentUserProfile, updateCurrentUserProfile } from "@/server/users/user-profile-service";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -25,22 +25,7 @@ export async function GET(req: Request) {
 
     const authUser = context.user;
 
-    const dbUser = await prisma.user.findUnique({
-      where: { id: authUser.id },
-      include: {
-        // Phase 9: `User.departmentId` dropped — đơn vị canonical là phân công vị trí
-        // việc làm chính đang hiệu lực.
-        positionAssignments: {
-          where: { type: 'PRIMARY', status: 'ACTIVE' },
-          orderBy: { effectiveFrom: 'desc' },
-          take: 1,
-          include: {
-            unit: { select: { id: true, code: true, name: true } },
-            positionDefinition: { select: { code: true, title: true } },
-          },
-        },
-      },
-    });
+    const dbUser = await getCurrentUserProfile(authUser.id);
 
     if (!dbUser || !dbUser.isActive) {
       return apiSuccess(
@@ -114,14 +99,7 @@ export async function PATCH(req: Request) {
       throw new ValidationError('Cần cung cấp ít nhất một trường thông tin để cập nhật', undefined, 'EMPTY_UPDATE');
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: authUser.id },
-      data: {
-        ...(name !== undefined ? { name } : {}),
-        ...(phone !== undefined ? { phone } : {}),
-        ...(title !== undefined ? { title } : {}),
-      },
-    });
+    const updatedUser = await updateCurrentUserProfile(authUser.id, { name, phone, title });
 
     const publicUser = toUserPublicDTO(updatedUser);
     const userResult = {
