@@ -7,7 +7,7 @@ import { assertCsrf } from "@/server/security/csrf";
 import { storeUploadedFile } from "@/server/files/file-service";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { findReadableTaskId } from "@/server/tasks/task-query-service";
-import { ForbiddenError, PayloadTooLargeError } from "@/server/api/errors";
+import { ForbiddenError, PayloadTooLargeError, ValidationError } from "@/server/api/errors";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export async function POST(req: NextRequest) {
@@ -30,11 +30,11 @@ export async function POST(req: NextRequest) {
     }
     const file = formData.get("file") as File | null;
     if (!file || typeof file === "string") {
-      return apiError("Vui lòng gửi tệp trong trường 'file'", requestId);
+      throw new ValidationError("Vui lòng gửi tệp trong trường 'file'");
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return apiError(`Tệp quá lớn (tối đa ${MAX_FILE_SIZE / 1024 / 1024}MB)`, requestId);
+      throw new PayloadTooLargeError(`Tệp quá lớn (tối đa ${MAX_FILE_SIZE / 1024 / 1024}MB)`);
     }
 
     const taskId = formData.get("taskId");

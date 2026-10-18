@@ -203,10 +203,17 @@ export async function storeUploadedFile(input: StoreUploadedFileInput) {
 
   // Reuse only files that have passed the configured scan workflow. Pending
   // uploads remain isolated so one upload cannot inherit another's scan state.
-  const cleanDuplicate = await prisma.fileObject.findFirst({
-    where: { contentHash, scanStatus: FileScanStatus.CLEAN, isArchived: false },
+  // Chỉ dùng lại tệp của chính người tải lên, gắn cùng nhiệm vụ: dùng bản của người khác sẽ trả id và tên
+  // tệp của họ, và lần tải này mất liên kết nhiệm vụ (metadata.taskId).
+  const taskIdOf = (metadata: unknown) =>
+    metadata && typeof metadata === "object" && typeof (metadata as { taskId?: unknown }).taskId === "string"
+      ? (metadata as { taskId: string }).taskId
+      : null;
+  const ownCleanCopies = await prisma.fileObject.findMany({
+    where: { contentHash, uploadedById: input.uploadedById, scanStatus: FileScanStatus.CLEAN, isArchived: false },
     orderBy: { createdAt: "asc" },
   });
+  const cleanDuplicate = ownCleanCopies.find((copy) => taskIdOf(copy.metadata) === taskIdOf(input.metadata));
   if (cleanDuplicate) {
     const updated = await prisma.fileObject.updateMany({
       where: {

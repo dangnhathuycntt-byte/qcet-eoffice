@@ -287,4 +287,63 @@ describe("POST /api/upload kèm taskId", () => {
     assert.equal(stored.uploadedById, users.outsider.id);
     assert.deepEqual(stored.metadata, { declaredMimeType: "text/plain" });
   });
+
+  test("thiếu trường file: 400 VALIDATION_ERROR (trước là 500)", async () => {
+    const res = await upload(uploadReq({ taskId }, "dri"));
+    assert.equal(res.status, 400);
+    const body = await res.json();
+    assert.equal(body.code, "VALIDATION_ERROR");
+    assert.equal(body.success, false);
+  });
+
+  test("tệp quá 10MB: 413 PAYLOAD_TOO_LARGE (trước là 500), không lưu tệp", async () => {
+    const bytes = Buffer.alloc(10 * 1024 * 1024 + 1, 0x61);
+    const hash = crypto.createHash("sha256").update(bytes).digest("hex");
+    const res = await upload(uploadReq({ bytes, fileName: `qua-lon-${tag}.txt` }, "dri"));
+    await assertRejectedWithoutStoring(res, 413, "PAYLOAD_TOO_LARGE", hash);
+  });
+
+  describe("dùng lại tệp trùng nội dung (dedupe)", () => {
+    const { bytes, hash } = makeBytes("dedupe");
+    let originalId = "";
+
+    before(async () => {
+      const res = await upload(uploadReq({ bytes, fileName: `goc-${tag}.txt`, taskId }, "dri"));
+      assert.equal(res.status, 200);
+      originalId = (await res.json()).fileId;
+      // Môi trường test để tệp mới PENDING; chỉ bản CLEAN mới được dùng lại.
+      await prisma.fileObject.update({ where: { id: originalId }, data: { scanStatus: "CLEAN" } });
+    });
+
+    test("cùng người, cùng nhiệm vụ: dùng lại đúng bản cũ", async () => {
+      const res = await upload(uploadReq({ bytes, fileName: `goc-${tag}.txt`, taskId }, "dri"));
+      assert.equal(res.status, 200);
+      const body = await res.json();
+      assert.equal(body.deduplicated, true);
+      assert.equal(body.fileId, originalId);
+    });
+
+    test("người khác cùng nội dung: bản mới của chính họ, không lộ id và tên tệp của người kia", async () => {
+      const fileName = `cua-toi-${tag}.txt`;
+      const res = await upload(uploadReq({ bytes, fileName }, "outsider"));
+      assert.equal(res.status, 200);
+      const body = await res.json();
+      assert.equal(body.deduplicated, false);
+      assert.notEqual(body.fileId, originalId);
+      assert.equal(body.fileName, fileName);
+      const stored = await prisma.fileObject.findUniqueOrThrow({ where: { id: body.fileId } });
+      assert.equal(stored.uploadedById, users.outsider.id);
+      assert.equal(stored.contentHash, hash);
+    });
+
+    test("cùng người, không gắn nhiệm vụ: bản mới, không mang taskId của bản cũ", async () => {
+      const res = await upload(uploadReq({ bytes, fileName: `goc-${tag}.txt` }, "dri"));
+      assert.equal(res.status, 200);
+      const body = await res.json();
+      assert.equal(body.deduplicated, false);
+      assert.notEqual(body.fileId, originalId);
+      const stored = await prisma.fileObject.findUniqueOrThrow({ where: { id: body.fileId } });
+      assert.deepEqual(stored.metadata, { declaredMimeType: "text/plain" });
+    });
+  });
 });
