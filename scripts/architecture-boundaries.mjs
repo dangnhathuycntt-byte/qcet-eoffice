@@ -2,8 +2,9 @@
  * Ranh giới FE/BE trong một repo (chuẩn bị tách apps/web và apps/api).
  * Dùng chung cho scripts/lint.mjs và tests/architecture-fitness.test.ts.
  *
- * Import được đọc bằng `ts.preProcessFile`: gồm import, import type, export…from,
- * import() và require(); bỏ qua comment và chuỗi. Đường dẫn tương đối được quy
+ * Import được đọc từ AST (`ts.createSourceFile`): import, import type, export…from
+ * (kể cả `export * as`), import x = require(), import(), require() và kiểu
+ * `import("…")`; comment và chuỗi thường không tính. Đường dẫn tương đối được quy
  * về dạng `@/…` trước khi so luật.
  */
 
@@ -32,17 +33,46 @@ export const SERVER_ONLY_LIB_ALLOWLIST = [
   "src/lib/db/outbox.ts", // gỡ ở bước 3
 ];
 
+/** Chuỗi module của một node import/export/require, nếu có. */
+function moduleSpecifierNode(node) {
+  if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
+    return node.moduleSpecifier;
+  }
+  if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
+    return node.moduleReference.expression;
+  }
+  if (ts.isCallExpression(node)) {
+    const callee = node.expression;
+    const isImportCall = callee.kind === ts.SyntaxKind.ImportKeyword;
+    const isRequire = ts.isIdentifier(callee) && callee.text === "require";
+    if (isImportCall || isRequire) return node.arguments[0];
+  }
+  if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+    return node.argument.literal;
+  }
+  return undefined;
+}
+
 /** Module specifier của mọi import trong file, kèm số dòng; tương đối → `@/…`. */
 export function importSpecifiers(relPath, content) {
-  const { importedFiles } = ts.preProcessFile(content, true, true);
-  return importedFiles.map(({ fileName, pos }) => {
-    let spec = fileName;
-    if (spec.startsWith(".")) {
-      const target = path.posix.normalize(path.posix.join(path.posix.dirname(relPath), spec));
-      if (target.startsWith("src/")) spec = `@/${target.slice(4)}`;
+  const kind = relPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(relPath, content, ts.ScriptTarget.Latest, false, kind);
+  const out = [];
+  const visit = (node) => {
+    const specNode = moduleSpecifierNode(node);
+    if (specNode && ts.isStringLiteralLike(specNode)) {
+      let spec = specNode.text;
+      if (spec.startsWith(".")) {
+        const target = path.posix.normalize(path.posix.join(path.posix.dirname(relPath), spec));
+        if (target.startsWith("src/")) spec = `@/${target.slice(4)}`;
+      }
+      const line = sourceFile.getLineAndCharacterOfPosition(specNode.getStart(sourceFile)).line + 1;
+      out.push({ spec, line });
     }
-    return { spec, line: content.slice(0, pos).split("\n").length };
-  });
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return out;
 }
 
 /** Vi phạm ranh giới của một file (`relPath` dạng `src/…` với dấu `/`). */

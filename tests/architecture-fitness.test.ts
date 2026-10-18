@@ -167,6 +167,10 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
         'export { writeAudit } from "@/lib/db/audit";',
         'const m = await import("@/lib/db/outbox");',
         'const p = require("../../../../lib/prisma");',
+        'export * as db from "@/lib/prisma";',
+        'export type * as P from "@prisma/client";',
+        'import prismaModule = require("@/lib/prisma");',
+        'type Client = import("@/lib/prisma").PrismaClientLike;',
       ]) {
         assert.deepStrictEqual(rulesOf("src/app/api/x/[id]/route.ts", line), ["app-no-db"], line);
       }
@@ -174,6 +178,10 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       assert.deepStrictEqual(rulesOf("src/app/a/(g)/layout.tsx", 'import { x } from "../../../lib/db/audit";'), ["app-no-db"]);
       assert.deepStrictEqual(rulesOf("src/hooks/use-x.ts", 'import type { T } from "@/server/tasks/t";'), ["ui-no-server"]);
       assert.deepStrictEqual(rulesOf("src/components/a/b.tsx", 'import { y } from "../../server/x";'), ["ui-no-server"]);
+      assert.deepStrictEqual(
+        rulesOf("src/components/a/c.tsx", 'export function C() { return <div title="x">{1}</div>; }\nexport * as srv from "@/server/tasks";'),
+        ["ui-no-server"],
+      );
       assert.deepStrictEqual(rulesOf("src/server/x.ts", 'import { B } from "@/components/ui/button";'), ["core-no-ui"]);
       assert.deepStrictEqual(rulesOf("src/domain/x.ts", 'export * from "../app/tasks/page";'), ["core-no-ui"]);
       assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import fs from "node:fs";'), ["server-only-in-lib"]);
