@@ -27,6 +27,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { getRouteByPath } from "@/lib/navigation/canonical-navigation-registry";
+import { useRuntimeFeature } from "@/lib/runtime-features";
+import { AgentIcon } from "@/components/icons/agent-icon";
 import {
   highlightMatchSegments,
   scoreVietnameseSearch,
@@ -166,6 +168,7 @@ function HighlightedText({
 export function CommandSearchModal({ className }: CommandSearchModalProps = {}) {
   const router = useRouter();
   const { user } = useAuth();
+  const assistantEnabled = useRuntimeFeature("assistant");
   const recentStorageKey = React.useMemo(
     () => scopedRecentSearchesKey(user?.id),
     [user?.id]
@@ -466,8 +469,26 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           else router.push("/inbox");
         },
       },
+      // Trợ lý chỉ hiện khi cờ bật; không gán phím tắt để không trùng các phím đã dùng
+      ...(assistantEnabled
+        ? [
+            {
+              id: "nav-assistant",
+              title: "Trợ lý",
+              description: "Hỏi đáp chỉ đọc về nhiệm vụ, văn bản và lịch họp",
+              category: "navigation" as const,
+              icon: AgentIcon,
+              keywords: ["tro ly", "tro ly ai", "hoi dap", "assistant", "agent", "hoi"],
+              action: (newTab?: boolean) => {
+                handleClose();
+                if (newTab) window.open("/assistant", "_blank");
+                else router.push("/assistant");
+              },
+            },
+          ]
+        : []),
     ];
-  }, [handleClose, router]);
+  }, [handleClose, router, assistantEnabled]);
 
   // Global event listeners
   React.useEffect(() => {

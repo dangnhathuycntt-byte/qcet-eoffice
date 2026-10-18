@@ -215,6 +215,23 @@ Rules:
 - `Văn bản` is the document noun; document-domain assignment uses `Phân công đơn vị xử lý
   văn bản` as a compound and is outside the task-action drift groups in §H.
 
+
+### E.1 Trợ lý (hỏi đáp chỉ đọc)
+
+Nhãn của trang Trợ lý (`/assistant`). Phân biệt với **Agent** (Agent soạn nhiệm vụ trong hộp tạo nhiệm vụ): hai tính năng khác nhau, không đặt chung nhãn.
+
+| Approved label | The control / object it names |
+| --- | --- |
+| Trợ lý | Trang hỏi đáp chỉ đọc trong sidebar, bảng lệnh và tiêu đề trang. |
+| Cuộc trò chuyện | Một cuộc đã lưu trong lịch sử Trợ lý; lưu theo số ngày ở `ASSISTANT_RETENTION_DAYS`. |
+| Cuộc trò chuyện mới | Nút mở một cuộc trống. |
+| Nguồn | Danh sách bản ghi Trợ lý đã đọc để trả lời, mỗi mục là link tới trang gốc. |
+
+Rules:
+
+- Trợ lý chỉ đọc: giao diện không dùng các động từ tạo, sửa, giao hay xóa dữ liệu nghiệp vụ cho chính Trợ lý.
+- `Đã dừng` là trạng thái của một lượt trả lời bị người dùng hủy; không dùng `Hủy` cho việc này.
+
 ---
 
 ## F. Actions & buttons
@@ -454,6 +471,12 @@ Nghị sự
 Danh sách
 # dashboard KPI (composite, see §C)
 Trễ / vướng
+# assistant (see §E.1)
+Trợ lý
+Cuộc trò chuyện
+Cuộc trò chuyện mới
+Nguồn
+Đã dừng
 ```
 
 ---

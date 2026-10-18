@@ -97,7 +97,7 @@ export function PWAInstallPrompt({
     <aside
       role="region"
       aria-label="Thông báo cài đặt ứng dụng QCET E-Office"
-      className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-lg z-50 p-4 sm:p-5 rounded-2xl border-0 bg-card text-foreground shadow-dropdown animate-in fade-in slide-in-from-bottom-4 duration-300 ${className}`}
+      className={`fixed bottom-4 md:bottom-[calc(1rem+var(--app-statusbar,0px))] left-4 right-4 sm:left-auto sm:right-6 sm:max-w-lg z-50 p-4 sm:p-5 rounded-2xl border-0 bg-card text-foreground shadow-dropdown animate-in fade-in slide-in-from-bottom-4 duration-300 ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3.5">

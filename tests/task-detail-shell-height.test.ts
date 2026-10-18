@@ -108,7 +108,10 @@ test("inbox main panel keeps its own height contract", () => {
   assert.ok(ts.isConditionalExpression(branch));
   const inboxBranch = branch.whenFalse;
   assert.ok(ts.isConditionalExpression(inboxBranch), "inbox branch must stay separate from task detail");
-  assert.ok(branchText(inboxBranch.whenTrue).includes("md:h-[calc(100dvh-16px)]"), "inbox is one rounded card inset 8px on top/right/bottom, like the tasks list");
+  assert.ok(
+    branchText(inboxBranch.whenTrue).includes("md:h-[calc(100dvh-16px-var(--app-statusbar))]"),
+    "inbox is one rounded card inset 8px on top/right/bottom, like the tasks list, above the assistant status bar reserve",
+  );
 });
 
 // Mobile: the parent canvas is the only scroller, so the split layout's mobile stack must take its natural height.

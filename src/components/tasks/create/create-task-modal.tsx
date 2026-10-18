@@ -31,11 +31,14 @@ import { SourceDocumentChip, linkTaskToDocument, type SourceDocumentOption } fro
 import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { CreateTaskSubtasks, nextSubtaskDraftId } from "@/components/tasks/create/create-task-subtasks";
 import { CREATE_TASK_MAX_SUBTASKS } from "@/contracts/tasks";
+import type { CreateTaskSubtaskSummary } from "@/lib/adapters/create-task-mapper";
 import { TaskAgentPanel, useTaskAgentAvailable } from "@/components/tasks/create/task-agent-panel";
 import { AgentIcon } from "@/components/icons/agent-icon";
 import { TASK_AGENT_DESCRIPTION_MAX, type TaskAgentDraft } from "@/domain/tasks/task-agent-draft";
 import { contentToPlainText, plainTextToContent } from "@/components/tasks/detail/plate-block-codec";
 import { motionDuration } from "@/lib/motion/tokens";
+import type { AssistantTaskProposal } from "@/contracts/assistant";
+import { proposalToTaskDraft } from "@/domain/assistant/assistant-task-proposal";
 
 const DESCRIPTION_PLACEHOLDER = "Nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu. Gõ / để chèn khối";
 
@@ -119,8 +122,9 @@ export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: (task: unknown) => void;
-  /** Nhận nhiệm vụ vừa tạo từ server (có `id`), dùng khi cần liên kết ngay sau khi tạo. */
-  onCreated?: (task: { id: string }) => void;
+  /** Nhận nhiệm vụ vừa tạo từ server (có `id`), dùng khi cần liên kết ngay sau khi tạo; `subtasks` cho biết việc con lỗi
+   *  một phần (hộp đã tự báo cảnh báo). */
+  onCreated?: (task: { id: string; code?: string }, extra: { subtasks: CreateTaskSubtaskSummary | null }) => void;
   /** Mở từ chính văn bản (văn bản tự gắn sau khi tạo): không hiện chip chọn văn bản nguồn. */
   hideSourceDocument?: boolean;
   onSubmit?: (data: any, result?: any) => void | Promise<void>;
@@ -133,6 +137,8 @@ export interface CreateTaskModalProps {
   initialLeadAssigneeName?: string;
   initialLeadAssigneeId?: string;
   initialDueDate?: string;
+  /** Đề xuất của Trợ lý (ADR-010): điền sẵn form, tên người khớp với nhân sự đơn vị; người dùng vẫn tự bấm Tạo. */
+  initialProposal?: AssistantTaskProposal;
 }
 
 // ─── Component ─────────────────────────────────────────────────
@@ -150,6 +156,7 @@ export function CreateTaskModal({
   initialParentTaskTitle,
   initialLeadAssigneeId,
   initialDueDate,
+  initialProposal,
 }: CreateTaskModalProps) {
   // Văn bản nguồn chọn trong hộp: gắn vào nhiệm vụ ngay sau khi tạo xong (hộp đóng ngay nên đọc qua ref)
   const [sourceDocument, setSourceDocument] = React.useState<SourceDocumentOption | null>(null);
@@ -162,13 +169,14 @@ export function CreateTaskModal({
   const form = useCreateTaskForm({
     isOpen,
     initialLevel,
-    initialTitle,
+    // Có đề xuất thì tiêu đề, hạn vào form ngay lúc mở và không khôi phục nháp cũ (như initialTitle)
+    initialTitle: initialTitle ?? initialProposal?.title,
     initialAssigneeId: initialLeadAssigneeId,
-    initialDueDate,
+    initialDueDate: initialDueDate ?? initialProposal?.dueDate,
     initialDepartmentCode,
     parentTaskId: initialParentTaskId,
     onSuccess: (task, { subtasks }) => {
-      const created = task as { id: string };
+      const created = task as { id: string; code?: string };
       // Như lịch lặp lại (T-09): việc cha đã tạo, việc con lỗi thì báo để bổ sung ở trang nhiệm vụ
       if (subtasks && subtasks.failed.length > 0) {
         const names = subtasks.failed.map((f) => `"${f.title}"`).join(", ");
@@ -189,7 +197,7 @@ export function CreateTaskModal({
           });
         });
       }
-      onCreated?.(created);
+      onCreated?.(created, { subtasks });
     },
   });
 
@@ -259,6 +267,12 @@ export function CreateTaskModal({
     [fitTitleHeight],
   );
   React.useLayoutEffect(() => fitTitleHeight(titleInputRef.current), [form.formData.title, fitTitleHeight]);
+  // Tên đã điền sẵn (thẻ đề xuất của Trợ lý, nháp khôi phục): con trỏ đứng cuối tên để gõ tiếp, không ở đầu dòng
+  const focusTitleEnd = React.useCallback(() => {
+    const el = titleInputRef.current;
+    el?.setSelectionRange(el.value.length, el.value.length);
+    return el;
+  }, []);
   // Xoay màn hình hoặc đổi cỡ cửa sổ làm đổi chỗ ngắt dòng: đo lại để không cắt dòng cuối
   React.useEffect(() => {
     if (!isOpen) return;
@@ -380,6 +394,25 @@ export function CreateTaskModal({
     },
     [form, initialParentTaskId],
   );
+  // Phần còn lại của đề xuất điền một lần mỗi lần mở, sau khi danh sách nhân sự tải xong để khớp tên người. Chờ một
+  // khung hình để chạy sau lần dựng lại form lúc mở: closure của lượt render mở hộp còn giữ form của lần mở trước.
+  const applyAgentDraftRef = React.useRef(applyAgentDraft);
+  applyAgentDraftRef.current = applyAgentDraft;
+  const personnelRef = React.useRef(form.availablePersonnel);
+  personnelRef.current = form.availablePersonnel;
+  const appliedProposalRef = React.useRef<AssistantTaskProposal | null>(null);
+  React.useEffect(() => {
+    if (!isOpen) {
+      appliedProposalRef.current = null;
+      return;
+    }
+    if (!initialProposal || form.isLoadingDepartments || appliedProposalRef.current === initialProposal) return;
+    const frame = requestAnimationFrame(() => {
+      appliedProposalRef.current = initialProposal;
+      applyAgentDraftRef.current(proposalToTaskDraft(initialProposal, personnelRef.current));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, initialProposal, form.isLoadingDepartments]);
   const closeAgent = React.useCallback(() => {
     setAgentOpen(false);
     requestAnimationFrame(() => agentToggleRef.current?.focus());
@@ -420,7 +453,7 @@ export function CreateTaskModal({
           />
           <Dialog.Popup
             // Mở hộp thì focus ngay ô tên (Base UI làm sau khi gắn), không chuyển focus giữa lúc hộp đang phóng to
-            initialFocus={titleInputRef}
+            initialFocus={focusTitleEnd}
             className={cn(
               "group/dlg pointer-events-none fixed inset-0 z-50 flex items-start justify-center px-3 py-[6vh] outline-none max-md:p-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+47px)] max-md:pb-[max(calc(env(safe-area-inset-bottom,0px)+47px),calc(var(--keyboard-height,0px)+8px))]",
               // Desktop: phóng từ 95% kèm hiện dần như hộp của Linear (đo 16/10/2026: scale 0,95 → 1, xong ~200ms); điện thoại trượt lên ở khung bên dưới

@@ -12,9 +12,11 @@ import { AppTopbar, DesktopTopbar } from "@/components/layout/app-topbar";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { MobileMenuOpenContext } from "@/components/layout/mobile-menu-button";
 import { OfflineBanner } from "@/components/layout/offline-banner";
+import { AgentModelsProvider } from "@/components/agent-chat/agent-models";
+import type { AgentModelCatalog } from "@/domain/agent/agent-models";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@/lib/login-helpers";
-import { isCardPagePath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
+import { isAssistantPath, isCardPagePath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
 import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { useTransform } from "motion/react";
@@ -64,12 +66,29 @@ function MobileAppInstallModalContainer() {
   );
 }
 
-function AppShellInner({ children }: { children: React.ReactNode }) {
+/**
+ * Phần khung trang chừa cho thanh dưới của Trợ lý (máy tính). Thanh cao 36px phủ cả 8px lề dưới của khung, nút 28px
+ * nằm giữa nên cách đáy khung 4px như thanh dưới của Linear (`assistant-dock.tsx`).
+ */
+const ASSISTANT_STATUSBAR_RESERVE = "1.75rem";
+
+// Thanh dưới và khung chat nổi của Trợ lý: tải sau, không nặng thêm khung trang (chỗ của thanh đã chừa từ server)
+const AssistantDock = dynamic(() => import("@/components/assistant/assistant-dock").then((mod) => mod.AssistantDock), {
+  ssr: false,
+});
+
+function AppShellInner({ children, assistantEnabled = false }: { children: React.ReactNode; assistantEnabled?: boolean }) {
   const { sidebarWidth, sidebarWidthMotion } = useSidebarLayout();
   const pathname = usePathname();
   const isTaskDetail = isTaskDetailPath(pathname);
   // Hộp thư tự chiếm toàn bộ khung nội dung (danh sách + chi tiết), không đệm
   const isInbox = pathname === "/inbox";
+  // Trợ lý dùng cùng khung cao như Hộp thư: thanh đầu trang và khung tin, không cột phụ. Cờ tắt thì trang là 404, dùng
+  // khung thường có thanh đầu
+  const isAssistant = assistantEnabled && isAssistantPath(pathname);
+  const isFullHeightPane = isInbox || isAssistant;
+  // Thanh dưới của Trợ lý (máy tính, mọi trang trừ trang Trợ lý): khung trang chừa `--app-statusbar` ở đáy
+  const showAssistantBar = assistantEnabled && !isAssistant;
   // Sổ văn bản dùng cùng khung workspace với chi tiết nhiệm vụ: chiều cao cố định, các thẻ tự cuộn
   // Trang con tĩnh của Nhiệm vụ tự dựng khung một thẻ (WorkspacePageCard) nên cũng dùng khung workspace, không bọc thêm thẻ ngoài
   const isTaskSubPage = isTaskSubPagePath(pathname);
@@ -77,7 +96,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isCardPage = isCardPagePath(pathname);
   const isWorkspaceShell = isTaskDetail || isTaskSubPage || isCardPage || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản, trang một thẻ: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
-  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isTaskSubPage || isCardPage || isInbox || pathname === "/documents";
+  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isTaskSubPage || isCardPage || isFullHeightPane || pathname === "/documents";
   const isTasksList = pathname === "/tasks";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -136,11 +155,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={cn(
-      "relative bg-sidebar text-foreground antialiased flex flex-col md:flex-row",
-      // Chi tiết nhiệm vụ: chiều cao cố định để vùng nội dung co theo khung, không giãn theo nội dung
-      isWorkspaceShell ? "h-[100dvh]" : "min-h-[100dvh]"
-    )}>
+    <div
+      className={cn(
+        "relative bg-sidebar text-foreground antialiased flex flex-col md:flex-row md:pb-[var(--app-statusbar)]",
+        // Chi tiết nhiệm vụ: chiều cao cố định để vùng nội dung co theo khung, không giãn theo nội dung
+        isWorkspaceShell ? "h-[100dvh]" : "min-h-[100dvh]"
+      )}
+      style={{ "--app-statusbar": showAssistantBar ? ASSISTANT_STATUSBAR_RESERVE : "0px" } as React.CSSProperties}
+    >
       {/* Nút mở menu ở header các trang đọc trạng thái này để tô nửa icon khi menu đang mở */}
       <MobileMenuOpenContext.Provider value={isMobileMenuOpen}>
       {/* Desktop Sidebar (Fixed width) */}
@@ -150,11 +172,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area: Content Panel on Desktop */}
       <m.div
-        className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 min-w-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] min-w-0 flex-1 flex flex-col"}
+        className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 min-w-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] md:min-h-[calc(100dvh-var(--app-statusbar))] min-w-0 flex-1 flex flex-col"}
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
         {/* Mobile Header (chỉ dưới md); danh sách, chi tiết nhiệm vụ, hộp thư và sổ văn bản tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
-        {!isTasksList && !isTaskDetail && !isInbox && pathname !== "/documents" && <AppTopbar showSearch={!isTaskSubPage && !isCardPage} />}
+        {!isTasksList && !isTaskDetail && !isFullHeightPane && pathname !== "/documents" && <AppTopbar showSearch={!isTaskSubPage && !isCardPage} />}
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
         {!hideDesktopTopbar && <DesktopTopbar />}
@@ -167,20 +189,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           tabIndex={-1}
           className={isWorkspaceShell
             ? "flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
-            : isInbox
-            ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:h-[calc(100dvh-16px)] md:rounded-2xl md:border md:border-border md:bg-card md:shadow-2xs outline-none overflow-hidden"
+            : isFullHeightPane
+            ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-2xl md:border md:border-border md:bg-card md:shadow-2xs outline-none overflow-hidden"
             : cn(
-                "flex-1 flex flex-col md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden",
+                "flex-1 flex flex-col md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
                 // Danh sách nhiệm vụ: khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết
                 isTasksList ? "md:rounded-2xl md:border-r md:border-b md:mr-2 md:mb-2" : "md:rounded-tl-2xl",
-                hideDesktopTopbar && (isTasksList ? "md:mt-2 md:h-[calc(100dvh-16px)] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px)]")
+                hideDesktopTopbar && (isTasksList ? "md:mt-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px-var(--app-statusbar))]")
               )}
         >
           <div
             className={
               isWorkspaceShell
                 ? "flex min-h-0 min-w-0 flex-1 flex-col"
-                : isInbox
+                : isFullHeightPane
                 ? "flex min-h-0 min-w-0 flex-1 flex-col pb-[env(safe-area-inset-bottom,0px)] md:pb-0"
                 : isTasksList
                 ? "flex-1 min-h-0 overflow-y-auto flex flex-col bg-card md:bg-transparent"
@@ -197,6 +219,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </main>
+
+        {/* Trong cột này để thanh dưới (fixed) lấy được `--sidebar-w`; luôn gắn khi bật cờ, kể cả ở trang Trợ lý (thanh tự
+            ẩn), để lượt đang chạy trong khung nổi không bị hủy khi chuyển sang đó */}
+        {assistantEnabled ? <AssistantDock /> : null}
       </m.div>
 
       <React.Suspense fallback={null}>
@@ -216,13 +242,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 export function AppShell({
   children,
   initialSidebarCollapsed,
+  assistantEnabled,
+  agentModels = null,
 }: {
   children: React.ReactNode;
   initialSidebarCollapsed?: boolean;
+  /** Cờ Trợ lý đọc ở server: bật thì có thanh dưới và khung chat nổi trên máy tính. */
+  assistantEnabled?: boolean;
+  /** Model chọn được ở ô soạn của Trợ lý và Agent tạo nhiệm vụ; ít hơn hai model thì không có bộ chọn. */
+  agentModels?: AgentModelCatalog | null;
 }) {
   return (
     <SidebarProvider initialCollapsed={initialSidebarCollapsed}>
-      <AppShellInner>{children}</AppShellInner>
+      <AgentModelsProvider catalog={agentModels}>
+        <AppShellInner assistantEnabled={assistantEnabled}>{children}</AppShellInner>
+      </AgentModelsProvider>
     </SidebarProvider>
   );
 }

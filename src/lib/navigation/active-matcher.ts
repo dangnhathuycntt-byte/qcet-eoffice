@@ -41,6 +41,12 @@ export function isTaskSubPagePath(pathname: string | null | undefined): boolean 
   return Boolean(match && TASK_SUB_PAGES.has(match[1]));
 }
 
+/** Trợ lý (`/assistant` và `/assistant/[id]`): khung hai cột cao như Hộp thư, không đệm. */
+export function isAssistantPath(pathname: string | null | undefined): boolean {
+  const clean = normalizePath(pathname ?? "");
+  return clean === "/assistant" || clean.startsWith("/assistant/");
+}
+
 /** Trang tự dựng khung một thẻ (`WorkspacePageCard`): Tổng quan, Cơ cấu & Danh bạ, Báo cáo và các trang trong menu "Thêm". */
 const CARD_PAGES = new Set(["/", "/org", "/reports", "/settings", "/delegations", "/search", "/admin/users", "/admin/audit", "/admin/dossiers"]);
 
@@ -147,6 +153,7 @@ const NON_CANONICAL_TITLES: readonly (readonly [string, string])[] = [
   ["/delegations", "Ủy quyền tác nghiệp"],
   ["/search", "Tìm kiếm"],
   ["/onboarding", "Bắt đầu sử dụng"],
+  ["/assistant", "Trợ lý"],
 ];
 
 export function resolveBreadcrumb(

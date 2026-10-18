@@ -34,11 +34,13 @@ import {
   TaskIconPriorityNone,
 } from "@/components/tasks/task-action-icons";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { AgentIcon } from "@/components/icons/agent-icon";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { getTaskUnitId } from "@/lib/tasks/task-unit";
+import { useRuntimeFeature } from "@/lib/runtime-features";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
 import {
@@ -303,6 +305,8 @@ export function TaskContextMenu({
   } catch {
     // Graceful fallback for non-App-Router or test environments
   }
+  // Cờ Trợ lý: chỉ hiện "Hỏi Trợ lý" khi bật; chỉ tải cờ khi menu mở
+  const assistantOn = useRuntimeFeature("assistant", isOpen);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -364,6 +368,12 @@ export function TaskContextMenu({
     } catch {
       onClose();
     }
+  };
+
+  // Hỏi Trợ lý: mở trang Trợ lý với nhiệm vụ này làm ngữ cảnh (server vẫn kiểm quyền khi gửi)
+  const handleAskAssistant = () => {
+    onClose();
+    router?.push(`/assistant?context=task:${encodeURIComponent(task.id)}`);
   };
 
   const version = (task as { version?: number }).version;
@@ -693,6 +703,9 @@ export function TaskContextMenu({
           onOpenDetail?.(task);
         }}
       />
+      {assistantOn ? (
+        <MenuRow icon={<AgentIcon className="size-4 text-muted-foreground" />} label="Hỏi Trợ lý" onClick={handleAskAssistant} />
+      ) : null}
 
       <div className="my-1 border-t border-border/40" />
 

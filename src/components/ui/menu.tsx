@@ -194,6 +194,33 @@ export const MenuActionItem = React.forwardRef<HTMLDivElement, MenuOptionItemPro
 );
 MenuActionItem.displayName = "MenuActionItem";
 
+export interface MenuLinkItemProps extends React.ComponentPropsWithoutRef<typeof BaseMenu.LinkItem> {
+  /** Icon dẫn đầu (16px). */
+  leading?: React.ReactNode;
+  /** Gợi ý bên phải: ngày giờ, trạng thái. */
+  hint?: React.ReactNode;
+}
+
+/**
+ * Hàng dẫn tới trang khác (thẻ `<a>`: bấm chuột giữa, mở tab mới vẫn được): cùng diện mạo `MenuActionItem`, bấm xong
+ * đóng menu. Với trang trong app truyền `render={<Link href="…" />}` để đi bằng điều hướng của Next.
+ */
+export const MenuLinkItem = React.forwardRef<Element, MenuLinkItemProps>(
+  ({ leading, hint, className, children, closeOnClick = true, ...props }, ref) => (
+    <BaseMenu.LinkItem
+      ref={ref}
+      closeOnClick={closeOnClick}
+      className={cn(MENU_ROW_CLASS, "whitespace-nowrap", className)}
+      {...props}
+    >
+      {leading ? <MenuRowLeading>{leading}</MenuRowLeading> : null}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {hint ? <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground/80">{hint}</span> : null}
+    </BaseMenu.LinkItem>
+  )
+);
+MenuLinkItem.displayName = "MenuLinkItem";
+
 export interface MenuSubmenuProps {
   /** Icon dẫn đầu của hàng mở menu con (16px). */
   icon?: React.ReactNode;

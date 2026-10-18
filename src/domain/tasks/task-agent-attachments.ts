@@ -43,15 +43,31 @@ export function getTaskAgentAttachmentKind(fileName: string): TaskAgentAttachmen
 
 const formatMb = (bytes: number) => `${Math.round(bytes / MB)}MB`;
 
-/** Kiểm danh sách tệp (đã có + định thêm). Trả câu báo lỗi tiếng Việt, hoặc null khi hợp lệ. */
-export function checkTaskAgentAttachments(files: ReadonlyArray<{ name: string; size: number }>): string | null {
+export interface AttachmentWording {
+  /** Ai nhận tệp, trong câu báo loại tệp. */
+  subject: string;
+  /** Phạm vi đếm số tệp, trong câu báo quá số lượng. */
+  scope: string;
+}
+
+/** Trợ lý: tệp đi theo từng lượt hỏi. */
+export const ASSISTANT_ATTACHMENT_WORDING: AttachmentWording = { subject: "Trợ lý", scope: "Mỗi lượt hỏi" };
+
+/**
+ * Kiểm danh sách tệp (đã có + định thêm). Trả câu báo lỗi tiếng Việt, hoặc null khi hợp lệ. Agent tạo nhiệm vụ tính cả
+ * cuộc trò chuyện (gửi lại tệp mỗi lượt); Trợ lý tính từng lượt hỏi (tệp chỉ đi theo lượt gửi kèm).
+ */
+export function checkTaskAgentAttachments(
+  files: ReadonlyArray<{ name: string; size: number }>,
+  wording: AttachmentWording = { subject: "Agent", scope: "Mỗi cuộc trò chuyện" },
+): string | null {
   if (files.length > TASK_AGENT_ATTACHMENT_MAX_FILES) {
-    return `Mỗi cuộc trò chuyện đính kèm tối đa ${TASK_AGENT_ATTACHMENT_MAX_FILES} tệp.`;
+    return `${wording.scope} đính kèm tối đa ${TASK_AGENT_ATTACHMENT_MAX_FILES} tệp.`;
   }
   let total = 0;
   for (const file of files) {
     const kind = getTaskAgentAttachmentKind(file.name);
-    if (!kind) return `Chưa đọc được loại tệp của "${file.name}". Agent nhận ảnh PNG/JPG/WebP, PDF, Word, Excel, TXT, CSV.`;
+    if (!kind) return `Chưa đọc được loại tệp của "${file.name}". ${wording.subject} nhận ảnh PNG/JPG/WebP, PDF, Word, Excel, TXT, CSV.`;
     if (file.size === 0) return `Tệp "${file.name}" rỗng.`;
     if (file.size > TASK_AGENT_ATTACHMENT_MAX_BYTES[kind]) {
       return `Tệp "${file.name}" lớn hơn ${formatMb(TASK_AGENT_ATTACHMENT_MAX_BYTES[kind])}.`;

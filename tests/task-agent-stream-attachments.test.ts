@@ -15,6 +15,7 @@ import {
   prepareTaskAgentAttachment,
 } from "../src/server/services/task-agent-attachments";
 import { ApiError } from "../src/server/api/errors";
+import { cleanAttachmentFileName } from "../src/server/api/json-or-multipart";
 import { agentReplyToPlainText, parseAgentReply, parseAgentReplyInline } from "../src/domain/tasks/agent-reply-format";
 
 const MB = 1024 * 1024;
@@ -62,6 +63,35 @@ describe("Luồng gateway (SSE) và NDJSON", () => {
     const parser = createGatewaySseParser();
     const deltas = parser.push(`data: {hỏng\n: keep-alive\ndata: ${JSON.stringify({ choices: [{ message: { content: "x" } }] })}\n`);
     assert.deepEqual(deltas, [{ content: "x" }]);
+  });
+
+  test("đọc tool_calls và finish_reason thành delta riêng, chỉ có khóa khi có giá trị", () => {
+    const parser = createGatewaySseParser();
+    const deltas = parser.push(
+      `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "get_task", arguments: '{"code":' } }] } }] })}\n` +
+        `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '"NV-1"}' }, extra_content: { google: { thought_signature: "s" } } }] } }] })}\n` +
+        `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "tool_calls" }] })}\n`,
+    );
+    assert.deepEqual(deltas, [
+      { toolCalls: [{ index: 0, id: "call_1", name: "get_task", arguments: '{"code":' }] },
+      { toolCalls: [{ index: 0, arguments: '"NV-1"}', extraContent: { google: { thought_signature: "s" } } }] },
+      { finishReason: "tool_calls" },
+    ]);
+  });
+
+  test("finish_reason null ở mọi khúc không tạo khóa finishReason; khúc có giá trị thì có", () => {
+    const parser = createGatewaySseParser();
+    const deltas = parser.push(
+      `data: ${JSON.stringify({ choices: [{ delta: { content: "a" }, finish_reason: null }] })}\n` +
+        `data: ${JSON.stringify({ choices: [{ delta: { content: "b" }, finish_reason: "stop" }] })}\n`,
+    );
+    assert.deepEqual(deltas, [{ content: "a" }, { content: "b", finishReason: "stop" }]);
+  });
+
+  test("khúc mang khóa error được đánh dấu lỗi giữa luồng, không thành chữ hay finish", () => {
+    const parser = createGatewaySseParser();
+    const deltas = parser.push(`data: ${JSON.stringify({ error: { message: "quá tải" } })}\n`);
+    assert.deepEqual(deltas, [{ error: true }]);
   });
 
   test("splitNdjson giữ dòng dở cho lần đọc sau", () => {
@@ -182,6 +212,16 @@ describe("Đọc tệp đính kèm ở server", () => {
     zip.file("xl/worksheets/sheet1.xml", `<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Việc</t></is></c></row></sheetData></worksheet>`);
     const text = await extractXlsxText(await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
     assert.equal(text, "## T0\nViệc");
+  });
+
+  test("tên tệp dài bị cắt phần tên, giữ đuôi để vẫn nhận đúng loại", () => {
+    const long = `${"Báo cáo tổng hợp ".repeat(10)}.pdf`;
+    const clean = cleanAttachmentFileName(long);
+    assert.ok(clean.length <= 120 && clean.length > 100, `${clean.length}`);
+    assert.ok(clean.endsWith("….pdf"), clean);
+    assert.equal(getTaskAgentAttachmentKind(clean), "pdf");
+    assert.equal(cleanAttachmentFileName("a[b]\u0007.png"), "a b  .png");
+    assert.equal(cleanAttachmentFileName("   "), "tệp");
   });
 
   test("ảnh và PDF gửi nguyên dạng data URI, CSV trích chữ", async () => {

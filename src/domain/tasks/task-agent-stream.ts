@@ -20,9 +20,41 @@ export type TaskAgentStreamEvent =
   | { type: "result"; data: TaskAgentStreamResult }
   | { type: "error"; error: { code: string; message: string } };
 
+/** Một khúc của tool call trong stream (hoặc một tool call khi gateway không stream). `index` gom các khúc cùng call. */
+export interface GatewayToolCallDelta {
+  index: number;
+  id?: string;
+  name?: string;
+  arguments?: string;
+  /** `extra_content` của gateway (vd. chữ ký suy nghĩ của Gemini): phải gửi lại nguyên vẹn ở lượt sau. */
+  extraContent?: unknown;
+}
+
 export interface GatewayDelta {
   reasoning?: string;
   content?: string;
+  toolCalls?: GatewayToolCallDelta[];
+  finishReason?: string;
+  /** Khúc mang khóa `error`: gateway báo lỗi giữa luồng, người gọi phải coi là lỗi chứ không phải trả lời xong. */
+  error?: boolean;
+}
+
+/** Đọc `tool_calls` của gateway. Thiếu `index` thì lấy vị trí trong mảng; chỉ gắn khóa khi có giá trị. */
+export function parseGatewayToolCallDeltas(raw: unknown): GatewayToolCallDelta[] {
+  if (!Array.isArray(raw)) return [];
+  const out: GatewayToolCallDelta[] = [];
+  raw.forEach((item: unknown, position: number) => {
+    if (!item || typeof item !== "object") return;
+    const call = item as Record<string, unknown>;
+    const fn = (call.function && typeof call.function === "object" ? call.function : {}) as Record<string, unknown>;
+    const delta: GatewayToolCallDelta = { index: typeof call.index === "number" ? call.index : position };
+    if (typeof call.id === "string" && call.id) delta.id = call.id;
+    if (typeof fn.name === "string" && fn.name) delta.name = fn.name;
+    if (typeof fn.arguments === "string" && fn.arguments) delta.arguments = fn.arguments;
+    if (call.extra_content != null) delta.extraContent = call.extra_content;
+    out.push(delta);
+  });
+  return out;
 }
 
 /** Đọc dần SSE của gateway: nhận từng khúc chữ, trả các delta đã đủ dòng; khúc dở dang giữ lại cho lần sau. */
@@ -34,14 +66,22 @@ export function createGatewaySseParser() {
     const data = trimmed.slice(5).trim();
     if (!data || data === "[DONE]") return null;
     try {
-      const choice = (JSON.parse(data) as { choices?: Array<{ delta?: Record<string, unknown>; message?: Record<string, unknown> }> })
-        .choices?.[0];
+      const payload = JSON.parse(data) as {
+        error?: unknown;
+        choices?: Array<{ delta?: Record<string, unknown>; message?: Record<string, unknown>; finish_reason?: unknown }>;
+      };
+      // Gateway báo lỗi giữa luồng: đánh dấu để người gọi dừng, không coi phần đã nhận là trả lời xong
+      if (payload.error) return { error: true };
+      const choice = payload.choices?.[0];
       const delta = choice?.delta ?? choice?.message ?? {};
       const reasoning = delta.reasoning_content ?? delta.reasoning;
       const out: GatewayDelta = {};
       if (typeof reasoning === "string" && reasoning) out.reasoning = reasoning;
       if (typeof delta.content === "string" && delta.content) out.content = delta.content;
-      return out.reasoning || out.content ? out : null;
+      const toolCalls = parseGatewayToolCallDeltas(delta.tool_calls);
+      if (toolCalls.length) out.toolCalls = toolCalls;
+      if (typeof choice?.finish_reason === "string" && choice.finish_reason) out.finishReason = choice.finish_reason;
+      return Object.keys(out).length ? out : null;
     } catch {
       return null;
     }

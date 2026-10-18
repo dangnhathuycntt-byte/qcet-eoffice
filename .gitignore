@@ -98,4 +98,6 @@ ds-bundle/
 /playwright/.auth/
 /test-results/
 /playwright-report/
+# Ảnh chụp và log của Playwright MCP khi kiểm giao diện
+/.playwright-mcp/
 /.next-build/

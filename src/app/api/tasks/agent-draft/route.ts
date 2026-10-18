@@ -2,16 +2,19 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError } from "@/server/api/response";
-import { ApiError, PayloadTooLargeError, ValidationError } from "@/server/api/errors";
+import { ApiError, ValidationError } from "@/server/api/errors";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
-import { parseAndValidateJson } from "@/server/api/validation";
+import { cleanAttachmentFileName, readJsonOrMultipart } from "@/server/api/json-or-multipart";
 import { isFeatureEnabled } from "@/features/flags";
 import { getTodayIctDate } from "@/lib/academic-calendar";
 import { TASK_AGENT_PRIORITIES, TASK_AGENT_SUBTASKS_MAX, TASK_AGENT_SUBTASK_DESCRIPTION_MAX, type TaskAgentContentPart } from "@/domain/tasks/task-agent-draft";
 import { checkTaskAgentAttachments, TASK_AGENT_ATTACHMENT_MAX_FILES } from "@/domain/tasks/task-agent-attachments";
 import type { TaskAgentStreamEvent } from "@/domain/tasks/task-agent-stream";
 import { draftTaskWithAgent } from "@/server/services/task-agent-service";
+import { readGatewayConfig } from "@/server/services/agent-gateway";
+import { getAgentModelCatalog } from "@/config/runtime";
+import { isAllowedAgentModel } from "@/domain/agent/agent-models";
 import { prepareTaskAgentAttachment } from "@/server/services/task-agent-attachments";
 
 const text = (max: number) => z.string().max(max);
@@ -53,49 +56,25 @@ const AgentDraftRequestSchema = z.object({
     .array(z.object({ messageIndex: z.number().int().min(0).max(9) }))
     .max(TASK_AGENT_ATTACHMENT_MAX_FILES)
     .default([]),
+  // Model chọn ở ô soạn (chung với Trợ lý); server chỉ nhận model trong TASK_AGENT_MODELS hoặc model mặc định
+  model: z.string().trim().min(1).max(64).optional(),
 });
 
 type AgentDraftRequest = z.infer<typeof AgentDraftRequestSchema>;
 
-/** Body multipart (có tệp) tối đa 11MB, dưới mức middleware cắt (12MB). */
-const MAX_MULTIPART_BYTES = 11 * 1024 * 1024;
-
-// Tên tệp đi vào prompt: bỏ ký tự điều khiển, ngoặc vuông (dùng làm dấu bọc tệp) và cắt ngắn
-const cleanFileName = (name: string) => name.replace(/[\u0000-\u001f\u007f[\]]/g, " ").trim().slice(0, 120) || "tệp";
-
 async function readAgentRequest(req: NextRequest): Promise<{ body: AgentDraftRequest; files: File[] }> {
-  if (!(req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
-    const body = await parseAndValidateJson(req, AgentDraftRequestSchema, { maxBytes: 64 * 1024 });
-    if (body.attachments.length > 0) throw new ValidationError("Tệp đính kèm phải gửi bằng multipart/form-data");
-    return { body, files: [] };
-  }
-  if (Number(req.headers.get("content-length") ?? 0) > MAX_MULTIPART_BYTES) {
-    throw new PayloadTooLargeError("Tổng dung lượng tệp đính kèm vượt 10MB.");
-  }
-  let form: FormData;
-  try {
-    form = await req.formData();
-  } catch {
-    // Middleware cắt body quá cỡ làm formData() ném lỗi (như /api/upload)
-    throw new PayloadTooLargeError("Không đọc được tệp đính kèm. Tổng dung lượng có thể vượt 10MB.");
-  }
-  const raw = form.get("payload");
-  let json: unknown;
-  try {
-    json = typeof raw === "string" && raw.length <= 64 * 1024 ? JSON.parse(raw) : null;
-  } catch {
-    json = null;
-  }
-  const parsed = AgentDraftRequestSchema.safeParse(json);
-  if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message || "Dữ liệu gửi Agent không hợp lệ");
-  const files = form.getAll("files").filter((f): f is File => typeof f !== "string");
-  if (files.length !== parsed.data.attachments.length) throw new ValidationError("Số tệp không khớp danh sách đính kèm");
-  return { body: parsed.data, files };
+  const { body, files, multipart } = await readJsonOrMultipart(req, AgentDraftRequestSchema, {
+    jsonMaxBytes: 64 * 1024,
+    invalidMessage: "Dữ liệu gửi Agent không hợp lệ",
+  });
+  if (!multipart && body.attachments.length > 0) throw new ValidationError("Tệp đính kèm phải gửi bằng multipart/form-data");
+  if (files.length !== body.attachments.length) throw new ValidationError("Số tệp không khớp danh sách đính kèm");
+  return { body, files };
 }
 
 /**
  * Soạn nháp nhiệm vụ bằng Agent: chỉ trả gợi ý điền form, không tạo hay ghi gì vào CSDL, không lưu tệp đính kèm.
- * Lỗi trước khi soạn (CSRF, đăng nhập, cờ, giới hạn tần suất, dữ liệu, tệp) trả JSON RFC 9457 kèm mã HTTP;
+ * Lỗi trước khi soạn (CSRF, đăng nhập, cờ, cấu hình gateway, giới hạn tần suất, dữ liệu, model, tệp) trả JSON RFC 9457 kèm mã HTTP;
  * sau đó trả NDJSON (`TaskAgentStreamEvent`): các bước, suy nghĩ (nếu model có), rồi kết quả hoặc lỗi.
  */
 export async function POST(req: NextRequest) {
@@ -108,10 +87,16 @@ export async function POST(req: NextRequest) {
     if (!isFeatureEnabled("taskAgent")) {
       throw new ApiError(503, "FEATURE_DISABLED", "Agent soạn nhiệm vụ đang tắt.");
     }
+    // Thiếu cấu hình gateway thì báo 503 trước khi trừ lượt gọi và trước khi đọc tệp, như Trợ lý
+    const gatewayConfig = readGatewayConfig();
     await assertRateLimit(authUser.id, "AI_DRAFT");
     const { body, files } = await readAgentRequest(req);
+    if (body.model && !isAllowedAgentModel(getAgentModelCatalog(), body.model)) {
+      throw new ApiError(400, "MODEL_NOT_ALLOWED", "Model này không dùng được cho Agent. Thầy/Cô chọn model khác.");
+    }
+    const config = body.model ? { ...gatewayConfig, model: body.model } : gatewayConfig;
 
-    const named = files.map((file) => ({ file, name: cleanFileName(file.name) }));
+    const named = files.map((file) => ({ file, name: cleanAttachmentFileName(file.name) }));
     const attachmentError = checkTaskAgentAttachments(named.map(({ file, name }) => ({ name, size: file.size })));
     if (attachmentError) throw new ValidationError(attachmentError);
     const attachments = new Map<number, TaskAgentContentPart[]>();
@@ -146,7 +131,7 @@ export async function POST(req: NextRequest) {
               parentTaskTitle: body.parentTaskTitle,
             },
             body.messages,
-            { attachments, signal: upstream.signal, onThinking: (delta) => send({ type: "thinking", delta }) },
+            { attachments, config, signal: upstream.signal, onThinking: (delta) => send({ type: "thinking", delta }) },
           );
           send({ type: "result", data: { ...result, steps, durationMs: Date.now() - startedAt } });
         } catch (error) {

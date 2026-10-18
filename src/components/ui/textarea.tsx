@@ -63,6 +63,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     const remaining = limit !== undefined ? limit - charCount : null;
     const isNearLimit = remaining !== null && remaining <= 20;
+    const showCounter = limit !== undefined && !(countOnlyNearLimit && !isNearLimit);
 
     const textareaElement = (
       <textarea
@@ -82,14 +83,16 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       />
     );
 
-    if ((!showCount && limit === undefined) || (countOnlyNearLimit && !isNearLimit)) {
+    if (!showCount && limit === undefined) {
       return textareaElement;
     }
 
+    // Có giới hạn thì luôn có lớp bọc flex: bộ đếm ẩn/hiện không đổi cây DOM (ô đang gõ không bị remount) và không
+    // đổi khoảng cách (lớp bọc `contents` làm mất margin của `space-y-*` ở thẻ cha).
     return (
       <div className="flex flex-col gap-1.5 w-full">
         {textareaElement}
-        {limit !== undefined && (
+        {showCounter && (
           <div className="flex items-center justify-between text-xs px-1 select-none" aria-live="polite">
             <span
               className={cn(

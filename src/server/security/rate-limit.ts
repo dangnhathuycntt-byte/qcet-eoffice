@@ -36,6 +36,7 @@ export const RATE_LIMIT_TIERS = {
   AUTH_REGISTER:       { limit: 5,  windowSeconds: 3600 }, // 5 req / 1h
   PUSH_TEST:           { limit: 3,  windowSeconds: 300  }, // 3 req / 5 phút
   AI_DRAFT:            { limit: 10, windowSeconds: 60   }, // 10 req / phút (gọi mô hình ngoài)
+  AI_CHAT:             { limit: 6,  windowSeconds: 60   }, // 6 lượt Trợ lý / phút; mỗi lượt ≤ 6 vòng gọi mô hình
 } as const;
 
 export type RateLimitTier = keyof typeof RATE_LIMIT_TIERS;

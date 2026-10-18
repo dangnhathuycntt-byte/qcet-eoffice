@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { authorizeOnTask, can } from "./authorize-on-task";
 
-const LABEL: Partial<Record<TaskActorRole, string>> = {
+export const LABEL: Partial<Record<TaskActorRole, string>> = {
   DRI: "Chủ trì",
   ASSIGNER: "Người giao",
   COLLABORATOR: "Phối hợp",

@@ -150,6 +150,46 @@ export function IconSidebarMore(props: SidebarIconProps) {
 }
 
 /**
+ * Trợ lý: tia sáng bốn cánh cùng hình với `AgentIcon` (Agent soạn nhiệm vụ) để nhận ra cùng một nhóm AI,
+ * vẽ trên lưới 16 với nét 1,25px như các icon sidebar khác.
+ */
+export function IconSidebarAssistant(props: SidebarIconProps) {
+  return (
+    <SidebarSvg {...props}>
+      <path d="M7 3.25Q8.15 7.85 12.75 9Q8.15 10.15 7 14.75Q5.85 10.15 1.25 9Q5.85 7.85 7 3.25Z" />
+      <path d="M12.75 1.25Q13.19 2.81 14.75 3.25Q13.19 3.69 12.75 5.25Q12.31 3.69 10.75 3.25Q12.31 2.81 12.75 1.25Z" fill="currentColor" stroke="none" />
+    </SidebarSvg>
+  );
+}
+
+/**
+ * Soạn mới (cuộc trò chuyện mới): khung bo lớn hở góc trên phải như các icon sidebar, bút chéo đi ra từ góc hở
+ * (hình bút theo `SquarePen` của Lucide, thu về lưới 16).
+ */
+export function IconSidebarCompose(props: SidebarIconProps) {
+  return (
+    <SidebarSvg {...props}>
+      <path d="M7.5 1.75H5A3.25 3.25 0 0 0 1.75 5v6A3.25 3.25 0 0 0 5 14.25h6A3.25 3.25 0 0 0 14.25 11V8.5" />
+      <path d="M12.25 1.75a1 1 0 0 1 2 2l-6 6a1.35 1.35 0 0 1-.58.34l-1.9.56a.33.33 0 0 1-.42-.42l.56-1.9a1.35 1.35 0 0 1 .34-.58Z" />
+    </SidebarSvg>
+  );
+}
+
+/**
+ * Lịch sử trò chuyện: mặt đồng hồ có mũi tên quay ngược ở góc trên trái (hình theo `History` của Lucide, thu về lưới
+ * 16, vòng tròn chạm cùng mép 1,75 như khung các icon khác).
+ */
+export function IconSidebarHistory(props: SidebarIconProps) {
+  return (
+    <SidebarSvg {...props}>
+      <path d="M1.75 8A6.25 6.25 0 1 0 8 1.75a6.75 6.75 0 0 0-4.7 1.9L1.75 5.25" />
+      <path d="M1.75 1.75v3.5h3.5" />
+      <path d="M8 4.75V8l2.5 1.5" />
+    </SidebarSvg>
+  );
+}
+
+/**
  * 11. Mở/đóng sidebar: khung 14×12 trên lưới 16 và vạch ngăn lệch trái như nút sidebar của Linear (vẽ ở 14px).
  * Đang mở thì tô kín nửa trái khung.
  */
