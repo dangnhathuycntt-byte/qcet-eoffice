@@ -20,7 +20,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { UserRole, UnitType, OrganizationalBodyType, BodyMemberRole } from '@prisma/client';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
-import { POST as createBodyRoute } from '@/app/api/organization/bodies/route';
+import { GET as listBodiesRoute, POST as createBodyRoute } from '@/app/api/organization/bodies/route';
 import { GET as getBodyRoute, POST as addMembershipRoute } from '@/app/api/organization/bodies/[id]/route';
 
 /**
@@ -168,5 +168,117 @@ describe('Issue #28: organizational body detail visibility', () => {
       { params: Promise.resolve({ id: 'does-not-exist' }) }
     );
     assert.equal(res.status, 404);
+  });
+});
+
+/**
+ * `GET /api/organization/bodies`: `type`/`status` sai enum là input sai, phải
+ * trả 400 VALIDATION_ERROR thay vì để Prisma ném lỗi thành 500. Xác thực vẫn
+ * chạy trước validate.
+ */
+describe('GET /api/organization/bodies: kiểm tra tham số lọc type/status', () => {
+  const runId = `orglist-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+  let rectorUser: any;
+  let staffUser: any;
+  let rectorToken: string;
+  let staffToken: string;
+  let bodyId: string;
+
+  const authHeaders = (token: string) => ({
+    cookie: `${SESSION_COOKIE_NAME}=${token}`,
+    origin: 'http://localhost',
+  });
+
+  const listBodies = (query: string, token?: string) =>
+    listBodiesRoute(
+      new NextRequest(`http://localhost/api/organization/bodies${query ? `?${query}` : ''}`, {
+        method: 'GET',
+        headers: token ? authHeaders(token) : {},
+      })
+    );
+
+  const containsFixture = async (res: Response) => {
+    const body = await res.json();
+    assert.ok(Array.isArray(body));
+    return body.some((item: { id: string }) => item.id === bodyId);
+  };
+
+  before(async () => {
+    rectorUser = await prisma.user.create({
+      data: { email: `rector.${runId}@qcet.edu.vn`, name: `Rector ${runId}`, role: UserRole.BAN_GIAM_HIEU, isActive: true },
+    });
+    staffUser = await prisma.user.create({
+      data: { email: `staff.${runId}@qcet.edu.vn`, name: `Staff ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },
+    });
+    rectorToken = signSessionToken({ id: rectorUser.id, email: rectorUser.email, name: rectorUser.name, role: rectorUser.role });
+    staffToken = signSessionToken({ id: staffUser.id, email: staffUser.email, name: staffUser.name, role: staffUser.role });
+
+    const createRes = await createBodyRoute(
+      new NextRequest('http://localhost/api/organization/bodies', {
+        method: 'POST',
+        headers: { ...authHeaders(rectorToken), 'content-type': 'application/json' },
+        body: JSON.stringify({ code: `HD_${runId}`, name: `Hoi dong ${runId}`, type: OrganizationalBodyType.COUNCIL }),
+      })
+    );
+    assert.equal(createRes.status, 201);
+    const created = await createRes.json();
+    bodyId = created.id || created.data?.id;
+    assert.ok(bodyId);
+  });
+
+  after(async () => {
+    const userIds = [rectorUser?.id, staffUser?.id].filter(Boolean);
+    await prisma.auditEvent.deleteMany({ where: { actorId: { in: userIds } } }).catch(() => undefined);
+    if (bodyId) await prisma.organizationalBody.deleteMany({ where: { id: bodyId } }).catch(() => undefined);
+    await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => undefined);
+  });
+
+  test('không tham số → 200, danh sách có body của fixture', async () => {
+    const res = await listBodies('', staffToken);
+    assert.equal(res.status, 200);
+    assert.equal(await containsFixture(res), true);
+  });
+
+  test('type=COUNCIL&status=ACTIVE → 200, có body của fixture', async () => {
+    const res = await listBodies('type=COUNCIL&status=ACTIVE', staffToken);
+    assert.equal(res.status, 200);
+    assert.equal(await containsFixture(res), true);
+  });
+
+  test('type=WORKING_GROUP → 200, lọc bỏ body COUNCIL của fixture', async () => {
+    const res = await listBodies('type=WORKING_GROUP', staffToken);
+    assert.equal(res.status, 200);
+    assert.equal(await containsFixture(res), false);
+  });
+
+  test('type rỗng và status rỗng → 200, coi như không lọc', async () => {
+    const res = await listBodies('type=&status=', staffToken);
+    assert.equal(res.status, 200);
+    assert.equal(await containsFixture(res), true);
+  });
+
+  for (const [query, field] of [
+    ['type=XYZ', 'type'],
+    ['status=XYZ', 'status'],
+    ['type=council', 'type'],
+  ] as const) {
+    test(`${query} → 400 VALIDATION_ERROR với fieldErrors.${field}`, async () => {
+      const res = await listBodies(query, staffToken);
+      assert.equal(res.status, 400);
+      const body = await res.json();
+      assert.equal(body.success, false);
+      assert.equal(body.code, 'VALIDATION_ERROR');
+      assert.equal(body.message, 'Validation failed');
+      assert.ok(Array.isArray(body.fieldErrors?.[field]) && body.fieldErrors[field].length > 0);
+      assert.ok(body.requestId);
+    });
+  }
+
+  test('chưa đăng nhập + type=XYZ → 401 AUTH_REQUIRED (xác thực trước validate)', async () => {
+    const res = await listBodies('type=XYZ');
+    assert.equal(res.status, 401);
+    const body = await res.json();
+    assert.equal(body.code, 'AUTH_REQUIRED');
   });
 });

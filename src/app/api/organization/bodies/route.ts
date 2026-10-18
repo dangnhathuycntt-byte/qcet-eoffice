@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
-import { CreateOrganizationalBodySchema } from '@/contracts/meeting';
+import { CreateOrganizationalBodySchema, ListOrganizationalBodiesQuerySchema } from '@/contracts/meeting';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { assertCanManageOrganizationalBodies } from '@/server/policies';
 import { assertCsrf } from '@/server/security/csrf';
@@ -30,10 +30,12 @@ export async function GET(request: NextRequest) {
     // Meeting contents on the detail endpoint additionally require body
     // membership or body-management authority (see bodies/[id] GET).
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const status = searchParams.get('status');
+    const query = ListOrganizationalBodiesQuerySchema.parse({
+      type: searchParams.get('type') || undefined,
+      status: searchParams.get('status') || undefined,
+    });
 
-    const bodies = await listOrganizationalBodies({ type, status });
+    const bodies = await listOrganizationalBodies(query);
 
     return apiSuccess(bodies, { requestId, status: 200 });
   } catch (error: any) {
