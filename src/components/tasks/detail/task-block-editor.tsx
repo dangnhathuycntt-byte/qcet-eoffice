@@ -697,6 +697,10 @@ interface TaskEditorUploadContextValue {
 }
 const TaskEditorUploadContext = React.createContext<TaskEditorUploadContextValue>({});
 
+// Ảnh vừa tải lên trong phiên trang: URL máy chủ → bản xem trước cục bộ (blob). Ảnh chèn lúc soạn nhiệm vụ mới chưa gắn
+// tài nguyên nào nên máy chủ chưa cho tải lại cho tới khi nhiệm vụ được tạo; khối ảnh hiển thị bản cục bộ thay thế.
+const localImagePreviews = new Map<string, string>();
+
 function ImageEl({ attributes, children, element }: any) {
   const editor = useEditorRef();
   const uploadCtx = React.useContext(TaskEditorUploadContext);
@@ -764,6 +768,7 @@ function ImageEl({ attributes, children, element }: any) {
           setImageUrl("", f.name);
           return;
         }
+        if (objectUrl) localImagePreviews.set(result.fileUrl, objectUrl);
         setImageUrl(result.fileUrl, f.name);
         uploadCtx.triggerAutoSave?.(editor.children as PlateValue);
       } catch (err) {
@@ -795,7 +800,7 @@ function ImageEl({ attributes, children, element }: any) {
             <div style={{ width: `${imageWidth}%` }} className="relative mx-auto transition-all duration-150">
               {!imageLoadError ? (
                 <img
-                  src={url}
+                  src={localImagePreviews.get(url) ?? url}
                   alt={caption || "Hình ảnh"}
                   className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none"
                   loading="lazy"
@@ -2246,6 +2251,7 @@ export function TaskBlockEditor({
         const nodes = editor.children as PlateElemT[];
         const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
         if (nodeIdx >= 0) {
+          if (objectUrl && isImageFile(file)) localImagePreviews.set(result.fileUrl, objectUrl);
           editor.tf.setNodes({ url: result.fileUrl } as any, { at: [nodeIdx] });
           // Trigger autosave now that blob URL is replaced with server URL
           triggerAutoSave(editor.children as PlateValue);
