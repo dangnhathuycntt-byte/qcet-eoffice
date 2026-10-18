@@ -72,7 +72,7 @@ Người dùng chọn thanh công cụ Nhiệm vụ làm chuẩn (2026-10-10). P
 - **Ô tìm** `ListToolbarSearch`: rộng 140px (mobile) / 180px, focus thì giãn 240px (`LIST_TOOLBAR_SEARCH_*`); phím `/` để focus.
 - **Nút lọc** hiện số bộ lọc bằng `ListToolbarCountBadge`. Nút chính dùng `listToolbarPrimaryButtonClass` (dấu `+` và nhãn).
 - **Hàng bộ lọc** `ActiveFilterBar` + `FilterSegmentChip` ("Nhãn: Giá trị ✕" kèm icon loại bộ lọc), bên phải là "↺ Xóa lọc" và "x kết quả". Chỉ hiện khi có bộ lọc; cách đường kẻ và bảng 16px. Khi không có bộ lọc, bảng cũng cách đường kẻ 16px.
-- Riêng Nhiệm vụ có thêm nút "Xóa bộ lọc" (`ListToolbarClearFiltersButton`) cạnh nút lọc; Văn bản đã bỏ nút này theo yêu cầu.
+- Không trang nào còn nút "Xóa bộ lọc" rời cạnh nút lọc: Văn bản bỏ theo yêu cầu; Nhiệm vụ không còn từ 59ca8235 (12/10/2026, `ListToolbarClearFiltersButton` đã xóa). Xóa bộ lọc bằng mục "Xóa bộ lọc" cuối menu lọc hoặc "Xóa lọc" ở hàng bộ lọc.
 
 ## Nhiệm vụ
 
@@ -167,4 +167,4 @@ Trang `/assistant` và `/assistant/[id]`, bật bằng cờ `assistant`; mục �
 - Bảng màu trạng thái nhiều sắc (xanh, tím, lục, cam, đỏ) vẫn dùng palette Tailwind: `STATUS_BADGE_CONFIGS` trong [constants.ts](src/components/tasks/table/constants.ts), nhãn trạng thái trong [document-badges.ts](src/components/documents/document-badges.ts). Đây là màu phân loại, chưa có token; cần quyết định riêng trước khi đổi.
 - Icon loại văn bản `FileText` màu cam trong [document-quick-entry-modal.tsx](src/components/documents/document-quick-entry-modal.tsx) là màu trang trí, chưa đổi.
 - `document-stats-summary.tsx`, `document-filter-bar.tsx`, `document-table.tsx` trong `registry/` không còn được trang `/documents` dùng, vẫn còn cỡ chữ/màu cũ.
-- Trang Nhiệm vụ còn nút "Xóa bộ lọc" cạnh nút lọc, Văn bản thì không. `tests/unified-task-toolbar.test.ts` đang yêu cầu nút này.
+- Nút "Xóa bộ lọc" rời cạnh nút lọc: Nhiệm vụ không còn nút này từ 59ca8235 (12/10/2026), nên hai trang không còn khác nhau; chưa có bản ghi duyệt riêng cho việc bỏ nút ở Nhiệm vụ. (Chữ "Xóa bộ lọc" mà `tests/unified-task-toolbar.test.ts` kiểm là nút của `TaskEmptyState`, không phải nút trên thanh công cụ.)

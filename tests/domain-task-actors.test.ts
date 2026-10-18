@@ -1167,9 +1167,11 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
     });
 
     test("5.1 First backfill execution correctly materializes DRI, ASSIGNER, and LEAD_UNIT actors", async () => {
-      // Run first pass
-      const summary1 = await migrateTaskRelations(prisma);
-      assert.ok(summary1.totalTasks >= 3, "Scanned tasks count must include test tasks");
+      // Run first pass, scoped to the fixtures: an unscoped scan writes actors onto other files' tasks running in parallel
+      const summary1 = await migrateTaskRelations(prisma, {
+        taskIds: [taskWithAssigneeAndDept.id, taskWithLeadUnitOnly.id, taskWithoutAssignee.id],
+      });
+      assert.equal(summary1.totalTasks, 3, "Scanned tasks count must equal the test tasks");
 
       // Verify taskWithAssigneeAndDept
       const actors1 = await prisma.taskActor.findMany({
