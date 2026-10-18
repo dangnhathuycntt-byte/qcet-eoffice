@@ -6,7 +6,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { TaskActorRole, TaskStatus } from '@prisma/client';
 import { prisma } from '../src/lib/prisma';
-import { taskDomainActionService } from '../src/lib/services/task-domain-actions';
+import { taskDomainActionService } from '../src/server/tasks/task-domain-actions';
 import { ApiError, NotFoundError, PreconditionFailedError, ValidationError, InvalidTransitionError } from '../src/server/api/errors';
 
 const runId = `t07_${Date.now()}`;

@@ -8,7 +8,6 @@ import type {
   DashboardStats,
 } from "@/types/dashboard";
 import { computeDashboardStats } from "@/lib/dashboard-aggregator";
-import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import type {
   ExecutiveFilter,
   ExecutiveActionStats,
@@ -21,8 +20,6 @@ import {
   filterTasksByExecutive,
   extractExecutiveActionItems,
 } from "@/lib/executive-matrix-aggregator";
-import type { TaskScope } from "@/components/dashboard/unified-task-toolbar";
-import { filterTasksByScope } from "@/components/dashboard/unified-task-toolbar";
 import { WorkspaceZone } from "@/types/workspace";
 import type { AuthUser } from "@/types/auth";
 import {
@@ -32,6 +29,9 @@ import {
 import {
   filterTasksHub,
   computeMonthlyTaskCounts,
+  filterTasksByScope,
+  type TaskScope,
+  type WorkboxFilter,
 } from "@/lib/unified-task-hub";
 import {
   formatDepartmentLabel,

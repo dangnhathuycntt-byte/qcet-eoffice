@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { assignUnitWork } from "@/lib/services/incoming-document-service";
-import { withIdempotency } from "@/lib/db/idempotency";
+import { assignUnitWork } from "@/server/documents/incoming-document-service";
+import { withIdempotency } from "@/server/api/idempotency";
 import { ValidationError } from "@/server/api/errors";
 import { documentActionRoute } from "../shared";
 

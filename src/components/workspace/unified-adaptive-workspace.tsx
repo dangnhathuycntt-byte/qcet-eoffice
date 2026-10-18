@@ -10,7 +10,6 @@ import {
 } from "./hooks/use-adaptive-workspace-data";
 import {
   UnifiedTaskToolbar,
-  filterTasksByScope,
   type TableDensity,
 } from "@/components/dashboard/unified-task-toolbar";
 import {
@@ -18,7 +17,7 @@ import {
   type TaskViewCriteria,
   findPresetById,
 } from "@/lib/saved-views/saved-views-store";
-import { workspaceScopeToTaskScope } from "@/lib/unified-task-hub";
+import { filterTasksByScope, workspaceScopeToTaskScope } from "@/lib/unified-task-hub";
 import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
 import { parseWorkspaceQuery } from "@/lib/workspace-query";
 import { matchesTaskTab, resolveTaskTab, TASK_TABS, type TaskTab } from "@/domain/tasks/task-tabs";
@@ -38,7 +37,7 @@ import {
   type TaskFilterFacets,
 } from "@/domain/tasks/task-filter-facets";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { matchesUser } from "@/lib/role-task-filter";
+import { isExecutiveUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
   getSystemReferenceDate,
@@ -55,7 +54,6 @@ import { DEFAULT_DISPLAY_PROPERTIES } from "@/components/tasks/table/components/
 import { TaskEmptyState } from "@/components/tasks/table/components/task-empty-state";
 import { resolveCreateTaskPolicy } from "@/domain/tasks/create-task-policy";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
-import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { Button } from "@/components/ui/button";
 import type { SchoolTask, StaffTask, TaskPriority, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";

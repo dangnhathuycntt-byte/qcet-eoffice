@@ -1,5 +1,5 @@
 import { PresentDocumentSchema } from "@/contracts/documents";
-import { presentDocument } from "@/lib/services/incoming-document-service";
+import { presentDocument } from "@/server/documents/incoming-document-service";
 import { documentActionRoute } from "../shared";
 
 export const POST = documentActionRoute(

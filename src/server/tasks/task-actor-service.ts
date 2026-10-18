@@ -1,6 +1,6 @@
 import {
   prisma,
-} from "../prisma";
+} from "@/lib/prisma";
 import {
   Prisma,
   TaskActor,

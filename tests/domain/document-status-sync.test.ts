@@ -17,7 +17,7 @@ import {
   IncomingDocumentStatus,
   OutgoingDocumentStatus,
 } from "@prisma/client";
-import { mapIncomingWorkflowStatusToDocumentStatus, mapOutgoingWorkflowStatusToDocumentStatus, isDocumentImmutable } from "../../src/lib/documents/state-machine";
+import { mapIncomingWorkflowStatusToDocumentStatus, mapOutgoingWorkflowStatusToDocumentStatus, isDocumentImmutable } from "../../src/server/documents/state-machine";
 import { InvalidTransitionError, ValidationError } from "../../src/server/api/errors";
 
 const describe: any = (globalThis as any).describe || nodeTest.describe;

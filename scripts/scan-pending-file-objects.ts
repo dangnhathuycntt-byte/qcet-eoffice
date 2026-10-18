@@ -1,6 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { FileScanStatus, PrismaClient } from "@prisma/client";
-import { scanPendingFileObject } from "../src/lib/services/file-service";
+import { scanPendingFileObject } from "../src/server/files/file-service";
 
 loadEnvConfig(process.cwd());
 

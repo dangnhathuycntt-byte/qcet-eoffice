@@ -15,7 +15,7 @@ import {
   isAllowedFileExtension,
   sanitizeDownloadFilename,
   resolveSafeFilePath,
-} from "@/lib/storage";
+} from "@/server/files/storage";
 
 describe("File API Hardening & Secure Download (Task 13)", () => {
   const uploadsDir = path.resolve(process.env.UPLOADS_DIR || "./uploads");

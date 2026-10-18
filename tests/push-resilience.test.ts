@@ -6,7 +6,7 @@ import {
   sendPushNotificationToUser,
   setPushSenderForTesting,
   ensureVapidConfigured,
-} from "../src/lib/push-service";
+} from "../src/server/notifications/push-service";
 import { areServerKeysEqual } from "../src/hooks/use-push-notification";
 
 describe("Task 3: PWA & Service Worker Resilience", () => {

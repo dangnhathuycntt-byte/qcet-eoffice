@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { getLiveDashboardData } from '../src/lib/server/dashboard-service';
+import { getLiveDashboardData } from '../src/server/services/dashboard-service';
 
 describe('Live Dashboard Service Contract', () => {
   test('getLiveDashboardData phải tổng hợp dữ liệu thực từ PostgreSQL', async () => {

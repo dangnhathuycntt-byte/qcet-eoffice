@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
@@ -16,19 +15,13 @@ import {
 import { toDocumentDetailDTO } from "@/server/dto/document-dto";
 import { UpdateDocumentSchema } from "@/contracts/documents";
 import {
+  applyDocumentPatch,
+  deleteDocumentCascade,
   getDocumentById,
-  updateDocument,
-} from "@/lib/documents/document-service";
-import { isDocumentImmutable } from "@/lib/documents/state-machine";
-import {
-  assertCanLinkTask,
-  lockDocumentRows,
-  normalizeLinkedTaskId,
-  recordLinkedTaskChange,
-  toLinkedTaskConflict,
-} from "@/lib/documents/linked-task-link";
+  isDocumentMarked,
+} from "@/server/documents/document-service";
+import { isDocumentImmutable } from "@/server/documents/state-machine";
 import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
-import { logAuditEvent } from "@/lib/db/audit";
 import {
   NotFoundError,
   AuthorizationError,
@@ -67,7 +60,7 @@ export async function GET(
       docResource
     );
 
-    const marked = Boolean(await prisma.documentMark.findUnique({ where: { documentId_userId: { documentId: id, userId: authUser.id } }, select: { userId: true } }));
+    const marked = await isDocumentMarked(id, authUser.id);
     const documentDTO = toDocumentDetailDTO(document);
     // Cùng điều kiện với PATCH và bổ sung tệp: UI chỉ hiện "Sửa"/"Thêm tệp" khi thao tác thực sự được phép
     const canEdit = canUpdateDocument(authContext, document) && !isDocumentImmutable(document);
@@ -201,64 +194,8 @@ export async function PATCH(
       );
     }
 
-    // S-1: gắn/đổi/gỡ nhiệm vụ liên kết làm đổi đơn vị xử lý văn bản nên phải kiểm quyền và ghi nhật ký.
-    // Mọi đọc-quyết định-ghi diễn ra trong một transaction sau khi khóa dòng, để hai PATCH đồng thời
-    // không dựa vào trạng thái đã cũ (bỏ sót kiểm quyền hoặc ghi sai nhật ký).
-    let updated;
-    if (validated.linkedTaskId !== undefined) {
-      const { linkedTaskId: requestedLink, ...rest } = validated;
-      try {
-        updated = await prisma.$transaction(async (tx) => {
-          await lockDocumentRows(tx, id);
-          const fresh = await getDocumentById(id, tx);
-          if (!fresh) {
-            throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
-          }
-          if (isDocumentImmutable(fresh)) {
-            throw new ValidationError(
-              "Văn bản đã được ký hoặc đã ban hành/hoàn thành/lưu trữ là bất biến, không thể chỉnh sửa metadata.",
-              undefined,
-              "IMMUTABLE_DOCUMENT"
-            );
-          }
-          if (!canUpdateDocument(authUser, fresh)) {
-            throw new ForbiddenError("Bạn không có quyền cập nhật văn bản này (Forbidden)");
-          }
-          const change = {
-            documentId: id,
-            currentTaskId: fresh.linkedTaskId ?? null,
-            nextTaskId: normalizeLinkedTaskId(requestedLink),
-          };
-          const changing = change.nextTaskId !== change.currentTaskId;
-          const task = changing ? await assertCanLinkTask(tx, authContext, change) : null;
-          const result = await updateDocument(
-            id,
-            { ...(rest as any), ...(changing ? { linkedTaskId: change.nextTaskId } : {}) },
-            tx
-          );
-          if (changing) {
-            await recordLinkedTaskChange(tx, { ...change, actorId: authUser.id, requestId, task });
-          }
-          return result;
-        });
-      } catch (error) {
-        throw toLinkedTaskConflict(error);
-      }
-    } else {
-      // Ghi nhật ký các trường đã sửa (chỉ tên trường) để thay đổi thông tin hiện trong luân chuyển
-      updated = await prisma.$transaction(async (tx) => {
-        const result = await updateDocument(id, validated as any, tx);
-        await logAuditEvent(tx, {
-          actorId: authUser.id,
-          action: "DOCUMENT_UPDATED",
-          entityType: "Document",
-          entityId: id,
-          requestId,
-          metadata: { fields: Object.keys(validated) },
-        });
-        return result;
-      });
-    }
+    // S-1: gắn/đổi/gỡ nhiệm vụ liên kết được kiểm quyền và ghi nhật ký trong transaction có khóa dòng (xem service).
+    const updated = await applyDocumentPatch(id, validated, { authUser, authContext, requestId });
 
     return apiSuccess(
       {
@@ -323,11 +260,7 @@ export async function DELETE(
     }
 
     // 4. Atomic transaction cleanup and deletion
-    await prisma.$transaction(async (tx) => {
-      await tx.documentDirective.deleteMany({ where: { documentId: id } });
-      await tx.documentAttachment.deleteMany({ where: { documentId: id } });
-      await tx.document.delete({ where: { id } });
-    });
+    await deleteDocumentCascade(id);
 
     return apiSuccess(
       {

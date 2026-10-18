@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
-import { buildContentDisposition, openByteRangeStream } from "@/lib/storage";
+import { buildContentDisposition, openByteRangeStream } from "@/server/files/storage";
 import { NotFoundError, ValidationError } from "@/server/api/errors";
 
 /**

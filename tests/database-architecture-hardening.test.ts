@@ -8,7 +8,7 @@ import {
 import {
   withIdempotency,
   IdempotencyConflictError,
-} from "../src/lib/db/idempotency";
+} from "../src/server/api/idempotency";
 import {
   recordAuditEvent,
   logAuditEvent,

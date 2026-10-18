@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { logAuditEvent, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { getApiContext } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertRateLimit } from "@/server/security/rate-limit";
+import { recordAccessRequest } from "@/server/auth/access-request-service";
 
 const RequestAccessSchema = z
   .object({
@@ -27,19 +27,7 @@ export async function POST(req: NextRequest) {
 
     const { email, name } = await parseAndValidateJson(req, RequestAccessSchema, { maxBytes: 4 * 1024 });
 
-    await logAuditEvent({
-      action: AuditAction.ACCESS_REQUESTED,
-      entityType: AuditEntityType.USER,
-      entityId: email,
-      metadata: {
-        type: "ACCESS_REQUEST",
-        email,
-        name: name || undefined,
-        timestamp: new Date().toISOString(),
-        source: "LOGIN_FLOW",
-        ip: context.ip,
-      },
-    });
+    await recordAccessRequest({ email, name, ip: context.ip });
 
     return apiSuccess(
       {

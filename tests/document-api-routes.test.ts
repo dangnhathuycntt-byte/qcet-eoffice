@@ -8,7 +8,7 @@ import { GET as listDocumentsRoute, POST as createDocumentRoute } from "../src/a
 import { GET as getDocumentRoute, PATCH as patchDocumentRoute } from "../src/app/api/documents/[id]/route";
 import { POST as postDirectiveRoute } from "../src/app/api/documents/[id]/directives/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { listDocuments } from "../src/lib/documents/document-service";
+import { listDocuments } from "../src/server/documents/document-service";
 import {
   DocumentType,
   DocumentStatus,

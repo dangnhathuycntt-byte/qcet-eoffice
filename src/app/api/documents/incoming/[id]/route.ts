@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { getIncomingDocument } from "@/lib/services/incoming-document-service";
+import { getIncomingDocument } from "@/server/documents/incoming-document-service";
 import { NotFoundError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { assertDocumentReadable } from "@/server/documents/authorize-on-document";

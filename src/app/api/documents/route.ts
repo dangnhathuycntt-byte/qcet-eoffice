@@ -18,9 +18,9 @@ import {
   mapPrismaDocumentToItem,
   type CreateDocumentPayload,
   type ListDocumentsFilter,
-} from "@/lib/documents/document-service";
+} from "@/server/documents/document-service";
 import { validateDocumentCreatePayload } from "@/lib/documents/document-validator";
-import { assertNoSuspectedDuplicate } from "@/lib/documents/duplicate-check";
+import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { AuthorizationError, ValidationError } from "@/server/api/errors";
 import type { DocumentType } from "@/types/document";
 import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     // luôn được tạo cùng Document (Decree 30/2020/ND-CP compliance).
     if (docType === "VAN_BAN_DI") {
       const { OutgoingDocumentService } = await import(
-        "@/lib/services/outgoing-document-service"
+        "@/server/documents/outgoing-document-service"
       );
       const result = await OutgoingDocumentService.createOutgoingDraft(
         {

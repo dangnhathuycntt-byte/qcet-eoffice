@@ -7,7 +7,7 @@ import {
   stableStringify,
   computePayloadHash,
   getIdempotencyRecord,
-} from '../src/lib/db/idempotency';
+} from '../src/server/api/idempotency';
 
 describe('Tasks 3.12-3.14: Idempotency Payload Verification & Command Flow', () => {
   const testRunId = `cmd_test_${Date.now()}`;

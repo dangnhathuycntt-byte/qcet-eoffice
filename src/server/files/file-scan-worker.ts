@@ -1,6 +1,6 @@
 import { FileScanStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { scanPendingFileObject } from "@/lib/services/file-service";
+import { scanPendingFileObject } from "@/server/files/file-service";
 import { logger } from "@/server/observability/logger";
 
 const BATCH_SIZE = 3;

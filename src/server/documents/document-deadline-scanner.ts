@@ -16,7 +16,7 @@ import { UserRole } from "@prisma/client";
 import { DOCUMENT_DONE_STATUSES } from "@/lib/documents/document-sidebar-buckets";
 import { getIctReferenceDateStart } from "@/domain/tasks/deadlines";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType, type DbClient } from "@/lib/db/outbox";
-import { formatDocumentPushPayload, type PushResult } from "@/lib/push-service";
+import { formatDocumentPushPayload, type PushResult } from "@/server/notifications/push-service";
 
 export interface ScanDocumentDeadlinesOptions {
   now?: Date;

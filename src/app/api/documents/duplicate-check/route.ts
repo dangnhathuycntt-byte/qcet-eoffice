@@ -5,7 +5,7 @@ import { apiSuccess, apiError } from "@/server/api/response";
 import { AuthorizationError } from "@/server/api/errors";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { canCreateDocument } from "@/server/policies/document-policy";
-import { findSuspectedDuplicates } from "@/lib/documents/duplicate-check";
+import { findSuspectedDuplicates } from "@/server/documents/duplicate-check";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

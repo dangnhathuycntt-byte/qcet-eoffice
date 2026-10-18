@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { DeliverOutgoingDocumentSchema } from "@/contracts/documents";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";

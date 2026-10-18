@@ -1,4 +1,4 @@
-import { ReviewInputSchema, taskDomainActionService } from "@/lib/services/task-domain-actions";
+import { ReviewInputSchema, taskDomainActionService } from "@/server/tasks/task-domain-actions";
 import { taskActionRoute } from "../shared";
 
 export const POST = taskActionRoute(ReviewInputSchema, "task.review", (session, taskId, body) =>

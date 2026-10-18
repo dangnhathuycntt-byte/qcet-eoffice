@@ -28,8 +28,8 @@ import {
   assertAuthorized,
   type AuthenticatedUserContext,
   type AuthorizationResource,
-} from "@/lib/auth/hybrid-authorization";
-import { resolveUserContext } from "@/lib/services/incoming-document-service";
+} from "@/server/authorization/hybrid-authorization";
+import { resolveUserContext } from "@/server/documents/incoming-document-service";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import {
@@ -41,11 +41,12 @@ import {
 } from "@/server/api/errors";
 import { canReadDossier } from "@/server/policies/dossier-policy";
 import type { SessionPayload } from "@/lib/jwt-session";
+import type { AuthenticatedUser } from "@/server/api/request-context";
 import {
   assertTransition,
   assertDossierNotImmutable,
 } from "@/domain/dossiers/state-machine";
-import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
+import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 
 // ============================================================================
 // Types & Interfaces
@@ -1306,6 +1307,40 @@ export class DossierService {
     }
 
     return dossier as WorkDossierWithDetails;
+  }
+
+  /**
+   * Danh sách mục trong hồ sơ cho người dùng hiện tại. Người không đủ quyền đọc
+   * toàn bộ hồ sơ chỉ thấy mục do mình thêm (RFC-09: người đóng góp chỉ đọc mục của mình).
+   */
+  static async listItemsForUser(authUser: AuthenticatedUser, id: string) {
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            addedBy: { select: { id: true, name: true } },
+          },
+          orderBy: { sequence: "asc" },
+        },
+      },
+    });
+
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
+    }
+
+    const hasFullRead = canReadDossier(authUser, dossier);
+    let items = dossier.items || [];
+
+    if (!hasFullRead) {
+      items = items.filter((item) => item.addedById === authUser.id);
+      if (items.length === 0) {
+        throw new ForbiddenError("Bạn không có quyền truy cập hồ sơ công việc này");
+      }
+    }
+
+    return items;
   }
 
   /**

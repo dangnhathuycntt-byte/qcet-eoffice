@@ -37,7 +37,7 @@ import type {
   SearchTaskResult,
   SearchUserResult,
   SearchDocumentResult,
-} from "@/app/api/search/route";
+} from "@/contracts/search";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Pressable } from "@/components/ui/pressable";
 import { getDocumentHref } from "@/lib/documents/document-view-model";

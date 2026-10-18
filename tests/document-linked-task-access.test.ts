@@ -22,7 +22,7 @@ import { signSessionToken } from "../src/lib/jwt-session";
 import { GET as getDocument, PATCH as patchDocument } from "../src/app/api/documents/[id]/route";
 import { GET as getAuditLogs } from "../src/app/api/documents/[id]/audit-logs/route";
 import { GET as getFile } from "../src/app/api/files/[...path]/route";
-import { toLinkedTaskConflict } from "../src/lib/documents/linked-task-link";
+import { toLinkedTaskConflict } from "../src/server/documents/linked-task-link";
 
 /**
  * Kiểm thử tích hợp (DB test `qcet_test` do runner đặt): quyền đọc văn bản qua nhiệm vụ liên kết (D17)

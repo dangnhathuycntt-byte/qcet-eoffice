@@ -4,8 +4,7 @@ import type {
   WorkspaceScope,
   UniversalActionQueueItems,
 } from "../types";
-import { matchesUser } from "@/lib/role-task-filter";
-import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
+import { isExecutiveUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 

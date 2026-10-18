@@ -1,13 +1,13 @@
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { AuthorizationError } from "@/server/api/errors";
-import { AuditLogQuerySchema, type AuditLogEntryDTO } from "@/contracts/audit-logs";
+import { AuditLogQuerySchema } from "@/contracts/audit-logs";
 import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";
 import { normalizeIctDateRange } from "@/lib/ict-date-boundaries";
+import { listAuditLogEntries } from "@/server/audit/audit-log-query-service";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -28,17 +28,7 @@ export async function GET(req: Request) {
     const rawParams = Object.fromEntries(url.searchParams.entries());
     const query = AuditLogQuerySchema.parse(rawParams);
 
-    const where: Record<string, unknown> = {};
-
-    if (query.action) {
-      where.action = query.action;
-    }
-    if (query.entityType) {
-      where.entityType = query.entityType;
-    }
-    if (query.actorId) {
-      where.actorId = query.actorId;
-    }
+    let createdRange: { gte?: string | Date; lte?: string | Date } | undefined;
     if (query.from || query.to) {
       const range = normalizeIctDateRange(query.from, query.to);
       if (range.error) {
@@ -48,40 +38,17 @@ export async function GET(req: Request) {
           { headers: { 'Cache-Control': 'private, no-store' } }
         );
       }
-      const createdAt: Record<string, string | Date> = {};
-      if (range.gte !== undefined) createdAt.gte = range.gte;
-      if (range.lte !== undefined) createdAt.lte = range.lte;
-      where.createdAt = createdAt;
+      createdRange = range;
     }
 
-    const [rows, total] = await Promise.all([
-      prisma.auditEvent.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: query.pageSize,
-        skip: (query.page - 1) * query.pageSize,
-        select: {
-          id: true,
-          actorId: true,
-          action: true,
-          entityType: true,
-          entityId: true,
-          requestId: true,
-          createdAt: true,
-        },
-      }),
-      prisma.auditEvent.count({ where }),
-    ]);
-
-    const entries: AuditLogEntryDTO[] = rows.map((row) => ({
-      id: row.id,
-      actorId: row.actorId,
-      action: row.action,
-      entityType: row.entityType,
-      entityId: row.entityId,
-      requestId: row.requestId,
-      createdAt: row.createdAt.toISOString(),
-    }));
+    const { entries, total } = await listAuditLogEntries({
+      action: query.action,
+      entityType: query.entityType,
+      actorId: query.actorId,
+      createdRange,
+      page: query.page,
+      pageSize: query.pageSize,
+    });
 
     return apiSuccess(
       {

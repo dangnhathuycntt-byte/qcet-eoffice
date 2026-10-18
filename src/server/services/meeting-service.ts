@@ -11,7 +11,7 @@ import {
  */
 
 import { prisma } from '@/lib/prisma';
-import { getFileObjectIdFromUrl } from '@/lib/services/file-service';
+import { getFileObjectIdFromUrl } from '@/server/files/file-service';
 import {
   MeetingStatus,
   MeetingParticipantRole,
@@ -817,6 +817,28 @@ export class MeetingService {
     }
 
     return meeting;
+  }
+
+  /**
+   * Danh sách quyết nghị / kết luận của cuộc họp, sau khi kiểm quyền đọc cuộc họp cha.
+   */
+  static async listResolutions(meetingId: string, userId: string) {
+    // Enforce read authorization on parent meeting
+    await this.getMeeting(meetingId, userId);
+
+    return await prisma.meetingResolution.findMany({
+      where: { meetingId },
+      include: {
+        leadUnit: true,
+        leadUser: {
+          select: { id: true, name: true, email: true },
+        },
+        resultingTask: {
+          select: { id: true, title: true, status: true, dueDate: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   /**

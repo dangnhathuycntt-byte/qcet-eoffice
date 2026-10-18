@@ -10,7 +10,7 @@ import { taskQueryService } from '@/server/tasks/task-query-service';
 import { GET as getTaskById, PATCH as patchTaskById } from '@/app/api/tasks/[id]/route';
 import { GET as getFileRoute } from '@/app/api/files/[...path]/route';
 import { POST as logoutRoute } from '@/app/api/auth/logout/route';
-import { loadTaskAndBuildResource, taskDomainActionService } from '@/lib/services/task-domain-actions';
+import { loadTaskAndBuildResource, taskDomainActionService } from '@/server/tasks/task-domain-actions';
 import { NotFoundError } from '@/server/api/errors';
 
 

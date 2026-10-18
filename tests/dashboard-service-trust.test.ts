@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getLiveDashboardData, VALID_TASK_CATEGORIES } from "../src/lib/server/dashboard-service";
+import { getLiveDashboardData, VALID_TASK_CATEGORIES } from "../src/server/services/dashboard-service";
 import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
 import { prisma } from "../src/lib/prisma";
 

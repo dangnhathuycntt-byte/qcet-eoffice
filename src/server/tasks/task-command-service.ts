@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { getFileObjectIdFromUrl } from '@/lib/services/file-service';
+import { getFileObjectIdFromUrl } from '@/server/files/file-service';
 import {
   TaskScope,
   TaskStatus,
@@ -35,7 +35,7 @@ import {
   publishTaskCompletedEvent,
   OutboxAggregateType,
 } from '@/lib/db/outbox';
-import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
+import { safeAfter, dispatchTaskAssignedPush } from '@/server/notifications/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
 import { getAcademicYear, getSystemReferenceDate, getCurrentAcademicPeriod } from '@/lib/academic-calendar';
 import {

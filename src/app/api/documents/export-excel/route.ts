@@ -10,7 +10,7 @@ import {
 } from "@/server/api/validation";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { ExportDocumentQuerySchema } from "@/contracts/documents";
-import { listDocuments } from "@/lib/documents/document-service";
+import { listDocuments } from "@/server/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
 import { isFeatureEnabled } from "@/features/flags";
 import { ValidationError } from "@/server/api/errors";

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { RecipientsSchema } from "@/server/documents/outgoing-recipients";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 
 const IssueDocumentSchema = z.object({

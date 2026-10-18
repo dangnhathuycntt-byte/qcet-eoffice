@@ -2,7 +2,7 @@ import { AddressInfo } from "node:net";
 import net from "node:net";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { scanReadableWithClamAv } from "../src/lib/services/file-service";
+import { scanReadableWithClamAv } from "../src/server/files/file-service";
 
 async function startFakeClamAv(reply: string) {
   let scannedBytes = Buffer.alloc(0);

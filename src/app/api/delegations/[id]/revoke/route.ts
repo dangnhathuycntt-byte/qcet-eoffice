@@ -5,17 +5,17 @@
 
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
-import { ApiError, ForbiddenError, NotFoundError } from '@/server/api/errors';
+import { ApiError, ForbiddenError } from '@/server/api/errors';
 import { parseAndValidateJson } from '@/server/api/validation';
 import { assertCsrf } from '@/server/security/csrf';
-import { DelegationStatus } from '@prisma/client';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
-import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
-import { authorizationContextCache } from '@/server/authorization/authorization-context-cache';
 import { isExecutiveAdministrator } from '@/server/authorization/delegation-policy';
+import {
+  loadDelegationGrantForRevoke,
+  revokeDelegationGrant,
+} from '@/server/authorization/delegation-grant-service';
 
 const RevokeDelegationSchema = z
   .object({
@@ -50,31 +50,9 @@ export async function POST(request: NextRequest, props: RouteParams) {
       throw new ApiError(400, 'ID_REQUIRED', 'Thiếu mã định danh ủy quyền (id)');
     }
 
-    const delegation = await prisma.delegationGrant.findUnique({
-      where: { id },
-      include: {
-        grantorAssignment: {
-          include: {
-            user: { select: { id: true, name: true, email: true, role: true } },
-            unit: { select: { id: true, name: true, code: true } },
-            positionDefinition: { select: { id: true, title: true, code: true } },
-          },
-        },
-        granteeAssignment: {
-          include: {
-            user: { select: { id: true, name: true, email: true, role: true } },
-            unit: { select: { id: true, name: true, code: true } },
-            positionDefinition: { select: { id: true, title: true, code: true } },
-          },
-        },
-      },
-    });
+    const { delegation, alreadyRevoked } = await loadDelegationGrantForRevoke(id);
 
-    if (!delegation) {
-      throw new NotFoundError('Không tìm thấy văn bản ủy quyền');
-    }
-
-    if (delegation.status === DelegationStatus.REVOKED) {
+    if (alreadyRevoked) {
       return apiSuccess(delegation, {
         requestId,
         status: 200,
@@ -103,62 +81,7 @@ export async function POST(request: NextRequest, props: RouteParams) {
       // Body is optional
     }
 
-    const now = new Date();
-
-    const updated = await prisma.$transaction(async (tx) => {
-      const res = await tx.delegationGrant.update({
-        where: { id },
-        data: {
-          status: DelegationStatus.REVOKED,
-          revokedAt: now,
-          revokedReason: reason || 'Thu hồi hiệu lực văn bản ủy quyền',
-        },
-        include: {
-          grantorAssignment: {
-            include: {
-              user: { select: { id: true, name: true, email: true, role: true } },
-              unit: { select: { id: true, name: true, code: true } },
-              positionDefinition: { select: { id: true, title: true, code: true } },
-            },
-          },
-          granteeAssignment: {
-            include: {
-              user: { select: { id: true, name: true, email: true, role: true } },
-              unit: { select: { id: true, name: true, code: true } },
-              positionDefinition: { select: { id: true, title: true, code: true } },
-            },
-          },
-          responsibilityArea: true,
-        },
-      });
-
-      await logAuditEvent(tx, {
-        actorId: authUser.id,
-        action: AuditAction.DELEGATION_REVOKED,
-        entityType: AuditEntityType.DELEGATION_GRANT,
-        entityId: res.id,
-        requestId,
-        beforeData: {
-          status: delegation.status,
-          revokedAt: delegation.revokedAt ? delegation.revokedAt.toISOString() : null,
-        },
-        afterData: {
-          status: res.status,
-          revokedAt: res.revokedAt ? res.revokedAt.toISOString() : null,
-          revokedReason: res.revokedReason,
-        },
-        metadata: {
-          grantorUserId: delegation.grantorAssignment.userId,
-          granteeUserId: delegation.granteeAssignment.userId,
-          sourceDocumentNumber: delegation.sourceDocumentNumber,
-        },
-      });
-
-      return res;
-    });
-
-    authorizationContextCache.invalidateAuthorizationContextCache(delegation.grantorAssignment.userId);
-    authorizationContextCache.invalidateAuthorizationContextCache(delegation.granteeAssignment.userId);
+    const updated = await revokeDelegationGrant({ delegation, actorId: authUser.id, reason, requestId });
 
     return apiSuccess(updated, { requestId, status: 200 });
   } catch (error: any) {

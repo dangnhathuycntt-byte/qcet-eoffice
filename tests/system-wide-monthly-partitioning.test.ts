@@ -332,7 +332,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
   // ---------------------------------------------------------------------------
   describe("6. CascadingTaskTable Backlog & Period Indicator Invariants", () => {
     test("CascadingTaskTable renders operational period indicator in table header for Month 9", async () => {
-      const { CascadingTaskTable } = await import("../src/components/tasks/cascading-task-table");
+      const { ModularCascadingTaskTable: CascadingTaskTable } = await import("../src/components/tasks/table/modular-cascading-task-table");
 
       const markup = renderToStaticMarkup(
         React.createElement(CascadingTaskTable, {
@@ -347,7 +347,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
     });
 
     test("CascadingTaskTable renders Toàn năm học when selectedAcademicMonth === ALL", async () => {
-      const { CascadingTaskTable } = await import("../src/components/tasks/cascading-task-table");
+      const { ModularCascadingTaskTable: CascadingTaskTable } = await import("../src/components/tasks/table/modular-cascading-task-table");
 
       const markup = renderToStaticMarkup(
         React.createElement(CascadingTaskTable, {
@@ -360,7 +360,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
     });
 
     test("CascadingTaskTable renders Prior Overdue Backlog section when month !== ALL and backlog exists", async () => {
-      const { CascadingTaskTable } = await import("../src/components/tasks/cascading-task-table");
+      const { ModularCascadingTaskTable: CascadingTaskTable } = await import("../src/components/tasks/table/modular-cascading-task-table");
 
       const markup = renderToStaticMarkup(
         React.createElement(CascadingTaskTable, {
@@ -378,7 +378,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
     });
 
     test("CascadingTaskTable hides Prior Overdue Backlog section when selectedAcademicMonth === ALL", async () => {
-      const { CascadingTaskTable } = await import("../src/components/tasks/cascading-task-table");
+      const { ModularCascadingTaskTable: CascadingTaskTable } = await import("../src/components/tasks/table/modular-cascading-task-table");
 
       const markup = renderToStaticMarkup(
         React.createElement(CascadingTaskTable, {
@@ -416,7 +416,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
     });
 
     test("CascadingTaskTable tags subtasks due in active cycle with Hạn trong kỳ badge", async () => {
-      const { CascadingTaskTable } = await import("../src/components/tasks/cascading-task-table");
+      const { ModularCascadingTaskTable: CascadingTaskTable } = await import("../src/components/tasks/table/modular-cascading-task-table");
 
       const markup = renderToStaticMarkup(
         React.createElement(CascadingTaskTable, {

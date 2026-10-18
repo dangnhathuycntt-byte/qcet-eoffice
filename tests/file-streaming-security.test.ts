@@ -7,7 +7,7 @@ import {
   resolveSafeFilePath,
   getMimeType,
   openByteRangeStream,
-} from "../src/lib/storage";
+} from "../src/server/files/storage";
 import { GET } from "../src/app/api/documents/download/route";
 import { signSessionToken } from "../src/lib/jwt-session";
 import { prisma } from "../src/lib/prisma";

@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { getSessionFromRequest } from "@/lib/jwt-session";
-import { DossierService } from "@/lib/services/dossier-service";
+import { DossierService } from "@/server/dossiers/dossier-service";
 import { DossierDetailView } from "@/components/dossiers/dossier-detail-view";
 import type { SerializedDossierDetail } from "@/components/dossiers/dossier-detail-view";
 

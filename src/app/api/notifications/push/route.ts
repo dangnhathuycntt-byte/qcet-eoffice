@@ -1,15 +1,16 @@
 import { NextRequest } from "next/server";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { ValidationError } from "@/server/api/errors";
 import { parseAndValidateJson } from "@/server/api/validation";
-import { getVapidPublicKey } from "@/lib/push-service";
+import { getVapidPublicKey } from "@/server/notifications/push-service";
+import { DEFAULT_PUSH_PREFERENCES } from "@/lib/pwa/push-preferences";
 import {
-  DEFAULT_PUSH_PREFERENCES,
-  type PushPreferences,
-} from "@/lib/pwa/push-preferences";
+  getPushStatus,
+  revokePushSubscriptions,
+  savePushPreferences,
+  upsertPushSubscriptionClearingDisabledAt,
+} from "@/server/notifications/push-subscription-service";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { z } from "zod";
@@ -70,30 +71,13 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = context.user.id;
-    const [user, activeSubsCount] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { onboardingData: true },
-      }),
-      prisma.pushSubscription.count({
-        where: {
-          userId,
-          status: "ACTIVE",
-        },
-      }),
-    ]);
-
-    const onboardingData = user?.onboardingData as Record<string, unknown> | null;
-    const preferences: PushPreferences = {
-      ...DEFAULT_PUSH_PREFERENCES,
-      ...((onboardingData?.pushPreferences as Partial<PushPreferences>) || {}),
-    };
+    const { preferences, subscriptionsCount } = await getPushStatus(userId);
 
     return apiSuccess(
       {
         publicKey,
         preferences,
-        subscriptionsCount: activeSubsCount,
+        subscriptionsCount,
       },
       { requestId, legacyCompat: true }
     );
@@ -121,39 +105,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Handle preference updates
     if (body.preferences) {
-      const existingUser = await prisma.user.findUnique({
-        where: { id: authUser.id },
-        select: { onboardingData: true },
-      });
-
-      const currentData =
-        existingUser?.onboardingData &&
-        typeof existingUser.onboardingData === "object" &&
-        !Array.isArray(existingUser.onboardingData)
-          ? (existingUser.onboardingData as Record<string, unknown>)
-          : {};
-
-      const stored = (currentData.pushPreferences as Partial<PushPreferences> | undefined) ?? {};
-      const updatedPrefs: PushPreferences = {
-        taskAssigned: Boolean(body.preferences.taskAssigned ?? true),
-        taskReview: Boolean(body.preferences.taskReview ?? true),
-        deadlineReminder: Boolean(body.preferences.deadlineReminder ?? true),
-        documentDirective: Boolean(body.preferences.documentDirective ?? true),
-        // Máy khách cũ không gửi các khóa mới: giữ giá trị đã lưu thay vì đặt lại về bật.
-        taskExtension: Boolean(body.preferences.taskExtension ?? stored.taskExtension ?? true),
-        taskDecline: Boolean(body.preferences.taskDecline ?? stored.taskDecline ?? true),
-        unitRequest: Boolean(body.preferences.unitRequest ?? stored.unitRequest ?? true),
-      };
-
-      await prisma.user.update({
-        where: { id: authUser.id },
-        data: {
-          onboardingData: {
-            ...currentData,
-            pushPreferences: updatedPrefs,
-          } as unknown as Prisma.InputJsonValue,
-        },
-      });
+      const updatedPrefs = await savePushPreferences(authUser.id, body.preferences);
 
       if (!body.endpoint) {
         return apiSuccess(
@@ -186,30 +138,12 @@ export async function POST(request: NextRequest) {
       throw new ValidationError("Push endpoint must be a valid HTTPS URL");
     }
 
-    const subscription = await prisma.pushSubscription.upsert({
-      where: { endpoint },
-      update: {
-        userId: authUser.id,
-        p256dh,
-        auth,
-        deviceType: deviceType || null,
-        userAgent: userAgent || null,
-        status: "ACTIVE",
-        failureCount: 0,
-        lastFailureCode: null,
-        disabledAt: null,
-        updatedAt: new Date(),
-      },
-      create: {
-        userId: authUser.id,
-        endpoint,
-        p256dh,
-        auth,
-        deviceType: deviceType || null,
-        userAgent: userAgent || null,
-        status: "ACTIVE",
-        failureCount: 0,
-      },
+    const subscription = await upsertPushSubscriptionClearingDisabledAt(authUser.id, {
+      endpoint,
+      p256dh,
+      auth,
+      deviceType,
+      userAgent,
     });
 
     return apiSuccess(
@@ -241,29 +175,7 @@ export async function DELETE(request: NextRequest) {
     const body = await parseAndValidateJson(request, PushDeleteSchema, { allowEmpty: true });
 
     const endpoint = body?.endpoint;
-    if (endpoint) {
-      await prisma.pushSubscription.updateMany({
-        where: {
-          endpoint,
-          userId: authUser.id,
-        },
-        data: {
-          status: "REVOKED",
-          disabledAt: new Date(),
-        },
-      });
-    } else {
-      // Revoke all subscriptions for this user
-      await prisma.pushSubscription.updateMany({
-        where: {
-          userId: authUser.id,
-        },
-        data: {
-          status: "REVOKED",
-          disabledAt: new Date(),
-        },
-      });
-    }
+    await revokePushSubscriptions(authUser.id, endpoint);
 
     return apiSuccess(
       {

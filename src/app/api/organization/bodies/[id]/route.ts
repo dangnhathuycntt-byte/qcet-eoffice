@@ -5,17 +5,19 @@
  */
 
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { AddBodyMembershipSchema } from '@/contracts/meeting';
-import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
-import { NotFoundError } from '@/server/api/errors';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { assertCanManageOrganizationalBodies, assertCanAppointBodyMember, canManageOrganizationalBodies } from '@/server/policies';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { parseAndValidateJson } from '@/server/api/validation';
+import {
+  addBodyMembership,
+  assertOrganizationalBodyExists,
+  getOrganizationalBodyDetail,
+} from '@/server/organization/organizational-body-service';
 
 export async function GET(
   request: NextRequest,
@@ -28,32 +30,7 @@ export async function GET(
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
-    const body = await prisma.organizationalBody.findUnique({
-      where: { id: params.id },
-      include: {
-        memberships: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true, role: true },
-            },
-            positionAssignment: {
-              include: {
-                positionDefinition: true,
-                unit: true,
-              },
-            },
-          },
-        },
-        meetings: {
-          orderBy: { startTime: 'desc' },
-          take: 10,
-        },
-      },
-    });
-
-    if (!body) {
-      throw new NotFoundError('Hội đồng / Ban chỉ đạo không tồn tại');
-    }
+    const body = await getOrganizationalBodyDetail(params.id);
 
     // Intended visibility (Issue #28): the body roster is an institution-
     // internal directory visible to any authenticated user, but the recent
@@ -98,36 +75,17 @@ export async function POST(
     const authContext = await loadAuthorizationContext(authUser.id);
     assertCanManageOrganizationalBodies(authContext);
 
-    const existingBody = await prisma.organizationalBody.findUnique({
-      where: { id: params.id },
-      select: { id: true },
-    });
-    if (!existingBody) {
-      throw new NotFoundError('Hội đồng / Ban chỉ đạo không tồn tại');
-    }
+    await assertOrganizationalBodyExists(params.id);
 
     const input = await parseAndValidateJson(request, AddBodyMembershipSchema);
 
     assertCanAppointBodyMember(authContext, input.userId, input.role);
 
-    const membership = await prisma.bodyMembership.create({
-      data: {
-        bodyId: params.id,
-        userId: input.userId,
-        positionAssignmentId: input.positionAssignmentId,
-        role: input.role,
-        appointedAt: input.appointedAt ? new Date(input.appointedAt) : undefined,
-        expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
-      },
-    });
-
-    await logAuditEvent({
+    const membership = await addBodyMembership({
+      bodyId: params.id,
+      input,
       actorId: authUser.id,
-      action: AuditAction.ORGANIZATIONAL_BODY_MEMBERSHIP_ADDED,
-      entityType: AuditEntityType.BODY_MEMBERSHIP,
-      entityId: membership.id,
       requestId,
-      afterData: { bodyId: params.id, userId: input.userId, role: input.role },
     });
 
     return apiSuccess(membership, { requestId, status: 201 });

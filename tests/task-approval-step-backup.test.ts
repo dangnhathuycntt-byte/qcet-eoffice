@@ -11,7 +11,7 @@ import {
   initiateApprovalProcess,
   SegregationOfDutiesError,
   TaskActorAuthorizationError,
-} from '../src/lib/services/task-actor-service';
+} from '../src/server/tasks/task-actor-service';
 
 const runId = `t05s_${Date.now()}`;
 const u: Record<string, string> = {};

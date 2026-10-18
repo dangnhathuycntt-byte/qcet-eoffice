@@ -4,7 +4,7 @@ import path from "node:path";
 import { createReadStream } from "node:fs";
 import { loadEnvConfig } from "@next/env";
 import { FileScanStatus, Prisma, PrismaClient } from "@prisma/client";
-import { getMimeType, isAllowedFileExtension, resolveSafeFilePath } from "../src/lib/storage";
+import { getMimeType, isAllowedFileExtension, resolveSafeFilePath } from "../src/server/files/storage";
 
 loadEnvConfig(process.cwd());
 

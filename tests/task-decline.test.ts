@@ -8,7 +8,7 @@ import { TaskActorRole, TaskStatus } from '@prisma/client';
 import { ZodError } from 'zod';
 import { prisma } from '../src/lib/prisma';
 import { declineTask, getDeclineState } from '../src/server/tasks/task-decline-service';
-import { setTaskDRI } from '../src/lib/services/task-actor-service';
+import { setTaskDRI } from '../src/server/tasks/task-actor-service';
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { ApiError, ConflictError, InvalidTransitionError, PreconditionFailedError } from '../src/server/api/errors';
 

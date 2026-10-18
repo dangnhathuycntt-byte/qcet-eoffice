@@ -38,7 +38,7 @@ describe("Task detail audit regressions", () => {
 
   it("submits completed child work for approval without bypassing maker-checker", () => {
     const source = readSource("src/components/tasks/task-detail-page.tsx");
-    const service = readSource("src/lib/services/task-domain-actions.ts");
+    const service = readSource("src/server/tasks/task-domain-actions.ts");
 
     // Maker-checker: the server decides the status; at 100% it must be WAITING_APPROVAL (not COMPLETED)
     assert.match(

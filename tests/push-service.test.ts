@@ -7,7 +7,7 @@ import {
   sendPushNotificationToUser,
   setPushSenderForTesting,
   PushNotificationPayload,
-} from "../src/lib/push-service";
+} from "../src/server/notifications/push-service";
 import { prisma } from "../src/lib/prisma";
 
 describe("Push Notification Copywriting & Truncation Suite", () => {

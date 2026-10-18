@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME, signSessionToken } from "@/lib/jwt-session";
+import { findActiveUserForDevLogin, listActiveUsersForDevLogin } from "@/server/auth/dev-login-service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +19,7 @@ const notFound = () => new NextResponse(null, { status: 404 });
 /** GET /api/dev/login-as — danh sách tài khoản đang hoạt động để chọn vai trò thử (chỉ dev cục bộ). */
 export async function GET(req: NextRequest) {
   if (!isLocalDev(req)) return notFound();
-  const users = await prisma.user.findMany({
-    where: { isActive: true },
-    select: { id: true, name: true, email: true, role: true, title: true },
-    orderBy: [{ role: "asc" }, { name: "asc" }],
-  });
+  const users = await listActiveUsersForDevLogin();
   return NextResponse.json({ users }, { headers: { "Cache-Control": "no-store" } });
 }
 
@@ -33,7 +29,7 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as { userId?: unknown } | null;
   const userId = typeof body?.userId === "string" ? body.userId : "";
   const user = userId
-    ? await prisma.user.findFirst({ where: { id: userId, isActive: true }, select: { id: true, email: true, name: true, role: true, title: true } })
+    ? await findActiveUserForDevLogin(userId)
     : null;
   if (!user) return NextResponse.json({ error: "Không tìm thấy tài khoản" }, { status: 404 });
 

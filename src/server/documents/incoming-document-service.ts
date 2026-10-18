@@ -40,7 +40,7 @@ import {
   type AuthenticatedUserContext,
   type AuthorizationResource,
   HybridAuthorizationError,
-} from "@/lib/auth/hybrid-authorization";
+} from "@/server/authorization/hybrid-authorization";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import {
@@ -51,13 +51,13 @@ import {
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
-import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { verifySignatureSafely } from "@/server/documents/signature-verifier";
-import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
+import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 import {
   IncomingDocumentStateMachine,
   mapIncomingWorkflowStatusToDocumentStatus,
-} from "@/lib/documents/state-machine";
+} from "@/server/documents/state-machine";
 import {
   UnitWorkAssignmentStatusValues,
   assertUnitAssignmentTransition,
@@ -1361,6 +1361,44 @@ export async function getIncomingDocument(
   return Object.assign(workflow, {
     directives,
   }) as unknown as IncomingDocumentWorkflowWithDetails;
+}
+
+/**
+ * Bút phê cũ (DocumentDirective) của văn bản, mới nhất trước, kèm nhiệm vụ liên kết của văn bản.
+ * Người gọi phải đã được phép đọc văn bản.
+ */
+export async function listLegacyDirectives(documentId: string) {
+  // Preserve read access to historical directives. New bút phê commands are
+  // stored on DocumentIncomingWorkflow and do not create these legacy rows.
+  const directiveRows = await prisma.documentDirective.findMany({
+    where: { documentId },
+    include: {
+      leader: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+        },
+      },
+      document: {
+        select: {
+          linkedTask: {
+            select: {
+              id: true,
+              code: true,
+              leadUnit: { select: { id: true, name: true, code: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return directiveRows.map(({ document: parent, ...dir }) => ({
+    ...dir,
+    linkedTask: parent?.linkedTask ?? null,
+  }));
 }
 
 /**

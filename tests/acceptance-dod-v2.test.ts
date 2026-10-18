@@ -4,7 +4,7 @@ import {
   authorize,
   AuthenticatedUserContext,
   AuthorizationResource,
-} from '../src/lib/auth/hybrid-authorization';
+} from '../src/server/authorization/hybrid-authorization';
 import { OutgoingDocumentStatus } from '@prisma/client';
 
 test('QCET E-Office — Comprehensive DoD & Institutional Acceptance Verification', async (suite) => {

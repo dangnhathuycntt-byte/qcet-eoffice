@@ -1,5 +1,5 @@
 import { SubmitContentReviewSchema } from "@/contracts/documents";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 
 export const POST = documentActionRoute(

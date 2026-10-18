@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { detectUploadMimeType } from "@/lib/storage";
+import { detectUploadMimeType } from "@/server/files/storage";
 import { ApiError } from "@/server/api/errors";
 import type { TaskAgentContentPart } from "@/domain/tasks/task-agent-draft";
 import {

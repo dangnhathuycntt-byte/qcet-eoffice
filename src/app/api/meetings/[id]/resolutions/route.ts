@@ -5,7 +5,6 @@
  */
 
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
@@ -25,22 +24,7 @@ export async function GET(
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
-    // Enforce read authorization on parent meeting
-    await MeetingService.getMeeting(params.id, authUser.id);
-
-    const resolutions = await prisma.meetingResolution.findMany({
-      where: { meetingId: params.id },
-      include: {
-        leadUnit: true,
-        leadUser: {
-          select: { id: true, name: true, email: true },
-        },
-        resultingTask: {
-          select: { id: true, title: true, status: true, dueDate: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const resolutions = await MeetingService.listResolutions(params.id, authUser.id);
 
     return apiSuccess(resolutions, { requestId, status: 200 });
   } catch (error: any) {

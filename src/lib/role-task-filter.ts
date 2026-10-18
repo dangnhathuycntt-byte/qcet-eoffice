@@ -68,6 +68,35 @@ export function canAssignUnitTask(roleOrUser?: UserRole | AuthUser | null): bool
   return role === "ADMIN" || role === "MANAGER";
 }
 
+export function isExecutiveUser(
+  user?: { role?: string } | null
+): boolean {
+  if (!user?.role) return false;
+  const role = user.role.toUpperCase();
+  return (
+    role === "ADMIN" ||
+    role === "BGH" ||
+    role === "BAN_GIAM_HIEU" ||
+    role === "HIEU_TRUONG" ||
+    role === "PHO_HIEU_TRUONG"
+  );
+}
+
+export function isManagerUser(
+  user?: { role?: string } | null
+): boolean {
+  if (!user?.role) return false;
+  const role = user.role.toUpperCase();
+  return (
+    role === "MANAGER" ||
+    role === "TRUONG_DON_VI" ||
+    role === "TRUONG_PHONG" ||
+    role === "TRUONG_KHOA" ||
+    role === "PHO_PHONG" ||
+    role === "PHO_KHOA"
+  );
+}
+
 export function matchesUser(assigneeName?: string, user?: AuthUser | null): boolean {
   if (!assigneeName || !user) return false;
   const a = assigneeName.trim().toLowerCase();

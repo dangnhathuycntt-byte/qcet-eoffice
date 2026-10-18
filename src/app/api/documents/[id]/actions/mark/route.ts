@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { getDocumentById } from "@/lib/documents/document-service";
+import { getDocumentById, setDocumentMark } from "@/server/documents/document-service";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { canReadDocument } from "@/server/policies/document-policy";
 import { ForbiddenError, NotFoundError } from "@/server/api/errors";
@@ -14,11 +13,6 @@ export const POST = documentActionRoute(MarkSchema, async (user, body, { documen
   if (!document) throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
   if (!canReadDocument(authContext, document)) throw new ForbiddenError("Bạn không có quyền truy cập văn bản này");
 
-  const key = { documentId_userId: { documentId, userId: user.id } };
-  if (body.marked) {
-    await prisma.documentMark.upsert({ where: key, create: { documentId, userId: user.id }, update: {} });
-  } else {
-    await prisma.documentMark.deleteMany({ where: { documentId, userId: user.id } });
-  }
+  await setDocumentMark(documentId, user.id, body.marked);
   return { marked: body.marked };
 });

@@ -1,4 +1,4 @@
-import { RerouteDocumentSchema, rerouteIncomingDocument } from "@/lib/services/incoming-document-routing-service";
+import { RerouteDocumentSchema, rerouteIncomingDocument } from "@/server/documents/incoming-document-routing-service";
 import { documentActionRoute } from "../shared";
 
 /** POST /api/documents/{id}/actions/reroute — Văn thư chuyển văn bản bị trả lại cho đơn vị khác (V-01). */

@@ -35,7 +35,7 @@ import type { CreateTaskSubtaskSummary } from "@/lib/adapters/create-task-mapper
 import { TaskAgentPanel, useTaskAgentAvailable } from "@/components/tasks/create/task-agent-panel";
 import { AgentIcon } from "@/components/icons/agent-icon";
 import { TASK_AGENT_DESCRIPTION_MAX, type TaskAgentDraft } from "@/domain/tasks/task-agent-draft";
-import { contentToPlainText, plainTextToContent } from "@/components/tasks/detail/plate-block-codec";
+import { contentToPlainText, plainTextToContent } from "@/lib/tasks/plate-block-codec";
 import { motionDuration } from "@/lib/motion/tokens";
 import type { AssistantTaskProposal } from "@/contracts/assistant";
 import { proposalToTaskDraft } from "@/domain/assistant/assistant-task-proposal";

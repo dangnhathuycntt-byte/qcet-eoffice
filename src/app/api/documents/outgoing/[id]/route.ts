@@ -4,7 +4,7 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { NotFoundError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { assertDocumentReadable } from "@/server/documents/authorize-on-document";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 
 interface RouteContext {
   params: Promise<{ id: string }>;

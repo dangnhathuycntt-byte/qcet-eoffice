@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { setPushSenderForTesting } from '../src/lib/push-service';
+import { setPushSenderForTesting } from '../src/server/notifications/push-service';
 import {
   dispatchTaskAssignedPush,
   dispatchExecutiveDirectivePush,
   safeAfter,
   flushSafeAfter,
-} from '../src/lib/push-dispatch';
+} from '../src/server/notifications/push-dispatch';
 import { POST as createTaskRoute } from '../src/app/api/tasks/route';
 import { POST as createResolutionRoute } from '../src/app/api/executive/resolutions/route';
 import { UserRole, TaskPriority, TaskScope, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus, TaskActorRole } from '@prisma/client';

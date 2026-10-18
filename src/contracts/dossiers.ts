@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const DossierStatusSchema = z.enum([
+export const DossierStatusSchema = z.enum([
   "OPEN",
   "ACTIVE",
   "CLOSED",
@@ -19,7 +19,7 @@ const DossierItemTypeSchema = z.enum([
   "ATTACHMENT",
 ]);
 
-const DataClassificationSchema = z.enum(["PUBLIC", "INTERNAL", "RESTRICTED", "PERSONAL_DATA"]);
+export const DataClassificationSchema = z.enum(["PUBLIC", "INTERNAL", "RESTRICTED", "PERSONAL_DATA"]);
 const OptionalNotesSchema = z.string().trim().max(2000).optional();
 
 export const CreateDossierSchema = z

@@ -10,7 +10,7 @@ import {
   isAllowedFileExtension,
   resolveSafeFilePath,
   sanitizeDownloadFilename,
-} from "@/lib/storage";
+} from "@/server/files/storage";
 import { ConflictError, ValidationError } from "@/server/api/errors";
 
 export interface StoreUploadedFileInput {

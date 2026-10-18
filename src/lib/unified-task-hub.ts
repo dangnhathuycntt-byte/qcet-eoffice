@@ -1,19 +1,22 @@
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import type { AuthUser, UserRole } from "@/types/auth";
 import type { WorkspaceScope } from "@/types/workspace";
-import {
-  type TaskScope,
-  type TaskViewMode,
-  filterTasksByScope,
-} from "@/components/dashboard/unified-task-toolbar";
-export type { TaskScope, TaskViewMode };
-import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
-import { matchesUser } from "@/lib/role-task-filter";
-import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
+import { filterTasksByRole, isExecutiveUser, matchesUser } from "@/lib/role-task-filter";
+import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import {
   isDateInAcademicMonth,
   getSystemReferenceDate as getCanonicalReferenceDateStr,
 } from "@/lib/academic-calendar";
+
+export type TaskScope = "MY_TASKS" | "SCHOOL_TASKS" | "UNIT_TASKS";
+export type TaskViewMode = "table" | "kanban" | "calendar" | "department" | "executive";
+export type WorkboxFilter =
+  | "ALL"
+  | "URGENT_OVERDUE"
+  | "MY_ACTION"
+  | "ASSIGNED_BY_ME"
+  | "COMPLETED"
+  | "NEEDS_REVIEW";
 
 // One reference-date source for the whole app: delegate to the canonical date
 // module instead of keeping a second drifting constant (plan T03.5, contract-map D4).
@@ -295,6 +298,181 @@ export function computeMonthlyTaskCounts(
   }
 
   return counts;
+}
+
+export function filterTasksForTable(
+  tasks: SchoolTask[],
+  category: TaskCategory | "ALL",
+  searchQuery: string,
+  department: string = "ALL"
+): SchoolTask[] {
+  let result = tasks;
+
+  if (department !== "ALL") {
+    const canonicalDept = resolveDepartmentId(department) || department;
+    result = result.filter((task) => {
+      const matchTaskDept = Boolean(
+        (task.departmentCode &&
+          (task.departmentCode === canonicalDept ||
+            task.departmentCode === department ||
+            resolveDepartmentId(task.departmentCode) === canonicalDept)) ||
+        (task.leadDepartmentCode &&
+          (task.leadDepartmentCode === canonicalDept ||
+            task.leadDepartmentCode === department ||
+            resolveDepartmentId(task.leadDepartmentCode) === canonicalDept)) ||
+        (task.department &&
+          (task.department === canonicalDept ||
+            task.department === department ||
+            resolveDepartmentId(task.department) === canonicalDept)) ||
+        (task.leadDepartment &&
+          (task.leadDepartment === canonicalDept ||
+            task.leadDepartment === department ||
+            resolveDepartmentId(task.leadDepartment) === canonicalDept)) ||
+        (task.departmentId && (task.departmentId === canonicalDept || task.departmentId === department)) ||
+        (task.leadDepartmentId && (task.leadDepartmentId === canonicalDept || task.leadDepartmentId === department))
+      );
+
+      const matchCoDept =
+        task.coDepartmentCodes?.some(
+          (code) =>
+            code === canonicalDept ||
+            resolveDepartmentId(code) === canonicalDept
+        ) ||
+        task.coDepartments?.some(
+          (dept) =>
+            dept === canonicalDept ||
+            resolveDepartmentId(dept) === canonicalDept
+        );
+
+      const matchFallback =
+        !task.departmentCode &&
+        !task.leadDepartmentCode &&
+        !task.department &&
+        !task.leadDepartment &&
+        !task.departmentId &&
+        !task.leadDepartmentId &&
+        (resolveDepartmentId(task.leadAssigneeName) === canonicalDept ||
+          resolveDepartmentId(undefined, task.leadAssigneeName) === canonicalDept ||
+          resolveDepartmentId(undefined, undefined, task.category) === canonicalDept);
+
+      const matchSchoolTask =
+        matchTaskDept ||
+        matchCoDept ||
+        matchFallback ||
+        task.coAssignees?.some(
+          (name) =>
+            resolveDepartmentId(name) === canonicalDept ||
+            resolveDepartmentId(undefined, name) === canonicalDept
+        );
+
+      const matchSubTasks = task.subTasks?.some((sub) => {
+        const subDept = sub.departmentId || sub.departmentCode || sub.department;
+        const matchSubDept =
+          subDept &&
+          (subDept === canonicalDept ||
+            resolveDepartmentId(subDept) === canonicalDept);
+
+        return (
+          matchSubDept ||
+          resolveDepartmentId(sub.assigneeName) === canonicalDept ||
+          resolveDepartmentId(undefined, sub.assigneeName) === canonicalDept
+        );
+      });
+
+      return Boolean(matchSchoolTask || matchSubTasks);
+    });
+  }
+
+  if (category !== "ALL") {
+    result = result.filter((task) => task.category === category);
+  }
+
+  const query = searchQuery.trim().toLowerCase();
+  if (query) {
+    result = result.filter((task) => {
+      const matchTitle = task.title.toLowerCase().includes(query);
+      const matchId = task.id.toLowerCase().includes(query);
+      const matchLead = task.leadAssigneeName.toLowerCase().includes(query);
+      const matchCo = task.coAssignees?.some((name) =>
+        name.toLowerCase().includes(query)
+      );
+      const matchSubtasks = task.subTasks?.some(
+        (sub) =>
+          sub.title.toLowerCase().includes(query) ||
+          sub.id.toLowerCase().includes(query) ||
+          sub.assigneeName.toLowerCase().includes(query)
+      );
+
+      return matchTitle || matchId || matchLead || matchCo || matchSubtasks;
+    });
+  }
+
+  return result;
+}
+
+// Helper: filterTasksByScope (backward compatibility & unified scopes)
+
+export function filterTasksByScope(
+  tasks: SchoolTask[],
+  scope: TaskScope | WorkspaceScope | string,
+  user?: AuthUser | null,
+  departmentCode?: string
+): SchoolTask[] {
+  const normScope =
+    scope === "my" || scope === "MY_TASKS"
+      ? "MY_TASKS"
+      : scope === "unit" || scope === "UNIT_TASKS"
+      ? "UNIT_TASKS"
+      : "SCHOOL_TASKS";
+
+  if (normScope === "MY_TASKS") {
+    if (!user) return tasks;
+    return tasks.filter((t) => {
+      if ((t as any).viewerContext?.relation) return true;
+      const isCreator = Boolean(
+        user.id &&
+          ((t as any).createdById === user.id ||
+            (t as any).assignedById === user.id ||
+            (t as any).createdBy === user.id ||
+            (Array.isArray((t as any).actors) && (t as any).actors.some((a: any) => a.userId === user.id)))
+      );
+      const isLead =
+        t.leadAssigneeName === user.name ||
+        matchesUser(t.leadAssigneeName, user) ||
+        (user.id && (t.leadAssigneeId === user.id || t.assignedTo === user.id));
+      const hasSub = t.subTasks?.some(
+        (s) =>
+          s.assigneeName === user.name ||
+          matchesUser(s.assigneeName, user) ||
+          (user.id && (s.assigneeId === user.id || s.assignedTo === user.id))
+      );
+      const isCo = Boolean(
+        t.coAssignees?.some((ca) => matchesUser(ca, user))
+      );
+      return Boolean(isLead || hasSub || isCo || isCreator);
+    });
+  }
+
+  if (normScope === "SCHOOL_TASKS") {
+    if (!user || user.role === "ADMIN" || isExecutiveUser(user)) {
+      return [...tasks];
+    }
+    return filterTasksByRole(tasks, user);
+  }
+
+  if (normScope === "UNIT_TASKS") {
+    const targetDept =
+      departmentCode && departmentCode !== "ALL"
+        ? departmentCode
+        : user?.departmentCode || (user as any)?.departmentId || user?.department || (isExecutiveUser(user) ? "BGH" : undefined);
+
+    if (targetDept && targetDept !== "ALL") {
+      return filterTasksForTable(tasks, "ALL", "", targetDept);
+    }
+    return tasks.filter((t) => t.subTasks && t.subTasks.length > 0);
+  }
+
+  return tasks;
 }
 
 export interface FilterTasksHubOptions {

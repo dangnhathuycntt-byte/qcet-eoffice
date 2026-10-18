@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { POST as loginRoute } from "../src/app/api/auth/login/route";
 import { GET as dashboardOverviewRoute } from "../src/app/api/dashboard/overview/route";
-import { getLiveDashboardData } from "../src/lib/server/dashboard-service";
+import { getLiveDashboardData } from "../src/server/services/dashboard-service";
 import { prisma } from "../src/lib/prisma";
 import { signSessionToken } from "../src/lib/jwt-session";
 

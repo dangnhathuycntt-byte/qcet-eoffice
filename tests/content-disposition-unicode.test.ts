@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildContentDisposition } from "../src/lib/storage";
+import { buildContentDisposition } from "../src/server/files/storage";
 
 describe("Content-Disposition với tên file tiếng Việt", () => {
   it("không ném lỗi khi tên có ký tự ngoài Latin-1 (vd. ầ, ệ)", () => {

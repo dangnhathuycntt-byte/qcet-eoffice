@@ -27,7 +27,7 @@ import {
   UnitType,
   UnitStatus,
 } from "@prisma/client";
-import { DossierService } from "@/lib/services/dossier-service";
+import { DossierService } from "@/server/dossiers/dossier-service";
 import {
   InvalidTransitionError,
   ForbiddenError,

@@ -4,7 +4,7 @@
  */
 import { z } from "zod";
 import { DocumentStatus, DocumentType, DocumentSecurityLevel, type Prisma } from "@prisma/client";
-import { listDocuments } from "@/lib/documents/document-service";
+import { listDocuments } from "@/server/documents/document-service";
 import { KIND_LABEL, getDocumentKind, urgencyLabel } from "@/lib/documents/document-view-model";
 import { getLedgerStepLabel } from "@/lib/documents/document-ledger-format";
 import type { AssistantSourceRef } from "@/contracts/assistant";

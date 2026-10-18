@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { fileDocument } from "@/lib/services/incoming-document-service";
-import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
-import { prisma } from "@/lib/prisma";
+import { fileDocument } from "@/server/documents/incoming-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
+import { getDocumentTypeById } from "@/server/documents/document-service";
 import { NotFoundError } from "@/server/api/errors";
 import { documentActionRoute } from "../shared";
 
@@ -15,7 +15,7 @@ export const POST = documentActionRoute(
   FileDocumentSchema,
   async (user, body, { documentId, requestId }) => {
     // Phân nhánh theo loại văn bản (ADR-004)
-    const doc = await prisma.document.findUnique({ where: { id: documentId }, select: { type: true } });
+    const doc = await getDocumentTypeById(documentId);
     if (!doc) throw new NotFoundError("Văn bản không tồn tại");
 
     if (doc.type === "VAN_BAN_DI") {

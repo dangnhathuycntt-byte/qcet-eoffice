@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { UserQuerySchema } from "@/contracts/users";
 import { assertRateLimit } from "@/server/security/rate-limit";
@@ -7,6 +6,7 @@ import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";
 import { buildUserDirectoryQueryOptions } from "@/server/users/user-directory-query";
+import { listDirectoryUsers } from "@/server/users/user-directory-service";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -34,86 +34,8 @@ export async function GET(req: Request) {
       });
     }
 
-    const activeAssignmentFilter = {
-      status: "ACTIVE" as const,
-      effectiveFrom: { lte: new Date() },
-      OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
-      unit: { status: "ACTIVE" as const },
-    };
-
-    const where: any = {
-      isActive: true,
-    };
-
-    // Canonical membership: User must have active PositionAssignment in an active unit
-    if (validatedQuery.departmentId) {
-      where.positionAssignments = {
-        some: {
-          unitId: validatedQuery.departmentId,
-          ...activeAssignmentFilter,
-        },
-      };
-    } else {
-      where.positionAssignments = {
-        some: activeAssignmentFilter,
-      };
-    }
-
-    Object.assign(where, queryOptions.filters);
-
     const currentPage = validatedQuery.page;
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        orderBy: { name: "asc" },
-        take: queryOptions.take,
-        skip: queryOptions.skip,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          phone: true,
-          avatarUrl: true,
-          createdAt: true,
-          updatedAt: true,
-          positionAssignments: {
-            where: activeAssignmentFilter,
-            select: {
-              unitId: true,
-              type: true,
-              positionDefinition: { select: { title: true } },
-              unit: { select: { id: true, code: true, name: true } },
-            },
-          },
-        },
-      }),
-      prisma.user.count({ where }),
-    ]);
-
-    const enrichedUsers = users.map((u) => {
-      const chosenAssignment =
-        (validatedQuery.departmentId
-          ? u.positionAssignments.find((pa) => pa.unitId === validatedQuery.departmentId)
-          : null) ??
-        u.positionAssignments.find((pa) => pa.type === "PRIMARY") ??
-        u.positionAssignments[0];
-
-      return {
-        ...u,
-        position: chosenAssignment?.positionDefinition?.title ?? null,
-        title: chosenAssignment?.positionDefinition?.title ?? null,
-        departmentId: chosenAssignment?.unit?.id ?? null,
-        department: chosenAssignment?.unit
-          ? {
-              id: chosenAssignment.unit.id,
-              code: chosenAssignment.unit.code,
-              shortName: chosenAssignment.unit.code,
-              name: chosenAssignment.unit.name,
-            }
-          : null,
-      };
-    });
+    const { users: enrichedUsers, total } = await listDirectoryUsers(validatedQuery, queryOptions);
 
     return apiSuccess(
       {

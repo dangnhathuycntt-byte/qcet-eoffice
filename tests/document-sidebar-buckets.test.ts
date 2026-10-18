@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDocumentBucketWhere, parseDocumentBucket } from '../src/lib/documents/document-sidebar-buckets';
+import { parseDocumentBucket } from '../src/lib/documents/document-sidebar-buckets';
+import { buildDocumentBucketWhere } from '../src/server/documents/document-bucket-where';
 
 describe('nhóm "Đã thu hồi" ở menu Văn bản đi (V-05)', () => {
   test('nhận giá trị recalled từ URL', () => {

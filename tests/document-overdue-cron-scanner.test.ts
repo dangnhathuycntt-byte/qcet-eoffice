@@ -4,11 +4,11 @@ import { NextRequest } from 'next/server';
 import { prisma } from '../src/lib/prisma';
 import { DocumentStatus, DocumentType, UserRole, UnitType, UnitStatus } from '@prisma/client';
 import { getIctReferenceDateStart } from '../src/domain/tasks/deadlines';
-import { scanAndDispatchDocumentDeadlines, resolveDocumentStakeholders, formatIctDate } from '../src/lib/documents/document-deadline-scanner';
+import { scanAndDispatchDocumentDeadlines, resolveDocumentStakeholders, formatIctDate } from '../src/server/documents/document-deadline-scanner';
 import {
   formatDocumentPushPayload,
   setPushSenderForTesting,
-} from '../src/lib/push-service';
+} from '../src/server/notifications/push-service';
 import { GET, POST } from '../src/app/api/cron/document-deadline-check/route';
 import { OutboxEventType } from '../src/lib/db/outbox';
 

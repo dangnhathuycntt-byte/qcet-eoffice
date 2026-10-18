@@ -4,10 +4,10 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import {
   registerIncomingDocument,
   listIncomingWorkflows,
-} from "@/lib/services/incoming-document-service";
-import { IncomingDocumentStatus } from "@prisma/client";
+  type ListIncomingWorkflowsFilter,
+} from "@/server/documents/incoming-document-service";
 import { RegisterIncomingDocumentSchema } from "@/contracts/documents";
-import { assertNoSuspectedDuplicate } from "@/lib/documents/duplicate-check";
+import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const authUser = requireAuthenticated(context);
 
     const url = new URL(req.url);
-    const statusParam = url.searchParams.get("status") as IncomingDocumentStatus | null;
+    const statusParam = url.searchParams.get("status") as ListIncomingWorkflowsFilter["status"] | null;
     const leadUnitId = url.searchParams.get("leadUnitId") || undefined;
     const driUserId = url.searchParams.get("driUserId") || undefined;
     const leaderId = url.searchParams.get("leaderId") || undefined;

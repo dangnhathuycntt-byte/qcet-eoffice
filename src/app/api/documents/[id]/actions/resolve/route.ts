@@ -1,6 +1,6 @@
 import { ResolveDocumentSchema } from "@/contracts/documents";
-import { resolveDocument } from "@/lib/services/incoming-document-service";
-import { withIdempotency } from "@/lib/db/idempotency";
+import { resolveDocument } from "@/server/documents/incoming-document-service";
+import { withIdempotency } from "@/server/api/idempotency";
 import { ValidationError } from "@/server/api/errors";
 import { documentActionRoute } from "../shared";
 

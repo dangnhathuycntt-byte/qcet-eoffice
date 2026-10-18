@@ -1,10 +1,7 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { OutgoingDocumentService, OUTGOING_WORKFLOW_DETAIL_INCLUDE } from "@/lib/services/outgoing-document-service";
-import { prisma } from "@/lib/prisma";
-import { OutgoingDocumentStatus } from "@prisma/client";
-import { buildDocumentReadWhere } from "@/server/policies/document-policy";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { CreateOutgoingDraftSchema } from "@/contracts/documents";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
@@ -18,43 +15,18 @@ export async function GET(req: NextRequest) {
     const authUser = requireAuthenticated(context);
 
     const url = new URL(req.url);
-    const statusParam = url.searchParams.get("status") as OutgoingDocumentStatus | null;
+    const statusParam = url.searchParams.get("status");
     const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 50;
     const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
     const search = url.searchParams.get("search") || undefined;
 
-    const where: any = {};
-    // Apply document ACL in the database query so pagination and totals cannot
-    // reveal workflows the caller is not allowed to read.
-    where.document = { is: buildDocumentReadWhere(authUser) };
-    if (statusParam && Object.values(OutgoingDocumentStatus).includes(statusParam)) {
-      where.status = statusParam;
-    }
-    if (search) {
-      where.AND = [
-        {
-          document: {
-            is: {
-              OR: [
-                { summary: { contains: search, mode: "insensitive" } },
-                { originalNumber: { contains: search, mode: "insensitive" } },
-              ],
-            },
-          },
-        },
-      ];
-    }
-
-    const [items, total] = await Promise.all([
-      prisma.documentOutgoingWorkflow.findMany({
-        where,
-        take: limit,
-        skip: offset,
-        orderBy: { createdAt: "desc" },
-        include: OUTGOING_WORKFLOW_DETAIL_INCLUDE,
-      }),
-      prisma.documentOutgoingWorkflow.count({ where }),
-    ]);
+    // ACL được áp trong truy vấn của service (phân trang và tổng số không lộ văn bản ngoài quyền).
+    const { items, total } = await OutgoingDocumentService.listOutgoingWorkflows(authUser, {
+      status: statusParam,
+      limit,
+      offset,
+      search,
+    });
 
     return apiSuccess({ items, total, limit, offset }, { requestId, status: 200 });
   } catch (error) {

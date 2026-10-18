@@ -2,7 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../src/lib/prisma';
-import { withIdempotency, IdempotencyConflictError, getIdempotencyRecord, clearIdempotencyRecord } from '../src/lib/db/idempotency';
+import { withIdempotency, IdempotencyConflictError, getIdempotencyRecord, clearIdempotencyRecord } from '../src/server/api/idempotency';
 
 describe('Task 8: Idempotency Record Table & Helper', () => {
   const testRunId = `test_idem_${Date.now()}`;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { closeActiveProcessOnRevision, onApprovalStepAdvanced } from "@/server/tasks/task-approval-process-service";
 import { prisma } from "@/lib/prisma";
-import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
+import { getFileObjectIdFromUrl } from "@/server/files/file-service";
 import {
   TaskStatus,
   TaskActorRole,
@@ -28,7 +28,7 @@ import {
   MakerCheckerError,
   TaskActorAuthorizationError,
   StepProgressionError,
-} from "@/lib/services/task-actor-service";
+} from "@/server/tasks/task-actor-service";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import type { AuthorizationResource } from "@/server/authorization/resource";

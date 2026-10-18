@@ -7,6 +7,7 @@ import { QCET_ORG_UNITS, type OrgUnitConfig } from "@/lib/org/org-structure";
 import { type DepartmentNode } from "@/components/org/organization-tree";
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
 import { foldVietnamese } from "@/lib/search/vietnamese-search";
+import { isExecutiveUser, isManagerUser } from "@/lib/role-task-filter";
 
 export type ScopeType = "school" | "unit" | "my";
 
@@ -144,35 +145,6 @@ export function resolveDepartment(codeOrId?: string | null): DepartmentNode | un
     QCET_ORG_UNITS.find((d) => d.name.toUpperCase().includes(norm));
 
   return match ? toDepartmentNode(match) : undefined;
-}
-
-export function isExecutiveUser(
-  user?: { role?: string } | null
-): boolean {
-  if (!user?.role) return false;
-  const role = user.role.toUpperCase();
-  return (
-    role === "ADMIN" ||
-    role === "BGH" ||
-    role === "BAN_GIAM_HIEU" ||
-    role === "HIEU_TRUONG" ||
-    role === "PHO_HIEU_TRUONG"
-  );
-}
-
-export function isManagerUser(
-  user?: { role?: string } | null
-): boolean {
-  if (!user?.role) return false;
-  const role = user.role.toUpperCase();
-  return (
-    role === "MANAGER" ||
-    role === "TRUONG_DON_VI" ||
-    role === "TRUONG_PHONG" ||
-    role === "TRUONG_KHOA" ||
-    role === "PHO_PHONG" ||
-    role === "PHO_KHOA"
-  );
 }
 
 /**
