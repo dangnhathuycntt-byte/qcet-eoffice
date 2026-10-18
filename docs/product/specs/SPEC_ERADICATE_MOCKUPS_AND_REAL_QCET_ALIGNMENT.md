@@ -965,7 +965,7 @@ export const QCET_SEED_USERS: SeedUserData[] = [
 - **Khối Chế độ kiểm thử vai trò (Role Switcher)**:
   - Trước đây: Chứa dropdown cho phép chuyển đổi tự do giữa `Ban Giám hiệu (ADMIN)`, `Trưởng đơn vị (MANAGER)` và `Chuyên viên (STAFF)` trực tiếp trên client thông qua việc giả mạo `switchRole()`.
   - Thay đổi chuẩn hóa: Gỡ bỏ hoàn toàn `RoleSwitcherPill` và dropdown chuyển vai trò khỏi header. `RoleSwitcherPill` trả về `null`.
-  - Quyền hạn và phạm vi hiển thị (`scope`: Toàn trường, Đơn vị, Cá nhân) được tự động quyết định bởi `user.role` thực tế của phiên đăng nhập thông qua hàm phân quyền `isExecutiveUser(user)` và `isManagerUser(user)`.
+  - Quyền hạn và phạm vi hiển thị (`scope`: Toàn trường, Đơn vị, Cá nhân) được tự động quyết định bởi `user.role` thực tế của phiên đăng nhập thông qua hàm phân quyền `isAdminTierUser(user)` và `isManagerUser(user)`.
 - **Profile Dropdown Menu của Cán bộ**:
   - Giao diện dropdown của Avatar trên thanh Topbar chỉ chứa các chức năng nghiệp vụ hợp lệ:
     1. **Thẻ tóm tắt cán bộ (User Summary Card)**:
@@ -1240,7 +1240,7 @@ Khi xảy ra lỗi mạng, máy chủ gián đoạn dịch vụ hoặc API trả
 #### 6.5.2. Điều Hướng Không Gian Làm Việc Theo Vai Trò Thực Tế
 Sau khi xác thực và nạp thông tin cán bộ thành công, thành phần trung tâm `UnifiedAdaptiveWorkspace` sẽ tự động định hình không gian làm việc mà không cần bất kỳ thao tác chuyển vai trò thủ công nào:
 
-1. **Vai trò Ban Giám hiệu (`ADMIN` / `isExecutiveUser(user) = true`)**:
+1. **Vai trò Ban Giám hiệu (`ADMIN` / `isAdminTierUser(user) = true`)**:
    - **Phạm vi mặc định (`defaultScope`)**: `school` (Toàn trường).
    - **Chỉ số điều hành (`AdaptiveMetricStrip`)**: Tổng quan tiến độ văn bản toàn trường, tỷ lệ trễ hạn các khoa/phòng, chỉ số xử lý hồ sơ hành chính công, danh sách việc cần BGH phê duyệt.
    - **Hàng đợi hành động (`UniversalActionQueue`)**: Các hồ sơ trình ký cấp trường, văn bản đến cần phân công chỉ đạo, kế hoạch tháng cần phê duyệt.

@@ -55,7 +55,7 @@ import {
   getAcademicYear,
   getSystemReferenceDate,
 } from "@/lib/academic-calendar";
-import { isExecutiveUser } from "@/lib/role-task-filter";
+import { isAdminTierUser } from "@/lib/role-task-filter";
 import type { TaskScope, TaskViewMode } from "@/lib/unified-task-hub";
 import {
   MenuRoot,
@@ -642,7 +642,7 @@ export function UnifiedTaskToolbar({
   const isExecutive =
     propIsExecutive !== undefined
       ? propIsExecutive
-      : userRole === "ADMIN" || isExecutiveUser(user);
+      : userRole === "ADMIN" || isAdminTierUser(user);
   const isUnassigned =
     propIsUnassigned !== undefined
       ? propIsUnassigned

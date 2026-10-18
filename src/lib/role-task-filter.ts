@@ -68,7 +68,11 @@ export function canAssignUnitTask(roleOrUser?: UserRole | AuthUser | null): bool
   return role === "ADMIN" || role === "MANAGER";
 }
 
-export function isExecutiveUser(
+/**
+ * Tầng ADMIN đã chuẩn hóa (BGH + quản trị hệ thống), chỉ dùng cho scope/preset
+ * hiển thị, không phải thẩm quyền.
+ */
+export function isAdminTierUser(
   user?: { role?: string } | null
 ): boolean {
   if (!user?.role) return false;

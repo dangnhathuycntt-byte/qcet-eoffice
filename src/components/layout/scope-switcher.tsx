@@ -7,7 +7,7 @@ import { QCET_ORG_UNITS, type OrgUnitConfig } from "@/lib/org/org-structure";
 import { type DepartmentNode } from "@/components/org/organization-tree";
 import { isUserUnassignedDepartment } from "@/lib/auth-context";
 import { foldVietnamese } from "@/lib/search/vietnamese-search";
-import { isExecutiveUser, isManagerUser } from "@/lib/role-task-filter";
+import { isAdminTierUser, isManagerUser } from "@/lib/role-task-filter";
 
 export type ScopeType = "school" | "unit" | "my";
 
@@ -161,7 +161,7 @@ export function resolveScopeDetails(
   // Explicit school scope
   if (normScope === "school" || normScope === "school_tasks") {
     // Access control guard: non-executive users must never access school scope
-    if (fallbackUser && !isExecutiveUser(fallbackUser)) {
+    if (fallbackUser && !isAdminTierUser(fallbackUser)) {
       if (isManagerUser(fallbackUser)) {
         if (!deptParam && isUserUnassignedDepartment(fallbackUser)) {
           return {

@@ -1,7 +1,7 @@
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import type { AuthUser, UserRole } from "@/types/auth";
 import type { WorkspaceScope } from "@/types/workspace";
-import { filterTasksByRole, isExecutiveUser, matchesUser } from "@/lib/role-task-filter";
+import { filterTasksByRole, isAdminTierUser, matchesUser } from "@/lib/role-task-filter";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import {
   isDateInAcademicMonth,
@@ -454,7 +454,7 @@ export function filterTasksByScope(
   }
 
   if (normScope === "SCHOOL_TASKS") {
-    if (!user || user.role === "ADMIN" || isExecutiveUser(user)) {
+    if (!user || user.role === "ADMIN" || isAdminTierUser(user)) {
       return [...tasks];
     }
     return filterTasksByRole(tasks, user);
@@ -464,7 +464,7 @@ export function filterTasksByScope(
     const targetDept =
       departmentCode && departmentCode !== "ALL"
         ? departmentCode
-        : user?.departmentCode || (user as any)?.departmentId || user?.department || (isExecutiveUser(user) ? "BGH" : undefined);
+        : user?.departmentCode || (user as any)?.departmentId || user?.department || (isAdminTierUser(user) ? "BGH" : undefined);
 
     if (targetDept && targetDept !== "ALL") {
       return filterTasksForTable(tasks, "ALL", "", targetDept);

@@ -37,7 +37,7 @@ import {
   type TaskFilterFacets,
 } from "@/domain/tasks/task-filter-facets";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { isExecutiveUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
+import { isAdminTierUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
   getSystemReferenceDate,
@@ -646,7 +646,7 @@ function UnifiedAdaptiveWorkspaceInner({
     const role = (user?.role || user?.dbRole || "").toUpperCase();
     if (
       forcedRole === "ADMIN" ||
-      isExecutiveUser(user) ||
+      isAdminTierUser(user) ||
       role === "ADMIN" ||
       role === "BAN_GIAM_HIEU" ||
       role === "BGH"
@@ -670,12 +670,12 @@ function UnifiedAdaptiveWorkspaceInner({
 
   const effectiveReviewerRole: "ADMIN" | "MANAGER" | "STAFF" = React.useMemo(() => {
     if (forcedRole) return forcedRole;
-    if (isExecutiveUser(user)) return "ADMIN";
+    if (isAdminTierUser(user)) return "ADMIN";
     if (isManagerUser(user)) return "MANAGER";
     return "STAFF";
   }, [forcedRole, user]);
 
-  const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
+  const isExecutive = effectiveReviewerRole === "ADMIN" || isAdminTierUser(user);
 
   const createPolicy = React.useMemo(() => resolveCreateTaskPolicy(user), [user]);
 
@@ -1738,7 +1738,7 @@ function UnifiedAdaptiveWorkspaceInner({
   }, [activeViewId, handleSelectView]);
 
   const isStaff =
-    !isExecutiveUser(user) &&
+    !isAdminTierUser(user) &&
     !isManagerUser(user) &&
     forcedRole !== "ADMIN" &&
     forcedRole !== "MANAGER" &&

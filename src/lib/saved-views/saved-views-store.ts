@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { AuthUser, UserRole } from "@/types/auth";
-import { isExecutiveUser, isManagerUser } from "@/lib/role-task-filter";
+import { isAdminTierUser, isManagerUser } from "@/lib/role-task-filter";
 import {
   type TaskUrlParams,
   parseTaskUrlParams,
@@ -196,7 +196,7 @@ export const ALL_ROLE_PRESETS: SavedTaskView[] = [
  */
 export function resolveUserSavedViewRole(user?: AuthUser | null): SavedViewRole {
   if (!user) return "STAFF";
-  if (isExecutiveUser(user) || user.role === "ADMIN") return "EXECUTIVE";
+  if (isAdminTierUser(user) || user.role === "ADMIN") return "EXECUTIVE";
   if (isManagerUser(user) || user.role === "MANAGER") return "MANAGER";
   return "STAFF";
 }

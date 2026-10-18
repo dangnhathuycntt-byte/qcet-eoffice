@@ -7,7 +7,7 @@ import {
   resolveDepartment,
   formatDepartmentLabel,
 } from "@/components/layout/scope-switcher";
-import { isExecutiveUser, isManagerUser } from "@/lib/role-task-filter";
+import { isAdminTierUser, isManagerUser } from "@/lib/role-task-filter";
 
 describe("Scope Switcher Logic & Parameter Suite", () => {
   describe("TaskHub Scope Helpers", () => {
@@ -132,15 +132,15 @@ describe("Scope Switcher Logic & Parameter Suite", () => {
   });
 
   describe("Access Control Security Guard", () => {
-    test("isExecutiveUser accurately verifies role privileges", () => {
-      assert.strictEqual(isExecutiveUser({ role: "ADMIN" }), true);
-      assert.strictEqual(isExecutiveUser({ role: "BGH" }), true);
-      assert.strictEqual(isExecutiveUser({ role: "BAN_GIAM_HIEU" }), true);
-      assert.strictEqual(isExecutiveUser({ role: "HIEU_TRUONG" }), true);
-      assert.strictEqual(isExecutiveUser({ role: "MANAGER" }), false);
-      assert.strictEqual(isExecutiveUser({ role: "STAFF" }), false);
-      assert.strictEqual(isExecutiveUser(null), false);
-      assert.strictEqual(isExecutiveUser(undefined), false);
+    test("isAdminTierUser accurately verifies role privileges", () => {
+      assert.strictEqual(isAdminTierUser({ role: "ADMIN" }), true);
+      assert.strictEqual(isAdminTierUser({ role: "BGH" }), true);
+      assert.strictEqual(isAdminTierUser({ role: "BAN_GIAM_HIEU" }), true);
+      assert.strictEqual(isAdminTierUser({ role: "HIEU_TRUONG" }), true);
+      assert.strictEqual(isAdminTierUser({ role: "MANAGER" }), false);
+      assert.strictEqual(isAdminTierUser({ role: "STAFF" }), false);
+      assert.strictEqual(isAdminTierUser(null), false);
+      assert.strictEqual(isAdminTierUser(undefined), false);
     });
 
     test("isManagerUser accurately verifies manager roles", () => {
