@@ -1,13 +1,13 @@
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { AuthorizationError } from "@/server/api/errors";
-import { AuditLogQuerySchema, type AuditLogEntryDTO } from "@/contracts/audit-logs";
+import { AuditLogQuerySchema } from "@/contracts/audit-logs";
 import { buildOffsetPagination } from "@/server/api/pagination";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";
 import { normalizeIctDateRange } from "@/lib/ict-date-boundaries";
+import { listAuditLogEntries } from "@/server/audit/audit-log-query-service";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -54,34 +54,11 @@ export async function GET(req: Request) {
       where.createdAt = createdAt;
     }
 
-    const [rows, total] = await Promise.all([
-      prisma.auditEvent.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: query.pageSize,
-        skip: (query.page - 1) * query.pageSize,
-        select: {
-          id: true,
-          actorId: true,
-          action: true,
-          entityType: true,
-          entityId: true,
-          requestId: true,
-          createdAt: true,
-        },
-      }),
-      prisma.auditEvent.count({ where }),
-    ]);
-
-    const entries: AuditLogEntryDTO[] = rows.map((row) => ({
-      id: row.id,
-      actorId: row.actorId,
-      action: row.action,
-      entityType: row.entityType,
-      entityId: row.entityId,
-      requestId: row.requestId,
-      createdAt: row.createdAt.toISOString(),
-    }));
+    const { entries, total } = await listAuditLogEntries({
+      where,
+      page: query.page,
+      pageSize: query.pageSize,
+    });
 
     return apiSuccess(
       {
