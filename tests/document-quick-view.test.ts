@@ -55,20 +55,14 @@ describe("Quick View (SSR markup)", () => {
     assert.ok(html.includes("Đang xử lý"));
   });
 
-  test("header có Mở trang đầy đủ (liên kết thật), menu Thao tác khác và Đóng (SPEC §17.5A)", () => {
+  test("header có menu Thao tác khác và Đóng; không còn Mở trang đầy đủ (SPEC v5: bỏ trang chi tiết đầy đủ)", () => {
     const html = render("pane");
-    // Không có ?file= trên URL thì giữ tệp đang xem mặc định (tệp đầu)
-    assert.ok(html.includes('href="/documents/incoming/doc-1?file=a1"'));
-    assert.ok(html.includes('aria-label="Mở trang đầy đủ"'));
+    assert.ok(!html.includes('aria-label="Mở trang đầy đủ"'));
+    assert.ok(!html.includes('href="/documents/incoming/doc-1'));
     assert.ok(html.includes('aria-label="Thao tác khác"'));
     assert.ok(html.includes('aria-label="Đóng"'));
     // In phiếu nằm trong menu, không còn là nút icon dễ hiểu nhầm là in PDF
     assert.ok(!html.includes('aria-label="In phiếu văn bản"'));
-  });
-
-  test("liên kết trang đầy đủ giữ tệp đang xem theo ?file=", () => {
-    const html = render("pane", { fileId: "a2" });
-    assert.ok(html.includes('href="/documents/incoming/doc-1?file=a2"'));
   });
 
   test("xem chữ ký số không còn là nút riêng ở header (nằm trong menu Thao tác khác)", () => {

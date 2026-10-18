@@ -16,7 +16,7 @@ describe("Design Components & Foundation Alignment Suite", () => {
 
       assert.ok(source.includes("top-[10%]"), "Dialog popup must align top-[10%]");
       assert.ok(source.includes("-translate-x-1/2"), "Dialog popup must center horizontally with -translate-x-1/2");
-      assert.ok(source.includes("max-h-[85vh]"), "Dialog popup max height must be 85vh");
+      assert.ok(source.includes("max-h-[85dvh]"), "Dialog popup max height must be 85dvh");
       assert.ok(source.includes("bg-black/40"), "Dialog backdrop must use 40% black overlay");
     });
 
