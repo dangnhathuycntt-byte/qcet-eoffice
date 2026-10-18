@@ -1326,7 +1326,8 @@ export class DossierService {
       },
     });
 
-    if (!dossier) {
+    // Hồ sơ đã hủy (xóa mềm) không còn trong tra cứu thường: 404 cho mọi người, trước khi xét quyền.
+    if (!dossier || dossier.disposedAt) {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
     }
 

@@ -186,8 +186,9 @@ export async function authorizeFileObjectDownload({
   }
 
   if (!hasAuthorizedResource) {
+    // Hồ sơ đã hủy (xóa mềm) không cấp quyền đọc tệp qua mục của nó.
     hasAuthorizedResource = file.dossierItems.some(
-      (item) => item.dossier && canReadDossierItem(authUser, item, item.dossier)
+      (item) => item.dossier && !item.dossier.disposedAt && canReadDossierItem(authUser, item, item.dossier)
     );
   }
 
@@ -377,7 +378,12 @@ export async function authorizeLegacyFilePathDownload({
   });
 
   if (dossierItem) {
-    if (!dossierItem.dossier || !canReadDossierItem(authUser, dossierItem, dossierItem.dossier)) {
+    // Hồ sơ đã hủy (xóa mềm) không cấp quyền đọc tệp qua mục của nó.
+    if (
+      !dossierItem.dossier ||
+      dossierItem.dossier.disposedAt ||
+      !canReadDossierItem(authUser, dossierItem, dossierItem.dossier)
+    ) {
       logger.fileAccessDenied({
         requestId,
         userId: authUser.id,

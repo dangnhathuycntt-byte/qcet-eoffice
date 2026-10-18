@@ -6,7 +6,10 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { AssignmentStatus, DossierStatus, JobCatalogGroup, UnitType, UserRole } from '@prisma/client';
 import { ZodError } from 'zod';
+import { NextRequest } from 'next/server';
 import { prisma } from '../src/lib/prisma';
+import { signSessionToken } from '../src/lib/jwt-session';
+import { GET as getDossierItems } from '../src/app/api/dossiers/[id]/items/route';
 import { DossierService } from '../src/server/dossiers/dossier-service';
 import {
   decideDisposal,
@@ -30,6 +33,7 @@ const createdPositions: string[] = [];
 const NOW = new Date('2026-10-10T08:00:00Z');
 const session = (key: string) => ({ id: u[key], email: `${key}@x`, name: key, role: 'CHUYEN_VIEN' });
 const forbidden = (err: unknown) => err instanceof ApiError && err.statusCode === 403;
+const notFound = (err: unknown) => err instanceof ApiError && err.statusCode === 404;
 
 async function ensurePosition(code: string, group: JobCatalogGroup) {
   const existing = await prisma.positionDefinition.findUnique({ where: { code } });
@@ -59,7 +63,7 @@ async function makeDossier(key: string, data: { status?: DossierStatus; archived
 
 describe('V-07 xét hủy và gia hạn bảo quản hồ sơ', () => {
   before(async () => {
-    for (const [key, role] of [['owner', 'CHUYEN_VIEN'], ['clerk', 'VAN_THU'], ['rector', 'BAN_GIAM_HIEU'], ['admin', 'ADMIN'], ['staff', 'CHUYEN_VIEN']] as const) {
+    for (const [key, role] of [['owner', 'CHUYEN_VIEN'], ['clerk', 'VAN_THU'], ['rector', 'BAN_GIAM_HIEU'], ['admin', 'ADMIN'], ['staff', 'CHUYEN_VIEN'], ['outsider', 'CHUYEN_VIEN']] as const) {
       const user = await prisma.user.create({ data: { email: `${runId}_${key}@cdktcnqn.edu.vn`, name: `${runId} ${key}`, role: role as UserRole } });
       u[key] = user.id;
     }
@@ -120,6 +124,11 @@ describe('V-07 xét hủy và gia hạn bảo quản hồ sơ', () => {
 
   test('Văn thư không tự quyết định; lãnh đạo hủy: hồ sơ biến khỏi tra cứu thường (AC-V07-1, AC-V07-3)', async () => {
     const id = await makeDossier('dispose');
+    // Hồ sơ ARCHIVED là bất biến nên mục phải tạo thẳng (addItemToDossier từ chối).
+    await prisma.dossierItem.create({ data: { dossierId: id, itemType: 'RESULT', title: 'Mục do chuyên viên đóng góp', addedById: u.staff, sequence: 1 } });
+    assert.equal((await DossierService.listItemsForUser(session('owner'), id)).length, 1, 'trước khi hủy người phụ trách xem được mục');
+    assert.equal((await DossierService.listItemsForUser(session('staff'), id)).length, 1, 'trước khi hủy người đóng góp xem được mục của mình');
+    await assert.rejects(DossierService.listItemsForUser(session('outsider'), id), forbidden, 'trước khi hủy người ngoài bị từ chối');
     const { proposalId } = await proposeDisposal(session('clerk'), id, { minutesReference: 'BB-10', reason: 'Hết hạn' }, NOW);
     await assert.rejects(decideDisposal(session('clerk'), id, { proposalId, decision: 'DISPOSE' }, NOW), forbidden);
     await assert.rejects(decideDisposal(session('staff'), id, { proposalId, decision: 'DISPOSE' }, NOW), forbidden);
@@ -130,7 +139,23 @@ describe('V-07 xét hủy và gia hạn bảo quản hồ sơ', () => {
 
     const list = await DossierService.listDossiers(session('rector'), { limit: 100 });
     assert.ok(!list.items.some((d) => d.id === id), 'không còn trong danh sách');
-    await assert.rejects(DossierService.getDossierDetail(session('rector'), id), ApiError);
+    await assert.rejects(DossierService.getDossierDetail(session('rector'), id), notFound);
+    // Mục của hồ sơ đã hủy cũng biến khỏi tra cứu thường: 404 cho cả người phụ trách, người đóng góp và người ngoài
+    // (người ngoài không nhận 403, tránh lộ việc hồ sơ còn tồn tại).
+    for (const key of ['owner', 'staff', 'outsider']) {
+      await assert.rejects(DossierService.listItemsForUser(session(key), id), notFound, key);
+    }
+    for (const key of ['owner', 'outsider']) {
+      const res = await getDossierItems(
+        new NextRequest(`http://localhost:3000/api/dossiers/${id}/items`, { headers: { Authorization: `Bearer ${signSessionToken(session(key))}` } }),
+        { params: Promise.resolve({ id }) }
+      );
+      assert.equal(res.status, 404, key);
+      assert.match(res.headers.get('content-type') ?? '', /application\/problem\+json/, key);
+      const body = await res.json();
+      assert.equal(body.code, 'NOT_FOUND', key);
+      assert.equal(body.instance, `/api/dossiers/${id}/items`, key);
+    }
     await assert.rejects(decideDisposal(session('rector'), id, { proposalId, decision: 'DISPOSE' }, NOW), ApiError, 'hồ sơ đã hủy');
   });
 
