@@ -1,10 +1,8 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { NotFoundError, ForbiddenError, ValidationError } from "@/server/api/errors";
+import { ValidationError } from "@/server/api/errors";
 import { DossierService } from "@/server/dossiers/dossier-service";
-import { canReadDossier } from "@/server/policies/dossier-policy";
-import { prisma } from "@/lib/prisma";
 import { AddDossierItemSchema, DossierItemIdSchema } from "@/contracts/dossiers";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
@@ -23,31 +21,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     const { id } = await Promise.resolve(context.params);
 
-    const dossier = await prisma.workDossier.findUnique({
-      where: { id },
-      include: {
-        items: {
-          include: {
-            addedBy: { select: { id: true, name: true } },
-          },
-          orderBy: { sequence: "asc" },
-        },
-      },
-    });
-
-    if (!dossier) {
-      throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
-    }
-
-    const hasFullRead = canReadDossier(authUser, dossier);
-    let items = dossier.items || [];
-
-    if (!hasFullRead) {
-      items = items.filter((item) => item.addedById === authUser.id);
-      if (items.length === 0) {
-        throw new ForbiddenError("Bạn không có quyền truy cập hồ sơ công việc này");
-      }
-    }
+    const items = await DossierService.listItemsForUser(authUser, id);
 
     return apiSuccess({ items }, { requestId, status: 200 });
   } catch (error) {

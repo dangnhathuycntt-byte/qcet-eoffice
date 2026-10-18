@@ -820,6 +820,28 @@ export class MeetingService {
   }
 
   /**
+   * Danh sách quyết nghị / kết luận của cuộc họp, sau khi kiểm quyền đọc cuộc họp cha.
+   */
+  static async listResolutions(meetingId: string, userId: string) {
+    // Enforce read authorization on parent meeting
+    await this.getMeeting(meetingId, userId);
+
+    return await prisma.meetingResolution.findMany({
+      where: { meetingId },
+      include: {
+        leadUnit: true,
+        leadUser: {
+          select: { id: true, name: true, email: true },
+        },
+        resultingTask: {
+          select: { id: true, title: true, status: true, dueDate: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
    * 9. Danh sách cuộc họp với bộ lọc và ủy quyền
    */
   static async listMeetings(
