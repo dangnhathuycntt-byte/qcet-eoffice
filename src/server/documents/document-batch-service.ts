@@ -1,23 +1,36 @@
 /**
- * Thao tác văn bản hàng loạt (POST /api/documents/batch): giải quyết, giao đơn vị chủ trì, lập hồ sơ.
- * Cả lô chạy trong một transaction; lỗi của từng văn bản được ghi vào `failed` thay vì hủy cả lô.
+ * Thao tác văn bản hàng loạt (POST /api/documents/batch): giao đơn vị chủ trì, lưu hồ sơ.
+ * Mỗi văn bản gọi đúng command đơn lẻ (máy trạng thái, phân quyền theo văn bản, ánh xạ ADR-004) và chạy
+ * độc lập, không có transaction bao ngoài: lỗi của một văn bản ghi vào `failed` kèm mã lỗi như thao tác
+ * đơn lẻ, không ảnh hưởng văn bản khác.
  * Route đã kiểm vai trò, CSRF, giới hạn tần suất và validate payload trước khi gọi.
  */
 import { prisma } from "@/lib/prisma";
-import type { AuthenticatedUser } from "@/server/api/request-context";
-import type { BatchDocumentRequest } from "@/contracts/documents";
-import { ValidationError } from "@/server/api/errors";
 import {
-  IncomingDocumentStatus,
-  OutgoingDocumentStatus,
-  DocumentStatus,
   DocumentType,
   DossierItemType,
+  IncomingDocumentStatus,
+  OutgoingDocumentStatus,
 } from "@prisma/client";
-import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
-import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
-import { UnitWorkAssignmentStatusValues } from "@/domain/documents/unit-assignment-status";
-import { formatDisplayDate } from "@/lib/format/date";
+import type { AuthenticatedUser } from "@/server/api/request-context";
+import type { BatchDocumentRequest } from "@/contracts/documents";
+import {
+  ConflictError,
+  InvalidTransitionError,
+  NotFoundError,
+  ValidationError,
+  toApiErrorResponse,
+} from "@/server/api/errors";
+import { assertAuthorized } from "@/server/authorization/hybrid-authorization";
+import { assertDossierNotImmutable } from "@/domain/dossiers/state-machine";
+import { logger } from "@/server/observability/logger";
+import {
+  directDocument,
+  fileDocument,
+  resolveUserContext,
+} from "@/server/documents/incoming-document-service";
+import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
+import { DossierService } from "@/server/dossiers/dossier-service";
 
 export interface BatchItemResult {
   documentId: string;
@@ -25,7 +38,40 @@ export interface BatchItemResult {
   status?: string;
   leadUnitId?: string;
   dossierId?: string;
+  /**
+   * Mã lỗi như thao tác đơn lẻ trả về (INVALID_TRANSITION, INSUFFICIENT_CAPABILITY, NOT_FOUND...);
+   * ALREADY_FILED/ALREADY_ASSIGNED khi văn bản đã ở trạng thái đích của thao tác.
+   */
+  code?: string;
+  /** HTTP status thao tác đơn lẻ trả về cho văn bản này. */
+  httpStatus?: number;
   error?: string;
+}
+
+type BatchDocument = {
+  id: string;
+  type: DocumentType;
+  incomingWorkflow: { dossierId: string | null; status: IncomingDocumentStatus } | null;
+  outgoingWorkflow: { status: OutgoingDocumentStatus } | null;
+};
+
+function unsupportedDocumentType() {
+  return new ValidationError("Thao tác không áp dụng cho loại văn bản này.", undefined, "UNSUPPORTED_DOCUMENT_TYPE");
+}
+
+function toFailure(documentId: string, err: unknown, requestId: string, action: string): BatchItemResult {
+  const { status, body } = toApiErrorResponse(err, requestId);
+  if (status >= 500) {
+    logger.error("document.batch.item_failed", { metadata: { requestId, documentId, action } }, err);
+  }
+  return {
+    documentId,
+    success: false,
+    code: body.code,
+    httpStatus: status,
+    // Lỗi không lường trước (vd lỗi Prisma) không lộ chi tiết hệ thống ra ngoài
+    error: status >= 500 ? "Lỗi xử lý văn bản trong lô" : body.message,
+  };
 }
 
 export async function processDocumentBatch(
@@ -33,402 +79,162 @@ export async function processDocumentBatch(
   authUser: AuthenticatedUser,
   requestId: string
 ) {
-  const { action, documentIds } = payload;
-  const now = new Date();
+  const { action } = payload;
+  const documentIds = [...new Set(payload.documentIds)];
+  const user = await resolveUserContext(authUser);
 
-  // 6. Execute atomic batch operations in prisma.$transaction
-  return prisma.$transaction(async (tx) => {
-    const successful: BatchItemResult[] = [];
-    const failed: BatchItemResult[] = [];
-
-    // Fetch all targeted documents along with their workflows
-    const documents = await tx.document.findMany({
-      where: { id: { in: documentIds } },
-      include: {
-        incomingWorkflow: true,
-        outgoingWorkflow: true,
-      },
+  // Đơn vị chủ trì tra theo id hoặc mã; không tồn tại thì từ chối cả lô.
+  let leadUnitId: string | null = null;
+  if (action === "ASSIGN_LEAD_UNIT" && payload.leadUnitId) {
+    const unit = await prisma.organizationalUnit.findFirst({
+      where: { OR: [{ id: payload.leadUnitId }, { code: payload.leadUnitId }] },
+      select: { id: true },
     });
-
-    const docMap = new Map(documents.map((d) => [d.id, d]));
-
-    // Check for missing document IDs
-    for (const docId of documentIds) {
-      if (!docMap.has(docId)) {
-        failed.push({
-          documentId: docId,
-          success: false,
-          error: `Văn bản không tồn tại trong hệ thống: ${docId}`,
-        });
-      }
+    if (!unit) {
+      throw new ValidationError(
+        `Đơn vị chủ trì không tồn tại trong hệ thống: ${payload.leadUnitId}`,
+        { leadUnitId: ["Đơn vị chủ trì không tồn tại"] }
+      );
     }
+    leadUnitId = unit.id;
+  }
 
-    // Pre-validation for ASSIGN_LEAD_UNIT
-    let targetUnitId: string | null = null;
-    if (action === "ASSIGN_LEAD_UNIT" && payload.leadUnitId) {
-      const unit = await tx.organizationalUnit.findFirst({
-        where: {
-          OR: [{ id: payload.leadUnitId }, { code: payload.leadUnitId }],
-        },
-        select: { id: true, name: true, code: true },
-      });
+  // dossierId khớp hồ sơ công việc thì gắn văn bản qua DossierService; không khớp thì giữ như mã hồ sơ tự do.
+  const workDossier =
+    action === "FILE_DOCUMENTS" && payload.dossierId
+      ? await prisma.workDossier.findFirst({
+          where: { OR: [{ id: payload.dossierId }, { code: payload.dossierId }] },
+          select: {
+            id: true,
+            code: true,
+            status: true,
+            owningUnitId: true,
+            responsiblePersonId: true,
+            disposedAt: true,
+            items: {
+              where: { itemType: DossierItemType.DOCUMENT, itemId: { in: documentIds } },
+              select: { itemId: true },
+            },
+          },
+        })
+      : null;
+  const alreadyInDossier = new Set(workDossier?.items.map((item) => item.itemId));
 
-      if (!unit) {
-        throw new ValidationError(
-          `Đơn vị chủ trì không tồn tại trong hệ thống: ${payload.leadUnitId}`,
-          { leadUnitId: ["Đơn vị chủ trì không tồn tại"] }
-        );
-      }
-      targetUnitId = unit.id;
-    }
-
-    // Pre-fetch work dossier if dossierId is provided
-    let workDossier: { id: string; code: string; items: { sequence: number }[] } | null = null;
-    if (action === "FILE_DOCUMENTS" && payload.dossierId) {
-      workDossier = await tx.workDossier.findFirst({
-        where: {
-          OR: [{ id: payload.dossierId }, { code: payload.dossierId }],
-        },
-        select: {
-          id: true,
-          code: true,
-          items: { select: { sequence: true } },
-        },
-      });
-    }
-
-    // Process each existing document according to the specified batch action
-    for (const doc of documents) {
-      try {
-        switch (action) {
-          // -------------------------------------------------------------
-          // 1. MARK_RESOLVED
-          // -------------------------------------------------------------
-          case "MARK_RESOLVED": {
-            const resolutionText =
-              payload.resolutionSummary || payload.notes || "Đã giải quyết theo lô";
-
-            // Update incoming workflow if present
-            if (doc.incomingWorkflow || (doc.type as string) === DocumentType.VAN_BAN_DEN) {
-              await tx.documentIncomingWorkflow.upsert({
-                where: { documentId: doc.id },
-                create: {
-                  documentId: doc.id,
-                  status: IncomingDocumentStatus.RESOLVED,
-                  resolvedAt: now,
-                  resolvedById: authUser.id,
-                  resolutionSummary: resolutionText,
-                },
-                update: {
-                  status: IncomingDocumentStatus.RESOLVED,
-                  resolvedAt: now,
-                  resolvedById: authUser.id,
-                  resolutionSummary: resolutionText,
-                },
-              });
-
-              // Mark any unit assignments as RESOLVED
-              await tx.unitWorkAssignment.updateMany({
-                where: { workflow: { documentId: doc.id } },
-                data: { status: UnitWorkAssignmentStatusValues.RESOLVED },
-              });
-            }
-
-            // Update canonical Document
-            await tx.document.update({
-              where: { id: doc.id },
-              data: {
-                status: DocumentStatus.DA_HOAN_THANH,
-                notes: payload.notes
-                  ? doc.notes
-                    ? `${doc.notes}\n[${formatDisplayDate(now)}]: ${payload.notes}`
-                    : payload.notes
-                  : doc.notes,
-              },
-            });
-
-            // Audit Log
-            await auditService.logEvent(tx, {
-              actorId: authUser.id,
-              action: AuditAction.DOCUMENT_RESOLVED,
-              entityType: AuditEntityType.DOCUMENT,
-              entityId: doc.id,
-              requestId,
-              beforeData: { status: doc.status },
-              afterData: {
-                status: DocumentStatus.DA_HOAN_THANH,
-                resolvedById: authUser.id,
-                resolutionSummary: resolutionText,
-              },
-              metadata: {
-                batchAction: "MARK_RESOLVED",
-                requestId,
-              },
-            });
-
-            // Outbox Event
-            await publishOutboxEvent(tx, {
-              eventType: OutboxEventType.DOCUMENT_RESOLVED_NOTIFICATION,
-              aggregateType: OutboxAggregateType.DOCUMENT,
-              aggregateId: doc.id,
-              payload: {
-                documentId: doc.id,
-                resolvedById: authUser.id,
-                resolutionSummary: resolutionText,
-              },
-            });
-
-            successful.push({
-              documentId: doc.id,
-              success: true,
-              status: DocumentStatus.DA_HOAN_THANH,
-            });
-            break;
-          }
-
-          // -------------------------------------------------------------
-          // 2. ASSIGN_LEAD_UNIT
-          // -------------------------------------------------------------
-          case "ASSIGN_LEAD_UNIT": {
-            if (!targetUnitId) {
-              throw new ValidationError("Đơn vị chủ trì (leadUnitId) là bắt buộc.");
-            }
-
-            const instruction =
-              payload.leadershipInstruction ||
-              payload.instruction ||
-              "Phân công đơn vị chủ trì xử lý văn bản hàng loạt";
-            const deadlineDate = payload.deadline ? new Date(payload.deadline) : null;
-
-            // Update or create incoming workflow
-            await tx.documentIncomingWorkflow.upsert({
-              where: { documentId: doc.id },
-              create: {
-                documentId: doc.id,
-                status: IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT,
-                directedAt: now,
-                leaderId: authUser.id,
-                leadUnitId: targetUnitId,
-                leadershipInstruction: instruction,
-                deadline: deadlineDate,
-              },
-              update: {
-                status: IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT,
-                directedAt: now,
-                leaderId: authUser.id,
-                leadUnitId: targetUnitId,
-                leadershipInstruction: instruction,
-                deadline: deadlineDate || doc.incomingWorkflow?.deadline,
-              },
-            });
-
-            // Update canonical Document status and deadline
-            await tx.document.update({
-              where: { id: doc.id },
-              data: {
-                status: DocumentStatus.DANG_XU_LY,
-                dueDate: deadlineDate || doc.dueDate,
-              },
-            });
-
-            // Audit Log
-            await auditService.logEvent(tx, {
-              actorId: authUser.id,
-              action: AuditAction.DOCUMENT_DIRECTED,
-              entityType: AuditEntityType.DOCUMENT,
-              entityId: doc.id,
-              requestId,
-              beforeData: {
-                status: doc.status,
-                leadUnitId: doc.incomingWorkflow?.leadUnitId,
-              },
-              afterData: {
-                status: DocumentStatus.DANG_XU_LY,
-                leadUnitId: targetUnitId,
-                instruction,
-                deadline: deadlineDate,
-              },
-              metadata: {
-                batchAction: "ASSIGN_LEAD_UNIT",
-                requestId,
-              },
-            });
-
-            // Outbox Event
-            await publishOutboxEvent(tx, {
-              eventType: OutboxEventType.DOCUMENT_DIRECTIVE_NOTIFICATION,
-              aggregateType: OutboxAggregateType.DOCUMENT,
-              aggregateId: doc.id,
-              payload: {
-                documentId: doc.id,
-                leadUnitId: targetUnitId,
-                leaderId: authUser.id,
-                instruction,
-                deadline: deadlineDate,
-              },
-            });
-
-            successful.push({
-              documentId: doc.id,
-              success: true,
-              status: "ASSIGNED_TO_LEAD_UNIT",
-              leadUnitId: targetUnitId,
-            });
-            break;
-          }
-
-          // -------------------------------------------------------------
-          // 3. FILE_DOCUMENTS
-          // -------------------------------------------------------------
-          case "FILE_DOCUMENTS": {
-            const targetWorkflowStatus = IncomingDocumentStatus.FILED;
-            const dossierCode =
-              payload.dossierId ||
-              (workDossier
-                ? workDossier.code
-                : `HS-${doc.documentYear || now.getFullYear()}-${doc.registrationNumber}`);
-            const filingNotes =
-              payload.filingNotes ||
-              payload.storageLocation ||
-              `Lập hồ sơ lưu trữ ${dossierCode}`;
-
-            // Update incoming workflow if applicable
-            if (doc.incomingWorkflow || (doc.type as string) === DocumentType.VAN_BAN_DEN) {
-              await tx.documentIncomingWorkflow.upsert({
-                where: { documentId: doc.id },
-                create: {
-                  documentId: doc.id,
-                  status: targetWorkflowStatus,
-                  filedAt: now,
-                  filedById: authUser.id,
-                  dossierId: dossierCode,
-                  filingNotes,
-                },
-                update: {
-                  status: targetWorkflowStatus,
-                  filedAt: now,
-                  filedById: authUser.id,
-                  dossierId: dossierCode,
-                  filingNotes: filingNotes || doc.incomingWorkflow?.filingNotes,
-                },
-              });
-            }
-
-            // Update outgoing workflow if applicable
-            if (doc.outgoingWorkflow || (doc.type as string) === DocumentType.VAN_BAN_DI) {
-              if (doc.outgoingWorkflow) {
-                await tx.documentOutgoingWorkflow.update({
-                  where: { documentId: doc.id },
-                  data: {
-                    status: OutgoingDocumentStatus.FILED,
-                    filedAt: now,
-                    filedById: authUser.id,
-                    dossierId: dossierCode,
-                  },
-                });
-              }
-            }
-
-            // Update canonical Document
-            await tx.document.update({
-              where: { id: doc.id },
-              data: {
-                status: DocumentStatus.LUU_THEO_DOI,
-                archiveReason: filingNotes,
-              },
-            });
-
-            // Link document item into WorkDossier if matching dossier exists
-            if (workDossier) {
-              const existingItem = await tx.dossierItem.findFirst({
-                where: {
-                  dossierId: workDossier.id,
-                  itemType: DossierItemType.DOCUMENT,
-                  itemId: doc.id,
-                },
-              });
-
-              if (!existingItem) {
-                const maxSeq = workDossier.items.reduce(
-                  (max, it) => (it.sequence > max ? it.sequence : max),
-                  0
-                );
-                const newItem = await tx.dossierItem.create({
-                  data: {
-                    dossierId: workDossier.id,
-                    itemType: DossierItemType.DOCUMENT,
-                    itemId: doc.id,
-                    title: doc.summary,
-                    documentNumber: doc.originalNumber || String(doc.registrationNumber),
-                    documentDate: doc.issuedDate,
-                    sequence: maxSeq + 1,
-                    addedById: authUser.id,
-                    notes: filingNotes,
-                  },
-                });
-                workDossier.items.push({ sequence: newItem.sequence });
-              }
-            }
-
-            // Audit Log
-            await auditService.logEvent(tx, {
-              actorId: authUser.id,
-              action: AuditAction.DOCUMENT_FILED,
-              entityType: AuditEntityType.DOCUMENT,
-              entityId: doc.id,
-              requestId,
-              beforeData: { status: doc.status },
-              afterData: {
-                status: "FILED",
-                dossierId: dossierCode,
-                storageLocation: payload.storageLocation,
-                filedById: authUser.id,
-                filingNotes,
-              },
-              metadata: {
-                batchAction: "FILE_DOCUMENTS",
-                requestId,
-              },
-            });
-
-            // Outbox Event
-            await publishOutboxEvent(tx, {
-              eventType: OutboxEventType.DOCUMENT_FILED_NOTIFICATION,
-              aggregateType: OutboxAggregateType.DOCUMENT,
-              aggregateId: doc.id,
-              payload: {
-                documentId: doc.id,
-                dossierId: dossierCode,
-                filedById: authUser.id,
-                status: "FILED",
-              },
-            });
-
-            successful.push({
-              documentId: doc.id,
-              success: true,
-              status: "FILED",
-              dossierId: dossierCode,
-            });
-            break;
-          }
-        }
-      } catch (itemErr: any) {
-        failed.push({
-          documentId: doc.id,
-          success: false,
-          error: itemErr.message || "Lỗi xử lý văn bản trong lô",
-        });
-      }
-    }
-
-    return {
-      action,
-      total: documentIds.length,
-      successCount: successful.length,
-      failureCount: failed.length,
-      successful,
-      failed,
-    };
+  const documents: BatchDocument[] = await prisma.document.findMany({
+    where: { id: { in: documentIds } },
+    select: {
+      id: true,
+      type: true,
+      incomingWorkflow: { select: { dossierId: true, status: true } },
+      outgoingWorkflow: { select: { status: true } },
+    },
   });
+  const docMap = new Map(documents.map((d) => [d.id, d]));
+
+  async function fileOne(doc: BatchDocument): Promise<BatchItemResult> {
+    const isOutgoing = doc.type === DocumentType.VAN_BAN_DI;
+    if (!isOutgoing && doc.type !== DocumentType.VAN_BAN_DEN) throw unsupportedDocumentType();
+    // Máy trạng thái cho phép FILED→FILED: lưu lại sẽ ghi đè thông tin lưu hồ sơ (ADR-004 §4) kèm audit/outbox trùng.
+    const alreadyFiled = isOutgoing
+      ? doc.outgoingWorkflow?.status === OutgoingDocumentStatus.FILED
+      : doc.incomingWorkflow?.status === IncomingDocumentStatus.FILED;
+    if (alreadyFiled) throw new InvalidTransitionError("Văn bản đã được lưu hồ sơ.", "ALREADY_FILED");
+    // Hồ sơ đã hủy (xóa mềm) coi như không tồn tại, như tra cứu hồ sơ thường.
+    if (workDossier?.disposedAt) throw new NotFoundError(`Không tìm thấy hồ sơ: ${payload.dossierId}`);
+
+    const linkDossier = workDossier && !alreadyInDossier.has(doc.id) ? workDossier : null;
+    if (linkDossier) {
+      // Kiểm trước (không ghi) các điều kiện gắn hồ sơ như DossierService.addItemToDossier, rồi lưu xong mới gắn:
+      // dòng bị từ chối không để lại thay đổi nào trên hồ sơ hay văn bản.
+      assertDossierNotImmutable(linkDossier.status, "thêm tài liệu vào");
+      await assertAuthorized(user, "dossier.add_item", {
+        type: "dossier",
+        id: linkDossier.id,
+        owningUnitId: linkDossier.owningUnitId,
+        dossierOwnerId: linkDossier.responsiblePersonId,
+      });
+      // fileDocument ghi đè liên kết hồ sơ của văn bản, nên phải chặn văn bản đã thuộc hồ sơ khác trước khi lưu.
+      const linkedId = doc.incomingWorkflow?.dossierId;
+      if (linkedId && linkedId !== linkDossier.id && linkedId !== linkDossier.code) {
+        throw new ConflictError("Văn bản đã thuộc một hồ sơ công việc khác.", "INCOMING_DOCUMENT_DOSSIER_ALREADY_LINKED");
+      }
+    }
+
+    const filed: { status: string; dossierId?: string } = isOutgoing
+      ? await OutgoingDocumentService.fileOutgoingDocument(
+          { documentId: doc.id, filingNotes: payload.filingNotes ?? undefined },
+          user,
+          { requestId }
+        ).then((workflow) => ({ status: workflow.status, dossierId: workDossier?.id }))
+      : await fileDocument(
+          {
+            documentId: doc.id,
+            // Không chọn hồ sơ thì giữ liên kết hồ sơ sẵn có, tránh ghi đè bằng mã tự sinh.
+            dossierId: workDossier?.id ?? payload.dossierId ?? doc.incomingWorkflow?.dossierId ?? undefined,
+            filingNotes: payload.filingNotes ?? undefined,
+            storageLocation: payload.storageLocation ?? undefined,
+          },
+          user,
+          requestId
+        ).then((workflow) => ({ status: workflow.status, dossierId: workflow.dossierId ?? undefined }));
+
+    if (linkDossier) {
+      try {
+        await DossierService.linkDocument(user, { dossierId: linkDossier.id, documentId: doc.id });
+      } catch (err) {
+        // Văn bản đã lưu nhưng gắn hồ sơ lỗi (vd hồ sơ vừa bị đóng): báo riêng để không hiểu nhầm là chưa xử lý.
+        const failure = toFailure(doc.id, err, requestId, action);
+        return {
+          ...failure,
+          status: filed.status,
+          code: "DOSSIER_LINK_FAILED",
+          error: `Văn bản đã lưu nhưng chưa gắn được vào hồ sơ: ${failure.error}`,
+        };
+      }
+    }
+    return { documentId: doc.id, success: true, ...filed };
+  }
+
+  const successful: BatchItemResult[] = [];
+  const failed: BatchItemResult[] = [];
+
+  for (const documentId of documentIds) {
+    try {
+      const doc = docMap.get(documentId);
+      if (!doc) throw new NotFoundError(`Văn bản không tồn tại trong hệ thống: ${documentId}`);
+
+      if (action === "ASSIGN_LEAD_UNIT") {
+        if (doc.type !== DocumentType.VAN_BAN_DEN) throw unsupportedDocumentType();
+        // Máy trạng thái cho phép tự chuyển: bút phê lại sẽ thay đơn vị, ý kiến chỉ đạo, hạn và gửi lại thông báo.
+        if (doc.incomingWorkflow?.status === IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT) {
+          throw new InvalidTransitionError("Văn bản đã được giao đơn vị chủ trì.", "ALREADY_ASSIGNED");
+        }
+        const workflow = await directDocument(
+          {
+            documentId,
+            leadUnitId: leadUnitId!,
+            leadershipInstruction: (payload.leadershipInstruction || payload.instruction)!,
+            deadline: payload.deadline ? new Date(payload.deadline) : undefined,
+          },
+          user,
+          requestId
+        );
+        successful.push({ documentId, success: true, status: workflow.status, leadUnitId: leadUnitId! });
+      } else {
+        const result = await fileOne(doc);
+        (result.success ? successful : failed).push(result);
+      }
+    } catch (err) {
+      failed.push(toFailure(documentId, err, requestId, action));
+    }
+  }
+
+  return {
+    action,
+    total: documentIds.length,
+    successCount: successful.length,
+    failureCount: failed.length,
+    successful,
+    failed,
+  };
 }
