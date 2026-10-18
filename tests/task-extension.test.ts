@@ -57,6 +57,8 @@ describe('T-01 xin gia hạn nhiệm vụ', () => {
       academicYear: '2026-2027',
       createdById: u.creator,
       status: TaskStatus.IN_PROGRESS,
+      // Ngày bắt đầu cố định: mặc định now() sẽ vượt các hạn cố định dưới đây (chk_tasks_due_date_after_start_date)
+      startDate: D('2026-10-01'),
     };
     const parent = await prisma.task.create({
       data: {

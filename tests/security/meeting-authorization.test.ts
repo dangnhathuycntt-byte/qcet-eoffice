@@ -148,6 +148,14 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
 
   after(async () => {
     // Cleanup tasks and actors created from resolutions
+    const resolutionTasks = await prisma.task.findMany({
+      where: { createdById: { in: [chairUser?.id, secretaryUser?.id] } },
+      select: { id: true },
+    });
+    await prisma.outboxEvent.deleteMany({
+      where: { aggregateId: { in: resolutionTasks.map((t) => t.id) } },
+    });
+
     await prisma.taskActor.deleteMany({
       where: {
         task: {
@@ -381,7 +389,7 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
 
   test('11. Authorized Chair creates resolution -> Task created via canonical command with DRI actor and outbox', async () => {
     const resCode = `NQ_AUTH_${runId}`;
-    const deadline = new Date('2026-10-15T17:00:00Z');
+    const deadline = new Date(Date.now() + 30 * 86400000);
 
     const resReq = new NextRequest(`http://localhost:3000/api/meetings/${testMeeting.id}/resolutions`, {
       method: 'POST',
@@ -430,5 +438,45 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
     });
     assert.ok(outboxEvent, 'Outbox event TASK_CREATED_FROM_RESOLUTION must be created');
     assert.strictEqual((outboxEvent.payload as any).createdById, chairUser.id);
+  });
+
+  // Ràng buộc chk_tasks_due_date_after_start_date: hạn kết luận đã qua (hoặc là hôm nay sau 07:00
+  // giờ VN) vẫn tạo được nhiệm vụ; startDate được kẹp về dueDate như createTask, không trả 500.
+  const createResolutionTask = async (resCode: string, deadlineIso: string) => {
+    const resReq = new NextRequest(`http://localhost:3000/api/meetings/${testMeeting.id}/resolutions`, {
+      method: 'POST',
+      headers: authHeaders(chairToken),
+      body: JSON.stringify({
+        code: resCode,
+        title: 'Rà soát nhật ký truy cập hệ thống',
+        content: 'Giao chuyên viên rà soát nhật ký truy cập và báo cáo kết quả.',
+        leadUnitId: testUnit.id,
+        leadUserId: participantUser.id,
+        deadline: deadlineIso,
+        createTask: true,
+      }),
+    });
+    const resResult = await createResolutionRoute(resReq, { params: Promise.resolve({ id: testMeeting.id }) });
+    assert.strictEqual(resResult.status, 201);
+    const body = await resResult.json();
+    assert.ok(body.resultingTaskId);
+    const task = await prisma.task.findUnique({ where: { id: body.resultingTaskId } });
+    assert.ok(task, 'Resulting Task must exist in database');
+    assert.ok(task.dueDate, 'Resulting Task must have dueDate');
+    assert.strictEqual(task.dueDate.toISOString(), deadlineIso);
+    return { task, dueDate: task.dueDate };
+  };
+
+  test('12. Resolution deadline = hôm nay (dạng form gửi: YYYY-MM-DD giờ VN -> toISOString) -> 201, startDate <= dueDate', async () => {
+    // Giống meeting-detail-view.tsx: new Date(<input type="date">).toISOString() = 00:00Z (07:00 giờ VN).
+    const todayIct = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+    const { task, dueDate } = await createResolutionTask(`NQ_TODAY_${runId}`, new Date(todayIct).toISOString());
+    assert.ok(task.startDate.getTime() <= dueDate.getTime(), 'startDate must not be after dueDate');
+  });
+
+  test('13. Resolution deadline đã qua 3 ngày -> 201, startDate kẹp về dueDate', async () => {
+    const pastDeadline = new Date(Date.now() - 3 * 86400000).toISOString();
+    const { task, dueDate } = await createResolutionTask(`NQ_PAST_${runId}`, pastDeadline);
+    assert.strictEqual(task.startDate.getTime(), dueDate.getTime());
   });
 });

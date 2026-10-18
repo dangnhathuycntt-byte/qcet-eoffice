@@ -355,6 +355,9 @@ export class TaskCommandService {
     const dueDate = input.deadline
       ? new Date(input.deadline)
       : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    // Như createTask: giữ chk_tasks_due_date_after_start_date (due_date >= start_date) khi hạn đã qua.
+    const now = new Date();
+    const startDate = dueDate < now ? new Date(dueDate) : now;
 
     const { month: academicMonth, academicYear } = getCurrentAcademicPeriod();
     const originLevel = input.bodyId ? TaskOriginLevel.SCHOOL : TaskOriginLevel.UNIT;
@@ -388,6 +391,7 @@ export class TaskCommandService {
         originLevel,
         priority: TaskPriority.HIGH,
         scope,
+        startDate,
         dueDate,
         academicMonth,
         academicYear,
