@@ -115,7 +115,7 @@ async function runTurn(
   overrides: Partial<AssistantTurnInput> = {},
   extraDeps: Partial<AssistantTurnDeps> = {},
   signal?: AbortSignal,
-  timeouts?: { turnTimeoutMs?: number; roundTimeoutMs?: number },
+  timeouts?: { turnTimeoutMs?: number; roundTimeoutMs?: number; titleGraceMs?: number },
 ) {
   const gateway = scriptedGateway(scripts);
   const events: AssistantStreamEvent[] = [];
@@ -776,7 +776,7 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     assert.equal(conv?.contextType, null);
   });
 
-  it('propose_task: phát proposal ngay sau bước, tối đa 3 thẻ mỗi lượt, đề xuất không lưu vào tin và audit', async () => {
+  it('propose_task: phát proposal ngay sau bước, tối đa 3 thẻ mỗi lượt, thẻ lưu cùng tin trả lời, không vào audit', async () => {
     const { runAssistantTool } = await import('@/server/assistant/assistant-tools');
     const secret = `Chuẩn bị hội thảo ${runId}`;
     const call = (n: number) => ({
@@ -818,9 +818,76 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     const reply = rows[rows.length - 1];
     assert.equal(reply.content.includes('"proposal"'), false);
     assert.equal(JSON.stringify(reply.sources), '[]');
+    // Thẻ lưu cột riêng để mở lại cuộc vẫn còn (như ChatGPT), chưa tạo, chưa bỏ qua; tin hỏi không có thẻ
+    assert.deepEqual(reply.proposals, proposals.map((proposal) => ({ proposal, task: null, dismissed: false })));
+    assert.equal(rows[0].proposals, null);
     const audit = await prisma.auditEvent.findFirst({ where: { entityId: conversationId, action: AuditAction.ASSISTANT_TURN } });
     assert.ok(audit);
     assert.equal(JSON.stringify(audit.metadata).includes(secret), false, 'audit không ghi tiêu đề đề xuất');
+  });
+
+  it('cuộc mới: mô hình đặt tên song song, phát title trước done và ghi vào CSDL; cuộc cũ không đặt lại', async () => {
+    const titled: Array<{ message: string; context: string | null; attachments: string[] }> = [];
+    const generateTitle: AssistantTurnDeps['generateTitle'] = async (input) => {
+      titled.push(input);
+      return 'Việc cần làm hôm nay';
+    };
+    const { events } = await runTurn([() => completion('Hôm nay Thầy/Cô có hai việc.')], {}, { generateTitle });
+    const conversationId = convIds[convIds.length - 1];
+    assert.deepEqual(titled, [{ message: 'Hôm nay có việc gì cần làm?', context: null, attachments: [] }]);
+    const order = events.map((e) => e.type);
+    assert.ok(order.indexOf('title') > order.indexOf('conversation') && order.indexOf('title') < order.indexOf('done'), order.join(','));
+    const titleEvent = events.find((e) => e.type === 'title');
+    assert.ok(titleEvent && titleEvent.type === 'title');
+    assert.equal(titleEvent.conversation.id, conversationId);
+    assert.equal(titleEvent.conversation.title, 'Việc cần làm hôm nay');
+    const row = await prisma.assistantConversation.findUniqueOrThrow({ where: { id: conversationId } });
+    assert.equal(row.title, 'Việc cần làm hôm nay');
+    assert.equal(row.titleEdited, false);
+
+    // Lượt sau của cùng cuộc: không đặt tên lại
+    const next = await runTurn([() => completion('Còn một việc nữa.')], { conversationId }, { generateTitle });
+    assert.equal(titled.length, 1);
+    assert.equal(next.events.some((e) => e.type === 'title'), false);
+  });
+
+  it('đặt tên lỗi hay trả rỗng thì giữ tên lấy từ câu hỏi; chậm quá thời gian chờ thì không báo nhưng vẫn ghi', async () => {
+    const failed = await runTurn([() => completion('Trả lời.')], { message: 'Văn bản đến tuần này' }, {
+      generateTitle: async () => {
+        throw new Error('gateway lỗi');
+      },
+    });
+    assert.equal(failed.events.some((e) => e.type === 'title'), false);
+    assert.equal(failed.events.at(-1)?.type, 'done');
+    const failedId = convIds[convIds.length - 1];
+    assert.equal((await prisma.assistantConversation.findUniqueOrThrow({ where: { id: failedId } })).title, 'Văn bản đến tuần này');
+
+    const empty = await runTurn([() => completion('Trả lời.')], { message: 'Lịch họp tuần này' }, { generateTitle: async () => null });
+    assert.equal(empty.events.some((e) => e.type === 'title'), false);
+
+    let release: () => void = () => undefined;
+    const late = new Promise<void>((resolve) => (release = resolve));
+    const slow = await runTurn(
+      [() => completion('Trả lời.')],
+      { message: 'Nhiệm vụ trễ hạn' },
+      {
+        generateTitle: async () => {
+          await late;
+          return 'Nhiệm vụ trễ hạn của đơn vị';
+        },
+      },
+      undefined,
+      { titleGraceMs: 20 },
+    );
+    assert.equal(slow.events.some((e) => e.type === 'title'), false, 'luồng đã đóng ở done');
+    const slowId = convIds[convIds.length - 1];
+    release();
+    // Tên vẫn được ghi khi có: danh sách tải lại sẽ thấy
+    for (let i = 0; i < 50; i++) {
+      if ((await prisma.assistantConversation.findUniqueOrThrow({ where: { id: slowId } })).title !== 'Nhiệm vụ trễ hạn') break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.equal((await prisma.assistantConversation.findUniqueOrThrow({ where: { id: slowId } })).title, 'Nhiệm vụ trễ hạn của đơn vị');
   });
 
   it('ghi audit ASSISTANT_TURN với nguồn đã đọc, không chứa câu hỏi hay câu trả lời', async () => {

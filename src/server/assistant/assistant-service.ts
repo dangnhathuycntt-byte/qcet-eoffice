@@ -25,6 +25,7 @@ import { logger } from "@/server/observability/logger";
 import { ToolFailure } from "@/server/assistant/assistant-tool-shared";
 import {
   appendMessage,
+  applyGeneratedTitle,
   createConversation,
   getConversation,
   loadModelHistory,
@@ -43,6 +44,7 @@ import {
 } from "@/server/services/agent-gateway";
 import { buildAssistantSystemPrompt, assistantDateFrame } from "@/domain/assistant/assistant-prompt";
 import { deriveConversationTitle } from "@/domain/assistant/assistant-history";
+import { generateConversationTitle } from "@/server/assistant/assistant-title";
 import type { TaskAgentContentPart } from "@/domain/tasks/task-agent-draft";
 import type { TaskAgentAttachmentKind } from "@/domain/tasks/task-agent-attachments";
 import { dedupeSources, selectCitedSources } from "@/domain/assistant/assistant-sources";
@@ -58,6 +60,11 @@ export const ASSISTANT_LIMITS = {
   historyChars: 16_000,
   /** Số đề xuất nhiệm vụ (thẻ) tối đa trong một lượt; quá thì mô hình nhận lỗi, không hiện thêm thẻ. */
   maxProposalsPerTurn: 3,
+  /**
+   * Trả lời xong mà tên do mô hình đặt chưa có: chờ thêm tối đa chừng này trước `done`. Quá thì tên vẫn được ghi khi có
+   * nhưng không báo trong lượt (luồng đóng ở `done`); danh sách tải lại sẽ có tên mới.
+   */
+  titleGraceMs: 2_500,
 } as const;
 
 const EMPTY_ANSWER_MESSAGE = "Trợ lý chưa trả lời được câu này. Thầy/Cô thử hỏi lại cụ thể hơn.";
@@ -104,13 +111,15 @@ export interface AssistantTurnDeps {
   toolDefinitions: GatewayToolDefinition[];
   describeContext: typeof describeAssistantContext;
   readConfig: () => GatewayConfig;
+  /** Đặt tên cuộc mới; không có thì giữ tên lấy từ câu hỏi. */
+  generateTitle?: typeof generateConversationTitle;
 }
 
 export interface AssistantTurnOptions {
   signal?: AbortSignal;
   deps?: Partial<AssistantTurnDeps>;
   /** Chỉ để kiểm thử nhánh hết giờ; mặc định lấy từ ASSISTANT_LIMITS. */
-  timeouts?: { turnTimeoutMs?: number; roundTimeoutMs?: number };
+  timeouts?: { turnTimeoutMs?: number; roundTimeoutMs?: number; titleGraceMs?: number };
 }
 
 /** Kết quả đã đọc của một lần gọi công cụ, dạng dùng trong vòng lặp. */
@@ -135,13 +144,23 @@ interface DescribedContext {
 async function resolveDeps(partial: Partial<AssistantTurnDeps> = {}): Promise<AssistantTurnDeps> {
   const gateway = partial.callGateway ?? callGateway;
   const readConfig = partial.readConfig ?? (() => readGatewayConfig("Trợ lý"));
+  // Gateway giả (kiểm thử) mà không truyền generateTitle thì không đặt tên, để lần gọi đặt tên không lấy kịch bản của lượt
+  const generateTitle = partial.generateTitle ?? (partial.callGateway ? undefined : generateConversationTitle);
   if (partial.runTool && partial.toolDefinitions && partial.describeContext) {
-    return { callGateway: gateway, readConfig, runTool: partial.runTool, toolDefinitions: partial.toolDefinitions, describeContext: partial.describeContext };
+    return {
+      callGateway: gateway,
+      readConfig,
+      generateTitle,
+      runTool: partial.runTool,
+      toolDefinitions: partial.toolDefinitions,
+      describeContext: partial.describeContext,
+    };
   }
   const tools = await import("@/server/assistant/assistant-tools");
   return {
     callGateway: gateway,
     readConfig,
+    generateTitle,
     runTool: partial.runTool ?? tools.runAssistantTool,
     toolDefinitions: partial.toolDefinitions ?? tools.ASSISTANT_TOOL_DEFINITIONS,
     describeContext: partial.describeContext ?? tools.describeAssistantContext,
@@ -298,6 +317,8 @@ async function runTurn(
   const turnTimer = setTimeout(() => turn.abort(), turnTimeoutMs);
   const clientAborted = () => options.signal?.aborted === true;
   const turnExpired = () => !clientAborted() && (turn.signal.aborted || Date.now() >= turnDeadline);
+  // Sự kiện tên chỉ phát khi luồng còn mở: tắt trước `done` và khi lượt kết thúc vì bất kỳ lý do nào
+  let titleOpen = true;
 
   try {
     // Ngữ cảnh: cuộc có sẵn lấy từ bản ghi (bỏ input.context), mô tả lại mỗi lượt; cuộc mới phải đọc được mới tạo
@@ -342,6 +363,14 @@ async function runTurn(
     });
     if (described) emit({ type: "context", source: described.source });
 
+    // Cuộc mới: mô hình đặt tên song song với câu trả lời
+    const titleTask =
+      !input.conversationId && deps.generateTitle
+        ? nameConversation(deps.generateTitle, conversation, input, described, config, (row) => {
+            if (titleOpen) emit({ type: "title", conversation: toConversationSummaryDTO(row) });
+          })
+        : null;
+
     const history = await loadModelHistory(conversation.id, {
       maxMessages: ASSISTANT_LIMITS.historyMessages,
       maxChars: ASSISTANT_LIMITS.historyChars,
@@ -367,7 +396,7 @@ async function runTurn(
     const steps: AssistantStep[] = [];
     let answer = "";
     let toolChars = 0;
-    let proposals = 0;
+    const proposals: AssistantTaskProposal[] = [];
     // Ngân sách ký tự công cụ của cả lượt: hết (đủ trần, hoặc một kết quả đã bị loại vì vượt) thì các lần đọc sau không chạy nữa
     let budgetUsed = false;
     let rounds = 0;
@@ -470,7 +499,7 @@ async function runTurn(
           messages.push({ role: "tool", tool_call_id: call.id, content: TOOL_BUDGET_CONTENT });
           continue;
         }
-        if (run.proposal && proposals >= ASSISTANT_LIMITS.maxProposalsPerTurn) {
+        if (run.proposal && proposals.length >= ASSISTANT_LIMITS.maxProposalsPerTurn) {
           run = { ...run, ok: false, proposal: undefined, content: PROPOSAL_LIMIT_CONTENT, step: { ...run.step, ok: false } };
         }
         toolChars += run.content.length;
@@ -481,9 +510,9 @@ async function runTurn(
         if (run.ok) {
           read.push(...run.sources);
           if (run.detailed) detailed.push(...run.sources);
-          // Thẻ đề xuất hiện ngay dưới bước của nó; chỉ có trong phiên, không lưu cùng tin trả lời
+          // Thẻ đề xuất hiện ngay dưới bước của nó và lưu cùng tin trả lời (mở lại cuộc vẫn còn)
           if (run.proposal) {
-            proposals += 1;
+            proposals.push(run.proposal);
             emit({ type: "proposal", proposal: run.proposal });
           }
         }
@@ -497,6 +526,10 @@ async function runTurn(
       errorEvent = { code: "EMPTY_ANSWER", message: EMPTY_ANSWER_MESSAGE };
     }
 
+    // Tên thường xong trước câu trả lời (lượt có đọc dữ liệu); chưa xong thì chờ thêm một chút, rồi thôi báo
+    if (titleTask && !clientAborted()) await settledWithin(titleTask, options.timeouts?.titleGraceMs ?? ASSISTANT_LIMITS.titleGraceMs);
+    titleOpen = false;
+
     const content = answer.trim();
     const sources = selectCitedSources(content, read, detailed);
     emit({ type: "sources", sources });
@@ -507,6 +540,7 @@ async function runTurn(
       status,
       sources,
       steps,
+      proposals: proposals.map((proposal) => ({ proposal, task: null, dismissed: false })),
       durationMs,
     });
     progress.replySaved = true;
@@ -522,9 +556,46 @@ async function runTurn(
       refs: refsOf([...read, ...detailed]),
     });
   } finally {
+    titleOpen = false;
     clearTimeout(turnTimer);
     options.signal?.removeEventListener("abort", onClientAbort);
   }
+}
+
+/**
+ * Đặt tên cuộc mới bằng mô hình và ghi khi người dùng chưa tự đổi tên. Không ném lỗi; lỗi chỉ log tên lỗi, không ghi câu
+ * hỏi hay tên vào log.
+ */
+async function nameConversation(
+  generate: typeof generateConversationTitle,
+  conversation: AssistantConversation,
+  input: AssistantTurnInput,
+  described: DescribedContext | null,
+  config: GatewayConfig,
+  onTitled: (row: AssistantConversation) => void,
+): Promise<void> {
+  try {
+    const title = await generate(
+      {
+        message: input.message,
+        context: described ? contextLabel(described.source) : null,
+        attachments: (input.attachments ?? []).map((attachment) => attachment.step),
+      },
+      config,
+    );
+    if (!title || title === conversation.title) return;
+    const row = await applyGeneratedTitle(conversation.id, title);
+    if (row) onTitled(row);
+  } catch (error) {
+    logger.warn("assistant.title.failed", { requestId: input.requestId, errorName: error instanceof Error ? error.name : "unknown" });
+  }
+}
+
+/** Chờ `pending` xong hoặc hết `ms`, cái nào tới trước; không ném lỗi. */
+async function settledWithin(pending: Promise<void>, ms: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([pending, new Promise<void>((resolve) => (timer = setTimeout(resolve, ms)))]);
+  clearTimeout(timer);
 }
 
 /** Ghi audit của lượt. Lỗi ghi audit chỉ được log, không làm hỏng lượt đã lưu. */

@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ASSISTANT_RETENTION_DAYS } from '@/contracts/assistant';
 import {
+  cleanGeneratedTitle,
   deriveConversationTitle,
   formatConversationTime,
   groupConversationsByRecency,
@@ -10,6 +11,25 @@ import {
 
 // Thời điểm cố định theo lịch ICT: 17/10/2026 10:00. Test không phụ thuộc giờ máy.
 const NOW = new Date('2026-10-17T10:00:00+07:00');
+
+describe('cleanGeneratedTitle (tên do mô hình đặt)', () => {
+  it('bỏ nhãn, markdown, ngoặc kép và dấu câu cuối; giữ dấu tiếng Việt', () => {
+    assert.equal(cleanGeneratedTitle('Hỏi thứ của hôm nay'), 'Hỏi thứ của hôm nay');
+    assert.equal(cleanGeneratedTitle('Tiêu đề: "Hỏi thứ của hôm nay."'), 'Hỏi thứ của hôm nay');
+    assert.equal(cleanGeneratedTitle('**Việc sắp tới hạn tuần này**'), 'Việc sắp tới hạn tuần này');
+    assert.equal(cleanGeneratedTitle('# “Lịch họp tuần này?”'), 'Lịch họp tuần này');
+    assert.equal(cleanGeneratedTitle('tên: Văn bản đến chờ xử lý…'), 'Văn bản đến chờ xử lý');
+  });
+
+  it('chỉ lấy dòng đầu có chữ, cắt dài như tên lấy từ câu hỏi; không còn chữ thì null', () => {
+    assert.equal(cleanGeneratedTitle('\n  Tạo nhiệm vụ hội thảo\nGiải thích: người dùng muốn…'), 'Tạo nhiệm vụ hội thảo');
+    const long = cleanGeneratedTitle('Tổng hợp '.repeat(20));
+    assert.ok(long && long.endsWith('…') && Array.from(long).length <= 80);
+    assert.equal(cleanGeneratedTitle(''), null);
+    assert.equal(cleanGeneratedTitle('  "" . '), null);
+    assert.equal(cleanGeneratedTitle('**'), null);
+  });
+});
 
 describe('deriveConversationTitle', () => {
   it('gộp khoảng trắng và giữ nguyên dấu tiếng Việt', () => {

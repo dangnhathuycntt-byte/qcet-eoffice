@@ -1648,6 +1648,8 @@ model AssistantMessage {
   status         String                @default("complete") @db.VarChar(16)
   sources        Json?
   steps          Json?
+  /// Thẻ đề xuất nhiệm vụ của tin trả lời và trạng thái (đã tạo, bỏ qua), ADR-010
+  proposals      Json?
   durationMs     Int?                  @map("duration_ms")
   createdAt      DateTime              @default(now()) @map("created_at")
 

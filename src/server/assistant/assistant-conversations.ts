@@ -2,13 +2,14 @@ import { Prisma, type AssistantConversation, type AssistantMessage } from "@pris
 import { prisma } from "@/lib/prisma";
 import { AuditAction, AuditEntityType, logAuditEvent } from "@/lib/db/audit";
 import { logger } from "@/server/observability/logger";
-import { ValidationError } from "@/server/api/errors";
+import { NotFoundError, ValidationError } from "@/server/api/errors";
 import {
   ASSISTANT_CONTEXT_TYPES,
   ASSISTANT_RETENTION_DAYS,
   ASSISTANT_TOOL_NAMES,
   type AssistantContextRef,
   type AssistantContextType,
+  type AssistantMessageProposalDTO,
   type AssistantConversationDetailDTO,
   type AssistantConversationListDTO,
   type AssistantConversationListQuery,
@@ -16,11 +17,14 @@ import {
   type AssistantMessageDTO,
   type AssistantMessageRole,
   type AssistantMessageStatus,
+  type AssistantProposalUpdateRequest,
   type AssistantSourceRef,
   type AssistantSourceType,
   type AssistantStep,
 } from "@/contracts/assistant";
 import { retentionCutoff } from "@/domain/assistant/assistant-history";
+import { normalizeTaskProposal } from "@/domain/assistant/assistant-task-proposal";
+import { ProposeTaskArgs } from "@/server/assistant/assistant-tool-proposal";
 
 /** Số tin và ký tự gần nhất đưa lại cho mô hình trong một lượt (đặc tả W1-C). */
 const HISTORY_MESSAGES = 12;
@@ -74,6 +78,17 @@ function parseStep(value: unknown): AssistantStep | null {
   return { tool: tool as AssistantStep["tool"], label, count: typeof count === "number" ? count : null, ok };
 }
 
+/** Thẻ đề xuất đọc từ CSDL: đề xuất phải qua lại đúng tham số của propose_task; nhiệm vụ đã tạo chỉ giữ id và mã. */
+function parseProposal(value: unknown): AssistantMessageProposalDTO | null {
+  if (!isRecord(value)) return null;
+  const parsed = ProposeTaskArgs.safeParse(value.proposal);
+  if (!parsed.success) return null;
+  const { task } = value;
+  const created =
+    isRecord(task) && typeof task.id === "string" && task.id ? { id: task.id, code: typeof task.code === "string" ? task.code : null } : null;
+  return { proposal: normalizeTaskProposal(parsed.data), task: created, dismissed: value.dismissed === true };
+}
+
 export function toConversationSummaryDTO(row: AssistantConversation): AssistantConversationSummaryDTO {
   const contextType = toContextType(row.contextType);
   return {
@@ -97,6 +112,7 @@ export function toMessageDTO(row: AssistantMessage): AssistantMessageDTO {
     content: row.content,
     sources: parseJsonList(row.sources, parseSourceRef),
     steps: parseJsonList(row.steps, parseStep),
+    proposals: parseJsonList(row.proposals, parseProposal),
     durationMs: row.durationMs ?? null,
     createdAt: row.createdAt.toISOString(),
   };
@@ -196,6 +212,7 @@ export interface AppendMessageInput {
   status?: AssistantMessageStatus;
   sources?: AssistantSourceRef[];
   steps?: AssistantStep[];
+  proposals?: AssistantMessageProposalDTO[];
   durationMs?: number | null;
 }
 
@@ -212,6 +229,7 @@ export async function appendMessage(conversationId: string, data: AppendMessageI
         // Cột JSON: truyền mảng đối tượng đã kiểm kiểu; ép kiểu vì interface không khớp chữ ký JSON của Prisma
         sources: data.sources ? (data.sources as unknown as Prisma.InputJsonValue) : undefined,
         steps: data.steps ? (data.steps as unknown as Prisma.InputJsonValue) : undefined,
+        proposals: data.proposals?.length ? (data.proposals as unknown as Prisma.InputJsonValue) : undefined,
         durationMs: data.durationMs ?? null,
         createdAt: now,
       },
@@ -262,6 +280,49 @@ export async function loadModelHistory(
     picked.push({ role: row.role === "user" ? "user" : "assistant", content: row.content });
   }
   return picked.reverse();
+}
+
+/**
+ * Ghi trạng thái thẻ đề xuất thứ `index` của tin trả lời `messageId`: bỏ qua/hoàn tác, hoặc đã tạo nhiệm vụ. Tin phải
+ * thuộc cuộc còn hạn của người gọi. Nhiệm vụ phải do chính người gọi tạo; mã nhiệm vụ lấy từ CSDL, không nhận từ client.
+ * Không thấy tin, thẻ hay nhiệm vụ đều trả 404 như nhau.
+ */
+export async function updateMessageProposal(
+  userId: string,
+  messageId: string,
+  change: AssistantProposalUpdateRequest,
+  now: Date = new Date(),
+): Promise<AssistantMessageProposalDTO> {
+  return prisma.$transaction(async (tx) => {
+    const row = await tx.assistantMessage.findFirst({
+      where: { id: messageId, role: "assistant", conversation: visibleScope(userId, now) },
+      select: { id: true, proposals: true },
+    });
+    // Thẻ hỏng bị bỏ khi đọc nên vị trí theo danh sách đã đọc, cùng danh sách giao diện đang hiện
+    const items = row ? parseJsonList(row.proposals, parseProposal) : [];
+    const current = items[change.index];
+    if (!row || !current) throw new NotFoundError("Không tìm thấy đề xuất.");
+    let next: AssistantMessageProposalDTO;
+    if ("taskId" in change) {
+      const task = await tx.task.findFirst({ where: { id: change.taskId, createdById: userId }, select: { id: true, code: true } });
+      if (!task) throw new NotFoundError("Không tìm thấy nhiệm vụ.");
+      next = { ...current, task: { id: task.id, code: task.code }, dismissed: false };
+    } else {
+      next = { ...current, dismissed: change.dismissed };
+    }
+    items[change.index] = next;
+    await tx.assistantMessage.update({ where: { id: row.id }, data: { proposals: items as unknown as Prisma.InputJsonValue } });
+    return next;
+  });
+}
+
+/** Ghi tên do mô hình đặt khi người dùng chưa tự đổi tên; trả null nếu không ghi (đã đổi tên, cuộc đã xóa). */
+export async function applyGeneratedTitle(conversationId: string, title: string): Promise<AssistantConversation | null> {
+  const { count } = await prisma.assistantConversation.updateMany({
+    where: { id: conversationId, titleEdited: false },
+    data: { title },
+  });
+  return count === 0 ? null : prisma.assistantConversation.findUnique({ where: { id: conversationId } });
 }
 
 /** Đổi tên chỉ khi còn là cuộc của người gọi và chưa quá hạn; điều kiện nằm trong câu ghi nên không có cuộc đua với xóa. */

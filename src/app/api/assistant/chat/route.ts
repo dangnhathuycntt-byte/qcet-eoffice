@@ -10,6 +10,7 @@ import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { runAssistantTurn, type AssistantTurnAttachment } from "@/server/assistant/assistant-service";
 import { ASSISTANT_TOOL_DEFINITIONS, describeAssistantContext, runAssistantTool } from "@/server/assistant/assistant-tools";
+import { generateConversationTitle } from "@/server/assistant/assistant-title";
 import { callGateway, readGatewayConfig } from "@/server/services/agent-gateway";
 import { getAgentModelCatalog } from "@/config/runtime";
 import { isAllowedAgentModel } from "@/domain/agent/agent-models";
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
                 runTool: runAssistantTool,
                 toolDefinitions: ASSISTANT_TOOL_DEFINITIONS,
                 describeContext: describeAssistantContext,
+                generateTitle: generateConversationTitle,
               },
             },
           );

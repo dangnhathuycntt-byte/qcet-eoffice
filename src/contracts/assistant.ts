@@ -46,6 +46,16 @@ export const AssistantRenameRequestSchema = z
   .object({ title: z.string().trim().min(1, "Nhập tên cuộc trò chuyện").max(ASSISTANT_TITLE_MAX) })
   .strict();
 
+/**
+ * Cập nhật trạng thái thẻ đề xuất thứ `index` của một tin trả lời: bỏ qua/hoàn tác, hoặc đã tạo nhiệm vụ `taskId`
+ * (máy chủ chỉ nhận nhiệm vụ do chính người gọi tạo và lấy mã nhiệm vụ từ CSDL).
+ */
+export const AssistantProposalUpdateRequestSchema = z.union([
+  z.object({ index: z.number().int().min(0).max(19), dismissed: z.boolean() }).strict(),
+  z.object({ index: z.number().int().min(0).max(19), taskId: entityId }).strict(),
+]);
+export type AssistantProposalUpdateRequest = z.infer<typeof AssistantProposalUpdateRequestSchema>;
+
 export const AssistantConversationListQuerySchema = z
   .object({
     q: z.string().trim().max(100).optional(),
@@ -84,7 +94,7 @@ export interface AssistantStep {
 /**
  * Đề xuất nhiệm vụ Trợ lý soạn qua `propose_task` (ADR-010): chưa tạo gì. Giao diện hiện thẻ, người dùng mở hộp tạo
  * nhiệm vụ đã điền sẵn rồi tự bấm Tạo. Người là tên người hỏi nêu (mô hình không có danh sách nhân sự), hộp khớp tên
- * với nhân sự của đơn vị, không khớp thì để trống. Chỉ có trong phiên, không lưu cùng tin trả lời.
+ * với nhân sự của đơn vị, không khớp thì để trống. Lưu cùng tin trả lời (`AssistantMessageDTO.proposals`).
  */
 export interface AssistantTaskProposal {
   title: string;
@@ -106,6 +116,20 @@ export interface AssistantTaskProposalSubtask {
   dueDate?: string;
 }
 
+/** Nhiệm vụ đã tạo từ một thẻ đề xuất. */
+export interface AssistantProposalTask {
+  id: string;
+  code: string | null;
+}
+
+/** Thẻ đề xuất lưu cùng tin trả lời, kèm trạng thái người dùng đã chọn để mở lại cuộc vẫn còn (như ChatGPT). */
+export interface AssistantMessageProposalDTO {
+  proposal: AssistantTaskProposal;
+  /** Đã tạo nhiệm vụ từ thẻ này; null là chưa tạo. */
+  task: AssistantProposalTask | null;
+  dismissed: boolean;
+}
+
 export type AssistantMessageRole = "user" | "assistant";
 export type AssistantMessageStatus = "complete" | "error" | "aborted";
 
@@ -116,6 +140,8 @@ export interface AssistantMessageDTO {
   status: AssistantMessageStatus;
   sources: AssistantSourceRef[];
   steps: AssistantStep[];
+  /** Thẻ đề xuất nhiệm vụ của tin trả lời (ADR-010); rỗng với tin khác. */
+  proposals: AssistantMessageProposalDTO[];
   durationMs: number | null;
   createdAt: string;
 }
@@ -145,6 +171,8 @@ export interface AssistantConversationListDTO {
 /** Sự kiện NDJSON của `POST /api/assistant/chat`, mỗi dòng một sự kiện. */
 export type AssistantStreamEvent =
   | { type: "conversation"; conversation: AssistantConversationSummaryDTO; userMessageId: string }
+  /** Cuộc mới: tên do mô hình đặt thay cho tên lấy từ câu hỏi, phát trước `done`. */
+  | { type: "title"; conversation: AssistantConversationSummaryDTO }
   | { type: "context"; source: AssistantSourceRef }
   | { type: "step"; step: AssistantStep }
   | { type: "thinking"; delta: string }

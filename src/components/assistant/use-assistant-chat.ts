@@ -7,7 +7,9 @@ import {
   assistantErrorText,
   getConversationRequest,
   streamAssistantTurn,
+  updateProposalRequest,
 } from "@/components/assistant/assistant-client";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   ASSISTANT_ATTACHMENT_ONLY_PROMPT,
   ASSISTANT_RETRY_ATTACHMENTS_GONE,
@@ -73,6 +75,9 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   const unmountedRef = React.useRef(false);
   const turnSeq = React.useRef(0);
   const callbacksRef = React.useRef({ onUpsert, onTurnSettled });
+  const { showToast } = useFeedback();
+  const showToastRef = React.useRef(showToast);
+  showToastRef.current = showToast;
   // Model chọn ở ô soạn (chung trang Trợ lý và khung chat nổi); không có danh sách thì để máy chủ dùng model mặc định
   const { model } = useAgentModel();
   React.useEffect(() => {
@@ -147,21 +152,15 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   }, [releasePreviews]);
 
   const openConversation = React.useCallback(async (id: string) => {
-    // Tải lại đúng cuộc đang mở (khung chat nổi quay lại): giữ tệp đã gửi và thẻ đề xuất nhiệm vụ trong phiên theo mã
-    // tin, để còn ảnh trên câu hỏi, "Thử lại" vẫn gửi kèm tệp và thẻ vẫn mở được. Máy chủ không lưu hai thứ này.
-    const carried = new Map<string, Pick<ThreadMessage, "attachments" | "proposals" | "proposalTasks" | "dismissedProposals">>();
+    // Tải lại đúng cuộc đang mở (khung chat nổi quay lại): giữ tệp đã gửi trong phiên theo mã tin, để còn ảnh trên câu
+    // hỏi và "Thử lại" vẫn gửi kèm tệp. Máy chủ không lưu tệp; thẻ đề xuất thì máy chủ lưu nên tải lại là có.
+    const carried = new Map<string, ChatAttachment[]>();
     if (id === activeIdRef.current) {
-      for (const { id: messageId, attachments: sent, proposals, proposalTasks, dismissedProposals } of threadRef.current) {
-        if (!messageId || (!sent && !proposals)) continue;
-        carried.set(messageId, {
-          ...(sent ? { attachments: sent } : {}),
-          ...(proposals ? { proposals } : {}),
-          ...(proposalTasks ? { proposalTasks } : {}),
-          ...(dismissedProposals ? { dismissedProposals } : {}),
-        });
+      for (const { id: messageId, attachments: sent } of threadRef.current) {
+        if (messageId && sent) carried.set(messageId, sent);
       }
     }
-    releasePreviews([...carried.values()].flatMap((kept) => kept.attachments ?? []));
+    releasePreviews([...carried.values()].flat());
     turnRef.current?.abort();
     turnRef.current = null;
     detailRef.current?.abort();
@@ -184,8 +183,8 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
       setThread(
         detail.messages.map((dto) => {
           const message = threadMessageFromDto(dto);
-          const kept = carried.get(dto.id);
-          return kept ? { ...message, ...kept } : message;
+          const sent = carried.get(dto.id);
+          return sent ? { ...message, attachments: sent } : message;
         }),
       );
       setDetailStatus("ready");
@@ -312,6 +311,12 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
             setActiveContext(event.source);
             return;
           }
+          if (event.type === "title") {
+            // Tên do mô hình đặt cho cuộc mới; người dùng đã chuyển sang cuộc khác thì chỉ cập nhật danh sách
+            if (activeIdRef.current === event.conversation.id) setActiveTitle(event.conversation.title);
+            callbacksRef.current.onUpsert(event.conversation);
+            return;
+          }
           if (event.type === "done" || event.type === "error") turn.settled = true;
           setThread((prev) => prev.map((m) => (m.key === replyKey ? reduceAssistantReply(m, event) : m)));
         },
@@ -355,15 +360,43 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     void send(question.content, restoreDraft, question.attachments ?? []);
   };
 
-  /** Người dùng đã tạo nhiệm vụ từ thẻ đề xuất: thẻ chuyển sang "Đã tạo" (chỉ trong phiên, như thẻ). */
-  const proposalCreated = React.useCallback((replyKey: string, index: number, task: AssistantProposalTask) => {
-    setThread((prev) => markProposalCreated(prev, replyKey, index, task));
-  }, []);
+  /**
+   * Lưu trạng thái thẻ đề xuất ở máy chủ để thoát ra vào lại vẫn còn (như ChatGPT); giao diện đã đổi trước. Tin trả lời
+   * lỗi không có mã thì thẻ chỉ còn trong phiên.
+   */
+  const saveProposal = React.useCallback(
+    (replyKey: string, change: Parameters<typeof updateProposalRequest>[1], failure: string, revert?: () => void) => {
+      const messageId = threadRef.current.find((m) => m.key === replyKey)?.id;
+      if (!messageId) return;
+      // Câu riêng cho thẻ (câu lỗi chung của Trợ lý nói về lượt trả lời, dễ hiểu nhầm)
+      updateProposalRequest(messageId, change).catch(() => {
+        revert?.();
+        showToastRef.current({ variant: "error", message: failure });
+      });
+    },
+    [],
+  );
 
-  /** "Bỏ qua" hoặc "Hoàn tác" trên thẻ đề xuất; không gửi gì cho máy chủ (đề xuất chưa tạo gì). */
-  const proposalDismissed = React.useCallback((replyKey: string, index: number, dismissed: boolean) => {
-    setThread((prev) => setProposalDismissed(prev, replyKey, index, dismissed));
-  }, []);
+  /** Người dùng đã tạo nhiệm vụ từ thẻ đề xuất: thẻ chuyển sang "Đã tạo" kèm lối mở. */
+  const proposalCreated = React.useCallback(
+    (replyKey: string, index: number, task: AssistantProposalTask) => {
+      setThread((prev) => markProposalCreated(prev, replyKey, index, task));
+      // Nhiệm vụ đã tạo thật nên không trả thẻ về; chỉ báo là lần sau mở lại thẻ có thể còn nút tạo
+      saveProposal(replyKey, { index, taskId: task.id }, "Đã tạo nhiệm vụ nhưng chưa lưu được trạng thái thẻ đề xuất.");
+    },
+    [saveProposal],
+  );
+
+  /** "Bỏ qua" hoặc "Hoàn tác" trên thẻ đề xuất; lưu không được thì trả thẻ về như trước. */
+  const proposalDismissed = React.useCallback(
+    (replyKey: string, index: number, dismissed: boolean) => {
+      setThread((prev) => setProposalDismissed(prev, replyKey, index, dismissed));
+      saveProposal(replyKey, { index, dismissed }, "Chưa lưu được thao tác trên thẻ đề xuất. Thầy/Cô thử lại.", () =>
+        setThread((prev) => setProposalDismissed(prev, replyKey, index, !dismissed)),
+      );
+    },
+    [saveProposal],
+  );
 
   return {
     activeId,

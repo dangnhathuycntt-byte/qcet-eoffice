@@ -59,11 +59,18 @@ async function withEnv(values: Record<string, string | undefined>, run: () => Pr
   }
 }
 
-/** Gateway giả trả SSE: một đoạn chữ rồi kết thúc. Ghi lại yêu cầu đã gửi. */
-function mockGateway(sent: SentGatewayRequest[], chunks: string[]): void {
+const TITLE_PROMPT_START = 'Đặt tên cho cuộc trò chuyện';
+
+/**
+ * Gateway giả trả SSE: một đoạn chữ rồi kết thúc. Ghi lại yêu cầu của lượt vào `sent`; lời gọi đặt tên cuộc mới
+ * (system prompt đặt tên) ghi vào `titles` và trả tên cố định.
+ */
+function mockGateway(sent: SentGatewayRequest[], chunks: string[], titles: SentGatewayRequest[] = []): void {
   globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-    sent.push({ body: JSON.parse(String(init?.body)) as SentGatewayRequest['body'] });
-    const lines = chunks.map((content) => `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
+    const body = JSON.parse(String(init?.body)) as SentGatewayRequest['body'];
+    const naming = String(body.messages[0]?.content ?? '').startsWith(TITLE_PROMPT_START);
+    (naming ? titles : sent).push({ body });
+    const lines = (naming ? ['"Chào hỏi Trợ lý."'] : chunks).map((content) => `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
     lines.push(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`, 'data: [DONE]\n\n');
     return new Response(lines.join(''), { status: 200, headers: { 'content-type': 'text/event-stream' } });
   }) as typeof fetch;
@@ -201,10 +208,11 @@ describe('POST /api/assistant/chat', () => {
     });
   });
 
-  it('lượt hợp lệ: NDJSON gồm conversation, text, sources, done; gửi đủ công cụ và tên người hỏi cho gateway', async () => {
+  it('lượt hợp lệ: NDJSON gồm conversation, text, title, sources, done; gửi đủ công cụ và tên người hỏi cho gateway', async () => {
     const sent: SentGatewayRequest[] = [];
+    const titles: SentGatewayRequest[] = [];
     await withEnv(GATEWAY_ENV, async () => {
-      mockGateway(sent, ['Xin ', 'chào Thầy/Cô.']);
+      mockGateway(sent, ['Xin ', 'chào Thầy/Cô.'], titles);
       const res = await chatRoute(chatRequest({ cookie: cookieFor(owner), body: { message: 'Chào Trợ lý' } }));
       assert.equal(res.status, 200);
       assert.equal(res.headers.get('content-type'), 'application/x-ndjson; charset=utf-8');
@@ -212,14 +220,25 @@ describe('POST /api/assistant/chat', () => {
       assert.ok(res.headers.get('x-request-id'));
 
       const events = await readEvents(res);
-      assert.deepEqual(events.map((e) => e.type), ['conversation', 'text', 'text', 'sources', 'done']);
+      // Tên chạy song song với câu trả lời nên có thể tới trước hay sau chữ, nhưng luôn trước sources và done
+      assert.deepEqual(events.map((e) => e.type).filter((type) => type !== 'title'), ['conversation', 'text', 'text', 'sources', 'done']);
+      const types = events.map((e) => e.type);
+      assert.ok(types.indexOf('title') > 0 && types.indexOf('title') < types.indexOf('sources'), types.join(','));
       const conversation = events[0];
       assert.equal(conversation.type === 'conversation' && conversation.conversation.title, 'Chào Trợ lý');
       if (conversation.type === 'conversation') convIds.push(conversation.conversation.id);
+      const titled = events.find((e) => e.type === 'title');
+      assert.equal(titled?.type === 'title' && titled.conversation.title, 'Chào hỏi Trợ lý', 'tên đã làm sạch dấu câu và ngoặc kép');
       const done = events[events.length - 1];
       assert.equal(done.type === 'done' && done.status, 'complete');
     });
 
+    // Lời gọi đặt tên: không công cụ, không suy nghĩ, chỉ có câu hỏi
+    assert.equal(titles.length, 1);
+    const naming = titles[0].body as SentGatewayRequest['body'] & { thinking?: unknown };
+    assert.equal(naming.tools, undefined);
+    assert.equal(naming.thinking, undefined);
+    assert.equal(naming.messages[1].content, 'Câu hỏi: Chào Trợ lý');
     assert.equal(sent.length, 1);
     const names = (sent[0].body.tools ?? []).map((t) => t.function.name).sort();
     assert.deepEqual(names, [...ASSISTANT_TOOL_NAMES].sort());
@@ -270,9 +289,10 @@ describe('POST /api/assistant/chat', () => {
 
   it('lượt có ảnh và tệp chữ: gateway nhận phần ảnh, chữ trích; bước "Xem ảnh/Đọc tệp" lưu cùng tin trả lời; audit chỉ ghi loại và dung lượng', async () => {
     const sent: SentGatewayRequest[] = [];
+    const titles: SentGatewayRequest[] = [];
     let conversationId = '';
     await withEnv(GATEWAY_ENV, async () => {
-      mockGateway(sent, ['Ảnh là sơ đồ.']);
+      mockGateway(sent, ['Ảnh là sơ đồ.'], titles);
       const res = await chatRoute(
         chatFormRequest(cookieFor(owner), { message: 'Ảnh này nói gì?' }, [
           { name: 'so-do.png', bytes: PNG },
@@ -295,6 +315,9 @@ describe('POST /api/assistant/chat', () => {
       assert.equal(events[events.length - 1].type, 'done');
     });
 
+    // Đặt tên chỉ nhận nhãn tệp, không nhận ảnh hay chữ trích của tệp
+    assert.equal(titles.length, 1);
+    assert.equal(titles[0].body.messages[1].content, 'Câu hỏi: Ảnh này nói gì?\nTệp gửi kèm: Xem ảnh so-do.png; Đọc tệp ghi-chu.txt');
     assert.equal(sent.length, 1);
     const question = sent[0].body.messages[sent[0].body.messages.length - 1];
     assert.equal(question.role, 'user');

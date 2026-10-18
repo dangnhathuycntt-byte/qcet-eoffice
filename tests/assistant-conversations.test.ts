@@ -16,7 +16,7 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('_test')) {
 }
 
 import { NextRequest } from 'next/server';
-import type { AssistantConversation, AssistantMessage, User } from '@prisma/client';
+import { TaskPriority, TaskScope, TaskStatus, type AssistantConversation, type AssistantMessage, type User } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { AuditAction } from '@/lib/db/audit';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
@@ -26,6 +26,7 @@ import type { AssistantConversationListDTO, AssistantSourceRef } from '@/contrac
 import { ValidationError } from '@/server/api/errors';
 import {
   appendMessage,
+  applyGeneratedTitle,
   createConversation,
   deleteConversation,
   encodeConversationCursor,
@@ -37,7 +38,9 @@ import {
   renameConversation,
   toConversationSummaryDTO,
   toMessageDTO,
+  updateMessageProposal,
 } from '@/server/assistant/assistant-conversations';
+import { PATCH as proposalRoute } from '@/app/api/assistant/messages/[id]/proposals/route';
 import { GET as listRoute } from '@/app/api/assistant/conversations/route';
 import {
   GET as detailRoute,
@@ -293,13 +296,25 @@ describe('Lịch sử Trợ lý (CSDL)', () => {
         status: 'bất thường',
         sources: { not: 'an array' },
         steps: null,
+        // Thẻ hỏng (đề xuất sai tham số, có trường lạ) bị bỏ; thẻ đúng giữ, nhiệm vụ chỉ giữ id và mã
+        proposals: [
+          { proposal: { title: 'Chuẩn bị hội thảo', dueDate: '2026-10-30' }, task: { id: 't-1', code: 'NV-1', extra: 'x' }, dismissed: false },
+          { proposal: { title: 'ab' }, task: null, dismissed: false },
+          { proposal: { title: 'Gửi giấy mời', leadAssigneeId: 'u-2' }, task: null, dismissed: true },
+          'không phải đối tượng',
+          { proposal: { title: 'Đặt hội trường' }, dismissed: true },
+        ],
         durationMs: null,
         createdAt: new Date('2026-10-17T03:00:00Z'),
-      } as AssistantMessage;
+      } as unknown as AssistantMessage;
       const dto = toMessageDTO(row);
       assert.equal(dto.status, 'complete');
       assert.deepEqual(dto.sources, []);
       assert.deepEqual(dto.steps, []);
+      assert.deepEqual(dto.proposals, [
+        { proposal: { title: 'Chuẩn bị hội thảo', dueDate: '2026-10-30' }, task: { id: 't-1', code: 'NV-1' }, dismissed: false },
+        { proposal: { title: 'Đặt hội trường' }, task: null, dismissed: true },
+      ]);
       assert.equal(dto.createdAt, '2026-10-17T03:00:00.000Z');
     });
 
@@ -749,6 +764,122 @@ describe('Lịch sử Trợ lý (CSDL)', () => {
   });
 
   // Đặt cuối file: purge quét toàn bộ CSDL test nên chạy trước sẽ xóa c4 và làm các kiểm ẩn ở trên thành vô nghĩa
+  describe('tên do mô hình đặt', () => {
+    it('ghi khi người dùng chưa đổi tên; đã đổi tên thì giữ tên người dùng', async () => {
+      const conv = await makeConversation(owner.id, 'hôm nay thứ mấy', ago(1 * HOUR));
+      const named = await applyGeneratedTitle(conv.id, 'Hỏi thứ của hôm nay');
+      assert.equal(named?.title, 'Hỏi thứ của hôm nay');
+      assert.equal(named?.titleEdited, false, 'tên mô hình đặt vẫn đổi tay được, không khóa như tên người dùng');
+      await renameConversation(owner.id, conv.id, 'Tên tôi đặt');
+      assert.equal(await applyGeneratedTitle(conv.id, 'Tên khác của mô hình'), null);
+      assert.equal((await prisma.assistantConversation.findUniqueOrThrow({ where: { id: conv.id } })).title, 'Tên tôi đặt');
+    });
+  });
+
+  describe('thẻ đề xuất lưu cùng tin trả lời', () => {
+    const unitId = `unit_${runId}`;
+    const taskIds: string[] = [];
+    let conv: AssistantConversation;
+    let reply: AssistantMessage;
+    let question: AssistantMessage;
+    let ownTaskId = '';
+    let strangerTaskId = '';
+
+    const makeTask = async (createdById: string, code: string) => {
+      const task = await prisma.task.create({
+        data: {
+          code,
+          title: `Nhiệm vụ thẻ ${runId}`,
+          scope: TaskScope.DEPARTMENT,
+          priority: TaskPriority.NORMAL,
+          academicMonth: 10,
+          academicYear: '2026-2027',
+          dueDate: new Date('2026-12-01T00:00:00+07:00'),
+          status: TaskStatus.IN_PROGRESS,
+          createdById,
+          leadUnitId: unitId,
+        },
+      });
+      taskIds.push(task.id);
+      return task.id;
+    };
+    const patch = (messageId: string, body: unknown, user: User = owner, origin?: string | null) =>
+      proposalRoute(
+        request(`/api/assistant/messages/${messageId}/proposals`, { method: 'PATCH', cookie: cookieFor(user), body, origin }),
+        routeProps(messageId),
+      );
+
+    before(async () => {
+      await prisma.organizationalUnit.create({
+        data: { id: unitId, code: unitId, name: `Phòng thẻ ${runId}`, type: 'DEPARTMENT' as never, status: 'ACTIVE' as never },
+      });
+      ownTaskId = await makeTask(owner.id, `NV-THE-${runId}-1`);
+      strangerTaskId = await makeTask(stranger.id, `NV-THE-${runId}-2`);
+      conv = await makeConversation(owner.id, 'Tạo nhiệm vụ hội thảo', ago(10 * 60_000));
+      question = await appendMessage(conv.id, { role: 'user', content: 'Tạo nhiệm vụ hội thảo' });
+      reply = await appendMessage(conv.id, {
+        role: 'assistant',
+        content: 'Tôi đã soạn hai đề xuất.',
+        proposals: [
+          { proposal: { title: 'Chuẩn bị hội thảo chuyển đổi số', dueDate: '2026-10-30' }, task: null, dismissed: false },
+          { proposal: { title: 'Gửi giấy mời dự hội thảo' }, task: null, dismissed: false },
+        ],
+      });
+    });
+
+    after(async () => {
+      await prisma.task.deleteMany({ where: { id: { in: taskIds } } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: unitId } });
+    });
+
+    it('chi tiết cuộc trả thẻ kèm trạng thái; tin không có thẻ thì rỗng', async () => {
+      const detail = await getConversationDetail(owner.id, conv.id, async () => null);
+      assert.deepEqual(detail?.messages.map((m) => m.proposals.length), [0, 2]);
+      assert.deepEqual(detail?.messages[1].proposals[0], {
+        proposal: { title: 'Chuẩn bị hội thảo chuyển đổi số', dueDate: '2026-10-30' },
+        task: null,
+        dismissed: false,
+      });
+    });
+
+    it('bỏ qua rồi hoàn tác qua API, lưu vào CSDL', async () => {
+      const dismissed = await patch(reply.id, { index: 0, dismissed: true });
+      assert.equal(dismissed.status, 200);
+      assert.equal(dismissed.headers.get('cache-control'), 'private, no-store');
+      assert.equal(((await dismissed.json()) as { dismissed: boolean }).dismissed, true);
+      let detail = await getConversationDetail(owner.id, conv.id, async () => null);
+      assert.equal(detail?.messages[1].proposals[0].dismissed, true);
+      assert.equal(detail?.messages[1].proposals[1].dismissed, false, 'thẻ khác không đổi');
+      assert.equal((await patch(reply.id, { index: 0, dismissed: false })).status, 200);
+      detail = await getConversationDetail(owner.id, conv.id, async () => null);
+      assert.equal(detail?.messages[1].proposals[0].dismissed, false);
+    });
+
+    it('đã tạo: chỉ nhận nhiệm vụ do chính người gọi tạo, mã lấy từ CSDL', async () => {
+      const created = await patch(reply.id, { index: 1, taskId: ownTaskId });
+      assert.equal(created.status, 200);
+      assert.deepEqual(((await created.json()) as { task: unknown }).task, { id: ownTaskId, code: `NV-THE-${runId}-1` });
+      const others = await patch(reply.id, { index: 0, taskId: strangerTaskId });
+      assert.equal(others.status, 404, 'nhiệm vụ người khác tạo');
+      assert.equal((await patch(reply.id, { index: 0, taskId: 'khong-co' })).status, 404);
+      // Client không gửi được mã nhiệm vụ hay trường lạ
+      assert.equal((await patch(reply.id, { index: 0, taskId: ownTaskId, code: 'NV-GIA' })).status, 400);
+      const detail = await getConversationDetail(owner.id, conv.id, async () => null);
+      assert.equal(detail?.messages[1].proposals[0].task, null);
+      assert.deepEqual(detail?.messages[1].proposals[1].task, { id: ownTaskId, code: `NV-THE-${runId}-1` });
+    });
+
+    it('người khác, tin hỏi, thẻ không có, thiếu Origin đều bị từ chối', async () => {
+      assert.equal((await patch(reply.id, { index: 0, dismissed: true }, stranger)).status, 404);
+      assert.equal((await patch(question.id, { index: 0, dismissed: true })).status, 404);
+      assert.equal((await patch(reply.id, { index: 5, dismissed: true })).status, 404);
+      assert.equal((await patch(reply.id, { index: 0, dismissed: true }, owner, null)).status, 403);
+      await assert.rejects(updateMessageProposal(stranger.id, reply.id, { index: 0, dismissed: true }), /Không tìm thấy đề xuất/);
+      const detail = await getConversationDetail(owner.id, conv.id, async () => null);
+      assert.equal(detail?.messages[1].proposals[0].dismissed, false, 'không lời gọi bị từ chối nào ghi được');
+    });
+  });
+
   describe('quét quá hạn', () => {
     it('purgeExpiredConversations xóa cuộc quá hạn kèm tin nhắn, giữ cuộc còn hạn', async () => {
       const expired = await makeConversation(owner.id, 'Quá hạn để xóa', ago(120 * DAY));

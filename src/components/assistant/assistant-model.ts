@@ -9,6 +9,7 @@ import {
   type AssistantMessageDTO,
   type AssistantMessageRole,
   type AssistantMessageStatus,
+  type AssistantProposalTask,
   type AssistantSourceRef,
   type AssistantStep,
   type AssistantStreamEvent,
@@ -105,7 +106,7 @@ export interface ThreadMessage {
   errorMessage: string | null;
   /** Ảnh/tệp gửi kèm câu hỏi, chỉ có trong phiên đang mở (máy chủ không lưu tệp). */
   attachments?: ChatAttachment[];
-  /** Đề xuất nhiệm vụ của lượt trả lời (propose_task), chỉ có trong phiên đang mở, không lưu cùng tin. */
+  /** Đề xuất nhiệm vụ của lượt trả lời (propose_task); lưu cùng tin nên mở lại cuộc vẫn còn, kèm hai trạng thái dưới. */
   proposals?: AssistantTaskProposal[];
   /** Nhiệm vụ đã tạo từ đề xuất thứ i (người dùng bấm Tạo trong hộp), để thẻ báo "Đã tạo" kèm lối mở. */
   proposalTasks?: Record<number, AssistantProposalTask>;
@@ -113,11 +114,7 @@ export interface ThreadMessage {
   dismissedProposals?: number[];
 }
 
-/** Nhiệm vụ vừa tạo từ một thẻ đề xuất. */
-export interface AssistantProposalTask {
-  id: string;
-  code: string | null;
-}
+export type { AssistantProposalTask } from "@/contracts/assistant";
 
 /** Bỏ qua hoặc hoàn tác bỏ qua đề xuất thứ `index` của tin `replyKey`. */
 export function setProposalDismissed(thread: ThreadMessage[], replyKey: string, index: number, dismissed: boolean): ThreadMessage[] {
@@ -150,7 +147,7 @@ export function streamingThreadMessage(key: string): ThreadMessage {
 }
 
 export function threadMessageFromDto(dto: AssistantMessageDTO): ThreadMessage {
-  return {
+  const message: ThreadMessage = {
     key: dto.id,
     id: dto.id,
     role: dto.role,
@@ -161,6 +158,20 @@ export function threadMessageFromDto(dto: AssistantMessageDTO): ThreadMessage {
     thinking: "",
     durationMs: dto.durationMs,
     errorMessage: null,
+  };
+  if (dto.proposals.length === 0) return message;
+  // Thẻ đề xuất và trạng thái đã chọn (đã tạo, bỏ qua) lưu ở máy chủ: thoát ra vào lại vẫn như lúc rời
+  const proposalTasks: Record<number, AssistantProposalTask> = {};
+  const dismissedProposals: number[] = [];
+  dto.proposals.forEach((item, index) => {
+    if (item.task) proposalTasks[index] = item.task;
+    if (item.dismissed) dismissedProposals.push(index);
+  });
+  return {
+    ...message,
+    proposals: dto.proposals.map((item) => item.proposal),
+    ...(Object.keys(proposalTasks).length > 0 ? { proposalTasks } : {}),
+    ...(dismissedProposals.length > 0 ? { dismissedProposals } : {}),
   };
 }
 

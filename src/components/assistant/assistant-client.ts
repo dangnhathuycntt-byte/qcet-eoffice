@@ -8,6 +8,8 @@ import {
   type AssistantConversationDetailDTO,
   type AssistantConversationListDTO,
   type AssistantConversationSummaryDTO,
+  type AssistantMessageProposalDTO,
+  type AssistantProposalUpdateRequest,
   type AssistantStreamEvent,
 } from "@/contracts/assistant";
 import { splitNdjson } from "@/domain/tasks/task-agent-stream";
@@ -82,6 +84,15 @@ export function renameConversationRequest(id: string, title: string): Promise<As
 
 export function deleteConversationRequest(id: string): Promise<{ deleted: true }> {
   return requestJson<{ deleted: true }>(conversationUrl(id), { method: "DELETE" });
+}
+
+/** Lưu trạng thái thẻ đề xuất (bỏ qua/hoàn tác, đã tạo nhiệm vụ) của tin trả lời `messageId`. */
+export function updateProposalRequest(messageId: string, change: AssistantProposalUpdateRequest): Promise<AssistantMessageProposalDTO> {
+  return requestJson<AssistantMessageProposalDTO>(`/api/assistant/messages/${encodeURIComponent(messageId)}/proposals`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(change),
+  });
 }
 
 /**

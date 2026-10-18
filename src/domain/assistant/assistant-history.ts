@@ -24,10 +24,30 @@ export function deriveConversationTitle(message: string): string {
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!text) return NEW_CONVERSATION_TITLE;
+  return text ? clampTitle(text) : NEW_CONVERSATION_TITLE;
+}
+
+/**
+ * Tên do mô hình đặt (cuộc mới): dòng đầu có chữ, bỏ ký hiệu markdown, nhãn kiểu "Tiêu đề:", ngoặc kép bao quanh và
+ * dấu câu cuối, cắt như tên lấy từ câu hỏi. Không còn chữ thì null để giữ tên đang có.
+ */
+export function cleanGeneratedTitle(raw: string): string | null {
+  const line = raw.split(/\r?\n/).map((item) => item.trim()).find(Boolean) ?? "";
+  const text = line
+    .replace(/^[\s#>*\-•]+/u, "")
+    .replace(/[*_`]+/g, "")
+    .replace(/^(?:tên cuộc trò chuyện|tiêu đề|tên|title)\s*[:：]\s*/iu, "")
+    .replace(/^["'“”‘’«»\s]+|["'“”‘’«»\s]+$/gu, "")
+    .replace(/[\s.。:;,!?…]+$/u, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text ? clampTitle(text) : null;
+}
+
+/** Cắt ở ranh giới từ: 79 ký tự đầu rồi thêm "…" để tổng không vượt 80 ký tự. */
+function clampTitle(text: string): string {
   const chars = Array.from(text);
   if (chars.length <= TITLE_MAX_CHARS) return text;
-  // Cắt 79 ký tự đầu rồi thêm "…" để tổng không vượt 80 ký tự
   const head = chars.slice(0, TITLE_MAX_CHARS - 1).join("");
   const lastSpace = head.lastIndexOf(" ");
   const cut = lastSpace > 0 ? head.slice(0, lastSpace) : head;

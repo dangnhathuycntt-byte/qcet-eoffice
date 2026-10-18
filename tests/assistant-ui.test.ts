@@ -220,8 +220,22 @@ describe("Trợ lý UI: gom sự kiện NDJSON vào một lượt", () => {
     // Lượt đọc tệp gửi kèm rồi soạn đề xuất vẫn ghi "Đã soạn đề xuất"
     const withFile = { ...reply, steps: [{ tool: "attachment" as const, label: "Đọc tệp qd.pdf", count: null, ok: true }, ...reply.steps] };
     assert.ok(render(withFile).includes("Đã soạn đề xuất trong 2 giây"));
-    // Thẻ chỉ có trong phiên: tin tải lại từ máy chủ không có đề xuất
-    assert.equal(threadMessageFromDto({ id: "m-p", role: "assistant", content: "x", status: "complete", sources: [], steps: [], durationMs: 1, createdAt: "2026-10-18T00:00:00Z" }).proposals, undefined);
+    // Thẻ lưu ở máy chủ: mở lại cuộc thì thẻ và trạng thái (đã tạo, bỏ qua) vẫn còn, như ChatGPT
+    const base = { id: "m-p", role: "assistant" as const, content: "x", status: "complete" as const, sources: [], steps: [], durationMs: 1, createdAt: "2026-10-18T00:00:00Z" };
+    assert.equal(threadMessageFromDto({ ...base, proposals: [] }).proposals, undefined, "tin không có thẻ");
+    const reloaded = threadMessageFromDto({
+      ...base,
+      proposals: [
+        { proposal: { title: "Chuẩn bị hội thảo chuyển đổi số" }, task: null, dismissed: true },
+        { proposal: { title: "Gửi giấy mời dự hội thảo" }, task: { id: "t-9", code: "NV-2026-10-009" }, dismissed: false },
+      ],
+    });
+    assert.deepEqual(reloaded.proposals?.map((item) => item.title), ["Chuẩn bị hội thảo chuyển đổi số", "Gửi giấy mời dự hội thảo"]);
+    assert.deepEqual(reloaded.dismissedProposals, [0]);
+    assert.deepEqual(reloaded.proposalTasks, { 1: { id: "t-9", code: "NV-2026-10-009" } });
+    const reloadedHtml = render({ ...reloaded, key: "reply-p" }, onOpen);
+    assert.ok(reloadedHtml.includes("Đã bỏ qua đề xuất") && reloadedHtml.includes("Đã tạo nhiệm vụ NV-2026-10-009"));
+    assert.equal(reloadedHtml.includes("Xem lại và tạo"), false);
   });
 
   test("hoàn tất với status error và không có chữ: tin hiện câu lỗi và nút 'Thử lại'", () => {
@@ -271,6 +285,7 @@ describe("Trợ lý UI: DTO lịch sử và nhãn ngữ cảnh", () => {
       status: "complete",
       sources: [SOURCE],
       steps: [{ tool: "list_tasks", label: "Xem nhiệm vụ của Thầy/Cô", count: 2, ok: true }],
+      proposals: [],
       durationMs: 3100,
       createdAt: "2026-10-17T03:00:00.000Z",
     };
@@ -391,12 +406,16 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     const opensProposal = "openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))";
     assert.ok(dock.includes("useCreateTaskLauncher()") && dock.includes(opensProposal) && dock.includes("{createTaskModal}"));
     assert.ok(read("src/components/assistant/assistant-workspace.tsx").includes(opensProposal));
-    // Bỏ qua thẻ được ở cả hai nơi, giữ khi tải lại đúng cuộc đang mở
+    // Bỏ qua thẻ được ở cả hai nơi; trạng thái thẻ lưu ở máy chủ, bỏ qua lưu lỗi thì trả thẻ về
     for (const file of ["assistant-dock.tsx", "assistant-workspace.tsx"]) {
       assert.ok(read(`src/components/assistant/${file}`).includes("onDismissProposal={chat.proposalDismissed}"), file);
     }
     assert.ok(read("src/components/assistant/assistant-dock-panel.tsx").includes("onDismissProposal={onDismissProposal}"));
-    assert.ok(read("src/components/assistant/use-assistant-chat.ts").includes("...(dismissedProposals ? { dismissedProposals } : {})"));
+    const chatHook = read("src/components/assistant/use-assistant-chat.ts");
+    assert.ok(chatHook.includes("saveProposal(replyKey, { index, taskId: task.id }") && chatHook.includes("saveProposal(replyKey, { index, dismissed }"));
+    assert.ok(chatHook.includes("setThread((prev) => setProposalDismissed(prev, replyKey, index, !dismissed))"), "lưu lỗi thì hoàn lại");
+    // Tên do mô hình đặt cập nhật thanh đầu (đúng cuộc đang mở) và danh sách
+    assert.ok(chatHook.includes('if (event.type === "title") {') && chatHook.includes("if (activeIdRef.current === event.conversation.id) setActiveTitle(event.conversation.title);"));
     assert.ok(launcher.includes("notifyCard({ id: task.id, code: task.code ?? null });\n          return;"), "mở từ thẻ: báo cho thẻ, không thêm toast trùng");
   });
 
@@ -511,8 +530,8 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     const chat = read("src/components/assistant/use-assistant-chat.ts");
     assert.ok(chat.includes("setSendError(ASSISTANT_RETRY_ATTACHMENTS_GONE);"), "báo đính kèm lại thay vì gửi");
     assert.ok(
-      chat.includes("if (id === activeIdRef.current) {") && chat.includes("...(sent ? { attachments: sent } : {})") && chat.includes("...(proposals ? { proposals } : {})"),
-      "tải lại đúng cuộc thì giữ tệp đã gửi và thẻ đề xuất trong phiên",
+      chat.includes("if (id === activeIdRef.current) {") && chat.includes("return sent ? { ...message, attachments: sent } : message;"),
+      "tải lại đúng cuộc thì giữ tệp đã gửi trong phiên (thẻ đề xuất do máy chủ trả)",
     );
   });
 
