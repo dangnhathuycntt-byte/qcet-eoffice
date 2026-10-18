@@ -28,17 +28,7 @@ export async function GET(req: Request) {
     const rawParams = Object.fromEntries(url.searchParams.entries());
     const query = AuditLogQuerySchema.parse(rawParams);
 
-    const where: Record<string, unknown> = {};
-
-    if (query.action) {
-      where.action = query.action;
-    }
-    if (query.entityType) {
-      where.entityType = query.entityType;
-    }
-    if (query.actorId) {
-      where.actorId = query.actorId;
-    }
+    let createdRange: { gte?: string | Date; lte?: string | Date } | undefined;
     if (query.from || query.to) {
       const range = normalizeIctDateRange(query.from, query.to);
       if (range.error) {
@@ -48,14 +38,14 @@ export async function GET(req: Request) {
           { headers: { 'Cache-Control': 'private, no-store' } }
         );
       }
-      const createdAt: Record<string, string | Date> = {};
-      if (range.gte !== undefined) createdAt.gte = range.gte;
-      if (range.lte !== undefined) createdAt.lte = range.lte;
-      where.createdAt = createdAt;
+      createdRange = range;
     }
 
     const { entries, total } = await listAuditLogEntries({
-      where,
+      action: query.action,
+      entityType: query.entityType,
+      actorId: query.actorId,
+      createdRange,
       page: query.page,
       pageSize: query.pageSize,
     });

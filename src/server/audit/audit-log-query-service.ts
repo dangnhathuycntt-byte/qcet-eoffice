@@ -4,14 +4,38 @@ import type { AuditLogEntryDTO } from "@/contracts/audit-logs";
 // Nhật ký kiểm toán hệ thống: một trang bản ghi đã lọc kèm tổng số.
 
 export async function listAuditLogEntries({
-  where,
+  action,
+  entityType,
+  actorId,
+  createdRange,
   page,
   pageSize,
 }: {
-  where: Record<string, unknown>;
+  action?: string;
+  entityType?: string;
+  actorId?: string;
+  createdRange?: { gte?: string | Date; lte?: string | Date };
   page: number;
   pageSize: number;
 }) {
+  const where: Record<string, unknown> = {};
+
+  if (action) {
+    where.action = action;
+  }
+  if (entityType) {
+    where.entityType = entityType;
+  }
+  if (actorId) {
+    where.actorId = actorId;
+  }
+  if (createdRange) {
+    const createdAt: Record<string, string | Date> = {};
+    if (createdRange.gte !== undefined) createdAt.gte = createdRange.gte;
+    if (createdRange.lte !== undefined) createdAt.lte = createdRange.lte;
+    where.createdAt = createdAt;
+  }
+
   const [rows, total] = await Promise.all([
     prisma.auditEvent.findMany({
       where,
