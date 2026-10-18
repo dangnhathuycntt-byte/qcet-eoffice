@@ -11,6 +11,7 @@ import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 
 export async function GET(req: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -28,7 +29,8 @@ export async function GET(req: NextRequest) {
     const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 50;
     const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
 
-    const result = await listIncomingWorkflows({
+    // Ngữ cảnh đầy đủ (mọi chức danh/đơn vị, kể cả kiêm nhiệm): cùng điều kiện đọc với GET /api/documents.
+    const result = await listIncomingWorkflows(await loadCachedAuthorizationContext(authUser.id), {
       status: statusParam || undefined,
       leadUnitId,
       driUserId,
