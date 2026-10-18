@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import fs from 'node:fs';
-import { prisma } from '@/lib/prisma';
+import { countAppliedMigrations, countPublicTables, pingDatabase } from '@/server/lifecycle/health-checks';
 import { isServerShuttingDown } from '@/server/lifecycle/shutdown';
 import { getPrivateStorageDir } from '@/storage/private-files';
 import { getRateLimitBackend, getRateLimitBackendInfo } from '@/server/security/rate-limit';
@@ -43,7 +43,7 @@ export async function GET() {
 
   try {
     const dbStart = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
+    await pingDatabase();
     dbLatencyMs = Date.now() - dbStart;
     dbHealthy = true;
   } catch (err: any) {
@@ -58,13 +58,7 @@ export async function GET() {
 
   if (dbHealthy) {
     try {
-      const migrationRows = (await prisma.$queryRaw`
-        SELECT COUNT(*)::int as count
-        FROM _prisma_migrations
-        WHERE rolled_back_at IS NULL
-      `) as Array<{ count: number }>;
-
-      migrationsCount = migrationRows[0]?.count ?? 0;
+      migrationsCount = await countAppliedMigrations();
       schemaHealthy = migrationsCount > 0;
       if (!schemaHealthy) {
         schemaError = 'No migrations applied';
@@ -72,12 +66,7 @@ export async function GET() {
     } catch {
       // If _prisma_migrations doesn't exist or error, fallback to table check
       try {
-        const tableRows = (await prisma.$queryRaw`
-          SELECT COUNT(*)::int as count
-          FROM information_schema.tables
-          WHERE table_schema = 'public'
-        `) as Array<{ count: number }>;
-        const count = tableRows[0]?.count ?? 0;
+        const count = await countPublicTables();
         schemaHealthy = count > 0;
         migrationsCount = count;
       } catch (err: any) {

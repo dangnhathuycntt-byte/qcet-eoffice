@@ -12,12 +12,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "@/server/api/errors";
-import { prisma } from "@/lib/prisma";
-import { canReadDocument } from "@/server/policies/document-policy";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
-import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
-import { canReadDossier, canReadDossierItem } from "@/server/policies/dossier-policy";
-import { canViewMeeting } from "@/server/policies/meeting-policy";
+import { authorizeLegacyFilePathDownload } from "@/server/files/file-access-service";
 import { logger } from "@/server/observability/logger";
 
 export async function GET(
@@ -68,189 +63,16 @@ export async function GET(
       `api/files/${normalizedRelative}`,
     ];
 
-    // Object-level authorization check: DocumentAttachment
-    const attachment = await prisma.documentAttachment.findFirst({
-      where: {
-        fileUrl: { in: candidateUrls },
-      },
-      include: {
-        document: {
-          include: {
-            directives: true,
-            incomingWorkflow: {
-              include: {
-                unitAssignments: true,
-              },
-            },
-            linkedTask: { select: { leadUnitId: true } },
-          },
-        },
-      },
+    const { canonicalFileObjectId } = await authorizeLegacyFilePathDownload({
+      authUser,
+      requestId,
+      relativePath,
+      fileName,
+      candidateUrls,
+      normalizedRelative,
     });
-
-    if (attachment) {
-      // Ngữ cảnh phân quyền đầy đủ (mọi phân công đang hiệu lực, kể cả kiêm nhiệm), nạp mới (không cache)
-      // để phân công vừa hết hạn không còn cấp quyền tải tệp. Giữ thêm cổng cũ theo `authUser` để không làm
-      // mất quyền của tài khoản chỉ có vai trò (ví dụ văn thư chưa có phân công chức danh).
-      const docAuthCtx = await loadAuthorizationContext(authUser.id, new Date());
-      const canReadAttachment =
-        Boolean(attachment.document) &&
-        (canReadDocument(docAuthCtx, attachment.document) || canReadDocument(authUser, attachment.document));
-      if (!canReadAttachment) {
-        logger.fileAccessDenied({
-          requestId,
-          userId: authUser.id,
-          filePath: relativePath,
-          fileName,
-          resourceType: "DocumentAttachment",
-          resourceId: attachment.documentId,
-          reason: "User lacks permission to read associated document",
-        });
-        throw new ForbiddenError(
-          "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
-        );
-      }
-    }
-
-    // Object-level authorization check: TaskDeliverable
-    const deliverable = await prisma.taskDeliverable.findFirst({
-      where: {
-        fileUrl: { in: candidateUrls },
-      },
-    });
-
-    if (deliverable) {
-      // P1: Canonical authorization via buildTaskReadWhere (replaces legacy canReadTask)
-      const authCtx = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true });
-      const taskAuthWhere = buildTaskReadWhere(authCtx);
-      const authorizedDeliverable = await prisma.taskDeliverable.findFirst({
-        where: {
-          id: deliverable.id,
-          task: taskAuthWhere,
-        },
-      });
-      if (!authorizedDeliverable) {
-        logger.fileAccessDenied({
-          requestId,
-          userId: authUser.id,
-          filePath: relativePath,
-          fileName,
-          resourceType: "TaskDeliverable",
-          resourceId: deliverable.taskId,
-          reason: "User lacks permission to read associated task",
-        });
-        throw new ForbiddenError(
-          "Bạn không có quyền truy cập tệp đính kèm của nhiệm vụ này"
-        );
-      }
-    }
-
-    // Object-level authorization check: WorkDossierItem
-    const dossierItem = await prisma.dossierItem.findFirst({
-      where: {
-        OR: [
-          { itemId: { in: candidateUrls } },
-          { notes: { in: candidateUrls } },
-        ],
-      },
-      include: {
-        dossier: {
-          include: {
-            items: true,
-          },
-        },
-      },
-    });
-
-    if (dossierItem) {
-      if (!dossierItem.dossier || !canReadDossierItem(authUser, dossierItem, dossierItem.dossier)) {
-        logger.fileAccessDenied({
-          requestId,
-          userId: authUser.id,
-          filePath: relativePath,
-          fileName,
-          resourceType: "DossierItem",
-          resourceId: dossierItem.dossierId,
-          reason: "User lacks permission to read associated work dossier item",
-        });
-        throw new ForbiddenError(
-          "Bạn không có quyền truy cập tệp đính kèm của hồ sơ công việc này"
-        );
-      }
-    }
-
-    // Object-level authorization check: Meeting
-    const meeting = await prisma.meeting.findFirst({
-      where: {
-        OR: [
-          { materialsUrl: { in: candidateUrls } },
-        ],
-      },
-      include: {
-        participants: {
-          include: {
-            user: true,
-          },
-        },
-        body: {
-          include: {
-            memberships: true,
-          },
-        },
-      },
-    });
-
-    if (meeting) {
-      if (!canViewMeeting(authUser, meeting)) {
-        logger.fileAccessDenied({
-          requestId,
-          userId: authUser.id,
-          filePath: relativePath,
-          fileName,
-          resourceType: "Meeting",
-          resourceId: meeting.id,
-          reason: "User lacks permission to view associated meeting",
-        });
-        throw new ForbiddenError(
-          "Bạn không có quyền truy cập tài liệu của cuộc họp này"
-        );
-      }
-    }
-
-    // Default Deny: Unregistered/orphan files cannot be downloaded (F07)
-    if (!attachment && !deliverable && !dossierItem && !meeting) {
-      logger.fileAccessDenied({
-        requestId,
-        userId: authUser.id,
-        filePath: relativePath,
-        fileName,
-        reason: "Unregistered or orphan file not associated with any authorized resource",
-      });
-      throw new NotFoundError(
-        "Không tìm thấy tệp hoặc tệp không thuộc tài nguyên được cấp quyền"
-      );
-    }
-
-    const canonicalFile = await prisma.fileObject.findUnique({
-      where: { storageKey: normalizedRelative },
-      select: {
-        id: true,
-        scanStatus: true,
-        attachments: { select: { id: true } },
-        deliverables: { select: { id: true } },
-        dossierItems: { select: { id: true } },
-        meetingMaterials: { select: { id: true } },
-      },
-    });
-    if (
-      canonicalFile &&
-      (canonicalFile.attachments.length > 0 || canonicalFile.deliverables.length > 0 ||
-        canonicalFile.dossierItems.length > 0 || canonicalFile.meetingMaterials.length > 0)
-    ) {
-      if (canonicalFile.scanStatus !== "CLEAN") {
-        throw new ForbiddenError("Tệp đang bị cách ly hoặc chờ kiểm tra an toàn");
-      }
-      return NextResponse.redirect(new URL(`/api/file-objects/${canonicalFile.id}`, req.url));
+    if (canonicalFileObjectId !== null) {
+      return NextResponse.redirect(new URL(`/api/file-objects/${canonicalFileObjectId}`, req.url));
     }
 
     return streamLocalFile(req, safeResolvedPath, requestId, { type: "inline", filename: fileName });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { pingDatabase } from "@/server/lifecycle/health-checks";
 import { logger } from "@/server/observability/logger";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function GET() {
 
   try {
     const dbStart = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
+    await pingDatabase();
     dbLatencyMs = Date.now() - dbStart;
   } catch (error) {
     dbStatus = "unhealthy";

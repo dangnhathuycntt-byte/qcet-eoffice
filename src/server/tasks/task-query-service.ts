@@ -773,6 +773,24 @@ export function buildTaskReadWhere(
   };
 }
 
+/**
+ * Id nhiệm vụ (đã trim) nếu người dùng đọc được, ngược lại null. Giữ thứ tự `{ id, ...readWhere }`:
+ * nhánh từ chối của `buildTaskReadWhere` trả `{ id: '__DENY_*' }` và phải ghi đè `id`.
+ */
+export async function findReadableTaskId(
+  context: AuthorizationContext | AuthenticatedUser,
+  taskId: string
+): Promise<string | null> {
+  const task = await prisma.task.findFirst({
+    where: {
+      id: taskId.trim(),
+      ...buildTaskReadWhere(context),
+    },
+    select: { id: true },
+  });
+  return task ? task.id : null;
+}
+
 export class TaskQueryService {
   /**
    * Truy vấn danh sách nhiệm vụ chuẩn hoá có phân trang, lọc scope, đơn vị, trạng thái, người thực hiện.
