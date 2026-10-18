@@ -1,5 +1,5 @@
 /**
- * Kiểu kết quả tìm kiếm toàn cục (`GET /api/search`) dùng ở client.
+ * Kiểu kết quả tìm kiếm toàn cục (`GET /api/search`), khớp payload của `searchGlobal`.
  */
 export interface SearchTaskResult {
   id: string;
@@ -9,22 +9,24 @@ export interface SearchTaskResult {
   status: string;
   priority: string;
   progressPercent: number;
+  /** ISO 8601 */
   dueDate: string;
   academicMonth: number;
   academicYear: string;
-  department?: {
+  leadUnit: {
     id: string;
     name: string;
-    shortName: string | null;
-    color: string | null;
+    code: string;
   } | null;
-  assignees: Array<{
-    roleInTask: string;
+  actors: Array<{
+    role: string;
+    isPrimaryDRI: boolean;
+    /** null với tác nhân là đơn vị */
     user: {
       id: string;
       name: string;
       avatarUrl: string | null;
-    };
+    } | null;
   }>;
 }
 
@@ -36,30 +38,32 @@ export interface SearchUserResult {
   title: string | null;
   phone: string | null;
   avatarUrl: string | null;
-  department?: {
-    id: string;
-    name: string;
-    shortName: string | null;
-    color: string | null;
-  } | null;
 }
 
 export interface SearchDocumentResult {
   id: string;
-  documentNumber?: string;
-  originalNumber?: string | null;
-  registrationNumber?: number | null;
-  title: string;
+  originalNumber: string;
+  registrationNumber: number;
+  type: string;
   summary: string;
-  type?: string;
-  category?: string | null;
-  issuingAuthority?: string | null;
-  issuedDate?: string;
-  status?: string;
-  urgency?: string;
-  leadDepartment?: {
-    id: string;
-    name: string;
-    shortName: string | null;
-  } | null;
+  category: string;
+  issuingAuthority: string;
+  /** ISO 8601 */
+  issuedDate: string;
+  status: string;
+  urgency: string;
+}
+
+export interface GlobalSearchPayload {
+  query: string;
+  results: {
+    tasks: SearchTaskResult[];
+    documents: SearchDocumentResult[];
+    users: SearchUserResult[];
+  };
+  count: {
+    tasks: number;
+    documents: number;
+    users: number;
+  };
 }

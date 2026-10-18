@@ -20,43 +20,9 @@ import { IconSidebarDocLines, IconSidebarInboxIn, IconSidebarSend } from "@/comp
 import { getDocumentHref } from "@/lib/documents/document-view-model";
 import { daysUntil, formatRelativeDate } from "@/lib/format/relative-date";
 import { cn } from "@/lib/utils";
+import type { GlobalSearchPayload, SearchDocumentResult, SearchTaskResult, SearchUserResult } from "@/contracts/search";
 
-// Khớp phần `select` của `GET /api/search`
-interface SearchTaskResult {
-  id: string;
-  code: string;
-  title: string;
-  status: string;
-  dueDate: string;
-  leadUnit?: { id: string; name: string; code: string } | null;
-}
-
-interface SearchDocumentResult {
-  id: string;
-  originalNumber?: string | null;
-  registrationNumber?: number | null;
-  type?: string;
-  summary: string;
-  issuingAuthority?: string | null;
-  issuedDate?: string;
-  status?: string;
-  urgency?: string;
-}
-
-interface SearchUserResult {
-  id: string;
-  name: string;
-  email: string;
-  title: string | null;
-  phone: string | null;
-  avatarUrl: string | null;
-}
-
-interface SearchResults {
-  tasks: SearchTaskResult[];
-  documents: SearchDocumentResult[];
-  users: SearchUserResult[];
-}
+type SearchResults = GlobalSearchPayload["results"];
 
 type TabKey = keyof SearchResults;
 

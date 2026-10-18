@@ -264,7 +264,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         id: `task-${task.id}`,
         type: "task",
         title: `${task.code}: ${task.title}`,
-        subtitle: task.department?.name || "Nhiệm vụ trường",
+        subtitle: task.leadUnit?.name || "Nhiệm vụ trường",
         timestamp: Date.now(),
         data: task,
       });
@@ -321,7 +321,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         id: `user-${user.id}`,
         type: "user",
         title: user.name,
-        subtitle: `${user.title || "Cán bộ"} · ${user.department?.name || "QCET"}`,
+        subtitle: `${user.title || "Cán bộ"} · QCET`,
         timestamp: Date.now(),
         data: user,
       });
@@ -1128,11 +1128,11 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                             </span>
                           </div>
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                            {task.department && (
+                            {task.leadUnit && (
                               <span className="flex items-center gap-1 text-muted-foreground">
                                 <Building2 className="w-3 h-3 text-muted-foreground" />
                                 <HighlightedText
-                                  text={task.department.shortName || task.department.name}
+                                  text={task.leadUnit.name}
                                   query={query}
                                 />
                               </span>
@@ -1269,12 +1269,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                             )}
                           </div>
                           <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
-                            {user.department && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <Building2 className="w-3 h-3 text-muted-foreground" />
-                                {user.department.name}
-                              </span>
-                            )}
                             {user.email && (
                               <span className="flex items-center gap-1">
                                 <Mail className="w-3 h-3 text-muted-foreground" />
