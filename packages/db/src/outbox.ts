@@ -19,6 +19,9 @@
  * 4. Dead-Letter Quarantine:
  *    Events exceeding maxRetries transition to FAILED status with the terminal error recorded in lastError,
  *    preventing endless poison-pill retry loops while preserving auditability.
+ * 5. Lease (lockedAt):
+ *    Nhận sự kiện (PENDING → PROCESSING) ghi lockedAt; kết thúc (COMPLETED/FAILED/lùi lịch) xóa lockedAt.
+ *    Worker chết giữa chừng để lại PROCESSING: recoverExpiredOutboxLeases trả về PENDING khi quá hạn lease.
  */
 
 import {
@@ -115,6 +118,7 @@ export const OutboxAggregateType = {
   WORK_DOSSIER: "WorkDossier",
   DOSSIER_ITEM: "DossierItem",
   FILE_OBJECT: "FileObject",
+  AGENT_JOB: "AgentJob",
 } as const;
 
 export type OutboxAggregateTypeValue =
@@ -390,7 +394,7 @@ export async function processOutboxEvent(
   if (shouldMarkProcessing) {
     const claimResult = await db.outboxEvent.updateMany({
       where: { id: event.id, status: OutboxStatus.PENDING },
-      data: { status: OutboxStatus.PROCESSING },
+      data: { status: OutboxStatus.PROCESSING, lockedAt: currentNow },
     });
     if (claimResult.count === 0) {
       return { status: OutboxStatus.PROCESSING, attempts: event.attempts };
@@ -423,6 +427,7 @@ export async function processOutboxEvent(
         attempts: event.attempts + 1,
         processedAt: currentNow,
         lastError: null,
+        lockedAt: null,
       },
     });
 
@@ -449,6 +454,7 @@ export async function processOutboxEvent(
           attempts: nextAttempts,
           lastError: errorMessage,
           processedAt: currentNow,
+          lockedAt: null,
         },
       });
 
@@ -483,6 +489,7 @@ export async function processOutboxEvent(
           attempts: nextAttempts,
           lastError: errorMessage,
           availableAt: nextAvailableAt,
+          lockedAt: null,
         },
       });
 
@@ -497,6 +504,49 @@ export async function processOutboxEvent(
       };
     }
   }
+}
+
+/**
+ * Options for recovering expired outbox leases.
+ */
+export interface RecoverExpiredOutboxLeasesOptions {
+  /** Thời hạn lease; phải dài hơn handler chậm nhất (việc agent có timeout riêng ngắn hơn). */
+  leaseMs: number;
+  /** Cùng giới hạn với worker: lần thu hồi chạm giới hạn thì FAILED thay vì lặp mãi (handler làm sập tiến trình). */
+  maxRetries: number;
+  now?: Date;
+  /** Chỉ xét các sự kiện này (chạy thử theo id); bỏ trống: mọi sự kiện. */
+  ids?: string[];
+}
+
+/**
+ * Trả sự kiện kẹt ở PROCESSING quá hạn lease về PENDING (tính là một lần thử, ghi lastError).
+ * Dòng PROCESSING không có lockedAt (nhận bởi bản trước khi có lease) được coi là quá hạn khi
+ * availableAt đã cũ hơn hạn lease.
+ */
+export async function recoverExpiredOutboxLeases(
+  client: DbClient,
+  options: RecoverExpiredOutboxLeasesOptions
+): Promise<{ requeued: number; deadLettered: number }> {
+  const db = client ?? defaultPrisma;
+  const now = options.now ?? new Date();
+  const cutoff = new Date(now.getTime() - options.leaseMs);
+  const expired: Prisma.OutboxEventWhereInput = {
+    status: OutboxStatus.PROCESSING,
+    ...(options.ids?.length ? { id: { in: options.ids } } : {}),
+    OR: [{ lockedAt: { lt: cutoff } }, { lockedAt: null, availableAt: { lt: cutoff } }],
+  };
+  const lastError = `Lease hết hạn sau ${options.leaseMs} ms: worker dừng khi đang xử lý`;
+
+  const deadLettered = await db.outboxEvent.updateMany({
+    where: { ...expired, attempts: { gte: options.maxRetries - 1 } },
+    data: { status: OutboxStatus.FAILED, attempts: { increment: 1 }, lastError, processedAt: now, lockedAt: null },
+  });
+  const requeued = await db.outboxEvent.updateMany({
+    where: expired,
+    data: { status: OutboxStatus.PENDING, attempts: { increment: 1 }, lastError, availableAt: now, lockedAt: null },
+  });
+  return { requeued: requeued.count, deadLettered: deadLettered.count };
 }
 
 /**

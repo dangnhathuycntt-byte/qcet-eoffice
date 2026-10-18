@@ -204,9 +204,10 @@ export async function seedMitacoPersonnel(
 ): Promise<SeedMitacoResult> {
   console.log('--- Bắt đầu gieo hạt 258 Nhân sự thực tế từ MITACOSQL ---');
 
+  // Cạnh file này (không theo cwd: prisma/ đã chuyển vào packages/db)
   const jsonPath =
     options?.rawPersonnelPath ||
-    path.join(process.cwd(), 'prisma', 'seeds', 'extracted_personnel_mitaco.json');
+    path.join(__dirname, 'extracted_personnel_mitaco.json');
 
   if (!fs.existsSync(jsonPath)) {
     throw new Error(`Không tìm thấy file dữ liệu nhân sự MITACO: ${jsonPath}`);

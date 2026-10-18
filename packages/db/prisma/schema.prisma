@@ -1749,6 +1749,8 @@ model OutboxEvent {
   availableAt   DateTime     @default(now()) @map("available_at")
   processedAt   DateTime?    @map("processed_at")
   createdAt     DateTime     @default(now()) @map("created_at")
+  /// Lúc worker nhận sự kiện (PROCESSING); quá OUTBOX_LEASE_MS thì vòng sau trả về PENDING (worker chết giữa chừng)
+  lockedAt      DateTime?    @map("locked_at") @db.Timestamptz(3)
 
   @@index([status, availableAt])
   @@index([aggregateType, aggregateId])

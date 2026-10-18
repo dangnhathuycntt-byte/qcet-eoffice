@@ -1,11 +1,17 @@
 /**
  * Outbox worker (H-1, spec task-document-gap-spec.md).
  *
- * Chạy trong tiến trình app như file-scan-worker, bật bằng OUTBOX_WORKER_ENABLED.
- * Nhiều bản app cùng chạy vẫn an toàn: processOutboxEvent nhận sự kiện bằng lệnh
- * cập nhật nguyên tử PENDING → PROCESSING. Sự kiện không có handler giữ PENDING.
+ * Chạy trong tiến trình qcet-api như file-scan-worker, bật bằng OUTBOX_WORKER_ENABLED; mỗi OUTBOX_POLL_INTERVAL_MS
+ * (mặc định 60 s) một vòng. Nhiều bản cùng chạy vẫn an toàn: processOutboxEvent nhận sự kiện bằng lệnh cập nhật
+ * nguyên tử PENDING → PROCESSING (ghi lockedAt). Đầu mỗi vòng, sự kiện PROCESSING quá OUTBOX_LEASE_MS (mặc định
+ * 10 phút, worker chết giữa chừng) được trả về PENDING. Sự kiện không có handler giữ PENDING.
  */
-import { processOutboxBatch, type DbClient, type ProcessOutboxBatchResult } from "@qcet/db/outbox";
+import {
+  processOutboxBatch,
+  recoverExpiredOutboxLeases,
+  type DbClient,
+  type ProcessOutboxBatchResult,
+} from "@qcet/db/outbox";
 import { prisma } from "@qcet/db/prisma";
 import { registerShutdownHook } from "@/server/lifecycle/shutdown";
 import { logger } from "@/server/observability/logger";
@@ -16,12 +22,31 @@ import { DOSSIER_NOTIFICATION_HANDLERS } from "./dossier-notification-handlers";
 import { FILE_PURGE_HANDLERS } from "@/server/files/file-object-purge";
 import { scanDossierReminders } from "@/server/dossiers/dossier-reminder-scanner";
 import { runTaskRecurrences } from "@/server/tasks/task-recurrence-service";
+import { AGENT_JOB_HANDLERS, agentJobTimeoutMs } from "./agent-jobs";
 
-export const OUTBOX_HANDLERS = { ...TASK_NOTIFICATION_HANDLERS, ...DOCUMENT_NOTIFICATION_HANDLERS, ...DOSSIER_NOTIFICATION_HANDLERS, ...FILE_PURGE_HANDLERS };
+export const OUTBOX_HANDLERS = {
+  ...TASK_NOTIFICATION_HANDLERS,
+  ...DOCUMENT_NOTIFICATION_HANDLERS,
+  ...DOSSIER_NOTIFICATION_HANDLERS,
+  ...FILE_PURGE_HANDLERS,
+  ...AGENT_JOB_HANDLERS,
+};
 
-const POLL_INTERVAL_MS = 60_000;
 const BATCH_LIMIT = 50;
 const MAX_RETRIES = 5;
+
+function positiveIntEnv(name: string, fallback: number): number {
+  const value = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/** Cấu hình đọc từ env mỗi lần gọi: OUTBOX_POLL_INTERVAL_MS (60 s), OUTBOX_LEASE_MS (10 phút). */
+export function outboxWorkerConfig() {
+  return {
+    pollIntervalMs: positiveIntEnv("OUTBOX_POLL_INTERVAL_MS", 60_000),
+    leaseMs: positiveIntEnv("OUTBOX_LEASE_MS", 10 * 60_000),
+  };
+}
 
 let timer: NodeJS.Timeout | null = null;
 let currentCycle: Promise<unknown> | null = null;
@@ -33,13 +58,23 @@ let lastReminderScanAt = 0;
 export async function runOutboxCycle(
   client: DbClient = prisma,
   options: { now?: Date; ids?: string[] } = {}
-): Promise<ProcessOutboxBatchResult> {
-  return processOutboxBatch(client, OUTBOX_HANDLERS, {
+): Promise<ProcessOutboxBatchResult & { recoveredLeases: number }> {
+  const leases = await recoverExpiredOutboxLeases(client, {
+    leaseMs: outboxWorkerConfig().leaseMs,
+    maxRetries: MAX_RETRIES,
+    now: options.now,
+    ids: options.ids,
+  });
+  if (leases.requeued > 0 || leases.deadLettered > 0) {
+    logger.warn("outbox.worker.lease_recovered", { metadata: { ...leases } });
+  }
+  const result = await processOutboxBatch(client, OUTBOX_HANDLERS, {
     limit: BATCH_LIMIT,
     maxRetries: MAX_RETRIES,
     now: options.now,
     ids: options.ids,
   });
+  return { ...result, recoveredLeases: leases.requeued + leases.deadLettered };
 }
 
 async function cycle() {
@@ -79,8 +114,9 @@ export function startOutboxWorker() {
     return;
   }
 
+  const { pollIntervalMs, leaseMs } = outboxWorkerConfig();
   void cycle();
-  timer = setInterval(() => void cycle(), POLL_INTERVAL_MS);
+  timer = setInterval(() => void cycle(), pollIntervalMs);
   timer.unref();
 
   registerShutdownHook(
@@ -92,7 +128,12 @@ export function startOutboxWorker() {
     { name: "outbox-worker", priority: 10 }
   );
 
+  const agentJobTimeout = agentJobTimeoutMs();
+  if (leaseMs <= agentJobTimeout) {
+    // Lease ngắn hơn việc agent dài nhất: việc đang chạy có thể bị coi là kẹt và chạy lặp
+    logger.warn("outbox.worker.lease_shorter_than_agent_timeout", { metadata: { leaseMs, agentJobTimeoutMs: agentJobTimeout } });
+  }
   logger.info("outbox.worker.started", {
-    metadata: { intervalMs: POLL_INTERVAL_MS, batchLimit: BATCH_LIMIT, handlers: Object.keys(OUTBOX_HANDLERS).length },
+    metadata: { intervalMs: pollIntervalMs, leaseMs, batchLimit: BATCH_LIMIT, handlers: Object.keys(OUTBOX_HANDLERS).length },
   });
 }
