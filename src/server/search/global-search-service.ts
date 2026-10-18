@@ -1,11 +1,12 @@
 /**
  * Tìm kiếm toàn cục (`GET /api/search`): nhiệm vụ trong phạm vi đọc, người dùng đang hoạt động, văn bản
- * (trừ TUYET_MAT); khớp cả dạng bỏ dấu, telex, từ viết tắt rồi chấm điểm tiếng Việt.
+ * trong phạm vi đọc (`buildDocumentReadWhere`); khớp cả dạng bỏ dấu, telex, từ viết tắt rồi chấm điểm tiếng Việt.
  */
 import { prisma } from '@/lib/prisma';
 import { TaskScope } from '@prisma/client';
 import type { z } from 'zod';
 import type { OperationalScopeSchema } from '@/contracts/common';
+import type { GlobalSearchPayload } from '@/contracts/search';
 import {
   foldVietnamese,
   normalizeTelexQuery,
@@ -14,11 +15,12 @@ import {
 } from '@/lib/search/vietnamese-search';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { buildTaskReadWhere } from '@/server/tasks/task-query-service';
+import { buildDocumentReadWhere } from '@/server/policies/document-policy';
 
 export async function searchGlobal(
   userId: string,
   { q, limit, scope }: { q: string; limit: number; scope?: z.infer<typeof OperationalScopeSchema> }
-) {
+): Promise<GlobalSearchPayload> {
   const foldedQ = foldVietnamese(q);
   const telexQ = normalizeTelexQuery(q);
   const acronymTerms = QCET_ACRONYMS[foldedQ] || [];
@@ -144,19 +146,10 @@ export async function searchGlobal(
     documentsWhere = { OR: docOrConditions };
   }
 
-  // Phase 9 & Section 31/43: Classification filter for documents
-  // SYSTEM_ADMIN is denied operational access; apply classification filter to all users.
-  {
-    const docAndConditions: any[] = [];
-    if (documentsWhere.OR) {
-      docAndConditions.push(documentsWhere);
-    }
-    // Deny TUYET_MAT by default
-    docAndConditions.push({
-      securityLevel: { not: 'TUYET_MAT' as any },
-    });
-    documentsWhere = { AND: docAndConditions };
-  }
+  // Cùng điều kiện đọc với danh sách văn bản (`GET /api/documents`); helper đã loại TUYET_MAT.
+  documentsWhere = {
+    AND: [...(documentsWhere.OR ? [documentsWhere] : []), buildDocumentReadWhere(authorizationContext)],
+  };
 
   const [rawTasks, rawUsers, rawDocuments] = await Promise.all([
     prisma.task.findMany({

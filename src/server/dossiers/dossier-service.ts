@@ -47,6 +47,8 @@ import {
   assertDossierNotImmutable,
 } from "@/domain/dossiers/state-machine";
 import { getFileObjectIdFromUrl } from "@/server/files/file-service";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { readDocumentForUser } from "@/server/documents/read-document-for-user";
 
 // ============================================================================
 // Types & Interfaces
@@ -353,6 +355,37 @@ export class DossierService {
     };
     await assertAuthorized(user, "dossier.add_item", resource);
 
+    const targetItemId = input.itemId ?? input.documentId ?? input.taskId;
+
+    // Mục hồ sơ cấp quyền tải tệp cho người đọc hồ sơ (file-access-service), nên chỉ gắn được tệp do chính
+    // người thao tác tải lên, như bổ sung tệp cho văn bản.
+    const fileObjectId = getFileObjectIdFromUrl(input.fileUrl);
+    if (fileObjectId) {
+      const file = await prisma.fileObject.findUnique({
+        where: { id: fileObjectId },
+        select: { isArchived: true, uploadedById: true, scanStatus: true },
+      });
+      if (!file || file.isArchived || file.uploadedById !== user.id) {
+        throw new NotFoundError("Không tìm thấy tệp đã tải lên", "FILE_NOT_FOUND");
+      }
+      if (file.scanStatus === "INFECTED") {
+        throw new ValidationError("Tệp không an toàn, không thể đính kèm.", undefined, "FILE_INFECTED");
+      }
+    }
+
+    // Mục văn bản ghi liên kết hồ sơ vào quy trình văn bản đến: người thao tác phải đọc được văn bản như
+    // GET /api/documents/[id]; không đọc được thì coi như không tồn tại.
+    if (input.itemType === DossierItemType.DOCUMENT && targetItemId) {
+      try {
+        await readDocumentForUser(await loadAuthorizationContext(user.id), targetItemId);
+      } catch (error) {
+        if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+          throw new NotFoundError(`Không tìm thấy văn bản: ${targetItemId}`);
+        }
+        throw error;
+      }
+    }
+
     // Calculate next sequence
     let sequence = input.sequence;
     if (!sequence) {
@@ -368,8 +401,6 @@ export class DossierService {
         ? new Date(input.documentDate)
         : input.documentDate
       : undefined;
-
-    const targetItemId = input.itemId ?? input.documentId ?? input.taskId;
 
     return await prisma.$transaction(async (tx) => {
       const currentDossier = await tx.workDossier.findUnique({
@@ -394,7 +425,7 @@ export class DossierService {
           addedById: user.id,
           addedAt: new Date(),
           notes: input.notes,
-          fileObjectId: getFileObjectIdFromUrl(input.fileUrl),
+          fileObjectId,
         },
       });
 
@@ -1326,7 +1357,8 @@ export class DossierService {
       },
     });
 
-    if (!dossier) {
+    // Hồ sơ đã hủy (xóa mềm) không còn trong tra cứu thường: 404 cho mọi người, trước khi xét quyền.
+    if (!dossier || dossier.disposedAt) {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
     }
 

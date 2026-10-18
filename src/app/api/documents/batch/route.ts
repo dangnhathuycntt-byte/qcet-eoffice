@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.json();
     const payload: BatchDocumentRequest = BatchDocumentRequestSchema.parse(rawBody);
 
-    // 6. Execute atomic batch operations (one transaction, per-item failures collected)
+    // 6. Each document goes through its single-document command independently; per-item failures collected
     const result = await processDocumentBatch(payload, authUser, requestId);
 
     return apiSuccess(

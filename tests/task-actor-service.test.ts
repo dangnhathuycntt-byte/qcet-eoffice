@@ -31,6 +31,7 @@ describe("Phase 5.2 & 5.3: Task Actor Service & ReBAC Authorization Engine", () 
   let independentReviewerUser: any;
   let orgUnit: any;
   let testTask: any;
+  let legacyTask: any;
 
   before(async () => {
     // 1. Create or retrieve test organizational unit
@@ -156,10 +157,35 @@ describe("Phase 5.2 & 5.3: Task Actor Service & ReBAC Authorization Engine", () 
         isPrimaryDRI: false,
       },
     });
+
+    // 4. Legacy task for the backfill test: no ASSIGNER/LEAD_UNIT actor, DRI not yet primary
+    legacyTask = await prisma.task.create({
+      data: {
+        code: `TEST-TASK-LEGACY-${timestamp}`,
+        title: "Nhiệm vụ cũ chưa có quan hệ ReBAC",
+        createdById: creatorUser.id,
+        leadUnitId: orgUnit.id,
+        academicMonth: 9,
+        academicYear: "2026-2027",
+        dueDate: new Date(Date.now() + 86400000),
+      },
+    });
+    await prisma.taskActor.create({
+      data: {
+        taskId: legacyTask.id,
+        userId: initialDriUser.id,
+        role: TaskActorRole.DRI,
+        isPrimaryDRI: false,
+      },
+    });
   });
 
   after(async () => {
     // Cleanup created test records
+    if (legacyTask) {
+      await prisma.taskActor.deleteMany({ where: { taskId: legacyTask.id } });
+      await prisma.task.delete({ where: { id: legacyTask.id } });
+    }
     if (testTask) {
       await prisma.taskResult.deleteMany({ where: { taskId: testTask.id } });
       await prisma.taskApprovalStep.deleteMany({
@@ -398,11 +424,18 @@ describe("Phase 5.2 & 5.3: Task Actor Service & ReBAC Authorization Engine", () 
   });
 
   test("7. migrateTaskRelations backfill is idempotent", async () => {
-    const summary1 = await migrateTaskRelations(prisma);
-    assert.ok(summary1.totalTasks > 0, "Must have processed tasks");
+    // Scope to this file's fixtures: an unscoped scan sees tasks other test files create in parallel and
+    // writes actors onto them (LEAD_UNIT is checked only against the in-memory snapshot, so concurrent
+    // scans duplicate it). testTask is already a fixed point after tests 1-6; legacyTask gives pass 1 work.
+    const scope = { taskIds: [testTask.id, legacyTask.id] };
+    const summary1 = await migrateTaskRelations(prisma, scope);
+    assert.equal(summary1.totalTasks, 2, "Must have processed the fixture tasks");
+    assert.equal(summary1.driCreatedOrUpdated, 1, "First run promotes the legacy task's DRI to primary");
+    assert.equal(summary1.assignerCreated, 1, "First run materializes ASSIGNER for the legacy task");
+    assert.equal(summary1.leadUnitCreated, 1, "First run materializes LEAD_UNIT for the legacy task");
 
     // Second run should result in 0 new creations
-    const summary2 = await migrateTaskRelations(prisma);
+    const summary2 = await migrateTaskRelations(prisma, scope);
     assert.equal(summary2.driCreatedOrUpdated, 0, "Idempotent: 0 DRI created on second run");
     assert.equal(summary2.assignerCreated, 0, "Idempotent: 0 ASSIGNER created on second run");
     assert.equal(summary2.leadUnitCreated, 0, "Idempotent: 0 LEAD_UNIT created on second run");

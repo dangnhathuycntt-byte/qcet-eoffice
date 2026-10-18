@@ -1,16 +1,13 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import {
-  registerIncomingDocument,
-  listIncomingWorkflows,
-  type ListIncomingWorkflowsFilter,
-} from "@/server/documents/incoming-document-service";
-import { RegisterIncomingDocumentSchema } from "@/contracts/documents";
+import { registerIncomingDocument, listIncomingWorkflows } from "@/server/documents/incoming-document-service";
+import { IncomingWorkflowListQuerySchema, RegisterIncomingDocumentSchema } from "@/contracts/documents";
 import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
+import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 
 export async function GET(req: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -20,16 +17,20 @@ export async function GET(req: NextRequest) {
     const authUser = requireAuthenticated(context);
 
     const url = new URL(req.url);
-    const statusParam = url.searchParams.get("status") as ListIncomingWorkflowsFilter["status"] | null;
     const leadUnitId = url.searchParams.get("leadUnitId") || undefined;
     const driUserId = url.searchParams.get("driUserId") || undefined;
     const leaderId = url.searchParams.get("leaderId") || undefined;
     const search = url.searchParams.get("search") || undefined;
-    const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 50;
-    const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
+    // Tham số rỗng dùng mặc định; trạng thái lạ, phân trang ngoài khoảng → 400 (trước đây vào thẳng Prisma, trả 500).
+    const { status, limit, offset } = IncomingWorkflowListQuerySchema.parse({
+      status: url.searchParams.get("status") || undefined,
+      limit: url.searchParams.get("limit") || undefined,
+      offset: url.searchParams.get("offset") || undefined,
+    });
 
-    const result = await listIncomingWorkflows({
-      status: statusParam || undefined,
+    // Ngữ cảnh đầy đủ (mọi chức danh/đơn vị, kể cả kiêm nhiệm): cùng điều kiện đọc với GET /api/documents.
+    const result = await listIncomingWorkflows(await loadCachedAuthorizationContext(authUser.id), {
+      status,
       leadUnitId,
       driUserId,
       leaderId,

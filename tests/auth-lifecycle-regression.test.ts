@@ -57,13 +57,12 @@ describe("Complete Authentication Lifecycle & Regression Suite (Login -> Logout 
       assert.equal(res?.headers.get("location"), null);
     });
 
-    test("1.3 Authenticated user accessing / is redirected to /tasks (307)", async () => {
+    // Từ 15/10/2026 (ba9859f6) '/' là trang Tổng quan, không còn chuyển sang /tasks.
+    test("1.3 Authenticated user accessing / reaches the Tổng quan page (200, no redirect)", async () => {
       const req = createRequest("https://eoffice.qcet.edu.vn/", sessionToken);
       const res = await middleware(req);
-      assert.equal(res?.status, 307);
-      const location = res?.headers.get("location");
-      assert.ok(location);
-      assert.equal(new URL(location).pathname, "/tasks");
+      assert.equal(res?.status, 200);
+      assert.equal(res?.headers.get("location"), null);
     });
 
     test("1.4 Authenticated user accessing /tasks is allowed through (200)", async () => {

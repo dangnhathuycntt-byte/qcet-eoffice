@@ -148,12 +148,14 @@ test("mobile split stack takes natural content height so the canvas scrolls all 
   assert.ok(jsxClassNames(splitSource).some((cls) => cls.includes("min-h-0")), "desktop split branch keeps its min-h-0 contract");
 });
 
-test("mobile canvas bottom padding clears the fixed bottom navigation", () => {
-  const css = readFileSync(cssPath, "utf8");
-  const mobileCanvas = /@media \(max-width: 1023px\)\s*\{[\s\S]*?\.canvas\s*\{\s*padding:\s*0 16px ([^;]+);/.exec(css);
+// Thanh điều hướng dưới (56px) đã bỏ ở 1fd0831e, nên đáy canvas chỉ chừa safe area. Ở 768–1023px thanh Trợ lý
+// `fixed bottom-0 md:flex` vẫn hiện, nhưng gốc shell đã chừa `md:pb-[var(--app-statusbar)]`, canvas không cần thêm.
+// Chỉ ràng padding đáy; padding ngang dùng biến --canvas-pad-x (ae583cee).
+test("mobile canvas bottom padding clears the safe area (no fixed bottom nav)", () => {
+  const mobileCanvas = /@media \(max-width: 1023px\)\s*\{[\s\S]*?\.canvas\s*\{[^}]*?padding:\s*0 \S+ ([^;]+);/.exec(css);
   assert.ok(mobileCanvas, "mobile canvas padding rule not found");
-  assert.match(mobileCanvas[1], /56px/, "bottom padding must clear the 56px bottom nav");
-  assert.match(mobileCanvas[1], /env\(safe-area-inset-bottom/);
+  assert.match(mobileCanvas[1], /env\(safe-area-inset-bottom/, "bottom padding must clear the safe area");
+  assert.doesNotMatch(mobileCanvas[1], /56px/, "no bottom nav to clear since 1fd0831e");
 });
 
 // Scroll contract: the parent canvas and the child drawer each own a scroll area inside a bounded chain.

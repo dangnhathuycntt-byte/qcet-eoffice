@@ -4,7 +4,7 @@ import type {
   WorkspaceScope,
   UniversalActionQueueItems,
 } from "../types";
-import { isExecutiveUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
+import { isAdminTierUser, isManagerUser, matchesUser } from "@/lib/role-task-filter";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 
@@ -86,8 +86,8 @@ export function deriveAdaptiveWorkspaceData({
   referenceDate,
 }: DeriveWorkspaceDataOptions): DerivedWorkspaceData {
   const cleanTasks = tasks;
-  const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
-  const isExecutive = isExecutiveUser(user);
+  const userDept = selectedDepartment || user?.departmentCode || user?.department || (isAdminTierUser(user) ? "BGH" : "");
+  const isExecutive = isAdminTierUser(user);
   const isManager = isManagerUser(user);
 
   let scopedTasks: SchoolTask[] = [];

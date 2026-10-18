@@ -9,7 +9,7 @@ import {
   getPushStatus,
   revokePushSubscriptions,
   savePushPreferences,
-  upsertPushSubscriptionClearingDisabledAt,
+  upsertPushSubscription,
 } from "@/server/notifications/push-subscription-service";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       throw new ValidationError("Push endpoint must be a valid HTTPS URL");
     }
 
-    const subscription = await upsertPushSubscriptionClearingDisabledAt(authUser.id, {
+    const subscription = await upsertPushSubscription(authUser.id, {
       endpoint,
       p256dh,
       auth,

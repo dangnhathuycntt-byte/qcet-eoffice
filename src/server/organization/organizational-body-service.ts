@@ -2,23 +2,17 @@ import type { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
 import { NotFoundError } from '@/server/api/errors';
-import type { AddBodyMembershipSchema, CreateOrganizationalBodySchema } from '@/contracts/meeting';
+import type {
+  AddBodyMembershipSchema,
+  CreateOrganizationalBodySchema,
+  ListOrganizationalBodiesQuery,
+} from '@/contracts/meeting';
 
 // Hội đồng, ban chỉ đạo, tổ công tác: danh sách, chi tiết, tạo mới và bổ nhiệm thành viên.
 
-export async function listOrganizationalBodies({
-  type,
-  status,
-}: {
-  type: string | null;
-  status: string | null;
-}) {
-  const where: any = {};
-  if (type) where.type = type;
-  if (status) where.status = status;
-
+export async function listOrganizationalBodies({ type, status }: ListOrganizationalBodiesQuery) {
   return prisma.organizationalBody.findMany({
-    where,
+    where: { type, status },
     include: {
       memberships: {
         include: {

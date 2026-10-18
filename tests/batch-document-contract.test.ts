@@ -10,13 +10,14 @@ import assert from "node:assert/strict";
 import { BatchDocumentRequestSchema } from "@/contracts/documents";
 
 describe("BatchDocumentRequestSchema validation", () => {
-  test("accepts valid MARK_RESOLVED batch", () => {
+  test("rejects MARK_RESOLVED (hoàn tất hàng loạt đã bỏ khỏi API)", () => {
+    // Chỉ action + documentIds: lỗi phải đến từ enum action, không phải trường thừa (schema strict)
     const result = BatchDocumentRequestSchema.safeParse({
       action: "MARK_RESOLVED",
       documentIds: ["doc-1", "doc-2"],
-      resolutionSummary: "Đã xử lý xong",
     });
-    assert.ok(result.success);
+    assert.strictEqual(result.success, false);
+    assert.ok(result.error.issues.some((issue) => issue.path[0] === "action"));
   });
 
   test("accepts valid ASSIGN_LEAD_UNIT batch with required leadUnitId", () => {
@@ -42,7 +43,7 @@ describe("BatchDocumentRequestSchema validation", () => {
 
   test("rejects empty documentIds array", () => {
     const result = BatchDocumentRequestSchema.safeParse({
-      action: "MARK_RESOLVED",
+      action: "FILE_DOCUMENTS",
       documentIds: [],
     });
     assert.strictEqual(result.success, false);
@@ -51,7 +52,7 @@ describe("BatchDocumentRequestSchema validation", () => {
   test("rejects documentIds exceeding 100 items", () => {
     const ids = Array.from({ length: 101 }, (_, i) => `doc-${i}`);
     const result = BatchDocumentRequestSchema.safeParse({
-      action: "MARK_RESOLVED",
+      action: "FILE_DOCUMENTS",
       documentIds: ids,
     });
     assert.strictEqual(result.success, false);
@@ -60,7 +61,7 @@ describe("BatchDocumentRequestSchema validation", () => {
   test("accepts exactly 100 documentIds", () => {
     const ids = Array.from({ length: 100 }, (_, i) => `doc-${i}`);
     const result = BatchDocumentRequestSchema.safeParse({
-      action: "MARK_RESOLVED",
+      action: "FILE_DOCUMENTS",
       documentIds: ids,
     });
     assert.ok(result.success);
@@ -70,8 +71,21 @@ describe("BatchDocumentRequestSchema validation", () => {
     const result = BatchDocumentRequestSchema.safeParse({
       action: "ASSIGN_LEAD_UNIT",
       documentIds: ["doc-1"],
+      leadershipInstruction: "Xử lý gấp theo chỉ đạo BGH",
     });
     assert.strictEqual(result.success, false, "ASSIGN_LEAD_UNIT requires leadUnitId");
+  });
+
+  test("rejects ASSIGN_LEAD_UNIT without leadership instruction (như bút phê đơn lẻ)", () => {
+    for (const instruction of [undefined, "   "]) {
+      const result = BatchDocumentRequestSchema.safeParse({
+        action: "ASSIGN_LEAD_UNIT",
+        documentIds: ["doc-1"],
+        leadUnitId: "unit-cntt",
+        leadershipInstruction: instruction,
+      });
+      assert.strictEqual(result.success, false, "ASSIGN_LEAD_UNIT requires leadershipInstruction/instruction");
+    }
   });
 
   test("rejects ASSIGN_LEAD_UNIT with empty leadUnitId", () => {
@@ -79,6 +93,7 @@ describe("BatchDocumentRequestSchema validation", () => {
       action: "ASSIGN_LEAD_UNIT",
       documentIds: ["doc-1"],
       leadUnitId: "  ",
+      leadershipInstruction: "Xử lý gấp theo chỉ đạo BGH",
     });
     assert.strictEqual(result.success, false, "Whitespace-only leadUnitId should fail");
   });
@@ -93,7 +108,7 @@ describe("BatchDocumentRequestSchema validation", () => {
 
   test("rejects unknown extra fields (strict mode)", () => {
     const result = BatchDocumentRequestSchema.safeParse({
-      action: "MARK_RESOLVED",
+      action: "FILE_DOCUMENTS",
       documentIds: ["doc-1"],
       maliciousField: "injection",
     });
@@ -102,7 +117,7 @@ describe("BatchDocumentRequestSchema validation", () => {
 
   test("rejects documentIds with empty string entries", () => {
     const result = BatchDocumentRequestSchema.safeParse({
-      action: "MARK_RESOLVED",
+      action: "FILE_DOCUMENTS",
       documentIds: ["doc-1", ""],
     });
     assert.strictEqual(result.success, false, "Empty string doc ID should fail");
@@ -117,7 +132,7 @@ describe("BatchDocumentRequestSchema validation", () => {
 
   test("rejects missing documentIds", () => {
     const result = BatchDocumentRequestSchema.safeParse({
-      action: "MARK_RESOLVED",
+      action: "FILE_DOCUMENTS",
     });
     assert.strictEqual(result.success, false);
   });

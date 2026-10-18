@@ -277,6 +277,36 @@ export async function fetchVapidPublicKey(): Promise<string | null> {
 }
 
 /**
+ * Lưu đăng ký lên server qua POST /api/notifications/push/subscribe. Chỉ thử lại qua
+ * POST /api/notifications/push khi không tới được server (lỗi mạng) hoặc URL không có (404,
+ * server cũ); lỗi khác (400/401/403/429, 5xx) sẽ lặp lại y hệt ở /push nên trả về luôn.
+ */
+export async function syncPushSubscriptionWithServer(payload: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  userAgent: string;
+  deviceType: string;
+}): Promise<boolean> {
+  const post = (url: string) =>
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+  let res: Response | null = null;
+  try {
+    res = await post("/api/notifications/push/subscribe");
+  } catch {
+    res = null;
+  }
+  if (!res || res.status === 404) {
+    res = await post("/api/notifications/push");
+  }
+  return res.ok;
+}
+
+/**
  * Full lifecycle push subscription flow:
  * 1. Checks iOS standalone requirement and Notification API support.
  * 2. Requests notification permission.
@@ -377,37 +407,19 @@ export async function subscribeToPush(options?: {
     }
 
     // 4. Server Sync
-    const syncRes = await fetch("/api/notifications/push/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        endpoint,
-        keys: { p256dh, auth },
-        userAgent: navigator.userAgent,
-        deviceType: iosStatus.isIOS ? "ios" : "browser",
-      }),
+    const synced = await syncPushSubscriptionWithServer({
+      endpoint,
+      keys: { p256dh, auth },
+      userAgent: navigator.userAgent,
+      deviceType: iosStatus.isIOS ? "ios" : "browser",
     });
 
-    if (!syncRes.ok) {
-      // Fallback endpoint test
-      const altRes = await fetch("/api/notifications/push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint,
-          keys: { p256dh, auth },
-          userAgent: navigator.userAgent,
-          deviceType: iosStatus.isIOS ? "ios" : "browser",
-        }),
-      });
-
-      if (!altRes.ok) {
-        return {
-          success: false,
-          code: "SERVER_SYNC_FAILED",
-          error: "Failed to persist push subscription to server database.",
-        };
-      }
+    if (!synced) {
+      return {
+        success: false,
+        code: "SERVER_SYNC_FAILED",
+        error: "Failed to persist push subscription to server database.",
+      };
     }
 
     // 5. Store / Sync preferences

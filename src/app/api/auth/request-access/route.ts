@@ -20,7 +20,13 @@ const RequestAccessSchema = z
 export async function POST(req: NextRequest) {
   let requestId = crypto.randomUUID();
   try {
-    const context = await getApiContext(req);
+    // Endpoint công khai: phiên cũ/không hợp lệ trong cookie hoặc Authorization (tài khoản bị khóa, token hỏng) không
+    // được làm mất yêu cầu (trước đây getApiContext ném 401 SESSION_INVALID). Lấy requestId/IP như mọi route nhưng
+    // không đọc phiên.
+    const headers = new Headers(req.headers);
+    headers.delete("authorization");
+    headers.delete("cookie");
+    const context = await getApiContext({ headers, url: req.url });
     requestId = context.requestId;
 
     await assertRateLimit(`request-access:${context.ip || "unknown"}`, "AUTH_REGISTER");

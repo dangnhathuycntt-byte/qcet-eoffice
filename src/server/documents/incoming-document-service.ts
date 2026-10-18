@@ -51,6 +51,8 @@ import {
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
+import type { AuthorizationContext } from "@/server/authorization/authorization-context";
+import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { verifySignatureSafely } from "@/server/documents/signature-verifier";
 import { getFileObjectIdFromUrl } from "@/server/files/file-service";
@@ -914,6 +916,9 @@ export async function assignUnitWork(
         scope: TaskScope.DEPARTMENT,
       });
       const taskTitle = input.taskTitle || `Xử lý văn bản số ${doc.registrationNumber}: ${doc.summary}`;
+      const taskDueDate = deadline || new Date(now.getTime() + 7 * 86400000);
+      // Ràng buộc chk_tasks_due_date_after_start_date (dueDate >= startDate): hạn đã qua thì ngày bắt đầu kẹp về hạn, như createTask.
+      const taskStartDate = taskDueDate < now ? new Date(taskDueDate) : now;
 
       // Phase 9: Department model dropped — use leadUnitId directly
       const task = await tx.task.create({
@@ -931,8 +936,8 @@ export async function assignUnitWork(
               : TaskPriority.NORMAL,
           academicMonth,
           academicYear,
-          startDate: now,
-          dueDate: deadline || new Date(now.getTime() + 7 * 86400000),
+          startDate: taskStartDate,
+          dueDate: taskDueDate,
           createdById: user.id,
           leadUnitId,
           actors: {
@@ -1403,11 +1408,14 @@ export async function listLegacyDirectives(documentId: string) {
 
 /**
  * List incoming workflows by status, lead unit, or leader.
+ * Chỉ gồm văn bản người xem được đọc (`buildDocumentReadWhere`), lọc trước phân trang để `total` không lộ số lượng.
  */
 export async function listIncomingWorkflows(
+  viewer: AuthorizationContext,
   filters: ListIncomingWorkflowsFilter = {}
 ) {
   const where: Prisma.DocumentIncomingWorkflowWhereInput = {};
+  const documentWhere: Prisma.DocumentWhereInput[] = [buildDocumentReadWhere(viewer)];
 
   if (filters.status) {
     where.status = filters.status;
@@ -1424,14 +1432,15 @@ export async function listIncomingWorkflows(
     };
   }
   if (filters.search) {
-    where.document = {
+    documentWhere.push({
       OR: [
         { summary: { contains: filters.search, mode: "insensitive" } },
         { issuingAuthority: { contains: filters.search, mode: "insensitive" } },
         { originalNumber: { contains: filters.search, mode: "insensitive" } },
       ],
-    };
+    });
   }
+  where.document = { is: { AND: documentWhere } };
 
   const [total, items] = await Promise.all([
     prisma.documentIncomingWorkflow.count({ where }),

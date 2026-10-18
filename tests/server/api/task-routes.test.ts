@@ -210,7 +210,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         createdById: leaderAUser.id,
         academicMonth: 9,
         academicYear: '2026-2027',
-        dueDate: new Date('2026-10-15T17:00:00.000Z'),
+        dueDate: new Date(Date.now() + 7 * 86400000),
         actors: {
           create: [
             {
@@ -237,7 +237,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         createdById: staffBUser.id,
         academicMonth: 9,
         academicYear: '2026-2027',
-        dueDate: new Date('2026-10-20T17:00:00.000Z'),
+        dueDate: new Date(Date.now() + 14 * 86400000),
         actors: {
           create: [
             {

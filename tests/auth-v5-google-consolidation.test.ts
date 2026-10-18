@@ -1,7 +1,7 @@
 import { test, describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { isAllowedDomain, OFFICIAL_DOMAIN } from "@/lib/google-oauth";
+import { isAllowedDomain, OFFICIAL_DOMAIN } from "@/server/auth/google-oauth";
 import {
   signSessionToken,
   verifySessionToken,

@@ -1,6 +1,6 @@
 import { test, describe, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { isAllowedDomain, getAppBaseUrl } from "../src/lib/google-oauth";
+import { isAllowedDomain, getAppBaseUrl } from "../src/server/auth/google-oauth";
 
 describe("Google OAuth Helper Functions", () => {
   describe("isAllowedDomain", () => {

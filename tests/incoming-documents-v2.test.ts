@@ -25,6 +25,7 @@ import {
 } from "../src/server/documents/incoming-document-service";
 import { AuthorizationError, ValidationError } from "../src/server/api/errors";
 import { signSessionToken } from "../src/lib/jwt-session";
+import { loadAuthorizationContext } from "../src/server/authorization/authorization-context-service";
 import { POST as incomingRegisterRoute } from "../src/app/api/documents/incoming/route";
 import { POST as presentRoute } from "../src/app/api/documents/[id]/actions/present/route";
 import { POST as directRoute } from "../src/app/api/documents/[id]/actions/direct/route";
@@ -968,7 +969,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
   // =========================================================================
   describe("6. Workflow Querying & State Machine Invariants", () => {
     it("lists incoming workflows with filtering by lead unit", async () => {
-      const list = await listIncomingWorkflows({
+      const list = await listIncomingWorkflows(await loadAuthorizationContext(clerkUser.id), {
         leadUnitId: deptLeadId,
         limit: 10,
       });

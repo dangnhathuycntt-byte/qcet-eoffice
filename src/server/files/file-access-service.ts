@@ -186,8 +186,9 @@ export async function authorizeFileObjectDownload({
   }
 
   if (!hasAuthorizedResource) {
+    // Hồ sơ đã hủy (xóa mềm) không cấp quyền đọc tệp qua mục của nó.
     hasAuthorizedResource = file.dossierItems.some(
-      (item) => item.dossier && canReadDossierItem(authUser, item, item.dossier)
+      (item) => item.dossier && !item.dossier.disposedAt && canReadDossierItem(authUser, item, item.dossier)
     );
   }
 
@@ -216,9 +217,12 @@ export async function authorizeFileObjectDownload({
     }
 
     if (!hasAuthorizedResource) {
+      // Ảnh nhúng lúc soạn nhiệm vụ mới (chưa có taskId để gắn metadata): chỉ tính nhiệm vụ do chính người tải tệp
+      // lên tạo, để dán UUID tệp của người khác vào mô tả không tự cấp quyền tải tệp đó.
       const taskWithFile = await prisma.task.findFirst({
         where: {
           description: { contains: file.id },
+          createdById: file.uploadedById,
           ...taskReadWhere,
         },
         select: { id: true },
@@ -377,7 +381,12 @@ export async function authorizeLegacyFilePathDownload({
   });
 
   if (dossierItem) {
-    if (!dossierItem.dossier || !canReadDossierItem(authUser, dossierItem, dossierItem.dossier)) {
+    // Hồ sơ đã hủy (xóa mềm) không cấp quyền đọc tệp qua mục của nó.
+    if (
+      !dossierItem.dossier ||
+      dossierItem.dossier.disposedAt ||
+      !canReadDossierItem(authUser, dossierItem, dossierItem.dossier)
+    ) {
       logger.fileAccessDenied({
         requestId,
         userId: authUser.id,

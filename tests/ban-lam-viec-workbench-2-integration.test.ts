@@ -324,10 +324,14 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
         htmlFiltered.includes('data-slot="active-filter-breadcrumb"'),
         "Breadcrumb must appear when department filter is active"
       );
+      assert.ok(
+        htmlFiltered.includes('data-slot="filter-chip-department"'),
+        "Department chip must appear when department filter is active"
+      );
 
-      // When department is ALL, the workspace still applies the current academic
-      // month as a default time filter, so a breadcrumb chip is expected.
-      // We verify department-specific breadcrumb is absent, not all breadcrumbs.
+      // Không còn lọc tháng mặc định ở nhánh ownQuery (b5946be4 bỏ mặc định tháng hiện tại, defaultMonth chỉ lấy
+      // từ prop; 645d1506 dọn biến chết), nên khi ALL không có bộ lọc nào và hàng chip ẩn hẳn. Kiểm theo
+      // data-slot của chip, không dò chữ "CNTT": tiêu đề nhiệm vụ trong fixture có "Khoa CNTT & Tự động hóa".
       const htmlUnfiltered = renderToStaticMarkup(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: adminUser,
@@ -336,10 +340,13 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
           onSelectTask: () => {},
         })
       );
-      // Department "ALL" should not appear as a filter chip
       assert.ok(
-        !htmlUnfiltered.includes("CNTT"),
-        "Department name must not appear as a chip when department is ALL"
+        !htmlUnfiltered.includes('data-slot="filter-chip-department"'),
+        "Department chip must not appear when department is ALL"
+      );
+      assert.ok(
+        !htmlUnfiltered.includes('data-slot="active-filter-breadcrumb"'),
+        "Breadcrumb must hide when no filter is active"
       );
     });
   });

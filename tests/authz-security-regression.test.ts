@@ -6,6 +6,7 @@
  * 2. SYSTEM_ADMIN không thấy operational tasks qua /api/search
  * 3. BGH thấy school-wide tasks qua /api/search
  * 4. CHUYEN_VIEN không mở rộng qua scope=school query param
+ * 5. /api/search chỉ trả văn bản trong phạm vi đọc (`buildDocumentReadWhere`), khớp GET /api/documents
  */
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -14,6 +15,7 @@ import path from "node:path";
 import { NextRequest } from "next/server";
 import { GET as downloadDoc } from "../src/app/api/documents/download/route";
 import { GET as searchGet } from "../src/app/api/search/route";
+import { GET as listDocumentsGet } from "../src/app/api/documents/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import { prisma } from "../src/lib/prisma";
 
@@ -406,6 +408,102 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     assert.ok(
       !taskIds.includes(IDS.taskDeptA),
       `CHUYEN_VIEN dept B không được thấy task dept A (${IDS.taskDeptA}) dù truyền scope=school`
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 5: /api/search phạm vi đọc văn bản
+// ---------------------------------------------------------------------------
+describe("P0-3: /api/search chỉ trả văn bản trong phạm vi đọc", () => {
+  const runId = `authzdoc${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const users: Record<"staff" | "owner" | "bgh", { id: string; email: string; name: string; role: string }> = {} as never;
+  const docs: Record<"own" | "other" | "mat" | "secret", string> = { own: "", other: "", mat: "", secret: "" };
+  let regSeq = 900_000_000 + Math.floor(Math.random() * 90_000_000);
+
+  const tokenOf = (key: keyof typeof users) => signSessionToken(users[key]);
+
+  async function searchDocIds(key: keyof typeof users, q: string) {
+    const url = q ? `http://localhost:3000/api/search?q=${encodeURIComponent(q)}` : "http://localhost:3000/api/search";
+    const res = await searchGet(new NextRequest(url, { headers: { Authorization: `Bearer ${tokenOf(key)}` } }));
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.success, true);
+    return (body.results.documents as Array<{ id: string }>).map((d) => d.id);
+  }
+
+  before(async () => {
+    const roles = { staff: "CHUYEN_VIEN", owner: "CHUYEN_VIEN", bgh: "BAN_GIAM_HIEU" } as const;
+    for (const [key, role] of Object.entries(roles) as Array<[keyof typeof users, string]>) {
+      const created = await prisma.user.create({
+        data: { email: `${runId}_${key}@qcet.edu.vn`, name: `${runId} ${key}`, role: role as any, isActive: true },
+      });
+      users[key] = { id: created.id, email: created.email, name: created.name, role: created.role };
+    }
+
+    // Ngày ban hành ở tương lai để văn bản fixture đứng đầu danh sách khi q rỗng (5 văn bản mới nhất).
+    const makeDoc = async (registeredBy: keyof typeof users, securityLevel: string, offsetDays: number) => {
+      const seq = regSeq++;
+      const doc = await prisma.document.create({
+        data: {
+          type: "VAN_BAN_DEN",
+          registrationNumber: seq,
+          documentYear: new Date().getFullYear(),
+          originalNumber: `${runId}/${seq}`,
+          issuedDate: new Date(Date.now() + offsetDays * 86_400_000),
+          issuingAuthority: "Sở Giáo dục và Đào tạo",
+          category: "Công văn",
+          summary: `Văn bản kiểm thử tìm kiếm ${runId} ${securityLevel}`,
+          securityLevel: securityLevel as any,
+          registeredById: users[registeredBy].id,
+        },
+      });
+      return doc.id;
+    };
+    docs.own = await makeDoc("staff", "THUONG", 365);
+    docs.other = await makeDoc("owner", "THUONG", 366);
+    docs.mat = await makeDoc("owner", "MAT", 367);
+    docs.secret = await makeDoc("staff", "TUYET_MAT", 368);
+  });
+
+  after(async () => {
+    await prisma.document.deleteMany({ where: { id: { in: Object.values(docs).filter(Boolean) } } });
+    await prisma.user.deleteMany({ where: { id: { in: Object.values(users).map((u) => u.id) } } });
+  });
+
+  it("chuyên viên chỉ thấy văn bản của mình; văn bản THUONG ngoài phạm vi, MAT và TUYET_MAT bị loại", async () => {
+    const ids = await searchDocIds("staff", runId);
+    assert.ok(ids.includes(docs.own), "phải thấy văn bản do mình vào sổ");
+    assert.ok(!ids.includes(docs.other), "không được thấy văn bản THUONG ngoài phạm vi");
+    assert.ok(!ids.includes(docs.mat), "không được thấy văn bản MAT ngoài phạm vi");
+    assert.ok(!ids.includes(docs.secret), "không được thấy văn bản TUYET_MAT");
+  });
+
+  it("q rỗng (văn bản mới nhất) cũng lọc theo phạm vi đọc", async () => {
+    const ids = await searchDocIds("staff", "");
+    assert.ok(ids.includes(docs.own), "phải thấy văn bản do mình vào sổ");
+    assert.ok(!ids.includes(docs.other) && !ids.includes(docs.mat) && !ids.includes(docs.secret));
+  });
+
+  it("BGH thấy văn bản THUONG của người khác nhưng không thấy TUYET_MAT", async () => {
+    const ids = await searchDocIds("bgh", runId);
+    assert.ok(ids.includes(docs.other), "BGH phải thấy văn bản THUONG");
+    assert.ok(!ids.includes(docs.secret), "BGH không được thấy văn bản TUYET_MAT");
+  });
+
+  it("kết quả tìm kiếm văn bản nằm trong GET /api/documents của cùng người dùng", async () => {
+    const searchIds = await searchDocIds("staff", runId);
+    const res = await listDocumentsGet(
+      new NextRequest(`http://localhost:3000/api/documents?type=VAN_BAN_DEN&search=${runId}`, {
+        headers: { Authorization: `Bearer ${tokenOf("staff")}` },
+      })
+    );
+    assert.equal(res.status, 200);
+    const listIds = ((await res.json()).documents as Array<{ id: string }>).map((d) => d.id);
+    assert.ok(searchIds.length > 0);
+    assert.ok(
+      searchIds.every((id) => listIds.includes(id)),
+      `search trả văn bản ngoài danh sách: ${searchIds.filter((id) => !listIds.includes(id)).join(", ")}`
     );
   });
 });

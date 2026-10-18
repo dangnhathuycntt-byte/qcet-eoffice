@@ -513,11 +513,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/executive-stat-strip.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<input"
     },

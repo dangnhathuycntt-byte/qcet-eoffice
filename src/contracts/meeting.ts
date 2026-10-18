@@ -84,6 +84,13 @@ export const CreateOrganizationalBodySchema = z.object({
   status: z.nativeEnum(BodyStatus).default(BodyStatus.ACTIVE),
 });
 
+export const ListOrganizationalBodiesQuerySchema = z.object({
+  type: z.nativeEnum(OrganizationalBodyType).optional(),
+  status: z.nativeEnum(BodyStatus).optional(),
+});
+
+export type ListOrganizationalBodiesQuery = z.infer<typeof ListOrganizationalBodiesQuerySchema>;
+
 export const AddBodyMembershipSchema = z.object({
   userId: z.string().optional(),
   positionAssignmentId: z.string().optional(),

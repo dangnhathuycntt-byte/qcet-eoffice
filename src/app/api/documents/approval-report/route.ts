@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import type { SessionPayload } from "@/lib/jwt-session";
-import { buildXlsx, XLSX_CONTENT_TYPE } from "@/lib/export/xlsx-writer";
+import { buildXlsx, XLSX_CONTENT_TYPE } from "@/server/files/xlsx-writer";
 import { approvalReportRows, approvalReportToCsv, getApprovalReport } from "@/server/documents/submission-approval-service";
 
 export const dynamic = "force-dynamic";

@@ -5,24 +5,88 @@ import * as m from "motion/react-m";
 import { AnimatePresence } from "motion/react";
 import {
   Building2,
-  CheckCircle2,
   Archive,
   X,
   CheckSquare,
   Loader2,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
+import { InlineAlert } from "@/components/ui/inline-alert";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useDepartmentList } from "@/hooks/use-department-list";
+import { useAuth } from "@/lib/auth-context";
+import { getIncomingActions } from "@/lib/documents/incoming-workflow";
 import { motionSpring, motionDuration, motionEase } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 
-export type BulkActionType = "assign-unit" | "resolve" | "file";
+// Hoàn tất hàng loạt đã bỏ: giải quyết văn bản cần báo cáo kết quả và hồ sơ như thao tác đơn lẻ.
+export type BulkActionType = "assign-unit" | "file";
+
+/**
+ * Giao đơn vị hàng loạt chính là bút phê văn bản đến: dùng cùng nguồn gợi ý quyền với nút "Chuyển"
+ * ở chi tiết văn bản đến. Server vẫn kiểm quyền từng văn bản.
+ */
+export function canBulkAssignLeadUnit(dbRole: string | null | undefined): boolean {
+  return getIncomingActions("REGISTERED", dbRole).some((action) => action.key === "direct");
+}
+
+export interface BulkBatchFailureGroup {
+  reason: string;
+  count: number;
+}
+
+/** Gom các văn bản không xử lý được theo lý do server trả về, giữ thứ tự xuất hiện. */
+export function groupBulkBatchFailures(
+  failed: ReadonlyArray<{ documentId?: string; error?: string | null }>
+): BulkBatchFailureGroup[] {
+  const counts = new Map<string, number>();
+  for (const item of failed) {
+    const reason = item.error?.trim() || "Không xử lý được văn bản.";
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+  return Array.from(counts, ([reason, count]) => ({ reason, count }));
+}
+
+export interface BulkBatchOutcome {
+  successCount: number;
+  failureCount: number;
+  total: number;
+  failures: BulkBatchFailureGroup[];
+}
+
+/**
+ * Đọc kết quả lô: `outcome` khi có văn bản không xử lý được (hiện kết quả thay vì đóng hộp thoại);
+ * `clearSelection` khi có văn bản đã xử lý xong, vì giữ lựa chọn thì bấm lại sẽ chạy lại thao tác trên
+ * chính các văn bản đó. Lô lỗi toàn bộ giữ lựa chọn để sửa thông tin rồi thử lại.
+ */
+export function resolveBulkBatchResult(
+  data: unknown,
+  fallbackTotal: number
+): { outcome: BulkBatchOutcome | null; clearSelection: boolean } {
+  const result = (data ?? {}) as {
+    total?: unknown;
+    successCount?: unknown;
+    failed?: unknown;
+  };
+  const failed = Array.isArray(result.failed)
+    ? (result.failed as { documentId?: string; error?: string | null }[])
+    : [];
+  if (failed.length === 0) return { outcome: null, clearSelection: true };
+  const successCount = typeof result.successCount === "number" ? result.successCount : 0;
+  return {
+    outcome: {
+      successCount,
+      failureCount: failed.length,
+      total: typeof result.total === "number" ? result.total : fallbackTotal,
+      failures: groupBulkBatchFailures(failed),
+    },
+    clearSelection: successCount > 0,
+  };
+}
 
 export interface DocumentBulkToolbarProps {
   /** Số lượng văn bản đã chọn */
@@ -53,7 +117,7 @@ interface ActionModalState {
 /**
  * Component DocumentBulkToolbar:
  * Thanh công cụ thao tác hàng loạt cố định nổi ở đáy màn hình khi có văn bản được chọn.
- * Hỗ trợ các hành động: Giao đơn vị, Hoàn tất, Lưu hồ sơ, và Bỏ chọn (ESC).
+ * Hỗ trợ các hành động: Giao đơn vị (người có quyền bút phê), Lưu hồ sơ, và Bỏ chọn (ESC).
  */
 export function DocumentBulkToolbar({
   selectedCount,
@@ -73,14 +137,19 @@ export function DocumentBulkToolbar({
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [batchOutcome, setBatchOutcome] = React.useState<BulkBatchOutcome | null>(null);
 
   // Form states cho từng loại modal
   const [selectedUnitId, setSelectedUnitId] = React.useState("");
   const unitFieldRef = React.useRef<HTMLDivElement>(null);
   const [instruction, setInstruction] = React.useState("");
+  const instructionRef = React.useRef<HTMLTextAreaElement>(null);
   const [deadline, setDeadline] = React.useState("");
-  const [resolutionSummary, setResolutionSummary] = React.useState("");
   const [filingNotes, setFilingNotes] = React.useState("");
+
+  const { user } = useAuth();
+  // `role` là vai trò giao diện (ADMIN/MANAGER/STAFF); quyền theo bước dùng vai trò nghiệp vụ trong DB.
+  const canAssignUnit = canBulkAssignLeadUnit((user as { dbRole?: string } | null)?.dbRole);
 
   const { departments, isLoading: isLoadingDepts } = useDepartmentList();
 
@@ -112,10 +181,10 @@ export function DocumentBulkToolbar({
 
   const openModal = (type: BulkActionType) => {
     setErrorMessage(null);
+    setBatchOutcome(null);
     setSelectedUnitId("");
     setInstruction("");
     setDeadline("");
-    setResolutionSummary("");
     setFilingNotes("");
     setModalState({ type, isOpen: true });
   };
@@ -124,6 +193,7 @@ export function DocumentBulkToolbar({
     if (isSubmitting) return;
     setModalState({ type: null, isOpen: false });
     setErrorMessage(null);
+    setBatchOutcome(null);
   };
 
   // Thực thi gọi API /api/documents/batch
@@ -137,42 +207,31 @@ export function DocumentBulkToolbar({
       unitFieldRef.current?.querySelector("button")?.focus();
       return;
     }
+    if (modalState.type === "assign-unit" && !instruction.trim()) {
+      setErrorMessage("Vui lòng nhập ý kiến chỉ đạo.");
+      instructionRef.current?.focus();
+      return;
+    }
 
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      let apiAction = "ASSIGN_LEAD_UNIT";
-      let payload: Record<string, any> = {
-        documentIds: resolvedIds,
-      };
-
-      if (modalState.type === "assign-unit") {
-        apiAction = "ASSIGN_LEAD_UNIT";
-        payload = {
-          action: apiAction,
-          documentIds: resolvedIds,
-          leadUnitId: selectedUnitId,
-          instruction: instruction.trim() || undefined,
-          leadershipInstruction: instruction.trim() || undefined,
-          deadline: deadline || undefined,
-        };
-      } else if (modalState.type === "resolve") {
-        apiAction = "MARK_RESOLVED";
-        payload = {
-          action: apiAction,
-          documentIds: resolvedIds,
-          resolutionSummary: resolutionSummary.trim() || "Hoàn tất xử lý hàng loạt",
-        };
-      } else if (modalState.type === "file") {
-        apiAction = "FILE_DOCUMENTS";
-        payload = {
-          action: apiAction,
-          documentIds: resolvedIds,
-          filingNotes: filingNotes.trim() || undefined,
-          archiveReason: filingNotes.trim() || undefined,
-        };
-      }
+      const payload =
+        modalState.type === "assign-unit"
+          ? {
+              action: "ASSIGN_LEAD_UNIT",
+              documentIds: resolvedIds,
+              leadUnitId: selectedUnitId,
+              leadershipInstruction: instruction.trim(),
+              deadline: deadline || undefined,
+            }
+          : {
+              action: "FILE_DOCUMENTS",
+              documentIds: resolvedIds,
+              filingNotes: filingNotes.trim() || undefined,
+              archiveReason: filingNotes.trim() || undefined,
+            };
 
       const res = await fetch("/api/documents/batch", {
         method: "POST",
@@ -191,9 +250,19 @@ export function DocumentBulkToolbar({
         throw new Error(errorDetail);
       }
 
+      // Server xử lý từng văn bản độc lập: văn bản không xử lý được nằm trong `failed` kèm lý do.
+      const { outcome, clearSelection } = resolveBulkBatchResult(json?.data, effectiveCount);
+      if (clearSelection) onClearSelection();
+      if (outcome) {
+        setBatchOutcome(outcome);
+        if (clearSelection && onRefresh) {
+          await onRefresh();
+        }
+        return;
+      }
+
       onSuccess?.(modalState.type, effectiveCount);
       closeModal();
-      onClearSelection();
       if (onRefresh) {
         await onRefresh();
       }
@@ -234,7 +303,7 @@ export function DocumentBulkToolbar({
               },
             }}
             className={cn(
-              // Điện thoại: thanh rộng gần hết màn, hàng 1 = số đã chọn + bỏ chọn, hàng 2 = ba thao tác chia đều
+              // Điện thoại: thanh rộng gần hết màn, hàng 1 = số đã chọn + bỏ chọn, hàng 2 = các thao tác chia đều
               "fixed bottom-6 md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max select-none max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+12px)] max-sm:w-[calc(100vw-24px)]",
               className
             )}
@@ -264,31 +333,20 @@ export function DocumentBulkToolbar({
                 aria-hidden="true"
               />
 
-              {/* [Nút Giao đơn vị] */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openModal("assign-unit")}
-                disabled={isLoading || isSubmitting}
-                className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
-                title="Giao đơn vị chủ trì xử lý các văn bản đã chọn"
-              >
-                <Building2 className="text-primary" />
-                <span>Giao đơn vị</span>
-              </Button>
-
-              {/* [Nút Hoàn tất] */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openModal("resolve")}
-                disabled={isLoading || isSubmitting}
-                className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
-                title="Đánh dấu hoàn tất xử lý các văn bản đã chọn"
-              >
-                <CheckCircle2 className="text-emerald-600" />
-                <span>Hoàn tất</span>
-              </Button>
+              {/* [Nút Giao đơn vị]: chỉ người có quyền bút phê văn bản đến */}
+              {canAssignUnit ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openModal("assign-unit")}
+                  disabled={isLoading || isSubmitting}
+                  className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
+                  title="Giao đơn vị chủ trì xử lý các văn bản đã chọn"
+                >
+                  <Building2 className="text-primary" />
+                  <span>Giao đơn vị</span>
+                </Button>
+              ) : null}
 
               {/* [Nút Lưu hồ sơ] */}
               <Button
@@ -324,7 +382,7 @@ export function DocumentBulkToolbar({
                   Esc
                 </kbd>
               </Button>
-              {/* Điện thoại: ngắt hàng sau nút bỏ chọn để ba thao tác nằm riêng hàng dưới */}
+              {/* Điện thoại: ngắt hàng sau nút bỏ chọn để các thao tác nằm riêng hàng dưới */}
               <div aria-hidden="true" className="hidden h-0 basis-full max-sm:order-1 max-sm:block" />
             </div>
           </m.aside>
@@ -338,23 +396,39 @@ export function DocumentBulkToolbar({
         onOpenChange={(open) => {
           if (!open) closeModal();
         }}
-        title={
-          modalState.type === "assign-unit"
-            ? "Giao đơn vị chủ trì"
-            : modalState.type === "resolve"
-            ? "Xác nhận hoàn tất văn bản"
-            : "Lưu trữ hồ sơ văn bản"
+        title={modalState.type === "assign-unit" ? "Giao đơn vị chủ trì" : "Lưu trữ hồ sơ văn bản"}
+        description={
+          // Lựa chọn có thể đã được bỏ khi hiện kết quả, nên lấy tổng số từ kết quả lô
+          batchOutcome
+            ? `Kết quả xử lý ${batchOutcome.total} văn bản`
+            : `Áp dụng đồng loạt cho ${effectiveCount} văn bản đã chọn`
         }
-        description={`Áp dụng đồng loạt cho ${effectiveCount} văn bản đã chọn`}
         size="md"
       >
-        {errorMessage && (
-          <div role="alert" className="mb-3 flex items-center gap-1.5 rounded-md bg-danger-soft px-2.5 py-1.5 text-xs text-destructive">
-            <AlertCircle className="size-3.5 shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
+        {errorMessage && <InlineAlert className="mb-3">{errorMessage}</InlineAlert>}
 
+        {batchOutcome ? (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <InlineAlert variant={batchOutcome.successCount > 0 ? "warning" : "error"}>
+                Đã xử lý {batchOutcome.successCount}/{batchOutcome.total} văn bản. Không xử lý được{" "}
+                {batchOutcome.failureCount} văn bản:
+              </InlineAlert>
+              <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                {batchOutcome.failures.map((failure) => (
+                  <li key={failure.reason}>
+                    <span className="font-medium text-foreground tabular-nums">{failure.count} văn bản</span>: {failure.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
+              <Button size="sm" onClick={closeModal}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleExecuteBatch} noValidate className="space-y-3">
           {/* Nội dung Form: Giao đơn vị */}
           {modalState.type === "assign-unit" && (
@@ -374,8 +448,9 @@ export function DocumentBulkToolbar({
               </FormField>
               </div>
 
-              <FormField label="Ý kiến chỉ đạo / yêu cầu xử lý" optional>
+              <FormField label="Ý kiến chỉ đạo / yêu cầu xử lý">
                 <Textarea
+                  ref={instructionRef}
                   compact
                   value={instruction}
                   onChange={(e) => setInstruction(e.target.value)}
@@ -401,33 +476,6 @@ export function DocumentBulkToolbar({
                   className="w-full"
                 />
               </div>
-            </div>
-          )}
-
-          {/* Nội dung Form: Hoàn tất */}
-          {modalState.type === "resolve" && (
-            <div className="space-y-3">
-              <div className="rounded-md bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">
-                  Bạn đang thao tác đánh dấu hoàn tất xử lý cho {effectiveCount} văn bản.
-                </p>
-                <p>
-                  Trạng thái các văn bản sẽ được chuyển sang{" "}
-                  <span className="font-semibold text-emerald-700">Đã hoàn thành (DA_HOAN_THANH)</span>.
-                </p>
-              </div>
-
-              <FormField label="Tóm tắt kết quả giải quyết" optional>
-                <Textarea
-                  compact
-                  value={resolutionSummary}
-                  onChange={(e) => setResolutionSummary(e.target.value)}
-                  disabled={isSubmitting}
-                  rows={3}
-                  placeholder="Ghi chú kết quả thực hiện, văn bản phúc đáp hoặc căn cứ hoàn thành..."
-                  className="resize-none"
-                />
-              </FormField>
             </div>
           )}
 
@@ -470,13 +518,12 @@ export function DocumentBulkToolbar({
                   ? "Đang xử lý..."
                   : modalState.type === "assign-unit"
                   ? "Xác nhận giao việc"
-                  : modalState.type === "resolve"
-                  ? "Xác nhận hoàn tất"
                   : "Lưu hồ sơ"}
               </span>
             </Button>
           </div>
         </form>
+        )}
       </StandardDialog>
     </>
   );

@@ -51,7 +51,7 @@ describe('H-1 outbox worker: thông báo nhiệm vụ', () => {
         title: 'Báo cáo tuyển sinh',
         academicMonth: 10,
         academicYear: '2026-2027',
-        dueDate: new Date('2026-10-20T00:00:00+07:00'),
+        dueDate: new Date(Date.now() + 2 * 86400000),
         createdById: ids.creator,
         actors: {
           create: [

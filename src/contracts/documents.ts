@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IncomingDocumentStatus } from '@prisma/client';
 import { PaginationQuerySchema, IsoDateStringSchema } from './common';
 import { isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE } from '@/lib/url-utils';
 
@@ -53,6 +54,19 @@ export const OutgoingDocumentStatusSchema = z.enum([
   'RECALLED',
 ]);
 export type OutgoingDocumentStatus = z.infer<typeof OutgoingDocumentStatusSchema>;
+
+/**
+ * Phân trang danh sách luồng văn bản đến/đi (`GET /api/documents/incoming`, `/outgoing`): cùng giới hạn với
+ * danh sách văn bản (`DocumentQuerySchema`); mặc định 50 bản ghi từ vị trí 0.
+ */
+export const WorkflowListPaginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const IncomingWorkflowListQuerySchema = WorkflowListPaginationSchema.extend({
+  status: z.nativeEnum(IncomingDocumentStatus).optional(),
+});
 
 /**
  * Document query filters schema.
@@ -390,16 +404,16 @@ export const CreateDirectiveSchema = z
 
 /**
  * Batch document action types.
+ * Hoàn tất hàng loạt (MARK_RESOLVED) đã bỏ: giải quyết văn bản cần báo cáo kết quả và hồ sơ như thao tác đơn lẻ.
  */
 export const BatchDocumentActionSchema = z.enum([
-  'MARK_RESOLVED',
   'ASSIGN_LEAD_UNIT',
   'FILE_DOCUMENTS',
 ]);
 
 /**
  * Batch document request schema.
- * Supports bulk operations on multiple documents within an atomic transaction.
+ * Mỗi văn bản được xử lý độc lập qua command đơn lẻ; lỗi từng văn bản trả về trong `failed`.
  */
 export const BatchDocumentRequestSchema = z
   .object({
@@ -418,9 +432,6 @@ export const BatchDocumentRequestSchema = z
     storageLocation: z.string().trim().max(255).optional().nullable(),
     filingNotes: z.string().trim().max(2000).optional().nullable(),
     archiveReason: z.string().trim().max(2000).optional().nullable(),
-    // For MARK_RESOLVED
-    resolutionSummary: z.string().trim().max(5000).optional().nullable(),
-    notes: z.string().trim().max(2000).optional().nullable(),
   })
   .strict()
   .refine(
@@ -433,6 +444,15 @@ export const BatchDocumentRequestSchema = z
     {
       message: 'Đơn vị chủ trì (leadUnitId) là bắt buộc khi thực hiện gán đơn vị chủ trì',
       path: ['leadUnitId'],
+    }
+  )
+  .refine(
+    (data) =>
+      data.action !== 'ASSIGN_LEAD_UNIT' ||
+      Boolean(data.leadershipInstruction?.trim() || data.instruction?.trim()),
+    {
+      message: 'Ý kiến chỉ đạo / bút phê (leadershipInstruction hoặc instruction) là bắt buộc',
+      path: ['leadershipInstruction'],
     }
   );
 

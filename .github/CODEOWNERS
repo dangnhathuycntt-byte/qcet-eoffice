@@ -18,6 +18,7 @@ prisma/schema.prisma                  @qcet-data-team @cdktcnqn-admin
 prisma/migrations/                    @qcet-data-team @cdktcnqn-admin
 src/lib/db/                           @qcet-data-team
 src/lib/prisma.ts                     @qcet-data-team
+src/server/api/idempotency.ts         @qcet-data-team
 
 # ------------------------------------------------------------------------------
 # 2. AUTHENTICATION, AUTHORIZATION & SECURITY
@@ -26,9 +27,9 @@ src/lib/prisma.ts                     @qcet-data-team
 src/app/api/auth/                     @qcet-security-team @cdktcnqn-admin
 src/components/auth/                  @qcet-security-team
 src/lib/auth-context.tsx              @qcet-security-team
-src/lib/auth/                         @qcet-security-team
+src/server/authorization/hybrid-authorization.ts @qcet-security-team
 src/lib/jwt-session.ts                @qcet-security-team @cdktcnqn-admin
-src/lib/google-oauth.ts               @qcet-security-team
+src/server/auth/google-oauth.ts       @qcet-security-team
 src/lib/password.ts                   @qcet-security-team
 src/server/security/                  @qcet-security-team @cdktcnqn-admin
 src/config/security-headers.ts        @qcet-security-team
@@ -60,6 +61,13 @@ src/server/policies/                  @qcet-document-team
 src/server/dto/                       @qcet-document-team
 src/lib/documents/                    @qcet-document-team
 src/lib/document-numbering.ts         @qcet-document-team
+src/server/documents/document-bucket-where.ts     @qcet-document-team
+src/server/documents/document-deadline-scanner.ts @qcet-document-team
+src/server/documents/document-service.ts          @qcet-document-team
+src/server/documents/duplicate-check.ts           @qcet-document-team
+src/server/documents/linked-task-link.ts          @qcet-document-team
+src/server/documents/numbering-engine.ts          @qcet-document-team
+src/server/documents/state-machine.ts             @qcet-document-team
 src/components/documents/             @qcet-document-team
 
 # ------------------------------------------------------------------------------

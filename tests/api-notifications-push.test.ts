@@ -6,6 +6,7 @@ import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { setPushSenderForTesting, getVapidPublicKey } from '../src/server/notifications/push-service';
 import { GET as getKeyRoute } from '../src/app/api/notifications/push/key/route';
 import { POST as subscribeRoute, DELETE as unsubscribeRoute } from '../src/app/api/notifications/push/subscribe/route';
+import { POST as pushPostRoute, DELETE as pushDeleteRoute } from '../src/app/api/notifications/push/route';
 import { POST as testPushRoute } from '../src/app/api/notifications/push/test/route';
 import { GET as getNotificationsRoute, PATCH as markAllReadRoute } from '../src/app/api/notifications/route';
 import { PATCH as markOneReadRoute } from '../src/app/api/notifications/[id]/read/route';
@@ -274,17 +275,20 @@ describe('API Routes: Push & Notifications System', () => {
       assert.strictEqual(res.status, 401);
     });
 
-    test('DELETE returns 400 when missing endpoint', async () => {
-      const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUserToken}`,
-        },
-        body: JSON.stringify({}),
-      });
-      const res = await unsubscribeRoute(req);
-      assert.strictEqual(res.status, 400);
+    test('DELETE returns 400 when endpoint is missing or blank', async () => {
+      // revokePushSubscriptions thu hồi tất cả khi endpoint rỗng: URL này phải chặn ở bước validate.
+      for (const body of [{}, { endpoint: '' }, { endpoint: '   ' }]) {
+        const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${testUserToken}`,
+          },
+          body: JSON.stringify(body),
+        });
+        const res = await unsubscribeRoute(req);
+        assert.strictEqual(res.status, 400, JSON.stringify(body));
+      }
     });
 
     test('DELETE marks the subscription as REVOKED', async () => {
@@ -306,6 +310,7 @@ describe('API Routes: Push & Notifications System', () => {
         where: { endpoint: testEndpoint },
       });
       assert.strictEqual(revoked?.status, 'REVOKED');
+      assert.ok(revoked?.disabledAt instanceof Date, 'Thu hồi phải ghi disabledAt như DELETE /push');
     });
   });
 
@@ -354,6 +359,294 @@ describe('API Routes: Push & Notifications System', () => {
       // Thử chuông không được ghi vào Hộp thư
       const countAfter = await prisma.notification.count({ where: { userId: testUser.id } });
       assert.strictEqual(countAfter, countBefore);
+    });
+  });
+
+  // =========================================================================
+  // 3b. /push và /push/subscribe: hai URL, một đường ghi
+  // (đặt sau mục 3 để các đăng ký ACTIVE thêm ở đây không đổi sentCount của mục 3)
+  // =========================================================================
+  describe('/api/notifications/push và /push/subscribe dùng chung một đường ghi', () => {
+    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const otherP256dh = 'BOther...other-user-p256dh-key...';
+    const otherAuth = 'other-user-auth-secret-456';
+
+    function uniqueEndpoint(suffix: string) {
+      const endpoint = `https://fcm.googleapis.com/fcm/send/shared-path-${runId}-${suffix}`;
+      createdSubscriptionEndpoints.push(endpoint);
+      return endpoint;
+    }
+
+    function bearerRequest(
+      path: '/api/notifications/push' | '/api/notifications/push/subscribe',
+      method: 'POST' | 'DELETE',
+      token: string,
+      body: Record<string, unknown>
+    ) {
+      return new NextRequest(`http://localhost:3000${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+    }
+
+    function subscriptionBody(endpoint: string, keys = { p256dh: testP256dh, auth: testAuth }) {
+      return {
+        endpoint,
+        keys,
+        deviceType: 'browser',
+        userAgent: 'Mozilla/5.0 (QCET push test)',
+      };
+    }
+
+    async function subscribeVia(
+      path: '/api/notifications/push' | '/api/notifications/push/subscribe',
+      endpoint: string,
+      token = testUserToken,
+      keys?: { p256dh: string; auth: string }
+    ) {
+      const req = bearerRequest(path, 'POST', token, subscriptionBody(endpoint, keys));
+      const res =
+        path === '/api/notifications/push' ? await pushPostRoute(req) : await subscribeRoute(req);
+      assert.strictEqual(res.status, 200);
+      return res.json();
+    }
+
+    async function findRow(endpoint: string) {
+      const row = await prisma.pushSubscription.findUnique({ where: { endpoint } });
+      assert.ok(row, `Thiếu đăng ký ${endpoint}`);
+      return row;
+    }
+
+    test('POST /push/subscribe kích hoạt lại đăng ký đã thu hồi qua DELETE /push: ACTIVE, disabledAt null', async () => {
+      const endpoint = uniqueEndpoint('reactivate-after-delete');
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+
+      const delRes = await pushDeleteRoute(
+        bearerRequest('/api/notifications/push', 'DELETE', testUserToken, { endpoint })
+      );
+      assert.strictEqual(delRes.status, 200);
+      const revoked = await findRow(endpoint);
+      assert.strictEqual(revoked.status, 'REVOKED');
+      assert.ok(revoked.disabledAt instanceof Date);
+
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+      const reactivated = await findRow(endpoint);
+      assert.strictEqual(reactivated.status, 'ACTIVE');
+      assert.strictEqual(reactivated.disabledAt, null);
+      assert.strictEqual(reactivated.userId, testUser.id);
+    });
+
+    test('POST /push/subscribe kích hoạt lại đăng ký bị push-service thu hồi (410): xóa disabledAt và bộ đếm lỗi', async () => {
+      const endpoint = uniqueEndpoint('reactivate-after-410');
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+      // Giống push-service khi gửi gặp 404/410: REVOKED kèm disabledAt, trình duyệt vẫn giữ subscription.
+      await prisma.pushSubscription.update({
+        where: { endpoint },
+        data: { status: 'REVOKED', disabledAt: new Date(), failureCount: 5, lastFailureCode: 410 },
+      });
+
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+      const row = await findRow(endpoint);
+      assert.strictEqual(row.status, 'ACTIVE');
+      assert.strictEqual(row.disabledAt, null);
+      assert.strictEqual(row.failureCount, 0);
+      assert.strictEqual(row.lastFailureCode, null);
+    });
+
+    test('DELETE /push/subscribe thu hồi giống DELETE /push: REVOKED kèm disabledAt', async () => {
+      const endpoint = uniqueEndpoint('delete-subscribe');
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+
+      const res = await unsubscribeRoute(
+        bearerRequest('/api/notifications/push/subscribe', 'DELETE', testUserToken, { endpoint })
+      );
+      assert.strictEqual(res.status, 200);
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+
+      const row = await findRow(endpoint);
+      assert.strictEqual(row.status, 'REVOKED');
+      assert.ok(row.disabledAt instanceof Date, 'DELETE /push/subscribe phải ghi disabledAt');
+    });
+
+    test('POST /push và POST /push/subscribe ghi cùng trạng thái và trả cùng dạng phản hồi, không kèm khóa', async () => {
+      const viaPush = uniqueEndpoint('parity-push');
+      const viaSubscribe = uniqueEndpoint('parity-subscribe');
+      await subscribeVia('/api/notifications/push', viaPush);
+      await subscribeVia('/api/notifications/push/subscribe', viaSubscribe);
+      await prisma.pushSubscription.updateMany({
+        where: { endpoint: { in: [viaPush, viaSubscribe] } },
+        data: { status: 'REVOKED', disabledAt: new Date(), failureCount: 3, lastFailureCode: 500 },
+      });
+
+      const pushJson = await subscribeVia('/api/notifications/push', viaPush);
+      const subscribeJson = await subscribeVia('/api/notifications/push/subscribe', viaSubscribe);
+
+      const pick = (row: Awaited<ReturnType<typeof findRow>>) => ({
+        userId: row.userId,
+        p256dh: row.p256dh,
+        auth: row.auth,
+        deviceType: row.deviceType,
+        userAgent: row.userAgent,
+        status: row.status,
+        failureCount: row.failureCount,
+        lastFailureCode: row.lastFailureCode,
+        disabledAt: row.disabledAt,
+      });
+      const pushRow = await findRow(viaPush);
+      const subscribeRow = await findRow(viaSubscribe);
+      assert.deepStrictEqual(pick(subscribeRow), pick(pushRow));
+      assert.deepStrictEqual(pick(pushRow), {
+        userId: testUser.id,
+        p256dh: testP256dh,
+        auth: testAuth,
+        deviceType: 'browser',
+        userAgent: 'Mozilla/5.0 (QCET push test)',
+        status: 'ACTIVE',
+        failureCount: 0,
+        lastFailureCode: null,
+        disabledAt: null,
+      });
+
+      assert.deepStrictEqual(pushJson, { success: true, subscriptionId: pushRow.id });
+      assert.deepStrictEqual(subscribeJson, { success: true, subscriptionId: subscribeRow.id });
+      const raw = JSON.stringify(subscribeJson);
+      assert.ok(!raw.includes(testP256dh) && !raw.includes(testAuth), 'Phản hồi không được chứa p256dh/auth');
+    });
+
+    test('người khác DELETE endpoint của testUser qua /push và /push/subscribe: 200 nhưng đăng ký giữ nguyên', async () => {
+      const endpoint = uniqueEndpoint('foreign-delete');
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+
+      const viaPush = await pushDeleteRoute(
+        bearerRequest('/api/notifications/push', 'DELETE', otherUserToken, { endpoint })
+      );
+      assert.strictEqual(viaPush.status, 200);
+      const viaSubscribe = await unsubscribeRoute(
+        bearerRequest('/api/notifications/push/subscribe', 'DELETE', otherUserToken, { endpoint })
+      );
+      assert.strictEqual(viaSubscribe.status, 200);
+
+      const row = await findRow(endpoint);
+      assert.strictEqual(row.status, 'ACTIVE');
+      assert.strictEqual(row.userId, testUser.id);
+      assert.strictEqual(row.disabledAt, null);
+    });
+
+    test('thiết bị dùng chung: người khác đăng ký lại cùng endpoint thì đăng ký chuyển sang người đó', async () => {
+      const endpoint = uniqueEndpoint('shared-device');
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+      const delRes = await pushDeleteRoute(
+        bearerRequest('/api/notifications/push', 'DELETE', testUserToken, { endpoint })
+      );
+      assert.strictEqual(delRes.status, 200);
+
+      const otherJson = await subscribeVia('/api/notifications/push/subscribe', endpoint, otherUserToken, {
+        p256dh: otherP256dh,
+        auth: otherAuth,
+      });
+      const handedOver = await findRow(endpoint);
+      assert.deepStrictEqual(otherJson, { success: true, subscriptionId: handedOver.id });
+      assert.strictEqual(handedOver.userId, otherUser.id);
+      assert.strictEqual(handedOver.p256dh, otherP256dh);
+      assert.strictEqual(handedOver.auth, otherAuth);
+      assert.strictEqual(handedOver.status, 'ACTIVE');
+      assert.strictEqual(handedOver.disabledAt, null);
+
+      // Chủ cũ không còn thu hồi được đăng ký đã chuyển chủ.
+      const staleDelete = await unsubscribeRoute(
+        bearerRequest('/api/notifications/push/subscribe', 'DELETE', testUserToken, { endpoint })
+      );
+      assert.strictEqual(staleDelete.status, 200);
+      const stillOther = await findRow(endpoint);
+      assert.strictEqual(stillOther.userId, otherUser.id);
+      assert.strictEqual(stillOther.status, 'ACTIVE');
+
+      // Chủ cũ đăng ký lại qua /push thì chuyển về, như /push/subscribe.
+      await subscribeVia('/api/notifications/push', endpoint);
+      const back = await findRow(endpoint);
+      assert.strictEqual(back.userId, testUser.id);
+      assert.strictEqual(back.p256dh, testP256dh);
+      assert.strictEqual(back.status, 'ACTIVE');
+    });
+
+    test('POST và DELETE /push từ chối khi chưa đăng nhập (401) hoặc thiếu/sai khóa (400)', async () => {
+      const endpoint = uniqueEndpoint('push-validation');
+      const anonymous = (method: 'POST' | 'DELETE', body: Record<string, unknown>) =>
+        new NextRequest('http://localhost:3000/api/notifications/push', {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+      const postRes = await pushPostRoute(anonymous('POST', subscriptionBody(endpoint)));
+      assert.strictEqual(postRes.status, 401);
+      assert.strictEqual((await postRes.json()).success, false);
+      const deleteRes = await pushDeleteRoute(anonymous('DELETE', { endpoint }));
+      assert.strictEqual(deleteRes.status, 401);
+      assert.strictEqual((await deleteRes.json()).success, false);
+
+      const missingKeys = await pushPostRoute(
+        bearerRequest('/api/notifications/push', 'POST', testUserToken, { endpoint })
+      );
+      assert.strictEqual(missingKeys.status, 400);
+      assert.strictEqual((await missingKeys.json()).success, false);
+
+      const insecure = await pushPostRoute(
+        bearerRequest(
+          '/api/notifications/push',
+          'POST',
+          testUserToken,
+          subscriptionBody('http://fcm.googleapis.com/fcm/send/insecure')
+        )
+      );
+      assert.strictEqual(insecure.status, 400);
+      const insecureJson = await insecure.json();
+      assert.strictEqual(insecureJson.success, false);
+      assert.strictEqual(insecureJson.error, 'Push endpoint must be a valid HTTPS URL');
+
+      assert.strictEqual(await prisma.pushSubscription.count({ where: { endpoint } }), 0);
+    });
+
+    test('cookie phiên kèm Origin lạ bị chặn CSRF (403) ở cả hai URL, đăng ký không đổi', async () => {
+      const endpoint = uniqueEndpoint('csrf');
+      await subscribeVia('/api/notifications/push/subscribe', endpoint);
+
+      const crossSite = (
+        path: '/api/notifications/push' | '/api/notifications/push/subscribe',
+        method: 'POST' | 'DELETE',
+        body: Record<string, unknown>
+      ) =>
+        new NextRequest(`http://localhost:3000${path}`, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Origin': 'https://evil-attacker.site',
+            'Cookie': `${SESSION_COOKIE_NAME}=${otherUserToken}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+      const responses = [
+        await pushPostRoute(crossSite('/api/notifications/push', 'POST', subscriptionBody(endpoint))),
+        await subscribeRoute(crossSite('/api/notifications/push/subscribe', 'POST', subscriptionBody(endpoint))),
+        await pushDeleteRoute(crossSite('/api/notifications/push', 'DELETE', { endpoint })),
+        await unsubscribeRoute(crossSite('/api/notifications/push/subscribe', 'DELETE', { endpoint })),
+      ];
+      for (const res of responses) {
+        assert.strictEqual(res.status, 403);
+        const json = await res.json();
+        assert.strictEqual(json.success, false);
+        assert.strictEqual(json.code, 'CSRF_VALIDATION_FAILED');
+      }
+
+      const row = await findRow(endpoint);
+      assert.strictEqual(row.userId, testUser.id);
+      assert.strictEqual(row.status, 'ACTIVE');
     });
   });
 

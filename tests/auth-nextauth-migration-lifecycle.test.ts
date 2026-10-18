@@ -105,7 +105,8 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
   // 2. Initial Login & Session Resolution Flow
   // =========================================================================
   describe("2. Initial Login & Route Access Flow", () => {
-    test("2.1 Authenticated user accessing / is redirected to /tasks", async () => {
+    // Từ 15/10/2026 (ba9859f6) '/' là trang Tổng quan, không còn chuyển sang /tasks.
+    test("2.1 Authenticated user accessing / reaches the Tổng quan page (no redirect)", async () => {
       const req = new NextRequest("http://localhost:3000/", {
         headers: {
           cookie: `${SESSION_COOKIE_NAME}=${activeUserToken}`,
@@ -113,8 +114,8 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
       });
 
       const res = await middleware(req);
-      assert.equal(res.status, 307);
-      assert.equal(res.headers.get("location"), "http://localhost:3000/tasks");
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("location"), null);
     });
 
     test("2.2 JWT at /login waits for database session truth", async () => {

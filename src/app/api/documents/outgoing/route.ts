@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
-import { CreateOutgoingDraftSchema } from "@/contracts/documents";
+import { CreateOutgoingDraftSchema, WorkflowListPaginationSchema } from "@/contracts/documents";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
@@ -16,8 +16,11 @@ export async function GET(req: NextRequest) {
 
     const url = new URL(req.url);
     const statusParam = url.searchParams.get("status");
-    const limit = url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : 50;
-    const offset = url.searchParams.get("offset") ? Number(url.searchParams.get("offset")) : 0;
+    // Tham số rỗng dùng mặc định; ngoài khoảng/không phải số nguyên → 400 (trước đây NaN, số âm vào thẳng Prisma).
+    const { limit, offset } = WorkflowListPaginationSchema.parse({
+      limit: url.searchParams.get("limit") || undefined,
+      offset: url.searchParams.get("offset") || undefined,
+    });
     const search = url.searchParams.get("search") || undefined;
 
     // ACL được áp trong truy vấn của service (phân trang và tổng số không lộ văn bản ngoài quyền).

@@ -6,7 +6,7 @@ import { parseAndValidateJson } from '@/server/api/validation';
 import { PushSubscriptionSchema } from '@/contracts/notifications';
 import { getVapidPublicKey } from '@/server/notifications/push-service';
 import {
-  revokePushSubscriptionByEndpoint,
+  revokePushSubscriptions,
   upsertPushSubscription,
 } from '@/server/notifications/push-subscription-service';
 import { assertCsrf } from '@/server/security/csrf';
@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
     return apiSuccess(
       {
         subscriptionId: subscription.id,
-        subscription,
       },
       {
         requestId,
@@ -92,7 +91,7 @@ export async function DELETE(request: NextRequest) {
 
     const body = await parseAndValidateJson(request, DeletePushSubscriptionSchema);
 
-    await revokePushSubscriptionByEndpoint(authUser.id, body.endpoint);
+    await revokePushSubscriptions(authUser.id, body.endpoint);
 
     return apiSuccess(
       { success: true },
