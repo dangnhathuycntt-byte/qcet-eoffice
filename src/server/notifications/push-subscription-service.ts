@@ -6,8 +6,9 @@ import {
 } from "@/lib/pwa/push-preferences";
 
 // Đăng ký push và tùy chọn push của người dùng.
-// /api/notifications/push và /api/notifications/push/subscribe ghi khác nhau (disabledAt,
-// updatedAt, thu hồi tất cả): mỗi route có hàm riêng, không gộp.
+// Client hiện tại POST /api/notifications/push/subscribe trước, chỉ quay về /api/notifications/push khi lỗi mạng
+// hoặc 404; /push còn lo tùy chọn và DELETE. Hai URL dùng chung một đường ghi: upsertPushSubscription và
+// revokePushSubscriptions.
 
 export interface PushSubscriptionInput {
   endpoint: string;
@@ -83,39 +84,10 @@ export async function savePushPreferences(
   return updatedPrefs;
 }
 
-/** POST /api/notifications/push: upsert theo endpoint, đặt lại `disabledAt` khi cập nhật. */
-export async function upsertPushSubscriptionClearingDisabledAt(
-  userId: string,
-  { endpoint, p256dh, auth, deviceType, userAgent }: PushSubscriptionInput
-) {
-  return prisma.pushSubscription.upsert({
-    where: { endpoint },
-    update: {
-      userId,
-      p256dh,
-      auth,
-      deviceType: deviceType || null,
-      userAgent: userAgent || null,
-      status: "ACTIVE",
-      failureCount: 0,
-      lastFailureCode: null,
-      disabledAt: null,
-      updatedAt: new Date(),
-    },
-    create: {
-      userId,
-      endpoint,
-      p256dh,
-      auth,
-      deviceType: deviceType || null,
-      userAgent: userAgent || null,
-      status: "ACTIVE",
-      failureCount: 0,
-    },
-  });
-}
-
-/** POST /api/notifications/push/subscribe: upsert theo endpoint, không đụng `disabledAt`. */
+/**
+ * Đăng ký hoặc kích hoạt lại theo endpoint: ACTIVE, xóa bộ đếm lỗi và `disabledAt`.
+ * Endpoint đã thuộc người khác thì chuyển sang người gọi (thiết bị dùng chung đổi chủ).
+ */
 export async function upsertPushSubscription(
   userId: string,
   { endpoint, p256dh, auth, deviceType, userAgent }: PushSubscriptionInput
@@ -131,7 +103,7 @@ export async function upsertPushSubscription(
       status: "ACTIVE",
       failureCount: 0,
       lastFailureCode: null,
-      updatedAt: new Date(),
+      disabledAt: null,
     },
     create: {
       userId,
@@ -147,48 +119,19 @@ export async function upsertPushSubscription(
 }
 
 /**
- * DELETE /api/notifications/push: thu hồi đăng ký có endpoint này, không có endpoint thì
- * thu hồi tất cả của người dùng; đặt `disabledAt`.
+ * Thu hồi đăng ký của chính người dùng (REVOKED kèm `disabledAt`): theo endpoint, không có
+ * endpoint thì tất cả (chỉ DELETE /api/notifications/push cho phép). Endpoint của người khác
+ * không bị đụng tới.
  */
 export async function revokePushSubscriptions(
   userId: string,
   endpoint: string | null | undefined
 ) {
-  if (endpoint) {
-    await prisma.pushSubscription.updateMany({
-      where: {
-        endpoint,
-        userId,
-      },
-      data: {
-        status: "REVOKED",
-        disabledAt: new Date(),
-      },
-    });
-  } else {
-    // Revoke all subscriptions for this user
-    await prisma.pushSubscription.updateMany({
-      where: {
-        userId,
-      },
-      data: {
-        status: "REVOKED",
-        disabledAt: new Date(),
-      },
-    });
-  }
-}
-
-/** DELETE /api/notifications/push/subscribe: thu hồi theo endpoint, đặt `updatedAt`. */
-export async function revokePushSubscriptionByEndpoint(userId: string, endpoint: string) {
   await prisma.pushSubscription.updateMany({
-    where: {
-      endpoint,
-      userId,
-    },
+    where: endpoint ? { userId, endpoint } : { userId },
     data: {
       status: "REVOKED",
-      updatedAt: new Date(),
+      disabledAt: new Date(),
     },
   });
 }

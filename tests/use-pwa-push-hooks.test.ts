@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 // Import hooks and helpers (will fail initially before implementation)
 import { usePWAInstall, checkIsIOS } from '../src/hooks/use-pwa-install';
 import { usePushNotification, urlBase64ToUint8Array } from '../src/hooks/use-push-notification';
+import { syncPushSubscriptionWithServer } from '../src/lib/pwa/push-manager';
 
 describe('Task 6: PWA and Push Notification Hooks', () => {
   describe('urlBase64ToUint8Array utility', () => {
@@ -220,5 +221,79 @@ describe('Task 6: PWA and Push Notification Hooks', () => {
       assert.strictEqual(subJson.keys.p256dh, 'mock-p256dh');
       assert.strictEqual(subJson.keys.auth, 'mock-auth');
     });
+  });
+
+  describe('syncPushSubscriptionWithServer: chỉ fallback sang /push khi lỗi mạng hoặc 404', () => {
+    const payload = {
+      endpoint: 'https://fcm.googleapis.com/fcm/send/sync-test-token',
+      keys: { p256dh: 'mock-p256dh', auth: 'mock-auth' },
+      userAgent: 'Mozilla/5.0 (QCET push test)',
+      deviceType: 'browser',
+    };
+
+    type Outcome = number | 'network-error';
+
+    async function runSync(outcomes: Outcome[]) {
+      const calls: Array<{ url: string; method?: string; body?: string }> = [];
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push({ url: String(input), method: init?.method, body: init?.body as string | undefined });
+        const outcome = outcomes[calls.length - 1];
+        if (outcome === undefined) throw new Error(`fetch không mong đợi lần ${calls.length}`);
+        if (outcome === 'network-error') throw new TypeError('Failed to fetch');
+        return new Response(JSON.stringify({ success: outcome < 400 }), {
+          status: outcome,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }) as typeof fetch;
+      try {
+        const ok = await syncPushSubscriptionWithServer(payload);
+        return { ok, calls };
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    }
+
+    test('/push/subscribe thành công: gọi một lần, không fallback', async () => {
+      const { ok, calls } = await runSync([200]);
+      assert.strictEqual(ok, true);
+      assert.deepStrictEqual(calls.map((c) => c.url), ['/api/notifications/push/subscribe']);
+      assert.strictEqual(calls[0].method, 'POST');
+      assert.deepStrictEqual(JSON.parse(calls[0].body!), payload);
+    });
+
+    test('404 (server cũ chưa có /push/subscribe): fallback POST /push cùng nội dung', async () => {
+      const { ok, calls } = await runSync([404, 200]);
+      assert.strictEqual(ok, true);
+      assert.deepStrictEqual(calls.map((c) => c.url), [
+        '/api/notifications/push/subscribe',
+        '/api/notifications/push',
+      ]);
+      assert.strictEqual(calls[1].method, 'POST');
+      assert.strictEqual(calls[1].body, calls[0].body);
+    });
+
+    test('lỗi mạng ở /push/subscribe: fallback POST /push', async () => {
+      const { ok, calls } = await runSync(['network-error', 200]);
+      assert.strictEqual(ok, true);
+      assert.deepStrictEqual(calls.map((c) => c.url), [
+        '/api/notifications/push/subscribe',
+        '/api/notifications/push',
+      ]);
+    });
+
+    test('fallback cũng lỗi: trả false', async () => {
+      const { ok, calls } = await runSync([404, 500]);
+      assert.strictEqual(ok, false);
+      assert.strictEqual(calls.length, 2);
+    });
+
+    for (const status of [400, 401, 403, 429, 500]) {
+      test(`${status} ở /push/subscribe: không lặp lại sang /push, trả false`, async () => {
+        const { ok, calls } = await runSync([status]);
+        assert.strictEqual(ok, false);
+        assert.deepStrictEqual(calls.map((c) => c.url), ['/api/notifications/push/subscribe']);
+      });
+    }
   });
 });

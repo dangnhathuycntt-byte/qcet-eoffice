@@ -204,6 +204,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     });
     assert.ok(revoked);
     assert.strictEqual(revoked.status, 'REVOKED', 'Subscription status must transition to REVOKED');
+    assert.ok(revoked.disabledAt instanceof Date, 'Thu hồi phải ghi disabledAt');
   });
 
   test('4. Test notification dispatch endpoint (POST /api/notifications/push/test)', async () => {
