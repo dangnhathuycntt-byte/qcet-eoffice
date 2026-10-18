@@ -13,11 +13,10 @@ import {
   NotFoundError,
   ValidationError,
 } from "@/server/api/errors";
-import { prisma } from "@/lib/prisma";
-import { canReadDocument } from "@/server/policies/document-policy";
-import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
-import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
-import { logger } from "@/server/observability/logger";
+import {
+  assertFilePathDownloadAllowed,
+  getReadableAttachmentForDownload,
+} from "@/server/files/file-access-service";
 
 export async function GET(req: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -41,20 +40,8 @@ export async function GET(req: NextRequest) {
     let downloadName: string;
 
     if (attachmentId) {
-      const attachment = await prisma.documentAttachment.findUnique({
-        where: { id: attachmentId },
-        include: { document: true },
-      });
-
-      if (!attachment) {
-        throw new NotFoundError("Không tìm thấy tệp đính kèm");
-      }
-
-      if (!canReadDocument(authUser, attachment.document)) {
-        throw new ForbiddenError(
-          "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
-        );
-      }
+      // 404 khi không có tệp đính kèm, 403 khi không đọc được văn bản
+      const attachment = await getReadableAttachmentForDownload(authUser, attachmentId);
 
       if (attachment.fileObjectId) {
         return NextResponse.redirect(new URL(`/api/file-objects/${attachment.fileObjectId}`, req.url));
@@ -88,76 +75,8 @@ export async function GET(req: NextRequest) {
       safeResolvedPath = resolveSafeFilePath(filePathParam!);
       const fileName = path.basename(safeResolvedPath);
 
-      // Object-level permission check: DocumentAttachment
-      const matchingAttachment = await prisma.documentAttachment.findFirst({
-        where: {
-          fileUrl: { in: [
-            filePathParam!,
-            `/${filePathParam}`,
-            `/uploads/${filePathParam}`,
-            `uploads/${filePathParam}`,
-            `/api/files/${filePathParam}`,
-            `api/files/${filePathParam}`,
-          ] },
-        },
-        include: { document: true },
-      });
-
-      if (matchingAttachment?.document) {
-        if (!canReadDocument(authUser, matchingAttachment.document)) {
-          throw new ForbiddenError(
-            "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
-          );
-        }
-      }
-
-      // Object-level permission check: TaskDeliverable
-      const matchingDeliverable = await prisma.taskDeliverable.findFirst({
-        where: {
-          fileUrl: { in: [
-            filePathParam!,
-            `/${filePathParam}`,
-            `/uploads/${filePathParam}`,
-            `uploads/${filePathParam}`,
-            `/api/files/${filePathParam}`,
-            `api/files/${filePathParam}`,
-          ] },
-        },
-        include: {
-          task: {
-            include: { actors: true },
-          },
-        },
-      });
-
-      if (matchingDeliverable?.task) {
-        // P1: Canonical authorization via buildTaskReadWhere (replaces legacy canReadTask)
-        const authCtx = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true });
-        const taskAuthWhere = buildTaskReadWhere(authCtx);
-        const authorizedDeliverable = await prisma.taskDeliverable.findFirst({
-          where: {
-            id: matchingDeliverable.id,
-            task: taskAuthWhere,
-          },
-        });
-        if (!authorizedDeliverable) {
-          throw new ForbiddenError("Bạn không có quyền truy cập tệp của nhiệm vụ này");
-        }
-      }
-
-      // P0-1: Default deny (F07) — file không thuộc resource được cấp quyền
-      if (!matchingAttachment && !matchingDeliverable) {
-        logger.fileAccessDenied({
-          requestId,
-          userId: authUser.id,
-          filePath: filePathParam!,
-          fileName,
-          reason: "Unregistered orphan file not associated with any authorized resource",
-        });
-        throw new NotFoundError(
-          "Không tìm thấy tệp hoặc tệp không thuộc tài nguyên được cấp quyền"
-        );
-      }
+      // Tệp phải thuộc tệp đính kèm văn bản / sản phẩm nhiệm vụ được đọc; mặc định từ chối (404)
+      await assertFilePathDownloadAllowed(authUser, filePathParam!, fileName, requestId);
 
       downloadName = req.nextUrl.searchParams.get("name") || fileName;
     }

@@ -12,16 +12,26 @@ import type {
 import { getNextRegistrationNumber } from "./numbering-engine";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
-import { buildDocumentReadWhere } from "@/server/policies/document-policy";
+import { buildDocumentReadWhere, canUpdateDocument } from "@/server/policies/document-policy";
 import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import {
   isDocumentImmutable,
   mapIncomingWorkflowStatusToDocumentStatus,
   mapOutgoingWorkflowStatusToDocumentStatus,
 } from "./state-machine";
-import { NotFoundError, ValidationError } from "@/server/api/errors";
-import type { DocumentBucket } from "@/lib/documents/document-sidebar-buckets";
+import { ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
+import { DOCUMENT_DONE_STATUSES, type DocumentBucket } from "@/lib/documents/document-sidebar-buckets";
 import { buildDocumentBucketWhere } from "./document-bucket-where";
+import {
+  assertCanLinkTask,
+  lockDocumentRows,
+  normalizeLinkedTaskId,
+  recordLinkedTaskChange,
+  toLinkedTaskConflict,
+} from "./linked-task-link";
+import { logAuditEvent } from "@/lib/db/audit";
+import type { UpdateDocumentInput } from "@/contracts/documents";
+import type { DocumentTypeCode } from "@/domain/documents/document-type-param";
 
 export {
   buildDocumentReadWhere,
@@ -621,3 +631,230 @@ export async function registerIncomingDocument(
 }
 
 export { getNextRegistrationNumber };
+
+/**
+ * PATCH metadata văn bản sau khi route đã kiểm tồn tại, bất biến, quyền và validate.
+ * `validated` là payload đã qua `UpdateDocumentSchema` (không phải body thô).
+ */
+export async function applyDocumentPatch(
+  id: string,
+  validated: UpdateDocumentInput,
+  {
+    authUser,
+    authContext,
+    requestId,
+  }: { authUser: AuthenticatedUser; authContext: AuthorizationContext; requestId: string }
+) {
+  // S-1: gắn/đổi/gỡ nhiệm vụ liên kết làm đổi đơn vị xử lý văn bản nên phải kiểm quyền và ghi nhật ký.
+  // Mọi đọc-quyết định-ghi diễn ra trong một transaction sau khi khóa dòng, để hai PATCH đồng thời
+  // không dựa vào trạng thái đã cũ (bỏ sót kiểm quyền hoặc ghi sai nhật ký).
+  let updated;
+  if (validated.linkedTaskId !== undefined) {
+    const { linkedTaskId: requestedLink, ...rest } = validated;
+    try {
+      updated = await defaultPrisma.$transaction(async (tx) => {
+        await lockDocumentRows(tx, id);
+        const fresh = await getDocumentById(id, tx);
+        if (!fresh) {
+          throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
+        }
+        if (isDocumentImmutable(fresh)) {
+          throw new ValidationError(
+            "Văn bản đã được ký hoặc đã ban hành/hoàn thành/lưu trữ là bất biến, không thể chỉnh sửa metadata.",
+            undefined,
+            "IMMUTABLE_DOCUMENT"
+          );
+        }
+        if (!canUpdateDocument(authUser, fresh)) {
+          throw new ForbiddenError("Bạn không có quyền cập nhật văn bản này (Forbidden)");
+        }
+        const change = {
+          documentId: id,
+          currentTaskId: fresh.linkedTaskId ?? null,
+          nextTaskId: normalizeLinkedTaskId(requestedLink),
+        };
+        const changing = change.nextTaskId !== change.currentTaskId;
+        const task = changing ? await assertCanLinkTask(tx, authContext, change) : null;
+        const result = await updateDocument(
+          id,
+          { ...(rest as any), ...(changing ? { linkedTaskId: change.nextTaskId } : {}) },
+          tx
+        );
+        if (changing) {
+          await recordLinkedTaskChange(tx, { ...change, actorId: authUser.id, requestId, task });
+        }
+        return result;
+      });
+    } catch (error) {
+      throw toLinkedTaskConflict(error);
+    }
+  } else {
+    // Ghi nhật ký các trường đã sửa (chỉ tên trường) để thay đổi thông tin hiện trong luân chuyển
+    updated = await defaultPrisma.$transaction(async (tx) => {
+      const result = await updateDocument(id, validated as any, tx);
+      await logAuditEvent(tx, {
+        actorId: authUser.id,
+        action: "DOCUMENT_UPDATED",
+        entityType: "Document",
+        entityId: id,
+        requestId,
+        metadata: { fields: Object.keys(validated) },
+      });
+      return result;
+    });
+  }
+  return updated;
+}
+
+/** Xóa văn bản cùng chỉ đạo và tệp đính kèm trong một transaction (route đã kiểm quyền, bất biến). */
+export async function deleteDocumentCascade(id: string): Promise<void> {
+  await defaultPrisma.$transaction(async (tx) => {
+    await tx.documentDirective.deleteMany({ where: { documentId: id } });
+    await tx.documentAttachment.deleteMany({ where: { documentId: id } });
+    await tx.document.delete({ where: { id } });
+  });
+}
+
+/** Người dùng đã đánh dấu văn bản này chưa. */
+export async function isDocumentMarked(documentId: string, userId: string): Promise<boolean> {
+  return Boolean(await defaultPrisma.documentMark.findUnique({ where: { documentId_userId: { documentId, userId } }, select: { userId: true } }));
+}
+
+/** Đánh dấu / hủy đánh dấu văn bản cho riêng người dùng (route đã kiểm quyền đọc). */
+export async function setDocumentMark(documentId: string, userId: string, marked: boolean): Promise<void> {
+  const key = { documentId_userId: { documentId, userId } };
+  if (marked) {
+    await defaultPrisma.documentMark.upsert({ where: key, create: { documentId, userId }, update: {} });
+  } else {
+    await defaultPrisma.documentMark.deleteMany({ where: { documentId, userId } });
+  }
+}
+
+/** Chỉ đọc loại văn bản (để rẽ nhánh đến/đi theo ADR-004); `null` khi không tồn tại. */
+export async function getDocumentTypeById(id: string) {
+  return defaultPrisma.document.findUnique({ where: { id }, select: { type: true } });
+}
+
+/**
+ * Gắn tệp đã tải lên qua `POST /api/upload` vào văn bản (route đã kiểm quyền, bất biến).
+ * Chỉ gắn được tệp do chính người thao tác tải lên; tên, dung lượng, định dạng lấy từ máy chủ.
+ */
+export async function addUploadedFileAttachment({
+  documentId,
+  fileId,
+  actorId,
+  requestId,
+}: {
+  documentId: string;
+  fileId: string;
+  actorId: string;
+  requestId: string;
+}) {
+  const file = await defaultPrisma.fileObject.findUnique({ where: { id: fileId } });
+  if (!file || file.isArchived || file.uploadedById !== actorId) {
+    throw new NotFoundError("Không tìm thấy tệp đã tải lên", "FILE_NOT_FOUND");
+  }
+  if (file.scanStatus === "INFECTED") {
+    throw new ValidationError("Tệp không an toàn, không thể đính kèm.", undefined, "FILE_INFECTED");
+  }
+
+  return defaultPrisma.$transaction(async (tx) => {
+    const created = await tx.documentAttachment.create({
+      data: {
+        documentId,
+        fileName: file.originalName,
+        fileUrl: `/api/file-objects/${file.id}`,
+        fileObjectId: file.id,
+        fileSize: Number(file.byteSize),
+        mimeType: file.mimeType,
+        sha256Hash: file.contentHash,
+        isOriginal: false,
+      },
+    });
+    await logAuditEvent(tx, {
+      actorId,
+      action: "DOCUMENT_ATTACHMENT_ADDED",
+      entityType: "Document",
+      entityId: documentId,
+      requestId,
+      metadata: { attachmentId: created.id, fileName: created.fileName },
+    });
+    return created;
+  });
+}
+
+/**
+ * Số liệu thô cho thống kê sổ văn bản, trong phạm vi `aclWhere` của người xem.
+ * Route tự tổng hợp theo loại/trạng thái từ các dòng `groupBy`.
+ */
+export async function getDocumentStatsRows({
+  aclWhere,
+  scopedType,
+  now,
+}: {
+  aclWhere: Prisma.DocumentWhereInput;
+  scopedType: DocumentTypeCode | null;
+  now: Date;
+}) {
+  const baseFilter = { AND: [{ archivedAt: null }, aclWhere] };
+  // Các chỉ số trạng thái/khẩn/trễ hạn bám theo loại văn bản đang xem (nếu có).
+  const scopedFilter = scopedType ? { AND: [baseFilter, { type: scopedType }] } : baseFilter;
+
+  const countBucket = (type: "VAN_BAN_DEN" | "VAN_BAN_DI", bucket: "pending" | "done" | "issued") =>
+    defaultPrisma.document.count({
+      where: { AND: [baseFilter, { type }, buildDocumentBucketWhere(type, bucket) ?? {}] },
+    });
+
+  const [
+    byType,
+    byStatus,
+    urgent,
+    overdue,
+    linkedTasks,
+    incomingPending,
+    incomingDone,
+    outgoingPending,
+    outgoingDone,
+    outgoingIssued,
+  ] = await Promise.all([
+    defaultPrisma.document.groupBy({ by: ["type"], where: baseFilter, _count: { _all: true } }),
+    defaultPrisma.document.groupBy({ by: ["status"], where: scopedFilter, _count: { _all: true } }),
+    defaultPrisma.document.count({
+      where: {
+        ...scopedFilter,
+        urgency: { in: ["KHAN", "THUONG_KHAN", "HOA_TOC"] },
+      },
+    }),
+    defaultPrisma.document.count({
+      where: {
+        ...scopedFilter,
+        dueDate: { lt: now },
+        status: { notIn: [...DOCUMENT_DONE_STATUSES] },
+      },
+    }),
+    defaultPrisma.document.count({
+      where: {
+        ...scopedFilter,
+        linkedTaskId: { not: null },
+      },
+    }),
+    countBucket("VAN_BAN_DEN", "pending"),
+    countBucket("VAN_BAN_DEN", "done"),
+    countBucket("VAN_BAN_DI", "pending"),
+    countBucket("VAN_BAN_DI", "done"),
+    countBucket("VAN_BAN_DI", "issued"),
+  ]);
+
+  return {
+    byType,
+    byStatus,
+    urgent,
+    overdue,
+    linkedTasks,
+    incomingPending,
+    incomingDone,
+    outgoingPending,
+    outgoingDone,
+    outgoingIssued,
+  };
+}

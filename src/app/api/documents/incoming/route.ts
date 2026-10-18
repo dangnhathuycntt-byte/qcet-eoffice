@@ -4,8 +4,8 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import {
   registerIncomingDocument,
   listIncomingWorkflows,
+  type ListIncomingWorkflowsFilter,
 } from "@/server/documents/incoming-document-service";
-import { IncomingDocumentStatus } from "@prisma/client";
 import { RegisterIncomingDocumentSchema } from "@/contracts/documents";
 import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { parseAndValidateJson } from "@/server/api/validation";
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const authUser = requireAuthenticated(context);
 
     const url = new URL(req.url);
-    const statusParam = url.searchParams.get("status") as IncomingDocumentStatus | null;
+    const statusParam = url.searchParams.get("status") as ListIncomingWorkflowsFilter["status"] | null;
     const leadUnitId = url.searchParams.get("leadUnitId") || undefined;
     const driUserId = url.searchParams.get("driUserId") || undefined;
     const leaderId = url.searchParams.get("leaderId") || undefined;

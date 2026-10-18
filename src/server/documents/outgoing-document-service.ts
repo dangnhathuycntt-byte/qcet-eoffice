@@ -47,6 +47,7 @@ import {
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
+import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@/config/institution";
 import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
@@ -1472,6 +1473,55 @@ export class OutgoingDocumentService {
       where: { documentId },
       include: OUTGOING_WORKFLOW_DETAIL_INCLUDE,
     }) as unknown as OutgoingWorkflowWithDetails | null;
+  }
+
+  /**
+   * Danh sách luồng văn bản đi trong phạm vi đọc của người xem (lọc trong truy vấn để phân trang
+   * và tổng số không lộ văn bản ngoài quyền). `status` không hợp lệ thì bỏ qua bộ lọc trạng thái.
+   */
+  static async listOutgoingWorkflows(
+    authUser: AuthenticatedUser,
+    {
+      status: statusParam,
+      limit,
+      offset,
+      search,
+    }: { status: string | null; limit: number; offset: number; search: string | undefined }
+  ) {
+    const where: any = {};
+    // Apply document ACL in the database query so pagination and totals cannot
+    // reveal workflows the caller is not allowed to read.
+    where.document = { is: buildDocumentReadWhere(authUser) };
+    if (statusParam && Object.values(OutgoingDocumentStatus).includes(statusParam as OutgoingDocumentStatus)) {
+      where.status = statusParam;
+    }
+    if (search) {
+      where.AND = [
+        {
+          document: {
+            is: {
+              OR: [
+                { summary: { contains: search, mode: "insensitive" } },
+                { originalNumber: { contains: search, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      prisma.documentOutgoingWorkflow.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: "desc" },
+        include: OUTGOING_WORKFLOW_DETAIL_INCLUDE,
+      }),
+      prisma.documentOutgoingWorkflow.count({ where }),
+    ]);
+
+    return { items, total };
   }
 
   /**

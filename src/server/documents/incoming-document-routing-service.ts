@@ -32,6 +32,8 @@ import {
   isValidUnitWorkAssignmentStatus,
 } from "@/domain/documents/unit-assignment-status";
 import { resolveUserContext } from "@/server/documents/incoming-document-service";
+import { buildDocumentReadWhere } from "@/server/policies/document-policy";
+import { loadContext } from "@/server/documents/authorize-on-document";
 
 type Actor = AuthenticatedUserContext | SessionPayload | AuthenticatedUser;
 
@@ -295,4 +297,12 @@ export async function listDocumentReturns(documentId: string) {
     resolvedAt: r.resolvedAt ? r.resolvedAt.toISOString() : null,
     rerouteNote: r.rerouteNote,
   }));
+}
+
+/** Lịch sử trả lại của văn bản cho người xem; văn bản ngoài phạm vi đọc coi như không tồn tại. */
+export async function getDocumentReturnsForUser(session: SessionPayload, documentId: string) {
+  const authz = await loadContext(session);
+  const readable = await prisma.document.findFirst({ where: { AND: [{ id: documentId }, buildDocumentReadWhere(authz)] }, select: { id: true } });
+  if (!readable) throw new NotFoundError("Không tìm thấy văn bản", "DOCUMENT_NOT_FOUND");
+  return listDocumentReturns(documentId);
 }

@@ -1364,6 +1364,44 @@ export async function getIncomingDocument(
 }
 
 /**
+ * Bút phê cũ (DocumentDirective) của văn bản, mới nhất trước, kèm nhiệm vụ liên kết của văn bản.
+ * Người gọi phải đã được phép đọc văn bản.
+ */
+export async function listLegacyDirectives(documentId: string) {
+  // Preserve read access to historical directives. New bút phê commands are
+  // stored on DocumentIncomingWorkflow and do not create these legacy rows.
+  const directiveRows = await prisma.documentDirective.findMany({
+    where: { documentId },
+    include: {
+      leader: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+        },
+      },
+      document: {
+        select: {
+          linkedTask: {
+            select: {
+              id: true,
+              code: true,
+              leadUnit: { select: { id: true, name: true, code: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return directiveRows.map(({ document: parent, ...dir }) => ({
+    ...dir,
+    linkedTask: parent?.linkedTask ?? null,
+  }));
+}
+
+/**
  * List incoming workflows by status, lead unit, or leader.
  */
 export async function listIncomingWorkflows(

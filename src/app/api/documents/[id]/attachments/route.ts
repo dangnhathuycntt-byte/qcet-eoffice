@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
@@ -12,9 +11,8 @@ import {
 } from "@/server/api/validation";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { canUpdateDocument } from "@/server/policies/document-policy";
-import { getDocumentById } from "@/server/documents/document-service";
+import { addUploadedFileAttachment, getDocumentById } from "@/server/documents/document-service";
 import { isDocumentImmutable } from "@/server/documents/state-machine";
-import { logAuditEvent } from "@/lib/db/audit";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization";
 
@@ -59,37 +57,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const file = await prisma.fileObject.findUnique({ where: { id: fileId } });
-    if (!file || file.isArchived || file.uploadedById !== authUser.id) {
-      throw new NotFoundError("Không tìm thấy tệp đã tải lên", "FILE_NOT_FOUND");
-    }
-    if (file.scanStatus === "INFECTED") {
-      throw new ValidationError("Tệp không an toàn, không thể đính kèm.", undefined, "FILE_INFECTED");
-    }
-
-    const attachment = await prisma.$transaction(async (tx) => {
-      const created = await tx.documentAttachment.create({
-        data: {
-          documentId: id,
-          fileName: file.originalName,
-          fileUrl: `/api/file-objects/${file.id}`,
-          fileObjectId: file.id,
-          fileSize: Number(file.byteSize),
-          mimeType: file.mimeType,
-          sha256Hash: file.contentHash,
-          isOriginal: false,
-        },
-      });
-      await logAuditEvent(tx, {
-        actorId: authUser.id,
-        action: "DOCUMENT_ATTACHMENT_ADDED",
-        entityType: "Document",
-        entityId: id,
-        requestId,
-        metadata: { attachmentId: created.id, fileName: created.fileName },
-      });
-      return created;
-    });
+    const attachment = await addUploadedFileAttachment({ documentId: id, fileId, actorId: authUser.id, requestId });
 
     return apiSuccess({ attachment }, { requestId });
   } catch (error) {

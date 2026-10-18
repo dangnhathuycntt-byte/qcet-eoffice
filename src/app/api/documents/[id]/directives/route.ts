@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
@@ -14,7 +13,7 @@ import { canReadDocument } from "@/server/policies/document-policy";
 import { toDocumentDirectiveDTOArray } from "@/server/dto/document-dto";
 import { CreateDirectiveSchema } from "@/contracts/documents";
 import { getDocumentById } from "@/server/documents/document-service";
-import { directDocument } from "@/server/documents/incoming-document-service";
+import { directDocument, listLegacyDirectives } from "@/server/documents/incoming-document-service";
 import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import { AuthorizationError, NotFoundError, ValidationError } from "@/server/api/errors";
 
@@ -47,37 +46,8 @@ export async function GET(
       );
     }
 
-    // Preserve read access to historical directives. New bút phê commands are
-    // stored on DocumentIncomingWorkflow and do not create these legacy rows.
-    const directiveRows = await prisma.documentDirective.findMany({
-      where: { documentId: id },
-      include: {
-        leader: {
-          select: {
-            id: true,
-            name: true,
-            role: true,
-          },
-        },
-        document: {
-          select: {
-            linkedTask: {
-              select: {
-                id: true,
-                code: true,
-                leadUnit: { select: { id: true, name: true, code: true } },
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const directives = directiveRows.map(({ document: parent, ...dir }) => ({
-      ...dir,
-      linkedTask: parent?.linkedTask ?? null,
-    }));
+    // Bút phê cũ (lịch sử); bút phê mới lưu trên DocumentIncomingWorkflow.
+    const directives = await listLegacyDirectives(id);
 
     return apiSuccess(
       {

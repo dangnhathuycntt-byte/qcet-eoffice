@@ -344,6 +344,7 @@ export const UpdateDocumentSchema = z
     linkedTaskId: z.string().trim().max(64).optional().nullable(),
   })
   .strict();
+export type UpdateDocumentInput = z.infer<typeof UpdateDocumentSchema>;
 
 /**
  * Create executive directive contract.
@@ -514,6 +515,18 @@ export const SignDocumentSchema = z
   })
   .strict();
 export type SignDocumentInput = z.infer<typeof SignDocumentSchema>;
+
+/**
+ * Assign outgoing number schema. Enum values match Prisma `DocumentSecurityLevel` /
+ * `DocumentUrgency` (same order as prisma/schema.prisma). Intentionally not `.strict()`.
+ */
+export const AssignOutgoingNumberSchema = z.object({
+  outgoingNumberStr: z.string().trim().max(100).optional().nullable(),
+  codeNotation: z.string().trim().max(100).optional().nullable(),
+  issuedDate: z.union([z.string().trim(), z.date()]).optional().nullable(),
+  securityLevel: z.enum(["THUONG", "MAT", "TOI_MAT", "TUYET_MAT"]).optional().nullable(),
+  urgency: z.enum(["THUONG", "KHAN", "THUONG_KHAN", "HOA_TOC"]).optional().nullable(),
+});
 
 /**
  * Submit outgoing document for content review schema.

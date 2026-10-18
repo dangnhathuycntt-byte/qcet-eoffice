@@ -1,6 +1,5 @@
-import { SignatureType } from "@prisma/client";
 import { SignDocumentSchema } from "@/contracts/documents";
-import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
+import { OutgoingDocumentService, type SignDocumentInput } from "@/server/documents/outgoing-document-service";
 import { documentActionRoute } from "../shared";
 
 export const POST = documentActionRoute(
@@ -10,7 +9,7 @@ export const POST = documentActionRoute(
       {
         documentId,
         signingCapacity: body.signingCapacity ?? undefined,
-        signatureType: (body.signatureType as SignatureType) ?? undefined,
+        signatureType: (body.signatureType as SignDocumentInput["signatureType"]) ?? undefined,
         certificateMetadata: (body.certificateMetadata as Record<string, unknown>) ?? undefined,
         signingNotes: body.signingNotes ?? undefined,
       },
