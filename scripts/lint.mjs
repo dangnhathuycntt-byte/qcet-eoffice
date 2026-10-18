@@ -14,6 +14,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { boundaryViolations } from "./architecture-boundaries.mjs";
 
 const ROOT_DIR = process.cwd();
 const SRC_DIR = path.join(ROOT_DIR, "src");
@@ -270,6 +271,12 @@ function lintFile(filePath) {
       }
     }
   });
+
+  // FE/BE boundary (route/page không chạm DB, UI không import src/server,
+  // lib/domain/server không import UI, src/lib không chứa file server-only).
+  for (const violation of boundaryViolations(relPath.split(path.sep).join("/"), content)) {
+    logError(filePath, violation.line, violation.message);
+  }
 }
 
 // ---------------------------------------------------------------------------

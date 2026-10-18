@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { boundaryViolations, SERVER_ONLY_LIB_ALLOWLIST } from "../scripts/architecture-boundaries.mjs";
 
 const ROOT_DIR = process.cwd();
 const SRC_DIR = path.join(ROOT_DIR, "src");
@@ -114,6 +115,76 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
         [],
         `Domain business logic must never import UI presentation components: ${violations.join(", ")}`
       );
+    });
+
+    // Ranh giới FE/BE (luật dùng chung với scripts/lint.mjs: scripts/architecture-boundaries.mjs).
+    function boundaryViolationsFor(rule: string): string[] {
+      const out: string[] = [];
+      for (const filePath of allSrcFiles) {
+        const relPath = path.relative(ROOT_DIR, filePath).split(path.sep).join("/");
+        for (const v of boundaryViolations(relPath, fs.readFileSync(filePath, "utf8"))) {
+          if (v.rule === rule) out.push(`${relPath}:${v.line} ${v.spec}`);
+        }
+      }
+      return out;
+    }
+
+    it("ensures API routes, pages and layouts do not import Prisma or @/lib/db", () => {
+      const violations = boundaryViolationsFor("app-no-db");
+      assert.deepStrictEqual(violations, [], `Route/page/layout phải đọc/ghi DB qua src/server: ${violations.join(", ")}`);
+    });
+
+    it("ensures components and hooks do not import @/server", () => {
+      const violations = boundaryViolationsFor("ui-no-server");
+      assert.deepStrictEqual(violations, [], `Component/hook không import src/server: ${violations.join(", ")}`);
+    });
+
+    it("ensures lib, domain and server do not import components or app", () => {
+      const violations = boundaryViolationsFor("core-no-ui");
+      assert.deepStrictEqual(violations, [], `lib/domain/server không import UI/app: ${violations.join(", ")}`);
+    });
+
+    it("keeps server-only files out of src/lib except the 4 files removed in step 3", () => {
+      assert.deepStrictEqual(SERVER_ONLY_LIB_ALLOWLIST, [
+        "src/lib/prisma.ts",
+        "src/lib/jwt-session.ts",
+        "src/lib/db/audit.ts",
+        "src/lib/db/outbox.ts",
+      ]);
+      for (const relPath of SERVER_ONLY_LIB_ALLOWLIST) {
+        assert.ok(fs.existsSync(path.join(ROOT_DIR, relPath)), `${relPath} trong allowlist không còn tồn tại`);
+      }
+      const violations = boundaryViolationsFor("server-only-in-lib");
+      assert.deepStrictEqual(violations, [], `File server-only phải nằm trong src/server: ${violations.join(", ")}`);
+    });
+
+    it("detects every import form and ignores comments, strings and look-alike paths", () => {
+      const rulesOf = (relPath: string, content: string) => boundaryViolations(relPath, content).map((v) => v.rule);
+
+      for (const line of [
+        'import { prisma } from "@/lib/prisma";',
+        'import type { Prisma } from "@prisma/client";',
+        'export { writeAudit } from "@/lib/db/audit";',
+        'const m = await import("@/lib/db/outbox");',
+        'const p = require("../../../../lib/prisma");',
+      ]) {
+        assert.deepStrictEqual(rulesOf("src/app/api/x/[id]/route.ts", line), ["app-no-db"], line);
+      }
+      assert.deepStrictEqual(rulesOf("src/app/page.tsx", 'import "@/lib/prisma";'), ["app-no-db"]);
+      assert.deepStrictEqual(rulesOf("src/app/a/(g)/layout.tsx", 'import { x } from "../../../lib/db/audit";'), ["app-no-db"]);
+      assert.deepStrictEqual(rulesOf("src/hooks/use-x.ts", 'import type { T } from "@/server/tasks/t";'), ["ui-no-server"]);
+      assert.deepStrictEqual(rulesOf("src/components/a/b.tsx", 'import { y } from "../../server/x";'), ["ui-no-server"]);
+      assert.deepStrictEqual(rulesOf("src/server/x.ts", 'import { B } from "@/components/ui/button";'), ["core-no-ui"]);
+      assert.deepStrictEqual(rulesOf("src/domain/x.ts", 'export * from "../app/tasks/page";'), ["core-no-ui"]);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import fs from "node:fs";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { s } from "@/server/api/route-error";'), ["server-only-in-lib"]);
+      assert.deepStrictEqual(rulesOf("src/lib/db/audit.ts", 'import { prisma } from "@/lib/prisma";'), []);
+
+      assert.deepStrictEqual(rulesOf("src/app/api/x/route.ts", '// import { prisma } from "@/lib/prisma";\nconst s = "@/lib/prisma";'), []);
+      assert.deepStrictEqual(rulesOf("src/app/api/x/route.ts", 'import { x } from "@/lib/prisma-errors";\nimport { y } from "@/lib/dbx";'), []);
+      assert.deepStrictEqual(rulesOf("src/app/api/x/shared.ts", 'import { prisma } from "@/lib/prisma";'), []);
+      assert.deepStrictEqual(rulesOf("src/components/x.tsx", 'import { z } from "@/server-utils";'), []);
+      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { z } from "@/lib/server-safe";'), []);
     });
   });
 
