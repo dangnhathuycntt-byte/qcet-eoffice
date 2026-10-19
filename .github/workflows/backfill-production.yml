@@ -4,7 +4,7 @@
 #   1. PRODUCTION_UPLOADS_DIR secret non-empty; path absolute;
 #      DATABASE_URL bootstrapped from running app container (masked immediately)
 #   2. Uploads directory exists and is readable on runner host
-#   3. Uploads dir matches /app/uploads bind-mount of running qcet-app container
+#   3. Uploads dir matches /app/uploads bind-mount of running qcet-eoffice-api container
 #   4. DB reachable — COUNT(*) via scripts/db-count.sh
 #      Runs psql in a one-shot postgres:16-alpine container joined to qcet-network,
 #      so Docker DNS resolves qcet-db:5432 correctly. Never runs on runner host.
@@ -92,7 +92,7 @@ jobs:
           UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
         run: |
           # Find the app container
-          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          APP=$(docker ps --filter "name=qcet-eoffice-api" --format '{{.Names}}' | head -1)
           if [ -z "$APP" ]; then
             APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared\|tunnel" | head -1)
           fi

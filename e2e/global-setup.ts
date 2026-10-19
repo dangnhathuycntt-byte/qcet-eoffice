@@ -10,7 +10,7 @@ import {
   UnitType,
   UserRole,
 } from "@prisma/client";
-import { signSessionToken } from "../src/lib/jwt-session";
+import { signSessionToken } from "../apps/api/src/lib/jwt-session";
 import { E2E_AUTH_FILE, E2E_BASE_URL, E2E_TMP, E2E_UPLOADS, resolveE2eDatabaseUrl } from "./env";
 import {
   DOC_EDIT_ID,

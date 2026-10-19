@@ -15,10 +15,10 @@ import assert from 'node:assert/strict';
 const describe: any = (globalThis as any).describe || nodeTest.describe;
 const it: any = (globalThis as any).it || (globalThis as any).test || nodeTest.it;
 
-import { deriveTaskCompletion, mapDbStatusToLifecycle } from '../../src/domain/tasks/canonical-semantics';
+import { deriveTaskCompletion, mapDbStatusToLifecycle } from '@qcet/shared/domain/tasks/canonical-semantics';
 
 // Barrel reachability proof: the new helpers must resolve from '@/domain/tasks'.
-import { deriveTaskCompletion as barrelDeriveTaskCompletion } from '@/domain/tasks';
+import { deriveTaskCompletion as barrelDeriveTaskCompletion } from '@qcet/shared/domain/tasks';
 
 describe('T03.1 Completion is derived solely from the COMPLETED lifecycle', () => {
 

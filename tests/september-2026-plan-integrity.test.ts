@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { DocumentType, TaskScope } from '@prisma/client';
 
 test('Kế hoạch công tác tháng 9/2026 - Data Integrity & Architecture Invariants', async (t) => {
@@ -56,7 +56,7 @@ test('Kế hoạch công tác tháng 9/2026 - Data Integrity & Architecture Inva
     const candidatePaths = [
       path.join(process.cwd(), 'storage/private', normalizedRelPath),
       path.join(process.cwd(), 'uploads', normalizedRelPath),
-      path.join(process.cwd(), 'public', primaryAttachment.fileUrl),
+      path.join(process.cwd(), 'apps/web/public', primaryAttachment.fileUrl),
     ];
     const physicalFilePath = candidatePaths.find(p => fs.existsSync(p)) || candidatePaths[0];
     assert.ok(fs.existsSync(physicalFilePath), `File vật lý phải tồn tại trong private storage tại ${physicalFilePath}`);

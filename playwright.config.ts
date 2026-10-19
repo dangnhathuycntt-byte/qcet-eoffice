@@ -1,6 +1,15 @@
 import { defineConfig } from "@playwright/test";
 import { loadEnvConfig } from "@next/env";
-import { E2E_AUTH_FILE, E2E_AUTH_SECRET, E2E_BASE_URL, E2E_PORT, E2E_UPLOADS, resolveE2eDatabaseUrl } from "./e2e/env";
+import {
+  E2E_API_PORT,
+  E2E_API_URL,
+  E2E_AUTH_FILE,
+  E2E_AUTH_SECRET,
+  E2E_BASE_URL,
+  E2E_PORT,
+  E2E_UPLOADS,
+  resolveE2eDatabaseUrl,
+} from "./e2e/env";
 
 loadEnvConfig(process.cwd());
 
@@ -26,11 +35,21 @@ export default defineConfig({
     storageState: E2E_AUTH_FILE,
     trace: "retain-on-failure",
   },
-  webServer: {
-    command: `npx next dev -p ${E2E_PORT}`,
-    url: `${E2E_BASE_URL}/api/health`,
-    reuseExistingServer: false,
-    timeout: 180_000,
-    env: { NEXT_DIST_DIR: ".next-e2e" },
-  },
+  // Hai server như production: api (chạy từ gốc repo để ./uploads, storage/ giữ nguyên) và web chuyển tiếp /api tới api
+  webServer: [
+    {
+      command: `npx next dev apps/api -p ${E2E_API_PORT}`,
+      url: `${E2E_API_URL}/api/health`,
+      reuseExistingServer: false,
+      timeout: 180_000,
+      env: { NEXT_DIST_DIR: ".next-e2e", SERVICE_NAME: "qcet-api" },
+    },
+    {
+      command: `npx next dev apps/web -p ${E2E_PORT}`,
+      url: `${E2E_BASE_URL}/api/health`,
+      reuseExistingServer: false,
+      timeout: 180_000,
+      env: { NEXT_DIST_DIR: ".next-e2e", SERVICE_NAME: "qcet-web", API_INTERNAL_URL: E2E_API_URL },
+    },
+  ],
 });

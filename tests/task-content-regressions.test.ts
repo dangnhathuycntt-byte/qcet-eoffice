@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import { UpdateTaskInputSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
-import { parseAndValidateJson, MAX_JSON_BODY_SIZE } from '@/server/api/validation';
-import { parseContentToBlocks, serializeBlocksToContent } from '@/components/tasks/detail/task-block-editor';
+import { UpdateTaskInputSchema, UpdateTaskMetadataSchema } from '@qcet/contracts/tasks';
+import { parseAndValidateJson, MAX_JSON_BODY_SIZE } from '../apps/api/src/server/api/validation';
+import { parseContentToBlocks, serializeBlocksToContent } from '../apps/web/src/components/tasks/detail/task-block-editor';
 
-const editorPath = 'src/components/tasks/detail/task-block-editor.tsx';
+const editorPath = 'apps/web/src/components/tasks/detail/task-block-editor.tsx';
 const editorSource = ts.createSourceFile(editorPath, readFileSync(editorPath, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
 test('editing blocks preserves the row component identity across editor renders', () => {
@@ -21,7 +21,7 @@ test('editing blocks preserves the row component identity across editor renders'
 });
 
 test('Space never toggles task panels while Ctrl+I remains available', () => {
-  const source = ts.createSourceFile('detail.tsx', readFileSync('src/components/tasks/detail/task-detail-view.tsx', 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const source = ts.createSourceFile('detail.tsx', readFileSync('apps/web/src/components/tasks/detail/task-detail-view.tsx', 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let effect: ts.Node | undefined;
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node) && node.expression.getText(source) === 'React.useEffect' && node.arguments[0]?.getText(source).includes('window.addEventListener("keydown", handleKeyDown)')) effect = node.arguments[0];
@@ -80,7 +80,7 @@ test('inline images survive both task update contracts and document reload', asy
   });
   const parsed = await parseAndValidateJson(request, UpdateTaskMetadataSchema, { maxBytes: 10 * 1024 * 1024 });
   assert.deepEqual(parseContentToBlocks(parsed.description), blocks);
-  const route = readFileSync('src/app/api/tasks/[id]/route.ts', 'utf8');
+  const route = readFileSync('apps/api/src/app/api/tasks/[id]/route.ts', 'utf8');
   assert.match(route, /assertRequestBodySize\(req, MAX_TASK_CONTENT_BYTES\)/);
   assert.match(route, /parseAndValidateJson\(req, UpdateTaskMetadataSchema,\s*\{\s*maxBytes: MAX_TASK_CONTENT_BYTES/);
 });

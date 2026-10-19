@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   CreateExecutiveResolutionSchema,
   ExecutiveResolutionQuerySchema,
-} from '@/contracts/executive';
+} from '@qcet/contracts/executive';
 
 // ---------------------------------------------------------------------------
 // CreateExecutiveResolutionSchema

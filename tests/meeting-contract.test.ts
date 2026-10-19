@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { CreateMeetingSchema, AddParticipantSchema, UpdateAttendanceSchema, DraftMinutesSchema, ConfirmMinutesSchema, CreateOrganizationalBodySchema, AddBodyMembershipSchema, ListMeetingsQuerySchema } from '@/contracts/meeting';
+import { CreateMeetingSchema, AddParticipantSchema, UpdateAttendanceSchema, DraftMinutesSchema, ConfirmMinutesSchema, CreateOrganizationalBodySchema, AddBodyMembershipSchema, ListMeetingsQuerySchema } from '@qcet/contracts/meeting';
 
 const ISO_NOW = '2025-06-15T09:00:00.000Z';
 const ISO_LATER = '2025-06-15T11:00:00.000Z';

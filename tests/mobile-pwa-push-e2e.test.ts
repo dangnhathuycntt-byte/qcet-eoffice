@@ -1,28 +1,28 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { prisma } from '../src/lib/prisma';
-import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { prisma } from '@qcet/db/prisma';
+import { signSessionToken, SESSION_COOKIE_NAME } from '../apps/api/src/lib/jwt-session';
 import {
   setPushSenderForTesting,
   getVapidPublicKey,
   formatTaskPushPayload,
   sendPushNotificationToUser,
   TaskPushEventType,
-} from '../src/server/notifications/push-service';
+} from '../apps/api/src/server/notifications/push-service';
 import {
   dispatchTaskAssignedPush,
   safeAfter,
   flushSafeAfter,
-} from '../src/server/notifications/push-dispatch';
+} from '../apps/api/src/server/notifications/push-dispatch';
 import {
   GET as getPushSubscribe,
   POST as postPushSubscribe,
   DELETE as deletePushSubscribe,
-} from '../src/app/api/notifications/push/subscribe/route';
-import { POST as postPushTest } from '../src/app/api/notifications/push/test/route';
-import manifestFn from '../src/app/manifest';
-import { checkIsIOS } from '../src/hooks/use-pwa-install';
+} from '../apps/api/src/app/api/notifications/push/subscribe/route';
+import { POST as postPushTest } from '../apps/api/src/app/api/notifications/push/test/route';
+import manifestFn from '../apps/web/src/app/manifest';
+import { checkIsIOS } from '../apps/web/src/hooks/use-pwa-install';
 import { UserRole } from '@prisma/client';
 
 describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {

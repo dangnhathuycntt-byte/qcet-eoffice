@@ -1,0 +1,47 @@
+import { test, describe, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { NextRequest } from 'next/server';
+import { GET as getDashboardOverview } from '../src/app/api/dashboard/overview/route';
+import { GET as getDocumentStats } from '../src/app/api/documents/stats/route';
+import { SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { createDocumentRouteFixture } from './server/api/documents-route-fixtures';
+
+describe('Dashboard API Routes (Zero Mock Fallback)', () => {
+  // Người dùng riêng của file: findFirst() trên dữ liệu dùng chung có thể trúng tài khoản ADMIN hoặc người dùng tạm
+  // của test khác vừa bị xóa (401)
+  const fixture = createDocumentRouteFixture('dashapi');
+  let token: string;
+
+  before(async () => {
+    const user = await fixture.user('viewer', { role: 'VAN_THU', unitId: await fixture.unit('unit') });
+    token = user.token;
+  });
+
+  after(() => fixture.cleanup());
+
+  test('GET /api/dashboard/overview phải trả về source=database', async () => {
+    const req = new NextRequest('http://localhost:3000/api/dashboard/overview', {
+      headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
+    });
+    const response = await getDashboardOverview(req);
+    assert.strictEqual(response.status, 200);
+
+    const json = await response.json();
+    assert.strictEqual(json.source, 'database');
+    assert.notStrictEqual(json.source, 'mock-fallback');
+    assert.ok(Array.isArray(json.tasks));
+  });
+
+  test('GET /api/documents/stats phải trả về thống kê sổ văn bản từ cơ sở dữ liệu thực', async () => {
+    const req = new NextRequest('http://localhost:3000/api/documents/stats', {
+      headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
+    });
+    const response = await getDocumentStats(req);
+    assert.strictEqual(response.status, 200);
+
+    const json = await response.json();
+    assert.ok(json.success);
+    assert.ok(typeof json.data.total === 'number');
+    assert.ok(Number.isSafeInteger(json.data.total) && json.data.total >= 0);
+  });
+});

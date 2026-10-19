@@ -7,7 +7,7 @@ import {
   insertMention,
   resolveMentionIds,
   splitMentions,
-} from '../src/domain/tasks/comment-mentions';
+} from '@qcet/shared/domain/tasks/comment-mentions';
 
 const people = [
   { id: 'a', name: 'Nguyễn Thị Hồng Trinh' },

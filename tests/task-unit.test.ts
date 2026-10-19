@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getTaskUnitId } from "../src/lib/tasks/task-unit";
+import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
 
 test("đơn vị chủ trì ưu tiên hơn mã đơn vị chung", () => {
   assert.equal(getTaskUnitId({ leadDepartmentId: "dept-lead", departmentId: "dept-other" }), "dept-lead");

@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { deriveNotificationsViewState, getNotificationEmptyCopy, type NotificationTriageTab, type MobileNotificationFilter } from "../../src/lib/notification-triage";
+import { deriveNotificationsViewState, getNotificationEmptyCopy, type NotificationTriageTab, type MobileNotificationFilter } from "@qcet/shared/lib/notification-triage";
 
 describe("T44: notification surfaces distinguish loading / data / empty / error", () => {
   test("error wins over empty and data — a failed fetch never collapses into no-data", () => {

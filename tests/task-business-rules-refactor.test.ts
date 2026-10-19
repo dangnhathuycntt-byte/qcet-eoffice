@@ -21,14 +21,14 @@ import {
   CreateTaskInputSchema,
   UpdateTaskMetadataSchema,
   UpdateTaskInputSchema,
-} from '../src/contracts/tasks';
+} from '@qcet/contracts/tasks';
 import {
   extractDerivedCollaborators,
   toTaskListDTO,
   toTaskDetailDTO,
-} from '../src/server/dto/task-dto';
-import { mapPrismaTaskToSchoolTask } from '../src/lib/adapters/task-db-adapter';
-import { buildCreateTaskPayload } from '../src/lib/adapters/create-task-mapper';
+} from '../apps/api/src/server/dto/task-dto';
+import { mapPrismaTaskToSchoolTask } from '@qcet/shared/lib/adapters/task-db-adapter';
+import { buildCreateTaskPayload } from '../apps/web/src/lib/adapters/create-task-mapper';
 
 describe('Task Business Rules Refactor — Targeted Verification', () => {
   // ─────────────────────────────────────────────────────────────

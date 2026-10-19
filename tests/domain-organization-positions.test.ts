@@ -1,6 +1,6 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   UnitType,
   UnitStatus,
@@ -19,8 +19,8 @@ import {
   CANONICAL_FACULTIES,
   CANONICAL_RESPONSIBILITY_AREAS,
   seedCanonicalOrg,
-} from '../prisma/seeds/canonical-org-seed';
-import { getSystemReferenceDate } from '../src/lib/academic-calendar';
+} from '../packages/db/prisma/seeds/canonical-org-seed';
+import { getSystemReferenceDate } from '@qcet/shared/lib/academic-calendar';
 
 describe('Domain Models: Organization & Position Verification Suite', () => {
   const TEST_PREFIX = 'QA_ORG_TEST_';

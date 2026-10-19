@@ -2,19 +2,19 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { encode } from "next-auth/jwt";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@qcet/db/prisma";
 import {
   getSessionFromRequest,
   signSessionToken,
   SESSION_COOKIE_NAME,
   SECURE_SESSION_COOKIE_NAME,
-} from "@/lib/jwt-session";
-import { resolveCurrentSession } from "@/server/auth/current-session";
-import { middleware } from "@/middleware";
-import { GET as logoutGet, POST as logoutPost } from "@/app/api/auth/logout/route";
-import { POST as passwordLogin } from "@/app/api/auth/login/route";
-import { POST as legacyGoogleVerify } from "@/app/api/auth/google/verify/route";
-import { isVerifiedGoogleWorkspaceIdentity } from "@/server/auth/google-oauth";
+} from "../apps/api/src/lib/jwt-session";
+import { resolveCurrentSession } from "../apps/api/src/server/auth/current-session";
+import { middleware } from "./helpers/split-middleware";
+import { GET as logoutGet, POST as logoutPost } from "../apps/api/src/app/api/auth/logout/route";
+import { POST as passwordLogin } from "../apps/api/src/app/api/auth/login/route";
+import { POST as legacyGoogleVerify } from "../apps/api/src/app/api/auth/google/verify/route";
+import { isVerifiedGoogleWorkspaceIdentity } from "../apps/api/src/server/auth/google-oauth";
 
 const secret = "auth-hardening-regression-secret-32chars";
 process.env.AUTH_SECRET = secret;

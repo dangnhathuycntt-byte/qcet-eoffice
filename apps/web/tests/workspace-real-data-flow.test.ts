@@ -1,0 +1,371 @@
+import { test, describe, it } from "node:test";
+import assert from "node:assert/strict";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
+import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-adaptive-workspace";
+import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
+import { UniversalActionQueue } from "../src/components/workspace/components/universal-action-queue";
+import { validateDeliverableSubmission } from "../src/components/portal/submit-deliverable-modal";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
+
+const mockRouter = {
+  push: () => {},
+  replace: () => {},
+  prefetch: () => {},
+  back: () => {},
+  forward: () => {},
+  refresh: () => {},
+};
+
+function renderWorkspace(element: React.ReactElement): string {
+  return renderToStaticMarkup(
+    React.createElement(
+      AppRouterContext.Provider,
+      { value: mockRouter },
+      React.createElement(
+        PathnameContext.Provider,
+        { value: "/" },
+        React.createElement(
+          SearchParamsContext.Provider,
+          { value: new URLSearchParams() },
+          element
+        )
+      )
+    )
+  );
+}
+
+describe("Workspace Real Data Flow & Authentic State Suite", () => {
+  const adminUser: AuthUser = {
+    id: "usr-admin-real",
+    email: "bgh@cdktcnqn.edu.vn",
+    name: "TS. Nguyễn Văn A",
+    role: "ADMIN",
+    dbRole: "BAN_GIAM_HIEU",
+    roleLabel: "Ban Giám hiệu",
+    department: "Ban Giám hiệu",
+    departmentCode: "BGH",
+  };
+
+  const managerUser: AuthUser = {
+    id: "usr-mgr-real",
+    email: "truongphong@cdktcnqn.edu.vn",
+    name: "ThS. Trần Thị B",
+    role: "MANAGER",
+    dbRole: "TRUONG_PHONG",
+    roleLabel: "Trưởng phòng Đào tạo",
+    department: "Phòng Quản lý Đào tạo",
+    departmentCode: "P_QLDT",
+  };
+
+  const staffUser: AuthUser = {
+    id: "usr-staff-real",
+    email: "chuyenvien@cdktcnqn.edu.vn",
+    name: "Lê Văn C",
+    role: "STAFF",
+    dbRole: "CHUYEN_VIEN",
+    roleLabel: "Chuyên viên Khảo thí",
+    department: "Phòng Khảo thí & ĐBCL",
+    departmentCode: "P_KTDBCL",
+  };
+
+  describe("1. Zero Mock Fallbacks in Metrics & Queue", () => {
+    test("AdaptiveMetricStrip displays strict 0 and 0% when zero metrics passed", () => {
+      const zeroMetrics = {
+        totalTasks: 0,
+        urgentOverdueCount: 0,
+        waitingApprovalCount: 0,
+        completedRate: 0,
+        labelScope: "Toàn trường",
+      };
+
+      const html = renderToStaticMarkup(
+        React.createElement(AdaptiveMetricStrip, {
+          metrics: zeroMetrics,
+          scope: "school",
+        })
+      );
+
+      assert.ok(html.includes("data-slot=\"adaptive-metric-strip\""));
+      assert.ok(html.includes(">0<"));
+      assert.ok(html.includes(">0%<"));
+      // Must not render fake stats like 85% or 100%
+      assert.ok(!html.includes("85%"));
+    });
+
+    test("UniversalActionQueue displays authentic empty state when queue is empty", () => {
+      const emptyQueue = {
+        pendingApprovals: [],
+        myPendingSubmissions: [],
+      };
+
+      const html = renderToStaticMarkup(
+        React.createElement(UniversalActionQueue, {
+          actionQueue: emptyQueue,
+          onSelectTask: () => {},
+        })
+      );
+
+      assert.ok(html.includes("data-slot=\"universal-action-queue\""));
+      assert.ok(html.includes("Không có nhiệm vụ cần xử lý gấp"));
+      assert.ok(html.includes("Tất cả công việc đều đúng tiến độ"));
+      // Must not render fake tasks or warnings
+      assert.ok(!html.includes("Cảnh báo hạn chót khẩn cấp"));
+    });
+  });
+
+  describe("2. UnifiedAdaptiveWorkspace Authentic State Handling", () => {
+    test("renders clean empty state when tasks array is genuinely empty", () => {
+      const emptyTasks: SchoolTask[] = [];
+
+      const html = renderWorkspace(
+        React.createElement(UnifiedAdaptiveWorkspace, {
+          user: staffUser,
+          tasks: emptyTasks,
+          onSelectTask: () => {},
+        })
+      );
+
+      assert.ok(html.includes("data-slot=\"workspace-empty-state\""));
+      assert.ok(
+        html.includes("Chưa có nhiệm vụ nào")
+      );
+      assert.ok(!html.includes("fake"));
+      assert.ok(!html.includes("dummy"));
+    });
+
+    test("renders loading state when initialLoading is true and tasks are empty", () => {
+      const emptyTasks: SchoolTask[] = [];
+
+      const html = renderWorkspace(
+        React.createElement(UnifiedAdaptiveWorkspace, {
+          user: managerUser,
+          tasks: emptyTasks,
+          initialLoading: true,
+          onSelectTask: () => {},
+        })
+      );
+
+      assert.ok(html.includes("data-slot=\"workspace-loading-state\""));
+      assert.ok(html.includes("Đang tải dữ liệu nhiệm vụ từ máy chủ QCET..."));
+    });
+
+    test("renders offline/error banner when isOffline or errorMessage is present", () => {
+      const emptyTasks: SchoolTask[] = [];
+
+      const html = renderWorkspace(
+        React.createElement(UnifiedAdaptiveWorkspace, {
+          user: adminUser,
+          tasks: emptyTasks,
+          isOffline: true,
+          errorMessage: "Mất kết nối máy chủ CSDL",
+          onSelectTask: () => {},
+          onRefresh: () => {},
+        })
+      );
+
+      assert.ok(html.includes("data-slot=\"workspace-offline-alert\""));
+      assert.ok(html.includes("Mất kết nối máy chủ"));
+      assert.ok(html.includes("Mất kết nối máy chủ CSDL"));
+      assert.ok(html.includes("Thử lại"));
+    });
+
+    test("assigns default scope based on authentic user role", () => {
+      const htmlAdmin = renderWorkspace(
+        React.createElement(UnifiedAdaptiveWorkspace, {
+          user: adminUser,
+          tasks: [],
+          onSelectTask: () => {},
+        })
+      );
+      assert.ok(htmlAdmin.includes("data-active-scope=\"school\""));
+
+      const htmlManager = renderWorkspace(
+        React.createElement(UnifiedAdaptiveWorkspace, {
+          user: managerUser,
+          tasks: [],
+          onSelectTask: () => {},
+        })
+      );
+      assert.ok(htmlManager.includes("data-active-scope=\"unit\""));
+
+      const htmlStaff = renderWorkspace(
+        React.createElement(UnifiedAdaptiveWorkspace, {
+          user: staffUser,
+          tasks: [],
+          onSelectTask: () => {},
+        })
+      );
+      assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
+    });
+
+    test("staff user renders unified segmented tablist with unit and my scopes", () => {
+      const htmlStaff = renderWorkspace(
+        React.createElement(UnifiedAdaptiveWorkspace, {
+          user: staffUser,
+          tasks: [],
+          onSelectTask: () => {},
+        })
+      );
+
+      assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
+      // Scope switching moved from AdaptiveScopeHeader (tablist + data-scope)
+      // to UnifiedTaskToolbar — verify toolbar is rendered and default scope is set
+      assert.ok(htmlStaff.includes("data-slot=\"unified-task-toolbar\""));
+      assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
+    });
+  });
+
+});
+
+
+/* ===== merged from tests/workspace-real-sync.test.ts ===== */
+
+
+
+
+
+
+
+
+
+describe("Workspace & Onboarding Real Sync Suite", () => {
+  const adminUser: AuthUser = {
+    id: "usr-admin-real",
+    email: "bgh@cdktcnqn.edu.vn",
+    name: "TS. Nguyễn Văn A",
+    role: "ADMIN",
+    dbRole: "BAN_GIAM_HIEU",
+    roleLabel: "Ban Giám hiệu",
+    department: "Ban Giám hiệu",
+    departmentCode: "BGH",
+  };
+
+  const managerUser: AuthUser = {
+    id: "usr-mgr-real",
+    email: "truongphong@cdktcnqn.edu.vn",
+    name: "ThS. Trần Thị B",
+    role: "MANAGER",
+    dbRole: "TRUONG_PHONG",
+    roleLabel: "Trưởng phòng Đào tạo",
+    department: "Phòng Quản lý Đào tạo",
+    departmentCode: "P_QLDT",
+  };
+
+  const staffUser: AuthUser = {
+    id: "usr-staff-real",
+    email: "chuyenvien@cdktcnqn.edu.vn",
+    name: "Lê Văn C",
+    role: "STAFF",
+    dbRole: "CHUYEN_VIEN",
+    roleLabel: "Chuyên viên Khảo thí",
+    department: "Phòng Khảo thí & ĐBCL",
+    departmentCode: "P_KTDBCL",
+  };
+
+  test("1. Workspace gán default scope dựa trên user thật từ session", () => {
+    const htmlAdmin = renderWorkspace(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: adminUser,
+        tasks: [],
+        onSelectTask: () => {},
+      })
+    );
+    assert.ok(htmlAdmin.includes("data-active-scope=\"school\""));
+
+    const htmlMgr = renderWorkspace(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: managerUser,
+        tasks: [],
+        onSelectTask: () => {},
+      })
+    );
+    assert.ok(htmlMgr.includes("data-active-scope=\"unit\""));
+
+    const htmlStaff = renderWorkspace(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: staffUser,
+        tasks: [],
+        onSelectTask: () => {},
+      })
+    );
+    assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
+    assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
+  });
+
+
+  test("2. Không fallback về mock payload khi API trả về lỗi hoặc rỗng", () => {
+    const emptyTasks: SchoolTask[] = [];
+
+    const htmlOffline = renderWorkspace(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: adminUser,
+        tasks: emptyTasks,
+        isOffline: true,
+        errorMessage: "Lỗi kết nối máy chủ dữ liệu QCET",
+        onSelectTask: () => {},
+        onRefresh: () => {},
+      })
+    );
+
+    assert.ok(htmlOffline.includes("data-slot=\"workspace-offline-alert\""));
+    assert.ok(htmlOffline.includes("Lỗi kết nối máy chủ dữ liệu QCET"));
+    assert.ok(htmlOffline.includes("data-slot=\"workspace-empty-state\""));
+    assert.ok(htmlOffline.includes("Chưa có nhiệm vụ nào"));
+    // Ensure no mock tasks are generated
+    assert.ok(!htmlOffline.includes("Đề xuất mở lớp đào tạo cấp chứng chỉ"));
+    assert.ok(!htmlOffline.includes("Dự án xây dựng phòng thí nghiệm"));
+  });
+});
+
+
+/* ===== merged from tests/workspace-action-queue.test.ts ===== */
+
+
+
+
+
+
+describe("Task 5: Workspace Action Queue & DACUM Review", () => {
+  it("validateDeliverableSubmission rejects invalid URLs like '#' or 'javascript:'", () => {
+    const res1 = validateDeliverableSubmission("Báo cáo", "#");
+    assert.equal(res1.isValid, false);
+    assert.ok(res1.error?.includes("URL") || res1.error?.includes("giao thức"));
+
+    const res2 = validateDeliverableSubmission("Báo cáo", "javascript:alert(1)");
+    assert.equal(res2.isValid, false);
+    assert.ok(res2.error?.includes("giao thức http:// hoặc https://"));
+
+    const resFtp = validateDeliverableSubmission("Báo cáo", "ftp://ftp.example.com/file.zip");
+    assert.equal(resFtp.isValid, false);
+    assert.ok(resFtp.error?.includes("giao thức http:// hoặc https://"));
+
+    const resData = validateDeliverableSubmission("Báo cáo", "data:text/html,test");
+    assert.equal(resData.isValid, false);
+
+    const resMalformed = validateDeliverableSubmission("Báo cáo", "random-domain-without-protocol.com");
+    assert.equal(resMalformed.isValid, false);
+
+    const res3 = validateDeliverableSubmission("Báo cáo", "https://drive.google.com/file/123");
+    assert.equal(res3.isValid, true);
+    assert.equal(res3.error, undefined);
+
+    const resHttp = validateDeliverableSubmission("Báo cáo", "http://example.edu.vn/document");
+    assert.equal(resHttp.isValid, true);
+  });
+
+  it("validateDeliverableSubmission enforces non-empty deliverable title", () => {
+    const emptyName = validateDeliverableSubmission("", "https://example.com");
+    assert.equal(emptyName.isValid, false);
+    assert.ok(emptyName.error?.includes("tên minh chứng"));
+
+    const whitespaceName = validateDeliverableSubmission("   ", "https://example.com");
+    assert.equal(whitespaceName.isValid, false);
+
+    const validNoUrl = validateDeliverableSubmission("Báo cáo DACUM kỳ 1");
+    assert.equal(validNoUrl.isValid, true);
+  });
+});

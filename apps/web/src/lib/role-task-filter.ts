@@ -1,0 +1,263 @@
+import { SchoolTask, UpcomingItem } from "@qcet/contracts/types/dashboard";
+import { AuthUser, UserRole } from "@qcet/contracts/types/auth";
+
+export { type AuthUser, type UserRole } from "@qcet/contracts/types/auth";
+
+export const DEFAULT_DEMO_USERS: AuthUser[] = [
+  {
+    id: "user-admin-bgh",
+    name: "ThS. Phạm Văn Tường",
+    email: "tuongpv@cdktcnqn.edu.vn",
+    role: "ADMIN",
+    roleLabel: "Ban Giám hiệu (Hiệu trưởng - ThS. Phạm Văn Tường)",
+    department: "Ban Giám hiệu",
+    departmentCode: "QCET",
+    title: "Hiệu trưởng",
+    aliases: ["Ban Giám hiệu", "Hiệu trưởng", "Phạm Văn Tường", "tuongpv@cdktcnqn.edu.vn", "bgh@cdktcnqn.edu.vn"],
+  },
+  {
+    id: "user-manager-qldt",
+    name: "ThS. Lê Văn Thí",
+    email: "levanthi@cdktcnqn.edu.vn",
+    role: "MANAGER",
+    roleLabel: "Trưởng phòng Quản lý Đào tạo (ThS. Lê Văn Thí)",
+    department: "Phòng Quản lý Đào tạo",
+    departmentCode: "P_QLDT",
+    title: "Trưởng phòng",
+    aliases: [
+      "Lê Văn Thí",
+      "Trần Hùng",
+      "Trưởng phòng Đào tạo & QLKH",
+      "Phòng Đào tạo & QLKH",
+      "daotao@cdktcnqn.edu.vn",
+    ],
+  },
+  {
+    id: "user-staff-huy",
+    name: "ThS. Đặng Nhật Huy",
+    email: "dangnhathuy@cdktcnqn.edu.vn",
+    role: "STAFF",
+    roleLabel: "Chuyên viên Chuyển đổi số (ThS. Đặng Nhật Huy)",
+    department: "Trung tâm Số và Truyền thông",
+    departmentCode: "TT_SO_TT",
+    title: "Chuyên viên chuyển đổi số",
+    aliases: ["Đặng Nhật Huy", "Huy", "dangnhathuy@cdktcnqn.edu.vn"],
+  },
+  {
+    id: "user-staff-vinh",
+    name: "KS. Nguyễn Ngọc Vinh",
+    email: "vinhnn@cdktcnqn.edu.vn",
+    role: "STAFF",
+    roleLabel: "Chuyên viên CNTT (KS. Nguyễn Ngọc Vinh)",
+    department: "Trung tâm Số - Truyền thông",
+    departmentCode: "TT_STT",
+    title: "Chuyên viên CNTT",
+    aliases: ["Nguyễn Ngọc Vinh", "Vinh"],
+  },
+];
+
+export function canCreateSchoolTask(roleOrUser?: UserRole | AuthUser | null): boolean {
+  if (!roleOrUser) return false;
+  const role = typeof roleOrUser === "string" ? roleOrUser : roleOrUser.role;
+  return role === "ADMIN";
+}
+
+export function canAssignUnitTask(roleOrUser?: UserRole | AuthUser | null): boolean {
+  if (!roleOrUser) return false;
+  const role = typeof roleOrUser === "string" ? roleOrUser : roleOrUser.role;
+  return role === "ADMIN" || role === "MANAGER";
+}
+
+/**
+ * Tầng ADMIN đã chuẩn hóa (BGH + quản trị hệ thống), chỉ dùng cho scope/preset
+ * hiển thị, không phải thẩm quyền.
+ */
+export function isAdminTierUser(
+  user?: { role?: string } | null
+): boolean {
+  if (!user?.role) return false;
+  const role = user.role.toUpperCase();
+  return (
+    role === "ADMIN" ||
+    role === "BGH" ||
+    role === "BAN_GIAM_HIEU" ||
+    role === "HIEU_TRUONG" ||
+    role === "PHO_HIEU_TRUONG"
+  );
+}
+
+export function isManagerUser(
+  user?: { role?: string } | null
+): boolean {
+  if (!user?.role) return false;
+  const role = user.role.toUpperCase();
+  return (
+    role === "MANAGER" ||
+    role === "TRUONG_DON_VI" ||
+    role === "TRUONG_PHONG" ||
+    role === "TRUONG_KHOA" ||
+    role === "PHO_PHONG" ||
+    role === "PHO_KHOA"
+  );
+}
+
+export function matchesUser(assigneeName?: string, user?: AuthUser | null): boolean {
+  if (!assigneeName || !user) return false;
+  const a = assigneeName.trim().toLowerCase();
+  const uName = user.name.trim().toLowerCase();
+  if (a === uName) return true;
+  if (uName.includes(a) || a.includes(uName)) return true;
+  if (user.roleLabel) {
+    const rLabel = user.roleLabel.trim().toLowerCase();
+    if (rLabel === a) return true;
+    const genericRoles = ["trưởng phòng", "chuyên viên", "giảng viên", "phó phòng", "hiệu trưởng", "phó hiệu trưởng"];
+    if (rLabel.includes(a) && a.length > 3 && !genericRoles.includes(a)) return true;
+  }
+  if (user.aliases && Array.isArray(user.aliases)) {
+    for (const alias of user.aliases) {
+      const al = alias.trim().toLowerCase();
+      if (a === al || al.includes(a) || a.includes(al)) return true;
+    }
+  }
+  return false;
+}
+
+export function filterTasksByRole(tasks: SchoolTask[], user?: AuthUser | null): SchoolTask[] {
+  if (!user) {
+    return [];
+  }
+
+  if (user.role === "ADMIN") {
+    return [...tasks];
+  }
+
+  if (user.role === "MANAGER") {
+    return tasks.filter((task) => {
+      // 0. Creator
+      if (
+        user.id &&
+        ((task as any).createdById === user.id ||
+          (task as any).assignedById === user.id ||
+          (task as any).createdBy === user.id)
+      ) {
+        return true;
+      }
+      // 1. Lead assignee matches manager
+      if (
+        matchesUser(task.leadAssigneeName, user) ||
+        (user.id && ((task as any).leadAssigneeId === user.id || (task as any).assignedTo === user.id))
+      ) {
+        return true;
+      }
+      // 2. Co-assignees include manager
+      if (task.coAssignees && task.coAssignees.some((ca) => matchesUser(ca, user))) return true;
+      // 3. Any subtask belongs to manager's unit/name
+      if (
+        task.subTasks &&
+        task.subTasks.some(
+          (sub) =>
+            matchesUser(sub.assigneeName, user) ||
+            (user.id && ((sub as any).assigneeId === user.id || (sub as any).assignedTo === user.id))
+        )
+      ) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  // STAFF role:
+  // 1. If staff is DRI or creator, they see the task with all subtasks for coordination.
+  // 2. If staff is coAssignee without subtasks, they see the task in observing/awaiting assignment mode.
+  // 3. If staff has assigned subtasks, they see the task filtered down to their subtasks.
+  const result: SchoolTask[] = [];
+  for (const task of tasks) {
+    const isCreator = Boolean(
+      user.id &&
+        ((task as any).createdById === user.id ||
+          (task as any).assignedById === user.id ||
+          (task as any).createdBy === user.id)
+    );
+    const isLead =
+      matchesUser(task.leadAssigneeName, user) ||
+      (user.id && ((task as any).leadAssigneeId === user.id || (task as any).assignedTo === user.id));
+    const isCoAssignee = Boolean(
+      task.coAssignees && task.coAssignees.some((ca) => matchesUser(ca, user))
+    );
+    const userSubTasks = (task.subTasks || []).filter(
+      (sub) =>
+        matchesUser(sub.assigneeName, user) ||
+        (user.id && ((sub as any).assigneeId === user.id || (sub as any).assignedTo === user.id))
+    );
+
+    if (isLead || isCreator) {
+      // DRI or Creator retains full task with all subtasks
+      result.push({ ...task });
+    } else if (userSubTasks.length > 0) {
+      // Participant with assigned subtasks: filtered to user's subtasks, with recalculated rollup
+      const totalSubTasks = userSubTasks.length;
+      const completedSubTasks = userSubTasks.filter(
+        (st) => st.status === "COMPLETED"
+      ).length;
+      const progressPercent =
+        totalSubTasks > 0
+          ? Math.round((completedSubTasks / totalSubTasks) * 100)
+          : task.status === "COMPLETED"
+          ? 100
+          : 0;
+
+      result.push({
+        ...task,
+        subTasks: userSubTasks,
+        totalSubTasks,
+        completedSubTasks,
+        progressPercent,
+      });
+    } else if (isCoAssignee) {
+      // Co-assignee awaiting assignment: preserve task with empty subtasks for staff view
+      result.push({
+        ...task,
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: task.status === "COMPLETED" ? 100 : 0,
+      });
+    }
+  }
+
+  return result;
+}
+
+export function filterUpcomingByRole(
+  items: UpcomingItem[],
+  user?: AuthUser | null,
+  visibleTasks?: SchoolTask[]
+): UpcomingItem[] {
+  if (!user) {
+    return [];
+  }
+
+  if (user.role === "ADMIN") {
+    return [...items];
+  }
+
+  if (user.role === "MANAGER") {
+    const visibleTaskIds = visibleTasks
+      ? new Set(
+          visibleTasks.flatMap((t) => [
+            t.id,
+            ...t.subTasks.map((st) => st.id),
+          ])
+        )
+      : null;
+
+    return items.filter((item) => {
+      if (matchesUser(item.assigneeName, user)) return true;
+      if (visibleTaskIds && item.taskId && visibleTaskIds.has(item.taskId)) return true;
+      return false;
+    });
+  }
+
+  // STAFF sees only items assigned directly to them
+  return items.filter((item) => matchesUser(item.assigneeName, user));
+}

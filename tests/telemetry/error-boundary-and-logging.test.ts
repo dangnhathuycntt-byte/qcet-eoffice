@@ -1,8 +1,8 @@
 import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { sanitizeLogContext, sanitizeString } from "../../src/telemetry/sanitize";
-import { ServerLogger } from "../../src/telemetry/server";
-import { getMetricRating } from "../../src/telemetry/web-vitals";
+import { sanitizeLogContext, sanitizeString } from "@qcet/shared/telemetry/sanitize";
+import { ServerLogger } from "../../apps/api/src/telemetry/server";
+import { getMetricRating } from "../../apps/web/src/telemetry/web-vitals";
 
 describe("Error Boundary & Structured Logging Integration", () => {
   it("enforces sanitization of sensitive credentials and headers in log context", () => {

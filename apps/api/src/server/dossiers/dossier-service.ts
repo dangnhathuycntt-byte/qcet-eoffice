@@ -1,0 +1,1386 @@
+/**
+ * Work Dossier & Archival Service (Nghị định 30/2020/NĐ-CP & Luật Lưu trữ)
+ *
+ * Implements the official institutional records management and archival domain:
+ * 1. OPEN -> ACTIVE: Tạo lập và cập nhật tài liệu vào hồ sơ công việc.
+ * 2. CLOSED: Đóng hồ sơ sau khi hoàn thành nhiệm vụ / giải quyết xong văn bản.
+ * 3. READY_FOR_ARCHIVE / SUBMITTED_TO_ARCHIVE: Chuyên viên / Lãnh đạo đơn vị nộp lưu hồ sơ vào lưu trữ cơ quan.
+ * 4. ACCEPTED / ARCHIVED: Lưu trữ viên / Văn thư kiểm tra, tiếp nhận và vào sổ lưu trữ cơ quan.
+ *
+ * Invariants Enforced:
+ * - Separation of Duties (SoD): Submitter (responsiblePerson) != Archivist (archivedBy).
+ * - Immutability: Cannot add or remove items from CLOSED or ARCHIVED dossiers.
+ * - Atomic database operations via prisma.$transaction.
+ * - Immutable Audit Logging via auditService.
+ * - Reliable Outbox Event Publishing via publishOutboxEvent.
+ * - Hybrid Authorization via assertAuthorized().
+ */
+
+import { prisma } from "@qcet/db/prisma";
+import type { Prisma, WorkDossier, DossierItem, RetentionRule } from "@prisma/client";
+import {
+  DossierStatus,
+  DossierItemType,
+  DataClassification,
+  TaskStatus,
+} from "@prisma/client";
+import {
+  assertAuthorized,
+  type AuthenticatedUserContext,
+  type AuthorizationResource,
+} from "@/server/authorization/hybrid-authorization";
+import { resolveUserContext } from "@/server/documents/incoming-document-service";
+import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
+import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
+import {
+  ConflictError,
+  InvalidTransitionError,
+  NotFoundError,
+  ValidationError,
+  ForbiddenError,
+} from "@/server/api/errors";
+import { canReadDossier } from "@/server/policies/dossier-policy";
+import type { SessionPayload } from "@/lib/jwt-session";
+import type { AuthenticatedUser } from "@/server/api/request-context";
+import {
+  assertTransition,
+  assertDossierNotImmutable,
+} from "@/domain/dossiers/state-machine";
+import { getFileObjectIdFromUrl } from "@/server/files/file-service";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { readDocumentForUser } from "@/server/documents/read-document-for-user";
+
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
+
+export interface CreateDossierInput {
+  title: string;
+  code?: string;
+  owningUnitId: string;
+  responsiblePersonId?: string;
+  retentionRuleId?: string;
+  classification?: DataClassification;
+  storageLocation?: string;
+  notes?: string;
+}
+
+export interface AddItemToDossierInput {
+  dossierId: string;
+  itemType: DossierItemType;
+  itemId?: string;
+  documentId?: string;
+  taskId?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  title: string;
+  documentNumber?: string;
+  documentDate?: Date | string;
+  pageCount?: number;
+  sequence?: number;
+  notes?: string;
+}
+
+export interface RemoveItemFromDossierInput {
+  dossierId: string;
+  itemId: string;
+}
+
+export interface CloseDossierInput {
+  dossierId: string;
+  notes?: string;
+  requireAllTasksCompleted?: boolean;
+}
+
+export interface MarkReadyForArchiveInput {
+  dossierId: string;
+  notes?: string;
+}
+
+export interface SubmitArchiveInput {
+  dossierId: string;
+  notes?: string;
+}
+
+export interface AcceptArchiveInput {
+  dossierId: string;
+  storageLocation?: string;
+  notes?: string;
+  status?: DossierStatus;
+}
+
+export interface FinalizeArchiveInput {
+  dossierId: string;
+  storageLocation?: string;
+  notes?: string;
+}
+
+export interface LinkTaskToDossierInput {
+  dossierId: string;
+  taskId: string;
+  notes?: string;
+}
+
+export interface LinkDocumentToDossierInput {
+  dossierId: string;
+  documentId: string;
+  notes?: string;
+}
+
+export interface LinkMeetingResolutionToDossierInput {
+  dossierId: string;
+  resolutionId: string;
+  notes?: string;
+}
+
+export interface ListDossiersFilter {
+  status?: DossierStatus;
+  owningUnitId?: string;
+  responsiblePersonId?: string;
+  search?: string;
+  classification?: DataClassification;
+  limit?: number;
+  offset?: number;
+}
+
+export type WorkDossierWithDetails = WorkDossier & {
+  owningUnit: { id: string; name: string; code: string };
+  responsiblePerson: { id: string; name: string; email: string };
+  archivedBy?: { id: string; name: string; email: string } | null;
+  retentionRule?: RetentionRule | null;
+  items?: (DossierItem & { addedBy?: { id: string; name: string } })[];
+  _count?: { items: number };
+};
+
+// ============================================================================
+// Helper Methods
+// ============================================================================
+
+async function generateDossierCode(unitId: string): Promise<string> {
+  const currentYear = new Date().getFullYear();
+  const unit = await prisma.organizationalUnit.findUnique({
+    where: { id: unitId },
+    select: { code: true },
+  });
+  const unitCode = unit?.code || "DV";
+
+  const count = await prisma.workDossier.count({
+    where: {
+      owningUnitId: unitId,
+      openedAt: {
+        gte: new Date(currentYear, 0, 1),
+        lt: new Date(currentYear + 1, 0, 1),
+      },
+    },
+  });
+
+  const nextSeq = String(count + 1).padStart(3, "0");
+  return `HS-${currentYear}-${unitCode}-${nextSeq}`;
+}
+
+function hasSchoolWideArchivalAccess(user: AuthenticatedUserContext): boolean {
+  if (user.systemRole === "RECTOR") {
+    return true;
+  }
+
+  const pos = (user.activePositionCode || "").toUpperCase();
+  if (
+    pos === "VAN_THU" ||
+    pos === "CLERK" ||
+    pos === "LUU_TRU" ||
+    pos === "ARCHIVIST" ||
+    pos === "HIEU_TRUONG" ||
+    pos === "PHO_HIEU_TRUONG"
+  ) {
+    return true;
+  }
+
+  const grants = user.delegationGrants || [];
+  return grants.some(
+    (g) =>
+      g.status === "ACTIVE" &&
+      (g.capability === "*" ||
+        g.capability === "document.archive" ||
+        g.capability === "dossier.accept_archive")
+  );
+}
+
+// ============================================================================
+// Service Methods
+// ============================================================================
+
+export class DossierService {
+  /**
+   * 1. Create a new work dossier (Hồ sơ công việc).
+   */
+  static async createDossier(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: CreateDossierInput
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    if (!input.title || input.title.trim() === "") {
+      throw new ValidationError("Tiêu đề hồ sơ không được để trống", {
+        title: ["Tiêu đề hồ sơ không được để trống"],
+      });
+    }
+
+    if (!input.owningUnitId) {
+      throw new ValidationError("Đơn vị quản lý hồ sơ không được để trống", {
+        owningUnitId: ["Đơn vị quản lý hồ sơ không được để trống"],
+      });
+    }
+
+    const owningUnit = await prisma.organizationalUnit.findUnique({
+      where: { id: input.owningUnitId },
+    });
+    if (!owningUnit) {
+      throw new NotFoundError(`Không tìm thấy đơn vị: ${input.owningUnitId}`);
+    }
+
+    const responsiblePersonId = input.responsiblePersonId || user.id;
+
+    const respPerson = await prisma.user.findUnique({
+      where: { id: responsiblePersonId },
+    });
+    if (!respPerson) {
+      throw new NotFoundError(`Không tìm thấy cán bộ chịu trách nhiệm: ${responsiblePersonId}`);
+    }
+
+    // Authorization check
+    const resource: AuthorizationResource = {
+      id: "new",
+      type: "dossier",
+      owningUnitId: input.owningUnitId,
+      dossierOwnerId: responsiblePersonId,
+      createdById: user.id,
+    };
+    await assertAuthorized(user, "dossier.open", resource);
+
+    // Generate code if not provided
+    const code = input.code?.trim() || (await generateDossierCode(input.owningUnitId));
+
+    // Verify code uniqueness
+    const existing = await prisma.workDossier.findUnique({
+      where: { code },
+    });
+    if (existing) {
+      throw new ValidationError(`Mã hồ sơ ${code} đã tồn tại trong hệ thống`, {
+        code: [`Mã hồ sơ ${code} đã tồn tại`],
+      });
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const dossier = await tx.workDossier.create({
+        data: {
+          code,
+          title: input.title.trim(),
+          owningUnitId: input.owningUnitId,
+          responsiblePersonId,
+          retentionRuleId: input.retentionRuleId,
+          classification: input.classification || DataClassification.INTERNAL,
+          storageLocation: input.storageLocation,
+          notes: input.notes,
+          status: DossierStatus.OPEN,
+          openedAt: new Date(),
+        },
+      });
+
+      // Immutable Audit Event
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_CREATED,
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: dossier.id,
+        afterData: {
+          code: dossier.code,
+          title: dossier.title,
+          status: dossier.status,
+          owningUnitId: dossier.owningUnitId,
+          responsiblePersonId: dossier.responsiblePersonId,
+        },
+      });
+
+      // Reliable Transactional Outbox Event
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.DOSSIER_CREATED_NOTIFICATION,
+        aggregateType: OutboxAggregateType.WORK_DOSSIER,
+        aggregateId: dossier.id,
+        payload: {
+          dossierId: dossier.id,
+          code: dossier.code,
+          title: dossier.title,
+          responsiblePersonId: dossier.responsiblePersonId,
+          openedAt: dossier.openedAt,
+        },
+      });
+
+      return dossier;
+    });
+  }
+
+  /**
+   * 2. Add an item (document, task, deliverable, minutes) into a work dossier.
+   */
+  static async addItemToDossier(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: AddItemToDossierInput
+  ): Promise<DossierItem> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+      include: { items: true },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    // Invariant: Cannot add items to closed or archived dossiers
+    assertDossierNotImmutable(dossier.status, "thêm tài liệu vào");
+
+    if (!input.title || input.title.trim() === "") {
+      throw new ValidationError("Tiêu đề tài liệu không được để trống", {
+        title: ["Tiêu đề tài liệu không được để trống"],
+      });
+    }
+
+    // Authorization check
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.add_item", resource);
+
+    const targetItemId = input.itemId ?? input.documentId ?? input.taskId;
+
+    // Mục hồ sơ cấp quyền tải tệp cho người đọc hồ sơ (file-access-service), nên chỉ gắn được tệp do chính
+    // người thao tác tải lên, như bổ sung tệp cho văn bản.
+    const fileObjectId = getFileObjectIdFromUrl(input.fileUrl);
+    if (fileObjectId) {
+      const file = await prisma.fileObject.findUnique({
+        where: { id: fileObjectId },
+        select: { isArchived: true, uploadedById: true, scanStatus: true },
+      });
+      if (!file || file.isArchived || file.uploadedById !== user.id) {
+        throw new NotFoundError("Không tìm thấy tệp đã tải lên", "FILE_NOT_FOUND");
+      }
+      if (file.scanStatus === "INFECTED") {
+        throw new ValidationError("Tệp không an toàn, không thể đính kèm.", undefined, "FILE_INFECTED");
+      }
+    }
+
+    // Mục văn bản ghi liên kết hồ sơ vào quy trình văn bản đến: người thao tác phải đọc được văn bản như
+    // GET /api/documents/[id]; không đọc được thì coi như không tồn tại.
+    if (input.itemType === DossierItemType.DOCUMENT && targetItemId) {
+      try {
+        await readDocumentForUser(await loadAuthorizationContext(user.id), targetItemId);
+      } catch (error) {
+        if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+          throw new NotFoundError(`Không tìm thấy văn bản: ${targetItemId}`);
+        }
+        throw error;
+      }
+    }
+
+    // Calculate next sequence
+    let sequence = input.sequence;
+    if (!sequence) {
+      const maxSeq = dossier.items.reduce(
+        (max, it) => (it.sequence > max ? it.sequence : max),
+        0
+      );
+      sequence = maxSeq + 1;
+    }
+
+    const docDate = input.documentDate
+      ? typeof input.documentDate === "string"
+        ? new Date(input.documentDate)
+        : input.documentDate
+      : undefined;
+
+    return await prisma.$transaction(async (tx) => {
+      const currentDossier = await tx.workDossier.findUnique({
+        where: { id: dossier.id },
+        select: { id: true, status: true },
+      });
+      if (!currentDossier) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${dossier.id}`);
+      }
+      assertDossierNotImmutable(currentDossier.status, "thêm tài liệu vào");
+
+      const item = await tx.dossierItem.create({
+        data: {
+          dossierId: dossier.id,
+          itemType: input.itemType,
+          itemId: targetItemId,
+          title: input.title.trim(),
+          documentNumber: input.documentNumber,
+          documentDate: docDate,
+          pageCount: input.pageCount,
+          sequence,
+          addedById: user.id,
+          addedAt: new Date(),
+          notes: input.notes,
+          fileObjectId,
+        },
+      });
+
+      // Keep the canonical incoming-workflow backlink in step with dossier
+      // membership. This lets the resolution command validate the exact
+      // archive-checked dossier without relying on a client-supplied string.
+      if (input.itemType === DossierItemType.DOCUMENT && targetItemId) {
+        const incomingWorkflow = await tx.documentIncomingWorkflow.findUnique({
+          where: { documentId: targetItemId },
+          select: { id: true, dossierId: true },
+        });
+        if (incomingWorkflow) {
+          if (
+            incomingWorkflow.dossierId &&
+            incomingWorkflow.dossierId !== dossier.id &&
+            incomingWorkflow.dossierId !== dossier.code
+          ) {
+            throw new ConflictError(
+              "Văn bản đã thuộc một hồ sơ công việc khác.",
+              "INCOMING_DOCUMENT_DOSSIER_ALREADY_LINKED"
+            );
+          }
+          await tx.documentIncomingWorkflow.update({
+            where: { id: incomingWorkflow.id },
+            data: { dossierId: dossier.id },
+          });
+        }
+      }
+
+      // Update dossier status from OPEN to ACTIVE if adding first item
+      if (currentDossier.status === DossierStatus.OPEN) {
+        assertTransition(currentDossier.status, DossierStatus.ACTIVE);
+        await tx.workDossier.update({
+          where: { id: dossier.id },
+          data: { status: DossierStatus.ACTIVE },
+        });
+      }
+
+      // Immutable Audit Event
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_ITEM_ADDED,
+        entityType: AuditEntityType.DOSSIER_ITEM,
+        entityId: item.id,
+        metadata: {
+          dossierId: dossier.id,
+          itemType: item.itemType,
+          title: item.title,
+          sequence: item.sequence,
+        },
+      });
+
+      return item;
+    });
+  }
+
+  /**
+   * 3. Remove an item from a work dossier.
+   */
+  static async removeItemFromDossier(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: RemoveItemFromDossierInput
+  ): Promise<{ success: boolean }> {
+    const user = await resolveUserContext(actor);
+
+    const item = await prisma.dossierItem.findUnique({
+      where: { id: input.itemId },
+      include: { dossier: true },
+    });
+    if (!item || item.dossierId !== input.dossierId) {
+      throw new NotFoundError(`Không tìm thấy tài liệu trong hồ sơ: ${input.itemId}`);
+    }
+
+    const dossier = item.dossier;
+
+    // Invariant: Cannot remove items from closed or archived dossiers
+    assertDossierNotImmutable(dossier.status, "xóa tài liệu khỏi");
+
+    // Authorization check
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.remove_item", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const currentItem = await tx.dossierItem.findUnique({
+        where: { id: item.id },
+        include: { dossier: { select: { id: true, status: true } } },
+      });
+      if (!currentItem || currentItem.dossierId !== input.dossierId) {
+        throw new NotFoundError(`Không tìm thấy tài liệu trong hồ sơ: ${input.itemId}`);
+      }
+      assertDossierNotImmutable(currentItem.dossier.status, "xóa tài liệu khỏi");
+
+      await tx.dossierItem.delete({
+        where: { id: item.id },
+      });
+
+      // Immutable Audit Event
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_ITEM_REMOVED,
+        entityType: AuditEntityType.DOSSIER_ITEM,
+        entityId: item.id,
+        beforeData: {
+          dossierId: dossier.id,
+          title: item.title,
+          itemType: item.itemType,
+        },
+      });
+
+      return { success: true };
+    });
+  }
+
+  /**
+   * 4. Close work dossier (Kết thúc hồ sơ công việc).
+   */
+  static async closeDossier(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: CloseDossierInput
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+      include: { items: true },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    assertTransition(dossier.status, DossierStatus.CLOSED);
+
+    // Authorization check
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.close", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const currentDossier = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        include: { items: true },
+      });
+      if (!currentDossier) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+      }
+      assertTransition(currentDossier.status, DossierStatus.CLOSED);
+      if (!currentDossier.items || currentDossier.items.length === 0) {
+        throw new ValidationError("Không thể đóng hồ sơ rỗng chưa có tài liệu, văn bản");
+      }
+
+      // Invariant: Không cho phép đóng hồ sơ nếu còn nhiệm vụ liên kết chưa hoàn thành
+      if (input.requireAllTasksCompleted) {
+        const linkedTaskIds = currentDossier.items
+          .filter((it) => it.itemType === DossierItemType.TASK && it.itemId)
+          .map((it) => it.itemId!);
+
+        if (linkedTaskIds.length > 0) {
+          const incompleteTasks = await tx.task.findMany({
+            where: {
+              id: { in: linkedTaskIds },
+              status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] },
+            },
+            select: { id: true, title: true, status: true },
+          });
+
+          if (incompleteTasks.length > 0) {
+            throw new ValidationError(
+              `Không thể đóng hồ sơ khi còn ${incompleteTasks.length} nhiệm vụ chưa hoàn thành (${incompleteTasks
+                .map((t) => `${t.title} [${t.status}]`)
+                .join(", ")})`
+            );
+          }
+        }
+      }
+
+      const updated = await tx.workDossier.update({
+        where: { id: currentDossier.id },
+        data: {
+          status: DossierStatus.CLOSED,
+          closedAt: new Date(),
+          notes: input.notes
+            ? currentDossier.notes
+              ? `${currentDossier.notes}\n[Đóng hồ sơ]: ${input.notes}`
+              : `[Đóng hồ sơ]: ${input.notes}`
+            : currentDossier.notes,
+        },
+      });
+
+      // Immutable Audit Event
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_CLOSED,
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: currentDossier.id,
+        beforeData: { status: currentDossier.status },
+        afterData: { status: updated.status, closedAt: updated.closedAt },
+      });
+
+      // Reliable Transactional Outbox Event
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.DOSSIER_CLOSED_NOTIFICATION,
+        aggregateType: OutboxAggregateType.WORK_DOSSIER,
+        aggregateId: currentDossier.id,
+        payload: {
+          dossierId: currentDossier.id,
+          code: currentDossier.code,
+          title: currentDossier.title,
+          closedAt: updated.closedAt,
+          closedByUserId: user.id,
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * 4b. Mark dossier as ready for archive (Chuyển hồ sơ sang trạng thái sẵn sàng nộp lưu).
+   */
+  static async markReadyForArchive(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: MarkReadyForArchiveInput
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    assertTransition(dossier.status, DossierStatus.READY_FOR_ARCHIVE);
+
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.close", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const current = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        include: { items: true },
+      });
+      if (!current) throw new NotFoundError(`Không tìm thấy hồ sơ`);
+      assertTransition(current.status, DossierStatus.READY_FOR_ARCHIVE);
+
+      if (!current.retentionRuleId) {
+        throw new ValidationError("Hồ sơ phải xác định Bảng thời hạn bảo quản (RetentionRule) trước khi chuẩn bị lưu trữ");
+      }
+      if (!current.items || current.items.length === 0) {
+        throw new ValidationError("Không thể chuẩn bị lưu trữ hồ sơ rỗng");
+      }
+
+      const updated = await tx.workDossier.update({
+        where: { id: current.id },
+        data: {
+          status: DossierStatus.READY_FOR_ARCHIVE,
+          notes: input.notes
+            ? current.notes
+              ? `${current.notes}\n[Sẵn sàng nộp lưu]: ${input.notes}`
+              : `[Sẵn sàng nộp lưu]: ${input.notes}`
+            : current.notes,
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: "DOSSIER_READY_FOR_ARCHIVE",
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: current.id,
+        beforeData: { status: current.status },
+        afterData: { status: updated.status },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * 5. Submit dossier to institutional archives (Nộp lưu hồ sơ vào lưu trữ cơ quan).
+   */
+  static async submitArchive(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: SubmitArchiveInput
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    if (dossier.status === DossierStatus.CLOSED) {
+      assertTransition(dossier.status, DossierStatus.READY_FOR_ARCHIVE);
+      assertTransition(DossierStatus.READY_FOR_ARCHIVE, DossierStatus.SUBMITTED_TO_ARCHIVE);
+    } else {
+      assertTransition(dossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
+    }
+
+    // Authorization check
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.submit_archive", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const currentDossier = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        include: { items: true },
+      });
+      if (!currentDossier) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+      }
+      if (currentDossier.status === DossierStatus.CLOSED) {
+        assertTransition(currentDossier.status, DossierStatus.READY_FOR_ARCHIVE);
+        assertTransition(DossierStatus.READY_FOR_ARCHIVE, DossierStatus.SUBMITTED_TO_ARCHIVE);
+      } else {
+        assertTransition(currentDossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
+      }
+      if (!currentDossier.retentionRuleId) {
+        throw new ValidationError(
+          "Hồ sơ phải xác định Bảng thời hạn bảo quản (RetentionRule) trước khi nộp lưu trữ cơ quan theo Luật Lưu trữ"
+        );
+      }
+      if (!currentDossier.items || currentDossier.items.length === 0) {
+        throw new ValidationError("Không thể nộp lưu hồ sơ rỗng chưa có tài liệu, văn bản");
+      }
+
+      const updated = await tx.workDossier.update({
+        where: { id: currentDossier.id },
+        data: {
+          status: DossierStatus.SUBMITTED_TO_ARCHIVE,
+          submittedArchiveAt: new Date(),
+          submittedById: user.id,
+          notes: input.notes
+            ? currentDossier.notes
+              ? `${currentDossier.notes}\n[Nộp lưu]: ${input.notes}`
+              : `[Nộp lưu]: ${input.notes}`
+            : currentDossier.notes,
+        },
+      });
+
+      // Immutable Audit Event
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_SUBMITTED_ARCHIVE,
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: currentDossier.id,
+        beforeData: { status: currentDossier.status },
+        afterData: {
+          status: updated.status,
+          submittedArchiveAt: updated.submittedArchiveAt,
+        },
+      });
+
+      // Reliable Transactional Outbox Event
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.DOSSIER_SUBMITTED_ARCHIVE_NOTIFICATION,
+        aggregateType: OutboxAggregateType.WORK_DOSSIER,
+        aggregateId: currentDossier.id,
+        payload: {
+          dossierId: currentDossier.id,
+          code: currentDossier.code,
+          title: currentDossier.title,
+          submittedArchiveAt: updated.submittedArchiveAt,
+          submittedByUserId: user.id,
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * 6. Accept dossier into institutional archives (Tiếp nhận hồ sơ lưu trữ cơ quan).
+   * Invariant: Separation of Duties (SoD) - Submitter (responsiblePerson) != Archivist.
+   */
+  static async acceptArchive(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: AcceptArchiveInput
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    const targetStatus = input.status === DossierStatus.ACCEPTED ? DossierStatus.ACCEPTED : DossierStatus.ARCHIVED;
+    if (dossier.status === DossierStatus.READY_FOR_ARCHIVE) {
+      assertTransition(dossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
+      assertTransition(DossierStatus.SUBMITTED_TO_ARCHIVE, DossierStatus.ACCEPTED);
+      if (targetStatus === DossierStatus.ARCHIVED) {
+        assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+      }
+    } else if (targetStatus === DossierStatus.ARCHIVED) {
+      assertTransition(dossier.status, DossierStatus.ACCEPTED);
+      assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+    } else {
+      assertTransition(dossier.status, targetStatus);
+    }
+
+    // Invariant: Separation of Duties (SoD)
+    // Người lập / chịu trách nhiệm nộp lưu hồ sơ tuyệt đối không được tự tiếp nhận hồ sơ vào lưu trữ cơ quan
+    if (
+      dossier.responsiblePersonId === user.id ||
+      (dossier.submittedById && dossier.submittedById === user.id)
+    ) {
+      throw new ForbiddenError(
+        "Người nộp lưu hồ sơ không được tự tiếp nhận hồ sơ vào lưu trữ cơ quan (Vi phạm nguyên tắc phân công độc lập SoD)"
+      );
+    }
+
+    // Authorization check (Requires archival capability / clerical or archivist duty)
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+      submittedByUserId: dossier.submittedById || dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.accept_archive", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const currentDossier = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        include: { items: true },
+      });
+      if (!currentDossier) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+      }
+      const targetStatus = input.status === DossierStatus.ACCEPTED ? DossierStatus.ACCEPTED : DossierStatus.ARCHIVED;
+      const isFinalArchived = targetStatus === DossierStatus.ARCHIVED;
+
+      if (currentDossier.status === DossierStatus.READY_FOR_ARCHIVE) {
+        assertTransition(currentDossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
+        assertTransition(DossierStatus.SUBMITTED_TO_ARCHIVE, DossierStatus.ACCEPTED);
+        if (targetStatus === DossierStatus.ARCHIVED) {
+          assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+        }
+      } else if (targetStatus === DossierStatus.ARCHIVED) {
+        assertTransition(currentDossier.status, DossierStatus.ACCEPTED);
+        assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+      } else {
+        assertTransition(currentDossier.status, targetStatus);
+      }
+      if (
+        currentDossier.responsiblePersonId === user.id ||
+        (currentDossier.submittedById && currentDossier.submittedById === user.id)
+      ) {
+        throw new ForbiddenError(
+          "Người nộp lưu hồ sơ không được tự tiếp nhận hồ sơ vào lưu trữ cơ quan (Vi phạm nguyên tắc phân công độc lập SoD)"
+        );
+      }
+      if (!currentDossier.retentionRuleId) {
+        throw new ValidationError(
+          "Hồ sơ phải có Bảng thời hạn bảo quản hợp lệ trước khi tiếp nhận lưu trữ cơ quan"
+        );
+      }
+      if (!currentDossier.items || currentDossier.items.length === 0) {
+        throw new ValidationError("Không thể tiếp nhận lưu trữ hồ sơ rỗng");
+      }
+
+      const updated = await tx.workDossier.update({
+        where: { id: currentDossier.id },
+        data: {
+          status: targetStatus,
+          archivedAt: isFinalArchived ? new Date() : currentDossier.archivedAt,
+          archivedById: isFinalArchived ? user.id : currentDossier.archivedById,
+          storageLocation: input.storageLocation || currentDossier.storageLocation,
+          notes: input.notes
+            ? currentDossier.notes
+              ? `${currentDossier.notes}\n[${isFinalArchived ? "Tiếp nhận lưu trữ" : "Đã nghiệm thu lưu trữ"}]: ${input.notes}`
+              : `[${isFinalArchived ? "Tiếp nhận lưu trữ" : "Đã nghiệm thu lưu trữ"}]: ${input.notes}`
+            : currentDossier.notes,
+        },
+      });
+
+      // Immutable Audit Events
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_ACCEPTED_ARCHIVE,
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: dossier.id,
+        metadata: {
+          archivedById: isFinalArchived ? user.id : undefined,
+          targetStatus,
+          storageLocation: updated.storageLocation,
+        },
+      });
+
+      if (isFinalArchived) {
+        await auditService.logEvent(tx, {
+          actorId: user.id,
+          action: AuditAction.DOSSIER_ARCHIVED,
+          entityType: AuditEntityType.WORK_DOSSIER,
+          entityId: dossier.id,
+          beforeData: { status: dossier.status },
+          afterData: {
+            status: updated.status,
+            archivedAt: updated.archivedAt,
+            archivedById: updated.archivedById,
+          },
+        });
+      }
+
+      // Reliable Transactional Outbox Event
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.DOSSIER_ACCEPTED_ARCHIVE_NOTIFICATION,
+        aggregateType: OutboxAggregateType.WORK_DOSSIER,
+        aggregateId: dossier.id,
+        payload: {
+          dossierId: dossier.id,
+          code: dossier.code,
+          title: dossier.title,
+          status: targetStatus,
+          archivedAt: updated.archivedAt,
+          archivedById: isFinalArchived ? user.id : null,
+          storageLocation: updated.storageLocation,
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * 6b. Finalize archived dossier (Chuyển trạng thái từ ACCEPTED sang ARCHIVED sau khi hoàn tất sắp xếp kho lưu trữ).
+   */
+  static async finalizeArchive(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: FinalizeArchiveInput
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    assertTransition(dossier.status, DossierStatus.ARCHIVED);
+
+    // Invariant: Separation of Duties (SoD)
+    if (
+      dossier.responsiblePersonId === user.id ||
+      (dossier.submittedById && dossier.submittedById === user.id)
+    ) {
+      throw new ForbiddenError(
+        "Người nộp lưu hồ sơ không được tự thao tác đưa vào kho lưu trữ (Vi phạm nguyên tắc phân công độc lập SoD)"
+      );
+    }
+
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+      submittedByUserId: dossier.submittedById || dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.accept_archive", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const current = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        select: { id: true, status: true },
+      });
+      if (!current) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+      }
+      assertTransition(current.status, DossierStatus.ARCHIVED);
+
+      const now = new Date();
+      const updated = await tx.workDossier.update({
+        where: { id: dossier.id },
+        data: {
+          status: DossierStatus.ARCHIVED,
+          archivedAt: now,
+          archivedById: user.id,
+          storageLocation: input.storageLocation || dossier.storageLocation,
+          notes: input.notes
+            ? dossier.notes
+              ? `${dossier.notes}\n[Hoàn tất đưa vào kho lưu trữ]: ${input.notes}`
+              : `[Hoàn tất đưa vào kho lưu trữ]: ${input.notes}`
+            : dossier.notes,
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_ARCHIVED,
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: dossier.id,
+        beforeData: { status: dossier.status },
+        afterData: {
+          status: updated.status,
+          archivedAt: updated.archivedAt,
+          archivedById: updated.archivedById,
+          storageLocation: updated.storageLocation,
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * 6d. Reject / Return submitted archive (Lưu trữ viên trả lại hồ sơ yêu cầu bổ sung/chỉnh lý tài liệu).
+   * Transition: SUBMITTED_TO_ARCHIVE -> READY_FOR_ARCHIVE (under RFC-11)
+   */
+  static async rejectArchive(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: { dossierId: string; returnReason: string }
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    assertTransition(dossier.status, DossierStatus.READY_FOR_ARCHIVE);
+
+    if (
+      dossier.responsiblePersonId === user.id ||
+      (dossier.submittedById && dossier.submittedById === user.id)
+    ) {
+      throw new ForbiddenError(
+        "Người nộp lưu hồ sơ không được tự thao tác duyệt/từ chối hồ sơ lưu trữ (Vi phạm nguyên tắc phân công độc lập SoD)"
+      );
+    }
+
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+      submittedByUserId: dossier.submittedById || dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.accept_archive", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const current = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        select: { id: true, status: true },
+      });
+      if (!current) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+      }
+      assertTransition(current.status, DossierStatus.READY_FOR_ARCHIVE);
+
+      const updated = await tx.workDossier.update({
+        where: { id: dossier.id },
+        data: {
+          status: DossierStatus.READY_FOR_ARCHIVE,
+          notes: input.returnReason
+            ? dossier.notes
+              ? `${dossier.notes}\n[Lưu trữ viên trả lại]: ${input.returnReason}`
+              : `[Lưu trữ viên trả lại]: ${input.returnReason}`
+            : dossier.notes,
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_UPDATED,
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: dossier.id,
+        beforeData: { status: dossier.status },
+        afterData: {
+          status: updated.status,
+          returnReason: input.returnReason,
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * 6c. Link a Task to Dossier (Liên kết nhiệm vụ vào hồ sơ công việc).
+   */
+  static async linkTask(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: LinkTaskToDossierInput
+  ): Promise<DossierItem> {
+    const task = await prisma.task.findUnique({
+      where: { id: input.taskId },
+      select: { id: true, title: true, code: true },
+    });
+    if (!task) {
+      throw new NotFoundError(`Không tìm thấy nhiệm vụ: ${input.taskId}`);
+    }
+
+    return await this.addItemToDossier(actor, {
+      dossierId: input.dossierId,
+      itemType: DossierItemType.TASK,
+      itemId: input.taskId,
+      title: task.title,
+      documentNumber: task.code || undefined,
+      notes: input.notes,
+    });
+  }
+
+  /**
+   * 6d. Link an Incoming/Outgoing Document to Dossier (Liên kết văn bản vào hồ sơ công việc).
+   */
+  static async linkDocument(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: LinkDocumentToDossierInput
+  ): Promise<DossierItem> {
+    const doc = await prisma.document.findUnique({
+      where: { id: input.documentId },
+      select: { id: true, summary: true, originalNumber: true, issuedDate: true },
+    });
+    if (!doc) {
+      throw new NotFoundError(`Không tìm thấy văn bản: ${input.documentId}`);
+    }
+
+    return await this.addItemToDossier(actor, {
+      dossierId: input.dossierId,
+      itemType: DossierItemType.DOCUMENT,
+      itemId: input.documentId,
+      title: doc.summary,
+      documentNumber: doc.originalNumber || undefined,
+      documentDate: doc.issuedDate || undefined,
+      notes: input.notes,
+    });
+  }
+
+  /**
+   * 6e. Link a Meeting Resolution to Dossier (Liên kết nghị quyết phiên họp vào hồ sơ công việc).
+   */
+  static async linkMeetingResolution(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: LinkMeetingResolutionToDossierInput
+  ): Promise<DossierItem> {
+    const resolution = await prisma.meetingResolution.findUnique({
+      where: { id: input.resolutionId },
+      select: { id: true, title: true, code: true },
+    });
+    if (!resolution) {
+      throw new NotFoundError(`Không tìm thấy nghị quyết phiên họp: ${input.resolutionId}`);
+    }
+
+    return await this.addItemToDossier(actor, {
+      dossierId: input.dossierId,
+      itemType: DossierItemType.DECISION,
+      itemId: input.resolutionId,
+      title: resolution.title || `Nghị quyết phiên họp: ${resolution.code || resolution.id}`,
+      documentNumber: resolution.code || undefined,
+      notes: input.notes,
+    });
+  }
+
+  /**
+   * 7. List work dossiers with scoping and filtering.
+   */
+  static async listDossiers(
+    actor: AuthenticatedUserContext | SessionPayload,
+    filter: ListDossiersFilter = {}
+  ): Promise<{ items: WorkDossierWithDetails[]; total: number; limit: number; offset: number }> {
+    const user = await resolveUserContext(actor);
+    const limit = Math.min(Math.max(filter.limit || 20, 1), 100);
+    const offset = Math.max(filter.offset || 0, 0);
+
+    // Hồ sơ đã hủy (xóa mềm) không hiện trong tra cứu thường (V-07).
+    const where: Prisma.WorkDossierWhereInput = { disposedAt: null };
+
+    // Scoping enforcement (RFC-09 Option B):
+    if (hasSchoolWideArchivalAccess(user)) {
+      const pos = (user.activePositionCode || "").toUpperCase();
+      const isRector = user.systemRole === "RECTOR" || pos === "HIEU_TRUONG" || user.role === "ADMIN";
+      if (!isRector) {
+        where.OR = [
+          { classification: { notIn: [DataClassification.RESTRICTED, DataClassification.PERSONAL_DATA] } },
+          { responsiblePersonId: user.id },
+          { submittedById: user.id },
+          { archivedById: user.id },
+        ];
+      }
+    } else {
+      const activeUnits = [user.departmentId, user.activeUnitId].filter(Boolean) as string[];
+      where.OR = [
+        { responsiblePersonId: user.id },
+        { submittedById: user.id },
+        { archivedById: user.id },
+        ...(activeUnits.length > 0
+          ? [
+              {
+                owningUnitId: { in: activeUnits },
+                classification: {
+                  notIn: [DataClassification.RESTRICTED, DataClassification.PERSONAL_DATA],
+                },
+              },
+            ]
+          : []),
+      ];
+    }
+
+    if (filter.status) {
+      where.status = filter.status;
+    }
+
+    if (filter.owningUnitId) {
+      where.owningUnitId = filter.owningUnitId;
+    }
+
+    if (filter.responsiblePersonId) {
+      where.responsiblePersonId = filter.responsiblePersonId;
+    }
+
+    if (filter.classification) {
+      where.classification = filter.classification;
+    }
+
+    if (filter.search && filter.search.trim() !== "") {
+      const term = filter.search.trim();
+      where.AND = [
+        {
+          OR: [
+            { title: { contains: term } },
+            { code: { contains: term } },
+            { notes: { contains: term } },
+          ],
+        },
+      ];
+    }
+
+    const [total, items] = await Promise.all([
+      prisma.workDossier.count({ where }),
+      prisma.workDossier.findMany({
+        where,
+        include: {
+          owningUnit: { select: { id: true, name: true, code: true } },
+          responsiblePerson: { select: { id: true, name: true, email: true } },
+          archivedBy: { select: { id: true, name: true, email: true } },
+          retentionRule: true,
+          _count: { select: { items: true } },
+        },
+        orderBy: [{ openedAt: "desc" }],
+        take: limit,
+        skip: offset,
+      }),
+    ]);
+
+    return {
+      items: items as WorkDossierWithDetails[],
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  /**
+   * 8. Get work dossier details with full item list.
+   */
+  static async getDossierDetail(
+    actor: AuthenticatedUserContext | SessionPayload,
+    id: string
+  ): Promise<WorkDossierWithDetails> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id },
+      include: {
+        owningUnit: { select: { id: true, name: true, code: true } },
+        responsiblePerson: { select: { id: true, name: true, email: true } },
+        archivedBy: { select: { id: true, name: true, email: true } },
+        retentionRule: true,
+        items: {
+          include: {
+            addedBy: { select: { id: true, name: true } },
+          },
+          orderBy: { sequence: "asc" },
+        },
+      },
+    });
+
+    if (!dossier || dossier.disposedAt) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
+    }
+
+    // Read access check (RFC-09 Option B Canonical Policy)
+    if (!canReadDossier(user, dossier)) {
+      throw new ForbiddenError("Bạn không có quyền truy cập hồ sơ công việc này");
+    }
+
+    return dossier as WorkDossierWithDetails;
+  }
+
+  /**
+   * Danh sách mục trong hồ sơ cho người dùng hiện tại. Người không đủ quyền đọc
+   * toàn bộ hồ sơ chỉ thấy mục do mình thêm (RFC-09: người đóng góp chỉ đọc mục của mình).
+   */
+  static async listItemsForUser(authUser: AuthenticatedUser, id: string) {
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            addedBy: { select: { id: true, name: true } },
+          },
+          orderBy: { sequence: "asc" },
+        },
+      },
+    });
+
+    // Hồ sơ đã hủy (xóa mềm) không còn trong tra cứu thường: 404 cho mọi người, trước khi xét quyền.
+    if (!dossier || dossier.disposedAt) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
+    }
+
+    const hasFullRead = canReadDossier(authUser, dossier);
+    let items = dossier.items || [];
+
+    if (!hasFullRead) {
+      items = items.filter((item) => item.addedById === authUser.id);
+      if (items.length === 0) {
+        throw new ForbiddenError("Bạn không có quyền truy cập hồ sơ công việc này");
+      }
+    }
+
+    return items;
+  }
+
+  /**
+   * 9. List retention rules (Bảng thời hạn bảo quản hồ sơ).
+   */
+  static async listRetentionRules(): Promise<RetentionRule[]> {
+    return await prisma.retentionRule.findMany({
+      orderBy: { code: "asc" },
+    });
+  }
+}

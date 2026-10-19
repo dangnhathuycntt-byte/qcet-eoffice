@@ -6,7 +6,7 @@
  * is DERIVED FROM the recorded baseline) and FAILS (exit 1) if any cell
  * violates its budget:
  *   - tier "cwv"        : the frozen C16 good threshold, sourced live from
- *                         src/telemetry/web-vitals.ts (never redefined here).
+ *                         apps/web/src/telemetry/web-vitals.ts (never redefined here).
  *   - tier "regression" : baseline p75 + headroom — "no meaningful regression".
  * Missing measurement evidence is a failure (fail closed), never a pass.
  *
@@ -256,7 +256,7 @@ if (AS_JSON) {
         waived,
         variance,
         rows,
-        thresholdsSource: "src/telemetry/web-vitals.ts",
+        thresholdsSource: "apps/web/src/telemetry/web-vitals.ts",
       },
       null,
       2
@@ -264,7 +264,7 @@ if (AS_JSON) {
   );
 } else {
   console.log(
-    `S-PERF budget gate — ${results.label || "results"} vs baseline budgets (canonical C16 thresholds from src/telemetry/web-vitals.ts)`
+    `S-PERF budget gate — ${results.label || "results"} vs baseline budgets (canonical C16 thresholds from apps/web/src/telemetry/web-vitals.ts)`
   );
   console.log("route".padEnd(20), "viewport".padEnd(9), "metric".padEnd(5), "tier".padEnd(11), "budget".padEnd(8), "p75".padEnd(9), "status");
   for (const r of rows) {

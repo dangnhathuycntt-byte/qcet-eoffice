@@ -7,7 +7,7 @@ import {
   resolvePositionCode,
   matchUnitCodeByTitle,
   normalizeVietnamese,
-} from "../prisma/seeds/canonical-org-seed";
+} from "../packages/db/prisma/seeds/canonical-org-seed";
 
 /**
  * Phase 9 / WS3: kiểm tra logic suy ra vị trí việc làm và đơn vị canonical cho

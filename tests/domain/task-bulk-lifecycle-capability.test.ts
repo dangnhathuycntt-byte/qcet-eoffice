@@ -4,12 +4,12 @@ import assert from "node:assert/strict";
 import {
   canBulkTransition,
   filterBulkTransitionTargets,
-} from "../../src/domain/tasks/bulk-lifecycle-capability";
+} from "@qcet/shared/domain/tasks/bulk-lifecycle-capability";
 import type {
   TaskActorContract,
   TaskEntityContract,
-} from "../../src/domain/tasks/contract";
-import type { TaskStatus } from "../../src/types/dashboard";
+} from "@qcet/shared/domain/tasks/contract";
+import type { TaskStatus } from "@qcet/contracts/types/dashboard";
 
 /**
  * Plan P0-07 / R-T07-bulk: a bulk lifecycle action may be offered only when it

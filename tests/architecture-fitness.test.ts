@@ -1,12 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { builtinModules } from "node:module";
 import path from "node:path";
-import { boundaryViolations, SERVER_ONLY_LIB_ALLOWLIST } from "../scripts/architecture-boundaries.mjs";
+import { boundaryViolations, importSpecifiers } from "../scripts/architecture-boundaries.mjs";
 
 const ROOT_DIR = process.cwd();
-const SRC_DIR = path.join(ROOT_DIR, "src");
-const PUBLIC_DIR = path.join(ROOT_DIR, "public");
+const WEB_SRC = path.join(ROOT_DIR, "apps", "web", "src");
+const API_SRC = path.join(ROOT_DIR, "apps", "api", "src");
+const PUBLIC_DIR = path.join(ROOT_DIR, "apps", "web", "public");
 
 function getAllFiles(dir: string, fileList: string[] = []): string[] {
   if (!fs.existsSync(dir)) return fileList;
@@ -48,14 +50,14 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       }
     });
 
-    it("verifies private file storage abstraction exists in src/storage/private-files.ts", () => {
-      const storageModule = path.join(SRC_DIR, "storage", "private-files.ts");
-      assert.strictEqual(fs.existsSync(storageModule), true, "src/storage/private-files.ts must exist");
+    it("verifies private file storage abstraction exists in apps/api/src/storage/private-files.ts", () => {
+      const storageModule = path.join(API_SRC, "storage", "private-files.ts");
+      assert.strictEqual(fs.existsSync(storageModule), true, "apps/api/src/storage/private-files.ts must exist");
     });
   });
 
   describe("2. Client / Server Boundary Invariants", () => {
-    const allSrcFiles = getAllFiles(SRC_DIR).filter((f) => /\.(ts|tsx)$/.test(f));
+    const allSrcFiles = [WEB_SRC, API_SRC, path.join(ROOT_DIR, "packages")].flatMap((dir) => getAllFiles(dir)).filter((f) => /\.(ts|tsx)$/.test(f));
 
     it("ensures no Client Component or UI Component imports Prisma directly", () => {
       const violations: string[] = [];
@@ -63,7 +65,7 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       for (const filePath of allSrcFiles) {
         const content = fs.readFileSync(filePath, "utf8");
         const isClientComponent = /^["']use client["']/m.test(content);
-        const isInsideComponents = filePath.includes(path.join("src", "components"));
+        const isInsideComponents = filePath.includes(path.join("web", "src", "components"));
 
         if (isClientComponent || isInsideComponents) {
           if (/from\s+["']@prisma\/client["']/.test(content)) {
@@ -80,7 +82,7 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
     });
 
     it("ensures UI components do not import server-only environment configuration", () => {
-      const uiFiles = allSrcFiles.filter((f) => f.includes(path.join("src", "components")));
+      const uiFiles = allSrcFiles.filter((f) => f.includes(path.join("web", "src", "components")));
       const violations: string[] = [];
 
       for (const filePath of uiFiles) {
@@ -129,33 +131,63 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       return out;
     }
 
-    it("ensures files in src/app do not import Prisma or @/lib/db", () => {
+    it("ensures API route handlers do not import Prisma or @qcet/db", () => {
       const violations = boundaryViolationsFor("app-no-db");
-      assert.deepStrictEqual(violations, [], `File trong src/app phải đọc/ghi DB qua src/server: ${violations.join(", ")}`);
+      assert.deepStrictEqual(violations, [], `Route handler phải đọc/ghi DB qua src/server: ${violations.join(", ")}`);
     });
 
-    it("ensures components and hooks do not import @/server", () => {
-      const violations = boundaryViolationsFor("ui-no-server");
-      assert.deepStrictEqual(violations, [], `Component/hook không import src/server: ${violations.join(", ")}`);
+    it("ensures apps/web imports no server-only module (DB, secrets, node:*, @/server)", () => {
+      const violations = boundaryViolationsFor("web-no-server");
+      assert.deepStrictEqual(violations, [], `Web không import mã server: ${violations.join(", ")}`);
     });
 
-    it("ensures lib, domain and server do not import components or app", () => {
+    it("ensures API lib, domain and server do not import components or app", () => {
       const violations = boundaryViolationsFor("core-no-ui");
       assert.deepStrictEqual(violations, [], `lib/domain/server không import UI/app: ${violations.join(", ")}`);
     });
 
-    it("keeps server-only files out of src/lib except the 4 files removed in step 3", () => {
-      assert.deepStrictEqual(SERVER_ONLY_LIB_ALLOWLIST, [
-        "src/lib/prisma.ts",
-        "src/lib/jwt-session.ts",
-        "src/lib/db/audit.ts",
-        "src/lib/db/outbox.ts",
-      ]);
-      for (const relPath of SERVER_ONLY_LIB_ALLOWLIST) {
-        assert.ok(fs.existsSync(path.join(ROOT_DIR, relPath)), `${relPath} trong allowlist không còn tồn tại`);
+    it("ensures no app imports another app (no allowlist left)", () => {
+      const violations = boundaryViolationsFor("no-cross-app");
+      assert.deepStrictEqual(violations, [], `App import app khác: ${violations.join(", ")}`);
+    });
+
+    it("packages do not import apps; @qcet/shared and @qcet/contracts stay pure", () => {
+      const violations = [...boundaryViolationsFor("package-no-app"), ...boundaryViolationsFor("package-pure")];
+      assert.deepStrictEqual(violations, [], `Package import app hoặc module server: ${violations.join(", ")}`);
+
+      const rulesOf = (relPath: string, content: string) => boundaryViolations(relPath, content).map((v) => v.rule);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/lib/x.ts", 'import { y } from "@/lib/y";'), ["package-no-app"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/lib/x.ts", 'import { y } from "../../../../apps/web/src/lib/y";'), ["package-no-app"]);
+      assert.deepStrictEqual(rulesOf("packages/contracts/src/x.ts", 'import { TaskStatus } from "@prisma/client";'), ["package-pure"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/x.ts", 'import { prisma } from "@qcet/db/prisma";'), ["package-pure"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/x.ts", 'import fs from "node:fs";'), ["package-pure"]);
+      assert.deepStrictEqual(rulesOf("packages/shared/src/x.ts", 'import { z } from "@qcet/contracts/common";'), []);
+      assert.deepStrictEqual(rulesOf("packages/db/src/audit.ts", 'import { Prisma } from "@prisma/client";'), []);
+      assert.deepStrictEqual(rulesOf("packages/db/src/audit.ts", 'import { x } from "@/server/x";'), ["package-no-app"]);
+    });
+
+    // npm hoist mọi dependency lên node_modules gốc nên import thiếu khai báo vẫn chạy; chỉ kiểm này bắt được.
+    it("each workspace declares the packages its src imports; web declares no server library", () => {
+      const builtins = new Set(builtinModules);
+      const undeclared: string[] = [];
+      for (const workspace of ["apps/web", "apps/api", "packages/contracts", "packages/shared", "packages/db"]) {
+        const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, workspace, "package.json"), "utf8"));
+        const declared = new Set(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }));
+        for (const filePath of getAllFiles(path.join(ROOT_DIR, workspace, "src")).filter((f) => /\.(ts|tsx)$/.test(f))) {
+          const relPath = path.relative(ROOT_DIR, filePath).split(path.sep).join("/");
+          for (const { spec, line } of importSpecifiers(relPath, fs.readFileSync(filePath, "utf8"))) {
+            if (/^(?:\.|@\/|apps\/|src\/|node:)/.test(spec) || builtins.has(spec.split("/")[0])) continue;
+            const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
+            if (name !== pkg.name && !declared.has(name)) undeclared.push(`${relPath}:${line} ${name}`);
+          }
+        }
       }
-      const violations = boundaryViolationsFor("server-only-in-lib");
-      assert.deepStrictEqual(violations, [], `File server-only phải nằm trong src/server: ${violations.join(", ")}`);
+      assert.deepStrictEqual(undeclared, [], `Import chưa khai báo trong package.json của workspace: ${undeclared.join(", ")}`);
+
+      const web = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, "apps", "web", "package.json"), "utf8"));
+      const webDeclared = { ...web.dependencies, ...web.devDependencies };
+      const serverLibs = ["@prisma/client", "@qcet/db", "ioredis", "web-push", "jsonwebtoken", "bcryptjs", "@auth/prisma-adapter"];
+      assert.deepStrictEqual(serverLibs.filter((lib) => lib in webDeclared), [], "apps/web không khai báo thư viện server");
     });
 
     it("detects every import form and ignores comments, strings and look-alike paths", () => {
@@ -172,41 +204,50 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
         'import prismaModule = require("@/lib/prisma");',
         'type Client = import("@/lib/prisma").PrismaClientLike;',
       ]) {
-        assert.deepStrictEqual(rulesOf("src/app/api/x/[id]/route.ts", line), ["app-no-db"], line);
+        assert.deepStrictEqual(rulesOf("apps/api/src/app/api/x/[id]/route.ts", line), ["app-no-db"], line);
       }
-      assert.deepStrictEqual(rulesOf("src/app/page.tsx", 'import "@/lib/prisma";'), ["app-no-db"]);
-      assert.deepStrictEqual(rulesOf("src/app/a/(g)/layout.tsx", 'import { x } from "../../../lib/db/audit";'), ["app-no-db"]);
-      assert.deepStrictEqual(rulesOf("src/hooks/use-x.ts", 'import type { T } from "@/server/tasks/t";'), ["ui-no-server"]);
-      assert.deepStrictEqual(rulesOf("src/components/a/b.tsx", 'import { y } from "../../server/x";'), ["ui-no-server"]);
+      // Web: mọi file trong apps/web/src (trang, component, hook, lib) không import module chỉ chạy server.
+      assert.deepStrictEqual(rulesOf("apps/web/src/app/page.tsx", 'import "@/lib/prisma";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/app/a/(g)/layout.tsx", 'import { x } from "../../../lib/db/audit";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/hooks/use-x.ts", 'import type { T } from "@/server/tasks/t";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/components/a/b.tsx", 'import { y } from "../../server/x";'), ["web-no-server"]);
       assert.deepStrictEqual(
-        rulesOf("src/components/a/c.tsx", 'export function C() { return <div title="x">{1}</div>; }\nexport * as srv from "@/server/tasks";'),
-        ["ui-no-server"],
+        rulesOf("apps/web/src/components/a/c.tsx", 'export function C() { return <div title="x">{1}</div>; }\nexport * as srv from "@/server/tasks";'),
+        ["web-no-server"],
       );
-      assert.deepStrictEqual(rulesOf("src/server/x.ts", 'import { B } from "@/components/ui/button";'), ["core-no-ui"]);
-      assert.deepStrictEqual(rulesOf("src/domain/x.ts", 'export * from "../app/tasks/page";'), ["core-no-ui"]);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import fs from "node:fs";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { s } from "@/server/api/route-error";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/db/audit.ts", 'import { prisma } from "@/lib/prisma";'), []);
-      // app-no-db áp cho mọi file trong src/app, kể cả helper không theo tên route/page/layout.
-      assert.deepStrictEqual(rulesOf("src/app/api/x/[id]/actions/shared.ts", 'import { prisma } from "@/lib/prisma";'), ["app-no-db"]);
-      assert.deepStrictEqual(rulesOf("src/app/x/foo-client.tsx", 'import { TaskStatus } from "@prisma/client";'), ["app-no-db"]);
-      assert.deepStrictEqual(rulesOf("src/app/x/foo-client.tsx", 'import { x } from "@/lib/prisma-errors";'), []);
-      // server-only-in-lib: bí mật server và mọi module có tiền tố node:; built-in không tiền tố (file isomorphic) không tính.
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { serverEnv } from "@/config/env.server";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/a/x.ts", 'import { serverEnv } from "../../config/env.server";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { crc32 } from "node:zlib";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import http2 from "node:http2";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { readFile } from "node:fs/promises";'), ["server-only-in-lib"]);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { clientEnv } from "@/config/env.client";'), []);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'const c = await import("crypto");\nimport { gzip } from "zlib";'), []);
-      assert.deepStrictEqual(rulesOf("src/lib/jwt-session.ts", 'import { serverEnv } from "@/config/env.server";'), []);
-      assert.deepStrictEqual(rulesOf("src/server/auth/x.ts", 'import { serverEnv } from "@/config/env.server";'), []);
+      assert.deepStrictEqual(rulesOf("apps/api/src/server/x.ts", 'import { B } from "@/components/ui/button";'), ["core-no-ui"]);
+      assert.deepStrictEqual(rulesOf("apps/api/src/domain/x.ts", 'export * from "../app/tasks/page";'), ["core-no-ui"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import fs from "node:fs";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { s } from "@/server/api/route-error";'), ["web-no-server"]);
+      // Prisma client và audit/outbox nằm ở @qcet/db: web import là vi phạm, lib/server của API thì được.
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/db/audit.ts", 'import { prisma } from "@/lib/prisma";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/api/src/lib/jwt-session.ts", 'import { prisma } from "@qcet/db/prisma";'), []);
+      assert.deepStrictEqual(rulesOf("apps/web/src/app/x/page.tsx", 'import { prisma } from "@qcet/db/prisma";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { writeAudit } from "@qcet/db/audit";'), ["web-no-server"]);
+      // app-no-db áp cho mọi file trong src/app của API, kể cả helper không theo tên route.
+      assert.deepStrictEqual(rulesOf("apps/api/src/app/api/x/[id]/actions/shared.ts", 'import { prisma } from "@/lib/prisma";'), ["app-no-db"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/app/x/foo-client.tsx", 'import { TaskStatus } from "@prisma/client";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/app/x/foo-client.tsx", 'import { x } from "@/lib/prisma-errors";'), []);
+      // web-no-server: bí mật server và mọi module có tiền tố node:; built-in không tiền tố (file isomorphic) không tính.
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { serverEnv } from "@/config/env.server";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/a/x.ts", 'import { serverEnv } from "../../config/env.server";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { crc32 } from "node:zlib";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import http2 from "node:http2";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { readFile } from "node:fs/promises";'), ["web-no-server"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { clientEnv } from "@/config/env.client";'), []);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'const c = await import("crypto");\nimport { gzip } from "zlib";'), []);
+      assert.deepStrictEqual(rulesOf("apps/api/src/lib/jwt-session.ts", 'import { serverEnv } from "@/config/env.server";'), []);
+      assert.deepStrictEqual(rulesOf("apps/api/src/server/auth/x.ts", 'import { serverEnv } from "@/config/env.server";'), []);
+      // Không app nào import app khác (đường dẫn tương đối ra khỏi app).
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { j } from "../../../api/src/lib/jwt-session";'), ["no-cross-app"]);
+      assert.deepStrictEqual(rulesOf("apps/api/src/server/x.ts", 'import { b } from "../../../web/src/components/ui/button";'), ["no-cross-app"]);
+      assert.deepStrictEqual(rulesOf("apps/api/src/server/x.ts", 'import { b } from "../lib/jwt-session";'), []);
 
-      assert.deepStrictEqual(rulesOf("src/app/api/x/route.ts", '// import { prisma } from "@/lib/prisma";\nconst s = "@/lib/prisma";'), []);
-      assert.deepStrictEqual(rulesOf("src/app/api/x/route.ts", 'import { x } from "@/lib/prisma-errors";\nimport { y } from "@/lib/dbx";'), []);
-      assert.deepStrictEqual(rulesOf("src/app/api/x/shared.ts", 'import { prisma } from "@/lib/prisma";'), ["app-no-db"]);
-      assert.deepStrictEqual(rulesOf("src/components/x.tsx", 'import { z } from "@/server-utils";'), []);
-      assert.deepStrictEqual(rulesOf("src/lib/x.ts", 'import { z } from "@/lib/server-safe";'), []);
+      assert.deepStrictEqual(rulesOf("apps/api/src/app/api/x/route.ts", '// import { prisma } from "@/lib/prisma";\nconst s = "@/lib/prisma";'), []);
+      assert.deepStrictEqual(rulesOf("apps/api/src/app/api/x/route.ts", 'import { x } from "@/lib/prisma-errors";\nimport { y } from "@/lib/dbx";'), []);
+      assert.deepStrictEqual(rulesOf("apps/api/src/app/api/x/shared.ts", 'import { prisma } from "@/lib/prisma";'), ["app-no-db"]);
+      assert.deepStrictEqual(rulesOf("apps/web/src/components/x.tsx", 'import { z } from "@/server-utils";'), []);
+      assert.deepStrictEqual(rulesOf("apps/web/src/lib/x.ts", 'import { z } from "@/lib/server-safe";'), []);
     });
   });
 
@@ -222,18 +263,18 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
     });
 
     it("verifies Central Environment Configuration modules exist", () => {
-      assert.strictEqual(fs.existsSync(path.join(SRC_DIR, "config", "env.server.ts")), true);
-      assert.strictEqual(fs.existsSync(path.join(SRC_DIR, "config", "env.client.ts")), true);
-      assert.strictEqual(fs.existsSync(path.join(SRC_DIR, "config", "runtime.ts")), true);
+      assert.strictEqual(fs.existsSync(path.join(API_SRC, "config", "env.server.ts")), true);
+      assert.strictEqual(fs.existsSync(path.join(WEB_SRC, "config", "env.client.ts")), true);
+      assert.strictEqual(fs.existsSync(path.join(API_SRC, "config", "runtime.ts")), true);
     });
   });
 
   describe("4. Security Headers & Browser Defense", () => {
     it("ensures security headers configuration module exists and defines nosniff and frame-ancestors", async () => {
-      const secHeadersPath = path.join(SRC_DIR, "config", "security-headers.ts");
+      const secHeadersPath = path.join(ROOT_DIR, "packages", "shared", "src", "config", "security-headers.ts");
       assert.strictEqual(fs.existsSync(secHeadersPath), true);
 
-      const { getSecurityHeaders } = await import("@/config/security-headers");
+      const { getSecurityHeaders } = await import("@qcet/shared/config/security-headers");
       const headers = getSecurityHeaders();
 
       assert.strictEqual(headers["X-Content-Type-Options"], "nosniff");
@@ -244,10 +285,10 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
 
   describe("5. Feature Flags & Kill Switches", () => {
     it("ensures feature flag module exists and defines kill switches", async () => {
-      const flagsPath = path.join(SRC_DIR, "features", "flags.ts");
+      const flagsPath = path.join(API_SRC, "features", "flags.ts");
       assert.strictEqual(fs.existsSync(flagsPath), true);
 
-      const { isFeatureEnabled, FEATURE_FLAGS } = await import("@/features/flags");
+      const { isFeatureEnabled, FEATURE_FLAGS } = await import("../apps/api/src/features/flags");
       assert.ok(FEATURE_FLAGS.pushNotifications);
       assert.strictEqual(typeof isFeatureEnabled("pushNotifications"), "boolean");
       assert.strictEqual(FEATURE_FLAGS.pushNotifications.isKillSwitch, true);
@@ -256,7 +297,7 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
 
   describe("6. Logging Sanitization & Observability", () => {
     it("ensures sanitizeLogContext redacts confidential data", async () => {
-      const { sanitizeLogContext } = await import("@/telemetry/server");
+      const { sanitizeLogContext } = await import("../apps/api/src/telemetry/server");
       const sanitized = sanitizeLogContext({
         user: "admin",
         password: "super_secret_password",
@@ -293,8 +334,8 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
 
   describe("8. Domain Layer Isolation & Canonical Services (Phase 28)", () => {
     it("verifies src/domain/tasks/state-machine.ts exists and has zero imports from react, next, or src/components/", () => {
-      const stateMachinePath = path.join(SRC_DIR, "domain", "tasks", "state-machine.ts");
-      assert.strictEqual(fs.existsSync(stateMachinePath), true, "src/domain/tasks/state-machine.ts must exist");
+      const stateMachinePath = path.join(ROOT_DIR, "packages", "shared", "src", "domain", "tasks", "state-machine.ts");
+      assert.strictEqual(fs.existsSync(stateMachinePath), true, "packages/shared/src/domain/tasks/state-machine.ts must exist");
 
       const content = fs.readFileSync(stateMachinePath, "utf8");
       assert.doesNotMatch(
@@ -315,9 +356,9 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
     });
 
     it("verifies canonical domain services layer exists", () => {
-      const queryServicePath = path.join(SRC_DIR, "server", "tasks", "task-query-service.ts");
-      const commandServicePath = path.join(SRC_DIR, "server", "tasks", "task-command-service.ts");
-      const stateMachinePath = path.join(SRC_DIR, "domain", "tasks", "state-machine.ts");
+      const queryServicePath = path.join(API_SRC, "server", "tasks", "task-query-service.ts");
+      const commandServicePath = path.join(API_SRC, "server", "tasks", "task-command-service.ts");
+      const stateMachinePath = path.join(ROOT_DIR, "packages", "shared", "src", "domain", "tasks", "state-machine.ts");
 
       assert.strictEqual(fs.existsSync(queryServicePath), true, "task-query-service.ts must exist");
       assert.strictEqual(fs.existsSync(commandServicePath), true, "task-command-service.ts must exist");

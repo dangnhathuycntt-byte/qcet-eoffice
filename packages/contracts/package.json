@@ -1,0 +1,10 @@
+{
+  "name": "@qcet/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hợp đồng API dùng chung (schema Zod, kiểu, enum thuần) giữa apps/web và apps/api.",
+  "dependencies": {
+    "@qcet/shared": "*",
+    "zod": "^4.5.4"
+  }
+}

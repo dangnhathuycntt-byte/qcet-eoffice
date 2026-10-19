@@ -8,7 +8,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { DocumentQuerySchema } from "@/contracts/documents";
+import { DocumentQuerySchema } from "@qcet/contracts/documents";
 
 describe("DocumentQuerySchema validation", () => {
   // ── 1. Empty query defaults ───────────────────────────────────────────

@@ -7,7 +7,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { ExportDocumentQuerySchema } from "@/contracts/documents";
+import { ExportDocumentQuerySchema } from "@qcet/contracts/documents";
 
 describe("ExportDocumentQuerySchema validation", () => {
   test("accepts valid VAN_BAN_DEN type", () => {

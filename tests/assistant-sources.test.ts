@@ -1,12 +1,12 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import type { AssistantSourceRef, AssistantSourceType } from "../src/contracts/assistant";
+import type { AssistantSourceRef, AssistantSourceType } from "@qcet/contracts/assistant";
 import {
   assistantSourceHref,
   dedupeSources,
   linkSourceCodes,
   selectCitedSources,
-} from "../src/domain/assistant/assistant-sources";
+} from "@qcet/shared/domain/assistant/assistant-sources";
 
 function source(type: AssistantSourceType, id: string, code: string | null, title = `Tiêu đề ${id}`): AssistantSourceRef {
   return { type, id, code, title, href: assistantSourceHref(type, id) };

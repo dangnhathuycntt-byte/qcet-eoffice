@@ -15,7 +15,7 @@ import {
   SignDocumentSchema,
   SubmitContentReviewSchema,
   SubmitFormatCheckSchema,
-} from "@/contracts/documents";
+} from "@qcet/contracts/documents";
 
 // ---------------------------------------------------------------------------
 // CreateDocumentSchema

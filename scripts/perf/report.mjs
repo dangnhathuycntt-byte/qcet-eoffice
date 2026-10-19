@@ -75,7 +75,7 @@ function writeBudgets(baseline) {
         entries.push({
           route: cell.route, viewport: cell.viewport, metric, tier: "cwv",
           budget: thresholds[metric].good,
-          basis: `C16 good threshold (${path.relative(REPO_ROOT, "src/telemetry/web-vitals.ts")})`,
+          basis: `C16 good threshold (${path.relative(REPO_ROOT, "apps/web/src/telemetry/web-vitals.ts")})`,
         });
       }
       const regression = regressionBudget(metric, m.p75);
@@ -97,7 +97,7 @@ function writeBudgets(baseline) {
     baselineGitSha: baseline.gitSha || null,
     runs: baseline.runs,
     headroomMultiplier: HEADROOM,
-    thresholdsSource: "src/telemetry/web-vitals.ts",
+    thresholdsSource: "apps/web/src/telemetry/web-vitals.ts",
     cwvThresholds: thresholds,
     entries,
   };

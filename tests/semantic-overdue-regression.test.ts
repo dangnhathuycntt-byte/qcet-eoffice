@@ -19,7 +19,7 @@ import assert from "node:assert/strict";
 import {
   isTaskOverdue,
   isTaskPastDue,
-} from "../src/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 
 // Fixed anchor — injected into all helpers; never relies on wall-clock.
 const REF = "2026-09-10";

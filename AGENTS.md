@@ -12,18 +12,23 @@
 ## Tìm đúng chỗ
 | Công việc | Điểm vào |
 |---|---|
-| Trang và API | `src/app/`, `src/app/api/` |
-| Giao diện dùng chung | `src/components/ui/`, `src/components/workspace/` |
-| Nhiệm vụ | `src/components/tasks/`, `src/domain/tasks/` |
-| Nghiệp vụ, tiện ích | `src/domain/`, `src/lib/` |
-| Phân quyền và dịch vụ | `src/server/authorization/`, `src/server/services/` |
-| Schema và kiểm thử | `prisma/schema.prisma`, `tests/` |
+| Trang | `apps/web/src/app/` |
+| API | `apps/api/src/app/api/` (dữ liệu cho trang: `api/page-data/*`, phiên: `api/auth/me`) |
+| Giao diện dùng chung | `apps/web/src/components/ui/`, `apps/web/src/components/workspace/` |
+| Nhiệm vụ | `apps/web/src/components/tasks/`, `packages/shared/src/domain/tasks/` |
+| Nghiệp vụ, tiện ích | `packages/shared/src/{domain,lib}/`, `apps/<app>/src/lib/` |
+| Phân quyền, dịch vụ, việc nền | `apps/api/src/server/{authorization,services,outbox}/` |
+| Hợp đồng API | `packages/contracts/src/` (Zod + kiểu DTO dùng chung web/api) |
+| Schema và kiểm thử | `packages/db/prisma/schema.prisma`, `apps/<app>/tests/`, `tests/` (test chéo hai app, test chỉ dùng packages) |
+
+- Hai ứng dụng (ADR-011): chỉ `apps/api` chạm CSDL, Redis, ClamAV, uploads, migrate, worker, cron và giữ bí mật server; `apps/web` đọc dữ liệu qua API (`serverApiFetch`, `fetchPageData` ở `apps/web/src/lib/server-api.ts`; trình duyệt gọi `/api` cùng tên miền). Không import chéo giữa hai app; phần dùng chung đặt trong `packages/`. Thư viện khai báo ở `package.json` của workspace import nó (`npm install <gói> -w @qcet/web`); gốc chỉ giữ công cụ chung (`tests/architecture-fitness.test.ts` kiểm). Việc nền ghi vào outbox trong cùng transaction (`enqueueAgentJob` cho việc của agent).
 
 ## Phạm vi và cách làm
 - Giữ các thay đổi đang làm dở. Không tự commit, push, merge hoặc deploy nếu người dùng chưa yêu cầu.
 - Sửa nguyên nhân trong phạm vi yêu cầu; tránh refactor, dependency hay abstraction không cần thiết. Giải thích lý do khi thay đổi kiến trúc.
 - Tái sử dụng component, dependency và helper chung. Không tạo workspace, bảng, toolbar hoặc định nghĩa metric song song.
-- Không bịa dữ liệu nghiệp vụ, số đếm hay metadata. Dùng thuật ngữ tiếng Việt hiện có; ngày nghiệp vụ dùng `src/lib/academic-calendar.ts`, múi giờ `Asia/Ho_Chi_Minh`. Logic domain phải deterministic, không có side effect ẩn.
+- Trước khi tự viết một tính năng, tra xem thư viện đã cài (Plate, Base UI, …) và component chung đã hỗ trợ chưa (tài liệu chính thức đúng phiên bản). Chỉ tự viết khi chưa có, hoặc có sẵn nhưng chưa đủ tốt; khi đó nêu rõ thiếu gì.
+- Không bịa dữ liệu nghiệp vụ, số đếm hay metadata. Dùng thuật ngữ tiếng Việt hiện có; ngày nghiệp vụ dùng `packages/shared/src/lib/academic-calendar.ts`, múi giờ `Asia/Ho_Chi_Minh`. Logic domain phải deterministic, không có side effect ẩn.
 
 ## Nghiệp vụ và phân quyền
 - Role quyết định quyền, scope lọc tập dữ liệu. Giữ ngữ nghĩa nhiệm vụ cha/con và đồng bộ filter, counter, view, URL.
@@ -35,7 +40,7 @@
 - `DESIGN.md` chỉ dẫn nguồn thiết kế, token hiện tại và khác biệt chưa chốt. Chỉ đọc khi sửa UI; không coi hiện trạng code là bằng chứng thiết kế đã được duyệt.
 - Khi cần bảng gốc, tra `INDEX.md`, `project/`, `shots/` trong đúng bộ thiết kế. Bám token, font, khoảng cách, ảnh và trạng thái tương ứng; không tự thêm biến thể hoặc suy nghiệp vụ từ ví dụ.
 - Đối chiếu ở viewport phù hợp, kiểm tra bàn phím, responsive, loading/error khi sửa phần liên quan.
-- Không tự dựng lại control đã có. Trước khi viết `<button>`, `<input>`, màu hay cỡ chữ riêng, tra bảng sau; thiếu biến thể thì thêm vào component trong `src/components/ui/` (cva), không chép class sang màn hình:
+- Không tự dựng lại control đã có. Trước khi viết `<button>`, `<input>`, màu hay cỡ chữ riêng, tra bảng sau; thiếu biến thể thì thêm vào component trong `apps/web/src/components/ui/` (cva), không chép class sang màn hình:
 
   | Cần | Dùng |
   |---|---|
@@ -50,16 +55,16 @@
   | Màu tín hiệu | `text-destructive`, `bg-danger-soft`, `bg-destructive/10`; `text-warning`, `bg-warning/10` |
   | Cỡ chữ | `text-xs`, `text-compact`, `text-sm`… (thang ở `DESIGN.md`) |
 
-- `npm run lint` chặn vi phạm mới (`<button>`/`<input>` tự viết ngoài `ui/`, `rose-*`/`amber-*`, `text-[…px]`, palette xám thô…); debt cũ nằm ở `scripts/design-lint-baseline.json`. Sửa dòng cũ thì làm sạch luôn dòng đó, không thêm vào baseline. Ngoại lệ có lý do: `design-lint-ignore <rule-id>: <lý do>` trên cùng dòng hoặc dòng trước. Hook Claude Code trong `.claude/settings.json` chạy lint trên mỗi file vừa sửa. `npm run lint` cũng chặn file mới trong `src/` (cả `server/`, `domain/`, `contracts/`) mà không route nào import; test import không tính (`scripts/check-orphans.mjs`; module backend chưa nối còn trong `scripts/orphan-baseline.json`): nối vào chỗ dùng hoặc xóa, không để lại bản cũ.
-- Kích thước UI chuẩn (nhỏ gọn, kiểu Linear): chữ nội dung `text-compact` 13px, nhãn/dòng phụ/popover/tab `text-xs` 12px, không dùng cỡ lẻ (kể cả `text-[12px]`, `text-[13px]`: dùng `text-xs`, `text-compact`); hàng bảng Nhiệm vụ 48px (như bảng Projects của Linear), các bảng danh sách khác một dòng 40px, hai dòng 48px; tiêu đề cột bảng Nhiệm vụ 32px (thấp hơn hàng, như Linear); tiêu đề chính của hàng một dòng cắt cuối kèm tooltip, tên cơ quan/đơn vị không ghi tắt "…" mà xuống tối đa 2 dòng; thuộc tính trong panel chi tiết là lưới nhãn–giá trị căn thẳng cột, không xếp thành dòng metadata không nhãn; icon loại tệp dùng `FileTypeIcon` và token `--file-*`; đường chia kéo giãn có grip luôn hiện (`ResizeGrip`) và vùng kéo 24px không bị `overflow-hidden` cắt; item popover/menu ≤ 32px (`py-1`); màu tín hiệu dùng token `text-destructive` (trễ hạn, khẩn) và `text-warning` (sắp tới hạn), không dùng `rose-*`/`amber-*`; control `h-7` (28px, `--control-height-sm`), avatar `size="xs"` (16px) trong hàng bảng danh sách (như Linear), `sm` (20px) ở sidebar/menu, `md` (24px) chỉ ở nơi cần nhận diện; popover rộng 224–256px; nét icon 1,5px (mặc định từ `LucideProvider`, không truyền `strokeWidth`). Khi không chắc, chọn cỡ nhỏ hơn một bậc và so với phần tử cạnh nó (sidebar, bảng). Chi tiết ở `DESIGN.md`.
+- `npm run lint` chặn vi phạm mới (`<button>`/`<input>` tự viết ngoài `ui/`, `rose-*`/`amber-*`, `text-[…px]`, palette xám thô…); debt cũ nằm ở `scripts/design-lint-baseline.json`. Sửa dòng cũ thì làm sạch luôn dòng đó, không thêm vào baseline. Ngoại lệ có lý do: `design-lint-ignore <rule-id>: <lý do>` trên cùng dòng hoặc dòng trước. Hook Claude Code trong `.claude/settings.json` chạy lint trên mỗi file vừa sửa. `npm run lint` cũng chặn file mới trong `apps/<app>/src/` và `packages/<tên>/src/` mà không route nào import; test import không tính (`scripts/check-orphans.mjs`; module backend chưa nối còn trong `scripts/orphan-baseline.json`): nối vào chỗ dùng hoặc xóa, không để lại bản cũ.
+- Kích thước UI chuẩn (nhỏ gọn, kiểu Linear): chữ nội dung `text-compact` 13px, nhãn/dòng phụ/popover/tab `text-xs` 12px, không dùng cỡ lẻ (kể cả `text-[12px]`, `text-[13px]`: dùng `text-xs`, `text-compact`); hàng bảng Nhiệm vụ 48px (như bảng Projects của Linear), các bảng danh sách khác một dòng 40px, hai dòng 48px; tiêu đề cột bảng Nhiệm vụ 32px (thấp hơn hàng, như Linear); tiêu đề chính của hàng một dòng cắt cuối kèm tooltip, tên cơ quan/đơn vị không ghi tắt "…" mà xuống tối đa 2 dòng; thuộc tính trong panel chi tiết là lưới nhãn–giá trị căn thẳng cột, không xếp thành dòng metadata không nhãn; icon loại tệp dùng `FileTypeIcon` và token `--file-*`; đường chia kéo giãn có grip luôn hiện (`ResizeGrip`) và vùng kéo 24px không bị `overflow-hidden` cắt; item popover/menu ≤ 32px (`py-1`); màu tín hiệu dùng token `text-destructive` (trễ hạn, khẩn) và `text-warning` (sắp tới hạn), không dùng `rose-*`/`amber-*`; control `h-7` (28px, `--control-height-sm`), avatar `size="xs"` (16px) trong hàng bảng danh sách (như Linear), `sm` (20px) ở sidebar/menu, `md` (24px) chỉ ở nơi cần nhận diện; popover rộng 224–256px; nét icon Lucide 1,25px trên màn hình ở mọi cỡ (`LucideProvider` + `vector-effect` ở `globals.css`, không truyền `strokeWidth`; bộ icon sidebar `SidebarSvg` cũng vậy). Khi không chắc, chọn cỡ nhỏ hơn một bậc và so với phần tử cạnh nó (sidebar, bảng). Chi tiết ở `DESIGN.md`.
 - Mọi thay đổi UI phải tự kiểm lại kích thước trước khi báo xong: đối chiếu với thang trên và với phần tử lân cận, rà `text-sm`/`text-base`/`py-2+`/`size-8+` mới thêm, xem lại ảnh người dùng gửi (chụp màn Retina nên nhìn to hơn thực tế). Chưa xem được trên trình duyệt thì nói rõ chưa kiểm.
 
 
 ## Kiểm tra
-- Dùng npm theo `package-lock.json`. Tận dụng dev server hiện có; nếu cần khởi chạy, dùng `npm run dev -- -p 3001` sau khi kiểm tra cổng. Server treo (không phản hồi) thì kill tiến trình của repo này và khởi động lại, không chờ thêm. Không xóa `.next/` để verify.
+- Dùng npm theo `package-lock.json`. Tận dụng dev server hiện có; nếu cần khởi chạy, dùng `npm run dev -- -p 3001` sau khi kiểm tra cổng (chạy cả api ở cổng `API_PORT`, mặc định 3100, và web ở cổng `-p`; web chuyển `/api` tới api). Server treo (không phản hồi) thì kill tiến trình của repo này và khởi động lại, không chờ thêm. Không xóa `.next/` để verify.
 - Không dùng `next build` / `npm run build` để verify; chỉ chạy production build khi người dùng yêu cầu trực tiếp.
 - Thay đổi TypeScript/logic: chạy `npm run typecheck`, `npm run lint` và test liên quan. Sửa docs: kiểm tra link/path và `git diff --check`; không cần chạy toàn bộ suite. `npm run verify` gồm typecheck + lint + toàn bộ test, dùng khi phạm vi thực sự cần.
-- Chạy test cụ thể: `node scripts/run-tests.mjs --files tests/<file>.test.ts`. Thay placeholder bằng file tồn tại; đọc số test đã chạy và số skip. Runner hiện bỏ qua đường dẫn không tồn tại và có thể thoát 0 khi không chọn được test; đó không phải bằng chứng pass. Thiếu `--files` có thể chạy toàn bộ suite.
+- Chạy test cụ thể: `node scripts/run-tests.mjs --files apps/<app>/tests/<file>.test.ts` (hoặc `tests/<file>.test.ts`); mỗi workspace chạy với cwd của nó và in tổng kết riêng. Thay placeholder bằng file tồn tại; đọc số test đã chạy và số skip. Runner hiện bỏ qua đường dẫn không tồn tại và có thể thoát 0 khi không chọn được test; đó không phải bằng chứng pass. Thiếu `--files` có thể chạy toàn bộ suite.
 - Bug/hành vi mới cần regression test phù hợp; test yêu cầu thực và ranh giới quyền/scope, cố định thời gian khi cần. Không nới assertion hoặc cập nhật lint baseline để che lỗi. Không thêm test chỉ lặp lại implementation cho chỉnh sửa nhỏ, dễ đảo ngược.
 - Test cần DB dùng môi trường test được repo hỗ trợ; không dùng dữ liệu vận hành để thử nghiệm. Thiếu môi trường thì báo phần chưa kiểm chứng. Không gọi lỗi là có sẵn nếu chưa có bằng chứng baseline.
 

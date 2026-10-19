@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { fromDocumentItem, fromOfficialDocument, getDocumentKind, getDocumentHref } from "../src/lib/documents/document-view-model";
-import type { DocumentItem, OfficialDocument } from "../src/types/document";
+import { fromDocumentItem, fromOfficialDocument, getDocumentKind, getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
+import type { DocumentItem, OfficialDocument } from "@qcet/contracts/types/document";
 
 const attachment = (id: string, name: string, isOriginal = false) => ({
   id,

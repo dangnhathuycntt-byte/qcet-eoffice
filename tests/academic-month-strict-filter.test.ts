@@ -1,7 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { filterTasksByAcademicMonthStrict } from "../src/lib/academic-calendar";
-import type { SchoolTask } from "../src/types/dashboard";
+import { filterTasksByAcademicMonthStrict } from "@qcet/shared/lib/academic-calendar";
+import type { SchoolTask } from "@qcet/contracts/types/dashboard";
 
 describe("filterTasksByAcademicMonthStrict refinement", () => {
   test("filterTasksByAcademicMonthStrict prioritizes academicMonth property", () => {

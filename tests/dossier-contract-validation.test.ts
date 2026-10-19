@@ -13,7 +13,7 @@ import {
   CloseDossierSchema,
   AcceptArchiveSchema,
   RejectArchiveSchema,
-} from "@/contracts/dossiers";
+} from "@qcet/contracts/dossiers";
 
 describe("CreateDossierSchema validation", () => {
   test("accepts valid minimal input", () => {

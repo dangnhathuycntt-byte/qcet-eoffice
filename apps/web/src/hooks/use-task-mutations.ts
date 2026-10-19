@@ -1,0 +1,589 @@
+"use client";
+
+import * as React from "react";
+import { confirmAction } from "@/components/ui/confirm-host";
+import type {
+  SchoolTask,
+  StaffTask,
+  DashboardPayload,
+  TaskStatus,
+} from "@qcet/contracts/types/dashboard";
+import {
+  computeSchoolTaskRollup,
+  computeDashboardStats,
+} from "@/lib/dashboard-aggregator";
+import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@qcet/contracts/types/workspace";
+import type { DelegationRule } from "@qcet/contracts/types/delegation";
+import type { AuthUser } from "@qcet/contracts/types/auth";
+import { isOnline, enqueueOfflineMutation } from "@/lib/offline-sync";
+import { getSystemReferenceDateStr } from "@/lib/unified-task-hub";
+import { createLatestRequestGuard } from "@/lib/latest-request-guard";
+
+export const EMPTY_DASHBOARD_PAYLOAD: DashboardPayload = {
+  stats: {
+    totalSchoolTasks: 0,
+    schoolTasksInProgress: 0,
+    schoolTasksCompleted: 0,
+    totalStaffTasks: 0,
+    staffTasksInProgress: 0,
+    staffTasksCompleted: 0,
+    needsReviewTasksCount: 0,
+    overdueTasksCount: 0,
+    averageSchoolProgressPercent: 0,
+    totalTasks: 0,
+    inProgressTasks: 0,
+    completedTasks: 0,
+    overdueTasks: 0,
+    pendingApprovals: 0,
+    completionRate: 0,
+  },
+  tasks: [],
+  upcoming: [],
+  activities: [],
+  source: "database",
+  departmentHealth: [],
+  syncTimestamp: "",
+};
+
+
+export interface TaskMutationsReturn {
+  dashboardData: DashboardPayload;
+  isLoading: boolean;
+  errorMessage: string | null;
+  error?: string | null;
+  isRefreshing: boolean;
+  delegations: DelegationRule[];
+  delegationDeptCode: string;
+  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<boolean>;
+  handleSubmitDeliverable: (payload: DeliverableSubmissionPayload) => Promise<void>;
+  handleReviewAction: (payload: ApprovalActionPayload) => Promise<void>;
+  handleManualRefresh: () => Promise<void>;
+  handleSaveDelegation: (ruleData: Omit<DelegationRule, "id" | "createdAt">) => void;
+  handleRevokeDelegation: (ruleId: string) => void;
+}
+
+/** Bước đang chờ của luồng duyệt nhiều bước (nếu có), để gửi kèm quyết định duyệt. */
+async function currentApprovalStepId(taskId: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/approval-process`, { cache: "no-store" });
+    if (!res.ok) return undefined;
+    const view = await res.json();
+    if (view?.process?.status !== "IN_REVIEW") return undefined;
+    return (view.process.steps as Array<{ id: string; current: boolean }>).find((step) => step.current)?.id;
+  } catch {
+    return undefined;
+  }
+}
+
+export function useTaskMutations(
+  user?: AuthUser | null,
+  onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void,
+  initialData?: DashboardPayload
+): TaskMutationsReturn {
+  const hasInitialData = Boolean(initialData && initialData.tasks && initialData.stats);
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
+    hasInitialData ? (initialData as DashboardPayload) : EMPTY_DASHBOARD_PAYLOAD
+  );
+  const [isLoading, setIsLoading] = React.useState<boolean>(!hasInitialData);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = React.useState<boolean>(false);
+  const [delegations, setDelegations] = React.useState<DelegationRule[]>([]);
+  const [delegationDeptCode] = React.useState(user?.departmentCode || "");
+
+  // Latest-request-wins guard: a slow earlier fetch must not overwrite a newer
+  // one (plan T03.6). One guard instance per hook, shared by every overview fetch.
+  const overviewRequestGuard = React.useRef(createLatestRequestGuard());
+
+  // Initial background sync: Skip when server-provided initial data is present
+  React.useEffect(() => {
+    if (hasInitialData) {
+      return;
+    }
+    let isMounted = true;
+    async function syncDashboardOverview() {
+      const requestToken = overviewRequestGuard.current.begin();
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const response = await fetch("/api/dashboard/overview");
+        if (isMounted && !overviewRequestGuard.current.isCurrent(requestToken)) {
+          return; // a newer request has started; this response is stale
+        }
+        if (response.ok && isMounted) {
+          const liveData: DashboardPayload = await response.json();
+          if (liveData && liveData.tasks && liveData.stats) {
+            setDashboardData(liveData);
+          }
+        } else if (!response.ok && isMounted) {
+          const errData = await response.json().catch(() => null);
+          setErrorMessage(errData?.error || "Không thể tải dữ liệu dashboard từ máy chủ");
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setErrorMessage(err?.message || "Lỗi mạng khi tải dữ liệu dashboard");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+    syncDashboardOverview();
+    return () => {
+      isMounted = false;
+    };
+  }, [hasInitialData]);
+
+  // Fetch active delegations from API
+  React.useEffect(() => {
+    if (!user?.id) return;
+    let isMounted = true;
+    fetch("/api/delegations?status=ACTIVE")
+      .then((r) => {
+        if (!r.ok) throw new Error("delegation fetch failed");
+        return r.json();
+      })
+      .then((data: any[]) => {
+        if (!isMounted || !Array.isArray(data)) return;
+        setDelegations(
+          data.map((d) => ({
+            id: d.id,
+            grantorId: d.grantorAssignment?.userId || "",
+            grantorName: d.grantorAssignment?.user?.name || "",
+            grantorRole: (d.grantorAssignment?.user?.role === "ADMIN" ? "ADMIN" : "MANAGER") as "ADMIN" | "MANAGER",
+            granteeId: d.granteeAssignment?.userId || "",
+            granteeName: d.granteeAssignment?.user?.name || "",
+            granteeRole: (d.granteeAssignment?.user?.role === "MANAGER" ? "MANAGER" : "STAFF") as "MANAGER" | "STAFF",
+            departmentCode: d.grantorAssignment?.unit?.code || d.granteeAssignment?.unit?.code || "",
+            scope: d.action || "",
+            startDate: d.validFrom ? new Date(d.validFrom).toISOString().slice(0, 10) : "",
+            endDate: d.validUntil ? new Date(d.validUntil).toISOString().slice(0, 10) : "",
+            status: d.status || "ACTIVE",
+            reason: d.reason || "",
+            documentRef: d.sourceDocumentNumber || undefined,
+            createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : "",
+            revokedAt: d.revokedAt ? new Date(d.revokedAt).toISOString() : undefined,
+          }))
+        );
+      })
+      .catch(() => {/* silent — delegations are optional */});
+    return () => { isMounted = false; };
+  }, [user?.id]);
+
+  const handleManualRefresh = React.useCallback(async () => {
+    const requestToken = overviewRequestGuard.current.begin();
+    setIsRefreshing(true);
+    setErrorMessage(null);
+    try {
+      const response = await fetch("/api/dashboard/overview");
+      if (!overviewRequestGuard.current.isCurrent(requestToken)) {
+        return; // a newer request has started; this response is stale
+      }
+      if (response.ok) {
+        const liveData: DashboardPayload = await response.json();
+        if (liveData && liveData.tasks && liveData.stats) {
+          setDashboardData(liveData);
+        }
+      } else {
+        const errData = await response.json().catch(() => null);
+        setErrorMessage(errData?.error || "Làm mới dữ liệu thất bại");
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Lỗi kết nối khi làm mới dữ liệu");
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  }, []);
+
+  const handleStatusChange = React.useCallback(
+    async (taskId: string, newStatus: TaskStatus, note?: string) => {
+      const previousData = dashboardData;
+      setErrorMessage(null);
+
+      const currentTask =
+        dashboardData.tasks.find((task) => task.id === taskId) ??
+        dashboardData.tasks.flatMap((task) => task.subTasks || []).find((task) => task.id === taskId);
+      const expectedVersion = currentTask?.version;
+      if (newStatus === "COMPLETED" && expectedVersion === undefined) {
+        setErrorMessage("Không thể phê duyệt do thiếu phiên bản mới nhất của nhiệm vụ. Hãy tải lại dữ liệu.");
+        return false;
+      }
+
+      // Optimistic state update
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === taskId) {
+            const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+              newStatus === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS";
+            return { ...st, status: schoolStatus };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) =>
+            sub.id === taskId ? { ...sub, status: newStatus } : sub
+          );
+          return { ...st, subTasks: updatedSubs };
+        });
+        const rolledUpTasks = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUpTasks,
+          stats: computeDashboardStats(rolledUpTasks),
+        };
+      });
+
+      // Dedicated domain action endpoint and payload for status update
+      const actionUrl = `/api/tasks/${taskId}/actions/update-status`;
+      const actionBody: any = {
+        status: newStatus,
+        note,
+        ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+      };
+      const actionDesc = `Cập nhật trạng thái nhiệm vụ ${taskId} (${newStatus})`;
+
+      // API call or offline enqueue
+      if (!isOnline()) {
+        enqueueOfflineMutation({
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
+        });
+        setErrorMessage("Đang ngoại tuyến. Thay đổi đã được lưu tạm và sẽ tự động gửi khi có mạng.");
+        return false;
+      }
+
+      try {
+        const res = await fetch(actionUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(actionBody),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          setDashboardData(previousData);
+          setErrorMessage(errData?.error || "Cập nhật trạng thái nhiệm vụ thất bại. Đã khôi phục dữ liệu.");
+          return false;
+        }
+        const responseBody = await res.json().catch(() => null);
+        const nextVersion = responseBody?.data?.version ??
+          (expectedVersion !== undefined ? expectedVersion + 1 : undefined);
+        if (nextVersion !== undefined) {
+          setDashboardData((previous) => ({
+            ...previous,
+            tasks: previous.tasks.map((task) => {
+              if (task.id === taskId) return { ...task, version: nextVersion };
+              return {
+                ...task,
+                subTasks: task.subTasks.map((subTask) =>
+                  subTask.id === taskId ? { ...subTask, version: nextVersion } : subTask
+                ),
+              };
+            }),
+          }));
+        }
+        return true;
+      } catch (err: any) {
+        // Network drop during request: enqueue mutation and preserve optimistic state
+        enqueueOfflineMutation({
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
+        });
+        setErrorMessage("Mất kết nối mạng. Thao tác đã được lưu tạm và sẽ tự động gửi khi có kết nối.");
+        return false;
+      }
+    },
+    [dashboardData]
+  );
+
+  const handleSubmitDeliverable = React.useCallback(
+    async (payload: DeliverableSubmissionPayload) => {
+      const previousData = dashboardData;
+      setErrorMessage(null);
+      const todayStr = getSystemReferenceDateStr();
+
+      // Optimistic state update
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === payload.taskId) {
+            return {
+              ...st,
+              status: "PENDING_EXECUTIVE_APPROVAL" as const,
+              completionReport: {
+                summary:
+                  payload.note ||
+                  payload.deliverableName ||
+                  "Nộp minh chứng hoàn thành nhiệm vụ cấp trường",
+                submittedBy: user?.name || "Cán bộ chủ trì",
+                submittedAt: todayStr,
+                reportUrl: payload.url,
+              },
+            };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) => {
+            if (sub.id === payload.taskId) {
+              const existingDeliverables = sub.deliverables || [];
+              const newFile = {
+                id: `deliv-${Date.now()}`,
+                name: payload.deliverableName || "Tài liệu minh chứng",
+                url: payload.url || "#",
+                fileType: payload.fileType || "application/pdf",
+                submittedAt: todayStr,
+              };
+              return {
+                ...sub,
+                status: "NEEDS_REVIEW" as const,
+                deliverables: [...existingDeliverables, newFile],
+                deliverableDescription: payload.note || sub.deliverableDescription,
+                updatedAt: todayStr,
+              };
+            }
+            return sub;
+          });
+          return { ...st, subTasks: updatedSubs };
+        });
+
+        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUp,
+          stats: computeDashboardStats(rolledUp),
+        };
+      });
+
+      // API call or offline enqueue
+      if (!isOnline()) {
+        enqueueOfflineMutation({
+          url: `/api/tasks/${payload.taskId}/deliverables`,
+          method: "POST",
+          body: {
+            title: payload.deliverableName || "Tài liệu minh chứng",
+            fileUrl: payload.url || "#",
+            fileType: payload.fileType || "LINK",
+            uploadedById: user?.id,
+          },
+          description: `Nộp minh chứng nhiệm vụ ${payload.taskId}`,
+        });
+        setErrorMessage("Đang ngoại tuyến. Minh chứng đã được lưu tạm và sẽ tự động gửi khi có mạng.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/tasks/${payload.taskId}/deliverables`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: payload.deliverableName || "Tài liệu minh chứng",
+            fileUrl: payload.url || "#",
+            fileType: payload.fileType || "LINK",
+            uploadedById: user?.id,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          setDashboardData(previousData);
+          setErrorMessage(errData?.error || "Nộp minh chứng thất bại. Đã khôi phục dữ liệu.");
+        }
+      } catch (err: any) {
+        // Network drop: enqueue mutation and preserve optimistic state
+        enqueueOfflineMutation({
+          url: `/api/tasks/${payload.taskId}/deliverables`,
+          method: "POST",
+          body: {
+            title: payload.deliverableName || "Tài liệu minh chứng",
+            fileUrl: payload.url || "#",
+            fileType: payload.fileType || "LINK",
+            uploadedById: user?.id,
+          },
+          description: `Nộp minh chứng nhiệm vụ ${payload.taskId}`,
+        });
+        setErrorMessage("Mất kết nối mạng. Minh chứng đã được lưu tạm và sẽ tự động nộp khi có mạng.");
+      }
+    },
+    [dashboardData, user?.id, user?.name]
+  );
+
+  const handleReviewAction = React.useCallback(
+    async (payload: ApprovalActionPayload) => {
+      const previousData = dashboardData;
+      setErrorMessage(null);
+      const currentTask =
+        dashboardData.tasks.find((task) => task.id === payload.taskId) ??
+        dashboardData.tasks.flatMap((task) => task.subTasks || []).find((task) => task.id === payload.taskId);
+      const expectedVersion = payload.expectedVersion ?? currentTask?.version;
+      if (expectedVersion === undefined) {
+        setErrorMessage("Không có phiên bản nhiệm vụ hiện tại để gửi quyết định. Hãy tải lại dữ liệu rồi thử lại.");
+        return;
+      }
+      // T-04 (Q3): duyệt không bị chặn khi còn tiêu chí chưa đạt, nhưng người duyệt phải xác nhận.
+      if ((payload.decision === "approved" || payload.decision === undefined) && isOnline() && typeof window !== "undefined") {
+        try {
+          const res = await fetch(`/api/tasks/${payload.taskId}/criteria`, { cache: "no-store" });
+          const view = res.ok ? await res.json() : null;
+          const unmet = Number(view?.unmet ?? 0);
+          if (unmet > 0) {
+            const proceed = await confirmAction({
+              title: "Vẫn phê duyệt nhiệm vụ?",
+              description: `Còn ${unmet} tiêu chí chưa đạt. Có thể chọn Yêu cầu chỉnh sửa thay vì phê duyệt.`,
+              confirmLabel: "Vẫn phê duyệt",
+            });
+            if (!proceed) return;
+          }
+        } catch {
+          // Không đọc được tiêu chí thì không chặn việc duyệt.
+        }
+      }
+      const todayStr = getSystemReferenceDateStr();
+      let statusToSet: TaskStatus = "IN_PROGRESS";
+      if (payload.decision === "approved") {
+        statusToSet = "COMPLETED";
+      } else if (payload.decision === "revision_requested") {
+        statusToSet = "IN_PROGRESS";
+      } else if (payload.decision === "rejected") {
+        statusToSet = "BLOCKED";
+      }
+
+      // Optimistic state update
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === payload.taskId) {
+            const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+              payload.decision === "approved" ? "COMPLETED" : "IN_PROGRESS";
+            return {
+              ...st,
+              status: schoolStatus,
+            };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) => {
+            if (sub.id === payload.taskId) {
+              return {
+                ...sub,
+                status: statusToSet,
+                updatedAt: todayStr,
+                rejectionReason:
+                  payload.decision !== "approved" ? payload.comment : undefined,
+              };
+            }
+            return sub;
+          });
+          return { ...st, subTasks: updatedSubs };
+        });
+
+        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUp,
+          stats: computeDashboardStats(rolledUp),
+        };
+      });
+
+      let actionUrl: string;
+      let actionBody: Record<string, unknown>;
+      let actionDesc: string;
+
+      // Có luồng duyệt nhiều bước đang chạy (T-05): quyết định phải nêu bước hiện tại.
+      const stepId =
+        payload.decision !== "revision_requested" && isOnline() ? await currentApprovalStepId(payload.taskId) : undefined;
+
+      if (payload.decision === "approved") {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
+        actionBody = { note: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
+        actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
+      } else if (payload.decision === "revision_requested") {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/request-revision`;
+        actionBody = { reason: payload.comment || "Yêu cầu chỉnh sửa", expectedVersion };
+        actionDesc = `Yêu cầu chỉnh sửa nhiệm vụ ${payload.taskId}`;
+      } else if (payload.decision === "rejected") {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/review`;
+        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
+        actionDesc = `Từ chối nhiệm vụ ${payload.taskId}`;
+      } else {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
+        actionBody = { note: payload.comment, expectedVersion, ...(stepId ? { stepId } : {}) };
+        actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
+      }
+
+      // API call or offline enqueue
+      if (!isOnline()) {
+        enqueueOfflineMutation({
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
+        });
+        setErrorMessage("Đang ngoại tuyến. Quyết định phê duyệt đã được lưu tạm và sẽ tự động gửi khi có mạng.");
+        return;
+      }
+
+      try {
+        const res = await fetch(actionUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(actionBody),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          setDashboardData(previousData);
+          setErrorMessage(errData?.error || "Phê duyệt nhiệm vụ thất bại. Đã khôi phục dữ liệu.");
+        }
+      } catch (err: any) {
+        // Network drop: enqueue mutation and preserve optimistic state
+        enqueueOfflineMutation({
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
+        });
+        setErrorMessage("Mất kết nối mạng. Quyết định phê duyệt đã được lưu tạm và sẽ tự động gửi khi có kết nối.");
+      }
+    },
+    [dashboardData]
+  );
+
+  const handleSaveDelegation = React.useCallback(
+    (ruleData: Omit<DelegationRule, "id" | "createdAt">) => {
+      const newRule: DelegationRule = {
+        ...ruleData,
+        id: `del-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      };
+      setDelegations((prev) => [newRule, ...prev]);
+    },
+    []
+  );
+
+  const handleRevokeDelegation = React.useCallback((ruleId: string) => {
+    setDelegations((prev) =>
+      prev.map((d) => (d.id === ruleId ? { ...d, status: "REVOKED" as const } : d))
+    );
+  }, []);
+
+  // Global custom event listeners
+  React.useEffect(() => {
+    const handleGlobalOpenCreate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
+      onOpenCreateModal?.("TRUONG", undefined, customEvent?.detail?.leadAssigneeName);
+    };
+
+    window.addEventListener("qcet:open-create-task", handleGlobalOpenCreate);
+    return () => {
+      window.removeEventListener("qcet:open-create-task", handleGlobalOpenCreate);
+    };
+  }, [onOpenCreateModal]);
+
+  return {
+    dashboardData,
+    isLoading,
+    errorMessage,
+    error: errorMessage,
+    isRefreshing,
+    delegations,
+    delegationDeptCode,
+    handleStatusChange,
+    handleSubmitDeliverable,
+    handleReviewAction,
+    handleManualRefresh,
+    handleSaveDelegation,
+    handleRevokeDelegation,
+  };
+}

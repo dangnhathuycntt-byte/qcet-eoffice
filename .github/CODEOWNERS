@@ -13,68 +13,71 @@
 # 1. DATABASE & PERSISTENCE SUBSYSTEM
 # ------------------------------------------------------------------------------
 # Schema definitions, migrations, audit logging, transactions, database clients
-prisma/                               @qcet-data-team @cdktcnqn-admin
-prisma/schema.prisma                  @qcet-data-team @cdktcnqn-admin
-prisma/migrations/                    @qcet-data-team @cdktcnqn-admin
-src/lib/db/                           @qcet-data-team
-src/lib/prisma.ts                     @qcet-data-team
-src/server/api/idempotency.ts         @qcet-data-team
+packages/db/prisma/                   @qcet-data-team @cdktcnqn-admin
+packages/db/prisma/schema.prisma      @qcet-data-team @cdktcnqn-admin
+packages/db/prisma/migrations/        @qcet-data-team @cdktcnqn-admin
+packages/db/src/                      @qcet-data-team
+apps/api/src/server/api/idempotency.ts @qcet-data-team
 
 # ------------------------------------------------------------------------------
 # 2. AUTHENTICATION, AUTHORIZATION & SECURITY
 # ------------------------------------------------------------------------------
 # Session handling, JWT signing, OAuth flows, RBAC policies, CSRF, encryption
-src/app/api/auth/                     @qcet-security-team @cdktcnqn-admin
-src/components/auth/                  @qcet-security-team
-src/lib/auth-context.tsx              @qcet-security-team
-src/server/authorization/hybrid-authorization.ts @qcet-security-team
-src/lib/jwt-session.ts                @qcet-security-team @cdktcnqn-admin
-src/server/auth/google-oauth.ts       @qcet-security-team
+apps/api/src/app/api/auth/            @qcet-security-team @cdktcnqn-admin
+apps/web/src/components/auth/         @qcet-security-team
+apps/web/src/lib/auth-context.tsx     @qcet-security-team
+apps/api/src/server/authorization/hybrid-authorization.ts @qcet-security-team
+apps/api/src/lib/jwt-session.ts       @qcet-security-team @cdktcnqn-admin
+apps/api/src/server/auth/google-oauth.ts @qcet-security-team
 src/lib/password.ts                   @qcet-security-team
-src/server/security/                  @qcet-security-team @cdktcnqn-admin
-src/config/security-headers.ts        @qcet-security-team
+apps/api/src/server/security/         @qcet-security-team @cdktcnqn-admin
+packages/shared/src/config/security-headers.ts @qcet-security-team
 
 # ------------------------------------------------------------------------------
 # 3. ENVIRONMENT & RUNTIME CONFIGURATION
 # ------------------------------------------------------------------------------
 # Environment schemas, runtime configuration, build guards
 .env*                                 @qcet-core-infra @cdktcnqn-admin
-src/config/                           @qcet-core-infra
-next.config.ts                        @qcet-core-infra
+apps/api/src/config/                  @qcet-core-infra
+apps/web/src/config/                  @qcet-core-infra
+apps/api/next.config.ts               @qcet-core-infra
+apps/web/next.config.ts               @qcet-core-infra
 
 # ------------------------------------------------------------------------------
 # 4. TASK MANAGEMENT, DACUM WORKFLOWS & WORKBENCH
 # ------------------------------------------------------------------------------
 # Tasks engine, deliverables, cascading task table, workbench, delegation
-src/server/tasks/                     @qcet-workflow-team
-src/lib/tasks/                        @qcet-workflow-team
-src/lib/dacum*                        @qcet-workflow-team
-src/lib/unified-task-hub.ts           @qcet-workflow-team
-src/components/tasks/                 @qcet-workflow-team
-src/components/workspace/             @qcet-workflow-team
+apps/api/src/server/tasks/            @qcet-workflow-team
+apps/web/src/lib/tasks/               @qcet-workflow-team
+apps/web/src/lib/dacum*               @qcet-workflow-team
+apps/web/src/lib/unified-task-hub.ts  @qcet-workflow-team
+apps/web/src/components/tasks/        @qcet-workflow-team
+apps/web/src/components/workspace/    @qcet-workflow-team
 
 # ------------------------------------------------------------------------------
 # 5. DOCUMENT MANAGEMENT & NUMBERING
 # ------------------------------------------------------------------------------
 # Official document repository, numbering sequence, directives, resolutions
-src/server/policies/                  @qcet-document-team
-src/server/dto/                       @qcet-document-team
-src/lib/documents/                    @qcet-document-team
+apps/api/src/server/policies/         @qcet-document-team
+apps/api/src/server/dto/              @qcet-document-team
+apps/api/src/lib/documents/           @qcet-document-team
+apps/web/src/lib/documents/           @qcet-document-team
 src/lib/document-numbering.ts         @qcet-document-team
-src/server/documents/document-bucket-where.ts     @qcet-document-team
-src/server/documents/document-deadline-scanner.ts @qcet-document-team
-src/server/documents/document-service.ts          @qcet-document-team
-src/server/documents/duplicate-check.ts           @qcet-document-team
-src/server/documents/linked-task-link.ts          @qcet-document-team
-src/server/documents/numbering-engine.ts          @qcet-document-team
-src/server/documents/state-machine.ts             @qcet-document-team
-src/components/documents/             @qcet-document-team
+apps/api/src/server/documents/document-bucket-where.ts @qcet-document-team
+apps/api/src/server/documents/document-deadline-scanner.ts @qcet-document-team
+apps/api/src/server/documents/document-service.ts @qcet-document-team
+apps/api/src/server/documents/duplicate-check.ts  @qcet-document-team
+apps/api/src/server/documents/linked-task-link.ts @qcet-document-team
+apps/api/src/server/documents/numbering-engine.ts @qcet-document-team
+apps/api/src/server/documents/state-machine.ts    @qcet-document-team
+apps/web/src/components/documents/    @qcet-document-team
 
 # ------------------------------------------------------------------------------
 # 6. TELEMETRY, LOGGING & SANITIZATION
 # ------------------------------------------------------------------------------
 # Structured logging, telemetry sanitization, web vitals
-src/telemetry/                        @qcet-security-team @qcet-core-infra
+apps/api/src/telemetry/               @qcet-security-team @qcet-core-infra
+apps/web/src/telemetry/               @qcet-security-team @qcet-core-infra
 
 # ------------------------------------------------------------------------------
 # 7. CI/CD, AUTOMATION & GOVERNANCE

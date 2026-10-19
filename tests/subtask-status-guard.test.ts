@@ -6,8 +6,8 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSubtaskActorContext, buildSubtaskContext, type StatusOption, type SubtaskStatusGuardResult } from '../src/domain/tasks/subtask-status-guard';
-import type { ActorContext } from '../src/domain/tasks/state-machine';
+import { buildSubtaskActorContext, buildSubtaskContext, type StatusOption, type SubtaskStatusGuardResult } from '@qcet/shared/domain/tasks/subtask-status-guard';
+import type { ActorContext } from '@qcet/shared/domain/tasks/state-machine';
 
 // ---------------------------------------------------------------------------
 // Test fixtures

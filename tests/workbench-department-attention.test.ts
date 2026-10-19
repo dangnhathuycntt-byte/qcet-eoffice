@@ -11,7 +11,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { summarizeDepartmentAttention } from "../src/lib/executive-matrix-aggregator";
+import { summarizeDepartmentAttention } from "@qcet/shared/lib/executive-matrix-aggregator";
 import {
   FIXTURE_DEPARTMENTS,
   EXPECTED_DEPARTMENT_TOTALS,

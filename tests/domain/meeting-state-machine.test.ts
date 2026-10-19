@@ -22,10 +22,10 @@ import assert from 'node:assert/strict';
 const describe: any = (globalThis as any).describe || nodeTest.describe;
 const it: any = (globalThis as any).it || (globalThis as any).test || nodeTest.it;
 
-import { MeetingStatus, MEETING_STATUSES, ALLOWED_MEETING_TRANSITIONS, TERMINAL_MEETING_STATUSES, canTransition, assertTransition, isMeetingFinalized, assertMeetingNotFinalized, InvalidMeetingStateTransitionError, FinalizedMeetingError } from '../../src/domain/meetings';
+import { MeetingStatus, MEETING_STATUSES, ALLOWED_MEETING_TRANSITIONS, TERMINAL_MEETING_STATUSES, canTransition, assertTransition, isMeetingFinalized, assertMeetingNotFinalized, InvalidMeetingStateTransitionError, FinalizedMeetingError } from '@qcet/shared/domain/meetings';
 
 // Barrel export reachability proof via alias
-import { canTransition as barrelCanTransition, assertTransition as barrelAssertTransition, isMeetingFinalized as barrelIsMeetingFinalized, assertMeetingNotFinalized as barrelAssertMeetingNotFinalized } from '@/domain/meetings';
+import { canTransition as barrelCanTransition, assertTransition as barrelAssertTransition, isMeetingFinalized as barrelIsMeetingFinalized, assertMeetingNotFinalized as barrelAssertMeetingNotFinalized } from '@qcet/shared/domain/meetings';
 
 describe('WI-6.1a: Meeting State Machine Formalization', () => {
   describe('1. Canonical Statuses & Definitions', () => {

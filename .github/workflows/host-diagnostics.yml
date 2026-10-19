@@ -1,7 +1,7 @@
 # Host Diagnostics — Read-Only Identity Verification
 #
 # Captures independently verified facts about the self-hosted runner environment.
-# Pinned target: qcet-eoffice-app on qcet-network. No fallback to other containers.
+# Pinned target: qcet-eoffice-api on qcet-network. No fallback to other containers.
 # Rules:
 #   - Never prints DATABASE_URL, .env, or any secret value.
 #   - All env var inspection: key names only, values replaced with <REDACTED>.
@@ -49,7 +49,7 @@ jobs:
         id: app
         run: |
           set -euo pipefail
-          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_APP="qcet-eoffice-api"
           EXPECTED_NET="qcet-network"
 
           APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
@@ -181,7 +181,7 @@ jobs:
           IMAGE_ID=$(docker inspect "$APP" --format '{{.Image}}')
 
           echo "=== DEPLOYED IMAGE: Prisma schema presence check ==="
-          # Check if /app/prisma/schema.prisma exists in the image filesystem.
+          # Check if /app/packages/db/prisma/schema.prisma exists in the image filesystem.
           # Use 'docker run --rm' against the exact image ID (not mutable tag).
           # This is read-only: no writes, no env injection.
           # --entrypoint ls: overrides entrypoint; exits immediately after listing.
@@ -189,17 +189,17 @@ jobs:
             --entrypoint sh \
             --network none \
             "$IMAGE_ID" \
-            -c "test -f /app/prisma/schema.prisma && echo FOUND || echo ABSENT" 2>/dev/null \
+            -c "test -f /app/packages/db/prisma/schema.prisma && echo FOUND || echo ABSENT" 2>/dev/null \
             || echo "ERROR_RUNNING")
           echo "Prisma schema.prisma in image: $SCHEMA_CHECK"
 
           echo ""
-          echo "=== DEPLOYED IMAGE: migration directories in /app/prisma/migrations ==="
+          echo "=== DEPLOYED IMAGE: migration directories in /app/packages/db/prisma/migrations ==="
           MIG_LIST=$(docker run --rm \
             --entrypoint sh \
             --network none \
             "$IMAGE_ID" \
-            -c "ls /app/prisma/migrations/ 2>/dev/null || echo '(not found)'" 2>/dev/null \
+            -c "ls /app/packages/db/prisma/migrations/ 2>/dev/null || echo '(not found)'" 2>/dev/null \
             || echo "ERROR_RUNNING")
           echo "$MIG_LIST"
 
@@ -219,7 +219,7 @@ jobs:
             --entrypoint sh \
             --network none \
             "$IMAGE_ID" \
-            -c "cat /app/.next/BUILD_ID 2>/dev/null || echo '(not found)'" 2>/dev/null \
+            -c "cat /app/apps/api/.next/BUILD_ID 2>/dev/null || echo '(not found)'" 2>/dev/null \
             || echo "ERROR_RUNNING")
           echo "BUILD_ID: $BUILD_ID"
 

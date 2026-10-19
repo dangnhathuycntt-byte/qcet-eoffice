@@ -141,6 +141,8 @@ jobs:
         env:
           NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: "1"
+          # Địa chỉ nội bộ của qcet-api mà web chuyển tiếp /api tới (rewrites cố định khi build, như Dockerfile)
+          API_INTERNAL_URL: "http://qcet-api:3000"
         run: npm run build
 
       - name: Upload Standalone Build Artifacts
@@ -148,8 +150,10 @@ jobs:
         with:
           name: qcet-standalone-build
           path: |
-            .next/standalone
-            .next/static
-            public
+            apps/api/.next/standalone
+            apps/api/.next/static
+            apps/web/.next/standalone
+            apps/web/.next/static
+            apps/web/public
           retention-days: 7
           if-no-files-found: warn

@@ -1,8 +1,8 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import { OutboxStatus } from '@prisma/client';
-import { publishOutboxEvent, processOutboxEvent, processOutboxBatch, calculateExponentialBackoff } from '../src/lib/db/outbox';
+import { publishOutboxEvent, processOutboxEvent, processOutboxBatch, calculateExponentialBackoff } from '@qcet/db/outbox';
 
 describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
   const testRunId = `worker_test_${Date.now()}`;

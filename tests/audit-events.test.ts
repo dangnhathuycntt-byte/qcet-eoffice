@@ -1,9 +1,9 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { Prisma, TaskStatus, TaskScope, TaskPriority, DeliverableReviewStatus } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
-import { logAuditEvent, getEntityAuditHistory, getActorAuditHistory, getRequestAuditEvents, countEntityAuditEvents, AuditAction, TASK_CREATED, TASK_STATUS_CHANGED, TASK_APPROVED, DELIVERABLE_SUBMITTED } from '../src/lib/db/audit';
-import * as auditModule from '../src/lib/db/audit';
+import { prisma } from '@qcet/db/prisma';
+import { logAuditEvent, getEntityAuditHistory, getActorAuditHistory, getRequestAuditEvents, countEntityAuditEvents, AuditAction, TASK_CREATED, TASK_STATUS_CHANGED, TASK_APPROVED, DELIVERABLE_SUBMITTED } from '@qcet/db/audit';
+import * as auditModule from '@qcet/db/audit';
 
 describe('Task 9: Immutable AuditEvent Model & Service', () => {
   const testRunId = `audit_test_${Date.now()}`;

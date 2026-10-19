@@ -1,7 +1,7 @@
 # DB Inspect — Read-Only Production DB Schema/Data Inspection
 #
 # Safe read-only queries against production DB.
-# Pinned to exact container names (qcet-eoffice-app / qcet-eoffice-db network).
+# Pinned to exact container names (qcet-eoffice-api / qcet-eoffice-db network).
 # Credentials: DATABASE_URL extracted via stdlib Python urlsplit/unquote,
 # masked via ::add-mask::, passed via chmod-600 env-file to docker run --env-file.
 # PGPASSWORD never written to GITHUB_ENV; never passed as CLI -e argument.
@@ -48,7 +48,7 @@ jobs:
         id: app
         run: |
           set -euo pipefail
-          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_APP="qcet-eoffice-api"
           EXPECTED_NET="qcet-network"
 
           APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)

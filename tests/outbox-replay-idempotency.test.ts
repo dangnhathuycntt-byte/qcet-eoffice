@@ -15,14 +15,14 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { OutboxStatus } from '@prisma/client';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '@qcet/db/prisma';
 import {
   publishOutboxEvent,
   fetchAvailableOutboxEvents,
   processOutboxEvent,
   OutboxEventType,
   OutboxAggregateType,
-} from '../src/lib/db/outbox';
+} from '@qcet/db/outbox';
 
 describe('Item 175: Outbox Replay Idempotency & processed_at Lifecycle', () => {
   const runId = `replay_idem_${Date.now()}`;

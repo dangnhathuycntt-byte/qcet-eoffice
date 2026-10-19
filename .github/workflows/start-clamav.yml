@@ -27,7 +27,7 @@ jobs:
         run: |
           # Find the compose project directory from the running app container.
           # The uploads bind-mount source gives us the project root.
-          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          APP=$(docker ps --filter "name=qcet-eoffice-api" --format '{{.Names}}' | head -1)
           if [ -z "$APP" ]; then
             APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared\|tunnel" | head -1)
           fi

@@ -1,13 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ASSISTANT_RETENTION_DAYS } from '@/contracts/assistant';
+import { ASSISTANT_RETENTION_DAYS } from '@qcet/contracts/assistant';
 import {
   cleanGeneratedTitle,
   deriveConversationTitle,
   formatConversationTime,
   groupConversationsByRecency,
   retentionCutoff,
-} from '@/domain/assistant/assistant-history';
+} from '@qcet/shared/domain/assistant/assistant-history';
 
 // Thời điểm cố định theo lịch ICT: 17/10/2026 10:00. Test không phụ thuộc giờ máy.
 const NOW = new Date('2026-10-17T10:00:00+07:00');

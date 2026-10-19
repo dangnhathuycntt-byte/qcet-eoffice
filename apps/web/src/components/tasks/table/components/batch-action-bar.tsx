@@ -1,0 +1,435 @@
+"use client";
+
+import * as React from "react";
+import { ChevronUp } from "lucide-react";
+import {
+  MenuRoot,
+  MenuTrigger,
+  MenuPortal,
+  MenuPositioner,
+  MenuPopup,
+  MenuItem,
+} from "@/components/ui/menu";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import {
+  TaskIconChecklist,
+  TaskIconComplete,
+  TaskIconStatus,
+  TaskIconPriority,
+  TaskIconDeadline,
+  TaskIconAssignee,
+  TaskIconExport,
+  TaskIconTrash,
+  TaskIconClose,
+} from "@qcet/shared/lib/icons/task-icons";
+import type { TaskStatus } from "@qcet/contracts/types/dashboard";
+import { cn } from "@/lib/utils";
+import { getSystemReferenceDate } from "../utils/table-date-helpers";
+import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
+import { Pressable } from "@/components/ui/pressable";
+
+/**
+ * Cộng `daysToAdd` ngày vào `baseDate` (hạn hiện tại; mặc định hôm nay) theo UTC để không lệch ngày.
+ */
+export function calculateExtendedDeadline(
+  daysToAdd: number,
+  baseDate: Date | string = getSystemReferenceDate()
+): string {
+  const d =
+    typeof baseDate === "string" ? new Date(baseDate) : new Date(baseDate);
+  d.setUTCDate(d.getUTCDate() + daysToAdd);
+  return d.toISOString().slice(0, 10);
+}
+
+export type BulkPriority = "URGENT" | "HIGH" | "NORMAL" | "LOW" | "NONE";
+
+export interface BatchActionBarProps {
+  selectedCount: number;
+  selectedIds: string[];
+  totalCount?: number;
+  onClearSelection: () => void;
+  onBulkStatusChange?: (status: TaskStatus) => Promise<void> | void;
+  /** Gia hạn thêm `days` ngày, cộng vào hạn hiện tại của từng nhiệm vụ (không tính từ hôm nay để khỏi rút ngắn hạn). */
+  onBulkExtendDeadline?: (days: number) => Promise<void> | void;
+  onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
+  /** Đổi ưu tiên hàng loạt (T-08): quyền và version kiểm riêng từng dòng ở máy chủ. */
+  onBulkPriorityChange?: (priority: BulkPriority) => Promise<void> | void;
+  onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
+  onExportExcel?: () => void;
+  isLoading?: boolean;
+  className?: string;
+  /**
+   * Lifecycle targets valid for the ENTIRE selection, computed by the caller
+   * from the canonical bulk gate (src/domain/tasks/bulk-lifecycle-capability.ts).
+   *
+   * P0-07 / R-T07-bulk: the bar must expose only capabilities valid for every
+   * selected task. When this is omitted no capability information is available,
+   * so the bar FAILS SAFE and withholds every approval-bearing action rather
+   * than offering an authority-laundering bulk approval.
+   */
+  allowedLifecycleTargets?: TaskStatus[];
+}
+
+/**
+ * Targets that change who holds lifecycle authority. Mirrors
+ * APPROVAL_TARGETS in src/domain/tasks/bulk-lifecycle-capability.ts; kept in
+ * sync there so the bar cannot offer an approval the domain gate would refuse.
+ */
+const APPROVAL_BEARING_TARGETS: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
+  "COMPLETED",
+  "WAITING_APPROVAL",
+  "NEEDS_REVIEW",
+  "PENDING_EXECUTIVE_APPROVAL",
+]);
+
+/** Lifecycle targets the status dropdown may offer, in display order. */
+const BULK_STATUS_OPTIONS: ReadonlyArray<{ value: TaskStatus; label: string }> =
+  STATUS_DISPLAY_CONFIG.filter((c) =>
+    (['IN_PROGRESS', 'WAITING_APPROVAL', 'COMPLETED', 'CANCELLED'] as string[]).includes(c.value),
+  );
+
+/** Các mức gia hạn hạn chót hàng loạt. */
+export const BULK_DEADLINE_OPTIONS: ReadonlyArray<{ days: number; label: string }> = [
+  { days: 3, label: "+3 ngày" },
+  { days: 7, label: "+7 ngày (1 tuần)" },
+  { days: 14, label: "+14 ngày (2 tuần)" },
+  { days: 30, label: "+30 ngày (1 tháng)" },
+];
+
+/**
+ * P0-07: chỉ trả về các trạng thái mà TOÀN BỘ lựa chọn được phép chuyển tới.
+ * Không có thông tin quyền thì chặn an toàn mọi trạng thái cần duyệt.
+ */
+export function getPermittedBulkStatusOptions(
+  allowedLifecycleTargets?: TaskStatus[]
+): ReadonlyArray<{ value: TaskStatus; label: string }> {
+  return BULK_STATUS_OPTIONS.filter((option) =>
+    allowedLifecycleTargets
+      ? allowedLifecycleTargets.includes(option.value)
+      : !APPROVAL_BEARING_TARGETS.has(option.value)
+  );
+}
+
+function BulkMenu({
+  ariaLabel,
+  icon,
+  label,
+  header,
+  disabled,
+  triggerClassName,
+  onDigit,
+  children,
+}: {
+  ariaLabel: string;
+  icon: React.ReactNode;
+  label: string;
+  header: string;
+  disabled?: boolean;
+  triggerClassName: string;
+  /** Phím số 1-9 chọn nhanh mục tương ứng; trả về true nếu đã xử lý. */
+  onDigit?: (digit: number) => boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <MenuRoot open={open} onOpenChange={setOpen}>
+      <MenuTrigger
+        disabled={disabled}
+        aria-label={ariaLabel}
+        className={cn(triggerClassName, "data-[popup-open]:bg-selected")}
+      >
+        {icon}
+        <span className="hidden sm:inline">{label}</span>
+        <ChevronUp className="size-3 text-muted-foreground shrink-0" />
+      </MenuTrigger>
+      <MenuPortal>
+        <MenuPositioner side="top" align="start" sideOffset={8} className="z-50">
+          <MenuPopup
+            className="min-w-56 rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none animate-in fade-in-0 zoom-in-95 duration-100"
+            onKeyDown={(e) => {
+              if (onDigit && /^[0-9]$/.test(e.key) && onDigit(Number(e.key))) {
+                e.preventDefault();
+                setOpen(false);
+              }
+            }}
+          >
+            <div className="px-2 pt-1 pb-1.5 text-xs text-muted-foreground select-none">{header}</div>
+            {children}
+          </MenuPopup>
+        </MenuPositioner>
+      </MenuPortal>
+    </MenuRoot>
+  );
+}
+
+export function BatchActionBar({
+  selectedCount,
+  selectedIds,
+  totalCount,
+  onClearSelection,
+  onBulkStatusChange,
+  onBulkExtendDeadline,
+  onBulkReassign,
+  onBulkPriorityChange,
+  onBulkDelete,
+  onExportExcel,
+  isLoading = false,
+  className,
+  allowedLifecycleTargets,
+}: BatchActionBarProps) {
+  /**
+   * P0-07: only offer a transition the WHOLE selection permits. With no
+   * capability information supplied, fail safe — withhold approval-bearing
+   * targets rather than expose an authority-laundering bulk approval.
+   */
+  const isTargetAllowed = React.useCallback(
+    (target: TaskStatus): boolean =>
+      allowedLifecycleTargets
+        ? allowedLifecycleTargets.includes(target)
+        : !APPROVAL_BEARING_TARGETS.has(target),
+    [allowedLifecycleTargets]
+  );
+
+  const permittedStatusOptions = getPermittedBulkStatusOptions(allowedLifecycleTargets);
+
+  const hasAnyAction = Boolean(
+    (onBulkStatusChange && (isTargetAllowed("COMPLETED") || permittedStatusOptions.length > 0)) ||
+    onBulkReassign ||
+    onBulkPriorityChange ||
+    onBulkExtendDeadline ||
+    onExportExcel ||
+    onBulkDelete
+  );
+
+  // Lắng nghe phím Escape để hủy chọn toàn bộ
+  React.useEffect(() => {
+    if (selectedCount <= 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClearSelection();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCount, onClearSelection]);
+
+  if (selectedCount <= 0 || !hasAnyAction) {
+    return null;
+  }
+
+  const btn =
+    "h-7 px-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted active:bg-muted/70 inline-flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
+  const icon = "size-4 text-muted-foreground shrink-0";
+  const divider = <div className="h-4 w-px bg-border mx-1 shrink-0" aria-hidden="true" />;
+
+  const menuItemCls =
+    "flex h-7 w-full items-center justify-between gap-6 rounded-md px-2 text-xs text-foreground cursor-pointer select-none outline-none transition-colors data-[highlighted]:bg-accent hover:bg-accent";
+
+  return (
+    <aside
+      role="region"
+      aria-label="Thao tác hàng loạt"
+      aria-live="polite"
+      aria-busy={isLoading}
+      className={cn(
+        "hidden sm:block fixed bottom-6 md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] inset-x-0 md:left-[var(--sidebar-w,0px)] mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max",
+        "animate-in fade-in slide-in-from-bottom-3 duration-200",
+        className
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-0.5 rounded-[var(--radius-menu)] border border-border/60 bg-card px-2 py-1.5 shadow-menu text-foreground">
+        {/* Bộ đếm số lượng mục đã chọn */}
+        <div className="flex items-center gap-2 pl-1.5 pr-2 text-xs font-medium text-foreground whitespace-nowrap">
+          <TaskIconChecklist className="size-4 text-primary shrink-0" />
+          <span>
+            Đã chọn{" "}
+            <strong className="font-semibold tabular-nums text-foreground">{selectedCount}</strong>
+            {totalCount ? (
+              <span className="text-muted-foreground font-normal">/{totalCount}</span>
+            ) : (
+              ""
+            )}
+            <span className="sr-only">nhiệm vụ được chọn</span>
+          </span>
+        </div>
+
+        {divider}
+
+        {/* Hoàn thành nhanh (P0-07: chỉ khi cả lựa chọn đủ quyền) */}
+        {onBulkStatusChange && isTargetAllowed("COMPLETED") && (
+          <Pressable
+            onClick={() => onBulkStatusChange("COMPLETED")}
+            disabled={isLoading}
+            className={btn}
+            title="Đánh dấu hoàn thành tất cả công việc đã chọn"
+          >
+            <TaskIconComplete className={icon} />
+            <span className="hidden sm:inline">Hoàn thành</span>
+          </Pressable>
+        )}
+
+        {/* Đổi trạng thái: chỉ các trạng thái hợp lệ cho TOÀN BỘ lựa chọn (P0-07) */}
+        {onBulkStatusChange && permittedStatusOptions.length > 0 && (
+          <BulkMenu
+            ariaLabel="Đổi trạng thái hàng loạt"
+            icon={<TaskIconStatus className={icon} />}
+            label="Đổi trạng thái"
+            header="Đổi trạng thái cho các mục đã chọn"
+            disabled={isLoading}
+            triggerClassName={btn}
+            onDigit={(digit) => {
+              const option = permittedStatusOptions[digit - 1];
+              if (!option) return false;
+              onBulkStatusChange(option.value);
+              return true;
+            }}
+          >
+            {permittedStatusOptions.map((option, index) => (
+              <MenuItem
+                key={option.value}
+                className={menuItemCls}
+                onClick={() => onBulkStatusChange(option.value)}
+              >
+                <span className="flex items-center gap-2">
+                  <TaskStatusCircle status={option.value} />
+                  <span>{option.label}</span>
+                </span>
+                <kbd className="font-sans text-xs tabular-nums text-muted-foreground">{index + 1}</kbd>
+              </MenuItem>
+            ))}
+          </BulkMenu>
+        )}
+
+        {/* Giao lại */}
+        {onBulkReassign && (
+          <Pressable
+            onClick={() => onBulkReassign("")}
+            disabled={isLoading}
+            className={btn}
+            aria-label="Phân công lại các công việc đã chọn"
+            title="Giao lại nhiệm vụ"
+          >
+            <TaskIconAssignee className={icon} />
+            <span className="hidden sm:inline">Giao lại</span>
+            <span className="sr-only">Phân công lại</span>
+          </Pressable>
+        )}
+
+        {/* Ưu tiên (T-08) */}
+        {onBulkPriorityChange && (
+          <BulkMenu
+            ariaLabel="Đổi ưu tiên hàng loạt"
+            icon={<TaskIconPriority className={icon} />}
+            label="Ưu tiên"
+            header="Đổi ưu tiên cho các mục đã chọn"
+            disabled={isLoading}
+            triggerClassName={btn}
+            onDigit={(digit) => {
+              // Phím 0 = Không ưu tiên (đứng đầu danh sách), 1–4 như cũ
+              const option = PRIORITY_DISPLAY_CONFIG[digit];
+              if (!option) return false;
+              onBulkPriorityChange(option.value as BulkPriority);
+              return true;
+            }}
+          >
+            {PRIORITY_DISPLAY_CONFIG.map((option, index) => (
+              <MenuItem key={option.value} className={menuItemCls} onClick={() => onBulkPriorityChange(option.value as BulkPriority)}>
+                <span>{option.label}</span>
+                <kbd className="font-sans text-xs tabular-nums text-muted-foreground">{index}</kbd>
+              </MenuItem>
+            ))}
+          </BulkMenu>
+        )}
+
+        {/* Gia hạn: hiển thị luôn ngày hạn mới để biết trước kết quả */}
+        {onBulkExtendDeadline && (
+          <BulkMenu
+            ariaLabel="Gia hạn thời hạn hàng loạt"
+            icon={<TaskIconDeadline className={icon} />}
+            label="Gia hạn"
+            header="Gia hạn thêm, tính từ hạn hiện tại"
+            disabled={isLoading}
+            triggerClassName={btn}
+            onDigit={(digit) => {
+              const option = BULK_DEADLINE_OPTIONS[digit - 1];
+              if (!option) return false;
+              onBulkExtendDeadline(option.days);
+              return true;
+            }}
+          >
+            {BULK_DEADLINE_OPTIONS.map((option) => {
+              return (
+                <MenuItem
+                  key={option.days}
+                  className={menuItemCls}
+                  onClick={() => onBulkExtendDeadline(option.days)}
+                >
+                  <span>{option.label}</span>
+                  <span className="flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
+                    <kbd className="font-sans">{BULK_DEADLINE_OPTIONS.indexOf(option) + 1}</kbd>
+                  </span>
+                </MenuItem>
+              );
+            })}
+          </BulkMenu>
+        )}
+
+        {/* Xuất */}
+        {onExportExcel && (
+          <>
+            {divider}
+            <Pressable
+              onClick={onExportExcel}
+              disabled={isLoading}
+              className={btn}
+              aria-label="Xuất file Excel các công việc đã chọn"
+            >
+              <TaskIconExport className={icon} />
+              <span className="hidden sm:inline">Xuất Excel</span>
+            </Pressable>
+          </>
+        )}
+
+        {/* Xóa: tách riêng bằng đường phân cách, màu cảnh báo */}
+        {onBulkDelete && (
+          <>
+            {divider}
+            <button
+              type="button"
+              onClick={() => onBulkDelete(selectedIds)}
+              disabled={isLoading}
+              className="h-7 px-2.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 active:bg-destructive/20 inline-flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+              aria-label="Xóa các công việc đã chọn"
+            >
+              <TaskIconTrash className="size-4 shrink-0" />
+              <span className="hidden sm:inline">Xóa</span>
+            </button>
+          </>
+        )}
+
+        {divider}
+
+        {/* Bỏ chọn (Esc) */}
+        <button
+          type="button"
+          onClick={onClearSelection}
+          disabled={isLoading}
+          className="h-7 pl-2 pr-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted/70 inline-flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          aria-label="Bỏ chọn tất cả công việc"
+          title="Bỏ chọn (Esc)"
+        >
+          <TaskIconClose className="size-4 shrink-0" />
+          <span className="hidden sm:inline">Bỏ chọn</span>
+          <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-0.5 font-sans text-xs text-muted-foreground leading-none">
+            Esc
+          </kbd>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+export const TaskBulkActionBar = BatchActionBar;

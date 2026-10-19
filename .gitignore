@@ -1,5 +1,5 @@
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 .yarn/cache
@@ -7,8 +7,8 @@
 # testing
 /coverage
 
-# next.js
-/.next/
+# next.js (gốc repo và từng app trong apps/)
+.next/
 /out/
 
 # production
@@ -61,6 +61,11 @@ qcet-backend-api/
 /uploads/
 /test_storage_*/
 /test_uploads_*/
+# test của từng app chạy với cwd apps/<app> (scripts/run-tests.mjs)
+/apps/*/storage/
+/apps/*/uploads/
+/apps/*/test_storage_*/
+/apps/*/test_uploads_*/
 
 # Ephemeral agent artifacts and temporary backups
 /artifacts/
@@ -93,11 +98,11 @@ ds-bundle/
 
 
 # Playwright E2E
-/.next-e2e/
+.next-e2e/
 /e2e/.tmp/
 /playwright/.auth/
 /test-results/
 /playwright-report/
 # Ảnh chụp và log của Playwright MCP khi kiểm giao diện
 /.playwright-mcp/
-/.next-build/
+.next-build/

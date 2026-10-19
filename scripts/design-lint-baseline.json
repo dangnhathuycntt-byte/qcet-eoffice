@@ -3,32 +3,32 @@
   "entries": [
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "file": "apps/web/src/components/documents/digital-signature-dialog.tsx",
       "text": "<circle cx=\"100\" cy=\"100\" r=\"87\" fill=\"none\" stroke=\"currentColor\" strokeWidth=\"1.2\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "file": "apps/web/src/components/documents/digital-signature-dialog.tsx",
       "text": "<circle cx=\"100\" cy=\"100\" r=\"94\" fill=\"none\" stroke=\"currentColor\" strokeWidth=\"3.5\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "file": "apps/web/src/components/documents/digital-signature-dialog.tsx",
       "text": "strokeWidth=\"1.8\""
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "file": "apps/web/src/components/documents/digital-signature-dialog.tsx",
       "text": "strokeWidth=\"1.8\""
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "file": "apps/web/src/components/documents/digital-signature-dialog.tsx",
       "text": "strokeWidth=\"2.2\""
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "file": "apps/web/src/components/documents/digital-signature-dialog.tsx",
       "text": "strokeWidth=\"2.8\""
     },
     {
@@ -38,577 +38,577 @@
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/registry/document-table.tsx",
+      "file": "apps/web/src/components/documents/registry/document-table.tsx",
       "text": "<Check className=\"size-3 text-emerald-600\" strokeWidth={2} />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
       "text": "<path d=\"M3 3L9 9M9 3L3 9\" stroke=\"currentColor\" strokeWidth=\"1.8\" strokeLinecap=\"round\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
       "text": "<path d=\"M4 2 L32 2 L21 16 L21 28 L15 31 L15 16 Z\" fill=\"white\" stroke=\"currentColor\" strokeWidth=\"1.2\" strokeOpacity=\"0.25\" strokeLinejoin=\"round\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
       "text": "<path d=\"M8 4 L28 4\" stroke=\"currentColor\" strokeWidth=\"0.8\" strokeOpacity=\"0.08\" strokeLinecap=\"round\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
       "text": "<rect x=\"0\" y=\"0\" width=\"58\" height=\"72\" rx=\"5\" fill=\"white\" stroke=\"currentColor\" strokeWidth=\"1\" strokeOpacity=\"0.15\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/table/components/task-pagination-bar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-pagination-bar.tsx",
       "text": "{isSelected && <Check className=\"size-3.5 text-primary shrink-0\" strokeWidth={2} />}"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/table/components/task-row.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-row.tsx",
       "text": "<Check className=\"size-3 text-primary-foreground\" strokeWidth={2.5} />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
       "text": "<Check className=\"size-3 text-primary-foreground\" strokeWidth={2.5} />"
     },
     {
       "ruleId": "no-arbitrary-color-value",
-      "file": "src/components/layout/app-shell.tsx",
+      "file": "apps/web/src/components/layout/app-shell.tsx",
       "text": "<div className=\"flex min-h-screen w-full items-center justify-center bg-[#f4f5f7] dark:bg-zinc-950\">"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<div className=\"absolute right-8 bottom-[52px] hidden min-[600px]:block text-[13px] z-10\" style={{ color: C.sub }}>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<div className=\"flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-foreground bg-[var(--avatar-initial-bg)]\">"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<div className=\"flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-foreground\" style={{ background: bgColor }}>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<div className=\"mt-5 w-full rounded-[14px] bg-muted p-3 text-center text-[13.5px] leading-relaxed text-foreground\">"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<div className=\"mt-8 pt-5 w-full text-center text-[13px]\" style={{ borderTop: `1px solid ${C.border}`, color: C.sub }}>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>Chưa kết nối được Google</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>Chưa được cấp quyền</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>Chọn tài khoản</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>Mở bằng trình duyệt</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>Tài khoản đã bị khóa</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>{title}</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>Đã gửi yêu cầu</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<h1 className=\"mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]\" style={{ color: C.fg }}>Đăng nhập</h1>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>Chào mừng quay lại</p>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>Google không cho đăng nhập trong ứng dụng này.</p>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>Kiểm tra mạng rồi thử lại.</p>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>Luôn hỏi trước khi vào, vì đây là máy dùng chung.</p>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>Quản trị viên sẽ xem và báo qua email.</p>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>Tài khoản này không còn dùng được QCET E-Office.</p>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<p className=\"mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm\" style={{ color: C.sub }}>{subtitle}</p>"
     },
     {
       "ruleId": "no-arbitrary-text-size",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "className=\"text-[13.5px] font-medium underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 flex items-center\""
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconBg: \"bg-blue-500/10 dark:bg-blue-500/20\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconBg: \"bg-destructive/10 dark:bg-destructive/20\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconBg: \"bg-emerald-500/10 dark:bg-emerald-500/20\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconBg: \"bg-sky-500/10 dark:bg-sky-500/20\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconBg: \"bg-warning/10 dark:bg-warning/20\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconColor: \"text-blue-600 dark:text-blue-400\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconColor: \"text-destructive dark:text-destructive\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconColor: \"text-emerald-600 dark:text-emerald-400\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconColor: \"text-sky-600 dark:text-sky-400\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "iconColor: \"text-warning dark:text-warning\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
       "text": "textColor: \"text-destructive dark:text-destructive\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-shell.tsx",
+      "file": "apps/web/src/components/layout/app-shell.tsx",
       "text": "<div className=\"flex min-h-screen w-full items-center justify-center bg-[#f4f5f7] dark:bg-zinc-950\">"
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-topbar.tsx",
+      "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar dark:bg-zinc-950 select-none\""
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-topbar.tsx",
+      "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/calendar/calendar-day-sheet.tsx",
+      "file": "apps/web/src/components/calendar/calendar-day-sheet.tsx",
       "text": "className=\"inline-flex items-center justify-center h-7.5 px-2 text-xs font-medium gap-1 rounded-md border border-border/70 bg-background hover:bg-muted/50 text-foreground cursor-pointer transition-colors active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/documents/registry/document-table.tsx",
+      "file": "apps/web/src/components/documents/registry/document-table.tsx",
       "text": "className=\"size-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer active:scale-[0.98]\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/layout/app-topbar.tsx",
+      "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/layout/app-topbar.tsx",
+      "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/layout/app-topbar.tsx",
+      "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"size-8 relative flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/layout/scope-switcher.tsx",
+      "file": "apps/web/src/components/layout/scope-switcher.tsx",
       "text": "className=\"min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/pwa/mobile-app-install-modal.tsx",
+      "file": "apps/web/src/components/pwa/mobile-app-install-modal.tsx",
       "text": "className=\"min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "className=\"absolute right-1 top-1/2 -translate-y-1/2 inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors\""
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors active:scale-[0.98]\""
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/calendar/calendar-client.tsx",
+      "file": "apps/web/src/app/calendar/calendar-client.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/calendar/calendar-client.tsx",
+      "file": "apps/web/src/app/calendar/calendar-client.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/calendar/calendar-client.tsx",
+      "file": "apps/web/src/app/calendar/calendar-client.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/design/design-showcase.tsx",
+      "file": "apps/web/src/app/design/design-showcase.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/app/login/page.tsx",
+      "file": "apps/web/src/app/login/page.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/auth/google-login-button.tsx",
+      "file": "apps/web/src/components/auth/google-login-button.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/auth/user-profile-modal.tsx",
+      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/auth/user-profile-modal.tsx",
+      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/auth/user-profile-modal.tsx",
+      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/auth/user-profile-modal.tsx",
+      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/auth/user-profile-modal.tsx",
+      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-day-sheet.tsx",
+      "file": "apps/web/src/components/calendar/calendar-day-sheet.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-month-grid.tsx",
+      "file": "apps/web/src/components/calendar/calendar-month-grid.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-month-grid.tsx",
+      "file": "apps/web/src/components/calendar/calendar-month-grid.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-toolbar.tsx",
+      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-week-view.tsx",
+      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-week-view.tsx",
+      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-week-view.tsx",
+      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-week-view.tsx",
+      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-week-view.tsx",
+      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/calendar-week-view.tsx",
+      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/calendar/create-event-modal.tsx",
+      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-audit-timeline.tsx",
+      "file": "apps/web/src/components/documents/document-audit-timeline.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-detail-parts.tsx",
+      "file": "apps/web/src/components/documents/document-detail-parts.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-detail-parts.tsx",
+      "file": "apps/web/src/components/documents/document-detail-parts.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-viewer-rail.tsx",
+      "file": "apps/web/src/components/documents/document-viewer-rail.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-viewer-rail.tsx",
+      "file": "apps/web/src/components/documents/document-viewer-rail.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-viewer-rail.tsx",
+      "file": "apps/web/src/components/documents/document-viewer-rail.tsx",
       "text": "<button type=\"submit\" className=\"h-7 shrink-0 cursor-pointer rounded-md px-2 text-xs text-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring\">"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-viewer-rail.tsx",
+      "file": "apps/web/src/components/documents/document-viewer-rail.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/document-viewer-rail.tsx",
+      "file": "apps/web/src/components/documents/document-viewer-rail.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/docx-document-canvas.tsx",
+      "file": "apps/web/src/components/documents/docx-document-canvas.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/pdf-document-canvas.tsx",
+      "file": "apps/web/src/components/documents/pdf-document-canvas.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-card-list.tsx",
+      "file": "apps/web/src/components/documents/registry/document-card-list.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-filter-bar.tsx",
+      "file": "apps/web/src/components/documents/registry/document-filter-bar.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-filter-bar.tsx",
+      "file": "apps/web/src/components/documents/registry/document-filter-bar.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-ledger.tsx",
+      "file": "apps/web/src/components/documents/registry/document-ledger.tsx",
       "text": "<button"
     },
     {
@@ -643,1007 +643,1007 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-table.tsx",
+      "file": "apps/web/src/components/documents/registry/document-table.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-table.tsx",
+      "file": "apps/web/src/components/documents/registry/document-table.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/workspace/document-edit.tsx",
+      "file": "apps/web/src/components/documents/workspace/document-edit.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/workspace/document-workspace-parts.tsx",
+      "file": "apps/web/src/components/documents/workspace/document-workspace-parts.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/workspace/document-workspace-parts.tsx",
+      "file": "apps/web/src/components/documents/workspace/document-workspace-parts.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/workspace/submission-approval-panel.tsx",
+      "file": "apps/web/src/components/documents/workspace/submission-approval-panel.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/documents/workspace/submission-approval-panel.tsx",
+      "file": "apps/web/src/components/documents/workspace/submission-approval-panel.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dossiers/dossier-detail-view.tsx",
+      "file": "apps/web/src/components/dossiers/dossier-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dossiers/dossier-registry-view.tsx",
+      "file": "apps/web/src/components/dossiers/dossier-registry-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dossiers/dossier-registry-view.tsx",
+      "file": "apps/web/src/components/dossiers/dossier-registry-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dossiers/dossier-registry-view.tsx",
+      "file": "apps/web/src/components/dossiers/dossier-registry-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dossiers/dossier-registry-view.tsx",
+      "file": "apps/web/src/components/dossiers/dossier-registry-view.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dossiers/dossier-registry-view.tsx",
+      "file": "apps/web/src/components/dossiers/dossier-registry-view.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/dossiers/dossier-registry-view.tsx",
+      "file": "apps/web/src/components/dossiers/dossier-registry-view.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/inbox/inbox-view.tsx",
+      "file": "apps/web/src/components/inbox/inbox-view.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/layout/app-sidebar.tsx",
+      "file": "apps/web/src/components/layout/app-sidebar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/layout/command-search-modal.tsx",
+      "file": "apps/web/src/components/layout/command-search-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
+      "file": "apps/web/src/components/layout/global-shortcuts-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/layout/scope-switcher.tsx",
+      "file": "apps/web/src/components/layout/scope-switcher.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/layout/scope-switcher.tsx",
+      "file": "apps/web/src/components/layout/scope-switcher.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/layout/scope-switcher.tsx",
+      "file": "apps/web/src/components/layout/scope-switcher.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/meetings/meeting-detail-view.tsx",
+      "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/notifications/notification-center.tsx",
+      "file": "apps/web/src/components/notifications/notification-center.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/notifications/notification-center.tsx",
+      "file": "apps/web/src/components/notifications/notification-center.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/notifications/notification-center.tsx",
+      "file": "apps/web/src/components/notifications/notification-center.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/notifications/notification-center.tsx",
+      "file": "apps/web/src/components/notifications/notification-center.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/notifications/notification-center.tsx",
+      "file": "apps/web/src/components/notifications/notification-center.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/portal/review-action-dialog.tsx",
+      "file": "apps/web/src/components/portal/review-action-dialog.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/portal/review-action-dialog.tsx",
+      "file": "apps/web/src/components/portal/review-action-dialog.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/portal/submit-deliverable-modal.tsx",
+      "file": "apps/web/src/components/portal/submit-deliverable-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/portal/submit-deliverable-modal.tsx",
+      "file": "apps/web/src/components/portal/submit-deliverable-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/portal/submit-deliverable-modal.tsx",
+      "file": "apps/web/src/components/portal/submit-deliverable-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/portal/submit-deliverable-modal.tsx",
+      "file": "apps/web/src/components/portal/submit-deliverable-modal.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/portal/submit-deliverable-modal.tsx",
+      "file": "apps/web/src/components/portal/submit-deliverable-modal.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/pwa/mobile-app-install-modal.tsx",
+      "file": "apps/web/src/components/pwa/mobile-app-install-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/pwa/mobile-app-install-modal.tsx",
+      "file": "apps/web/src/components/pwa/mobile-app-install-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "file": "apps/web/src/components/pwa/offline-conflict-dialog.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "file": "apps/web/src/components/pwa/push-onboarding-sheet.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "file": "apps/web/src/components/pwa/pwa-install-prompt.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "file": "apps/web/src/components/pwa/pwa-install-prompt.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "file": "apps/web/src/components/pwa/pwa-install-prompt.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/create/create-task-modal.tsx",
+      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/create/create-task-modal.tsx",
+      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/create/create-task-modal.tsx",
+      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/create/create-task-modal.tsx",
+      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/create/create-task-modal.tsx",
+      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/direct-inline-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/direct-inline-editor.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/subtask-detail-drawer.tsx",
+      "file": "apps/web/src/components/tasks/detail/subtask-detail-drawer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/subtask-detail-drawer.tsx",
+      "file": "apps/web/src/components/tasks/detail/subtask-detail-drawer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/subtask-detail-drawer.tsx",
+      "file": "apps/web/src/components/tasks/detail/subtask-detail-drawer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/subtask-detail-drawer.tsx",
+      "file": "apps/web/src/components/tasks/detail/subtask-detail-drawer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/subtask-outline-rail.tsx",
+      "file": "apps/web/src/components/tasks/detail/subtask-outline-rail.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-add-chip.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-add-chip.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input type=\"text\" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === \"Enter\" && draftUrl.trim()) setBookmarkUrl(draftUrl); }} placeholder=\"Dán link web để tạo thẻ dấu trang (nhấn Enter)...\" className=\"flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs\" />"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-block-editor.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
       "text": "<input type=\"text\" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === \"Enter\" && draftUrl.trim()) setLinkUrl(draftUrl); }} placeholder=\"Dán đường dẫn liên kết (nhấn Enter)...\" className=\"flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs\" />"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-detail-header-nav.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-detail-header-nav.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-detail-header-nav.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-detail-header-nav.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-evidence-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-progress-composer.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
       "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-subtasks-sidebar-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-subtasks-sidebar-section.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/detail/task-subtasks-sidebar-section.tsx",
+      "file": "apps/web/src/components/tasks/detail/task-subtasks-sidebar-section.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/batch-action-bar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/batch-action-bar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/batch-action-bar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/batch-action-bar.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-pagination-bar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-pagination-bar.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-row.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-row.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<select"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/tasks/table/task-context-menu.tsx",
+      "file": "apps/web/src/components/tasks/table/task-context-menu.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "<button"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "\"border-slate-400/20 bg-slate-400/10 text-slate-600\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "\"border-slate-500/20 bg-slate-500/10 text-slate-700\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "\"border-slate-500/20 bg-slate-500/10 text-slate-700\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<span className=\"truncate max-w-[120px] font-medium text-slate-800\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "className=\"flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/80\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
       "text": "? \"bg-neutral-800 text-white font-semibold shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-shell.tsx",
+      "file": "apps/web/src/components/layout/app-shell.tsx",
       "text": "<div className=\"flex min-h-screen w-full items-center justify-center bg-[#f4f5f7] dark:bg-zinc-950\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-topbar.tsx",
+      "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar dark:bg-zinc-950 select-none\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-topbar.tsx",
+      "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "badgeClass: \"border-zinc-300 bg-zinc-100 text-zinc-600\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "badgeClass: \"border-zinc-300 bg-zinc-100 text-zinc-600\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "badgeClass: \"border-zinc-300 bg-zinc-100 text-zinc-600\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "borderClass: \"border-zinc-300\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "borderClass: \"border-zinc-300\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "borderClass: \"border-zinc-300\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "className: \"border-zinc-200 bg-zinc-50 text-zinc-700\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "className: \"border-zinc-300 bg-zinc-100 text-zinc-600\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/constants.ts",
+      "file": "apps/web/src/components/tasks/table/constants.ts",
       "text": "className: \"border-zinc-300 bg-zinc-100 text-zinc-600\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/utils/table-date-helpers.ts",
+      "file": "apps/web/src/components/tasks/table/utils/table-date-helpers.ts",
       "text": "colorClass: \"text-zinc-400 bg-transparent border-transparent\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/utils/table-date-helpers.ts",
+      "file": "apps/web/src/components/tasks/table/utils/table-date-helpers.ts",
       "text": "colorClass: \"text-zinc-600 bg-zinc-100 border-zinc-200\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/utils/table-date-helpers.ts",
+      "file": "apps/web/src/components/tasks/table/utils/table-date-helpers.ts",
       "text": "colorClass: \"text-zinc-600 bg-zinc-50 border-zinc-200/60\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": ": \"bg-slate-200 text-slate-700\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-white/60\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "<div className=\"mt-4 pt-3 border-t border-slate-100 flex items-center justify-between\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "<h3 className=\"text-base font-bold text-slate-900\">{emptyTitle}</h3>"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "<p className=\"text-xs sm:text-sm text-slate-700 max-w-md mt-1\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "? \"bg-white text-slate-900 shadow-xs border border-slate-200\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "className=\"flex items-center gap-1.5 p-2 bg-slate-100/60 border-b border-slate-200 overflow-x-auto no-scrollbar\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/action-queue-shell.tsx",
+      "file": "apps/web/src/components/workspace/action-queue-shell.tsx",
       "text": "isActive ? \"text-blue-600\" : \"text-slate-500\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/attention-badge.tsx",
+      "file": "apps/web/src/components/workspace/attention-badge.tsx",
       "text": "\"bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200/80\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/attention-badge.tsx",
+      "file": "apps/web/src/components/workspace/attention-badge.tsx",
       "text": "iconColor: \"text-slate-600\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<CornerDownRight className=\"size-2.5 text-slate-400 shrink-0\" />"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<CornerDownRight className=\"size-2.5 text-slate-400 shrink-0\" />"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"divide-y divide-slate-100\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"divide-y divide-slate-100\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"flex items-center gap-1 text-xs text-slate-400 truncate\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"flex items-center gap-1 text-xs text-slate-400 truncate\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"flex items-center gap-2 text-xs text-slate-400 truncate\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"flex items-center justify-between pb-1 border-b border-slate-100\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"flex items-center justify-between pb-1 border-b border-slate-100\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"text-xs text-slate-400 truncate\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<span className=\"font-mono font-normal text-slate-400 tabular-nums\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<span className=\"font-mono font-normal text-slate-400 tabular-nums\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<span className=\"text-xs font-semibold text-slate-900\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<span className=\"text-xs font-semibold text-slate-900\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<span className={cn(isItemOverdue ? \"text-destructive font-medium\" : \"text-slate-400\")}>"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"hover:text-slate-700 truncate text-left\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"hover:text-slate-700 truncate text-left\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"min-h-[30px] h-7 px-2 text-xs font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"text-xs text-slate-400 hover:text-slate-700\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"text-xs text-slate-400 hover:text-slate-700\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className=\"w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/workspace/components/universal-action-queue.tsx",
+      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "className={cn(\"py-8 text-center text-xs text-slate-400\", className)}"
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/lib/notification-triage.ts",
+      "file": "packages/shared/src/lib/notification-triage.ts",
       "text": "bg: \"bg-slate-500/15\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/lib/notification-triage.ts",
+      "file": "packages/shared/src/lib/notification-triage.ts",
       "text": "ring: \"ring-slate-500/30\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/lib/notification-triage.ts",
+      "file": "packages/shared/src/lib/notification-triage.ts",
       "text": "text: \"text-slate-700\","
     }
   ]

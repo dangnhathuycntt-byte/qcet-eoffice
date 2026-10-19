@@ -12,13 +12,13 @@
  */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveDocumentTypeParam } from "@/domain/documents/document-type-param";
+import { resolveDocumentTypeParam } from "@qcet/shared/domain/documents/document-type-param";
 
 describe("Internal Document Workflow Contract", () => {
   test("TO_TRINH_NOI_BO is a recognized document type in the API type map", async () => {
     // Route văn bản đổi tham số `type` qua resolveDocumentTypeParam.
     const routeSource = await import("node:fs").then((fs) =>
-      fs.readFileSync("src/app/api/documents/route.ts", "utf8")
+      fs.readFileSync("apps/api/src/app/api/documents/route.ts", "utf8")
     );
     assert.ok(routeSource.includes("resolveDocumentTypeParam("), "Documents API route must resolve the type param");
     assert.strictEqual(resolveDocumentTypeParam("TO_TRINH_NOI_BO"), "TO_TRINH_NOI_BO");
@@ -28,18 +28,18 @@ describe("Internal Document Workflow Contract", () => {
   test("submit-content-review and approve-content action routes exist", async () => {
     const fs = await import("node:fs");
     assert.ok(
-      fs.existsSync("src/app/api/documents/[id]/actions/submit-content-review/route.ts"),
+      fs.existsSync("apps/api/src/app/api/documents/[id]/actions/submit-content-review/route.ts"),
       "submit-content-review action route must exist"
     );
     assert.ok(
-      fs.existsSync("src/app/api/documents/[id]/actions/approve-content/route.ts"),
+      fs.existsSync("apps/api/src/app/api/documents/[id]/actions/approve-content/route.ts"),
       "approve-content action route must exist"
     );
   });
 
   test("Document stats API counts internal documents separately", async () => {
     const statsSource = await import("node:fs").then((fs) =>
-      fs.readFileSync("src/app/api/documents/stats/route.ts", "utf8")
+      fs.readFileSync("apps/api/src/app/api/documents/stats/route.ts", "utf8")
     );
     assert.ok(
       statsSource.includes("TO_TRINH_NOI_BO"),
@@ -49,7 +49,7 @@ describe("Internal Document Workflow Contract", () => {
 
   test("buildDocumentReadWhere enforces unit-level visibility for non-privileged users", async () => {
     const { buildDocumentReadWhere } = await import(
-      "../src/server/policies/document-policy"
+      "../apps/api/src/server/policies/document-policy"
     );
 
     // Non-privileged user with a department
@@ -81,7 +81,7 @@ describe("Internal Document Workflow Contract", () => {
 
   test("internalDocuments feature flag exists with default false", async () => {
     const { FEATURE_FLAGS, isFeatureEnabled, setFeatureFlagOverride, resetFeatureFlagOverrides } =
-      await import("../src/features/flags");
+      await import("../apps/api/src/features/flags");
 
     // Flag must be defined
     assert.ok(
@@ -115,7 +115,7 @@ describe("Internal Document Workflow Contract", () => {
   test("Registry UI includes submission view for internal documents", async () => {
     const registrySource = await import("node:fs").then((fs) =>
       fs.readFileSync(
-        "src/components/documents/document-registry-view.tsx",
+        "apps/web/src/components/documents/document-registry-view.tsx",
         "utf8"
       )
     );

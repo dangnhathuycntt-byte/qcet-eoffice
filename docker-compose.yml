@@ -39,12 +39,14 @@ services:
     networks:
       - qcet-internal
 
-  qcet-app:
-    container_name: qcet-eoffice-app
-    image: qcet-eoffice-app:latest
+  # API: duy nhất nơi chạm CSDL, Redis, ClamAV, uploads; chạy migrate khi khởi động, worker outbox/quét tệp và cron.
+  # Đúng MỘT bản (container_name cố định, không scale): worker và migrate giả định một tiến trình.
+  qcet-api:
+    container_name: qcet-eoffice-api
+    image: qcet-eoffice-api:latest
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/api/Dockerfile
       network: host
     restart: unless-stopped
     depends_on:
@@ -57,6 +59,7 @@ services:
     environment:
       NODE_ENV: production
       NODE_OPTIONS: "--dns-result-order=ipv4first"
+      SERVICE_NAME: qcet-api
       REDIS_URL: redis://redis:6379
       # Runtime credentials must be a dedicated least-privilege role. Never
       # fall back to the database owner used for bootstrap and migrations.
@@ -71,14 +74,14 @@ services:
       FEATURE_FLAG_TASK_WORKSPACE_V2: ${FEATURE_FLAG_TASK_WORKSPACE_V2:-true}
       FEATURE_FLAG_PUSH_NOTIFICATIONS: ${FEATURE_FLAG_PUSH_NOTIFICATIONS:-true}
       NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA: ${NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA:-true}
+      # Tuyệt đối: server.js của standalone chdir về apps/api
       UPLOADS_DIR: /app/uploads
       CLAMAV_HOST: clamav
       CLAMAV_PORT: 3310
       FILE_SCAN_WORKER_ENABLED: "true"
       OUTBOX_WORKER_ENABLED: ${OUTBOX_WORKER_ENABLED:-true}
       TZ: Asia/Ho_Chi_Minh
-    ports:
-      - "127.0.0.1:${PORT:-3001}:3000"
+    # Không publish cổng: tunnel và web gọi qua mạng compose; trên host dùng /api qua cổng của web hoặc docker exec
     volumes:
       - ${UPLOADS_HOST_PATH:?Vui long cung cap UPLOADS_HOST_PATH trong .env.production}:/app/uploads
     networks:
@@ -86,6 +89,35 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+
+  # Web: trang và tài nguyên tĩnh; không bí mật server, không CSDL. Trang đọc dữ liệu qua API_INTERNAL_URL;
+  # /api gọi thẳng vào web (không qua tunnel) được chuyển tiếp tới qcet-api (rewrite chốt khi build).
+  qcet-web:
+    container_name: qcet-eoffice-web
+    image: qcet-eoffice-web:latest
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      network: host
+      args:
+        API_INTERNAL_URL: http://qcet-api:3000
+    restart: unless-stopped
+    depends_on:
+      qcet-api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
+      SERVICE_NAME: qcet-web
+      API_INTERNAL_URL: http://qcet-api:3000
+      NEXT_PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://qcet.dixxie.store}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+      NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA: ${NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA:-true}
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "127.0.0.1:${PORT:-3001}:3000"
+    networks:
+      - qcet-internal
 
   clamav:
     # TCP is reachable only on the private Docker network; do not publish 3310.
@@ -105,7 +137,8 @@ services:
       - /home/dnhhuy/.cloudflared/514f4f82-5355-4eaa-840e-dfa3f548b61c.json:/etc/cloudflared/credentials.json:ro
       - ./cloudflared.yml:/etc/cloudflared/config.yml:ro
     depends_on:
-      - qcet-app
+      - qcet-api
+      - qcet-web
     networks:
       - qcet-internal
 

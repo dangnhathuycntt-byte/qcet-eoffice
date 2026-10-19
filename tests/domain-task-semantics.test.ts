@@ -17,9 +17,9 @@ import assert from 'node:assert/strict';
 const describe: any = (globalThis as any).describe || nodeTest.describe;
 const it: any = (globalThis as any).it || (globalThis as any).test || nodeTest.it;
 
-import { mapDbStatusToLifecycle, mapLifecycleToKanbanColumn, KANBAN_COLUMNS } from '../src/domain/tasks/canonical-semantics';
+import { mapDbStatusToLifecycle, mapLifecycleToKanbanColumn, KANBAN_COLUMNS } from '@qcet/shared/domain/tasks/canonical-semantics';
 
-import { isTaskMaker, isTaskAssignee, isUserAuthorizedApprover, isTaskDueSoon } from '../src/domain/tasks/attention-resolver';
+import { isTaskMaker, isTaskAssignee, isUserAuthorizedApprover, isTaskDueSoon } from '@qcet/shared/domain/tasks/attention-resolver';
 
 describe('1. Canonical Task Status Lifecycle Mapping', () => {
   it('maps all canonical DB statuses to TaskLifecycleStatus', () => {

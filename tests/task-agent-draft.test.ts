@@ -7,7 +7,7 @@ import {
   buildTaskAgentSystemPrompt,
   parseTaskAgentOutput,
   sanitizeTaskAgentDraft,
-} from "../src/domain/tasks/task-agent-draft";
+} from "@qcet/shared/domain/tasks/task-agent-draft";
 
 const personnel = [
   { id: "u1", name: "Lê Văn Thí", position: "Trưởng phòng" },

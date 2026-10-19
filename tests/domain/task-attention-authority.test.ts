@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 const describe: any = (globalThis as any).describe || nodeTest.describe;
 const it: any = (globalThis as any).it || (globalThis as any).test || nodeTest.it;
 
-import { canUserReviewTask, isUserAuthorizedApprover } from '../../src/domain/tasks/attention-resolver';
+import { canUserReviewTask, isUserAuthorizedApprover } from '@qcet/shared/domain/tasks/attention-resolver';
 
 // A single WAITING_APPROVAL task, reviewed by different actors.
 const awaitingTask = {

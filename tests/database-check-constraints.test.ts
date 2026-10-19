@@ -5,8 +5,8 @@ import path from "node:path";
 import { Prisma } from "@prisma/client";
 
 describe("Database Architecture Hardening - Task 5: Database Check Constraints", () => {
-  const sqlPath = path.join(process.cwd(), "prisma/migrations/check_constraints.sql");
-  const schemaPath = path.join(process.cwd(), "prisma/schema.prisma");
+  const sqlPath = path.join(process.cwd(), "packages/db/prisma/migrations/check_constraints.sql");
+  const schemaPath = path.join(process.cwd(), "packages/db/prisma/schema.prisma");
 
   const sqlContent = fs.existsSync(sqlPath) ? fs.readFileSync(sqlPath, "utf-8") : "";
   const schemaContent = fs.existsSync(schemaPath) ? fs.readFileSync(schemaPath, "utf-8") : "";

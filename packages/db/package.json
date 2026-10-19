@@ -1,0 +1,14 @@
+{
+  "name": "@qcet/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prisma schema, migration, seed và Prisma client dùng chung phía server.",
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "prisma": "^6.19.3"
+  }
+}

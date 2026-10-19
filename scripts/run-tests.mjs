@@ -1,17 +1,34 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execSync, spawnSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
 
 const { loadEnvConfig } = nextEnv;
-loadEnvConfig(process.cwd());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
-const testsDir = path.join(rootDir, "tests");
+// .env* ở gốc repo, kể cả khi chạy từ một workspace (npm test -w @qcet/api)
+loadEnvConfig(rootDir);
+
+/**
+ * Mỗi workspace chạy tsx riêng với cwd là thư mục của nó: alias `@/` theo tsconfig của app, chuỗi "src/…"
+ * trong test đọc nguồn trỏ đúng app. tests/ ở gốc: test chỉ dùng package và test chéo hai app.
+ */
+const WORKSPACES = [
+  { name: "apps/web", dir: path.join(rootDir, "apps", "web") },
+  { name: "apps/api", dir: path.join(rootDir, "apps", "api") },
+  { name: "tests", dir: rootDir },
+];
+const workspaceArgIdx = process.argv.indexOf("--workspace");
+const onlyWorkspace = workspaceArgIdx !== -1 ? process.argv[workspaceArgIdx + 1] : null;
+if (onlyWorkspace && !WORKSPACES.some((w) => w.name === onlyWorkspace)) {
+  console.error(`[test-runner] Workspace không có: "${onlyWorkspace}". Chọn: ${WORKSPACES.map((w) => w.name).join(", ")}`);
+  process.exit(1);
+}
+const workspaceOf = (relPath) => (relPath.startsWith("apps/web/") ? "apps/web" : relPath.startsWith("apps/api/") ? "apps/api" : "tests");
 
 // Parse --pattern flag from argv
 const patternArgIdx = process.argv.indexOf("--pattern");
@@ -19,7 +36,7 @@ const pattern = patternArgIdx !== -1 ? process.argv[patternArgIdx + 1] : null;
 
 // Parse --files flag for explicit file list
 const filesArgIdx = process.argv.indexOf("--files");
-const explicitFiles = filesArgIdx !== -1 ? process.argv.slice(filesArgIdx + 1) : null;
+const explicitFiles = filesArgIdx !== -1 ? process.argv.slice(filesArgIdx + 1).filter((a, i, all) => !a.startsWith("--") && all[i - 1] !== "--workspace") : null;
 
 // Parse --base flag for the git diff base (default: main)
 const baseArgIdx = process.argv.indexOf("--base");
@@ -169,7 +186,7 @@ function findAffectedTests(changedFiles, allTestFiles) {
 
   for (const changed of changedFiles) {
     // If a test file itself changed, include it
-    if (changed.startsWith("tests/") && changed.endsWith(".test.ts")) {
+    if (/^(apps\/[^/]+\/)?tests\//.test(changed) && changed.endsWith(".test.ts")) {
       const rel = allTestFiles.find((f) => f === changed);
       if (rel) affected.add(rel);
       continue;
@@ -223,14 +240,16 @@ function applyPattern(files, pat) {
   return { files: filtered, concurrency: rule.concurrency };
 }
 
-const allFiles = findTestFiles(testsDir);
+const allFiles = WORKSPACES.filter((w) => !onlyWorkspace || w.name === onlyWorkspace).flatMap((w) =>
+  findTestFiles(w.name === "tests" ? path.join(rootDir, "tests") : path.join(w.dir, "tests")),
+);
 
 let testFiles;
 let concurrency;
 
 if (explicitFiles && explicitFiles.length > 0) {
   // --files mode: run exactly the specified test files
-  testFiles = explicitFiles.filter((f) => fs.existsSync(path.join(rootDir, f)));
+  testFiles = explicitFiles.filter((f) => fs.existsSync(path.join(rootDir, f)) && (!onlyWorkspace || workspaceOf(f) === onlyWorkspace));
   concurrency = os.cpus().length;
   console.log(`[test-runner] Explicit files: ${testFiles.length} test files (concurrency=${concurrency}).`);
 } else if (pattern === "changed") {
@@ -286,15 +305,48 @@ const env = {
 };
 delete env.NEXT_PUBLIC_REFERENCE_DATE;
 
-const result = spawnSync(bin, ["--test", `--test-concurrency=${concurrency}`, ...testFiles], {
-  cwd: rootDir,
-  stdio: "inherit",
-  env,
-});
-
-if (result.error) {
-  console.error("[test-runner] Execution failed:", result.error);
-  process.exit(1);
+/** Chạy test của một workspace; chuyển nguyên output và đọc dòng tổng kết TAP ở cuối. */
+function runWorkspace(workspace, files) {
+  return new Promise((resolve) => {
+    const relFiles = files.map((f) => path.relative(workspace.dir, path.join(rootDir, f)));
+    console.log(`[test-runner] ${workspace.name}: ${files.length} test files (cwd=${path.relative(rootDir, workspace.dir) || "."}).`);
+    const child = spawn(bin, ["--test", `--test-concurrency=${concurrency}`, ...relFiles], {
+      cwd: workspace.dir,
+      stdio: ["inherit", "pipe", "inherit"],
+      env,
+    });
+    let tail = "";
+    child.stdout.on("data", (chunk) => {
+      process.stdout.write(chunk);
+      tail = (tail + chunk.toString()).slice(-4000);
+    });
+    child.on("error", (error) => {
+      console.error(`[test-runner] ${workspace.name}: không chạy được`, error);
+      resolve({ name: workspace.name, status: 1, counts: {} });
+    });
+    child.on("close", (status) => {
+      const counts = {};
+      for (const key of ["tests", "pass", "fail", "cancelled", "skipped", "todo"]) {
+        const match = tail.match(new RegExp(`^# ${key} (\\d+)$`, "m"));
+        counts[key] = match ? Number(match[1]) : 0;
+      }
+      resolve({ name: workspace.name, status: status ?? 1, counts });
+    });
+  });
 }
 
-process.exit(result.status ?? 0);
+const results = [];
+for (const workspace of WORKSPACES) {
+  const files = testFiles.filter((f) => workspaceOf(f) === workspace.name);
+  if (files.length > 0) results.push(await runWorkspace(workspace, files));
+}
+
+const total = { tests: 0, pass: 0, fail: 0, cancelled: 0, skipped: 0, todo: 0 };
+for (const r of results) for (const key of Object.keys(total)) total[key] += r.counts[key] ?? 0;
+console.log("\n[test-runner] Tổng kết theo workspace:");
+for (const r of results) {
+  console.log(`  ${r.name}: ${r.counts.tests} tests, ${r.counts.pass} pass, ${r.counts.fail} fail, ${r.counts.skipped} skipped, ${r.counts.todo} todo (exit ${r.status})`);
+}
+console.log(`  TỔNG: ${total.tests} tests, ${total.pass} pass, ${total.fail} fail, ${total.cancelled} cancelled, ${total.skipped} skipped, ${total.todo} todo`);
+
+process.exit(results.some((r) => r.status !== 0) ? 1 : 0);

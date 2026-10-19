@@ -7,7 +7,7 @@ import {
   getLedgerUrgencyTag,
   getLedgerStepLabel,
   todayInVietnam,
-} from "../src/lib/documents/document-ledger-format";
+} from "@qcet/shared/lib/documents/document-ledger-format";
 
 describe("document-ledger-format", () => {
   it("todayInVietnam dùng múi giờ Asia/Ho_Chi_Minh", () => {

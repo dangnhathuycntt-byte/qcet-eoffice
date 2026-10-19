@@ -7,7 +7,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { PushSubscriptionSchema, TestPushSchema } from "@/contracts/notifications";
+import { PushSubscriptionSchema, TestPushSchema } from "@qcet/contracts/notifications";
 
 // ---------------------------------------------------------------------------
 // Helpers

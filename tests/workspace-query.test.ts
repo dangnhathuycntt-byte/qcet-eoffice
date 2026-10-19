@@ -4,10 +4,10 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
-import { parseWorkspaceQuery, serializeWorkspaceQuery, type WorkspaceFilterState } from "../src/lib/workspace-query";
-import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "../src/hooks/use-workspace-query";
-import { buildTaskReadWhere } from "../src/server/tasks/task-query-service";
-import type { AuthenticatedUser } from "../src/server/api/request-context";
+import { parseWorkspaceQuery, serializeWorkspaceQuery, type WorkspaceFilterState } from "../apps/web/src/lib/workspace-query";
+import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "../apps/web/src/hooks/use-workspace-query";
+import { buildTaskReadWhere } from "../apps/api/src/server/tasks/task-query-service";
+import type { AuthenticatedUser } from "../apps/api/src/server/api/request-context";
 import { TaskScope } from "@prisma/client";
 
 describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Linking", () => {

@@ -8,11 +8,18 @@ const readSource = (relativePath: string) =>
 
 describe("Task detail audit regressions", () => {
   it("enforces authentication and object-level read authorization before rendering", () => {
-    const source = readSource("src/app/tasks/[id]/page.tsx");
+    // Trang gọi GET /api/page-data/tasks/[id]: 401 chuyển tới đăng nhập, kiểm quyền và map nằm ở route
+    const page = readSource("apps/web/src/app/tasks/[id]/page.tsx");
+    const source = readSource("apps/api/src/app/api/page-data/tasks/[id]/route.ts");
 
-    assert.match(source, /if \(!session\)[\s\S]*redirect\(/);
+    assert.match(page, /if \(result\.status === 401\)[\s\S]*redirect\(/);
+    assert.match(source, /const user = requireAuthenticated\(ctx\)/);
     // Authorization refactored to service pattern: loadAuthorizationContext + resolveTaskDetailContext
-    assert.match(source, /loadAuthorizationContext\(session\.id\)/);
+    assert.match(source, /loadAuthorizationContext\(user\.id\)/);
+    assert.ok(
+      source.indexOf("requireAuthenticated(") < source.indexOf("loadAuthorizationContext("),
+      "authentication must run before loading the authorization context"
+    );
     assert.match(source, /resolveTaskDetailContext\(/);
     assert.ok(
       source.indexOf("loadAuthorizationContext") < source.indexOf("resolveTaskDetailContext"),
@@ -30,15 +37,15 @@ describe("Task detail audit regressions", () => {
   });
 
   it("passes a computed edit capability instead of enabling every editor", () => {
-    const source = readSource("src/components/tasks/task-detail-page.tsx");
+    const source = readSource("apps/web/src/components/tasks/task-detail-page.tsx");
 
     assert.ok(!source.includes("canEdit={true}"), "detail editors must not be hard-coded writable");
     assert.ok(source.includes("canEdit={canEdit}"), "detail editors must receive the server capability");
   });
 
   it("submits completed child work for approval without bypassing maker-checker", () => {
-    const source = readSource("src/components/tasks/task-detail-page.tsx");
-    const service = readSource("src/server/tasks/task-domain-actions.ts");
+    const source = readSource("apps/web/src/components/tasks/task-detail-page.tsx");
+    const service = readSource("apps/api/src/server/tasks/task-domain-actions.ts");
 
     // Maker-checker: the server decides the status; at 100% it must be WAITING_APPROVAL (not COMPLETED)
     assert.match(
@@ -54,7 +61,7 @@ describe("Task detail audit regressions", () => {
   });
 
   it("sends expectedVersion with every task-detail metadata PATCH", () => {
-    const source = readSource("src/components/tasks/task-detail-page.tsx");
+    const source = readSource("apps/web/src/components/tasks/task-detail-page.tsx");
     const patchBodies = [...source.matchAll(/method: "PATCH",[\s\S]{0,260}?body: JSON\.stringify\(([^)]*)\)/g)];
 
     assert.ok(patchBodies.length >= 2, "expected title and description PATCH calls");

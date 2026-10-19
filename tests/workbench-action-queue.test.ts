@@ -17,7 +17,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { extractExecutiveActionItems, type ExecutiveActionItem } from "../src/lib/executive-matrix-aggregator";
+import { extractExecutiveActionItems, type ExecutiveActionItem } from "@qcet/shared/lib/executive-matrix-aggregator";
 import {
   SMALL_FIXTURE_TASKS,
   FIXTURE_REFERENCE_DATE,

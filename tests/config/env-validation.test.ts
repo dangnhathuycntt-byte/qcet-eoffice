@@ -8,13 +8,13 @@ import {
   DEV_DATABASE_URL_FALLBACK,
   assertRuntimeAuthSecret,
   isPlaceholderAuthSecret,
-} from "@/config/env.server";
-import { ClientEnvSchema, validateClientEnv, clientSource, FORBIDDEN_SERVER_SECRETS } from "@/config/env.client";
+} from "../../apps/api/src/config/env.server";
+import { ClientEnvSchema, validateClientEnv, clientSource, FORBIDDEN_SERVER_SECRETS } from "../../apps/web/src/config/env.client";
 import {
   getPublicRuntimeConfig,
   assertZeroSecrets,
-} from "@/config/runtime";
-import { GET as getRuntimeConfig } from "@/app/api/runtime-config/route";
+} from "../../apps/api/src/config/runtime";
+import { GET as getRuntimeConfig } from "../../apps/api/src/app/api/runtime-config/route";
 
 describe("Central Environment Configuration & Secret Isolation (Task 2)", () => {
   describe("ServerEnvSchema & Server Validation", () => {

@@ -7,7 +7,7 @@ import {
   getAcademicMonthsForYear,
   ACADEMIC_MONTH_ORDER,
   filterTasksByAcademicMonthStrict,
-} from "../src/lib/academic-calendar";
+} from "@qcet/shared/lib/academic-calendar";
 
 // Consolidated behavioural coverage for the calendar month view:
 //   - calendar-month-view.tsx helper logic (grids, status dots, headers)
