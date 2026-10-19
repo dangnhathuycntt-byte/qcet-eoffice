@@ -44,3 +44,21 @@ describe("parseAgentReply: bảng kiểu GFM", () => {
     assert.equal(agentReplyToPlainText(reply), "Tổng kết\n\n\tSố lượng\nNhiệm vụ chính\t12\nViệc con\t48\n\nThầy muốn tôi bắt đầu?");
   });
 });
+
+/** Trích dẫn `>` (Trợ lý dùng cho "Lưu ý"; thử công văn thật 19/10/2026 thấy dấu `>` hiện nguyên). */
+describe("parseAgentReply: trích dẫn", () => {
+  it("dòng `>` liền nhau thành một khối, bỏ dấu `>`, giữ chữ đậm và xuống dòng", () => {
+    const blocks = parseAgentReply("Nội dung chính.\n\n> **Lưu ý:** hạn đã qua.\n> Thầy/Cô xem lại.\n\nCâu cuối");
+    assert.deepEqual(
+      blocks.map((block) => block.type),
+      ["paragraph", "quote", "paragraph"],
+    );
+    const quote = blocks[1];
+    assert.ok(quote.type === "quote");
+    assert.deepEqual(quote.inline, [
+      { text: "Lưu ý:", bold: true },
+      { text: " hạn đã qua.\nThầy/Cô xem lại.", bold: false },
+    ]);
+    assert.equal(agentReplyToPlainText("> **Lưu ý:** hạn đã qua."), "Lưu ý: hạn đã qua.");
+  });
+});

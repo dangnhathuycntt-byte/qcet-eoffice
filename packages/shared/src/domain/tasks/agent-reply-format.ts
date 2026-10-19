@@ -1,6 +1,6 @@
 /**
  * Định dạng tối giản cho câu trả lời của Agent (một phần Markdown): đoạn văn, tiêu đề `#`, danh sách `-`/`*`/`1.`,
- * chữ đậm `**…**` và bảng kiểu GFM (dòng tiêu đề, dòng `|---|`, các dòng dữ liệu). Thuần, trả cấu trúc để giao diện dựng
+ * trích dẫn `>`, chữ đậm `**…**` và bảng kiểu GFM (dòng tiêu đề, dòng `|---|`, các dòng dữ liệu). Thuần, trả cấu trúc để giao diện dựng
  * thành phần tử React (không chèn HTML).
  */
 
@@ -9,6 +9,8 @@ export type AgentReplyInline = { text: string; bold: boolean };
 export type AgentReplyBlock =
   | { type: "heading"; inline: AgentReplyInline[] }
   | { type: "paragraph"; inline: AgentReplyInline[] }
+  /** Dòng `>` liền nhau (mô hình hay dùng cho "Lưu ý"); giữ xuống dòng giữa các dòng. */
+  | { type: "quote"; inline: AgentReplyInline[] }
   | { type: "list"; ordered: boolean; items: AgentReplyInline[][] }
   /** Mỗi ô là chữ đã tách đậm; mọi dòng có đúng số ô của dòng tiêu đề (thiếu thì thêm ô rỗng, thừa thì bỏ). */
   | { type: "table"; header: AgentReplyInline[][]; rows: AgentReplyInline[][][] };
@@ -30,6 +32,7 @@ export function parseAgentReplyInline(text: string): AgentReplyInline[] {
 
 const LIST_ITEM = /^\s*(?:([-*•])|(\d+)[.)])\s+(.*)$/;
 const HEADING = /^\s*#{1,6}\s+(.*)$/;
+const QUOTE = /^\s*>\s?(.*)$/;
 /** Dòng ngăn tiêu đề của bảng: `|---|:--:|`, ống đầu và cuối có thể bỏ. */
 const TABLE_SEPARATOR = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
 
@@ -67,6 +70,17 @@ export function parseAgentReply(text: string): AgentReplyBlock[] {
       }
       index--;
       blocks.push({ type: "table", header: fit(header), rows });
+      continue;
+    }
+    const quote = line.match(QUOTE);
+    if (quote) {
+      flushParagraph();
+      const quoted = [quote[1].trim()];
+      while (index + 1 < lines.length && QUOTE.test(lines[index + 1]) && lines[index + 1].trim() !== ">") {
+        index++;
+        quoted.push((lines[index].match(QUOTE)?.[1] ?? "").trim());
+      }
+      blocks.push({ type: "quote", inline: parseAgentReplyInline(quoted.join("\n")) });
       continue;
     }
     const heading = line.match(HEADING);

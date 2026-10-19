@@ -37,7 +37,7 @@ export function ReplyInline({ parts, sources }: { parts: AgentReplyInline[]; sou
 }
 
 /**
- * Câu trả lời có định dạng (đoạn, tiêu đề, danh sách, chữ đậm, bảng) theo nhịp của Linear (đo ảnh 16/10/2026):
+ * Câu trả lời có định dạng (đoạn, tiêu đề, danh sách, trích dẫn, chữ đậm, bảng) theo nhịp của Linear (đo ảnh 16/10/2026):
  * chữ 13px dòng ~21px, đoạn cách 16px, tiêu đề sát danh sách 6px, mục cách 6px, thụt 24px.
  * `sources`: mã nguồn trong chữ thành link (chỉ nguồn đã đọc trong lượt).
  */
@@ -77,6 +77,11 @@ export function AgentReplyText({ text, sources }: { text: string; sources?: Assi
               </tbody>
             </table>
           </div>
+        ) : block.type === "quote" ? (
+          // Trích dẫn ("Lưu ý" của Trợ lý): kẻ trái và chữ phụ như khối suy nghĩ, không hiện dấu `>`
+          <p key={i} className="whitespace-pre-wrap border-l-2 border-border pl-3 text-muted-foreground">
+            <ReplyInline parts={block.inline} sources={sources} />
+          </p>
         ) : block.type === "list" ? (
           <ul key={i} className={cn("flex flex-col gap-1.5 pl-6 marker:text-muted-foreground", block.ordered ? "list-decimal" : "list-disc")}>
             {block.items.map((item, j) => (
