@@ -8,6 +8,7 @@ import {
   DelegationStatus,
 } from '@prisma/client';
 import { ActionInboxItem, ActionInboxResponse } from '@qcet/contracts/me';
+import { VISIBLE_TASK_WHERE } from '@/server/tasks/task-query-service';
 import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
@@ -69,7 +70,7 @@ export class ActionInboxService {
       // 1. TASKS: As DRI
       prisma.task.findMany({
         where: {
-          archivedAt: null,
+          ...VISIBLE_TASK_WHERE,
           actors: { some: { userId, role: TaskActorRole.DRI } },
           status: { in: [TaskStatus.IN_PROGRESS, TaskStatus.NOT_STARTED] },
         },
@@ -80,7 +81,7 @@ export class ActionInboxService {
       // 2. TASKS: Pending Review
       prisma.task.findMany({
         where: {
-          archivedAt: null,
+          ...VISIBLE_TASK_WHERE,
           status: TaskStatus.WAITING_APPROVAL,
           OR: [
             { actors: { some: { userId, role: { in: [TaskActorRole.REVIEWER, TaskActorRole.APPROVER] } } } },

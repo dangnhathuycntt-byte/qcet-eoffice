@@ -104,6 +104,15 @@ export interface TaskMetricsResult {
   referenceDate: string;
 }
 
+/**
+ * Nhiệm vụ còn hiệu lực: chưa lưu trữ và việc cha (nếu có) chưa lưu trữ. Việc con của việc cha đã lưu trữ ẩn theo cha
+ * ở mọi nơi đọc nhiệm vụ: danh sách, chi tiết, hộp việc (Trợ lý đọc qua hai nơi sau).
+ */
+export const VISIBLE_TASK_WHERE = {
+  archivedAt: null,
+  NOT: { parentTask: { is: { archivedAt: { not: null } } } },
+} satisfies Prisma.TaskWhereInput;
+
 /** Lightweight projection for list views — includes summary subtasks for rollup and collaborators, omits deliverables, dacumTaskDef, description */
 const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
   leadUnit: { select: { id: true, name: true, code: true } },
@@ -813,8 +822,7 @@ export class TaskQueryService {
     const assignedTo = filters.assignedTo;
     const parentTaskId = filters.parentTaskId;
 
-    // Việc con của việc cha đã lưu trữ ẩn theo cha: trang chi tiết của chúng trả 404.
-    const where: Prisma.TaskWhereInput = { archivedAt: null, NOT: { parentTask: { is: { archivedAt: { not: null } } } } };
+    const where: Prisma.TaskWhereInput = { ...VISIBLE_TASK_WHERE };
 
     if (month !== undefined && String(month) !== 'all') {
       where.academicMonth = parseInt(String(month), 10);
@@ -1112,7 +1120,7 @@ export class TaskQueryService {
   async getTaskEntityForInternalUse(taskId: string) {
     const now = new Date();
     return prisma.task.findUnique({
-      where: { id: taskId, archivedAt: null },
+      where: { id: taskId, ...VISIBLE_TASK_WHERE },
       include: {
         leadUnit: true,
         actors: {
