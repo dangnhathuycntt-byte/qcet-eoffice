@@ -6,7 +6,12 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as path from "path";
-import { parseAssistantContextParam } from "../src/components/assistant/assistant-model";
+import {
+  ASSISTANT_ASK_EVENT,
+  askAssistantInDock,
+  parseAssistantContextParam,
+  type AssistantAskEventDetail,
+} from "../src/components/assistant/assistant-model";
 import { isAssistantEligibleDocument } from "@qcet/shared/domain/assistant/assistant-document-eligibility";
 
 const ROOT = process.cwd();
@@ -39,6 +44,38 @@ describe("Hỏi Trợ lý từ nhiệm vụ", () => {
   test("hàng dùng AgentIcon cùng cỡ icon các hàng khác", () => {
     assert.ok(src.includes('import { AgentIcon } from "@/components/icons/agent-icon"'));
     assert.ok(src.includes('<AgentIcon className="size-4 text-muted-foreground" />'));
+  });
+});
+
+describe("Hỏi Trợ lý từ nhiệm vụ mở khung nổi tại chỗ (19/10/2026)", () => {
+  test("khung nổi nhận thì không chuyển trang; không có khung (điện thoại) thì trả false để mở trang Trợ lý", () => {
+    const target = new EventTarget();
+    const g = globalThis as { window?: unknown };
+    g.window = target;
+    try {
+      assert.equal(askAssistantInDock({ type: "task", id: "t-1" }), false);
+      const asked: unknown[] = [];
+      target.addEventListener(ASSISTANT_ASK_EVENT, (event) => {
+        const detail = (event as CustomEvent<AssistantAskEventDetail>).detail;
+        asked.push(detail.context);
+        detail.handled = true;
+      });
+      assert.equal(askAssistantInDock({ type: "task", id: "t-1" }), true);
+      assert.deepEqual(asked, [{ type: "task", id: "t-1" }]);
+    } finally {
+      delete g.window;
+    }
+  });
+
+  test("menu nhiệm vụ hỏi qua khung nổi, khung mở cuộc mới với nhiệm vụ làm ngữ cảnh và chip ở ô soạn", () => {
+    const menu = read("src/components/tasks/table/task-context-menu.tsx");
+    assert.ok(menu.includes('if (!askAssistantInDock({ type: "task", id: task.id })) return handleAskAssistant();'));
+    assert.ok(menu.includes('label="Hỏi Trợ lý" onClick={askInDock} />'));
+    const dock = read("src/components/assistant/assistant-dock.tsx");
+    assert.ok(dock.includes("window.addEventListener(ASSISTANT_ASK_EVENT, onAsk)"));
+    assert.ok(dock.includes('if (hidden || !window.matchMedia("(min-width: 768px)").matches) return;'), "điện thoại và trang Trợ lý không nhận");
+    assert.ok(dock.includes("chat.setPendingContext(detail.context);"));
+    assert.ok(read("src/components/assistant/assistant-dock-panel.tsx").includes("context={composerContext}"));
   });
 });
 

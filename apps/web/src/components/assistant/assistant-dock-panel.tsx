@@ -35,6 +35,8 @@ export interface AssistantDockPanelProps {
   detailStatus: DetailStatus;
   detailError: string | null;
   context: AssistantSourceRef | null;
+  /** Mục cuộc mới sẽ hỏi về ("Hỏi Trợ lý" từ menu nhiệm vụ): chip "Đang hỏi về" ở ô soạn, bỏ được. */
+  composerContext: { label: string; onRemove: () => void } | null;
   pending: boolean;
   draft: string;
   onDraftChange: (value: string) => void;
@@ -77,6 +79,7 @@ export function AssistantDockPanel({
   detailStatus,
   detailError,
   context,
+  composerContext,
   pending,
   draft,
   onDraftChange,
@@ -210,7 +213,7 @@ export function AssistantDockPanel({
           onStop={onStop}
           pending={pending}
           disabled={detailStatus === "loading" || detailStatus === "error"}
-          context={null}
+          context={composerContext}
           error={sendError}
           inputRef={composerRef}
           stopScope={panelRef}

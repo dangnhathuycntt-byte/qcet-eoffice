@@ -62,6 +62,24 @@ export type AssistantConversationEventDetail =
   | { id: string; deleted: true }
   | { id: string; title: string | null; opened: true };
 
+/**
+ * "Hỏi Trợ lý" về một mục (menu nhiệm vụ): khung chat nổi trên trang đang xem mở cuộc mới với mục đó làm ngữ cảnh, không
+ * chuyển sang trang Trợ lý (người dùng yêu cầu 19/10/2026). Khung nhận thì đặt `handled`.
+ */
+export const ASSISTANT_ASK_EVENT = "qcet:assistant-ask";
+export interface AssistantAskEventDetail {
+  context: AssistantContextRef;
+  handled: boolean;
+}
+
+/** Mở khung chat nổi hỏi về `context`; không có khung (điện thoại, trang Trợ lý) thì trả false để nơi gọi chuyển trang. */
+export function askAssistantInDock(context: AssistantContextRef): boolean {
+  if (typeof window === "undefined") return false;
+  const detail: AssistantAskEventDetail = { context, handled: false };
+  window.dispatchEvent(new CustomEvent<AssistantAskEventDetail>(ASSISTANT_ASK_EVENT, { detail }));
+  return detail.handled;
+}
+
 export const ASSISTANT_RATE_LIMIT_MESSAGE = "Thầy/Cô gửi hơi nhanh. Chờ một phút rồi thử lại.";
 export const ASSISTANT_NO_ANSWER_MESSAGE = "Trợ lý chưa trả lời xong. Thầy/Cô thử hỏi lại.";
 export const ASSISTANT_INTERRUPTED_MESSAGE = "Kết nối tới Trợ lý bị gián đoạn. Thầy/Cô thử hỏi lại.";

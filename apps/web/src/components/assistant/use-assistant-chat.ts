@@ -605,6 +605,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     pendingContext,
     contextLabel,
     clearPendingContext: () => setPendingContext(null),
+    setPendingContext,
     attachments,
     addAttachments,
     removeAttachment,

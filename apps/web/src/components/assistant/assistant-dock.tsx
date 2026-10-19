@@ -8,7 +8,13 @@ import { formatConversationTime, groupConversationsByRecency } from "@qcet/share
 import { assistantErrorText, deleteConversationRequest, listConversationsRequest } from "@/components/assistant/assistant-client";
 import { ConversationRowsSkeleton } from "@/components/assistant/conversation-rows-skeleton";
 import { AssistantDockPanel } from "@/components/assistant/assistant-dock-panel";
-import { ASSISTANT_CONVERSATION_EVENT, type AssistantConversationEventDetail } from "@/components/assistant/assistant-model";
+import {
+  ASSISTANT_ASK_EVENT,
+  ASSISTANT_CONVERSATION_EVENT,
+  contextTypeLabel,
+  type AssistantAskEventDetail,
+  type AssistantConversationEventDetail,
+} from "@/components/assistant/assistant-model";
 import { useAssistantChat } from "@/components/assistant/use-assistant-chat";
 import { useCreateTaskLauncher } from "@/components/assistant/use-create-task-launcher";
 import { useStickToBottom } from "@/components/assistant/use-stick-to-bottom";
@@ -234,6 +240,25 @@ export function AssistantDock() {
     return () => window.removeEventListener(ASSISTANT_CONVERSATION_EVENT, onChange);
   }, []);
 
+  // "Hỏi Trợ lý" từ menu nhiệm vụ: cuộc mới với nhiệm vụ làm ngữ cảnh ngay trong khung nổi, không sang trang Trợ lý.
+  // Cuộc đang mở (kể cả đang trả lời: lượt vẫn chạy ở máy chủ) về lịch sử. Điện thoại không có khung nên không nhận.
+  const onAskRef = React.useRef<(detail: AssistantAskEventDetail) => void>(() => undefined);
+  onAskRef.current = (detail) => {
+    if (hidden || !window.matchMedia("(min-width: 768px)").matches) return;
+    detail.handled = true;
+    newChat();
+    chat.setPendingContext(detail.context);
+    openPanel();
+  };
+  React.useEffect(() => {
+    const onAsk = (event: Event) => {
+      const detail = (event as CustomEvent<AssistantAskEventDetail>).detail;
+      if (detail) onAskRef.current(detail);
+    };
+    window.addEventListener(ASSISTANT_ASK_EVENT, onAsk);
+    return () => window.removeEventListener(ASSISTANT_ASK_EVENT, onAsk);
+  }, []);
+
   // Máy chủ từ chối lượt vừa gửi: trả câu về ô soạn khi ô còn trống; báo cho hook biết để tệp đi cùng chữ
   const draftRef = React.useRef(draft);
   draftRef.current = draft;
@@ -378,6 +403,11 @@ export function AssistantDock() {
           detailStatus={detailStatus}
           detailError={chat.detailError}
           context={chat.activeContext}
+          composerContext={
+            chat.pendingContext && !activeId
+              ? { label: chat.contextLabel ?? contextTypeLabel(chat.pendingContext.type), onRemove: chat.clearPendingContext }
+              : null
+          }
           pending={pending}
           draft={draft}
           onDraftChange={setDraft}

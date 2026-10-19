@@ -41,6 +41,7 @@ import { useFeedback } from "@/components/ui/feedback-layer";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
 import { useRuntimeFeature } from "@/lib/runtime-features";
+import { askAssistantInDock } from "@/components/assistant/assistant-model";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
 import {
@@ -370,7 +371,12 @@ export function TaskContextMenu({
     }
   };
 
-  // Hỏi Trợ lý: mở trang Trợ lý với nhiệm vụ này làm ngữ cảnh (server vẫn kiểm quyền khi gửi)
+  // Hỏi Trợ lý: khung chat nổi trên trang này hỏi về nhiệm vụ (người dùng yêu cầu 19/10/2026: không cần sang trang to);
+  // không có khung (điện thoại) thì mở trang Trợ lý với nhiệm vụ làm ngữ cảnh. Server vẫn kiểm quyền khi gửi.
+  const askInDock = () => {
+    if (!askAssistantInDock({ type: "task", id: task.id })) return handleAskAssistant();
+    onClose();
+  };
   const handleAskAssistant = () => {
     onClose();
     router?.push(`/assistant?context=task:${encodeURIComponent(task.id)}`);
@@ -704,7 +710,7 @@ export function TaskContextMenu({
         }}
       />
       {assistantOn ? (
-        <MenuRow icon={<AgentIcon className="size-4 text-muted-foreground" />} label="Hỏi Trợ lý" onClick={handleAskAssistant} />
+        <MenuRow icon={<AgentIcon className="size-4 text-muted-foreground" />} label="Hỏi Trợ lý" onClick={askInDock} />
       ) : null}
 
       <div className="my-1 border-t border-border/40" />
