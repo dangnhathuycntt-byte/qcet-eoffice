@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { UserAvatar } from "@/components/ui/user-avatar";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { propertyTriggerVariants } from "@/components/ui/property-control-styles";
 import { IconSidebarTasks } from "@/components/layout/sidebar-rounded-icons";
 import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { CREATE_TASK_MAX_SUBTASKS } from "@qcet/contracts/tasks";
@@ -50,6 +50,8 @@ export function CreateTaskSubtasks({ items, onChange, people, loadingPeople, par
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(EMPTY_DRAFT);
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  /** Hàng đang mở menu chọn chủ trì (mỗi lúc một menu) */
+  const [rowPickerId, setRowPickerId] = React.useState<string | null>(null);
   const [titleError, setTitleError] = React.useState<string | null>(null);
   const [dueError, setDueError] = React.useState<string | null>(null);
   const titleRef = React.useRef<HTMLInputElement>(null);
@@ -101,6 +103,8 @@ export function CreateTaskSubtasks({ items, onChange, people, loadingPeople, par
   };
 
   const removeItem = (id: string) => onChange(items.filter((item) => item.id !== id));
+  const updateItem = (id: string, patch: Partial<CreateTaskSubtaskFormItem>) =>
+    onChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
 
   return (
     <section aria-label="Việc con" className={cn("rounded-lg border border-border/70 bg-background", className)}>
@@ -118,25 +122,37 @@ export function CreateTaskSubtasks({ items, onChange, people, loadingPeople, par
       {items.length > 0 && (
         <ul className="border-t border-border/60">
           {items.map((item) => {
-            const lead = people.find((p) => p.id === (item.assigneeId || parentLeadId)) ?? null;
-            const due = item.dueDate || parentDueDate;
             return (
-              <li key={item.id} className="group flex h-9 items-center gap-2 pr-1.5 pl-3">
-                <IconSidebarTasks size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+              <li key={item.id} className="group flex h-9 items-center gap-1 pr-1.5 pl-3">
+                <IconSidebarTasks size={14} className="mr-1 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate text-compact text-foreground" title={item.title}>
                   {item.title}
                 </span>
-                {lead && (
-                  <span className={cn("flex shrink-0 items-center gap-1 text-xs", item.assigneeId ? "text-foreground" : "text-muted-foreground")} title={item.assigneeId ? `Chủ trì: ${lead.name}` : `Chủ trì theo nhiệm vụ: ${lead.name}`}>
-                    <UserAvatar name={lead.name} avatarUrl={lead.avatarUrl} size="xs" className={cn(!item.assigneeId && "opacity-60")} />
-                    <span className="max-w-[120px] truncate max-md:hidden">{lead.name}</span>
-                  </span>
-                )}
-                {due && (
-                  <span className={cn("shrink-0 text-xs tabular-nums", item.dueDate ? "text-foreground" : "text-muted-foreground")} title={item.dueDate ? "Hạn hoàn thành" : "Hạn theo nhiệm vụ"}>
-                    {shortDate(due)}
-                  </span>
-                )}
+                {/* Chủ trì và hạn sửa ngay trên hàng (kể cả việc con Agent thêm); để trống thì theo nhiệm vụ, hiện mờ */}
+                <PersonPillPicker
+                  appearance="property"
+                  people={people}
+                  valueId={item.assigneeId}
+                  onSelect={(person) => updateItem(item.id, { assigneeId: person.id })}
+                  open={rowPickerId === item.id}
+                  onOpenChange={(open) => setRowPickerId(open ? item.id : null)}
+                  loading={loadingPeople}
+                  fallbackPerson={parentLead}
+                  fallbackHint={parentLead ? `Chủ trì theo nhiệm vụ: ${parentLead.name}` : undefined}
+                  triggerLabel={`Chủ trì việc con ${item.title}`}
+                />
+                <VietnameseDatePicker
+                  variant="inline"
+                  className="flex shrink-0"
+                  triggerClassName={propertyTriggerVariants({ variant: item.dueDate ? "default" : "muted" })}
+                  value={item.dueDate}
+                  onChange={(iso) => updateItem(item.id, { dueDate: iso })}
+                  maxDate={parentDueDate ? parentDueDate.slice(0, 10) : undefined}
+                  placeholder={parentDueDate ? shortDate(parentDueDate) : "Hạn"}
+                  title={item.dueDate ? "Hạn hoàn thành" : parentDueDate ? "Để trống thì theo hạn của nhiệm vụ" : "Hạn hoàn thành"}
+                  align="right"
+                  clearable
+                />
                 <Button
                   variant="ghost"
                   size="icon-xs"

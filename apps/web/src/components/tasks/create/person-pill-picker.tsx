@@ -5,6 +5,7 @@ import { Combobox } from "@base-ui/react/combobox";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
+import { propertyTriggerVariants } from "@/components/ui/property-control-styles";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
@@ -27,6 +28,10 @@ export interface PersonPillPickerProps {
   required?: boolean;
   /** Điện thoại: chưa chọn thì chỉ hiện nút tròn có icon */
   compactWhenEmpty?: boolean;
+  /** `pill`: chip thuộc tính của hộp tạo việc; `property`: nút không viền trong hàng danh sách (hàng việc con), điện thoại chỉ hiện avatar/icon */
+  appearance?: "pill" | "property";
+  /** Tên nút cho trình đọc màn hình, ví dụ kèm tên việc con; mặc định là `emptyLabel` */
+  triggerLabel?: string;
   triggerRef?: React.Ref<HTMLButtonElement>;
 }
 
@@ -44,6 +49,8 @@ export function PersonPillPicker({
   invalid = false,
   required = false,
   compactWhenEmpty = false,
+  appearance = "pill",
+  triggerLabel,
   triggerRef,
 }: PersonPillPickerProps) {
   const [query, setQuery] = React.useState("");
@@ -81,20 +88,22 @@ export function PersonPillPicker({
         ref={triggerRef}
         aria-required={required || undefined}
         aria-invalid={invalid || undefined}
-        aria-label={selected ? undefined : emptyLabel}
+        aria-label={triggerLabel ?? (selected ? undefined : emptyLabel)}
         title={selected ? `${emptyLabel}: ${selected.name}` : fallbackPerson ? fallbackHint : undefined}
         className={cn(
-          PROPERTY_PILL_CLASS,
-          !selected && "text-muted-foreground",
+          appearance === "property" ? propertyTriggerVariants({ variant: selected ? "default" : "muted" }) : PROPERTY_PILL_CLASS,
+          appearance === "pill" && !selected && "text-muted-foreground",
           !shown && compactWhenEmpty && "max-md:aspect-square max-md:gap-0 max-md:px-0",
         )}
       >
         {shown ? (
           <UserAvatar name={shown.name} avatarUrl={shown.avatarUrl} size="xs" className={cn(!selected && "opacity-60")} />
         ) : (
-          <User className={invalid ? "text-destructive" : "text-muted-foreground"} />
+          <User className={cn("size-3.5", invalid ? "text-destructive" : "text-muted-foreground")} />
         )}
-        <span className={cn("max-w-[140px] truncate", !shown && compactWhenEmpty && "max-md:hidden")}>{shown?.name || emptyLabel}</span>
+        <span className={cn(appearance === "property" ? "max-w-[120px] truncate max-md:hidden" : "max-w-[140px] truncate", !shown && compactWhenEmpty && "max-md:hidden")}>
+          {shown?.name || emptyLabel}
+        </span>
       </Combobox.Trigger>
 
       <Combobox.Portal>
