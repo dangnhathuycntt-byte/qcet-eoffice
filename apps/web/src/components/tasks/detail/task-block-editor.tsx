@@ -1406,14 +1406,15 @@ function FloatingToolbar({ editor }: { editor: any }) {
     document.addEventListener("dragend", onDragEnd, true);
     document.addEventListener("drop", onDragEnd, true);
 
+    // Chỉ hiện khi đang bôi đen chữ trong chính editor này. Xét vùng chọn DOM thay vì editor.selection: Slate cập nhật
+    // editor.selection trễ, nên bấm vào chữ (chỉ focus) vẫn còn vùng chọn cũ và thanh hiện nhầm ở con trỏ.
     const handleSelectionChange = () => {
-      const sel = editor.selection;
-      if (dragging || !sel || editor.api.isCollapsed?.(sel)) {
-        setVisible(false);
-        return;
-      }
       const domSel = window.getSelection();
-      if (!domSel || domSel.rangeCount === 0) {
+      const root = editor.api.toDOMNode(editor);
+      if (
+        dragging || !domSel || domSel.rangeCount === 0 || domSel.isCollapsed || !root ||
+        !root.contains(domSel.anchorNode) || !root.contains(domSel.focusNode)
+      ) {
         setVisible(false);
         return;
       }
