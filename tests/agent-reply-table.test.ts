@@ -62,3 +62,14 @@ describe("parseAgentReply: trích dẫn", () => {
     assert.equal(agentReplyToPlainText("> **Lưu ý:** hạn đã qua."), "Lưu ý: hạn đã qua.");
   });
 });
+
+describe("parseAgentReply: đường kẻ", () => {
+  it("dòng chỉ có ---, *** hay ___ thành đường kẻ, không hiện thô; danh sách và bảng không bị nhầm", () => {
+    const blocks = parseAgentReply("Phần một.\n\n---\n\nPhần hai.\n* * *\n- Mục\n\n| A |\n|---|\n| 1 |");
+    assert.deepEqual(
+      blocks.map((block) => block.type),
+      ["paragraph", "divider", "paragraph", "divider", "list", "table"],
+    );
+    assert.equal(agentReplyToPlainText("Phần một.\n\n---\n\nPhần hai."), "Phần một.\n\nPhần hai.");
+  });
+});

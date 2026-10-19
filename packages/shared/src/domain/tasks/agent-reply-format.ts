@@ -1,6 +1,6 @@
 /**
  * Định dạng tối giản cho câu trả lời của Agent (một phần Markdown): đoạn văn, tiêu đề `#`, danh sách `-`/`*`/`1.`,
- * trích dẫn `>`, chữ đậm `**…**` và bảng kiểu GFM (dòng tiêu đề, dòng `|---|`, các dòng dữ liệu). Thuần, trả cấu trúc để giao diện dựng
+ * trích dẫn `>`, đường kẻ `---`, chữ đậm `**…**` và bảng kiểu GFM (dòng tiêu đề, dòng `|---|`, các dòng dữ liệu). Thuần, trả cấu trúc để giao diện dựng
  * thành phần tử React (không chèn HTML).
  */
 
@@ -11,6 +11,8 @@ export type AgentReplyBlock =
   | { type: "paragraph"; inline: AgentReplyInline[] }
   /** Dòng `>` liền nhau (mô hình hay dùng cho "Lưu ý"); giữ xuống dòng giữa các dòng. */
   | { type: "quote"; inline: AgentReplyInline[] }
+  /** Dòng chỉ có `---` (hay `***`, `___`): mô hình dùng để ngăn hai phần của câu trả lời. */
+  | { type: "divider" }
   | { type: "list"; ordered: boolean; items: AgentReplyInline[][] }
   /** Mỗi ô là chữ đã tách đậm; mọi dòng có đúng số ô của dòng tiêu đề (thiếu thì thêm ô rỗng, thừa thì bỏ). */
   | { type: "table"; header: AgentReplyInline[][]; rows: AgentReplyInline[][][] };
@@ -33,6 +35,7 @@ export function parseAgentReplyInline(text: string): AgentReplyInline[] {
 const LIST_ITEM = /^\s*(?:([-*•])|(\d+)[.)])\s+(.*)$/;
 const HEADING = /^\s*#{1,6}\s+(.*)$/;
 const QUOTE = /^\s*>\s?(.*)$/;
+const DIVIDER = /^\s*([-*_])(?:\s*\1){2,}\s*$/;
 /** Dòng ngăn tiêu đề của bảng: `|---|:--:|`, ống đầu và cuối có thể bỏ. */
 const TABLE_SEPARATOR = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
 
@@ -70,6 +73,11 @@ export function parseAgentReply(text: string): AgentReplyBlock[] {
       }
       index--;
       blocks.push({ type: "table", header: fit(header), rows });
+      continue;
+    }
+    if (DIVIDER.test(line)) {
+      flushParagraph();
+      blocks.push({ type: "divider" });
       continue;
     }
     const quote = line.match(QUOTE);
@@ -113,7 +121,9 @@ export function agentReplyToPlainText(text: string): string {
       if (block.type === "list") return block.items.map((item, i) => `${block.ordered ? `${i + 1}.` : "-"} ${join(item)}`).join("\n");
       // Bảng sao chép thành các dòng cách nhau bằng Tab: dán vào Excel hay Word ra đúng cột
       if (block.type === "table") return [block.header, ...block.rows].map((row) => row.map(join).join("\t")).join("\n");
+      if (block.type === "divider") return "";
       return join(block.inline);
     })
+    .filter(Boolean)
     .join("\n\n");
 }

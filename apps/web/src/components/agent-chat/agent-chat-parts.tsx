@@ -82,6 +82,8 @@ export function AgentReplyText({ text, sources }: { text: string; sources?: Assi
           <p key={i} className="whitespace-pre-wrap border-l-2 border-border pl-3 text-muted-foreground">
             <ReplyInline parts={block.inline} sources={sources} />
           </p>
+        ) : block.type === "divider" ? (
+          <hr key={i} className="border-border/60" />
         ) : block.type === "list" ? (
           <ul key={i} className={cn("flex flex-col gap-1.5 pl-6 marker:text-muted-foreground", block.ordered ? "list-decimal" : "list-disc")}>
             {block.items.map((item, j) => (
