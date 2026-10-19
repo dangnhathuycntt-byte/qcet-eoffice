@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import * as m from "motion/react-m";
+import { useReducedMotion, type Transition } from "motion/react";
 import { CalendarDays, FileText, ListChecks } from "lucide-react";
 import type { AssistantSourceRef } from "@qcet/contracts/assistant";
 import { Button } from "@/components/ui/button";
@@ -10,6 +12,7 @@ import { focusRingClass } from "@/components/ui/focus-ring";
 import { FileTypeIcon } from "@/components/documents/file-type-icon";
 import { formatBytes } from "@/lib/pwa/storage-manager";
 import { formatDisplayDate } from "@qcet/shared/lib/format/date";
+import { motionTransition } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 import { ProposalListRow } from "@/components/assistant/assistant-task-proposal-card";
 import {
@@ -24,6 +27,10 @@ const SOURCE_ICON: Record<AssistantSourceRef["type"], React.ComponentType<{ clas
   document: FileText,
   meeting: CalendarDays,
 };
+
+const INSTANT: Transition = { duration: 0 };
+const CARD_HIDDEN = { opacity: 0, scale: 0.97, y: -4 };
+const ROW_HIDDEN = { opacity: 0, y: 4 };
 
 const ROW_LINK_CLASS = cn("flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-compact hover:bg-accent", focusRingClass);
 
@@ -69,99 +76,123 @@ export function AssistantSidePanel({
   outline,
   onOpenProposal,
   onCreateProposals,
+  animated = true,
 }: {
   outline: ConversationOutline;
   onOpenProposal: (target: ProposalTarget) => void;
   onCreateProposals: (items: ProposalTarget[]) => void;
+  /** false: hiện/ẩn ngay, không chuyển động (lần đầu áp lựa chọn đã lưu của người dùng). */
+  animated?: boolean;
 }) {
   const { proposals, files, sources } = outline;
   const waiting = pendingProposals(proposals);
   const created = proposals.filter((item) => item.created).length;
+  const reduceMotion = useReducedMotion();
+  const still = !animated || Boolean(reduceMotion);
+  // Hàng có sẵn khi thẻ mở thì hiện ngay; hàng đến sau (đề xuất đang soạn) mới trượt nhẹ vào
+  const [settled, setSettled] = React.useState(false);
+  React.useEffect(() => setSettled(true), []);
   return (
-    // ml-3: thanh cuộn của cột tin cách thẻ một khoảng như lề trên và phải, không dính sát mép thẻ
-    <aside
-      aria-label="Trong cuộc trò chuyện"
-      data-slot="assistant-side-panel"
-      className="relative ml-3 mr-3 mt-3 hidden max-h-[calc(100%-1.5rem)] w-80 shrink-0 flex-col self-start overflow-y-auto rounded-xl bg-popover text-popover-foreground shadow-menu thin-scrollbar xl:flex"
+    // Chỗ của thẻ giãn từ 0 nên cột tin thu hẹp, căn lại mượt; thẻ neo mép phải (justify-end) không trượt theo
+    <m.div
+      className="hidden shrink-0 justify-end xl:flex"
+      initial={{ width: 0 }}
+      animate={{ width: "auto", transition: still ? INSTANT : motionTransition.panel }}
+      exit={{ width: 0, transition: still ? INSTANT : motionTransition.panelExit }}
     >
+      {/* Thẻ hiện như popover từ góc trên phải, chỗ nút bật trên thanh đầu: mờ dần, phóng nhẹ */}
+      {/* ml-3: thanh cuộn của cột tin cách thẻ một khoảng như lề trên và phải, không dính sát mép thẻ */}
+      <m.aside
+        aria-label="Trong cuộc trò chuyện"
+        data-slot="assistant-side-panel"
+        className="relative ml-3 mr-3 mt-3 flex max-h-[calc(100%-1.5rem)] w-80 shrink-0 origin-top-right flex-col self-start overflow-y-auto rounded-xl bg-popover text-popover-foreground shadow-menu thin-scrollbar"
+        initial={CARD_HIDDEN}
+        animate={{ opacity: 1, scale: 1, y: 0, transition: still ? INSTANT : motionTransition.dropdown }}
+        exit={{ ...CARD_HIDDEN, transition: still ? INSTANT : motionTransition.dropdownExit }}
+      >
 
-      {proposals.length > 0 ? (
-        <Section
-          title="Đề xuất nhiệm vụ"
-          meta={
-            <span role="status" className="shrink-0 text-xs text-muted-foreground tabular-nums">
-              {created}/{proposals.length} đã tạo
-            </span>
-          }
-        >
-          <Progress value={created} max={proposals.length} aria-label="Tiến độ tạo nhiệm vụ từ đề xuất" className="px-2" />
-          {waiting.length > 1 ? (
-            // Nút phụ: nút chính "Tạo tất cả" đã ở thẻ trong cột tin, cột bên giữ yên như cột Progress của Claude
-            <Button variant="toolbar" size="sm" className="mx-2 my-1" onClick={() => onCreateProposals(waiting)}>
-              Tạo tất cả ({waiting.length})
-            </Button>
-          ) : null}
-          {/* Danh sách cuộn riêng trong mục như Progress của Claude, để mục Tệp và Nguồn bên dưới vẫn thấy */}
-          {/* relative: chữ sr-only (định vị tuyệt đối) của hàng ở lại trong vùng cuộn, không kéo dài cả trang */}
-          <div className="relative flex max-h-[min(55dvh,480px)] flex-col gap-1 overflow-y-auto thin-scrollbar">
-            {groupByDue(proposals).map((group, i) => (
-              <div key={i} className="flex flex-col">
-                {group.due ? (
-                  <p className="px-2 pb-0.5 pt-1.5 text-xs text-muted-foreground tabular-nums">Hạn {formatDisplayDate(group.due)}</p>
-                ) : (
-                  <p className="px-2 pb-0.5 pt-1.5 text-xs text-muted-foreground">Chưa có hạn</p>
-                )}
-                <ul className="flex flex-col">
-                  {group.items.map((item) => (
-                    <li key={`${item.replyKey}:${item.index}`}>
-                      <ProposalListRow item={item} onOpen={() => onOpenProposal(item)} hideDue />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </Section>
-      ) : null}
+        {proposals.length > 0 ? (
+          <Section
+            title="Đề xuất nhiệm vụ"
+            meta={
+              <span role="status" className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                {created}/{proposals.length} đã tạo
+              </span>
+            }
+          >
+            <Progress value={created} max={proposals.length} aria-label="Tiến độ tạo nhiệm vụ từ đề xuất" className="px-2" />
+            {waiting.length > 1 ? (
+              // Nút phụ: nút chính "Tạo tất cả" đã ở thẻ trong cột tin, cột bên giữ yên như cột Progress của Claude
+              <Button variant="toolbar" size="sm" className="mx-2 my-1" onClick={() => onCreateProposals(waiting)}>
+                Tạo tất cả ({waiting.length})
+              </Button>
+            ) : null}
+            {/* Danh sách cuộn riêng trong mục như Progress của Claude, để mục Tệp và Nguồn bên dưới vẫn thấy */}
+            {/* relative: chữ sr-only (định vị tuyệt đối) của hàng ở lại trong vùng cuộn, không kéo dài cả trang */}
+            <div className="relative flex max-h-[min(55dvh,480px)] flex-col gap-1 overflow-y-auto thin-scrollbar">
+              {groupByDue(proposals).map((group, i) => (
+                <div key={i} className="flex flex-col">
+                  {group.due ? (
+                    <p className="px-2 pb-0.5 pt-1.5 text-xs text-muted-foreground tabular-nums">Hạn {formatDisplayDate(group.due)}</p>
+                  ) : (
+                    <p className="px-2 pb-0.5 pt-1.5 text-xs text-muted-foreground">Chưa có hạn</p>
+                  )}
+                  <ul className="flex flex-col">
+                    {group.items.map((item) => (
+                      <m.li
+                        key={`${item.replyKey}:${item.index}`}
+                        initial={settled && !still ? ROW_HIDDEN : false}
+                        animate={{ opacity: 1, y: 0, transition: motionTransition.micro }}
+                      >
+                        <ProposalListRow item={item} onOpen={() => onOpenProposal(item)} hideDue />
+                      </m.li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Section>
+        ) : null}
 
-      {files.length > 0 ? (
-        <Section title="Tệp" meta={<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{files.length}</span>}>
-          <ul className="flex flex-col">
-            {files.map((file) => (
-              <li key={file.id}>
-                <a href={file.url} target="_blank" rel="noopener noreferrer" aria-label={`Mở tệp ${file.name}`} className={ROW_LINK_CLASS}>
-                  <FileTypeIcon fileName={file.name} className="size-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-foreground" title={file.name}>
-                    {file.name}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatBytes(file.size)}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </Section>
-      ) : null}
-
-      {sources.length > 0 ? (
-        <Section title="Nguồn đã dùng" meta={<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{sources.length}</span>}>
-          <ul className="flex flex-col">
-            {sources.map((source) => {
-              const Icon = SOURCE_ICON[source.type];
-              return (
-                <li key={`${source.type}:${source.id}`}>
-                  <Link href={source.href} className={ROW_LINK_CLASS}>
-                    <Icon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-                    {source.code ? <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums">{source.code}</span> : null}
-                    <span className="min-w-0 flex-1 truncate text-foreground" title={source.title}>
-                      {source.title}
+        {files.length > 0 ? (
+          <Section title="Tệp" meta={<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{files.length}</span>}>
+            <ul className="flex flex-col">
+              {files.map((file) => (
+                <li key={file.id}>
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" aria-label={`Mở tệp ${file.name}`} className={ROW_LINK_CLASS}>
+                    <FileTypeIcon fileName={file.name} className="size-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate text-foreground" title={file.name}>
+                      {file.name}
                     </span>
-                  </Link>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatBytes(file.size)}</span>
+                  </a>
                 </li>
-              );
-            })}
-          </ul>
-        </Section>
-      ) : null}
-    </aside>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+
+        {sources.length > 0 ? (
+          <Section title="Nguồn đã dùng" meta={<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{sources.length}</span>}>
+            <ul className="flex flex-col">
+              {sources.map((source) => {
+                const Icon = SOURCE_ICON[source.type];
+                return (
+                  <li key={`${source.type}:${source.id}`}>
+                    <Link href={source.href} className={ROW_LINK_CLASS}>
+                      <Icon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+                      {source.code ? <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums">{source.code}</span> : null}
+                      <span className="min-w-0 flex-1 truncate text-foreground" title={source.title}>
+                        {source.title}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </Section>
+        ) : null}
+      </m.aside>
+    </m.div>
   );
 }

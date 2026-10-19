@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence } from "motion/react";
 import type { AssistantContextRef, AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
 import {
   ASSISTANT_CONVERSATION_EVENT,
@@ -71,8 +72,9 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
   const [draft, setDraft] = React.useState("");
   const isPhone = useIsPhone();
   const { openCreateTask, openBulkCreate, createTaskModal } = useCreateTaskLauncher();
-  // Đọc lựa chọn ẩn cột bên sau khi gắn (máy chủ không có localStorage), để HTML ban đầu khớp nhau
-  const [sidePanelHidden, setSidePanelHidden] = React.useState(false);
+  // Đọc lựa chọn ẩn cột bên sau khi gắn (máy chủ không có localStorage), để HTML ban đầu khớp nhau. null: chưa đọc, cột
+  // bên hiện như mặc định và ẩn ngay không chuyển động nếu người dùng đã ẩn từ trước
+  const [sidePanelHidden, setSidePanelHidden] = React.useState<boolean | null>(null);
   React.useEffect(() => setSidePanelHidden(readSidePanelHidden()), []);
   const toggleSidePanel = () => {
     const hidden = !sidePanelHidden;
@@ -307,13 +309,17 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
             {start ? <AssistantFootnote /> : null}
           </div>
 
-          {showSidePanelToggle && !sidePanelHidden ? (
-            <AssistantSidePanel
-              outline={outline}
-              onOpenProposal={openProposal}
-              onCreateProposals={createProposals}
-            />
-          ) : null}
+          <AnimatePresence initial={false}>
+            {showSidePanelToggle && !sidePanelHidden ? (
+              <AssistantSidePanel
+                key="side-panel"
+                outline={outline}
+                onOpenProposal={openProposal}
+                onCreateProposals={createProposals}
+                animated={sidePanelHidden !== null}
+              />
+            ) : null}
+          </AnimatePresence>
         </div>
 
       </div>
