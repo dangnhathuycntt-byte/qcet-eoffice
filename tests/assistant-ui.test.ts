@@ -1205,6 +1205,34 @@ describe("Trợ lý UI: kế hoạch nhiều đề xuất", () => {
     assert.ok(html.includes('aria-label="Xem lại và tạo: Đầu việc 2 của kế hoạch tháng 8/2026"'), "hàng còn chờ mở hộp tạo riêng");
   });
 
+  test("bỏ qua hết: thẻ danh sách thu gọn một hàng có Hoàn tác; xong mà còn đề xuất đã bỏ qua thì có Hoàn tác bỏ qua", () => {
+    const render = (patch: Partial<ThreadMessage>) =>
+      renderToStaticMarkup(
+        React.createElement(AssistantThread, {
+          thread: [question, { ...reply, ...patch }],
+          detailStatus: "ready",
+          detailError: null,
+          onRetry: () => undefined,
+          onNewChat: () => undefined,
+          listRef: { current: null },
+          onScroll: () => undefined,
+          onOpenProposal: () => undefined,
+          onDismissProposal: () => undefined,
+          onCreateProposals: () => undefined,
+        }),
+      );
+    const all = render({ proposalTasks: {}, dismissedProposals: [0, 1, 2, 3, 4, 5, 6, 7] });
+    assert.ok(all.includes('aria-label="Đã bỏ qua 8 đề xuất nhiệm vụ"') && all.includes("Đã bỏ qua tất cả đề xuất") && all.includes(">Hoàn tác<"));
+    assert.equal(all.includes("Tạo tất cả"), false);
+    assert.equal(all.includes("Đầu việc 1 của kế hoạch"), false, "không còn hàng mờ chiếm chỗ");
+
+    const settled = render({ proposalTasks: { 0: { id: "t-1", code: "NV-2026-08-009" }, 1: { id: "t-2", code: "NV-2026-08-010" } }, dismissedProposals: [2, 3, 4, 5, 6, 7] });
+    assert.ok(settled.includes("Đã tạo 2/8 · bỏ qua 6") && settled.includes(">Hoàn tác bỏ qua<"));
+    assert.equal(settled.includes("Tạo tất cả"), false);
+    assert.ok(settled.includes(">Đã bỏ qua</span>"), "hàng đã bỏ qua ghi chữ thay cho dấu gạch");
+    assert.ok(settled.includes('aria-label="Xem lại và tạo: Đầu việc 3 của kế hoạch tháng 8/2026"'), "hàng đã bỏ qua vẫn mở lại được");
+  });
+
   test("cột bên là thẻ nổi: đề xuất gom theo hạn có tiến độ, tệp và nguồn đã dùng; không có nút X", () => {
     const html = renderToStaticMarkup(
       React.createElement(AssistantSidePanel, {
@@ -1219,6 +1247,28 @@ describe("Trợ lý UI: kế hoạch nhiều đề xuất", () => {
     assert.equal((html.match(/Hạn 31\/08\/2026/g) ?? []).length, 1, "ngày ghi ở tiêu đề nhóm, hàng không lặp lại");
     assert.ok(html.includes("rounded-xl") && html.includes("shadow-menu") && !html.includes("border-l"), "thẻ nổi, không kẻ chia trang");
     assert.equal(html.includes("Ẩn cột bên"), false, "bật/tắt chỉ ở thanh đầu");
+  });
+
+  test("cột bên: một nhóm không hạn thì không ghi \"Chưa có hạn\"; chưa tạo gì thì không có thanh tiến độ rỗng; bỏ qua hết thì ghi Đã bỏ qua", () => {
+    const render = (patch: Partial<ThreadMessage>) =>
+      renderToStaticMarkup(
+        React.createElement(AssistantSidePanel, {
+          outline: conversationOutline([question, { ...reply, ...patch }]),
+          onOpenProposal: () => undefined,
+          onCreateProposals: () => undefined,
+        }),
+      );
+    assert.ok(render({}).includes('role="progressbar"'), "đã tạo một nhiệm vụ thì có tiến độ");
+    const undated = render({ proposals: plan.map(({ title }) => ({ title })), proposalTasks: {}, dismissedProposals: [] });
+    assert.equal(undated.includes("Chưa có hạn"), false);
+    assert.equal(undated.includes('role="progressbar"'), false);
+    assert.ok(undated.includes("0/8 đã tạo") && undated.includes("Tạo tất cả (8)"));
+    const mixed = render({ proposals: plan.map((item, i) => (i < 4 ? item : { title: item.title })), proposalTasks: {}, dismissedProposals: [] });
+    assert.ok(mixed.includes("Hạn 31/08/2026") && mixed.includes("Chưa có hạn"), "có nhóm có hạn thì nhóm không hạn vẫn ghi");
+    const dismissed = render({ proposalTasks: {}, dismissedProposals: [0, 1, 2, 3, 4, 5, 6, 7] });
+    assert.match(dismissed, /role="status"[^>]*>Đã bỏ qua</, "đầu thẻ ghi Đã bỏ qua thay cho 0/8 đã tạo");
+    assert.equal(dismissed.includes("đã tạo"), false);
+    assert.equal(dismissed.includes("Tạo tất cả"), false);
   });
 
   test("thanh đầu có nút cột bên với icon panel phải kiểu Linear, tiến độ trong nhãn; trang và khung nổi nối \"Tạo tất cả\"", () => {

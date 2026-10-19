@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Check, Circle, ListPlus, Minus } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Circle, CircleCheck, CircleSlash, ListPlus, Minus } from "lucide-react";
 import type { AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { Button } from "@/components/ui/button";
@@ -233,20 +233,28 @@ const SHOWN_LIST_ROWS = 6;
 type ProposalRowItem = Pick<ConversationProposalItem, "proposal" | "created" | "dismissed"> & { streaming?: boolean };
 
 /**
- * Một hàng đề xuất (thẻ danh sách và bảng bên): dấu trạng thái, tên cắt cuối kèm tooltip, hạn hoặc mã nhiệm vụ đã tạo.
- * Đã tạo thì mở nhiệm vụ; còn lại bấm để mở hộp tạo nhiệm vụ đã điền sẵn (xem lại, sửa, tạo riêng).
+ * Một hàng đề xuất (thẻ danh sách và bảng bên): dấu trạng thái như trạng thái nhiệm vụ của Linear (vòng trống: chờ, vòng
+ * tích: đã tạo, vòng gạch: đã bỏ qua), tên cắt cuối kèm tooltip, bên phải hạn, mã nhiệm vụ đã tạo hoặc chữ "Đã bỏ qua".
+ * Đã tạo thì mở nhiệm vụ; còn lại (kể cả đã bỏ qua) bấm để mở hộp tạo nhiệm vụ đã điền sẵn (xem lại, sửa, tạo riêng).
  */
 export function ProposalListRow({ item, onOpen, hideDue = false }: { item: ProposalRowItem; onOpen?: () => void; hideDue?: boolean }) {
   const { proposal, created, dismissed } = item;
   const icon = created ? (
-    <Check aria-hidden className="size-3.5 shrink-0 text-foreground" />
+    <CircleCheck aria-hidden className="size-3.5 shrink-0 text-foreground" />
   ) : dismissed ? (
-    <Minus aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+    <CircleSlash aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
   ) : (
     <Circle aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
   );
-  const status = created ? `Đã tạo${created.code ? ` ${created.code}` : ""}` : dismissed ? "Đã bỏ qua" : "Chưa tạo";
-  const trailing = created ? (created.code ?? "Đã tạo") : proposal.dueDate && !hideDue ? formatDisplayDate(proposal.dueDate) : null;
+  const trailing = created
+    ? (created.code ?? "Đã tạo")
+    : dismissed
+      ? "Đã bỏ qua"
+      : proposal.dueDate && !hideDue
+        ? formatDisplayDate(proposal.dueDate)
+        : null;
+  // Trạng thái đọc cho trình đọc màn hình khi chữ bên phải chưa nói (mã nhiệm vụ, ngày)
+  const status = created ? `Đã tạo${created.code ? ` ${created.code}` : ""}` : dismissed ? null : "Chưa tạo";
   const rowClass = "flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-compact";
   const content = (
     <>
@@ -254,7 +262,7 @@ export function ProposalListRow({ item, onOpen, hideDue = false }: { item: Propo
       <span className={cn("min-w-0 flex-1 truncate", dismissed ? "text-muted-foreground" : "text-foreground")} title={proposal.title}>
         {proposal.title}
       </span>
-      <span className="sr-only">{status}</span>
+      {status ? <span className="sr-only">{status}</span> : null}
       {trailing ? <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{trailing}</span> : null}
     </>
   );
@@ -276,38 +284,84 @@ export function ProposalListRow({ item, onOpen, hideDue = false }: { item: Propo
 /**
  * Nhiều đề xuất trong một câu trả lời (kế hoạch năm, danh sách việc; người dùng gửi kế hoạch 48 đầu việc 19/10/2026):
  * một thẻ danh sách gọn thay cho từng thẻ lớn. Hàng mở hộp tạo nhiệm vụ của đề xuất đó; "Tạo tất cả" mở hộp xem và tạo
- * các đề xuất còn chờ một lần; "Bỏ qua" bỏ qua các đề xuất còn chờ (từng hàng vẫn mở lại được).
+ * các đề xuất còn chờ một lần; "Bỏ qua" bỏ qua các đề xuất còn chờ (từng hàng vẫn mở lại được). Bỏ qua hết thì thẻ thu
+ * gọn một hàng có "Hoàn tác" như thẻ đề xuất đơn; xong hết mà còn đề xuất đã bỏ qua thì có "Hoàn tác bỏ qua".
  */
 export function AssistantProposalList({
   items,
   onOpen,
   onCreateAll,
   onDismissAll,
+  onRestoreAll,
 }: {
   items: ProposalRowItem[];
   onOpen?: (index: number) => void;
   onCreateAll?: () => void;
   onDismissAll?: () => void;
+  /** Đưa các đề xuất đã bỏ qua về chờ tạo. */
+  onRestoreAll?: () => void;
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const created = items.filter((item) => item.created).length;
-  const pending = items.filter((item) => !item.created && !item.dismissed).length;
+  const dismissed = items.filter((item) => item.dismissed && !item.created).length;
+  const pending = items.length - created - dismissed;
+  const allDismissed = items.length > 0 && dismissed === items.length;
   const subtasks = items.reduce((sum, item) => sum + (item.proposal.subtasks?.length ?? 0), 0);
   const shown = expanded ? items : items.slice(0, SHOWN_LIST_ROWS);
   const hidden = items.length - shown.length;
+  const summary = `Đề xuất ${items.length} nhiệm vụ${subtasks > 0 ? ` · ${subtasks} việc con` : ""}`;
+
+  // Bỏ qua / Hoàn tác làm mất nút vừa bấm: chuyển tiêu điểm sang nút đối ứng, chỉ khi do chính người dùng bấm
+  const focusNext = React.useRef<"undo" | "create" | null>(null);
+  const undoRef = React.useRef<HTMLButtonElement>(null);
+  const createRef = React.useRef<HTMLButtonElement>(null);
+  React.useLayoutEffect(() => {
+    if (focusNext.current === "undo" && allDismissed) undoRef.current?.focus();
+    if (focusNext.current === "create" && !allDismissed) createRef.current?.focus();
+    focusNext.current = null;
+  }, [allDismissed]);
+
+  if (allDismissed) {
+    return (
+      <CompactProposalRow
+        label={`Đã bỏ qua ${items.length} đề xuất nhiệm vụ`}
+        icon={<Minus className="size-3.5 text-muted-foreground" />}
+        title={summary}
+        status="Đã bỏ qua tất cả đề xuất"
+        muted
+      >
+        {onRestoreAll ? (
+          <Button
+            ref={undoRef}
+            variant="ghost"
+            size="sm"
+            className="shrink-0 max-md:min-h-11"
+            onClick={() => {
+              focusNext.current = "create";
+              onRestoreAll();
+            }}
+          >
+            Hoàn tác
+          </Button>
+        ) : null}
+      </CompactProposalRow>
+    );
+  }
+
+  const status = [created > 0 ? `Đã tạo ${created}/${items.length}` : null, dismissed > 0 ? `bỏ qua ${dismissed}` : null]
+    .filter(Boolean)
+    .join(" · ");
   return (
     // relative: chữ sr-only của hàng ở lại trong thẻ, không thoát khỏi khung cuộn của cột tin
     <section aria-label={`Đề xuất ${items.length} nhiệm vụ`} className="relative flex flex-col gap-2 rounded-lg border border-border bg-background p-3">
       <div className="flex items-center gap-2">
         <p className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-foreground">
           <ListPlus className="size-3.5 shrink-0" aria-hidden />
-          <span className="truncate">
-            Đề xuất {items.length} nhiệm vụ{subtasks > 0 ? ` · ${subtasks} việc con` : ""}
-          </span>
+          <span className="truncate">{summary}</span>
         </p>
-        {created > 0 ? (
+        {status ? (
           <p role="status" className="shrink-0 text-xs text-muted-foreground tabular-nums">
-            Đã tạo {created}/{items.length}
+            {status}
           </p>
         ) : null}
       </div>
@@ -317,24 +371,46 @@ export function AssistantProposalList({
             <ProposalListRow item={item} onOpen={onOpen ? () => onOpen(index) : undefined} />
           </li>
         ))}
+        {hidden > 0 || expanded ? (
+          // Hàng "Xem thêm" như cuối nhóm của Linear: cùng cột dấu trạng thái, chữ nhạt, không nền khi đang mở
+          <li>
+            <Pressable
+              aria-expanded={expanded}
+              onClick={() => setExpanded((v) => !v)}
+              className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <ChevronDown aria-hidden className={cn("size-3.5 shrink-0", expanded && "rotate-180")} />
+              {expanded ? "Thu gọn" : `Xem thêm ${hidden} đề xuất`}
+            </Pressable>
+          </li>
+        ) : null}
       </ul>
-      {hidden > 0 || expanded ? (
-        <Button variant="ghost" size="xs" className="-ml-2 w-fit text-muted-foreground" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
-          {expanded ? "Thu gọn" : `Xem thêm ${hidden} đề xuất`}
-        </Button>
-      ) : null}
       {pending > 0 && (onCreateAll || onDismissAll) ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
           {onDismissAll ? (
-            <Button variant="ghost" size="sm" className="max-md:min-h-11" onClick={onDismissAll}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="max-md:min-h-11"
+              onClick={() => {
+                focusNext.current = "undo";
+                onDismissAll();
+              }}
+            >
               Bỏ qua
             </Button>
           ) : null}
           {onCreateAll ? (
-            <Button size="sm" className="max-md:min-h-11" onClick={onCreateAll}>
+            <Button ref={createRef} size="sm" className="max-md:min-h-11" onClick={onCreateAll}>
               Tạo tất cả ({pending})
             </Button>
           ) : null}
+        </div>
+      ) : pending === 0 && dismissed > 0 && onRestoreAll ? (
+        <div className="flex justify-end">
+          <Button variant="ghost" size="sm" className="max-md:min-h-11" onClick={onRestoreAll}>
+            Hoàn tác bỏ qua
+          </Button>
         </div>
       ) : null}
     </section>

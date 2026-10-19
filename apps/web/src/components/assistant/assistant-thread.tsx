@@ -430,7 +430,7 @@ function ReplyTurn({
   );
 }
 
-/** Thẻ danh sách của tin có nhiều đề xuất; "Tạo tất cả" và "Bỏ qua" chỉ tác động các đề xuất còn chờ. */
+/** Thẻ danh sách của tin có nhiều đề xuất; "Tạo tất cả" và "Bỏ qua" chỉ tác động các đề xuất còn chờ, "Hoàn tác" các đề xuất đã bỏ qua. */
 function ReplyProposalList({
   message,
   onOpenProposal,
@@ -456,6 +456,11 @@ function ReplyProposalList({
       onOpen={onOpenProposal ? (index) => onOpenProposal(items[index]) : undefined}
       onCreateAll={onCreateProposals ? () => onCreateProposals(waiting) : undefined}
       onDismissAll={onDismissProposal ? () => waiting.forEach((item) => onDismissProposal(message.key, item.index, true)) : undefined}
+      onRestoreAll={
+        onDismissProposal
+          ? () => items.filter((item) => item.dismissed && !item.created).forEach((item) => onDismissProposal(message.key, item.index, false))
+          : undefined
+      }
     />
   );
 }

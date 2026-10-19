@@ -201,6 +201,10 @@ export function AssistantSidePanel({
   const { progress, proposals, files, sources } = outline;
   const waiting = pendingProposals(proposals);
   const created = proposals.filter((item) => item.created).length;
+  const allDismissed = proposals.length > 0 && proposals.every((item) => item.dismissed && !item.created);
+  const groups = groupByDue(proposals);
+  // Chỉ một nhóm không hạn thì tiêu đề nhóm thừa: không có gì để phân biệt
+  const showGroupHeaders = !(groups.length === 1 && groups[0].due === null);
   const reduceMotion = useReducedMotion();
   const still = !animated || Boolean(reduceMotion);
   const elapsed = useElapsedSeconds(progress?.startedAt, progress?.status === "streaming");
@@ -256,12 +260,15 @@ export function AssistantSidePanel({
               title="Đề xuất nhiệm vụ"
               meta={
                 <span role="status" className={META_CLASS}>
-                  {created}/{proposals.length} đã tạo
+                  {allDismissed ? "Đã bỏ qua" : `${created}/${proposals.length} đã tạo`}
                 </span>
               }
               {...cardProps("proposals")}
             >
-              <Progress value={created} max={proposals.length} aria-label="Tiến độ tạo nhiệm vụ từ đề xuất" className="px-2" />
+              {/* Thanh tiến độ chỉ khi đã tạo được nhiệm vụ: thanh rỗng không nói thêm gì ngoài số ở đầu thẻ */}
+              {created > 0 ? (
+                <Progress value={created} max={proposals.length} aria-label="Tiến độ tạo nhiệm vụ từ đề xuất" className="px-2 pb-1" />
+              ) : null}
               {waiting.length > 1 ? (
                 // Nút phụ: nút chính "Tạo tất cả" đã ở thẻ trong cột tin, cột bên giữ yên như cột Progress của Claude
                 <Button variant="toolbar" size="sm" className="mx-2 my-1" onClick={() => onCreateProposals(waiting)}>
@@ -270,9 +277,9 @@ export function AssistantSidePanel({
               ) : null}
               {/* Danh sách cuộn riêng trong thẻ, để các thẻ bên dưới vẫn thấy */}
               <div className="relative flex max-h-[min(55dvh,480px)] flex-col gap-1 overflow-y-auto thin-scrollbar">
-                {groupByDue(proposals).map((group, i) => (
+                {groups.map((group, i) => (
                   <div key={i} className="flex flex-col">
-                    {group.due ? (
+                    {!showGroupHeaders ? null : group.due ? (
                       <p className="px-2 pb-0.5 pt-1.5 text-xs text-muted-foreground tabular-nums">Hạn {formatDisplayDate(group.due)}</p>
                     ) : (
                       <p className="px-2 pb-0.5 pt-1.5 text-xs text-muted-foreground">Chưa có hạn</p>
