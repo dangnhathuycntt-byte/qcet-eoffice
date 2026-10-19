@@ -180,7 +180,7 @@ export function GlobalShortcutsModal() {
               return (
                 <div key={group.id} className="space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground/75 tracking-tight px-1">
-                    <Icon size={13} strokeWidth={1.5} className="text-muted-foreground/60" />
+                    <Icon size={13} className="text-muted-foreground/60" />
                     <span>{group.title}</span>
                   </div>
 

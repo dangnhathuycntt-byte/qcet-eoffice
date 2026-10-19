@@ -155,7 +155,7 @@ function SectionCard({
   return (
     <div className="rounded-xl border border-border/50 bg-card">
       <div className="flex items-center gap-2 border-b border-border/30 px-4 py-3">
-        <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+        <Icon className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-medium text-foreground">{title}</h3>
       </div>
       <div className="px-4 py-3">{children}</div>
@@ -174,7 +174,7 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-start gap-3 py-1.5">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-sm text-foreground">

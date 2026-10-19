@@ -1461,7 +1461,7 @@ function FloatingToolbar({ editor }: { editor: any }) {
             isMarkActive(key) ? "bg-selected text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
-          <Icon className="size-3.5" strokeWidth={1.5} />
+          <Icon className="size-3.5" />
         </Pressable>
       ))}
       <div className="w-px h-4 bg-border/60 mx-0.5" />

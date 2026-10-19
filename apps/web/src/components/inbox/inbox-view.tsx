@@ -914,7 +914,7 @@ function InboxRow({
           aria-hidden
           className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
         >
-          <TypeIcon size={16} strokeWidth={1.5} />
+          <TypeIcon size={16} />
         </span>
       )}
       <div className="min-w-0 flex-1">

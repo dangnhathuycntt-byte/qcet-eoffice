@@ -328,7 +328,7 @@ export function DossierRegistryView() {
             className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-2xs"
           >
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <s.icon className={cn("size-3.5", s.color)} strokeWidth={1.5} />
+              <s.icon className={cn("size-3.5", s.color)} />
               {s.label}
             </div>
             <p className="mt-1 text-xl font-bold tracking-tight text-foreground">

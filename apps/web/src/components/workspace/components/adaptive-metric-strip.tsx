@@ -263,7 +263,6 @@ export function AdaptiveMetricStrip({
               >
                 <Icon
                   className="size-3.5"
-                  strokeWidth={1.5}
                   aria-hidden="true"
                 />
               </div>

@@ -315,7 +315,7 @@ export function DocumentQuickEntryModal({
                   onClick={() => setDocType(value)}
                   className={cn(docType === value ? "bg-selected text-foreground" : "text-muted-foreground")}
                 >
-                  <Icon strokeWidth={1.5} />
+                  <Icon />
                   <span>{label}</span>
                 </Button>
               ))}

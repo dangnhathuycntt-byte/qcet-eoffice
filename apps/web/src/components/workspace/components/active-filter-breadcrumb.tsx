@@ -230,7 +230,7 @@ export function FilterSegmentChip({
       data-slot={dataSlot}
       className="inline-flex min-w-0 max-w-full items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none group"
     >
-      {Icon && <Icon className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />}
+      {Icon && <Icon className="size-3.5 text-muted-foreground/75 shrink-0" />}
       <span className="text-muted-foreground text-xs whitespace-nowrap">{label}:</span>
       <span className="min-w-0 font-medium text-xs truncate max-w-[240px]">{value}</span>
       {onRemove && (

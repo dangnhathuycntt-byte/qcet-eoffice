@@ -192,7 +192,6 @@ export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflo
                           ? "text-primary"
                           : "text-muted-foreground/50"
                     )}
-                    strokeWidth={1.5}
                   />
                   <span
                     className={cn(

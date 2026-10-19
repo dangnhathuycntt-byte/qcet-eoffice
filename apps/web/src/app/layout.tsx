@@ -99,8 +99,9 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full overflow-x-hidden bg-background text-foreground font-sans">
-        {/* Nét icon 1,5px cho toàn app; icon không cần truyền strokeWidth. */}
-        <LucideProvider strokeWidth={1.5}>
+        {/* Nét icon 1,25px cho toàn app, như icon của Linear (đo 19/10/2026: ~1,3px) và bộ icon sidebar; `globals.css` giữ nét
+            không co theo cỡ icon. Icon không cần truyền strokeWidth. */}
+        <LucideProvider strokeWidth={1.25}>
           <MotionProvider>
             <AuthProvider>
               <DisplayDensityProvider>

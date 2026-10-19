@@ -1197,7 +1197,7 @@ export function UnifiedTaskToolbar({
                         : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     )}
                   >
-                    <Icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                    <Icon className="size-3.5 shrink-0 text-muted-foreground" />
                     <span>{tab.label}</span>
                     {showBadge && (
                       <span

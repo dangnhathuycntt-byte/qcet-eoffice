@@ -417,7 +417,7 @@ function NotificationCenterRow({ item, onRead }: NotificationCenterRowProps) {
             badge.bg
           )}
         >
-          <BadgeIcon size={10} strokeWidth={1.5} />
+          <BadgeIcon size={10} />
         </div>
       </div>
 

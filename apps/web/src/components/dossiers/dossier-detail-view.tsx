@@ -176,10 +176,7 @@ function MetaRow({
   if (!value) return null;
   return (
     <div className="flex items-start gap-2 text-xs">
-      <Icon
-        className="size-3.5 text-muted-foreground shrink-0 mt-0.5"
-        strokeWidth={1.5}
-      />
+      <Icon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
       <span className="text-muted-foreground shrink-0">{label}:</span>
       <span className="text-foreground font-medium">{value}</span>
     </div>
@@ -483,7 +480,7 @@ export function DossierDetailView({
                   {isLoading ? (
                     <Loader2 className="size-3.5 animate-spin" />
                   ) : (
-                    <Icon className="size-3.5" strokeWidth={1.5} />
+                    <Icon className="size-3.5" />
                   )}
                   {action.label}
                 </button>

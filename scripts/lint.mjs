@@ -68,15 +68,15 @@ const DESIGN_RULES = [
   {
     id: "no-emoji",
     message:
-      "Emoji in interface source. Use a Lucide icon with strokeWidth={1.5} instead.",
+      "Emoji in interface source. Use a Lucide icon instead.",
     test: (line) => EMOJI_RE.test(line),
   },
   {
     id: "icon-stroke-width",
     message:
-      "Lucide icon stroke is 1.5, set once by LucideProvider in apps/web/src/app/layout.tsx. Drop the strokeWidth prop.",
+      "Lucide icon stroke is 1.25px at every size, set once by LucideProvider in apps/web/src/app/layout.tsx (non-scaling via globals.css). Drop the strokeWidth prop; 1.5 is only for hand-drawn SVGs on their own grid.",
     test: (line) =>
-      /strokeWidth=\{(?!1\.5\b)[\d.]+\}/.test(line) || /strokeWidth="(?!1\.5")[\d.]+"/.test(line),
+      /strokeWidth=\{(?!1\.25\b|1\.5\b)[\d.]+\}/.test(line) || /strokeWidth="(?!1\.25"|1\.5")[\d.]+"/.test(line),
   },
   {
     id: "no-uppercase-heading",

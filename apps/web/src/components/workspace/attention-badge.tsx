@@ -139,7 +139,6 @@ export const AttentionBadge = React.forwardRef<HTMLElement, AttentionBadgeProps>
         <span className="relative inline-flex items-center shrink-0">
           <IconComponent
             className={cn(sizeConfig.icon, config.iconColor)}
-            strokeWidth={1.5}
             aria-hidden="true"
           />
           {pulse && level === "urgent" && (
