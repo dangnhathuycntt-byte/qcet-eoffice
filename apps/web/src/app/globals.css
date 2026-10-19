@@ -1014,9 +1014,10 @@
   }
 
   /* iPhone tự phóng trang khi chạm ô nhập dưới 16px: ép ô nhập lên 16px. Ô vốn chữ to hơn (tên nhiệm vụ 20px)
-     gắn data-large-text để giữ cỡ của nó, không bị ép nhỏ lại khi đang sửa. */
+     gắn data-large-text để giữ cỡ của nó, không bị ép nhỏ lại khi đang sửa. Lớp tô màu đè lên ô (Textarea
+     renderHighlight) cùng cỡ để chữ trùng khít. */
   @media (max-width: 639px) {
-    input:not([data-large-text]), select, textarea:not([data-large-text]) {
+    input:not([data-large-text]), select, textarea:not([data-large-text]), [data-slot="textarea-highlight"] {
       font-size: 16px !important;
     }
   }

@@ -15,6 +15,12 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   countOnlyNearLimit?: boolean;
   /** compact: chữ 13px, đệm gọn, không đặt chiều cao tối thiểu 96px. Mặc định giữ nguyên. */
   compact?: boolean;
+  /**
+   * Tô màu một phần chữ ngay trong ô (ví dụ tên được nhắc): lớp chữ trùng khít cỡ chữ, đệm, ngắt dòng đè lên ô, chữ của ô
+   * trong suốt, con trỏ và vùng chọn vẫn là của ô. Chỉ đổi màu, không đổi độ đậm hay cỡ để chữ không lệch con trỏ.
+   * Cần `value` (ô có điều khiển).
+   */
+  renderHighlight?: (value: string) => React.ReactNode;
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -26,6 +32,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       maxCharacters,
       countOnlyNearLimit = false,
       compact = false,
+      renderHighlight,
       maxLength,
       value,
       defaultValue,
@@ -64,8 +71,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const remaining = limit !== undefined ? limit - charCount : null;
     const isNearLimit = remaining !== null && remaining <= 20;
     const showCounter = limit !== undefined && !(countOnlyNearLimit && !isNearLimit);
+    const highlightText = renderHighlight && typeof value === "string" ? value : null;
+    const metricClass = compact ? "px-2 py-1.5 text-compact" : "px-3.5 py-3 text-base sm:text-sm";
 
-    const textareaElement = (
+    const field = (
       <textarea
         ref={internalRef}
         data-slot="textarea"
@@ -78,9 +87,28 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           compact ? "min-h-8 px-2 py-1.5 text-compact sm:min-h-7" : "min-h-24 px-3.5 py-3 text-base sm:text-sm",
           autoResize ? "resize-none overflow-hidden" : "resize-y",
           className,
+          highlightText !== null && "text-transparent caret-foreground",
         )}
         {...props}
       />
+    );
+
+    const textareaElement = highlightText === null ? field : (
+      // flex: ô (inline-block) không chừa khe dưới đường chân chữ, lớp bọc cao đúng bằng ô
+      <div className="relative flex w-full flex-col">
+        {field}
+        <div
+          aria-hidden
+          data-slot="textarea-highlight"
+          className={cn(
+            metricClass,
+            className,
+            "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words bg-transparent text-foreground hover:bg-transparent",
+          )}
+        >
+          {renderHighlight!(highlightText)}
+        </div>
+      </div>
     );
 
     if (!showCount && limit === undefined) {

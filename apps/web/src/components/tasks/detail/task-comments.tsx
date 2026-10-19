@@ -307,6 +307,19 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
     [participants, viewer, comments]
   );
 
+  /** Tên được nhắc tô màu chính; trong ô gõ chỉ đổi màu (đậm làm chữ rộng ra, lệch con trỏ), khi hiển thị thì đậm thêm. */
+  const renderMentions = React.useCallback(
+    (text: string, bold = false) =>
+      splitMentions(text, mentionNames).map((part, i) =>
+        part.mention ? (
+          <span key={i} className={cn("text-primary", bold && "font-medium")}>{part.text}</span>
+        ) : (
+          <React.Fragment key={i}>{part.text}</React.Fragment>
+        )
+      ),
+    [mentionNames]
+  );
+
   /** Nút "@": chèn "@" tại con trỏ (thêm khoảng trắng nếu dính chữ trước) để mở danh sách nhắc tên. */
   const startMention = () => {
     const el = textareaRef.current;
@@ -531,6 +544,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
                       autoFocus
                       rows={1}
                       value={editDraft}
+                      renderHighlight={renderMentions}
                       maxLength={2000}
                       countOnlyNearLimit
                       aria-label="Sửa bình luận"
@@ -561,13 +575,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
                   </div>
                 ) : (
                   <p className="whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground">
-                    {splitMentions(c.body ?? "", mentionNames).map((part, i) =>
-                      part.mention ? (
-                        <span key={i} className="font-medium text-primary">{part.text}</span>
-                      ) : (
-                        <React.Fragment key={i}>{part.text}</React.Fragment>
-                      )
-                    )}
+                    {renderMentions(c.body ?? "", true)}
                   </p>
                 )}
 
@@ -630,6 +638,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
               autoResize
               rows={1}
               value={draft}
+              renderHighlight={renderMentions}
               maxLength={2000}
               countOnlyNearLimit
               placeholder="Thêm bình luận…"
