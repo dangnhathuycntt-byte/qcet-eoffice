@@ -69,6 +69,7 @@ Rủi ro cần chặn: mô hình đọc dữ liệu vượt quyền người h�
 - **Phân loại rủi ro và chuyển dữ liệu.** Đơn vị hoặc pháp chế quyết định cách phân loại theo Luật AI 134/2025 Điều 10, và quyết định việc chuyển dữ liệu ra nước ngoài khi mô hình là Gemini.
 - **Gateway truy cập được từ máy chủ production.** `localhost:8000` chỉ có trên máy phát triển.
 - **Thời gian chờ của host cho route chat đủ 330 giây.** Route khai báo `maxDuration` 330 giây (`src/app/api/assistant/chat/route.ts`), lớn hơn `turnTimeoutMs` 300 giây để kịp lưu tin và ghi audit. Host và proxy đứng trước phải cho phép đúng thời gian đó. Vercel chỉ cho quá 300 giây khi bật Fluid compute.
+- **Một tiến trình API.** Từ 19/10/2026 lượt chạy tiếp khi trình duyệt rời trang hay tải lại; mở lại cuộc thì nối lại (`GET /api/assistant/conversations/[id]/stream`), chỉ nút Dừng (`POST /api/assistant/runs/[id]/stop`) mới hủy lượt. Sổ lượt nằm trong bộ nhớ của tiến trình (`src/server/assistant/assistant-runs.ts`), đúng với một container `qcet-api` hiện có. Chạy nhiều bản API thì phải chuyển sổ lượt sang Redis. Khởi động lại API giữa lượt thì lượt mất; câu hỏi hiện "bị gián đoạn" để thử lại.
 - **Cron.** Đọc từ mã nguồn, chưa kiểm ở runtime: danh sách công khai của `src/middleware.ts` (dòng 174–184) không có `/api/cron`, và matcher `/api/:path*` (dòng 302) yêu cầu phiên trước khi `isCronAuthorized` chạy. Lời gọi cron không có phiên có thể bị 401. Hai cron cũ có cùng đường đi. Cần xác nhận trước khi tin lịch xóa hằng ngày đang chạy.
 - **Migration** `20261017120000_assistant_conversations` được áp lên production trước khi bật cờ.
 - **Ngân sách suy nghĩ.** Không đặt `TASK_AGENT_THINKING_BUDGET` thì `max_tokens` chỉ 1.200; câu trả lời dài bị cắt và thành lỗi `AGENT_TRUNCATED`. Đặt ngân sách (đang dùng 65536) trên production.
@@ -89,6 +90,7 @@ Rủi ro cần chặn: mô hình đọc dữ liệu vượt quyền người h�
 | Lịch cron | `vercel.json` | `/api/cron/assistant-retention` lúc `30 19 * * *` |
 | Chặn cron của middleware | `src/middleware.ts` | Cần kiểm ở runtime |
 | Thời gian chờ route | `src/app/api/assistant/chat/route.ts` | `maxDuration = 330`, lớn hơn `turnTimeoutMs` 300 giây |
+| Lượt độc lập với kết nối | `src/server/assistant/assistant-runs.ts`; `src/app/api/assistant/conversations/[id]/stream/route.ts`; `src/app/api/assistant/runs/[id]/stop/route.ts` | `startAssistantRun`, `findConversationRun`, `stopAssistantRun` |
 | Tên do mô hình đặt | `src/server/assistant/assistant-title.ts`; `src/domain/assistant/assistant-history.ts`; `src/server/assistant/assistant-conversations.ts` | `generateConversationTitle`, `cleanGeneratedTitle`, `applyGeneratedTitle` |
 
 ## Related ADRs

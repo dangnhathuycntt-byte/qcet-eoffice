@@ -17,6 +17,15 @@ import { isAllowedAgentModel } from "@qcet/shared/domain/agent/agent-models";
 import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "@qcet/shared/domain/tasks/task-agent-attachments";
 import { prepareTaskAgentAttachment } from "@/server/services/task-agent-attachments";
 import { findConversationAttachments, readStoredAttachment } from "@/server/assistant/assistant-attachments";
+import {
+  assistantRunHeaders,
+  assistantRunResponseBody,
+  emitRunEvent,
+  finishAssistantRun,
+  hasActiveConversationRun,
+  startAssistantRun,
+} from "@/server/assistant/assistant-runs";
+import { logger } from "@/server/observability/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,16 +77,13 @@ async function prepareAttachments(
 
 /**
  * POST /api/assistant/chat — một lượt hỏi đáp với Trợ lý (chỉ đọc).
- * Lỗi trước khi trả lời (CSRF, đăng nhập, cờ, cấu hình, giới hạn tần suất, dữ liệu) trả JSON RFC 9457 kèm mã HTTP;
- * sau đó trả NDJSON (`AssistantStreamEvent`), mỗi dòng một sự kiện. Client ngắt thì hủy lượt phía server.
+ * Lỗi trước khi trả lời (CSRF, đăng nhập, cờ, cấu hình, giới hạn tần suất, dữ liệu, cuộc đang có lượt chạy) trả JSON
+ * RFC 9457 kèm mã HTTP; sau đó trả NDJSON (`AssistantStreamEvent`), mỗi dòng một sự kiện. Lượt chạy độc lập với kết
+ * nối (`assistant-runs`): trình duyệt rời đi thì lượt vẫn chạy và lưu, mở lại cuộc thì nối lại qua
+ * `GET /api/assistant/conversations/[id]/stream`; chỉ `POST /api/assistant/runs/[id]/stop` mới dừng lượt.
  */
 export async function POST(req: NextRequest) {
   let requestId: string = crypto.randomUUID();
-  // Gắn trước mọi lệnh await: client ngắt trong lúc xác thực vẫn hủy được lượt (sự kiện có thể đã phát trước khi gắn)
-  const upstream = new AbortController();
-  const onClientAbort = () => upstream.abort();
-  req.signal.addEventListener("abort", onClientAbort);
-  if (req.signal.aborted) upstream.abort();
   try {
     assertCsrf(req);
     const apiCtx = await getApiContext(req);
@@ -101,66 +107,55 @@ export async function POST(req: NextRequest) {
     if (body.replacesMessageId && !body.conversationId) {
       throw new ValidationError("Chỉ tạo lại hoặc sửa được câu hỏi trong một cuộc trò chuyện có sẵn.");
     }
+    // Hai lượt song song trên một cuộc (tab khác, hay vừa rời trang mà lượt cũ chưa xong) làm lẫn lịch sử
+    if (body.conversationId && hasActiveConversationRun(authUser.id, body.conversationId)) {
+      throw new ApiError(409, "RUN_IN_PROGRESS", "Cuộc trò chuyện đang có câu trả lời chưa xong. Thầy/Cô chờ xong hoặc bấm Dừng rồi hỏi tiếp.");
+    }
     const turnConfig = body.model ? { ...config, model: body.model } : config;
     const attachments = await prepareAttachments(files, { userId: authUser.id, conversationId: body.conversationId, ids: body.attachmentIds });
     const authz = await loadCachedAuthorizationContext(authUser.id);
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        const send = (event: AssistantStreamEvent) => {
-          if (!upstream.signal.aborted) controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-        };
-        try {
-          await runAssistantTurn(
-            {
-              userId: authUser.id,
-              authz,
-              conversationId: body.conversationId,
-              ...(body.replacesMessageId ? { replacesMessageId: body.replacesMessageId } : {}),
-              message: body.message,
-              context: body.context,
-              ...(attachments.length > 0 ? { attachments } : {}),
-              requestId,
-            },
-            send,
-            {
-              signal: upstream.signal,
-              deps: {
-                callGateway,
-                // Audit của lượt ghi đúng model đã dùng (turnConfig.model)
-                readConfig: () => turnConfig,
-                runTool: runAssistantTool,
-                toolDefinitions: ASSISTANT_TOOL_DEFINITIONS,
-                describeContext: describeAssistantContext,
-                generateTitle: generateConversationTitle,
-              },
-            },
-          );
-        } finally {
-          req.signal.removeEventListener("abort", onClientAbort);
-          try {
-            controller.close();
-          } catch {
-            // Luồng đã đóng do trình duyệt hủy
-          }
-        }
-      },
-      cancel() {
-        upstream.abort();
-      },
-    });
+    // Trình duyệt đã hủy trước khi lượt bắt đầu (bấm Dừng ngay khi gửi): không tạo cuộc, không lưu tin, không gọi mô hình.
+    // Sau khi lượt bắt đầu, ngắt kết nối chỉ là rời đi.
+    if (req.signal.aborted) {
+      return new Response(null, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "x-request-id": requestId } });
+    }
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "application/x-ndjson; charset=utf-8",
-        "Cache-Control": "private, no-store",
-        "X-Accel-Buffering": "no",
-        "x-request-id": requestId,
+    const run = startAssistantRun(authUser.id);
+    void runAssistantTurn(
+      {
+        userId: authUser.id,
+        authz,
+        conversationId: body.conversationId,
+        ...(body.replacesMessageId ? { replacesMessageId: body.replacesMessageId } : {}),
+        message: body.message,
+        context: body.context,
+        ...(attachments.length > 0 ? { attachments } : {}),
+        requestId,
       },
-    });
+      (event) => emitRunEvent(run, event),
+      {
+        // Chỉ nút Dừng hủy lượt (không phải kết nối của request này)
+        signal: run.controller.signal,
+        deps: {
+          callGateway,
+          // Audit của lượt ghi đúng model đã dùng (turnConfig.model)
+          readConfig: () => turnConfig,
+          runTool: runAssistantTool,
+          toolDefinitions: ASSISTANT_TOOL_DEFINITIONS,
+          describeContext: describeAssistantContext,
+          generateTitle: generateConversationTitle,
+        },
+      },
+    )
+      .catch((error: unknown) => {
+        // runAssistantTurn tự bắt lỗi và phát sự kiện error; tới đây là lỗi không lường trước
+        logger.error("assistant.run.failed", { requestId, errorName: error instanceof Error ? error.name : "unknown" });
+      })
+      .finally(() => finishAssistantRun(run));
+
+    return new Response(assistantRunResponseBody(run), { headers: assistantRunHeaders(run, requestId) });
   } catch (error) {
-    req.signal.removeEventListener("abort", onClientAbort);
     return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }

@@ -15,6 +15,7 @@ import {
   toConversationSummaryDTO,
 } from "@/server/assistant/assistant-conversations";
 import { resolveAssistantContextSource } from "@/server/assistant/assistant-tools";
+import { findConversationRun, stopAssistantRun } from "@/server/assistant/assistant-runs";
 
 const NOT_FOUND_MESSAGE = "Không tìm thấy cuộc trò chuyện.";
 
@@ -62,7 +63,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   }
 }
 
-/** Xóa cuộc trò chuyện và toàn bộ tin nhắn; ghi audit không kèm tiêu đề hay nội dung. */
+/** Xóa cuộc trò chuyện và toàn bộ tin nhắn (dừng lượt đang chạy của cuộc); ghi audit không kèm tiêu đề hay nội dung. */
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   let requestId: string = crypto.randomUUID();
   try {
@@ -73,6 +74,8 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
     assertAssistantEnabled();
     await assertRateLimit(authUser.id, "MUTATION", { requestId, endpoint: "DELETE /api/assistant/conversations/[id]" });
     const { id } = await props.params;
+    // Lượt đang chạy của cuộc dừng trước, để không ghi câu trả lời vào cuộc đã xóa
+    stopAssistantRun(findConversationRun(authUser.id, id));
     const deleted = await deleteConversation(authUser.id, id, requestId);
     if (!deleted) throw new NotFoundError(NOT_FOUND_MESSAGE);
     return apiSuccess({ deleted: true }, { requestId, headers: { "Cache-Control": "private, no-store" } });
