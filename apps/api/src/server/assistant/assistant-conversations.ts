@@ -24,7 +24,7 @@ import {
   type AssistantStep,
 } from "@qcet/contracts/assistant";
 import { retentionCutoff } from "@qcet/shared/domain/assistant/assistant-history";
-import { normalizeTaskProposal } from "@qcet/shared/domain/assistant/assistant-task-proposal";
+import { normalizeTaskProposal, proposalHistoryNote } from "@qcet/shared/domain/assistant/assistant-task-proposal";
 import { ProposeTaskArgs } from "@/server/assistant/assistant-tool-proposal";
 import { listConversationAttachments, requestAssistantAttachmentPurges } from "@/server/assistant/assistant-attachments";
 
@@ -273,14 +273,15 @@ export async function loadModelHistoryEntries(
   const rows = await prisma.assistantMessage.findMany({
     where: {
       conversationId,
-      content: { not: "" },
+      // Tin trả lời chỉ có thẻ đề xuất (không kèm lời) vẫn đưa lại, kèm khối ghi các đề xuất đó
+      OR: [{ content: { not: "" } }, { role: "assistant", NOT: { proposals: { equals: Prisma.AnyNull } } }],
       // Tin trả lời lỗi không đưa lại; tin bị dừng (aborted) giữ phần đã có
       NOT: [{ role: "assistant", status: "error" }],
       ...(options.excludeMessageId ? { id: { not: options.excludeMessageId } } : {}),
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: maxMessages,
-    select: { id: true, role: true, content: true },
+    select: { id: true, role: true, content: true, proposals: true },
   });
 
   const picked: Array<{ id: string; role: AssistantMessageRole; content: string }> = [];
@@ -288,13 +289,15 @@ export async function loadModelHistoryEntries(
   // Rà từ mới về cũ: câu hỏi chỉ giữ khi tin trả lời ngay sau nó (mới hơn) đã được giữ, để không gửi hai tin user liền nhau
   let replyKept = false;
   for (const row of rows) {
-    const keep: boolean = row.content.trim() !== "" && (row.role === "assistant" || replyKept);
+    const note = row.role === "assistant" ? proposalHistoryNote(parseJsonList(row.proposals, parseProposal)) : "";
+    const content = note ? (row.content.trim() ? `${row.content}\n\n${note}` : note) : row.content;
+    const keep: boolean = content.trim() !== "" && (row.role === "assistant" || replyKept);
     replyKept = keep && row.role === "assistant";
     if (!keep) continue;
     // Tin mới nhất đã vượt ngân sách thì dừng; các tin cũ hơn cũng bị bỏ
-    if (chars + row.content.length > maxChars) break;
-    chars += row.content.length;
-    picked.push({ id: row.id, role: row.role === "user" ? "user" : "assistant", content: row.content });
+    if (chars + content.length > maxChars) break;
+    chars += content.length;
+    picked.push({ id: row.id, role: row.role === "user" ? "user" : "assistant", content });
   }
   return picked.reverse();
 }

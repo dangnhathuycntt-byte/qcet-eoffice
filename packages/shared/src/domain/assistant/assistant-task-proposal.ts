@@ -2,7 +2,7 @@
  * Đề xuất nhiệm vụ của Trợ lý (ADR-010): Trợ lý soạn, người dùng mở hộp tạo nhiệm vụ đã điền sẵn rồi tự bấm Tạo.
  * Thuần, không gọi mạng: làm sạch đề xuất mô hình gửi, và khớp tên người hỏi nêu với nhân sự của đơn vị trong hộp.
  */
-import type { AssistantTaskProposal, AssistantTaskProposalSubtask } from "@qcet/contracts/assistant";
+import type { AssistantMessageProposalDTO, AssistantTaskProposal, AssistantTaskProposalSubtask } from "@qcet/contracts/assistant";
 import {
   TASK_AGENT_SUBTASKS_MAX,
   TASK_AGENT_TITLE_MAX,
@@ -132,4 +132,23 @@ export function planProposalBatch(
     if (!draft.leadAssigneeId) missing.push("lead");
     return { draft, missing };
   });
+}
+
+const HISTORY_TITLE_MAX = 120;
+
+/**
+ * Khối nối sau một tin trả lời cũ trong lịch sử gửi mô hình, ghi lại các lần gọi propose_task của lượt đó (lịch sử chỉ
+ * lưu lời, không lưu lần gọi công cụ). Thiếu khối này, người dùng nhắn "tiếp tục" sau một kế hoạch dài thì mô hình
+ * tưởng mình chưa soạn gì và soạn lại từ đầu (thử thật 19/10/2026: kế hoạch 84 đầu việc, lượt đầu soạn 60). Mỗi đề xuất
+ * một dòng: tên, hạn, trạng thái hiện tại (đã tạo kèm mã, đã bỏ qua, chưa tạo). Không có đề xuất thì chuỗi rỗng.
+ */
+export function proposalHistoryNote(items: readonly AssistantMessageProposalDTO[]): string {
+  if (items.length === 0) return "";
+  const lines = items.map((item, i) => {
+    const title = item.proposal.title.length > HISTORY_TITLE_MAX ? `${item.proposal.title.slice(0, HISTORY_TITLE_MAX - 1)}…` : item.proposal.title;
+    const due = item.proposal.dueDate ? ` (hạn ${item.proposal.dueDate})` : "";
+    const state = item.task ? `đã tạo${item.task.code ? ` ${item.task.code}` : ""}` : item.dismissed ? "đã bỏ qua" : "chưa tạo";
+    return `${i + 1}. ${title}${due} · ${state}`;
+  });
+  return [`[Hệ thống ghi lại: lượt này đã gọi propose_task ${items.length} lần, người hỏi thấy các thẻ đề xuất sau]`, ...lines].join("\n");
 }

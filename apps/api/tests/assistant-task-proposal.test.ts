@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchPersonByName, normalizeTaskProposal, planProposalBatch, proposalToTaskDraft } from '@qcet/shared/domain/assistant/assistant-task-proposal';
+import { matchPersonByName, normalizeTaskProposal, planProposalBatch, proposalHistoryNote, proposalToTaskDraft } from '@qcet/shared/domain/assistant/assistant-task-proposal';
 import { ASSISTANT_TOOL_DEFINITIONS, runAssistantTool, type AssistantToolContext } from '../src/server/assistant/assistant-tools';
 import { TASK_AGENT_SUBTASKS_MAX } from '@qcet/shared/domain/tasks/task-agent-draft';
 
@@ -175,5 +175,15 @@ describe('Đề xuất nhiệm vụ của Trợ lý: tool propose_task', () => {
     assert.deepEqual(parameters.required, ['title']);
     assert.equal(parameters.properties.subtasks.items?.additionalProperties, false);
     assert.equal(JSON.stringify(parameters).includes('Id'), false);
+  });
+});
+
+describe('proposalHistoryNote: đề xuất đã soạn ghi vào lịch sử gửi mô hình', () => {
+  it('không có đề xuất thì rỗng; tên dài cắt ở 120 ký tự, nhiệm vụ đã tạo chưa có mã vẫn ghi đã tạo', () => {
+    assert.equal(proposalHistoryNote([]), '');
+    const long = 'Đầu việc '.repeat(20).trim();
+    const note = proposalHistoryNote([{ proposal: { title: long }, task: { id: 't-1', code: null }, dismissed: false }]);
+    const line = note.split('\n')[1];
+    assert.equal(line, `1. ${long.slice(0, 119)}… · đã tạo`);
   });
 });

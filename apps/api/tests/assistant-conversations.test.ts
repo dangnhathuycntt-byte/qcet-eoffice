@@ -98,7 +98,7 @@ async function makeMessage(
   role: 'user' | 'assistant',
   content: string,
   createdAt: Date,
-  extra: { status?: string; sources?: unknown; steps?: unknown } = {},
+  extra: { status?: string; sources?: unknown; steps?: unknown; proposals?: unknown } = {},
 ): Promise<AssistantMessage> {
   return prisma.assistantMessage.create({
     data: {
@@ -108,6 +108,7 @@ async function makeMessage(
       status: extra.status ?? 'complete',
       sources: extra.sources === undefined ? undefined : (extra.sources as object),
       steps: extra.steps === undefined ? undefined : (extra.steps as object),
+      proposals: extra.proposals === undefined ? undefined : (extra.proposals as object),
       createdAt,
     },
   });
@@ -385,6 +386,44 @@ describe('Lịch sử Trợ lý (CSDL)', () => {
       assert.deepEqual(await loadModelHistory(conv.id, { excludeMessageId: current.id }), [
         { role: 'user', content: 'U1' },
         { role: 'assistant', content: 'A1' },
+      ]);
+    });
+
+    it('loadModelHistory kèm khối ghi các đề xuất đã soạn của tin trả lời cũ, để "tiếp tục" không soạn lại từ đầu', async () => {
+      const conv = await makeConversation(owner.id, 'Kế hoạch dài', ago(1 * HOUR));
+      await makeMessage(conv.id, 'user', 'Soạn nhiệm vụ theo kế hoạch', ago(50 * 60_000));
+      await makeMessage(conv.id, 'assistant', 'Đã soạn 3 đề xuất, còn đầu việc chưa soạn.', ago(49 * 60_000), {
+        proposals: [
+          { proposal: { title: 'Tuyển sinh đợt 3', dueDate: '2026-10-30' }, task: { id: 't-1', code: 'NV-2026-10-001' }, dismissed: false },
+          { proposal: { title: 'Rà soát chương trình đào tạo' }, task: null, dismissed: true },
+          { proposal: { title: 'Báo cáo tháng 10', dueDate: '2026-10-31' }, task: null, dismissed: false },
+        ],
+      });
+      // Tin chỉ có thẻ, không kèm lời, vẫn đưa lại (cùng câu hỏi của nó)
+      await makeMessage(conv.id, 'user', 'Soạn thêm việc họp giao ban', ago(40 * 60_000));
+      await makeMessage(conv.id, 'assistant', '', ago(39 * 60_000), {
+        proposals: [{ proposal: { title: 'Họp giao ban tháng 11' }, task: null, dismissed: false }],
+      });
+      const current = await makeMessage(conv.id, 'user', 'tiếp tục', ago(30 * 60_000));
+
+      assert.deepEqual(await loadModelHistory(conv.id, { excludeMessageId: current.id }), [
+        { role: 'user', content: 'Soạn nhiệm vụ theo kế hoạch' },
+        {
+          role: 'assistant',
+          content: [
+            'Đã soạn 3 đề xuất, còn đầu việc chưa soạn.',
+            '',
+            '[Hệ thống ghi lại: lượt này đã gọi propose_task 3 lần, người hỏi thấy các thẻ đề xuất sau]',
+            '1. Tuyển sinh đợt 3 (hạn 2026-10-30) · đã tạo NV-2026-10-001',
+            '2. Rà soát chương trình đào tạo · đã bỏ qua',
+            '3. Báo cáo tháng 10 (hạn 2026-10-31) · chưa tạo',
+          ].join('\n'),
+        },
+        { role: 'user', content: 'Soạn thêm việc họp giao ban' },
+        {
+          role: 'assistant',
+          content: '[Hệ thống ghi lại: lượt này đã gọi propose_task 1 lần, người hỏi thấy các thẻ đề xuất sau]\n1. Họp giao ban tháng 11 · chưa tạo',
+        },
       ]);
     });
 
