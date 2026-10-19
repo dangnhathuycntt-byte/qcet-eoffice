@@ -552,6 +552,15 @@
   }
 }
 
+/* Nét icon Lucide đúng 1,5px trên màn hình ở mọi cỡ: stroke-width tính trên khung 24 nên icon 16px chỉ còn 1px, 12px còn
+   0,75px. `absoluteStrokeWidth` tính theo prop `size` nên vô tác dụng với icon đặt cỡ bằng class. Bộ icon sidebar
+   (`SidebarSvg`) không có class `lucide`, giữ nguyên nét của nó. */
+@layer base {
+  svg.lucide * {
+    vector-effect: non-scaling-stroke;
+  }
+}
+
 @layer base {
   @media (max-width: 640px) {
     .overflow-x-auto {
