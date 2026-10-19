@@ -214,16 +214,20 @@ const PANEL_FILL_CLASS =
   "transition-[transform,opacity] duration-200 ease-out [transform-box:fill-box] motion-reduce:transition-none";
 
 /**
- * 12. Mở/đóng panel thuộc tính bên phải: cùng khung với nút sidebar (11), vạch ngăn lệch phải.
- * Đang mở thì tô kín nửa phải khung, như nút panel của Linear.
+ * 12. Mở/đóng panel bên phải: cùng khung với nút sidebar (11). Đóng thì một vạch mảnh sát mép phải bên trong khung; mở
+ * thì khối đặc bo góc thụt vào trong khung, không chạm viền (người dùng gửi ảnh nút panel của Linear 19/10/2026).
  */
 export function IconSidebarPanelRight({ active = false, ...props }: SidebarIconProps & { active?: boolean }) {
   return (
     <SidebarSvg {...props}>
       <rect x="1.625" y="2.625" width="12.75" height="10.75" rx="2.25" />
       <path d="M11.25 5.625v4.75" className={cn(PANEL_DIVIDER_CLASS, active && "opacity-0")} />
-      <path
-        d="M8 2.625h4.125a2.25 2.25 0 0 1 2.25 2.25v6.25a2.25 2.25 0 0 1-2.25 2.25H8z"
+      <rect
+        x="7.75"
+        y="5"
+        width="4.25"
+        height="6"
+        rx="1.25"
         fill="currentColor"
         className={cn(PANEL_FILL_CLASS, "origin-right", active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0")}
       />

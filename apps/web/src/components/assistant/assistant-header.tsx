@@ -144,13 +144,13 @@ export function AssistantHeader({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
+                variant="toolbar"
                 size="icon-md"
                 onClick={sidePanel.onToggle}
                 aria-label={`${sidePanel.open ? "Ẩn cột bên" : "Hiện cột bên"}${sidePanel.progress ? `: ${sidePanel.progress}` : ""}`}
                 aria-pressed={sidePanel.open}
-                // Đang mở thể hiện bằng icon tô nửa phải, không thêm nền (như nút thuộc tính ở trang nhiệm vụ)
-                className={cn("max-xl:hidden", sidePanel.open && "text-foreground")}
+                // Nút tròn nền trắng viền mảnh như nút panel của Linear; đang mở thể hiện bằng khối đặc trong icon
+                className={cn("rounded-full max-xl:hidden", sidePanel.open ? "text-foreground" : "text-muted-foreground")}
               >
                 <IconSidebarPanelRight size={14} active={sidePanel.open} />
               </Button>
