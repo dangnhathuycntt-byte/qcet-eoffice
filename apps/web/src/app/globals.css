@@ -618,21 +618,6 @@
   to   { clip-path: none; box-shadow: 0 0 0 5px color-mix(in oklab, var(--foreground) 5%, transparent); opacity: 0; }
 }
 
-/* Thư chào mừng: 4 cảnh nét mực thay nhau (mỗi cảnh 1/4 chu kỳ, lệch nhau bằng animation-delay ở nơi dùng).
-   Hiện dần kèm trôi nhẹ lên, giữ yên, rồi mờ đi đúng lúc cảnh sau hiện. Chấm tiến trình dùng chung nhịp. */
-@keyframes welcome-scene {
-  0%   { opacity: 0; transform: translateY(6px) scale(0.985); }
-  4%   { opacity: 1; transform: none; }
-  24%  { opacity: 1; transform: none; }
-  28%  { opacity: 0; transform: translateY(-4px); }
-  100% { opacity: 0; transform: translateY(-4px); }
-}
-@keyframes welcome-dot {
-  /* 0% là trạng thái tắt: chấm chưa tới lượt (còn trong animation-delay) không sáng sẵn */
-  0%, 28%, 100% { background-color: var(--border); width: 6px; }
-  3%, 25% { background-color: var(--foreground); width: 16px; }
-}
-
 /* Thư chào mừng, ảnh động "Cài ứng dụng trên điện thoại" (welcome-install-demo.tsx), chu kỳ 12s, màn hình 180×360:
    chạm Chia sẻ (18%) → bảng Chia sẻ, chạm Thêm vào MH chính (40%) → màn hình chính, biểu tượng hiện (55%)
    → chạm biểu tượng (65%), ứng dụng mở → thông báo việc mới (80%) → tan về Safari. Các bước bên cạnh sáng theo 1/4 chu kỳ. */

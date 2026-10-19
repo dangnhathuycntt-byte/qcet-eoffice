@@ -1,22 +1,27 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import Link from "next/link";
+import { ArrowUpRight, Circle, CircleCheck, Smartphone } from "lucide-react";
 import { WelcomeInstallDemo } from "@/components/inbox/welcome-install-demo";
-import { Pressable } from "@/components/ui/pressable";
+import { AssistantSettingsDialog } from "@/components/assistant/assistant-settings-dialog";
+import { getPreferencesRequest, listConversationsRequest } from "@/components/assistant/assistant-client";
+import { Button } from "@/components/ui/button";
 import { focusRingClass } from "@/components/ui/focus-ring";
+import { Progress } from "@/components/ui/progress";
+import { usePushNotification } from "@/hooks/use-push-notification";
 import { INSTITUTION_CONFIG } from "@qcet/shared/config/institution";
 import { useAuth } from "@/lib/auth-context";
+import { useRuntimeFeature } from "@/lib/runtime-features";
 import { cn } from "@/lib/utils";
 
 /**
- * Thông báo chào mừng (type `welcome`), theo bố cục "Welcome to Linear" (đo trên linear.app 14/10/2026):
- * một trang tài liệu — tiêu đề lớn, một câu dẫn, khung hình minh họa (Linear là video), rồi từng mục có tiêu đề
- * với danh sách "liên kết + một dòng mô tả", đường kẻ và dòng hỗ trợ ở cuối.
- * Không lặp logo (sidebar và hàng thông báo đã có). Mọi lối vào đều là trang/hộp thoại có thật trong ứng dụng;
- * Chỗ video của Linear là 4 cảnh nét mực (tạo bằng imagegen, nền đã chuyển thành trong suốt) thay nhau bằng CSS;
- * tô bằng màu chữ qua mask nên tự hợp chế độ tối. Giảm chuyển động thì chỉ hiện cảnh đầu.
- * Bản có ảnh động hướng dẫn tạo nhiệm vụ được lưu ở `artifacts/welcome-onboarding/`.
+ * Thông báo chào mừng (type `welcome`), thiết kế lại 19/10/2026 (người dùng: "thiết kế lại toàn bộ thư welcome"): thay
+ * trang tài liệu kiểu "Welcome to Linear" (khung ảnh lớn thay cảnh, danh sách liên kết gạch chân) bằng thư làm quen gọn
+ * theo cỡ chữ của app: danh sách "Bắt đầu" có trạng thái thật như checklist làm quen của Notion, Linear (chỉ việc kiểm
+ * được: đã hỏi Trợ lý, đã bật thông báo, đã nhận bản tin sáng), câu hỏi mẫu mở Trợ lý với câu điền sẵn, bốn khu làm việc
+ * mang bốn cảnh nét mực (tô bằng màu chữ qua mask nên hợp chế độ tối), phím tắt có thật và lối cài ứng dụng.
+ * Không lặp logo (hàng thông báo đã có); mọi lối vào là trang hay hộp thoại có thật.
  */
 interface WelcomeEntry {
   title: string;
@@ -27,73 +32,34 @@ interface WelcomeEntry {
   event?: string;
 }
 
-const START_ITEMS: readonly WelcomeEntry[] = [
-  { href: "/tasks", title: "Nhiệm vụ", description: "Giao việc, theo dõi tiến độ và hạn hoàn thành." },
-  { href: "/documents?type=inbox", title: "Văn bản", description: "Văn bản đến, văn bản đi, tờ trình nội bộ và hồ sơ công việc." },
-  { href: "/calendar", title: "Lịch công tác", description: "Xem lịch công tác của bạn." },
-  { href: "/org", title: "Cơ cấu & Danh bạ", description: "Tra cứu đơn vị và thông tin liên hệ." },
-];
+const INSTALL_ENTRY: WelcomeEntry = {
+  event: "qcet:open-install-modal",
+  title: "Cài ứng dụng trên điện thoại",
+  description: "Nhận việc mới, nhắc hạn và xử lý văn bản ngay trên điện thoại.",
+};
 
-const RESOURCE_ITEMS: readonly WelcomeEntry[] = [
-  { event: "qcet:open-install-modal", title: "Cài ứng dụng trên điện thoại", description: "Nhận thông báo và xử lý việc ngay trên điện thoại." },
-];
-
-const SCENES = [
-  { src: "/design/illustrations/welcome-tasks.webp", caption: "Giao việc và theo dõi tiến độ đến khi hoàn thành" },
-  { src: "/design/illustrations/welcome-docs.webp", caption: "Văn bản đến tay đúng người, đúng hạn" },
-  { src: "/design/illustrations/welcome-calendar.webp", caption: "Lịch công tác chung cho cả đơn vị" },
-  { src: "/design/illustrations/welcome-people.webp", caption: "Danh bạ toàn trường và thông báo ngay trên điện thoại" },
+/** Bốn khu làm việc chính, mỗi khu một cảnh nét mực cùng chủ đề. */
+const AREAS = [
+  { href: "/tasks", title: "Nhiệm vụ", description: "Giao việc, theo dõi tiến độ đến khi hoàn thành.", art: "/design/illustrations/welcome-tasks.webp" },
+  { href: "/documents?type=inbox", title: "Văn bản", description: "Văn bản đến, văn bản đi, tờ trình và hồ sơ công việc.", art: "/design/illustrations/welcome-docs.webp" },
+  { href: "/calendar", title: "Lịch công tác", description: "Lịch họp và lịch công tác chung của đơn vị.", art: "/design/illustrations/welcome-calendar.webp" },
+  { href: "/org", title: "Cơ cấu & Danh bạ", description: "Tra cứu đơn vị, người phụ trách và liên hệ.", art: "/design/illustrations/welcome-people.webp" },
 ] as const;
-/** Mỗi cảnh hiện 4 giây. */
-const SCENE_MS = 4000;
-const CYCLE_MS = SCENE_MS * SCENES.length;
 
-/** Thời điểm bắt đầu của cảnh thứ `index` trong chu kỳ chung. */
-const sceneTiming = (name: string, index: number): React.CSSProperties => ({
-  animationName: name,
-  animationDuration: `${CYCLE_MS}ms`,
-  animationDelay: `${index * SCENE_MS}ms`,
-  animationTimingFunction: "ease-in-out",
-  animationIterationCount: "infinite",
-  animationFillMode: "both",
-});
+/** Câu hỏi mẫu: mở Trợ lý với câu điền sẵn, người dùng tự gửi. */
+const SAMPLE_PROMPTS = [
+  "Hôm nay tôi cần làm gì?",
+  "Việc nào của tôi sắp tới hạn trong tuần này?",
+  "Tóm tắt văn bản đến đang chờ tôi xử lý.",
+] as const;
 
-function WelcomeScenes() {
-  return (
-    <figure aria-hidden className="mt-6">
-      <div className="relative aspect-[1600/679] overflow-hidden rounded-xl border border-border/60 bg-card">
-        {SCENES.map((scene, index) => {
-          const mask = `url(${scene.src}) center / contain no-repeat`;
-          return (
-            <span
-              key={scene.src}
-              className={cn("absolute inset-4 bg-foreground/80 motion-reduce:animate-none! sm:inset-6", index > 0 && "motion-reduce:hidden")}
-              style={{ WebkitMask: mask, mask, ...sceneTiming("welcome-scene", index) }}
-            />
-          );
-        })}
-      </div>
-      <figcaption className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span className="relative grid min-w-0 flex-1">
-          {SCENES.map((scene, index) => (
-            <span
-              key={scene.src}
-              className={cn("col-start-1 row-start-1 truncate motion-reduce:animate-none!", index > 0 && "motion-reduce:hidden")}
-              style={sceneTiming("welcome-scene", index)}
-            >
-              {scene.caption}
-            </span>
-          ))}
-        </span>
-        <span className="flex shrink-0 items-center gap-1 motion-reduce:hidden">
-          {SCENES.map((scene, index) => (
-            <span key={scene.src} className="h-1.5 w-1.5 rounded-full bg-border" style={sceneTiming("welcome-dot", index)} />
-          ))}
-        </span>
-      </figcaption>
-    </figure>
-  );
-}
+/** Phím tắt đang có trong app (bảng đầy đủ mở bằng "?"). */
+const SHORTCUTS: ReadonlyArray<{ keys: string[]; label: string; assistant?: boolean }> = [
+  { keys: ["⌘", "K"], label: "Tìm kiếm và mở nhanh" },
+  { keys: ["⌘", "J"], label: "Mở Trợ lý ở mọi trang", assistant: true },
+  { keys: ["C"], label: "Tạo nhiệm vụ (trang Nhiệm vụ)" },
+  { keys: ["?"], label: "Xem mọi phím tắt" },
+];
 
 // Tạm ẩn ảnh động cài ứng dụng trên điện thoại cuối thư (người dùng chốt 14/10/2026); mục "Cài ứng dụng trên điện thoại" và dòng hỗ trợ vẫn giữ.
 // Hộp "Hướng dẫn sử dụng" và các thẻ hướng dẫn 1/3–3/3 đã bỏ hẳn (14/10/2026), thay bằng thẻ gợi ý ở trang trống.
@@ -104,36 +70,170 @@ const SUPPORT_EMAIL = "hotro@cdktcnqn.edu.vn";
 
 const LINK_CLASS = cn("rounded-sm text-primary underline-offset-2 hover:underline", focusRingClass);
 
-function EntryTitle({ entry }: { entry: WelcomeEntry }) {
-  if (entry.href) {
-    return (
-      <Link href={entry.href} className={LINK_CLASS}>
-        {entry.title}
-      </Link>
-    );
-  }
-  if (entry.event) {
-    const name = entry.event;
-    return (
-      <Pressable onClick={() => window.dispatchEvent(new CustomEvent(name))} className={cn(LINK_CLASS, "text-left")}>
-        {entry.title}
-      </Pressable>
-    );
-  }
-  return <span className="font-medium text-foreground">{entry.title}</span>;
+function assistantPromptHref(prompt: string): string {
+  return `/assistant?prompt=${encodeURIComponent(prompt)}`;
 }
 
-function WelcomeSection({ id, title, items }: { id: string; title: string; items: readonly WelcomeEntry[] }) {
+/** Trạng thái một bước: chỉ "done" khi đọc được bằng chứng (cuộc trò chuyện, đăng ký nhận thông báo, cài đặt bản tin). */
+type StepState = "done" | "todo";
+
+interface Step {
+  id: string;
+  title: string;
+  description: string;
+  state: StepState;
+  doneLabel: string;
+  action: React.ReactNode;
+}
+
+/** Đọc trạng thái các bước liên quan Trợ lý; lỗi mạng thì coi như chưa làm (không báo xong khi không chắc). */
+function useAssistantSteps(enabled: boolean) {
+  const [asked, setAsked] = React.useState(false);
+  const [briefing, setBriefing] = React.useState(false);
+  const [refresh, setRefresh] = React.useState(0);
+  React.useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    void listConversationsRequest({}, controller.signal)
+      .then((list) => setAsked(list.items.length > 0))
+      .catch(() => undefined);
+    void getPreferencesRequest(controller.signal)
+      .then((prefs) => setBriefing(prefs.briefingEnabled))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [enabled, refresh]);
+  return { asked, briefing, reload: () => setRefresh((value) => value + 1) };
+}
+
+function SectionTitle({ id, children, aside }: { id: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="mt-8">
-      <h3 id={id} className="text-base font-semibold text-foreground">
-        {title}
+    <div className="mb-2 flex items-baseline justify-between gap-3">
+      <h3 id={id} className="text-compact font-semibold text-foreground">
+        {children}
       </h3>
-      <ul className="mt-2 list-disc space-y-2 pl-5 marker:text-muted-foreground">
-        {items.map((entry) => (
-          <li key={entry.title} className="pl-0.5">
-            <EntryTitle entry={entry} />
-            <p className="text-foreground">{entry.description}</p>
+      {aside}
+    </div>
+  );
+}
+
+function StartChecklist({ steps }: { steps: Step[] }) {
+  const done = steps.filter((step) => step.state === "done").length;
+  return (
+    <section aria-labelledby="welcome-start" className="mt-8">
+      <SectionTitle
+        id="welcome-start"
+        aside={
+          <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+            <Progress value={done} max={steps.length} aria-label="Tiến độ làm quen" className="w-16" />
+            {done}/{steps.length}
+          </span>
+        }
+      >
+        Bắt đầu
+      </SectionTitle>
+      <div className="overflow-hidden rounded-lg border border-border">
+        <ul className="divide-y divide-border/60">
+          {steps.map((step) => {
+            const finished = step.state === "done";
+            return (
+              <li key={step.id} className="flex min-h-12 items-center gap-3 px-3 py-2">
+                {finished ? (
+                  <CircleCheck className="size-4 shrink-0 text-foreground" aria-hidden />
+                ) : (
+                  <Circle className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                )}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <p className={cn("text-compact", finished ? "text-muted-foreground line-through decoration-border" : "font-medium text-foreground")}>
+                    {step.title}
+                    {finished ? <span className="sr-only"> (đã xong)</span> : null}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                </div>
+                {finished ? <span className="shrink-0 text-xs text-muted-foreground">{step.doneLabel}</span> : step.action}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function SamplePrompts() {
+  return (
+    <section aria-labelledby="welcome-ask" className="mt-8">
+      <SectionTitle id="welcome-ask">Thử hỏi Trợ lý</SectionTitle>
+      <div className="flex flex-wrap gap-2">
+        {SAMPLE_PROMPTS.map((prompt) => (
+          <Button key={prompt} asChild variant="toolbar" size="pill" className="max-md:h-11">
+            <Link href={assistantPromptHref(prompt)}>{prompt}</Link>
+          </Button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WorkAreas() {
+  return (
+    <section aria-labelledby="welcome-areas" className="mt-8">
+      <SectionTitle id="welcome-areas">Các khu làm việc</SectionTitle>
+      <ul className="grid grid-cols-2 gap-2 sm:gap-3">
+        {AREAS.map((area) => {
+          const mask = `url(${area.art}) center / contain no-repeat`;
+          return (
+            <li key={area.href}>
+              <Link
+                href={area.href}
+                className={cn(
+                  "group/area flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-foreground/20",
+                  focusRingClass,
+                )}
+              >
+                {/* Cảnh nét mực cùng chủ đề, tô màu chữ (mờ) để hợp cả hai chế độ sáng tối */}
+                <span aria-hidden className="relative block aspect-[1600/679] border-b border-border/60 bg-muted/40">
+                  <span className="absolute inset-2 bg-foreground/70 sm:inset-3 transition-colors group-hover/area:bg-foreground/85" style={{ WebkitMask: mask, mask }} />
+                </span>
+                <span className="flex flex-col gap-0.5 px-3 py-2.5">
+                  <span className="flex items-center gap-1 text-compact font-medium text-foreground">
+                    {area.title}
+                    <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover/area:opacity-100" aria-hidden />
+                  </span>
+                  <span className="text-xs text-muted-foreground">{area.description}</span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function Keycap({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-border bg-muted px-1 font-sans text-xs text-muted-foreground">
+      {children}
+    </kbd>
+  );
+}
+
+function Shortcuts({ assistantEnabled }: { assistantEnabled: boolean }) {
+  // Điện thoại không có bàn phím nên ẩn mục này ở màn hẹp
+  return (
+    <section aria-labelledby="welcome-keys" className="mt-8 hidden md:block">
+      <SectionTitle id="welcome-keys" aside={<span className="text-xs text-muted-foreground">Windows dùng Ctrl thay ⌘</span>}>
+        Phím tắt
+      </SectionTitle>
+      <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+        {SHORTCUTS.filter((item) => !item.assistant || assistantEnabled).map((item) => (
+          <li key={item.label} className="flex h-8 items-center justify-between gap-3 text-compact text-foreground">
+            <span className="min-w-0 truncate">{item.label}</span>
+            <span className="flex shrink-0 gap-1">
+              {item.keys.map((key) => (
+                <Keycap key={key}>{key}</Keycap>
+              ))}
+            </span>
           </li>
         ))}
       </ul>
@@ -141,33 +241,116 @@ function WelcomeSection({ id, title, items }: { id: string; title: string; items
   );
 }
 
+function InstallRow({ entry }: { entry: WelcomeEntry }) {
+  const name = entry.event;
+  return (
+    <section aria-label={entry.title} className="mt-8 flex items-center gap-3 rounded-lg border border-border px-3 py-2.5">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden>
+        <Smartphone className="size-4" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <p className="text-compact font-medium text-foreground">{entry.title}</p>
+        <p className="text-xs text-muted-foreground">{entry.description}</p>
+      </div>
+      {name ? (
+        <Button variant="outline" size="sm" className="shrink-0 max-md:min-h-11" onClick={() => window.dispatchEvent(new CustomEvent(name))}>
+          Xem cách cài
+        </Button>
+      ) : null}
+    </section>
+  );
+}
+
 export function WelcomeNotification({ title }: { title: string }) {
   const { user } = useAuth();
   const name = user?.name?.trim();
+  const assistantEnabled = useRuntimeFeature("assistant");
+  const assistant = useAssistantSteps(assistantEnabled);
+  const push = usePushNotification();
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+
+  const steps: Step[] = [
+    ...(assistantEnabled
+      ? [
+          {
+            id: "ask",
+            title: "Hỏi Trợ lý câu đầu tiên",
+            description: "Hỏi bằng tiếng Việt về việc, văn bản, lịch họp Thầy/Cô được xem.",
+            state: assistant.asked ? "done" : "todo",
+            doneLabel: "Đã hỏi",
+            action: (
+              <Button asChild variant="outline" size="sm" className="shrink-0 max-md:min-h-11">
+                <Link href={assistantPromptHref(SAMPLE_PROMPTS[0])}>Hỏi ngay</Link>
+              </Button>
+            ),
+          } satisfies Step,
+        ]
+      : []),
+    {
+      id: "push",
+      title: "Bật thông báo trên thiết bị này",
+      description: "Biết ngay khi có việc mới, bình luận hay nhắc hạn.",
+      state: push.isSubscribed ? "done" : "todo",
+      doneLabel: "Đã bật",
+      action: (
+        <Button asChild variant="outline" size="sm" className="shrink-0 max-md:min-h-11">
+          <Link href="/settings">Bật</Link>
+        </Button>
+      ),
+    },
+    ...(assistantEnabled
+      ? [
+          {
+            id: "briefing",
+            title: "Nhận bản tin sáng",
+            description: "7 giờ mỗi sáng, Hộp thư nhận số việc cần xử lý, việc trễ hạn và lịch họp.",
+            state: assistant.briefing ? "done" : "todo",
+            doneLabel: "Đã bật",
+            action: (
+              <Button variant="outline" size="sm" className="shrink-0 max-md:min-h-11" onClick={() => setSettingsOpen(true)}>
+                Bật
+              </Button>
+            ),
+          } satisfies Step,
+        ]
+      : []),
+  ];
+
   return (
-    <div className="text-sm leading-6">
-      <h2 className="break-words text-3xl font-medium leading-tight tracking-tight text-foreground">{title}</h2>
-      <p className="mt-4 text-foreground">
-        {name ? `Chào ${name}, ` : ""}QCET E-Office là hệ thống làm việc trực tuyến của {INSTITUTION_CONFIG.officialName}: giao
-        việc, xử lý văn bản và theo dõi lịch công tác trên cùng một nơi.
+    <div className="text-compact leading-relaxed">
+      <h2 className="break-words text-2xl font-semibold leading-tight tracking-tight text-foreground">{title}</h2>
+      <p className="mt-3 text-foreground">
+        {name ? `Chào ${name}. ` : ""}Đây là nơi {INSTITUTION_CONFIG.officialName} giao việc, xử lý văn bản và theo dõi lịch
+        công tác. Vài bước dưới đây giúp Thầy/Cô bắt đầu trong vài phút.
       </p>
 
-      {/* Linear đặt video ở đây */}
-      <WelcomeScenes />
-
-      <WelcomeSection id="welcome-start" title="Bắt đầu" items={START_ITEMS} />
-      <WelcomeSection id="welcome-resources" title="Tài nguyên" items={RESOURCE_ITEMS} />
+      <StartChecklist steps={steps} />
+      {assistantEnabled ? <SamplePrompts /> : null}
+      <WorkAreas />
+      <Shortcuts assistantEnabled={assistantEnabled} />
+      <InstallRow entry={INSTALL_ENTRY} />
       {/* Minh họa mục "Cài ứng dụng trên điện thoại": các bước trên iPhone, máy duy nhất phải cài tay */}
       {INSTALL_DEMO_ENABLED ? <WelcomeInstallDemo /> : null}
 
       <hr className="mt-8 border-border" />
-      <p className="mt-6 text-foreground">
+      <p className="mt-4 text-xs text-muted-foreground">
         Có câu hỏi? Gửi thư tới{" "}
         <a href={`mailto:${SUPPORT_EMAIL}`} className={LINK_CLASS}>
           {SUPPORT_EMAIL}
         </a>
         .
       </p>
+
+      {assistantEnabled ? (
+        <AssistantSettingsDialog
+          open={settingsOpen}
+          onOpenChange={(open) => {
+            setSettingsOpen(open);
+            // Đóng cài đặt thì đọc lại trạng thái bản tin
+            if (!open) assistant.reload();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
