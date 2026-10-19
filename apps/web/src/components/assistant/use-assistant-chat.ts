@@ -291,7 +291,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     setPending(true);
     setSendError(null);
     if (fromComposer) setAttachments([]);
-    setThread((prev) => [...prev, userThreadMessage(userKey, message, sentAttachments, resendStored), streamingThreadMessage(replyKey)]);
+    setThread((prev) => [...prev, userThreadMessage(userKey, message, sentAttachments, resendStored), streamingThreadMessage(replyKey, Date.now())]);
 
     try {
       await streamAssistantTurn(

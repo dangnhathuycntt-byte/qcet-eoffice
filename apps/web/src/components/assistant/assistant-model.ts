@@ -119,6 +119,8 @@ export interface ThreadMessage {
   proposalTasks?: Record<number, AssistantProposalTask>;
   /** Vị trí các đề xuất người dùng bấm "Bỏ qua" (thẻ thu gọn, hoàn tác được). */
   dismissedProposals?: number[];
+  /** Lúc gửi câu hỏi (ms) của tin đang chạy, để đếm thời gian trực tiếp; tin mở từ lịch sử không có. */
+  startedAt?: number;
 }
 
 export type { AssistantProposalTask } from "@qcet/contracts/assistant";
@@ -209,8 +211,20 @@ export function userThreadMessage(
   };
 }
 
-export function streamingThreadMessage(key: string): ThreadMessage {
-  return { ...baseMessage(key, "assistant"), status: "streaming" };
+export function streamingThreadMessage(key: string, startedAt?: number): ThreadMessage {
+  return { ...baseMessage(key, "assistant"), status: "streaming", ...(startedAt === undefined ? {} : { startedAt }) };
+}
+
+/**
+ * Thời lượng đọc được: dưới một phút ghi giây ("45 giây"), từ một phút ghi phút và giây ("3 phút 58 giây"); lượt soạn
+ * kế hoạch dài chạy vài phút, "238 giây" khó hình dung.
+ */
+export function formatDurationVi(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  if (total < 60) return `${total} giây`;
+  const minutes = Math.floor(total / 60);
+  const rest = total % 60;
+  return rest === 0 ? `${minutes} phút` : `${minutes} phút ${rest} giây`;
 }
 
 export function threadMessageFromDto(dto: AssistantMessageDTO): ThreadMessage {

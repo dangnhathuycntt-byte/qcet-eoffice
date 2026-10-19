@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { cn } from "@/lib/utils";
-import { ASSISTANT_NO_ANSWER_MESSAGE, type ProposalTarget, type ThreadMessage } from "@/components/assistant/assistant-model";
+import { ASSISTANT_NO_ANSWER_MESSAGE, formatDurationVi, type ProposalTarget, type ThreadMessage } from "@/components/assistant/assistant-model";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
 import { AssistantProposalList, AssistantTaskProposalCard, PROPOSAL_LIST_MIN } from "@/components/assistant/assistant-task-proposal-card";
 
@@ -45,6 +45,20 @@ export type { ProposalTarget } from "@/components/assistant/assistant-model";
 
 /** Cách đáy quá chừng này (px) thì hiện nút cuộn xuống tin mới nhất. */
 const SCROLL_BUTTON_OFFSET = 160;
+/** Lượt chạy quá chừng này (giây) mới hiện đồng hồ, để câu trả lời nhanh không nhấp nháy "1 giây, 2 giây". */
+const SHOW_ELAPSED_AFTER_SECONDS = 5;
+
+/** Số giây từ `startedAt` tới giờ, cập nhật mỗi giây khi `active`; không chạy thì null. */
+function useElapsedSeconds(startedAt: number | undefined, active: boolean): number | null {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!active || startedAt === undefined) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [active, startedAt]);
+  return active && startedAt !== undefined ? Math.max(0, Math.floor((now - startedAt) / 1000)) : null;
+}
 
 /**
  * Cột tin của cuộc đang mở: cuộn được, căn giữa, rộng tối đa 720px. Màn đầu (chưa có tin) do khung cha lo. Kéo lên đọc
@@ -163,9 +177,9 @@ function workLabel(message: ThreadMessage): string {
   const seconds = message.durationMs === null ? null : Math.max(1, Math.round(message.durationMs / 1000));
   if (message.steps.length > 0) {
     const done = onlyProposes(message) ? "Đã soạn đề xuất" : "Đã đọc dữ liệu";
-    return seconds === null ? done : `${done} trong ${seconds} giây`;
+    return seconds === null ? done : `${done} trong ${formatDurationVi(seconds)}`;
   }
-  return seconds === null ? "Đã suy nghĩ" : `Đã suy nghĩ trong ${seconds} giây`;
+  return seconds === null ? "Đã suy nghĩ" : `Đã suy nghĩ trong ${formatDurationVi(seconds)}`;
 }
 
 /** Tin Trợ lý: chữ toàn chiều rộng cột, không bong bóng. Nút sao chép hiện khi rê chuột hoặc có tiêu điểm (luôn hiện trên điện thoại). */
@@ -196,6 +210,13 @@ function ReplyTurn({
   const lastStep = stepLabels[stepLabels.length - 1];
   const showWorkLog = !streaming && (message.durationMs !== null || stepLabels.length > 0 || message.thinking !== "");
   const sources = message.sources.slice(0, MAX_SHOWN_SOURCES);
+  // Lượt dài (kế hoạch vài chục đề xuất chạy 3–4 phút): đồng hồ và số đề xuất đã soạn cho biết việc vẫn đang tiến
+  const elapsed = useElapsedSeconds(message.startedAt, streaming);
+  const draftedCount = streaming ? (message.proposals?.length ?? 0) : 0;
+  const progress = [
+    draftedCount > 0 ? `${draftedCount} đề xuất` : null,
+    elapsed !== null && elapsed >= SHOW_ELAPSED_AFTER_SECONDS ? formatDurationVi(elapsed) : null,
+  ].filter(Boolean);
 
   return (
     <div className={cn("group/reply flex flex-col gap-3", ENTER_MOTION)} aria-busy={!settled || undefined}>
@@ -220,8 +241,15 @@ function ReplyTurn({
 
       {streaming ? (
         <div className="flex flex-col gap-1.5">
-          <p className="w-fit animate-text-shimmer text-compact">
-            {stepLabels.length === 0 ? "Đang suy nghĩ…" : onlyProposes(message) ? "Đang soạn đề xuất…" : "Đang đọc dữ liệu…"}
+          <p className="flex items-baseline gap-2 text-compact">
+            <span className="animate-text-shimmer">
+              {stepLabels.length === 0 ? "Đang suy nghĩ…" : onlyProposes(message) ? "Đang soạn đề xuất…" : "Đang đọc dữ liệu…"}
+            </span>
+            {progress.length > 0 ? (
+              <span data-slot="assistant-run-progress" className="text-xs text-muted-foreground tabular-nums">
+                {progress.join(" · ")}
+              </span>
+            ) : null}
           </p>
           {lastStep ? (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

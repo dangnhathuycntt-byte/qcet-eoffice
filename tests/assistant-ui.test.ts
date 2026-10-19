@@ -21,6 +21,7 @@ import {
   conversationIdFromPath,
   conversationOutline,
   describeContextTarget,
+  formatDurationVi,
   pendingProposals,
   isSendKey,
   isStopKey,
@@ -1248,5 +1249,47 @@ describe("Trợ lý UI: kế hoạch nhiều đề xuất", () => {
     assert.ok(dialog.includes("await onCreated(item, task)"), "lưu thẻ xong mới tạo cái tiếp theo");
     const chatHook = read("apps/web/src/components/assistant/use-assistant-chat.ts");
     assert.ok(chatHook.includes("return saveProposal(replyKey, { index, taskId: task.id }"));
+  });
+});
+
+describe("Trợ lý UI: tiến độ trực tiếp của lượt dài", () => {
+  const renderThread = (message: ThreadMessage) =>
+    renderToStaticMarkup(
+      React.createElement(AssistantThread, {
+        thread: [userThreadMessage("u1", "Soạn nhiệm vụ theo kế hoạch"), message],
+        detailStatus: "ready",
+        detailError: null,
+        onRetry: () => undefined,
+        onNewChat: () => undefined,
+        listRef: { current: null },
+        onScroll: () => undefined,
+      }),
+    );
+
+  test("thời lượng dưới một phút ghi giây, từ một phút ghi phút và giây", () => {
+    assert.equal(formatDurationVi(2), "2 giây");
+    assert.equal(formatDurationVi(59.6), "1 phút");
+    assert.equal(formatDurationVi(238), "3 phút 58 giây");
+    assert.equal(formatDurationVi(120), "2 phút");
+  });
+
+  test("đang chạy: đồng hồ từ lúc gửi và số đề xuất đã soạn cạnh nhãn; xong thì nhãn ghi tổng thời gian theo phút", () => {
+    let reply = streamingThreadMessage("r-long", Date.now() - 65_000);
+    reply = reduceAssistantReply(reply, { type: "step", step: { tool: "propose_task", label: "Soạn đề xuất “Tuyển sinh”", count: null, ok: true } });
+    reply = ["Tuyển sinh đợt 3", "Rà soát chương trình", "Báo cáo tháng"].reduce(
+      (acc, title) => reduceAssistantReply(acc, { type: "proposal", proposal: { title } }),
+      reply,
+    );
+    const live = renderThread(reply);
+    assert.ok(live.includes("Đang soạn đề xuất…"));
+    assert.ok(live.includes("3 đề xuất · 1 phút 5 giây"), "số đề xuất và đồng hồ");
+
+    const quick = renderThread(streamingThreadMessage("r-quick", Date.now() - 2_000));
+    assert.equal(quick.includes('data-slot="assistant-run-progress"'), false, "trả lời nhanh không hiện đồng hồ");
+
+    const done = reduceAssistantReply(reply, { type: "done", messageId: "m-long", status: "complete", durationMs: 238_000 });
+    const html = renderThread(done);
+    assert.ok(html.includes("Đã soạn đề xuất trong 3 phút 58 giây"));
+    assert.equal(html.includes('data-slot="assistant-run-progress"'), false);
   });
 });
