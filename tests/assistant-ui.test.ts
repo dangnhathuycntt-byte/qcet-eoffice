@@ -1141,6 +1141,17 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
     assert.ok(dock.includes('<IconSidebarHistory className="size-3.5" />') && !dock.includes('from "lucide-react"'), "icon thanh dưới cùng bộ icon sidebar (lưới 16, nét 1,25px)");
   });
 
+  test("thanh dưới giữ nhiều chip cuộc trò chuyện như tab chat của Linear: bấm để chuyển, × để bỏ chip, nhớ theo trình duyệt", () => {
+    const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");
+    assert.ok(dock.includes('const DOCK_TABS_STORAGE_KEY = "qcet.assistant.dockTabs";') && dock.includes("const MAX_DOCK_TABS = 5;"));
+    assert.ok(dock.includes("if (value) upsertDockTab(value);"), "cuộc nào lên khung nổi cũng thành chip");
+    assert.ok(dock.includes("{shownTabs.map((tab) => {") && dock.includes("<DockChip"), "mỗi cuộc một chip");
+    assert.ok(dock.includes("switchTo(tab);\n                      openPanel();"), "bấm chip khác thì mở cuộc đó");
+    assert.ok(dock.includes("onClose={() => closeTab(tab.id)}") && dock.includes("removeDockTab(id);"), "× bỏ chip, cuộc vẫn ở lịch sử");
+    assert.ok(dock.includes('if ("deleted" in detail) removeDockTab(detail.id);'), "cuộc bị xóa ở trang Trợ lý thì mất chip");
+    assert.ok(dock.includes('className="flex min-w-0 flex-1 items-center justify-end gap-0.5"'), "chip co lại khi chật, không đè nút Trợ lý");
+  });
+
   test("skeleton danh sách cuộc trò chuyện là vạch tên (và vạch giờ) như hàng thật, không phải khối xám kín hàng", () => {
     const skeleton = read("apps/web/src/components/assistant/conversation-rows-skeleton.tsx");
     assert.ok(skeleton.includes('<Skeleton className={cn("h-3", TITLE_WIDTHS[i % TITLE_WIDTHS.length])} />'), "vạch tên dài ngắn khác nhau");

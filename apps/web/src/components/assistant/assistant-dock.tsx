@@ -63,6 +63,8 @@ function readDockRaw(): string | null {
 }
 
 function writeDock(value: DockConversation | null) {
+  // Cuộc lên khung nổi thì cũng thành một chip ở thanh dưới (giữ khi mở cuộc khác)
+  if (value) upsertDockTab(value);
   const raw = value ? JSON.stringify(value) : null;
   if (raw === readDockRaw()) return;
   dockValue = raw;
@@ -86,6 +88,75 @@ function parseDock(raw: string | null): DockConversation | null {
   }
 }
 
+/* ---------------------------------------------------------------------------------------------------------------
+ * Các chip cuộc trò chuyện ở thanh dưới, như các tab chat ở thanh Agent của Linear (người dùng yêu cầu 19/10/2026: "trải
+ * ngang nhiều lịch sử"): cuộc từng mở ở khung nổi giữ chip tới khi đóng bằng ×, bấm chip để chuyển cuộc. Nhớ theo trình
+ * duyệt như cuộc đang mở, đọc bộ nhớ một lần khi tải trang.
+ * ------------------------------------------------------------------------------------------------------------- */
+
+const DOCK_TABS_STORAGE_KEY = "qcet.assistant.dockTabs";
+/** Quá số chip này thì bỏ chip cũ nhất (không phải cuộc đang mở); cuộc vẫn còn trong lịch sử. */
+const MAX_DOCK_TABS = 5;
+let dockTabsValue: string | null | undefined;
+
+function readDockTabsRaw(): string | null {
+  if (dockTabsValue === undefined) {
+    try {
+      dockTabsValue = window.localStorage.getItem(DOCK_TABS_STORAGE_KEY);
+    } catch {
+      dockTabsValue = null;
+    }
+  }
+  return dockTabsValue;
+}
+
+function parseDockTabs(raw: string | null): DockConversation[] {
+  if (!raw) return [];
+  try {
+    const value: unknown = JSON.parse(raw);
+    return Array.isArray(value) ? value.flatMap((item) => parseDock(JSON.stringify(item)) ?? []) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDockTabs(tabs: DockConversation[]) {
+  const raw = tabs.length > 0 ? JSON.stringify(tabs) : null;
+  if (raw === readDockTabsRaw()) return;
+  dockTabsValue = raw;
+  try {
+    if (raw) window.localStorage.setItem(DOCK_TABS_STORAGE_KEY, raw);
+    else window.localStorage.removeItem(DOCK_TABS_STORAGE_KEY);
+  } catch {
+    // Bộ nhớ bị chặn: vẫn giữ trong tab này
+  }
+  dockListeners.forEach((listener) => listener());
+}
+
+/** Thêm chip cho cuộc (cuối hàng, sát nút Trợ lý) hoặc cập nhật tên; quá số chip thì bỏ chip cũ nhất. */
+function upsertDockTab(item: DockConversation) {
+  const tabs = parseDockTabs(readDockTabsRaw());
+  const index = tabs.findIndex((tab) => tab.id === item.id);
+  let next: DockConversation[];
+  if (index >= 0) {
+    // Tên đang tải (null) thì giữ tên đã nhớ
+    next = tabs.map((tab, i) => (i === index ? { id: tab.id, title: item.title ?? tab.title } : tab));
+  } else {
+    next = [...tabs, item];
+    while (next.length > MAX_DOCK_TABS) next.splice(next.findIndex((tab) => tab.id !== item.id), 1);
+  }
+  writeDockTabs(next);
+}
+
+/** Cuộc đổi tên ở trang Trợ lý: chip của nó (nếu có) theo tên mới. */
+function upsertDockTabTitle(id: string, title: string) {
+  if (parseDockTabs(readDockTabsRaw()).some((tab) => tab.id === id)) upsertDockTab({ id, title });
+}
+
+function removeDockTab(id: string) {
+  writeDockTabs(parseDockTabs(readDockTabsRaw()).filter((tab) => tab.id !== id));
+}
+
 function subscribeDock(listener: () => void) {
   dockListeners.add(listener);
   return () => {
@@ -106,6 +177,9 @@ export function AssistantDock() {
   const hidden = isAssistantPath(pathname);
   const { showToast } = useFeedback();
   const dock = parseDock(React.useSyncExternalStore(subscribeDock, readDockRaw, () => null));
+  const tabs = parseDockTabs(React.useSyncExternalStore(subscribeDock, readDockTabsRaw, () => null));
+  // Cuộc đang mở nhớ từ trước khi có chip (bản cũ) vẫn hiện chip
+  const shownTabs = dock && !tabs.some((tab) => tab.id === dock.id) ? [...tabs, dock] : tabs;
   const [panelOpen, setPanelOpen] = React.useState(false);
   // Chưa mở khung lần nào kể từ khi tải trang thì chưa tải chi tiết cuộc nhớ sẵn (chip dùng tên đã nhớ)
   const [activated, setActivated] = React.useState(false);
@@ -179,6 +253,15 @@ export function AssistantDock() {
     setUnread(false);
   };
 
+  /** × trên chip: bỏ chip khỏi thanh dưới (cuộc vẫn ở lịch sử, lượt đang chạy vẫn chạy ở máy chủ); chip đang mở thì đóng khung. */
+  const closeTab = (id: string) => {
+    if (id === dock?.id) {
+      newChat();
+      minimize();
+    }
+    removeDockTab(id);
+  };
+
   /** Đưa cuộc khác lên chip (chọn ở lịch sử, hoặc vừa mở ở trang Trợ lý): bỏ chữ nháp và tệp đang chờ của cuộc cũ. */
   const switchTo = (item: DockConversation) => {
     if (item.id === parseDock(readDockRaw())?.id) return;
@@ -226,6 +309,8 @@ export function AssistantDock() {
       }
       return;
     }
+    if ("deleted" in detail) removeDockTab(detail.id);
+    else if (detail.title) upsertDockTabTitle(detail.id, detail.title);
     if (detail.id !== current?.id) return;
     if ("deleted" in detail) return newChat();
     writeDock({ id: detail.id, title: detail.title });
@@ -280,6 +365,7 @@ export function AssistantDock() {
     try {
       await deleteConversationRequest(id);
       setDeleteOpen(false);
+      removeDockTab(id);
       newChat();
     } catch (error) {
       setDeleteOpen(false);
@@ -304,61 +390,30 @@ export function AssistantDock() {
           // khung 4px như thanh dưới của Linear
           className="fixed bottom-0 left-[var(--sidebar-w)] right-0 z-30 hidden h-9 items-center justify-end gap-0.5 bg-sidebar px-2 md:flex"
         >
-          {dock ? (
-            // Chip như tab chat ở thanh Agent của Linear: chữ nhạt, rê chuột hay đang mở thì nền và × hiện ra. Thanh nằm trên
-            // nền canvas như sidebar nên dùng màu hover/đang chọn của sidebar (accent thường gần trùng nền)
-            <div
-              className={cn(
-                "group/chip relative flex min-w-0 max-w-56 items-center rounded-md transition-colors hover:bg-sidebar-accent/60",
-                panelOpen && "bg-sidebar-accent hover:bg-sidebar-accent",
-              )}
-            >
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    ref={chipRef}
-                    variant="ghost"
-                    size="sm"
-                    aria-expanded={panelOpen}
-                    onClick={() => (panelOpen ? minimize() : openPanel())}
-                    className={cn(
-                      // Button mặc định không co (shrink-0): chip phải co để tên dài cắt "…" trong 224px, không đè nút bên cạnh
-                      "min-w-0 shrink justify-start pr-7 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground",
-                      panelOpen && "text-foreground",
-                    )}
-                  >
-                    {/* Thu nhỏ khi đang trả lời: vòng quay cho biết lượt vẫn chạy; tên nút đọc kèm trạng thái (Button tự đặt
-                        aria-busy theo `loading`, mà `loading` lại khóa nút) */}
-                    {pending ? <Spinner size="xs" /> : null}
-                    <span className="truncate">{chipTitle}</span>
-                    {unread && !pending ? <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" /> : null}
-                    {pending ? <span className="sr-only">, đang trả lời</span> : null}
-                    {unread && !pending ? <span className="sr-only">, có trả lời mới</span> : null}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-80">
-                  {chipTitle} [{TOGGLE_SHORTCUT}]
-                </TooltipContent>
-              </Tooltip>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Đóng cuộc trò chuyện ${chipTitle}`}
-                title="Đóng"
-                // Đóng như nút × của khung: bỏ cuộc khỏi thanh dưới (vẫn còn trong lịch sử), lượt đang chạy bị dừng
-                onClick={() => {
-                  newChat();
-                  minimize();
-                }}
-                className={cn(
-                  "absolute right-0.5 size-6 text-muted-foreground opacity-0 transition-opacity hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 group-hover/chip:opacity-100 motion-reduce:transition-none",
-                  panelOpen && "opacity-100",
-                )}
-              >
-                <IconSidebarClose className="size-3" />
-              </Button>
-            </div>
-          ) : null}
+          {/* Chip như tab chat ở thanh Agent của Linear: mỗi cuộc từng mở ở khung nổi một chip, co lại khi chật */}
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
+            {shownTabs.map((tab) => {
+              const active = tab.id === dock?.id;
+              return (
+                <DockChip
+                  key={tab.id}
+                  ref={active ? chipRef : undefined}
+                  title={active ? chipTitle : (tab.title ?? "Cuộc trò chuyện")}
+                  open={active && panelOpen}
+                  pending={active && pending}
+                  unread={active && unread}
+                  onToggle={() => {
+                    if (!active) {
+                      switchTo(tab);
+                      openPanel();
+                    } else if (panelOpen) minimize();
+                    else openPanel();
+                  }}
+                  onClose={() => closeTab(tab.id)}
+                />
+              );
+            })}
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -452,7 +507,8 @@ export function AssistantDock() {
             router.push(dock ? `/assistant/${encodeURIComponent(dock.id)}` : "/assistant");
           }}
           onClose={() => {
-            // Đóng hẳn: bỏ cuộc khỏi thanh dưới (vẫn còn trong lịch sử); lượt đang chạy bị dừng
+            // Đóng hẳn: bỏ chip của cuộc khỏi thanh dưới (vẫn còn trong lịch sử, lượt đang chạy vẫn chạy ở máy chủ)
+            if (dock) return closeTab(dock.id);
             newChat();
             minimize();
           }}
@@ -479,6 +535,67 @@ export function AssistantDock() {
     </>
   );
 }
+
+/**
+ * Một chip cuộc trò chuyện ở thanh dưới, như tab chat ở thanh Agent của Linear: chữ nhạt, rê chuột hay đang mở thì nền và
+ * × hiện ra. Thanh nằm trên nền canvas như sidebar nên dùng màu hover/đang chọn của sidebar (accent thường gần trùng nền).
+ * Chỉ chip của cuộc đang mở biết lượt đang chạy và trả lời mới.
+ */
+const DockChip = React.forwardRef<
+  HTMLButtonElement,
+  { title: string; open: boolean; pending: boolean; unread: boolean; onToggle: () => void; onClose: () => void }
+>(function DockChip({ title, open, pending, unread, onToggle, onClose }, ref) {
+  return (
+    <div
+      className={cn(
+        "group/chip relative flex min-w-0 max-w-56 items-center rounded-md transition-colors hover:bg-sidebar-accent/60",
+        open && "bg-sidebar-accent hover:bg-sidebar-accent",
+      )}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            ref={ref}
+            variant="ghost"
+            size="sm"
+            aria-expanded={open}
+            onClick={onToggle}
+            className={cn(
+              // Button mặc định không co (shrink-0): chip phải co để tên dài cắt "…" trong 224px, không đè nút bên cạnh
+              "min-w-0 shrink justify-start pr-7 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground",
+              open && "text-foreground",
+            )}
+          >
+            {/* Thu nhỏ khi đang trả lời: vòng quay cho biết lượt vẫn chạy; tên nút đọc kèm trạng thái (Button tự đặt
+                aria-busy theo `loading`, mà `loading` lại khóa nút) */}
+            {pending ? <Spinner size="xs" /> : null}
+            <span className="truncate">{title}</span>
+            {unread && !pending ? <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" /> : null}
+            {pending ? <span className="sr-only">, đang trả lời</span> : null}
+            {unread && !pending ? <span className="sr-only">, có trả lời mới</span> : null}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-80">
+          {title} [{TOGGLE_SHORTCUT}]
+        </TooltipContent>
+      </Tooltip>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label={`Đóng cuộc trò chuyện ${title}`}
+        title="Đóng"
+        // Bỏ chip khỏi thanh dưới (cuộc vẫn còn trong lịch sử, lượt đang chạy vẫn chạy ở máy chủ)
+        onClick={onClose}
+        className={cn(
+          "absolute right-0.5 size-6 text-muted-foreground opacity-0 transition-opacity hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 group-hover/chip:opacity-100 motion-reduce:transition-none",
+          open && "opacity-100",
+        )}
+      >
+        <IconSidebarClose className="size-3" />
+      </Button>
+    </div>
+  );
+});
 
 /**
  * Nút lịch sử ở thanh dưới: menu nổi phía trên liệt kê vài cuộc gần đây (cuộc đang ở khung nổi ghi "Hiện tại") như
