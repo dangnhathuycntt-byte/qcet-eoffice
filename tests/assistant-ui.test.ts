@@ -1434,6 +1434,8 @@ describe("Trợ lý UI: tạo lại và sửa câu hỏi cuối", () => {
     const failed = render([q("u2", "q2", "Câu 2"), a("r2", { status: "error", content: "" })]);
     assert.equal(failed.includes("Tạo lại câu trả lời"), false, "tin lỗi dùng Thử lại");
     assert.ok(failed.includes("Sửa câu hỏi"), "câu hỏi của tin lỗi vẫn sửa được");
+    const withTask = render([q("u2", "q2", "Câu 2"), a("r2", { proposals: [{ title: "Tuyển sinh đợt 3" }], proposalTasks: { 0: { id: "t-1", code: "NV-2026-10-001" } } })]);
+    assert.equal(withTask.includes("Tạo lại câu trả lời") || withTask.includes("Sửa câu hỏi"), false, "đề xuất đã thành nhiệm vụ thì giữ dấu, không thay");
   });
 
   test("hook thay cặp cuối qua replacesMessageId, máy chủ từ chối thì trả cặp cũ; trang và khung nổi đều nối", () => {

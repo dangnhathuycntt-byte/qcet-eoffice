@@ -93,11 +93,12 @@ export function AssistantThread({
     const el = listRef.current;
     if (el) setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > SCROLL_BUTTON_OFFSET);
   };
-  // "Tạo lại"/"Sửa" chỉ cho cặp hỏi–đáp cuối, khi câu trả lời đã xong và câu hỏi đã có mã ở máy chủ
+  // "Tạo lại"/"Sửa" chỉ cho cặp hỏi–đáp cuối, khi câu trả lời đã xong và câu hỏi đã có mã ở máy chủ. Câu trả lời có đề
+  // xuất đã thành nhiệm vụ thì không: thay nó sẽ làm mất dấu "Đã tạo NV-…" trong cuộc (nhiệm vụ vẫn còn)
   const last = thread[thread.length - 1];
   const lastReply = !pending && last?.role === "assistant" && last.status !== "streaming" ? last : null;
   const lastQuestion = lastReply ? questionMessageBefore(thread, lastReply.key) : null;
-  const replaceable = Boolean(lastQuestion?.id);
+  const replaceable = Boolean(lastQuestion?.id) && Object.keys(lastReply?.proposalTasks ?? {}).length === 0;
   const scrollToBottom = () => {
     const el = listRef.current;
     if (!el) return;
