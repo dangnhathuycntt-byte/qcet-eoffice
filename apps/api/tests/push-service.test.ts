@@ -9,6 +9,7 @@ import {
   PushNotificationPayload,
 } from "../src/server/notifications/push-service";
 import { prisma } from "@qcet/db/prisma";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 
 describe("Push Notification Copywriting & Truncation Suite", () => {
   test("truncatePushText enforces character budget strictly", () => {
@@ -105,20 +106,13 @@ describe("Push Notification Copywriting & Truncation Suite", () => {
 });
 
 describe("Web Push Dispatch & Stale Token Purge Suite", () => {
+  // Người dùng riêng của file: không xóa đăng ký push của người dùng seed mà test khác đang dùng
+  const fixture = createDocumentRouteFixture("pushsvc");
   let testUserId: string;
   const createdSubIds: string[] = [];
 
   before(async () => {
-    const user = await prisma.user.findFirst();
-    assert.ok(user, "User must exist in database");
-    testUserId = user.id;
-
-    // Clean up any old test subscriptions for this user
-    await prisma.pushSubscription.deleteMany({
-      where: {
-        userId: testUserId,
-      },
-    });
+    testUserId = (await fixture.user("subscriber")).id;
   });
 
   after(async () => {
@@ -127,6 +121,7 @@ describe("Web Push Dispatch & Stale Token Purge Suite", () => {
         where: { id: { in: createdSubIds } },
       });
     }
+    await fixture.cleanup();
   });
 
   test("sendPushNotificationToUser handles user with no subscriptions gracefully", async () => {

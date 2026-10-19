@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@qcet/db/prisma';
 import { TaskStatus, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus, UserRole } from '@prisma/client';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
+import { createDocumentRouteFixture } from './documents-route-fixtures';
 import { GET as getNotificationsRoute } from '@/app/api/notifications/route';
 import { POST as markAllReadRoute } from '@/app/api/notifications/read-all/route';
 import { POST as markOneReadPostRoute, PATCH as markOneReadPatchRoute } from '@/app/api/notifications/[id]/read/route';
@@ -16,6 +17,9 @@ import { GET as dashboardOverviewRoute } from '@/app/api/dashboard/overview/rout
 import { GET as networkInfoRoute } from '@/app/api/system/network-info/route';
 
 describe('Notifications, Executive, Search & System API Hardening (Task 12)', () => {
+  // Nhân viên, trưởng phòng, quản trị và nhiệm vụ riêng của file: file đánh dấu đã đọc mọi thông báo của nhân viên và
+  // ghi chỉ đạo lên nhiệm vụ, nên không được dùng người dùng hay nhiệm vụ seed
+  const fixture = createDocumentRouteFixture('t12');
   let executiveUser: { id: string; email: string; name: string; role: string;};
   let staffUser: { id: string; email: string; name: string; role: string;};
   let otherUser: { id: string; email: string; name: string; role: string;};
@@ -52,16 +56,13 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
     createdUserIds.push(bghCreated.id);
     executiveUser = { id: bghCreated.id, email: bghCreated.email, name: bghCreated.name, role: bghCreated.role };
 
-    const chuyenvien = await prisma.user.findFirst({ where: { role: 'CHUYEN_VIEN' } });
-    assert.ok(chuyenvien, 'CHUYEN_VIEN user required');
+    const chuyenvien = await fixture.user('staff', { role: UserRole.CHUYEN_VIEN });
     staffUser = { id: chuyenvien.id, email: chuyenvien.email, name: chuyenvien.name, role: chuyenvien.role};
 
-    const truongphong = await prisma.user.findFirst({ where: { role: 'TRUONG_PHONG' } });
-    assert.ok(truongphong, 'TRUONG_PHONG user required');
+    const truongphong = await fixture.user('other', { role: UserRole.TRUONG_PHONG });
     otherUser = { id: truongphong.id, email: truongphong.email, name: truongphong.name, role: truongphong.role};
 
-    const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-    assert.ok(admin, 'ADMIN user required');
+    const admin = await fixture.user('admin', { role: UserRole.ADMIN });
     adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role};
 
     // 2. Generate tokens
@@ -96,22 +97,21 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
     });
     execAssignmentId = execAssignment.id;
 
-    // 3. Find or create a test task for executive resolutions
-    let task = await prisma.task.findFirst();
-    if (!task) {
-      task = await prisma.task.create({
-        data: {
-          code: `TASK_TEST_${Date.now()}`,
-          title: 'Nhiệm vụ kiểm thử API hardening',
-          status: TaskStatus.IN_PROGRESS,
-          priority: 'NORMAL',
-          academicMonth: 3,
-          academicYear: '2025-2026',
-          dueDate: new Date(Date.now() + 86400000 * 7),
-          createdById: executiveUser.id,
-        },
-      });
-    }
+    // 3. Create a test task for executive resolutions
+    const task = await prisma.task.create({
+      data: {
+        code: `TASK_TEST_${Date.now()}`,
+        title: 'Nhiệm vụ kiểm thử API hardening',
+        status: TaskStatus.IN_PROGRESS,
+        priority: 'NORMAL',
+        academicMonth: 3,
+        academicYear: '2025-2026',
+        dueDate: new Date(Date.now() + 86400000 * 7),
+        // Người khác người chỉ đạo: người khởi tạo không được tự phê duyệt (SoD)
+        createdById: staffUser.id,
+      },
+    });
+    fixture.trackTask(task.id);
     testTaskId = task.id;
 
     // 4. Create isolated test notifications
@@ -156,6 +156,8 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
         where: { id: { in: createdNotificationIds } },
       });
     }
+    // Trước khi xóa người dùng chỉ đạo: xóa nhiệm vụ của file kéo theo các chỉ đạo người này đã ghi
+    await fixture.cleanup();
     if (execUnitId) {
       await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } });
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });

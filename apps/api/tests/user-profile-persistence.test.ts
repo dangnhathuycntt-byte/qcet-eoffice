@@ -1,4 +1,4 @@
-import test, { describe } from "node:test";
+import test, { after, before, describe } from "node:test";
 import assert from "node:assert/strict";
 import { loadEnvConfig } from "@next/env";
 
@@ -17,7 +17,7 @@ if (!process.env.DATABASE_URL) {
 import { UpdateUserProfileSchema } from "@qcet/contracts/users";
 import { PATCH, GET } from "../src/app/api/auth/me/route";
 import { prisma } from "@qcet/db/prisma";
-import { signSessionToken } from "../src/lib/jwt-session";
+import { createDocumentRouteFixture, type FixtureUser } from "./server/api/documents-route-fixtures";
 
 describe("R7: User Profile Persistence & Security Suite", () => {
   describe("1. UpdateUserProfileSchema Contract Validation", () => {
@@ -95,6 +95,16 @@ describe("R7: User Profile Persistence & Security Suite", () => {
   });
 
   describe("2. PATCH /api/auth/me Endpoint Security & Persistence", () => {
+    // Người dùng riêng của file: không sửa hồ sơ người dùng seed mà file khác đang đọc
+    const fixture = createDocumentRouteFixture("profile");
+    let testUser: FixtureUser;
+
+    before(async () => {
+      testUser = await fixture.user("me", { role: "CHUYEN_VIEN" });
+    });
+
+    after(() => fixture.cleanup());
+
     test("rejects unauthenticated request with 401", async () => {
       const req = new Request("http://localhost:3000/api/auth/me", {
         method: "PATCH",
@@ -113,28 +123,7 @@ describe("R7: User Profile Persistence & Security Suite", () => {
     });
 
     test("rejects payload with role tampering with 400 Bad Request", async () => {
-      // Find or create test user
-      let testUser = await prisma.user.findFirst({
-        where: { isActive: true },
-      });
-
-      if (!testUser) {
-        testUser = await prisma.user.create({
-          data: {
-            email: "test.profile.tamper@qcet.edu.vn",
-            name: "Original Name",
-            role: "CHUYEN_VIEN",
-            isActive: true,
-          },
-        });
-      }
-
-      const token = signSessionToken({
-        id: testUser.id,
-        email: testUser.email,
-        role: testUser.role,
-        name: testUser.name,
-      });
+      const token = testUser.token;
 
       const req = new Request("http://localhost:3000/api/auth/me", {
         method: "PATCH",
@@ -163,27 +152,7 @@ describe("R7: User Profile Persistence & Security Suite", () => {
     });
 
     test("rejects empty update with 400 Bad Request", async () => {
-      let testUser = await prisma.user.findFirst({
-        where: { isActive: true },
-      });
-
-      if (!testUser) {
-        testUser = await prisma.user.create({
-          data: {
-            email: "test.profile.empty@qcet.edu.vn",
-            name: "Test User",
-            role: "CHUYEN_VIEN",
-            isActive: true,
-          },
-        });
-      }
-
-      const token = signSessionToken({
-        id: testUser.id,
-        email: testUser.email,
-        role: testUser.role,
-        name: testUser.name,
-      });
+      const token = testUser.token;
 
       const req = new Request("http://localhost:3000/api/auth/me", {
         method: "PATCH",
@@ -201,33 +170,7 @@ describe("R7: User Profile Persistence & Security Suite", () => {
     });
 
     test("successfully updates profile and persists to database", async () => {
-      let testUser = await prisma.user.findFirst({
-        where: { isActive: true },
-      });
-
-      if (!testUser) {
-        testUser = await prisma.user.create({
-          data: {
-            email: "test.profile.success@qcet.edu.vn",
-            name: "Original Teacher",
-            title: "Tập sự",
-            phone: "0900000000",
-            role: "CHUYEN_VIEN",
-            isActive: true,
-          },
-        });
-      }
-
-      const originalName = testUser.name;
-      const originalTitle = testUser.title;
-      const originalPhone = testUser.phone;
-
-      const token = signSessionToken({
-        id: testUser.id,
-        email: testUser.email,
-        role: testUser.role,
-        name: testUser.name,
-      });
+      const token = testUser.token;
 
       const updatedName = "ThS. Nguyễn Văn Cập Nhật";
       const updatedTitle = "Giảng viên chính Khoa CNTT";
@@ -279,16 +222,6 @@ describe("R7: User Profile Persistence & Security Suite", () => {
       assert.strictEqual(getJson.user.name, updatedName);
       assert.strictEqual(getJson.user.title, updatedTitle);
       assert.strictEqual(getJson.user.phone, updatedPhone);
-
-      // Restore original profile values for hygiene
-      await prisma.user.update({
-        where: { id: testUser.id },
-        data: {
-          name: originalName,
-          title: originalTitle,
-          phone: originalPhone,
-        },
-      });
     });
   });
 });

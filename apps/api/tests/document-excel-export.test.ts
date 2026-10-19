@@ -8,7 +8,7 @@ import {
   generateAppendixIVCsv,
 } from "../src/lib/documents/excel-export";
 import { GET as exportExcelRoute } from "../src/app/api/documents/export-excel/route";
-import { signSessionToken } from "../src/lib/jwt-session";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 import type { DocumentItem } from "@qcet/contracts/types/document";
 
 describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
@@ -144,21 +144,15 @@ describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
 });
 
 describe("GET /api/documents/export-excel Route Integration", () => {
+  // Văn thư riêng của file: người dùng seed lấy bằng findFirst có thể là người dùng tạm của test khác, bị xóa giữa chừng
+  const fixture = createDocumentRouteFixture("excelexport");
   let testDocId: string;
   let sessionToken: string;
 
   before(async () => {
-    const user = (await prisma.user.findFirst({
-      where: { NOT: { email: { contains: "test" } } },
-    })) || (await prisma.user.findFirst());
-    assert.ok(user, "User must exist");
-    sessionToken = signSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    });
-    const dept = await prisma.organizationalUnit.findFirst();
+    const unitId = await fixture.unit("office");
+    const user = await fixture.user("clerk", { role: "VAN_THU", unitId });
+    sessionToken = user.token;
 
     // Create a sample incoming document for 2026 export test
     const created = await prisma.document.create({
@@ -185,6 +179,7 @@ describe("GET /api/documents/export-excel Route Integration", () => {
     if (testDocId) {
       await prisma.document.deleteMany({ where: { id: testDocId } });
     }
+    await fixture.cleanup();
   });
 
   test("exports incoming document registry as CSV with proper headers and content", async () => {

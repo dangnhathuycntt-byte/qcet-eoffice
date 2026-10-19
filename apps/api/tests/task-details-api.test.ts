@@ -4,36 +4,23 @@ import { NextRequest } from 'next/server';
 import { GET, PATCH, DELETE } from '../src/app/api/tasks/[id]/route';
 import { POST as postDeliverable } from '../src/app/api/tasks/[id]/deliverables/route';
 import { prisma } from '@qcet/db/prisma';
-import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope } from '@prisma/client';
+import { SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { TaskStatus, TaskPriority, TaskScope, UserRole } from '@prisma/client';
+import { createDocumentRouteFixture } from './server/api/documents-route-fixtures';
 
 describe('Task Detail & Deliverable Workflow Tests', () => {
+  // Người tạo nhiệm vụ riêng của file (văn thư có phân công trong đơn vị riêng), không lấy người dùng seed
+  const fixture = createDocumentRouteFixture('taskdetail');
   let testUserId: string;
-  let testDeptId: string;
   let validToken: string;
   let testTaskId: string;
   const createdTaskIds: string[] = [];
 
   before(async () => {
-    const user = await prisma.user.findFirst({
-      where: { email: { contains: '@cdktcnqn.edu.vn' }, isActive: true },
-    }) || await prisma.user.findFirst({ where: { isActive: true } });
-    assert.ok(user, 'Must have at least one active user in database');
+    const unitId = await fixture.unit('dept');
+    const user = await fixture.user('creator', { role: UserRole.VAN_THU, unitId });
     testUserId = user.id;
-
-    const dept = await prisma.organizationalUnit.findFirst({
-      where: { id: { in: ['BGH', 'P_QLDT', 'K_CNTT'] } },
-    }) || await prisma.organizationalUnit.findFirst();
-    assert.ok(dept, 'Must have at least one department in database');
-    testDeptId = dept.id;
-
-    validToken = signSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-
-    });
+    validToken = user.token;
 
     // Create a task for testing detail routes
     const task = await prisma.task.create({
@@ -72,6 +59,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
         where: { id: { in: createdTaskIds } },
       });
     }
+    await fixture.cleanup();
   });
 
   test('transition task status to WAITING_APPROVAL when deliverable is submitted', () => {
@@ -253,16 +241,6 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
   });
 
   test('DELETE /api/tasks/[id] deletes the task when authenticated', async () => {
-    const targetDept = await prisma.organizationalUnit.findFirst({
-      where: { id: { in: ['BGH', 'P_QLDT', 'K_CNTT'] } },
-    }) || await prisma.organizationalUnit.findFirst();
-    const deptId = targetDept ? targetDept.id : testDeptId;
-
-    const targetUser = await prisma.user.findFirst({
-      where: { email: { contains: '@cdktcnqn.edu.vn' } },
-    }) || await prisma.user.findFirst();
-    const userId = targetUser ? targetUser.id : testUserId;
-
     // Create a dedicated task to delete
     const taskToDelete = await prisma.task.create({
       data: {
@@ -274,9 +252,10 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
 
-        createdById: userId,
+        createdById: testUserId,
       },
     });
+    createdTaskIds.push(taskToDelete.id);
 
     const req = new NextRequest(`http://localhost:3000/api/tasks/${taskToDelete.id}`, {
       method: 'DELETE',

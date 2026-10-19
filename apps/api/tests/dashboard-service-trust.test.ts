@@ -66,28 +66,36 @@ test("departmentHealth accurately calculates averageProgressPercent from task pr
 });
 
 test("DepartmentHealth does not use department name as leadName when users exist or when empty", async () => {
-  const data = await getLiveDashboardData();
-  assert.ok(data.departmentHealth && data.departmentHealth.length > 0, "Must have department health records");
-  const deptHealthList = data.departmentHealth;
-
   // Fetch departments directly to verify against ground truth in DB
-  const dbDepts = await prisma.organizationalUnit.findMany({
-    include: {
-      positionAssignments: {
-        where: { status: 'ACTIVE' },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              role: true,
+  const readDbDepts = () =>
+    prisma.organizationalUnit.findMany({
+      include: {
+        positionAssignments: {
+          where: { status: 'ACTIVE' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                role: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    });
+  // Dashboard và truy vấn đối chiếu là hai lần đọc riêng, test khác chạy song song tạo đơn vị và gán người vào giữa
+  // hai lần đọc: đọc DB trước và sau dashboard, chỉ đối chiếu đơn vị có tên và thành viên giống nhau ở cả hai lần.
+  const dbDeptsBefore = await readDbDepts();
+  const data = await getLiveDashboardData();
+  const dbDepts = await readDbDepts();
+  assert.ok(data.departmentHealth && data.departmentHealth.length > 0, "Must have department health records");
+  const deptHealthList = data.departmentHealth;
   const dbDeptMap = new Map(dbDepts.map((d) => [d.id, d]));
+  const snapshot = (d: (typeof dbDepts)[number] | undefined) =>
+    JSON.stringify(d ? [d.name, d.positionAssignments.map((pa) => [pa.user.id, pa.user.name, pa.user.role])] : null);
+  const beforeSnapshots = new Map(dbDeptsBefore.map((d) => [d.id, snapshot(d)]));
+  let compared = 0;
 
   for (const dept of deptHealthList) {
     // Invariant: leadName must NEVER be the department's name or code
@@ -103,6 +111,8 @@ test("DepartmentHealth does not use department name as leadName when users exist
     );
 
     const dbDept = dbDeptMap.get(dept.departmentId);
+    if (beforeSnapshots.get(dept.departmentId) !== snapshot(dbDept)) continue;
+    compared += 1;
     const dbUsers = dbDept?.positionAssignments?.map((pa: any) => pa.user) ?? [];
     if (!dbDept || dbUsers.length === 0) {
       assert.equal(
@@ -131,6 +141,7 @@ test("DepartmentHealth does not use department name as leadName when users exist
       }
     }
   }
+  assert.ok(compared > 0, "Phải đối chiếu được ít nhất một đơn vị không đổi giữa hai lần đọc");
 });
 
 test("Tasks without explicit category are not fabricated into CHUYEN_DOI_SO or CNTT", async () => {

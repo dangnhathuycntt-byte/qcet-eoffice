@@ -17,6 +17,7 @@ import { ValidationError, PreconditionFailedError } from '../src/server/api/erro
 import { POST as createResolutionRoute } from '../src/app/api/executive/resolutions/route';
 import { NextRequest } from 'next/server';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { createDocumentRouteFixture } from './server/api/documents-route-fixtures';
 import {
   isTaskOverdue,
   getSystemReferenceDateStr,
@@ -24,6 +25,9 @@ import {
 } from '@qcet/shared/domain/tasks/deadlines';
 
 describe('Task State Machine Integration & Executive OCC Tests', () => {
+  // Người dùng và đơn vị riêng của file: file gán chức Hiệu trưởng, Phó hiệu trưởng cho hai người BGH, nên không được là
+  // người dùng seed; lấy theo vai trò có thể trúng người dùng tạm của test khác
+  const fixture = createDocumentRouteFixture('taskocc');
   let adminUser: any;
   let bghUser: any;
   let bghApprover: any;
@@ -38,14 +42,11 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
   const createdResolutionIds: string[] = [];
 
   before(async () => {
-    adminUser = await prisma.user.findFirst({
-      where: { role: UserRole.ADMIN },
-    });
-    const bghList = await prisma.user.findMany({
-      where: { role: UserRole.BAN_GIAM_HIEU },
-      take: 2,
-    });
-    assert.ok(bghList.length >= 1, 'At least one BGH user must exist');
+    adminUser = await fixture.user('admin', { role: UserRole.ADMIN });
+    const bghList = [
+      await fixture.user('rector', { role: UserRole.BAN_GIAM_HIEU }),
+      await fixture.user('vice', { role: UserRole.BAN_GIAM_HIEU }),
+    ];
     bghUser = bghList[0];
     bghApprover = bghList[0];
     bghCreator = bghList.length > 1 ? bghList[1] : bghList[0];
@@ -95,11 +96,8 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
       execAssignment2Id = execAssignment2.id;
     }
 
-    staffUser = await prisma.user.findFirst({
-      where: { role: UserRole.CHUYEN_VIEN },
-    });
-    const dept = await prisma.organizationalUnit.findFirst();
-    testDepartmentId = dept ? dept.id : 'dept-test-1';
+    staffUser = await fixture.user('staff', { role: UserRole.CHUYEN_VIEN, unitId: await fixture.unit('staff') });
+    testDepartmentId = await fixture.unit('dept');
 
     assert.ok(adminUser, 'Admin user must exist');
     assert.ok(bghUser, 'BGH user must exist');
@@ -137,6 +135,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
       await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } });
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
     }
+    await fixture.cleanup();
   });
 
   describe('1. Task State Machine Enforcement in taskCommandService', () => {

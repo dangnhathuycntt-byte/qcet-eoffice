@@ -4,51 +4,24 @@ import { NextRequest } from 'next/server';
 import { GET as getTasks } from '../src/app/api/tasks/route';
 import { DELETE as deleteTask } from '../src/app/api/tasks/[id]/route';
 import { prisma } from '@qcet/db/prisma';
-import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus, TaskActorRole, DeliverableReviewStatus, ResolutionType } from '@prisma/client';
+import { SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { TaskScope, TaskPriority, TaskStatus, TaskActorRole, DeliverableReviewStatus, ResolutionType, UserRole } from '@prisma/client';
+import { createDocumentRouteFixture } from './server/api/documents-route-fixtures';
 
 describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 10)', () => {
+  // Trưởng đơn vị riêng của file: danh sách chỉ gồm nhiệm vụ file tạo, phân trang không bị nhiệm vụ của test
+  // chạy song song chen vào giữa hai trang
+  const fixture = createDocumentRouteFixture('taskperf');
   let testUserId: string;
-  let testDeptId: string;
   let validToken: string;
   const createdTaskIds: string[] = [];
   const createdDocIds: string[] = [];
 
   before(async () => {
-    const user =
-      (await prisma.user.findFirst({
-        where: {
-          role: { not: 'ADMIN' },
-          positionAssignments: {
-            some: {
-              status: 'ACTIVE',
-              positionDefinition: {
-                code: { in: ['TRUONG_DON_VI', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG', 'TRUONG_KHOA', 'HIEU_TRUONG', 'PHO_HIEU_TRUONG'] },
-              },
-            },
-          },
-        },
-      })) ||
-      (await prisma.user.findFirst({
-        where: { role: { not: 'ADMIN' } },
-      })) ||
-      (await prisma.user.findFirst());
-    assert.ok(user, 'Must have at least one user in database');
+    const unitId = await fixture.unit('dept');
+    const user = await fixture.user('head', { role: UserRole.TRUONG_PHONG, unitId });
     testUserId = user.id;
-
-    const dept = await prisma.organizationalUnit.findFirst({
-      where: { id: { notIn: ['dept-daotao', 'dept-cntt'] } },
-    });
-    assert.ok(dept, 'Must have at least one department in database');
-    testDeptId = dept.id;
-
-    validToken = signSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-
-    });
+    validToken = user.token;
 
     // Seed 12 distinct tasks for pagination tests
     const timestamp = Date.now();
@@ -99,6 +72,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
         where: { id: { in: createdTaskIds } },
       });
     }
+    await fixture.cleanup();
   });
 
   describe('Pagination Defaults & Metadata Structure', () => {

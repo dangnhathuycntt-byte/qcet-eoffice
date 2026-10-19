@@ -4,8 +4,7 @@ import { NextRequest } from "next/server";
 import { POST as loginRoute } from "../src/app/api/auth/login/route";
 import { GET as dashboardOverviewRoute } from "../src/app/api/dashboard/overview/route";
 import { getLiveDashboardData } from "../src/server/services/dashboard-service";
-import { prisma } from "@qcet/db/prisma";
-import { signSessionToken } from "../src/lib/jwt-session";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 
 describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
   describe("2. POST /api/auth/login is retired", () => {
@@ -68,26 +67,22 @@ describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
     });
 
     test("/api/dashboard/overview route returns live database payload and ignores ?source=mock", async () => {
-      let token = "";
-      const user = await prisma.user.findFirst();
-      if (user) {
-        token = signSessionToken({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-
+      // Người dùng riêng của test: findFirst() trên dữ liệu dùng chung có thể trúng tài khoản ADMIN hoặc người dùng tạm
+      const fixture = createDocumentRouteFixture("zeromock");
+      try {
+        const user = await fixture.user("viewer", { role: "VAN_THU", unitId: await fixture.unit("unit") });
+        const req = new NextRequest("http://localhost:3000/api/dashboard/overview?source=mock", {
+          headers: { authorization: `Bearer ${user.token}` },
         });
+        const res = await dashboardOverviewRoute(req);
+        assert.equal(res.status, 200);
+        const json = await res.json();
+        assert.equal(json.source, "database");
+        assert.ok(Array.isArray(json.tasks));
+        assert.ok(json.stats);
+      } finally {
+        await fixture.cleanup();
       }
-      const req = new NextRequest("http://localhost:3000/api/dashboard/overview?source=mock", {
-        headers: token ? { authorization: `Bearer ${token}` } : {},
-      });
-      const res = await dashboardOverviewRoute(req);
-      assert.equal(res.status, 200);
-      const json = await res.json();
-      assert.equal(json.source, "database");
-      assert.ok(Array.isArray(json.tasks));
-      assert.ok(json.stats);
     });
   });
 });

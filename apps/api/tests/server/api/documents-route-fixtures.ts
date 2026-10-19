@@ -1,5 +1,7 @@
 /**
- * Fixture dùng chung cho các test route văn bản `tests/server/api/documents-*.test.ts`.
+ * Fixture dùng chung cho các test route văn bản `tests/server/api/documents-*.test.ts` và các test API cần người
+ * dùng, đơn vị riêng của file. Test chạy song song sửa, xóa người dùng và đơn vị, nên `findFirst()` trên dữ liệu
+ * dùng chung có thể trả bản ghi khác nhau giữa các lần chạy (ví dụ trúng tài khoản ADMIN).
  *
  * Mỗi lần gọi `createDocumentRouteFixture` có một runId riêng (thời điểm + ngẫu nhiên); đơn vị, người dùng,
  * văn bản, tệp đều do test tạo và `cleanup()` chỉ xóa đúng các id đã ghi nhận (kèm nhật ký, outbox,

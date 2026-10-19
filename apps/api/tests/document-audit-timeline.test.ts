@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { prisma } from "@qcet/db/prisma";
 import { GET as getAuditLogsRoute } from "../src/app/api/documents/[id]/audit-logs/route";
-import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 import {
   DocumentType,
   DocumentStatus,
@@ -14,38 +15,18 @@ import {
 import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 
 describe("Document Audit Timeline & Circulation History API Tests", () => {
+  // Văn thư riêng của file: lấy theo vai trò có thể trúng văn thư tạm của test khác, bị xóa giữa chừng
+  const fixture = createDocumentRouteFixture("audittimeline");
   let seededUser: any;
   let sessionToken: string;
   let testDocument: any;
   let testWorkflow: any;
   const createdDocumentIds: string[] = [];
-  const createdUserIds: string[] = [];
 
   before(async () => {
-    // 1. Get or create seeded user
-    seededUser = (await prisma.user.findFirst({
-      where: { role: "VAN_THU" },
-    })) || (await prisma.user.findFirst());
-
-    if (!seededUser) {
-      seededUser = await prisma.user.create({
-        data: {
-          id: `test-clerk-${Date.now()}`,
-          email: `test-clerk-${Date.now()}@cdktcnqn.edu.vn`,
-          name: "Văn thư Thử nghiệm",
-          role: "VAN_THU",
-          title: "Văn thư viên",
-        },
-      });
-      createdUserIds.push(seededUser.id);
-    }
-
-    sessionToken = signSessionToken({
-      id: seededUser.id,
-      email: seededUser.email,
-      name: seededUser.name,
-      role: seededUser.role,
-    });
+    // 1. Văn thư của file
+    seededUser = await fixture.user("clerk", { role: "VAN_THU", unitId: await fixture.unit("office") });
+    sessionToken = seededUser.token;
 
     // 2. Create test document with incoming workflow
     const timestamp = Date.now();
@@ -113,9 +94,7 @@ describe("Document Audit Timeline & Circulation History API Tests", () => {
       await prisma.auditEvent.deleteMany({ where: { entityId: docId } });
       await prisma.document.deleteMany({ where: { id: docId } });
     }
-    for (const uId of createdUserIds) {
-      await prisma.user.deleteMany({ where: { id: uId } });
-    }
+    await fixture.cleanup();
   });
 
   test("GET /api/documents/[id]/audit-logs returns 401 when unauthenticated", async () => {

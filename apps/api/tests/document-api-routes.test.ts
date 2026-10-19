@@ -14,80 +14,35 @@ import {
   DocumentStatus,
   DocumentUrgency,
   DocumentSecurityLevel,
-  JobCatalogGroup,
+  UserRole,
 } from "@prisma/client";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 
 describe("Document Registry API & Validation Tests (ND30)", () => {
+  // Văn thư, Hiệu trưởng và đơn vị riêng của file. Lấy người dùng seed bằng findFirst có thể trúng tài khoản ADMIN
+  // hoặc người dùng tạm của test khác (403), và gán chức Hiệu trưởng cho người dùng seed làm đổi dữ liệu file khác đọc.
+  const fixture = createDocumentRouteFixture("docapi");
   let seededUserId: string;
   let seededBghUserId: string;
   let seededDeptId: string;
   let sessionToken: string;
   let bghSessionToken: string;
-  let bghPositionAssignmentId: string;
-  let createdBghUserId: string | null = null;
   const createdDocumentIds: string[] = [];
   const createdTaskIds: string[] = [];
 
   before(async () => {
-    // Obtain valid user and department from database
-    const user = (await prisma.user.findFirst({
-      where: { NOT: { email: { contains: "test" } } },
-    })) || (await prisma.user.findFirst());
-    assert.ok(user, "At least one user must exist in database");
-    seededUserId = user.id;
+    seededDeptId = await fixture.unit("lead");
+    const clerk = await fixture.user("clerk", { role: UserRole.VAN_THU, unitId: await fixture.unit("office") });
+    seededUserId = clerk.id;
+    sessionToken = clerk.token;
 
-    sessionToken = signSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
+    const rector = await fixture.user("rector", {
+      role: UserRole.BAN_GIAM_HIEU,
+      unitId: seededDeptId,
+      positionCode: "HIEU_TRUONG",
     });
-
-    const dept = await prisma.organizationalUnit.findFirst();
-    assert.ok(dept, "At least one department must exist in database");
-    seededDeptId = dept.id;
-
-    let bghUser = await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU" } });
-    if (!bghUser) {
-      bghUser = await prisma.user.create({
-        data: {
-          id: `test-bgh-doc-${Date.now()}`,
-          email: `bgh-doc-${Date.now()}@cdktcnqn.edu.vn`,
-          name: "Hiệu trưởng kiểm thử văn bản",
-          role: "BAN_GIAM_HIEU",
-        },
-      });
-      createdBghUserId = bghUser.id;
-    }
-    seededBghUserId = bghUser.id;
-
-    bghSessionToken = signSessionToken({
-      id: bghUser.id,
-      email: bghUser.email,
-      name: bghUser.name,
-      role: bghUser.role,
-    });
-
-    const rectorPosition = await prisma.positionDefinition.upsert({
-      where: { code: "HIEU_TRUONG" },
-      update: {},
-      create: {
-        code: "HIEU_TRUONG",
-        title: "Hiệu trưởng",
-        group: JobCatalogGroup.LDPU,
-        isLeadership: true,
-      },
-    });
-    const rectorAssignment = await prisma.positionAssignment.create({
-      data: {
-        userId: bghUser.id,
-        positionDefinitionId: rectorPosition.id,
-        unitId: dept.id,
-        type: "PRIMARY",
-        status: "ACTIVE",
-      },
-    });
-    bghPositionAssignmentId = rectorAssignment.id;
+    seededBghUserId = rector.id;
+    bghSessionToken = rector.token;
 
     // Clean up any lingering test documents and generated tasks from previous runs
     await prisma.documentDirective.deleteMany({
@@ -107,13 +62,6 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
   });
 
   after(async () => {
-    if (bghPositionAssignmentId) {
-      await prisma.positionAssignment.deleteMany({ where: { id: bghPositionAssignmentId } });
-    }
-    if (createdBghUserId) {
-      await prisma.user.deleteMany({ where: { id: createdBghUserId } });
-    }
-
     // Clean up created directives, tasks, and documents in reverse order
     if (createdDocumentIds.length > 0) {
       await prisma.documentDirective.deleteMany({
@@ -146,6 +94,7 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
         where: { id: { in: createdDocumentIds } },
       });
     }
+    await fixture.cleanup();
   });
 
   describe("Payload Validation Unit Tests", () => {

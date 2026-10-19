@@ -1,11 +1,13 @@
-import { test, describe, before } from "node:test";
+import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
-import { prisma } from "@qcet/db/prisma";
 import { GET } from "../src/app/api/users/route";
-import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 
 describe("API Route: /api/users", () => {
+  // Người dùng riêng của file có phân công đang hiệu lực trong đơn vị riêng; không lấy người dùng seed bằng findFirst
+  const fixture = createDocumentRouteFixture("apiusers");
   let sampleUser: {
     id: string;
     name: string;
@@ -16,35 +18,13 @@ describe("API Route: /api/users", () => {
   let authCookie: string;
 
   before(async () => {
-    const user = await prisma.user.findFirst({
-      where: {
-        isActive: true,
-        positionAssignments: {
-          some: {
-            status: "ACTIVE",
-            unit: { status: "ACTIVE" },
-          },
-        },
-      },
-      select: { id: true, name: true, email: true, role: true },
-    });
-    assert.ok(user, "Expected at least one active user with an active organizational assignment");
-    sampleUser = user;
-    // Lấy unitId từ positionAssignment để dùng cho filter test
-    const assignment = await prisma.positionAssignment.findFirst({
-      where: { userId: user.id, status: "ACTIVE" },
-      select: { unitId: true },
-    });
-    sampleUnitId = assignment?.unitId ?? null;
-    const token = signSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-
-    });
-    authCookie = `${SESSION_COOKIE_NAME}=${token}`;
+    sampleUnitId = await fixture.unit("unit");
+    const user = await fixture.user("staff", { role: "VAN_THU", unitId: sampleUnitId });
+    sampleUser = { id: user.id, name: user.name, email: user.email, role: user.role };
+    authCookie = `${SESSION_COOKIE_NAME}=${user.token}`;
   });
+
+  after(() => fixture.cleanup());
 
   test("GET /api/users returns list of users with required fields", async () => {
     const req = new NextRequest("http://localhost:3001/api/users", {

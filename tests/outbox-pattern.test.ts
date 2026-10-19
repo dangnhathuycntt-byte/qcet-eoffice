@@ -749,6 +749,8 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
           payload: {},
           status: OutboxStatus.PENDING,
           attempts: 2,
+          // Giờ Node như hai sự kiện trên: mặc định của DB làm tròn tới mili giây có thể lớn hơn `now` của batch ngay sau đó
+          availableAt: new Date(),
         },
       });
 

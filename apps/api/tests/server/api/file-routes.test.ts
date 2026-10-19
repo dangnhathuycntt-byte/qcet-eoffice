@@ -25,6 +25,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
   let adminUser: { id: string; email: string; name: string; role: string;};
   let deptAUser: { id: string; email: string; name: string; role: string;};
   let deptBUser: { id: string; email: string; name: string; role: string;};
+  let bghUnitId: string | undefined;
 
   let adminToken: string;
   let deptAToken: string;
@@ -97,15 +98,14 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     deptBId = deptB.id;
 
     // 3. Identify users
-    const admin =
-      (await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU" } })) ||
-      (await prisma.user.create({
-        data: {
-          email: `test-bgh-${Date.now()}@qcet.edu.vn`,
-          name: "Ban Giám Hiệu Kiểm Thử",
-          role: "BAN_GIAM_HIEU",
-        },
-      }));
+    // BGH riêng của file: after() xóa mọi phân công của người này, nên không được là người dùng seed
+    const admin = await prisma.user.create({
+      data: {
+        email: `test-bgh-${Date.now()}@qcet.edu.vn`,
+        name: "Ban Giám Hiệu Kiểm Thử",
+        role: "BAN_GIAM_HIEU",
+      },
+    });
     adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role };
 
     // Create explicit test staff users in Dept A and Dept B
@@ -127,17 +127,16 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     });
     deptBUser = { id: userB.id, email: userB.email, name: userB.name, role: userB.role};
 
-    const bghUnit =
-      (await prisma.organizationalUnit.findFirst({ where: { type: "SCHOOL" } })) ||
-      (await prisma.organizationalUnit.create({
-        data: {
-          id: `UNIT_BGH_FILE_${Date.now()}`,
-          code: `BGH_FILE_${Date.now()}`,
-          name: "Ban Giám Hiệu",
-          type: "SCHOOL",
-          status: "ACTIVE",
-        },
-      }));
+    const bghUnit = await prisma.organizationalUnit.create({
+      data: {
+        id: `UNIT_BGH_FILE_${Date.now()}`,
+        code: `BGH_FILE_${Date.now()}`,
+        name: "Ban Giám Hiệu",
+        type: "SCHOOL",
+        status: "ACTIVE",
+      },
+    });
+    bghUnitId = bghUnit.id;
 
     const posDefLeadership =
       (await prisma.positionDefinition.findFirst({ where: { isLeadership: true } })) ||
@@ -367,6 +366,12 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       }
       if (deptBUser?.id) {
         await prisma.user.delete({ where: { id: deptBUser.id } }).catch(() => {});
+      }
+      if (adminUser?.id) {
+        await prisma.user.delete({ where: { id: adminUser.id } }).catch(() => {});
+      }
+      if (bghUnitId) {
+        await prisma.organizationalUnit.delete({ where: { id: bghUnitId } }).catch(() => {});
       }
     } catch {}
 

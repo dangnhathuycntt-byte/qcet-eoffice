@@ -10,6 +10,7 @@ import { POST as postDirective } from "../src/app/api/documents/[id]/directives/
 import { GET as getNetworkInfo } from "../src/app/api/system/network-info/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import { prisma } from "@qcet/db/prisma";
+import { createDocumentRouteFixture, type FixtureUser } from "./server/api/documents-route-fixtures";
 
 function createTestToken(payload: { id: string; role: string; departmentId?: string; name?: string; email?: string }) {
   return signSessionToken({
@@ -22,6 +23,16 @@ function createTestToken(payload: { id: string; role: string; departmentId?: str
 }
 
 describe("Task 1: Security & Session Binding on Document Endpoints", () => {
+  // Văn thư riêng của file: findFirst() trên dữ liệu dùng chung có thể trúng tài khoản ADMIN hoặc người dùng tạm
+  const fixture = createDocumentRouteFixture("secreg");
+  let clerk: FixtureUser;
+
+  before(async () => {
+    clerk = await fixture.user("clerk", { role: "VAN_THU", unitId: await fixture.unit("office") });
+  });
+
+  after(() => fixture.cleanup());
+
   it("GET /api/documents returns 401 when unauthenticated", async () => {
     const req = new NextRequest("http://localhost:3001/api/documents");
     const res = await getDocs(req);
@@ -85,16 +96,8 @@ describe("Task 1: Security & Session Binding on Document Endpoints", () => {
   });
 
   it("POST /api/documents overwrites registeredById with session.id (anti-spoofing)", async () => {
-    // Find or fallback to a real user in db
-    const user = await prisma.user.findFirst();
-    assert.ok(user, "User should exist in db");
-
-    const token = signSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    });
+    const user = clerk;
+    const token = clerk.token;
 
     const fakeAttackerId = "spoofed-attacker-user-id";
     const req = new NextRequest("http://localhost:3001/api/documents", {
@@ -131,15 +134,7 @@ describe("Task 1: Security & Session Binding on Document Endpoints", () => {
   });
 
   it("GET /api/documents succeeds when authenticated", async () => {
-    const user = await prisma.user.findFirst();
-    assert.ok(user, "User should exist in db");
-
-    const token = signSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    });
+    const token = clerk.token;
 
     const req = new NextRequest("http://localhost:3001/api/documents?limit=5", {
       headers: {

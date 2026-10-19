@@ -6,10 +6,12 @@ import { NextRequest } from "next/server";
 import { GET } from "../src/app/api/files/[...path]/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import { prisma } from "@qcet/db/prisma";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 
 const TEST_UPLOADS_DIR = path.resolve("./test_uploads_sandbox");
 
 describe("API Files Streaming & Security", () => {
+  const fixture = createDocumentRouteFixture("filestream");
   let token: string;
   let unauthorizedToken: string;
   let unauthorizedUserId: string;
@@ -36,13 +38,10 @@ describe("API Files Streaming & Security", () => {
       "%PDF-1.4 Fake Meeting Content for QCET Unit Test 1234567890"
     );
 
-    const user = await prisma.user.findFirst() || await prisma.user.create({
-      data: {
-        email: `stream-test-${Date.now()}@qcet.edu.vn`,
-        name: "Stream Test User",
-        role: "ADMIN",
-      },
-    });
+    // Người dùng và đơn vị riêng của file: findFirst() trên dữ liệu dùng chung có thể trúng tài khoản ADMIN hoặc người
+    // dùng tạm của test khác bị xóa giữa chừng
+    const unitId = await fixture.unit("unit");
+    const user = await fixture.user("owner", { role: "VAN_THU", unitId });
 
     const unauthorizedUser = await prisma.user.create({
       data: {
@@ -53,12 +52,7 @@ describe("API Files Streaming & Security", () => {
     });
     unauthorizedUserId = unauthorizedUser.id;
 
-    token = await signSessionToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    });
+    token = user.token;
 
     unauthorizedToken = await signSessionToken({
       id: unauthorizedUser.id,
@@ -93,16 +87,11 @@ describe("API Files Streaming & Security", () => {
     });
 
     // Create WorkDossier and DossierItem
-    const unit =
-      (await prisma.organizationalUnit.findFirst({
-        where: { code: { in: ["QCET", "P_QLDT", "K_CNTT"] } },
-      })) || (await prisma.organizationalUnit.findFirst());
-    assert.ok(unit, "OrganizationalUnit must exist in test database");
     const dossier = await prisma.workDossier.create({
       data: {
         title: "Dossier Streaming Test",
         code: `DOS-STREAM-${Date.now()}`,
-        owningUnitId: unit?.id || "unit-test-default",
+        owningUnitId: unitId,
         responsiblePersonId: user.id,
         status: "OPEN",
       },
@@ -148,6 +137,7 @@ describe("API Files Streaming & Security", () => {
     if (unauthorizedUserId) {
       await prisma.user.delete({ where: { id: unauthorizedUserId } });
     }
+    await fixture.cleanup();
   });
 
   it("should serve existing PDF with 200 OK and correct headers", async () => {

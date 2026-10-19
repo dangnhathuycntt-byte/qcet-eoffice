@@ -4,9 +4,13 @@ import { NextRequest } from 'next/server';
 import { GET, POST } from '../src/app/api/executive/resolutions/route';
 import { prisma } from '@qcet/db/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { createDocumentRouteFixture } from './server/api/documents-route-fixtures';
 import { TaskStatus, TaskPriority, TaskScope, UserRole, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
 
 describe('Executive Resolutions API Persistence & Authorization Tests', () => {
+  // Người dùng và đơn vị riêng của file: không gán chức Hiệu trưởng cho người dùng seed, không lấy người dùng hay đơn
+  // vị theo vai trò/thứ tự (có thể trúng bản ghi tạm của test khác)
+  const fixture = createDocumentRouteFixture('execres');
   let bghUser: { id: string; email: string; name: string; role: UserRole };
   let staffUser: { id: string; email: string; name: string; role: UserRole };
   let adminUser: { id: string; email: string; name: string; role: UserRole };
@@ -21,17 +25,12 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
   const createdTaskIds: string[] = [];
 
   before(async () => {
-    // 1. Fetch departments
-    const depts = await prisma.organizationalUnit.findMany({ take: 2 });
-    assert.ok(depts.length >= 2, 'Must have at least 2 departments for reassignment tests');
-    testDeptId = depts[0].id;
-    targetDeptId = depts[1].id;
+    // 1. Departments
+    testDeptId = await fixture.unit('dept');
+    targetDeptId = await fixture.unit('target');
 
-    // 2. Fetch BGH user
-    const bgh = await prisma.user.findFirst({
-      where: { role: UserRole.BAN_GIAM_HIEU },
-    });
-    assert.ok(bgh, 'Must have at least one BGH user in database');
+    // 2. BGH user
+    const bgh = await fixture.user('bgh', { role: UserRole.BAN_GIAM_HIEU });
     bghUser = bgh;
     bghToken = signSessionToken({
       id: bgh.id,
@@ -43,7 +42,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
 
     // Canonical statutory mandate (Issue #27): executive authority requires
     // an ACTIVE executive PositionAssignment, never the role string. Equip
-    // the seed BGH user so the authorized flows below exercise the new
+    // the file's BGH user so the authorized flows below exercise the new
     // contract instead of the legacy role gate.
     let rectorDef = await prisma.positionDefinition.findUnique({ where: { code: 'HIEU_TRUONG' } });
     if (!rectorDef) {
@@ -67,11 +66,8 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
     });
     execAssignmentId = execAssignment.id;
 
-    // 3. Fetch non-BGH staff user (TRUONG_PHONG or CHUYEN_VIEN)
-    const staff = await prisma.user.findFirst({
-      where: { role: { in: [UserRole.TRUONG_PHONG, UserRole.CHUYEN_VIEN] } },
-    });
-    assert.ok(staff, 'Must have at least one non-BGH staff user in database');
+    // 3. Non-BGH staff user
+    const staff = await fixture.user('staff', { role: UserRole.CHUYEN_VIEN });
     staffUser = staff;
     staffToken = signSessionToken({
       id: staff.id,
@@ -81,11 +77,8 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
 
     });
 
-    // 4. Fetch Admin user
-    const admin = await prisma.user.findFirst({
-      where: { role: UserRole.ADMIN },
-    });
-    assert.ok(admin, 'Must have at least one Admin user in database');
+    // 4. Admin user
+    const admin = await fixture.user('admin', { role: UserRole.ADMIN });
     adminUser = admin;
     adminToken = signSessionToken({
       id: admin.id,
@@ -137,6 +130,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } });
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
     }
+    await fixture.cleanup();
   });
 
   test('calculates new due date correctly when grantedDays is applied', () => {

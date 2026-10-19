@@ -1,30 +1,23 @@
-import { test, describe, before } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { GET as getDashboardOverview } from '../src/app/api/dashboard/overview/route';
 import { GET as getDocumentStats } from '../src/app/api/documents/stats/route';
-import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { prisma } from '@qcet/db/prisma';
+import { SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
+import { createDocumentRouteFixture } from './server/api/documents-route-fixtures';
 
 describe('Dashboard API Routes (Zero Mock Fallback)', () => {
+  // Người dùng riêng của file: findFirst() trên dữ liệu dùng chung có thể trúng tài khoản ADMIN hoặc người dùng tạm
+  // của test khác vừa bị xóa (401)
+  const fixture = createDocumentRouteFixture('dashapi');
   let token: string;
 
   before(async () => {
-    const user = await prisma.user.findFirst() || await prisma.user.create({
-      data: {
-        email: `dashboard-test-${Date.now()}@qcet.edu.vn`,
-        name: 'Dashboard Test User',
-        role: 'ADMIN',
-      },
-    });
-
-    token = await signSessionToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    });
+    const user = await fixture.user('viewer', { role: 'VAN_THU', unitId: await fixture.unit('unit') });
+    token = user.token;
   });
+
+  after(() => fixture.cleanup());
 
   test('GET /api/dashboard/overview phải trả về source=database', async () => {
     const req = new NextRequest('http://localhost:3000/api/dashboard/overview', {

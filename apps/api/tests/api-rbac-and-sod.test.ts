@@ -7,6 +7,7 @@ import { taskCommandService } from "../src/server/tasks";
 import { ForbiddenError } from "../src/server/api/errors";
 import prisma from "@qcet/db/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { createDocumentRouteFixture } from "./server/api/documents-route-fixtures";
 import {
   AssignmentStatus,
   AssignmentType,
@@ -18,6 +19,9 @@ import {
 } from "@prisma/client";
 
 describe("RBAC and Segregation of Duties (SoD) API Control", () => {
+  // Người dùng riêng của file: file gán chức danh cho bốn người dùng này, nên không được là người dùng seed; lấy theo
+  // vai trò (kể cả orderBy id) có thể trúng người dùng tạm của test khác
+  const fixture = createDocumentRouteFixture("rbacsod");
   let adminToken: string;
   let bghToken: string;
   let leaderDeptToken: string;
@@ -37,11 +41,11 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
   let testDelegationId: string | null = null;
 
   before(async () => {
-    // 1. Fetch real seeded users
-    adminUser = await prisma.user.findFirst({ where: { role: "ADMIN", isActive: true }, orderBy: { id: "asc" } });
-    bghUser = await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU", isActive: true }, orderBy: { id: "asc" } });
-    leaderUser = await prisma.user.findFirst({ where: { role: "TRUONG_PHONG", isActive: true }, orderBy: { id: "asc" } });
-    staffUser = await prisma.user.findFirst({ where: { role: "CHUYEN_VIEN", isActive: true }, orderBy: { id: "asc" } });
+    // 1. Người dùng của file theo từng vai trò
+    adminUser = await fixture.user("admin", { role: "ADMIN" });
+    bghUser = await fixture.user("bgh", { role: "BAN_GIAM_HIEU" });
+    leaderUser = await fixture.user("leader", { role: "TRUONG_PHONG" });
+    staffUser = await fixture.user("staff", { role: "CHUYEN_VIEN" });
 
     assert.ok(adminUser, "Must have ADMIN user in DB");
     assert.ok(bghUser, "Must have BAN_GIAM_HIEU user in DB");
@@ -207,6 +211,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
     if (unitIds.length > 0) {
       await prisma.organizationalUnit.deleteMany({ where: { id: { in: unitIds } } });
     }
+    await fixture.cleanup();
   });
 
   test("GET /api/dashboard/overview returns 401 when unauthenticated NextRequest is provided", async () => {
