@@ -4,6 +4,7 @@ import * as React from "react";
 import { signIn } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
+import { Pressable } from "@/components/ui/pressable";
 // Official Google Multi-Color SVG Icon
 export function GoogleIcon({ className = "size-5" }: { className?: string }) {
   return (
@@ -95,13 +96,12 @@ export function GoogleLoginButton({
 
   return (
     <div className={cn("flex flex-col items-center justify-center w-full", className)}>
-      <button
-        type="button"
+      <Pressable
         disabled={disabled || isLoading}
         onClick={handleStartOAuth}
         aria-label={isLoading ? "Đang chuyển sang Google…" : label}
         aria-busy={isLoading}
-        className="flex h-[52px] min-[600px]:h-12 w-full items-center justify-center gap-2.5 rounded-[14px] shadow-[inset_0_0_0_1px_var(--google-btn-edge)] bg-[var(--google-btn-bg)] px-3 min-[600px]:px-4 text-sm font-medium text-[var(--google-btn-text)] hover:bg-[var(--google-btn-bg-hover)] active:bg-[var(--google-btn-bg-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 transition-colors duration-150 motion-reduce:transition-none"
+        className="flex h-[52px] min-[600px]:h-12 w-full items-center justify-center gap-2.5 rounded-[14px] shadow-[inset_0_0_0_1px_var(--google-btn-edge)] bg-[var(--google-btn-bg)] px-3 min-[600px]:px-4 text-sm font-medium text-[var(--google-btn-text)] hover:bg-[var(--google-btn-bg-hover)] active:bg-[var(--google-btn-bg-active)] disabled:cursor-not-allowed disabled:opacity-70 transition-colors duration-150 motion-reduce:transition-none"
       >
         {isLoading ? (
           <span role="status" className="inline-flex items-center gap-2.5">
@@ -114,7 +114,7 @@ export function GoogleLoginButton({
             <span className="text-base min-[600px]:text-sm font-medium text-current">{label}</span>
           </>
         )}
-      </button>
+      </Pressable>
     </div>
   );
 }

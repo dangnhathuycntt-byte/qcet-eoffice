@@ -14,7 +14,6 @@ import {
   Inbox,
   PlusCircle,
   ArrowRight,
-  Loader2,
   Mail,
   Phone,
   ChevronRight,
@@ -42,6 +41,7 @@ import { StandardDialog } from "@/components/ui/dialog";
 import { Pressable } from "@/components/ui/pressable";
 import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
+import { Spinner } from "@/components/ui/spinner";
 export interface QuickAction {
   id: string;
   title: string;
@@ -826,6 +826,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         {/* Search Header Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-white">
           <Search className="w-5 h-5 text-muted-foreground shrink-0" />
+          {/* design-lint-ignore no-raw-control: ô lệnh của bảng ⌘K, chữ lớn không nền như Linear; ui/Input là ô có nền và chiều cao cố định */}
           <input
             ref={inputRef}
             type="text"
@@ -840,7 +841,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             placeholder="Tìm theo tên việc, mã số, văn bản, viết tắt khoa (cntt, vb)..."
             className="flex-1 bg-transparent text-sm sm:text-base font-normal text-foreground placeholder:text-muted-foreground focus:outline-hidden"
           />
-          {isLoading && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
+          {isLoading && <Spinner size="md" tone="muted" />}
           {query && !isLoading && (
             <Pressable
               onClick={() => {

@@ -16,6 +16,8 @@ import type {
 } from "../types";
 import { TASK_COLUMN_CLASS } from "../constants";
 
+import { Pressable } from "@/components/ui/pressable";
+import { Checkbox } from "@/components/ui/checkbox";
 export interface TaskTableHeaderProps {
   sortField?: TaskSortField;
   sortDirection?: SortDirection;
@@ -131,13 +133,11 @@ export function TaskTableHeader({
             className={cn("w-10 text-center align-middle", paddingClass)}
           >
             <div className="flex items-center justify-center">
-              <input
+              <Checkbox
                 ref={checkboxRef}
-                type="checkbox"
                 checked={allSelected}
                 disabled={!hasTasks}
                 onChange={(e) => onToggleSelectAll?.(e.target.checked)}
-                className="size-4 rounded border-border/80 text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
                 aria-label="Chọn tất cả nhiệm vụ hiển thị"
               />
             </div>
@@ -218,14 +218,13 @@ export function TaskTableHeader({
 
                   <div className="flex items-center gap-1">
                     {isSortable ? (
-                      <button
-                        type="button"
+                      <Pressable
                         onClick={() => onSort?.(col.id as TaskSortField)}
-                        className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+                        className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors select-none rounded"
                       >
                         <span>{col.label}</span>
                         {renderSortIndicator(col.id as TaskSortField)}
-                      </button>
+                      </Pressable>
                     ) : (
                       <span>{col.label}</span>
                     )}
@@ -261,14 +260,13 @@ export function TaskTableHeader({
                 )}
               >
                 {isSortable ? (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => onSort?.(col.id as TaskSortField)}
-                    className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+                    className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors select-none rounded"
                   >
                     <span>{col.label}</span>
                     {renderSortIndicator(col.id as TaskSortField)}
-                  </button>
+                  </Pressable>
                 ) : (
                   <span>{col.label}</span>
                 )}

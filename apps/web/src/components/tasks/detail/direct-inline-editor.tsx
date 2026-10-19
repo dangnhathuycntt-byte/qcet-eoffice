@@ -327,6 +327,7 @@ export function DirectInlineEditor({
     <div className={cn("relative w-full group/editor", className)}>
       {isEditing ? (
         <div className="w-full relative" style={lockedHeight ? { minHeight: lockedHeight } : undefined}>
+          {/* design-lint-ignore no-raw-control: sửa tại chỗ không nền, giữ đúng cỡ chữ của tiêu đề/mô tả đang hiển thị; ui/Textarea ép nền và đệm */}
           <textarea
             ref={textareaRef}
             value={draft}

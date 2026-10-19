@@ -106,7 +106,7 @@ export function getSlaBadgeStatus(
   if (!dueDate || daysRemaining === null) {
     return {
       label: null,
-      colorClass: "text-zinc-400 bg-transparent border-transparent",
+      colorClass: "text-muted-foreground bg-transparent border-transparent",
       isOverdue: false,
       isToday: false,
       daysRemaining: null,
@@ -129,7 +129,7 @@ export function getSlaBadgeStatus(
   if (status === "CANCELLED") {
     return {
       label: "Đã hủy",
-      colorClass: "text-zinc-600 bg-zinc-100 border-zinc-200",
+      colorClass: "text-muted-foreground bg-secondary border-border",
       isOverdue: false,
       isToday: false,
       daysRemaining,
@@ -189,7 +189,7 @@ export function getSlaBadgeStatus(
   // Bình thường (> 3 ngày): không render badge SLA dư thừa
   return {
     label: null,
-    colorClass: "text-zinc-600 bg-zinc-50 border-zinc-200/60",
+    colorClass: "text-muted-foreground bg-card border-border/60",
     isOverdue: false,
     isToday: false,
     daysRemaining,

@@ -1,20 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { Popover } from "@base-ui/react/popover";
 import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   ChevronDown,
-  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZES } from "../constants";
-import { Pressable } from "@/components/ui/pressable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MenuActionItem, MenuContent, MenuRoot, MenuSubmenuTitle, MenuTrigger } from "@/components/ui/menu";
 
 export interface TaskPaginationBarProps {
   currentPage: number;
@@ -122,7 +120,6 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   shortcutTrigger,
 }: TaskPaginationBarProps) {
   const [isSizeMenuOpen, setIsSizeMenuOpen] = React.useState(false);
-  const sizeMenuRef = React.useRef<HTMLDivElement>(null);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -136,9 +133,6 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   const endItem = Math.min(totalItems, safeCurrentPage * pageSize);
 
   const pageNumbers = getPageNumbers(safeCurrentPage, totalPages);
-
-  // Click outside listener for custom page size dropdown
-  // ponytail: click-outside/Escape handled by Base UI Popover
 
   const handlePrevious = () => {
     if (safeCurrentPage > 1 && !disabled) {
@@ -194,93 +188,39 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           )}
         </div>
 
-        {/* Custom Page Size Dropdown Popover */}
-        <Popover.Root open={isSizeMenuOpen} onOpenChange={setIsSizeMenuOpen}>
-        <div className="relative flex items-center gap-1.5 ml-1" ref={sizeMenuRef}>
-          <label htmlFor="task-table-page-size" className="sr-only">
-            {itemLabel === "nhiệm vụ" ? "Số lượng công việc trên mỗi trang" : `Số lượng ${itemLabel} trên mỗi trang`}
-          </label>
-
-          <Popover.Trigger
-            type="button"
+        {/* Chọn số dòng mỗi trang: menu chuẩn ui/menu (mục đang chọn nền accent, chữ đậm) */}
+        <MenuRoot open={isSizeMenuOpen} onOpenChange={setIsSizeMenuOpen}>
+          <MenuTrigger
+            render={<Button variant="toolbar" size="sm" />}
             id="task-table-page-size-trigger"
             aria-label={itemLabel === "nhiệm vụ" ? "Số lượng công việc trên mỗi trang" : `Số lượng ${itemLabel} trên mỗi trang`}
-            aria-expanded={isSizeMenuOpen}
-            aria-haspopup="listbox"
             disabled={disabled || totalItems === 0}
-            className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2.5 py-0.5 text-xs font-medium text-foreground shadow-2xs transition-[background-color,border-color,box-shadow,opacity] hover:bg-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
-              isSizeMenuOpen && "bg-selected"
-            )}
+            className="ml-1 data-[popup-open]:bg-selected"
           >
             <span className="font-mono tabular-nums">{pageSize} / trang</span>
-            <ChevronDown
-              className={cn(
-                "size-3 text-muted-foreground transition-transform duration-150",
-                isSizeMenuOpen && "rotate-180 text-foreground"
-              )}
-            />
-          </Popover.Trigger>
-
-          {/* Floating Dropdown Popover */}
-          {isSizeMenuOpen && (
-            <Popover.Portal>
-            <Popover.Positioner className="z-50" side="top" align="start" sideOffset={6} collisionPadding={12}>
-            <Popover.Popup
-              style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-              role="listbox"
-              aria-label={itemLabel === "nhiệm vụ" ? "Chọn số lượng công việc mỗi trang" : `Chọn số lượng ${itemLabel} mỗi trang`}
-              className="min-w-[124px] rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg shadow-black/10 animate-in fade-in-0 zoom-in-95 duration-100 text-popover-foreground"
-            >
-              <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border/40 mb-1">
-                Kích thước trang
-              </div>
-              {effectivePageSizeOptions.map((size) => {
-                const isSelected = size === pageSize;
-                return (
-                  <Pressable
-                    key={size}
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => {
-                      onPageSizeChange(size);
-                      setIsSizeMenuOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left font-mono tabular-nums",
-                      isSelected
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-foreground hover:bg-muted/70 hover:text-foreground"
-                    )}
-                  >
-                    <span>{size} / trang</span>
-                    {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={2} />}
-                  </Pressable>
-                );
-              })}
-            </Popover.Popup>
-            </Popover.Positioner>
-            </Popover.Portal>
-          )}
-
-          {/* Hidden native select for accessibility, testing & fallback sync */}
-          <select
-            id="task-table-page-size"
-            value={pageSize}
-            disabled={disabled || totalItems === 0}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="sr-only"
-            aria-hidden="true"
-            tabIndex={-1}
+            <ChevronDown className="size-3 text-muted-foreground" />
+          </MenuTrigger>
+          <MenuContent
+            side="top"
+            sideOffset={6}
+            positionerClassName="z-50"
+            className="min-w-32"
+            mobileSheet
+            sheetTitle="Kích thước trang"
           >
+            <MenuSubmenuTitle>Kích thước trang</MenuSubmenuTitle>
             {effectivePageSizeOptions.map((size) => (
-              <option key={size} value={size}>
+              <MenuActionItem
+                key={size}
+                selected={size === pageSize}
+                onClick={() => onPageSizeChange(size)}
+                className="font-mono tabular-nums"
+              >
                 {size} / trang
-              </option>
+              </MenuActionItem>
             ))}
-          </select>
-        </div>
-        </Popover.Root>
+          </MenuContent>
+        </MenuRoot>
       </div>
 
       {/* Right section: điều hướng trang. Di động chỉ còn ‹ x / n ›, máy tính hiện dãy số trang */}

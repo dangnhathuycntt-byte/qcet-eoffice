@@ -34,6 +34,7 @@ import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
 import { MENU_POPUP_CLASS, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
+import { Pressable } from "@/components/ui/pressable";
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
   { ssr: false }
@@ -380,16 +381,15 @@ export function AppSidebar() {
         >
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
+              <Pressable
                 onClick={toggleCollapse}
                 aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
                 aria-expanded={!isCollapsed}
                 aria-controls="app-sidebar"
-                className="flex h-12 w-3 items-center justify-center rounded-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-12 w-3 items-center justify-center rounded-full"
               >
                 <div className="h-8 w-1 rounded-full bg-border group-hover/collapse-trigger:bg-muted-foreground/50 transition-colors duration-150" />
-              </button>
+              </Pressable>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={10}>
               {isCollapsed ? "Mở rộng thanh bên [⌘B]" : "Thu gọn thanh bên [⌘B]"}

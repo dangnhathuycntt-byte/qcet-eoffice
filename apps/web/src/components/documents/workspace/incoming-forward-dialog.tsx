@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useDepartmentList, type DepartmentOption } from "@/hooks/use-department-list";
 import { cn } from "@/lib/utils";
 
+import { Spinner } from "@/components/ui/spinner";
 export type ForwardMode = "unit" | "person";
 
 export interface ForwardPayload {
@@ -177,7 +177,7 @@ export function IncomingForwardDialog({
               })
             }
           >
-            {pending ? <Loader2 className="size-3 animate-spin" /> : null}
+            {pending ? <Spinner size="xs" /> : null}
             Chuyển
           </Button>
         </div>

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { useTransform } from "motion/react";
 
+import { Spinner } from "@/components/ui/spinner";
 const CommandSearchModal = dynamic(
   () => import("@/components/layout/command-search-modal").then((mod) => mod.CommandSearchModal),
   { ssr: false }
@@ -145,9 +146,9 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
   // Khi chưa đăng nhập hoặc mất session trên protected route: hiển thị trạng thái chuyển hướng
   if (!isLoading && !isAuthenticated && !user) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-[#f4f5f7] dark:bg-zinc-950">
+      <div className="flex min-h-screen w-full items-center justify-center bg-sidebar">
         <div className="flex flex-col items-center gap-3">
-          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <Spinner tone="primary" className="size-6" />
           <p className="text-sm text-muted-foreground font-medium">Đang chuyển hướng đến trang đăng nhập...</p>
         </div>
       </div>

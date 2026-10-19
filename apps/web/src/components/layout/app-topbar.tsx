@@ -101,7 +101,7 @@ export function DesktopTopbar() {
   return (
     <header
       data-slot="desktop-topbar"
-      className="hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar dark:bg-zinc-950 select-none"
+      className="hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar select-none"
     >
       <Suspense fallback={<DesktopHeaderTitleFallback pathname={pathname} />}>
         <DesktopHeaderTitle pathname={pathname} />

@@ -8,11 +8,9 @@ import {
   Users,
   FileText,
   CheckCircle2,
-  AlertCircle,
   User,
   Building2,
   Hash,
-  Loader2,
   Play,
   FileEdit,
   Plus,
@@ -26,6 +24,14 @@ import { useState, useCallback } from "react";
 import { fadeVariants } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FormField } from "@/components/ui/form-field";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 
@@ -328,14 +334,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     >
       {/* Back + header */}
       <div className="flex items-start gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="mt-1 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          aria-label="Quay lại"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
+        <Button variant="ghost" size="icon-sm" onClick={() => router.back()} className="mt-1" aria-label="Quay lại">
+          <ArrowLeft />
+        </Button>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">
             {meeting.code && (
@@ -354,9 +355,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         <div className="rounded-xl border border-border/50 bg-card px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
             {canHold && (
-              <button
-                type="button"
-                disabled={holdLoading}
+              <Button
+                size="sm"
+                loading={holdLoading}
                 onClick={async () => {
                   setHoldLoading(true);
                   try {
@@ -369,32 +370,23 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                     setHoldLoading(false);
                   }
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                {holdLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
+                {!holdLoading && <Play />}
                 Bắt đầu họp
-              </button>
+              </Button>
             )}
 
             {canDraftMinutes && !showMinutesInput && (
-              <button
-                type="button"
-                onClick={() => setShowMinutesInput(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <FileEdit className="h-4 w-4" />
+              <Button size="sm" onClick={() => setShowMinutesInput(true)}>
+                <FileEdit />
                 Soạn biên bản
-              </button>
+              </Button>
             )}
 
             {canConfirmMinutes && (
-              <button
-                type="button"
-                disabled={confirmLoading}
+              <Button
+                size="sm"
+                loading={confirmLoading}
                 onClick={async () => {
                   setConfirmLoading(true);
                   try {
@@ -407,43 +399,36 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                     setConfirmLoading(false);
                   }
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                {confirmLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" />
-                )}
+                {!confirmLoading && <CheckCircle2 />}
                 Duyệt biên bản
-              </button>
+              </Button>
             )}
 
             {canAddResolution && !showResolutionForm && (
-              <button
-                type="button"
-                onClick={() => setShowResolutionForm(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <Plus className="h-4 w-4" />
+              <Button variant="toolbar" size="sm" onClick={() => setShowResolutionForm(true)}>
+                <Plus />
                 Thêm quyết nghị
-              </button>
+              </Button>
             )}
           </div>
 
           {/* Inline minutes textarea */}
           {showMinutesInput && (
             <div className="mt-3 space-y-2">
-              <textarea
+              <Textarea
+                compact
                 value={minutesText}
                 onChange={(e) => setMinutesText(e.target.value)}
                 placeholder="Nhập nội dung biên bản..."
+                aria-label="Nội dung biên bản"
                 rows={5}
-                className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={draftLoading || !minutesText.trim()}
+                <Button
+                  size="sm"
+                  loading={draftLoading}
+                  disabled={!minutesText.trim()}
                   onClick={async () => {
                     setDraftLoading(true);
                     try {
@@ -462,21 +447,19 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                       setDraftLoading(false);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {draftLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   Lưu biên bản
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="toolbar"
+                  size="sm"
                   onClick={() => {
                     setShowMinutesInput(false);
                     setMinutesText("");
                   }}
-                  className="inline-flex items-center rounded-lg border border-border px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   Hủy
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -489,156 +472,105 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                   <ListChecks className="h-4 w-4 text-muted-foreground" />
                   Thêm quyết nghị / kết luận
                 </div>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => {
                     setShowResolutionForm(false);
                     resetResolutionForm();
                   }}
-                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Đóng"
                 >
-                  <X className="h-4 w-4" />
-                </button>
+                  <X />
+                </Button>
               </div>
 
-              {resError && (
-                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                  {resError}
-                </div>
-              )}
+              {resError && <InlineAlert variant="error">{resError}</InlineAlert>}
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Tiêu đề <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={resTitle}
-                    onChange={(e) => setResTitle(e.target.value)}
-                    placeholder="Tiêu đề quyết nghị..."
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
+                <FormField label="Tiêu đề" className="sm:col-span-2">
+                  <Input compact value={resTitle} onChange={(e) => setResTitle(e.target.value)} placeholder="Tiêu đề quyết nghị..." />
+                </FormField>
 
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Nội dung <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
+                <FormField label="Nội dung" className="sm:col-span-2">
+                  <Textarea
+                    compact
                     value={resContent}
                     onChange={(e) => setResContent(e.target.value)}
                     placeholder="Nội dung quyết nghị / chỉ đạo..."
                     rows={3}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Mã quyết nghị
-                  </label>
-                  <input
-                    type="text"
-                    value={resCode}
-                    onChange={(e) => setResCode(e.target.value)}
-                    placeholder="VD: KL-01"
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <FormField label="Mã quyết nghị" optional>
+                  <Input compact value={resCode} onChange={(e) => setResCode(e.target.value)} placeholder="VD: KL-01" />
+                </FormField>
+
+                <FormField label="Hạn hoàn thành" optional>
+                  <VietnameseDatePicker variant="input" value={resDeadline} onChange={setResDeadline} />
+                </FormField>
+
+                <FormField label="Đơn vị phụ trách" optional>
+                  <Select
+                    compact
+                    value={resLeadUnitId || null}
+                    onValueChange={(v) => setResLeadUnitId(v ?? "")}
+                    placeholder="Chọn đơn vị"
+                    options={departments.map((d) => ({ value: d.id, label: d.name }))}
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Hạn hoàn thành
-                  </label>
-                  <input
-                    type="date"
-                    value={resDeadline}
-                    onChange={(e) => setResDeadline(e.target.value)}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <FormField label="Người phụ trách" optional>
+                  <Select
+                    compact
+                    value={resLeadUserId || null}
+                    onValueChange={(v) => setResLeadUserId(v ?? "")}
+                    placeholder="Chọn người"
+                    options={personnel.map((p) => ({
+                      value: p.id,
+                      label: `${p.name}${p.departmentName ? ` (${p.departmentName})` : ""}`,
+                    }))}
                   />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Đơn vị phụ trách
-                  </label>
-                  <select
-                    value={resLeadUnitId}
-                    onChange={(e) => setResLeadUnitId(e.target.value)}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">— Chọn đơn vị —</option>
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Người phụ trách
-                  </label>
-                  <select
-                    value={resLeadUserId}
-                    onChange={(e) => setResLeadUserId(e.target.value)}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">— Chọn người —</option>
-                    {personnel.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}{p.departmentName ? ` (${p.departmentName})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                </FormField>
               </div>
 
               {/* Create task toggle */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={resCreateTask}
-                    onChange={(e) => setResCreateTask(e.target.checked)}
-                    className="h-4 w-4 rounded border-border/50 text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  />
+                <label className="flex items-center gap-2 text-compact text-foreground">
+                  <Checkbox checked={resCreateTask} onChange={(e) => setResCreateTask(e.target.checked)} />
                   Tạo nhiệm vụ từ quyết nghị
                 </label>
                 {resCreateTask && (
-                  <input
-                    type="text"
+                  <Input
+                    compact
                     value={resTaskTitle}
                     onChange={(e) => setResTaskTitle(e.target.value)}
                     placeholder="Tiêu đề nhiệm vụ (để trống sẽ dùng tiêu đề quyết nghị)"
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Tiêu đề nhiệm vụ"
                   />
                 )}
               </div>
 
               {/* Submit / Cancel */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={resolutionLoading || !resTitle.trim() || !resContent.trim()}
+                <Button
+                  size="sm"
+                  loading={resolutionLoading}
+                  disabled={!resTitle.trim() || !resContent.trim()}
                   onClick={handleCreateResolution}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {resolutionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   Ban hành
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="toolbar"
+                  size="sm"
                   onClick={() => {
                     setShowResolutionForm(false);
                     resetResolutionForm();
                   }}
-                  className="inline-flex items-center rounded-lg border border-border px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   Hủy
-                </button>
+                </Button>
               </div>
             </div>
           )}

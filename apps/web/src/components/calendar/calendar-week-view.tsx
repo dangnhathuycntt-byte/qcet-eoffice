@@ -25,6 +25,7 @@ import { type DayTaskItem } from "./calendar-day-sheet";
 import { groupDayTaskItemsByDate } from "./day-task-items";
 import type { CalendarScope } from "./calendar-toolbar";
 
+import { Pressable } from "@/components/ui/pressable";
 export interface CalendarWeekViewProps {
   currentDate: string;
   tasks: SchoolTask[];
@@ -169,15 +170,14 @@ export function CalendarWeekView({
           {weekDays.map((day) => {
             const isSelected = selectedDate === day.date;
             return (
-              <button
+              <Pressable
                 key={day.date}
-                type="button"
                 onClick={() => {
                   onSelectDate(day.date);
                   onOpenDaySheet(day.date);
                 }}
                 className={cn(
-                  "py-2.5 px-1 sm:px-2 flex flex-col items-center justify-center gap-0.5 transition-colors text-center focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring min-h-[44px]",
+                  "py-2.5 px-1 sm:px-2 flex flex-col items-center justify-center gap-0.5 transition-colors text-center min-h-[44px]",
                   day.isToday && "bg-muted/40 font-semibold",
                   isSelected && "bg-selected",
                   !day.isToday && !isSelected && "hover:bg-muted/40"
@@ -197,7 +197,7 @@ export function CalendarWeekView({
                 >
                   {day.dayNumber}
                 </div>
-              </button>
+              </Pressable>
             );
           })}
         </div>
@@ -229,13 +229,12 @@ export function CalendarWeekView({
               >
                 {/* Per-day attention count summary — click opens Day Sheet */}
                 {totalCount > 0 && (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => {
                       onSelectDate(day.date);
                       onOpenDaySheet(day.date);
                     }}
-                    className="flex items-center gap-1 flex-wrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-xs"
+                    className="flex items-center gap-1 flex-wrap rounded-xs"
                     aria-label={`${totalCount} nhiệm vụ đến hạn ngày ${day.date}${overdueCount > 0 ? `, ${overdueCount} trễ hạn` : ""}`}
                   >
                     <span className="text-xs font-bold text-foreground tabular-nums">
@@ -246,7 +245,7 @@ export function CalendarWeekView({
                         {overdueCount} trễ hạn
                       </span>
                     )}
-                  </button>
+                  </Pressable>
                 )}
                 {dayTasks.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-xs text-muted-foreground/40 italic select-none">
@@ -257,9 +256,8 @@ export function CalendarWeekView({
                     const state = getCalendarAttentionState(task, referenceDate);
                     const isDone = state === "completed";
                     return (
-                      <button
+                      <Pressable
                         key={task.id}
-                        type="button"
                         onClick={() => {
                           if (task.originalTask) {
                             onSelectTask?.(task.originalTask);
@@ -269,7 +267,7 @@ export function CalendarWeekView({
                           }
                         }}
                         className={cn(
-                          "w-full text-left rounded-md p-1.5 border border-border/60 bg-card hover:border-primary/40 hover:shadow-2xs transition-all flex flex-col gap-1 group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
+                          "w-full text-left rounded-md p-1.5 border border-border/60 bg-card hover:border-primary/40 hover:shadow-2xs transition-all flex flex-col gap-1 group",
                           isDone && "opacity-60 bg-muted/20"
                         )}
                         title={task.title}
@@ -300,7 +298,7 @@ export function CalendarWeekView({
                             {task.assigneeName}
                           </p>
                         )}
-                      </button>
+                      </Pressable>
                     );
                   })
                 )}
@@ -337,9 +335,8 @@ export function CalendarWeekView({
                     )}
                   >
                     {overflowEvents.map((ev) => (
-                      <button
+                      <Pressable
                         key={ev.id}
-                        type="button"
                         onClick={() => {
                           if (onSelectEvent) {
                             onSelectEvent(ev);
@@ -348,14 +345,14 @@ export function CalendarWeekView({
                             onOpenDaySheet(day.date);
                           }
                         }}
-                        className="w-full text-left rounded-md px-1.5 py-1 border border-border/80 bg-background hover:bg-muted/50 hover:border-border transition-all shadow-2xs flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                        className="w-full text-left rounded-md px-1.5 py-1 border border-border/80 bg-background hover:bg-muted/50 hover:border-border transition-all shadow-2xs flex items-center gap-1"
                         aria-label={`Sự kiện: ${ev.title}${ev.time ? ` lúc ${ev.time}` : ""}`}
                       >
                         <CalendarIcon className="size-2.5 text-muted-foreground shrink-0" aria-hidden="true" />
                         <span className="text-xs font-medium text-foreground truncate">
                           {ev.time ? `${ev.time} ` : ""}{ev.title}
                         </span>
-                      </button>
+                      </Pressable>
                     ))}
                   </div>
                 );
@@ -400,9 +397,8 @@ export function CalendarWeekView({
                     >
                       {/* Sự kiện diễn ra trong giờ này */}
                       {hourEvents.map((ev) => (
-                        <button
+                        <Pressable
                           key={ev.id}
-                          type="button"
                           onClick={() => {
                             if (onSelectEvent) {
                               onSelectEvent(ev);
@@ -411,7 +407,7 @@ export function CalendarWeekView({
                               onOpenDaySheet(day.date);
                             }
                           }}
-                          className="w-full text-left rounded-lg p-2 border border-border/80 bg-background hover:bg-muted/50 hover:border-border transition-all text-foreground shadow-2xs space-y-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring z-10"
+                          className="w-full text-left rounded-lg p-2 border border-border/80 bg-background hover:bg-muted/50 hover:border-border transition-all text-foreground shadow-2xs space-y-1 z-10"
                           aria-label={`Sự kiện: ${ev.title} lúc ${ev.time || hourLabel}`}
                         >
                           <div className="flex items-center justify-between gap-1 text-xs font-mono tabular-nums text-muted-foreground">
@@ -433,13 +429,12 @@ export function CalendarWeekView({
                               Chủ trì: {ev.host || ev.assigneeName}
                             </p>
                           )}
-                        </button>
+                        </Pressable>
                       ))}
 
                       {/* Nút thêm sự kiện khi hover hoặc chạm vào ô trống */}
                       {onAddEventOnDate && (
-                        <button
-                          type="button"
+                        <Pressable
                           onClick={() => {
                             const startLabel = formatHourLabel(hour);
                             const endLabel = formatHourLabel(Math.min(hour + 1, HOUR_END));
@@ -449,7 +444,7 @@ export function CalendarWeekView({
                           aria-label={`Thêm sự kiện ngày ${day.date} lúc ${formatHourLabel(hour)}`}
                         >
                           <Plus className="size-4" />
-                        </button>
+                        </Pressable>
                       )}
                     </div>
                   );

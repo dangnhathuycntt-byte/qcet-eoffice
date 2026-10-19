@@ -18,7 +18,7 @@ const buttonVariants = cva(
         ghost:
           "text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:bg-selected aria-expanded:bg-selected aria-expanded:text-foreground",
         destructive:
-          "bg-danger-soft text-destructive focus-visible:outline-destructive",
+          "bg-danger-soft text-destructive hover:bg-destructive/15 focus-visible:outline-destructive",
         premium:
           "bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:bg-primary-hover",
         link: "text-primary underline-offset-4 hover:underline",
@@ -74,7 +74,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       });
     }
 
-    const spinnerSize = size === "xs" || size === "sm" || size === "pill" || size === "icon-xs" || size === "icon-sm" ? "xs" : "sm";
+    const spinnerSize = size === "xs" || size === "sm" || size === "pill" || size === "pill-xs" || size === "icon-xs" || size === "icon-sm" ? "xs" : "sm";
     return (
       <button
         ref={ref}

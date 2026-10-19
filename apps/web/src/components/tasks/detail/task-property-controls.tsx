@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   TaskIconAssignee,
   TaskIconDeadline,
@@ -79,6 +79,7 @@ import type { PersonnelOption } from "@/hooks/use-personnel-list";
 import { Pressable } from "@/components/ui/pressable";
 import { MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
+import { Spinner } from "@/components/ui/spinner";
 export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, loading, onSelect }: {
   items: PersonnelOption[];
   assigneeId?: string;
@@ -107,7 +108,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
         {/* Ô 16px cố định như các icon thuộc tính khác để chữ bắt đầu cùng một mép */}
         <span className="flex size-4 shrink-0 items-center justify-center">
           {pending ? (
-            <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" />
+            <Spinner className="motion-reduce:animate-none" />
           ) : selected || assigneeName ? (
             <UserAvatar name={selected?.name ?? assigneeName} avatarUrl={selected?.avatarUrl ?? assigneeAvatarUrl} size="sm" />
           ) : (

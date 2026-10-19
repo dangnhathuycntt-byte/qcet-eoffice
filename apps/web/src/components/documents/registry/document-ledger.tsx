@@ -538,8 +538,7 @@ const numberLabel = (doc: OfficialDocument): string | null =>
 
 function RowSelector({ checked, label, onToggle, always }: { checked: boolean; label: string; onToggle: () => void; always?: boolean }) {
   return (
-    <button
-      type="button"
+    <Pressable
       role="checkbox"
       aria-checked={checked}
       aria-label={label}
@@ -547,7 +546,7 @@ function RowSelector({ checked, label, onToggle, always }: { checked: boolean; l
         e.stopPropagation();
         onToggle();
       }}
-      className="relative flex size-7 items-center justify-center rounded outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
+      className="relative flex size-7 items-center justify-center rounded"
     >
       {checked ? (
         <span className="flex size-4 items-center justify-center rounded-[4px] bg-primary text-primary-foreground">
@@ -561,7 +560,7 @@ function RowSelector({ checked, label, onToggle, always }: { checked: boolean; l
           )}
         />
       )}
-    </button>
+    </Pressable>
   );
 }
 

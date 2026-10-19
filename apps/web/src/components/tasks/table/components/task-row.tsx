@@ -369,6 +369,7 @@ export const TaskRow = React.memo(function TaskRow({
           <div
             role="checkbox"
             aria-checked={isSelected}
+            aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === " " || e.key === "Enter") {
@@ -381,12 +382,13 @@ export const TaskRow = React.memo(function TaskRow({
             onClick={handleCheckboxClick}
             title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
           >
+            {/* design-lint-ignore no-raw-control: ô tích ẩn chỉ để đồng bộ trạng thái; ô tích thật là div role="checkbox" bên ngoài nên ẩn khỏi trình đọc màn hình */}
             <input
               type="checkbox"
               checked={isSelected}
               readOnly
               className="sr-only"
-              aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
+              aria-hidden="true"
               tabIndex={-1}
             />
             {isSelected ? (

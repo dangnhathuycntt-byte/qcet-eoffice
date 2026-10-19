@@ -35,8 +35,8 @@ function resolveParentTaskRef(item: { parentTaskTitle?: string; parentTaskCode?:
 
 function ParentTaskLink({ parent, onSelectTask }: { parent: ParentTaskRef; onSelectTask: (task: SchoolTask) => void }) {
   return (
-    <div className="flex items-center gap-1 text-xs text-slate-400 truncate">
-      <CornerDownRight className="size-2.5 text-slate-400 shrink-0" />
+    <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+      <CornerDownRight className="size-2.5 text-muted-foreground shrink-0" />
       <Pressable
         onClick={(e) => {
           e.stopPropagation();
@@ -46,7 +46,7 @@ function ParentTaskLink({ parent, onSelectTask }: { parent: ParentTaskRef; onSel
             taskCode: parent.code,
           } as SchoolTask);
         }}
-        className="hover:text-slate-700 truncate text-left"
+        className="hover:text-foreground truncate text-left"
       >
         {parent.code ? `[${parent.code}] ` : ""}{parent.title}
       </Pressable>
@@ -152,7 +152,7 @@ export function UniversalActionQueue({
     return (
       <div
         data-slot="universal-action-queue"
-        className={cn("py-8 text-center text-xs text-slate-400", className)}
+        className={cn("py-8 text-center text-xs text-muted-foreground", className)}
       >
         Không có nhiệm vụ cần xử lý gấp. Tất cả công việc đều đúng tiến độ.
       </div>
@@ -199,28 +199,28 @@ export function UniversalActionQueue({
       {/* Approvals Section */}
       {pendingApprovals.length > 0 && (
         <div className="space-y-1">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-            <span className="text-xs font-semibold text-slate-900">
+          <div className="flex items-center justify-between pb-1 border-b border-border">
+            <span className="text-xs font-semibold text-foreground">
               {scope === "school"
                 ? "Chờ BGH phê duyệt"
                 : scope === "unit"
                 ? "Hàng đợi thẩm định L1"
                 : "Hàng đợi thẩm định"}{" "}
-              <span className="font-mono font-normal text-slate-400 tabular-nums">
+              <span className="font-mono font-normal text-muted-foreground tabular-nums">
                 ({pendingApprovals.length})
               </span>
             </span>
             {onFilterCanvas && (
               <Pressable
                 onClick={() => onFilterCanvas("approvals")}
-                className="text-xs text-slate-400 hover:text-slate-700"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Lọc trên bảng
               </Pressable>
             )}
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border">
             {displayedApprovals.map((item, idx) => {
               const parent = resolveParentTaskRef(item);
 
@@ -239,14 +239,14 @@ export function UniversalActionQueue({
                     {parent && <ParentTaskLink parent={parent} onSelectTask={onSelectTask} />}
                     <Pressable
                       onClick={() => onSelectTask(item.task)}
-                      className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block"
+                      className="text-left text-xs font-medium text-foreground hover:text-primary truncate block"
                     >
                       {item.task.title}
                     </Pressable>
-                    <div className="flex items-center gap-2 text-xs text-slate-400 truncate">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
                       <span>{item.submittedBy || "Cán bộ chuyên trách"}</span>
                       {item.task.dueDate && (
-                        <span className={cn(isItemOverdue ? "text-destructive font-medium" : "text-slate-400")}>
+                        <span className={cn(isItemOverdue ? "text-destructive font-medium" : "text-muted-foreground")}>
                           • Hạn: {item.task.dueDate}
                         </span>
                       )}
@@ -278,7 +278,7 @@ export function UniversalActionQueue({
                     {scope === "unit" && onCreateSubtask && (
                       <Pressable
                         onClick={() => onCreateSubtask(item.task.id)}
-                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                        className="min-h-[30px] h-7 px-2 text-xs font-medium rounded text-muted-foreground bg-secondary hover:bg-accent transition-colors"
                         title="Phân rã nhiệm vụ cho chuyên viên"
                       >
                         Phân công
@@ -306,7 +306,7 @@ export function UniversalActionQueue({
           {pendingApprovals.length > 3 && (
             <Pressable
               aria-expanded={isApprovalsExpanded}
-              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center"
+              className="w-full py-1.5 text-xs text-muted-foreground hover:text-foreground text-center"
               onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
             >
               {isApprovalsExpanded
@@ -320,24 +320,24 @@ export function UniversalActionQueue({
       {/* Submissions Section */}
       {myPendingSubmissions.length > 0 && (
         <div className="space-y-1 pt-1">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-            <span className="text-xs font-semibold text-slate-900">
+          <div className="flex items-center justify-between pb-1 border-b border-border">
+            <span className="text-xs font-semibold text-foreground">
               Nhiệm vụ cần nộp hồ sơ minh chứng{" "}
-              <span className="font-mono font-normal text-slate-400 tabular-nums">
+              <span className="font-mono font-normal text-muted-foreground tabular-nums">
                 ({myPendingSubmissions.length})
               </span>
             </span>
             {onFilterCanvas && (
               <Pressable
                 onClick={() => onFilterCanvas("submissions")}
-                className="text-xs text-slate-400 hover:text-slate-700"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Xem trên bảng
               </Pressable>
             )}
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border">
             {displayedSubmissions.map((item, idx) => {
               const parent = resolveParentTaskRef(item);
 
@@ -350,11 +350,11 @@ export function UniversalActionQueue({
                     {parent && <ParentTaskLink parent={parent} onSelectTask={onSelectTask} />}
                     <Pressable
                       onClick={() => onSelectTask(item.task)}
-                      className="text-left text-xs font-medium text-slate-900 hover:text-blue-600 truncate block"
+                      className="text-left text-xs font-medium text-foreground hover:text-primary truncate block"
                     >
                       {item.task.title}
                     </Pressable>
-                    <div className="text-xs text-slate-400 truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {item.isOverdue ? (
                         <span className="text-destructive font-medium">
                           Trễ hạn: {item.dueDate}
@@ -370,7 +370,7 @@ export function UniversalActionQueue({
                       Chờ nộp BC
                     </span>
                     <Pressable
-                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-foreground bg-secondary hover:bg-accent transition-colors"
                       onClick={() => {
                         if (onOpenSubmit) {
                           const staffTask: StaffTask = ("assigneeName" in item.task)
@@ -408,7 +408,7 @@ export function UniversalActionQueue({
           {myPendingSubmissions.length > 3 && (
             <Pressable
               aria-expanded={isSubmissionsExpanded}
-              className="w-full py-1.5 text-xs text-slate-500 hover:text-slate-800 text-center"
+              className="w-full py-1.5 text-xs text-muted-foreground hover:text-foreground text-center"
               onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
             >
               {isSubmissionsExpanded

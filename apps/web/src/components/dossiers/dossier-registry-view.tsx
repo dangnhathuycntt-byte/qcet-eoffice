@@ -20,6 +20,8 @@ import { Pressable } from "@/components/ui/pressable";
 import { Button } from "@/components/ui/button";
 import { MobileTopbarActions } from "@/components/layout/app-topbar";
 
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -347,49 +349,57 @@ export function DossierRegistryView() {
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/60"
           />
-          <input
-            type="text"
+          <Input
+            compact
             placeholder="Tìm kiếm mã, tiêu đề..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="h-9 min-h-[44px] sm:min-h-0 w-full rounded-lg border border-border/60 bg-background pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-border focus:ring-1 focus:ring-ring/30"
+            className="w-full pl-9 pr-3"
           />
         </div>
 
         {/* Status filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
+        <Select
+          compact
+          aria-label="Lọc theo trạng thái"
+          value={statusFilter || null}
+          onValueChange={(v) => {
+            setStatusFilter(v ?? "");
             setPage(0);
           }}
-          className="h-9 min-h-[44px] sm:min-h-0 cursor-pointer appearance-none rounded-lg border border-border/60 bg-background px-3 pr-8 text-sm text-foreground outline-none focus:border-border focus:ring-1 focus:ring-ring/30"
-        >
-          <option value="">Tất cả trạng thái</option>
-          <option value="OPEN">Đang mở</option>
-          <option value="ACTIVE">Hoạt động</option>
-          <option value="CLOSED">Đã đóng</option>
-          <option value="READY_FOR_ARCHIVE">Sẵn sàng lưu trữ</option>
-          <option value="SUBMITTED_TO_ARCHIVE">Đã nộp lưu trữ</option>
-          <option value="ACCEPTED">Đã chấp nhận</option>
-          <option value="ARCHIVED">Đã lưu trữ</option>
-        </select>
+          placeholder="Tất cả trạng thái"
+          className="sm:w-48"
+          options={[
+            { value: "", label: "Tất cả trạng thái" },
+            { value: "OPEN", label: "Đang mở" },
+            { value: "ACTIVE", label: "Hoạt động" },
+            { value: "CLOSED", label: "Đã đóng" },
+            { value: "READY_FOR_ARCHIVE", label: "Sẵn sàng lưu trữ" },
+            { value: "SUBMITTED_TO_ARCHIVE", label: "Đã nộp lưu trữ" },
+            { value: "ACCEPTED", label: "Đã chấp nhận" },
+            { value: "ARCHIVED", label: "Đã lưu trữ" },
+          ]}
+        />
 
         {/* Classification filter */}
-        <select
-          value={classificationFilter}
-          onChange={(e) => {
-            setClassificationFilter(e.target.value);
+        <Select
+          compact
+          aria-label="Lọc theo phân loại"
+          value={classificationFilter || null}
+          onValueChange={(v) => {
+            setClassificationFilter(v ?? "");
             setPage(0);
           }}
-          className="h-9 min-h-[44px] sm:min-h-0 cursor-pointer appearance-none rounded-lg border border-border/60 bg-background px-3 pr-8 text-sm text-foreground outline-none focus:border-border focus:ring-1 focus:ring-ring/30"
-        >
-          <option value="">Tất cả phân loại</option>
-          <option value="PUBLIC">Công khai</option>
-          <option value="INTERNAL">Nội bộ</option>
-          <option value="RESTRICTED">Hạn chế</option>
-          <option value="PERSONAL_DATA">Dữ liệu cá nhân</option>
-        </select>
+          placeholder="Tất cả phân loại"
+          className="sm:w-48"
+          options={[
+            { value: "", label: "Tất cả phân loại" },
+            { value: "PUBLIC", label: "Công khai" },
+            { value: "INTERNAL", label: "Nội bộ" },
+            { value: "RESTRICTED", label: "Hạn chế" },
+            { value: "PERSONAL_DATA", label: "Dữ liệu cá nhân" },
+          ]}
+        />
       </div>
       )}
 
@@ -397,14 +407,13 @@ export function DossierRegistryView() {
       {fetchError && (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-6 py-8 text-center">
           <p className="text-sm text-red-700">{fetchError}</p>
-          <button
-            type="button"
+          <Pressable
             onClick={handleRefresh}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/60 bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted/60 active:scale-[0.98]"
           >
             <RefreshCw className="size-3" />
             Thử lại
-          </button>
+          </Pressable>
         </div>
       )}
 
@@ -574,25 +583,23 @@ export function DossierRegistryView() {
             {Math.min((page + 1) * PAGE_SIZE, total)} / {total} hồ sơ
           </p>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Pressable
               disabled={page === 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              className="inline-flex h-8 min-h-[44px] sm:min-h-0 cursor-pointer items-center rounded-lg border border-border/60 bg-background px-3 text-xs font-medium transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-8 min-h-[44px] sm:min-h-0 items-center rounded-lg border border-border/60 bg-background px-3 text-xs font-medium transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Trước
-            </button>
+            </Pressable>
             <span className="text-xs text-muted-foreground">
               Trang {page + 1} / {totalPages}
             </span>
-            <button
-              type="button"
+            <Pressable
               disabled={page + 1 >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="inline-flex h-8 min-h-[44px] sm:min-h-0 cursor-pointer items-center rounded-lg border border-border/60 bg-background px-3 text-xs font-medium transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-8 min-h-[44px] sm:min-h-0 items-center rounded-lg border border-border/60 bg-background px-3 text-xs font-medium transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Sau
-            </button>
+            </Pressable>
           </div>
         </div>
       )}

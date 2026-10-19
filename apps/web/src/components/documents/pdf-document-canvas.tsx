@@ -17,6 +17,7 @@ import {
 } from "@/lib/documents/pdf-layout";
 import { findHits, hasSearchableText, highlightItemHtml, toSearchQuery, type TextHit } from "@/lib/documents/pdf-text-index";
 
+import { Pressable } from "@/components/ui/pressable";
 // Worker phải khai báo cùng module với <Document> (theo tài liệu react-pdf).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -374,16 +375,15 @@ export default function PdfDocumentCanvas({
         <div role="alert" className="flex flex-col items-center gap-2 py-10 text-center">
           <p className="text-compact text-muted-foreground">{loadError}</p>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Pressable
               onClick={() => {
                 setLoadError(null);
                 setAttempt((n) => n + 1);
               }}
-              className="h-7 cursor-pointer rounded-md border border-border px-2.5 text-xs text-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-7 rounded-md border border-border px-2.5 text-xs text-foreground hover:bg-muted/60"
             >
               Thử lại
-            </button>
+            </Pressable>
             <a
               href={fileUrl}
               target="_blank"

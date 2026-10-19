@@ -4,6 +4,7 @@ import * as React from "react";
 import { Download, X, Smartphone, CheckCircle2 } from "lucide-react";
 import { usePWAOnboardingCoordinator } from "@/lib/pwa/onboarding-coordinator";
 
+import { Pressable } from "@/components/ui/pressable";
 export interface PWAInstallPromptProps {
   userId?: string | null;
   className?: string;
@@ -121,33 +122,30 @@ export function PWAInstallPrompt({
           </div>
         </div>
 
-        <button
-          type="button"
+        <Pressable
           onClick={handleDismiss}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
           aria-label="Để sau và đóng"
         >
           <X size={18} />
-        </button>
+        </Pressable>
       </div>
 
       <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3 border-0">
-        <button
-          type="button"
+        <Pressable
           onClick={handleDismiss}
-          className="min-h-[44px] px-4 py-2.5 rounded-xl border-0 bg-card hover:bg-muted text-foreground font-medium text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="min-h-[44px] px-4 py-2.5 rounded-xl border-0 bg-card hover:bg-muted text-foreground font-medium text-xs sm:text-sm transition-colors flex items-center justify-center"
         >
           Để sau
-        </button>
-        <button
-          type="button"
+        </Pressable>
+        <Pressable
           onClick={handleInstall}
           disabled={isProcessing}
-          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs sm:text-sm shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs sm:text-sm shadow-none transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Download size={16} />
           <span>{isProcessing ? "Đang xử lý..." : "Cài đặt ngay"}</span>
-        </button>
+        </Pressable>
       </div>
     </aside>
   );

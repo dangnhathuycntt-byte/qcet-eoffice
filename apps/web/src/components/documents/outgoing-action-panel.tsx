@@ -10,7 +10,6 @@ import {
   Hash,
   Stamp,
   RotateCcw,
-  Loader2,
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
@@ -22,6 +21,7 @@ import { StandardDialog } from "@/components/ui/dialog";
 import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
 import { OUTGOING_STEP_ACTIONS } from "@/lib/documents/outgoing-step-actions";
 
+import { Spinner } from "@/components/ui/spinner";
 interface ActionDef {
   label: string;
   description: string;
@@ -182,7 +182,7 @@ export function OutgoingActionPanel({
               className={cn("text-compact", actionDef.variant === "danger" && "text-destructive hover:text-destructive")}
             >
               {isLoading ? (
-                <Loader2 className="animate-spin motion-reduce:animate-none" />
+                <Spinner size="md" className="motion-reduce:animate-none" />
               ) : null}
               {actionDef.label}
             </Button>
@@ -244,7 +244,7 @@ export function OutgoingActionPanel({
                 onClick={() => executeAction(confirmAction, note || undefined)}
               >
                 {pending ? (
-                  <Loader2 className="animate-spin" />
+                  <Spinner size="md" />
                 ) : (
                   <Send />
                 )}

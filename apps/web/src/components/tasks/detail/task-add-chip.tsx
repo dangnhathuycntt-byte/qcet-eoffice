@@ -289,13 +289,12 @@ export function TaskPanelActions({
   return (
     <div className="flex items-center justify-end gap-1.5 pt-1">
       {leading ? <div className="mr-auto">{leading}</div> : null}
-      <button
-        type="button"
+      <Pressable
         onClick={onCancel}
-        className="inline-flex h-7 cursor-pointer items-center rounded-sm px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex h-7 items-center rounded-sm px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         Hủy
-      </button>
+      </Pressable>
       {children}
     </div>
   );

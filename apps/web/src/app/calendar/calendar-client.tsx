@@ -34,7 +34,6 @@ import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import type { TaskLevel } from "@qcet/shared/domain/tasks/create-task-policy";
 import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
 import { useAuth } from "@/lib/auth-context";
-import { useDismissOnOutside } from "@/hooks/use-dismiss-on-outside";
 import {
   getTodayIctDate,
   getAcademicYear,
@@ -50,6 +49,9 @@ import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
+import { Input } from "@/components/ui/input";
+import { PopoverContent, PopoverRoot, PopoverTrigger } from "@/components/ui/popover";
+import { Select } from "@/components/ui/select";
 import { MenuActionItem, MenuContent, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import { MobileTopbarActions } from "@/components/layout/app-topbar";
 
@@ -204,9 +206,7 @@ function CalendarRouteContent({
   const [levelFilter, setLevelFilter] = useState<"ALL" | "TRUONG" | "DON_VI">("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [isSecondaryOpen, setIsSecondaryOpen] = useState(false);
-  const secondaryRef = useRef<HTMLDivElement>(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   const hasActiveFilters = levelFilter !== "ALL" || statusFilter !== "ALL" || Boolean(searchQuery.trim());
@@ -237,8 +237,6 @@ function CalendarRouteContent({
     document.title = "Lịch Công Tác Học Vụ | QCET E-Office";
   }, []);
 
-  useDismissOnOutside(isFilterOpen, [filterDropdownRef], () => setIsFilterOpen(false));
-  useDismissOnOutside(isSecondaryOpen, [secondaryRef], () => setIsSecondaryOpen(false));
 
   const updateUrlParam = useCallback((key: string, value: string | null) => {
     if (typeof window === "undefined") return;
@@ -657,9 +655,8 @@ function CalendarRouteContent({
           <MenuRoot>
             <MenuTrigger
               render={
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
+                <Pressable
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] shrink-0 shadow-none"
                 />
               }
             >
@@ -740,12 +737,10 @@ function CalendarRouteContent({
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
         {/* Scope + Filter selector: Bộ lọc ▾ */}
-        <div className="relative" ref={filterDropdownRef}>
-          <Pressable
+        <PopoverRoot open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+          <PopoverTrigger
+            render={<Pressable />}
             aria-label="Bộ lọc"
-            onClick={() => setIsFilterOpen((previous) => !previous)}
-            aria-expanded={isFilterOpen}
-            aria-haspopup="listbox"
             className={cn(
               "inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors border border-border/80 bg-background",
               (hasActiveFilters || activeScope !== "school")
@@ -758,84 +753,80 @@ function CalendarRouteContent({
               <span className="inline-flex items-center justify-center size-4 rounded-full bg-foreground/85 text-xs text-background font-mono font-bold">{activeFilterCount}</span>
             )}
             <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isFilterOpen && "rotate-180")} />
-          </Pressable>
+          </PopoverTrigger>
 
-          {isFilterOpen && (
-            <div role="dialog" aria-label="Phạm vi và bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150 text-popover-foreground">
-              {/* Scope */}
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">Phạm vi</span>
-                <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex w-full items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5">
-                  {([["school", "Toàn trường"], ["unit", "Đơn vị"], ["my", "Của tôi"]] as const).map(([value, label]) => (
-                    <Pressable
-                      key={value}
-                      role="tab"
-                      aria-selected={activeScope === value}
-                      onClick={() => handleScopeChange(value)}
-                      className={cn(
-                        "flex-1 h-7 px-2 rounded-[4px] text-xs font-medium transition-all text-center select-none",
-                        activeScope === value ? "bg-background text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                      )}
-                    >
-                      {label}
-                    </Pressable>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-border/40" />
-
-              {/* Level filter */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
-                  {hasActiveFilters && (
-                    <Pressable onClick={handleResetFilters} className="text-xs text-muted-foreground hover:text-foreground">Đặt lại</Pressable>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  {([["ALL", "Tất cả"], ["TRUONG", "Trường"], ["DON_VI", "Đơn vị"]] as const).map(([value, label]) => (
-                    <Pressable
-                      key={value}
-                      onClick={() => setLevelFilter(value)}
-                      aria-pressed={levelFilter === value}
-                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", levelFilter === value ? "bg-selected border-transparent text-foreground font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
-                    >
-                      {label}
-                    </Pressable>
-                  ))}
-                </div>
-              </div>
-
-              {/* Status filter */}
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
-                <div className="grid grid-cols-2 gap-1">
-                  {([["ALL", "Tất cả"], ["IN_PROGRESS", "Đang làm"], ["COMPLETED", "Hoàn thành"], ["OVERDUE", "Trễ hạn"]] as const).map(([value, label]) => (
-                    <Pressable
-                      key={value}
-                      onClick={() => setStatusFilter(value)}
-                      aria-pressed={statusFilter === value}
-                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", statusFilter === value ? "bg-selected border-transparent text-foreground font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
-                    >
-                      {label}
-                    </Pressable>
-                  ))}
-                </div>
+          <PopoverContent align="start" aria-label="Phạm vi và bộ lọc" className="w-64 space-y-3 p-3">
+            {/* Scope */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">Phạm vi</span>
+              <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex w-full items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5">
+                {([["school", "Toàn trường"], ["unit", "Đơn vị"], ["my", "Của tôi"]] as const).map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    role="tab"
+                    aria-selected={activeScope === value}
+                    onClick={() => handleScopeChange(value)}
+                    className={cn(
+                      "flex-1 h-7 px-2 rounded-[4px] text-xs font-medium transition-all text-center select-none",
+                      activeScope === value ? "bg-background text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    )}
+                  >
+                    {label}
+                  </Pressable>
+                ))}
               </div>
             </div>
-          )}
-        </div>
+
+            <div className="border-t border-border/40" />
+
+            {/* Level filter */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
+                {hasActiveFilters && (
+                  <Pressable onClick={handleResetFilters} className="text-xs text-muted-foreground hover:text-foreground">Đặt lại</Pressable>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {([["ALL", "Tất cả"], ["TRUONG", "Trường"], ["DON_VI", "Đơn vị"]] as const).map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    onClick={() => setLevelFilter(value)}
+                    aria-pressed={levelFilter === value}
+                    className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", levelFilter === value ? "bg-selected border-transparent text-foreground font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
+                  >
+                    {label}
+                  </Pressable>
+                ))}
+              </div>
+            </div>
+
+            {/* Status filter */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
+              <div className="grid grid-cols-2 gap-1">
+                {([["ALL", "Tất cả"], ["IN_PROGRESS", "Đang làm"], ["COMPLETED", "Hoàn thành"], ["OVERDUE", "Trễ hạn"]] as const).map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    onClick={() => setStatusFilter(value)}
+                    aria-pressed={statusFilter === value}
+                    className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors select-none", statusFilter === value ? "bg-selected border-transparent text-foreground font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
+                  >
+                    {label}
+                  </Pressable>
+                ))}
+              </div>
+            </div>
+          </PopoverContent>
+        </PopoverRoot>
 
         {/* Spacer */}
         <div className="flex-1" aria-hidden="true" />
 
         {/* Secondary disclosure ⋯ */}
-        <div className="relative" ref={secondaryRef}>
-          <Pressable
-            onClick={() => setIsSecondaryOpen((previous) => !previous)}
-            aria-expanded={isSecondaryOpen}
-            aria-haspopup="dialog"
+        <PopoverRoot open={isSecondaryOpen} onOpenChange={setIsSecondaryOpen}>
+          <PopoverTrigger
+            render={<Pressable />}
             aria-label="Tùy chọn hiển thị"
             className={cn(
               "inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg transition-colors",
@@ -843,80 +834,78 @@ function CalendarRouteContent({
             )}
           >
             <MoreHorizontal className="size-4" />
-          </Pressable>
-
-          {isSecondaryOpen && (
-            <div role="dialog" aria-label="Tùy chọn hiển thị" className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
-              {/* Academic year */}
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">Năm học</span>
-                <label htmlFor="academic-year-select" className="sr-only">Năm học</label>
-                <select
-                  id="academic-year-select"
-                  value={selectedAcademicYear}
-                  onChange={(event) => {
-                    const academicYear = event.target.value;
-                    setSelectedAcademicYear(academicYear);
-                const newMonths = getAcademicMonthsForYear(academicYear);
-                if (newMonths.length > 0) {
-                  setSelectedMonthNumber(newMonths[0].monthNumber);
-                  handleSelectDate(newMonths[0].startDate);
-                  updateUrlParam("month", String(newMonths[0].monthNumber));
-                }
-                updateUrlParam("year", academicYear);
-              }}
-                  className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono tabular-nums"
-                >
-                  {availableAcademicYears.map((year) => (
-                    <option key={year} value={year}>{year.replace("-", " - ")}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="border-t border-border/40" />
-
-              {/* Search — inline expandable, not a permanent row */}
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">Lọc lịch hiện tại</span>
-                {isSearchExpanded ? (
-                  <div className="relative">
-                    <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="search"
-                      autoFocus
-                      placeholder="Tìm việc, sự kiện..."
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      className="w-full h-9 pl-8 pr-7 rounded-lg border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    />
-                    {searchQuery && (
-                      <Pressable
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground"
-                        aria-label="Xóa tìm kiếm"
-                      >
-                        <X className="mx-auto size-3.5" />
-                      </Pressable>
-                    )}
-                  </div>
-                ) : (
-                  <Pressable
-                    onClick={() => setIsSearchExpanded(true)}
-                    className={cn(
-                      "w-full min-h-9 flex items-center gap-2 px-2.5 rounded-lg border text-xs transition-colors text-left",
-                      searchQuery
-                        ? "border-primary/30 bg-primary/5 text-primary font-semibold"
-                        : "border-border/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    )}
-                  >
-                    <Search className="size-3.5 shrink-0" />
-                    {searchQuery || "Tìm việc, sự kiện..."}
-                  </Pressable>
-                )}
-              </div>
+          </PopoverTrigger>
+          <PopoverContent align="end" aria-label="Tùy chọn hiển thị" className="space-y-3 p-3">
+            {/* Academic year */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">Năm học</span>
+              <Select
+                compact
+                id="academic-year-select"
+                aria-label="Năm học"
+                value={selectedAcademicYear}
+                onValueChange={(academicYear) => {
+                  if (!academicYear) return;
+                  setSelectedAcademicYear(academicYear);
+                  const newMonths = getAcademicMonthsForYear(academicYear);
+                  if (newMonths.length > 0) {
+                    setSelectedMonthNumber(newMonths[0].monthNumber);
+                    handleSelectDate(newMonths[0].startDate);
+                    updateUrlParam("month", String(newMonths[0].monthNumber));
+                  }
+                  updateUrlParam("year", academicYear);
+                }}
+                positionerClassName="z-50"
+                className="font-mono tabular-nums"
+                options={availableAcademicYears.map((year) => ({ value: year, label: year.replace("-", " - ") }))}
+              />
             </div>
-          )}
-        </div>
+
+            <div className="border-t border-border/40" />
+
+            {/* Search — inline expandable, not a permanent row */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">Lọc lịch hiện tại</span>
+              {isSearchExpanded ? (
+                <div className="relative">
+                  <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <Input
+                    compact
+                    type="search"
+                    autoFocus
+                    placeholder="Tìm việc, sự kiện..."
+                    aria-label="Tìm việc, sự kiện"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="pl-8 pr-7"
+                  />
+                  {searchQuery && (
+                    <Pressable
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground"
+                      aria-label="Xóa tìm kiếm"
+                    >
+                      <X className="mx-auto size-3.5" />
+                    </Pressable>
+                  )}
+                </div>
+              ) : (
+                <Pressable
+                  onClick={() => setIsSearchExpanded(true)}
+                  className={cn(
+                    "w-full h-8 sm:h-7 flex items-center gap-2 px-2.5 rounded-lg border text-xs transition-colors text-left",
+                    searchQuery
+                      ? "border-primary/30 bg-primary/5 text-primary font-semibold"
+                      : "border-border/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  <Search className="size-3.5 shrink-0" />
+                  {searchQuery || "Tìm việc, sự kiện..."}
+                </Pressable>
+              )}
+            </div>
+          </PopoverContent>
+        </PopoverRoot>
       </div>
 
       {/* Active filter criteria with individual removal (Zero Silent Loss / Explicit State) */}

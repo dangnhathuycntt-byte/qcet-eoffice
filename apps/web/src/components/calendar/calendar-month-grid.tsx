@@ -27,6 +27,7 @@ import {
 import { type DayTaskItem } from "./calendar-day-sheet";
 import { groupDayTaskItemsByDate } from "./day-task-items";
 
+import { Pressable } from "@/components/ui/pressable";
 export type CalendarScope = "school" | "unit" | "my";
 
 export interface CalendarMonthGridProps {
@@ -320,9 +321,8 @@ export function CalendarMonthGrid({
                     );
                     const isDone = state === "completed";
                     return (
-                      <button
+                      <Pressable
                         key={taskEntry.id}
-                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           const legacyItem = entriesByDate === null
@@ -335,7 +335,7 @@ export function CalendarMonthGrid({
                           }
                         }}
                         className={cn(
-                          "w-full text-left flex items-center gap-1 rounded px-1 py-0.5 text-xs truncate transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
+                          "w-full text-left flex items-center gap-1 rounded px-1 py-0.5 text-xs truncate transition-colors",
                           "hover:bg-accent",
                           isDone && "opacity-50 line-through"
                         )}
@@ -344,24 +344,23 @@ export function CalendarMonthGrid({
                       >
                         <StatusIcon state={state} className="size-2.5" />
                         <span className="truncate leading-tight">{taskEntry.title}</span>
-                      </button>
+                      </Pressable>
                     );
                   })}
                 </div>
 
                 {/* Row 3: "+N việc" overflow button */}
                 {extraHidden > 0 && (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={(e) => {
                       e.stopPropagation();
                       openDay(cell.dateString);
                     }}
-                    className="mt-0.5 w-full text-left rounded px-1 py-0.5 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors tabular-nums focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+                    className="mt-0.5 w-full text-left rounded px-1 py-0.5 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors tabular-nums"
                     aria-label={`Xem thêm ${extraHidden} việc ngày ${cell.dateString}`}
                   >
                     +{extraHidden} việc
-                  </button>
+                  </Pressable>
                 )}
               </section>
             );

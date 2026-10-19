@@ -11,7 +11,6 @@ import {
   Smartphone,
   ShieldCheck,
   AlertCircle,
-  Loader2,
   Lock,
   Settings,
   RefreshCw,
@@ -40,6 +39,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
 
+import { Checkbox } from "@/components/ui/checkbox";
+import { Spinner } from "@/components/ui/spinner";
 const SNOOZE_KEY = "qcet-push-onboarding-dismissed";
 const SNOOZE_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -691,11 +692,10 @@ export function PushOnboardingSheet({
                           key={topic.id}
                           className="pt-3 first:pt-0 flex items-start gap-3 cursor-pointer group"
                         >
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={isChecked}
                             onChange={() => handleToggleTopic(topic.id)}
-                            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0"
+                            className="mt-0.5"
                           />
                           <div className="flex-1">
                             <div className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -719,7 +719,7 @@ export function PushOnboardingSheet({
                   className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Spinner className="size-5" />
                   ) : (
                     <Bell className="w-5 h-5" />
                   )}

@@ -85,8 +85,7 @@ function MenuRow({
   danger?: boolean;
 }) {
   return (
-    <button
-      type="button"
+    <Pressable
       role="menuitem"
       onClick={onClick}
       className={cn(ROW, danger && "text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10")}
@@ -94,7 +93,7 @@ function MenuRow({
       <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
       <span className="flex-1 truncate">{label}</span>
       {shortcut ? <Kbd>{shortcut}</Kbd> : null}
-    </button>
+    </Pressable>
   );
 }
 

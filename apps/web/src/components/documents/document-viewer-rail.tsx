@@ -11,6 +11,7 @@ import type { FilePreviewKind } from "@qcet/shared/lib/documents/file-viewer-sta
 import { Pressable } from "@/components/ui/pressable";
 import { SheetKeyboardSync } from "@/components/ui/menu";
 
+import { Input } from "@/components/ui/input";
 // Nút thao tác (có trạng thái hover), không phải hộp bọc icon tĩnh
 const RAIL_BUTTON = cn(
   "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md",
@@ -93,7 +94,8 @@ function SearchButton({ search }: { search: RailSearch }) {
         {open ? <SheetKeyboardSync /> : null}
         <PopoverTitle className="sr-only">Tìm trong tệp</PopoverTitle>
         <div className="flex items-center gap-1">
-          <input
+          <Input
+            compact
             autoFocus
             type="search"
             value={query}
@@ -106,7 +108,7 @@ function SearchButton({ search }: { search: RailSearch }) {
             }}
             placeholder="Tìm trong tệp"
             aria-label="Từ khóa cần tìm"
-            className="h-7 min-w-0 flex-1 rounded-md bg-muted/50 px-2 text-compact text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-w-0 flex-1"
           />
           <span className="w-10 shrink-0 text-center text-xs tabular-nums text-muted-foreground" aria-live="polite">
             {searching ? (total > 0 ? `${active + 1}/${total}` : "0") : ""}
@@ -153,18 +155,19 @@ function PageJumpForm({ pages, onDone }: { pages: RailPages; onDone: () => void 
         onDone();
       }}
     >
-      <input
+      <Input
+        compact
         autoFocus
         inputMode="numeric"
         value={draft}
         onChange={(event) => setDraft(event.target.value.replace(/\D/g, ""))}
         aria-label="Số trang"
-        className="h-7 min-w-0 flex-1 rounded-md bg-muted/50 px-2 text-compact tabular-nums text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="min-w-0 flex-1 tabular-nums"
       />
       <span className="shrink-0 text-xs tabular-nums text-muted-foreground">/ {total}</span>
-      <button type="submit" className="h-7 shrink-0 cursor-pointer rounded-md px-2 text-xs text-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring">
+      <Pressable type="submit" className="h-7 shrink-0 rounded-md px-2 text-xs text-foreground hover:bg-muted/60">
         Đi
-      </button>
+      </Pressable>
     </form>
   );
 }
@@ -424,8 +427,7 @@ export function FilesMenu({
             const isActive = file.id === activeId;
             return (
               <li key={file.id} role="presentation">
-                <button
-                  type="button"
+                <Pressable
                   role="option"
                   aria-selected={isActive}
                   aria-current={isActive ? "true" : undefined}
@@ -435,13 +437,13 @@ export function FilesMenu({
                     onSelect(file.id);
                     setOpen(false);
                   }}
-                  className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-muted/60"
                 >
                   <FileTypeIcon fileName={file.name} mimeType={file.mimeType} />
                   <span className={cn("min-w-0 flex-1 truncate text-compact text-foreground", isActive && "font-medium")}>{file.name}</span>
                   {file.detail ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{file.detail}</span> : null}
                   {isActive ? <Check className="size-4 shrink-0 text-foreground" aria-hidden /> : null}
-                </button>
+                </Pressable>
               </li>
             );
           })}
@@ -696,13 +698,12 @@ export function DocumentFilesRail({
           const isHover = file.id === hoverId;
           return (
             <li key={file.id} data-tick-id={file.id}>
-              <button
-                type="button"
+              <Pressable
                 onClick={() => onSelect(file.id)}
                 onFocus={() => focusTick(file.id)}
                 aria-label={`Xem tệp ${file.name}`}
                 aria-current={isActive ? "true" : undefined}
-                className="flex h-4 w-8 cursor-pointer items-center justify-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-4 w-8 items-center justify-center rounded-sm"
               >
                 <span
                   style={{ width: isActive || isHover ? 24 : tickWidth(file.name) }}
@@ -711,7 +712,7 @@ export function DocumentFilesRail({
                     isActive ? "bg-foreground" : isHover ? "bg-foreground/70" : "bg-muted-foreground/35",
                   )}
                 />
-              </button>
+              </Pressable>
             </li>
           );
         })}

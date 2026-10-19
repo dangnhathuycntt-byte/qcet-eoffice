@@ -3,6 +3,7 @@
 import * as React from "react";
 import { isAllowedDocxHref } from "@/lib/documents/docx-links";
 
+import { Pressable } from "@/components/ui/pressable";
 /** Lớp CSS gốc cho nội dung docx-preview (mọi lớp sinh ra đều có tiền tố này). */
 const DOCX_CLASS = "qcet-docx";
 
@@ -150,13 +151,12 @@ export default function DocxDocumentCanvas({ fileUrl, zoom }: DocxDocumentCanvas
       {status === "error" ? (
         <div role="alert" className="flex flex-col items-center gap-2 py-10 text-center">
           <p className="text-compact text-muted-foreground">{error}</p>
-          <button
-            type="button"
+          <Pressable
             onClick={() => setAttempt((n) => n + 1)}
-            className="h-7 cursor-pointer rounded-md border border-border px-2.5 text-xs text-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-7 rounded-md border border-border px-2.5 text-xs text-foreground hover:bg-muted/60"
           >
             Thử lại
-          </button>
+          </Pressable>
         </div>
       ) : null}
       <div ref={bodyRef} hidden={status !== "ready"} style={{ zoom: fit * zoom }} />

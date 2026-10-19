@@ -1446,10 +1446,11 @@ export function DesignShowcase() {
                   {/* Search box 280px pill */}
                   <div className="relative w-[280px]">
                     <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
+                    <Input
+                      compact
                       placeholder="Tìm kiếm nhiệm vụ…"
-                      className="h-8 w-full pl-8.5 pr-8 text-xs rounded-full bg-secondary/80 focus:bg-background border border-transparent focus:border-border/60 transition-all outline-none"
+                      aria-label="Tìm kiếm nhiệm vụ"
+                      className="rounded-full pl-8.5 pr-8"
                     />
                     <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full bg-card px-1.5 py-0.2 text-xs font-mono text-muted-foreground shadow-2xs">
                       /

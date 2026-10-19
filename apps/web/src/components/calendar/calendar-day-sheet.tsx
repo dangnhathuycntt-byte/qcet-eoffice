@@ -36,6 +36,8 @@ import {
 } from "@/lib/calendar/calendar-presentation";
 import { Pressable } from "@/components/ui/pressable";
 
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 export interface DayTaskItem {
   id: string;
   title: string;
@@ -357,12 +359,13 @@ export function CalendarDaySheet({
               {selectedDate && (
                 <MenuRoot>
                   <MenuTrigger
-                    className="inline-flex items-center justify-center h-7.5 px-2 text-xs font-medium gap-1 rounded-md border border-border/70 bg-background hover:bg-muted/50 text-foreground cursor-pointer transition-colors active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    render={<Button variant="toolbar" size="sm" />}
+                    className="data-[popup-open]:bg-selected"
                     aria-label="Tạo mới nhiệm vụ hoặc sự kiện"
                   >
-                    <Plus className="size-3" />
+                    <Plus />
                     <span>Tạo</span>
-                    <ChevronDown className="size-2.5 text-muted-foreground" />
+                    <ChevronDown className="size-3 text-muted-foreground" />
                   </MenuTrigger>
                   <MenuPortal>
                     <MenuPositioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
@@ -397,12 +400,14 @@ export function CalendarDaySheet({
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/60"
                   aria-hidden="true"
                 />
-                <input
+                <Input
+                  compact
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Lọc nhanh danh sách..."
-                  className="h-7 w-full rounded-md border border-border/50 bg-background pl-7 pr-2.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60"
+                  aria-label="Lọc nhanh danh sách"
+                  className="pl-7"
                 />
               </div>
             </div>

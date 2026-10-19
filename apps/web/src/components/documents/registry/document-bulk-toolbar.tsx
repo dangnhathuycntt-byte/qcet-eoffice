@@ -8,8 +8,7 @@ import {
   Archive,
   X,
   CheckSquare,
-  Loader2,
-} from "lucide-react";
+  } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
@@ -23,6 +22,7 @@ import { getIncomingActions } from "@/lib/documents/incoming-workflow";
 import { motionSpring, motionDuration, motionEase } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 
+import { Spinner } from "@/components/ui/spinner";
 // Hoàn tất hàng loạt đã bỏ: giải quyết văn bản cần báo cáo kết quả và hồ sơ như thao tác đơn lẻ.
 export type BulkActionType = "assign-unit" | "file";
 
@@ -512,7 +512,7 @@ export function DocumentBulkToolbar({
             </Button>
 
             <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="animate-spin motion-reduce:animate-none" />}
+              {isSubmitting && <Spinner size="md" className="motion-reduce:animate-none" />}
               <span>
                 {isSubmitting
                   ? "Đang xử lý..."

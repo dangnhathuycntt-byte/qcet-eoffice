@@ -5,15 +5,18 @@ import { StandardDialog } from "@/components/ui/dialog";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import {
   Clock,
-  Loader2,
   MapPin,
   User,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
+import { Spinner } from "@/components/ui/spinner";
 export interface CreateEventFormData {
   title: string;
   startDate: string;
@@ -160,7 +163,7 @@ export function CreateEventModal({
               <label htmlFor="calendar-event-title" className="block text-xs font-semibold text-foreground mb-1.5">
                 Tên sự kiện / Cuộc họp <span className="text-destructive">*</span>
               </label>
-              <input
+              <Input
                 ref={titleInputRef}
                 id="calendar-event-title"
                 type="text"
@@ -169,7 +172,8 @@ export function CreateEventModal({
                 onChange={(e) => setTitle(e.target.value)}
                 onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                 placeholder="VD: Giao ban Lãnh đạo Trường tháng 9"
-                className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                // Ô nhập trong hộp giữ 16px trên điện thoại để iOS không phóng trang, 14px trên desktop
+                className="text-base sm:text-sm"
               />
             </div>
 
@@ -192,13 +196,13 @@ export function CreateEventModal({
                   Bắt đầu
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="calendar-event-start-time"
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
                     onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
-                    className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    className="font-mono [&::-webkit-calendar-picker-indicator]:opacity-0"
                   />
                   <Clock className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
                 </div>
@@ -208,13 +212,13 @@ export function CreateEventModal({
                   Kết thúc
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="calendar-event-end-time"
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                     onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
-                    className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    className="font-mono [&::-webkit-calendar-picker-indicator]:opacity-0"
                   />
                   <Clock className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
                 </div>
@@ -227,14 +231,14 @@ export function CreateEventModal({
                   Địa điểm / Phòng họp
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="calendar-event-location"
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                     placeholder="VD: Phòng họp số 1"
-                    className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    className="pl-8"
                   />
                   <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
                 </div>
@@ -244,16 +248,16 @@ export function CreateEventModal({
                 <label htmlFor="calendar-event-type" className="block text-xs font-semibold text-foreground mb-1.5">
                   Cấp quản lý
                 </label>
-                <select
+                <Select
                   id="calendar-event-type"
                   value={scope}
-                  onChange={(e) => setScope(e.target.value as "SCHOOL" | "UNIT")}
-                  onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
-                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 cursor-pointer"
-                >
-                  <option value="SCHOOL">Cấp Trường (Toàn trường)</option>
-                  <option value="UNIT">Cấp Đơn vị (Nội bộ khoa/phòng)</option>
-                </select>
+                  onValueChange={(v) => { if (v) setScope(v as "SCHOOL" | "UNIT"); }}
+                  positionerClassName="z-50"
+                  options={[
+                    { value: "SCHOOL", label: "Cấp Trường (Toàn trường)" },
+                    { value: "UNIT", label: "Cấp Đơn vị (Nội bộ khoa/phòng)" },
+                  ]}
+                />
               </div>
             </div>
 
@@ -263,14 +267,14 @@ export function CreateEventModal({
                   Chủ trì cuộc họp
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="calendar-event-host"
                     type="text"
                     value={host}
                     onChange={(e) => setHost(e.target.value)}
                     onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                     placeholder="VD: TS. Nguyễn Văn A - Hiệu trưởng"
-                    className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    className="pl-8"
                   />
                   <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
                 </div>
@@ -281,14 +285,14 @@ export function CreateEventModal({
                   Thành phần tham dự
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     id="calendar-event-department"
                     type="text"
                     value={participants}
                     onChange={(e) => setParticipants(e.target.value)}
                     onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                     placeholder="VD: Ban Giám hiệu, Trưởng các Đơn vị"
-                    className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    className="pl-8"
                   />
                   <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
                 </div>
@@ -299,14 +303,14 @@ export function CreateEventModal({
               <label htmlFor="calendar-event-description" className="block text-xs font-semibold text-foreground mb-1.5">
                 Nội dung chuẩn bị / Ghi chú
               </label>
-              <textarea
+              <Textarea
                 id="calendar-event-description"
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                 placeholder="Ghi chú về tài liệu họp, nội dung chi tiết..."
-                className="w-full rounded-xl border border-border/80 bg-background p-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none"
+                className="min-h-0 resize-none"
               />
             </div>
           </form>
@@ -332,7 +336,7 @@ export function CreateEventModal({
           >
             {submitting ? (
               <>
-                <Loader2 className="size-3.5 animate-spin mr-1.5" />
+                <Spinner className="mr-1.5" />
                 Đang lưu...
               </>
             ) : (

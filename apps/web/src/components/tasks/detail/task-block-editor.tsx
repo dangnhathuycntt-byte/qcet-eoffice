@@ -118,7 +118,6 @@ import {
   Bookmark,
   Globe,
   UploadCloud,
-  Loader2,
   Highlighter,
   Table as TableIcon,
   AtSign,
@@ -149,9 +148,12 @@ import {
   type ContentBlockType,
 } from "@qcet/shared/lib/tasks/plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MENU_POPUP_CLASS, MenuActionItem, MenuContent, MenuRoot, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 
+import { Spinner } from "@/components/ui/spinner";
 /** Props chung cho mọi element renderer trong QCET Plate editor */
 type ElProps = RenderElementProps & {
   element: RenderElementProps["element"] & {
@@ -658,7 +660,8 @@ function MediaEmbedEl({ attributes, children, element }: any) {
             <TaskIconBlockEmbed className="size-6" />
             <span>Dán đường dẫn YouTube, Loom hoặc Drive</span>
             <div className="flex w-full max-w-sm items-center gap-1.5">
-              <input
+              <Input
+                compact
                 value={draftUrl}
                 onChange={(e) => setDraftUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -669,14 +672,11 @@ function MediaEmbedEl({ attributes, children, element }: any) {
                 }}
                 placeholder="https://..."
                 aria-label="Đường dẫn nhúng"
-                className="h-7 min-w-0 flex-1 rounded-md bg-muted/60 px-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:bg-muted"
+                className="min-w-0 flex-1"
               />
-              <Pressable
-                onClick={applyUrl}
-                className="h-7 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-              >
+              <Button size="xs" onClick={applyUrl}>
                 Nhúng
-              </Pressable>
+              </Button>
             </div>
           </div>
         )}
@@ -839,8 +839,7 @@ function ImageEl({ attributes, children, element }: any) {
                       <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90 cursor-pointer transition-opacity">
                         <UploadCloud className="size-3" />
                         <span>Tải ảnh khác</span>
-                        <input
-                          type="file"
+                        <input type="file"
                           accept="image/*"
                           className="hidden"
                           onChange={(e) => {
@@ -856,7 +855,7 @@ function ImageEl({ attributes, children, element }: any) {
               {isUploading && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-2xs flex items-center justify-center rounded-lg">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 shadow-sm border border-border text-xs text-foreground font-medium">
-                    <Loader2 className="size-3.5 animate-spin text-primary" />
+                    <Spinner tone="primary" />
                     <span>Đang tải ảnh lên máy chủ...</span>
                   </div>
                 </div>
@@ -896,6 +895,7 @@ function ImageEl({ attributes, children, element }: any) {
               // Điện thoại: CSS chung ép ô nhập 16px để iPhone không phóng trang khi chạm; giữ 16px thật nhưng thu hình còn 12px
               // (scale 0.75, rộng bù 133% và lùi lề để vẫn căn giữa đúng bề rộng ảnh), nên chú thích không to hơn chữ phụ
               <div style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }}>
+              {/* design-lint-ignore no-raw-control: chú thích ảnh không nền, căn giữa dưới ảnh như Notion; ui/Input ép nền, đệm và viền focus */}
               <input
                 type="text"
                 value={captionValue}
@@ -941,10 +941,9 @@ function ImageEl({ attributes, children, element }: any) {
             <div className="flex items-center gap-2">
               {uploadError && <span className="text-destructive text-xs">{uploadError}</span>}
               <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-2xs">
-                {isUploading ? <Loader2 className="size-3.5 animate-spin" /> : <UploadCloud className="size-3.5" />}
+                {isUploading ? <Spinner /> : <UploadCloud className="size-3.5" />}
                 <span>{isUploading ? "Đang tải ảnh..." : "Tải ảnh lên"}</span>
-                <input
-                  type="file"
+                <input type="file"
                   accept="image/*"
                   disabled={isUploading}
                   className="hidden"
@@ -1026,10 +1025,9 @@ function AttachmentEl({ attributes, children, element }: any) {
           <div className="flex max-w-full items-center gap-2 py-1 px-2.5 rounded-lg bg-muted/30 border border-dashed border-border/70 text-xs w-fit">
             <FileText className="size-3.5 text-muted-foreground" />
             <label className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer font-medium">
-              {isUploading ? <Loader2 className="size-3 animate-spin" /> : <UploadCloud className="size-3" />}
+              {isUploading ? <Spinner size="xs" /> : <UploadCloud className="size-3" />}
               <span>{isUploading ? "Đang tải tệp..." : "Tải tệp đính kèm lên"}</span>
-              <input
-                type="file"
+              <input type="file"
                 disabled={isUploading}
                 className="hidden"
                 onChange={(e) => {
@@ -1072,8 +1070,8 @@ function LinkBlockEl({ attributes, children, element }: any) {
         ) : (
           <div className="flex items-center gap-2 p-2 my-1 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
             <Link2 className="size-4 text-muted-foreground shrink-0" />
-            <input type="text" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setLinkUrl(draftUrl); }} placeholder="Dán đường dẫn liên kết (nhấn Enter)..." className="flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs" />
-            <Pressable onClick={() => { if (draftUrl.trim()) setLinkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Lưu</Pressable>
+            <Input compact value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setLinkUrl(draftUrl); }} placeholder="Dán đường dẫn liên kết (nhấn Enter)..." aria-label="Đường dẫn liên kết" className="min-w-0 flex-1" />
+            <Button size="xs" onClick={() => { if (draftUrl.trim()) setLinkUrl(draftUrl); }}>Lưu</Button>
           </div>
         )}
       </div>
@@ -1117,8 +1115,8 @@ function BookmarkEl({ attributes, children, element }: any) {
         ) : (
           <div className="flex items-center gap-2 p-2 my-1 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
             <Bookmark className="size-4 text-muted-foreground shrink-0" />
-            <input type="text" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setBookmarkUrl(draftUrl); }} placeholder="Dán link web để tạo thẻ dấu trang (nhấn Enter)..." className="flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs" />
-            <Pressable onClick={() => { if (draftUrl.trim()) setBookmarkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">Tạo thẻ</Pressable>
+            <Input compact value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setBookmarkUrl(draftUrl); }} placeholder="Dán link web để tạo thẻ dấu trang (nhấn Enter)..." aria-label="Đường dẫn dấu trang" className="min-w-0 flex-1" />
+            <Button size="xs" onClick={() => { if (draftUrl.trim()) setBookmarkUrl(draftUrl); }}>Tạo thẻ</Button>
           </div>
         )}
       </div>
@@ -1650,9 +1648,8 @@ function BlockRowDraggable({ children, element, compact }: { children: React.Rea
         contentEditable={false}
         data-plate-selectable="true"
       >
-        <button
+        <Pressable
           ref={handleRef}
-          type="button"
           contentEditable={false}
           tabIndex={-1}
           aria-label="Mở menu khối hoặc kéo để sắp xếp"
@@ -1668,12 +1665,11 @@ function BlockRowDraggable({ children, element, compact }: { children: React.Rea
             "cursor-grab active:cursor-grabbing transition-opacity duration-100",
             showBlockMenu ? "opacity-100" : "opacity-0 pointer-events-none",
             "group-hover/block:opacity-100 group-hover/block:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-            "focus-visible:ring-2 focus-visible:ring-primary/40",
             "motion-reduce:transition-none",
           )}
         >
           <GripVertical className="size-3.5 pointer-events-none" />
-        </button>
+        </Pressable>
       </div>
       <div ref={previewRef} className="flex-1 min-w-0">{children}</div>
       {dropLine && (
@@ -1754,6 +1750,7 @@ function SlashInputElement({ attributes, children, element }: any) {
     <span {...attributes}>
       <span contentEditable={false} className="inline-flex items-baseline text-muted-foreground">
         <span aria-hidden="true">/</span>
+        {/* design-lint-ignore no-raw-control: ô gõ lệnh "/" nằm giữa dòng chữ, rộng theo số ký tự; ui/Input là ô có nền và chiều cao cố định */}
         <input
           ref={setInputRef}
           value={query}
