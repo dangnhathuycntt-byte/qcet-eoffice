@@ -181,6 +181,15 @@ export function IconSidebarHistory(props: SidebarIconProps) {
   );
 }
 
+/** Đóng (dấu ×) ở chip cuộc trò chuyện trên thanh dưới của Trợ lý: hai nét chéo, cùng lưới 16 và nét với các icon khác. */
+export function IconSidebarClose(props: SidebarIconProps) {
+  return (
+    <SidebarSvg {...props}>
+      <path d="M4.25 4.25l7.5 7.5M11.75 4.25l-7.5 7.5" />
+    </SidebarSvg>
+  );
+}
+
 /**
  * 11. Mở/đóng sidebar: khung 14×12 trên lưới 16 và vạch ngăn lệch trái như nút sidebar của Linear (vẽ ở 14px).
  * Đang mở thì tô kín nửa trái khung.

@@ -23,7 +23,7 @@ import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-di
 import { useIsPhone } from "@/hooks/use-is-phone";
 import { cn } from "@/lib/utils";
 
-/** Báo cho khung chat nổi (đang ẩn ở trang này nhưng vẫn gắn) biết cuộc vừa đổi tên hay bị xóa. */
+/** Báo cho khung chat nổi (đang ẩn ở trang này nhưng vẫn gắn) biết cuộc vừa mở, đổi tên hay bị xóa. */
 function announceConversationChange(detail: AssistantConversationEventDetail) {
   window.dispatchEvent(new CustomEvent<AssistantConversationEventDetail>(ASSISTANT_CONVERSATION_EVENT, { detail }));
 }
@@ -65,6 +65,11 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
   const { thread, pending, activeId, activeTitle, activeContext, detailStatus } = chat;
   // Màn đầu: chưa có tin và không đang mở hay lỗi một cuộc
   const start = thread.length === 0 && (detailStatus === "idle" || detailStatus === "ready");
+
+  // Cuộc đang mở ở đây thành chip ở thanh dưới khi rời trang (như tab chat ở thanh Agent của Linear)
+  React.useEffect(() => {
+    if (activeId) announceConversationChange({ id: activeId, title: activeTitle, opened: true });
+  }, [activeId, activeTitle]);
 
   // Đang ở đáy thì tin mới tự cuộn theo; người dùng kéo lên đọc thì không bị kéo xuống
   const { listRef, stickToBottomRef, onScroll: onThreadScroll } = useStickToBottom(thread, activeId, !start);

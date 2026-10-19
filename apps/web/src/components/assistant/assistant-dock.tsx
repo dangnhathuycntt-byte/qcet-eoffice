@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
-import { formatConversationTime } from "@qcet/shared/domain/assistant/assistant-history";
+import { formatConversationTime, groupConversationsByRecency } from "@qcet/shared/domain/assistant/assistant-history";
 import { assistantErrorText, deleteConversationRequest, listConversationsRequest } from "@/components/assistant/assistant-client";
 import { ConversationRowsSkeleton } from "@/components/assistant/conversation-rows-skeleton";
 import { AssistantDockPanel } from "@/components/assistant/assistant-dock-panel";
@@ -12,7 +12,7 @@ import { ASSISTANT_CONVERSATION_EVENT, type AssistantConversationEventDetail } f
 import { useAssistantChat } from "@/components/assistant/use-assistant-chat";
 import { useCreateTaskLauncher } from "@/components/assistant/use-create-task-launcher";
 import { useStickToBottom } from "@/components/assistant/use-stick-to-bottom";
-import { IconSidebarAssistant, IconSidebarHistory } from "@/components/layout/sidebar-rounded-icons";
+import { IconSidebarAssistant, IconSidebarClose, IconSidebarHistory } from "@/components/layout/sidebar-rounded-icons";
 import { isAssistantPath } from "@/lib/navigation/active-matcher";
 import { Button } from "@/components/ui/button";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils";
 
 /** Số cuộc trong menu lịch sử của thanh dưới. */
 const HISTORY_COUNT = 8;
+/** Phím tắt mở/thu nhỏ khung chat như ⌘J của Linear Agent (ghi trong tooltip theo cách ghi ⌘B của sidebar). */
+const TOGGLE_SHORTCUT = "⌘J";
 
 /* ---------------------------------------------------------------------------------------------------------------
  * Cuộc đang mở trong khung nổi: nhớ theo trình duyệt (mã và tên) để tải lại trang vẫn còn chip. Bộ nhớ chỉ đọc một
@@ -86,10 +88,11 @@ function subscribeDock(listener: () => void) {
 }
 
 /**
- * Thanh dưới và khung chat nổi của Trợ lý trên mọi trang (máy tính), như thanh dưới của Linear: bên phải là chip cuộc
- * đang mở, nút "Trợ lý" (cuộc mới) và nút lịch sử. Trang Trợ lý tự là khung chat nên ẩn thanh và khung, nhưng vẫn giữ
- * trạng thái để lượt đang chạy không bị hủy khi chuyển sang đó. Điện thoại không có (thanh dưới trùng thanh điều hướng
- * dưới; mở Trợ lý từ menu).
+ * Thanh dưới và khung chat nổi của Trợ lý trên mọi trang (máy tính), như thanh Agent của Linear: bên phải là chip cuộc
+ * đang mở (như tab chat của Linear: tên ngắn, × để đóng, vòng quay khi đang trả lời, chấm khi có trả lời mới lúc thu
+ * nhỏ), nút "Trợ lý" (cuộc mới) và nút lịch sử; ⌘/Ctrl+J mở hoặc thu nhỏ khung. Cuộc mở ở trang Trợ lý thành chip khi
+ * rời trang. Trang Trợ lý tự là khung chat nên ẩn thanh và khung, nhưng vẫn giữ trạng thái để lượt đang chạy không bị
+ * hủy khi chuyển sang đó. Điện thoại không có (thanh dưới trùng thanh điều hướng dưới; mở Trợ lý từ menu).
  */
 export function AssistantDock() {
   const pathname = usePathname() ?? "";
@@ -103,6 +106,8 @@ export function AssistantDock() {
   const [draft, setDraft] = React.useState("");
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  // Trả lời xong lúc khung đang thu nhỏ: chấm trên chip tới khi mở khung (như chỉ báo "unread" của tab chat Linear)
+  const [unread, setUnread] = React.useState(false);
   const composerRef = React.useRef<HTMLTextAreaElement>(null);
   const chipRef = React.useRef<HTMLButtonElement>(null);
   const agentRef = React.useRef<HTMLButtonElement>(null);
@@ -165,12 +170,57 @@ export function AssistantDock() {
     writeDock(null);
     setDraft("");
     chat.clearAttachments();
+    setUnread(false);
   };
 
-  // Cuộc đổi tên hay bị xóa ở trang Trợ lý: cập nhật chip, hoặc bỏ cuộc đã xóa khỏi khung
+  /** Đưa cuộc khác lên chip (chọn ở lịch sử, hoặc vừa mở ở trang Trợ lý): bỏ chữ nháp và tệp đang chờ của cuộc cũ. */
+  const switchTo = (item: DockConversation) => {
+    if (item.id === parseDock(readDockRaw())?.id) return;
+    setDraft("");
+    chat.clearAttachments();
+    setUnread(false);
+    writeDock(item);
+  };
+
+  const shownOpen = panelOpen && !hidden;
+  const wasPendingRef = React.useRef(pending);
+  React.useEffect(() => {
+    if (wasPendingRef.current && !pending && !shownOpen) setUnread(true);
+    wasPendingRef.current = pending;
+  }, [pending, shownOpen]);
+  React.useEffect(() => {
+    if (shownOpen) setUnread(false);
+  }, [shownOpen]);
+
+  const toggleRef = React.useRef<() => void>(() => undefined);
+  toggleRef.current = () => (panelOpen ? minimize() : openPanel());
+  // ⌘/Ctrl+J ở mọi trang (kể cả khi đang gõ), trừ trang Trợ lý (đã là khung chat) và khi đang mở hộp thoại
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "KeyJ" && event.key.toLowerCase() !== "j") return;
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.repeat) return;
+      if (isAssistantPath(window.location.pathname) || document.querySelector('[role="dialog"][data-open], [role="alertdialog"][data-open]')) return;
+      event.preventDefault();
+      toggleRef.current();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Cuộc mở ở trang Trợ lý: lên chip, trừ khi khung đang trả lời hay đang soạn dở chữ, tệp cho cuộc khác. Cuộc đổi tên
+  // hay bị xóa ở trang Trợ lý: cập nhật chip, hoặc bỏ cuộc đã xóa khỏi khung
   const onConversationChangeRef = React.useRef<(detail: AssistantConversationEventDetail) => void>(() => undefined);
   onConversationChangeRef.current = (detail) => {
-    if (detail.id !== parseDock(readDockRaw())?.id) return;
+    const current = parseDock(readDockRaw());
+    if ("opened" in detail) {
+      if (detail.id === current?.id) {
+        if (detail.title && detail.title !== current.title) writeDock({ id: detail.id, title: detail.title });
+      } else if (!pending && !draftRef.current.trim() && chat.attachments.length === 0) {
+        switchTo({ id: detail.id, title: detail.title });
+      }
+      return;
+    }
+    if (detail.id !== current?.id) return;
     if ("deleted" in detail) return newChat();
     writeDock({ id: detail.id, title: detail.title });
     if (chat.readActiveId() === detail.id) chat.setActiveTitle(detail.title);
@@ -230,47 +280,80 @@ export function AssistantDock() {
           className="fixed bottom-0 left-[var(--sidebar-w)] right-0 z-30 hidden h-9 items-center justify-end gap-0.5 bg-sidebar px-2 md:flex"
         >
           {dock ? (
-            <Button
-              ref={chipRef}
-              variant="ghost"
-              size="sm"
-              aria-expanded={panelOpen}
-              onClick={() => (panelOpen ? minimize() : openPanel())}
-              className="max-w-56 font-normal"
-            >
-              {/* Thu nhỏ khi đang trả lời: vòng quay cho biết lượt vẫn chạy; tên nút đọc kèm trạng thái (Button tự đặt
-                  aria-busy theo `loading`, mà `loading` lại khóa nút) */}
-              {pending ? <Spinner size="xs" /> : null}
-              <span className="truncate">{chipTitle}</span>
-              {pending ? <span className="sr-only">, đang trả lời</span> : null}
-            </Button>
+            // Chip như tab chat ở thanh Agent của Linear: chữ nhạt, rê chuột hay đang mở thì nền và × hiện ra
+            <div className={cn("group/chip relative flex min-w-0 max-w-56 items-center rounded-md transition-colors hover:bg-accent", panelOpen && "bg-accent")}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    ref={chipRef}
+                    variant="ghost"
+                    size="sm"
+                    aria-expanded={panelOpen}
+                    onClick={() => (panelOpen ? minimize() : openPanel())}
+                    className={cn(
+                      "min-w-0 justify-start pr-7 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground",
+                      panelOpen && "text-foreground",
+                    )}
+                  >
+                    {/* Thu nhỏ khi đang trả lời: vòng quay cho biết lượt vẫn chạy; tên nút đọc kèm trạng thái (Button tự đặt
+                        aria-busy theo `loading`, mà `loading` lại khóa nút) */}
+                    {pending ? <Spinner size="xs" /> : null}
+                    <span className="truncate">{chipTitle}</span>
+                    {unread && !pending ? <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" /> : null}
+                    {pending ? <span className="sr-only">, đang trả lời</span> : null}
+                    {unread && !pending ? <span className="sr-only">, có trả lời mới</span> : null}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-80">
+                  {chipTitle} [{TOGGLE_SHORTCUT}]
+                </TooltipContent>
+              </Tooltip>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`Đóng cuộc trò chuyện ${chipTitle}`}
+                title="Đóng"
+                // Đóng như nút × của khung: bỏ cuộc khỏi thanh dưới (vẫn còn trong lịch sử), lượt đang chạy bị dừng
+                onClick={() => {
+                  newChat();
+                  minimize();
+                }}
+                className={cn(
+                  "absolute right-0.5 size-6 text-muted-foreground opacity-0 transition-opacity hover:bg-background/60 hover:text-foreground focus-visible:opacity-100 group-hover/chip:opacity-100 motion-reduce:transition-none",
+                  panelOpen && "opacity-100",
+                )}
+              >
+                <IconSidebarClose className="size-3" />
+              </Button>
+            </div>
           ) : null}
-          <Button
-            ref={agentRef}
-            variant="ghost"
-            size="sm"
-            // Chỉ là nút bật/tắt khi chưa có cuộc; có cuộc thì bấm là mở cuộc mới, chip mới là nút bật/tắt
-            aria-expanded={dock ? undefined : showingNewChat}
-            onClick={() => {
-              // Đang mở cuộc mới thì bấm lại là thu nhỏ; đang có cuộc thì mở cuộc mới (cuộc cũ vẫn ở lịch sử). Đang trả lời
-              // thì chỉ mở khung của lượt đó, không bỏ ngang lượt; muốn cuộc mới thì dùng mục trong menu "…"
-              if (showingNewChat) return minimize();
-              if (dock && !pending) newChat();
-              openPanel();
-            }}
-            className="font-normal"
-          >
-            <IconSidebarAssistant className="size-3.5" />
-            Trợ lý
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                ref={agentRef}
+                variant="ghost"
+                size="sm"
+                // Chỉ là nút bật/tắt khi chưa có cuộc; có cuộc thì bấm là mở cuộc mới, chip mới là nút bật/tắt
+                aria-expanded={dock ? undefined : showingNewChat}
+                onClick={() => {
+                  // Đang mở cuộc mới thì bấm lại là thu nhỏ; đang có cuộc thì mở cuộc mới (cuộc cũ vẫn ở lịch sử). Đang trả lời
+                  // thì chỉ mở khung của lượt đó, không bỏ ngang lượt; muốn cuộc mới thì dùng mục trong menu "…"
+                  if (showingNewChat) return minimize();
+                  if (dock && !pending) newChat();
+                  openPanel();
+                }}
+                className={cn("font-normal text-muted-foreground hover:text-foreground", showingNewChat && "bg-accent text-foreground")}
+              >
+                <IconSidebarAssistant className="size-3.5" />
+                Trợ lý
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{dock ? "Cuộc trò chuyện mới" : `Mở Trợ lý [${TOGGLE_SHORTCUT}]`}</TooltipContent>
+          </Tooltip>
           <DockHistoryButton
             activeId={dock?.id ?? null}
             onOpen={(item) => {
-              if (item.id !== dock?.id) {
-                setDraft("");
-                chat.clearAttachments();
-                writeDock({ id: item.id, title: item.title });
-              }
+              switchTo({ id: item.id, title: item.title });
               openPanel();
             }}
           />
@@ -426,28 +509,32 @@ function DockHistoryList({
       {state.status === "ready" && state.items.length === 0 ? (
         <p className="px-3 py-2 text-xs text-muted-foreground">Chưa có cuộc trò chuyện nào.</p>
       ) : null}
-      {state.items.length > 0 ? (
-        <ul className="flex flex-col gap-px" aria-label="Cuộc trò chuyện gần đây">
-          {state.items.map((item) => {
-            const time = formatConversationTime(item.lastMessageAt, now);
-            return (
-              <li key={item.id}>
-                <Pressable
-                  onClick={() => onOpen(item)}
-                  aria-current={item.id === activeId ? "true" : undefined}
-                  className="flex h-8 w-full items-center gap-3 rounded-lg px-3 text-left text-compact text-foreground transition-colors hover:bg-accent/50"
-                >
-                  <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                  {item.id === activeId ? <span className="shrink-0 text-xs text-muted-foreground">Hiện tại</span> : null}
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title={time.full}>
-                    {time.short}
-                  </span>
-                </Pressable>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      {/* Chia theo thời gian (Hôm nay, Hôm qua, 7 ngày qua, từng tháng) như lịch sử chat của Linear và menu ở trang Trợ lý */}
+      {groupConversationsByRecency(state.items, now).map((group) => (
+        <div key={group.key} className="flex flex-col">
+          <p className="flex h-7 select-none items-center px-3 text-xs text-muted-foreground">{group.label}</p>
+          <ul className="flex flex-col gap-px" aria-label={group.label}>
+            {group.items.map((item) => {
+              const time = formatConversationTime(item.lastMessageAt, now);
+              return (
+                <li key={item.id}>
+                  <Pressable
+                    onClick={() => onOpen(item)}
+                    aria-current={item.id === activeId ? "true" : undefined}
+                    className="flex h-8 w-full items-center gap-3 rounded-lg px-3 text-left text-compact text-foreground transition-colors hover:bg-accent/50"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                    {item.id === activeId ? <span className="shrink-0 text-xs text-muted-foreground">Hiện tại</span> : null}
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title={time.full}>
+                      {time.short}
+                    </span>
+                  </Pressable>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
       <div className="mt-1 border-t border-border/60 pt-1">
         <Link href="/assistant" onClick={onNavigate} className={cn("flex h-8 items-center rounded-lg px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground", focusRingClass)}>
           Mở trang Trợ lý

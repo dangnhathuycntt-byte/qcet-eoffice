@@ -51,11 +51,14 @@ export const ASSISTANT_EXAMPLES: readonly AssistantExample[] = [
 ];
 
 /**
- * Sự kiện trong tab khi một cuộc đổi tên hay bị xóa ở trang Trợ lý, để khung chat nổi (thanh dưới) cập nhật chip và
- * không giữ cuộc đã xóa.
+ * Sự kiện trong tab khi một cuộc được mở, đổi tên hay bị xóa ở trang Trợ lý, để khung chat nổi (thanh dưới) đưa cuộc
+ * đang mở lên chip, cập nhật tên và không giữ cuộc đã xóa.
  */
 export const ASSISTANT_CONVERSATION_EVENT = "qcet:assistant-conversation";
-export type AssistantConversationEventDetail = { id: string; title: string } | { id: string; deleted: true };
+export type AssistantConversationEventDetail =
+  | { id: string; title: string }
+  | { id: string; deleted: true }
+  | { id: string; title: string | null; opened: true };
 
 export const ASSISTANT_RATE_LIMIT_MESSAGE = "Thầy/Cô gửi hơi nhanh. Chờ một phút rồi thử lại.";
 export const ASSISTANT_NO_ANSWER_MESSAGE = "Trợ lý chưa trả lời xong. Thầy/Cô thử hỏi lại.";

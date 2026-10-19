@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { ArrowDown, FileText } from "lucide-react";
 import type { AssistantSourceRef, AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { agentReplyToPlainText } from "@qcet/shared/domain/tasks/agent-reply-format";
 import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
@@ -45,7 +45,13 @@ export interface ProposalTarget {
   proposal: AssistantTaskProposal;
 }
 
-/** Cột tin của cuộc đang mở: cuộn được, căn giữa, rộng tối đa 720px. Màn đầu (chưa có tin) do khung cha lo. */
+/** Cách đáy quá chừng này (px) thì hiện nút cuộn xuống tin mới nhất. */
+const SCROLL_BUTTON_OFFSET = 160;
+
+/**
+ * Cột tin của cuộc đang mở: cuộn được, căn giữa, rộng tối đa 720px. Màn đầu (chưa có tin) do khung cha lo. Kéo lên đọc
+ * thì có nút tròn ở đáy để về tin mới nhất (như ChatGPT, Claude), cột thôi bám đáy tới khi về lại đáy.
+ */
 export function AssistantThread({
   thread,
   detailStatus,
@@ -60,8 +66,20 @@ export function AssistantThread({
   onOpenProposal,
   onDismissProposal,
 }: AssistantThreadProps) {
+  const [awayFromBottom, setAwayFromBottom] = React.useState(false);
+  const handleScroll = () => {
+    onScroll();
+    const el = listRef.current;
+    if (el) setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > SCROLL_BUTTON_OFFSET);
+  };
+  const scrollToBottom = () => {
+    const el = listRef.current;
+    if (!el) return;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollTo({ top: el.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
+  };
   return (
-    <div ref={listRef} onScroll={onScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto" data-slot="assistant-thread">
+    <div ref={listRef} onScroll={handleScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto" data-slot="assistant-thread">
       <div className={cn("mx-auto flex w-full flex-col gap-6", compact ? "px-4 py-4" : "max-w-[752px] px-4 py-6 md:px-6")}>
         {context ? (
           <Link
@@ -102,6 +120,21 @@ export function AssistantThread({
           ),
         )}
       </div>
+      {/* Nút dính đáy vùng cuộn; khối cao 0 nên không chiếm chỗ dưới tin cuối */}
+      {awayFromBottom ? (
+        <div className="pointer-events-none sticky bottom-3 flex h-0 justify-center">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={scrollToBottom}
+            aria-label="Cuộn xuống tin mới nhất"
+            title="Cuộn xuống tin mới nhất"
+            className={cn("pointer-events-auto -translate-y-full rounded-full bg-background shadow-sm", ENTER_MOTION)}
+          >
+            <ArrowDown />
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
