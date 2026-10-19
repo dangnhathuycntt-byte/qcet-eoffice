@@ -43,6 +43,8 @@ export interface AssistantDockPanelProps {
   /** Mở hộp tạo nhiệm vụ đã điền theo thẻ đề xuất (ADR-010). */
   onOpenProposal: (target: ProposalTarget) => void;
   onDismissProposal: (replyKey: string, index: number, dismissed: boolean) => void;
+  /** "Tạo tất cả" trên thẻ danh sách đề xuất. */
+  onCreateProposals: (items: ProposalTarget[]) => void;
   onStop: () => void;
   sendError: string | null;
   /** Ảnh/tệp chờ gửi ở ô soạn (giữ trong `useAssistantChat` của `AssistantDock`). */
@@ -77,6 +79,7 @@ export function AssistantDockPanel({
   onRetry,
   onOpenProposal,
   onDismissProposal,
+  onCreateProposals,
   onStop,
   sendError,
   attachments,
@@ -177,6 +180,7 @@ export function AssistantDockPanel({
           onRetry={onRetry}
           onOpenProposal={onOpenProposal}
           onDismissProposal={onDismissProposal}
+          onCreateProposals={onCreateProposals}
           onNewChat={onNewChat}
           listRef={listRef}
           onScroll={onThreadScroll}

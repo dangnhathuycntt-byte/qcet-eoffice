@@ -113,7 +113,7 @@ export function AssistantDock() {
   const agentRef = React.useRef<HTMLButtonElement>(null);
 
   // Thẻ đề xuất nhiệm vụ trong khung mở hộp tạo nhiệm vụ của app ngay trên trang đang xem (ADR-010)
-  const { openCreateTask, createTaskModal } = useCreateTaskLauncher();
+  const { openCreateTask, openBulkCreate, createTaskModal } = useCreateTaskLauncher();
 
   const chat = useAssistantChat({
     conversationId: activated ? dock?.id : undefined,
@@ -397,6 +397,7 @@ export function AssistantDock() {
             openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task), chat.filesForReply(replyKey))
           }
           onDismissProposal={chat.proposalDismissed}
+          onCreateProposals={(items) => openBulkCreate(items, (item, task) => chat.proposalCreated(item.replyKey, item.index, task))}
           onStop={chat.stop}
           sendError={chat.sendError}
           attachments={chat.attachments}

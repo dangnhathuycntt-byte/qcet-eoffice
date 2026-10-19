@@ -311,6 +311,9 @@ export async function updateMessageProposal(
   now: Date = new Date(),
 ): Promise<AssistantMessageProposalDTO> {
   return prisma.$transaction(async (tx) => {
+    // Khóa dòng trước khi đọc: "Tạo tất cả" lưu nhiều thẻ của cùng tin liền nhau, đọc rồi ghi cả mảng mà không khóa thì
+    // lần ghi sau đè mất thẻ vừa lưu
+    await tx.$queryRaw`SELECT 1 FROM assistant_messages WHERE id = ${messageId} FOR UPDATE`;
     const row = await tx.assistantMessage.findFirst({
       where: { id: messageId, role: "assistant", conversation: visibleScope(userId, now) },
       select: { id: true, proposals: true },

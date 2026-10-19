@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchPersonByName, normalizeTaskProposal, proposalToTaskDraft } from '@qcet/shared/domain/assistant/assistant-task-proposal';
+import { matchPersonByName, normalizeTaskProposal, planProposalBatch, proposalToTaskDraft } from '@qcet/shared/domain/assistant/assistant-task-proposal';
 import { ASSISTANT_TOOL_DEFINITIONS, runAssistantTool, type AssistantToolContext } from '../src/server/assistant/assistant-tools';
 import { TASK_AGENT_SUBTASKS_MAX } from '@qcet/shared/domain/tasks/task-agent-draft';
 
@@ -100,6 +100,33 @@ describe('Đề xuất nhiệm vụ của Trợ lý: khớp tên người với 
         { title: 'Gửi giấy mời' },
       ],
     });
+  });
+});
+
+describe('"Tạo tất cả" đề xuất của Trợ lý: planProposalBatch', () => {
+  const plan = [
+    { title: 'Rà soát danh mục ERP, LMS tháng 8/2026', dueDate: '2026-08-31', leadAssigneeName: 'Đỗ Quang Minh' },
+    { title: 'Khảo sát nguồn dữ liệu tháng 9/2026', dueDate: '2026-09-30', leadAssigneeName: 'chị Lan' },
+    { title: 'Thiết kế quy trình số', leadAssigneeName: 'Vũ Thị Anh', subtasks: [{ title: 'Vẽ sơ đồ quy trình', assigneeName: 'anh Minh' }] },
+  ];
+
+  it('mỗi đề xuất thành nháp đã khớp người như hộp tạo; thiếu hạn hoặc chủ trì không khớp thì ghi trường thiếu', () => {
+    const rows = planProposalBatch(plan, PEOPLE);
+    assert.deepEqual(rows[0], { draft: { title: plan[0].title, dueDate: '2026-08-31', leadAssigneeId: 'minh' }, missing: [] });
+    // "chị Lan" khớp hai người: để trống, không đoán
+    assert.deepEqual(rows[1].missing, ['lead']);
+    assert.equal(rows[1].draft.leadAssigneeId, undefined);
+    // Không tự đặt hạn; việc con khớp người nhận theo tên
+    assert.deepEqual(rows[2].missing, ['dueDate']);
+    assert.deepEqual(rows[2].draft.subtasks, [{ title: 'Vẽ sơ đồ quy trình', assigneeId: 'minh' }]);
+  });
+
+  it('chủ trì người dùng chọn trong hộp chỉ điền cho đề xuất chưa khớp và phải thuộc nhân sự của đơn vị', () => {
+    const rows = planProposalBatch(plan, PEOPLE, 'anh');
+    assert.equal(rows[0].draft.leadAssigneeId, 'minh', 'đề xuất đã khớp giữ người của nó');
+    assert.equal(rows[1].draft.leadAssigneeId, 'anh');
+    assert.deepEqual(rows[1].missing, []);
+    assert.deepEqual(planProposalBatch(plan, PEOPLE, 'nguoi-ngoai')[1].missing, ['lead']);
   });
 });
 

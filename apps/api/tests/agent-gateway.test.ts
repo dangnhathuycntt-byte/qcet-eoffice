@@ -341,6 +341,14 @@ describe("callGateway: thân yêu cầu", () => {
     assert.equal(sent[3].body.max_tokens, 5048);
     assert.equal("reasoning_effort" in sent[3].body, false);
   });
+
+  test("outputTokens thay phần trả lời ngoài ngân sách suy nghĩ (Trợ lý soạn kế hoạch nhiều đề xuất)", async () => {
+    const sent = mockFetch(() => sseResponse(sse({ choices: [{ delta: { content: "ok" } }] }) + "data: [DONE]\n\n"));
+    await callGateway(MESSAGES, { config: { ...CONFIG, thinkingBudget: 2048 }, outputTokens: 12_000 });
+    await callGateway(MESSAGES, { config: CONFIG, outputTokens: 12_000 });
+    assert.equal(sent[0].body.max_tokens, 14_048);
+    assert.equal(sent[1].body.max_tokens, 12_000);
+  });
 });
 
 describe("draftTaskWithAgent: giữ hành vi cũ khi chuyển sang callGateway", () => {

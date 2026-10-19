@@ -17,6 +17,7 @@ import {
   type AssistantTaskProposal,
 } from "@qcet/contracts/assistant";
 import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
+import { dedupeSources } from "@qcet/shared/domain/assistant/assistant-sources";
 
 /** Câu gửi khi chỉ đính kèm tệp, không gõ chữ (như Agent tạo nhiệm vụ). */
 export const ASSISTANT_ATTACHMENT_ONLY_PROMPT = "Tóm tắt tệp đính kèm.";
@@ -121,6 +122,56 @@ export interface ThreadMessage {
 }
 
 export type { AssistantProposalTask } from "@qcet/contracts/assistant";
+
+/** Thẻ đề xuất thứ `index` của tin trả lời `replyKey`: mở hộp tạo nhiệm vụ hoặc lưu trạng thái thẻ theo vị trí này. */
+export interface ProposalTarget {
+  replyKey: string;
+  index: number;
+  proposal: AssistantTaskProposal;
+}
+
+/** Một đề xuất của cả cuộc trò chuyện, kèm trạng thái thẻ; `streaming`: lượt chưa xong, chưa thao tác được. */
+export interface ConversationProposalItem extends ProposalTarget {
+  created: AssistantProposalTask | null;
+  dismissed: boolean;
+  streaming: boolean;
+}
+
+/** Những gì cuộc trò chuyện đã sinh ra và dùng tới, cho bảng bên của trang Trợ lý (như Progress/Outputs của Claude). */
+export interface ConversationOutline {
+  proposals: ConversationProposalItem[];
+  /** Tệp đã lưu của các câu hỏi, theo thứ tự gửi, không trùng. */
+  files: AssistantAttachmentDTO[];
+  /** Nguồn Trợ lý đã dẫn trong các câu trả lời, theo thứ tự xuất hiện, không trùng. */
+  sources: AssistantSourceRef[];
+}
+
+export function conversationOutline(thread: readonly ThreadMessage[]): ConversationOutline {
+  const proposals: ConversationProposalItem[] = [];
+  const files = new Map<string, AssistantAttachmentDTO>();
+  const sources: AssistantSourceRef[] = [];
+  for (const message of thread) {
+    for (const file of message.storedAttachments ?? []) if (!files.has(file.id)) files.set(file.id, file);
+    if (message.role !== "assistant") continue;
+    sources.push(...message.sources);
+    message.proposals?.forEach((proposal, index) => {
+      proposals.push({
+        replyKey: message.key,
+        index,
+        proposal,
+        created: message.proposalTasks?.[index] ?? null,
+        dismissed: message.dismissedProposals?.includes(index) ?? false,
+        streaming: message.status === "streaming",
+      });
+    });
+  }
+  return { proposals, files: [...files.values()], sources: dedupeSources(sources) };
+}
+
+/** Đề xuất còn chờ tạo: chưa tạo, chưa bỏ qua, lượt đã xong. "Tạo tất cả" chỉ nhận những đề xuất này. */
+export function pendingProposals(items: readonly ConversationProposalItem[]): ConversationProposalItem[] {
+  return items.filter((item) => !item.created && !item.dismissed && !item.streaming);
+}
 
 /** Bỏ qua hoặc hoàn tác bỏ qua đề xuất thứ `index` của tin `replyKey`. */
 export function setProposalDismissed(thread: ThreadMessage[], replyKey: string, index: number, dismissed: boolean): ThreadMessage[] {

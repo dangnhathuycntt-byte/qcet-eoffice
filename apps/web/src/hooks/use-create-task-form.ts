@@ -310,7 +310,11 @@ function clearDraftStorage(): void {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────
-export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
+/**
+ * Đơn vị người dùng được tạo nhiệm vụ, kèm nhân sự: lãnh đạo thấy mọi đơn vị, người khác chỉ đơn vị của mình. Dùng
+ * chung cho hộp tạo nhiệm vụ và "Tạo tất cả" đề xuất của Trợ lý.
+ */
+export function useCreateTaskDepartments() {
   const { user } = useAuth();
   const isExecutive = isExecutiveUser(user);
 
@@ -336,6 +340,12 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
     );
     return filtered.length > 0 ? filtered : [];
   }, [isExecutive, allDepartments, userDeptCode, user?.department]);
+
+  return { user, isExecutive, userDeptCode, availableDepartments, isLoadingDepartments };
+}
+
+export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
+  const { isExecutive, userDeptCode, availableDepartments, isLoadingDepartments } = useCreateTaskDepartments();
 
   // ── Initial form data ───────────────────────────────────────
   const defaultDeptCode =

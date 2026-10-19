@@ -323,6 +323,8 @@ export type CreateTaskSubmitResult =
       idempotencyKey: string;
       attempts: number;
       status?: number;
+      /** 429: số giây máy chủ báo chờ (`Retry-After`) trước khi gửi lại. */
+      retryAfterSeconds?: number;
       error: string;
     };
 
@@ -435,10 +437,12 @@ export async function submitCreateTask(
       } catch {
         /* keep the status-derived message */
       }
+      const retryAfter = Number(response.headers?.get?.('Retry-After'));
       return {
         ok: false,
         reason: 'rejected',
         status: response.status,
+        ...(response.status === 429 && Number.isFinite(retryAfter) && retryAfter > 0 ? { retryAfterSeconds: retryAfter } : {}),
         idempotencyKey,
         attempts,
         error: message,

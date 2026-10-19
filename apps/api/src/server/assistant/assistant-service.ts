@@ -6,6 +6,7 @@
 import type { AssistantConversation, AssistantMessage } from "@prisma/client";
 import {
   ASSISTANT_CONTEXT_TYPES,
+  ASSISTANT_MAX_PROPOSALS_PER_TURN,
   ASSISTANT_TOOL_NAMES,
   type AssistantAttachmentDTO,
   type AssistantContextRef,
@@ -65,8 +66,16 @@ export const ASSISTANT_LIMITS = {
   turnTimeoutMs: 300_000,
   historyMessages: 12,
   historyChars: 16_000,
-  /** Số đề xuất nhiệm vụ (thẻ) tối đa trong một lượt; quá thì mô hình nhận lỗi, không hiện thêm thẻ. */
-  maxProposalsPerTurn: 3,
+  /**
+   * Số đề xuất nhiệm vụ (thẻ) tối đa trong một lượt; quá thì mô hình nhận lỗi, không hiện thêm thẻ. Lần gọi propose_task
+   * không đọc dữ liệu nên không tính vào `maxToolCallsPerRound` và `maxToolCharsPerTurn` (kế hoạch vài chục đầu việc).
+   */
+  maxProposalsPerTurn: ASSISTANT_MAX_PROPOSALS_PER_TURN,
+  /**
+   * Token cho phần trả lời và lời gọi công cụ của mỗi vòng (ngoài ngân sách suy nghĩ): mặc định của gateway (3000) chỉ đủ
+   * vài đề xuất có việc con, kế hoạch năm cần nhiều đề xuất trong một vòng.
+   */
+  outputTokens: 12_000,
   /**
    * Trả lời xong mà tên do mô hình đặt chưa có: chờ thêm tối đa chừng này trước `done`. Quá thì tên vẫn được ghi khi có
    * nhưng không báo trong lượt (luồng đóng ở `done`); danh sách tải lại sẽ có tên mới.
@@ -198,6 +207,11 @@ async function describeSafely(
     if (error instanceof ToolFailure) onRestricted?.(error.userMessage);
     return null;
   }
+}
+
+/** Lời gọi soạn đề xuất nhiệm vụ: không đọc dữ liệu, chỉ chịu giới hạn số đề xuất của lượt. */
+function isProposalCall(call: GatewayToolCall): boolean {
+  return call.name === "propose_task";
 }
 
 /** Mã loại công cụ dùng cho bước hiển thị; tên lạ thành "unknown". */
@@ -466,6 +480,7 @@ async function runTurn(
       try {
         completion = await deps.callGateway(lastRound ? toTextOnlyMessages(messages, FINAL_ROUND_NOTE) : messages, {
           tools: lastRound ? undefined : deps.toolDefinitions,
+          outputTokens: ASSISTANT_LIMITS.outputTokens,
           signal: turn.signal,
           timeoutMs: Math.max(1, Math.min(roundTimeoutMs, turnDeadline - Date.now())),
           onThinking: (delta) => emit({ type: "thinking", delta }),
@@ -519,14 +534,23 @@ async function runTurn(
       });
       messages.push(toAssistantToolCallMessage(completion.content, calls));
 
-      const batch = calls.slice(0, ASSISTANT_LIMITS.maxToolCallsPerRound);
-      const overflow = calls.slice(ASSISTANT_LIMITS.maxToolCallsPerRound);
-      // Cả batch vẫn chạy song song; kết quả chỉ được gửi theo thứ tự gọi khi còn trong ngân sách của cả lượt
-      const runs = await Promise.all(batch.map((call) => (budgetUsed ? null : runToolSafely(deps, call, toolCtx, turn.signal))));
+      // Đề xuất không đọc dữ liệu: không tính vào trần công cụ mỗi vòng (giới hạn riêng maxProposalsPerTurn)
+      const batch: typeof calls = [];
+      const overflow: typeof calls = [];
+      let readCalls = 0;
+      for (const call of calls) {
+        if (isProposalCall(call) || readCalls++ < ASSISTANT_LIMITS.maxToolCallsPerRound) batch.push(call);
+        else overflow.push(call);
+      }
+      // Cả batch vẫn chạy song song; kết quả đọc dữ liệu chỉ được gửi theo thứ tự gọi khi còn trong ngân sách của cả lượt
+      const runs = await Promise.all(
+        batch.map((call) => (budgetUsed && !isProposalCall(call) ? null : runToolSafely(deps, call, toolCtx, turn.signal))),
+      );
       for (const [index, call] of batch.entries()) {
         let run = runs[index];
+        const proposalCall = isProposalCall(call);
         // Kết quả vượt phần còn lại không gửi cho mô hình, không thêm bước và nguồn của nó
-        if (!run || budgetUsed || toolChars + run.content.length > ASSISTANT_LIMITS.maxToolCharsPerTurn) {
+        if (!run || (!proposalCall && (budgetUsed || toolChars + run.content.length > ASSISTANT_LIMITS.maxToolCharsPerTurn))) {
           budgetUsed = true;
           messages.push({ role: "tool", tool_call_id: call.id, content: TOOL_BUDGET_CONTENT });
           continue;
@@ -534,8 +558,10 @@ async function runTurn(
         if (run.proposal && proposals.length >= ASSISTANT_LIMITS.maxProposalsPerTurn) {
           run = { ...run, ok: false, proposal: undefined, content: PROPOSAL_LIMIT_CONTENT, step: { ...run.step, ok: false } };
         }
-        toolChars += run.content.length;
-        budgetUsed = toolChars >= ASSISTANT_LIMITS.maxToolCharsPerTurn;
+        if (!proposalCall) {
+          toolChars += run.content.length;
+          budgetUsed = toolChars >= ASSISTANT_LIMITS.maxToolCharsPerTurn;
+        }
         emit({ type: "step", step: run.step });
         steps.push(run.step);
         messages.push({ role: "tool", tool_call_id: call.id, content: run.content });

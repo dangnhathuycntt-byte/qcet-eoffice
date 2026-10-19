@@ -106,3 +106,30 @@ export function proposalToTaskDraft(proposal: AssistantTaskProposal, personnel: 
   }
   return draft;
 }
+
+/** Một đề xuất trong "Tạo tất cả": nháp đã khớp người như hộp tạo nhiệm vụ, cùng trường bắt buộc còn thiếu. */
+export interface ProposalBatchRow {
+  draft: TaskAgentDraft;
+  missing: Array<"dueDate" | "lead">;
+}
+
+/**
+ * Chuẩn bị "Tạo tất cả" (kế hoạch nhiều đề xuất, ADR-010): mỗi đề xuất thành nháp qua `proposalToTaskDraft`. Người chủ
+ * trì không khớp tên thì lấy `fallbackLeadId` (người dùng chọn trong hộp, phải thuộc `personnel`); vẫn trống thì thiếu
+ * "lead". Không tự đặt hạn: thiếu hạn thì đề xuất đó chờ người dùng mở hộp tạo riêng.
+ */
+export function planProposalBatch(
+  proposals: readonly AssistantTaskProposal[],
+  personnel: readonly TaskAgentPerson[],
+  fallbackLeadId?: string,
+): ProposalBatchRow[] {
+  const fallback = fallbackLeadId && personnel.some((person) => person.id === fallbackLeadId) ? fallbackLeadId : undefined;
+  return proposals.map((proposal) => {
+    const draft = proposalToTaskDraft(proposal, personnel);
+    if (!draft.leadAssigneeId && fallback) draft.leadAssigneeId = fallback;
+    const missing: ProposalBatchRow["missing"] = [];
+    if (!draft.dueDate) missing.push("dueDate");
+    if (!draft.leadAssigneeId) missing.push("lead");
+    return { draft, missing };
+  });
+}

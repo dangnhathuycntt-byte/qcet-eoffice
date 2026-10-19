@@ -10,6 +10,11 @@ import { TASK_AGENT_ATTACHMENT_MAX_FILES, type TaskAgentAttachmentKind } from "@
 export const ASSISTANT_RETENTION_DAYS = 90;
 export const ASSISTANT_MESSAGE_MAX = 4000;
 export const ASSISTANT_TITLE_MAX = 120;
+/**
+ * Số đề xuất (thẻ) tối đa trong một lượt: đủ cho kế hoạch năm 12 tháng, mỗi tháng 4 đầu việc, mỗi đầu việc là một
+ * nhiệm vụ (người dùng gửi kế hoạch năm 19/10/2026: "vài chục cái nhiệm vụ", đầu việc là việc lớn, không phải việc con).
+ */
+export const ASSISTANT_MAX_PROPOSALS_PER_TURN = 60;
 
 export const ASSISTANT_CONTEXT_TYPES = ["task", "document"] as const;
 export type AssistantContextType = (typeof ASSISTANT_CONTEXT_TYPES)[number];
@@ -53,9 +58,10 @@ export const AssistantRenameRequestSchema = z
  * Cập nhật trạng thái thẻ đề xuất thứ `index` của một tin trả lời: bỏ qua/hoàn tác, hoặc đã tạo nhiệm vụ `taskId`
  * (máy chủ chỉ nhận nhiệm vụ do chính người gọi tạo và lấy mã nhiệm vụ từ CSDL).
  */
+const proposalIndex = z.number().int().min(0).max(ASSISTANT_MAX_PROPOSALS_PER_TURN - 1);
 export const AssistantProposalUpdateRequestSchema = z.union([
-  z.object({ index: z.number().int().min(0).max(19), dismissed: z.boolean() }).strict(),
-  z.object({ index: z.number().int().min(0).max(19), taskId: entityId }).strict(),
+  z.object({ index: proposalIndex, dismissed: z.boolean() }).strict(),
+  z.object({ index: proposalIndex, taskId: entityId }).strict(),
 ]);
 export type AssistantProposalUpdateRequest = z.infer<typeof AssistantProposalUpdateRequestSchema>;
 

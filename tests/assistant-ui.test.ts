@@ -19,7 +19,9 @@ import {
   appendUniqueById,
   assistantHttpErrorMessage,
   conversationIdFromPath,
+  conversationOutline,
   describeContextTarget,
+  pendingProposals,
   isSendKey,
   isStopKey,
   markProposalCreated,
@@ -47,6 +49,7 @@ import { AgentModelsProvider } from "../apps/web/src/components/agent-chat/agent
 import { parseAgentModels } from "@qcet/shared/domain/agent/agent-models";
 import { TASK_AGENT_ATTACHMENT_ACCEPT } from "@qcet/shared/domain/tasks/task-agent-attachments";
 import { AssistantThread } from "../apps/web/src/components/assistant/assistant-thread";
+import { AssistantSidePanel, hasOutline } from "../apps/web/src/components/assistant/assistant-side-panel";
 import { AssistantHeader } from "../apps/web/src/components/assistant/assistant-header";
 import { AssistantStartList } from "../apps/web/src/components/assistant/assistant-start";
 import { listErrorText } from "../apps/web/src/components/assistant/use-assistant-history";
@@ -1138,5 +1141,112 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
       assert.ok(src.includes(use), `${file}: cùng chiều cao, lề với hàng thật`);
       assert.equal(/<Skeleton key=\{i\} className="h-(8|9) w-full/.test(src), false, `${file}: không còn khối kín hàng`);
     }
+  });
+});
+
+/** Kế hoạch nhiều đầu việc (người dùng gửi kế hoạch năm 19/10/2026): thẻ danh sách, cột bên, "Tạo tất cả". */
+describe("Trợ lý UI: kế hoạch nhiều đề xuất", () => {
+  const plan = Array.from({ length: 8 }, (_, i) => ({
+    title: `Đầu việc ${i + 1} của kế hoạch tháng ${i < 4 ? 8 : 9}/2026`,
+    dueDate: i < 4 ? "2026-08-31" : "2026-09-30",
+    leadAssigneeName: "Đặng Nhật Huy",
+  }));
+  const reply: ThreadMessage = {
+    ...streamingThreadMessage("reply-plan"),
+    id: "m-plan",
+    status: "complete",
+    content: "Tôi đã soạn 8 đề xuất.",
+    durationMs: 3000,
+    proposals: plan,
+    proposalTasks: { 0: { id: "t-1", code: "NV-2026-08-009" } },
+    dismissedProposals: [7],
+    sources: [SOURCE],
+  };
+  const question = userThreadMessage("u-plan", "Tạo nhiệm vụ theo kế hoạch", [], [
+    { id: "f-1", name: "Ke-hoach-nam-hoc.docx", size: 120_000, kind: "docx", url: "/api/file-objects/f-1" },
+  ]);
+
+  test("gom cả cuộc: đề xuất kèm trạng thái theo vị trí, tệp đã lưu, nguồn không trùng; chỉ đề xuất còn chờ vào \"Tạo tất cả\"", () => {
+    const outline = conversationOutline([question, reply, { ...reply, key: "reply-2", proposals: undefined, sources: [SOURCE] }]);
+    assert.equal(outline.proposals.length, 8);
+    assert.deepEqual(outline.proposals[0], { replyKey: "reply-plan", index: 0, proposal: plan[0], created: { id: "t-1", code: "NV-2026-08-009" }, dismissed: false, streaming: false });
+    assert.equal(outline.proposals[7].dismissed, true);
+    assert.deepEqual(outline.files.map((file) => file.id), ["f-1"]);
+    assert.deepEqual(outline.sources, [SOURCE]);
+    assert.deepEqual(pendingProposals(outline.proposals).map((item) => item.index), [1, 2, 3, 4, 5, 6]);
+    // Lượt chưa xong: đề xuất hiện nhưng chưa thao tác được
+    const live = conversationOutline([{ ...reply, status: "streaming" }]);
+    assert.equal(pendingProposals(live.proposals).length, 0);
+    assert.equal(hasOutline(conversationOutline([userThreadMessage("u", "chào")])), false);
+  });
+
+  test("từ PROPOSAL_LIST_MIN đề xuất: một thẻ danh sách gọn có \"Tạo tất cả\" thay cho từng thẻ lớn", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AssistantThread, {
+        thread: [question, reply],
+        detailStatus: "ready",
+        detailError: null,
+        onRetry: () => undefined,
+        onNewChat: () => undefined,
+        listRef: { current: null },
+        onScroll: () => undefined,
+        onOpenProposal: () => undefined,
+        onDismissProposal: () => undefined,
+        onCreateProposals: () => undefined,
+      }),
+    );
+    assert.ok(html.includes('aria-label="Đề xuất 8 nhiệm vụ"'));
+    assert.ok(html.includes("Đã tạo 1/8") && html.includes("Tạo tất cả (6)"), "chỉ đếm đề xuất còn chờ");
+    assert.ok(html.includes('href="/tasks/t-1"') && html.includes("NV-2026-08-009"), "đề xuất đã tạo mở nhiệm vụ");
+    assert.ok(html.includes("Xem thêm 2 đề xuất"), "hiện sẵn 6 hàng");
+    assert.equal(html.includes(">Xem lại và tạo<"), false, "không còn thẻ lớn từng đề xuất");
+    assert.ok(html.includes('aria-label="Xem lại và tạo: Đầu việc 2 của kế hoạch tháng 8/2026"'), "hàng còn chờ mở hộp tạo riêng");
+  });
+
+  test("cột bên là thẻ nổi: đề xuất gom theo hạn có tiến độ, tệp và nguồn đã dùng; không có nút X", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AssistantSidePanel, {
+        outline: conversationOutline([question, reply]),
+        onOpenProposal: () => undefined,
+        onCreateProposals: () => undefined,
+      }),
+    );
+    for (const text of ["Đề xuất nhiệm vụ", "1/8 đã tạo", "Tạo tất cả (6)", "Hạn 31/08/2026", "Hạn 30/09/2026", "Tệp", "Ke-hoach-nam-hoc.docx", "Nguồn đã dùng", "NV-2026-09-001"]) {
+      assert.ok(html.includes(text), text);
+    }
+    assert.equal((html.match(/Hạn 31\/08\/2026/g) ?? []).length, 1, "ngày ghi ở tiêu đề nhóm, hàng không lặp lại");
+    assert.ok(html.includes("rounded-xl") && html.includes("shadow-menu") && !html.includes("border-l"), "thẻ nổi, không kẻ chia trang");
+    assert.equal(html.includes("Ẩn cột bên"), false, "bật/tắt chỉ ở thanh đầu");
+  });
+
+  test("thanh đầu có nút cột bên với icon panel phải kiểu Linear, tiến độ trong nhãn; trang và khung nổi nối \"Tạo tất cả\"", () => {
+    const history = { items: [], status: "ready", error: null, hasMore: false, loadingMore: false, loadMore: async () => undefined, retry: async () => undefined, query: "", setQuery: () => undefined } as never;
+    const html = renderToStaticMarkup(
+      React.createElement(AssistantHeader, {
+        title: "Kế hoạch năm",
+        activeId: "c1",
+        history,
+        onNewChat: () => undefined,
+        onRename: () => undefined,
+        onDeleteRequest: () => undefined,
+        sidePanel: { open: true, onToggle: () => undefined, progress: "Đã tạo 1/8" },
+      }),
+    );
+    assert.ok(html.includes('aria-label="Ẩn cột bên: Đã tạo 1/8"') && html.includes('aria-pressed="true"'));
+    assert.ok(read("apps/web/src/components/assistant/assistant-header.tsx").includes("<IconSidebarPanelRight size={14} active={sidePanel.open} />"));
+    const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");
+    assert.ok(workspace.includes("onCreateProposals={createProposals}") && workspace.includes("<AssistantSidePanel"));
+    assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onCreateProposals={onCreateProposals}"));
+    const launcher = read("apps/web/src/components/assistant/use-create-task-launcher.tsx");
+    assert.ok(launcher.includes('import("@/components/assistant/assistant-bulk-create-dialog")'), "hộp tạo tất cả tải khi cần");
+  });
+
+  test("\"Tạo tất cả\" tạo lần lượt qua POST /api/tasks, giữ khóa idempotency khi chưa rõ kết quả, chạm giới hạn thì chờ rồi tạo tiếp", () => {
+    const dialog = read("apps/web/src/components/assistant/assistant-bulk-create-dialog.tsx");
+    assert.ok(dialog.includes("performCreateTaskSubmission(") && dialog.includes("idempotencyKey: idempotencyKeys.current.get(key)"));
+    assert.ok(dialog.includes("outcome.result.status === 429") && dialog.includes("retryAfterSeconds ?? RATE_LIMIT_FALLBACK_SECONDS"));
+    assert.ok(dialog.includes("await onCreated(item, task)"), "lưu thẻ xong mới tạo cái tiếp theo");
+    const chatHook = read("apps/web/src/components/assistant/use-assistant-chat.ts");
+    assert.ok(chatHook.includes("return saveProposal(replyKey, { index, taskId: task.id }"));
   });
 });

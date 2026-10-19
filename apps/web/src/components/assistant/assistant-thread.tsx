@@ -12,9 +12,9 @@ import { Button } from "@/components/ui/button";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { cn } from "@/lib/utils";
-import { ASSISTANT_NO_ANSWER_MESSAGE, type ThreadMessage } from "@/components/assistant/assistant-model";
+import { ASSISTANT_NO_ANSWER_MESSAGE, type ProposalTarget, type ThreadMessage } from "@/components/assistant/assistant-model";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
-import { AssistantTaskProposalCard } from "@/components/assistant/assistant-task-proposal-card";
+import { AssistantProposalList, AssistantTaskProposalCard, PROPOSAL_LIST_MIN } from "@/components/assistant/assistant-task-proposal-card";
 
 const MAX_SHOWN_SOURCES = 6;
 const ENTER_MOTION = "motion-safe:animate-[fade-in_0.3s_cubic-bezier(0.16,1,0.3,1)]";
@@ -37,13 +37,11 @@ export interface AssistantThreadProps {
   onOpenProposal?: (target: ProposalTarget) => void;
   /** Bỏ qua (hoặc hoàn tác bỏ qua) thẻ đề xuất thứ `index` của tin `replyKey`; không truyền thì thẻ không có nút Bỏ qua. */
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
+  /** "Tạo tất cả" trên thẻ danh sách (từ PROPOSAL_LIST_MIN đề xuất): mở hộp tạo các đề xuất còn chờ của tin đó. */
+  onCreateProposals?: (items: ProposalTarget[]) => void;
 }
 
-export interface ProposalTarget {
-  replyKey: string;
-  index: number;
-  proposal: AssistantTaskProposal;
-}
+export type { ProposalTarget } from "@/components/assistant/assistant-model";
 
 /** Cách đáy quá chừng này (px) thì hiện nút cuộn xuống tin mới nhất. */
 const SCROLL_BUTTON_OFFSET = 160;
@@ -65,6 +63,7 @@ export function AssistantThread({
   compact = false,
   onOpenProposal,
   onDismissProposal,
+  onCreateProposals,
 }: AssistantThreadProps) {
   const [awayFromBottom, setAwayFromBottom] = React.useState(false);
   const handleScroll = () => {
@@ -116,6 +115,7 @@ export function AssistantThread({
               pending={pending}
               onOpenProposal={onOpenProposal}
               onDismissProposal={onDismissProposal}
+              onCreateProposals={onCreateProposals}
             />
           ),
         )}
@@ -175,12 +175,14 @@ function ReplyTurn({
   pending,
   onOpenProposal,
   onDismissProposal,
+  onCreateProposals,
 }: {
   message: ThreadMessage;
   onRetry: () => void;
   pending: boolean;
   onOpenProposal?: (target: ProposalTarget) => void;
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
+  onCreateProposals?: (items: ProposalTarget[]) => void;
 }) {
   const streaming = message.status === "streaming";
   // Chữ hiện dần kể cả khi gateway gửi cả cục; tin mở từ lịch sử hiện ngay
@@ -233,7 +235,14 @@ function ReplyTurn({
       ) : null}
 
       {/* Thẻ đề xuất hiện cùng nguồn, sau khi chữ chạy xong, để câu dẫn của Trợ lý đứng trước thẻ */}
-      {settled && message.proposals?.length ? (
+      {settled && message.proposals && message.proposals.length >= PROPOSAL_LIST_MIN ? (
+        <ReplyProposalList
+          message={message}
+          onOpenProposal={onOpenProposal}
+          onDismissProposal={onDismissProposal}
+          onCreateProposals={onCreateProposals}
+        />
+      ) : settled && message.proposals?.length ? (
         <div className="flex flex-col gap-2">
           {message.proposals.map((proposal, index) => (
             <AssistantTaskProposalCard
@@ -269,6 +278,36 @@ function ReplyTurn({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Thẻ danh sách của tin có nhiều đề xuất; "Tạo tất cả" và "Bỏ qua" chỉ tác động các đề xuất còn chờ. */
+function ReplyProposalList({
+  message,
+  onOpenProposal,
+  onDismissProposal,
+  onCreateProposals,
+}: {
+  message: ThreadMessage;
+  onOpenProposal?: (target: ProposalTarget) => void;
+  onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
+  onCreateProposals?: (items: ProposalTarget[]) => void;
+}) {
+  const items = (message.proposals ?? []).map((proposal, index) => ({
+    replyKey: message.key,
+    index,
+    proposal,
+    created: message.proposalTasks?.[index] ?? null,
+    dismissed: message.dismissedProposals?.includes(index) ?? false,
+  }));
+  const waiting = items.filter((item) => !item.created && !item.dismissed);
+  return (
+    <AssistantProposalList
+      items={items}
+      onOpen={onOpenProposal ? (index) => onOpenProposal(items[index]) : undefined}
+      onCreateAll={onCreateProposals ? () => onCreateProposals(waiting) : undefined}
+      onDismissAll={onDismissProposal ? () => waiting.forEach((item) => onDismissProposal(message.key, item.index, true)) : undefined}
+    />
   );
 }
 

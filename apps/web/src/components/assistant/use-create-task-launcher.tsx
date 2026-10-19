@@ -4,12 +4,21 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useFeedback } from "@/components/ui/feedback-layer";
-import type { AssistantTaskProposal } from "@qcet/contracts/assistant";
+import type { AssistantProposalTask, AssistantTaskProposal } from "@qcet/contracts/assistant";
+import type { ProposalTarget } from "@/components/assistant/assistant-model";
 
 /** Hộp tạo nhiệm vụ của app: tải khi bấm lần đầu, không nặng thêm lúc mở trang. */
 const CreateTaskModal = dynamic(() => import("@/components/tasks/create/create-task-modal").then((mod) => mod.CreateTaskModal), {
   ssr: false,
 });
+
+/** Hộp "Tạo tất cả" đề xuất: cũng chỉ tải khi bấm lần đầu. */
+const AssistantBulkCreateDialog = dynamic(
+  () => import("@/components/assistant/assistant-bulk-create-dialog").then((mod) => mod.AssistantBulkCreateDialog),
+  { ssr: false },
+);
+
+type BulkCreated = (item: ProposalTarget, task: AssistantProposalTask) => Promise<void> | void;
 
 /**
  * Hộp tạo nhiệm vụ chuẩn của Trợ lý: thẻ "Tạo nhiệm vụ" ở màn đầu mở hộp trống, thẻ đề xuất (propose_task, ADR-010) mở
@@ -27,6 +36,12 @@ export function useCreateTaskLauncher(): {
     onCreated?: (task: { id: string; code: string | null }) => void,
     files?: File[] | Promise<File[]>,
   ) => void;
+  /**
+   * "Tạo tất cả": hộp xem các đề xuất còn chờ và tự bấm Tạo một lần; `onCreated` báo từng nhiệm vụ vừa tạo cho thẻ của
+   * nó (trả promise thì hộp chờ lưu xong mới tạo cái tiếp theo).
+   */
+  openBulkCreate: (items: ProposalTarget[], onCreated: BulkCreated) => void;
+  /** Gắn cả hộp tạo nhiệm vụ lẫn hộp "Tạo tất cả". */
   createTaskModal: React.ReactNode;
 } {
   const router = useRouter();
@@ -37,6 +52,11 @@ export function useCreateTaskLauncher(): {
   const [proposal, setProposal] = React.useState<AssistantTaskProposal | null>(null);
   const [contextFiles, setContextFiles] = React.useState<File[]>([]);
   const onCreatedRef = React.useRef<((task: { id: string; code: string | null }) => void) | null>(null);
+  const [bulk, setBulk] = React.useState<{ open: boolean; items: ProposalTarget[]; onCreated: BulkCreated } | null>(null);
+
+  const openBulkCreate = React.useCallback((items: ProposalTarget[], onCreated: BulkCreated) => {
+    if (items.length > 0) setBulk({ open: true, items, onCreated });
+  }, []);
 
   const openCreateTask = React.useCallback(
     (next?: AssistantTaskProposal, onCreated?: (task: { id: string; code: string | null }) => void, pendingFiles?: File[] | Promise<File[]>) => {
@@ -53,7 +73,16 @@ export function useCreateTaskLauncher(): {
     [],
   );
 
-  const createTaskModal = createTaskMounted ? (
+  const bulkDialog = bulk ? (
+    <AssistantBulkCreateDialog
+      open={bulk.open}
+      items={bulk.items}
+      onClose={() => setBulk((prev) => (prev ? { ...prev, open: false } : prev))}
+      onCreated={bulk.onCreated}
+    />
+  ) : null;
+
+  const taskModal = createTaskMounted ? (
     <CreateTaskModal
       isOpen={createTaskOpen}
       onClose={() => setCreateTaskOpen(false)}
@@ -78,5 +107,12 @@ export function useCreateTaskLauncher(): {
     />
   ) : null;
 
-  return { openCreateTask, createTaskModal };
+  const createTaskModal = (
+    <>
+      {taskModal}
+      {bulkDialog}
+    </>
+  );
+
+  return { openCreateTask, openBulkCreate, createTaskModal };
 }

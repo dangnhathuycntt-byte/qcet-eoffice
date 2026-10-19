@@ -81,6 +81,8 @@ export interface GatewayCallOptions {
   config?: GatewayConfig;
   /** Tên trong câu lỗi, mặc định "Agent"; Trợ lý truyền "Trợ lý". */
   subject?: string;
+  /** Token cho phần trả lời và lời gọi công cụ, ngoài ngân sách suy nghĩ. Mặc định 3000 (có suy nghĩ) hoặc 1200. */
+  outputTokens?: number;
 }
 
 /** Khối trả lời của gateway khi không stream. */
@@ -94,8 +96,14 @@ interface GatewayChatJson {
 /**
  * Thân yêu cầu gateway. Có ngân sách suy nghĩ: gửi `thinking` (không kèm `reasoning_effort`, chưa thử cặp này)
  * và `max_tokens` phải lớn hơn ngân sách (Sonnet 4.6 và Gemini 3.8 Flash đều nhận). Không có: cấu hình cũ, `max_tokens` 1200.
+ * `outputTokens` thay phần ngoài ngân sách suy nghĩ (Trợ lý cần nhiều hơn để soạn kế hoạch nhiều đề xuất).
  */
-function buildGatewayBody(config: GatewayConfig, messages: GatewayMessage[], tools: GatewayToolDefinition[] | undefined) {
+function buildGatewayBody(
+  config: GatewayConfig,
+  messages: GatewayMessage[],
+  tools: GatewayToolDefinition[] | undefined,
+  outputTokens: number | undefined,
+) {
   const toolPart = tools?.length ? { tools } : {};
   return config.thinkingBudget
     ? {
@@ -103,10 +111,10 @@ function buildGatewayBody(config: GatewayConfig, messages: GatewayMessage[], too
         messages,
         stream: true,
         thinking: { type: "enabled", budget_tokens: config.thinkingBudget },
-        max_tokens: config.thinkingBudget + 3000,
+        max_tokens: config.thinkingBudget + (outputTokens ?? 3000),
         ...toolPart,
       }
-    : { model: config.model, messages, stream: true, reasoning_effort: "low", max_tokens: 1200, ...toolPart };
+    : { model: config.model, messages, stream: true, reasoning_effort: "low", max_tokens: outputTokens ?? 1200, ...toolPart };
 }
 
 /**
@@ -114,7 +122,7 @@ function buildGatewayBody(config: GatewayConfig, messages: GatewayMessage[], too
  * hoặc gateway trả lỗi HTTP, 503 nếu chưa cấu hình. Câu lỗi dùng `subject` thay cho "Agent".
  */
 export async function callGateway(messages: GatewayMessage[], options: GatewayCallOptions = {}): Promise<GatewayCompletion> {
-  const { tools, signal, timeoutMs = AGENT_GATEWAY_TIMEOUT_MS, onThinking, onContent, subject = "Agent" } = options;
+  const { tools, signal, timeoutMs = AGENT_GATEWAY_TIMEOUT_MS, onThinking, onContent, subject = "Agent", outputTokens } = options;
   const config = options.config ?? readGatewayConfig(options.subject);
   const controller = new AbortController();
   // Khi hủy (quá giờ hoặc người gọi hủy), mọi lần chờ dừng ngay, kể cả khi gateway không đáp ứng abort
@@ -171,7 +179,7 @@ export async function callGateway(messages: GatewayMessage[], options: GatewayCa
         fetch(`${config.baseUrl}/chat/completions`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-          body: JSON.stringify(buildGatewayBody(config, messages, tools)),
+          body: JSON.stringify(buildGatewayBody(config, messages, tools, outputTokens)),
           signal: controller.signal,
           cache: "no-store",
         }),

@@ -4,12 +4,13 @@ import * as React from "react";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { ASSISTANT_TITLE_MAX } from "@qcet/contracts/assistant";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
-import { IconSidebarCompose } from "@/components/layout/sidebar-rounded-icons";
+import { IconSidebarCompose, IconSidebarPanelRight } from "@/components/layout/sidebar-rounded-icons";
 import { AssistantHistoryMenu, type AssistantHistoryState } from "@/components/assistant/assistant-history-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 /** Thanh đầu trang 48px có kẻ dưới, như thanh đầu của Linear Agent. */
 const HEADER_CLASS =
@@ -27,6 +28,11 @@ export interface AssistantHeaderProps {
   onNewChat: () => void;
   onRename: (title: string) => void;
   onDeleteRequest: () => void;
+  /**
+   * Cột bên (đề xuất, tệp, nguồn của cuộc): có thì hiện nút bật/tắt, chỉ ở màn rộng như chính cột đó. Icon panel phải
+   * như Linear (người dùng gửi ảnh 19/10/2026); `progress` (vd. "Đã tạo 3/48") ghi trong tooltip và nhãn đọc màn hình.
+   */
+  sidePanel?: { open: boolean; onToggle: () => void; progress?: string };
 }
 
 /**
@@ -41,6 +47,7 @@ export function AssistantHeader({
   onNewChat,
   onRename,
   onDeleteRequest,
+  sidePanel,
 }: AssistantHeaderProps) {
   // Lưu mã cuộc đang đổi tên: đổi sang cuộc khác thì tự thoát chế độ này, không cần đồng bộ bằng effect
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
@@ -132,6 +139,28 @@ export function AssistantHeader({
         <Button variant="ghost" size="icon-md" onClick={onNewChat} aria-label="Cuộc trò chuyện mới" className="size-11 md:hidden">
           <IconSidebarCompose className="size-4" />
         </Button>
+
+        {sidePanel ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-md"
+                onClick={sidePanel.onToggle}
+                aria-label={`${sidePanel.open ? "Ẩn cột bên" : "Hiện cột bên"}${sidePanel.progress ? `: ${sidePanel.progress}` : ""}`}
+                aria-pressed={sidePanel.open}
+                // Đang mở thể hiện bằng icon tô nửa phải, không thêm nền (như nút thuộc tính ở trang nhiệm vụ)
+                className={cn("max-xl:hidden", sidePanel.open && "text-foreground")}
+              >
+                <IconSidebarPanelRight size={14} active={sidePanel.open} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="end" sideOffset={6}>
+              {sidePanel.open ? "Ẩn cột bên" : "Hiện cột bên"}
+              {sidePanel.progress ? ` · ${sidePanel.progress}` : ""}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
 
         {activeId !== null && !renaming ? (
           // Khi đổi tên, menu này rời khỏi cây giao diện để tiêu điểm không quay lại nút "…" và cướp ô đổi tên

@@ -405,27 +405,31 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
 
   /**
    * Lưu trạng thái thẻ đề xuất ở máy chủ để thoát ra vào lại vẫn còn (như ChatGPT); giao diện đã đổi trước. Tin trả lời
-   * lỗi không có mã thì thẻ chỉ còn trong phiên.
+   * lỗi không có mã thì thẻ chỉ còn trong phiên. Promise xong khi đã lưu hoặc đã báo lỗi (không ném), để "Tạo tất cả"
+   * lưu xong thẻ này mới tạo nhiệm vụ tiếp theo.
    */
   const saveProposal = React.useCallback(
-    (replyKey: string, change: Parameters<typeof updateProposalRequest>[1], failure: string, revert?: () => void) => {
+    (replyKey: string, change: Parameters<typeof updateProposalRequest>[1], failure: string, revert?: () => void): Promise<void> => {
       const messageId = threadRef.current.find((m) => m.key === replyKey)?.id;
-      if (!messageId) return;
+      if (!messageId) return Promise.resolve();
       // Câu riêng cho thẻ (câu lỗi chung của Trợ lý nói về lượt trả lời, dễ hiểu nhầm)
-      updateProposalRequest(messageId, change).catch(() => {
-        revert?.();
-        showToastRef.current({ variant: "error", message: failure });
-      });
+      return updateProposalRequest(messageId, change).then(
+        () => undefined,
+        () => {
+          revert?.();
+          showToastRef.current({ variant: "error", message: failure });
+        },
+      );
     },
     [],
   );
 
   /** Người dùng đã tạo nhiệm vụ từ thẻ đề xuất: thẻ chuyển sang "Đã tạo" kèm lối mở. */
   const proposalCreated = React.useCallback(
-    (replyKey: string, index: number, task: AssistantProposalTask) => {
+    (replyKey: string, index: number, task: AssistantProposalTask): Promise<void> => {
       setThread((prev) => markProposalCreated(prev, replyKey, index, task));
       // Nhiệm vụ đã tạo thật nên không trả thẻ về; chỉ báo là lần sau mở lại thẻ có thể còn nút tạo
-      saveProposal(replyKey, { index, taskId: task.id }, "Đã tạo nhiệm vụ nhưng chưa lưu được trạng thái thẻ đề xuất.");
+      return saveProposal(replyKey, { index, taskId: task.id }, "Đã tạo nhiệm vụ nhưng chưa lưu được trạng thái thẻ đề xuất.");
     },
     [saveProposal],
   );
@@ -434,7 +438,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   const proposalDismissed = React.useCallback(
     (replyKey: string, index: number, dismissed: boolean) => {
       setThread((prev) => setProposalDismissed(prev, replyKey, index, dismissed));
-      saveProposal(replyKey, { index, dismissed }, "Chưa lưu được thao tác trên thẻ đề xuất. Thầy/Cô thử lại.", () =>
+      void saveProposal(replyKey, { index, dismissed }, "Chưa lưu được thao tác trên thẻ đề xuất. Thầy/Cô thử lại.", () =>
         setThread((prev) => setProposalDismissed(prev, replyKey, index, !dismissed)),
       );
     },

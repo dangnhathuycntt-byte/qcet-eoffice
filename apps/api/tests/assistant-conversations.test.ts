@@ -869,6 +869,20 @@ describe('Lịch sử Trợ lý (CSDL)', () => {
       assert.deepEqual(detail?.messages[1].proposals[1].task, { id: ownTaskId, code: `NV-THE-${runId}-1` });
     });
 
+    it('"Tạo tất cả": nhiều thẻ của một tin lưu cùng lúc không ghi đè nhau; vị trí thẻ quá 20 vẫn nhận', async () => {
+      const count = 30;
+      const plan = await appendMessage(conv.id, {
+        role: 'assistant',
+        content: 'Tôi đã soạn 30 đề xuất.',
+        proposals: Array.from({ length: count }, (_, i) => ({ proposal: { title: `Đầu việc kế hoạch số ${i + 1}` }, task: null, dismissed: false })),
+      });
+      await Promise.all(Array.from({ length: count - 1 }, (_, i) => updateMessageProposal(owner.id, plan.id, { index: i, dismissed: true })));
+      assert.equal((await patch(plan.id, { index: count - 1, dismissed: true })).status, 200);
+      const detail = await getConversationDetail(owner.id, conv.id, async () => null);
+      const saved = detail?.messages.find((m) => m.id === plan.id);
+      assert.deepEqual(saved?.proposals.map((item) => item.dismissed), Array.from({ length: count }, () => true));
+    });
+
     it('người khác, tin hỏi, thẻ không có, thiếu Origin đều bị từ chối', async () => {
       assert.equal((await patch(reply.id, { index: 0, dismissed: true }, stranger)).status, 404);
       assert.equal((await patch(question.id, { index: 0, dismissed: true })).status, 404);

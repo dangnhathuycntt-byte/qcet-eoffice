@@ -7,21 +7,44 @@ import {
   ASSISTANT_CONVERSATION_EVENT,
   contextTypeLabel,
   conversationIdFromPath,
+  conversationOutline,
   shouldApplyRenamedTitle,
   type AssistantConversationEventDetail,
 } from "@/components/assistant/assistant-model";
 import { assistantErrorText } from "@/components/assistant/assistant-client";
 import { AssistantComposer, AssistantFootnote } from "@/components/assistant/assistant-composer";
 import { AssistantHeader } from "@/components/assistant/assistant-header";
+import { AssistantSidePanel, hasOutline } from "@/components/assistant/assistant-side-panel";
 import { AssistantStartList } from "@/components/assistant/assistant-start";
 import { AssistantThread } from "@/components/assistant/assistant-thread";
 import { useAssistantChat } from "@/components/assistant/use-assistant-chat";
 import { useAssistantHistory } from "@/components/assistant/use-assistant-history";
 import { useCreateTaskLauncher } from "@/components/assistant/use-create-task-launcher";
 import { useStickToBottom } from "@/components/assistant/use-stick-to-bottom";
+import type { ProposalTarget } from "@/components/assistant/assistant-model";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useIsPhone } from "@/hooks/use-is-phone";
 import { cn } from "@/lib/utils";
+
+/** Người dùng ẩn cột bên thì nhớ cho lần sau (chỉ trình duyệt này; lỗi bộ nhớ thì coi như đang hiện). */
+const SIDE_PANEL_STORAGE_KEY = "qcet.assistant.sidePanel";
+
+function readSidePanelHidden(): boolean {
+  try {
+    return window.localStorage.getItem(SIDE_PANEL_STORAGE_KEY) === "hidden";
+  } catch {
+    return false;
+  }
+}
+
+function writeSidePanelHidden(hidden: boolean) {
+  try {
+    if (hidden) window.localStorage.setItem(SIDE_PANEL_STORAGE_KEY, "hidden");
+    else window.localStorage.removeItem(SIDE_PANEL_STORAGE_KEY);
+  } catch {
+    // Không lưu được thì chỉ mất lựa chọn ở lần sau
+  }
+}
 
 /** Báo cho khung chat nổi (đang ẩn ở trang này nhưng vẫn gắn) biết cuộc vừa mở, đổi tên hay bị xóa. */
 function announceConversationChange(detail: AssistantConversationEventDetail) {
@@ -47,7 +70,15 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
   const activeRouteId = conversationIdFromPath(pathname) ?? conversationId ?? null;
   const [draft, setDraft] = React.useState("");
   const isPhone = useIsPhone();
-  const { openCreateTask, createTaskModal } = useCreateTaskLauncher();
+  const { openCreateTask, openBulkCreate, createTaskModal } = useCreateTaskLauncher();
+  // Đọc lựa chọn ẩn cột bên sau khi gắn (máy chủ không có localStorage), để HTML ban đầu khớp nhau
+  const [sidePanelHidden, setSidePanelHidden] = React.useState(false);
+  React.useEffect(() => setSidePanelHidden(readSidePanelHidden()), []);
+  const toggleSidePanel = () => {
+    const hidden = !sidePanelHidden;
+    setSidePanelHidden(hidden);
+    writeSidePanelHidden(hidden);
+  };
   // Cuộc đang chờ xác nhận xóa (cuộc đang mở, từ menu "…" của thanh đầu)
   const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; title: string | null } | null>(null);
   const [deleting, setDeleting] = React.useState(false);
@@ -65,6 +96,8 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
   const { thread, pending, activeId, activeTitle, activeContext, detailStatus } = chat;
   // Màn đầu: chưa có tin và không đang mở hay lỗi một cuộc
   const start = thread.length === 0 && (detailStatus === "idle" || detailStatus === "ready");
+  const outline = React.useMemo(() => conversationOutline(thread), [thread]);
+  const showSidePanelToggle = !start && hasOutline(outline);
 
   // Cuộc đang mở ở đây thành chip ở thanh dưới khi rời trang (như tab chat ở thanh Agent của Linear)
   React.useEffect(() => {
@@ -164,6 +197,11 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
     }
   };
 
+  const openProposal = ({ replyKey, index, proposal }: ProposalTarget) =>
+    openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task), chat.filesForReply(replyKey));
+  const createProposals = (items: ProposalTarget[]) =>
+    openBulkCreate(items, (item, task) => chat.proposalCreated(item.replyKey, item.index, task));
+
   const requestDelete = (conversation: Pick<AssistantConversationSummaryDTO, "id" | "title">) => {
     setDeleteTarget({ id: conversation.id, title: conversation.title });
   };
@@ -192,69 +230,90 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
           onDeleteRequest={() => {
             if (activeId) requestDelete({ id: activeId, title: activeTitle ?? "" });
           }}
+          sidePanel={
+            showSidePanelToggle
+              ? {
+                  open: !sidePanelHidden,
+                  onToggle: toggleSidePanel,
+                  progress: outline.proposals.length
+                    ? `Đã tạo ${outline.proposals.filter((item) => item.created).length}/${outline.proposals.length}`
+                    : undefined,
+                }
+              : undefined
+          }
         />
 
         <div role="status" aria-live="polite" className="sr-only">
           {pending ? "Trợ lý đang trả lời." : ""}
         </div>
 
-        {/* Khung cuộn ngoài: màn đầu căn giữa bằng m-auto nên khi màn thấp thì phần trên vẫn cuộn tới được */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className={cn("flex min-h-0 flex-col", start ? "m-auto w-full gap-5 py-6" : "flex-1")}>
-            {/* Màn đầu không có tiêu đề, chỉ ô soạn và danh sách như Linear Agent (người dùng bỏ câu hỏi lớn 17/10/2026) */}
-            {start ? null : (
-              <AssistantThread
-                thread={thread}
-                detailStatus={detailStatus}
-                detailError={chat.detailError}
-                onRetry={retry}
-                onNewChat={newChat}
-                listRef={listRef}
-                onScroll={onThreadScroll}
-                context={activeContext}
-                pending={pending}
-                onOpenProposal={({ replyKey, index, proposal }) =>
-                  openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task), chat.filesForReply(replyKey))
-                }
-                onDismissProposal={chat.proposalDismissed}
-              />
-            )}
+        {/* Dưới thanh đầu: cột tin và cột bên (màn rộng) cạnh nhau, như cột Progress của Claude */}
+        <div className="flex min-h-0 flex-1">
+          {/* Khung cuộn ngoài: màn đầu căn giữa bằng m-auto nên khi màn thấp thì phần trên vẫn cuộn tới được */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <div className={cn("flex min-h-0 flex-col", start ? "m-auto w-full gap-5 py-6" : "flex-1")}>
+              {/* Màn đầu không có tiêu đề, chỉ ô soạn và danh sách như Linear Agent (người dùng bỏ câu hỏi lớn 17/10/2026) */}
+              {start ? null : (
+                <AssistantThread
+                  thread={thread}
+                  detailStatus={detailStatus}
+                  detailError={chat.detailError}
+                  onRetry={retry}
+                  onNewChat={newChat}
+                  listRef={listRef}
+                  onScroll={onThreadScroll}
+                  context={activeContext}
+                  pending={pending}
+                  onOpenProposal={openProposal}
+                  onDismissProposal={chat.proposalDismissed}
+                  onCreateProposals={createProposals}
+                />
+              )}
 
-            {/* Cột 752px (chữ 704px) như ô soạn và cột tin của Linear Agent, đo cùng tỉ lệ 17/10/2026 */}
-            <div className={cn("mx-auto w-full max-w-[752px] shrink-0 px-4 md:px-6", !start && "pb-4")}>
-              <AssistantComposer
-                variant={start ? "hero" : "dock"}
-                value={draft}
-                onChange={setDraft}
-                onSubmit={submit}
-                onStop={chat.stop}
-                pending={pending}
-                disabled={detailStatus === "loading" || detailStatus === "error"}
-                context={contextChip}
-                error={chat.sendError ?? actionError}
-                inputRef={composerRef}
-                attachments={chat.attachments}
-                onAddAttachments={chat.addAttachments}
-                onRemoveAttachment={chat.removeAttachment}
-              />
+              {/* Cột 752px (chữ 704px) như ô soạn và cột tin của Linear Agent, đo cùng tỉ lệ 17/10/2026 */}
+              <div className={cn("mx-auto w-full max-w-[752px] shrink-0 px-4 md:px-6", !start && "pb-4")}>
+                <AssistantComposer
+                  variant={start ? "hero" : "dock"}
+                  value={draft}
+                  onChange={setDraft}
+                  onSubmit={submit}
+                  onStop={chat.stop}
+                  pending={pending}
+                  disabled={detailStatus === "loading" || detailStatus === "error"}
+                  context={contextChip}
+                  error={chat.sendError ?? actionError}
+                  inputRef={composerRef}
+                  attachments={chat.attachments}
+                  onAddAttachments={chat.addAttachments}
+                  onRemoveAttachment={chat.removeAttachment}
+                />
+              </div>
+
+              {start ? (
+                <AssistantStartList
+                  items={history.items}
+                  status={history.status}
+                  now={new Date()}
+                  onSuggest={suggest}
+                  onCreateTask={openCreateTask}
+                  onExamplesDismissed={isPhone ? undefined : () => composerRef.current?.focus()}
+                  error={history.error}
+                  onRetry={() => void history.retry()}
+                />
+              ) : null}
             </div>
 
-            {start ? (
-              <AssistantStartList
-                items={history.items}
-                status={history.status}
-                now={new Date()}
-                onSuggest={suggest}
-                onCreateTask={openCreateTask}
-                onExamplesDismissed={isPhone ? undefined : () => composerRef.current?.focus()}
-                error={history.error}
-                onRetry={() => void history.retry()}
-              />
-            ) : null}
+            {/* Chân trang chỉ ở màn đầu, nằm ở đáy như ChatGPT (cụm ô soạn căn giữa phần còn lại); đang chat thì ẩn */}
+            {start ? <AssistantFootnote /> : null}
           </div>
 
-          {/* Chân trang chỉ ở màn đầu, nằm ở đáy như ChatGPT (cụm ô soạn căn giữa phần còn lại); đang chat thì ẩn */}
-          {start ? <AssistantFootnote /> : null}
+          {showSidePanelToggle && !sidePanelHidden ? (
+            <AssistantSidePanel
+              outline={outline}
+              onOpenProposal={openProposal}
+              onCreateProposals={createProposals}
+            />
+          ) : null}
         </div>
 
       </div>

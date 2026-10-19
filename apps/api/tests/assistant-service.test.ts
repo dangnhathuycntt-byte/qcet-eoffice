@@ -49,6 +49,7 @@ interface GatewayCall {
   tools: GatewayToolDefinition[] | undefined;
   subject: string | undefined;
   timeoutMs: number | undefined;
+  outputTokens: number | undefined;
 }
 
 /**
@@ -59,7 +60,7 @@ function scriptedGateway(scripts: GatewayScript[]) {
   const calls: GatewayCall[] = [];
   let next = 0;
   const fn = (async (messages: GatewayMessage[], options?: GatewayCallOptions) => {
-    calls.push({ messages: [...messages], tools: options?.tools, subject: options?.subject, timeoutMs: options?.timeoutMs });
+    calls.push({ messages: [...messages], tools: options?.tools, subject: options?.subject, timeoutMs: options?.timeoutMs, outputTokens: options?.outputTokens });
     const script = scripts[next++];
     if (!script) throw new Error('Gateway được gọi nhiều hơn kịch bản');
     let streamed = false;
@@ -776,9 +777,13 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     assert.equal(conv?.contextType, null);
   });
 
-  it('propose_task: phát proposal ngay sau bước, tối đa 3 thẻ mỗi lượt, thẻ lưu cùng tin trả lời, không vào audit', async () => {
+  // Giới hạn cũ 3 thẻ mỗi lượt đổi theo yêu cầu 19/10/2026 (kế hoạch năm "vài chục cái nhiệm vụ"): mỗi lượt tối đa
+  // ASSISTANT_LIMITS.maxProposalsPerTurn đề xuất, lời gọi đề xuất không tính vào trần công cụ mỗi vòng
+  it('propose_task: phát proposal ngay sau bước, tối đa maxProposalsPerTurn thẻ mỗi lượt, thẻ lưu cùng tin trả lời, không vào audit', async () => {
     const { runAssistantTool } = await import('@/server/assistant/assistant-tools');
     const secret = `Chuẩn bị hội thảo ${runId}`;
+    const max = ASSISTANT_LIMITS.maxProposalsPerTurn;
+    assert.ok(max > ASSISTANT_LIMITS.maxToolCallsPerRound, 'kế hoạch nhiều đầu việc vượt trần công cụ mỗi vòng');
     const call = (n: number) => ({
       id: `p${n}`,
       name: 'propose_task',
@@ -786,32 +791,33 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     });
     const { events, gateway } = await runTurn(
       [
-        () => completion('', [call(1), call(2), call(3), call(4)], 'tool_calls'),
-        () => completion('Tôi đã soạn ba đề xuất, Thầy/Cô mở hộp tạo nhiệm vụ để xem lại.'),
+        () => completion('', Array.from({ length: max + 1 }, (_, i) => call(i + 1)), 'tool_calls'),
+        () => completion('Tôi đã soạn các đề xuất, Thầy/Cô bấm "Tạo tất cả" để xem lại và tạo.'),
       ],
-      { message: 'Tạo bốn nhiệm vụ hội thảo' },
+      { message: 'Tạo các nhiệm vụ hội thảo theo kế hoạch' },
       { runTool: runAssistantTool },
     );
 
+    // Mỗi vòng gọi gateway với phần trả lời đủ cho nhiều đề xuất
+    assert.equal(gateway.calls[0].outputTokens, ASSISTANT_LIMITS.outputTokens);
     const proposals = events.flatMap((e) => (e.type === 'proposal' ? [e.proposal] : []));
-    assert.equal(proposals.length, ASSISTANT_LIMITS.maxProposalsPerTurn);
+    assert.equal(proposals.length, max);
     // Ngày bắt đầu sau hạn bị bỏ; tên người giữ đúng như người hỏi nêu (giao diện khớp với nhân sự)
     assert.deepEqual(proposals[0], { title: `${secret} đợt 1`, dueDate: '2026-10-30', leadAssigneeName: 'chị Lan' });
-    // Mỗi thẻ đứng ngay sau bước của nó
+    // Mỗi thẻ đứng ngay sau bước của nó; lời gọi vượt giới hạn chỉ có bước lỗi
     const types = events.map((e) => e.type).filter((type) => type === 'step' || type === 'proposal');
-    assert.deepEqual(types, ['step', 'proposal', 'step', 'proposal', 'step', 'proposal', 'step']);
+    assert.deepEqual(types, [...Array.from({ length: max }, () => ['step', 'proposal']).flat(), 'step']);
     const steps = events.flatMap((e) => (e.type === 'step' ? [e.step] : []));
-    assert.deepEqual(steps.map((step) => [step.tool, step.ok]), [
-      ['propose_task', true],
-      ['propose_task', true],
-      ['propose_task', true],
-      ['propose_task', false],
-    ]);
-    // Đề xuất thứ tư: mô hình nhận lỗi giới hạn, không phải "đã soạn"
+    assert.deepEqual(
+      steps.map((step) => [step.tool, step.ok]),
+      [...Array.from({ length: max }, () => ['propose_task', true]), ['propose_task', false]],
+    );
+    // Đề xuất vượt giới hạn: mô hình nhận lỗi giới hạn, không phải "đã soạn"; không lời gọi nào bị báo quá nhiều công cụ
     const toolMessages = gateway.calls[1].messages.filter((m) => m.role === 'tool');
-    assert.equal(toolMessages.length, 4);
-    assert.match(String(toolMessages[3].content), /tối đa 3 đề xuất/);
+    assert.equal(toolMessages.length, max + 1);
+    assert.match(String(toolMessages[max].content), new RegExp(`tối đa ${max} đề xuất`));
     assert.match(String(toolMessages[0].content), /"created":false/);
+    assert.equal(toolMessages.some((m) => String(m.content).includes('Quá nhiều công cụ')), false);
 
     const conversationId = convIds[convIds.length - 1];
     const rows = await assistantRowsOf(conversationId);
@@ -824,6 +830,31 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     const audit = await prisma.auditEvent.findFirst({ where: { entityId: conversationId, action: AuditAction.ASSISTANT_TURN } });
     assert.ok(audit);
     assert.equal(JSON.stringify(audit.metadata).includes(secret), false, 'audit không ghi tiêu đề đề xuất');
+  });
+
+  it('vòng có cả đọc dữ liệu lẫn đề xuất: đọc vẫn tối đa maxToolCallsPerRound, đề xuất chạy hết và không ăn ngân sách đọc', async () => {
+    const { runAssistantTool } = await import('@/server/assistant/assistant-tools');
+    const reads = Array.from({ length: ASSISTANT_LIMITS.maxToolCallsPerRound + 1 }, (_, i) => ({ id: `r${i}`, name: 'list_tasks', arguments: '{}' }));
+    const proposalCalls = [1, 2].map((n) => ({ id: `q${n}`, name: 'propose_task', arguments: JSON.stringify({ title: `Rà soát hồ sơ đợt ${n} ${runId}` }) }));
+    // Một kết quả đọc dùng hết ngân sách của lượt: đề xuất sau đó vẫn soạn được
+    const bigRead = { ...toolOk(`{"total":1,"tasks":[],"pad":"${'x'.repeat(ASSISTANT_LIMITS.maxToolCharsPerTurn)}"}`) };
+    let readRuns = 0;
+    const runTool = (async (name: string, rawArgs: string, ctx: Parameters<typeof runAssistantTool>[2]) => {
+      if (name === 'propose_task') return runAssistantTool(name, rawArgs, ctx);
+      readRuns += 1;
+      return readRuns === 1 ? bigRead : toolOk();
+    }) as typeof runAssistantTool;
+    const { events, gateway } = await runTurn(
+      [() => completion('', [...reads, ...proposalCalls], 'tool_calls'), () => completion('Đã soạn hai đề xuất.')],
+      { message: 'Xem việc rồi soạn hai nhiệm vụ rà soát' },
+      { runTool },
+    );
+    assert.equal(readRuns, ASSISTANT_LIMITS.maxToolCallsPerRound);
+    assert.equal(events.filter((e) => e.type === 'proposal').length, 2);
+    const toolMessages = gateway.calls[1].messages.filter((m) => m.role === 'tool');
+    const byId = new Map(toolMessages.map((m) => [m.tool_call_id, String(m.content)]));
+    assert.match(byId.get(`r${ASSISTANT_LIMITS.maxToolCallsPerRound}`) ?? '', /Quá nhiều công cụ/);
+    for (const call of proposalCalls) assert.match(byId.get(call.id) ?? '', /"created":false/);
   });
 
   it('cuộc mới: mô hình đặt tên song song, phát title trước done và ghi vào CSDL; cuộc cũ không đặt lại', async () => {

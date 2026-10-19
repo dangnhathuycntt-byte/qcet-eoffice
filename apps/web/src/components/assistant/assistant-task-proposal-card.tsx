@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Check, ListPlus, Minus } from "lucide-react";
+import { ArrowUpRight, Check, Circle, ListPlus, Minus } from "lucide-react";
 import type { AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { Button } from "@/components/ui/button";
+import { Pressable } from "@/components/ui/pressable";
+import { cn } from "@/lib/utils";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
-import type { AssistantProposalTask } from "@/components/assistant/assistant-model";
+import type { AssistantProposalTask, ConversationProposalItem } from "@/components/assistant/assistant-model";
 
 /** Số việc con hiện trên thẻ; còn lại gộp thành "và n việc con khác" (hộp tạo nhiệm vụ có đủ). */
 const SHOWN_SUBTASKS = 5;
@@ -219,6 +221,122 @@ function CompactProposalRow({
         <p className="text-xs text-muted-foreground">{status}</p>
       </div>
       {children}
+    </section>
+  );
+}
+
+/** Từ chừng này đề xuất trong một câu trả lời trở lên thì gom thành một thẻ danh sách (kế hoạch nhiều nhiệm vụ). */
+export const PROPOSAL_LIST_MIN = 4;
+/** Số hàng thẻ danh sách hiện sẵn; còn lại mở bằng "Xem thêm". */
+const SHOWN_LIST_ROWS = 6;
+
+type ProposalRowItem = Pick<ConversationProposalItem, "proposal" | "created" | "dismissed"> & { streaming?: boolean };
+
+/**
+ * Một hàng đề xuất (thẻ danh sách và bảng bên): dấu trạng thái, tên cắt cuối kèm tooltip, hạn hoặc mã nhiệm vụ đã tạo.
+ * Đã tạo thì mở nhiệm vụ; còn lại bấm để mở hộp tạo nhiệm vụ đã điền sẵn (xem lại, sửa, tạo riêng).
+ */
+export function ProposalListRow({ item, onOpen, hideDue = false }: { item: ProposalRowItem; onOpen?: () => void; hideDue?: boolean }) {
+  const { proposal, created, dismissed } = item;
+  const icon = created ? (
+    <Check aria-hidden className="size-3.5 shrink-0 text-foreground" />
+  ) : dismissed ? (
+    <Minus aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+  ) : (
+    <Circle aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+  );
+  const status = created ? `Đã tạo${created.code ? ` ${created.code}` : ""}` : dismissed ? "Đã bỏ qua" : "Chưa tạo";
+  const trailing = created ? (created.code ?? "Đã tạo") : proposal.dueDate && !hideDue ? formatDisplayDate(proposal.dueDate) : null;
+  const rowClass = "flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-compact";
+  const content = (
+    <>
+      {icon}
+      <span className={cn("min-w-0 flex-1 truncate", dismissed ? "text-muted-foreground" : "text-foreground")} title={proposal.title}>
+        {proposal.title}
+      </span>
+      <span className="sr-only">{status}</span>
+      {trailing ? <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{trailing}</span> : null}
+    </>
+  );
+  if (created) {
+    return (
+      <Link href={`/tasks/${encodeURIComponent(created.id)}`} className={cn(rowClass, "hover:bg-accent")}>
+        {content}
+      </Link>
+    );
+  }
+  if (!onOpen || item.streaming) return <div className={rowClass}>{content}</div>;
+  return (
+    <Pressable onClick={onOpen} className={cn(rowClass, "hover:bg-accent")} aria-label={`Xem lại và tạo: ${proposal.title}`}>
+      {content}
+    </Pressable>
+  );
+}
+
+/**
+ * Nhiều đề xuất trong một câu trả lời (kế hoạch năm, danh sách việc; người dùng gửi kế hoạch 48 đầu việc 19/10/2026):
+ * một thẻ danh sách gọn thay cho từng thẻ lớn. Hàng mở hộp tạo nhiệm vụ của đề xuất đó; "Tạo tất cả" mở hộp xem và tạo
+ * các đề xuất còn chờ một lần; "Bỏ qua" bỏ qua các đề xuất còn chờ (từng hàng vẫn mở lại được).
+ */
+export function AssistantProposalList({
+  items,
+  onOpen,
+  onCreateAll,
+  onDismissAll,
+}: {
+  items: ProposalRowItem[];
+  onOpen?: (index: number) => void;
+  onCreateAll?: () => void;
+  onDismissAll?: () => void;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const created = items.filter((item) => item.created).length;
+  const pending = items.filter((item) => !item.created && !item.dismissed).length;
+  const subtasks = items.reduce((sum, item) => sum + (item.proposal.subtasks?.length ?? 0), 0);
+  const shown = expanded ? items : items.slice(0, SHOWN_LIST_ROWS);
+  const hidden = items.length - shown.length;
+  return (
+    // relative: chữ sr-only của hàng ở lại trong thẻ, không thoát khỏi khung cuộn của cột tin
+    <section aria-label={`Đề xuất ${items.length} nhiệm vụ`} className="relative flex flex-col gap-2 rounded-lg border border-border bg-background p-3">
+      <div className="flex items-center gap-2">
+        <p className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-foreground">
+          <ListPlus className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">
+            Đề xuất {items.length} nhiệm vụ{subtasks > 0 ? ` · ${subtasks} việc con` : ""}
+          </span>
+        </p>
+        {created > 0 ? (
+          <p role="status" className="shrink-0 text-xs text-muted-foreground tabular-nums">
+            Đã tạo {created}/{items.length}
+          </p>
+        ) : null}
+      </div>
+      <ul className="-mx-2 flex flex-col">
+        {shown.map((item, index) => (
+          <li key={index}>
+            <ProposalListRow item={item} onOpen={onOpen ? () => onOpen(index) : undefined} />
+          </li>
+        ))}
+      </ul>
+      {hidden > 0 || expanded ? (
+        <Button variant="ghost" size="xs" className="-ml-2 w-fit text-muted-foreground" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
+          {expanded ? "Thu gọn" : `Xem thêm ${hidden} đề xuất`}
+        </Button>
+      ) : null}
+      {pending > 0 && (onCreateAll || onDismissAll) ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {onDismissAll ? (
+            <Button variant="ghost" size="sm" className="max-md:min-h-11" onClick={onDismissAll}>
+              Bỏ qua
+            </Button>
+          ) : null}
+          {onCreateAll ? (
+            <Button size="sm" className="max-md:min-h-11" onClick={onCreateAll}>
+              Tạo tất cả ({pending})
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
