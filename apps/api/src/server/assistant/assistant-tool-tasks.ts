@@ -70,9 +70,11 @@ export interface TaskSummaryItem {
   progress: number;
   lead: string | null;
   unit: string | null;
+  /** Việc con của nhiệm vụ (đã xong/tổng), như cột "0/4" ở trang Nhiệm vụ; không có việc con thì bỏ. */
+  subtasks?: { completed: number; total: number };
 }
 
-export function toTaskSummary(dto: TaskListDTO): TaskSummaryItem {
+export function toTaskSummary(dto: TaskListItem): TaskSummaryItem {
   return {
     id: dto.id,
     code: dto.code,
@@ -85,6 +87,7 @@ export function toTaskSummary(dto: TaskListDTO): TaskSummaryItem {
     progress: dto.progress,
     lead: dto.leadAssignee?.name ?? null,
     unit: dto.department?.name ?? null,
+    ...(dto.subtasks && dto.subtasks.total > 0 ? { subtasks: dto.subtasks } : {}),
   };
 }
 
@@ -92,9 +95,25 @@ export function taskSource(id: string, code: string | null, title: string): Assi
   return { type: "task", id, code, title: redactContact(title), href: assistantSourceHref("task", id) };
 }
 
+/** Nhiệm vụ trong danh sách, kèm số việc con nếu truy vấn có lấy. */
+export type TaskListItem = TaskListDTO & { subtasks?: { completed: number; total: number } };
+
 export interface TaskSearchResult {
   total: number;
-  dtos: TaskListDTO[];
+  dtos: TaskListItem[];
+}
+
+/** Đã xong/tổng việc con chưa lưu trữ của từng nhiệm vụ trong kết quả truy vấn, như cột "0/4" ở trang Nhiệm vụ. */
+function withSubtaskCounts(rawTasks: unknown[]): TaskListItem[] {
+  const counts = new Map<string, { completed: number; total: number }>();
+  for (const raw of rawTasks as Array<{ id?: unknown; subTasks?: Array<{ status?: unknown }> }>) {
+    const subTasks = Array.isArray(raw?.subTasks) ? raw.subTasks : [];
+    counts.set(String(raw?.id ?? ""), {
+      completed: subTasks.filter((sub) => sub.status === "COMPLETED").length,
+      total: subTasks.length,
+    });
+  }
+  return toTaskListDTOArray(rawTasks).map((dto) => ({ ...dto, subtasks: counts.get(dto.id) }));
 }
 
 /** Nhiệm vụ đọc được có chứa từ khóa (không kèm lọc view, để tìm rộng trong phạm vi được xem). */
@@ -103,24 +122,35 @@ export async function searchReadableTasks(authz: AuthorizationContext, query: st
   return { total: result.total, dtos: toTaskListDTOArray(result.tasks) };
 }
 
-/** Nhiệm vụ đọc được theo bộ lọc; `today` làm mốc để tính trễ hạn. */
+/**
+ * Nhiệm vụ đọc được theo bộ lọc, đếm như trang Nhiệm vụ: danh sách và `total` là nhiệm vụ chính (không có việc cha),
+ * `subtaskTotal` là số việc con khớp cùng bộ lọc. `today` làm mốc để tính trễ hạn.
+ */
 export async function listReadableTasks(
   authz: AuthorizationContext,
   input: ListTasksInput,
   today: string
-): Promise<TaskSearchResult> {
-  const result = await taskQueryService.queryTasks(authz, {
+): Promise<TaskSearchResult & { subtaskTotal: number }> {
+  const filters = {
     view: input.view ?? "related",
     status: input.status,
     departmentId: input.departmentId,
     assignedTo: input.assigneeId,
     academicMonth: input.academicMonth,
     academicYear: input.academicYear,
-    limit: input.limit ?? TASK_LIST_LIMIT,
     page: 1,
     referenceDate: today,
-  });
-  return { total: result.total, dtos: toTaskListDTOArray(result.tasks) };
+  };
+  const [roots, all] = await Promise.all([
+    taskQueryService.queryTasks(authz, { ...filters, parentTaskId: "root", limit: input.limit ?? TASK_LIST_LIMIT }),
+    // Chỉ cần tổng của cả nhiệm vụ chính lẫn việc con
+    taskQueryService.queryTasks(authz, { ...filters, limit: 1 }),
+  ]);
+  return {
+    total: roots.total,
+    subtaskTotal: Math.max(0, all.total - roots.total),
+    dtos: withSubtaskCounts(roots.tasks),
+  };
 }
 
 export interface TaskDetailRead {

@@ -164,9 +164,11 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
 
   list_tasks: register("list_tasks", {
     description:
-      "Liệt kê nhiệm vụ Thầy/Cô được xem. view: related = việc Thầy/Cô tham gia (mặc định), unit = việc của đơn vị, " +
-      "all = mọi việc Thầy/Cô được xem. status = overdue là trễ hạn; không truyền status thì lấy mọi trạng thái. " +
-      "Số lượng lấy từ total, không tự đếm.",
+      "Liệt kê nhiệm vụ Thầy/Cô được xem, đếm như trang Nhiệm vụ: tasks và total là nhiệm vụ chính, mỗi nhiệm vụ kèm " +
+      "subtasks (việc con đã xong/tổng); subtaskTotal là số việc con khớp bộ lọc. view: related = việc Thầy/Cô tham gia " +
+      "(mặc định), unit = việc của đơn vị, all = mọi việc Thầy/Cô được xem. status = overdue là trễ hạn; không truyền " +
+      "status thì lấy mọi trạng thái. Số lượng lấy từ total và subtaskTotal, không tự đếm; cần việc con của một nhiệm vụ " +
+      "thì gọi get_task.",
     schema: ListTasksArgs,
     failLabel: "Xem nhiệm vụ",
     label: (args: ListTasksInput) => {
@@ -182,6 +184,7 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
       return {
         payload: {
           total: result.total,
+          subtaskTotal: result.subtaskTotal,
           ...(result.total > items.length ? { truncated: true } : {}),
           tasks: items,
         },

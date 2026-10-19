@@ -41,7 +41,11 @@ export const PROPOSE_TASK_DESCRIPTION =
   "tạo gì: giao diện hiện thẻ đề xuất, Thầy/Cô mở hộp tạo nhiệm vụ đã điền sẵn, xem lại và tự bấm Tạo. title ngắn, bắt " +
   "đầu bằng động từ, không ghi tên người hay hạn. priority: khẩn, gấp = URGENT; quan trọng = HIGH; bình thường = MEDIUM; " +
   "không gấp = LOW; không nói thì bỏ. dueDate, startDate, leadAssigneeName, assigneeName chỉ điền khi Thầy/Cô nêu rõ; tên " +
-  "người ghi đúng như Thầy/Cô nói, không đoán, không tra cứu. Ngày dạng YYYY-MM-DD; hạn việc con không sau hạn nhiệm vụ.";
+  "người ghi đúng như Thầy/Cô nói, không đoán, không tra cứu. Ngày dạng YYYY-MM-DD. " +
+  "Chia luôn thành việc con (3–7 việc, mỗi việc một bước cụ thể để hoàn thành nhiệm vụ, ưu tiên đầu việc nêu trong văn " +
+  "bản hay tệp; title việc con bắt đầu bằng động từ), trừ khi nhiệm vụ chỉ là một việc đơn lẻ hoặc Thầy/Cô bảo không chia. " +
+  "Hạn và người nhận của việc con chỉ điền khi Thầy/Cô hay văn bản nêu cho đúng việc con đó, không tự chia mốc từ hạn " +
+  "nhiệm vụ; có hạn thì không sau hạn nhiệm vụ.";
 
 const PROPOSAL_NOTE =
   "Chưa tạo nhiệm vụ nào. Giao diện đã hiện thẻ đề xuất đủ nội dung. Bây giờ viết câu trả lời một hai câu: đã soạn đề " +

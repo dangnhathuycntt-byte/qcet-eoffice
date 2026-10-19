@@ -236,6 +236,17 @@ describe('Trợ lý: nhiệm vụ theo phạm vi người hỏi', () => {
     assert.equal(mine.isOverdue, true);
   });
 
+  it('list_tasks đếm như trang Nhiệm vụ: danh sách và total chỉ là nhiệm vụ chính, việc con đếm riêng và kèm đã xong/tổng', async () => {
+    const outcome = await runAssistantTool('list_tasks', '{}', ctxA);
+    const body = parsed(outcome);
+    const tasks = body.tasks as Array<{ id: string; subtasks?: { completed: number; total: number } }>;
+    assert.deepEqual(tasks.map((task) => task.id), [taskA.id]);
+    assert.equal(body.total, 1);
+    assert.equal(body.subtaskTotal, subTaskIds.length);
+    assert.deepEqual(tasks[0].subtasks, { completed: subTaskIds.length, total: subTaskIds.length });
+    assert.equal(outcome.step.count, 1);
+  });
+
   it('nhiệm vụ có nhiều việc con: nội dung không vượt trần, cắt phần tử cuối và đánh dấu truncated', async () => {
     const outcome = await runAssistantTool('get_task', JSON.stringify({ id: taskA.id }), ctxA);
     const body = parsed(outcome);
@@ -702,6 +713,34 @@ describe('Trợ lý: ngữ cảnh văn bản bị loại vì hạn chế', () =>
 });
 
 describe('Trợ lý: giới hạn kích thước', () => {
+  // Danh sách chỉ tính nhiệm vụ chính: thêm một nhiệm vụ chính thứ hai để limit 1 phải cắt
+  let secondRootId = '';
+  before(async () => {
+    const second = await prisma.task.create({
+      data: {
+        code: `NV-W2D-${RAND}-ROOT2`,
+        title: `Nhiệm vụ chính thứ hai ${token}`,
+        scope: TaskScope.DEPARTMENT,
+        priority: TaskPriority.NORMAL,
+        academicMonth: 10,
+        academicYear: '2026-2027',
+        startDate: new Date('2026-09-01T00:00:00+07:00'),
+        status: TaskStatus.IN_PROGRESS,
+        dueDate: new Date('2026-12-01T00:00:00+07:00'),
+        createdById: userA.id,
+        leadUnitId: unitA.id,
+        actors: { create: [{ userId: userA.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }] },
+      },
+      select: { id: true },
+    });
+    secondRootId = second.id;
+  });
+
+  after(async () => {
+    await prisma.taskActor.deleteMany({ where: { taskId: secondRootId } });
+    await prisma.task.deleteMany({ where: { id: secondRootId } });
+  });
+
   it('danh sách có thể bị cắt nhưng luôn đúng trần và mang cờ truncated khi còn nữa', async () => {
     const outcome = await runAssistantTool('list_tasks', JSON.stringify({ limit: 1 }), ctxA);
     assert.equal(outcome.ok, true);
