@@ -35,6 +35,7 @@ import {
 import { POST as chatRoute } from '@/app/api/assistant/chat/route';
 import { GET as streamRoute } from '@/app/api/assistant/conversations/[id]/stream/route';
 import { POST as stopRoute } from '@/app/api/assistant/runs/[id]/stop/route';
+import { DELETE as deleteRoute } from '@/app/api/assistant/conversations/[id]/route';
 
 const runId = crypto.randomBytes(4).toString('hex');
 const ORIGIN = 'http://localhost:3000';
@@ -313,5 +314,23 @@ describe('lượt chạy độc lập với kết nối (POST chat, GET stream, 
     const after = await post(owner, { conversationId, message: 'Hỏi tiếp' });
     assert.equal(after.status, 200);
     await readUntil(after);
+  });
+
+  it('xóa cuộc khi lượt đang chạy: lượt dừng, không ghi trả lời vào cuộc đã xóa', async () => {
+    mockSlowGateway(['Mở. '], 10);
+    const conversationId = conversationOf(await readUntil(await post(owner, { message: 'Cuộc sẽ xóa' })));
+    mockSlowGateway(['Chậm một. ', 'Chậm hai. ', 'Chậm ba.'], 80);
+    const res = await post(owner, { conversationId, message: 'Đang chạy thì xóa' });
+    const run = res.headers.get('x-assistant-run-id')!;
+    const reading = readUntil(res);
+    await waitFor(() => findAssistantRun(owner.id, run)?.conversationId === conversationId);
+    const deleted = await deleteRoute(
+      new NextRequest(`${ORIGIN}/api/assistant/conversations/${conversationId}`, { method: 'DELETE', headers: { cookie: cookieFor(owner), origin: ORIGIN } }),
+      { params: Promise.resolve({ id: conversationId }) },
+    );
+    assert.equal(deleted.status, 200);
+    await reading;
+    assert.equal(findAssistantRun(owner.id, run)?.controller.signal.aborted, true);
+    assert.equal(await prisma.assistantMessage.count({ where: { conversationId } }), 0);
   });
 });
