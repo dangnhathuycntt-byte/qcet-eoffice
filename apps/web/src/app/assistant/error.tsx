@@ -17,8 +17,8 @@ export default function AssistantError({
       logLabel="Assistant"
       title="Đã xảy ra lỗi khi mở Trợ lý"
       fallbackMessage="Không thể tải trang Trợ lý. Vui lòng thử lại hoặc quay về tổng quan."
-      backHref="/"
-      backLabel="Tổng quan"
+      backHref="/tasks"
+      backLabel="Nhiệm vụ"
     />
   );
 }

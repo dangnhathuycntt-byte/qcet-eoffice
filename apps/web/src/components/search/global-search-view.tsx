@@ -64,7 +64,7 @@ const ROW_CLASS = cn("flex h-12 items-center gap-3 rounded-md px-2 transition-co
 
 /**
  * Tìm kiếm (`/search`, mục "Thêm" ở sidebar): nhiệm vụ, văn bản và nhân sự trong phạm vi người dùng được xem (`GET /api/search`).
- * Dựng lại 15/10/2026 theo khung một thẻ: ô tìm lớn, tab theo nhóm kèm số kết quả, mỗi kết quả một hàng 48px như danh sách Tổng quan.
+ * Dựng lại 15/10/2026 theo khung một thẻ: ô tìm lớn, tab theo nhóm kèm số kết quả, mỗi kết quả một hàng 48px.
  */
 export function GlobalSearchView() {
   const searchParams = useSearchParams();

@@ -25,15 +25,15 @@ export default function DocumentsError({
     <div className="max-w-[1440px] w-full mx-auto py-12 px-4">
       <DocumentLoadError
         title="Đã xảy ra lỗi khi tải phân hệ văn bản"
-        message={isChunkError ? CHUNK_ERROR_MESSAGE : "Không thể xử lý sổ quản lý văn bản & công văn. Vui lòng thử lại hoặc quay về bảng điều khiển."}
+        message={isChunkError ? CHUNK_ERROR_MESSAGE : "Không thể xử lý sổ quản lý văn bản & công văn. Vui lòng thử lại hoặc quay về Nhiệm vụ."}
         digest={error?.digest}
         onRetry={isChunkError ? () => window.location.reload() : reset}
         retryLabel={isChunkError ? "Tải lại trang" : undefined}
       >
         <Button variant="secondary" size="sm" asChild>
-          <Link href="/dashboard">
+          <Link href="/tasks">
             <ArrowLeft />
-            Bảng điều khiển
+            Nhiệm vụ
           </Link>
         </Button>
       </DocumentLoadError>

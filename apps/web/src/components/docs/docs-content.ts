@@ -28,8 +28,7 @@ export const DOC_GROUPS: DocGroup[] = [
           {
             type: "ul",
             items: [
-              "**Tổng quan**: mục đầu tiên của thanh bên. Trang gom việc đang chờ Thầy/Cô (trễ hạn, sắp đến hạn), lịch 7 ngày tới và tình hình nhiệm vụ theo đơn vị.",
-              "**Hộp thư**: thông báo gửi tới Thầy/Cô, có lọc và tìm kiếm.",
+              "**Hộp thư**: mục đầu tiên của thanh bên. Thông báo gửi tới Thầy/Cô, có lọc và tìm kiếm.",
               "**Nhiệm vụ**: bảng nhiệm vụ, cùng hai mục con **Yêu cầu phối hợp** và **Mẫu và lặp lại**.",
               "**Lịch công tác**: xem theo **Tuần** hoặc **Tháng**. Bấm một ngày để mở chi tiết ngày đó.",
               "**Văn bản**: **Văn bản đến**, **Văn bản đi**, **Tờ trình nội bộ** và **Hồ sơ công việc**.",
@@ -239,7 +238,7 @@ export const DOC_GROUPS: DocGroup[] = [
             type: "ul",
             items: [
               "`Ctrl` + `B` hoặc `⌘` + `B`: thu gọn hoặc mở rộng thanh bên.",
-              "`1`, `2`, `3`, `4`, `6`: mở lần lượt **Tổng quan**, **Nhiệm vụ**, **Lịch công tác**, **Hộp thư**, **Cơ cấu & Danh bạ**. Phím `5` hiện không chuyển trang.",
+              "`1`, `2`, `3`, `5`: mở lần lượt **Hộp thư**, **Nhiệm vụ**, **Lịch công tác**, **Cơ cấu & Danh bạ**. Phím `4` hiện không chuyển trang.",
               "`C`: mở hộp tạo nhiệm vụ mới trên trang **Nhiệm vụ**. Nhấn `N` rồi `P` liền nhau cũng mở hộp này.",
               "`Esc`: đóng hộp thoại hoặc bảng đang mở.",
             ],

@@ -71,8 +71,8 @@ function extractTokenFromRequest(request: NextRequest): string | null {
  * Requirements & Invariants (phần giao diện của Issue #27):
  * 1. Unauthenticated users accessing protected UI routes -> redirect to /login with returnTo.
  * 2. Authenticated users opening /login -> page asks /api/auth/me for server truth.
- * 3. Root '/' (Tổng quan) -> /login for unauthenticated users; any session passes through to
- *    app/page.tsx, which verifies it via /api/auth/me.
+ * 3. Root '/' -> /login for unauthenticated users; any session passes through to
+ *    app/page.tsx, which verifies it via /api/auth/me and redirects to /tasks (or the legacy ?zone= page).
  * 4. Public assets, static chunks, PWA manifest, /portal and /docs (user guide): Always accessible.
  * 5. Canonical singular to plural redirects (/task -> /tasks).
  */
@@ -150,8 +150,8 @@ export async function middleware(request: NextRequest) {
   const token = extractTokenFromRequest(request);
   const hasToken = Boolean(token && token.trim().length > 0);
 
-  // 5-6. Root '/' = trang Tổng quan (từ 15/10/2026; trước đó chuyển thẳng sang /tasks). Chưa có phiên thì về /login;
-  // có phiên (JWT hay phiên DB) thì app/page.tsx kiểm phiên phía máy chủ rồi hiện Tổng quan hoặc chuyển ?zone= cũ tới trang tương ứng.
+  // 5-6. Root '/' không có trang riêng (Tổng quan 15–19/10/2026 đã bỏ). Chưa có phiên thì về /login;
+  // có phiên (JWT hay phiên DB) thì app/page.tsx kiểm phiên phía máy chủ rồi chuyển tới /tasks hoặc trang của ?zone= cũ.
   if (pathname === '/') {
     if (!hasToken) {
       const url = request.nextUrl.clone();

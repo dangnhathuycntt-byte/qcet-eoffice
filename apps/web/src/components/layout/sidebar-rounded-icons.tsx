@@ -37,16 +37,6 @@ function SidebarSvg({ size = 16, strokeWidth = 1.25, className, children, ...pro
 /** Đáy khay (dùng chung cho Hộp thư và Văn bản đến) */
 const TRAY_LINE = "M1.75 9h3l1 1.5h4.5l1-1.5h3";
 
-/** 1. Tổng quan: ngôi nhà, cửa vòm */
-export function IconSidebarHome(props: SidebarIconProps) {
-  return (
-    <SidebarSvg {...props}>
-      <path d="M2.5 7.2c0-.4.2-.8.5-1.1l4-3.5a1.5 1.5 0 0 1 2 0l4 3.5c.3.3.5.7.5 1.1v5.3a1.75 1.75 0 0 1-1.75 1.75h-7.5A1.75 1.75 0 0 1 2.5 12.5Z" />
-      <path d="M6.25 14.25V11.5a1.75 1.75 0 0 1 3.5 0v2.75" />
-    </SidebarSvg>
-  );
-}
-
 /** 2. Nhiệm vụ: hai ô chồng (như icon Issues của Linear) */
 export function IconSidebarTasks(props: SidebarIconProps) {
   return (

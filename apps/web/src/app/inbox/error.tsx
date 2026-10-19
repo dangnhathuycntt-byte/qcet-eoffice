@@ -16,9 +16,9 @@ export default function InboxError({
       reset={reset}
       logLabel="Inbox"
       title="Đã xảy ra lỗi khi tải Hộp thư"
-      fallbackMessage="Không thể tải danh sách nhiệm vụ cần xử lý. Vui lòng thử lại hoặc quay về bàn làm việc."
-      backHref="/"
-      backLabel="Tổng quan"
+      fallbackMessage="Không thể tải danh sách nhiệm vụ cần xử lý. Vui lòng thử lại hoặc quay về Nhiệm vụ."
+      backHref="/tasks"
+      backLabel="Nhiệm vụ"
     />
   );
 }

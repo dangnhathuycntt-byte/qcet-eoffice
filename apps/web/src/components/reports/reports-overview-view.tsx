@@ -152,9 +152,9 @@ function csvRows(units: UnitHealth[] | null, docs: DocumentStats | null): string
 }
 
 /**
- * Báo cáo thống kê (`/reports`, mục "Báo cáo" ở sidebar): số liệu tổng hợp trong phạm vi người dùng được xem, tách khỏi Tổng quan
- * (Tổng quan chỉ giữ việc của riêng người dùng, như Linear tách My issues khỏi Insights; chốt 15/10/2026).
- * - Nhiệm vụ: `departmentHealth` của `/api/dashboard/overview`, mọi việc do đơn vị chủ trì kể cả việc con (cùng định nghĩa khối đơn vị ở Tổng quan cũ);
+ * Báo cáo thống kê (`/reports`, mục "Báo cáo" ở sidebar): số liệu tổng hợp trong phạm vi người dùng được xem (chốt 15/10/2026;
+ * trang Tổng quan từng giữ việc của riêng người dùng đã bỏ 19/10/2026).
+ * - Nhiệm vụ: `departmentHealth` của `/api/dashboard/overview`, mọi việc do đơn vị chủ trì kể cả việc con;
  *   Ban Giám hiệu xem mọi đơn vị, người thuộc đơn vị chỉ thấy đơn vị mình, tài khoản chưa thuộc đơn vị không có số liệu.
  * - Văn bản: `/api/documents/stats`, văn bản chưa lưu trữ mà người dùng được xem; mỗi loại văn bản mở đúng sổ ở sidebar.
  * Con số chính không khung, so sánh nhóm bằng thanh ngang, tỷ lệ bằng thanh xếp chồng (bảng DataViz).

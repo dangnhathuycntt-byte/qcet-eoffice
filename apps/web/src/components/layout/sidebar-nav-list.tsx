@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ArchiveX, BookOpen, ChevronDown, ScrollText, Search, Settings, UserRoundCheck, UsersRound, type LucideIcon } from "lucide-react";
 import {
-  IconSidebarHome,
   IconSidebarTasks,
   IconSidebarMail,
   IconSidebarCalendar,
@@ -62,23 +61,23 @@ export interface SidebarNavGroup {
  * Sử dụng bộ icon bo tròn mềm mại đồng bộ với Vector 2758.svg và mẫu UI
  */
 export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
-  // 1. Nhóm chính (Core Workspace): Tổng quan, Hộp thư, Nhiệm vụ, Lịch công tác
+  // 1. Nhóm chính (Core Workspace): Hộp thư, Trợ lý, Nhiệm vụ, Lịch công tác (bỏ Tổng quan 19/10/2026; `/` chuyển tới Nhiệm vụ)
   {
     id: "core",
     items: [
-      {
-        id: "desk",
-        label: "Tổng quan",
-        href: "/",
-        icon: IconSidebarHome,
-        aliases: ["/dashboard", "/workbench"],
-      },
       {
         id: "inbox",
         label: "Hộp thư",
         href: "/inbox",
         icon: IconSidebarMail,
         aliases: ["/notifications"],
+      },
+      {
+        id: "assistant",
+        label: "Trợ lý",
+        href: "/assistant",
+        icon: IconSidebarAssistant,
+        feature: "assistant",
       },
       {
         id: "tasks",
@@ -97,13 +96,6 @@ export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
         href: "/calendar",
         icon: IconSidebarCalendar,
         aliases: ["/meetings"],
-      },
-      {
-        id: "assistant",
-        label: "Trợ lý",
-        href: "/assistant",
-        icon: IconSidebarAssistant,
-        feature: "assistant",
       },
     ],
   },

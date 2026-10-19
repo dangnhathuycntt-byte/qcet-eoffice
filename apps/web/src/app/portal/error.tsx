@@ -16,9 +16,9 @@ export default function PortalError({
       reset={reset}
       logLabel="Portal"
       title="Đã xảy ra lỗi khi tải Cổng Lãnh đạo"
-      fallbackMessage="Không thể tải dữ liệu điều hành. Vui lòng thử lại hoặc quay về bàn làm việc."
-      backHref="/"
-      backLabel="Tổng quan"
+      fallbackMessage="Không thể tải dữ liệu điều hành. Vui lòng thử lại hoặc quay về Nhiệm vụ."
+      backHref="/tasks"
+      backLabel="Nhiệm vụ"
     />
   );
 }

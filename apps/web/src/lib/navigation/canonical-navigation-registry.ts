@@ -17,18 +17,19 @@ export interface CanonicalRouteConfig {
   order: number;
 }
 
+// Thứ tự `order` theo thanh bên (bỏ Tổng quan 19/10/2026): phím số 1–6 ở `handleSidebarShortcut` đi theo thứ tự này.
 export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
   {
-    id: "desk",
-    href: "/",
-    label: "Tổng quan",
-    shortLabel: "Tổng quan",
+    id: "inbox",
+    href: "/inbox",
+    label: "Hộp thư",
+    shortLabel: "Hộp thư",
     section: "work",
-    iconName: "LayoutDashboard",
-    zone: "dashboard",
-    badgeKey: "tasks",
-    aliases: ["/dashboard", "/workbench"],
-    mobilePlacement: "none",
+    iconName: "Inbox",
+    badgeKey: "notifications",
+    aliases: ["/notifications"],
+    mobilePlacement: "bottom-bar",
+    mobileOrder: 3,
     order: 1,
   },
   {
@@ -58,19 +59,6 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     mobilePlacement: "bottom-bar",
     mobileOrder: 2,
     order: 3,
-  },
-  {
-    id: "inbox",
-    href: "/inbox",
-    label: "Hộp thư",
-    shortLabel: "Hộp thư",
-    section: "work",
-    iconName: "Inbox",
-    badgeKey: "notifications",
-    aliases: ["/notifications"],
-    mobilePlacement: "bottom-bar",
-    mobileOrder: 3,
-    order: 4,
   },
   {
     id: "documents",

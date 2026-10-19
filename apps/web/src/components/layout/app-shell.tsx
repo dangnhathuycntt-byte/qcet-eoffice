@@ -92,7 +92,7 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
   // Sổ văn bản dùng cùng khung workspace với chi tiết nhiệm vụ: chiều cao cố định, các thẻ tự cuộn
   // Trang con tĩnh của Nhiệm vụ tự dựng khung một thẻ (WorkspacePageCard) nên cũng dùng khung workspace, không bọc thêm thẻ ngoài
   const isTaskSubPage = isTaskSubPagePath(pathname);
-  // Tổng quan, Báo cáo và các trang trong menu "Thêm" cũng tự dựng khung một thẻ
+  // Cơ cấu & Danh bạ, Báo cáo và các trang trong menu "Thêm" cũng tự dựng khung một thẻ
   const isCardPage = isCardPagePath(pathname);
   const isWorkspaceShell = isTaskDetail || isTaskSubPage || isCardPage || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản, trang một thẻ: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
