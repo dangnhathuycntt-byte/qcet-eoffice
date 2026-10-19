@@ -149,7 +149,7 @@ import {
   type ContentBlockType,
 } from "@qcet/shared/lib/tasks/plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
-import { MENU_POPUP_CLASS } from "@/components/ui/menu";
+import { MENU_POPUP_CLASS, MenuActionItem, MenuContent, MenuRoot, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 
 /** Props chung cho mọi element renderer trong QCET Plate editor */
@@ -191,7 +191,7 @@ export interface TaskBlockEditorProps {
   onOpenCreateSubtask?: () => void;
   className?: string;
   /**
-   * compose: ô mô tả trong hộp tạo việc. Không có tay kéo khối (không chừa lề trái), ⌘/Ctrl+Enter để hộp gửi
+   * compose: ô mô tả trong hộp tạo việc. Tay kéo khối nằm trong lề 24px của hộp (không chừa lề trái), ⌘/Ctrl+Enter để hộp gửi
    * (không chèn dòng thoát khối), báo nội dung ngay sau mỗi thay đổi (không debounce) để bấm Tạo không mất chữ cuối,
    * tệp tải lên chưa gắn nhiệm vụ (nhiệm vụ chưa có).
    */
@@ -380,14 +380,24 @@ const QcetAlignPlugin = createPlatePlugin({
 // Plate element render components
 // ---------------------------------------------------------------------------
 
+/**
+ * Đoạn văn là `<p>`, mục danh sách là `<ul>`/`<ol>` bọc `<li aria-level>`: đúng thẻ mà bộ đọc HTML của Plate nhận ra
+ * (BaseParagraphPlugin đọc `P`, BaseListPlugin đọc `LI` + `aria-level` + kiểu của danh sách cha), nên chữ chọn bằng chuột
+ * rồi dán vào ô khác hay ứng dụng khác vẫn giữ được đoạn và gạch đầu dòng. `li` hiển thị flex nên không hiện dấu mặc định.
+ */
 function ParagraphEl({ attributes, children, element }: RenderElementProps<any>) {
   const editor = useEditorRef();
   const indent = element.indent;
   const listStyle = element.listStyleType;
   const checked = element.checked;
   const textAlign = element.textAlign;
-
-  const alignStyle = textAlign ? { textAlign } : undefined;
+  // Thụt lề theo cấp, 24px mỗi cấp như BaseIndentPlugin; danh sách cấp 1 nằm sát lề vì dấu đầu dòng đã chiếm chỗ.
+  // Tự tính vì style riêng của khối thay style Plate chèn vào `attributes`.
+  const indentLevel = (indent ?? 0) - (listStyle && indent >= 1 ? 1 : 0);
+  const alignStyle = {
+    ...(textAlign ? { textAlign } : {}),
+    ...(indentLevel > 0 ? { marginLeft: indentLevel * 24 } : {}),
+  };
 
   if (indent >= 1 && listStyle) {
     if (typeof checked === "boolean") {
@@ -398,59 +408,65 @@ function ParagraphEl({ attributes, children, element }: RenderElementProps<any>)
         }
       };
       return (
-        <div {...attributes} style={alignStyle} className="flex items-start gap-2.5 py-0.5 text-sm leading-relaxed">
-          <Pressable contentEditable={false} onClick={toggleChecked} className="mt-0.5 shrink-0 select-none" aria-label={checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}>
-            {checked ? (
-              <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
-            ) : (
-              <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
-            )}
-          </Pressable>
-          <span className={cn("flex-1 min-w-0", checked && "line-through text-muted-foreground/70")}>
-            {children}
-          </span>
-        </div>
+        <ul {...attributes} style={{ ...alignStyle, listStyleType: listStyle }}>
+          <li aria-level={indent} className="flex items-start gap-2.5 py-0.5 text-sm leading-relaxed">
+            <Pressable contentEditable={false} onClick={toggleChecked} className="mt-0.5 shrink-0 select-none" aria-label={checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}>
+              {checked ? (
+                <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
+              ) : (
+                <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
+              )}
+            </Pressable>
+            <span className={cn("flex-1 min-w-0", checked && "line-through text-muted-foreground/70")}>
+              {children}
+            </span>
+          </li>
+        </ul>
       );
     }
     if (listStyle === "decimal") {
       return (
-        <div {...attributes} style={alignStyle} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
-          <span contentEditable={false} className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right select-none">
-            {(element.listStart ?? 1)}.
-          </span>
-          <span className="flex-1 min-w-0">{children}</span>
-        </div>
+        <ol {...attributes} start={element.listStart ?? 1} style={{ ...alignStyle, listStyleType: listStyle }}>
+          <li aria-level={indent} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
+            <span contentEditable={false} className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right select-none">
+              {(element.listStart ?? 1)}.
+            </span>
+            <span className="flex-1 min-w-0">{children}</span>
+          </li>
+        </ol>
       );
     }
     return (
-      <div {...attributes} style={alignStyle} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
-        <span contentEditable={false} className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
-        <span className="flex-1 min-w-0">{children}</span>
-      </div>
+      <ul {...attributes} style={{ ...alignStyle, listStyleType: listStyle }}>
+        <li aria-level={indent} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
+          <span contentEditable={false} className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2 select-none" />
+          <span className="flex-1 min-w-0">{children}</span>
+        </li>
+      </ul>
     );
   }
 
   return (
-    <div {...attributes} style={alignStyle} className="text-sm leading-relaxed text-foreground py-0.5">
+    <p {...attributes} style={alignStyle} className="text-sm leading-relaxed text-foreground py-0.5">
       {children}
-    </div>
+    </p>
   );
 }
 
 function H1El({ attributes, children, element }: RenderElementProps<any>) {
-  return <h1 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-xl sm:text-2xl mt-2 mb-0.5 font-bold tracking-tight text-foreground">{children}</h1>;
+  return <h1 {...attributes} style={{ ...attributes.style, ...(element.textAlign ? { textAlign: element.textAlign } : {}) }} className="text-xl sm:text-2xl mt-2 mb-0.5 font-bold tracking-tight text-foreground">{children}</h1>;
 }
 
 function H2El({ attributes, children, element }: RenderElementProps<any>) {
-  return <h2 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-base sm:text-lg font-semibold mt-1.5 mb-0.5 tracking-tight text-foreground">{children}</h2>;
+  return <h2 {...attributes} style={{ ...attributes.style, ...(element.textAlign ? { textAlign: element.textAlign } : {}) }} className="text-base sm:text-lg font-semibold mt-1.5 mb-0.5 tracking-tight text-foreground">{children}</h2>;
 }
 
 function H3El({ attributes, children, element }: RenderElementProps<any>) {
-  return <h3 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-sm sm:text-base font-semibold mt-1 mb-0.5 tracking-tight text-foreground">{children}</h3>;
+  return <h3 {...attributes} style={{ ...attributes.style, ...(element.textAlign ? { textAlign: element.textAlign } : {}) }} className="text-sm sm:text-base font-semibold mt-1 mb-0.5 tracking-tight text-foreground">{children}</h3>;
 }
 
 function BlockquoteEl({ attributes, children, element }: RenderElementProps<any>) {
-  return <blockquote {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90 text-sm leading-relaxed">{children}</blockquote>;
+  return <blockquote {...attributes} style={{ ...attributes.style, ...(element.textAlign ? { textAlign: element.textAlign } : {}) }} className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90 text-sm leading-relaxed">{children}</blockquote>;
 }
 
 function CalloutEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
@@ -846,7 +862,7 @@ function ImageEl({ attributes, children, element }: any) {
                 </div>
               )}
               {!editor.api.isReadOnly() && !imageLoadError && (
-                <div className={cn("absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60", IMAGE_TOOLBAR_REVEAL)}>
+                <div className={cn("absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 select-none", IMAGE_TOOLBAR_REVEAL)}>
                   {[25, 50, 75, 100].map((w) => (
                     <Pressable
                       key={w}
@@ -861,7 +877,7 @@ function ImageEl({ attributes, children, element }: any) {
                   ))}
                 </div>
               )}
-              <div className={cn("absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60", IMAGE_TOOLBAR_REVEAL)}>
+              <div className={cn("absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60 select-none", IMAGE_TOOLBAR_REVEAL)}>
                 <Pressable
                   onClick={() => {
                     if (!editor.api.isReadOnly()) {
@@ -1497,121 +1513,103 @@ const TURN_INTO_OPTIONS = [
   { type: "callout", label: "Ghi chú", icon: Info },
 ] as const;
 
-function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; element: any; onClose: () => void; contextMode?: boolean }) {
-  const [showTurnInto, setShowTurnInto] = React.useState(false);
+/** Menu khối đang mở: neo vào tay kéo hoặc điểm bấm chuột phải; `ids` là các khối menu tác động. */
+interface BlockMenuState {
+  anchor: Element | { getBoundingClientRect: () => DOMRect };
+  ids: string[];
+}
+
+/** Mở menu khối từ tay kéo của từng khối; `openId` giữ tay kéo của khối đang mở menu luôn hiện. */
+const BlockMenuContext = React.createContext<{
+  openId: string | null;
+  open: (element: any, anchor: BlockMenuState["anchor"]) => void;
+} | null>(null);
+
+/**
+ * Menu khối (tay kéo sáu chấm, chuột phải) dựng trên `ui/menu` (Base UI): tự lật lên trên hay sang bên khi gần mép màn
+ * hình. Như BlockContextMenu của Plate, menu tác động lên vùng chọn khối hiện tại bằng transform có sẵn của Plate; bấm
+ * vào menu (portal ngoài khung soạn) có thể làm Plate bỏ chọn, khi đó dùng các khối ghi lại lúc mở và chọn lại trước
+ * mỗi thao tác. Phải nằm trong `<Plate>` để đọc vùng chọn.
+ */
+function BlockMenu({ editor, state, onClose }: { editor: any; state: BlockMenuState | null; onClose: () => void }) {
   const selectedIds = usePluginOption(BlockSelectionPlugin, "selectedIds");
-  const isMulti = contextMode && (selectedIds?.size ?? 0) > 1;
+  const ids = state && selectedIds?.size ? [...selectedIds] : (state?.ids ?? []);
+  const selectTargets = () => editor.getApi(BlockSelectionPlugin).blockSelection.set(ids);
+  const targetNodes = { at: [], match: (node: any) => typeof node.id === "string" && ids.includes(node.id) };
 
-  const getSelectedElements = React.useCallback(() => {
-    if (!isMulti) return [element];
-    try {
-      const entries = editor.getApi(BlockSelectionPlugin).blockSelection.getNodes();
-      return entries.map(([node]: [any]) => node);
-    } catch { return [element]; }
-  }, [editor, element, isMulti]);
-
-  const turnInto = React.useCallback((opt: typeof TURN_INTO_OPTIONS[number]) => {
-    const elements = getSelectedElements();
-    (editor as any).withoutNormalizing(() => {
-      // Process in reverse order to preserve paths
-      for (let i = elements.length - 1; i >= 0; i--) {
-        const el = elements[i];
-        const path = editor.api.findPath(el);
-        if (!path) continue;
+  const turnInto = (opt: typeof TURN_INTO_OPTIONS[number]) => {
+    selectTargets();
+    const entries = editor.getApi(BlockSelectionPlugin).blockSelection.getNodes() as Array<[any, number[]]>;
+    editor.tf.withoutNormalizing(() => {
+      // Từ cuối lên để đường dẫn của các khối phía trên không đổi
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const [el, path] = entries[i];
         const contentBlock = plateToBlocks([el])[0];
         const converted: any = { id: contentBlock.id, type: opt.type, content: contentBlock.content };
         if (opt.type === "heading") converted.level = (opt as any).level;
         if (opt.type === "checklist") converted.checked = false;
         const [plateNode] = blocksToPlate([converted]);
-        const finalNode = { ...plateNode, children: el.children };
         editor.tf.removeNodes({ at: path });
-        editor.tf.insertNodes([finalNode] as any, { at: path });
+        editor.tf.insertNodes([{ ...plateNode, children: el.children }] as any, { at: path });
       }
     });
-    onClose();
-  }, [editor, getSelectedElements, onClose]);
+    // Khối được gỡ rồi chèn lại (giữ id) nên Plate bỏ chọn: chọn lại để thao tác tiếp trên đúng các khối này
+    selectTargets();
+  };
 
-  const duplicateBlock = React.useCallback(() => {
-    if (isMulti) {
-      editor.getTransforms(BlockSelectionPlugin).blockSelection.duplicate();
-    } else {
-      const path = editor.api.findPath(element);
-      if (!path) return;
-      const id = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const clone = { ...JSON.parse(JSON.stringify(element)), id };
-      editor.tf.insertNodes([clone] as any, { at: [path[0] + 1] });
-    }
-    onClose();
-  }, [editor, element, isMulti, onClose]);
+  const duplicateBlock = () => {
+    selectTargets();
+    editor.getTransforms(BlockSelectionPlugin).blockSelection.duplicate();
+  };
 
-  const deleteBlock = React.useCallback(() => {
-    if (isMulti) {
-      editor.getTransforms(BlockSelectionPlugin).blockSelection.removeNodes();
-    } else {
-      const path = editor.api.findPath(element);
-      if (!path) return;
-      editor.tf.removeNodes({ at: path });
-    }
-    onClose();
-  }, [editor, element, isMulti, onClose]);
+  const deleteBlock = () => {
+    selectTargets();
+    editor.getTransforms(BlockSelectionPlugin).blockSelection.removeNodes();
+  };
 
   return (
-    <div className={cn(
-      "w-44 rounded-lg border border-border/80 bg-card p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100",
-      contextMode ? "relative" : "absolute left-0 top-full mt-1 z-50"
-    )}>
-      <Pressable
-        onClick={() => setShowTurnInto(!showTurnInto)}
-        className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
+    <MenuRoot open={state !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      {/* Base UI chỉ đăng ký menu gốc vào cây menu qua Trigger; thiếu nó thì mở menu con "Chuyển thành" sẽ đóng menu gốc
+          (lý do sibling-open). Menu mở bằng tay kéo hoặc chuột phải qua `anchor`, nên nút này ẩn và không nhận focus. */}
+      <MenuTrigger aria-hidden tabIndex={-1} className="sr-only" />
+      <MenuContent
+        anchor={state?.anchor}
+        positionerClassName="z-50"
+        className="w-56"
+        data-plate-prevent-unselect="true"
       >
-        <span className="flex items-center gap-2"><ArrowRight className="size-3.5 text-muted-foreground" /> Chuyển thành</span>
-        <ChevronRight className="size-3 text-muted-foreground" />
-      </Pressable>
-      {showTurnInto && (
-        <div className="ml-1 mt-0.5 space-y-0.5 border-l border-border/40 pl-1">
+        <MenuSubmenu icon={<ArrowRight />} label="Chuyển thành">
           {TURN_INTO_OPTIONS.map((opt) => {
             const Icon = opt.icon;
             return (
-              <Pressable
-                key={`${opt.type}-${(opt as any).level || ""}`}
-                onClick={() => turnInto(opt)}
-                className="flex w-full items-center gap-2 px-2 py-1 rounded-md hover:bg-muted transition-colors text-left text-xs"
-              >
-                <Icon className="size-3.5 text-muted-foreground" /> {opt.label}
-              </Pressable>
+              <MenuActionItem key={`${opt.type}-${(opt as any).level || ""}`} leading={<Icon />} onClick={() => turnInto(opt)}>
+                {opt.label}
+              </MenuActionItem>
             );
           })}
-        </div>
-      )}
-      <Pressable
-        onClick={() => {
-          plateIndent(editor as any);
-          onClose();
-        }}
-        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
-      >
-        <IndentIncrease className="size-3.5 text-muted-foreground" /> Thụt vào
-      </Pressable>
-      <Pressable
-        onClick={() => {
-          plateOutdent(editor as any);
-          onClose();
-        }}
-        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
-      >
-        <IndentDecrease className="size-3.5 text-muted-foreground" /> Giảm thụt
-      </Pressable>
-      <Pressable onClick={duplicateBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left">
-        <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
-      </Pressable>
-      <Pressable onClick={deleteBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-destructive hover:bg-danger-soft transition-colors text-left">
-        <Trash2 className="size-3.5" /> {isMulti ? `Xóa ${selectedIds?.size} blocks` : "Xóa block"}
-      </Pressable>
-    </div>
+        </MenuSubmenu>
+        <MenuActionItem leading={<IndentIncrease />} onClick={() => plateIndent(editor, { getNodesOptions: targetNodes })}>
+          Thụt vào
+        </MenuActionItem>
+        <MenuActionItem
+          leading={<IndentDecrease />}
+          // Về mức 0 thì bỏ luôn kiểu danh sách, như giảm thụt của danh sách Plate
+          onClick={() => plateOutdent(editor, { getNodesOptions: targetNodes, unsetNodesProps: ["listStyleType", "listStart", "checked"] })}
+        >
+          Giảm thụt
+        </MenuActionItem>
+        <MenuActionItem leading={<Copy />} onClick={duplicateBlock}>
+          Nhân bản
+        </MenuActionItem>
+        <MenuActionItem destructive leading={<Trash2 />} onClick={deleteBlock}>
+          {ids.length > 1 ? `Xóa ${ids.length} khối` : "Xóa khối"}
+        </MenuActionItem>
+      </MenuContent>
+    </MenuRoot>
   );
 }
 
-function BlockRowDraggable({ children, element }: { children: React.ReactNode; element: any }) {
+function BlockRowDraggable({ children, element, compact }: { children: React.ReactNode; element: any; compact?: boolean }) {
   const { props: selectableProps } = useBlockSelectable();
   const isSelected = useBlockSelected(element?.id);
   const editor = useEditorRef();
@@ -1624,19 +1622,8 @@ function BlockRowDraggable({ children, element }: { children: React.ReactNode; e
     canDropNode: ({ dragItem }) => !("editorId" in dragItem) || dragItem.editorId === editor.id,
   });
   const { dropLine } = useDropLine({ id: element.id, orientation: "vertical" });
-  const [showBlockMenu, setShowBlockMenu] = React.useState(false);
-  const blockMenuRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!showBlockMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (blockMenuRef.current && !blockMenuRef.current.contains(e.target as Node)) {
-        setShowBlockMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showBlockMenu]);
+  const blockMenu = React.useContext(BlockMenuContext);
+  const showBlockMenu = blockMenu?.openId === element.id;
 
   return (
     <div
@@ -1653,9 +1640,10 @@ function BlockRowDraggable({ children, element }: { children: React.ReactNode; e
       data-plate-selectable="true"
     >
       <div
-        ref={blockMenuRef}
         className={cn(
-          "w-6 shrink-0 -ml-7 mr-1 flex items-center justify-center h-6 mt-0.5 relative select-none",
+          "shrink-0 mr-1 flex items-center justify-center h-6 mt-0.5 relative select-none",
+          // compact (hộp tạo việc): khe 24px vừa lề của hộp; điện thoại không rê chuột nên ẩn tay kéo
+          compact ? "w-5 -ml-6 max-md:hidden" : "w-6 -ml-7",
           readOnly && "invisible"
         )}
         contentEditable={false}
@@ -1666,8 +1654,13 @@ function BlockRowDraggable({ children, element }: { children: React.ReactNode; e
           type="button"
           contentEditable={false}
           tabIndex={-1}
-          aria-label="Mở menu block hoặc kéo để sắp xếp"
-          onClick={(e) => { e.stopPropagation(); setShowBlockMenu((prev) => !prev); }}
+          aria-label="Mở menu khối hoặc kéo để sắp xếp"
+          aria-haspopup="menu"
+          aria-expanded={showBlockMenu}
+          // Bấm tay kéo không làm Plate bỏ vùng chọn khối: menu mở trên đúng các khối đang chọn. Plate chỉ đọc thuộc tính
+          // trên chính phần tử bị bấm nên icon bên trong không nhận chuột
+          data-plate-prevent-unselect="true"
+          onClick={(e) => { e.stopPropagation(); blockMenu?.open(element, e.currentTarget); }}
           className={cn(
             "size-5 flex items-center justify-center rounded-md",
             "text-muted-foreground/50 hover:text-foreground hover:bg-muted",
@@ -1678,9 +1671,8 @@ function BlockRowDraggable({ children, element }: { children: React.ReactNode; e
             "motion-reduce:transition-none",
           )}
         >
-          <GripVertical className="size-3.5" />
+          <GripVertical className="size-3.5 pointer-events-none" />
         </button>
-        {showBlockMenu && !readOnly && <BlockMenu editor={editor} element={element} onClose={() => setShowBlockMenu(false)} />}
       </div>
       <div ref={previewRef} className="flex-1 min-w-0">{children}</div>
       {dropLine && (
@@ -2066,11 +2058,9 @@ export function TaskBlockEditor({
         options: { enableScroller: true },
         render: {
           aboveNodes: ({ element, editor }) => {
-            // compose: không có tay kéo khối nên không cần chừa lề trái
-            if (compose) return;
             const path = editor.api.findPath(element);
             if (path?.length !== 1) return;
-            return (props) => <BlockRowDraggable {...props} />;
+            return (props) => <BlockRowDraggable {...props} compact={compose} />;
           },
         },
       }),
@@ -2399,22 +2389,41 @@ export function TaskBlockEditor({
     [editor],
   );
 
-  // Context menu state: right-click on selected blocks shows BlockMenu at cursor
-  const [ctxMenu, setCtxMenu] = React.useState<{ x: number; y: number; element: any } | null>(null);
-
-  React.useEffect(() => {
-    if (!ctxMenu) return;
-    const close = (e: MouseEvent) => {
-      // Close when clicking outside the context menu
-      const menuEl = document.querySelector("[data-context-block-menu]");
-      if (menuEl && menuEl.contains(e.target as Node)) return;
-      setCtxMenu(null);
-    };
-    const closeEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setCtxMenu(null); };
-    window.addEventListener("mousedown", close);
-    window.addEventListener("keydown", closeEsc);
-    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("keydown", closeEsc); };
-  }, [ctxMenu]);
+  // Menu khối dùng chung cho tay kéo và chuột phải. Khối nằm trong vùng chọn nhiều khối (chọn khối, hoặc bôi đen chữ trải
+  // qua nhiều khối) thì menu tác động cả vùng chọn (kiểu Notion), không thì chỉ khối đó; chọn khối ngay khi mở để thấy
+  // menu đang tác động lên đâu.
+  const [blockMenu, setBlockMenu] = React.useState<(BlockMenuState & { openId: string }) | null>(null);
+  const openBlockMenu = React.useCallback(
+    (element: any, anchor: BlockMenuState["anchor"]) => {
+      const selected = editor.getOption(BlockSelectionPlugin, "selectedIds") as Set<string> | undefined;
+      const textSelected: string[] = editor.selection && editor.api.isExpanded()
+        ? Array.from(editor.api.nodes({ at: editor.selection, match: (_node: any, path: number[]) => path.length === 1 }))
+            .map(([node]: any) => node.id)
+            .filter((id: unknown): id is string => typeof id === "string")
+        : [];
+      const ids = selected?.has(element.id) && selected.size > 1
+        ? [...selected]
+        : textSelected.length > 1 && textSelected.includes(element.id)
+          ? textSelected
+          : [element.id];
+      editor.getApi(BlockSelectionPlugin).blockSelection.set(ids);
+      setBlockMenu({ anchor, ids, openId: element.id });
+    },
+    [editor],
+  );
+  const closeBlockMenu = React.useCallback(() => {
+    setBlockMenu(null);
+    // Như menu khối của Plate: trả focus cho vùng chọn khối để Delete, ⌘C, mũi tên vẫn tác động lên khối
+    requestAnimationFrame(() => {
+      if ((editor.getOption(BlockSelectionPlugin, "selectedIds") as Set<string> | undefined)?.size) {
+        editor.getApi(BlockSelectionPlugin).blockSelection.focus();
+      }
+    });
+  }, [editor]);
+  const blockMenuContext = React.useMemo(
+    () => ({ openId: blockMenu?.openId ?? null, open: openBlockMenu }),
+    [blockMenu?.openId, openBlockMenu],
+  );
 
   const handleEditorContextMenu = React.useCallback(
     (e: React.MouseEvent) => {
@@ -2429,9 +2438,10 @@ export function TaskBlockEditor({
       const node = editor.children.find((n: any) => n.id === blockId);
       if (!node) return;
       e.preventDefault();
-      setCtxMenu({ x: e.clientX, y: e.clientY, element: node });
+      const { clientX: x, clientY: y } = e;
+      openBlockMenu(node, { getBoundingClientRect: () => new DOMRect(x, y, 0, 0) });
     },
-    [canEdit, editor],
+    [canEdit, editor, openBlockMenu],
   );
 
   // Bấm vùng trống dưới khối cuối: khối cuối là ảnh/tệp/bảng thì thêm dòng mới, còn lại đặt con trỏ cuối nội dung
@@ -2470,6 +2480,7 @@ export function TaskBlockEditor({
         {showFixedToolbar && <FixedToolbar editor={editor} />}
 
         <div className={cn("flex flex-1 min-h-0 flex-col", !compose && "px-1 py-1")}>
+          <BlockMenuContext.Provider value={blockMenuContext}>
           <PlateDndContainer>
             <Plate
               editor={editor}
@@ -2516,20 +2527,11 @@ export function TaskBlockEditor({
                 />
                 <FloatingToolbar editor={editor} />
               </PlateContainer>
+              <BlockMenu editor={editor} state={blockMenu} onClose={closeBlockMenu} />
             </Plate>
           </PlateDndContainer>
+          </BlockMenuContext.Provider>
         </div>
-
-        {/* Right-click context menu portal */}
-        {ctxMenu && typeof document !== "undefined" && createPortal(
-          <div
-            data-context-block-menu
-            style={{ position: "fixed", top: ctxMenu.y, left: ctxMenu.x, zIndex: 9999 }}
-          >
-            <BlockMenu editor={editor} element={ctxMenu.element} onClose={() => setCtxMenu(null)} contextMode />
-          </div>,
-          document.body,
-        )}
         {isGlobalDragging && typeof document !== "undefined" && createPortal(
           <div
             data-testid="global-file-drop-overlay"

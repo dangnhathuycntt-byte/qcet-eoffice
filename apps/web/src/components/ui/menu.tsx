@@ -299,6 +299,8 @@ export interface MenuContentProps
   mobileSheet?: boolean;
   /** Tiêu đề của bottom sheet trên điện thoại. */
   sheetTitle?: React.ReactNode;
+  /** Neo khi menu không có `MenuTrigger`: phần tử hoặc điểm ảo (menu chuột phải). */
+  anchor?: React.ComponentPropsWithoutRef<typeof BaseMenu.Positioner>["anchor"];
 }
 
 /**
@@ -321,6 +323,7 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
       arrow = false,
       mobileSheet = false,
       sheetTitle,
+      anchor,
       children,
       ...props
     },
@@ -343,6 +346,7 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
           sideOffset={sideOffset}
           alignOffset={alignOffset}
           collisionPadding={collisionPadding}
+          anchor={anchor}
           className={cn("z-30 outline-none", positionerClassName, mobileSheet && SHEET_POSITIONER_CLASS)}
         >
           <MenuPopup

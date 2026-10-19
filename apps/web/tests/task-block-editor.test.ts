@@ -384,6 +384,28 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     });
   });
 
+  describe("4c2. Dán HTML và menu khối dùng thư viện", () => {
+    it("đoạn là <p>, mục danh sách là <ul>/<ol> bọc <li aria-level>: bộ đọc HTML của Plate dựng lại được khối khi dán", () => {
+      assert.ok(componentContent.includes("<p {...attributes} style={alignStyle}"));
+      assert.ok(componentContent.includes("<ul {...attributes} style={{ ...alignStyle, listStyleType: listStyle }}>"));
+      assert.ok(componentContent.includes("<ol {...attributes} start={element.listStart ?? 1}"));
+      assert.ok((componentContent.match(/<li aria-level=\{indent\}/g) ?? []).length >= 3);
+    });
+
+    it("menu khối dựng trên ui/menu (tự lật khi thiếu chỗ), có Trigger ẩn để menu con không đóng menu gốc", () => {
+      assert.ok(componentContent.includes("<MenuContent\n        anchor={state?.anchor}"));
+      assert.ok(componentContent.includes('<MenuTrigger aria-hidden tabIndex={-1} className="sr-only" />'));
+      assert.ok(componentContent.includes('<MenuSubmenu icon={<ArrowRight />} label="Chuyển thành">'));
+      assert.ok(!componentContent.includes('"absolute left-0 top-full mt-1 z-50"'), "không tự định vị menu bằng top-full");
+    });
+
+    it("bấm tay kéo giữ vùng chọn khối: Plate chỉ nhận data-plate-prevent-unselect có giá trị, đọc trên chính phần tử bị bấm", () => {
+      assert.ok(!componentContent.includes('data-plate-prevent-unselect=""'), "chuỗi rỗng bị Plate coi là không có");
+      assert.ok((componentContent.match(/data-plate-prevent-unselect="true"/g) ?? []).length >= 2);
+      assert.ok(componentContent.includes('<GripVertical className="size-3.5 pointer-events-none" />'));
+    });
+  });
+
   describe("4d. Six-dot block menu with indent/outdent", () => {
     it("block menu has indent and outdent actions", () => {
       assert.ok(
