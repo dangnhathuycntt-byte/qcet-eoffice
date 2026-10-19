@@ -280,8 +280,14 @@ export function AssistantDock() {
           className="fixed bottom-0 left-[var(--sidebar-w)] right-0 z-30 hidden h-9 items-center justify-end gap-0.5 bg-sidebar px-2 md:flex"
         >
           {dock ? (
-            // Chip như tab chat ở thanh Agent của Linear: chữ nhạt, rê chuột hay đang mở thì nền và × hiện ra
-            <div className={cn("group/chip relative flex min-w-0 max-w-56 items-center rounded-md transition-colors hover:bg-accent", panelOpen && "bg-accent")}>
+            // Chip như tab chat ở thanh Agent của Linear: chữ nhạt, rê chuột hay đang mở thì nền và × hiện ra. Thanh nằm trên
+            // nền canvas như sidebar nên dùng màu hover/đang chọn của sidebar (accent thường gần trùng nền)
+            <div
+              className={cn(
+                "group/chip relative flex min-w-0 max-w-56 items-center rounded-md transition-colors hover:bg-sidebar-accent/60",
+                panelOpen && "bg-sidebar-accent hover:bg-sidebar-accent",
+              )}
+            >
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -291,7 +297,8 @@ export function AssistantDock() {
                     aria-expanded={panelOpen}
                     onClick={() => (panelOpen ? minimize() : openPanel())}
                     className={cn(
-                      "min-w-0 justify-start pr-7 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground",
+                      // Button mặc định không co (shrink-0): chip phải co để tên dài cắt "…" trong 224px, không đè nút bên cạnh
+                      "min-w-0 shrink justify-start pr-7 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground",
                       panelOpen && "text-foreground",
                     )}
                   >
@@ -319,7 +326,7 @@ export function AssistantDock() {
                   minimize();
                 }}
                 className={cn(
-                  "absolute right-0.5 size-6 text-muted-foreground opacity-0 transition-opacity hover:bg-background/60 hover:text-foreground focus-visible:opacity-100 group-hover/chip:opacity-100 motion-reduce:transition-none",
+                  "absolute right-0.5 size-6 text-muted-foreground opacity-0 transition-opacity hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 group-hover/chip:opacity-100 motion-reduce:transition-none",
                   panelOpen && "opacity-100",
                 )}
               >
@@ -342,7 +349,10 @@ export function AssistantDock() {
                   if (dock && !pending) newChat();
                   openPanel();
                 }}
-                className={cn("font-normal text-muted-foreground hover:text-foreground", showingNewChat && "bg-accent text-foreground")}
+                className={cn(
+                  "font-normal text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground aria-expanded:bg-sidebar-accent",
+                  showingNewChat && "bg-sidebar-accent text-foreground",
+                )}
               >
                 <IconSidebarAssistant className="size-3.5" />
                 Trợ lý
@@ -438,7 +448,7 @@ function DockHistoryButton({ activeId, onOpen }: { activeId: string | null; onOp
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Lịch sử trò chuyện">
+            <Button variant="ghost" size="icon-sm" aria-label="Lịch sử trò chuyện" className="hover:bg-sidebar-accent/60 aria-expanded:bg-sidebar-accent">
               <IconSidebarHistory className="size-3.5" />
             </Button>
           </PopoverTrigger>
