@@ -77,6 +77,11 @@ export interface GatewayCallOptions {
   timeoutMs?: number;
   onThinking?: (delta: string) => void;
   onContent?: (delta: string) => void;
+  /**
+   * Một lời gọi công cụ bắt đầu tới (đã đủ tên, tham số đang stream), trước khi cả vòng xong. Tên có thể tới thành nhiều
+   * khúc nên chỉ báo khi tham số đã bắt đầu; gateway không stream từng phần thì báo lúc đọc xong.
+   */
+  onToolCallStart?: (name: string) => void;
   /** Mặc định readGatewayConfig(subject). */
   config?: GatewayConfig;
   /** Tên trong câu lỗi, mặc định "Agent"; Trợ lý truyền "Trợ lý". */
@@ -122,7 +127,7 @@ function buildGatewayBody(
  * hoặc gateway trả lỗi HTTP, 503 nếu chưa cấu hình. Câu lỗi dùng `subject` thay cho "Agent".
  */
 export async function callGateway(messages: GatewayMessage[], options: GatewayCallOptions = {}): Promise<GatewayCompletion> {
-  const { tools, signal, timeoutMs = AGENT_GATEWAY_TIMEOUT_MS, onThinking, onContent, subject = "Agent", outputTokens } = options;
+  const { tools, signal, timeoutMs = AGENT_GATEWAY_TIMEOUT_MS, onThinking, onContent, onToolCallStart, subject = "Agent", outputTokens } = options;
   const config = options.config ?? readGatewayConfig(options.subject);
   const controller = new AbortController();
   // Khi hủy (quá giờ hoặc người gọi hủy), mọi lần chờ dừng ngay, kể cả khi gateway không đáp ứng abort
@@ -144,6 +149,7 @@ export async function callGateway(messages: GatewayMessage[], options: GatewayCa
   let thinking = "";
   let finishReason: string | null = null;
   const pendingCalls = new Map<number, GatewayToolCall>();
+  const startedCalls = new Set<number>();
   const takeToolCalls = (calls: GatewayToolCallDelta[] | undefined) => {
     for (const call of calls ?? []) {
       const current = pendingCalls.get(call.index) ?? { id: "", name: "", arguments: "" };
@@ -152,6 +158,10 @@ export async function callGateway(messages: GatewayMessage[], options: GatewayCa
       current.arguments += call.arguments ?? "";
       if (call.extraContent !== undefined) current.extraContent = call.extraContent;
       pendingCalls.set(call.index, current);
+      if (current.name && current.arguments && !startedCalls.has(call.index)) {
+        startedCalls.add(call.index);
+        onToolCallStart?.(current.name);
+      }
     }
   };
   const failedMidway = () => new ApiError(502, "AGENT_UNAVAILABLE", `${subject} trả lỗi giữa chừng. Thầy/Cô thử lại sau.`);

@@ -204,6 +204,8 @@ export type AssistantStreamEvent =
   | { type: "text"; delta: string }
   | { type: "sources"; sources: AssistantSourceRef[] }
   | { type: "proposal"; proposal: AssistantTaskProposal }
+  /** Mô hình bắt đầu viết một lời gọi propose_task (thẻ tới sau, khi cả vòng xong): để đếm "đang soạn" trực tiếp. */
+  | { type: "proposal_started" }
   | { type: "done"; messageId: string; status: AssistantMessageStatus; durationMs: number }
   | { type: "error"; error: { code: string; message: string }; messageId?: string };
 

@@ -122,6 +122,8 @@ export interface ThreadMessage {
   dismissedProposals?: number[];
   /** Lúc gửi câu hỏi (ms) của tin đang chạy, để đếm thời gian trực tiếp; tin mở từ lịch sử không có. */
   startedAt?: number;
+  /** Số lời gọi propose_task mô hình đã bắt đầu viết trong lượt đang chạy (thẻ tới sau, khi cả vòng xong). */
+  proposalsStarted?: number;
 }
 
 export type { AssistantProposalTask } from "@qcet/contracts/assistant";
@@ -271,6 +273,8 @@ export function reduceAssistantReply(reply: ThreadMessage, event: AssistantStrea
       return { ...reply, sources: event.sources };
     case "proposal":
       return { ...reply, proposals: [...(reply.proposals ?? []), event.proposal] };
+    case "proposal_started":
+      return { ...reply, proposalsStarted: (reply.proposalsStarted ?? 0) + 1 };
     case "done":
       return { ...reply, id: event.messageId, status: event.status, durationMs: event.durationMs };
     case "error":

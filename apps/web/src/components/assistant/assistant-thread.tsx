@@ -234,7 +234,8 @@ function ReplyTurn({
   const sources = message.sources.slice(0, MAX_SHOWN_SOURCES);
   // Lượt dài (kế hoạch vài chục đề xuất chạy 3–4 phút): đồng hồ và số đề xuất đã soạn cho biết việc vẫn đang tiến
   const elapsed = useElapsedSeconds(message.startedAt, streaming);
-  const draftedCount = streaming ? (message.proposals?.length ?? 0) : 0;
+  // Đề xuất đang viết dở cũng đếm: một vòng soạn 8–16 đề xuất chạy cả phút, thẻ chỉ tới khi cả vòng xong
+  const draftedCount = streaming ? Math.max(message.proposals?.length ?? 0, message.proposalsStarted ?? 0) : 0;
   const progress = [
     draftedCount > 0 ? `${draftedCount} đề xuất` : null,
     elapsed !== null && elapsed >= SHOW_ELAPSED_AFTER_SECONDS ? formatDurationVi(elapsed) : null,

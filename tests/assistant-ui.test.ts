@@ -1285,6 +1285,12 @@ describe("Trợ lý UI: tiến độ trực tiếp của lượt dài", () => {
     assert.ok(live.includes("Đang soạn đề xuất…"));
     assert.ok(live.includes("3 đề xuất · 1 phút 5 giây"), "số đề xuất và đồng hồ");
 
+    // Đề xuất đang viết dở (sự kiện proposal_started) đếm trước khi thẻ tới
+    let drafting = streamingThreadMessage("r-drafting", Date.now() - 30_000);
+    drafting = reduceAssistantReply(drafting, { type: "step", step: { tool: "propose_task", label: "Soạn đề xuất", count: null, ok: true } });
+    for (let i = 0; i < 5; i++) drafting = reduceAssistantReply(drafting, { type: "proposal_started" });
+    assert.ok(renderThread(drafting).includes("5 đề xuất · 30 giây"));
+
     const quick = renderThread(streamingThreadMessage("r-quick", Date.now() - 2_000));
     assert.equal(quick.includes('data-slot="assistant-run-progress"'), false, "trả lời nhanh không hiện đồng hồ");
 
@@ -1300,8 +1306,8 @@ describe("Trợ lý UI: gợi ý bước tiếp theo", () => {
   const question = userThreadMessage("u", "Tóm tắt văn bản");
   const withFile: ThreadMessage = {
     ...question,
-    storedAttachments: [{ id: "f1", name: "Ke-hoach.pdf", kind: "pdf", mimeType: "application/pdf", size: 10, url: "/api/x" }],
-  } as ThreadMessage;
+    storedAttachments: [{ id: "f1", name: "Ke-hoach.pdf", kind: "pdf", size: 10, url: "/api/x" }],
+  };
   const proposals = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `Đầu việc ${i + 1}` }));
 
   test("chỉ suy từ trạng thái lượt: soạn tiếp khi chạm trần hoặc dừng giữa chừng, tiếp tục khi dừng lúc viết, soạn nhiệm vụ từ tệp", () => {

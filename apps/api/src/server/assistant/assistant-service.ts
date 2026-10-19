@@ -210,7 +210,7 @@ async function describeSafely(
 }
 
 /** Lời gọi soạn đề xuất nhiệm vụ: không đọc dữ liệu, chỉ chịu giới hạn số đề xuất của lượt. */
-function isProposalCall(call: GatewayToolCall): boolean {
+function isProposalCall(call: Pick<GatewayToolCall, "name">): boolean {
   return call.name === "propose_task";
 }
 
@@ -485,6 +485,9 @@ async function runTurn(
           timeoutMs: Math.max(1, Math.min(roundTimeoutMs, turnDeadline - Date.now())),
           onThinking: (delta) => emit({ type: "thinking", delta }),
           onContent,
+          onToolCallStart: (name) => {
+            if (isProposalCall({ name })) emit({ type: "proposal_started" });
+          },
           config,
           subject: "Trợ lý",
         });

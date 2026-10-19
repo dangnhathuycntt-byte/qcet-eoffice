@@ -857,6 +857,26 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     for (const call of proposalCalls) assert.match(byId.get(call.id) ?? '', /"created":false/);
   });
 
+  it('lời gọi propose_task bắt đầu tới thì phát proposal_started ngay (trước thẻ), lời gọi đọc thì không', async () => {
+    const { runAssistantTool } = await import('@/server/assistant/assistant-tools');
+    const calls = [1, 2].map((n) => ({ id: `s${n}`, name: 'propose_task', arguments: JSON.stringify({ title: `Chuẩn bị lễ khai giảng phần ${n} ${runId}` }) }));
+    const { events } = await runTurn(
+      [
+        (_messages, options) => {
+          options?.onToolCallStart?.('list_tasks');
+          options?.onToolCallStart?.('propose_task');
+          options?.onToolCallStart?.('propose_task');
+          return completion('', calls, 'tool_calls');
+        },
+        () => completion('Đã soạn hai đề xuất.'),
+      ],
+      { message: 'Soạn hai nhiệm vụ chuẩn bị lễ khai giảng' },
+      { runTool: runAssistantTool },
+    );
+    const types = events.map((e) => e.type).filter((type) => type === 'proposal_started' || type === 'proposal');
+    assert.deepEqual(types, ['proposal_started', 'proposal_started', 'proposal', 'proposal']);
+  });
+
   it('cuộc mới: mô hình đặt tên song song, phát title trước done và ghi vào CSDL; cuộc cũ không đặt lại', async () => {
     const titled: Array<{ message: string; context: string | null; attachments: string[] }> = [];
     const generateTitle: AssistantTurnDeps['generateTitle'] = async (input) => {

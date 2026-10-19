@@ -102,12 +102,16 @@ describe("callGateway: đọc luồng SSE", () => {
 
     const thinking: string[] = [];
     const content: string[] = [];
+    const started: string[] = [];
     const result = await callGateway(MESSAGES, {
       config: CONFIG,
       tools: [TOOL],
       onThinking: (delta) => thinking.push(delta),
       onContent: (delta) => content.push(delta),
+      onToolCallStart: (name) => started.push(name),
     });
+    // Báo một lần cho mỗi lời gọi, khi tên đã đủ (tên tới thành hai khúc) và tham số bắt đầu tới
+    assert.deepEqual(started, ["list_tasks", "my_inbox"]);
 
     assert.equal(thinking.join(""), "Cần đọc việc. ");
     assert.equal(content.join(""), "Để tôi xem");
@@ -274,12 +278,16 @@ describe("callGateway: khối JSON (gateway không stream)", () => {
 
     const thinking: string[] = [];
     const content: string[] = [];
+    const started: string[] = [];
     const result = await callGateway(MESSAGES, {
       config: CONFIG,
       tools: [TOOL],
       onThinking: (delta) => thinking.push(delta),
       onContent: (delta) => content.push(delta),
+      onToolCallStart: (name) => started.push(name),
     });
+    // Gateway không stream: báo lúc đọc xong khối JSON
+    assert.deepEqual(started, ["get_task"]);
 
     assert.deepEqual(result, {
       content: "",
