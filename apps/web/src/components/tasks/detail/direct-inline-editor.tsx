@@ -374,8 +374,10 @@ export function DirectInlineEditor({
                 }
               },
             } : {})}
+            // text-wrap: heading toàn cục là balance, textarea không balance được: không ép về ngắt dòng thường thì bấm vào
+            // sửa là chữ nhảy dòng
             className={cn(
-              "block w-full cursor-text select-text p-0 m-0",
+              "block w-full cursor-text select-text p-0 m-0 text-wrap",
               canEdit && "hover:text-foreground/85 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
               viewClassName
             )}
