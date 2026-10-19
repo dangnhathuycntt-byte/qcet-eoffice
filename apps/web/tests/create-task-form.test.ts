@@ -194,3 +194,24 @@ describe("describeCreateTaskFailure — thông báo lỗi tiếng Việt", () =>
     );
   });
 });
+
+describe("Việc con tạo kèm — sửa tên ngay trên hàng", () => {
+  test("tên việc con là ô nhập (gõ là cập nhật form, không có nút Lưu); Esc trả tên cũ mà không đóng hộp", async () => {
+    const React = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { CreateTaskSubtasks } = await import("../src/components/tasks/create/create-task-subtasks");
+    const html = renderToStaticMarkup(
+      React.createElement(CreateTaskSubtasks, {
+        items: [{ id: "s1", title: "Lên danh sách các tiết mục văn nghệ", description: "", assigneeId: "", dueDate: "" }],
+        onChange: () => undefined,
+        people: [],
+        parentLeadId: "",
+        parentDueDate: "",
+      }),
+    );
+    assert.match(html, /<input[^>]*aria-label="Tên việc con"[^>]*value="Lên danh sách các tiết mục văn nghệ"|<input[^>]*value="Lên danh sách các tiết mục văn nghệ"[^>]*aria-label="Tên việc con"/);
+    const src = await import("node:fs").then((fs) => fs.readFileSync(new URL("../src/components/tasks/create/create-task-subtasks.tsx", import.meta.url), "utf8"));
+    assert.ok(src.includes("onChange={(title) => updateItem(item.id, { title })}"), "mỗi phím cập nhật form");
+    assert.ok(src.includes("reverted.current = true") && src.includes("e.stopPropagation()"), "Esc trả tên cũ, không đóng hộp");
+  });
+});

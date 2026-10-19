@@ -26,6 +26,52 @@ function shortDate(iso: string): string {
   return month && day ? `${day}/${month}` : iso;
 }
 
+/**
+ * Tên việc con sửa ngay trên hàng (người dùng yêu cầu 19/10/2026: "cho gõ edit luôn, lưu real time"): gõ tới đâu form
+ * cập nhật tới đó (form tự lưu nháp), không có nút Lưu. Enter xong, Esc trả lại tên lúc bắt đầu sửa; rời ô mà tên còn
+ * dưới MIN_TITLE ký tự thì cũng trả lại tên cũ, vì máy chủ không nhận tên ngắn hơn.
+ */
+function SubtaskTitleInput({ title, onChange }: { title: string; onChange: (title: string) => void }) {
+  const before = React.useRef(title);
+  // Esc đã trả tên cũ: lần blur ngay sau đó (vẫn thấy tên đang sửa) không được ghi đè lại
+  const reverted = React.useRef(false);
+  return (
+    <Input
+      compact
+      value={title}
+      maxLength={255}
+      aria-label="Tên việc con"
+      title={title}
+      onFocus={() => {
+        before.current = title;
+        reverted.current = false;
+      }}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={() => {
+        if (reverted.current) return;
+        const next = title.trim();
+        const kept = next.length >= MIN_TITLE ? next : before.current;
+        if (kept !== title) onChange(kept);
+      }}
+      onKeyDown={(e) => {
+        if (e.nativeEvent.isComposing) return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.blur();
+        } else if (e.key === "Escape") {
+          // Esc chỉ bỏ phần vừa sửa, không đóng hộp tạo việc
+          e.stopPropagation();
+          reverted.current = true;
+          onChange(before.current);
+          e.currentTarget.blur();
+        }
+      }}
+      className="h-7 min-w-0 flex-1 truncate bg-transparent px-0 text-foreground hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
+    />
+  );
+}
+
 let draftSeq = 0;
 /** Khóa client của một việc con trong form (cũng dùng khi Agent thêm việc con). */
 export const nextSubtaskDraftId = () => `subtask-${Date.now().toString(36)}-${(draftSeq += 1)}`;
@@ -125,9 +171,7 @@ export function CreateTaskSubtasks({ items, onChange, people, loadingPeople, par
             return (
               <li key={item.id} className="group flex h-9 items-center gap-1 pr-1.5 pl-3">
                 <IconSidebarTasks size={14} className="mr-1 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate text-compact text-foreground" title={item.title}>
-                  {item.title}
-                </span>
+                <SubtaskTitleInput title={item.title} onChange={(title) => updateItem(item.id, { title })} />
                 {/* Chủ trì và hạn sửa ngay trên hàng (kể cả việc con Agent thêm); để trống thì theo nhiệm vụ, hiện mờ */}
                 <PersonPillPicker
                   appearance="property"
