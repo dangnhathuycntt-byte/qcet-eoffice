@@ -796,6 +796,20 @@
   opacity: 0.5;
 }
 
+/* Chế độ giữa (khung Trợ lý): lưới canh giữa theo icon đậm, mờ dần đều ra bốn phía; lớp sáng mờ cả mép dưới */
+.agent-pattern[data-centered] .agent-pattern-base {
+  mask-image:
+    url("/design/patterns/agent-grid.svg"),
+    radial-gradient(50% 50% at 50% 50%, #000, rgb(0 0 0 / 0.85) 12%, rgb(0 0 0 / 0.5) 30%, rgb(0 0 0 / 0.15) 55%, transparent 82%);
+}
+
+.agent-pattern[data-centered] .agent-pattern-spot {
+  mask-image:
+    url("/design/patterns/agent-grid.svg"),
+    radial-gradient(circle 112px at var(--agent-spot-x) var(--agent-spot-y), #000, rgb(0 0 0 / 0.35) 45%, transparent),
+    linear-gradient(transparent, #000 72px, #000 calc(100% - 72px), transparent);
+}
+
 @keyframes progress-indeterminate {
   0%   { transform: translateX(-100%); }
   50%  { transform: translateX(0%); }

@@ -155,11 +155,15 @@ export function AssistantDockPanel({
 
       {start ? (
         // Màn trống chỉ còn lưới icon mờ, canh giữa vùng trống (người dùng bỏ tên, câu giới thiệu, chip gợi ý và câu chỉ
-        // đọc cho gọn, 17/10/2026; câu chỉ đọc theo ADR-009 vẫn ở chân trang Trợ lý)
-        <div ref={emptyRef} className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 [mask-image:linear-gradient(transparent,#000_1.5rem)]">
+        // đọc cho gọn, 17/10/2026; câu chỉ đọc theo ADR-009 vẫn ở chân trang Trợ lý). Icon đậm giữ chỗ thấp như cũ (đệm
+        // 240px + ô 24px), lưới tỏa cả xuống dưới icon (19/10/2026), mờ ở mép trên và mép sát ô soạn.
+        <div
+          ref={emptyRef}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 [mask-image:linear-gradient(transparent,#000_1.5rem,#000_calc(100%-1.5rem),transparent)]"
+        >
           <div className="flex-1" />
-          <div aria-hidden="true" className="h-66 shrink" />
-          <div className="relative">
+          <div aria-hidden="true" className="h-60 shrink" />
+          <div className="relative h-6 shrink-0">
             <AgentEmptyPattern trackRef={emptyRef} />
           </div>
           <div className="flex-1" />

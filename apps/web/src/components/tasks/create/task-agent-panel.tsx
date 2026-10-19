@@ -337,7 +337,7 @@ export function TaskAgentPanel({
             <div className="flex-1" />
             <div aria-hidden="true" className="h-66" />
             <div className="relative flex flex-col items-center pt-1.5 text-center">
-              <AgentEmptyPattern trackRef={listRef} />
+              <AgentEmptyPattern trackRef={listRef} aboveTitle />
               <p className="text-compact font-semibold text-foreground">Soạn nhiệm vụ cùng Agent</p>
               {/* Mỗi câu một dòng để không ngắt giữa cụm từ */}
               <p className="mt-1 text-compact text-muted-foreground">

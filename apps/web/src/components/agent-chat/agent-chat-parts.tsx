@@ -146,11 +146,19 @@ export function CopyMessageButton({ text, phoneTouchTarget = false }: { text: st
 }
 
 /**
- * Nền trống kiểu Linear, đặt ngay trên tiêu đề: lưới 24px mờ dần lên trên, icon đậm ở ô giữa hàng cuối
- * (CSS `.agent-pattern*` trong globals.css). Vùng quanh con trỏ chuột trong `trackRef` sáng hơn; rời vùng thì tắt dần.
- * Dùng chung cho Agent soạn nhiệm vụ và khung chat nổi của Trợ lý.
+ * Nền trống kiểu Linear: lưới icon 24px, icon đậm ở một ô (CSS `.agent-pattern*` trong globals.css). Vùng quanh con trỏ
+ * chuột trong `trackRef` sáng hơn; rời vùng thì tắt dần. Dùng chung cho khung chat nổi của Trợ lý và Agent soạn nhiệm vụ.
+ * Mặc định (khung Trợ lý, không có chữ bên dưới): lưới canh giữa theo icon đậm, mờ dần ra cả bốn phía; đặt trong khối
+ * `relative` cao 24px đúng ô của icon đậm. `aboveTitle` (Agent soạn nhiệm vụ): đặt ngay trên tiêu đề, lưới chỉ mờ dần lên
+ * trên, icon đậm ở ô giữa hàng cuối.
  */
-export function AgentEmptyPattern({ trackRef }: { trackRef: React.RefObject<HTMLElement | null> }) {
+export function AgentEmptyPattern({
+  trackRef,
+  aboveTitle = false,
+}: {
+  trackRef: React.RefObject<HTMLElement | null>;
+  aboveTitle?: boolean;
+}) {
   const patternRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     const area = trackRef.current;
@@ -181,12 +189,29 @@ export function AgentEmptyPattern({ trackRef }: { trackRef: React.RefObject<HTML
     };
   }, [trackRef]);
 
+  // Lưới 23 ô ngang; chế độ giữa cao 21 ô (số lẻ) để ô giữa trùng lưới 24px
+  const centered = !aboveTitle;
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute -inset-x-4 bottom-full h-66 overflow-hidden">
-      <div ref={patternRef} className="agent-pattern absolute inset-y-0 left-1/2 w-138 -translate-x-1/2 text-foreground">
+    <div
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute -inset-x-4 overflow-hidden",
+        centered ? "top-1/2 h-126 -translate-y-1/2" : "bottom-full h-66",
+      )}
+    >
+      <div
+        ref={patternRef}
+        data-centered={centered ? "" : undefined}
+        className="agent-pattern absolute inset-y-0 left-1/2 w-138 -translate-x-1/2 text-foreground"
+      >
         <div className="agent-pattern-base absolute inset-0 opacity-20" />
         <div className="agent-pattern-spot absolute inset-0" />
-        <div className="agent-pattern-featured absolute bottom-0 left-1/2 size-6 -translate-x-1/2" />
+        <div
+          className={cn(
+            "agent-pattern-featured absolute left-1/2 size-6 -translate-x-1/2",
+            centered ? "top-1/2 -translate-y-1/2" : "bottom-0",
+          )}
+        />
       </div>
     </div>
   );
