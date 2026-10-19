@@ -5,6 +5,7 @@
 import {
   parseAssistantStreamEvent,
   type AssistantChatRequest,
+  type AssistantConversationActivityDTO,
   type AssistantConversationDetailDTO,
   type AssistantConversationListDTO,
   type AssistantConversationSummaryDTO,
@@ -182,6 +183,12 @@ export async function resumeAssistantTurn(
   if (run) onRun(run);
   await readTurnEvents(res.body, onEvent);
   return true;
+}
+
+/** Hoạt động của các cuộc có chip ở thanh dưới: đang chạy, mốc tin mới nhất (chấm chưa đọc). */
+export function conversationActivityRequest(ids: string[], signal?: AbortSignal): Promise<{ items: AssistantConversationActivityDTO[] }> {
+  const params = new URLSearchParams({ ids: ids.join(",") });
+  return requestJson<{ items: AssistantConversationActivityDTO[] }>(`/api/assistant/runs?${params}`, { signal, cache: "no-store" });
 }
 
 /** Nút Dừng: hủy lượt ở máy chủ (máy chủ lưu phần chữ đã có với trạng thái "Đã dừng"). */

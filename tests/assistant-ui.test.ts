@@ -1152,6 +1152,17 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
     assert.ok(dock.includes('className="flex min-w-0 flex-1 items-center justify-end gap-0.5"'), "chip co lại khi chật, không đè nút Trợ lý");
   });
 
+  test("chip không mở cũng có vòng quay khi cuộc đang chạy và chấm khi có trả lời mới từ lần xem trước", () => {
+    const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");
+    assert.ok(dock.includes("conversationActivityRequest(tabIds.split(\",\"), controller.signal)"), "hỏi máy chủ trạng thái các chip");
+    assert.ok(dock.includes("timer = setTimeout(poll, running ? ACTIVITY_POLL_RUNNING_MS : ACTIVITY_POLL_IDLE_MS);"), "đang chạy thì hỏi dày hơn");
+    assert.ok(dock.includes("item.lastMessageAt > tab.seen"), "tin mới hơn lần xem trước thì có chấm");
+    assert.ok(dock.includes("} else if (tab.seen === undefined || left || item.id === viewedRef.current) {"), "đang xem hoặc vừa rời khi đã xong thì ghi đã xem");
+    assert.ok(dock.includes("pending={active && activated ? pending : Boolean(activity[tab.id]?.running)}"));
+    assert.ok(dock.includes("unread={(active && unread) || tabUnread(tab)}"));
+    assert.ok(dock.includes("const viewedId = hidden ? conversationIdFromPath(pathname) : shownOpen ? (dock?.id ?? null) : null;"), "đang xem ở trang Trợ lý cũng tính");
+  });
+
   test("skeleton danh sách cuộc trò chuyện là vạch tên (và vạch giờ) như hàng thật, không phải khối xám kín hàng", () => {
     const skeleton = read("apps/web/src/components/assistant/conversation-rows-skeleton.tsx");
     assert.ok(skeleton.includes('<Skeleton className={cn("h-3", TITLE_WIDTHS[i % TITLE_WIDTHS.length])} />'), "vạch tên dài ngắn khác nhau");

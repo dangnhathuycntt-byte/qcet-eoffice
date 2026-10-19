@@ -168,6 +168,18 @@ export async function listConversations(
   };
 }
 
+/** Mốc tin mới nhất của các cuộc `ids` còn thấy được của người gọi (cuộc của người khác, quá hạn, không có thì bỏ). */
+export async function listConversationLastMessageAt(
+  userId: string,
+  ids: readonly string[],
+  now: Date = new Date(),
+): Promise<Array<{ id: string; lastMessageAt: Date }>> {
+  return prisma.assistantConversation.findMany({
+    where: { id: { in: [...ids] }, ...visibleScope(userId, now) },
+    select: { id: true, lastMessageAt: true },
+  });
+}
+
 export async function getConversation(userId: string, id: string, now: Date = new Date()): Promise<AssistantConversation | null> {
   return prisma.assistantConversation.findFirst({ where: { id, ...visibleScope(userId, now) } });
 }

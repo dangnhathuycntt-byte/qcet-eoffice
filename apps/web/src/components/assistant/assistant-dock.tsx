@@ -3,15 +3,21 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
+import type { AssistantConversationActivityDTO, AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
 import { formatConversationTime, groupConversationsByRecency } from "@qcet/shared/domain/assistant/assistant-history";
-import { assistantErrorText, deleteConversationRequest, listConversationsRequest } from "@/components/assistant/assistant-client";
+import {
+  assistantErrorText,
+  conversationActivityRequest,
+  deleteConversationRequest,
+  listConversationsRequest,
+} from "@/components/assistant/assistant-client";
 import { ConversationRowsSkeleton } from "@/components/assistant/conversation-rows-skeleton";
 import { AssistantDockPanel } from "@/components/assistant/assistant-dock-panel";
 import {
   ASSISTANT_ASK_EVENT,
   ASSISTANT_CONVERSATION_EVENT,
   contextTypeLabel,
+  conversationIdFromPath,
   type AssistantAskEventDetail,
   type AssistantConversationEventDetail,
 } from "@/components/assistant/assistant-model";
@@ -94,7 +100,17 @@ function parseDock(raw: string | null): DockConversation | null {
  * duyệt như cuộc đang mở, đọc bộ nhớ một lần khi tải trang.
  * ------------------------------------------------------------------------------------------------------------- */
 
+/** `seen`: mốc tin mới nhất (giờ máy chủ) lúc người dùng xem cuộc lần cuối; tin mới hơn thì chip có chấm chưa đọc. */
+interface DockTab extends DockConversation {
+  seen?: string;
+}
+
 const DOCK_TABS_STORAGE_KEY = "qcet.assistant.dockTabs";
+/** Cuộc đang chạy khi mới có chip: coi như chưa xem gì, trả lời xong thì có chấm. */
+const SEEN_NOTHING = "1970-01-01T00:00:00.000Z";
+/** Hỏi trạng thái các chip: nhanh khi có cuộc đang chạy, chậm khi không. */
+const ACTIVITY_POLL_RUNNING_MS = 4_000;
+const ACTIVITY_POLL_IDLE_MS = 30_000;
 /** Quá số chip này thì bỏ chip cũ nhất (không phải cuộc đang mở); cuộc vẫn còn trong lịch sử. */
 const MAX_DOCK_TABS = 5;
 let dockTabsValue: string | null | undefined;
@@ -110,17 +126,23 @@ function readDockTabsRaw(): string | null {
   return dockTabsValue;
 }
 
-function parseDockTabs(raw: string | null): DockConversation[] {
+function parseDockTabs(raw: string | null): DockTab[] {
   if (!raw) return [];
   try {
     const value: unknown = JSON.parse(raw);
-    return Array.isArray(value) ? value.flatMap((item) => parseDock(JSON.stringify(item)) ?? []) : [];
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((item: unknown) => {
+      const base = parseDock(JSON.stringify(item));
+      if (!base) return [];
+      const seen = (item as { seen?: unknown }).seen;
+      return [typeof seen === "string" ? { ...base, seen } : base];
+    });
   } catch {
     return [];
   }
 }
 
-function writeDockTabs(tabs: DockConversation[]) {
+function writeDockTabs(tabs: DockTab[]) {
   const raw = tabs.length > 0 ? JSON.stringify(tabs) : null;
   if (raw === readDockTabsRaw()) return;
   dockTabsValue = raw;
@@ -137,10 +159,10 @@ function writeDockTabs(tabs: DockConversation[]) {
 function upsertDockTab(item: DockConversation) {
   const tabs = parseDockTabs(readDockTabsRaw());
   const index = tabs.findIndex((tab) => tab.id === item.id);
-  let next: DockConversation[];
+  let next: DockTab[];
   if (index >= 0) {
     // Tên đang tải (null) thì giữ tên đã nhớ
-    next = tabs.map((tab, i) => (i === index ? { id: tab.id, title: item.title ?? tab.title } : tab));
+    next = tabs.map((tab, i) => (i === index ? { ...tab, title: item.title ?? tab.title } : tab));
   } else {
     next = [...tabs, item];
     while (next.length > MAX_DOCK_TABS) next.splice(next.findIndex((tab) => tab.id !== item.id), 1);
@@ -151,6 +173,13 @@ function upsertDockTab(item: DockConversation) {
 /** Cuộc đổi tên ở trang Trợ lý: chip của nó (nếu có) theo tên mới. */
 function upsertDockTabTitle(id: string, title: string) {
   if (parseDockTabs(readDockTabsRaw()).some((tab) => tab.id === id)) upsertDockTab({ id, title });
+}
+
+/** Ghi mốc đã xem của chip (giờ máy chủ của tin mới nhất). */
+function markDockTabSeen(id: string, seen: string) {
+  const tabs = parseDockTabs(readDockTabsRaw());
+  if (!tabs.some((tab) => tab.id === id && tab.seen !== seen)) return;
+  writeDockTabs(tabs.map((tab) => (tab.id === id ? { ...tab, seen } : tab)));
 }
 
 function removeDockTab(id: string) {
@@ -179,7 +208,7 @@ export function AssistantDock() {
   const dock = parseDock(React.useSyncExternalStore(subscribeDock, readDockRaw, () => null));
   const tabs = parseDockTabs(React.useSyncExternalStore(subscribeDock, readDockTabsRaw, () => null));
   // Cuộc đang mở nhớ từ trước khi có chip (bản cũ) vẫn hiện chip
-  const shownTabs = dock && !tabs.some((tab) => tab.id === dock.id) ? [...tabs, dock] : tabs;
+  const shownTabs: DockTab[] = dock && !tabs.some((tab) => tab.id === dock.id) ? [...tabs, dock] : tabs;
   const [panelOpen, setPanelOpen] = React.useState(false);
   // Chưa mở khung lần nào kể từ khi tải trang thì chưa tải chi tiết cuộc nhớ sẵn (chip dùng tên đã nhớ)
   const [activated, setActivated] = React.useState(false);
@@ -280,6 +309,58 @@ export function AssistantDock() {
   React.useEffect(() => {
     if (shownOpen) setUnread(false);
   }, [shownOpen]);
+
+  // Chip của cuộc không mở (người dùng sang cuộc khác, rời trang khi lượt còn chạy): hỏi máy chủ cuộc nào đang chạy
+  // (vòng quay) và tin mới nhất lúc nào; mới hơn lần xem trước thì có chấm, như tab chat của Linear. Cuộc đang xem
+  // (khung nổi mở, hoặc đang ở trang Trợ lý của cuộc đó) thì ghi là đã xem.
+  const [activity, setActivity] = React.useState<Record<string, AssistantConversationActivityDTO>>({});
+  const viewedId = hidden ? conversationIdFromPath(pathname) : shownOpen ? (dock?.id ?? null) : null;
+  const viewedRef = React.useRef(viewedId);
+  // Cuộc vừa rời: lần hỏi sau ghi đã xem nếu lượt đã xong (còn chạy thì trả lời xong sẽ có chấm)
+  const leftRef = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    const previous = viewedRef.current;
+    if (previous && previous !== viewedId) leftRef.current.add(previous);
+    viewedRef.current = viewedId;
+  }, [viewedId]);
+  const tabIds = shownTabs.map((tab) => tab.id).join(",");
+  React.useEffect(() => {
+    if (!tabIds || !window.matchMedia("(min-width: 768px)").matches) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      let running = false;
+      try {
+        const { items } = await conversationActivityRequest(tabIds.split(","), controller.signal);
+        if (controller.signal.aborted) return;
+        setActivity(Object.fromEntries(items.map((item) => [item.id, item])));
+        const stored = parseDockTabs(readDockTabsRaw());
+        for (const item of items) {
+          const tab = stored.find((entry) => entry.id === item.id);
+          const left = leftRef.current.delete(item.id);
+          if (!tab) continue;
+          if (item.running) {
+            running = true;
+            if (tab.seen === undefined) markDockTabSeen(item.id, SEEN_NOTHING);
+          } else if (tab.seen === undefined || left || item.id === viewedRef.current) {
+            markDockTabSeen(item.id, item.lastMessageAt);
+          }
+        }
+      } catch {
+        if (controller.signal.aborted) return;
+      }
+      timer = setTimeout(poll, running ? ACTIVITY_POLL_RUNNING_MS : ACTIVITY_POLL_IDLE_MS);
+    };
+    void poll();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [tabIds, viewedId, pathname]);
+  const tabUnread = (tab: DockTab) => {
+    const item = activity[tab.id];
+    return Boolean(item && !item.running && tab.id !== viewedId && tab.seen !== undefined && item.lastMessageAt > tab.seen);
+  };
 
   const toggleRef = React.useRef<() => void>(() => undefined);
   toggleRef.current = () => (panelOpen ? minimize() : openPanel());
@@ -400,8 +481,9 @@ export function AssistantDock() {
                   ref={active ? chipRef : undefined}
                   title={active ? chipTitle : (tab.title ?? "Cuộc trò chuyện")}
                   open={active && panelOpen}
-                  pending={active && pending}
-                  unread={active && unread}
+                  // Cuộc đang mở trong khung biết lượt chạy ngay; chip khác (và chip chưa tải cuộc) theo trạng thái máy chủ
+                  pending={active && activated ? pending : Boolean(activity[tab.id]?.running)}
+                  unread={(active && unread) || tabUnread(tab)}
                   onToggle={() => {
                     if (!active) {
                       switchTo(tab);

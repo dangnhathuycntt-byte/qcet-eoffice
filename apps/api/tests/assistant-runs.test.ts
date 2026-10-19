@@ -36,6 +36,7 @@ import { POST as chatRoute } from '@/app/api/assistant/chat/route';
 import { GET as streamRoute } from '@/app/api/assistant/conversations/[id]/stream/route';
 import { POST as stopRoute } from '@/app/api/assistant/runs/[id]/stop/route';
 import { DELETE as deleteRoute } from '@/app/api/assistant/conversations/[id]/route';
+import { GET as activityRoute } from '@/app/api/assistant/runs/route';
 
 const runId = crypto.randomBytes(4).toString('hex');
 const ORIGIN = 'http://localhost:3000';
@@ -332,5 +333,38 @@ describe('lượt chạy độc lập với kết nối (POST chat, GET stream, 
     await reading;
     assert.equal(findAssistantRun(owner.id, run)?.controller.signal.aborted, true);
     assert.equal(await prisma.assistantMessage.count({ where: { conversationId } }), 0);
+  });
+
+  it('hoạt động của các chip: cuộc đang chạy, mốc tin mới nhất; cuộc người khác bị bỏ; danh sách sai thì 400', async () => {
+    const activity = async (user: User, ids: string) => {
+      const res = await activityRoute(new NextRequest(`${ORIGIN}/api/assistant/runs?ids=${ids}`, { headers: { cookie: cookieFor(user) } }));
+      return { status: res.status, body: res.ok ? ((await res.json()) as { items: Array<{ id: string; running: boolean; lastMessageAt: string }> }) : null };
+    };
+    mockSlowGateway(['Mở. '], 10);
+    const idle = conversationOf(await readUntil(await post(owner, { message: 'Cuộc rảnh' })));
+    mockSlowGateway(['Chậm một. ', 'Chậm hai.'], 80);
+    const res = await post(owner, { message: 'Cuộc đang chạy' });
+    const run = res.headers.get('x-assistant-run-id')!;
+    const reading = readUntil(res);
+    await waitFor(() => Boolean(findAssistantRun(owner.id, run)?.conversationId));
+    const busy = findAssistantRun(owner.id, run)!.conversationId!;
+    convIds.push(busy);
+
+    const during = await activity(owner, `${idle},${busy},khong-co-${runId}`);
+    assert.equal(during.status, 200);
+    const byId = new Map(during.body!.items.map((item) => [item.id, item]));
+    assert.deepEqual([...byId.keys()].sort(), [idle, busy].sort(), 'mã không có thì bỏ');
+    assert.equal(byId.get(busy)?.running, true);
+    assert.equal(byId.get(idle)?.running, false);
+    const before = byId.get(busy)!.lastMessageAt;
+
+    await reading;
+    const after = (await activity(owner, busy)).body!.items[0];
+    assert.equal(after.running, false);
+    assert.ok(after.lastMessageAt > before, 'trả lời xong thì mốc tin mới hơn (chip có chấm)');
+
+    assert.deepEqual((await activity(stranger, busy)).body?.items, [], 'cuộc người khác không lộ');
+    assert.equal((await activity(owner, '')).status, 400);
+    assert.equal((await activity(owner, Array.from({ length: 11 }, (_, i) => `c${i}`).join(','))).status, 400);
   });
 });

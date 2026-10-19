@@ -190,6 +190,20 @@ export interface AssistantConversationDetailDTO extends AssistantConversationSum
   context: AssistantSourceRef | null;
 }
 
+/**
+ * Hoạt động của vài cuộc (chip ở thanh dưới của khung nổi): cuộc đang có lượt chạy ở máy chủ, mốc tin mới nhất để biết
+ * có trả lời mới từ lần xem trước. Tối đa 10 mã mỗi lần.
+ */
+export const ASSISTANT_ACTIVITY_MAX_IDS = 10;
+export const AssistantConversationActivityQuerySchema = z
+  .object({ ids: z.array(entityId).min(1).max(ASSISTANT_ACTIVITY_MAX_IDS) })
+  .strict();
+export interface AssistantConversationActivityDTO {
+  id: string;
+  running: boolean;
+  lastMessageAt: string;
+}
+
 export interface AssistantConversationListDTO {
   items: AssistantConversationSummaryDTO[];
   nextCursor: string | null;
