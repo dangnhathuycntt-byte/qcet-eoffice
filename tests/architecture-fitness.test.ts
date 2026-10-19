@@ -1,8 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { builtinModules } from "node:module";
 import path from "node:path";
-import { boundaryViolations } from "../scripts/architecture-boundaries.mjs";
+import { boundaryViolations, importSpecifiers } from "../scripts/architecture-boundaries.mjs";
 
 const ROOT_DIR = process.cwd();
 const WEB_SRC = path.join(ROOT_DIR, "apps", "web", "src");
@@ -163,6 +164,30 @@ describe("Architecture Fitness Invariants (QCET E-Office)", () => {
       assert.deepStrictEqual(rulesOf("packages/shared/src/x.ts", 'import { z } from "@qcet/contracts/common";'), []);
       assert.deepStrictEqual(rulesOf("packages/db/src/audit.ts", 'import { Prisma } from "@prisma/client";'), []);
       assert.deepStrictEqual(rulesOf("packages/db/src/audit.ts", 'import { x } from "@/server/x";'), ["package-no-app"]);
+    });
+
+    // npm hoist mọi dependency lên node_modules gốc nên import thiếu khai báo vẫn chạy; chỉ kiểm này bắt được.
+    it("each workspace declares the packages its src imports; web declares no server library", () => {
+      const builtins = new Set(builtinModules);
+      const undeclared: string[] = [];
+      for (const workspace of ["apps/web", "apps/api", "packages/contracts", "packages/shared", "packages/db"]) {
+        const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, workspace, "package.json"), "utf8"));
+        const declared = new Set(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }));
+        for (const filePath of getAllFiles(path.join(ROOT_DIR, workspace, "src")).filter((f) => /\.(ts|tsx)$/.test(f))) {
+          const relPath = path.relative(ROOT_DIR, filePath).split(path.sep).join("/");
+          for (const { spec, line } of importSpecifiers(relPath, fs.readFileSync(filePath, "utf8"))) {
+            if (/^(?:\.|@\/|apps\/|src\/|node:)/.test(spec) || builtins.has(spec.split("/")[0])) continue;
+            const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
+            if (name !== pkg.name && !declared.has(name)) undeclared.push(`${relPath}:${line} ${name}`);
+          }
+        }
+      }
+      assert.deepStrictEqual(undeclared, [], `Import chưa khai báo trong package.json của workspace: ${undeclared.join(", ")}`);
+
+      const web = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, "apps", "web", "package.json"), "utf8"));
+      const webDeclared = { ...web.dependencies, ...web.devDependencies };
+      const serverLibs = ["@prisma/client", "@qcet/db", "ioredis", "web-push", "jsonwebtoken", "bcryptjs", "@auth/prisma-adapter"];
+      assert.deepStrictEqual(serverLibs.filter((lib) => lib in webDeclared), [], "apps/web không khai báo thư viện server");
     });
 
     it("detects every import form and ignores comments, strings and look-alike paths", () => {

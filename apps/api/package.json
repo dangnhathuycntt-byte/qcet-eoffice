@@ -11,8 +11,24 @@
     "test": "node ../../scripts/run-tests.mjs --workspace apps/api"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
+    "@next/env": "^15.5.27",
+    "@prisma/client": "^6.19.3",
     "@qcet/contracts": "*",
     "@qcet/db": "*",
-    "@qcet/shared": "*"
+    "@qcet/shared": "*",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "jszip": "^3.10.2",
+    "next": "^15.5.27",
+    "next-auth": "^5.0.0-beta.32",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "web-push": "^3.6.7",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/web-push": "^3.6.4"
   }
 }

@@ -21,7 +21,7 @@
 | Hợp đồng API | `packages/contracts/src/` (Zod + kiểu DTO dùng chung web/api) |
 | Schema và kiểm thử | `packages/db/prisma/schema.prisma`, `apps/<app>/tests/`, `tests/` (test chéo hai app, test chỉ dùng packages) |
 
-- Hai ứng dụng (ADR-011): chỉ `apps/api` chạm CSDL, Redis, ClamAV, uploads, migrate, worker, cron và giữ bí mật server; `apps/web` đọc dữ liệu qua API (`serverApiFetch`, `fetchPageData` ở `apps/web/src/lib/server-api.ts`; trình duyệt gọi `/api` cùng tên miền). Không import chéo giữa hai app; phần dùng chung đặt trong `packages/`. Việc nền ghi vào outbox trong cùng transaction (`enqueueAgentJob` cho việc của agent).
+- Hai ứng dụng (ADR-011): chỉ `apps/api` chạm CSDL, Redis, ClamAV, uploads, migrate, worker, cron và giữ bí mật server; `apps/web` đọc dữ liệu qua API (`serverApiFetch`, `fetchPageData` ở `apps/web/src/lib/server-api.ts`; trình duyệt gọi `/api` cùng tên miền). Không import chéo giữa hai app; phần dùng chung đặt trong `packages/`. Thư viện khai báo ở `package.json` của workspace import nó (`npm install <gói> -w @qcet/web`); gốc chỉ giữ công cụ chung (`tests/architecture-fitness.test.ts` kiểm). Việc nền ghi vào outbox trong cùng transaction (`enqueueAgentJob` cho việc của agent).
 
 ## Phạm vi và cách làm
 - Giữ các thay đổi đang làm dở. Không tự commit, push, merge hoặc deploy nếu người dùng chưa yêu cầu.
