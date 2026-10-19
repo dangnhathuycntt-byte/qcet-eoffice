@@ -9,7 +9,8 @@ export interface SidebarIconProps extends React.SVGProps<SVGSVGElement> {
 
 /**
  * Bộ icon điều hướng theo sidebar chính của Linear: lưới 16 (vẽ ở 16px), chỉ nét viền mảnh 1,25px,
- * khung bo lớn, không mảng tô (riêng chấm của "Thêm").
+ * khung bo lớn, không mảng tô (riêng chấm của "Thêm"). Nét giữ 1,25px cả khi hiện nhỏ hơn 16px (`data-slot`, xem
+ * `globals.css`), cùng độ dày với icon Lucide.
  */
 function SidebarSvg({ size = 16, strokeWidth = 1.25, className, children, ...props }: SidebarIconProps & { children: React.ReactNode }) {
   return (
@@ -23,6 +24,7 @@ function SidebarSvg({ size = 16, strokeWidth = 1.25, className, children, ...pro
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      data-slot="sidebar-icon"
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
       {...props}
