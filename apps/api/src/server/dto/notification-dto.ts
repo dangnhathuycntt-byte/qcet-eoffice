@@ -18,6 +18,7 @@ export interface NotificationDTO {
   category?: string | null;
   isRead: boolean;
   readAt?: string | null;
+  archivedAt?: string | null;
   createdAt: string;
 }
 
@@ -46,6 +47,7 @@ export function toNotificationDTO(rawNotif: unknown): NotificationDTO | null {
     category: typeof notif.category === 'string' && notif.category.trim() ? notif.category.trim() : null,
     isRead: Boolean(notif.isRead),
     readAt: notif.readAt ? toISOStringSafe(notif.readAt) : null,
+    archivedAt: notif.archivedAt ? toISOStringSafe(notif.archivedAt) : null,
     createdAt: toISOStringSafe(notif.createdAt),
   };
 }

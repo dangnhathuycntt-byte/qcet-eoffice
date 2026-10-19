@@ -5,17 +5,30 @@ import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
-import { ArrowUpRight, CheckCheck, ListFilter, MoreHorizontal } from "lucide-react";
+import { Archive, ArrowUpRight, CheckCheck, ListFilter, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { Kbd } from "@/components/ui/kbd";
 import { MenuActionItem, MenuContent, MenuOptionItem, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Pressable } from "@/components/ui/pressable";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { IconSidebarMail } from "@/components/layout/sidebar-rounded-icons";
 import { useSidebar } from "@/components/layout/sidebar-context";
-import { getInboxEmptyCopy, InboxRow, readNotificationEnvelope, useNow } from "@/components/inbox/inbox-row";
+import {
+  getInboxEmptyCopy,
+  INBOX_ARCHIVE_KEY,
+  INBOX_TOGGLE_READ_KEY,
+  INBOX_UNDO_TOAST_MS as UNDO_TOAST_MS,
+  InboxRow,
+  InboxRowActions,
+  readNotificationEnvelope,
+  useNow,
+} from "@/components/inbox/inbox-row";
+import { archiveNotificationsRequest, setNotificationReadRequest } from "@/components/inbox/notification-actions";
 import { popoverVariants } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
 import { mapDbNotification, type NotificationTriageTab, type QCETNotification } from "@qcet/shared/lib/notification-triage";
@@ -37,7 +50,14 @@ const PAGE_SIZE = 30;
 const UNREAD_POLL_MS = 60_000;
 const FILTER_STORAGE_KEY = "qcet.inbox.panelFilter";
 
-type ReadFilter = "all" | "unread";
+/** Ba chế độ xem như Notion: cả Hộp thư, chỉ chưa đọc, đã lưu trữ. */
+type ReadFilter = "all" | "unread" | "archived";
+
+const READ_TABS: { id: ReadFilter; label: string }[] = [
+  { id: "all", label: "Tất cả" },
+  { id: "unread", label: "Chưa đọc" },
+  { id: "archived", label: "Đã lưu trữ" },
+];
 
 const CATEGORY_OPTIONS: { id: NotificationTriageTab; label: string }[] = [
   { id: "all", label: "Mọi loại" },
@@ -59,7 +79,7 @@ function readStoredFilter(): PanelFilter {
   try {
     const raw = JSON.parse(window.localStorage.getItem(FILTER_STORAGE_KEY) ?? "null");
     return {
-      read: raw?.read === "unread" ? "unread" : "all",
+      read: READ_TABS.some((tab) => tab.id === raw?.read) ? raw.read : "all",
       category: CATEGORY_OPTIONS.some((opt) => opt.id === raw?.category) ? raw.category : "all",
     };
   } catch {
@@ -154,7 +174,8 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Element | null;
       if (!target || panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-      if (target.closest('[role="menu"], [data-slot="menu-backdrop"]')) return;
+      // Toast "Hoàn tác" của thao tác trong khung cũng không tính là bấm ra ngoài
+      if (target.closest('[role="menu"], [data-slot="menu-backdrop"], [data-sonner-toaster]')) return;
       close(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -256,6 +277,7 @@ function InboxPanelBody({
   onNavigate: (href: string) => void;
 }) {
   const now = useNow(60_000);
+  const { showToast } = useFeedback();
   const [filter, setFilter] = React.useState<PanelFilter>(readStoredFilter);
   const [items, setItems] = React.useState<QCETNotification[]>([]);
   const [unread, setUnread] = React.useState<number | null>(null);
@@ -263,10 +285,11 @@ function InboxPanelBody({
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">("loading");
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [loadMoreError, setLoadMoreError] = React.useState(false);
-  const [markingAll, setMarkingAll] = React.useState(false);
+  const [bulkBusy, setBulkBusy] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const seqRef = React.useRef(0);
   const listRef = React.useRef<HTMLDivElement>(null);
+  const archivedView = filter.read === "archived";
 
   const changeFilter = (patch: Partial<PanelFilter>) => {
     setFilter((prev) => {
@@ -280,6 +303,7 @@ function InboxPanelBody({
     (cursor?: string | null) => {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
       if (filter.read === "unread") params.set("unreadOnly", "true");
+      if (filter.read === "archived") params.set("archived", "true");
       if (filter.category !== "all") params.set("triage", filter.category);
       if (cursor) params.set("cursor", cursor);
       return params.toString();
@@ -295,24 +319,27 @@ function InboxPanelBody({
     [onUnreadCount]
   );
 
-  const load = React.useCallback(async () => {
-    const seq = ++seqRef.current;
-    setStatus("loading");
-    setLoadMoreError(false);
-    try {
-      const res = await fetch(`/api/notifications?${query()}`, { credentials: "include", cache: "no-store" });
-      const json = await readNotificationEnvelope(res);
-      if (seq !== seqRef.current) return;
-      if (!Array.isArray(json.notifications)) throw new Error("Dữ liệu thông báo không hợp lệ");
-      setItems(json.notifications.map(mapDbNotification));
-      setNextCursor(json.hasMore ? (json.nextCursor ?? null) : null);
-      if (typeof json.unreadCount === "number") applyUnread(json.unreadCount);
-      setActiveIndex(0);
-      setStatus("ready");
-    } catch {
-      if (seq === seqRef.current) setStatus("error");
-    }
-  }, [query, applyUnread]);
+  const load = React.useCallback(
+    async (mode: "reset" | "refresh" = "reset") => {
+      const seq = ++seqRef.current;
+      if (mode === "reset") setStatus("loading");
+      setLoadMoreError(false);
+      try {
+        const res = await fetch(`/api/notifications?${query()}`, { credentials: "include", cache: "no-store" });
+        const json = await readNotificationEnvelope(res);
+        if (seq !== seqRef.current) return;
+        if (!Array.isArray(json.notifications)) throw new Error("Dữ liệu thông báo không hợp lệ");
+        setItems(json.notifications.map(mapDbNotification));
+        setNextCursor(json.hasMore ? (json.nextCursor ?? null) : null);
+        if (typeof json.unreadCount === "number") applyUnread(json.unreadCount);
+        if (mode === "reset") setActiveIndex(0);
+        setStatus("ready");
+      } catch {
+        if (seq === seqRef.current && mode === "reset") setStatus("error");
+      }
+    },
+    [query, applyUnread]
+  );
 
   React.useEffect(() => {
     void load();
@@ -340,37 +367,92 @@ function InboxPanelBody({
     }
   };
 
-  const markRead = async (id: string) => {
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
-    if (unread !== null) applyUnread(Math.max(0, unread - 1));
+  const setRead = async (n: QCETNotification, isRead: boolean) => {
+    setItems((prev) => prev.map((item) => (item.id === n.id ? { ...item, isRead } : item)));
+    if (unread !== null) applyUnread(Math.max(0, unread + (isRead ? -1 : 1)));
     try {
-      await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ isRead: true }),
-      }).then(readNotificationEnvelope);
+      await setNotificationReadRequest(n.id, isRead);
     } catch {
-      // Đánh dấu không thành: lần tải số chưa đọc kế tiếp (chuyển trang) tự đồng bộ lại
+      setItems((prev) => prev.map((item) => (item.id === n.id ? { ...item, isRead: n.isRead } : item)));
+      void load("refresh");
+      showToast({ variant: "error", message: "Chưa cập nhật được trạng thái đã đọc. Thầy/Cô thử lại." });
     }
   };
 
   const markAllRead = async () => {
-    if (markingAll) return;
-    setMarkingAll(true);
+    if (bulkBusy) return;
+    setBulkBusy(true);
     setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
     try {
       await fetch("/api/notifications/read-all", { method: "POST", credentials: "include" }).then(readNotificationEnvelope);
       applyUnread(0);
     } catch {
-      void load();
+      void load("refresh");
+      showToast({ variant: "error", message: "Chưa đánh dấu được. Thầy/Cô thử lại." });
     } finally {
-      setMarkingAll(false);
+      setBulkBusy(false);
+    }
+  };
+
+  /** Lưu trữ (hoặc đưa về Hộp thư khi đang xem "Đã lưu trữ") một thông báo: bỏ khỏi danh sách ngay, có Hoàn tác. */
+  const toggleArchive = async (n: QCETNotification, index: number) => {
+    const archive = !n.isArchived;
+    // Giữ vị trí chọn: hàng kế tiếp lên thế chỗ (hàng cuối thì lùi lên một). Tìm theo mã vì hàng vừa bỏ còn trong DOM lúc mờ dần.
+    const next = items[index + 1] ?? items[index - 1];
+    setItems((prev) => prev.filter((item) => item.id !== n.id));
+    setActiveIndex(Math.max(0, Math.min(index, items.length - 2)));
+    if (next) requestAnimationFrame(() => focusRowById(next.id));
+    try {
+      const result = await archiveNotificationsRequest({ ids: [n.id], archived: archive });
+      applyUnread(result.unreadCount);
+      showToast({
+        variant: "success",
+        message: archive ? "Đã lưu trữ thông báo." : "Đã đưa thông báo về Hộp thư.",
+        // Đủ lâu để kịp bấm Hoàn tác (toast thường 4 giây)
+        durationMs: UNDO_TOAST_MS,
+        action: {
+          label: "Hoàn tác",
+          onClick: () => {
+            void archiveNotificationsRequest({ ids: [n.id], archived: !archive })
+              .then((undo) => {
+                applyUnread(undo.unreadCount);
+                void load("refresh");
+              })
+              .catch(() => showToast({ variant: "error", message: "Chưa hoàn tác được. Thầy/Cô thử lại." }));
+          },
+        },
+      });
+    } catch {
+      void load("refresh");
+      showToast({ variant: "error", message: archive ? "Chưa lưu trữ được thông báo. Thầy/Cô thử lại." : "Chưa đưa được thông báo về Hộp thư." });
+    }
+  };
+
+  /** Lưu trữ hàng loạt như Notion ("Archive read" / "Archive all"); xem lại ở tab Đã lưu trữ. */
+  const archiveBulk = async (scope: "read" | "all") => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      const result = await archiveNotificationsRequest({ scope });
+      applyUnread(result.unreadCount);
+      void load();
+      showToast({
+        variant: result.count ? "success" : "info",
+        message: result.count
+          ? `Đã lưu trữ ${result.count} thông báo. Xem lại ở mục Đã lưu trữ.`
+          : scope === "read"
+            ? "Không có thông báo đã đọc nào để lưu trữ."
+            : "Hộp thư không còn thông báo nào để lưu trữ.",
+      });
+    } catch {
+      showToast({ variant: "error", message: "Chưa lưu trữ được. Thầy/Cô thử lại." });
+    } finally {
+      setBulkBusy(false);
     }
   };
 
   const openNotification = (n: QCETNotification) => {
-    if (!n.isRead) void markRead(n.id);
+    if (!n.isRead) void setRead(n, true);
     // Thông báo không có trang đích (lời chào, thông báo hệ thống) mở chi tiết ở trang Hộp thư
     onNavigate(getNotificationHref(n) ?? `/inbox?id=${encodeURIComponent(n.id)}`);
   };
@@ -386,27 +468,45 @@ function InboxPanelBody({
     return result;
   }, [items, now]);
 
+  function focusRowById(id: string) {
+    listRef.current?.querySelector<HTMLElement>(`[data-group-key="${CSS.escape(id)}"]`)?.focus();
+  }
+
   const focusRow = (index: number) => {
     const next = Math.max(0, Math.min(items.length - 1, index));
     setActiveIndex(next);
-    listRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[next]?.focus();
+    const target = items[next];
+    if (target) focusRowById(target.id);
   };
 
   const onRowKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, index: number, n: QCETNotification) => {
-    if (event.key === "ArrowDown" || event.key === "j") {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const key = event.key.toLowerCase();
+    if (event.key === "ArrowDown" || key === "j") {
       event.preventDefault();
       focusRow(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "k") {
+    } else if (event.key === "ArrowUp" || key === "k") {
       event.preventDefault();
       focusRow(index - 1);
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       openNotification(n);
+    } else if (key === INBOX_ARCHIVE_KEY) {
+      event.preventDefault();
+      void toggleArchive(n, index);
+    } else if (key === INBOX_TOGGLE_READ_KEY && !n.isArchived) {
+      event.preventDefault();
+      void setRead(n, !n.isRead);
     }
   };
 
-  const filtered = filter.read === "unread" || filter.category !== "all";
-  const empty = getInboxEmptyCopy({ failed: false, hasCondition: filter.category !== "all", unreadOnly: filter.read === "unread" });
+  const categoryFiltered = filter.category !== "all";
+  const empty = getInboxEmptyCopy({
+    failed: false,
+    hasCondition: categoryFiltered,
+    unreadOnly: filter.read === "unread",
+    archived: archivedView && !categoryFiltered,
+  });
   let rowIndex = -1;
 
   return (
@@ -419,25 +519,14 @@ function InboxPanelBody({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                aria-label={filtered ? "Lọc thông báo (đang lọc)" : "Lọc thông báo"}
-                className={cn(filtered && "bg-accent text-foreground")}
+                aria-label={categoryFiltered ? "Lọc theo loại (đang lọc)" : "Lọc theo loại"}
+                className={cn(categoryFiltered && "bg-accent text-foreground")}
               />
             }
           >
             <ListFilter />
           </MenuTrigger>
           <MenuContent align="end" className="w-56" positionerClassName={PANEL_MENU_LAYER}>
-            <MenuOptionItem selected={filter.read === "all"} onClick={() => changeFilter({ read: "all" })}>
-              Tất cả
-            </MenuOptionItem>
-            <MenuOptionItem
-              selected={filter.read === "unread"}
-              hint={unread ? unread : undefined}
-              onClick={() => changeFilter({ read: "unread" })}
-            >
-              Chưa đọc
-            </MenuOptionItem>
-            <MenuSeparator className="my-1 border-t border-border/40" />
             {CATEGORY_OPTIONS.map((opt) => (
               <MenuOptionItem key={opt.id} selected={filter.category === opt.id} onClick={() => changeFilter({ category: opt.id })}>
                 {opt.label}
@@ -449,16 +538,34 @@ function InboxPanelBody({
           <MenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" />}>
             <MoreHorizontal />
           </MenuTrigger>
-          <MenuContent align="end" className="w-56" positionerClassName={PANEL_MENU_LAYER}>
-            <MenuActionItem disabled={!unread || markingAll} leading={<CheckCheck />} onClick={() => void markAllRead()}>
+          <MenuContent align="end" className="w-60" positionerClassName={PANEL_MENU_LAYER}>
+            <MenuActionItem disabled={!unread || bulkBusy} leading={<CheckCheck />} onClick={() => void markAllRead()}>
               Đánh dấu đã đọc tất cả
             </MenuActionItem>
+            <MenuActionItem disabled={bulkBusy} leading={<Archive />} onClick={() => void archiveBulk("read")}>
+              Lưu trữ thông báo đã đọc
+            </MenuActionItem>
+            <MenuActionItem disabled={bulkBusy} leading={<Archive />} onClick={() => void archiveBulk("all")}>
+              Lưu trữ tất cả
+            </MenuActionItem>
+            <MenuSeparator className="my-1 border-t border-border/40" />
             <MenuActionItem leading={<ArrowUpRight />} onClick={() => onNavigate("/inbox")}>
               Mở trang Hộp thư
             </MenuActionItem>
           </MenuContent>
         </MenuRoot>
       </div>
+
+      <Tabs value={filter.read} onValueChange={(value) => changeFilter({ read: value as ReadFilter })} className="shrink-0 px-3 pb-2">
+        <TabsList variant="pill" size="sm" aria-label="Chế độ xem hộp thư">
+          {READ_TABS.map((tab) => (
+            <TabsTrigger key={tab.id} value={tab.id} className="flex-none">
+              {tab.label}
+              {tab.id === "unread" && unread ? <span className="tabular-nums text-muted-foreground">{formatUnreadBadge(unread)}</span> : null}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2 thin-scrollbar" aria-busy={status === "loading"}>
         {status === "loading" ? (
@@ -485,37 +592,57 @@ function InboxPanelBody({
             description={empty.description}
             className="py-12"
             action={
-              filtered ? (
-                <Button variant="outline" size="xs" onClick={() => changeFilter(DEFAULT_FILTER)}>
-                  Xem tất cả
+              categoryFiltered ? (
+                <Button variant="outline" size="xs" onClick={() => changeFilter({ category: "all" })}>
+                  Xem mọi loại
+                </Button>
+              ) : filter.read !== "all" ? (
+                <Button variant="outline" size="xs" onClick={() => changeFilter({ read: "all" })}>
+                  Về Hộp thư
                 </Button>
               ) : undefined
             }
           />
         ) : (
-          <div role="listbox" aria-label="Thông báo">
+          <div role="listbox" aria-label={archivedView ? "Thông báo đã lưu trữ" : "Thông báo"}>
             {sections.map((section) => (
               <div key={section.bucket} role="group" aria-label={NOTIFICATION_TIME_BUCKET_LABELS[section.bucket]}>
                 <p aria-hidden className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground">
                   {NOTIFICATION_TIME_BUCKET_LABELS[section.bucket]}
                 </p>
-                {section.items.map((n) => {
-                  rowIndex += 1;
-                  const index = rowIndex;
-                  return (
-                    <InboxRow
-                      key={n.id}
-                      group={singleGroup(n)}
-                      now={now}
-                      selected={false}
-                      tabIndex={index === activeIndex ? 0 : -1}
-                      snippet={getNotificationSnippet(n)}
-                      onOpen={() => openNotification(n)}
-                      onFocus={() => setActiveIndex(index)}
-                      onKeyDown={(event) => onRowKeyDown(event, index, n)}
-                    />
-                  );
-                })}
+                <AnimatePresence initial={false}>
+                  {section.items.map((n) => {
+                    rowIndex += 1;
+                    const index = rowIndex;
+                    return (
+                      <m.div
+                        key={n.id}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.16, ease: "easeOut" }}
+                        className="overflow-hidden"
+                      >
+                        <InboxRow
+                          group={singleGroup(n)}
+                          now={now}
+                          selected={false}
+                          tabIndex={index === activeIndex ? 0 : -1}
+                          snippet={getNotificationSnippet(n)}
+                          actions={
+                            <InboxRowActions
+                              unread={!n.isRead}
+                              archived={Boolean(n.isArchived)}
+                              onToggleRead={() => void setRead(n, !n.isRead)}
+                              onArchive={() => void toggleArchive(n, index)}
+                            />
+                          }
+                          onOpen={() => openNotification(n)}
+                          onFocus={() => setActiveIndex(index)}
+                          onKeyDown={(event) => onRowKeyDown(event, index, n)}
+                        />
+                      </m.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             ))}
             {nextCursor ? (
@@ -538,6 +665,27 @@ function InboxPanelBody({
           </div>
         )}
       </div>
+
+      {/* Gợi ý phím như bảng lệnh của Linear: chọn bằng phím rồi xử lý không cần chuột */}
+      {status === "ready" && items.length > 0 ? (
+        <div aria-hidden className="flex h-9 shrink-0 items-center gap-3 border-t border-border/60 px-4 text-xs text-muted-foreground">
+          <KeyHint keys={["↑", "↓"]} label="chọn" />
+          <KeyHint keys={["↵"]} label="mở" />
+          <KeyHint keys={["E"]} label={archivedView ? "đưa về" : "lưu trữ"} />
+          {archivedView ? null : <KeyHint keys={["U"]} label="đã đọc" />}
+        </div>
+      ) : null}
     </>
+  );
+}
+
+function KeyHint({ keys, label }: { keys: string[]; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      {keys.map((key) => (
+        <Kbd key={key}>{key}</Kbd>
+      ))}
+      {label}
+    </span>
   );
 }

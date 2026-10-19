@@ -118,7 +118,8 @@ export async function deliverTaskNotice(db: DbClient, notice: TaskNotice): Promi
   // Gộp thông báo (Quy trình 11): cùng loại, cùng nhiệm vụ trong 5 phút chỉ báo một lần cho mỗi người.
   const linkHref = notice.linkHref ?? `/tasks?taskId=${encodeURIComponent(task.id)}`;
   const recent = !COALESCED_TYPES.has(notice.type) ? [] : await db.notification.findMany({
-    where: { userId: { in: candidates }, type: notice.type, linkHref, createdAt: { gte: new Date(Date.now() - COALESCE_WINDOW_MS) } },
+    // Thông báo đã lưu trữ không tính: người nhận đã dọn nó thì lần mới vẫn phải báo
+    where: { userId: { in: candidates }, type: notice.type, linkHref, archivedAt: null, createdAt: { gte: new Date(Date.now() - COALESCE_WINDOW_MS) } },
     select: { userId: true },
   });
   const alreadyNotified = new Set(recent.map((r) => r.userId));

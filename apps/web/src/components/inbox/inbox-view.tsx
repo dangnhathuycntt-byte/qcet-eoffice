@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  Archive,
+  ArchiveRestore,
   ArrowLeft,
   ArrowUpRight,
   Calendar,
@@ -21,6 +23,7 @@ import { TaskStatusIcon } from "@/components/ui/task-status-icon";
 import { PriorityIndicator } from "@/components/ui/priority-indicator";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import { getStatusLabel } from "@qcet/shared/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
@@ -42,7 +45,18 @@ import {
   type NotificationGroup,
 } from "@/lib/notification-inbox";
 import { Pressable } from "@/components/ui/pressable";
-import { getInboxEmptyCopy, InboxRow, readNotificationEnvelope, toNotificationIso, useNow } from "@/components/inbox/inbox-row";
+import {
+  getInboxEmptyCopy,
+  INBOX_ARCHIVE_KEY,
+  INBOX_TOGGLE_READ_KEY,
+  INBOX_UNDO_TOAST_MS as UNDO_TOAST_MS,
+  InboxRow,
+  InboxRowActions,
+  readNotificationEnvelope,
+  toNotificationIso,
+  useNow,
+} from "@/components/inbox/inbox-row";
+import { archiveNotificationsRequest } from "@/components/inbox/notification-actions";
 
 export { getInboxEmptyCopy, type InboxEmptyCopy } from "@/components/inbox/inbox-row";
 
@@ -58,7 +72,10 @@ interface InboxTask {
   department?: { name?: string | null } | null;
 }
 
-type ReadFilter = "all" | "unread";
+type ReadFilter = "all" | "unread" | "archived";
+
+/** Một nhóm có thể nhiều thông báo; API nhận tối đa 100 mã một lần. */
+const ARCHIVE_BATCH = 100;
 
 const PAGE_SIZE = 30;
 const WIDE_MIN_WIDTH = 920;
@@ -69,6 +86,11 @@ const CATEGORY_OPTIONS: { id: NotificationTriageTab; label: string }[] = [
   { id: "action_required", label: "Việc cần làm" },
   { id: "reminders", label: "Nhắc hạn" },
 ];
+
+/** Nhóm đã lưu trữ khi mọi thông báo trong nhóm đã lưu trữ. */
+function isGroupArchived(group: NotificationGroup): boolean {
+  return group.items.every((n) => n.isArchived);
+}
 
 function parseCategory(value: string | null): NotificationTriageTab {
   const tab = parseTriageTab(value);
@@ -84,10 +106,13 @@ export function InboxView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setBadgeCounts } = useSidebar();
+  const { showToast } = useFeedback();
   const now = useNow(60_000);
 
   // URL là nguồn trạng thái cho lựa chọn, bộ lọc và từ khóa.
-  const readFilter: ReadFilter = searchParams?.get("filter") === "unread" ? "unread" : "all";
+  const filterParam = searchParams?.get("filter");
+  const readFilter: ReadFilter = filterParam === "unread" || filterParam === "archived" ? filterParam : "all";
+  const archivedView = readFilter === "archived";
   const category = parseCategory(searchParams?.get("category") ?? null);
   const urlQuery = (searchParams?.get("q") ?? "").trim().slice(0, 100);
   const selectedId = searchParams?.get("id") || null;
@@ -139,7 +164,7 @@ export function InboxView() {
       const set = (key: string, value: string | null | undefined) =>
         value ? params.set(key, value) : params.delete(key);
       if ("id" in patch) set("id", patch.id);
-      if ("filter" in patch) set("filter", patch.filter === "unread" ? "unread" : null);
+      if ("filter" in patch) set("filter", patch.filter === "all" ? null : patch.filter);
       if ("category" in patch) set("category", patch.category !== "all" ? patch.category : null);
       if ("q" in patch) set("q", patch.q?.trim());
       const qs = params.toString();
@@ -160,6 +185,7 @@ export function InboxView() {
     (cursor?: string | null) => {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
       if (readFilter === "unread") params.set("unreadOnly", "true");
+      if (readFilter === "archived") params.set("archived", "true");
       if (category !== "all") params.set("triage", category);
       if (urlQuery) params.set("q", urlQuery);
       if (cursor) params.set("cursor", cursor);
@@ -381,6 +407,64 @@ export function InboxView() {
     }
   };
 
+  /** Lưu trữ (hoặc đưa về Hộp thư khi xem "Đã lưu trữ") cả nhóm; đang mở nhóm đó thì chuyển sang nhóm kế tiếp. Có Hoàn tác. */
+  const toggleArchiveGroup = async (group: NotificationGroup) => {
+    const archive = !isGroupArchived(group);
+    const ids = group.items.map((n) => n.id).slice(0, ARCHIVE_BATCH);
+    const removed = new Set(ids);
+    const index = visibleGroups.findIndex((g) => g.key === group.key);
+    const next = index < 0 ? undefined : (visibleGroups[index + 1] ?? visibleGroups[index - 1]);
+    setItems((prev) => prev.filter((n) => !removed.has(n.id)));
+    if (selectedGroup?.key === group.key) navigate({ id: isWide && next ? next.latest.id : null });
+    if (next) requestAnimationFrame(() => focusRow(next.key));
+    try {
+      const result = await archiveNotificationsRequest({ ids, archived: archive });
+      syncUnread(result.unreadCount);
+      showToast({
+        variant: "success",
+        message: archive ? "Đã lưu trữ thông báo." : "Đã đưa thông báo về Hộp thư.",
+        // Đủ lâu để kịp bấm Hoàn tác (toast thường 4 giây)
+        durationMs: UNDO_TOAST_MS,
+        action: {
+          label: "Hoàn tác",
+          onClick: () => {
+            void archiveNotificationsRequest({ ids, archived: !archive })
+              .then((undo) => {
+                syncUnread(undo.unreadCount);
+                void loadList("refresh");
+              })
+              .catch(() => showToast({ variant: "error", message: "Chưa hoàn tác được. Vui lòng thử lại." }));
+          },
+        },
+      });
+    } catch {
+      void loadList("refresh");
+      showToast({ variant: "error", message: archive ? "Chưa lưu trữ được thông báo. Vui lòng thử lại." : "Chưa đưa được thông báo về Hộp thư." });
+    }
+  };
+
+  const archiveBulk = async (scope: "read" | "all") => {
+    try {
+      const result = await archiveNotificationsRequest({ scope });
+      syncUnread(result.unreadCount);
+      if (selectedId && !archivedView) navigate({ id: null });
+      void loadList("refresh");
+      showToast({
+        variant: result.count ? "success" : "info",
+        message: result.count
+          ? `Đã lưu trữ ${result.count} thông báo. Xem lại ở bộ lọc Đã lưu trữ.`
+          : scope === "read"
+            ? "Không có thông báo đã đọc nào để lưu trữ."
+            : "Hộp thư không còn thông báo nào để lưu trữ.",
+      });
+    } catch {
+      showToast({ variant: "error", message: "Chưa lưu trữ được. Vui lòng thử lại." });
+    }
+  };
+
+  const toggleGroupRead = (group: NotificationGroup) =>
+    void (group.unreadIds.length > 0 ? markRead(group.unreadIds, true) : markRead([group.latest.id], false));
+
   // Mở một nhóm là đã đọc mọi thông báo chưa đọc của nhóm (mỗi ID chỉ tự đánh dấu một lần).
   React.useEffect(() => {
     if (!selectedGroup) return;
@@ -460,6 +544,13 @@ export function InboxView() {
       openGroup(group);
       return;
     }
+    const key = event.key.toLowerCase();
+    if (!event.metaKey && !event.ctrlKey && !event.altKey && (key === INBOX_ARCHIVE_KEY || (key === INBOX_TOGGLE_READ_KEY && !isGroupArchived(group)))) {
+      event.preventDefault();
+      if (key === INBOX_ARCHIVE_KEY) void toggleArchiveGroup(group);
+      else toggleGroupRead(group);
+      return;
+    }
     let nextIndex: number | null = null;
     if (event.key === "ArrowDown" || event.key === "j") nextIndex = Math.min(index + 1, visibleGroups.length - 1);
     if (event.key === "ArrowUp" || event.key === "k") nextIndex = Math.max(index - 1, 0);
@@ -496,7 +587,7 @@ export function InboxView() {
   // không bảo "chọn một thông báo" khi không có gì để chọn); hẹp thì khung phải ẩn nên hiện ngay trong danh sách
   const emptyCopy =
     status === "error" || (status === "ready" && visibleGroups.length === 0)
-      ? getInboxEmptyCopy({ failed: status === "error", hasCondition, unreadOnly: readFilter === "unread" })
+      ? getInboxEmptyCopy({ failed: status === "error", hasCondition, unreadOnly: readFilter === "unread", archived: archivedView })
       : null;
   const emptyAction =
     emptyCopy?.action === "retry"
@@ -578,6 +669,13 @@ export function InboxView() {
                       Đánh dấu tất cả đã đọc
                     </MenuActionItem>
                     <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
+                    <MenuActionItem onClick={() => void archiveBulk("read")} leading={<Archive />}>
+                      Lưu trữ thông báo đã đọc
+                    </MenuActionItem>
+                    <MenuActionItem onClick={() => void archiveBulk("all")} leading={<Archive />}>
+                      Lưu trữ tất cả
+                    </MenuActionItem>
+                    <MenuSeparator className="my-1 border-t border-border/40" />
                     <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
                       Làm mới
                     </MenuActionItem>
@@ -622,7 +720,7 @@ export function InboxView() {
                       size="icon-xs"
                       aria-label="Lọc thông báo"
                       title="Lọc"
-                      className={cn((readFilter === "unread" || category !== "all") && "bg-accent text-foreground")}
+                      className={cn((readFilter !== "all" || category !== "all") && "bg-accent text-foreground")}
                     />
                   }
                 >
@@ -637,6 +735,13 @@ export function InboxView() {
                   >
                     Chỉ chưa đọc
                   </MenuActionItem>
+                  <MenuActionItem
+                    selected={archivedView}
+                    leading={<Archive />}
+                    onClick={() => navigate({ filter: archivedView ? "all" : "archived", id: null })}
+                  >
+                    Đã lưu trữ
+                  </MenuActionItem>
                   <MenuSeparator className="my-1 border-t border-border/40" />
                   {CATEGORY_OPTIONS.map((opt) => (
                     <MenuActionItem key={opt.id} selected={category === opt.id} onClick={() => navigate({ category: opt.id })}>
@@ -648,10 +753,10 @@ export function InboxView() {
             </div>
           </div>
 
-          {(readFilter === "unread" || category !== "all") && (
+          {(readFilter !== "all" || category !== "all") && (
             <div className="flex shrink-0 flex-wrap items-center gap-1 px-4 pb-2 pt-2">
-              {readFilter === "unread" && (
-                <FilterChip label="Chưa đọc" onRemove={() => navigate({ filter: "all" })} />
+              {readFilter !== "all" && (
+                <FilterChip label={archivedView ? "Đã lưu trữ" : "Chưa đọc"} onRemove={() => navigate({ filter: "all" })} />
               )}
               {category !== "all" && activeCategoryLabel && (
                 <FilterChip label={activeCategoryLabel} onRemove={() => navigate({ category: "all" })} />
@@ -702,6 +807,15 @@ export function InboxView() {
                       now={now}
                       selected={group.key === selectedGroup?.key}
                       tabIndex={group.key === activeKey ? 0 : -1}
+                      actions={
+                        <InboxRowActions
+                          unread={group.unreadIds.length > 0}
+                          archived={isGroupArchived(group)}
+                          disabled={group.items.some((n) => pendingIds.has(n.id)) || isMarkingAll}
+                          onToggleRead={() => toggleGroupRead(group)}
+                          onArchive={() => void toggleArchiveGroup(group)}
+                        />
+                      }
                       onOpen={() => openGroup(group)}
                       onFocus={() => setFocusKey(group.key)}
                       onKeyDown={(e) => handleRowKeyDown(e, index)}
@@ -758,11 +872,22 @@ export function InboxView() {
                 </span>
                 {selectedGroup && (
                   <div className="ml-auto flex shrink-0 items-center gap-1">
-                    <ReadToggle
-                      group={selectedGroup}
-                      disabled={selectedGroup.items.some((n) => pendingIds.has(n.id)) || isMarkingAll}
-                      onToggle={(ids, isRead) => void markRead(ids, isRead)}
-                    />
+                    {isGroupArchived(selectedGroup) ? null : (
+                      <ReadToggle
+                        group={selectedGroup}
+                        disabled={selectedGroup.items.some((n) => pendingIds.has(n.id)) || isMarkingAll}
+                        onToggle={(ids, isRead) => void markRead(ids, isRead)}
+                      />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      title={isGroupArchived(selectedGroup) ? "Đưa về Hộp thư (E)" : "Lưu trữ (E)"}
+                      aria-label={isGroupArchived(selectedGroup) ? "Đưa về Hộp thư" : "Lưu trữ"}
+                      onClick={() => void toggleArchiveGroup(selectedGroup)}
+                    >
+                      {isGroupArchived(selectedGroup) ? <ArchiveRestore /> : <Archive />}
+                    </Button>
                     {selectedGroup.target && (
                       <Button variant="ghost" size="sm" onClick={() => router.push(selectedGroup.target!.href)}>
                         {selectedGroup.target.ctaLabel}

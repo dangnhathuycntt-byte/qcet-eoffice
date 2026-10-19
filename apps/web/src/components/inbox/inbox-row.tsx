@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import Image from "next/image";
+import { Archive, ArchiveRestore, Mail, MailOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import type { IllustrationName } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
@@ -52,16 +55,22 @@ export function getInboxEmptyCopy({
   failed,
   hasCondition,
   unreadOnly,
+  archived = false,
 }: {
   failed: boolean;
   hasCondition: boolean;
   unreadOnly: boolean;
+  /** Đang xem bộ lọc "Đã lưu trữ". */
+  archived?: boolean;
 }): InboxEmptyCopy {
   if (failed) {
     return { illustration: "load-error", title: "Không tải được hộp thư", description: "Có lỗi khi tải thông báo. Thử lại sau ít phút.", action: "retry" };
   }
   if (hasCondition) {
     return { illustration: "no-results", title: "Không có thông báo phù hợp", description: "Thử từ khóa khác hoặc bỏ bớt bộ lọc.", action: "clear" };
+  }
+  if (archived) {
+    return { illustration: "inbox", title: "Chưa lưu trữ thông báo nào", description: "Lưu trữ thông báo đã xử lý (phím E) để Hộp thư gọn hơn; chúng vẫn xem lại được ở đây.", action: "show-all" };
   }
   if (unreadOnly) {
     return { illustration: "all-done", title: "Đã đọc hết", description: "Không còn thông báo nào chưa đọc.", action: "show-all" };
@@ -76,6 +85,7 @@ export function InboxRow({
   selected,
   tabIndex,
   snippet,
+  actions,
   onOpen,
   onFocus,
   onKeyDown,
@@ -86,6 +96,8 @@ export function InboxRow({
   tabIndex: number;
   /** Lời nhắn kèm thông báo (bình luận, lý do), hiện thành dòng thứ ba như hàng Inbox của Notion. */
   snippet?: string;
+  /** Nút thao tác nhanh (đã đọc, lưu trữ): hiện khi rê chuột hoặc hàng đang được chọn bằng phím, thế chỗ giờ như Linear. */
+  actions?: React.ReactNode;
   onOpen: () => void;
   onFocus: () => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
@@ -117,7 +129,8 @@ export function InboxRow({
       onKeyDown={onKeyDown}
       className={cn(
         // Hàng hai dòng 58px như Linear Inbox (cao gấp ~2,07 hàng sidebar 28px, đo ảnh 14/10/2026): avatar 32px, tiêu đề 13px, dòng phụ 12px kèm thời gian bên phải
-        "relative flex cursor-pointer gap-3 rounded-lg py-3 pl-3 pr-2 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+        // Viền focus vẽ vào trong: khung nổi bọc hàng trong lớp overflow-hidden (hiệu ứng thu gọn khi lưu trữ) nên viền ngoài bị cắt góc
+        "group/row relative flex cursor-pointer gap-3 rounded-lg py-3 pl-3 pr-2 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         // Có dòng trích lời nhắn thì avatar canh dòng đầu như Notion
         snippet ? "items-start" : "items-center",
         selected ? "bg-selected" : "hover:bg-accent/60"
@@ -135,7 +148,7 @@ export function InboxRow({
           <TypeIcon size={16} />
         </span>
       )}
-      <div className="min-w-0 flex-1">
+      <div className={cn("min-w-0 flex-1", actions && "group-hover/row:pr-14 group-focus-visible/row:pr-14")}>
         {/* Tên thư luôn đậm vừa và màu chữ chính (người dùng chốt 14/10/2026); chưa đọc = chấm màu chính ngay trước tên, như Linear.
             Chấm luôn được render để khi mở thư (đã đọc) nó thu nhỏ, mờ dần và tên trượt về trái thay vì biến mất đột ngột. */}
         <p className="flex items-center text-compact font-medium text-foreground">
@@ -150,12 +163,98 @@ export function InboxRow({
         </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">{secondary}</span>
-          <time dateTime={toNotificationIso(n.createdAt)} title={absolute} className="shrink-0 tabular-nums">
+          <time
+            dateTime={toNotificationIso(n.createdAt)}
+            title={absolute}
+            className={cn("shrink-0 tabular-nums", actions && "group-hover/row:invisible group-focus-visible/row:invisible")}
+          >
             {formatNotificationTime(n.createdAt, now)}
           </time>
         </div>
         {snippet ? <p className="mt-0.5 line-clamp-2 text-xs text-foreground/80">{snippet}</p> : null}
       </div>
+      {actions ? (
+        // Nút ở góc phải, chữ chừa chỗ (pr-14) và giờ ẩn đi khi nút hiện; không nhận Tab (đã có phím E/U)
+        <div
+          className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 group-hover/row:flex group-focus-visible/row:flex"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {actions}
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/** Phím tắt trên hàng đang chọn của Hộp thư (khung nổi và trang /inbox). */
+export const INBOX_ARCHIVE_KEY = "e";
+export const INBOX_TOGGLE_READ_KEY = "u";
+/** Toast lưu trữ có nút Hoàn tác giữ lâu hơn toast thường. */
+export const INBOX_UNDO_TOAST_MS = 6000;
+
+/** Hai nút thao tác nhanh của một hàng: đã đọc/chưa đọc (phím U) và lưu trữ/bỏ lưu trữ (phím E). */
+export function InboxRowActions({
+  unread,
+  archived,
+  disabled,
+  onToggleRead,
+  onArchive,
+}: {
+  unread: boolean;
+  archived: boolean;
+  disabled?: boolean;
+  onToggleRead: () => void;
+  onArchive: () => void;
+}) {
+  return (
+    <>
+      {/* Thông báo đã lưu trữ luôn là đã đọc: chỉ còn nút đưa về Hộp thư */}
+      {archived ? null : (
+        <RowAction label={unread ? "Đánh dấu đã đọc" : "Đánh dấu chưa đọc"} shortcut="U" disabled={disabled} onClick={onToggleRead}>
+          {unread ? <MailOpen /> : <Mail />}
+        </RowAction>
+      )}
+      <RowAction label={archived ? "Đưa về Hộp thư" : "Lưu trữ"} shortcut="E" disabled={disabled} onClick={onArchive}>
+        {archived ? <ArchiveRestore /> : <Archive />}
+      </RowAction>
+    </>
+  );
+}
+
+function RowAction({
+  label,
+  shortcut,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  shortcut: string;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          tabIndex={-1}
+          aria-label={label}
+          disabled={disabled}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClick();
+          }}
+          className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={4}>
+        {label} <span className="ml-1 text-background/60">{shortcut}</span>
+      </TooltipContent>
+    </Tooltip>
   );
 }

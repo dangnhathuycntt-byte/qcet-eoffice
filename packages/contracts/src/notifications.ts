@@ -16,35 +16,37 @@ export const NotificationTypeSchema = z
   .trim()
   .max(50, 'Type cannot exceed 50 characters');
 
+/** "true"/"1" và "false"/"0" trên query string thành boolean. */
+const QueryBoolean = z
+  .preprocess((val) => {
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      if (lower === 'true' || lower === '1') return true;
+      if (lower === 'false' || lower === '0') return false;
+    }
+    return val;
+  }, z.boolean())
+  .optional();
+
 /**
  * Notification query filtering schema with boolean coercion for read status.
  */
 export const NotificationQuerySchema = PaginationQuerySchema.extend({
-  read: z
-    .preprocess((val) => {
-      if (typeof val === 'string') {
-        const lower = val.trim().toLowerCase();
-        if (lower === 'true' || lower === '1') return true;
-        if (lower === 'false' || lower === '0') return false;
-      }
-      return val;
-    }, z.boolean())
-    .optional(),
-  unreadOnly: z
-    .preprocess((val) => {
-      if (typeof val === 'string') {
-        const lower = val.trim().toLowerCase();
-        if (lower === 'true' || lower === '1') return true;
-        if (lower === 'false' || lower === '0') return false;
-      }
-      return val;
-    }, z.boolean())
-    .optional(),
+  read: QueryBoolean,
+  unreadOnly: QueryBoolean,
+  /** true: xem thông báo đã lưu trữ; mặc định chỉ thông báo còn trong Hộp thư. */
+  archived: QueryBoolean,
   category: NotificationCategorySchema.optional(),
   type: NotificationTypeSchema.optional(),
   q: z.string().trim().max(100, 'Từ khóa không quá 100 ký tự').optional(),
   triage: z.enum(['all', 'action_required', 'approvals', 'reminders']).optional(),
 });
+
+/** Lưu trữ / bỏ lưu trữ theo mã (tối đa 100), hoặc lưu trữ hàng loạt thông báo đã đọc / tất cả. */
+export const NotificationArchiveSchema = z.union([
+  z.object({ ids: z.array(z.string().trim().min(1).max(64)).min(1).max(100), archived: z.boolean() }).strict(),
+  z.object({ scope: z.enum(['read', 'all']) }).strict(),
+]);
 
 /**
  * Push subscription keys schema.

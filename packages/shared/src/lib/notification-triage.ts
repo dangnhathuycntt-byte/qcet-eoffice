@@ -25,6 +25,8 @@ export interface QCETNotification {
   timestamp: string;
   category: string;
   isRead: boolean;
+  /** Đã lưu trữ (rời Hộp thư, xem ở bộ lọc "Đã lưu trữ"). */
+  isArchived?: boolean;
   timeGroup?: "new" | "earlier";
   type: string;
   linkHref?: string;
@@ -352,6 +354,7 @@ export function mapDbNotification(raw: any): QCETNotification {
     timestamp: raw.timestamp || (dateVal ? formatRelativeTime(dateVal) : ""),
     category: (raw.category || "QCET").toUpperCase(),
     isRead: Boolean(raw.isRead),
+    isArchived: Boolean(raw.archivedAt),
     timeGroup: raw.timeGroup || (dateVal ? getTimeGroup(dateVal) : "earlier"),
     type: raw.type || "general",
     linkHref: typeof link === "string" && link.trim() ? link.trim() : undefined,

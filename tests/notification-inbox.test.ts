@@ -94,6 +94,8 @@ describe("mapDbNotification với DTO hiện hành", () => {
     const noLink = mapDbNotification({ id: "n2", title: "x", message: "", type: "general", isRead: true });
     assert.equal(noLink.linkHref, undefined);
     assert.equal(noLink.createdAt, undefined);
+    assert.equal(noLink.isArchived, false);
+    assert.equal(mapDbNotification({ id: "n3", title: "x", message: "", type: "general", isRead: true, archivedAt: "2026-10-09T14:00:00.000Z" }).isArchived, true);
   });
 
   test("nhãn sự kiện, type lạ dùng nhãn trung tính", () => {
@@ -160,6 +162,12 @@ describe("buildNotificationWhere & cursor", () => {
 
     const countWhere = buildNotificationWhere({ userId: "u1", cursor: encodeNotificationCursor(at, "id9") }, false) as any;
     assert.equal(countWhere.AND, undefined);
+  });
+
+  test("mặc định chỉ thông báo trong Hộp thư; archived=true chỉ thông báo đã lưu trữ", () => {
+    assert.equal((buildNotificationWhere({ userId: "u1" }) as any).archivedAt, null);
+    assert.equal((buildNotificationWhere({ userId: "u1", archived: false }) as any).archivedAt, null);
+    assert.deepEqual((buildNotificationWhere({ userId: "u1", archived: true }) as any).archivedAt, { not: null });
   });
 });
 

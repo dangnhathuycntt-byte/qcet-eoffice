@@ -23,6 +23,8 @@ export interface NotificationWhereInput {
   userId: string;
   unreadOnly?: boolean;
   read?: boolean;
+  /** true: chỉ thông báo đã lưu trữ; còn lại: chỉ thông báo trong Hộp thư (chưa lưu trữ). */
+  archived?: boolean;
   category?: string;
   type?: string;
   triage?: NotificationTriageTab;
@@ -71,6 +73,7 @@ export function buildNotificationWhere(
 
   return {
     userId: input.userId,
+    archivedAt: input.archived === true ? { not: null } : null,
     ...(input.unreadOnly === true || input.read === false
       ? { isRead: false }
       : input.read === true

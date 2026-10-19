@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const validatedQuery = NotificationQuerySchema.parse({
       unreadOnly: searchParams.get('unreadOnly') ?? undefined,
       read: searchParams.get('read') ?? undefined,
+      archived: searchParams.get('archived') ?? undefined,
       category: searchParams.get('category') ?? undefined,
       type: searchParams.get('type') ?? undefined,
       q: searchParams.get('q') ?? undefined,

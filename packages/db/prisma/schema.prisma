@@ -923,11 +923,14 @@ model Notification {
   linkHref    String    @map("link_href")
   isRead      Boolean   @default(false) @map("is_read")
   readAt      DateTime? @map("read_at")
+  /// Lưu trữ như Notion: rời Hộp thư, xem lại ở bộ lọc "Đã lưu trữ"; lưu trữ thì cũng đánh dấu đã đọc.
+  archivedAt  DateTime? @map("archived_at")
   createdAt   DateTime  @default(now()) @map("created_at")
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, archivedAt])
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, readAt])
   @@index([createdAt])

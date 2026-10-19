@@ -7,6 +7,7 @@ import { WelcomeInstallDemo } from "@/components/inbox/welcome-install-demo";
 import { AssistantSettingsDialog } from "@/components/assistant/assistant-settings-dialog";
 import { getPreferencesRequest, listConversationsRequest } from "@/components/assistant/assistant-client";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { Progress } from "@/components/ui/progress";
 import { usePushNotification } from "@/hooks/use-push-notification";
@@ -210,14 +211,6 @@ function WorkAreas() {
   );
 }
 
-function Keycap({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-border bg-muted px-1 font-sans text-xs text-muted-foreground">
-      {children}
-    </kbd>
-  );
-}
-
 function Shortcuts({ assistantEnabled }: { assistantEnabled: boolean }) {
   // Điện thoại không có bàn phím nên ẩn mục này ở màn hẹp
   return (
@@ -231,7 +224,7 @@ function Shortcuts({ assistantEnabled }: { assistantEnabled: boolean }) {
             <span className="min-w-0 truncate">{item.label}</span>
             <span className="flex shrink-0 gap-1">
               {item.keys.map((key) => (
-                <Keycap key={key}>{key}</Keycap>
+                <Kbd key={key}>{key}</Kbd>
               ))}
             </span>
           </li>
