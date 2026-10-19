@@ -166,7 +166,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
   }
 
   return (
-    <section aria-label="Xin gia hạn" className={cn("space-y-2 px-4", className)}>
+    <section aria-label="Xin gia hạn" data-notification-focus="extension" className={cn("space-y-2 px-4", className)}>
       <div className="flex items-center gap-2">
         <h2 className="text-compact font-semibold text-foreground tracking-tight">Gia hạn</h2>
         {view.appliedCount >= 3 && (

@@ -23,6 +23,7 @@ import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
 import { TaskComments } from "@/components/tasks/detail/task-comments";
 import { TaskCriteria } from "@/components/tasks/detail/task-criteria";
 import { useIsPhone } from "@/hooks/use-is-phone";
+import { useNotificationFocus } from "@/hooks/use-notification-focus";
 import { TaskOptionalMenu, TaskOptionalMenuProvider, TaskOptionalSections } from "@/components/tasks/detail/task-add-chip";
 import { TaskDeliverables, toTaskDeliverableItems, type TaskDeliverableItem } from "@/components/tasks/detail/task-deliverables";
 import { TaskDecline } from "@/components/tasks/detail/task-decline";
@@ -79,6 +80,8 @@ export function TaskDetailPage({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Mở từ Hộp thư (`?focus=`): cuộn tới và tô sáng khối liên quan của thông báo
+  useNotificationFocus();
   const { user: clientUser } = useAuth();
   const currentUser = clientUser || serverUser;
   const { setBreadcrumbItems } = useSidebarLayout();

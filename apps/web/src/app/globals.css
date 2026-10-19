@@ -1190,3 +1190,14 @@
   border-radius: 2px;
   background: color-mix(in srgb, var(--primary) 14%, transparent);
 }
+
+/* Khối được mở từ Hộp thư (`useNotificationFocus`): nền xanh nhạt tràn ra quanh khối như Notion tô cuộc thảo luận khi bấm
+   thông báo; viền đổ bóng cùng màu thay cho padding nên không xô bố cục. Giữ tới khi người dùng bấm hoặc gõ phím. */
+[data-notification-highlight] {
+  border-radius: var(--radius-sm);
+  background-color: color-mix(in oklab, var(--primary) 9%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 9%, transparent);
+  transition:
+    background-color var(--motion-duration-panel) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-panel) var(--motion-ease-standard);
+}

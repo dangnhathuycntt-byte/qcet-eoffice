@@ -125,7 +125,7 @@ export function TaskIdentityBlock({
   [allowedMap, normalizedStatus]);
 
   return (
-    <section data-slot="task-identity-block" className={cn("space-y-3 relative z-30", className)}>
+    <section data-slot="task-identity-block" data-notification-focus="overview" className={cn("space-y-3 relative z-30", className)}>
       {/* 1. Title Area */}
       <div className="w-full min-w-0 space-y-1">
           {/* Direct Inline Editable Title with exact caret positioning */}

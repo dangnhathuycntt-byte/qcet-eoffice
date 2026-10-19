@@ -131,7 +131,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
   }
 
   return (
-    <section aria-label="Phối hợp liên đơn vị" className={cn("space-y-1.5", className)}>
+    <section aria-label="Phối hợp liên đơn vị" data-notification-focus="unit-requests" className={cn("space-y-1.5", className)}>
       <h2 className="text-compact font-semibold text-foreground tracking-tight">Phối hợp liên đơn vị</h2>
       {state.requests.length > 0 && (
         <ul className="space-y-0.5">

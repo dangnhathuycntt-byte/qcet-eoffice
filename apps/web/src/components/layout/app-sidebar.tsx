@@ -34,6 +34,7 @@ import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
 import { MENU_POPUP_CLASS, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
+import { OPEN_INBOX_EVENT, SidebarInbox } from "@/components/inbox/inbox-panel";
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
   { ssr: false }
@@ -146,6 +147,9 @@ export function handleSidebarShortcut(
   return false;
 }
 
+/** Hộp thư không nằm trong danh sách điều hướng desktop: nút ở đầu sidebar mở khung nổi (drawer điện thoại vẫn có mục này). */
+const DESKTOP_HIDDEN_NAV_ITEMS = ["inbox"] as const;
+
 export function AppSidebar() {
   const {
     isCollapsed,
@@ -243,7 +247,9 @@ export function AppSidebar() {
       handleSidebarShortcut(e, {
         toggleCollapse,
         onNavigate: (href) => {
-          router.push(href);
+          // Hộp thư mở khung nổi cạnh sidebar như nút ở đầu sidebar (điện thoại vẫn sang trang /inbox)
+          if (href === "/inbox") window.dispatchEvent(new CustomEvent(OPEN_INBOX_EVENT));
+          else router.push(href);
         },
       });
     };
@@ -262,9 +268,10 @@ export function AppSidebar() {
           className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-sidebar text-foreground select-none group/sidebar overflow-hidden"
         >
           {/* ========================================================= */}
-          {/* 1. SIDEBAR TOP HEADER: TÀI KHOẢN (AVATAR + TÊN) MỞ MENU    */}
+          {/* 1. SIDEBAR TOP HEADER: TÀI KHOẢN (AVATAR + TÊN) MỞ MENU,   */}
+          {/*    NÚT HỘP THƯ BÊN PHẢI NHƯ NOTION                          */}
           {/* ========================================================= */}
-          <div className={cn("shrink-0 w-full pt-3.5 pb-2.5 px-3 flex", isCollapsed && "justify-center")}>
+          <div className={cn("shrink-0 w-full pt-3.5 pb-2.5 px-3 flex items-center gap-1", isCollapsed && "flex-col")}>
             <Menu.Root
               open={isProfileDropdownOpen && Boolean(user)}
               onOpenChange={(open) => setIsProfileDropdownOpen(open)}
@@ -276,7 +283,7 @@ export function AppSidebar() {
                   "flex items-center transition-colors cursor-pointer text-left outline-none focus-visible:bg-sidebar-accent",
                   isCollapsed
                     ? "size-7 mx-auto justify-center rounded-sm p-0"
-                    : "max-w-full gap-1.5 px-1.5 h-7 rounded-sm",
+                    : "min-w-0 max-w-full gap-1.5 px-1.5 h-7 rounded-sm",
                   isProfileDropdownOpen
                     ? "bg-sidebar-accent"
                     : "hover:bg-sidebar-accent/60"
@@ -359,6 +366,8 @@ export function AppSidebar() {
                 </Menu.Positioner>
               </Menu.Portal>
             </Menu.Root>
+            {!isCollapsed && <span className="flex-1" aria-hidden />}
+            <SidebarInbox isCollapsed={isCollapsed} />
           </div>
 
           {/* ========================================================= */}
@@ -366,6 +375,7 @@ export function AppSidebar() {
           {/* ========================================================= */}
           <SidebarNavList
             isCollapsed={isCollapsed}
+            hiddenItemIds={DESKTOP_HIDDEN_NAV_ITEMS}
             onMaintenance={(item) => setMaintenanceDialog({ isOpen: true, title: item.label, feature: item.id })}
           />
 

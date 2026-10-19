@@ -273,12 +273,15 @@ export const TASK_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
     const mentioned = Array.isArray(p.mentionedUserIds)
       ? p.mentionedUserIds.filter((id): id is string => typeof id === "string")
       : [];
+    const taskId = requireTaskId(event);
     return deliverTaskNotice(db, {
-      taskId: requireTaskId(event),
+      taskId,
       recipientIds: mentioned,
       actorId: str(p, "authorId"),
       type: "mention",
       pushEvent: "TASK_MENTION",
+      // Bấm thông báo mở thẳng nhiệm vụ, cuộn tới và tô sáng đúng bình luận (như Notion)
+      linkHref: `/tasks/${encodeURIComponent(taskId)}?focus=comments&comment=${encodeURIComponent(commentId!)}`,
       note: comment.body.length > 80 ? `${comment.body.slice(0, 77)}...` : comment.body,
     });
   }),

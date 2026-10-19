@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -25,11 +24,10 @@ import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } fro
 import { getStatusLabel } from "@qcet/shared/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
-import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { WelcomeNotification } from "@/components/inbox/welcome-notification";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
-  getTypeBadge,
   mapDbNotification,
   parseTriageTab,
   type NotificationTriageTab,
@@ -44,6 +42,9 @@ import {
   type NotificationGroup,
 } from "@/lib/notification-inbox";
 import { Pressable } from "@/components/ui/pressable";
+import { getInboxEmptyCopy, InboxRow, readNotificationEnvelope, toNotificationIso, useNow } from "@/components/inbox/inbox-row";
+
+export { getInboxEmptyCopy, type InboxEmptyCopy } from "@/components/inbox/inbox-row";
 
 /** Phần nhiệm vụ lấy từ GET /api/tasks/{id} mà hộp thư cần hiển thị. */
 interface InboxTask {
@@ -69,63 +70,9 @@ const CATEGORY_OPTIONS: { id: NotificationTriageTab; label: string }[] = [
   { id: "reminders", label: "Nhắc hạn" },
 ];
 
-export interface InboxEmptyCopy {
-  illustration: IllustrationName;
-  title: string;
-  description: string;
-  action?: "retry" | "clear" | "show-all";
-}
-
-/** Hộp thư không có dòng nào: nói rõ vì sao (lỗi tải, lọc không ra, đã đọc hết, chưa có thông báo) và việc làm tiếp. */
-export function getInboxEmptyCopy({
-  failed,
-  hasCondition,
-  unreadOnly,
-}: {
-  failed: boolean;
-  hasCondition: boolean;
-  unreadOnly: boolean;
-}): InboxEmptyCopy {
-  if (failed) {
-    return { illustration: "load-error", title: "Không tải được hộp thư", description: "Có lỗi khi tải thông báo. Thử lại sau ít phút.", action: "retry" };
-  }
-  if (hasCondition) {
-    return { illustration: "no-results", title: "Không có thông báo phù hợp", description: "Thử từ khóa khác hoặc bỏ bớt bộ lọc.", action: "clear" };
-  }
-  if (unreadOnly) {
-    return { illustration: "all-done", title: "Đã đọc hết", description: "Không còn thông báo nào chưa đọc.", action: "show-all" };
-  }
-  return { illustration: "inbox", title: "Không có thông báo", description: "Thông báo gửi tới Thầy/Cô sẽ hiện ở đây." };
-}
-
 function parseCategory(value: string | null): NotificationTriageTab {
   const tab = parseTriageTab(value);
   return CATEGORY_OPTIONS.some((opt) => opt.id === tab) ? tab : "all";
-}
-
-/** Đọc envelope API; lỗi HTTP hoặc `success: false` đều ném lỗi. */
-async function readEnvelope(res: Response): Promise<any> {
-  const json = await res.json().catch(() => null);
-  if (!res.ok || !json || json.success === false) {
-    const message = typeof json?.error === "string" ? json.error : json?.error?.message;
-    throw new Error(message || `HTTP ${res.status}`);
-  }
-  return json;
-}
-
-function useNow(intervalMs: number): Date {
-  const [now, setNow] = React.useState(() => new Date());
-  React.useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), intervalMs);
-    return () => window.clearInterval(timer);
-  }, [intervalMs]);
-  return now;
-}
-
-function toIso(value: string | Date | undefined): string | undefined {
-  if (!value) return undefined;
-  const date = typeof value === "string" ? new Date(value) : value;
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 function relativeLabel(value: string | Date | undefined, now: Date): string {
@@ -240,7 +187,7 @@ export function InboxView() {
           window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
           return;
         }
-        const json = await readEnvelope(res);
+        const json = await readNotificationEnvelope(res);
         if (seq !== seqRef.current) return;
         if (!Array.isArray(json.notifications)) throw new Error("Dữ liệu thông báo không hợp lệ");
         setItems(json.notifications.map(mapDbNotification));
@@ -270,7 +217,7 @@ export function InboxView() {
         credentials: "include",
         cache: "no-store",
       });
-      const json = await readEnvelope(res);
+      const json = await readNotificationEnvelope(res);
       if (seq !== seqRef.current) return;
       const more: QCETNotification[] = (json.notifications ?? []).map(mapDbNotification);
       setItems((prev) => {
@@ -288,7 +235,7 @@ export function InboxView() {
   const refreshUnreadCount = React.useCallback(async () => {
     try {
       const res = await fetch("/api/notifications?limit=1", { credentials: "include", cache: "no-store" });
-      const json = await readEnvelope(res);
+      const json = await readNotificationEnvelope(res);
       if (typeof json.unreadCount === "number") syncUnread(json.unreadCount);
     } catch {
       // Giữ số hiện tại; lần tải sau sẽ đồng bộ lại.
@@ -341,7 +288,7 @@ export function InboxView() {
           if (active) setRemote({ id: selectedId, state: "missing" });
           return;
         }
-        const json = await readEnvelope(res);
+        const json = await readNotificationEnvelope(res);
         if (active) setRemote({ id: selectedId, state: "ready", notification: mapDbNotification(json.notification) });
       })
       .catch(() => {
@@ -402,7 +349,7 @@ export function InboxView() {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify({ isRead }),
-          }).then(readEnvelope)
+          }).then(readNotificationEnvelope)
         )
       );
       const failed = targets.filter((_, i) => results[i].status === "rejected");
@@ -423,7 +370,7 @@ export function InboxView() {
     setIsMarkingAll(true);
     setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
     try {
-      await fetch("/api/notifications/read-all", { method: "POST", credentials: "include" }).then(readEnvelope);
+      await fetch("/api/notifications/read-all", { method: "POST", credentials: "include" }).then(readNotificationEnvelope);
       setAnnouncement("Đã đánh dấu tất cả thông báo là đã đọc.");
     } catch {
       setAnnouncement("Không thể đánh dấu tất cả đã đọc. Vui lòng thử lại.");
@@ -456,7 +403,7 @@ export function InboxView() {
           if (active) setTaskCtx({ id: taskId, state: "denied" });
           return;
         }
-        const json = await readEnvelope(res);
+        const json = await readNotificationEnvelope(res);
         if (active) setTaskCtx({ id: taskId, state: "ready", task: (json.task ?? json.data ?? undefined) as InboxTask });
       })
       .catch(() => {
@@ -857,90 +804,6 @@ export function InboxView() {
   );
 }
 
-function InboxRow({
-  group,
-  now,
-  selected,
-  tabIndex,
-  onOpen,
-  onFocus,
-  onKeyDown,
-}: {
-  group: NotificationGroup;
-  now: Date;
-  selected: boolean;
-  tabIndex: number;
-  onOpen: () => void;
-  onFocus: () => void;
-  onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
-}) {
-  const n = group.latest;
-  const unread = group.unreadIds.length > 0;
-  const title = getNotificationDisplayTitle(n);
-  const event = getNotificationEventLabel(n.type);
-  const isWelcome = n.type === "welcome";
-  // Thông báo không có người gửi (hệ thống, lời chào): dòng phụ là đoạn đầu nội dung như Linear, không lặp nhãn sự kiện
-  const excerpt = !n.hasActor ? (n.body ?? "").trim().split(/\r?\n/)[0] : "";
-  const secondary =
-    excerpt ||
-    [event, n.hasActor ? n.actorName : null, group.items.length > 1 ? `${group.items.length} cập nhật` : null]
-      .filter(Boolean)
-      .join(" · ");
-  const absolute = formatNotificationAbsoluteTime(n.createdAt);
-  const TypeIcon = getTypeBadge(n.type).icon;
-
-  return (
-    <div
-      role="option"
-      aria-selected={selected}
-      aria-label={[unread ? "Chưa đọc" : null, title, secondary, absolute].filter(Boolean).join(". ")}
-      tabIndex={tabIndex}
-      data-group-key={group.key}
-      onClick={onOpen}
-      onFocus={onFocus}
-      onKeyDown={onKeyDown}
-      className={cn(
-        // Hàng hai dòng 58px như Linear Inbox (cao gấp ~2,07 hàng sidebar 28px, đo ảnh 14/10/2026): avatar 32px, tiêu đề 13px, dòng phụ 12px kèm thời gian bên phải
-        "relative flex cursor-pointer items-center gap-3 rounded-lg py-3 pl-3 pr-2 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "bg-selected" : "hover:bg-accent/60"
-      )}
-    >
-      {n.hasActor ? (
-        <UserAvatar name={n.actorName} size="lg" />
-      ) : isWelcome ? (
-        <Image src="/logo-qcet.png" alt="" aria-hidden width={32} height={32} className="size-8 shrink-0 rounded-full object-contain" />
-      ) : (
-        <span
-          aria-hidden
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground"
-        >
-          <TypeIcon size={16} />
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        {/* Tên thư luôn đậm vừa và màu chữ chính (người dùng chốt 14/10/2026); chưa đọc = chấm màu chính ngay trước tên, như Linear.
-            Chấm luôn được render để khi mở thư (đã đọc) nó thu nhỏ, mờ dần và tên trượt về trái thay vì biến mất đột ngột. */}
-        <p className="flex items-center text-compact font-medium text-foreground">
-          <span
-            aria-hidden
-            className={cn(
-              "h-2 w-2 shrink-0 rounded-full bg-primary transition-[width,margin,opacity,scale] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
-              unread ? "mr-1.5" : "mr-0 w-0 scale-0 opacity-0"
-            )}
-          />
-          <span className="truncate">{title}</span>
-        </p>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="min-w-0 flex-1 truncate">{secondary}</span>
-          <time dateTime={toIso(n.createdAt)} title={absolute} className="shrink-0 tabular-nums">
-            {formatNotificationTime(n.createdAt, now)}
-          </time>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ReadToggle({
   group,
   disabled,
@@ -1076,7 +939,7 @@ function EventMeta({
       {absolute && (
         <>
           <span aria-hidden>·</span>
-          <time dateTime={toIso(notification.createdAt)}>
+          <time dateTime={toNotificationIso(notification.createdAt)}>
             {absolute}
             {relative && !relative.includes("/") ? ` · ${relative}` : ""}
           </time>

@@ -117,6 +117,8 @@ describe('T-03 bình luận nhiệm vụ', () => {
     const notices = await prisma.notification.findMany({ where: { userId: u.collab, type: 'mention' } });
     assert.equal(notices.length, 1);
     assert.match(notices[0].body, /nhắc bạn|Nhờ chị/);
+    // Bấm thông báo mở nhiệm vụ và tô sáng đúng bình luận
+    assert.equal(notices[0].linkHref, `/tasks/${taskId}?focus=comments&comment=${c.id}`);
     assert.equal((await prisma.notification.count({ where: { userId: u.stranger } })), 0);
     assert.equal(c.canEdit, true);
   });

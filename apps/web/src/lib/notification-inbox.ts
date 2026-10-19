@@ -219,3 +219,95 @@ export function groupNotificationsByTarget(notifications: QCETNotification[]): N
   }
   return groups.sort((a, b) => compare(a.latest, b.latest));
 }
+
+/** Tham số trên đường dẫn đích: khối cần cuộn tới và tô sáng khi mở từ Hộp thư (như Notion), và bình luận cụ thể. */
+export const NOTIFICATION_FOCUS_PARAM = "focus";
+export const NOTIFICATION_COMMENT_PARAM = "comment";
+
+/** Khối trên trang nhiệm vụ mang `data-notification-focus` tương ứng. */
+export type NotificationFocus = "overview" | "comments" | "deliverables" | "approval" | "extension" | "unit-requests";
+
+/**
+ * Khối liên quan của từng loại thông báo nhiệm vụ. Loại không có khối riêng (giao việc, nhắc hạn, hủy, từ chối nhận…)
+ * tô phần đầu nhiệm vụ (tên, trạng thái, hạn, người chủ trì). Thông báo văn bản, hồ sơ chỉ mở trang đích.
+ */
+const FOCUS_BY_TYPE: Record<string, NotificationFocus> = {
+  mention: "comments",
+  deliverable_submitted: "deliverables",
+  deliverable_revision: "deliverables",
+  completed: "deliverables",
+  progress: "deliverables",
+  review: "approval",
+  review_requested: "approval",
+  review_pending: "approval",
+  dacum_step1_review: "approval",
+  extension_requested: "extension",
+  extension_decided: "extension",
+  unit_request_decided: "unit-requests",
+};
+
+export function getNotificationFocus(type: string | null | undefined): NotificationFocus {
+  return FOCUS_BY_TYPE[(type || "").toLowerCase().trim()] ?? "overview";
+}
+
+/** Mã nhiệm vụ dạng "NV-…" (đường dẫn cũ) không mở được /tasks/[id]; giữ nguyên đường dẫn gốc. */
+const TASK_CODE_PATTERN = /^[A-Z]{1,4}-\d/i;
+/** Trang con của Nhiệm vụ, không phải mã nhiệm vụ. */
+const TASK_SUBROUTES = new Set(["unit-requests", "templates"]);
+
+/**
+ * Đường dẫn mở khi bấm thông báo trong khung Hộp thư. Nhiệm vụ mở thẳng `/tasks/<id>` kèm khối cần tô sáng:
+ * `/tasks?taskId=` đi qua bảng danh sách, chỉ mở được nhiệm vụ đang tải và bỏ mất tham số. Không có đích hợp lệ thì null.
+ */
+export function getNotificationHref(notification: Pick<QCETNotification, "linkHref" | "type">): string | null {
+  const target = resolveNotificationTarget(notification.linkHref);
+  if (!target) return null;
+  const taskId = target.kind === "task" ? target.taskId : undefined;
+  if (!taskId || TASK_CODE_PATTERN.test(taskId) || TASK_SUBROUTES.has(taskId)) return target.href;
+  const url = new URL(target.href, "http://qcet.local");
+  const params = new URLSearchParams(url.search);
+  params.delete("taskId");
+  if (!params.has(NOTIFICATION_FOCUS_PARAM)) params.set(NOTIFICATION_FOCUS_PARAM, getNotificationFocus(notification.type));
+  return `/tasks/${encodeURIComponent(taskId)}?${params.toString()}${url.hash}`;
+}
+
+export type NotificationTimeBucket = "today" | "yesterday" | "week" | "older";
+
+export const NOTIFICATION_TIME_BUCKET_LABELS: Record<NotificationTimeBucket, string> = {
+  today: "Hôm nay",
+  yesterday: "Hôm qua",
+  week: "7 ngày qua",
+  older: "Cũ hơn",
+};
+
+function ictDayNumber(date: Date): number {
+  const p = ictParts(date);
+  return Math.floor(Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day)) / 86_400_000);
+}
+
+/** Nhóm thời gian của khung Hộp thư theo ngày lịch Asia/Ho_Chi_Minh; thiếu mốc hoặc mốc tương lai xếp vào Hôm nay. */
+export function getNotificationTimeBucket(
+  input: string | Date | null | undefined,
+  now: Date = new Date()
+): NotificationTimeBucket {
+  const date = toValidDate(input);
+  if (!date) return "older";
+  const days = ictDayNumber(now) - ictDayNumber(date);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return "week";
+  return "older";
+}
+
+/** Trích lời nhắn kèm thông báo (bình luận, lý do, ý kiến) cho dòng phụ; câu mặc định kiểu "vừa giao việc" thì bỏ. */
+export function getNotificationSnippet(notification: QCETNotification): string {
+  const { actionText } = formatNotificationContent(notification);
+  const quoted = actionText.match(/^[:\s]*["“]([\s\S]+?)["”]?$/);
+  return quoted ? quoted[1].trim() : "";
+}
+
+/** Số trên nút Hộp thư: không hiện khi 0, quá 9 ghi "9+". */
+export function formatUnreadBadge(count: number): string {
+  if (!Number.isFinite(count) || count <= 0) return "";
+  return count > 9 ? "9+" : String(Math.floor(count));
+}

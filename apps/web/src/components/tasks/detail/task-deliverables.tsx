@@ -123,7 +123,7 @@ export function TaskDeliverables({
   }
 
   return (
-    <section aria-label="Minh chứng" className={cn("space-y-1.5", className)}>
+    <section aria-label="Minh chứng" data-notification-focus="deliverables" className={cn("space-y-1.5", className)}>
       <div className="flex items-center gap-2">
         <h2 className="text-compact font-semibold text-foreground tracking-tight">Minh chứng</h2>
         <span className="text-xs tabular-nums text-muted-foreground">{deliverables.length}</span>

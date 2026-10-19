@@ -153,7 +153,7 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
   }
 
   return (
-    <section aria-label="Luồng duyệt nhiều bước" className={cn("space-y-1.5", className)}>
+    <section aria-label="Luồng duyệt nhiều bước" data-notification-focus="approval" className={cn("space-y-1.5", className)}>
       <div className="flex items-center gap-2">
         <h2 className="text-compact font-semibold text-foreground tracking-tight">Luồng duyệt</h2>
         {view.process ? <span className="text-xs text-muted-foreground">{PROCESS_LABEL[view.process.status]}</span> : null}

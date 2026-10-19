@@ -400,11 +400,13 @@ export interface SidebarNavListProps {
   onMaintenance?: (item: SidebarNavSubItem) => void;
   /** Drawer mobile: icon 14px, cách chữ 6px như sidebar di động của Linear (desktop giữ 16px). */
   compact?: boolean;
+  /** Mục không hiện ở nơi này: sidebar desktop bỏ "Hộp thư" vì đã có nút Hộp thư ở đầu sidebar mở khung nổi (như Notion). */
+  hiddenItemIds?: readonly string[];
   className?: string;
 }
 
 /** Danh sách điều hướng dùng chung cho sidebar desktop và drawer mobile: cùng nhóm, icon, menu con (không hiện số đếm). */
-export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance, compact = false, className }: SidebarNavListProps) {
+export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance, compact = false, hiddenItemIds, className }: SidebarNavListProps) {
   const { badgeCounts } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -413,7 +415,10 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
   // Mục theo cờ: ẩn khi cờ tắt (desktop và ngăn kéo điện thoại dùng chung danh sách này)
   const navGroups = SIDEBAR_NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.feature || (item.feature === "assistant" && assistantEnabled)),
+    items: group.items.filter(
+      (item) =>
+        (!item.feature || (item.feature === "assistant" && assistantEnabled)) && !hiddenItemIds?.includes(item.id)
+    ),
   }));
 
   // Quản lý trạng thái mở/đóng của các nhóm collapsible

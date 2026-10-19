@@ -477,6 +477,8 @@ export function SubtaskDetailDrawer({
           onMouseDownCapture={markSelectionStartTarget}
           className="relative min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain"
         >
+          {/* Mở từ thông báo của việc con (`?subtaskId=&focus=`): tô tên và thuộc tính việc con */}
+          <div data-notification-focus="subtask">
               {/* Child title first */}
               <div className="space-y-1.5">
             <DirectInlineEditor
@@ -534,6 +536,7 @@ export function SubtaskDetailDrawer({
               onDueDateChange={canChangeDueDate ? handleDueDateChange : undefined}
             />
           </section>
+          </div>
 
           <section className="mt-3 flex flex-1 flex-col">
             {!description && !canEditContent && (

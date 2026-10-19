@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { fetchWithRetry, RATE_LIMIT_MESSAGE } from "@/lib/fetch-with-retry";
 import { ArrowUp, AtSign, ChevronRight, MoreHorizontal, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { confirmAction } from "@/components/ui/confirm-host";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
+import { NOTIFICATION_COMMENT_PARAM, NOTIFICATION_FOCUS_PARAM } from "@/lib/notification-inbox";
 import {
   filterMentionCandidates,
   findMentionQuery,
@@ -287,6 +289,17 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
     void load();
   }, [load]);
 
+  // Mở từ thông báo nhắc tên (`?focus=comments&comment=<id>`): mở danh sách và hiện cả bình luận cũ để tô được bình luận đó.
+  // Chỉ đổi trạng thái lần này, không ghi đè lựa chọn thu gọn đã lưu.
+  const searchParams = useSearchParams();
+  const focusComments = searchParams?.get(NOTIFICATION_FOCUS_PARAM) === "comments";
+  const focusCommentId = searchParams?.get(NOTIFICATION_COMMENT_PARAM) ?? null;
+  React.useEffect(() => {
+    if (status !== "ready" || !focusComments) return;
+    setCollapsed(false);
+    if (focusCommentId) setShowAll(true);
+  }, [status, focusComments, focusCommentId]);
+
   const listCollapsed = isCommentListCollapsed(collapsed, comments.length);
   const hiddenCount = showAll ? 0 : Math.max(0, comments.length - VISIBLE_COMMENTS);
   const visibleComments = comments.slice(hiddenCount);
@@ -447,7 +460,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
   if (status === "ready" && comments.length === 0 && !canComment) return null;
 
   return (
-    <section aria-labelledby={`task-comments-${taskId}`} className={cn("space-y-2", className)}>
+    <section aria-labelledby={`task-comments-${taskId}`} data-notification-focus="comments" className={cn("space-y-2", className)}>
       {comments.length > 0 ? (
         <h2 id={`task-comments-${taskId}`}>
           <Pressable
@@ -488,7 +501,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
       {visibleComments.length > 0 && (
         <ul className="max-w-3xl">
           {visibleComments.map((c, index) => (
-            <li key={c.id} className="group/comment">
+            <li key={c.id} data-notification-focus={`comment:${c.id}`} className="group/comment">
               <div className="flex min-h-5 items-center gap-2">
                 <UserAvatar name={c.author.name} avatarUrl={c.author.avatarUrl} size="sm" />
                 <span className="truncate text-xs font-medium text-foreground">{c.author.name}</span>

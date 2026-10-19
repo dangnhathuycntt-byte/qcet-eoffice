@@ -8,8 +8,13 @@ import {
 import {
   formatNotificationAbsoluteTime,
   formatNotificationTime,
+  formatUnreadBadge,
   getNotificationDisplayTitle,
   getNotificationEventLabel,
+  getNotificationFocus,
+  getNotificationHref,
+  getNotificationSnippet,
+  getNotificationTimeBucket,
   groupNotificationsByTarget,
   resolveNotificationTarget,
 } from "../apps/web/src/lib/notification-inbox";
@@ -155,5 +160,84 @@ describe("buildNotificationWhere & cursor", () => {
 
     const countWhere = buildNotificationWhere({ userId: "u1", cursor: encodeNotificationCursor(at, "id9") }, false) as any;
     assert.equal(countWhere.AND, undefined);
+  });
+});
+
+describe("Hộp thư kiểu Notion: bấm thông báo tới đúng chỗ", () => {
+  test("mỗi loại thông báo nhiệm vụ tô khối liên quan, loại khác tô phần đầu nhiệm vụ", () => {
+    assert.equal(getNotificationFocus("mention"), "comments");
+    assert.equal(getNotificationFocus("deliverable_submitted"), "deliverables");
+    assert.equal(getNotificationFocus("DELIVERABLE_REVISION"), "deliverables");
+    assert.equal(getNotificationFocus("review_pending"), "approval");
+    assert.equal(getNotificationFocus("extension_requested"), "extension");
+    assert.equal(getNotificationFocus("extension_decided"), "extension");
+    assert.equal(getNotificationFocus("unit_request_decided"), "unit-requests");
+    for (const type of ["assigned", "reminder", "deadline", "overdue", "cancelled", "declined", "escalation", "", null]) {
+      assert.equal(getNotificationFocus(type), "overview", String(type));
+    }
+  });
+
+  test("nhiệm vụ mở thẳng /tasks/<id> kèm khối, không đi qua bảng danh sách", () => {
+    assert.equal(
+      getNotificationHref({ linkHref: "/tasks?taskId=ck1", type: "extension_requested" }),
+      "/tasks/ck1?focus=extension"
+    );
+    assert.equal(
+      getNotificationHref({ linkHref: "/tasks?taskId=ck1&scope=unit", type: "assigned" }),
+      "/tasks/ck1?scope=unit&focus=overview"
+    );
+    // Thông báo nhắc tên mới đã có sẵn bình luận cần tô: giữ nguyên
+    assert.equal(
+      getNotificationHref({ linkHref: "/tasks/ck1?focus=comments&comment=c9", type: "mention" }),
+      "/tasks/ck1?focus=comments&comment=c9"
+    );
+    // Thông báo nhắc tên cũ chưa có mã bình luận: tô cả khu bình luận
+    assert.equal(getNotificationHref({ linkHref: "/tasks?taskId=ck1", type: "mention" }), "/tasks/ck1?focus=comments");
+  });
+
+  test("trang con của Nhiệm vụ, mã NV cũ, văn bản và đích không hợp lệ giữ nguyên hoặc null", () => {
+    assert.equal(getNotificationHref({ linkHref: "/tasks/unit-requests", type: "unit_request" }), "/tasks/unit-requests");
+    assert.equal(getNotificationHref({ linkHref: "/tasks/templates", type: "task_recurrence_failed" }), "/tasks/templates");
+    assert.equal(getNotificationHref({ linkHref: "/tasks?taskId=NV-092", type: "assigned" }), "/tasks?taskId=NV-092");
+    assert.equal(getNotificationHref({ linkHref: "/dossiers/d1", type: "dossier_submit_deadline" }), "/dossiers/d1");
+    assert.equal(getNotificationHref({ linkHref: "https://evil.example/x", type: "assigned" }), null);
+    assert.equal(getNotificationHref({ linkHref: undefined, type: "welcome" }), null);
+  });
+
+  test("nhóm thời gian theo ngày lịch ICT", () => {
+    // NOW = 23:30 ICT 09/10
+    assert.equal(getNotificationTimeBucket("2026-10-08T17:30:00.000Z", NOW), "today"); // 00:30 ICT 09/10
+    assert.equal(getNotificationTimeBucket("2026-10-08T16:30:00.000Z", NOW), "yesterday"); // 23:30 ICT 08/10
+    assert.equal(getNotificationTimeBucket("2026-10-04T03:00:00.000Z", NOW), "week");
+    assert.equal(getNotificationTimeBucket("2026-10-02T03:00:00.000Z", NOW), "older");
+    assert.equal(getNotificationTimeBucket("2026-10-10T03:00:00.000Z", NOW), "today");
+    assert.equal(getNotificationTimeBucket(undefined, NOW), "older");
+  });
+
+  test("dòng trích chỉ lấy lời nhắn trong ngoặc kép, bỏ câu mặc định", () => {
+    const base = { id: "n1", actorName: "Anh Tuấn", hasActor: true, timestamp: "", category: "task", isRead: false };
+    assert.equal(
+      getNotificationSnippet({ ...base, type: "mention", title: "[NHẮC TÊN] Dựng video", body: 'Anh Tuấn: "xem và góp ý với nhé"' }),
+      "xem và góp ý với nhé"
+    );
+    assert.equal(
+      getNotificationSnippet({ ...base, type: "deliverable_submitted", title: "[NỘP DUYỆT] Dựng video", body: "Anh Tuấn đã gửi sản phẩm kết quả cần duyệt" }),
+      ""
+    );
+  });
+
+  test("tiêu đề bỏ mọi tiền tố loại sự kiện của push (đã có nhãn sự kiện riêng)", () => {
+    const base = { id: "n1", actorName: "A", timestamp: "", category: "task", isRead: false, body: "" };
+    for (const tag of ["NHẮC TÊN", "XIN GIA HẠN", "NHẮC VIỆC", "YÊU CẦU PHỐI HỢP", "TỪ CHỐI NHẬN VIỆC", "GIAO VIỆC"]) {
+      assert.equal(getNotificationDisplayTitle({ ...base, type: "x", title: `[${tag}] Dựng video` }), "Dựng video", tag);
+    }
+    // Ngoặc vuông là một phần tên nhiệm vụ thì giữ
+    assert.equal(getNotificationDisplayTitle({ ...base, type: "x", title: "[GIAO VIỆC] [QĐ] Ban hành quy chế" }), "[QĐ] Ban hành quy chế");
+  });
+
+  test("số trên nút Hộp thư: ẩn khi 0, quá 9 ghi 9+", () => {
+    assert.equal(formatUnreadBadge(0), "");
+    assert.equal(formatUnreadBadge(5), "5");
+    assert.equal(formatUnreadBadge(10), "9+");
   });
 });

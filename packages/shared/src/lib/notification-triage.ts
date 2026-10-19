@@ -204,6 +204,9 @@ export interface FormattedNotificationContent {
   extraBadge?: string;
 }
 
+const NOTIFICATION_TITLE_TAG =
+  /^\[(GIAO VIỆC|NỘP DUYỆT|ĐÃ DUYỆT|YÊU CẦU SỬA|SẮP HẾT HẠN|CHỈ ĐẠO BGH|THÔNG BÁO|NHẮC VIỆC|NHẮC TÊN|TRỄ HẠN|CHỜ DUYỆT|CẦN XỬ LÝ|TỪ CHỐI NHẬN VIỆC|XIN GIA HẠN|GIA HẠN|YÊU CẦU PHỐI HỢP|PHỐI HỢP LIÊN ĐƠN VỊ|ĐÃ HỦY|BÚT PHÊ CHỈ ĐẠO|GIAO XỬ LÝ VB|QUÁ HẠN XỬ LÝ|VĂN BẢN)\]\s*/i;
+
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -227,8 +230,9 @@ export function formatNotificationContent(
   const rawBody = (notification.action || notification.body || "").trim();
   const type = (notification.type || "").toLowerCase().trim();
 
-  // 1. Clean bracketed tags from targetTitle (e.g. "[GIAO VIỆC] Báo cáo..." -> "Báo cáo...")
-  let cleanTitle = rawTitle.replace(/^\[(GIAO VIỆC|NỘP DUYỆT|ĐÃ DUYỆT|YÊU CẦU SỬA|SẮP HẾT HẠN|CHỈ ĐẠO BGH|THÔNG BÁO)\]\s*/i, "").trim();
+  // 1. Clean bracketed tags from targetTitle (e.g. "[GIAO VIỆC] Báo cáo..." -> "Báo cáo..."): đủ các tiền tố tiêu đề push
+  // của apps/api/src/server/notifications/push-service.ts; loại sự kiện đã có nhãn riêng (getNotificationEventLabel).
+  let cleanTitle = rawTitle.replace(NOTIFICATION_TITLE_TAG, "").trim();
   cleanTitle = cleanTitle.replace(/^["'“”«»]+|["'“”«»]+$/g, "").trim();
 
   let actionRemainder = rawBody;
