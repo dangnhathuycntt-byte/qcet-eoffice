@@ -7,6 +7,7 @@ import type { AssistantConversation, AssistantMessage } from "@prisma/client";
 import {
   ASSISTANT_CONTEXT_TYPES,
   ASSISTANT_TOOL_NAMES,
+  type AssistantAttachmentDTO,
   type AssistantContextRef,
   type AssistantContextType,
   type AssistantMessageStatus,
@@ -28,9 +29,15 @@ import {
   applyGeneratedTitle,
   createConversation,
   getConversation,
-  loadModelHistory,
+  loadModelHistoryEntries,
   toConversationSummaryDTO,
 } from "@/server/assistant/assistant-conversations";
+import {
+  linkAssistantAttachments,
+  loadHistoryAttachmentParts,
+  storeAssistantAttachment,
+  toAssistantAttachmentDTO,
+} from "@/server/assistant/assistant-attachments";
 import {
   callGateway,
   readGatewayConfig,
@@ -91,7 +98,10 @@ export interface AssistantTurnInput {
   message: string;
   /** Chỉ dùng khi mở cuộc trò chuyện mới; server kiểm lại quyền đọc. */
   context?: AssistantContextRef;
-  /** Ảnh/tệp gửi kèm lượt này (đã kiểm nội dung): chỉ gửi gateway trong lượt này, không lưu, không ghi log. */
+  /**
+   * Ảnh/tệp gửi kèm lượt này (đã kiểm nội dung): gửi gateway và lưu gắn với câu hỏi (lượt sau, mở lại cuộc vẫn còn);
+   * không ghi tên hay nội dung vào log.
+   */
   attachments?: AssistantTurnAttachment[];
   requestId: string;
   now?: Date;
@@ -103,6 +113,11 @@ export interface AssistantTurnAttachment {
   /** Nhãn bước ("Đọc tệp a.pdf", "Xem ảnh b.png"), lưu cùng tin trả lời. */
   step: string;
   parts: TaskAgentContentPart[];
+  /** Tên (đã làm sạch) và nội dung tệp mới để lưu; không có thì không lưu. */
+  name?: string;
+  data?: Buffer;
+  /** Tệp đã lưu gửi lại khi "Thử lại": gắn thêm câu hỏi mới vào tệp đó, không lưu bản mới. */
+  storedId?: string;
 }
 
 export interface AssistantTurnDeps {
@@ -319,6 +334,8 @@ async function runTurn(
   const turnExpired = () => !clientAborted() && (turn.signal.aborted || Date.now() >= turnDeadline);
   // Sự kiện tên chỉ phát khi luồng còn mở: tắt trước `done` và khi lượt kết thúc vì bất kỳ lý do nào
   let titleOpen = true;
+  // Sự kiện tệp đã lưu cũng vậy
+  let attachmentsOpen = true;
 
   try {
     // Ngữ cảnh: cuộc có sẵn lấy từ bản ghi (bỏ input.context), mô tả lại mỗi lượt; cuộc mới phải đọc được mới tạo
@@ -356,6 +373,10 @@ async function runTurn(
 
     const userMessage = await appendMessage(conversation.id, { role: "user", content: input.message });
     progress.conversationId = conversation.id;
+    // Tệp của câu hỏi lưu song song với câu trả lời (lưu lỗi không làm hỏng lượt); báo trước `done` để mở lại cuộc vẫn có
+    const savingAttachments = saveTurnAttachments(input, conversation.id, userMessage.id).then((stored) => {
+      if (stored.length > 0 && attachmentsOpen) emit({ type: "attachments", messageId: userMessage.id, attachments: stored });
+    });
     emit({
       type: "conversation",
       conversation: toConversationSummaryDTO({ ...conversation, lastMessageAt: userMessage.createdAt }),
@@ -371,10 +392,20 @@ async function runTurn(
           })
         : null;
 
-    const history = await loadModelHistory(conversation.id, {
+    const history = await loadModelHistoryEntries(conversation.id, {
       maxMessages: ASSISTANT_LIMITS.historyMessages,
       maxChars: ASSISTANT_LIMITS.historyChars,
       excludeMessageId: userMessage.id,
+    });
+    // Tệp đã lưu của các câu hỏi còn trong lịch sử gửi lại cùng câu hỏi đó (tệp gửi lại ở lượt này thì không lặp)
+    const historyFiles = await loadHistoryAttachmentParts(
+      input.userId,
+      conversation.id,
+      history.filter((item) => item.role === "user").map((item) => item.id),
+      new Set((input.attachments ?? []).flatMap((attachment) => (attachment.storedId ? [attachment.storedId] : []))),
+    ).catch(() => {
+      logger.warn("assistant.attachment.history_failed", { requestId: input.requestId });
+      return new Map<string, TaskAgentContentPart[]>();
     });
     const system = buildAssistantSystemPrompt({
       today,
@@ -383,12 +414,13 @@ async function runTurn(
       positions: input.authz.positions.map((p) => ({ title: p.positionTitle, unitName: p.unitName })),
       context: described ? { label: contextLabel(described.source), summary: described.summary } : null,
     });
-    // Tệp chỉ gắn vào câu hỏi của lượt này; lịch sử là chữ (tệp không lưu nên lượt sau không còn)
     const attachmentParts = (input.attachments ?? []).flatMap((attachment) => attachment.parts);
+    const withParts = (text: string, parts: TaskAgentContentPart[] | undefined): GatewayMessage =>
+      ({ role: "user", content: parts?.length ? [{ type: "text", text }, ...parts] : text }) as GatewayMessage;
     const messages: GatewayMessage[] = [
       { role: "system", content: system },
-      ...history.map((item): GatewayMessage => (item.role === "user" ? { role: "user", content: item.content } : { role: "assistant", content: item.content })),
-      { role: "user", content: attachmentParts.length > 0 ? [{ type: "text", text: input.message }, ...attachmentParts] : input.message },
+      ...history.map((item): GatewayMessage => (item.role === "user" ? withParts(item.content, historyFiles.get(item.id)) : { role: "assistant", content: item.content })),
+      withParts(input.message, attachmentParts),
     ];
 
     const read: AssistantSourceRef[] = [];
@@ -529,6 +561,9 @@ async function runTurn(
     // Tên thường xong trước câu trả lời (lượt có đọc dữ liệu); chưa xong thì chờ thêm một chút, rồi thôi báo
     if (titleTask && !clientAborted()) await settledWithin(titleTask, options.timeouts?.titleGraceMs ?? ASSISTANT_LIMITS.titleGraceMs);
     titleOpen = false;
+    // Lưu tệp không bao giờ ném lỗi (saveTurnAttachments tự bắt); chờ xong để sự kiện tệp đứng trước `done`
+    await savingAttachments;
+    attachmentsOpen = false;
 
     const content = answer.trim();
     const sources = selectCitedSources(content, read, detailed);
@@ -557,6 +592,7 @@ async function runTurn(
     });
   } finally {
     titleOpen = false;
+    attachmentsOpen = false;
     clearTimeout(turnTimer);
     options.signal?.removeEventListener("abort", onClientAbort);
   }
@@ -589,6 +625,36 @@ async function nameConversation(
   } catch (error) {
     logger.warn("assistant.title.failed", { requestId: input.requestId, errorName: error instanceof Error ? error.name : "unknown" });
   }
+}
+
+/**
+ * Lưu tệp mới của câu hỏi và gắn câu hỏi vào tệp đã lưu gửi lại; trả các tệp theo thứ tự gửi (tệp lưu lỗi bị bỏ).
+ * Không ném lỗi.
+ */
+async function saveTurnAttachments(input: AssistantTurnInput, conversationId: string, messageId: string): Promise<AssistantAttachmentDTO[]> {
+  const out: AssistantAttachmentDTO[] = [];
+  try {
+    const reused = (input.attachments ?? []).flatMap((attachment) => (attachment.storedId ? [attachment.storedId] : []));
+    if (reused.length > 0) await linkAssistantAttachments(reused, messageId);
+    for (const attachment of input.attachments ?? []) {
+      if (attachment.storedId && attachment.name) {
+        out.push(toAssistantAttachmentDTO({ id: attachment.storedId, originalName: attachment.name, byteSize: BigInt(attachment.bytes) }));
+      } else if (attachment.name && attachment.data) {
+        const stored = await storeAssistantAttachment({
+          userId: input.userId,
+          conversationId,
+          messageId,
+          name: attachment.name,
+          data: attachment.data,
+          requestId: input.requestId,
+        });
+        if (stored) out.push(stored);
+      }
+    }
+  } catch (error) {
+    logger.warn("assistant.attachment.save_failed", { requestId: input.requestId, errorName: error instanceof Error ? error.name : "unknown" });
+  }
+  return out;
 }
 
 /** Chờ `pending` xong hoặc hết `ms`, cái nào tới trước; không ném lỗi. */

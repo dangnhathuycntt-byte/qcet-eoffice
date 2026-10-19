@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/pwa/storage-manager";
 import { Button } from "@/components/ui/button";
 import { FileTypeIcon } from "@/components/documents/file-type-icon";
+import { focusRingClass } from "@/components/ui/focus-ring";
+import type { AssistantAttachmentDTO } from "@qcet/contracts/assistant";
 import { getTaskAgentAttachmentKind, type TaskAgentAttachmentKind } from "@qcet/shared/domain/tasks/task-agent-attachments";
 
-/** Ảnh/tệp gửi kèm tin nhắn ở ô soạn của Agent tạo nhiệm vụ và Trợ lý; máy chủ không lưu tệp. */
+/** Ảnh/tệp gửi kèm tin nhắn ở ô soạn của Agent tạo nhiệm vụ và Trợ lý (bản trong phiên; Trợ lý còn lưu bản ở máy chủ). */
 export interface ChatAttachment {
   id: string;
   file: File;
@@ -66,5 +68,38 @@ export function AttachmentCard({ attachment, onRemove, compact = false }: { atta
       </div>
       {remove}
     </div>
+  );
+}
+
+/**
+ * Thẻ tệp đã lưu của Trợ lý (mở lại cuộc): cùng dáng với thẻ trong phiên, bấm mở tệp ở thẻ mới (chỉ chủ cuộc mở được).
+ * Ảnh hiện hình thu nhỏ tải từ máy chủ.
+ */
+export function StoredAttachmentCard({ attachment }: { attachment: AssistantAttachmentDTO }) {
+  const label = `Mở tệp ${attachment.name}`;
+  if (attachment.kind === "image") {
+    return (
+      <a href={attachment.url} target="_blank" rel="noopener noreferrer" aria-label={label} title={attachment.name} className={cn("shrink-0 rounded-lg", focusRingClass)}>
+        {/* Ảnh qua API tệp có kiểm quyền nên không qua next/image */}
+        <img src={attachment.url} alt={attachment.name} loading="lazy" className={cn("size-24 rounded-lg bg-muted object-cover", RING)} />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={attachment.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      className={cn("flex w-60 max-w-full min-w-0 items-center gap-2 rounded-lg bg-background px-2.5 py-2 transition-colors hover:bg-accent/40", RING, focusRingClass)}
+    >
+      <FileTypeIcon fileName={attachment.name} className="size-6" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-compact text-foreground" title={attachment.name}>
+          {attachment.name}
+        </p>
+        <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(attachment.size)}</p>
+      </div>
+    </a>
   );
 }

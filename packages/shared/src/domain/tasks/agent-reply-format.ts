@@ -1,6 +1,7 @@
 /**
- * Định dạng tối giản cho câu trả lời của Agent (một phần Markdown): đoạn văn, tiêu đề `#`, danh sách `-`/`*`/`1.`
- * và chữ đậm `**…**`. Thuần, trả cấu trúc để giao diện dựng thành phần tử React (không chèn HTML).
+ * Định dạng tối giản cho câu trả lời của Agent (một phần Markdown): đoạn văn, tiêu đề `#`, danh sách `-`/`*`/`1.`,
+ * chữ đậm `**…**` và bảng kiểu GFM (dòng tiêu đề, dòng `|---|`, các dòng dữ liệu). Thuần, trả cấu trúc để giao diện dựng
+ * thành phần tử React (không chèn HTML).
  */
 
 export type AgentReplyInline = { text: string; bold: boolean };
@@ -8,7 +9,9 @@ export type AgentReplyInline = { text: string; bold: boolean };
 export type AgentReplyBlock =
   | { type: "heading"; inline: AgentReplyInline[] }
   | { type: "paragraph"; inline: AgentReplyInline[] }
-  | { type: "list"; ordered: boolean; items: AgentReplyInline[][] };
+  | { type: "list"; ordered: boolean; items: AgentReplyInline[][] }
+  /** Mỗi ô là chữ đã tách đậm; mọi dòng có đúng số ô của dòng tiêu đề (thiếu thì thêm ô rỗng, thừa thì bỏ). */
+  | { type: "table"; header: AgentReplyInline[][]; rows: AgentReplyInline[][][] };
 
 /** Tách `**đậm**`; dấu `**` lẻ giữ nguyên là chữ. */
 export function parseAgentReplyInline(text: string): AgentReplyInline[] {
@@ -27,6 +30,15 @@ export function parseAgentReplyInline(text: string): AgentReplyInline[] {
 
 const LIST_ITEM = /^\s*(?:([-*•])|(\d+)[.)])\s+(.*)$/;
 const HEADING = /^\s*#{1,6}\s+(.*)$/;
+/** Dòng ngăn tiêu đề của bảng: `|---|:--:|`, ống đầu và cuối có thể bỏ. */
+const TABLE_SEPARATOR = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
+
+function splitTableRow(line: string): string[] {
+  let row = line.trim();
+  if (row.startsWith("|")) row = row.slice(1);
+  if (row.endsWith("|")) row = row.slice(0, -1);
+  return row.split("|").map((cell) => cell.trim());
+}
 
 export function parseAgentReply(text: string): AgentReplyBlock[] {
   const blocks: AgentReplyBlock[] = [];
@@ -35,9 +47,26 @@ export function parseAgentReply(text: string): AgentReplyBlock[] {
     if (paragraph.length > 0) blocks.push({ type: "paragraph", inline: parseAgentReplyInline(paragraph.join("\n")) });
     paragraph = [];
   };
-  for (const line of text.replace(/\r\n?/g, "\n").split("\n")) {
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
     if (!line.trim()) {
       flushParagraph();
+      continue;
+    }
+    // Bảng: dòng có `|` ngay trên dòng ngăn. Đang chạy dần mà chưa tới dòng ngăn thì vẫn là đoạn văn, tới thì thành bảng
+    if (line.includes("|") && index + 1 < lines.length && TABLE_SEPARATOR.test(lines[index + 1]) && lines[index + 1].includes("-")) {
+      flushParagraph();
+      const header = splitTableRow(line);
+      const fit = (cells: string[]) => header.map((_, i) => parseAgentReplyInline(cells[i] ?? ""));
+      const rows: AgentReplyInline[][][] = [];
+      index += 2;
+      while (index < lines.length && lines[index].trim() && lines[index].includes("|")) {
+        rows.push(fit(splitTableRow(lines[index])));
+        index++;
+      }
+      index--;
+      blocks.push({ type: "table", header: fit(header), rows });
       continue;
     }
     const heading = line.match(HEADING);
@@ -68,6 +97,8 @@ export function agentReplyToPlainText(text: string): string {
     .map((block) => {
       const join = (inline: AgentReplyInline[]) => inline.map((part) => part.text).join("");
       if (block.type === "list") return block.items.map((item, i) => `${block.ordered ? `${i + 1}.` : "-"} ${join(item)}`).join("\n");
+      // Bảng sao chép thành các dòng cách nhau bằng Tab: dán vào Excel hay Word ra đúng cột
+      if (block.type === "table") return [block.header, ...block.rows].map((row) => row.map(join).join("\t")).join("\n");
       return join(block.inline);
     })
     .join("\n\n");

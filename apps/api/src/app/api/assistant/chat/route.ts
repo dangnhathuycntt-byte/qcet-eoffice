@@ -16,6 +16,7 @@ import { getAgentModelCatalog } from "@/config/runtime";
 import { isAllowedAgentModel } from "@qcet/shared/domain/agent/agent-models";
 import { ASSISTANT_ATTACHMENT_WORDING, checkTaskAgentAttachments } from "@qcet/shared/domain/tasks/task-agent-attachments";
 import { prepareTaskAgentAttachment } from "@/server/services/task-agent-attachments";
+import { findConversationAttachments, readStoredAttachment } from "@/server/assistant/assistant-attachments";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,21 +26,42 @@ export const maxDuration = 330;
 const MAX_BODY_BYTES = 32 * 1024;
 
 /**
- * Ảnh/tệp gửi kèm lượt hỏi: cùng loại và giới hạn với Agent tạo nhiệm vụ nhưng tính theo lượt (Trợ lý không gửi lại tệp
- * của lượt trước). Kiểm nội dung trước khi trả luồng: tệp hỏng là 400, không tạo cuộc hay tin nào.
+ * Ảnh/tệp gửi kèm lượt hỏi: cùng loại và giới hạn với Agent tạo nhiệm vụ, tính theo lượt (tệp mới cộng tệp đã lưu gửi lại
+ * khi "Thử lại"). Tệp mới được lưu gắn với câu hỏi; tệp đã lưu phải thuộc chính cuộc này của người hỏi. Kiểm nội dung
+ * trước khi trả luồng: tệp hỏng hay mã tệp lạ là 400, không tạo cuộc hay tin nào.
  */
-async function prepareAttachments(files: File[]): Promise<AssistantTurnAttachment[]> {
+async function prepareAttachments(
+  files: File[],
+  stored: { userId: string; conversationId?: string; ids?: string[] },
+): Promise<AssistantTurnAttachment[]> {
+  const ids = stored.ids ?? [];
+  if (ids.length > 0 && !stored.conversationId) throw new ValidationError("Tệp đã lưu chỉ gửi lại được trong cuộc trò chuyện của nó.");
+  const reused = stored.conversationId ? await findConversationAttachments(stored.userId, stored.conversationId, ids) : [];
+  if (reused.length !== new Set(ids).size) throw new ValidationError("Tệp đính kèm không còn. Thầy/Cô đính kèm lại rồi gửi.");
   const named = files.map((file) => ({ file, name: cleanAttachmentFileName(file.name) }));
   const problem = checkTaskAgentAttachments(
-    named.map(({ file, name }) => ({ name, size: file.size })),
+    [
+      ...reused.map((row) => ({ name: row.originalName, size: Number(row.byteSize) })),
+      ...named.map(({ file, name }) => ({ name, size: file.size })),
+    ],
     ASSISTANT_ATTACHMENT_WORDING,
   );
   if (problem) throw new ValidationError(problem);
   const prepared: AssistantTurnAttachment[] = [];
+  for (const row of reused) {
+    let data: Buffer;
+    try {
+      data = await readStoredAttachment(row);
+    } catch {
+      throw new ValidationError("Tệp đính kèm không còn. Thầy/Cô đính kèm lại rồi gửi.");
+    }
+    const { kind, step, parts } = await prepareTaskAgentAttachment(row.originalName, data);
+    prepared.push({ kind, bytes: data.length, step, parts, name: row.originalName, storedId: row.id });
+  }
   for (const { file, name } of named) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const { kind, step, parts } = await prepareTaskAgentAttachment(name, bytes);
-    prepared.push({ kind, bytes: bytes.length, step, parts });
+    prepared.push({ kind, bytes: bytes.length, step, parts, name, data: bytes });
   }
   return prepared;
 }
@@ -77,7 +99,7 @@ export async function POST(req: NextRequest) {
       throw new ApiError(400, "MODEL_NOT_ALLOWED", "Model này không dùng được cho Trợ lý. Thầy/Cô chọn model khác.");
     }
     const turnConfig = body.model ? { ...config, model: body.model } : config;
-    const attachments = await prepareAttachments(files);
+    const attachments = await prepareAttachments(files, { userId: authUser.id, conversationId: body.conversationId, ids: body.attachmentIds });
     const authz = await loadCachedAuthorizationContext(authUser.id);
 
     const encoder = new TextEncoder();

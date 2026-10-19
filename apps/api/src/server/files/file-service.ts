@@ -203,17 +203,21 @@ export async function storeUploadedFile(input: StoreUploadedFileInput) {
 
   // Reuse only files that have passed the configured scan workflow. Pending
   // uploads remain isolated so one upload cannot inherit another's scan state.
-  // Chỉ dùng lại tệp của chính người tải lên, gắn cùng nhiệm vụ: dùng bản của người khác sẽ trả id và tên
-  // tệp của họ, và lần tải này mất liên kết nhiệm vụ (metadata.taskId).
-  const taskIdOf = (metadata: unknown) =>
-    metadata && typeof metadata === "object" && typeof (metadata as { taskId?: unknown }).taskId === "string"
-      ? (metadata as { taskId: string }).taskId
-      : null;
+  // Chỉ dùng lại tệp của chính người tải lên, cùng liên kết: dùng bản của người khác sẽ trả id và tên tệp của họ, và
+  // lần tải này mất liên kết nhiệm vụ (metadata.taskId) hay câu hỏi của Trợ lý (metadata.assistantMessageIds; tệp
+  // Trợ lý xóa theo cuộc nên không được dùng chung với tệp khác).
+  const linkKeyOf = (metadata: unknown) => {
+    if (!metadata || typeof metadata !== "object") return null;
+    const { taskId, assistantMessageIds } = metadata as { taskId?: unknown; assistantMessageIds?: unknown };
+    if (typeof taskId === "string") return `task:${taskId}`;
+    if (Array.isArray(assistantMessageIds)) return `assistant:${assistantMessageIds.join(",")}`;
+    return null;
+  };
   const ownCleanCopies = await prisma.fileObject.findMany({
     where: { contentHash, uploadedById: input.uploadedById, scanStatus: FileScanStatus.CLEAN, isArchived: false },
     orderBy: { createdAt: "asc" },
   });
-  const cleanDuplicate = ownCleanCopies.find((copy) => taskIdOf(copy.metadata) === taskIdOf(input.metadata));
+  const cleanDuplicate = ownCleanCopies.find((copy) => linkKeyOf(copy.metadata) === linkKeyOf(input.metadata));
   if (cleanDuplicate) {
     const updated = await prisma.fileObject.updateMany({
       where: {

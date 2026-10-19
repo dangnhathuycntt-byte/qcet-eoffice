@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import type { AssistantContextRef, AssistantConversationSummaryDTO, AssistantSourceRef } from "@qcet/contracts/assistant";
+import type {
+  AssistantAttachmentDTO,
+  AssistantContextRef,
+  AssistantConversationSummaryDTO,
+  AssistantSourceRef,
+} from "@qcet/contracts/assistant";
 import {
   AssistantRequestError,
   assistantErrorText,
@@ -62,7 +67,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   const [sendError, setSendError] = React.useState<string | null>(null);
   const [pendingContext, setPendingContext] = React.useState<AssistantContextRef | null>(initialContext);
   const [contextLabel, setContextLabel] = React.useState<string | null>(null);
-  // Ảnh/tệp chờ gửi ở ô soạn; gửi xong thì nằm trong tin hỏi của luồng (chỉ trong phiên, máy chủ không lưu)
+  // Ảnh/tệp chờ gửi ở ô soạn; gửi xong thì nằm trong tin hỏi của luồng (máy chủ lưu bản của nó, báo qua sự kiện `attachments`)
   const [attachments, setAttachments] = React.useState<ChatAttachment[]>([]);
   const previewUrlsRef = React.useRef(new Set<string>());
   // Đọc tệp chờ gửi và luồng tin mới nhất trong callback ổn định (đổi cuộc, thu hồi ảnh xem trước)
@@ -152,8 +157,8 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   }, [releasePreviews]);
 
   const openConversation = React.useCallback(async (id: string) => {
-    // Tải lại đúng cuộc đang mở (khung chat nổi quay lại): giữ tệp đã gửi trong phiên theo mã tin, để còn ảnh trên câu
-    // hỏi và "Thử lại" vẫn gửi kèm tệp. Máy chủ không lưu tệp; thẻ đề xuất thì máy chủ lưu nên tải lại là có.
+    // Tải lại đúng cuộc đang mở (khung chat nổi quay lại): giữ tệp đã gửi trong phiên theo mã tin, để ảnh xem trước trên
+    // câu hỏi không phải tải lại. Tệp đã lưu và thẻ đề xuất thì máy chủ trả cùng chi tiết cuộc.
     const carried = new Map<string, ChatAttachment[]>();
     if (id === activeIdRef.current) {
       for (const { id: messageId, attachments: sent } of threadRef.current) {
@@ -259,13 +264,20 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
 
   /**
    * Gửi một lượt kèm tệp đang chờ ở ô soạn; gợi ý và thử lại truyền `resend` (tệp của câu hỏi cũ hoặc không tệp, ô soạn
-   * giữ nguyên). Server từ chối trước khi trả lời: bỏ hai tin vừa thêm, trả câu hỏi về ô nhập qua `restoreDraft`; tệp về
-   * ô soạn cùng chữ, chỉ khi ô soạn còn trống (đã gõ câu khác hay thêm tệp khác thì không trộn vào).
+   * giữ nguyên) và `resendStored` (tệp đã lưu của câu hỏi cũ, gửi bằng mã). Server từ chối trước khi trả lời: bỏ hai tin
+   * vừa thêm, trả câu hỏi về ô nhập qua `restoreDraft`; tệp về ô soạn cùng chữ, chỉ khi ô soạn còn trống (đã gõ câu khác
+   * hay thêm tệp khác thì không trộn vào).
    */
-  const send = async (raw: string, restoreDraft: (text: string) => boolean, resend?: ChatAttachment[]) => {
+  const send = async (
+    raw: string,
+    restoreDraft: (text: string) => boolean,
+    resend?: ChatAttachment[],
+    resendStored: AssistantAttachmentDTO[] = [],
+  ) => {
     const fromComposer = resend === undefined;
     const sentAttachments = resend ?? attachments;
-    const message = raw.trim() || (sentAttachments.length > 0 ? ASSISTANT_ATTACHMENT_ONLY_PROMPT : "");
+    const hasFiles = sentAttachments.length > 0 || resendStored.length > 0;
+    const message = raw.trim() || (hasFiles ? ASSISTANT_ATTACHMENT_ONLY_PROMPT : "");
     if (!message || turnRef.current || detailStatus === "loading" || detailStatus === "error") return;
     const seq = ++turnSeq.current;
     const userKey = `user-${seq}`;
@@ -279,7 +291,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     setPending(true);
     setSendError(null);
     if (fromComposer) setAttachments([]);
-    setThread((prev) => [...prev, userThreadMessage(userKey, message, sentAttachments), streamingThreadMessage(replyKey)]);
+    setThread((prev) => [...prev, userThreadMessage(userKey, message, sentAttachments, resendStored), streamingThreadMessage(replyKey)]);
 
     try {
       await streamAssistantTurn(
@@ -288,6 +300,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
           message,
           ...(context ? { context } : {}),
           ...(model ? { model } : {}),
+          ...(resendStored.length > 0 ? { attachmentIds: resendStored.map((attachment) => attachment.id) } : {}),
         },
         controller.signal,
         (event) => {
@@ -309,6 +322,11 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
           }
           if (event.type === "context") {
             setActiveContext(event.source);
+            return;
+          }
+          if (event.type === "attachments") {
+            // Tệp của câu hỏi đã lưu: "Thử lại" gửi mã thay cho tệp, mở lại cuộc vẫn còn
+            setThread((prev) => prev.map((m) => (m.key === userKey ? { ...m, storedAttachments: event.attachments } : m)));
             return;
           }
           if (event.type === "title") {
@@ -346,8 +364,9 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   };
 
   /**
-   * Thử lại câu hỏi ngay trước tin trả lời `replyKey`, kèm tệp đã gửi trong phiên. Câu hỏi từng kèm tệp mà tệp không còn
-   * (tải lại trang; máy chủ không lưu tệp) thì không gửi thiếu tệp: đưa câu về ô soạn và nhắc đính kèm lại.
+   * Thử lại câu hỏi ngay trước tin trả lời `replyKey`, kèm tệp của nó: tệp đã lưu thì gửi mã (không tải lên lại), chưa
+   * lưu thì gửi bản trong phiên. Câu hỏi từng kèm tệp mà tệp không còn ở đâu thì không gửi thiếu tệp: đưa câu về ô soạn
+   * và nhắc đính kèm lại.
    */
   const retry = (replyKey: string, restoreDraft: (text: string) => boolean) => {
     const question = questionMessageBefore(thread, replyKey);
@@ -357,15 +376,32 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
       setSendError(ASSISTANT_RETRY_ATTACHMENTS_GONE);
       return;
     }
-    void send(question.content, restoreDraft, question.attachments ?? []);
+    if (question.storedAttachments?.length) void send(question.content, restoreDraft, [], question.storedAttachments);
+    else void send(question.content, restoreDraft, question.attachments ?? []);
   };
 
   /**
-   * Tệp của câu hỏi sinh ra tin trả lời `replyKey`, để "Xem lại và tạo" mang theo vào hộp tạo việc. Chỉ còn trong phiên
-   * (máy chủ không lưu tệp); trả bản `File` gốc, không chia sẻ ảnh xem trước của luồng chat.
+   * Tệp của câu hỏi sinh ra tin trả lời `replyKey`, để "Xem lại và tạo" mang theo vào hộp tạo việc: bản `File` gốc còn
+   * trong phiên (không chia sẻ ảnh xem trước của luồng chat), hoặc tải lại tệp đã lưu (mở lại cuộc). Tệp tải lỗi bị bỏ.
    */
-  const filesForReply = (replyKey: string): File[] =>
-    (questionMessageBefore(thread, replyKey)?.attachments ?? []).map((attachment) => attachment.file);
+  const filesForReply = (replyKey: string): File[] | Promise<File[]> => {
+    const local = questionMessageBefore(thread, replyKey)?.attachments ?? [];
+    if (local.length > 0) return local.map((attachment) => attachment.file);
+    const stored = questionMessageBefore(thread, replyKey)?.storedAttachments ?? [];
+    if (stored.length === 0) return [];
+    return Promise.all(
+      stored.map(async (attachment) => {
+        try {
+          const res = await fetch(attachment.url, { credentials: "same-origin" });
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          return new File([blob], attachment.name, { type: blob.type });
+        } catch {
+          return null;
+        }
+      }),
+    ).then((files) => files.filter((file): file is File => file !== null));
+  };
 
   /**
    * Lưu trạng thái thẻ đề xuất ở máy chủ để thoát ra vào lại vẫn còn (như ChatGPT); giao diện đã đổi trước. Tin trả lời

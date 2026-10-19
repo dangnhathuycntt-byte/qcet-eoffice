@@ -10,7 +10,7 @@
  *  3. Khóa lại, đếm lại, xóa dòng FileObject và ghi nhật ký.
  *
  * `referenceCount` chỉ tăng khi dedup và không giảm ở đâu nên không dùng được; tham chiếu được đếm theo
- * đúng các nguồn mà `GET /api/file-objects/{id}` dùng để cấp quyền tải tệp.
+ * đúng các nguồn mà `GET /api/file-objects/{id}` dùng để cấp quyền tải tệp (kể cả cuộc Trợ lý trong metadata).
  */
 import { Prisma, StorageProvider, type FileObject } from "@prisma/client";
 import fs from "node:fs/promises";
@@ -69,6 +69,10 @@ export async function countFileObjectReferences(db: DbClient, file: Pick<FileObj
     : null;
   if (typeof meta?.taskId === "string" && meta.taskId) {
     counts.push(await db.task.count({ where: { id: meta.taskId } }));
+  }
+  // Tệp gửi kèm câu hỏi của Trợ lý: còn cuộc thì còn tham chiếu
+  if (typeof meta?.assistantConversationId === "string" && meta.assistantConversationId) {
+    counts.push(await db.assistantConversation.count({ where: { id: meta.assistantConversationId } }));
   }
   return counts.reduce((sum, n) => sum + n, 0);
 }

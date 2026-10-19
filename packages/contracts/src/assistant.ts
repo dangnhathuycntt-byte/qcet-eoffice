@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import type { TaskAgentPriority } from "@qcet/shared/domain/tasks/task-agent-draft";
+import { TASK_AGENT_ATTACHMENT_MAX_FILES, type TaskAgentAttachmentKind } from "@qcet/shared/domain/tasks/task-agent-attachments";
 
 /** Thời hạn lưu cuộc trò chuyện (ngày). Quá hạn: ẩn khỏi danh sách, không gửi lại cho mô hình, cron xóa hẳn. */
 export const ASSISTANT_RETENTION_DAYS = 90;
@@ -38,6 +39,8 @@ export const AssistantChatRequestSchema = z
     context: AssistantContextRefSchema.optional(),
     // Model chọn ở ô soạn; server chỉ nhận model trong TASK_AGENT_MODELS hoặc model mặc định, không gửi thì dùng mặc định
     model: z.string().trim().min(1).max(64).optional(),
+    // "Thử lại" câu hỏi có tệp đã lưu: gửi mã tệp thay vì gửi lại tệp; server chỉ nhận tệp của chính cuộc này
+    attachmentIds: z.array(z.string().uuid()).max(TASK_AGENT_ATTACHMENT_MAX_FILES).optional(),
   })
   .strict();
 export type AssistantChatRequest = z.infer<typeof AssistantChatRequestSchema>;
@@ -130,6 +133,18 @@ export interface AssistantMessageProposalDTO {
   dismissed: boolean;
 }
 
+/**
+ * Tệp gửi kèm câu hỏi, đã lưu (từ 19/10/2026): mở lại cuộc vẫn thấy và lượt sau vẫn đọc được. `url` chỉ chủ cuộc tải
+ * được; tệp xóa theo cuộc.
+ */
+export interface AssistantAttachmentDTO {
+  id: string;
+  name: string;
+  size: number;
+  kind: TaskAgentAttachmentKind;
+  url: string;
+}
+
 export type AssistantMessageRole = "user" | "assistant";
 export type AssistantMessageStatus = "complete" | "error" | "aborted";
 
@@ -142,6 +157,8 @@ export interface AssistantMessageDTO {
   steps: AssistantStep[];
   /** Thẻ đề xuất nhiệm vụ của tin trả lời (ADR-010); rỗng với tin khác. */
   proposals: AssistantMessageProposalDTO[];
+  /** Tệp gửi kèm câu hỏi (chỉ tin người dùng); không có tệp thì không có trường này. */
+  attachments?: AssistantAttachmentDTO[];
   durationMs: number | null;
   createdAt: string;
 }
@@ -171,6 +188,8 @@ export interface AssistantConversationListDTO {
 /** Sự kiện NDJSON của `POST /api/assistant/chat`, mỗi dòng một sự kiện. */
 export type AssistantStreamEvent =
   | { type: "conversation"; conversation: AssistantConversationSummaryDTO; userMessageId: string }
+  /** Tệp của câu hỏi `messageId` đã lưu xong (chạy song song với câu trả lời, phát trước `done`). */
+  | { type: "attachments"; messageId: string; attachments: AssistantAttachmentDTO[] }
   /** Cuộc mới: tên do mô hình đặt thay cho tên lấy từ câu hỏi, phát trước `done`. */
   | { type: "title"; conversation: AssistantConversationSummaryDTO }
   | { type: "context"; source: AssistantSourceRef }

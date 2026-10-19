@@ -19,12 +19,13 @@ const CreateTaskModal = dynamic(() => import("@/components/tasks/create/create-t
 export function useCreateTaskLauncher(): {
   /**
    * `onCreated` báo nhiệm vụ vừa tạo cho nơi mở (thẻ đề xuất chuyển sang "Đã tạo"). `files`: tệp của lượt hỏi sinh ra đề
-   * xuất, hộp đính kèm vào mô tả và đưa vào ô soạn của Agent để giữ ngữ cảnh.
+   * xuất, hộp đính kèm vào mô tả và đưa vào ô soạn của Agent để giữ ngữ cảnh. Tệp đã lưu cần tải về (promise) thì mở hộp
+   * khi tải xong, để hộp nhận đủ tệp ngay lúc áp đề xuất.
    */
   openCreateTask: (
     proposal?: AssistantTaskProposal,
     onCreated?: (task: { id: string; code: string | null }) => void,
-    files?: File[],
+    files?: File[] | Promise<File[]>,
   ) => void;
   createTaskModal: React.ReactNode;
 } {
@@ -37,13 +38,20 @@ export function useCreateTaskLauncher(): {
   const [contextFiles, setContextFiles] = React.useState<File[]>([]);
   const onCreatedRef = React.useRef<((task: { id: string; code: string | null }) => void) | null>(null);
 
-  const openCreateTask = React.useCallback((next?: AssistantTaskProposal, onCreated?: (task: { id: string; code: string | null }) => void, files?: File[]) => {
-    setProposal(next ?? null);
-    setContextFiles(next && files ? files : []);
-    onCreatedRef.current = onCreated ?? null;
-    setCreateTaskMounted(true);
-    setCreateTaskOpen(true);
-  }, []);
+  const openCreateTask = React.useCallback(
+    (next?: AssistantTaskProposal, onCreated?: (task: { id: string; code: string | null }) => void, pendingFiles?: File[] | Promise<File[]>) => {
+      const open = (files?: File[]) => {
+        setProposal(next ?? null);
+        setContextFiles(next && files ? files : []);
+        onCreatedRef.current = onCreated ?? null;
+        setCreateTaskMounted(true);
+        setCreateTaskOpen(true);
+      };
+      if (pendingFiles instanceof Promise) void pendingFiles.then(open, () => open());
+      else open(pendingFiles);
+    },
+    [],
+  );
 
   const createTaskModal = createTaskMounted ? (
     <CreateTaskModal

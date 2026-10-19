@@ -9,6 +9,7 @@ import {
   ASSISTANT_TOOL_NAMES,
   type AssistantContextRef,
   type AssistantContextType,
+  type AssistantAttachmentDTO,
   type AssistantMessageProposalDTO,
   type AssistantConversationDetailDTO,
   type AssistantConversationListDTO,
@@ -25,6 +26,7 @@ import {
 import { retentionCutoff } from "@qcet/shared/domain/assistant/assistant-history";
 import { normalizeTaskProposal } from "@qcet/shared/domain/assistant/assistant-task-proposal";
 import { ProposeTaskArgs } from "@/server/assistant/assistant-tool-proposal";
+import { listConversationAttachments, requestAssistantAttachmentPurges } from "@/server/assistant/assistant-attachments";
 
 /** Số tin và ký tự gần nhất đưa lại cho mô hình trong một lượt (đặc tả W1-C). */
 const HISTORY_MESSAGES = 12;
@@ -103,7 +105,8 @@ export function toConversationSummaryDTO(row: AssistantConversation): AssistantC
   };
 }
 
-export function toMessageDTO(row: AssistantMessage): AssistantMessageDTO {
+/** `attachments`: tệp đã lưu của câu hỏi này (chỉ tin người dùng có). */
+export function toMessageDTO(row: AssistantMessage, attachments: AssistantAttachmentDTO[] = []): AssistantMessageDTO {
   return {
     id: row.id,
     role: row.role === "user" ? "user" : "assistant",
@@ -113,6 +116,7 @@ export function toMessageDTO(row: AssistantMessage): AssistantMessageDTO {
     sources: parseJsonList(row.sources, parseSourceRef),
     steps: parseJsonList(row.steps, parseStep),
     proposals: parseJsonList(row.proposals, parseProposal),
+    ...(attachments.length > 0 ? { attachments } : {}),
     durationMs: row.durationMs ?? null,
     createdAt: row.createdAt.toISOString(),
   };
@@ -182,6 +186,7 @@ export async function getConversationDetail(
   });
   if (!row) return null;
 
+  const attachments = await listConversationAttachments(userId, id);
   const ref = toContextRef(row.contextType, row.contextId);
   const context = ref
     ? await resolveContext(ref).catch(() => {
@@ -189,7 +194,11 @@ export async function getConversationDetail(
         return null;
       })
     : null;
-  return { ...toConversationSummaryDTO(row), messages: row.messages.map(toMessageDTO), context };
+  return {
+    ...toConversationSummaryDTO(row),
+    messages: row.messages.map((message) => toMessageDTO(message, message.role === "user" ? attachments.get(message.id) : undefined)),
+    context,
+  };
 }
 
 export async function createConversation(
@@ -251,6 +260,14 @@ export async function loadModelHistory(
   conversationId: string,
   options: ModelHistoryOptions = {},
 ): Promise<Array<{ role: AssistantMessageRole; content: string }>> {
+  return (await loadModelHistoryEntries(conversationId, options)).map(({ role, content }) => ({ role, content }));
+}
+
+/** Như `loadModelHistory`, kèm mã tin để lượt mới gắn lại tệp đã lưu vào đúng câu hỏi. */
+export async function loadModelHistoryEntries(
+  conversationId: string,
+  options: ModelHistoryOptions = {},
+): Promise<Array<{ id: string; role: AssistantMessageRole; content: string }>> {
   const maxMessages = options.maxMessages ?? HISTORY_MESSAGES;
   const maxChars = options.maxChars ?? HISTORY_CHARS;
   const rows = await prisma.assistantMessage.findMany({
@@ -263,10 +280,10 @@ export async function loadModelHistory(
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: maxMessages,
-    select: { role: true, content: true },
+    select: { id: true, role: true, content: true },
   });
 
-  const picked: Array<{ role: AssistantMessageRole; content: string }> = [];
+  const picked: Array<{ id: string; role: AssistantMessageRole; content: string }> = [];
   let chars = 0;
   // Rà từ mới về cũ: câu hỏi chỉ giữ khi tin trả lời ngay sau nó (mới hơn) đã được giữ, để không gửi hai tin user liền nhau
   let replyKept = false;
@@ -277,7 +294,7 @@ export async function loadModelHistory(
     // Tin mới nhất đã vượt ngân sách thì dừng; các tin cũ hơn cũng bị bỏ
     if (chars + row.content.length > maxChars) break;
     chars += row.content.length;
-    picked.push({ role: row.role === "user" ? "user" : "assistant", content: row.content });
+    picked.push({ id: row.id, role: row.role === "user" ? "user" : "assistant", content: row.content });
   }
   return picked.reverse();
 }
@@ -336,7 +353,8 @@ export async function renameConversation(userId: string, id: string, title: stri
 }
 
 /**
- * Xóa cuộc trò chuyện (tin nhắn xóa theo khóa ngoại) và ghi audit chỉ kèm số tin, không kèm tiêu đề hay nội dung.
+ * Xóa cuộc trò chuyện (tin nhắn xóa theo khóa ngoại, tệp gửi kèm xóa qua outbox) và ghi audit chỉ kèm số tin, không kèm
+ * tiêu đề hay nội dung.
  * Xóa đồng thời hai lần: lần sau đếm được 0 dòng và trả false (404), không ném lỗi và không ghi audit trùng.
  */
 export async function deleteConversation(userId: string, id: string, requestId?: string): Promise<boolean> {
@@ -348,6 +366,7 @@ export async function deleteConversation(userId: string, id: string, requestId?:
     if (!conversation) return false;
     const { count } = await tx.assistantConversation.deleteMany({ where: { id, ...visibleScope(userId, new Date()) } });
     if (count === 0) return false;
+    await requestAssistantAttachmentPurges(tx, [id], userId);
     await logAuditEvent(tx, {
       actorId: userId,
       action: AuditAction.ASSISTANT_CONVERSATION_DELETED,
@@ -360,10 +379,15 @@ export async function deleteConversation(userId: string, id: string, requestId?:
   });
 }
 
-/** Xóa hẳn các cuộc trò chuyện quá hạn lưu giữ (tin nhắn xóa theo khóa ngoại). Trả về số cuộc đã xóa. */
+/** Xóa hẳn các cuộc trò chuyện quá hạn lưu giữ (tin nhắn xóa theo khóa ngoại, tệp qua outbox). Trả về số cuộc đã xóa. */
 export async function purgeExpiredConversations(now: Date = new Date(), days: number = ASSISTANT_RETENTION_DAYS): Promise<number> {
-  const { count } = await prisma.assistantConversation.deleteMany({
-    where: { lastMessageAt: { lt: retentionCutoff(now, days) } },
+  const where = { lastMessageAt: { lt: retentionCutoff(now, days) } };
+  return prisma.$transaction(async (tx) => {
+    const expired = await tx.assistantConversation.findMany({ where, select: { id: true } });
+    if (expired.length === 0) return 0;
+    const ids = expired.map((row) => row.id);
+    const { count } = await tx.assistantConversation.deleteMany({ where: { id: { in: ids }, ...where } });
+    await requestAssistantAttachmentPurges(tx, ids, null);
+    return count;
   });
-  return count;
 }

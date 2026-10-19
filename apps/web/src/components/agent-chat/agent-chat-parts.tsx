@@ -37,7 +37,7 @@ export function ReplyInline({ parts, sources }: { parts: AgentReplyInline[]; sou
 }
 
 /**
- * Câu trả lời có định dạng (đoạn, tiêu đề, danh sách, chữ đậm) theo nhịp của Linear (đo ảnh 16/10/2026):
+ * Câu trả lời có định dạng (đoạn, tiêu đề, danh sách, chữ đậm, bảng) theo nhịp của Linear (đo ảnh 16/10/2026):
  * chữ 13px dòng ~21px, đoạn cách 16px, tiêu đề sát danh sách 6px, mục cách 6px, thụt 24px.
  * `sources`: mã nguồn trong chữ thành link (chỉ nguồn đã đọc trong lượt).
  */
@@ -51,6 +51,32 @@ export function AgentReplyText({ text, sources }: { text: string; sources?: Assi
           <p key={i} className="-mb-2.5 font-semibold">
             <ReplyInline parts={block.inline} sources={sources} />
           </p>
+        ) : block.type === "table" ? (
+          // Bảng cuộn ngang trong cột khi nhiều cột; chỉ kẻ ngang như bảng danh sách của app, số canh theo tabular-nums
+          <div key={i} className="-mx-1 overflow-x-auto px-1 thin-scrollbar">
+            <table className="w-full border-collapse text-left tabular-nums">
+              <thead>
+                <tr className="border-b border-border">
+                  {block.header.map((cell, j) => (
+                    <th key={j} scope="col" className="py-1.5 pr-4 text-xs font-medium whitespace-nowrap text-muted-foreground last:pr-0">
+                      <ReplyInline parts={cell} sources={sources} />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {block.rows.map((row, j) => (
+                  <tr key={j} className="border-b border-border/60 last:border-b-0">
+                    {row.map((cell, k) => (
+                      <td key={k} className="py-1.5 pr-4 align-top last:pr-0">
+                        <ReplyInline parts={cell} sources={sources} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : block.type === "list" ? (
           <ul key={i} className={cn("flex flex-col gap-1.5 pl-6 marker:text-muted-foreground", block.ordered ? "list-decimal" : "list-disc")}>
             {block.items.map((item, j) => (

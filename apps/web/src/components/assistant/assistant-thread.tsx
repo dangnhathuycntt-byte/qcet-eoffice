@@ -6,7 +6,7 @@ import { FileText } from "lucide-react";
 import type { AssistantSourceRef, AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { agentReplyToPlainText } from "@qcet/shared/domain/tasks/agent-reply-format";
 import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
-import { AttachmentCard } from "@/components/agent-chat/agent-attachments";
+import { AttachmentCard, StoredAttachmentCard } from "@/components/agent-chat/agent-attachments";
 import { useSmoothText } from "@/components/agent-chat/use-smooth-text";
 import { Button } from "@/components/ui/button";
 import { focusRingClass } from "@/components/ui/focus-ring";
@@ -110,8 +110,11 @@ export function AssistantThread({
 function UserTurn({ message }: { message: ThreadMessage }) {
   return (
     <div className={cn("flex flex-col items-end gap-1.5", ENTER_MOTION)}>
-      {/* Tệp gửi kèm hiện trên câu hỏi như panel Agent tạo nhiệm vụ; chỉ trong phiên (mở lại thì xem ở nhật ký "Đọc tệp…") */}
-      {message.attachments?.map((attachment) => <AttachmentCard key={attachment.id} attachment={attachment} />)}
+      {/* Tệp gửi kèm hiện trên câu hỏi như panel Agent tạo nhiệm vụ: bản trong phiên (có ảnh xem trước sẵn), mở lại cuộc
+          thì bản đã lưu ở máy chủ */}
+      {message.attachments?.length
+        ? message.attachments.map((attachment) => <AttachmentCard key={attachment.id} attachment={attachment} />)
+        : message.storedAttachments?.map((attachment) => <StoredAttachmentCard key={attachment.id} attachment={attachment} />)}
       <p className="max-w-[80%] break-words whitespace-pre-wrap rounded-2xl bg-muted px-3.5 py-2 text-compact text-foreground">{message.content}</p>
     </div>
   );

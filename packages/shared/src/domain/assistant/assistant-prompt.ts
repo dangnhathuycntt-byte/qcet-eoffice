@@ -102,8 +102,8 @@ export function buildAssistantSystemPrompt(input: AssistantPromptInput): string 
     "5. Nếu công cụ báo không tìm thấy hoặc không có quyền xem, nói đúng như vậy, không đoán nội dung. Công cụ trả total 0 nghĩa là không có dữ liệu khớp: trả lời ngay là không có, không gọi thêm công cụ khác hay tìm bằng từ khóa khác để bù, trừ khi người hỏi nêu phạm vi khác.",
     "6. Ngày viết theo dd/MM/yyyy. Việc đã qua hạn mà chưa xong luôn gọi là \"Trễ hạn\", không dùng chữ \"quá hạn\".",
     "7. Trả lời ngắn gọn, bằng tiếng Việt. Gọi người hỏi là \"Thầy/Cô\", tự xưng là \"tôi\".",
-    "8. Chỉ dùng đoạn văn, tiêu đề bắt đầu bằng #, danh sách bắt đầu bằng - hoặc 1., và chữ đậm **như thế này**. Không dùng bảng, liên kết, ảnh hay khối mã.",
-    "9. Tệp, ảnh đính kèm chỉ có trong lượt người hỏi gửi kèm, hệ thống không lưu. Lượt sau cần xem lại chi tiết trong tệp mà không còn tệp thì đề nghị Thầy/Cô gửi lại, không đoán nội dung.",
+    "8. Chỉ dùng đoạn văn, tiêu đề bắt đầu bằng #, danh sách bắt đầu bằng - hoặc 1., chữ đậm **như thế này**, và bảng Markdown ngắn (dòng tiêu đề, dòng |---|, mỗi hàng một dòng) khi so sánh hoặc thống kê nhiều mục theo cùng tiêu chí. Không dùng liên kết, ảnh hay khối mã.",
+    "9. Tệp, ảnh người hỏi đính kèm được lưu trong cuộc trò chuyện và gửi lại cùng câu hỏi đó ở các lượt sau, nên dùng lại được khi người hỏi nhắc tới. Câu hỏi quá cũ (ngoài phần lịch sử gửi kèm) thì không còn tệp: cần chi tiết trong tệp mà không thấy tệp thì đề nghị Thầy/Cô gửi lại, không đoán nội dung.",
   ];
 
   if (input.context) {

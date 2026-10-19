@@ -4,6 +4,7 @@
  */
 import {
   AssistantContextRefSchema,
+  type AssistantAttachmentDTO,
   type AssistantContextRef,
   type AssistantContextType,
   type AssistantMessageDTO,
@@ -19,7 +20,7 @@ import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
 
 /** Câu gửi khi chỉ đính kèm tệp, không gõ chữ (như Agent tạo nhiệm vụ). */
 export const ASSISTANT_ATTACHMENT_ONLY_PROMPT = "Tóm tắt tệp đính kèm.";
-export const ASSISTANT_RETRY_ATTACHMENTS_GONE = "Tệp của câu hỏi này không còn (máy chủ không lưu tệp). Thầy/Cô đính kèm lại rồi gửi.";
+export const ASSISTANT_RETRY_ATTACHMENTS_GONE = "Tệp của câu hỏi này không còn. Thầy/Cô đính kèm lại rồi gửi.";
 
 export interface AssistantExample {
   id: "create-task" | "due-soon" | "pending-documents";
@@ -104,8 +105,10 @@ export interface ThreadMessage {
   durationMs: number | null;
   /** Lý do lỗi riêng của lượt (từ sự kiện error); không có thì dùng câu chung. */
   errorMessage: string | null;
-  /** Ảnh/tệp gửi kèm câu hỏi, chỉ có trong phiên đang mở (máy chủ không lưu tệp). */
+  /** Ảnh/tệp gửi kèm câu hỏi còn trong phiên đang mở (bản `File`, có ảnh xem trước). */
   attachments?: ChatAttachment[];
+  /** Tệp của câu hỏi đã lưu ở máy chủ (từ 19/10/2026): mở lại cuộc vẫn còn, "Thử lại" gửi mã tệp thay cho tệp. */
+  storedAttachments?: AssistantAttachmentDTO[];
   /** Đề xuất nhiệm vụ của lượt trả lời (propose_task); lưu cùng tin nên mở lại cuộc vẫn còn, kèm hai trạng thái dưới. */
   proposals?: AssistantTaskProposal[];
   /** Nhiệm vụ đã tạo từ đề xuất thứ i (người dùng bấm Tạo trong hộp), để thẻ báo "Đã tạo" kèm lối mở. */
@@ -138,8 +141,18 @@ function baseMessage(key: string, role: AssistantMessageRole): ThreadMessage {
   return { key, id: null, role, content: "", status: "complete", sources: [], steps: [], thinking: "", durationMs: null, errorMessage: null };
 }
 
-export function userThreadMessage(key: string, content: string, attachments: ChatAttachment[] = []): ThreadMessage {
-  return { ...baseMessage(key, "user"), content, ...(attachments.length > 0 ? { attachments } : {}) };
+export function userThreadMessage(
+  key: string,
+  content: string,
+  attachments: ChatAttachment[] = [],
+  storedAttachments: AssistantAttachmentDTO[] = [],
+): ThreadMessage {
+  return {
+    ...baseMessage(key, "user"),
+    content,
+    ...(attachments.length > 0 ? { attachments } : {}),
+    ...(storedAttachments.length > 0 ? { storedAttachments } : {}),
+  };
 }
 
 export function streamingThreadMessage(key: string): ThreadMessage {
@@ -158,6 +171,7 @@ export function threadMessageFromDto(dto: AssistantMessageDTO): ThreadMessage {
     thinking: "",
     durationMs: dto.durationMs,
     errorMessage: null,
+    ...(dto.attachments?.length ? { storedAttachments: dto.attachments } : {}),
   };
   if (dto.proposals.length === 0) return message;
   // Thẻ đề xuất và trạng thái đã chọn (đã tạo, bỏ qua) lưu ở máy chủ: thoát ra vào lại vẫn như lúc rời
@@ -210,11 +224,16 @@ export function markReplyAborted(reply: ThreadMessage): ThreadMessage {
 }
 
 /**
- * Câu hỏi từng gửi kèm tệp (tin trả lời có bước đọc tệp) mà tệp không còn trong phiên: thử lại sẽ thiếu tệp. Tin trả
- * lời lỗi trước khi lưu bước thì không biết được, khi đó thử lại gửi chữ và mô hình được dặn xin gửi lại tệp.
+ * Câu hỏi từng gửi kèm tệp (tin trả lời có bước đọc tệp) mà tệp không còn trong phiên lẫn ở máy chủ (cuộc trước khi lưu
+ * tệp, hoặc lưu lỗi): thử lại sẽ thiếu tệp. Tin trả lời lỗi trước khi lưu bước thì không biết được, khi đó thử lại gửi
+ * chữ và mô hình được dặn xin gửi lại tệp.
  */
 export function retryMissesAttachments(question: ThreadMessage, reply: ThreadMessage | undefined): boolean {
-  return !question.attachments?.length && Boolean(reply?.steps.some((step) => step.tool === "attachment"));
+  return (
+    !question.attachments?.length &&
+    !question.storedAttachments?.length &&
+    Boolean(reply?.steps.some((step) => step.tool === "attachment"))
+  );
 }
 
 /** Tin hỏi ngay trước một tin trả lời, để "Thử lại" gửi lại đúng câu đó cùng tệp đã gửi trong phiên. */

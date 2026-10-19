@@ -12,6 +12,7 @@ import { canViewMeeting } from "@/server/policies/meeting-policy";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
 import { logger } from "@/server/observability/logger";
+import { retentionCutoff } from "@qcet/shared/domain/assistant/assistant-history";
 
 /** Tệp đính kèm văn bản (kèm văn bản) mà người dùng được đọc; 404 khi không có, 403 khi không có quyền. */
 export async function getReadableAttachmentForDownload(authUser: AuthenticatedUser, attachmentId: string) {
@@ -118,7 +119,7 @@ export async function assertFilePathDownloadAllowed(
 
 /**
  * Tải tệp theo FileObject: tệp phải liên kết với ít nhất một tài nguyên người dùng được đọc (văn bản,
- * sản phẩm nhiệm vụ, hồ sơ, cuộc họp, nhiệm vụ trong metadata/mô tả) và đã quét sạch. Trả về bản ghi
+ * sản phẩm nhiệm vụ, hồ sơ, cuộc họp, nhiệm vụ trong metadata/mô tả, cuộc Trợ lý của chính mình) và đã quét sạch. Trả về bản ghi
  * (đã cập nhật trạng thái quét khi tự sửa ở môi trường dev) để route kiểm tệp trên đĩa rồi stream.
  */
 export async function authorizeFileObjectDownload({
@@ -194,6 +195,19 @@ export async function authorizeFileObjectDownload({
 
   if (!hasAuthorizedResource) {
     hasAuthorizedResource = file.meetingMaterials.some((meeting) => canViewMeeting(authUser, meeting));
+  }
+
+  if (!hasAuthorizedResource) {
+    // Tệp gửi kèm câu hỏi của Trợ lý: chỉ chủ cuộc (cũng là người tải lên) mở được, khi cuộc còn trong hạn lưu giữ
+    const assistantMeta = (file.metadata as Record<string, unknown> | null) ?? null;
+    const conversationId = typeof assistantMeta?.assistantConversationId === "string" ? assistantMeta.assistantConversationId : null;
+    if (conversationId && file.uploadedById === authUser.id) {
+      const conversation = await prisma.assistantConversation.findFirst({
+        where: { id: conversationId, userId: authUser.id, lastMessageAt: { gte: retentionCutoff(new Date()) } },
+        select: { id: true },
+      });
+      hasAuthorizedResource = Boolean(conversation);
+    }
   }
 
   if (!hasAuthorizedResource) {
