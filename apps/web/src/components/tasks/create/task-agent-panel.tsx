@@ -77,6 +77,8 @@ export interface TaskAgentPanelProps {
   onClose: () => void;
   /** Panel đang ẩn (vẫn giữ cuộc trò chuyện): bỏ khỏi thứ tự Tab và trình đọc màn hình. */
   inactive?: boolean;
+  /** Đưa con trỏ vào ô soạn khi panel vừa gắn (mặc định có). Hộp tạo việc mở sẵn panel thì tắt để giữ con trỏ ở ô tên. */
+  focusOnMount?: boolean;
   /** Tệp mang sang từ Trợ lý: đặt sẵn ở ô soạn để lượt hỏi Agent đầu tiên gửi kèm (sau đó gửi lại mỗi lượt như tệp khác). */
   initialFiles?: File[];
   className?: string;
@@ -97,6 +99,7 @@ export function TaskAgentPanel({
   onHide,
   onClose,
   inactive = false,
+  focusOnMount = true,
   initialFiles,
   className,
 }: TaskAgentPanelProps) {
@@ -129,9 +132,13 @@ export function TaskAgentPanel({
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
   }, [messages, pending, live]);
-  // Mở lại panel: đưa con trỏ về ô soạn
+  // Mở lại panel (ẩn → hiện): đưa con trỏ về ô soạn. Lần gắn đầu do `autoFocus={focusOnMount}` quyết định; so với trạng
+  // thái trước để effect chạy hai lần lúc gắn (StrictMode) không tự focus.
+  const wasInactiveRef = React.useRef(inactive);
   React.useEffect(() => {
-    if (!inactive) inputRef.current?.focus();
+    const reopened = wasInactiveRef.current && !inactive;
+    wasInactiveRef.current = inactive;
+    if (reopened) inputRef.current?.focus();
   }, [inactive]);
 
   const stop = () => abortRef.current?.abort();
@@ -425,7 +432,7 @@ export function TaskAgentPanel({
             ref={inputRef}
             compact
             autoResize
-            autoFocus
+            autoFocus={focusOnMount}
             rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}

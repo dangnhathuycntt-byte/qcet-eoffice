@@ -229,12 +229,25 @@ export function CreateTaskModal({
   // Ẩn panel vẫn giữ cuộc trò chuyện; đóng hộp mới bỏ
   const [agentStarted, setAgentStarted] = React.useState(false);
   const agentToggleRef = React.useRef<HTMLButtonElement>(null);
-  React.useEffect(() => {
+  // Mở sẵn panel Agent mỗi lần mở hộp (người dùng chọn 19/10/2026), chỉ màn ≥ lg vì panel ẩn dưới lg; bấm Ẩn thì giữ ẩn
+  // tới khi đóng hộp. Con trỏ vẫn ở ô tên nhiệm vụ (`agentFocusOnMount`), bấm vào ô soạn mới chuyển sang Agent.
+  // Layout effect: đặt trạng thái trước khi vẽ để hộp hiện thẳng ở bề rộng có panel, không nới ra ngay sau khi mở.
+  const agentAutoOpenedRef = React.useRef(false);
+  const [agentFocusOnMount, setAgentFocusOnMount] = React.useState(true);
+  React.useLayoutEffect(() => {
     if (!isOpen) {
+      agentAutoOpenedRef.current = false;
       setAgentOpen(false);
       setAgentStarted(false);
+      setAgentFocusOnMount(true);
+      return;
     }
-  }, [isOpen]);
+    if (!agentAvailable || agentAutoOpenedRef.current || !window.matchMedia("(min-width: 64rem)").matches) return;
+    agentAutoOpenedRef.current = true;
+    setAgentFocusOnMount(false);
+    setAgentStarted(true);
+    setAgentOpen(true);
+  }, [isOpen, agentAvailable]);
   const isPhone = useIsPhone();
   // Điện thoại: mở menu ưu tiên/đơn vị (không có ô nhập) thì bỏ focus ô đang gõ để bàn phím không che menu.
   // Menu chủ trì có ô tìm riêng nên giữ nguyên.
@@ -939,6 +952,7 @@ export function CreateTaskModal({
                   onHide={closeAgent}
                   onClose={handleRequestClose}
                   inactive={!agentOpen}
+                  focusOnMount={agentFocusOnMount}
                   className={cn(
                     "w-[380px] shrink-0 max-lg:hidden",
                     // Hiện dần khi khung đã nới ra; Ẩn thì rời luồng (nằm ngoài mép phải, bị khung cắt) để khung thu lại mượt
