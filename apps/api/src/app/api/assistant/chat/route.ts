@@ -98,6 +98,9 @@ export async function POST(req: NextRequest) {
     if (body.model && !isAllowedAgentModel(getAgentModelCatalog(), body.model)) {
       throw new ApiError(400, "MODEL_NOT_ALLOWED", "Model này không dùng được cho Trợ lý. Thầy/Cô chọn model khác.");
     }
+    if (body.replacesMessageId && !body.conversationId) {
+      throw new ValidationError("Chỉ tạo lại hoặc sửa được câu hỏi trong một cuộc trò chuyện có sẵn.");
+    }
     const turnConfig = body.model ? { ...config, model: body.model } : config;
     const attachments = await prepareAttachments(files, { userId: authUser.id, conversationId: body.conversationId, ids: body.attachmentIds });
     const authz = await loadCachedAuthorizationContext(authUser.id);
@@ -114,6 +117,7 @@ export async function POST(req: NextRequest) {
               userId: authUser.id,
               authz,
               conversationId: body.conversationId,
+              ...(body.replacesMessageId ? { replacesMessageId: body.replacesMessageId } : {}),
               message: body.message,
               context: body.context,
               ...(attachments.length > 0 ? { attachments } : {}),

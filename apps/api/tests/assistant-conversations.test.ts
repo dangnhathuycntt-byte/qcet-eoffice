@@ -32,6 +32,7 @@ import {
   encodeConversationCursor,
   getConversation,
   getConversationDetail,
+  replaceLastQuestion,
   listConversations,
   loadModelHistory,
   purgeExpiredConversations,
@@ -425,6 +426,33 @@ describe('Lịch sử Trợ lý (CSDL)', () => {
           content: '[Hệ thống ghi lại: lượt này đã gọi propose_task 1 lần, người hỏi thấy các thẻ đề xuất sau]\n1. Họp giao ban tháng 11 · chưa tạo',
         },
       ]);
+    });
+
+    it('replaceLastQuestion ("Tạo lại"/"Sửa"): câu hỏi cuối và câu trả lời thành superseded, không hiện, không vào lịch sử; câu cũ hơn thì không đổi gì', async () => {
+      const conv = await makeConversation(owner.id, 'Tạo lại', ago(1 * HOUR));
+      await makeMessage(conv.id, 'user', 'Câu 1', ago(50 * 60_000));
+      await makeMessage(conv.id, 'assistant', 'Trả lời 1', ago(49 * 60_000));
+      const q2 = await makeMessage(conv.id, 'user', 'Câu 2', ago(40 * 60_000));
+      await makeMessage(conv.id, 'assistant', 'Trả lời 2', ago(39 * 60_000));
+
+      const older = await prisma.assistantMessage.findFirstOrThrow({ where: { conversationId: conv.id, content: 'Câu 1' } });
+      assert.equal(await replaceLastQuestion(conv.id, older.id, 'Câu 1 sửa'), null, 'chỉ thay được câu hỏi cuối');
+      assert.equal(await prisma.assistantMessage.count({ where: { conversationId: conv.id, status: 'superseded' } }), 0);
+
+      const replaced = await replaceLastQuestion(conv.id, q2.id, 'Câu 2 sửa');
+      assert.equal(replaced?.content, 'Câu 2 sửa');
+      const statuses = await prisma.assistantMessage.findMany({ where: { conversationId: conv.id }, orderBy: { createdAt: 'asc' }, select: { content: true, status: true } });
+      assert.deepEqual(statuses.map((m) => `${m.content}:${m.status}`), ['Câu 1:complete', 'Trả lời 1:complete', 'Câu 2:superseded', 'Trả lời 2:superseded', 'Câu 2 sửa:complete']);
+      const reloaded = await prisma.assistantConversation.findUniqueOrThrow({ where: { id: conv.id } });
+      assert.equal(reloaded.lastMessageAt.getTime(), replaced?.createdAt.getTime());
+
+      const detail = await getConversationDetail(owner.id, conv.id, async () => null);
+      assert.deepEqual(detail?.messages.map((m) => m.content), ['Câu 1', 'Trả lời 1', 'Câu 2 sửa']);
+      assert.deepEqual(await loadModelHistory(conv.id, { excludeMessageId: replaced?.id }), [
+        { role: 'user', content: 'Câu 1' },
+        { role: 'assistant', content: 'Trả lời 1' },
+      ]);
+      assert.equal(await replaceLastQuestion(conv.id, q2.id, 'Lần nữa'), null, 'câu đã thay không thay lại được');
     });
 
     it('renameConversation đổi tên và đánh dấu đã sửa tay; người khác không đổi được', async () => {

@@ -1405,3 +1405,42 @@ describe("Trợ lý UI: cột bên là chồng thẻ riêng (Tiến trình, Đ�
     assert.ok(/<h2[^>]*><button/.test(html), "nút nằm trong tiêu đề (mẫu disclosure)");
   });
 });
+
+describe("Trợ lý UI: tạo lại và sửa câu hỏi cuối", () => {
+  const render = (thread: ThreadMessage[], pending = false) =>
+    renderToStaticMarkup(
+      React.createElement(AssistantThread, {
+        thread,
+        detailStatus: "ready",
+        detailError: null,
+        onRetry: () => undefined,
+        onNewChat: () => undefined,
+        listRef: { current: null },
+        onScroll: () => undefined,
+        pending,
+        onRegenerate: () => undefined,
+        onEditQuestion: () => undefined,
+      }),
+    );
+  const q = (key: string, id: string | null, content: string): ThreadMessage => ({ ...userThreadMessage(key, content), id });
+  const a = (key: string, patch: Partial<ThreadMessage> = {}): ThreadMessage => ({ ...streamingThreadMessage(key), id: `m-${key}`, status: "complete", content: "Trả lời.", ...patch });
+
+  test("chỉ cặp hỏi–đáp cuối có nút sửa và tạo lại; đang chạy, câu hỏi chưa có mã hay tin lỗi thì không", () => {
+    const html = render([q("u1", "q1", "Câu 1"), a("r1"), q("u2", "q2", "Câu 2"), a("r2")]);
+    assert.equal((html.match(/aria-label="Sửa câu hỏi"/g) ?? []).length, 1);
+    assert.equal((html.match(/aria-label="Tạo lại câu trả lời"/g) ?? []).length, 1);
+    assert.equal(render([q("u2", "q2", "Câu 2"), a("r2")], true).includes("Tạo lại câu trả lời"), false, "đang có lượt chạy");
+    assert.equal(render([q("u2", null, "Câu 2"), a("r2")]).includes("Sửa câu hỏi"), false, "câu hỏi chưa lưu ở máy chủ");
+    const failed = render([q("u2", "q2", "Câu 2"), a("r2", { status: "error", content: "" })]);
+    assert.equal(failed.includes("Tạo lại câu trả lời"), false, "tin lỗi dùng Thử lại");
+    assert.ok(failed.includes("Sửa câu hỏi"), "câu hỏi của tin lỗi vẫn sửa được");
+  });
+
+  test("hook thay cặp cuối qua replacesMessageId, máy chủ từ chối thì trả cặp cũ; trang và khung nổi đều nối", () => {
+    const hook = read("apps/web/src/components/assistant/use-assistant-chat.ts");
+    assert.ok(hook.includes("replacesMessageId: replaces.questionId"));
+    assert.ok(hook.includes("...replaced]"), "từ chối thì trả lại cặp cũ");
+    assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes("onEditQuestion={(text) => replaceLast(text)}"));
+    assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onEditQuestion={(text) => onReplaceLast(text)}"));
+  });
+});

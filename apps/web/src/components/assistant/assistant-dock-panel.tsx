@@ -42,6 +42,8 @@ export interface AssistantDockPanelProps {
   onRetry: (replyKey: string) => void;
   /** Gợi ý bước tiếp theo dưới tin trả lời cuối. */
   onFollowUp: (prompt: string) => void;
+  /** "Tạo lại" câu trả lời cuối, hoặc gửi câu hỏi cuối đã sửa (`text`). */
+  onReplaceLast: (text?: string) => void;
   /** Mở hộp tạo nhiệm vụ đã điền theo thẻ đề xuất (ADR-010). */
   onOpenProposal: (target: ProposalTarget) => void;
   onDismissProposal: (replyKey: string, index: number, dismissed: boolean) => void;
@@ -80,6 +82,7 @@ export function AssistantDockPanel({
   onSubmit,
   onRetry,
   onFollowUp,
+  onReplaceLast,
   onOpenProposal,
   onDismissProposal,
   onCreateProposals,
@@ -182,6 +185,8 @@ export function AssistantDockPanel({
           detailError={detailError}
           onRetry={onRetry}
           onFollowUp={onFollowUp}
+          onRegenerate={() => onReplaceLast()}
+          onEditQuestion={(text) => onReplaceLast(text)}
           onOpenProposal={onOpenProposal}
           onDismissProposal={onDismissProposal}
           onCreateProposals={onCreateProposals}

@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowDown, FileText } from "lucide-react";
-import type { AssistantSourceRef, AssistantTaskProposal } from "@qcet/contracts/assistant";
+import { ArrowDown, FileText, Pencil, RotateCcw } from "lucide-react";
+import { ASSISTANT_MESSAGE_MAX, type AssistantSourceRef, type AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { agentReplyToPlainText } from "@qcet/shared/domain/tasks/agent-reply-format";
 import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
 import { AttachmentCard, StoredAttachmentCard } from "@/components/agent-chat/agent-attachments";
@@ -11,11 +11,13 @@ import { useSmoothText } from "@/components/agent-chat/use-smooth-text";
 import { Button } from "@/components/ui/button";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   ASSISTANT_NO_ANSWER_MESSAGE,
   followUpSuggestions,
   formatDurationVi,
+  isSendKey,
   questionMessageBefore,
   type FollowUpSuggestion,
   type ProposalTarget,
@@ -50,6 +52,10 @@ export interface AssistantThreadProps {
   onCreateProposals?: (items: ProposalTarget[]) => void;
   /** Gửi câu của gợi ý bước tiếp theo dưới tin trả lời cuối; không truyền thì không có gợi ý. */
   onFollowUp?: (prompt: string) => void;
+  /** "Tạo lại" câu trả lời cuối (thay cặp hỏi–đáp cuối); không truyền thì không có nút. */
+  onRegenerate?: () => void;
+  /** Gửi câu hỏi cuối đã sửa (thay cặp hỏi–đáp cuối); không truyền thì câu hỏi không sửa được. */
+  onEditQuestion?: (text: string) => void;
 }
 
 export type { ProposalTarget } from "@/components/assistant/assistant-model";
@@ -78,6 +84,8 @@ export function AssistantThread({
   onDismissProposal,
   onCreateProposals,
   onFollowUp,
+  onRegenerate,
+  onEditQuestion,
 }: AssistantThreadProps) {
   const [awayFromBottom, setAwayFromBottom] = React.useState(false);
   const handleScroll = () => {
@@ -85,6 +93,11 @@ export function AssistantThread({
     const el = listRef.current;
     if (el) setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > SCROLL_BUTTON_OFFSET);
   };
+  // "Tạo lại"/"Sửa" chỉ cho cặp hỏi–đáp cuối, khi câu trả lời đã xong và câu hỏi đã có mã ở máy chủ
+  const last = thread[thread.length - 1];
+  const lastReply = !pending && last?.role === "assistant" && last.status !== "streaming" ? last : null;
+  const lastQuestion = lastReply ? questionMessageBefore(thread, lastReply.key) : null;
+  const replaceable = Boolean(lastQuestion?.id);
   const scrollToBottom = () => {
     const el = listRef.current;
     if (!el) return;
@@ -120,7 +133,11 @@ export function AssistantThread({
 
         {thread.map((message, index) =>
           message.role === "user" ? (
-            <UserTurn key={message.key} message={message} />
+            <UserTurn
+              key={message.key}
+              message={message}
+              onEdit={replaceable && message.key === lastQuestion?.key ? onEditQuestion : undefined}
+            />
           ) : (
             <ReplyTurn
               key={message.key}
@@ -137,6 +154,8 @@ export function AssistantThread({
                   : undefined
               }
               onFollowUp={onFollowUp}
+              // Tin lỗi đã có "Thử lại" trong khung lỗi
+              onRegenerate={replaceable && message.key === lastReply?.key && message.status !== "error" ? onRegenerate : undefined}
             />
           ),
         )}
@@ -160,16 +179,81 @@ export function AssistantThread({
   );
 }
 
-/** Tin người dùng: bong bóng xám căn phải, tối đa 80% cột. */
-function UserTurn({ message }: { message: ThreadMessage }) {
+/**
+ * Tin người dùng: bong bóng xám căn phải, tối đa 80% cột. Câu hỏi cuối có nút sửa (hiện khi rê chuột, luôn hiện trên
+ * điện thoại) như ChatGPT và Claude: sửa ngay trong bong bóng, Enter gửi (thay câu trả lời cũ), Esc hủy.
+ */
+function UserTurn({ message, onEdit }: { message: ThreadMessage; onEdit?: (text: string) => void }) {
+  const [editing, setEditing] = React.useState(false);
+  const [text, setText] = React.useState(message.content);
+  const submit = () => {
+    const next = text.trim();
+    if (!next || !onEdit) return;
+    setEditing(false);
+    if (next !== message.content) onEdit(next);
+  };
   return (
-    <div className={cn("flex flex-col items-end gap-1.5", ENTER_MOTION)}>
+    <div className={cn("group/question flex flex-col items-end gap-1.5", ENTER_MOTION)}>
       {/* Tệp gửi kèm hiện trên câu hỏi như panel Agent tạo nhiệm vụ: bản trong phiên (có ảnh xem trước sẵn), mở lại cuộc
           thì bản đã lưu ở máy chủ */}
       {message.attachments?.length
         ? message.attachments.map((attachment) => <AttachmentCard key={attachment.id} attachment={attachment} />)
         : message.storedAttachments?.map((attachment) => <StoredAttachmentCard key={attachment.id} attachment={attachment} />)}
-      <p className="max-w-[80%] break-words whitespace-pre-wrap rounded-2xl bg-muted px-3.5 py-2 text-compact text-foreground">{message.content}</p>
+      {editing && onEdit ? (
+        <div className="flex w-full max-w-[80%] flex-col gap-2 rounded-2xl bg-muted p-2">
+          <Textarea
+            compact
+            autoResize
+            autoFocus
+            rows={1}
+            value={text}
+            maxLength={ASSISTANT_MESSAGE_MAX}
+            aria-label="Sửa câu hỏi"
+            onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if (isSendKey(event.nativeEvent)) {
+                event.preventDefault();
+                submit();
+              } else if (event.key === "Escape" && !event.nativeEvent.isComposing) {
+                // Esc chỉ hủy sửa, không dừng lượt hay đóng khung
+                event.preventDefault();
+                event.stopPropagation();
+                setEditing(false);
+              }
+            }}
+            className="max-h-60 overflow-y-auto bg-transparent px-1.5 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="pill-xs" onClick={() => setEditing(false)}>
+              Hủy
+            </Button>
+            <Button size="pill-xs" onClick={submit} disabled={!text.trim()}>
+              Gửi
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="max-w-[80%] break-words whitespace-pre-wrap rounded-2xl bg-muted px-3.5 py-2 text-compact text-foreground">{message.content}</p>
+          {onEdit ? (
+            <div className="flex opacity-0 transition-opacity duration-150 group-focus-within/question:opacity-100 group-hover/question:opacity-100 max-md:opacity-100 motion-reduce:transition-none">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Sửa câu hỏi"
+                title="Sửa câu hỏi"
+                onClick={() => {
+                  setText(message.content);
+                  setEditing(true);
+                }}
+                className="-mr-1.5 rounded-full max-md:size-11"
+              >
+                <Pencil />
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -199,6 +283,7 @@ function ReplyTurn({
   onCreateProposals,
   followUps,
   onFollowUp,
+  onRegenerate,
 }: {
   message: ThreadMessage;
   onRetry: () => void;
@@ -208,6 +293,7 @@ function ReplyTurn({
   onCreateProposals?: (items: ProposalTarget[]) => void;
   followUps?: FollowUpSuggestion[];
   onFollowUp?: (prompt: string) => void;
+  onRegenerate?: () => void;
 }) {
   const streaming = message.status === "streaming";
   // Chữ hiện dần kể cả khi gateway gửi cả cục; tin mở từ lịch sử hiện ngay
@@ -325,6 +411,18 @@ function ReplyTurn({
       {settled && message.content ? (
         <div className="flex items-center opacity-0 transition-opacity duration-150 group-focus-within/reply:opacity-100 group-hover/reply:opacity-100 max-md:opacity-100 motion-reduce:transition-none">
           <CopyMessageButton text={agentReplyToPlainText(message.content)} phoneTouchTarget />
+          {onRegenerate ? (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Tạo lại câu trả lời"
+              title="Tạo lại"
+              onClick={onRegenerate}
+              className="rounded-full max-md:size-11"
+            >
+              <RotateCcw />
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>

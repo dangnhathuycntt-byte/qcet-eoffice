@@ -46,6 +46,9 @@ export const AssistantChatRequestSchema = z
     model: z.string().trim().min(1).max(64).optional(),
     // "Thử lại" câu hỏi có tệp đã lưu: gửi mã tệp thay vì gửi lại tệp; server chỉ nhận tệp của chính cuộc này
     attachmentIds: z.array(z.string().uuid()).max(TASK_AGENT_ATTACHMENT_MAX_FILES).optional(),
+    // "Tạo lại" hoặc "Sửa" câu hỏi cuối (như ChatGPT, Claude): mã câu hỏi cuối của cuộc; câu hỏi đó và câu trả lời của nó
+    // được thay bằng lượt này (không hiện, không vào lịch sử mô hình). Chỉ đi cùng conversationId
+    replacesMessageId: entityId.optional(),
   })
   .strict();
 export type AssistantChatRequest = z.infer<typeof AssistantChatRequestSchema>;

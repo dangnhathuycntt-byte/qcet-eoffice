@@ -149,6 +149,14 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
     if (!isPhone) composerRef.current?.focus();
   };
 
+  // "Tạo lại"/"Sửa" câu hỏi cuối: như gửi mới, luôn cuộn xuống
+  const replaceLast = (text?: string) => {
+    if (!canSubmit) return;
+    setActionError(null);
+    stickToBottomRef.current = true;
+    chat.replaceLast(restoreDraft, text);
+  };
+
   const retry = (replyKey: string) => {
     if (pending) return;
     setActionError(null);
@@ -262,6 +270,8 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                   detailError={chat.detailError}
                   onRetry={retry}
                   onFollowUp={suggest}
+                  onRegenerate={() => replaceLast()}
+                  onEditQuestion={(text) => replaceLast(text)}
                   onNewChat={newChat}
                   listRef={listRef}
                   onScroll={onThreadScroll}

@@ -34,6 +34,8 @@ const HISTORY_CHARS = 16_000;
 
 const SOURCE_TYPES: readonly string[] = ["task", "document", "meeting"];
 const MESSAGE_STATUSES: readonly string[] = ["complete", "error", "aborted"];
+/** Câu hỏi đã được "Tạo lại"/"Sửa" và câu trả lời của nó: còn trong CSDL nhưng không hiện, không vào lịch sử mô hình. */
+const SUPERSEDED = "superseded";
 const STEP_TOOLS: readonly string[] = [...ASSISTANT_TOOL_NAMES, "attachment", "unknown"];
 
 /** Điều kiện chung: chỉ chủ nhân thấy, và tin cuối chưa quá hạn lưu giữ. */
@@ -182,7 +184,7 @@ export async function getConversationDetail(
 ): Promise<AssistantConversationDetailDTO | null> {
   const row = await prisma.assistantConversation.findFirst({
     where: { id, ...visibleScope(userId, now) },
-    include: { messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
+    include: { messages: { where: { NOT: { status: SUPERSEDED } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
   });
   if (!row) return null;
 
@@ -248,6 +250,34 @@ export async function appendMessage(conversationId: string, data: AppendMessageI
   });
 }
 
+/**
+ * "Tạo lại" hoặc "Sửa" câu hỏi cuối (như ChatGPT, Claude): `replacesMessageId` phải là câu hỏi cuối còn hiệu lực của
+ * cuộc. Nó và các tin từ đó trở đi (câu trả lời) thành "superseded", rồi thêm câu hỏi mới và đặt `lastMessageAt`, trong
+ * một transaction (khóa dòng cuộc để hai lần thay cùng lúc không cùng nhận một câu hỏi). Không phải câu hỏi cuối thì trả
+ * null và không đổi gì. Tệp của câu hỏi cũ được lượt mới gắn lại bằng mã (saveTurnAttachments).
+ */
+export async function replaceLastQuestion(conversationId: string, replacesMessageId: string, content: string): Promise<AssistantMessage | null> {
+  const now = new Date();
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 FROM assistant_conversations WHERE id = ${conversationId} FOR UPDATE`;
+    const last = await tx.assistantMessage.findFirst({
+      where: { conversationId, role: "user", NOT: { status: SUPERSEDED } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { id: true, createdAt: true },
+    });
+    if (!last || last.id !== replacesMessageId) return null;
+    await tx.assistantMessage.updateMany({
+      where: { conversationId, createdAt: { gte: last.createdAt }, NOT: { status: SUPERSEDED } },
+      data: { status: SUPERSEDED },
+    });
+    const message = await tx.assistantMessage.create({
+      data: { conversationId, role: "user", content, status: "complete", createdAt: now },
+    });
+    await tx.assistantConversation.update({ where: { id: conversationId }, data: { lastMessageAt: now } });
+    return message;
+  });
+}
+
 export interface ModelHistoryOptions {
   maxMessages?: number;
   maxChars?: number;
@@ -275,8 +305,8 @@ export async function loadModelHistoryEntries(
       conversationId,
       // Tin trả lời chỉ có thẻ đề xuất (không kèm lời) vẫn đưa lại, kèm khối ghi các đề xuất đó
       OR: [{ content: { not: "" } }, { role: "assistant", NOT: { proposals: { equals: Prisma.AnyNull } } }],
-      // Tin trả lời lỗi không đưa lại; tin bị dừng (aborted) giữ phần đã có
-      NOT: [{ role: "assistant", status: "error" }],
+      // Tin trả lời lỗi và lượt đã được thay ("Tạo lại"/"Sửa") không đưa lại; tin bị dừng (aborted) giữ phần đã có
+      NOT: [{ role: "assistant", status: "error" }, { status: SUPERSEDED }],
       ...(options.excludeMessageId ? { id: { not: options.excludeMessageId } } : {}),
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],

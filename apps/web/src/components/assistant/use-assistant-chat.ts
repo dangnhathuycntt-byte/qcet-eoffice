@@ -55,6 +55,13 @@ interface UseAssistantChatOptions {
  * Trạng thái khung chat: đang mở cuộc nào, tin hiển thị, lượt đang chạy. Mỗi lượt đọc NDJSON và áp sự kiện
  * vào đúng tin trả lời bằng khóa cố định, nên tin không bị lẫn khi lượt bị dừng hoặc chuyển cuộc.
  */
+/** Cặp hỏi–đáp cuối đang được "Tạo lại"/"Sửa": khóa trong luồng và mã câu hỏi ở máy chủ. */
+interface ReplacedTurn {
+  questionKey: string;
+  replyKey: string;
+  questionId: string;
+}
+
 export function useAssistantChat({ conversationId, initialContext, onUpsert, onTurnSettled, syncUrl = true }: UseAssistantChatOptions) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const activeIdRef = React.useRef<string | null>(null);
@@ -273,6 +280,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     restoreDraft: (text: string) => boolean,
     resend?: ChatAttachment[],
     resendStored: AssistantAttachmentDTO[] = [],
+    replaces?: ReplacedTurn,
   ) => {
     const fromComposer = resend === undefined;
     const sentAttachments = resend ?? attachments;
@@ -291,7 +299,14 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     setPending(true);
     setSendError(null);
     if (fromComposer) setAttachments([]);
-    setThread((prev) => [...prev, userThreadMessage(userKey, message, sentAttachments, resendStored), streamingThreadMessage(replyKey, Date.now())]);
+    // "Tạo lại"/"Sửa": cặp hỏi–đáp cuối rời luồng ngay, máy chủ từ chối thì trả lại đúng chỗ
+    const isReplaced = (m: ThreadMessage) => m.key === replaces?.questionKey || m.key === replaces?.replyKey;
+    const replaced = replaces ? threadRef.current.filter(isReplaced) : [];
+    setThread((prev) => [
+      ...(replaces ? prev.filter((m) => !isReplaced(m)) : prev),
+      userThreadMessage(userKey, message, sentAttachments, resendStored),
+      streamingThreadMessage(replyKey, Date.now()),
+    ]);
 
     try {
       await streamAssistantTurn(
@@ -301,6 +316,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
           ...(context ? { context } : {}),
           ...(model ? { model } : {}),
           ...(resendStored.length > 0 ? { attachmentIds: resendStored.map((attachment) => attachment.id) } : {}),
+          ...(replaces ? { replacesMessageId: replaces.questionId } : {}),
         },
         controller.signal,
         (event) => {
@@ -342,7 +358,10 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
       );
       if (!turn.settled) setThread((prev) => prev.map((m) => (m.key === replyKey ? markReplyInterrupted(m) : m)));
     } catch (error) {
-      if (error instanceof AssistantRequestError) {
+      if (error instanceof AssistantRequestError && replaces) {
+        setThread((prev) => [...prev.filter((m) => m.key !== userKey && m.key !== replyKey), ...replaced]);
+        setSendError(error.message);
+      } else if (error instanceof AssistantRequestError) {
         setThread((prev) => prev.filter((m) => m.key !== userKey && m.key !== replyKey));
         const restored = restoreDraft(raw.trim());
         if (fromComposer && restored && attachmentsRef.current.length === 0) setAttachments(sentAttachments);
@@ -378,6 +397,26 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     }
     if (question.storedAttachments?.length) void send(question.content, restoreDraft, [], question.storedAttachments);
     else void send(question.content, restoreDraft, question.attachments ?? []);
+  };
+
+  /**
+   * "Tạo lại" câu trả lời cuối, hoặc gửi câu hỏi cuối đã sửa (`text`), như ChatGPT và Claude: cặp hỏi–đáp cuối được thay
+   * (máy chủ đánh dấu, không hiện và không vào lịch sử mô hình), tệp của câu hỏi gửi lại như "Thử lại". Chỉ khi câu hỏi
+   * đã có mã ở máy chủ và câu trả lời đã xong.
+   */
+  const replaceLast = (restoreDraft: (text: string) => boolean, text?: string) => {
+    const reply = thread[thread.length - 1];
+    if (!reply || reply.role !== "assistant" || reply.status === "streaming") return;
+    const question = questionMessageBefore(thread, reply.key);
+    if (!question?.id) return;
+    if (retryMissesAttachments(question, reply)) {
+      setSendError(ASSISTANT_RETRY_ATTACHMENTS_GONE);
+      return;
+    }
+    const replaces: ReplacedTurn = { questionKey: question.key, replyKey: reply.key, questionId: question.id };
+    const content = text?.trim() || question.content;
+    if (question.storedAttachments?.length) void send(content, restoreDraft, [], question.storedAttachments, replaces);
+    else void send(content, restoreDraft, question.attachments ?? [], [], replaces);
   };
 
   /**
@@ -464,6 +503,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     clearAttachments,
     send,
     retry,
+    replaceLast,
     filesForReply,
     proposalCreated,
     proposalDismissed,

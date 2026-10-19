@@ -857,6 +857,28 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     for (const call of proposalCalls) assert.match(byId.get(call.id) ?? '', /"created":false/);
   });
 
+  it('"Tạo lại": thay câu hỏi cuối, lịch sử gửi mô hình không còn cặp cũ; câu hỏi không còn là câu cuối thì báo REPLACE_STALE, không ghi gì', async () => {
+    const first = await runTurn([() => completion('Trả lời lần đầu')], { message: 'Tóm tắt việc tuần này' });
+    const conv = first.events.find((e) => e.type === 'conversation');
+    assert.ok(conv && conv.type === 'conversation');
+    const conversationId = conv.conversation.id;
+    const questionId = conv.userMessageId;
+
+    const again = await runTurn([() => completion('Trả lời lần hai')], { conversationId, message: 'Tóm tắt việc tuần này', replacesMessageId: questionId });
+    assert.equal(again.events.some((e) => e.type === 'error'), false);
+    // Mô hình chỉ thấy câu hỏi mới, không thấy cặp cũ
+    const sent = again.gateway.calls[0].messages.filter((m) => m.role !== 'system').map((m) => `${m.role}:${typeof m.content === 'string' ? m.content : ''}`);
+    assert.deepEqual(sent, ['user:Tóm tắt việc tuần này']);
+    const rows = await assistantRowsOf(conversationId);
+    assert.deepEqual(rows.map((r) => `${r.role}:${r.status}`), ['user:superseded', 'assistant:superseded', 'user:complete', 'assistant:complete']);
+
+    const stale = await runTurn([() => completion('Không được gọi')], { conversationId, message: 'Sửa lại', replacesMessageId: questionId });
+    const error = stale.events.find((e) => e.type === 'error');
+    assert.ok(error && error.type === 'error' && error.error.code === 'REPLACE_STALE');
+    assert.equal(stale.gateway.calls.length, 0);
+    assert.equal((await assistantRowsOf(conversationId)).length, 4, 'không thêm tin nào');
+  });
+
   it('lời gọi propose_task bắt đầu tới thì phát proposal_started ngay (trước thẻ), lời gọi đọc thì không', async () => {
     const { runAssistantTool } = await import('@/server/assistant/assistant-tools');
     const calls = [1, 2].map((n) => ({ id: `s${n}`, name: 'propose_task', arguments: JSON.stringify({ title: `Chuẩn bị lễ khai giảng phần ${n} ${runId}` }) }));

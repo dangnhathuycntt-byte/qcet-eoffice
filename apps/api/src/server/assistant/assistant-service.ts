@@ -27,6 +27,7 @@ import { logger } from "@/server/observability/logger";
 import { ToolFailure } from "@/server/assistant/assistant-tool-shared";
 import {
   appendMessage,
+  replaceLastQuestion,
   applyGeneratedTitle,
   createConversation,
   getConversation,
@@ -98,12 +99,15 @@ const TOO_MANY_TOOLS_CONTENT = '{"error":"Quá nhiều công cụ trong một l�
 const TOOL_BUDGET_CONTENT = '{"error":"Đã đọc đủ dữ liệu cho lượt này, hãy trả lời với dữ liệu đã có."}';
 const CONTEXT_FORBIDDEN_MESSAGE = "Không tìm thấy hoặc Thầy/Cô không có quyền xem mục này.";
 const NOT_FOUND_MESSAGE = "Không tìm thấy cuộc trò chuyện.";
+const REPLACE_STALE_MESSAGE = "Cuộc trò chuyện đã có câu hỏi mới hơn. Thầy/Cô tải lại trang rồi thử lại.";
 const CONTEXT_NOUN: Record<AssistantSourceRef["type"], string> = { task: "nhiệm vụ", document: "văn bản", meeting: "cuộc họp" };
 
 export interface AssistantTurnInput {
   userId: string;
   authz: AuthorizationContext;
   conversationId?: string;
+  /** "Tạo lại"/"Sửa": câu hỏi cuối của cuộc được thay bằng câu hỏi của lượt này (replaceLastQuestion). */
+  replacesMessageId?: string;
   message: string;
   /** Chỉ dùng khi mở cuộc trò chuyện mới; server kiểm lại quyền đọc. */
   context?: AssistantContextRef;
@@ -385,7 +389,15 @@ async function runTurn(
       });
     }
 
-    const userMessage = await appendMessage(conversation.id, { role: "user", content: input.message });
+    const userMessage =
+      input.replacesMessageId && input.conversationId
+        ? await replaceLastQuestion(conversation.id, input.replacesMessageId, input.message)
+        : await appendMessage(conversation.id, { role: "user", content: input.message });
+    // Câu hỏi cần thay không còn là câu hỏi cuối (cuộc đã có lượt mới ở tab khác): không đổi gì
+    if (!userMessage) {
+      emit({ type: "error", error: { code: "REPLACE_STALE", message: REPLACE_STALE_MESSAGE } });
+      return;
+    }
     progress.conversationId = conversation.id;
     // Tệp của câu hỏi lưu song song với câu trả lời (lưu lỗi không làm hỏng lượt); báo trước `done` để mở lại cuộc vẫn có
     const savingAttachments = saveTurnAttachments(input, conversation.id, userMessage.id).then((stored) => {
