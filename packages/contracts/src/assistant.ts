@@ -59,12 +59,14 @@ export const AssistantRenameRequestSchema = z
 
 /**
  * Cập nhật trạng thái thẻ đề xuất thứ `index` của một tin trả lời: bỏ qua/hoàn tác, hoặc đã tạo nhiệm vụ `taskId`
- * (máy chủ chỉ nhận nhiệm vụ do chính người gọi tạo và lấy mã nhiệm vụ từ CSDL).
+ * (máy chủ chỉ nhận nhiệm vụ do chính người gọi tạo và lấy mã nhiệm vụ từ CSDL). `indexes`: bỏ qua/hoàn tác nhiều thẻ
+ * của cùng tin trong một lần ("Bỏ qua", "Hoàn tác" của thẻ danh sách), tất cả hoặc không thẻ nào.
  */
 const proposalIndex = z.number().int().min(0).max(ASSISTANT_MAX_PROPOSALS_PER_TURN - 1);
 export const AssistantProposalUpdateRequestSchema = z.union([
   z.object({ index: proposalIndex, dismissed: z.boolean() }).strict(),
   z.object({ index: proposalIndex, taskId: entityId }).strict(),
+  z.object({ indexes: z.array(proposalIndex).min(1).max(ASSISTANT_MAX_PROPOSALS_PER_TURN), dismissed: z.boolean() }).strict(),
 ]);
 export type AssistantProposalUpdateRequest = z.infer<typeof AssistantProposalUpdateRequestSchema>;
 

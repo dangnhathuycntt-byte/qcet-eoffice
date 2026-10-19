@@ -7,10 +7,11 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { parseAndValidateJson } from "@/server/api/validation";
 import { assertCsrf } from "@/server/security/csrf";
 import { assertRateLimit } from "@/server/security/rate-limit";
-import { updateMessageProposal } from "@/server/assistant/assistant-conversations";
+import { updateMessageProposal, updateMessageProposalsDismissed } from "@/server/assistant/assistant-conversations";
 
 /**
- * Trạng thái thẻ đề xuất nhiệm vụ của một tin trả lời (ADR-010): bỏ qua/hoàn tác, hoặc đã tạo nhiệm vụ từ thẻ.
+ * Trạng thái thẻ đề xuất nhiệm vụ của một tin trả lời (ADR-010): bỏ qua/hoàn tác, hoặc đã tạo nhiệm vụ từ thẻ; `indexes`
+ * bỏ qua/hoàn tác nhiều thẻ trong một request (thẻ danh sách 60 đề xuất không tiêu hết giới hạn ghi mỗi phút).
  * Không tạo nhiệm vụ ở đây; nhiệm vụ do `POST /api/tasks` tạo và phải do chính người gọi tạo.
  */
 export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -24,8 +25,11 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
     await assertRateLimit(authUser.id, "MUTATION", { requestId, endpoint: "PATCH /api/assistant/messages/[id]/proposals" });
     const { id } = await props.params;
     const body = await parseAndValidateJson(req, AssistantProposalUpdateRequestSchema, { maxBytes: 1024 });
-    const proposal = await updateMessageProposal(authUser.id, id, body);
-    return apiSuccess(proposal, { requestId, headers: { "Cache-Control": "private, no-store" } });
+    const result =
+      "indexes" in body
+        ? await updateMessageProposalsDismissed(authUser.id, id, body.indexes, body.dismissed)
+        : await updateMessageProposal(authUser.id, id, body);
+    return apiSuccess(result, { requestId, headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }

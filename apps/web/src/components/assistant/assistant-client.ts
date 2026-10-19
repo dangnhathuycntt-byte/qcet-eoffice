@@ -86,9 +86,12 @@ export function deleteConversationRequest(id: string): Promise<{ deleted: true }
   return requestJson<{ deleted: true }>(conversationUrl(id), { method: "DELETE" });
 }
 
-/** Lưu trạng thái thẻ đề xuất (bỏ qua/hoàn tác, đã tạo nhiệm vụ) của tin trả lời `messageId`. */
-export function updateProposalRequest(messageId: string, change: AssistantProposalUpdateRequest): Promise<AssistantMessageProposalDTO> {
-  return requestJson<AssistantMessageProposalDTO>(`/api/assistant/messages/${encodeURIComponent(messageId)}/proposals`, {
+/** Lưu trạng thái thẻ đề xuất (bỏ qua/hoàn tác một hay nhiều thẻ, đã tạo nhiệm vụ) của tin trả lời `messageId`. */
+export function updateProposalRequest(
+  messageId: string,
+  change: AssistantProposalUpdateRequest,
+): Promise<AssistantMessageProposalDTO | AssistantMessageProposalDTO[]> {
+  return requestJson<AssistantMessageProposalDTO | AssistantMessageProposalDTO[]>(`/api/assistant/messages/${encodeURIComponent(messageId)}/proposals`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(change),

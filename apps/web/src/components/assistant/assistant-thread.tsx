@@ -48,6 +48,8 @@ export interface AssistantThreadProps {
   onOpenProposal?: (target: ProposalTarget) => void;
   /** Bỏ qua (hoặc hoàn tác bỏ qua) thẻ đề xuất thứ `index` của tin `replyKey`; không truyền thì thẻ không có nút Bỏ qua. */
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
+  /** Bỏ qua (hoặc hoàn tác) nhiều thẻ của tin `replyKey` một lần (thẻ danh sách); không truyền thì gọi từng thẻ. */
+  onDismissProposals?: (replyKey: string, indexes: number[], dismissed: boolean) => void;
   /** "Tạo tất cả" trên thẻ danh sách (từ PROPOSAL_LIST_MIN đề xuất): mở hộp tạo các đề xuất còn chờ của tin đó. */
   onCreateProposals?: (items: ProposalTarget[]) => void;
   /** Gửi câu của gợi ý bước tiếp theo dưới tin trả lời cuối; không truyền thì không có gợi ý. */
@@ -82,6 +84,7 @@ export function AssistantThread({
   compact = false,
   onOpenProposal,
   onDismissProposal,
+  onDismissProposals,
   onCreateProposals,
   onFollowUp,
   onRegenerate,
@@ -147,6 +150,7 @@ export function AssistantThread({
               pending={pending}
               onOpenProposal={onOpenProposal}
               onDismissProposal={onDismissProposal}
+              onDismissProposals={onDismissProposals}
               onCreateProposals={onCreateProposals}
               // Gợi ý chỉ dưới tin cuối và khi không có lượt nào đang chạy
               followUps={
@@ -293,6 +297,7 @@ function ReplyTurn({
   pending,
   onOpenProposal,
   onDismissProposal,
+  onDismissProposals,
   onCreateProposals,
   followUps,
   onFollowUp,
@@ -303,6 +308,7 @@ function ReplyTurn({
   pending: boolean;
   onOpenProposal?: (target: ProposalTarget) => void;
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
+  onDismissProposals?: (replyKey: string, indexes: number[], dismissed: boolean) => void;
   onCreateProposals?: (items: ProposalTarget[]) => void;
   followUps?: FollowUpSuggestion[];
   onFollowUp?: (prompt: string) => void;
@@ -379,6 +385,7 @@ function ReplyTurn({
           message={message}
           onOpenProposal={onOpenProposal}
           onDismissProposal={onDismissProposal}
+          onDismissProposals={onDismissProposals}
           onCreateProposals={onCreateProposals}
         />
       ) : settled && message.proposals?.length ? (
@@ -447,11 +454,13 @@ function ReplyProposalList({
   message,
   onOpenProposal,
   onDismissProposal,
+  onDismissProposals,
   onCreateProposals,
 }: {
   message: ThreadMessage;
   onOpenProposal?: (target: ProposalTarget) => void;
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
+  onDismissProposals?: (replyKey: string, indexes: number[], dismissed: boolean) => void;
   onCreateProposals?: (items: ProposalTarget[]) => void;
 }) {
   const items = (message.proposals ?? []).map((proposal, index) => ({
@@ -462,17 +471,20 @@ function ReplyProposalList({
     dismissed: message.dismissedProposals?.includes(index) ?? false,
   }));
   const waiting = items.filter((item) => !item.created && !item.dismissed);
+  const dismissedItems = items.filter((item) => item.dismissed && !item.created);
+  // Cả nhóm một request (lưu một lần ở máy chủ); nơi dùng chưa có thì gọi từng thẻ
+  const dismissMany =
+    onDismissProposals ??
+    (onDismissProposal
+      ? (replyKey: string, indexes: number[], dismissed: boolean) => indexes.forEach((index) => onDismissProposal(replyKey, index, dismissed))
+      : undefined);
   return (
     <AssistantProposalList
       items={items}
       onOpen={onOpenProposal ? (index) => onOpenProposal(items[index]) : undefined}
       onCreateAll={onCreateProposals ? () => onCreateProposals(waiting) : undefined}
-      onDismissAll={onDismissProposal ? () => waiting.forEach((item) => onDismissProposal(message.key, item.index, true)) : undefined}
-      onRestoreAll={
-        onDismissProposal
-          ? () => items.filter((item) => item.dismissed && !item.created).forEach((item) => onDismissProposal(message.key, item.index, false))
-          : undefined
-      }
+      onDismissAll={dismissMany ? () => dismissMany(message.key, waiting.map((item) => item.index), true) : undefined}
+      onRestoreAll={dismissMany ? () => dismissMany(message.key, dismissedItems.map((item) => item.index), false) : undefined}
     />
   );
 }

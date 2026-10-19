@@ -408,6 +408,7 @@ export function AssistantDock() {
             openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task), chat.filesForReply(replyKey))
           }
           onDismissProposal={chat.proposalDismissed}
+          onDismissProposals={chat.proposalsDismissed}
           onCreateProposals={(items) => openBulkCreate(items, (item, task) => chat.proposalCreated(item.replyKey, item.index, task))}
           onStop={chat.stop}
           sendError={chat.sendError}

@@ -279,6 +279,7 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                   pending={pending}
                   onOpenProposal={openProposal}
                   onDismissProposal={chat.proposalDismissed}
+                  onDismissProposals={chat.proposalsDismissed}
                   onCreateProposals={createProposals}
                 />
               )}

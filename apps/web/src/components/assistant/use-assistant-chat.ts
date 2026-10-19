@@ -484,6 +484,23 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     [saveProposal],
   );
 
+  /**
+   * "Bỏ qua"/"Hoàn tác" nhiều thẻ của cùng tin (thẻ danh sách): một request cho cả nhóm, lưu không được thì trả cả nhóm
+   * về như trước.
+   */
+  const proposalsDismissed = React.useCallback(
+    (replyKey: string, indexes: number[], dismissed: boolean) => {
+      if (indexes.length === 0) return;
+      const apply = (value: boolean) => (prev: ThreadMessage[]) =>
+        indexes.reduce((acc, index) => setProposalDismissed(acc, replyKey, index, value), prev);
+      setThread(apply(dismissed));
+      void saveProposal(replyKey, { indexes, dismissed }, "Chưa lưu được thao tác trên thẻ đề xuất. Thầy/Cô thử lại.", () =>
+        setThread(apply(!dismissed)),
+      );
+    },
+    [saveProposal],
+  );
+
   return {
     activeId,
     activeTitle,
@@ -507,6 +524,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     filesForReply,
     proposalCreated,
     proposalDismissed,
+    proposalsDismissed,
     stop,
     reload,
     readActiveId,

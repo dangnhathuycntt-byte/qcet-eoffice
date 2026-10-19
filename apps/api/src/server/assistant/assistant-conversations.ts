@@ -340,21 +340,12 @@ export async function loadModelHistoryEntries(
 export async function updateMessageProposal(
   userId: string,
   messageId: string,
-  change: AssistantProposalUpdateRequest,
+  change: Exclude<AssistantProposalUpdateRequest, { indexes: number[] }>,
   now: Date = new Date(),
 ): Promise<AssistantMessageProposalDTO> {
-  return prisma.$transaction(async (tx) => {
-    // Khóa dòng trước khi đọc: "Tạo tất cả" lưu nhiều thẻ của cùng tin liền nhau, đọc rồi ghi cả mảng mà không khóa thì
-    // lần ghi sau đè mất thẻ vừa lưu
-    await tx.$queryRaw`SELECT 1 FROM assistant_messages WHERE id = ${messageId} FOR UPDATE`;
-    const row = await tx.assistantMessage.findFirst({
-      where: { id: messageId, role: "assistant", conversation: visibleScope(userId, now) },
-      select: { id: true, proposals: true },
-    });
-    // Thẻ hỏng bị bỏ khi đọc nên vị trí theo danh sách đã đọc, cùng danh sách giao diện đang hiện
-    const items = row ? parseJsonList(row.proposals, parseProposal) : [];
+  return editMessageProposals(userId, messageId, now, async (items, tx) => {
     const current = items[change.index];
-    if (!row || !current) throw new NotFoundError("Không tìm thấy đề xuất.");
+    if (!current) throw new NotFoundError("Không tìm thấy đề xuất.");
     let next: AssistantMessageProposalDTO;
     if ("taskId" in change) {
       const task = await tx.task.findFirst({ where: { id: change.taskId, createdById: userId }, select: { id: true, code: true } });
@@ -364,8 +355,52 @@ export async function updateMessageProposal(
       next = { ...current, dismissed: change.dismissed };
     }
     items[change.index] = next;
-    await tx.assistantMessage.update({ where: { id: row.id }, data: { proposals: items as unknown as Prisma.InputJsonValue } });
     return next;
+  });
+}
+
+/**
+ * Bỏ qua/hoàn tác nhiều thẻ của cùng tin trong một lần ghi (thẻ danh sách của kế hoạch vài chục đầu việc): một vị trí
+ * không có thì không đổi thẻ nào. Trả các thẻ đã đổi theo thứ tự vị trí.
+ */
+export async function updateMessageProposalsDismissed(
+  userId: string,
+  messageId: string,
+  indexes: readonly number[],
+  dismissed: boolean,
+  now: Date = new Date(),
+): Promise<AssistantMessageProposalDTO[]> {
+  const unique = [...new Set(indexes)].sort((a, b) => a - b);
+  return editMessageProposals(userId, messageId, now, async (items) => {
+    if (unique.some((index) => !items[index])) throw new NotFoundError("Không tìm thấy đề xuất.");
+    return unique.map((index) => (items[index] = { ...items[index], dismissed }));
+  });
+}
+
+/**
+ * Đọc, sửa và ghi lại mảng thẻ đề xuất của tin trả lời `messageId` (của người gọi, cuộc chưa hết hạn) trong một
+ * transaction. `edit` sửa mảng tại chỗ; ném lỗi thì không ghi gì.
+ */
+async function editMessageProposals<T>(
+  userId: string,
+  messageId: string,
+  now: Date,
+  edit: (items: AssistantMessageProposalDTO[], tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    // Khóa dòng trước khi đọc: "Tạo tất cả" lưu nhiều thẻ của cùng tin liền nhau, đọc rồi ghi cả mảng mà không khóa thì
+    // lần ghi sau đè mất thẻ vừa lưu
+    await tx.$queryRaw`SELECT 1 FROM assistant_messages WHERE id = ${messageId} FOR UPDATE`;
+    const row = await tx.assistantMessage.findFirst({
+      where: { id: messageId, role: "assistant", conversation: visibleScope(userId, now) },
+      select: { id: true, proposals: true },
+    });
+    if (!row) throw new NotFoundError("Không tìm thấy đề xuất.");
+    // Thẻ hỏng bị bỏ khi đọc nên vị trí theo danh sách đã đọc, cùng danh sách giao diện đang hiện
+    const items = parseJsonList(row.proposals, parseProposal);
+    const result = await edit(items, tx);
+    await tx.assistantMessage.update({ where: { id: row.id }, data: { proposals: items as unknown as Prisma.InputJsonValue } });
+    return result;
   });
 }
 

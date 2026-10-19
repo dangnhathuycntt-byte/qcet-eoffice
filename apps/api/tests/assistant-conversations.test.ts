@@ -40,6 +40,7 @@ import {
   toConversationSummaryDTO,
   toMessageDTO,
   updateMessageProposal,
+  updateMessageProposalsDismissed,
 } from '@/server/assistant/assistant-conversations';
 import { PATCH as proposalRoute } from '@/app/api/assistant/messages/[id]/proposals/route';
 import { GET as listRoute } from '@/app/api/assistant/conversations/route';
@@ -948,6 +949,31 @@ describe('Lịch sử Trợ lý (CSDL)', () => {
       const detail = await getConversationDetail(owner.id, conv.id, async () => null);
       const saved = detail?.messages.find((m) => m.id === plan.id);
       assert.deepEqual(saved?.proposals.map((item) => item.dismissed), Array.from({ length: count }, () => true));
+    });
+
+    it('bỏ qua/hoàn tác nhiều thẻ trong một request: một lần ghi; vị trí trùng gộp; một vị trí không có thì không đổi thẻ nào', async () => {
+      const count = 60;
+      const plan = await appendMessage(conv.id, {
+        role: 'assistant',
+        content: 'Tôi đã soạn 60 đề xuất.',
+        proposals: Array.from({ length: count }, (_, i) => ({ proposal: { title: `Việc nhóm số ${i + 1}` }, task: null, dismissed: false })),
+      });
+      const all = Array.from({ length: count }, (_, i) => i);
+      const res = await patch(plan.id, { indexes: all, dismissed: true });
+      assert.equal(res.status, 200);
+      assert.equal(((await res.json()) as unknown[]).length, count);
+      const saved = async () => (await getConversationDetail(owner.id, conv.id, async () => null))?.messages.find((m) => m.id === plan.id);
+      assert.deepEqual((await saved())?.proposals.map((item) => item.dismissed), all.map(() => true));
+
+      const restored = await updateMessageProposalsDismissed(owner.id, plan.id, [2, 0, 2], false);
+      assert.deepEqual(restored.map((item) => item.proposal.title), ['Việc nhóm số 1', 'Việc nhóm số 3'], 'gộp trùng, theo thứ tự vị trí');
+      assert.deepEqual((await saved())?.proposals.slice(0, 4).map((item) => item.dismissed), [false, true, false, true]);
+
+      await assert.rejects(updateMessageProposalsDismissed(owner.id, plan.id, [1, count], false), /Không tìm thấy đề xuất/);
+      assert.equal((await saved())?.proposals[1].dismissed, true, 'vị trí không có thì cả nhóm không đổi');
+      assert.equal((await patch(plan.id, { indexes: [], dismissed: true })).status, 400);
+      assert.equal((await patch(plan.id, { indexes: [0], taskId: ownTaskId })).status, 400, 'tạo nhiệm vụ không đi theo nhóm');
+      assert.equal((await patch(plan.id, { indexes: [0], dismissed: true }, stranger)).status, 404);
     });
 
     it('người khác, tin hỏi, thẻ không có, thiếu Origin đều bị từ chối', async () => {

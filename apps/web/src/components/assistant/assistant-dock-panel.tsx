@@ -47,6 +47,7 @@ export interface AssistantDockPanelProps {
   /** Mở hộp tạo nhiệm vụ đã điền theo thẻ đề xuất (ADR-010). */
   onOpenProposal: (target: ProposalTarget) => void;
   onDismissProposal: (replyKey: string, index: number, dismissed: boolean) => void;
+  onDismissProposals: (replyKey: string, indexes: number[], dismissed: boolean) => void;
   /** "Tạo tất cả" trên thẻ danh sách đề xuất. */
   onCreateProposals: (items: ProposalTarget[]) => void;
   onStop: () => void;
@@ -85,6 +86,7 @@ export function AssistantDockPanel({
   onReplaceLast,
   onOpenProposal,
   onDismissProposal,
+  onDismissProposals,
   onCreateProposals,
   onStop,
   sendError,
@@ -189,6 +191,7 @@ export function AssistantDockPanel({
           onEditQuestion={(text) => onReplaceLast(text)}
           onOpenProposal={onOpenProposal}
           onDismissProposal={onDismissProposal}
+          onDismissProposals={onDismissProposals}
           onCreateProposals={onCreateProposals}
           onNewChat={onNewChat}
           listRef={listRef}

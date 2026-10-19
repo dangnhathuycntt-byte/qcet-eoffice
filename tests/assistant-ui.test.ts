@@ -431,9 +431,15 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
       assert.ok(read(`apps/web/src/components/assistant/${file}`).includes("onDismissProposal={chat.proposalDismissed}"), file);
     }
     assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onDismissProposal={onDismissProposal}"));
+    // Bỏ qua/Hoàn tác của thẻ danh sách: một request cho cả nhóm ở cả hai nơi (giới hạn ghi 60 request/phút)
+    for (const file of ["assistant-dock.tsx", "assistant-workspace.tsx"]) {
+      assert.ok(read(`apps/web/src/components/assistant/${file}`).includes("onDismissProposals={chat.proposalsDismissed}"), file);
+    }
+    assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onDismissProposals={onDismissProposals}"));
     const chatHook = read("apps/web/src/components/assistant/use-assistant-chat.ts");
     assert.ok(chatHook.includes("saveProposal(replyKey, { index, taskId: task.id }") && chatHook.includes("saveProposal(replyKey, { index, dismissed }"));
     assert.ok(chatHook.includes("setThread((prev) => setProposalDismissed(prev, replyKey, index, !dismissed))"), "lưu lỗi thì hoàn lại");
+    assert.ok(chatHook.includes("saveProposal(replyKey, { indexes, dismissed }"), "cả nhóm một lần lưu");
     // Tên do mô hình đặt cập nhật thanh đầu (đúng cuộc đang mở) và danh sách
     assert.ok(chatHook.includes('if (event.type === "title") {') && chatHook.includes("if (activeIdRef.current === event.conversation.id) setActiveTitle(event.conversation.title);"));
     assert.ok(launcher.includes("notifyCard({ id: task.id, code: task.code ?? null });\n          return;"), "mở từ thẻ: báo cho thẻ, không thêm toast trùng");
