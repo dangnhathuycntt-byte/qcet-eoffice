@@ -29,7 +29,7 @@ import {
   useNow,
 } from "@/components/inbox/inbox-row";
 import { archiveNotificationsRequest, setNotificationReadRequest } from "@/components/inbox/notification-actions";
-import { popoverVariants } from "@/lib/motion/variants";
+import { edgePanelVariants } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
 import { mapDbNotification, type NotificationTriageTab, type QCETNotification } from "@qcet/shared/lib/notification-triage";
 import {
@@ -75,6 +75,35 @@ const DEFAULT_FILTER: PanelFilter = { read: "all", category: "all" };
 /** Menu của khung nằm trên khung (khung z-40, menu mặc định z-30). */
 const PANEL_MENU_LAYER = "z-50";
 
+/** Hàng đang chọn trong danh sách của trang /inbox (nút Hộp thư ở đó đưa focus vào danh sách thay vì mở khung chồng lên). */
+const PAGE_LIST_ROW = '[data-slot="inbox-list-pane"] [role="option"][tabindex="0"]';
+
+interface PanelFrame {
+  left: number;
+  top: number;
+  bottom: string;
+}
+
+/**
+ * Khung trùng thẻ trang: mép trái và mép trên lấy từ `#main-content` (trang có thanh trên như Lịch thì thẻ bắt đầu thấp hơn),
+ * đáy là lề 8px cộng phần chừa cho thanh dưới (`--app-statusbar` đặt ở vỏ app; khung portal ra body nên đọc qua thẻ trang).
+ * Khung lùi vào đúng bề dày viền thẻ: viền 1px của `shadow-menu` (vẽ phía ngoài) đè lên viền thẻ, nên đường kẻ dưới tiêu đề
+ * khung thẳng hàng với tiêu đề trang.
+ */
+function readPanelFrame(fallbackLeft: number): PanelFrame {
+  const main = document.getElementById("main-content");
+  if (!main) return { left: fallbackLeft, top: 8, bottom: "8px" };
+  const rect = main.getBoundingClientRect();
+  const style = getComputedStyle(main);
+  const edge = (side: "Left" | "Top" | "Bottom") => parseFloat(style[`border${side}Width`]) || 0;
+  const reserve = style.getPropertyValue("--app-statusbar").trim() || "0px";
+  return {
+    left: rect.left + edge("Left"),
+    top: Math.min(Math.max(rect.top, 8), 120) + edge("Top"),
+    bottom: `calc(${8 + edge("Bottom")}px + ${reserve})`,
+  };
+}
+
 function readStoredFilter(): PanelFilter {
   try {
     const raw = JSON.parse(window.localStorage.getItem(FILTER_STORAGE_KEY) ?? "null");
@@ -113,7 +142,9 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
   const badge = formatUnreadBadge(unreadCount);
 
   const [open, setOpen] = React.useState(false);
+  const [frame, setFrame] = React.useState<PanelFrame | null>(null);
   const [mounted, setMounted] = React.useState(false);
+  const onInboxPage = pathname === "/inbox";
   React.useEffect(() => setMounted(true), []);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -158,15 +189,25 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
     if (restoreFocus) triggerRef.current?.focus();
   }, []);
 
+  // Đang ở trang Hộp thư thì không mở khung chồng lên danh sách của trang: đưa focus vào danh sách đó
+  const openPanel = React.useCallback(() => {
+    if (onInboxPage) {
+      document.querySelector<HTMLElement>(PAGE_LIST_ROW)?.focus();
+      return;
+    }
+    setFrame(readPanelFrame(sidebarWidth));
+    setOpen(true);
+  }, [onInboxPage, sidebarWidth]);
+
   // Phím tắt hoặc nơi khác yêu cầu mở Hộp thư: điện thoại không có sidebar nên sang trang /inbox
   React.useEffect(() => {
     const onOpen = () => {
-      if (window.matchMedia("(min-width: 768px)").matches) setOpen(true);
+      if (window.matchMedia("(min-width: 768px)").matches) openPanel();
       else router.push("/inbox");
     };
     window.addEventListener(OPEN_INBOX_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_INBOX_EVENT, onOpen);
-  }, [router]);
+  }, [router, openPanel]);
 
   // Khung không chặn trang (như Notion): Esc hoặc bấm ra ngoài thì đóng. Menu của khung nằm ở portal riêng nên không tính là ngoài.
   React.useEffect(() => {
@@ -210,13 +251,14 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
             variant="ghost"
             size="icon-sm"
             aria-label={label}
-            aria-haspopup="dialog"
-            aria-expanded={open}
+            aria-haspopup={onInboxPage ? undefined : "dialog"}
+            aria-expanded={onInboxPage ? undefined : open}
             aria-controls={open ? "sidebar-inbox-panel" : undefined}
-            onClick={() => setOpen((prev) => !prev)}
+            aria-current={onInboxPage ? "page" : undefined}
+            onClick={() => (open ? close(false) : openPanel())}
             className={cn(
               "relative shrink-0 text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
-              open && "bg-sidebar-accent text-foreground"
+              (open || onInboxPage) && "bg-sidebar-accent text-foreground"
             )}
           >
             <IconSidebarMail />
@@ -235,7 +277,10 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
         </TooltipContent>
       </Tooltip>
 
-      {/* Portal ra body: sidebar là lớp fixed z-40 riêng nên khung đặt bên trong sẽ bị thanh công cụ dính của trang đè */}
+      {/* Portal ra body: sidebar là lớp fixed z-40 riêng nên khung đặt bên trong sẽ bị thanh công cụ dính của trang đè.
+          Khung trùng khít mép trái, mép trên và đáy thẻ trang, cùng bo 16px và nền thẻ, nên đọc như một tấm trượt ra từ thanh
+          bên trên chính trang (như Inbox của Notion) chứ không phải một hộp nổi lệch khung; bóng `shadow-menu` (viền mảnh + bóng
+          nhẹ) tách khung khỏi nội dung phía sau. */}
       {mounted &&
         createPortal(
           <AnimatePresence>
@@ -246,12 +291,12 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
                 id="sidebar-inbox-panel"
                 role="dialog"
                 aria-label="Hộp thư"
-                variants={popoverVariants}
+                variants={edgePanelVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"
-                style={{ left: sidebarWidth + 8 }}
-                className="fixed bottom-2 top-2 z-40 hidden w-96 flex-col overflow-hidden rounded-xl border border-border/70 bg-popover text-foreground shadow-dialog outline-none md:flex"
+                style={{ left: frame?.left ?? sidebarWidth, top: frame?.top ?? 8, bottom: frame?.bottom ?? "8px" }}
+                className="fixed z-40 hidden w-96 flex-col overflow-hidden rounded-2xl bg-card text-foreground shadow-menu outline-none md:flex"
               >
                 <InboxPanelBody
                   onUnreadCount={syncUnread}
@@ -511,8 +556,9 @@ function InboxPanelBody({
 
   return (
     <>
-      <div className="flex h-11 shrink-0 items-center gap-1 pl-4 pr-2">
-        <h2 className="min-w-0 flex-1 truncate text-compact font-semibold">Hộp thư</h2>
+      {/* Tiêu đề như tiêu đề trang (cao 44px, đường kẻ dưới, chữ 13px đậm vừa) để khung cùng nhịp với trang phía sau */}
+      <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 pl-4 pr-2">
+        <h2 className="min-w-0 flex-1 truncate text-compact font-medium text-foreground">Hộp thư</h2>
         <MenuRoot>
           <MenuTrigger
             render={
@@ -556,7 +602,7 @@ function InboxPanelBody({
         </MenuRoot>
       </div>
 
-      <Tabs value={filter.read} onValueChange={(value) => changeFilter({ read: value as ReadFilter })} className="shrink-0 px-3 pb-2">
+      <Tabs value={filter.read} onValueChange={(value) => changeFilter({ read: value as ReadFilter })} className="shrink-0 px-4 py-2">
         <TabsList variant="pill" size="sm" aria-label="Chế độ xem hộp thư">
           {READ_TABS.map((tab) => (
             <TabsTrigger key={tab.id} value={tab.id} className="flex-none">
@@ -567,7 +613,7 @@ function InboxPanelBody({
         </TabsList>
       </Tabs>
 
-      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2 thin-scrollbar" aria-busy={status === "loading"}>
+      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-2 pb-2 thin-scrollbar" aria-busy={status === "loading"}>
         {status === "loading" ? (
           <div className="space-y-1 px-1.5 pt-1" aria-hidden>
             {Array.from({ length: 6 }, (_, i) => (
@@ -607,7 +653,7 @@ function InboxPanelBody({
           <div role="listbox" aria-label={archivedView ? "Thông báo đã lưu trữ" : "Thông báo"}>
             {sections.map((section) => (
               <div key={section.bucket} role="group" aria-label={NOTIFICATION_TIME_BUCKET_LABELS[section.bucket]}>
-                <p aria-hidden className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground">
+                <p aria-hidden className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
                   {NOTIFICATION_TIME_BUCKET_LABELS[section.bucket]}
                 </p>
                 <AnimatePresence initial={false}>
@@ -617,6 +663,7 @@ function InboxPanelBody({
                     return (
                       <m.div
                         key={n.id}
+                        role="presentation"
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.16, ease: "easeOut" }}
                         className="overflow-hidden"

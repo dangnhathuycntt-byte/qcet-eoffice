@@ -70,6 +70,7 @@ The following historical matrix accounts for the 43 HTTP method handlers recorde
 | `/api/notifications` | `GET` | Cookie (`qcet_session`) | Any Authenticated | Strict user (`userId = session.id`) | Query params (`unreadOnly`, `category`, `limit`) | None | DB findMany notifications, count unread |
 | `/api/notifications` | `PATCH` | Cookie (`qcet_session`) | Any Authenticated | Strict user (`userId = session.id`) | None | None | DB updateMany setting `isRead: true`, `readAt: now` |
 | `/api/notifications/[id]/read` | `PATCH` | Cookie (`qcet_session`) | Any Authenticated | Strict ownership (`existing.userId === session.id`) | Route param `id` | None | DB update setting `isRead: true`, `readAt: now` |
+| `/api/notifications/archive` | `POST` | Cookie (`qcet_session`) | Any Authenticated | Strict user (`userId = session.id` trong mọi điều kiện) | Body `{ids, archived}` hoặc `{scope: read\|all}` (Zod) | CSRF, MUTATION | DB updateMany `archivedAt` (lưu trữ kèm `isRead: true`); trả `count`, `unreadCount` |
 | `/api/notifications/push/key` | `GET` | None | Public | N/A | None | None | Reads VAPID public key from env |
 | `/api/notifications/push/subscribe` | `GET` | None | Public | N/A | None | None | Duplicate of `/api/notifications/push/key` |
 | `/api/notifications/push/subscribe` | `POST` | Cookie (`qcet_session`) | Any Authenticated | Strict user (`userId = session.id`) | Manual JSON parsing | None | DB upsert into `PushSubscription` |

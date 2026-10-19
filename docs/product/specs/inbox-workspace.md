@@ -173,6 +173,13 @@ Tất cả  Chưa đọc [số server]  [Lọc]   | [Sự kiện • Người g�
 - Lỗi: “Không thể cập nhật trạng thái đã đọc. Vui lòng thử lại.” Khôi phục chấm unread/count và giữ lựa chọn. Lỗi 401 chuyển đăng nhập; 403 không vòng lặp đăng nhập hay biến thành empty.
 - Mọi request giữ auth, CSRF, rate limit, quyền sở hữu notification và quyền đọc đối tượng. Không dùng role/scope client để mở rộng tập dữ liệu.
 
+### 5.4. Lưu trữ (20/10/2026, như Notion)
+
+- Cột `notifications.archived_at` (null = còn trong Hộp thư). `GET /api/notifications` mặc định bỏ thông báo đã lưu trữ; `?archived=true` chỉ trả thông báo đã lưu trữ. `unreadCount` chỉ tính thông báo còn trong Hộp thư. `GET /api/notifications/:id` vẫn mở được thông báo đã lưu trữ (liên kết sâu).
+- `POST /api/notifications/archive` thân `{ ids (1–100), archived }` hoặc `{ scope: "read" | "all" }`; mọi điều kiện kèm `userId` của người gọi (mã của người khác đếm 0); trả `count` và `unreadCount`. Lưu trữ thì đánh dấu đã đọc (giữ `readAt` cũ), đưa về chỉ xóa `archived_at`.
+- Gộp thông báo cùng loại trong 5 phút bỏ qua thông báo đã lưu trữ, để người nhận đã dọn thì lần mới vẫn được báo.
+- Giao diện: khung nổi có tab Tất cả / Chưa đọc / Đã lưu trữ; trang `/inbox` có bộ lọc `filter=archived`. Trên hàng: nút đọc/chưa đọc (phím U) và lưu trữ/đưa về (phím E), toast có Hoàn tác 6 giây; menu "…" có Lưu trữ thông báo đã đọc / Lưu trữ tất cả.
+
 ## 6. Ma trận trạng thái
 
 | Điều kiện | Hiển thị | Thao tác |
