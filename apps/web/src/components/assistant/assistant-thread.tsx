@@ -182,16 +182,25 @@ export function AssistantThread({
 
 /**
  * Tin người dùng: bong bóng xám căn phải, tối đa 80% cột. Câu hỏi cuối có nút sửa (hiện khi rê chuột, luôn hiện trên
- * điện thoại) như ChatGPT và Claude: sửa ngay trong bong bóng, Enter gửi (thay câu trả lời cũ), Esc hủy.
+ * điện thoại) như ChatGPT và Claude: sửa ngay tại chỗ trong ô rộng hết cột, con trỏ đặt cuối câu, Enter gửi (thay câu trả
+ * lời cũ), Esc hủy. Bộ đếm ký tự chỉ hiện khi gần hết chỗ, như ô soạn; chưa đổi gì thì chưa gửi được.
  */
 function UserTurn({ message, onEdit }: { message: ThreadMessage; onEdit?: (text: string) => void }) {
   const [editing, setEditing] = React.useState(false);
   const [text, setText] = React.useState(message.content);
+  const editRef = React.useRef<HTMLTextAreaElement>(null);
+  React.useLayoutEffect(() => {
+    const el = editRef.current;
+    if (!editing || !el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [editing]);
+  const next = text.trim();
+  const changed = next.length > 0 && next !== message.content;
   const submit = () => {
-    const next = text.trim();
-    if (!next || !onEdit) return;
+    if (!changed || !onEdit) return;
     setEditing(false);
-    if (next !== message.content) onEdit(next);
+    onEdit(next);
   };
   return (
     <div className={cn("group/question flex flex-col items-end gap-1.5", ENTER_MOTION)}>
@@ -201,14 +210,15 @@ function UserTurn({ message, onEdit }: { message: ThreadMessage; onEdit?: (text:
         ? message.attachments.map((attachment) => <AttachmentCard key={attachment.id} attachment={attachment} />)
         : message.storedAttachments?.map((attachment) => <StoredAttachmentCard key={attachment.id} attachment={attachment} />)}
       {editing && onEdit ? (
-        <div className="flex w-full max-w-[80%] flex-col gap-2 rounded-2xl bg-muted p-2">
+        <div className="flex w-full flex-col gap-1 rounded-2xl bg-muted p-2">
           <Textarea
+            ref={editRef}
             compact
             autoResize
-            autoFocus
             rows={1}
             value={text}
             maxLength={ASSISTANT_MESSAGE_MAX}
+            countOnlyNearLimit
             aria-label="Sửa câu hỏi"
             onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
@@ -224,11 +234,13 @@ function UserTurn({ message, onEdit }: { message: ThreadMessage; onEdit?: (text:
             }}
             className="max-h-60 overflow-y-auto bg-transparent px-1.5 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
           />
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="pill-xs" onClick={() => setEditing(false)}>
+          {/* Gửi lại thay cặp hỏi–đáp cũ (không giữ nhánh như ChatGPT): nói trước để người dùng không bất ngờ */}
+          <div className="flex min-w-0 items-center gap-2 pl-1.5">
+            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">Gửi sẽ thay câu trả lời bên dưới</p>
+            <Button variant="ghost" size="pill-xs" className="shrink-0" onClick={() => setEditing(false)}>
               Hủy
             </Button>
-            <Button size="pill-xs" onClick={submit} disabled={!text.trim()}>
+            <Button size="pill-xs" className="shrink-0" onClick={submit} disabled={!changed}>
               Gửi
             </Button>
           </div>
