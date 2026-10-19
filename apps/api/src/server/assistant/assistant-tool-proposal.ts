@@ -37,6 +37,12 @@ export const ProposeTaskArgs = z
   .strict();
 export type ProposeTaskInput = z.infer<typeof ProposeTaskArgs>;
 
+/**
+ * Số lời gọi propose_task nên có trong một lần trả lời: kế hoạch dài chia nhiều vòng cho mỗi vòng ngắn, xa trần thời
+ * gian của vòng (chạy thật 19/10/2026: Opus 4.6 phát cả 48 lời gọi trong một vòng, 184 giây), thẻ cũng hiện dần.
+ */
+export const PROPOSALS_PER_REPLY = 16;
+
 export const PROPOSE_TASK_DESCRIPTION =
   "Soạn đề xuất MỘT nhiệm vụ mới (có thể kèm việc con) khi Thầy/Cô muốn tạo nhiệm vụ hoặc giao việc mới. Công cụ không " +
   "tạo gì: giao diện hiện thẻ đề xuất, Thầy/Cô mở hộp tạo nhiệm vụ đã điền sẵn, xem lại và tự bấm Tạo. title ngắn, bắt " +
@@ -48,7 +54,8 @@ export const PROPOSE_TASK_DESCRIPTION =
   "bản hay tệp; title việc con bắt đầu bằng động từ), trừ khi nhiệm vụ chỉ là một việc đơn lẻ hoặc Thầy/Cô bảo không chia. " +
   "Hạn và người nhận của việc con chỉ điền khi Thầy/Cô hay văn bản nêu cho đúng việc con đó, không tự chia mốc từ hạn " +
   "nhiệm vụ; có hạn thì không sau hạn nhiệm vụ. " +
-  `Kế hoạch hay danh sách nhiều nhiệm vụ: gọi công cụ này cho từng nhiệm vụ, gọi liên tiếp (nhiều lần trong một lượt, tối đa ${ASSISTANT_MAX_PROPOSALS_PER_TURN}) đến khi đủ. ` +
+  `Kế hoạch hay danh sách nhiều nhiệm vụ: gọi công cụ này cho từng nhiệm vụ, gọi liên tiếp (nhiều lần trong một lượt, tối đa ${ASSISTANT_MAX_PROPOSALS_PER_TURN}) đến khi đủ; ` +
+  `mỗi lần trả lời gọi tối đa ${PROPOSALS_PER_REPLY} lần, còn thì nhận kết quả rồi gọi tiếp phần sau. ` +
   "Mỗi đầu việc (mục đánh số, gạch đầu dòng) của kế hoạch là một nhiệm vụ riêng, không gộp các đầu việc của một tháng " +
   "hay giai đoạn thành việc con; title giữ đúng ý đầu việc, đầu việc lặp lại qua các tháng (công việc thường xuyên) thì " +
   "thêm tháng vào title cho khỏi trùng. dueDate là hạn ghi cho tháng, giai đoạn chứa đầu việc; leadAssigneeName là người " +

@@ -37,7 +37,7 @@ Người dùng muốn Trợ lý "tạo nhiệm vụ các kiểu". ADR-009 giữ 
 - Người cùng tên ở đơn vị khác đơn vị đang chọn không khớp; đổi đơn vị trong hộp không khớp lại tên.
 - Nội dung đề xuất (tiêu đề, mô tả, tên người hỏi nêu) nằm trong CSDL cùng tin trả lời, theo hạn lưu 90 ngày của cuộc.
 - Lưu trạng thái thẻ khóa dòng tin (`SELECT … FOR UPDATE`) trước khi đọc rồi ghi cả mảng, nên "Tạo tất cả" lưu nhiều thẻ liền nhau không ghi đè nhau (trước 19/10/2026 không khóa).
-- Lượt soạn kế hoạch dài: chạy thật 19/10/2026 với `claude-opus-4.6` mất 122 giây cho 12 đề xuất kèm 48 việc con và 184 giây cho 48 đề xuất, gần trần 300 giây của lượt. Mô hình vẫn viết một câu dẫn trước khi gọi công cụ.
+- Lượt soạn kế hoạch dài: chạy thật 19/10/2026 với `claude-opus-4.6` mất 122 giây cho 12 đề xuất kèm 48 việc con và 184 giây cho 48 đề xuất phát hết trong một vòng (sát trần 180 giây của vòng; quá giờ thì mất cả vòng). Mô tả công cụ nay dặn mỗi lần trả lời gọi tối đa 16 đề xuất (`PROPOSALS_PER_REPLY`): lần chạy sau ra 16 → 32 → 48 qua ba vòng, tổng 209 giây, vòng dài nhất khoảng 150 giây (chủ yếu suy nghĩ ở vòng đầu), thẻ hiện dần. Kế hoạch gần 60 đầu việc có thể chạm trần 300 giây của lượt.
 - Mô hình đôi khi nói một câu dẫn trước khi gọi công cụ ("Tôi sẽ soạn…"), như với các công cụ đọc. Prompt đã dặn không viết, nhưng sonnet-4.6 vẫn viết ở 2/3 câu thử ngày 18/10/2026; gemini-3.8-flash thì không.
 - Quyền tạo chỉ kiểm lúc bấm Tạo. Người không có quyền tạo ở đơn vị đang chọn vẫn thấy thẻ và hộp điền sẵn, rồi mới nhận lỗi của `POST /api/tasks` trong hộp.
 
