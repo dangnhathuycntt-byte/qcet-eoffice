@@ -387,6 +387,12 @@ export function AssistantDock() {
             setDraft("");
             send(text);
           }}
+          onFollowUp={(prompt) => {
+            if (!canSend) return;
+            stickToBottomRef.current = true;
+            // Câu gợi ý có sẵn: không lấy tệp đang chờ ở ô soạn
+            void chat.send(prompt, restoreDraft, []);
+          }}
           onRetry={(replyKey) => {
             if (!canSend) return;
             // Gửi lại cả tệp của câu hỏi đó (còn trong phiên); tệp đang chờ ở ô soạn giữ nguyên

@@ -3,6 +3,7 @@
  * vào một lượt trả lời và quyết định phím gửi. Không React, không gọi mạng nên kiểm bằng test thường.
  */
 import {
+  ASSISTANT_MAX_PROPOSALS_PER_TURN,
   AssistantContextRefSchema,
   type AssistantAttachmentDTO,
   type AssistantContextRef,
@@ -302,6 +303,39 @@ export function retryMissesAttachments(question: ThreadMessage, reply: ThreadMes
     !question.storedAttachments?.length &&
     Boolean(reply?.steps.some((step) => step.tool === "attachment"))
   );
+}
+
+export interface FollowUpSuggestion {
+  label: string;
+  /** Câu gửi cho Trợ lý khi bấm. */
+  prompt: string;
+}
+
+/**
+ * Gợi ý bước tiếp theo dưới tin trả lời cuối, như "what to ask next" của mẫu Streaming answer (Halaska UI) và "Continue"
+ * sau khi dừng của DeepSeek (Northbase: dừng là một trạng thái, giữ phần đã có và cho làm tiếp). Chỉ suy từ trạng thái
+ * lượt, không do mô hình nghĩ ra, tối đa một gợi ý:
+ * - lượt soạn đề xuất chưa xong (chạm trần một lượt, bị dừng hay lỗi giữa chừng): soạn tiếp phần còn lại;
+ * - lượt bị dừng khi đang viết: viết tiếp;
+ * - câu hỏi kèm tệp, trả lời xong mà chưa soạn đề xuất nào: soạn nhiệm vụ từ tệp đó.
+ */
+export function followUpSuggestions(
+  question: ThreadMessage | null,
+  reply: ThreadMessage,
+  maxProposals: number = ASSISTANT_MAX_PROPOSALS_PER_TURN,
+): FollowUpSuggestion[] {
+  const proposals = reply.proposals?.length ?? 0;
+  if (proposals > 0 && (proposals >= maxProposals || reply.status === "aborted" || reply.status === "error")) {
+    return [{ label: "Soạn tiếp phần còn lại", prompt: "Soạn tiếp các đầu việc còn lại" }];
+  }
+  if (reply.status === "aborted" && reply.content.trim()) {
+    return [{ label: "Tiếp tục", prompt: "Tiếp tục phần trả lời đang dở" }];
+  }
+  const withFiles = Boolean(question?.attachments?.length || question?.storedAttachments?.length);
+  if (reply.status === "complete" && proposals === 0 && withFiles) {
+    return [{ label: "Soạn nhiệm vụ từ tệp này", prompt: "Soạn nhiệm vụ cho các việc cần làm trong tệp đính kèm" }];
+  }
+  return [];
 }
 
 /** Tin hỏi ngay trước một tin trả lời, để "Thử lại" gửi lại đúng câu đó cùng tệp đã gửi trong phiên. */

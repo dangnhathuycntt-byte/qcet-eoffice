@@ -12,7 +12,15 @@ import { Button } from "@/components/ui/button";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { cn } from "@/lib/utils";
-import { ASSISTANT_NO_ANSWER_MESSAGE, formatDurationVi, type ProposalTarget, type ThreadMessage } from "@/components/assistant/assistant-model";
+import {
+  ASSISTANT_NO_ANSWER_MESSAGE,
+  followUpSuggestions,
+  formatDurationVi,
+  questionMessageBefore,
+  type FollowUpSuggestion,
+  type ProposalTarget,
+  type ThreadMessage,
+} from "@/components/assistant/assistant-model";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
 import { AssistantProposalList, AssistantTaskProposalCard, PROPOSAL_LIST_MIN } from "@/components/assistant/assistant-task-proposal-card";
 
@@ -39,6 +47,8 @@ export interface AssistantThreadProps {
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
   /** "Tạo tất cả" trên thẻ danh sách (từ PROPOSAL_LIST_MIN đề xuất): mở hộp tạo các đề xuất còn chờ của tin đó. */
   onCreateProposals?: (items: ProposalTarget[]) => void;
+  /** Gửi câu của gợi ý bước tiếp theo dưới tin trả lời cuối; không truyền thì không có gợi ý. */
+  onFollowUp?: (prompt: string) => void;
 }
 
 export type { ProposalTarget } from "@/components/assistant/assistant-model";
@@ -78,6 +88,7 @@ export function AssistantThread({
   onOpenProposal,
   onDismissProposal,
   onCreateProposals,
+  onFollowUp,
 }: AssistantThreadProps) {
   const [awayFromBottom, setAwayFromBottom] = React.useState(false);
   const handleScroll = () => {
@@ -118,7 +129,7 @@ export function AssistantThread({
           </div>
         ) : null}
 
-        {thread.map((message) =>
+        {thread.map((message, index) =>
           message.role === "user" ? (
             <UserTurn key={message.key} message={message} />
           ) : (
@@ -130,6 +141,13 @@ export function AssistantThread({
               onOpenProposal={onOpenProposal}
               onDismissProposal={onDismissProposal}
               onCreateProposals={onCreateProposals}
+              // Gợi ý chỉ dưới tin cuối và khi không có lượt nào đang chạy
+              followUps={
+                onFollowUp && !pending && index === thread.length - 1
+                  ? followUpSuggestions(questionMessageBefore(thread, message.key), message)
+                  : undefined
+              }
+              onFollowUp={onFollowUp}
             />
           ),
         )}
@@ -190,6 +208,8 @@ function ReplyTurn({
   onOpenProposal,
   onDismissProposal,
   onCreateProposals,
+  followUps,
+  onFollowUp,
 }: {
   message: ThreadMessage;
   onRetry: () => void;
@@ -197,6 +217,8 @@ function ReplyTurn({
   onOpenProposal?: (target: ProposalTarget) => void;
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
   onCreateProposals?: (items: ProposalTarget[]) => void;
+  followUps?: FollowUpSuggestion[];
+  onFollowUp?: (prompt: string) => void;
 }) {
   const streaming = message.status === "streaming";
   // Chữ hiện dần kể cả khi gateway gửi cả cục; tin mở từ lịch sử hiện ngay
@@ -298,6 +320,16 @@ function ReplyTurn({
         >
           {message.errorMessage ?? ASSISTANT_NO_ANSWER_MESSAGE}
         </InlineAlert>
+      ) : null}
+
+      {settled && followUps?.length && onFollowUp ? (
+        <div className="flex flex-wrap gap-2" aria-label="Gợi ý tiếp theo" role="group">
+          {followUps.map((item) => (
+            <Button key={item.prompt} variant="toolbar" size="pill" onClick={() => onFollowUp(item.prompt)} className="max-md:h-11">
+              {item.label}
+            </Button>
+          ))}
+        </div>
       ) : null}
 
       {settled && message.content ? (

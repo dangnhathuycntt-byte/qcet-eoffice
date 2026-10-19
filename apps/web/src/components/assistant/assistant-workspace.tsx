@@ -261,6 +261,7 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                   detailStatus={detailStatus}
                   detailError={chat.detailError}
                   onRetry={retry}
+                  onFollowUp={suggest}
                   onNewChat={newChat}
                   listRef={listRef}
                   onScroll={onThreadScroll}

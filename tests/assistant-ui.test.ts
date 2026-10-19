@@ -21,6 +21,7 @@ import {
   conversationIdFromPath,
   conversationOutline,
   describeContextTarget,
+  followUpSuggestions,
   formatDurationVi,
   pendingProposals,
   isSendKey,
@@ -1291,5 +1292,52 @@ describe("Trợ lý UI: tiến độ trực tiếp của lượt dài", () => {
     const html = renderThread(done);
     assert.ok(html.includes("Đã soạn đề xuất trong 3 phút 58 giây"));
     assert.equal(html.includes('data-slot="assistant-run-progress"'), false);
+  });
+});
+
+describe("Trợ lý UI: gợi ý bước tiếp theo", () => {
+  const done = (patch: Partial<ThreadMessage>): ThreadMessage => ({ ...streamingThreadMessage("r"), status: "complete", content: "Xong.", ...patch });
+  const question = userThreadMessage("u", "Tóm tắt văn bản");
+  const withFile: ThreadMessage = {
+    ...question,
+    storedAttachments: [{ id: "f1", name: "Ke-hoach.pdf", kind: "pdf", mimeType: "application/pdf", size: 10, url: "/api/x" }],
+  } as ThreadMessage;
+  const proposals = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `Đầu việc ${i + 1}` }));
+
+  test("chỉ suy từ trạng thái lượt: soạn tiếp khi chạm trần hoặc dừng giữa chừng, tiếp tục khi dừng lúc viết, soạn nhiệm vụ từ tệp", () => {
+    assert.deepEqual(followUpSuggestions(question, done({ proposals: proposals(60) })).map((s) => s.label), ["Soạn tiếp phần còn lại"]);
+    assert.deepEqual(followUpSuggestions(question, done({ proposals: proposals(3), status: "aborted" })).map((s) => s.label), ["Soạn tiếp phần còn lại"]);
+    assert.deepEqual(followUpSuggestions(question, done({ proposals: proposals(3), status: "error" })).map((s) => s.label), ["Soạn tiếp phần còn lại"]);
+    assert.deepEqual(followUpSuggestions(question, done({ proposals: proposals(6) })), [], "soạn xong dưới trần thì không gợi ý");
+    assert.deepEqual(followUpSuggestions(question, done({ status: "aborted" })).map((s) => s.label), ["Tiếp tục"]);
+    assert.deepEqual(followUpSuggestions(question, done({ status: "aborted", content: "" })), [], "dừng khi chưa có chữ thì không có gì để tiếp");
+    assert.deepEqual(followUpSuggestions(withFile, done({})).map((s) => s.label), ["Soạn nhiệm vụ từ tệp này"]);
+    assert.deepEqual(followUpSuggestions(withFile, done({ proposals: proposals(2) })), [], "đã soạn từ tệp thì thôi");
+    assert.deepEqual(followUpSuggestions(question, done({})), [], "hỏi đáp thường không có gợi ý");
+  });
+
+  test("gợi ý chỉ hiện dưới tin cuối, không hiện khi đang có lượt chạy; bấm gửi đúng câu", () => {
+    const sent: string[] = [];
+    const render = (thread: ThreadMessage[], pending = false) =>
+      renderToStaticMarkup(
+        React.createElement(AssistantThread, {
+          thread,
+          detailStatus: "ready",
+          detailError: null,
+          onRetry: () => undefined,
+          onNewChat: () => undefined,
+          listRef: { current: null },
+          onScroll: () => undefined,
+          pending,
+          onFollowUp: (prompt: string) => void sent.push(prompt),
+        }),
+      );
+    const older = { ...done({ status: "aborted" }), key: "r-old" };
+    const latest = { ...done({}), key: "r-new" };
+    assert.equal(render([question, older, withFile, latest]).match(/Tiếp tục/g), null, "tin cũ không có gợi ý");
+    assert.ok(render([question, older, withFile, latest]).includes("Soạn nhiệm vụ từ tệp này"));
+    assert.equal(render([withFile, latest], true).includes("Soạn nhiệm vụ từ tệp này"), false);
+    assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes("onFollowUp={suggest}"));
+    assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onFollowUp={onFollowUp}"));
   });
 });
