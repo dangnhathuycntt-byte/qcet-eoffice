@@ -1347,3 +1347,61 @@ describe("Trợ lý UI: gợi ý bước tiếp theo", () => {
     assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onFollowUp={onFollowUp}"));
   });
 });
+
+describe("Trợ lý UI: cột bên là chồng thẻ riêng (Tiến trình, Đề xuất, Tệp, Nguồn)", () => {
+  const step = (tool: "propose_task" | "list_tasks" | "attachment", label: string, ok = true) => ({ tool, label, count: null, ok });
+
+  test("tiến trình: bước soạn đề xuất liền nhau gom một dòng; đang chạy thì dòng cuối là bước đang làm, đếm cả đề xuất đang viết dở", () => {
+    const question = userThreadMessage("u", "Soạn nhiệm vụ theo kế hoạch");
+    let reply = streamingThreadMessage("r", 1_000);
+    assert.deepEqual(conversationOutline([question, reply]).progress?.steps, [{ label: "Suy nghĩ", state: "running" }]);
+
+    reply = reduceAssistantReply(reply, { type: "step", step: step("attachment", "Đọc tệp Ke-hoach.pdf") });
+    reply = reduceAssistantReply(reply, { type: "step", step: step("propose_task", "Soạn đề xuất “A”") });
+    reply = reduceAssistantReply(reply, { type: "step", step: step("propose_task", "Soạn đề xuất “B”") });
+    for (let i = 0; i < 5; i++) reply = reduceAssistantReply(reply, { type: "proposal_started" });
+    assert.deepEqual(conversationOutline([question, reply]).progress?.steps, [
+      { label: "Đọc tệp Ke-hoach.pdf", state: "done" },
+      { label: "Soạn 5 đề xuất", state: "running" },
+    ]);
+
+    reply = reduceAssistantReply(reply, { type: "text", delta: "Tôi đã soạn" });
+    assert.deepEqual(conversationOutline([question, reply]).progress?.steps.at(-1), { label: "Viết câu trả lời", state: "running" });
+
+    reply = reduceAssistantReply(reply, { type: "step", step: step("list_tasks", "Xem việc của Thầy/Cô", false) });
+    reply = reduceAssistantReply(reply, { type: "done", messageId: "m", status: "complete", durationMs: 95_000 });
+    const done = conversationOutline([question, reply]).progress;
+    assert.deepEqual(done?.steps, [
+      { label: "Đọc tệp Ke-hoach.pdf", state: "done" },
+      { label: "Soạn 2 đề xuất", state: "done" },
+      { label: "Xem việc của Thầy/Cô", state: "failed" },
+    ]);
+    assert.equal(done?.durationMs, 95_000);
+    assert.equal(conversationOutline([question, { ...reply, steps: [] }]).progress, null, "trả lời thường không có thẻ tiến trình");
+  });
+
+  test("mỗi loại là một thẻ nổi riêng có tiêu đề bấm thu gọn; thẻ trống không hiện", () => {
+    const question = { ...userThreadMessage("u", "Soạn nhiệm vụ"), storedAttachments: [{ id: "f1", name: "Ke-hoach.pdf", kind: "pdf" as const, size: 2048, url: "/api/f1" }] };
+    const reply: ThreadMessage = {
+      ...reduceAssistantReply(streamingThreadMessage("r"), { type: "step", step: step("propose_task", "Soạn đề xuất “A”") }),
+      status: "complete",
+      content: "Đã soạn.",
+      durationMs: 65_000,
+      proposals: [{ title: "Tuyển sinh đợt 3", dueDate: "2026-10-30" }],
+    };
+    const html = renderToStaticMarkup(
+      React.createElement(AssistantSidePanel, {
+        outline: conversationOutline([question, reply]),
+        onOpenProposal: () => undefined,
+        onCreateProposals: () => undefined,
+      }),
+    );
+    assert.equal((html.match(/data-slot="assistant-rail-card"/g) ?? []).length, 3, "Tiến trình, Đề xuất, Tệp; không có nguồn thì không có thẻ Nguồn");
+    for (const text of ["Tiến trình", "1 phút 5 giây", "Soạn 1 đề xuất", "Đề xuất nhiệm vụ", "0/1 đã tạo", "Tệp", "Ke-hoach.pdf"]) {
+      assert.ok(html.includes(text), text);
+    }
+    assert.equal(html.includes("Nguồn đã dùng"), false);
+    assert.equal((html.match(/aria-expanded="true"/g) ?? []).length, 3, "tiêu đề thẻ là nút thu gọn");
+    assert.ok(/<h2[^>]*><button/.test(html), "nút nằm trong tiêu đề (mẫu disclosure)");
+  });
+});

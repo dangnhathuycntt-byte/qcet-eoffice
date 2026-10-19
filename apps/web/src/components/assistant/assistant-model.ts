@@ -142,8 +142,25 @@ export interface ConversationProposalItem extends ProposalTarget {
   streaming: boolean;
 }
 
+/** Một dòng của thẻ Tiến trình. Bước soạn đề xuất liền nhau gom một dòng ("Soạn 23 đề xuất"). */
+export interface ProgressStep {
+  label: string;
+  state: "done" | "running" | "failed";
+}
+
+/** Tiến trình của lượt trả lời gần nhất có làm việc (đọc dữ liệu, đọc tệp, soạn đề xuất), như thẻ Progress của Claude. */
+export interface ConversationProgress {
+  replyKey: string;
+  status: ThreadMessage["status"];
+  steps: ProgressStep[];
+  startedAt?: number;
+  durationMs: number | null;
+}
+
 /** Những gì cuộc trò chuyện đã sinh ra và dùng tới, cho bảng bên của trang Trợ lý (như Progress/Outputs của Claude). */
 export interface ConversationOutline {
+  /** Lượt trả lời cuối nếu nó có bước làm việc hoặc đang chạy; không thì null. */
+  progress: ConversationProgress | null;
   proposals: ConversationProposalItem[];
   /** Tệp đã lưu của các câu hỏi, theo thứ tự gửi, không trùng. */
   files: AssistantAttachmentDTO[];
@@ -170,7 +187,55 @@ export function conversationOutline(thread: readonly ThreadMessage[]): Conversat
       });
     });
   }
-  return { proposals, files: [...files.values()], sources: dedupeSources(sources) };
+  return { progress: replyProgress(thread), proposals, files: [...files.values()], sources: dedupeSources(sources) };
+}
+
+/**
+ * Các bước của tin trả lời cuối thành dòng của thẻ Tiến trình. Bước soạn đề xuất liền nhau gom một dòng; đang chạy thì
+ * đề xuất mô hình đang viết dở (proposal_started) cũng đếm, dòng cuối là bước đang làm, và khi chữ trả lời đã bắt đầu
+ * thì thêm dòng "Viết câu trả lời". Chưa có bước nào mà đang chạy thì là "Suy nghĩ".
+ */
+function replyProgress(thread: readonly ThreadMessage[]): ConversationProgress | null {
+  const reply = thread[thread.length - 1];
+  if (!reply || reply.role !== "assistant") return null;
+  const streaming = reply.status === "streaming";
+  if (!streaming && reply.steps.length === 0) return null;
+
+  const groups: Array<{ tool: AssistantStep["tool"]; label: string; count: number; ok: boolean }> = [];
+  for (const step of reply.steps) {
+    const last = groups[groups.length - 1];
+    if (step.tool === "propose_task" && last?.tool === "propose_task") {
+      last.count += 1;
+      last.ok ||= step.ok;
+    } else {
+      groups.push({ tool: step.tool, label: step.label, count: 1, ok: step.ok });
+    }
+  }
+  if (streaming) {
+    // Đề xuất đang viết dở chưa có bước: cộng vào dòng soạn cuối, hoặc mở dòng soạn mới
+    const proposeSteps = reply.steps.filter((step) => step.tool === "propose_task").length;
+    const extra = Math.max(0, (reply.proposalsStarted ?? 0) - proposeSteps);
+    const last = groups[groups.length - 1];
+    if (extra > 0 && last?.tool === "propose_task") last.count += extra;
+    else if (extra > 0) groups.push({ tool: "propose_task", label: "", count: extra, ok: true });
+  }
+
+  const steps: ProgressStep[] = groups.map((group) => ({
+    label: group.tool === "propose_task" ? `Soạn ${group.count} đề xuất` : group.label,
+    state: group.ok ? "done" : "failed",
+  }));
+  if (streaming) {
+    if (reply.content.trim()) steps.push({ label: "Viết câu trả lời", state: "running" });
+    else if (steps.length === 0) steps.push({ label: "Suy nghĩ", state: "running" });
+    else steps[steps.length - 1] = { ...steps[steps.length - 1], state: "running" };
+  }
+  return {
+    replyKey: reply.key,
+    status: reply.status,
+    steps,
+    ...(reply.startedAt === undefined ? {} : { startedAt: reply.startedAt }),
+    durationMs: reply.durationMs,
+  };
 }
 
 /** Đề xuất còn chờ tạo: chưa tạo, chưa bỏ qua, lượt đã xong. "Tạo tất cả" chỉ nhận những đề xuất này. */

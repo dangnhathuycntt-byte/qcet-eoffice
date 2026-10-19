@@ -22,6 +22,7 @@ import {
   type ThreadMessage,
 } from "@/components/assistant/assistant-model";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
+import { useElapsedSeconds } from "@/components/assistant/use-elapsed-seconds";
 import { AssistantProposalList, AssistantTaskProposalCard, PROPOSAL_LIST_MIN } from "@/components/assistant/assistant-task-proposal-card";
 
 const MAX_SHOWN_SOURCES = 6;
@@ -57,18 +58,6 @@ export type { ProposalTarget } from "@/components/assistant/assistant-model";
 const SCROLL_BUTTON_OFFSET = 160;
 /** Lượt chạy quá chừng này (giây) mới hiện đồng hồ, để câu trả lời nhanh không nhấp nháy "1 giây, 2 giây". */
 const SHOW_ELAPSED_AFTER_SECONDS = 5;
-
-/** Số giây từ `startedAt` tới giờ, cập nhật mỗi giây khi `active`; không chạy thì null. */
-function useElapsedSeconds(startedAt: number | undefined, active: boolean): number | null {
-  const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => {
-    if (!active || startedAt === undefined) return;
-    setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [active, startedAt]);
-  return active && startedAt !== undefined ? Math.max(0, Math.floor((now - startedAt) / 1000)) : null;
-}
 
 /**
  * Cột tin của cuộc đang mở: cuộn được, căn giữa, rộng tối đa 720px. Màn đầu (chưa có tin) do khung cha lo. Kéo lên đọc
