@@ -140,28 +140,6 @@ export function AssistantHeader({
           <IconSidebarCompose className="size-4" />
         </Button>
 
-        {sidePanel ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="toolbar"
-                size="icon-md"
-                onClick={sidePanel.onToggle}
-                aria-label={`${sidePanel.open ? "Ẩn cột bên" : "Hiện cột bên"}${sidePanel.progress ? `: ${sidePanel.progress}` : ""}`}
-                aria-pressed={sidePanel.open}
-                // Nút tròn nền trắng viền mảnh như nút panel của Linear; đang mở thể hiện bằng khối đặc trong icon
-                className={cn("rounded-full max-xl:hidden", sidePanel.open ? "text-foreground" : "text-muted-foreground")}
-              >
-                <IconSidebarPanelRight size={14} active={sidePanel.open} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="end" sideOffset={6}>
-              {sidePanel.open ? "Ẩn cột bên" : "Hiện cột bên"}
-              {sidePanel.progress ? ` · ${sidePanel.progress}` : ""}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
-
         {activeId !== null && !renaming ? (
           // Khi đổi tên, menu này rời khỏi cây giao diện để tiêu điểm không quay lại nút "…" và cướp ô đổi tên
           <MenuRoot modal={false}>
@@ -180,6 +158,28 @@ export function AssistantHeader({
               </MenuActionItem>
             </MenuContent>
           </MenuRoot>
+        ) : null}
+
+        {sidePanel ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-md"
+                onClick={sidePanel.onToggle}
+                aria-label={`${sidePanel.open ? "Ẩn cột bên" : "Hiện cột bên"}${sidePanel.progress ? `: ${sidePanel.progress}` : ""}`}
+                aria-pressed={sidePanel.open}
+                // Đang mở thể hiện bằng khối đặc trong icon, không thêm nền; nằm sát mép phải, sau "…" (người dùng yêu cầu 19/10/2026)
+                className={cn("max-xl:hidden", sidePanel.open && "text-foreground")}
+              >
+                <IconSidebarPanelRight size={14} active={sidePanel.open} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="end" sideOffset={6}>
+              {sidePanel.open ? "Ẩn cột bên" : "Hiện cột bên"}
+              {sidePanel.progress ? ` · ${sidePanel.progress}` : ""}
+            </TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
     </header>
