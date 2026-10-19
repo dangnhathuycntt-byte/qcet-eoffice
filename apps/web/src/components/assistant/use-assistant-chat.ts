@@ -361,6 +361,13 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   };
 
   /**
+   * Tệp của câu hỏi sinh ra tin trả lời `replyKey`, để "Xem lại và tạo" mang theo vào hộp tạo việc. Chỉ còn trong phiên
+   * (máy chủ không lưu tệp); trả bản `File` gốc, không chia sẻ ảnh xem trước của luồng chat.
+   */
+  const filesForReply = (replyKey: string): File[] =>
+    (questionMessageBefore(thread, replyKey)?.attachments ?? []).map((attachment) => attachment.file);
+
+  /**
    * Lưu trạng thái thẻ đề xuất ở máy chủ để thoát ra vào lại vẫn còn (như ChatGPT); giao diện đã đổi trước. Tin trả lời
    * lỗi không có mã thì thẻ chỉ còn trong phiên.
    */
@@ -417,6 +424,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     clearAttachments,
     send,
     retry,
+    filesForReply,
     proposalCreated,
     proposalDismissed,
     stop,

@@ -17,8 +17,15 @@ const CreateTaskModal = dynamic(() => import("@/components/tasks/create/create-t
  * lần bấm đầu rồi giữ lại để đóng còn hiệu ứng.
  */
 export function useCreateTaskLauncher(): {
-  /** `onCreated` báo nhiệm vụ vừa tạo cho nơi mở (thẻ đề xuất chuyển sang "Đã tạo"). */
-  openCreateTask: (proposal?: AssistantTaskProposal, onCreated?: (task: { id: string; code: string | null }) => void) => void;
+  /**
+   * `onCreated` báo nhiệm vụ vừa tạo cho nơi mở (thẻ đề xuất chuyển sang "Đã tạo"). `files`: tệp của lượt hỏi sinh ra đề
+   * xuất, hộp đính kèm vào mô tả và đưa vào ô soạn của Agent để giữ ngữ cảnh.
+   */
+  openCreateTask: (
+    proposal?: AssistantTaskProposal,
+    onCreated?: (task: { id: string; code: string | null }) => void,
+    files?: File[],
+  ) => void;
   createTaskModal: React.ReactNode;
 } {
   const router = useRouter();
@@ -27,10 +34,12 @@ export function useCreateTaskLauncher(): {
   const [createTaskMounted, setCreateTaskMounted] = React.useState(false);
   // Đề xuất đang mở; đặt cùng lượt render với lúc mở để hộp dựng lại theo đúng đề xuất này
   const [proposal, setProposal] = React.useState<AssistantTaskProposal | null>(null);
+  const [contextFiles, setContextFiles] = React.useState<File[]>([]);
   const onCreatedRef = React.useRef<((task: { id: string; code: string | null }) => void) | null>(null);
 
-  const openCreateTask = React.useCallback((next?: AssistantTaskProposal, onCreated?: (task: { id: string; code: string | null }) => void) => {
+  const openCreateTask = React.useCallback((next?: AssistantTaskProposal, onCreated?: (task: { id: string; code: string | null }) => void, files?: File[]) => {
     setProposal(next ?? null);
+    setContextFiles(next && files ? files : []);
     onCreatedRef.current = onCreated ?? null;
     setCreateTaskMounted(true);
     setCreateTaskOpen(true);
@@ -41,6 +50,7 @@ export function useCreateTaskLauncher(): {
       isOpen={createTaskOpen}
       onClose={() => setCreateTaskOpen(false)}
       initialProposal={proposal ?? undefined}
+      initialContextFiles={contextFiles}
       onCreated={(task, { subtasks }) => {
         const notifyCard = onCreatedRef.current;
         onCreatedRef.current = null;

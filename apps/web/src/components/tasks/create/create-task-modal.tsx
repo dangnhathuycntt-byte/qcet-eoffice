@@ -35,7 +35,14 @@ import type { CreateTaskSubtaskSummary } from "@/lib/adapters/create-task-mapper
 import { TaskAgentPanel, useTaskAgentAvailable } from "@/components/tasks/create/task-agent-panel";
 import { AgentIcon } from "@/components/icons/agent-icon";
 import { TASK_AGENT_DESCRIPTION_MAX, type TaskAgentDraft } from "@qcet/shared/domain/tasks/task-agent-draft";
-import { contentToPlainText, plainTextToContent } from "@qcet/shared/lib/tasks/plate-block-codec";
+import {
+  contentToPlainText,
+  parseContentToBlocks,
+  plainTextToContent,
+  serializeBlocksToContent,
+  type ContentBlockItem,
+} from "@qcet/shared/lib/tasks/plate-block-codec";
+import { uploadFile } from "@/lib/files/upload-file";
 import { motionDuration } from "@/lib/motion/tokens";
 import type { AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { proposalToTaskDraft } from "@qcet/shared/domain/assistant/assistant-task-proposal";
@@ -139,6 +146,18 @@ export interface CreateTaskModalProps {
   initialDueDate?: string;
   /** Đề xuất của Trợ lý (ADR-010): điền sẵn form, tên người khớp với nhân sự đơn vị; người dùng vẫn tự bấm Tạo. */
   initialProposal?: AssistantTaskProposal;
+  /**
+   * Tệp của lượt hỏi Trợ lý sinh ra `initialProposal` (chỉ còn trong phiên): đính kèm cuối mô tả để người được giao đọc
+   * được văn bản gốc, và đưa vào ô soạn của Agent để Agent làm tiếp có ngữ cảnh.
+   */
+  initialContextFiles?: File[];
+}
+
+/** "1.4 MB" như khối tệp của editor tự ghi khi người dùng chèn tệp. */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ─── Component ─────────────────────────────────────────────────
@@ -157,6 +176,7 @@ export function CreateTaskModal({
   initialLeadAssigneeId,
   initialDueDate,
   initialProposal,
+  initialContextFiles,
 }: CreateTaskModalProps) {
   // Văn bản nguồn chọn trong hộp: gắn vào nhiệm vụ ngay sau khi tạo xong (hộp đóng ngay nên đọc qua ref)
   const [sourceDocument, setSourceDocument] = React.useState<SourceDocumentOption | null>(null);
@@ -307,6 +327,8 @@ export function CreateTaskModal({
 
   // Kiểm tra không qua thì đưa focus tới ô sai đầu tiên (người dùng bàn phím/đọc màn hình không thấy chip đổi màu)
   const handleFormSubmit = React.useCallback(async () => {
+    // Tệp từ Trợ lý đang tải lên: tạo lúc này thì nhiệm vụ thiếu tệp trong mô tả
+    if (contextUploadingRef.current) return;
     const errors = await form.handleSubmit();
     if (!errors) return;
     if (errors.title) titleInputRef.current?.focus();
@@ -394,6 +416,53 @@ export function CreateTaskModal({
     },
     [form, initialParentTaskId],
   );
+  // Tệp từ Trợ lý: tải lên lần lượt (máy chủ giới hạn tần suất) rồi thêm khối tệp cuối mô tả đang có. Chạy sau khi đề
+  // xuất đã điền vì điền mô tả thay cả nội dung; đóng hộp giữa chừng thì bỏ kết quả. Mọi loại tệp đều thành khối tệp:
+  // khối ảnh chèn từ ngoài editor không có bản xem trước cục bộ, ảnh lúc soạn chưa tải lại được từ máy chủ.
+  const [contextUpload, setContextUpload] = React.useState<{ pending: number; errors: string[] }>({ pending: 0, errors: [] });
+  const contextUploadingRef = React.useRef(false);
+  contextUploadingRef.current = contextUpload.pending > 0;
+  const formRef = React.useRef(form);
+  formRef.current = form;
+  const contextRunRef = React.useRef(0);
+  const attachContextFiles = React.useCallback(async (files: File[]) => {
+    const run = ++contextRunRef.current;
+    setContextUpload({ pending: files.length, errors: [] });
+    const blocks: ContentBlockItem[] = [];
+    const errors: string[] = [];
+    for (const [index, file] of files.entries()) {
+      try {
+        const uploaded = await uploadFile(file);
+        blocks.push({
+          id: `context-file-${Date.now().toString(36)}-${index}`,
+          type: "attachment",
+          content: file.name,
+          url: uploaded.fileUrl,
+          fileName: file.name,
+          fileSize: formatFileSize(file.size),
+          fileType: file.name.split(".").pop()?.toUpperCase() || "TỆP",
+        });
+      } catch (error) {
+        errors.push(`${file.name}: ${error instanceof Error ? error.message : "chưa tải lên được"}`);
+      }
+      if (run !== contextRunRef.current) return;
+      setContextUpload((prev) => ({ ...prev, pending: prev.pending - 1 }));
+    }
+    if (run !== contextRunRef.current) return;
+    if (blocks.length > 0) {
+      const current = parseContentToBlocks(formRef.current.formData.description);
+      formRef.current.setField("description", serializeBlocksToContent([...current, ...blocks]));
+    }
+    setContextUpload({ pending: 0, errors });
+  }, []);
+  const contextFilesRef = React.useRef<File[]>([]);
+  contextFilesRef.current = initialContextFiles ?? [];
+  React.useEffect(() => {
+    if (isOpen) return;
+    contextRunRef.current += 1;
+    setContextUpload({ pending: 0, errors: [] });
+  }, [isOpen]);
+
   // Phần còn lại của đề xuất điền một lần mỗi lần mở, sau khi danh sách nhân sự tải xong để khớp tên người. Chờ một
   // khung hình để chạy sau lần dựng lại form lúc mở: closure của lượt render mở hộp còn giữ form của lần mở trước.
   const applyAgentDraftRef = React.useRef(applyAgentDraft);
@@ -410,9 +479,10 @@ export function CreateTaskModal({
     const frame = requestAnimationFrame(() => {
       appliedProposalRef.current = initialProposal;
       applyAgentDraftRef.current(proposalToTaskDraft(initialProposal, personnelRef.current));
+      if (contextFilesRef.current.length > 0) void attachContextFiles(contextFilesRef.current);
     });
     return () => cancelAnimationFrame(frame);
-  }, [isOpen, initialProposal, form.isLoadingDepartments]);
+  }, [isOpen, initialProposal, form.isLoadingDepartments, attachContextFiles]);
   const closeAgent = React.useCallback(() => {
     setAgentOpen(false);
     requestAnimationFrame(() => agentToggleRef.current?.focus());
@@ -550,6 +620,13 @@ export function CreateTaskModal({
                   <div className="px-5 sm:px-6 pt-3 shrink-0">
                     <InlineAlert variant="error" aria-live="assertive">
                       {errorMessage}
+                    </InlineAlert>
+                  </div>
+                )}
+                {contextUpload.errors.length > 0 && (
+                  <div className="px-5 sm:px-6 pt-3 shrink-0">
+                    <InlineAlert variant="warning">
+                      Chưa đính kèm được tệp từ Trợ lý vào mô tả. {contextUpload.errors.join("; ")}
                     </InlineAlert>
                   </div>
                 )}
@@ -812,15 +889,20 @@ export function CreateTaskModal({
                     <Button
                       size="pill"
                       onClick={handleFormSubmit}
-                      loading={form.isSubmitting}
+                      loading={form.isSubmitting || contextUpload.pending > 0}
                       // Luôn bấm được như Linear: thiếu tên thì báo lỗi và đưa con trỏ về ô tên, không để nút mờ không rõ lý do
                       aria-keyshortcuts="Meta+Enter Control+Enter"
                       title={`${modKey} + Enter`}
                       className="max-md:px-4"
                     >
-                      <span>{form.isSubmitting ? (initialParentTaskId ? "Đang giao việc…" : "Đang tạo…") : initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
+                      <span>
+                        {form.isSubmitting
+                          ? initialParentTaskId ? "Đang giao việc…" : "Đang tạo…"
+                          : contextUpload.pending > 0 ? "Đang đính kèm tệp…"
+                          : initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}
+                      </span>
                       {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
-                      {form.isSubmitting ? null : (
+                      {form.isSubmitting || contextUpload.pending > 0 ? null : (
                         <kbd className="hidden sm:inline font-sans text-xs text-primary-foreground/60" aria-hidden="true">
                           {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
                         </kbd>
@@ -853,6 +935,7 @@ export function CreateTaskModal({
                         })),
                   }}
                   onApply={applyAgentDraft}
+                  initialFiles={initialContextFiles}
                   onHide={closeAgent}
                   onClose={handleRequestClose}
                   inactive={!agentOpen}

@@ -394,6 +394,21 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     assert.ok(loading.includes('aria-busy="true"') && !loading.includes("Bắt đầu với vài gợi ý"), "đang tải thì giữ chỗ, không hiện thẻ rồi đổi sang lịch sử");
   });
 
+  test("\"Xem lại và tạo\" mang tệp của lượt hỏi sang hộp tạo việc: đính kèm cuối mô tả và đặt sẵn ở ô soạn của Agent", () => {
+    const chatHook = read("apps/web/src/components/assistant/use-assistant-chat.ts");
+    assert.ok(chatHook.includes("questionMessageBefore(thread, replyKey)?.attachments"), "lấy tệp của đúng câu hỏi sinh ra tin trả lời");
+    const launcher = read("apps/web/src/components/assistant/use-create-task-launcher.tsx");
+    assert.ok(launcher.includes("setContextFiles(next && files ? files : [])") && launcher.includes("initialContextFiles={contextFiles}"), "chỉ mang tệp khi mở từ đề xuất");
+    const modal = read("apps/web/src/components/tasks/create/create-task-modal.tsx");
+    assert.ok(modal.includes('type: "attachment"') && modal.includes("await uploadFile(file)"), "tải lên rồi thêm khối tệp, không dùng khối ảnh");
+    // Điền đề xuất thay cả mô tả: tệp chỉ thêm sau khi đề xuất đã điền, vào mô tả đang có lúc tải xong
+    assert.ok(/applyAgentDraftRef\.current\(proposalToTaskDraft[\s\S]{0,200}attachContextFiles\(contextFilesRef\.current\)/.test(modal));
+    assert.ok(modal.includes("parseContentToBlocks(formRef.current.formData.description)"));
+    assert.ok(modal.includes("if (contextUploadingRef.current) return;") && modal.includes('"Đang đính kèm tệp…"'), "đang tải tệp thì chưa cho tạo");
+    const panel = read("apps/web/src/components/tasks/create/task-agent-panel.tsx");
+    assert.ok(panel.includes("seededFilesRef.current === initialFiles") && panel.includes("addFiles(initialFiles)"), "tệp đặt sẵn ở ô soạn Agent một lần, qua cùng kiểm tra tệp");
+  });
+
   test("thẻ \"Tạo nhiệm vụ\" mở hộp tạo nhiệm vụ chuẩn, tải khi cần và báo đã tạo kèm lối mở", () => {
     const launcher = read("apps/web/src/components/assistant/use-create-task-launcher.tsx");
     assert.ok(launcher.includes('import("@/components/tasks/create/create-task-modal")'), "tải hộp khi cần, không nặng lúc mở trang");
@@ -402,8 +417,8 @@ describe("Trợ lý UI: màn đầu (căn giữa, không cột phụ)", () => {
     assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes("useCreateTaskLauncher()"));
     // Khung chat nổi không có chip gợi ý (17/10) nhưng thẻ đề xuất nhiệm vụ mở hộp ngay trên trang đang xem (ADR-010)
     const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");
-    // Tạo xong thì thẻ của đúng đề xuất đó chuyển sang "Đã tạo"
-    const opensProposal = "openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))";
+    // Tạo xong thì thẻ của đúng đề xuất đó chuyển sang "Đã tạo"; tệp của lượt hỏi đi kèm sang hộp
+    const opensProposal = "openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task), chat.filesForReply(replyKey))";
     assert.ok(dock.includes("useCreateTaskLauncher()") && dock.includes(opensProposal) && dock.includes("{createTaskModal}"));
     assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes(opensProposal));
     // Bỏ qua thẻ được ở cả hai nơi; trạng thái thẻ lưu ở máy chủ, bỏ qua lưu lỗi thì trả thẻ về

@@ -77,6 +77,8 @@ export interface TaskAgentPanelProps {
   onClose: () => void;
   /** Panel đang ẩn (vẫn giữ cuộc trò chuyện): bỏ khỏi thứ tự Tab và trình đọc màn hình. */
   inactive?: boolean;
+  /** Tệp mang sang từ Trợ lý: đặt sẵn ở ô soạn để lượt hỏi Agent đầu tiên gửi kèm (sau đó gửi lại mỗi lượt như tệp khác). */
+  initialFiles?: File[];
   className?: string;
 }
 
@@ -95,6 +97,7 @@ export function TaskAgentPanel({
   onHide,
   onClose,
   inactive = false,
+  initialFiles,
   className,
 }: TaskAgentPanelProps) {
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
@@ -149,6 +152,13 @@ export function TaskAgentPanel({
     },
     [files, messages],
   );
+  // Mỗi bộ tệp mang sang chỉ đặt một lần (hộp tạo việc có thể giữ panel giữa các lần mở)
+  const seededFilesRef = React.useRef<File[] | undefined>(undefined);
+  React.useEffect(() => {
+    if (!initialFiles?.length || seededFilesRef.current === initialFiles) return;
+    seededFilesRef.current = initialFiles;
+    addFiles(initialFiles);
+  }, [initialFiles, addFiles]);
 
   const removeFile = (id: string) => {
     setFiles((prev) => {

@@ -209,7 +209,7 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                 context={activeContext}
                 pending={pending}
                 onOpenProposal={({ replyKey, index, proposal }) =>
-                  openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))
+                  openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task), chat.filesForReply(replyKey))
                 }
                 onDismissProposal={chat.proposalDismissed}
               />

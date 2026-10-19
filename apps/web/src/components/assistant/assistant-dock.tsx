@@ -301,7 +301,7 @@ export function AssistantDock() {
             chat.retry(replyKey, restoreDraft);
           }}
           onOpenProposal={({ replyKey, index, proposal }) =>
-            openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task))
+            openCreateTask(proposal, (task) => chat.proposalCreated(replyKey, index, task), chat.filesForReply(replyKey))
           }
           onDismissProposal={chat.proposalDismissed}
           onStop={chat.stop}

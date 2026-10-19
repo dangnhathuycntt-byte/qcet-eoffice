@@ -132,6 +132,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { uploadFile, type UploadedFile } from "@/lib/files/upload-file";
 import { usePersonnelList, type PersonnelOption } from "@/hooks/use-personnel-list";
 import type { StaffTask } from "@qcet/contracts/types/dashboard";
 import {
@@ -1484,9 +1485,6 @@ function FloatingToolbar({ editor }: { editor: any }) {
 // Block wrapper with hover-only six-dot handle + block menu
 // ---------------------------------------------------------------------------
 
-/** Giới hạn tệp của /api/upload (10MB) — chặn sớm để báo đúng thay vì lỗi máy chủ. */
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-
 const TURN_INTO_OPTIONS = [
   { type: "text", label: "Văn bản", icon: Type },
   { type: "heading", level: 1, label: "Tiêu đề 1", icon: Heading1 },
@@ -2113,43 +2111,11 @@ export function TaskBlockEditor({
   const onSaveRef = React.useRef(onSaveContent);
   onSaveRef.current = onSaveContent;
 
-  // Upload a file to /api/upload, return server URL
-  const uploadFileToServer = React.useCallback(async (file: File): Promise<{fileUrl: string; fileName: string} | null> => {
-    if (file.size > MAX_UPLOAD_BYTES) {
-      throw new Error(`Ảnh quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Tối đa ${MAX_UPLOAD_BYTES / 1024 / 1024}MB`);
-    }
-    const form = new FormData();
-    form.append("file", file);
-    // compose: nhiệm vụ chưa được tạo nên tệp chưa gắn với nhiệm vụ nào
-    if (taskId && !compose) {
-      form.append("taskId", taskId);
-    }
-    let res: Response;
-    try {
-      res = await fetch("/api/upload", { method: "POST", body: form });
-    } catch {
-      throw new Error("Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại");
-    }
-    if (!res.ok) {
-      // Hiện đúng nguyên nhân từ máy chủ (quyền, dung lượng, định dạng, giới hạn tần suất...)
-      const body = await res.json().catch(() => null);
-      const serverMsg =
-        (typeof body?.error === "string" ? body.error : body?.error?.message) ||
-        body?.message ||
-        "";
-      const fallback =
-        res.status === 401 ? "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại"
-        : res.status === 403 ? "Bạn không có quyền tải tệp lên nhiệm vụ này"
-        : res.status === 413 ? "Tệp quá lớn (tối đa 10MB)"
-        : res.status === 429 ? "Tải lên quá nhanh, vui lòng thử lại sau ít giây"
-        : `Máy chủ từ chối tải lên (mã ${res.status})`;
-      throw new Error(serverMsg || fallback);
-    }
-    const json = await res.json().catch(() => null);
-    const data = json?.data ?? json;
-    if (!data?.fileUrl) throw new Error("Máy chủ không trả về đường dẫn tệp");
-    return data;
-  }, [taskId, compose]);
+  // Tải tệp lên máy chủ; compose: nhiệm vụ chưa được tạo nên tệp chưa gắn với nhiệm vụ nào
+  const uploadFileToServer = React.useCallback(
+    (file: File): Promise<UploadedFile | null> => uploadFile(file, { taskId: taskId && !compose ? taskId : undefined }),
+    [taskId, compose],
+  );
 
   const triggerAutoSave = React.useCallback(
     (plateValue: PlateValue) => {
