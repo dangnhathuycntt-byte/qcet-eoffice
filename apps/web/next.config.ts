@@ -8,8 +8,10 @@ const repoRoot = path.resolve(__dirname, "../..");
 const { getNextSecurityHeaders }: typeof import("../../packages/shared/src/config/security-headers") = require(
   path.join(repoRoot, "packages/shared/src/config/security-headers"),
 );
-// .env* nằm ở gốc repo, dùng chung hai app; Next chỉ tự nạp trong thư mục app. Không ghi đè biến đã có.
-loadEnvConfig(repoRoot, process.env.NODE_ENV !== "production");
+// .env* nằm ở gốc repo, dùng chung hai app; Next chỉ tự nạp trong thư mục app. Next đã gọi loadEnvConfig cho thư mục
+// app ngay trước khi đọc file này và cache kết quả, nên phải forceReload (tham số cuối) mới nạp được gốc repo; biến
+// file này thêm vào được Next giữ lại (updateInitialEnv). Không ghi đè biến của shell.
+loadEnvConfig(repoRoot, process.env.NODE_ENV !== "production", console, true);
 
 const isProduction = process.env.NODE_ENV === "production";
 const securityHeaders = getNextSecurityHeaders(isProduction);
