@@ -407,6 +407,15 @@ export function followUpSuggestions(
   return [];
 }
 
+/**
+ * Câu hỏi cuối chưa có trả lời (đã lưu ở máy chủ): lượt của nó còn chạy ở máy chủ (người dùng rời trang, tải lại) thì
+ * nối lại; không còn lượt nào thì lượt đã bị gián đoạn. Có tin trả lời rồi thì không nối lại, để không hiện hai lần.
+ */
+export function unansweredQuestion(thread: readonly ThreadMessage[]): ThreadMessage | null {
+  const last = thread[thread.length - 1];
+  return last && last.role === "user" && last.id ? last : null;
+}
+
 /** Tin hỏi ngay trước một tin trả lời, để "Thử lại" gửi lại đúng câu đó cùng tệp đã gửi trong phiên. */
 export function questionMessageBefore(thread: ThreadMessage[], replyKey: string): ThreadMessage | null {
   const index = thread.findIndex((message) => message.key === replyKey);

@@ -31,6 +31,7 @@ import {
   markReplyInterrupted,
   parseAssistantContextParam,
   questionMessageBefore,
+  unansweredQuestion,
   retryMissesAttachments,
   setProposalDismissed,
   ASSISTANT_ATTACHMENT_ONLY_PROMPT,
@@ -45,7 +46,12 @@ import {
 } from "../apps/web/src/components/assistant/assistant-model";
 import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "../apps/web/src/components/agent-chat/agent-chat-parts";
 import { nextRevealCount, revealSpeed, safeRevealEnd } from "../apps/web/src/components/agent-chat/use-smooth-text";
-import { AssistantRequestError } from "../apps/web/src/components/assistant/assistant-client";
+import {
+  AssistantRequestError,
+  resumeAssistantTurn,
+  stopAssistantRunRequest,
+  streamAssistantTurn,
+} from "../apps/web/src/components/assistant/assistant-client";
 import { AssistantComposer, AssistantFootnote } from "../apps/web/src/components/assistant/assistant-composer";
 import { AgentModelsProvider } from "../apps/web/src/components/agent-chat/agent-models";
 import { parseAgentModels } from "@qcet/shared/domain/agent/agent-models";
@@ -1500,5 +1506,60 @@ describe("Trợ lý UI: tạo lại và sửa câu hỏi cuối", () => {
     assert.ok(hook.includes("...replaced]"), "từ chối thì trả lại cặp cũ");
     assert.ok(read("apps/web/src/components/assistant/assistant-workspace.tsx").includes("onEditQuestion={(text) => replaceLast(text)}"));
     assert.ok(read("apps/web/src/components/assistant/assistant-dock-panel.tsx").includes("onEditQuestion={(text) => onReplaceLast(text)}"));
+  });
+});
+
+describe("Trợ lý UI: lượt chạy tiếp khi rời trang, nối lại khi mở lại cuộc", () => {
+  const realFetch = globalThis.fetch;
+  const ndjson = (events: unknown[], headers: Record<string, string> = {}) =>
+    new Response(events.map((event) => JSON.stringify(event)).join("\n"), { status: 200, headers: { "content-type": "application/x-ndjson", ...headers } });
+
+  test("chỉ nối lại khi câu hỏi cuối đã lưu mà chưa có trả lời", () => {
+    const saved = { ...userThreadMessage("u1", "Hỏi"), id: "m-1" };
+    assert.equal(unansweredQuestion([saved]), saved);
+    assert.equal(unansweredQuestion([saved, { ...streamingThreadMessage("r1"), status: "complete" }]), null, "đã có trả lời thì không hiện hai lần");
+    assert.equal(unansweredQuestion([userThreadMessage("u2", "Chưa lưu")]), null);
+    assert.equal(unansweredQuestion([]), null);
+  });
+
+  test("nối lại: 204 là không có lượt; có lượt thì báo mã và mốc bắt đầu trước sự kiện đầu tiên; Dừng gọi đúng lượt", async () => {
+    const calls: string[] = [];
+    try {
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push(`${init?.method ?? "GET"} ${String(input)}`);
+        if (String(input).includes("/runs/")) return new Response(JSON.stringify({ stopped: true }), { status: 200 });
+        if (String(input).includes("c-idle")) return new Response(null, { status: 204 });
+        return ndjson([{ type: "text", delta: "Phát lại" }, { type: "done", messageId: "m-2", status: "complete", durationMs: 10 }], {
+          "x-assistant-run-id": "run-1",
+          "x-assistant-run-started-at": "1760860800000",
+        });
+      }) as typeof fetch;
+      const signal = new AbortController().signal;
+      assert.equal(await resumeAssistantTurn("c-idle", signal, () => assert.fail("không có lượt"), () => assert.fail("không có sự kiện")), false);
+
+      const order: string[] = [];
+      const found = await resumeAssistantTurn(
+        "c-run",
+        signal,
+        (run) => order.push(`run:${run.id}:${run.startedAt}`),
+        (event) => order.push(event.type),
+      );
+      assert.equal(found, true);
+      assert.deepEqual(order, ["run:run-1:1760860800000", "text", "done"]);
+
+      const runs: string[] = [];
+      await streamAssistantTurn({ message: "Hỏi" }, signal, () => undefined, [], (run) => runs.push(run.id));
+      assert.deepEqual(runs, ["run-1"], "gửi lượt mới cũng báo mã lượt để Dừng");
+
+      assert.deepEqual(await stopAssistantRunRequest("run-1"), { stopped: true });
+      assert.deepEqual(calls, [
+        "GET /api/assistant/conversations/c-idle/stream",
+        "GET /api/assistant/conversations/c-run/stream",
+        "POST /api/assistant/chat",
+        "POST /api/assistant/runs/run-1/stop",
+      ]);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });

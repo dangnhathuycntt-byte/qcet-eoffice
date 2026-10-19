@@ -6,13 +6,17 @@ import type {
   AssistantContextRef,
   AssistantConversationSummaryDTO,
   AssistantSourceRef,
+  AssistantStreamEvent,
 } from "@qcet/contracts/assistant";
 import {
   AssistantRequestError,
   assistantErrorText,
   getConversationRequest,
+  resumeAssistantTurn,
+  stopAssistantRunRequest,
   streamAssistantTurn,
   updateProposalRequest,
+  type AssistantRunInfo,
 } from "@/components/assistant/assistant-client";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
@@ -28,6 +32,7 @@ import {
   setProposalDismissed,
   streamingThreadMessage,
   threadMessageFromDto,
+  unansweredQuestion,
   userThreadMessage,
   type AssistantProposalTask,
   type ThreadMessage,
@@ -83,6 +88,9 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   const threadRef = React.useRef<ThreadMessage[]>([]);
   threadRef.current = thread;
   const turnRef = React.useRef<AbortController | null>(null);
+  // Lượt ở máy chủ của lượt đang hiện (để nút Dừng hủy đúng lượt); bấm Dừng khi chưa có mã thì dừng ngay khi có
+  const runRef = React.useRef<string | null>(null);
+  const stopPendingRef = React.useRef(false);
   const detailRef = React.useRef<AbortController | null>(null);
   const unmountedRef = React.useRef(false);
   const turnSeq = React.useRef(0);
@@ -192,14 +200,16 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
       if (controller.signal.aborted) return;
       setActiveTitle(detail.title);
       setActiveContext(detail.context);
-      setThread(
-        detail.messages.map((dto) => {
-          const message = threadMessageFromDto(dto);
-          const sent = carried.get(dto.id);
-          return sent ? { ...message, attachments: sent } : message;
-        }),
-      );
+      const messages = detail.messages.map((dto) => {
+        const message = threadMessageFromDto(dto);
+        const sent = carried.get(dto.id);
+        return sent ? { ...message, attachments: sent } : message;
+      });
+      setThread(messages);
       setDetailStatus("ready");
+      // Câu hỏi cuối chưa có trả lời: lượt có thể còn chạy ở máy chủ (rời trang, tải lại khi đang trả lời)
+      const question = unansweredQuestion(messages);
+      if (question) void resumeTurnRef.current(id, question.key);
     } catch (error) {
       if (controller.signal.aborted) return;
       setDetailError(assistantErrorText(error, OPEN_ERROR_MESSAGE));
@@ -258,7 +268,121 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const stop = React.useCallback(() => turnRef.current?.abort(), []);
+  /**
+   * Nút Dừng (Esc): hủy lượt ở máy chủ rồi thôi đọc. Rời trang, đổi cuộc hay cuộc mới chỉ thôi đọc (lượt vẫn chạy, mở
+   * lại cuộc thì nối lại), nên không gọi hàm này. Máy chủ chưa trả mã lượt thì dừng ngay khi có mã.
+   */
+  const stop = React.useCallback(() => {
+    const controller = turnRef.current;
+    if (!controller) return;
+    const runId = runRef.current;
+    if (!runId) {
+      stopPendingRef.current = true;
+      return;
+    }
+    void stopAssistantRunRequest(runId).catch(() => undefined);
+    controller.abort();
+  }, []);
+
+  /** Lượt `controller` vừa có mã ở máy chủ: nhớ để Dừng; người dùng đã bấm Dừng trước đó thì dừng luôn. */
+  const runStarted = (run: AssistantRunInfo, controller: AbortController) => {
+    if (turnRef.current !== controller) return;
+    runRef.current = run.id;
+    if (!stopPendingRef.current) return;
+    void stopAssistantRunRequest(run.id).catch(() => undefined);
+    controller.abort();
+  };
+
+  /** Lượt `controller` kết thúc: bỏ trạng thái lượt, trừ khi lượt khác đã thế chỗ. Trả true nếu còn là lượt hiện tại. */
+  const releaseTurn = (controller: AbortController): boolean => {
+    if (turnRef.current !== controller) return false;
+    turnRef.current = null;
+    runRef.current = null;
+    stopPendingRef.current = false;
+    return true;
+  };
+
+  /**
+   * Áp sự kiện của một lượt vào luồng, dùng chung cho gửi lượt mới và nối lại lượt đang chạy: `userKey`, `replyKey` là
+   * khóa của câu hỏi và tin trả lời của lượt; `turn.settled` thành true khi có `done` hoặc `error`.
+   */
+  const turnEventHandler =
+    (controller: AbortController, userKey: string, replyKey: string, turn: { settled: boolean }, isNewChat: boolean) =>
+    (event: AssistantStreamEvent) => {
+      if (controller.signal.aborted) return;
+      if (event.type === "conversation") {
+        const id = event.conversation.id;
+        activeIdRef.current = id;
+        setActiveId(id);
+        setActiveTitle(event.conversation.title);
+        setDetailStatus("ready");
+        if (isNewChat) {
+          // Đổi URL không tải lại khung: danh sách và khung chat vẫn giữ nguyên
+          if (syncUrl) window.history.replaceState(null, "", `/assistant/${encodeURIComponent(id)}`);
+          setPendingContext(null);
+        }
+        callbacksRef.current.onUpsert(event.conversation);
+        setThread((prev) => prev.map((m) => (m.key === userKey ? { ...m, id: event.userMessageId } : m)));
+        return;
+      }
+      if (event.type === "context") {
+        setActiveContext(event.source);
+        return;
+      }
+      if (event.type === "attachments") {
+        // Tệp của câu hỏi đã lưu: "Thử lại" gửi mã thay cho tệp, mở lại cuộc vẫn còn
+        setThread((prev) => prev.map((m) => (m.key === userKey ? { ...m, storedAttachments: event.attachments } : m)));
+        return;
+      }
+      if (event.type === "title") {
+        // Tên do mô hình đặt cho cuộc mới; người dùng đã chuyển sang cuộc khác thì chỉ cập nhật danh sách
+        if (activeIdRef.current === event.conversation.id) setActiveTitle(event.conversation.title);
+        callbacksRef.current.onUpsert(event.conversation);
+        return;
+      }
+      if (event.type === "done" || event.type === "error") turn.settled = true;
+      setThread((prev) => prev.map((m) => (m.key === replyKey ? reduceAssistantReply(m, event) : m)));
+    };
+
+  /**
+   * Nối lại lượt của câu hỏi cuối chưa có trả lời (người dùng rời trang, đổi cuộc hay tải lại khi lượt còn chạy): máy chủ
+   * phát lại từ đầu lượt rồi gửi tiếp, tin trả lời hiện như đang chạy và Dừng được. Máy chủ không còn lượt nào (khởi động
+   * lại giữa chừng) thì báo lượt bị gián đoạn để người dùng thử lại.
+   */
+  const resumeTurn = async (conversationId: string, userKey: string) => {
+    const controller = new AbortController();
+    turnRef.current = controller;
+    const replyKey = `reply-${++turnSeq.current}`;
+    const turn = { settled: false };
+    let started = false;
+    const interrupted = () => setThread((prev) => [...prev, markReplyInterrupted(streamingThreadMessage(replyKey))]);
+    setPending(true);
+    try {
+      const found = await resumeAssistantTurn(
+        conversationId,
+        controller.signal,
+        (run) => {
+          started = true;
+          setThread((prev) => [...prev, streamingThreadMessage(replyKey, run.startedAt)]);
+          runStarted(run, controller);
+        },
+        turnEventHandler(controller, userKey, replyKey, turn, false),
+      );
+      if (!found && !controller.signal.aborted) interrupted();
+      else if (!turn.settled) setThread((prev) => prev.map((m) => (m.key === replyKey ? markReplyInterrupted(m) : m)));
+    } catch {
+      if (!started && !controller.signal.aborted) interrupted();
+      else setThread((prev) => prev.map((m) => (m.key === replyKey ? (controller.signal.aborted ? markReplyAborted(m) : markReplyInterrupted(m)) : m)));
+    } finally {
+      if (releaseTurn(controller)) {
+        setPending(false);
+        if (turn.settled) void callbacksRef.current.onTurnSettled();
+      }
+    }
+  };
+  // openConversation (ổn định qua các lần render) gọi bản mới nhất
+  const resumeTurnRef = React.useRef(resumeTurn);
+  resumeTurnRef.current = resumeTurn;
 
   // Tải lại cuộc đang mở từ máy chủ (khung chat nổi quay lại sau khi cuộc đổi ở trang Trợ lý); đang trả lời thì thôi
   const reload = React.useCallback(() => {
@@ -319,42 +443,9 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
           ...(replaces ? { replacesMessageId: replaces.questionId } : {}),
         },
         controller.signal,
-        (event) => {
-          if (controller.signal.aborted) return;
-          if (event.type === "conversation") {
-            const id = event.conversation.id;
-            activeIdRef.current = id;
-            setActiveId(id);
-            setActiveTitle(event.conversation.title);
-            setDetailStatus("ready");
-            if (isNewChat) {
-              // Đổi URL không tải lại khung: danh sách và khung chat vẫn giữ nguyên
-              if (syncUrl) window.history.replaceState(null, "", `/assistant/${encodeURIComponent(id)}`);
-              setPendingContext(null);
-            }
-            callbacksRef.current.onUpsert(event.conversation);
-            setThread((prev) => prev.map((m) => (m.key === userKey ? { ...m, id: event.userMessageId } : m)));
-            return;
-          }
-          if (event.type === "context") {
-            setActiveContext(event.source);
-            return;
-          }
-          if (event.type === "attachments") {
-            // Tệp của câu hỏi đã lưu: "Thử lại" gửi mã thay cho tệp, mở lại cuộc vẫn còn
-            setThread((prev) => prev.map((m) => (m.key === userKey ? { ...m, storedAttachments: event.attachments } : m)));
-            return;
-          }
-          if (event.type === "title") {
-            // Tên do mô hình đặt cho cuộc mới; người dùng đã chuyển sang cuộc khác thì chỉ cập nhật danh sách
-            if (activeIdRef.current === event.conversation.id) setActiveTitle(event.conversation.title);
-            callbacksRef.current.onUpsert(event.conversation);
-            return;
-          }
-          if (event.type === "done" || event.type === "error") turn.settled = true;
-          setThread((prev) => prev.map((m) => (m.key === replyKey ? reduceAssistantReply(m, event) : m)));
-        },
+        turnEventHandler(controller, userKey, replyKey, turn, isNewChat),
         sentAttachments.map((a) => a.file),
+        (run) => runStarted(run, controller),
       );
       if (!turn.settled) setThread((prev) => prev.map((m) => (m.key === replyKey ? markReplyInterrupted(m) : m)));
     } catch (error) {
@@ -374,7 +465,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
         setThread((prev) => prev.map((m) => (m.key === replyKey ? markReplyInterrupted(m) : m)));
       }
     } finally {
-      if (turnRef.current === controller) turnRef.current = null;
+      releaseTurn(controller);
       setPending(false);
       // Có mã cuộc, hoặc dừng/hủy trước khi nhận sự kiện conversation (cuộc server có thể đã tạo): làm mới lịch sử.
       // Đã rời trang thì thôi.
