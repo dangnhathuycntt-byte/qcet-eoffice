@@ -22,6 +22,7 @@ import { useAssistantChat } from "@/components/assistant/use-assistant-chat";
 import { useAssistantHistory } from "@/components/assistant/use-assistant-history";
 import { useCreateTaskLauncher } from "@/components/assistant/use-create-task-launcher";
 import { useStickToBottom } from "@/components/assistant/use-stick-to-bottom";
+import { useSaveSkillDialog } from "@/components/assistant/assistant-settings-dialog";
 import type { ProposalTarget } from "@/components/assistant/assistant-model";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useIsPhone } from "@/hooks/use-is-phone";
@@ -57,6 +58,8 @@ export interface AssistantWorkspaceProps {
   conversationId?: string;
   /** Mục mở sẵn từ `?context=task:<id>|document:<id>`; chỉ dùng cho cuộc mới. */
   initialContext?: AssistantContextRef | null;
+  /** Câu hỏi điền sẵn vào ô soạn từ `?prompt=` (bản tin sáng); người dùng tự gửi. */
+  initialPrompt?: string;
 }
 
 /**
@@ -64,14 +67,15 @@ export interface AssistantWorkspaceProps {
  * ô soạn. Chưa có tin thì màn đầu căn giữa (ô soạn, rồi thẻ gợi ý hoặc cuộc gần đây); đã có tin thì tin cuộn ở trên và
  * ô soạn dính đáy. Ô soạn luôn ở cùng vị trí trong cây giao diện nên không mất tiêu điểm khi chuyển giữa hai trạng thái.
  */
-export function AssistantWorkspace({ conversationId, initialContext = null }: AssistantWorkspaceProps) {
+export function AssistantWorkspace({ conversationId, initialContext = null, initialPrompt = "" }: AssistantWorkspaceProps) {
   const router = useRouter();
   // Đường dẫn là nguồn chuẩn: sau `replaceState` (cuộc mới đã có mã) prop không đổi, còn Back/menu thì đổi cả hai
   const pathname = usePathname() ?? "";
   const activeRouteId = conversationIdFromPath(pathname) ?? conversationId ?? null;
-  const [draft, setDraft] = React.useState("");
+  const [draft, setDraft] = React.useState(initialPrompt);
   const isPhone = useIsPhone();
   const { openCreateTask, openBulkCreate, createTaskModal } = useCreateTaskLauncher();
+  const { openSaveSkill, saveSkillDialog } = useSaveSkillDialog();
   // Đọc lựa chọn ẩn cột bên sau khi gắn (máy chủ không có localStorage), để HTML ban đầu khớp nhau. null: chưa đọc, cột
   // bên hiện như mặc định và ẩn ngay không chuyển động nếu người dùng đã ẩn từ trước
   const [sidePanelHidden, setSidePanelHidden] = React.useState<boolean | null>(null);
@@ -281,6 +285,8 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                   onDismissProposal={chat.proposalDismissed}
                   onDismissProposals={chat.proposalsDismissed}
                   onCreateProposals={createProposals}
+                  onActionChange={chat.actionChanged}
+                  onSaveSkill={openSaveSkill}
                 />
               )}
 
@@ -300,6 +306,8 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
                   attachments={chat.attachments}
                   onAddAttachments={chat.addAttachments}
                   onRemoveAttachment={chat.removeAttachment}
+                  onPickSkill={chat.selectSkill}
+                  selectedSkill={chat.skill ? { name: chat.skill.name, onRemove: () => chat.selectSkill(null) } : null}
                 />
               </div>
 
@@ -337,6 +345,7 @@ export function AssistantWorkspace({ conversationId, initialContext = null }: As
       </div>
 
       {createTaskModal}
+      {saveSkillDialog}
 
       <DestructiveConfirmDialog
         isOpen={deleteTarget !== null}

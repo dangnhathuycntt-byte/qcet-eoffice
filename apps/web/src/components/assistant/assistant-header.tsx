@@ -6,6 +6,7 @@ import { ASSISTANT_TITLE_MAX } from "@qcet/contracts/assistant";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { IconSidebarCompose, IconSidebarPanelRight } from "@/components/layout/sidebar-rounded-icons";
 import { AssistantHistoryMenu, type AssistantHistoryState } from "@/components/assistant/assistant-history-menu";
+import { AssistantSettingsButton } from "@/components/assistant/assistant-settings-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
@@ -139,6 +140,8 @@ export function AssistantHeader({
         <Button variant="ghost" size="icon-md" onClick={onNewChat} aria-label="Cuộc trò chuyện mới" className="size-11 md:hidden">
           <IconSidebarCompose className="size-4" />
         </Button>
+
+        <AssistantSettingsButton className="max-md:size-11" />
 
         {activeId !== null && !renaming ? (
           // Khi đổi tên, menu này rời khỏi cây giao diện để tiêu điểm không quay lại nút "…" và cướp ô đổi tên

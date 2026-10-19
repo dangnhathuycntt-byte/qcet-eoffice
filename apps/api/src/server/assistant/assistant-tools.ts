@@ -1,5 +1,6 @@
 /**
- * Bộ công cụ chỉ đọc của Trợ lý, cộng propose_task chỉ soạn đề xuất (không ghi). Danh tính và quyền chỉ lấy từ ctx (server);
+ * Bộ công cụ chỉ đọc của Trợ lý, cộng propose_task chỉ soạn đề xuất (không ghi) và các công cụ soạn thẻ hành động chờ
+ * người dùng duyệt (ADR-012; chỉ lưu thẻ, không thực hiện). Danh tính và quyền chỉ lấy từ ctx (server);
  * tham số của model được kiểm bằng zod `.strict()`.
  * `runAssistantTool` không bao giờ ném lỗi: mọi lỗi thành JSON `{ "error": … }` gửi lại cho model.
  */
@@ -63,6 +64,20 @@ import {
   type ListMeetingsInput,
 } from "./assistant-tool-agenda";
 import { PROPOSE_TASK_DESCRIPTION, ProposeTaskArgs, proposeTask } from "./assistant-tool-proposal";
+import {
+  PROPOSE_COMMENT_DESCRIPTION,
+  PROPOSE_REMINDER_DESCRIPTION,
+  PROPOSE_STATUS_DESCRIPTION,
+  ProposeCommentArgs,
+  ProposeReminderArgs,
+  ProposeStatusArgs,
+  REMEMBER_DESCRIPTION,
+  RememberArgs,
+  proposeComment,
+  proposeMemory,
+  proposeReminder,
+  proposeStatusChange,
+} from "./assistant-tool-actions";
 
 export { ASSISTANT_TOOL_RESULT_MAX_CHARS, RESTRICTED_MESSAGE, ToolFailure } from "./assistant-tool-shared";
 export type { AssistantToolContext, AssistantToolOutcome } from "./assistant-tool-shared";
@@ -103,6 +118,7 @@ function register<A extends z.ZodType>(name: AssistantToolName, spec: ToolSpec<A
         sources: run.sources,
         detailed: run.detailed,
         ...(run.proposal ? { proposal: run.proposal } : {}),
+        ...(run.action ? { action: run.action } : {}),
       };
     } catch (error) {
       return failure(name, label, toolErrorMessage(error, name));
@@ -168,10 +184,15 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
       "subtasks (việc con đã xong/tổng); subtaskTotal là số việc con khớp bộ lọc. view: related = việc Thầy/Cô tham gia " +
       "(mặc định), unit = việc của đơn vị, all = mọi việc Thầy/Cô được xem. status = overdue là trễ hạn; không truyền " +
       "status thì lấy mọi trạng thái. Số lượng lấy từ total và subtaskTotal, không tự đếm; cần việc con của một nhiệm vụ " +
-      "thì gọi get_task.",
+      "thì gọi get_task. Lọc theo người hay đơn vị thì truyền tên: assignee là tên người tham gia (chủ trì, phối hợp), unit " +
+      "là tên hoặc mã đơn vị chủ trì; máy chủ tự tìm ra người hay đơn vị (matched cho biết tên đã khớp), nhiều tên khớp thì " +
+      "báo lỗi kèm các tên để hỏi lại Thầy/Cô. Ví dụ: việc trễ hạn của thầy Tuấn → {\"assignee\":\"Tuấn\",\"status\":\"overdue\"}; " +
+      "việc của Phòng Đào tạo tháng 10 → {\"unit\":\"Phòng Đào tạo\",\"academicMonth\":10}.",
     schema: ListTasksArgs,
     failLabel: "Xem nhiệm vụ",
     label: (args: ListTasksInput) => {
+      if (args.assignee) return `Xem nhiệm vụ của ${quotedLabel(args.assignee)}`;
+      if (args.unit) return `Xem nhiệm vụ của ${quotedLabel(args.unit)}`;
       if (args.status === "overdue") return "Xem nhiệm vụ trễ hạn";
       if (args.view === "unit") return "Xem nhiệm vụ của đơn vị";
       if (args.view === "all") return "Xem toàn bộ nhiệm vụ";
@@ -183,6 +204,7 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
       const limit = args.limit ?? TASK_LIST_LIMIT;
       return {
         payload: {
+          ...(Object.keys(result.matched).length ? { matched: result.matched } : {}),
           total: result.total,
           subtaskTotal: result.subtaskTotal,
           ...(result.total > items.length ? { truncated: true } : {}),
@@ -198,7 +220,9 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
 
   get_task: register("get_task", {
     description:
-      "Xem chi tiết một nhiệm vụ: mô tả, người tham gia, việc con, nhiệm vụ cha. Truyền đúng một trong id hoặc code (mã như NV-2026-09-001).",
+      "Xem chi tiết một nhiệm vụ: mô tả, người tham gia, việc con, nhiệm vụ cha, 5 bình luận gần nhất (recentComments, " +
+      "mới nhất trước; commentCount là tổng), minh chứng đã nộp và yêu cầu gia hạn đang chờ. Dùng khi hỏi tình hình, tiến " +
+      "độ hay trao đổi gần đây của một việc. Truyền đúng một trong id hoặc code (mã như NV-2026-09-001).",
     schema: GetTaskArgs,
     failLabel: "Đọc nhiệm vụ",
     label: (args) => (args.code ? `Đọc nhiệm vụ ${args.code.toUpperCase()}` : "Đọc nhiệm vụ"),
@@ -207,7 +231,7 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
       const detail = await readTaskDetail(ctx.authz, taskId);
       return {
         payload: detail.view,
-        lists: ["subTasks", "participants"],
+        lists: ["subTasks", "participants", "recentComments", "deliverables"],
         count: 1,
         sources: [detail.self, ...detail.related],
         detailed: true,
@@ -321,6 +345,34 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
     failLabel: "Soạn đề xuất nhiệm vụ",
     label: (args) => `Soạn đề xuất ${quotedLabel(args.title)}`,
     run: async (args) => proposeTask(args),
+  }),
+  propose_comment: register("propose_comment", {
+    description: PROPOSE_COMMENT_DESCRIPTION,
+    schema: ProposeCommentArgs,
+    failLabel: "Soạn bình luận",
+    label: (args) => (args.code ? `Soạn bình luận cho ${args.code.toUpperCase()}` : "Soạn bình luận"),
+    run: proposeComment,
+  }),
+  propose_status_change: register("propose_status_change", {
+    description: PROPOSE_STATUS_DESCRIPTION,
+    schema: ProposeStatusArgs,
+    failLabel: "Soạn đổi trạng thái",
+    label: (args) => (args.code ? `Soạn đổi trạng thái ${args.code.toUpperCase()}` : "Soạn đổi trạng thái"),
+    run: proposeStatusChange,
+  }),
+  propose_reminder: register("propose_reminder", {
+    description: PROPOSE_REMINDER_DESCRIPTION,
+    schema: ProposeReminderArgs,
+    failLabel: "Soạn lời nhắc",
+    label: (args) => (args.code ? `Soạn lời nhắc cho ${args.code.toUpperCase()}` : "Soạn lời nhắc"),
+    run: proposeReminder,
+  }),
+  remember: register("remember", {
+    description: REMEMBER_DESCRIPTION,
+    schema: RememberArgs,
+    failLabel: "Soạn ghi nhớ",
+    label: () => "Soạn ghi nhớ",
+    run: proposeMemory,
   }),
 };
 

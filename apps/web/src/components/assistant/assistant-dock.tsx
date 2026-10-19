@@ -23,6 +23,7 @@ import {
 } from "@/components/assistant/assistant-model";
 import { useAssistantChat } from "@/components/assistant/use-assistant-chat";
 import { useCreateTaskLauncher } from "@/components/assistant/use-create-task-launcher";
+import { useSaveSkillDialog } from "@/components/assistant/assistant-settings-dialog";
 import { useStickToBottom } from "@/components/assistant/use-stick-to-bottom";
 import { IconSidebarAssistant, IconSidebarClose, IconSidebarHistory } from "@/components/layout/sidebar-rounded-icons";
 import { isAssistantPath } from "@/lib/navigation/active-matcher";
@@ -223,6 +224,7 @@ export function AssistantDock() {
 
   // Thẻ đề xuất nhiệm vụ trong khung mở hộp tạo nhiệm vụ của app ngay trên trang đang xem (ADR-010)
   const { openCreateTask, openBulkCreate, createTaskModal } = useCreateTaskLauncher();
+  const { openSaveSkill, saveSkillDialog } = useSaveSkillDialog();
 
   const chat = useAssistantChat({
     conversationId: activated ? dock?.id : undefined,
@@ -578,6 +580,10 @@ export function AssistantDock() {
           onDismissProposals={chat.proposalsDismissed}
           onCreateProposals={(items) => openBulkCreate(items, (item, task) => chat.proposalCreated(item.replyKey, item.index, task))}
           onStop={chat.stop}
+          onActionChange={chat.actionChanged}
+          onSaveSkill={openSaveSkill}
+          onPickSkill={chat.selectSkill}
+          selectedSkill={chat.skill ? { name: chat.skill.name, onRemove: () => chat.selectSkill(null) } : null}
           sendError={chat.sendError}
           attachments={chat.attachments}
           onAddAttachments={chat.addAttachments}
@@ -614,6 +620,7 @@ export function AssistantDock() {
         isConfirming={deleting}
       />
       {createTaskModal}
+      {saveSkillDialog}
     </>
   );
 }

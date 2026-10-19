@@ -16,6 +16,7 @@ import { prisma } from "@qcet/db/prisma";
 import { registerShutdownHook } from "@/server/lifecycle/shutdown";
 import { logger } from "@/server/observability/logger";
 import { scanTaskReminders } from "@/server/tasks/task-reminder-scanner";
+import { sendAssistantBriefings } from "@/server/assistant/assistant-briefing";
 import { TASK_NOTIFICATION_HANDLERS } from "./task-notification-handlers";
 import { DOCUMENT_NOTIFICATION_HANDLERS } from "./document-notification-handlers";
 import { DOSSIER_NOTIFICATION_HANDLERS } from "./dossier-notification-handlers";
@@ -99,6 +100,8 @@ async function cycle() {
       await scanDossierReminders();
       const recurrences = await runTaskRecurrences();
       if (recurrences.created > 0 || recurrences.failed > 0) logger.info("task.recurrence.scan", { metadata: { ...recurrences } });
+      const briefings = await sendAssistantBriefings();
+      if (briefings.sent > 0 || briefings.failed > 0) logger.info("assistant.briefing.scan", { metadata: { ...briefings } });
       const sent = Object.values(scan.sent).reduce((a, b) => a + b, 0);
       if (sent > 0) logger.info("task.reminder.scan", { metadata: { ...scan.sent, skippedDuplicate: scan.skippedDuplicate, skippedOptOut: scan.skippedOptOut } });
     })

@@ -37,7 +37,8 @@
     "db:migrate:test-upgrade": "node scripts/db-migrate-test-upgrade.mjs",
     "files:backfill": "tsx scripts/backfill-file-objects.ts",
     "files:scan-pending": "tsx scripts/scan-pending-file-objects.ts",
-    "db:backup:drill": "node scripts/backup-restore-drill.mjs"
+    "db:backup:drill": "node scripts/backup-restore-drill.mjs",
+    "eval:assistant": "npm run eval:assistant -w @qcet/api --"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

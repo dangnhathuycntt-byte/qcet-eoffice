@@ -104,9 +104,11 @@ export const AuditAction = {
   OUTGOING_INITIAL_SIGNED: "OUTGOING_INITIAL_SIGNED",
   OUTGOING_RECEIPT_CONFIRMED: "OUTGOING_RECEIPT_CONFIRMED",
 
-  // Trợ lý (chỉ đọc): một sự kiện mỗi lượt hỏi, chỉ ghi tham chiếu bản ghi đã đọc, không ghi nội dung chat
+  // Trợ lý: một sự kiện mỗi lượt hỏi, chỉ ghi tham chiếu bản ghi đã đọc, không ghi nội dung chat
   ASSISTANT_TURN: "ASSISTANT_TURN",
   ASSISTANT_CONVERSATION_DELETED: "ASSISTANT_CONVERSATION_DELETED",
+  // Người dùng duyệt, bỏ qua hoặc hoàn tác thẻ hành động do Trợ lý soạn (ADR-012); không ghi nội dung hành động
+  ASSISTANT_ACTION_DECIDED: "ASSISTANT_ACTION_DECIDED",
 
   // Việc nền của agent (outbox): một sự kiện tóm tắt mỗi lần chạy, không ghi nội dung payload
   AGENT_JOB_COMPLETED: "AGENT_JOB_COMPLETED",

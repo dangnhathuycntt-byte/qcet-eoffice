@@ -8,7 +8,7 @@ import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
 import { AssistantThread, type ProposalTarget } from "@/components/assistant/assistant-thread";
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
 import type { ThreadMessage } from "@/components/assistant/assistant-model";
-import type { AssistantSourceRef } from "@qcet/contracts/assistant";
+import type { AssistantActionDTO, AssistantSkillDTO, AssistantSourceRef } from "@qcet/contracts/assistant";
 import { IconSidebarCompose } from "@/components/layout/sidebar-rounded-icons";
 import { Button } from "@/components/ui/button";
 import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
@@ -66,6 +66,13 @@ export interface AssistantDockPanelProps {
   listRef: React.RefObject<HTMLDivElement | null>;
   onThreadScroll: () => void;
   composerRef: React.RefObject<HTMLTextAreaElement | null>;
+  /** Thẻ hành động vừa được duyệt, bỏ qua hay hoàn tác (ADR-012). */
+  onActionChange: (action: AssistantActionDTO) => void;
+  /** "Lưu thành kỹ năng" trên câu hỏi. */
+  onSaveSkill: (text: string) => void;
+  /** Kỹ năng chọn bằng "/" và chip kỹ năng đang dùng. */
+  onPickSkill: (skill: AssistantSkillDTO) => void;
+  selectedSkill: { name: string; onRemove: () => void } | null;
 }
 
 /**
@@ -104,6 +111,10 @@ export function AssistantDockPanel({
   listRef,
   onThreadScroll,
   composerRef,
+  onActionChange,
+  onSaveSkill,
+  onPickSkill,
+  selectedSkill,
 }: AssistantDockPanelProps) {
   const panelRef = React.useRef<HTMLElement>(null);
   const emptyRef = React.useRef<HTMLDivElement>(null);
@@ -201,6 +212,8 @@ export function AssistantDockPanel({
           onScroll={onThreadScroll}
           context={context}
           pending={pending}
+          onActionChange={onActionChange}
+          onSaveSkill={onSaveSkill}
         />
       )}
 
@@ -220,6 +233,8 @@ export function AssistantDockPanel({
           attachments={attachments}
           onAddAttachments={onAddAttachments}
           onRemoveAttachment={onRemoveAttachment}
+          onPickSkill={onPickSkill}
+          selectedSkill={selectedSkill}
         />
       </div>
     </section>

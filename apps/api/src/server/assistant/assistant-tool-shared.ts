@@ -3,7 +3,7 @@
  * Không chứa truy vấn: mọi công cụ đọc dữ liệu qua service đã kiểm quyền.
  */
 import { z } from "zod";
-import type { AssistantSourceRef, AssistantStep, AssistantTaskProposal } from "@qcet/contracts/assistant";
+import type { AssistantActionDTO, AssistantSourceRef, AssistantStep, AssistantTaskProposal } from "@qcet/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { ApiError } from "@/server/api/errors";
 
@@ -25,6 +25,8 @@ export interface AssistantToolContext {
   userId: string;
   /** Ngày hôm nay theo giờ Việt Nam, dạng YYYY-MM-DD. */
   today: string;
+  /** Cuộc trò chuyện của lượt (có sau khi lưu câu hỏi); công cụ soạn thẻ hành động cần để lưu thẻ kèm cuộc. */
+  conversationId?: string;
 }
 
 export interface AssistantToolOutcome {
@@ -37,6 +39,8 @@ export interface AssistantToolOutcome {
   detailed: boolean;
   /** Chỉ propose_task: đề xuất đã làm sạch để giao diện hiện thẻ. */
   proposal?: AssistantTaskProposal;
+  /** Chỉ công cụ soạn thẻ hành động (ADR-012): thẻ chờ duyệt đã lưu. */
+  action?: AssistantActionDTO;
 }
 
 /** Kết quả thành công của một tool trước khi đóng gói thành outcome. */
@@ -50,6 +54,7 @@ export interface ToolRun {
   /** Nhãn bước riêng sau khi đọc xong (ví dụ có mã nhiệm vụ). */
   label?: string;
   proposal?: AssistantTaskProposal;
+  action?: AssistantActionDTO;
 }
 
 /** Lỗi nghiệp vụ có câu trả lời để gửi cho model; không ghi log. */

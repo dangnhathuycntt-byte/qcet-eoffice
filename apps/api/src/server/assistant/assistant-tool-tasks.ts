@@ -13,13 +13,19 @@ import { taskQueryService } from "@/server/tasks/task-query-service";
 import { findTaskIdByCode, readTaskForUser } from "@/server/tasks/read-task-for-user";
 import { LABEL as PEOPLE_ROLE_LABEL } from "@/server/tasks/task-people-view";
 import { toTaskListDTOArray, type TaskListDTO } from "@/server/dto/task-dto";
-import { clip, ictDate, isAccessDenial, redactContact, ToolAccessDenied } from "./assistant-tool-shared";
+import { clip, ictDate, ictDateTime, isAccessDenial, redactContact, ToolAccessDenied, ToolFailure } from "./assistant-tool-shared";
 
 /** Số nhiệm vụ tối đa trong một lần liệt kê. */
 export const TASK_LIST_LIMIT = 20;
 /** Số nhiệm vụ tối đa cho mỗi loại trong một lần tìm kiếm. */
 export const TASK_SEARCH_LIMIT = 10;
 const TASK_DESCRIPTION_MAX = 1500;
+/** Bình luận gần nhất đưa kèm chi tiết nhiệm vụ (mới nhất trước) và độ dài tối đa mỗi bình luận. */
+const TASK_COMMENTS_IN_DETAIL = 5;
+const TASK_COMMENT_MAX = 300;
+const TASK_DELIVERABLES_IN_DETAIL = 5;
+/** Số người hoặc đơn vị khớp tên tối đa nêu lại cho mô hình khi tên chưa đủ rõ. */
+const NAME_MATCH_LIMIT = 5;
 
 const IdText = z.string().trim().min(1).max(64);
 
@@ -36,6 +42,10 @@ export const ListTasksArgs = z
     status: z.enum(["not_started", "in_progress", "waiting_approval", "completed", "cancelled", "overdue"]).optional(),
     departmentId: IdText.optional(),
     assigneeId: IdText.optional(),
+    /** Tên người tham gia (chủ trì, phối hợp…): máy chủ tự tìm ra người, không cần mã. */
+    assignee: z.string().trim().min(2).max(80).optional(),
+    /** Tên hoặc mã đơn vị chủ trì: máy chủ tự tìm ra đơn vị. */
+    unit: z.string().trim().min(2).max(120).optional(),
     academicMonth: z.number().int().min(1).max(12).optional(),
     academicYear: z
       .string()
@@ -130,12 +140,17 @@ export async function listReadableTasks(
   authz: AuthorizationContext,
   input: ListTasksInput,
   today: string
-): Promise<TaskSearchResult & { subtaskTotal: number }> {
+): Promise<TaskSearchResult & { subtaskTotal: number; matched: { assignee?: string; unit?: string } }> {
+  // Lọc theo tên: tìm ra đúng một người/đơn vị, không thì báo các tên khớp để hỏi lại (mô hình không có mã người)
+  const person = input.assignee && !input.assigneeId ? await resolvePersonByName(input.assignee) : null;
+  const unit = input.unit && !input.departmentId ? await resolveUnitByName(input.unit) : null;
+  // Lọc theo người hay đơn vị cụ thể thì xét mọi việc Thầy/Cô được xem, không chỉ việc mình tham gia
+  const narrowed = Boolean(person || unit || input.assigneeId || input.departmentId);
   const filters = {
-    view: input.view ?? "related",
+    view: input.view ?? (narrowed ? "all" : "related"),
     status: input.status,
-    departmentId: input.departmentId,
-    assignedTo: input.assigneeId,
+    departmentId: unit?.id ?? input.departmentId,
+    assignedTo: person?.id ?? input.assigneeId,
     academicMonth: input.academicMonth,
     academicYear: input.academicYear,
     page: 1,
@@ -150,7 +165,63 @@ export async function listReadableTasks(
     total: roots.total,
     subtaskTotal: Math.max(0, all.total - roots.total),
     dtos: withSubtaskCounts(roots.tasks),
+    matched: { ...(person ? { assignee: person.name } : {}), ...(unit ? { unit: unit.name } : {}) },
   };
+}
+
+/** Bỏ dấu và chữ hoa để so tên tiếng Việt ("Tuấn" khớp "tuan"). */
+function foldName(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Một người dùng đang hoạt động có tên khớp; nhiều người khớp thì ưu tiên người trùng tên đầy đủ, vẫn nhiều thì báo danh
+ * sách tên để mô hình hỏi lại. Chỉ trả tên (như danh bạ), không trả email hay số điện thoại.
+ */
+export async function resolvePersonByName(name: string): Promise<{ id: string; name: string }> {
+  const rows = await prisma.user.findMany({
+    where: { isActive: true, name: { contains: name.trim(), mode: "insensitive" } },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+    take: 20,
+  });
+  // Gõ không dấu ("tuan") thì so bằng tên đã bỏ dấu
+  const candidates = rows.length > 0 ? rows : await findUsersByFoldedName(name);
+  return pickOne(candidates, name, "người", "người dùng");
+}
+
+async function findUsersByFoldedName(name: string): Promise<Array<{ id: string; name: string }>> {
+  const folded = foldName(name);
+  const rows = await prisma.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, take: 2000 });
+  return rows.filter((row) => foldName(row.name).includes(folded));
+}
+
+/** Một đơn vị có tên hoặc mã khớp; nhiều đơn vị khớp thì như với người. */
+export async function resolveUnitByName(name: string): Promise<{ id: string; name: string }> {
+  const rows = await prisma.organizationalUnit.findMany({
+    where: { OR: [{ name: { contains: name.trim(), mode: "insensitive" } }, { code: { equals: name.trim(), mode: "insensitive" } }] },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+    take: 20,
+  });
+  const candidates =
+    rows.length > 0
+      ? rows
+      : (await prisma.organizationalUnit.findMany({ select: { id: true, name: true }, take: 500 })).filter((row) =>
+          foldName(row.name).includes(foldName(name))
+        );
+  return pickOne(candidates, name, "đơn vị", "đơn vị");
+}
+
+function pickOne<T extends { id: string; name: string }>(rows: T[], query: string, noun: string, listNoun: string): T {
+  if (rows.length === 0) throw new ToolFailure(`Không tìm thấy ${noun} nào tên "${clip(query, 80)}". Hỏi lại Thầy/Cô tên đầy đủ.`);
+  if (rows.length === 1) return rows[0];
+  const exact = rows.filter((row) => foldName(row.name) === foldName(query));
+  if (exact.length === 1) return exact[0];
+  const names = rows.slice(0, NAME_MATCH_LIMIT).map((row) => row.name).join("; ");
+  throw new ToolFailure(
+    `Có ${rows.length} ${listNoun} khớp "${clip(query, 80)}": ${names}${rows.length > NAME_MATCH_LIMIT ? "; …" : ""}. Hỏi lại Thầy/Cô muốn ${noun} nào, rồi gọi lại với tên đầy đủ.`
+  );
 }
 
 export interface TaskDetailRead {
@@ -176,6 +247,30 @@ export async function readTaskDetail(authz: AuthorizationContext, taskId: string
     roleLabel: PEOPLE_ROLE_LABEL[actor.role as TaskActorRole] ?? String(actor.role),
     isPrimaryDRI: actor.isPrimaryDRI === true,
   }));
+
+  // Sau khi đã kiểm quyền đọc nhiệm vụ (như người tham gia ở trên): bình luận gần nhất, minh chứng, yêu cầu gia hạn đang chờ.
+  // Bình luận là chữ do người dùng viết: che liên hệ, cắt ngắn, và lời nhắc coi đó là dữ liệu, không phải chỉ dẫn.
+  const [comments, commentCount, deliverables, deliverableCount, extension] = await Promise.all([
+    prisma.taskComment.findMany({
+      where: { taskId, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      take: TASK_COMMENTS_IN_DETAIL,
+      select: { body: true, createdAt: true, author: { select: { name: true } } },
+    }),
+    prisma.taskComment.count({ where: { taskId, deletedAt: null } }),
+    prisma.taskDeliverable.findMany({
+      where: { taskId },
+      orderBy: { createdAt: "desc" },
+      take: TASK_DELIVERABLES_IN_DETAIL,
+      select: { title: true, reviewStatus: true, createdAt: true },
+    }),
+    prisma.taskDeliverable.count({ where: { taskId } }),
+    prisma.taskExtensionRequest.findFirst({
+      where: { taskId, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+      select: { requestedDueDate: true, reason: true, requestedBy: { select: { name: true } } },
+    }),
+  ]);
 
   const subTasks = task.subTasks ?? [];
   const parent = task.parentTask ?? null;
@@ -209,6 +304,25 @@ export async function readTaskDetail(authz: AuthorizationContext, taskId: string
       statusLabel: getStatusDisplay(sub.status).label,
       dueDate: ictDate(sub.dueDate),
     })),
+    commentCount,
+    recentComments: comments.map((comment) => ({
+      author: comment.author?.name ?? "—",
+      at: ictDateTime(comment.createdAt),
+      text: redactContact(clip(comment.body, TASK_COMMENT_MAX)),
+    })),
+    deliverableCount,
+    deliverables: deliverables.map((item) => ({
+      title: redactContact(clip(item.title, 160)),
+      reviewStatus: DELIVERABLE_REVIEW_LABEL[item.reviewStatus] ?? String(item.reviewStatus),
+      submittedAt: ictDate(item.createdAt),
+    })),
+    pendingExtension: extension
+      ? {
+          requestedBy: extension.requestedBy?.name ?? "—",
+          requestedDueDate: ictDate(extension.requestedDueDate),
+          reason: redactContact(clip(extension.reason, TASK_COMMENT_MAX)),
+        }
+      : null,
   };
   // Không có việc cha thì là null; có việc cha nhưng không đọc được thì bỏ hẳn trường
   if (!parent || readableParent) {
@@ -217,6 +331,12 @@ export async function readTaskDetail(authz: AuthorizationContext, taskId: string
 
   return { view, self, related };
 }
+
+const DELIVERABLE_REVIEW_LABEL: Record<string, string> = {
+  PENDING: "Chờ duyệt",
+  APPROVED: "Đã duyệt",
+  REVISION_REQUIRED: "Yêu cầu sửa",
+};
 
 /** Việc cha đọc được theo cùng quy tắc GET /api/tasks/[id]; chỉ lỗi từ chối/không tìm thấy mới thành "không đọc được". */
 async function canReadParentTask(authz: AuthorizationContext, parentId: string): Promise<boolean> {

@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import type {
+  AssistantActionDTO,
   AssistantAttachmentDTO,
   AssistantContextRef,
   AssistantConversationSummaryDTO,
+  AssistantSkillDTO,
   AssistantSourceRef,
   AssistantStreamEvent,
 } from "@qcet/contracts/assistant";
@@ -28,6 +30,7 @@ import {
   markReplyInterrupted,
   questionMessageBefore,
   reduceAssistantReply,
+  replaceThreadAction,
   retryMissesAttachments,
   setProposalDismissed,
   streamingThreadMessage,
@@ -81,6 +84,8 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
   const [contextLabel, setContextLabel] = React.useState<string | null>(null);
   // Ảnh/tệp chờ gửi ở ô soạn; gửi xong thì nằm trong tin hỏi của luồng (máy chủ lưu bản của nó, báo qua sự kiện `attachments`)
   const [attachments, setAttachments] = React.useState<ChatAttachment[]>([]);
+  // Kỹ năng chọn bằng "/" cho lượt gửi tiếp từ ô soạn (máy chủ chỉ ghi lần dùng); gửi xong thì bỏ
+  const [skill, setSkill] = React.useState<AssistantSkillDTO | null>(null);
   const previewUrlsRef = React.useRef(new Set<string>());
   // Đọc tệp chờ gửi và luồng tin mới nhất trong callback ổn định (đổi cuộc, thu hồi ảnh xem trước)
   const attachmentsRef = React.useRef(attachments);
@@ -422,7 +427,11 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
 
     setPending(true);
     setSendError(null);
-    if (fromComposer) setAttachments([]);
+    const skillId = fromComposer ? skill?.id : undefined;
+    if (fromComposer) {
+      setAttachments([]);
+      setSkill(null);
+    }
     // "Tạo lại"/"Sửa": cặp hỏi–đáp cuối rời luồng ngay, máy chủ từ chối thì trả lại đúng chỗ
     const isReplaced = (m: ThreadMessage) => m.key === replaces?.questionKey || m.key === replaces?.replyKey;
     const replaced = replaces ? threadRef.current.filter(isReplaced) : [];
@@ -441,6 +450,7 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
           ...(model ? { model } : {}),
           ...(resendStored.length > 0 ? { attachmentIds: resendStored.map((attachment) => attachment.id) } : {}),
           ...(replaces ? { replacesMessageId: replaces.questionId } : {}),
+          ...(skillId ? { skillId } : {}),
         },
         controller.signal,
         turnEventHandler(controller, userKey, replyKey, turn, isNewChat),
@@ -592,6 +602,11 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     [saveProposal],
   );
 
+  /** Thẻ hành động vừa được duyệt, bỏ qua hay hoàn tác ở máy chủ: thay thẻ trong luồng. */
+  const actionChanged = React.useCallback((action: AssistantActionDTO) => {
+    setThread((prev) => replaceThreadAction(prev, action));
+  }, []);
+
   return {
     activeId,
     activeTitle,
@@ -617,6 +632,9 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     proposalCreated,
     proposalDismissed,
     proposalsDismissed,
+    actionChanged,
+    skill,
+    selectSkill: setSkill,
     stop,
     reload,
     readActiveId,

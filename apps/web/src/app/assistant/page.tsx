@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getRuntimeConfig, getWebSession } from "@/lib/server-api";
 import { AssistantWorkspace } from "@/components/assistant/assistant-workspace";
-import { parseAssistantContextParam } from "@/components/assistant/assistant-model";
+import { parseAssistantContextParam, parseAssistantPromptParam } from "@/components/assistant/assistant-model";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 interface AssistantPageProps {
-  searchParams: Promise<{ context?: string | string[] }>;
+  searchParams: Promise<{ context?: string | string[]; prompt?: string | string[] }>;
 }
 
 export default async function AssistantPage({ searchParams }: AssistantPageProps) {
@@ -23,6 +23,6 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
     redirect(`/login?returnTo=${encodeURIComponent("/assistant")}`);
   }
 
-  const { context } = await searchParams;
-  return <AssistantWorkspace initialContext={parseAssistantContextParam(context)} />;
+  const { context, prompt } = await searchParams;
+  return <AssistantWorkspace initialContext={parseAssistantContextParam(context)} initialPrompt={parseAssistantPromptParam(prompt)} />;
 }

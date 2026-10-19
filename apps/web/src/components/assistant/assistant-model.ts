@@ -4,7 +4,9 @@
  */
 import {
   ASSISTANT_MAX_PROPOSALS_PER_TURN,
+  ASSISTANT_MESSAGE_MAX,
   AssistantContextRefSchema,
+  type AssistantActionDTO,
   type AssistantAttachmentDTO,
   type AssistantContextRef,
   type AssistantContextType,
@@ -19,6 +21,15 @@ import {
 } from "@qcet/contracts/assistant";
 import type { ChatAttachment } from "@/components/agent-chat/agent-attachments";
 import { dedupeSources } from "@qcet/shared/domain/assistant/assistant-sources";
+
+/**
+ * `?prompt=` (bản tin sáng trong Hộp thư, ADR-012): câu hỏi điền sẵn vào ô soạn để người dùng tự gửi; không tự gửi từ
+ * đường dẫn. Một dòng, cắt theo độ dài tối đa của câu hỏi.
+ */
+export function parseAssistantPromptParam(raw: string | string[] | undefined): string {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return (value ?? "").replace(/\s+/g, " ").trim().slice(0, ASSISTANT_MESSAGE_MAX);
+}
 
 /** Câu gửi khi chỉ đính kèm tệp, không gõ chữ (như Agent tạo nhiệm vụ). */
 export const ASSISTANT_ATTACHMENT_ONLY_PROMPT = "Tóm tắt tệp đính kèm.";
@@ -142,6 +153,8 @@ export interface ThreadMessage {
   startedAt?: number;
   /** Số lời gọi propose_task mô hình đã bắt đầu viết trong lượt đang chạy (thẻ tới sau, khi cả vòng xong). */
   proposalsStarted?: number;
+  /** Thẻ hành động chờ duyệt của lượt trả lời (ADR-012): bình luận, đổi trạng thái, nhắc việc, ghi nhớ. */
+  actions?: AssistantActionDTO[];
 }
 
 export type { AssistantProposalTask } from "@qcet/contracts/assistant";
@@ -270,6 +283,15 @@ export function setProposalDismissed(thread: ThreadMessage[], replyKey: string, 
   });
 }
 
+/** Thay thẻ hành động (sau khi duyệt, bỏ qua, hoàn tác) ở mọi tin đang có thẻ đó. */
+export function replaceThreadAction(thread: ThreadMessage[], action: AssistantActionDTO): ThreadMessage[] {
+  return thread.map((message) =>
+    message.actions?.some((item) => item.id === action.id)
+      ? { ...message, actions: message.actions.map((item) => (item.id === action.id ? action : item)) }
+      : message,
+  );
+}
+
 /** Ghi nhận đề xuất thứ `index` của tin `replyKey` đã thành nhiệm vụ; tin không còn trong luồng thì giữ nguyên. */
 export function markProposalCreated(thread: ThreadMessage[], replyKey: string, index: number, task: AssistantProposalTask): ThreadMessage[] {
   return thread.map((message) =>
@@ -326,6 +348,7 @@ export function threadMessageFromDto(dto: AssistantMessageDTO): ThreadMessage {
     durationMs: dto.durationMs,
     errorMessage: null,
     ...(dto.attachments?.length ? { storedAttachments: dto.attachments } : {}),
+    ...(dto.actions?.length ? { actions: dto.actions } : {}),
   };
   if (dto.proposals.length === 0) return message;
   // Thẻ đề xuất và trạng thái đã chọn (đã tạo, bỏ qua) lưu ở máy chủ: thoát ra vào lại vẫn như lúc rời
@@ -358,6 +381,8 @@ export function reduceAssistantReply(reply: ThreadMessage, event: AssistantStrea
       return { ...reply, proposals: [...(reply.proposals ?? []), event.proposal] };
     case "proposal_started":
       return { ...reply, proposalsStarted: (reply.proposalsStarted ?? 0) + 1 };
+    case "action":
+      return { ...reply, actions: [...(reply.actions ?? []), event.action] };
     case "done":
       return { ...reply, id: event.messageId, status: event.status, durationMs: event.durationMs };
     case "error":

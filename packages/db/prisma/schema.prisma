@@ -160,6 +160,11 @@ model User {
   pushSubscriptions     PushSubscription[]
   notifications         Notification[]
   assistantConversations AssistantConversation[]
+  assistantPreference    AssistantPreference?
+  assistantMemories      AssistantMemory[]
+  assistantSkills        AssistantSkill[]
+  assistantActions       AssistantAction[]
+  assistantBriefings     AssistantBriefing[]
   positionAssignments   PositionAssignment[]  @relation("UserPositionAssignments")
   bodyMemberships       BodyMembership[]
   taskActors            TaskActor[]
@@ -1631,6 +1636,7 @@ model AssistantConversation {
   updatedAt     DateTime           @updatedAt @map("updated_at")
   lastMessageAt DateTime           @default(now()) @map("last_message_at")
   messages      AssistantMessage[]
+  actions       AssistantAction[]
 
   @@index([userId, lastMessageAt(sort: Desc)])
   @@index([userId, contextType, contextId])
@@ -1652,9 +1658,92 @@ model AssistantMessage {
   proposals      Json?
   durationMs     Int?                  @map("duration_ms")
   createdAt      DateTime              @default(now()) @map("created_at")
+  actions        AssistantAction[]
 
   @@index([conversationId, createdAt])
   @@map("assistant_messages")
+}
+
+/// Thiết lập Trợ lý của từng người (ADR-012): hướng dẫn riêng đưa vào lời nhắc, bật bản tin sáng.
+model AssistantPreference {
+  userId          String   @id @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instructions    String   @default("") @db.VarChar(2000)
+  briefingEnabled Boolean  @default(false) @map("briefing_enabled")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("assistant_preferences")
+}
+
+/// Ghi nhớ của Trợ lý về người dùng (sở thích, cách làm việc), mỗi mục xem, sửa, xóa được. Trợ lý chỉ thêm khi người dùng duyệt thẻ.
+model AssistantMemory {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.VarChar(300)
+  /// "user" (tự thêm) hoặc "assistant" (Trợ lý đề xuất, người dùng đã duyệt)
+  source    String   @default("user") @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@map("assistant_memories")
+}
+
+/// Kỹ năng: câu lệnh dùng lại của từng người, gọi bằng "/" ở ô soạn (như Skills của Linear Agent).
+model AssistantSkill {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String    @db.VarChar(60)
+  prompt     String    @db.VarChar(4000)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  @@unique([userId, name])
+  @@map("assistant_skills")
+}
+
+/// Hành động ghi Trợ lý soạn, chờ người dùng duyệt (ADR-012). Máy chủ chỉ thực hiện đúng `payload` đã lưu, sau khi
+/// người dùng bấm Duyệt và kiểm lại quyền lúc đó; client không gửi lại nội dung hành động.
+model AssistantAction {
+  id             String                @id @default(cuid())
+  userId         String                @map("user_id")
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String                @map("conversation_id")
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// Gắn khi tin trả lời của lượt đã lưu
+  messageId      String?               @map("message_id")
+  message        AssistantMessage?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  kind           String                @db.VarChar(32)
+  payload        Json
+  /// pending | done | rejected | failed | undone | expired
+  status         String                @default("pending") @db.VarChar(16)
+  /// Dữ liệu để hiển thị kết quả và hoàn tác (mã bình luận, trạng thái cũ…)
+  result         Json?
+  error          String?               @db.VarChar(300)
+  createdAt      DateTime              @default(now()) @map("created_at")
+  decidedAt      DateTime?             @map("decided_at")
+
+  @@index([messageId])
+  @@index([userId, status])
+  @@index([conversationId])
+  @@map("assistant_actions")
+}
+
+/// Bản tin sáng đã gửi: mỗi người một bản mỗi ngày (ngày theo lịch Asia/Ho_Chi_Minh), để cron chạy lặp lại không gửi trùng.
+model AssistantBriefing {
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// YYYY-MM-DD (ICT)
+  day            String   @db.VarChar(10)
+  notificationId String?  @map("notification_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@id([userId, day])
+  @@map("assistant_briefings")
 }
 
 /// Emoji thả vào bình luận nhiệm vụ: mỗi người một lần cho mỗi emoji (bộ emoji cố định ở src/domain/tasks/comment-reactions.ts).

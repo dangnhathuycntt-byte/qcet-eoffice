@@ -4,13 +4,20 @@
  */
 import {
   parseAssistantStreamEvent,
+  type AssistantActionDecision,
+  type AssistantActionDTO,
   type AssistantChatRequest,
   type AssistantConversationActivityDTO,
   type AssistantConversationDetailDTO,
   type AssistantConversationListDTO,
   type AssistantConversationSummaryDTO,
+  type AssistantMemoryDTO,
   type AssistantMessageProposalDTO,
+  type AssistantPreferencesDTO,
+  type AssistantPreferencesUpdate,
   type AssistantProposalUpdateRequest,
+  type AssistantSkillDTO,
+  type AssistantSkillInput,
   type AssistantStreamEvent,
 } from "@qcet/contracts/assistant";
 import { splitNdjson } from "@qcet/shared/domain/tasks/task-agent-stream";
@@ -194,4 +201,55 @@ export function conversationActivityRequest(ids: string[], signal?: AbortSignal)
 /** Nút Dừng: hủy lượt ở máy chủ (máy chủ lưu phần chữ đã có với trạng thái "Đã dừng"). */
 export function stopAssistantRunRequest(runId: string): Promise<{ stopped: boolean }> {
   return requestJson<{ stopped: boolean }>(`/api/assistant/runs/${encodeURIComponent(runId)}/stop`, { method: "POST" });
+}
+
+/** Duyệt, bỏ qua hoặc hoàn tác thẻ hành động (ADR-012); máy chủ thực hiện đúng nội dung đã lưu của thẻ. */
+export function decideActionRequest(actionId: string, decision: AssistantActionDecision): Promise<AssistantActionDTO> {
+  return requestJson<AssistantActionDTO>(`/api/assistant/actions/${encodeURIComponent(actionId)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ decision }),
+  });
+}
+
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
+export function getPreferencesRequest(signal?: AbortSignal): Promise<AssistantPreferencesDTO> {
+  return requestJson<AssistantPreferencesDTO>("/api/assistant/preferences", { signal, cache: "no-store" });
+}
+
+export function updatePreferencesRequest(change: AssistantPreferencesUpdate): Promise<AssistantPreferencesDTO> {
+  return requestJson<AssistantPreferencesDTO>("/api/assistant/preferences", { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(change) });
+}
+
+export function listMemoriesRequest(signal?: AbortSignal): Promise<{ memories: AssistantMemoryDTO[] }> {
+  return requestJson<{ memories: AssistantMemoryDTO[] }>("/api/assistant/memories", { signal, cache: "no-store" });
+}
+
+export function addMemoryRequest(content: string): Promise<AssistantMemoryDTO> {
+  return requestJson<AssistantMemoryDTO>("/api/assistant/memories", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ content }) });
+}
+
+export function deleteMemoryRequest(id: string): Promise<{ id: string; deleted: true }> {
+  return requestJson<{ id: string; deleted: true }>(`/api/assistant/memories/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function listSkillsRequest(signal?: AbortSignal): Promise<{ skills: AssistantSkillDTO[] }> {
+  return requestJson<{ skills: AssistantSkillDTO[] }>("/api/assistant/skills", { signal, cache: "no-store" });
+}
+
+export function createSkillRequest(input: AssistantSkillInput): Promise<AssistantSkillDTO> {
+  return requestJson<AssistantSkillDTO>("/api/assistant/skills", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(input) });
+}
+
+export function updateSkillRequest(id: string, input: AssistantSkillInput): Promise<AssistantSkillDTO> {
+  return requestJson<AssistantSkillDTO>(`/api/assistant/skills/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteSkillRequest(id: string): Promise<{ id: string; deleted: true }> {
+  return requestJson<{ id: string; deleted: true }>(`/api/assistant/skills/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

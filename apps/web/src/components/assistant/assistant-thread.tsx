@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowDown, FileText, Pencil, RotateCcw } from "lucide-react";
-import { ASSISTANT_MESSAGE_MAX, type AssistantSourceRef, type AssistantTaskProposal } from "@qcet/contracts/assistant";
+import { ArrowDown, BookmarkPlus, FileText, Pencil, RotateCcw } from "lucide-react";
+import { ASSISTANT_MESSAGE_MAX, type AssistantActionDTO, type AssistantSourceRef, type AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { agentReplyToPlainText } from "@qcet/shared/domain/tasks/agent-reply-format";
 import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
 import { AttachmentCard, StoredAttachmentCard } from "@/components/agent-chat/agent-attachments";
@@ -26,6 +26,7 @@ import {
 import type { DetailStatus } from "@/components/assistant/use-assistant-chat";
 import { useElapsedSeconds } from "@/components/assistant/use-elapsed-seconds";
 import { AssistantProposalList, AssistantTaskProposalCard, PROPOSAL_LIST_MIN } from "@/components/assistant/assistant-task-proposal-card";
+import { AssistantActionCard } from "@/components/assistant/assistant-action-card";
 
 const MAX_SHOWN_SOURCES = 6;
 const ENTER_MOTION = "motion-safe:animate-[fade-in_0.3s_cubic-bezier(0.16,1,0.3,1)]";
@@ -58,6 +59,10 @@ export interface AssistantThreadProps {
   onRegenerate?: () => void;
   /** Gửi câu hỏi cuối đã sửa (thay cặp hỏi–đáp cuối); không truyền thì câu hỏi không sửa được. */
   onEditQuestion?: (text: string) => void;
+  /** Thẻ hành động vừa được duyệt, bỏ qua hay hoàn tác (ADR-012); không truyền thì thẻ chỉ để xem. */
+  onActionChange?: (action: AssistantActionDTO) => void;
+  /** "Lưu thành kỹ năng" trên câu hỏi; không truyền thì không có nút. */
+  onSaveSkill?: (text: string) => void;
 }
 
 export type { ProposalTarget } from "@/components/assistant/assistant-model";
@@ -89,6 +94,8 @@ export function AssistantThread({
   onFollowUp,
   onRegenerate,
   onEditQuestion,
+  onActionChange,
+  onSaveSkill,
 }: AssistantThreadProps) {
   const [awayFromBottom, setAwayFromBottom] = React.useState(false);
   const handleScroll = () => {
@@ -101,7 +108,11 @@ export function AssistantThread({
   const last = thread[thread.length - 1];
   const lastReply = !pending && last?.role === "assistant" && last.status !== "streaming" ? last : null;
   const lastQuestion = lastReply ? questionMessageBefore(thread, lastReply.key) : null;
-  const replaceable = Boolean(lastQuestion?.id) && Object.keys(lastReply?.proposalTasks ?? {}).length === 0;
+  // Thẻ hành động đã thực hiện cũng vậy: thay câu trả lời thì mất dấu việc đã làm
+  const replaceable =
+    Boolean(lastQuestion?.id) &&
+    Object.keys(lastReply?.proposalTasks ?? {}).length === 0 &&
+    !lastReply?.actions?.some((action) => action.status === "done");
   const scrollToBottom = () => {
     const el = listRef.current;
     if (!el) return;
@@ -141,6 +152,7 @@ export function AssistantThread({
               key={message.key}
               message={message}
               onEdit={replaceable && message.key === lastQuestion?.key ? onEditQuestion : undefined}
+              onSaveSkill={onSaveSkill}
             />
           ) : (
             <ReplyTurn
@@ -152,6 +164,7 @@ export function AssistantThread({
               onDismissProposal={onDismissProposal}
               onDismissProposals={onDismissProposals}
               onCreateProposals={onCreateProposals}
+              onActionChange={onActionChange}
               // Gợi ý chỉ dưới tin cuối và khi không có lượt nào đang chạy
               followUps={
                 onFollowUp && !pending && index === thread.length - 1
@@ -189,7 +202,15 @@ export function AssistantThread({
  * điện thoại) như ChatGPT và Claude: sửa ngay tại chỗ trong ô rộng hết cột, con trỏ đặt cuối câu, Enter gửi (thay câu trả
  * lời cũ), Esc hủy. Bộ đếm ký tự chỉ hiện khi gần hết chỗ, như ô soạn; chưa đổi gì thì chưa gửi được.
  */
-function UserTurn({ message, onEdit }: { message: ThreadMessage; onEdit?: (text: string) => void }) {
+function UserTurn({
+  message,
+  onEdit,
+  onSaveSkill,
+}: {
+  message: ThreadMessage;
+  onEdit?: (text: string) => void;
+  onSaveSkill?: (text: string) => void;
+}) {
   const [editing, setEditing] = React.useState(false);
   const [text, setText] = React.useState(message.content);
   const editRef = React.useRef<HTMLTextAreaElement>(null);
@@ -252,21 +273,35 @@ function UserTurn({ message, onEdit }: { message: ThreadMessage; onEdit?: (text:
       ) : (
         <>
           <p className="max-w-[80%] break-words whitespace-pre-wrap rounded-2xl bg-muted px-3.5 py-2 text-compact text-foreground">{message.content}</p>
-          {onEdit ? (
+          {onEdit || onSaveSkill ? (
             <div className="flex opacity-0 transition-opacity duration-150 group-focus-within/question:opacity-100 group-hover/question:opacity-100 max-md:opacity-100 motion-reduce:transition-none">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Sửa câu hỏi"
-                title="Sửa câu hỏi"
-                onClick={() => {
-                  setText(message.content);
-                  setEditing(true);
-                }}
-                className="-mr-1.5 rounded-full max-md:size-11"
-              >
-                <Pencil />
-              </Button>
+              {onSaveSkill ? (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Lưu thành kỹ năng"
+                  title="Lưu thành kỹ năng"
+                  onClick={() => onSaveSkill(message.content)}
+                  className="rounded-full max-md:size-11"
+                >
+                  <BookmarkPlus />
+                </Button>
+              ) : null}
+              {onEdit ? (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Sửa câu hỏi"
+                  title="Sửa câu hỏi"
+                  onClick={() => {
+                    setText(message.content);
+                    setEditing(true);
+                  }}
+                  className="-mr-1.5 rounded-full max-md:size-11"
+                >
+                  <Pencil />
+                </Button>
+              ) : null}
             </div>
           ) : null}
         </>
@@ -275,16 +310,24 @@ function UserTurn({ message, onEdit }: { message: ThreadMessage; onEdit?: (text:
   );
 }
 
-/** Lượt chỉ soạn đề xuất (có thể kèm đọc tệp gửi kèm) thì ghi "soạn đề xuất" thay cho "đọc dữ liệu". */
-function onlyProposes(message: ThreadMessage): boolean {
+/** Công cụ soạn (không đọc thêm dữ liệu để trả lời): đề xuất nhiệm vụ và thẻ hành động (ADR-012). */
+const COMPOSE_TOOLS: ReadonlySet<string> = new Set(["propose_task", "propose_comment", "propose_status_change", "propose_reminder", "remember"]);
+
+/**
+ * Lượt chỉ soạn (có thể kèm đọc tệp gửi kèm) thì ghi "soạn đề xuất" (chỉ đề xuất nhiệm vụ) hoặc "soạn thẻ" (có thẻ hành
+ * động) thay cho "đọc dữ liệu"; null khi lượt có đọc dữ liệu.
+ */
+function composeNoun(message: ThreadMessage): "đề xuất" | "thẻ" | null {
   const work = message.steps.filter((step) => step.tool !== "attachment");
-  return work.length > 0 && work.every((step) => step.tool === "propose_task");
+  if (work.length === 0 || !work.every((step) => COMPOSE_TOOLS.has(step.tool))) return null;
+  return work.every((step) => step.tool === "propose_task") ? "đề xuất" : "thẻ";
 }
 
 function workLabel(message: ThreadMessage): string {
   const seconds = message.durationMs === null ? null : Math.max(1, Math.round(message.durationMs / 1000));
   if (message.steps.length > 0) {
-    const done = onlyProposes(message) ? "Đã soạn đề xuất" : "Đã đọc dữ liệu";
+    const noun = composeNoun(message);
+    const done = noun ? `Đã soạn ${noun}` : "Đã đọc dữ liệu";
     return seconds === null ? done : `${done} trong ${formatDurationVi(seconds)}`;
   }
   return seconds === null ? "Đã suy nghĩ" : `Đã suy nghĩ trong ${formatDurationVi(seconds)}`;
@@ -302,10 +345,12 @@ function ReplyTurn({
   followUps,
   onFollowUp,
   onRegenerate,
+  onActionChange,
 }: {
   message: ThreadMessage;
   onRetry: () => void;
   pending: boolean;
+  onActionChange?: (action: AssistantActionDTO) => void;
   onOpenProposal?: (target: ProposalTarget) => void;
   onDismissProposal?: (replyKey: string, index: number, dismissed: boolean) => void;
   onDismissProposals?: (replyKey: string, indexes: number[], dismissed: boolean) => void;
@@ -360,7 +405,7 @@ function ReplyTurn({
         <div className="flex flex-col gap-1.5">
           <p className="flex items-baseline gap-2 text-compact">
             <span className="animate-text-shimmer">
-              {stepLabels.length === 0 ? "Đang suy nghĩ…" : onlyProposes(message) ? "Đang soạn đề xuất…" : "Đang đọc dữ liệu…"}
+              {stepLabels.length === 0 ? "Đang suy nghĩ…" : composeNoun(message) ? `Đang soạn ${composeNoun(message)}…` : "Đang đọc dữ liệu…"}
             </span>
             {progress.length > 0 ? (
               <span data-slot="assistant-run-progress" className="text-xs text-muted-foreground tabular-nums">
@@ -399,6 +444,14 @@ function ReplyTurn({
               onOpen={onOpenProposal ? () => onOpenProposal({ replyKey: message.key, index, proposal }) : undefined}
               onDismissedChange={onDismissProposal ? (dismissed) => onDismissProposal(message.key, index, dismissed) : undefined}
             />
+          ))}
+        </div>
+      ) : null}
+
+      {settled && message.actions?.length ? (
+        <div className="flex flex-col gap-2">
+          {message.actions.map((action) => (
+            <AssistantActionCard key={action.id} action={action} onChange={onActionChange} />
           ))}
         </div>
       ) : null}

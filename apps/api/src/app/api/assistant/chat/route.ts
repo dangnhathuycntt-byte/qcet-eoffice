@@ -128,6 +128,7 @@ export async function POST(req: NextRequest) {
         authz,
         conversationId: body.conversationId,
         ...(body.replacesMessageId ? { replacesMessageId: body.replacesMessageId } : {}),
+        ...(body.skillId ? { skillId: body.skillId } : {}),
         message: body.message,
         context: body.context,
         ...(attachments.length > 0 ? { attachments } : {}),

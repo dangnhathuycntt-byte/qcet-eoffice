@@ -9,6 +9,7 @@ import {
   ASSISTANT_TOOL_NAMES,
   type AssistantContextRef,
   type AssistantContextType,
+  type AssistantActionDTO,
   type AssistantAttachmentDTO,
   type AssistantMessageProposalDTO,
   type AssistantConversationDetailDTO,
@@ -27,10 +28,14 @@ import { retentionCutoff } from "@qcet/shared/domain/assistant/assistant-history
 import { normalizeTaskProposal, proposalHistoryNote } from "@qcet/shared/domain/assistant/assistant-task-proposal";
 import { ProposeTaskArgs } from "@/server/assistant/assistant-tool-proposal";
 import { listConversationAttachments, requestAssistantAttachmentPurges } from "@/server/assistant/assistant-attachments";
+import { listMessageActions } from "@/server/assistant/assistant-actions";
+import { actionHistoryNote } from "@qcet/shared/domain/assistant/assistant-actions";
 
 /** Số tin và ký tự gần nhất đưa lại cho mô hình trong một lượt (đặc tả W1-C). */
 const HISTORY_MESSAGES = 12;
 const HISTORY_CHARS = 16_000;
+/** Độ dài tối đa mỗi câu hỏi cũ liệt kê trong lời nhắc. */
+const EARLIER_QUESTION_MAX = 160;
 
 const SOURCE_TYPES: readonly string[] = ["task", "document", "meeting"];
 const MESSAGE_STATUSES: readonly string[] = ["complete", "error", "aborted"];
@@ -107,8 +112,12 @@ export function toConversationSummaryDTO(row: AssistantConversation): AssistantC
   };
 }
 
-/** `attachments`: tệp đã lưu của câu hỏi này (chỉ tin người dùng có). */
-export function toMessageDTO(row: AssistantMessage, attachments: AssistantAttachmentDTO[] = []): AssistantMessageDTO {
+/** `attachments`: tệp đã lưu của câu hỏi này (chỉ tin người dùng có); `actions`: thẻ hành động của tin trả lời này. */
+export function toMessageDTO(
+  row: AssistantMessage,
+  attachments: AssistantAttachmentDTO[] = [],
+  actions: AssistantActionDTO[] = [],
+): AssistantMessageDTO {
   return {
     id: row.id,
     role: row.role === "user" ? "user" : "assistant",
@@ -119,6 +128,7 @@ export function toMessageDTO(row: AssistantMessage, attachments: AssistantAttach
     steps: parseJsonList(row.steps, parseStep),
     proposals: parseJsonList(row.proposals, parseProposal),
     ...(attachments.length > 0 ? { attachments } : {}),
+    ...(actions.length > 0 ? { actions } : {}),
     durationMs: row.durationMs ?? null,
     createdAt: row.createdAt.toISOString(),
   };
@@ -200,7 +210,10 @@ export async function getConversationDetail(
   });
   if (!row) return null;
 
-  const attachments = await listConversationAttachments(userId, id);
+  const [attachments, actions] = await Promise.all([
+    listConversationAttachments(userId, id),
+    listMessageActions(row.messages.filter((message) => message.role === "assistant").map((message) => message.id), now),
+  ]);
   const ref = toContextRef(row.contextType, row.contextId);
   const context = ref
     ? await resolveContext(ref).catch(() => {
@@ -210,7 +223,9 @@ export async function getConversationDetail(
     : null;
   return {
     ...toConversationSummaryDTO(row),
-    messages: row.messages.map((message) => toMessageDTO(message, message.role === "user" ? attachments.get(message.id) : undefined)),
+    messages: row.messages.map((message) =>
+      toMessageDTO(message, message.role === "user" ? attachments.get(message.id) : undefined, actions.get(message.id)),
+    ),
     context,
   };
 }
@@ -315,8 +330,12 @@ export async function loadModelHistoryEntries(
   const rows = await prisma.assistantMessage.findMany({
     where: {
       conversationId,
-      // Tin trả lời chỉ có thẻ đề xuất (không kèm lời) vẫn đưa lại, kèm khối ghi các đề xuất đó
-      OR: [{ content: { not: "" } }, { role: "assistant", NOT: { proposals: { equals: Prisma.AnyNull } } }],
+      // Tin trả lời chỉ có thẻ đề xuất hay thẻ hành động (không kèm lời) vẫn đưa lại, kèm khối ghi các thẻ đó
+      OR: [
+        { content: { not: "" } },
+        { role: "assistant", NOT: { proposals: { equals: Prisma.AnyNull } } },
+        { role: "assistant", actions: { some: {} } },
+      ],
       // Tin trả lời lỗi và lượt đã được thay ("Tạo lại"/"Sửa") không đưa lại; tin bị dừng (aborted) giữ phần đã có
       NOT: [{ role: "assistant", status: "error" }, { status: SUPERSEDED }],
       ...(options.excludeMessageId ? { id: { not: options.excludeMessageId } } : {}),
@@ -325,13 +344,17 @@ export async function loadModelHistoryEntries(
     take: maxMessages,
     select: { id: true, role: true, content: true, proposals: true },
   });
+  const actions = await listMessageActions(rows.filter((row) => row.role === "assistant").map((row) => row.id));
 
   const picked: Array<{ id: string; role: AssistantMessageRole; content: string }> = [];
   let chars = 0;
   // Rà từ mới về cũ: câu hỏi chỉ giữ khi tin trả lời ngay sau nó (mới hơn) đã được giữ, để không gửi hai tin user liền nhau
   let replyKept = false;
   for (const row of rows) {
-    const note = row.role === "assistant" ? proposalHistoryNote(parseJsonList(row.proposals, parseProposal)) : "";
+    const note =
+      row.role === "assistant"
+        ? [proposalHistoryNote(parseJsonList(row.proposals, parseProposal)), actionHistoryNote(actions.get(row.id) ?? [])].filter(Boolean).join("\n\n")
+        : "";
     const content = note ? (row.content.trim() ? `${row.content}\n\n${note}` : note) : row.content;
     const keep: boolean = content.trim() !== "" && (row.role === "assistant" || replyKept);
     replyKept = keep && row.role === "assistant";
@@ -342,6 +365,30 @@ export async function loadModelHistoryEntries(
     picked.push({ id: row.id, role: row.role === "user" ? "user" : "assistant", content });
   }
   return picked.reverse();
+}
+
+/**
+ * Câu hỏi cũ hơn tin `beforeMessageId` (tin cũ nhất còn trong lịch sử gửi kèm), cũ trước, tối đa `limit` câu gần nhất.
+ * Chỉ lấy câu hỏi (không lấy trả lời), bỏ lượt đã được thay; mỗi câu cắt ngắn.
+ */
+export async function loadEarlierQuestions(conversationId: string, beforeMessageId: string, limit: number): Promise<string[]> {
+  const anchor = await prisma.assistantMessage.findFirst({
+    where: { id: beforeMessageId, conversationId },
+    select: { createdAt: true },
+  });
+  if (!anchor) return [];
+  const rows = await prisma.assistantMessage.findMany({
+    where: { conversationId, role: "user", createdAt: { lt: anchor.createdAt }, content: { not: "" }, NOT: { status: SUPERSEDED } },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit,
+    select: { content: true },
+  });
+  return rows.reverse().map((row) => clipQuestion(row.content));
+}
+
+function clipQuestion(text: string): string {
+  const line = text.replace(/\s+/g, " ").trim();
+  return line.length > EARLIER_QUESTION_MAX ? `${line.slice(0, EARLIER_QUESTION_MAX - 1)}…` : line;
 }
 
 /**

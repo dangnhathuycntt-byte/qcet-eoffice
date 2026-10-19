@@ -106,6 +106,7 @@ const EVENT_LABELS: Record<string, string> = {
   upload: "Tệp mới",
   created: "Tạo mới",
   welcome: "Chào mừng",
+  assistant_briefing: "Bản tin sáng",
 };
 
 /** Nhãn ngắn của loại sự kiện; type chưa biết dùng nhãn trung tính. */

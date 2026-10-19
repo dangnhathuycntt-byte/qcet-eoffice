@@ -1,13 +1,17 @@
 /**
  * Vòng hội thoại của Trợ lý (chỉ đọc): ghi câu hỏi, nạp lịch sử, gọi mô hình qua gateway có công cụ đọc dữ liệu (và
- * propose_task chỉ soạn đề xuất nhiệm vụ, ADR-010), phát sự kiện NDJSON, rồi lưu tin trả lời và ghi audit. Không ném lỗi: mọi lỗi thành sự kiện `error` và trạng thái tin.
+ * propose_task chỉ soạn đề xuất nhiệm vụ, ADR-010; công cụ soạn thẻ hành động chờ duyệt, ADR-012), phát sự kiện NDJSON,
+ * rồi lưu tin trả lời và ghi audit. Không ném lỗi: mọi lỗi thành sự kiện `error` và trạng thái tin.
  * Không ghi câu hỏi, câu trả lời hay dữ liệu công cụ vào log hay audit.
  */
 import type { AssistantConversation, AssistantMessage } from "@prisma/client";
 import {
+  ASSISTANT_ACTION_TOOL_NAMES,
   ASSISTANT_CONTEXT_TYPES,
+  ASSISTANT_MAX_ACTIONS_PER_TURN,
   ASSISTANT_MAX_PROPOSALS_PER_TURN,
   ASSISTANT_TOOL_NAMES,
+  type AssistantActionDTO,
   type AssistantAttachmentDTO,
   type AssistantContextRef,
   type AssistantContextType,
@@ -31,9 +35,12 @@ import {
   applyGeneratedTitle,
   createConversation,
   getConversation,
+  loadEarlierQuestions,
   loadModelHistoryEntries,
   toConversationSummaryDTO,
 } from "@/server/assistant/assistant-conversations";
+import { linkActionsToMessage } from "@/server/assistant/assistant-actions";
+import { loadAssistantPromptProfile, touchAssistantSkill } from "@/server/assistant/assistant-profile";
 import {
   linkAssistantAttachments,
   loadHistoryAttachmentParts,
@@ -72,6 +79,10 @@ export const ASSISTANT_LIMITS = {
    * không đọc dữ liệu nên không tính vào `maxToolCallsPerRound` và `maxToolCharsPerTurn` (kế hoạch vài chục đầu việc).
    */
   maxProposalsPerTurn: ASSISTANT_MAX_PROPOSALS_PER_TURN,
+  /** Số thẻ hành động (ADR-012) tối đa trong một lượt; quá thì mô hình nhận lỗi, công cụ không chạy (không lưu thẻ). */
+  maxActionsPerTurn: ASSISTANT_MAX_ACTIONS_PER_TURN,
+  /** Số câu hỏi cũ (ngoài phần lịch sử gửi kèm) liệt kê trong lời nhắc để mô hình biết cuộc đã bàn gì. */
+  earlierQuestions: 10,
   /**
    * Token cho phần trả lời và lời gọi công cụ của mỗi vòng (ngoài ngân sách suy nghĩ): mặc định của gateway (3000) chỉ đủ
    * vài đề xuất có việc con, kế hoạch năm cần nhiều đề xuất trong một vòng.
@@ -95,6 +106,9 @@ const TOOL_FAILED_CONTENT = '{"error":"Lỗi đọc dữ liệu, thử lại sau
 const PROPOSAL_LIMIT_CONTENT = JSON.stringify({
   error: `Mỗi lượt chỉ soạn tối đa ${ASSISTANT_LIMITS.maxProposalsPerTurn} đề xuất. Đề xuất này chưa được soạn; Thầy/Cô hỏi tiếp ở lượt sau.`,
 });
+const ACTION_LIMIT_CONTENT = JSON.stringify({
+  error: `Mỗi lượt chỉ soạn tối đa ${ASSISTANT_LIMITS.maxActionsPerTurn} thẻ hành động. Thẻ này chưa được soạn; Thầy/Cô hỏi tiếp ở lượt sau.`,
+});
 const TOO_MANY_TOOLS_CONTENT = '{"error":"Quá nhiều công cụ trong một lượt, hãy gọi ít hơn."}';
 const TOOL_BUDGET_CONTENT = '{"error":"Đã đọc đủ dữ liệu cho lượt này, hãy trả lời với dữ liệu đã có."}';
 const CONTEXT_FORBIDDEN_MESSAGE = "Không tìm thấy hoặc Thầy/Cô không có quyền xem mục này.";
@@ -116,6 +130,8 @@ export interface AssistantTurnInput {
    * không ghi tên hay nội dung vào log.
    */
   attachments?: AssistantTurnAttachment[];
+  /** Kỹ năng người dùng chọn (chữ của kỹ năng đã nằm trong `message`): chỉ ghi lần dùng để xếp kỹ năng hay dùng lên đầu. */
+  skillId?: string;
   requestId: string;
   now?: Date;
 }
@@ -158,6 +174,7 @@ interface ToolRun {
   detailed: boolean;
   ok: boolean;
   proposal?: AssistantTaskProposal;
+  action?: AssistantActionDTO;
 }
 
 interface DescribedContext {
@@ -218,6 +235,19 @@ function isProposalCall(call: Pick<GatewayToolCall, "name">): boolean {
   return call.name === "propose_task";
 }
 
+/** Lời gọi soạn thẻ hành động (ADR-012): chịu giới hạn số thẻ của lượt, kiểm trước khi chạy để không lưu thẻ thừa. */
+function isActionCall(call: Pick<GatewayToolCall, "name">): boolean {
+  return (ASSISTANT_ACTION_TOOL_NAMES as readonly string[]).includes(call.name);
+}
+
+/**
+ * Lời gọi soạn (đề xuất nhiệm vụ, thẻ hành động): đã có trần riêng của lượt nên không tính vào trần công cụ mỗi vòng và
+ * ngân sách ký tự; thẻ hành động đã lưu luôn được báo cho mô hình và giao diện, không bị bỏ giữa chừng vì hết ngân sách.
+ */
+function isComposeCall(call: Pick<GatewayToolCall, "name">): boolean {
+  return isProposalCall(call) || isActionCall(call);
+}
+
 /** Mã loại công cụ dùng cho bước hiển thị; tên lạ thành "unknown". */
 function toolNameOf(name: string): AssistantToolName | "unknown" {
   return (ASSISTANT_TOOL_NAMES as readonly string[]).includes(name) ? (name as AssistantToolName) : "unknown";
@@ -247,6 +277,7 @@ async function runToolSafely(deps: AssistantTurnDeps, call: GatewayToolCall, ctx
       detailed: outcome.detailed,
       ok: outcome.ok,
       ...(outcome.proposal ? { proposal: outcome.proposal } : {}),
+      ...(outcome.action ? { action: outcome.action } : {}),
     };
   } catch {
     return {
@@ -399,6 +430,10 @@ async function runTurn(
       return;
     }
     progress.conversationId = conversation.id;
+    toolCtx.conversationId = conversation.id;
+    if (input.skillId) {
+      void touchAssistantSkill(input.userId, input.skillId, now).catch(() => logger.warn("assistant.skill.touch_failed", { requestId: input.requestId }));
+    }
     // Tệp của câu hỏi lưu song song với câu trả lời (lưu lỗi không làm hỏng lượt); báo trước `done` để mở lại cuộc vẫn có
     const savingAttachments = saveTurnAttachments(input, conversation.id, userMessage.id).then((stored) => {
       if (stored.length > 0 && attachmentsOpen) emit({ type: "attachments", messageId: userMessage.id, attachments: stored });
@@ -418,11 +453,22 @@ async function runTurn(
           })
         : null;
 
-    const history = await loadModelHistoryEntries(conversation.id, {
-      maxMessages: ASSISTANT_LIMITS.historyMessages,
-      maxChars: ASSISTANT_LIMITS.historyChars,
-      excludeMessageId: userMessage.id,
-    });
+    const [history, profile] = await Promise.all([
+      loadModelHistoryEntries(conversation.id, {
+        maxMessages: ASSISTANT_LIMITS.historyMessages,
+        maxChars: ASSISTANT_LIMITS.historyChars,
+        excludeMessageId: userMessage.id,
+      }),
+      // Thiết lập riêng không đọc được thì trả lời như chưa có thiết lập, không làm hỏng lượt
+      loadAssistantPromptProfile(input.userId).catch(() => {
+        logger.warn("assistant.profile.load_failed", { requestId: input.requestId });
+        return { instructions: "", memories: [] as string[] };
+      }),
+    ]);
+    // Câu hỏi cũ hơn phần lịch sử gửi kèm: chỉ liệt kê câu hỏi (không kèm trả lời) để mô hình biết cuộc đã bàn gì
+    const earlierQuestions = history.length
+      ? await loadEarlierQuestions(conversation.id, history[0].id, ASSISTANT_LIMITS.earlierQuestions).catch(() => [] as string[])
+      : [];
     // Tệp đã lưu của các câu hỏi còn trong lịch sử gửi lại cùng câu hỏi đó (tệp gửi lại ở lượt này thì không lặp)
     const historyFiles = await loadHistoryAttachmentParts(
       input.userId,
@@ -439,6 +485,9 @@ async function runTurn(
       userName: input.authz.user.name,
       positions: input.authz.positions.map((p) => ({ title: p.positionTitle, unitName: p.unitName })),
       context: described ? { label: contextLabel(described.source), summary: described.summary } : null,
+      instructions: profile.instructions,
+      memories: profile.memories,
+      earlierQuestions,
     });
     const attachmentParts = (input.attachments ?? []).flatMap((attachment) => attachment.parts);
     const withParts = (text: string, parts: TaskAgentContentPart[] | undefined): GatewayMessage =>
@@ -455,6 +504,7 @@ async function runTurn(
     let answer = "";
     let toolChars = 0;
     const proposals: AssistantTaskProposal[] = [];
+    const actions: AssistantActionDTO[] = [];
     // Ngân sách ký tự công cụ của cả lượt: hết (đủ trần, hoặc một kết quả đã bị loại vì vượt) thì các lần đọc sau không chạy nữa
     let budgetUsed = false;
     let rounds = 0;
@@ -549,23 +599,27 @@ async function runTurn(
       });
       messages.push(toAssistantToolCallMessage(completion.content, calls));
 
-      // Đề xuất không đọc dữ liệu: không tính vào trần công cụ mỗi vòng (giới hạn riêng maxProposalsPerTurn)
+      // Lời gọi soạn (đề xuất, thẻ hành động) không tính vào trần công cụ mỗi vòng (giới hạn riêng của lượt)
       const batch: typeof calls = [];
       const overflow: typeof calls = [];
+      // Thẻ hành động vượt trần của lượt: không chạy (không lưu thẻ), mô hình nhận lỗi
+      const actionOverflow: typeof calls = [];
       let readCalls = 0;
+      let actionCalls = actions.length;
       for (const call of calls) {
-        if (isProposalCall(call) || readCalls++ < ASSISTANT_LIMITS.maxToolCallsPerRound) batch.push(call);
+        if (isActionCall(call) && actionCalls++ >= ASSISTANT_LIMITS.maxActionsPerTurn) actionOverflow.push(call);
+        else if (isComposeCall(call) || readCalls++ < ASSISTANT_LIMITS.maxToolCallsPerRound) batch.push(call);
         else overflow.push(call);
       }
       // Cả batch vẫn chạy song song; kết quả đọc dữ liệu chỉ được gửi theo thứ tự gọi khi còn trong ngân sách của cả lượt
       const runs = await Promise.all(
-        batch.map((call) => (budgetUsed && !isProposalCall(call) ? null : runToolSafely(deps, call, toolCtx, turn.signal))),
+        batch.map((call) => (budgetUsed && !isComposeCall(call) ? null : runToolSafely(deps, call, toolCtx, turn.signal))),
       );
       for (const [index, call] of batch.entries()) {
         let run = runs[index];
-        const proposalCall = isProposalCall(call);
+        const composeCall = isComposeCall(call);
         // Kết quả vượt phần còn lại không gửi cho mô hình, không thêm bước và nguồn của nó
-        if (!run || (!proposalCall && (budgetUsed || toolChars + run.content.length > ASSISTANT_LIMITS.maxToolCharsPerTurn))) {
+        if (!run || (!composeCall && (budgetUsed || toolChars + run.content.length > ASSISTANT_LIMITS.maxToolCharsPerTurn))) {
           budgetUsed = true;
           messages.push({ role: "tool", tool_call_id: call.id, content: TOOL_BUDGET_CONTENT });
           continue;
@@ -573,7 +627,7 @@ async function runTurn(
         if (run.proposal && proposals.length >= ASSISTANT_LIMITS.maxProposalsPerTurn) {
           run = { ...run, ok: false, proposal: undefined, content: PROPOSAL_LIMIT_CONTENT, step: { ...run.step, ok: false } };
         }
-        if (!proposalCall) {
+        if (!composeCall) {
           toolChars += run.content.length;
           budgetUsed = toolChars >= ASSISTANT_LIMITS.maxToolCharsPerTurn;
         }
@@ -588,9 +642,15 @@ async function runTurn(
             proposals.push(run.proposal);
             emit({ type: "proposal", proposal: run.proposal });
           }
+          // Thẻ hành động đã lưu (chờ duyệt) hiện ngay dưới bước của nó; gắn vào tin trả lời khi lưu
+          if (run.action) {
+            actions.push(run.action);
+            emit({ type: "action", action: run.action });
+          }
         }
       }
       for (const call of overflow) messages.push({ role: "tool", tool_call_id: call.id, content: TOO_MANY_TOOLS_CONTENT });
+      for (const call of actionOverflow) messages.push({ role: "tool", tool_call_id: call.id, content: ACTION_LIMIT_CONTENT });
     }
 
     // Không có chữ trả lời: báo lỗi một lần qua sự kiện error (giao diện hiện ở khung lỗi), không chèn thêm chữ
@@ -620,6 +680,11 @@ async function runTurn(
       durationMs,
     });
     progress.replySaved = true;
+    if (actions.length > 0) {
+      await linkActionsToMessage(input.userId, actions.map((action) => action.id), saved.id).catch(() =>
+        logger.warn("assistant.action.link_failed", { requestId: input.requestId }),
+      );
+    }
     if (errorEvent) emit({ type: "error", error: errorEvent, messageId: saved.id });
     emit({ type: "done", messageId: saved.id, status, durationMs });
 

@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "cd ../.. && next start apps/api -p 3100",
     "typecheck": "tsc --noEmit",
-    "test": "node ../../scripts/run-tests.mjs --workspace apps/api"
+    "test": "node ../../scripts/run-tests.mjs --workspace apps/api",
+    "eval:assistant": "tsx scripts/assistant-eval.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

@@ -1,5 +1,6 @@
 /**
- * Hợp đồng dữ liệu của Trợ lý (chỉ đọc): request, DTO lịch sử chat và sự kiện NDJSON server → trình duyệt.
+ * Hợp đồng dữ liệu của Trợ lý: request, DTO lịch sử chat và sự kiện NDJSON server → trình duyệt; thiết lập riêng, ghi
+ * nhớ, kỹ năng và hành động chờ duyệt (ADR-012).
  * Dùng chung cho route, service và giao diện; không chứa logic truy vấn.
  */
 import { z } from "zod";
@@ -28,8 +29,26 @@ export const ASSISTANT_TOOL_NAMES = [
   "my_inbox",
   "list_meetings",
   "propose_task",
+  "propose_comment",
+  "propose_status_change",
+  "propose_reminder",
+  "remember",
 ] as const;
 export type AssistantToolName = (typeof ASSISTANT_TOOL_NAMES)[number];
+
+/** Công cụ chỉ soạn thẻ hành động chờ duyệt (ADR-012); không thay đổi gì cho tới khi người dùng bấm Duyệt. */
+export const ASSISTANT_ACTION_TOOL_NAMES = ["propose_comment", "propose_status_change", "propose_reminder", "remember"] as const;
+
+/** Số thẻ hành động tối đa mỗi lượt: mỗi thẻ người dùng phải đọc và duyệt riêng. */
+export const ASSISTANT_MAX_ACTIONS_PER_TURN = 5;
+/** Thẻ chưa duyệt quá chừng này thì hết hạn: dữ liệu có thể đã đổi, phải soạn lại. */
+export const ASSISTANT_ACTION_TTL_HOURS = 72;
+export const ASSISTANT_INSTRUCTIONS_MAX = 2000;
+export const ASSISTANT_MEMORY_MAX = 300;
+/** Số ghi nhớ tối đa mỗi người; tất cả được đưa vào lời nhắc nên giữ ít và ngắn. */
+export const ASSISTANT_MEMORIES_PER_USER = 30;
+export const ASSISTANT_SKILL_NAME_MAX = 60;
+export const ASSISTANT_SKILLS_PER_USER = 30;
 
 const entityId = z.string().trim().min(1).max(64);
 
@@ -49,6 +68,8 @@ export const AssistantChatRequestSchema = z
     // "Tạo lại" hoặc "Sửa" câu hỏi cuối (như ChatGPT, Claude): mã câu hỏi cuối của cuộc; câu hỏi đó và câu trả lời của nó
     // được thay bằng lượt này (không hiện, không vào lịch sử mô hình). Chỉ đi cùng conversationId
     replacesMessageId: entityId.optional(),
+    // Kỹ năng người dùng chọn bằng "/" (chữ của kỹ năng đã nằm trong message): server chỉ ghi lần dùng
+    skillId: entityId.optional(),
   })
   .strict();
 export type AssistantChatRequest = z.infer<typeof AssistantChatRequestSchema>;
@@ -69,6 +90,31 @@ export const AssistantProposalUpdateRequestSchema = z.union([
   z.object({ indexes: z.array(proposalIndex).min(1).max(ASSISTANT_MAX_PROPOSALS_PER_TURN), dismissed: z.boolean() }).strict(),
 ]);
 export type AssistantProposalUpdateRequest = z.infer<typeof AssistantProposalUpdateRequestSchema>;
+
+/** Duyệt, bỏ qua hoặc hoàn tác một thẻ hành động; nội dung hành động lấy từ bản ghi ở máy chủ, không nhận từ client. */
+export const AssistantActionDecisionSchema = z.object({ decision: z.enum(["approve", "reject", "undo"]) }).strict();
+export type AssistantActionDecision = z.infer<typeof AssistantActionDecisionSchema>["decision"];
+
+export const AssistantPreferencesUpdateSchema = z
+  .object({
+    instructions: z.string().max(ASSISTANT_INSTRUCTIONS_MAX).optional(),
+    briefingEnabled: z.boolean().optional(),
+  })
+  .strict()
+  .refine((value) => value.instructions !== undefined || value.briefingEnabled !== undefined, { message: "Không có gì để lưu" });
+export type AssistantPreferencesUpdate = z.infer<typeof AssistantPreferencesUpdateSchema>;
+
+export const AssistantMemoryInputSchema = z
+  .object({ content: z.string().trim().min(1, "Nhập nội dung ghi nhớ").max(ASSISTANT_MEMORY_MAX) })
+  .strict();
+
+export const AssistantSkillInputSchema = z
+  .object({
+    name: z.string().trim().min(1, "Nhập tên kỹ năng").max(ASSISTANT_SKILL_NAME_MAX),
+    prompt: z.string().trim().min(1, "Nhập nội dung kỹ năng").max(ASSISTANT_MESSAGE_MAX),
+  })
+  .strict();
+export type AssistantSkillInput = z.infer<typeof AssistantSkillInputSchema>;
 
 export const AssistantConversationListQuerySchema = z
   .object({
@@ -156,6 +202,56 @@ export interface AssistantAttachmentDTO {
   url: string;
 }
 
+export type AssistantActionKind = "task_comment" | "task_status" | "task_remind" | "memory_save";
+export type AssistantActionStatus = "pending" | "done" | "rejected" | "failed" | "undone" | "expired";
+export type AssistantTaskStatusValue = "NOT_STARTED" | "IN_PROGRESS" | "WAITING_APPROVAL" | "COMPLETED" | "CANCELLED";
+
+/** Nhiệm vụ mà thẻ hành động tác động (đã kiểm quyền lúc soạn). */
+export interface AssistantActionTask {
+  id: string;
+  code: string | null;
+  title: string;
+}
+
+/** Nội dung thẻ hành động, hiện đủ để người dùng biết chính xác điều sẽ xảy ra trước khi duyệt. */
+export type AssistantActionView =
+  | { kind: "task_comment"; task: AssistantActionTask; body: string }
+  | { kind: "task_status"; task: AssistantActionTask; from: AssistantTaskStatusValue; to: AssistantTaskStatusValue }
+  | { kind: "task_remind"; task: AssistantActionTask; message: string; recipients: string[] }
+  | { kind: "memory_save"; content: string };
+
+/** Thẻ hành động chờ duyệt (ADR-012): chưa thay đổi gì cho tới khi người dùng bấm Duyệt. */
+export interface AssistantActionDTO {
+  id: string;
+  status: AssistantActionStatus;
+  view: AssistantActionView;
+  /** Đã thực hiện và còn hoàn tác được (bình luận, ghi nhớ; nhắc việc đã gửi và đổi trạng thái thì không). */
+  undoable: boolean;
+  /** Lý do thất bại, viết cho người dùng. */
+  error: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+}
+
+export interface AssistantPreferencesDTO {
+  instructions: string;
+  briefingEnabled: boolean;
+}
+
+export interface AssistantMemoryDTO {
+  id: string;
+  content: string;
+  source: "user" | "assistant";
+  createdAt: string;
+}
+
+export interface AssistantSkillDTO {
+  id: string;
+  name: string;
+  prompt: string;
+  lastUsedAt: string | null;
+}
+
 export type AssistantMessageRole = "user" | "assistant";
 export type AssistantMessageStatus = "complete" | "error" | "aborted";
 
@@ -168,6 +264,8 @@ export interface AssistantMessageDTO {
   steps: AssistantStep[];
   /** Thẻ đề xuất nhiệm vụ của tin trả lời (ADR-010); rỗng với tin khác. */
   proposals: AssistantMessageProposalDTO[];
+  /** Thẻ hành động chờ duyệt của tin trả lời (ADR-012); không có thì không có trường này. */
+  actions?: AssistantActionDTO[];
   /** Tệp gửi kèm câu hỏi (chỉ tin người dùng); không có tệp thì không có trường này. */
   attachments?: AssistantAttachmentDTO[];
   durationMs: number | null;
@@ -225,6 +323,8 @@ export type AssistantStreamEvent =
   | { type: "proposal"; proposal: AssistantTaskProposal }
   /** Mô hình bắt đầu viết một lời gọi propose_task (thẻ tới sau, khi cả vòng xong): để đếm "đang soạn" trực tiếp. */
   | { type: "proposal_started" }
+  /** Thẻ hành động chờ duyệt vừa soạn (ADR-012); chưa thực hiện gì. */
+  | { type: "action"; action: AssistantActionDTO }
   | { type: "done"; messageId: string; status: AssistantMessageStatus; durationMs: number }
   | { type: "error"; error: { code: string; message: string }; messageId?: string };
 
