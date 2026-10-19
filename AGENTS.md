@@ -27,6 +27,7 @@
 - Giữ các thay đổi đang làm dở. Không tự commit, push, merge hoặc deploy nếu người dùng chưa yêu cầu.
 - Sửa nguyên nhân trong phạm vi yêu cầu; tránh refactor, dependency hay abstraction không cần thiết. Giải thích lý do khi thay đổi kiến trúc.
 - Tái sử dụng component, dependency và helper chung. Không tạo workspace, bảng, toolbar hoặc định nghĩa metric song song.
+- Trước khi tự viết một tính năng, tra xem thư viện đã cài (Plate, Base UI, …) và component chung đã hỗ trợ chưa (tài liệu chính thức đúng phiên bản). Chỉ tự viết khi chưa có, hoặc có sẵn nhưng chưa đủ tốt; khi đó nêu rõ thiếu gì.
 - Không bịa dữ liệu nghiệp vụ, số đếm hay metadata. Dùng thuật ngữ tiếng Việt hiện có; ngày nghiệp vụ dùng `packages/shared/src/lib/academic-calendar.ts`, múi giờ `Asia/Ho_Chi_Minh`. Logic domain phải deterministic, không có side effect ẩn.
 
 ## Nghiệp vụ và phân quyền
