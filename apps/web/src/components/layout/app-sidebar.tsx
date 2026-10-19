@@ -371,10 +371,12 @@ export function AppSidebar() {
 
         </m.aside>
 
-        {/* Collapse toggle — mỏng, dính mép sidebar, grip luôn hiện để người dùng biết bấm/thu gọn được */}
+        {/* Collapse toggle — mỏng, dính mép sidebar, grip luôn hiện để người dùng biết bấm/thu gọn được.
+            Cùng tầng z-40 với sidebar: nằm trên sidebar và nội dung, nhưng dưới lớp phủ của hộp thoại, ngăn kéo
+            (portal ra cuối body, z-40/z-50) để grip không sáng lên giữa lớp phủ tối. */}
         <m.div
           style={{ left: sidebarWidthMotion }}
-          className="fixed top-0 bottom-0 z-50 hidden md:flex items-center -ml-px group/collapse-trigger"
+          className="fixed top-0 bottom-0 z-40 hidden md:flex items-center -ml-px group/collapse-trigger"
         >
           <Tooltip>
             <TooltipTrigger asChild>
