@@ -1,12 +1,14 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { IsoStackGlyph } from "@/components/ui/iso-stack-glyph";
+import { EmptyGlyph, type EmptyGlyphName } from "@/components/ui/empty-glyphs";
+
+export type { EmptyGlyphName };
 
 export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   icon?: React.ReactNode;
   /** Tranh nét mực trong `public/design/illustrations/` (vd. "dossier"), dùng khi chưa có dữ liệu. Có tranh thì bỏ qua `icon`. */
   illustration?: IllustrationName;
-  /** Icon lớn 56px cho trạng thái thường ngày (Hộp thư trống, chưa chọn, lỗi tải…); có icon lớn thì bỏ qua tranh và `icon`. */
+  /** Icon lớn 56px (`empty-glyphs`) cho trạng thái thường ngày (Hộp thư trống, chưa chọn, lỗi tải…); có icon lớn thì bỏ qua tranh và `icon`. */
   glyph?: EmptyGlyphName;
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -41,29 +43,6 @@ export type IllustrationName =
   | "reports"
   | "no-results"
   | "welcome";
-
-/** Icon lớn trong `public/design/glyphs/` (ảnh 224px chỉ giữ kênh alpha, hiện 56px). */
-export type EmptyGlyphName = "inbox" | "inbox-select" | "all-done" | "archive" | "no-results" | "load-error";
-
-/**
- * Icon lớn của trạng thái trống theo icon khay thư ở trang trống Hộp thư của Linear (người dùng gửi ảnh 20/10/2026): một vật
- * duy nhất, nét viền đôi (dải nét dày viền bằng hai nét mảnh), bo tròn, không tô, không chữ; tấm xếp chồng trên nền viền đứt cho
- * kết quả lọc rỗng. Tô bằng mask như tranh nét mực nên màu theo `bg-*`. Đứng yên, không có hiệu ứng: trạng thái thường ngày
- * phải yên. Tranh vẽ tay (`InkIllustration`) để dành cho trang chưa có dữ liệu lần đầu.
- */
-export function EmptyGlyph({ name, className }: { name: EmptyGlyphName; className?: string }) {
-  // Bản thử SVG có chuyển động (theo đoạn quay của người dùng 20/10/2026); các icon khác còn là ảnh chờ người dùng duyệt kiểu
-  if (name === "no-results") return <IsoStackGlyph className={className} />;
-  const mask = `url(/design/glyphs/${name}.png) center / contain no-repeat`;
-  return (
-    <span
-      data-slot="empty-state-glyph"
-      aria-hidden="true"
-      className={cn("block size-14 shrink-0 bg-foreground/85", className)}
-      style={{ WebkitMask: mask, mask }}
-    />
-  );
-}
 
 /**
  * Tranh có sẵn màu, hiện nguyên ảnh thay cho tranh nét mực tô bằng mask. Hiện chưa có tranh nào: 17/10/2026 người dùng chọn đổi cả bộ
