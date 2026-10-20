@@ -21,6 +21,7 @@ import {
   joinWindowTranscripts,
   offsetTranscriptClock,
   parseMinutesReply,
+  repairJson,
   planRecordingWindows,
 } from "@qcet/shared/domain/meetings/recording-transcript";
 
@@ -131,6 +132,72 @@ describe("Ghi âm cuộc họp: đọc biên bản đề xuất", () => {
     assert.equal(parseMinutesReply('{"minutes": ""}'), null);
     assert.equal(parseMinutesReply('{"minutes": 5}'), null);
     assert.equal(parseMinutesReply("{không đóng"), null);
+  });
+
+  // 20/10/2026: hai lần soạn thẳng từ bản ghi 2 giờ 16 phút trả lời trong khoảng 1 phút nhưng bị coi là không đọc được,
+  // việc rơi về chép từng đoạn 6 phút và kẹt ở gateway hàng chục phút. Thử lại 4 lần: 2 lần mô hình để lộ phần suy nghĩ
+  // (có chép lại mẫu JSON) trước JSON thật, dấu { đầu tiên rơi vào mẫu
+  it("bỏ phần suy nghĩ bị lộ trước câu trả lời, kể cả mẫu JSON được chép lại trong đó", () => {
+    const leaked = [
+      "The user wants a draft of the meeting minutes. Format:",
+      "```json",
+      '{"minutes": "...", "decisions": ["..."], "actionItems": [{"task": "...", "owner": "...", "deadline": "..."}]}',
+      "```",
+      "- Constraints on `minutes`: plain text, sections {Nội dung thảo luận} and {Kết luận}.",
+      "Key points from the audio: budget, enrolment.",
+      "",
+      JSON.stringify(reply),
+    ].join("\n");
+    const parsed = parseMinutesReply(leaked);
+    assert.equal(parsed?.minutes, reply.minutes);
+    assert.equal(parsed?.actionItems.length, 2);
+    assert.equal(parseMinutesReply('Thinking… {"minutes": "...", "decisions": []}'), null, "chỉ có mẫu thì không coi là biên bản");
+  });
+
+  it("sửa JSON hỏng thường gặp: xuống dòng thật, nháy kép trong câu, phẩy thừa, lời viết thêm sau đối tượng", () => {
+    const broken = [
+      "```json",
+      '{"minutes": "Nội dung thảo luận',
+      '- Triển khai "Kế hoạch năm học 2026-2027", rà soát lại',
+      '- Văn bản "Quy chế": góp ý trước thứ Sáu',
+      'Kết luận\t- Thống nhất",',
+      '  "decisions": ["Thống nhất "Kế hoạch năm học"", "Giao Phòng Đào tạo",],',
+      '  "actionItems": [{"task": "Góp ý "Quy chế"", "owner": "Phòng Đào tạo", "deadline": null},],',
+      "}",
+      "```",
+      "Ghi chú: các mục {owner} để trống khi không rõ.",
+    ].join("\n");
+    const parsed = parseMinutesReply(broken);
+    assert.ok(parsed);
+    assert.equal(
+      parsed.minutes,
+      'Nội dung thảo luận\n- Triển khai "Kế hoạch năm học 2026-2027", rà soát lại\n- Văn bản "Quy chế": góp ý trước thứ Sáu\nKết luận\t- Thống nhất'
+    );
+    assert.deepEqual(parsed.decisions, ['Thống nhất "Kế hoạch năm học"', "Giao Phòng Đào tạo"]);
+    assert.deepEqual(parsed.actionItems, [{ task: 'Góp ý "Quy chế"', owner: "Phòng Đào tạo", deadline: null }]);
+  });
+
+  it("sửa JSON không làm đổi JSON vốn đúng", () => {
+    const valid = JSON.stringify({ ...reply, minutes: 'Có "nháy", phẩy, {ngoặc} và \\ gạch' });
+    assert.equal(repairJson(valid), valid);
+  });
+
+  it("biên bản dạng mục hoặc mảng dòng, quyết định dạng đối tượng, mục sai dạng chỉ bỏ riêng mục đó", () => {
+    const parsed = parseMinutesReply(
+      JSON.stringify({
+        minutes: { "Nội dung thảo luận": ["- Kế hoạch học kỳ 2", "- Tuyển sinh"], "Kết luận": "- Giao phòng Đào tạo" },
+        decisions: [{ decision: "Giao phòng Đào tạo" }, 5],
+        actionItems: ["Lập kế hoạch", { task: "Báo cáo", owner: ["sai"], deadline: 3 }, null],
+      })
+    );
+    assert.ok(parsed);
+    assert.equal(parsed.minutes, "Nội dung thảo luận\n- Kế hoạch học kỳ 2\n- Tuyển sinh\n\nKết luận\n- Giao phòng Đào tạo");
+    assert.deepEqual(parsed.decisions, ["Giao phòng Đào tạo"]);
+    assert.deepEqual(parsed.actionItems, [
+      { task: "Lập kế hoạch", owner: null, deadline: null },
+      { task: "Báo cáo", owner: null, deadline: null },
+    ]);
+    assert.equal(parseMinutesReply(JSON.stringify({ minutes: ["- a", "- b"] }))?.minutes, "- a\n- b");
   });
 
   it("chặn số mục quá nhiều", () => {

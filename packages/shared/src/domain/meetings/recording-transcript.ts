@@ -2,7 +2,6 @@
  * Logic thuần của chép lời cuộc họp bằng mô hình: chia đoạn theo thời gian, lời nhắc, lọc bản chép và đọc kết quả
  * soạn biên bản. Không gọi mạng; việc gọi gateway nằm ở apps/api.
  */
-import { z } from "zod";
 import type { MeetingRecordingActionItem } from "@qcet/contracts/meeting-recordings";
 
 /** Mỗi lần gọi mô hình chép một đoạn dài tối đa ngần này (bản chép của đoạn vừa với giới hạn trả lời). */
@@ -164,23 +163,98 @@ export function buildDirectMinutesPrompt(meetingTitle: string): string {
   return [`Cuộc họp: "${promptTitle(meetingTitle)}".`, "Nghe toàn bộ tệp ghi âm đính kèm rồi soạn biên bản.", ...MINUTES_FORMAT_LINES].join("\n");
 }
 
-const textField = (max: number) => z.string().transform((value) => value.trim().slice(0, max));
-const nullableField = (max: number) =>
-  z
-    .union([z.string(), z.null()])
-    .optional()
-    .transform((value) => {
-      const trimmed = typeof value === "string" ? value.trim().slice(0, max) : "";
-      return trimmed && !/^null$/i.test(trimmed) ? trimmed : null;
-    });
+const clip = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
+const optionalText = (value: unknown, max: number) => {
+  const text = clip(value, max);
+  return text && !/^null$/i.test(text) ? text : null;
+};
 
-const MinutesReplySchema = z.object({
-  minutes: textField(20_000),
-  decisions: z.array(textField(500)).default([]),
-  actionItems: z
-    .array(z.object({ task: textField(500), owner: nullableField(200), deadline: nullableField(200) }))
-    .default([]),
-});
+/** Biên bản mô hình trả về dạng mảng dòng hoặc đối tượng theo mục ({"Kết luận": [...]}) thì ghép lại thành chữ thuần. */
+function looseText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(looseText).filter(Boolean).join("\n");
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .map(([heading, item]) => {
+        const text = looseText(item).trim();
+        return text ? `${heading}\n${text}` : "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+  }
+  return "";
+}
+
+/** Mục là đối tượng ({"decision": "…"}) thì lấy chuỗi đầu tiên trong đó. */
+const firstText = (value: unknown) =>
+  typeof value === "string" ? value : value && typeof value === "object" ? Object.values(value).find((item) => typeof item === "string") : undefined;
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Sửa những lỗi JSON mô hình hay mắc khi trả lời dạng chữ: xuống dòng/tab thật trong chuỗi, dấu nháy kép không thoát trong câu
+ * (tên văn bản "…"), dấu phẩy thừa trước } hoặc ], lời viết thêm sau đối tượng ngoài cùng. Nháy kép trong chuỗi chỉ được coi là đóng chuỗi khi sau nó là đúng cú pháp
+ * JSON: dấu : với tên trường; } ], hoặc dấu phẩy rồi tới phần tử/tên trường kế tiếp với giá trị.
+ */
+export function repairJson(text: string): string {
+  const containers: string[] = [];
+  let expectKey = false;
+  let inString = false;
+  let isKey = false;
+  let out = "";
+  const nextChar = (from: number) => {
+    let i = from;
+    while (i < text.length && /\s/.test(text[i]!)) i += 1;
+    return { char: text[i], at: i };
+  };
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i]!;
+    if (inString) {
+      if (ch === "\\") {
+        out += ch + (text[i + 1] ?? "");
+        i += 1;
+      } else if (ch === '"') {
+        const after = nextChar(i + 1);
+        let closes: boolean;
+        if (isKey) closes = after.char === ":";
+        else if (after.char === ",") {
+          // Sau dấu phẩy: tên trường kế tiếp (đối tượng), phần tử kế tiếp (mảng), hoặc dấu đóng khi phẩy thừa
+          const following = nextChar(after.at + 1).char ?? "";
+          closes = (containers.at(-1) === "{" ? ['"', "}"] : ['"', "{", "[", "]"]).includes(following);
+        } else closes = after.char === undefined || after.char === "}" || after.char === "]";
+        if (closes) inString = false;
+        out += closes ? ch : '\\"';
+      } else if (ch === "\n") out += "\\n";
+      else if (ch === "\r") out += "\\r";
+      else if (ch === "\t") out += "\\t";
+      else out += ch < " " ? " " : ch;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      isKey = expectKey;
+    } else if (ch === "{" || ch === "[") {
+      containers.push(ch);
+      expectKey = ch === "{";
+    } else if (ch === "}" || ch === "]") {
+      containers.pop();
+      expectKey = false;
+      out = out.replace(/,\s*$/, "") + ch;
+      // Hết đối tượng ngoài cùng: bỏ phần lời mô hình viết thêm sau đó (có thể chứa dấu ngoặc)
+      if (containers.length === 0) return out;
+      continue;
+    } else if (ch === ":") expectKey = false;
+    else if (ch === ",") expectKey = containers.at(-1) === "{";
+    out += ch;
+  }
+  return out;
+}
 
 export interface ParsedMinutes {
   minutes: string;
@@ -188,25 +262,40 @@ export interface ParsedMinutes {
   actionItems: MeetingRecordingActionItem[];
 }
 
+/** Đối tượng đã đọc thành biên bản; null khi thiếu biên bản hoặc chỉ là mẫu chép lại từ lời nhắc ("...", mô tả trường). */
+function readMinutesObject(json: unknown): ParsedMinutes | null {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return null;
+  const reply = json as Record<string, unknown>;
+  const minutes = clip(looseText(reply.minutes), 20_000);
+  if (!/[\p{L}\p{N}]/u.test(minutes) || MINUTES_FORMAT_LINES[1]!.includes(minutes)) return null;
+  const decisions = Array.isArray(reply.decisions) ? reply.decisions.map((item) => clip(firstText(item), 500)) : [];
+  const actionItems = Array.isArray(reply.actionItems)
+    ? reply.actionItems.map((item): MeetingRecordingActionItem => {
+        const fields: Record<string, unknown> = item && typeof item === "object" ? (item as Record<string, unknown>) : { task: item };
+        return { task: clip(fields.task ?? fields.title, 500), owner: optionalText(fields.owner, 200), deadline: optionalText(fields.deadline, 200) };
+      })
+    : [];
+  return {
+    minutes,
+    decisions: decisions.filter(Boolean).slice(0, 30),
+    actionItems: actionItems.filter((item) => item.task).slice(0, 50),
+  };
+}
+
 /**
- * Đọc câu trả lời của bước soạn biên bản: lấy đối tượng JSON đầu tiên (mô hình đôi khi kèm rào code hay lời dẫn),
- * bỏ mục rỗng, giới hạn số mục. Không đọc được thì null để nơi gọi dùng nguyên văn câu trả lời làm biên bản nháp.
+ * Đọc câu trả lời của bước soạn biên bản. Mô hình đôi khi để lộ phần suy nghĩ (tiếng Anh, có chép lại mẫu JSON) trước câu
+ * trả lời thật, hoặc kèm rào code, lời dẫn: thử từ đối tượng {"minutes": …} cuối cùng trở về trước, rồi tới cả đoạn từ dấu {
+ * đầu tới dấu } cuối. JSON hỏng thì sửa các lỗi thường gặp rồi đọc lại; mục sai dạng thì bỏ riêng mục đó. Không đọc được biên
+ * bản thì null để nơi gọi dùng nguyên văn câu trả lời làm biên bản nháp.
  */
 export function parseMinutesReply(content: string): ParsedMinutes | null {
+  const candidates = [...content.matchAll(/\{\s*"minutes"\s*:/g)].map((match) => content.slice(match.index)).reverse();
   const start = content.indexOf("{");
   const end = content.lastIndexOf("}");
-  if (start < 0 || end <= start) return null;
-  let json: unknown;
-  try {
-    json = JSON.parse(content.slice(start, end + 1));
-  } catch {
-    return null;
+  if (start >= 0 && end > start) candidates.push(content.slice(start, end + 1));
+  for (const raw of candidates) {
+    const parsed = readMinutesObject(parseJson(raw) ?? parseJson(repairJson(raw)));
+    if (parsed) return parsed;
   }
-  const parsed = MinutesReplySchema.safeParse(json);
-  if (!parsed.success || !parsed.data.minutes) return null;
-  return {
-    minutes: parsed.data.minutes,
-    decisions: parsed.data.decisions.filter(Boolean).slice(0, 30),
-    actionItems: parsed.data.actionItems.filter((item) => item.task).slice(0, 50),
-  };
+  return null;
 }
