@@ -63,7 +63,7 @@ function Muted({ children }: { children: React.ReactNode }) {
  * Chi tiết cuộc họp (`/meetings/[id]`), theo khung chi tiết nhiệm vụ (người dùng yêu cầu "cải thiện trang chi tiết cuộc họp"
  * 20/10/2026, sau khi trang danh sách đã theo trang Nhiệm vụ): một thẻ cao hết màn hình, không breadcrumb chung
  * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", "Bắt đầu họp" (khi đã mời) và sao chép liên kết; cột chính
- * là tên 20px, nội dung và chương trình, rồi thẻ Ghi âm và thẻ Biên bản ("+ Thêm" để soạn, "Duyệt biên bản" cho lãnh đạo);
+ * là tên 20px, nội dung và chương trình, rồi thẻ Ghi âm và thẻ Biên bản ("+ Thêm" để soạn, "Duyệt biên bản" cho chủ tọa);
  * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần, Ghi chú của tôi. Dưới 1024px cột phải xếp ngay dưới
  * tên. Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
  * máy chủ kiểm lại; ở đây chỉ để ẩn nút không dùng được.
@@ -79,10 +79,13 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const minutesRef = React.useRef<HTMLTextAreaElement>(null);
 
   const isOrganizer = currentUser.id === meeting.organizerId;
-  const isLeader = ["BAN_GIAM_HIEU", "TRUONG_PHONG", "ADMIN"].includes(currentUser.role);
-  const canHold = meeting.status === "INVITED" && (isLeader || isOrganizer);
-  const canDraftMinutes = meeting.status === "HELD" && (isLeader || isOrganizer);
-  const canConfirmMinutes = meeting.status === "MINUTES_DRAFT" && isLeader;
+  // Theo quyền máy chủ tính, không đoán theo vai trò: bắt đầu họp là người tổ chức/chủ tọa, soạn biên bản là thư ký/chủ
+  // tọa/người tổ chức, duyệt biên bản chỉ chủ tọa (thư ký soạn biên bản không tự duyệt)
+  const can = (action: string) => meeting.availableActions.includes(action);
+  const canHold = meeting.status === "INVITED" && can("meeting.update");
+  const canDraftMinutes = meeting.status === "HELD" && can("meeting.draft_minutes");
+  const canConfirmMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.confirm_minutes");
+  const chairs = meeting.participants.filter((p) => p.role === "CHAIR");
   // Ghi âm theo quan hệ soạn biên bản của máy chủ (người tổ chức, chủ tọa, thư ký của cuộc họp), trong lúc họp và soạn biên bản
   const isMinutesAuthor =
     isOrganizer || meeting.participants.some((p) => p.userId === currentUser.id && (p.role === "CHAIR" || p.role === "SECRETARY"));
@@ -306,7 +309,14 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                           Duyệt biên bản
                         </Button>
                       ) : meeting.status === "MINUTES_DRAFT" ? (
-                        <span className="text-xs text-warning">Dự thảo, chờ duyệt</span>
+                        <span
+                          className={cn("max-w-64 truncate text-xs", chairs.length > 0 ? "text-muted-foreground" : "text-warning")}
+                          title="Chỉ chủ tọa duyệt được biên bản; thư ký soạn biên bản không tự duyệt."
+                        >
+                          {chairs.length > 0
+                            ? `Chờ chủ tọa ${chairs.map((p) => p.user.name ?? p.user.email).join(", ")} duyệt`
+                            : "Chưa có chủ tọa để duyệt"}
+                        </span>
                       ) : meeting.status === "MINUTES_CONFIRMED" ? (
                         <span className="text-xs text-muted-foreground">Đã duyệt</span>
                       ) : null

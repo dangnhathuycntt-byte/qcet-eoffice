@@ -6,14 +6,17 @@ import { MeetingService } from "@/server/services/meeting-service";
 // Kiểm meeting.read qua MeetingService.getMeeting (cùng quy tắc với GET /api/meetings/[id]) trước khi đọc.
 
 /**
- * Cuộc họp kèm đơn vị, người tổ chức, người tham dự, kết luận; ngày giờ đã đổi sang ISO.
+ * Cuộc họp kèm đơn vị, người tổ chức, người tham dự, kết luận và các thao tác người xem làm được; ngày giờ đã đổi sang ISO.
  * `null` khi không có hoặc `userId` không có quyền đọc (trang trả notFound()).
  */
 export async function readMeetingDetailPageData(id: string, userId: string) {
   // getMeeting bỏ qua kiểm quyền khi không có người gọi, nên không có userId thì không đọc gì.
   if (!userId) return null;
+  let availableActions: string[];
   try {
-    await MeetingService.getMeeting(id, userId);
+    // Thao tác người xem làm được do máy chủ tính (giao diện không tự đoán theo vai trò): duyệt biên bản chỉ chủ tọa
+    const checked = await MeetingService.getMeeting(id, userId);
+    availableActions = "availableActions" in checked ? checked.availableActions : [];
   } catch (error) {
     if (error instanceof ApiError && (error.statusCode === 403 || error.statusCode === 404)) return null;
     throw error;
@@ -46,6 +49,7 @@ export async function readMeetingDetailPageData(id: string, userId: string) {
   /* Serialize ---------------------------------------------------------- */
   const serialized = {
     ...meeting,
+    availableActions,
     startTime: meeting.startTime.toISOString(),
     endTime: meeting.endTime?.toISOString() ?? null,
     minutesConfirmedAt: meeting.minutesConfirmedAt?.toISOString() ?? null,

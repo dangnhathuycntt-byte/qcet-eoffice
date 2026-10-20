@@ -165,6 +165,39 @@ describe('Trang chi tiết cuộc họp: kiểm quyền đọc theo đối tư�
       assert.equal(data.startTime, meeting.startTime.toISOString());
     });
   }
+
+  // 20/10/2026: trang hiện "Dự thảo, chờ duyệt" và nút Duyệt theo vai trò lãnh đạo, trong khi máy chủ chỉ cho chủ tọa duyệt
+  test('trả các thao tác máy chủ cho phép: chỉ chủ tọa duyệt biên bản, thư ký soạn biên bản thì không', async () => {
+    const draft = await prisma.meeting.create({
+      data: {
+        code: `MT_MDP_DRAFT_${runId}`,
+        title: `Họp đã soạn biên bản ${runId}`,
+        unitId: unitA.id,
+        organizerId: users.organizer.id,
+        startTime: new Date(Date.now() - DAY_MS),
+        status: 'MINUTES_DRAFT',
+        minutes: 'Biên bản dự thảo',
+        participants: {
+          create: [
+            { userId: users.bodyMember.id, role: MeetingParticipantRole.CHAIR },
+            { userId: users.attendee.id, role: MeetingParticipantRole.SECRETARY },
+          ],
+        },
+      },
+    });
+    try {
+      const chair = await readMeetingDetailPageData(draft.id, users.bodyMember.id);
+      assert.ok(chair?.availableActions.includes('meeting.confirm_minutes'), 'chủ tọa duyệt được');
+      const secretary = await readMeetingDetailPageData(draft.id, users.attendee.id);
+      assert.ok(secretary, 'thư ký đọc được cuộc họp');
+      assert.equal(secretary.availableActions.includes('meeting.confirm_minutes'), false, 'thư ký không tự duyệt biên bản mình soạn');
+      const organizer = await readMeetingDetailPageData(draft.id, users.organizer.id);
+      assert.equal(organizer?.availableActions.includes('meeting.confirm_minutes'), false, 'người tổ chức không phải chủ tọa thì không duyệt');
+    } finally {
+      await prisma.meetingParticipant.deleteMany({ where: { meetingId: draft.id } });
+      await prisma.meeting.delete({ where: { id: draft.id } });
+    }
+  });
 });
 
 describe('Trang chi tiết cuộc họp: metadata không đọc dữ liệu được bảo vệ', () => {

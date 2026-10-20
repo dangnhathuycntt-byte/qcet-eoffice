@@ -170,6 +170,8 @@ export const MeetingDetailSchema = z.looseObject({
   organizer: z.object({ name: z.string().nullable(), email: z.string(), avatarUrl: z.string().nullable().optional() }).nullable(),
   participants: z.array(MeetingParticipantSchema),
   resolutions: z.array(MeetingResolutionSchema),
+  /** Thao tác người xem làm được (`meeting.update`, `meeting.draft_minutes`, `meeting.confirm_minutes`…), máy chủ tính theo quan hệ với cuộc họp. */
+  availableActions: z.array(z.string()).default([]),
 });
 
 /** `GET /api/page-data/meetings/[id]`: chi tiết cuộc họp (đã kiểm meeting.read). Không có hoặc không được đọc: 404. */
