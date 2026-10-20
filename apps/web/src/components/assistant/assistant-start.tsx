@@ -124,7 +124,7 @@ export function AssistantStartList({ items, status, now, onSuggest, onCreateTask
                   <Pressable
                     onClick={() => (prompt ? onSuggest(prompt) : onCreateTask())}
                     className={cn(
-                      "flex w-full flex-col items-start rounded-lg border border-border/70 p-4 text-left transition-colors duration-100 hover:bg-background/75",
+                      "flex w-full flex-col items-start rounded-lg border border-border/70 p-4 text-left transition-[background-color,box-shadow] duration-150 hover:bg-background hover:shadow-[0_1px_2px_0_rgb(0_0_0/0.06)]",
                       "min-h-32 max-sm:min-h-0 max-sm:flex-row max-sm:items-center max-sm:gap-3 max-sm:px-3 max-sm:py-2.5",
                     )}
                   >
@@ -173,8 +173,11 @@ function RecentRow({ item, now }: { item: AssistantConversationSummaryDTO; now: 
         href={`/assistant/${encodeURIComponent(item.id)}`}
         onMouseEnter={measure}
         className={cn(
-          // Hàng nằm trên vầng sáng xanh: rê chuột thì sáng lên bằng lớp trắng trong như ô soạn, không phủ xám làm đục màu
-          "flex h-8 items-center gap-3 rounded-md px-4 text-compact text-foreground transition-colors hover:bg-background/75 focus-visible:bg-background/75 max-md:h-11",
+          // Hàng nằm trên vầng sáng xanh: rê chuột/Tab thì nổi thành thẻ trắng có viền mảnh và bóng nhẹ như ô soạn phía trên
+          // (nền xám làm đục màu, lớp trắng trong thì gần như không thấy; người dùng chê cả hai 20/10/2026)
+          "flex h-8 items-center gap-3 rounded-md px-4 text-compact text-foreground transition-[background-color,box-shadow] duration-150 max-md:h-11",
+          "hover:bg-background hover:shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_1px_2px_0_rgb(0_0_0/0.06)]",
+          "focus-visible:bg-background",
           focusRingClass,
         )}
       >
