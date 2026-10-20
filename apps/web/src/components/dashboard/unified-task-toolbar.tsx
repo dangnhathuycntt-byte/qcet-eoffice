@@ -3,7 +3,6 @@
 // Unified Task Toolbar Component — Unified control toolbar for task views
 import * as React from "react";
 import { Plus, RotateCcw } from "lucide-react";
-import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import {
   HealthSubOnTrack,
   HealthSubAtRisk,
@@ -26,7 +25,6 @@ import {
   TaskIconDeadline,
   TaskIconTime,
   TaskIconStatusNew,
-  TaskIconSearch,
 } from "@qcet/shared/lib/icons/task-icons";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { Input } from "@/components/ui/input";
@@ -41,7 +39,8 @@ import {
   type TaskFilterFacetKey,
   type TaskFilterFacets,
 } from "@qcet/shared/domain/tasks/task-filter-facets";
-import { ListToolbarFilterButton, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
+import { ListToolbarFilterButton, ListToolbarSearchToggle, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
+import { ListPageCreateButton, ListPageHeader } from "@/components/workspace/list-page-header";
 import {
   NO_TASK_TIME_FILTER,
   getTaskTimeFilterLabel,
@@ -791,7 +790,6 @@ export function UnifiedTaskToolbar({
   const isStatusActive = Boolean(effectiveStatus && effectiveStatus.toLowerCase() !== "all");
   const isDeadlineActive = Boolean(effectiveDeadline && effectiveDeadline !== "all");
   const isPriorityActive = Boolean(selectedPriority && selectedPriority !== "ALL");
-  const isSearchActive = Boolean(localSearch && localSearch.trim().length > 0);
   const isHealthActive = Boolean(selectedHealth && selectedHealth !== "all");
   const isLeadActive = parsePersonFilter(selectedLead).length > 0;
   const isCollaboratorActive = parsePersonFilter(selectedCollaborator).length > 0;
@@ -1123,22 +1121,8 @@ export function UnifiedTaskToolbar({
     );
   };
 
-  const searchExpanded = isSearchOpen || isSearchActive;
-  const openSearch = () => {
-    setIsSearchOpen(true);
-    requestAnimationFrame(() => searchInputRef.current?.focus());
-  };
   const createCta = (leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction ? (
-    <Pressable
-      data-slot="list-toolbar-create"
-      onClick={() => handlePrimaryAction()}
-      title="Tạo việc mới"
-      aria-label="Tạo việc mới"
-      className={cn(listToolbarPrimaryButtonClass, "rounded-full border-transparent bg-transparent shadow-none max-md:size-8 max-md:px-0")}
-    >
-      <Plus className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="hidden md:inline">{primaryActionLabel}</span>
-    </Pressable>
+    <ListPageCreateButton label={primaryActionLabel} ariaLabel="Tạo việc mới" onClick={() => handlePrimaryAction()} />
   ) : null;
 
   return (
@@ -1247,14 +1231,7 @@ export function UnifiedTaskToolbar({
 
       {/* Left Content (View Title / Summary Strip) */}
       {leftContent && (
-        <div className="-mx-4 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-[calc(100%+32px)] min-w-0 items-center justify-between gap-3 border-b border-border/60 px-4 pt-[env(safe-area-inset-top,0px)] md:-mx-[18px] md:h-11 md:w-[calc(100%+36px)] md:px-[18px] md:pt-0">
-          <div className="flex min-w-0 items-center gap-2">
-            {/* Điện thoại: nút mở sidebar thay cho thanh trên cùng (như Linear) */}
-            <MobileMenuButton className="-ml-1.5 md:hidden" />
-            {leftContent}
-          </div>
-          {createCta}
-        </div>
+        <ListPageHeader title={leftContent} action={createCta} />
       )}
 
       {!quiet && (
@@ -1263,29 +1240,17 @@ export function UnifiedTaskToolbar({
       {!hideListControls && (
         <>
       {/* 1. Search: icon thu gọn, bấm hoặc nhấn "/" để mở ô */}
-      {searchExpanded ? (
-        <ListToolbarSearch
-          ref={searchInputRef}
-          value={localSearch}
-          onChange={handleSearchInputChange}
-          onClear={handleSearchClear}
-          loading={loading}
-          placeholder="Tìm nhiệm vụ…"
-          aria-label="Tìm nhiệm vụ"
-          onBlur={() => {
-            if (!localSearch.trim()) setIsSearchOpen(false);
-          }}
-        />
-      ) : (
-        <Pressable
-          onClick={openSearch}
-          aria-label="Tìm nhiệm vụ"
-          title="Tìm nhiệm vụ (/)"
-          className={listToolbarIconButtonClass(false)}
-        >
-          <TaskIconSearch size={14} className="shrink-0 text-muted-foreground" />
-        </Pressable>
-      )}
+      <ListToolbarSearchToggle
+        ref={searchInputRef}
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        label="Tìm nhiệm vụ"
+        value={localSearch}
+        onChange={handleSearchInputChange}
+        onClear={handleSearchClear}
+        loading={loading}
+        placeholder="Tìm nhiệm vụ…"
+      />
 
       {/* 2. Filter — icon-only trigger */}
       <MenuRoot open={isCollapsedFilterOpen} onOpenChange={setIsCollapsedFilterOpen}>

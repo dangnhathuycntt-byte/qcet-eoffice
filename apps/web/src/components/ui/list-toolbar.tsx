@@ -119,6 +119,107 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
   );
 });
 
+export interface ListToolbarSearchToggleProps extends ListToolbarSearchProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Tên nút icon và ô tìm ("Tìm nhiệm vụ"). */
+  label: string;
+  /** Nghe phím "/" ở cả trang để mở ô (bỏ qua khi đang gõ trong ô nhập). Trang tự xử lý phím tắt thì để tắt. */
+  slashShortcut?: boolean;
+}
+
+/**
+ * Tìm thu gọn của trang danh sách (chuẩn trang Nhiệm vụ): nút icon tròn, bấm (hoặc "/") thì thành `ListToolbarSearch` và đưa
+ * con trỏ vào; rời ô khi ô trống thì thu lại. Còn từ khóa thì ô luôn mở để người dùng thấy đang tìm gì.
+ */
+export const ListToolbarSearchToggle = React.forwardRef<HTMLInputElement, ListToolbarSearchToggleProps>(function ListToolbarSearchToggle(
+  { open, onOpenChange, label, slashShortcut = false, value, onChange, onClear, onBlur, onKeyDown, ...props },
+  ref
+) {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const focusOnOpen = React.useRef(false);
+  const focusButtonOnClose = React.useRef(false);
+  const expanded = open || value.trim().length > 0;
+  const setRefs = React.useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref]
+  );
+  const openAndFocus = React.useCallback(() => {
+    focusOnOpen.current = true;
+    if (inputRef.current) inputRef.current.focus();
+    else onOpenChange(true);
+  }, [onOpenChange]);
+
+  React.useEffect(() => {
+    if (expanded && focusOnOpen.current) {
+      focusOnOpen.current = false;
+      inputRef.current?.focus();
+    }
+    if (!expanded && focusButtonOnClose.current) {
+      focusButtonOnClose.current = false;
+      buttonRef.current?.focus();
+    }
+  }, [expanded]);
+
+  React.useEffect(() => {
+    if (!slashShortcut) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true'], [role='textbox']")) return;
+      event.preventDefault();
+      openAndFocus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [slashShortcut, openAndFocus]);
+
+  if (expanded) {
+    return (
+      <ListToolbarSearch
+        ref={setRefs}
+        value={value}
+        onChange={onChange}
+        aria-label={label}
+        // Bấm X xóa xong con trỏ ở lại ô để gõ tiếp (nút X biến mất, không thì tiêu điểm rơi ra trang và ô không thu lại)
+        onClear={() => {
+          if (onClear) onClear();
+          else onChange("");
+          inputRef.current?.focus();
+        }}
+        onBlur={(event) => {
+          if (!value.trim()) onOpenChange(false);
+          onBlur?.(event);
+        }}
+        // Esc: còn chữ thì xóa chữ, ô trống thì thu lại và trả con trỏ về nút tìm
+        onKeyDown={(event) => {
+          onKeyDown?.(event);
+          if (event.defaultPrevented || event.key !== "Escape") return;
+          event.preventDefault();
+          if (value) {
+            if (onClear) onClear();
+            else onChange("");
+          } else {
+            focusButtonOnClose.current = true;
+            onOpenChange(false);
+          }
+        }}
+        {...props}
+      />
+    );
+  }
+  return (
+    <Pressable ref={buttonRef} onClick={openAndFocus} aria-label={label} title={`${label} (/)`} className={listToolbarIconButtonClass(false)}>
+      <TaskIconSearch size={14} className="shrink-0 text-muted-foreground" />
+    </Pressable>
+  );
+});
+
 /** Khung popover của thanh công cụ: nút trigger dùng chung và panel theo style property */
 export function ListToolbarPopover({
   open,

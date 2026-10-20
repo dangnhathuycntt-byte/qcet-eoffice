@@ -15,13 +15,18 @@ const rowHeightClass: Record<TableDensity, string> = {
 
 export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
   density?: TableDensity;
+  /**
+   * Lớp thêm cho khung bọc, mặc định cuộn ngang. Tiêu đề cột dính (`sticky`) theo vùng cuộn của trang chỉ chạy khi khung
+   * này không cuộn, nên bảng đó truyền `overflow-x-visible` ở cỡ màn hình có tiêu đề dính.
+   */
+  containerClassName?: string;
 }
 
 /** Bảng dữ liệu dùng chung. Không kèm skeleton hay trạng thái rỗng: dùng Skeleton và EmptyState ở nơi gọi. */
-function Table({ className, density = "one-line", ...props }: TableProps) {
+function Table({ className, density = "one-line", containerClassName, ...props }: TableProps) {
   return (
     <TableDensityContext.Provider value={density}>
-      <div data-slot="table-container" className="relative w-full overflow-x-auto">
+      <div data-slot="table-container" className={cn("relative w-full overflow-x-auto", containerClassName)}>
         <table data-slot="table" className={cn("w-full caption-bottom border-collapse text-compact", className)} {...props} />
       </div>
     </TableDensityContext.Provider>

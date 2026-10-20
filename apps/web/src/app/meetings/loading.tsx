@@ -1,21 +1,26 @@
 import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Khung chờ của danh sách Cuộc họp: cùng khung thẻ một trang (`WorkspacePageCard`), thanh tab và vài hàng 48px. */
+/** Khung chờ của danh sách Cuộc họp: cùng khung trang danh sách như Nhiệm vụ (thanh tiêu đề 44px, hàng tab, hàng 48px). */
 export default function MeetingsLoading() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col p-2 max-md:p-0 animate-pulse" role="status" aria-label="Đang tải danh sách cuộc họp…">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0">
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-6">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-7 w-28 rounded-full" />
-        </div>
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-4 sm:px-6">
-          <Skeleton className="h-7 w-64 rounded-full" />
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
+    <div className="flex flex-col animate-pulse" role="status" aria-label="Đang tải danh sách cuộc họp…">
+      <div className="-mx-4 flex h-11 items-center justify-between gap-3 border-b border-border/60 px-4 md:-mx-[18px] md:px-[18px]">
+        <Skeleton className="h-3.5 w-20" />
+        <Skeleton className="h-7 w-28 rounded-full max-md:w-8" />
+      </div>
+      <div className="flex h-11 items-center justify-between gap-3">
+        <Skeleton className="h-7 w-56 rounded-full" />
+        <Skeleton className="size-7 rounded-full" />
+      </div>
+      <div className="flex flex-col pt-8">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="flex h-12 items-center gap-6 px-2">
+            <Skeleton className="h-3.5 w-2/5" />
+            <Skeleton className="h-3.5 w-1/6" />
+            <Skeleton className="h-3.5 w-1/6 max-md:hidden" />
+          </div>
+        ))}
       </div>
     </div>
   );

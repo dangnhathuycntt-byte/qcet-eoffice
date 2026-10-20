@@ -97,8 +97,10 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
   const isCardPage = isCardPagePath(pathname);
   const isWorkspaceShell = isTaskDetail || isTaskSubPage || isCardPage || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản, trang một thẻ: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
-  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isTaskSubPage || isCardPage || isFullHeightPane || pathname === "/documents";
-  const isTasksList = pathname === "/tasks";
+  // Trang danh sách khung một thẻ cao hết màn hình như Nhiệm vụ: tự có thanh tiêu đề 44px và nút mở sidebar trên điện thoại
+  // (`ListPageHeader`), nội dung cuộn trong thẻ. Cuộc họp học theo Nhiệm vụ (người dùng yêu cầu 20/10/2026).
+  const isListPage = pathname === "/tasks" || pathname === "/meetings";
+  const hideDesktopTopbar = isListPage || isTaskDetail || isTaskSubPage || isCardPage || isFullHeightPane || pathname === "/documents";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isRedirectingRef = React.useRef(false);
@@ -177,7 +179,7 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
         {/* Mobile Header (chỉ dưới md); danh sách, chi tiết nhiệm vụ, hộp thư và sổ văn bản tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
-        {!isTasksList && !isTaskDetail && !isFullHeightPane && pathname !== "/documents" && <AppTopbar showSearch={!isTaskSubPage && !isCardPage} />}
+        {!isListPage && !isTaskDetail && !isFullHeightPane && pathname !== "/documents" && <AppTopbar showSearch={!isTaskSubPage && !isCardPage} />}
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
         {!hideDesktopTopbar && <DesktopTopbar />}
@@ -196,9 +198,9 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
             ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:ml-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-2xl md:border md:border-border md:bg-card md:shadow-2xs outline-none overflow-hidden"
             : cn(
                 "flex-1 flex flex-col md:ml-2 md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
-                // Danh sách nhiệm vụ: khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết
-                isTasksList ? "md:rounded-2xl md:border-r md:border-b md:mr-2 md:mb-2" : "md:rounded-tl-2xl",
-                hideDesktopTopbar && (isTasksList ? "md:mt-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px-var(--app-statusbar))]")
+                // Trang danh sách (Nhiệm vụ, Cuộc họp): khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết
+                isListPage ? "md:rounded-2xl md:border-r md:border-b md:mr-2 md:mb-2" : "md:rounded-tl-2xl",
+                hideDesktopTopbar && (isListPage ? "md:mt-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px-var(--app-statusbar))]")
               )}
         >
           <div
@@ -207,13 +209,13 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
                 ? "flex min-h-0 min-w-0 flex-1 flex-col"
                 : isFullHeightPane
                 ? "flex min-h-0 min-w-0 flex-1 flex-col pb-[env(safe-area-inset-bottom,0px)] md:pb-0"
-                : isTasksList
+                : isListPage
                 ? "flex-1 min-h-0 overflow-y-auto flex flex-col bg-card md:bg-transparent"
                 : "w-full flex-1 p-3 sm:p-5 md:p-6 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] md:pb-6 flex flex-col"
             }
           >
-            {/* Danh sách nhiệm vụ: padding nằm trong vùng cuộn để tiêu đề cột dính sát mép khung */}
-            {isTasksList ? (
+            {/* Trang danh sách: padding nằm trong vùng cuộn để tiêu đề cột dính sát mép khung */}
+            {isListPage ? (
               <div className="flex w-full flex-1 flex-col px-4 pt-0 sm:p-5 md:px-[18px] md:pt-0 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] md:pb-6">
                 {children}
               </div>
