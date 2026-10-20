@@ -89,8 +89,8 @@ interface PanelFrame {
 }
 
 /** Phần tử trên cùng của `root` tại điểm (bỏ qua lớp phủ như khung đang đóng dần, toast). */
-function topmostWithin(root: HTMLElement, x: number, y: number): Element | undefined {
-  return document.elementsFromPoint(x, y).find((el) => root.contains(el));
+function topmostWithin(root: HTMLElement, x: number, y: number): Element | null {
+  return document.elementsFromPoint(x, y).find((el) => root.contains(el)) ?? null;
 }
 
 /**
