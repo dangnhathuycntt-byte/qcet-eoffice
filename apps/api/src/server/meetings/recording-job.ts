@@ -273,7 +273,13 @@ async function tryDirectMinutes(input: DirectMinutesInput): Promise<boolean> {
       { config, signal, timeoutMs: DIRECT_CALL_TIMEOUT_MS, outputTokens: DIRECT_OUTPUT_TOKENS, subject: SUBJECT }
     );
     // Không đọc được JSON (hoặc không có biên bản) thì không tin: chép từng đoạn rồi soạn từ bản chép
-    if (!parseMinutesReply(completion.content)) return false;
+    if (!parseMinutesReply(completion.content)) {
+      // Chỉ ghi độ dài và lý do dừng, không ghi nội dung (nội dung họp không vào log)
+      logger.warn("meeting_recording.direct_minutes_unreadable", {
+        metadata: { recordingId, finishReason: completion.finishReason, chars: completion.content.length, hasBrace: completion.content.includes("{") },
+      });
+      return false;
+    }
     await finishRecording(recordingId, config.model, null, completion.content, null);
     return true;
   } catch (error) {
