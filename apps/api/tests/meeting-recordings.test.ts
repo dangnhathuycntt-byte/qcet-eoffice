@@ -487,14 +487,16 @@ describe('Ghi âm cuộc họp', () => {
       assert.match(partial.error ?? '', /Chưa soạn được biên bản/);
     });
 
-    it('gateway chưa cấu hình: FAILED ngay, không thử lại', async () => {
+    it('gateway chưa cấu hình: không mở được bản ghi mới (503); bản đã xếp hàng thì FAILED ngay, không thử lại', async () => {
+      const id = await queuedRecording(60);
       setEnv({ TASK_AGENT_BASE_URL: undefined });
       try {
-        const id = await queuedRecording(60);
+        await assert.rejects(create(users.organizer), (error: { statusCode?: number }) => error.statusCode === 503);
         await transcribeMeeting(job(id));
         const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
         assert.equal(row.status, 'FAILED');
         assert.match(row.error ?? '', /chưa được cấu hình/);
+        assert.equal(await prisma.meetingRecording.count({ where: { meetingId } }), 1, 'lần mở bị từ chối không để lại bản ghi');
       } finally {
         setEnv({ TASK_AGENT_BASE_URL: 'http://gateway.test/v1' });
       }

@@ -22,7 +22,7 @@ import { loadAuthorizationContext } from "@/server/authorization/authorization-c
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { buildMeetingResource } from "@/server/services/meeting-service";
 import { enqueueAgentJob } from "@/server/outbox/agent-jobs";
-import { TRANSCRIBE_MEETING_JOB } from "@/server/meetings/recording-job";
+import { TRANSCRIBE_MEETING_JOB, recordingGatewayConfig } from "@/server/meetings/recording-job";
 import {
   assembleRecording,
   detectRecordingMimeType,
@@ -127,6 +127,8 @@ export class MeetingRecordingService {
     requestId?: string
   ): Promise<MeetingRecordingSummary> {
     await authorizeRecordingAccess(meetingId, userId, { write: true });
+    // Chưa cấu hình gateway thì từ chối ngay (503), không để người dùng ghi cả buổi rồi mới báo lỗi
+    recordingGatewayConfig();
 
     // Dọn bản tải lên bỏ dở (đóng trình duyệt giữa chừng) để không chiếm chỗ trong giới hạn mỗi cuộc họp
     const stale = await prisma.meetingRecording.findMany({

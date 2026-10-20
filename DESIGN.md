@@ -151,6 +151,20 @@ Kiến trúc đã duyệt ở [document-workspace.md](docs/product/specs/documen
 - **Trạng thái trống** (20/10/2026): icon lớn (`glyph`). Khung và danh sách: khay thư, Chưa đọc trống thì tấm xếp chồng, Đã lưu trữ trống thì hộp lưu trữ, lọc loại hoặc tìm không ra thì kính lúp; đặt giữa theo chiều dọc. Trang `/inbox` rộng: phần chi tiết đặt icon và chữ ở giữa khung (thẻ danh sách có con trỏ khi chưa chọn thông báo, tấm rơi lệch khi lỗi tải), không dùng khối căn trái của trang danh sách. Chưa có khung "N thông báo bị ẩn vì bộ lọc" như Linear vì chưa có số đếm đó.
 - Thư chào mừng: thẻ khu làm việc dùng icon lớn trạng thái trống (`tasks`, `doc-in`, `calendar`, `directory`), xem mục Component nền.
 
+## Ghi chú cá nhân
+
+Trang `/notes` (mục "Ghi chú cá nhân" trong menu "Thêm"), khung hai cột cao như Hộp thư (`isNotesPath` trong [active-matcher.ts](apps/web/src/lib/navigation/active-matcher.ts), nên ẩn breadcrumb desktop). Code: [components/notes/](apps/web/src/components/notes/), [app/notes/](apps/web/src/app/notes/). Chưa có bộ thiết kế riêng được duyệt: bố cục mượn Hộp thư và quyết định tự đặt 20/10/2026, cần người dùng xem lại.
+- **Danh sách** rộng 320px (hẹp dưới 720px thì một khung, có nút quay lại); thanh đầu 44px: "Ghi chú cá nhân" `text-compact font-medium`, nút tìm (ô tìm thay tiêu đề như Hộp thư, Esc xóa từ khóa rồi đóng) và "+" ghi chú mới. Hàng 48px hai dòng: tiêu đề `text-compact font-medium` (chưa đặt thì "Ghi chú không tên" mờ), icon ghim 12px và thời gian tương đối `text-xs` bên phải, dòng dưới là đoạn đầu nội dung `text-xs` mờ. Ghim lên đầu, rồi mới nhất trước. Trống: tranh `dossier`, "Chưa có ghi chú" kèm nút "Ghi chú mới"; chưa chọn: `inbox-select`.
+- **Soạn**: thanh đầu 44px có liên kết "Gắn với cuộc họp/nhiệm vụ" (hoặc "Chỉ mình bạn xem được"), trạng thái lưu `text-xs` (Chưa lưu, Đang lưu…, Đã lưu, Chưa lưu được kèm Thử lại), ghim và xóa (`DestructiveConfirmDialog`). Tiêu đề `text-lg font-semibold` và nội dung `text-compact` không nền, không viền, cột giữa tối đa 768px. Tự lưu sau 800ms ngừng gõ; đổi ghi chú hay rời trang thì lưu nốt (`keepalive`).
+- **Trong cuộc họp**: khung "Ghi chú của tôi" ở cột phải trang chi tiết liệt kê ghi chú đã gắn và nút "Ghi chú mới" mở thẳng trình soạn.
+
+## Ghi âm cuộc họp
+
+Khung "Ghi âm cuộc họp" ([meeting-recording-panel.tsx](apps/web/src/components/meetings/meeting-recording-panel.tsx)) ở cột chính trang chi tiết cuộc họp, chỉ người tổ chức, chủ tọa, thư ký (máy chủ kiểm quyền, 403/404 thì khung tự ẩn), dùng `SectionCard` như các khối cùng trang. Quyết định kỹ thuật: [ADR-013](docs/architecture/decisions/ADR-013-meeting-recording-transcription.md). Chưa có bộ thiết kế riêng được duyệt; trang chi tiết cuộc họp còn nợ kiểu cũ (`text-sm`, nút tự viết) nằm trong baseline.
+- Hộp tích xác nhận đã thông báo cho người dự họp nằm trên hai nút "Bắt đầu ghi âm" (chỉ hiện khi trình duyệt có `MediaRecorder`) và "Tải tệp ghi âm"; chưa tích thì hai nút khóa và có dòng nhắc.
+- Đang ghi: chấm đỏ nhấp nháy, đồng hồ, "Đã gửi N phần", nhắc không đóng tab, nút "Dừng và gửi". Tải tệp: thanh `Progress` và phần trăm.
+- Danh sách bản ghi: hàng `text-compact` kèm dòng trạng thái `text-xs` (Đang tải lên, Đang chờ xử lý, Đang chép lời · n/m đoạn · số phút, Sẵn sàng, Chưa xử lý được kèm lý do); bản lỗi có nút thử lại; xóa qua `DestructiveConfirmDialog`. Bản Sẵn sàng mở ra kết quả: lời cảnh báo bản nháp AI, biên bản đề xuất, quyết định, việc được giao, bản chép lời (gập), nút "Dùng làm biên bản nháp" (khi cuộc họp đã ở "Đã họp", điền vào ô soạn biên bản) và "Sao chép".
+
 ## Trợ lý
 
 Trang `/assistant` và `/assistant/[id]`, bật bằng cờ `assistant`; mục điều hướng và lệnh "Trợ lý" trong tìm kiếm chỉ hiện khi cờ bật. Code: [components/assistant/](apps/web/src/components/assistant/), [app/assistant/](apps/web/src/app/assistant/). Bố cục theo tham chiếu Linear Agent và ChatGPT do người dùng gửi (17/10/2026); chưa có bộ thiết kế riêng được duyệt cho Trợ lý. Quyết định kỹ thuật và giới hạn: [ADR-009](docs/architecture/decisions/ADR-009-assistant-read-only-tools.md); đề xuất nhiệm vụ: [ADR-010](docs/architecture/decisions/ADR-010-assistant-task-proposals.md).
