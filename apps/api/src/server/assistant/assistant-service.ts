@@ -70,6 +70,11 @@ export const ASSISTANT_LIMITS = {
   maxRounds: 6,
   maxToolCallsPerRound: 4,
   maxToolCharsPerTurn: 24_000,
+  /**
+   * Hai mốc này là thời gian chờ KHÔNG có dữ liệu (đặt lại mỗi khi gateway trả thêm chữ, suy nghĩ hay lời gọi công cụ, hoặc một
+   * công cụ chạy xong), không phải tổng thời gian: Trợ lý đang trả lời thì không bị cắt (người dùng yêu cầu 20/10/2026), chỉ
+   * mất mạng, không nối được provider hoặc im lặng quá lâu mới báo hết giờ. Số vòng đã bị chặn bởi `maxRounds`.
+   */
   roundTimeoutMs: 180_000,
   turnTimeoutMs: 300_000,
   historyMessages: 12,
@@ -377,8 +382,14 @@ async function runTurn(
   options.signal?.addEventListener("abort", onClientAbort, { once: true });
   const turnTimeoutMs = options.timeouts?.turnTimeoutMs ?? ASSISTANT_LIMITS.turnTimeoutMs;
   const roundTimeoutMs = options.timeouts?.roundTimeoutMs ?? ASSISTANT_LIMITS.roundTimeoutMs;
-  const turnDeadline = startedAt + turnTimeoutMs;
-  const turnTimer = setTimeout(() => turn.abort(), turnTimeoutMs);
+  // Đồng hồ cả lượt tính từ lần cuối có dữ liệu (`markActivity`), không phải từ lúc bắt đầu
+  let turnDeadline = startedAt + turnTimeoutMs;
+  let turnTimer = setTimeout(() => turn.abort(), turnTimeoutMs);
+  const markActivity = () => {
+    turnDeadline = Date.now() + turnTimeoutMs;
+    clearTimeout(turnTimer);
+    turnTimer = setTimeout(() => turn.abort(), turnTimeoutMs);
+  };
   const clientAborted = () => options.signal?.aborted === true;
   const turnExpired = () => !clientAborted() && (turn.signal.aborted || Date.now() >= turnDeadline);
   // Sự kiện tên chỉ phát khi luồng còn mở: tắt trước `done` và khi lượt kết thúc vì bất kỳ lý do nào
@@ -545,6 +556,7 @@ async function runTurn(
           outputTokens: ASSISTANT_LIMITS.outputTokens,
           signal: turn.signal,
           timeoutMs: Math.max(1, Math.min(roundTimeoutMs, turnDeadline - Date.now())),
+          onActivity: markActivity,
           onThinking: (delta) => emit({ type: "thinking", delta }),
           onContent,
           onToolCallStart: (name) => {
@@ -615,6 +627,7 @@ async function runTurn(
       const runs = await Promise.all(
         batch.map((call) => (budgetUsed && !isComposeCall(call) ? null : runToolSafely(deps, call, toolCtx, turn.signal))),
       );
+      markActivity();
       for (const [index, call] of batch.entries()) {
         let run = runs[index];
         const composeCall = isComposeCall(call);

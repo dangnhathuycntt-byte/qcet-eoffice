@@ -73,8 +73,14 @@ export interface GatewayCallOptions {
   /** Có và không rỗng thì gửi `tools`; không gửi `tool_choice`. */
   tools?: GatewayToolDefinition[];
   signal?: AbortSignal;
-  /** Mặc định AGENT_GATEWAY_TIMEOUT_MS, bao cả lúc đọc phần trả lời. */
+  /**
+   * Chờ tối đa chừng này khi KHÔNG nhận được byte nào: lúc kết nối, lúc chờ phản hồi đầu và giữa hai khối của luồng.
+   * Có dữ liệu về (kể cả suy nghĩ dài) thì đếm lại từ đầu, không bao giờ hết giờ vì mô hình đang trả lời lâu; chỉ mất mạng,
+   * không nối được provider hoặc luồng đứng im mới hết giờ. Mặc định AGENT_GATEWAY_TIMEOUT_MS.
+   */
   timeoutMs?: number;
+  /** Gọi mỗi khi nhận thêm dữ liệu từ gateway (kể cả khối chưa có chữ), để nơi gọi đặt lại đồng hồ chờ của riêng mình. */
+  onActivity?: () => void;
   onThinking?: (delta: string) => void;
   onContent?: (delta: string) => void;
   /**
@@ -123,11 +129,11 @@ function buildGatewayBody(
 }
 
 /**
- * Gọi gateway (streaming; chấp nhận cả khối JSON). Lỗi: 504 nếu quá giờ, 502 nếu không kết nối được, đứt giữa chừng
+ * Gọi gateway (streaming; chấp nhận cả khối JSON). Lỗi: 504 nếu im lặng quá `timeoutMs` (không có dữ liệu nào về), 502 nếu không kết nối được, đứt giữa chừng
  * hoặc gateway trả lỗi HTTP, 503 nếu chưa cấu hình. Câu lỗi dùng `subject` thay cho "Agent".
  */
 export async function callGateway(messages: GatewayMessage[], options: GatewayCallOptions = {}): Promise<GatewayCompletion> {
-  const { tools, signal, timeoutMs = AGENT_GATEWAY_TIMEOUT_MS, onThinking, onContent, onToolCallStart, subject = "Agent", outputTokens } = options;
+  const { tools, signal, timeoutMs = AGENT_GATEWAY_TIMEOUT_MS, onThinking, onContent, onToolCallStart, onActivity, subject = "Agent", outputTokens } = options;
   const config = options.config ?? readGatewayConfig(options.subject);
   const controller = new AbortController();
   // Khi hủy (quá giờ hoặc người gọi hủy), mọi lần chờ dừng ngay, kể cả khi gateway không đáp ứng abort
@@ -136,7 +142,13 @@ export async function callGateway(messages: GatewayMessage[], options: GatewayCa
   });
   aborted.catch(() => {}); // không có lần chờ nào đang treo thì không báo lỗi không xử lý
   const raceAbort = <T>(pending: Promise<T>): Promise<T> => Promise.race([pending, aborted]);
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // Đồng hồ chờ không có dữ liệu: đặt lại mỗi khi nhận phản hồi đầu hoặc một khối của luồng
+  let timer = setTimeout(() => controller.abort(), timeoutMs);
+  const touch = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+    onActivity?.();
+  };
   const onAbort = () => controller.abort();
   signal?.addEventListener("abort", onAbort);
   if (signal?.aborted) controller.abort();
@@ -197,6 +209,7 @@ export async function callGateway(messages: GatewayMessage[], options: GatewayCa
     } catch {
       throw timedOut() ? timeoutError() : new ApiError(502, "AGENT_UNAVAILABLE", `Chưa kết nối được tới ${subject}. Thầy/Cô thử lại sau.`);
     }
+    touch();
     if (!response.ok) {
       // Chỉ ghi mã lỗi và đoạn đầu thông báo lỗi của gateway (không có prompt hay khóa) để chẩn đoán
       const detail = await raceAbort(response.text().catch(() => "")).catch(() => "");
@@ -227,6 +240,7 @@ export async function callGateway(messages: GatewayMessage[], options: GatewayCa
         for (;;) {
           const { done, value } = await raceAbort(reader.read());
           if (done) break;
+          touch();
           take(parser.push(decoder.decode(value, { stream: true })));
         }
         take(parser.push(decoder.decode()));

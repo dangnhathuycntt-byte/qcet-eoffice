@@ -170,6 +170,26 @@ describe("callGateway: đọc luồng SSE", () => {
     );
   });
 
+  test("luồng còn dữ liệu về đều đặn thì không hết giờ dù tổng thời gian vượt timeoutMs; onActivity báo từng khối", async () => {
+    // 8 khối cách nhau 40ms (~320ms) với timeoutMs 150: mỗi lần im lặng chỉ 40ms nên không bị cắt (người dùng: đang trả lời thì không timeout)
+    const body = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        for (let i = 0; i < 8; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          controller.enqueue(enc.encode(sse({ choices: [{ delta: { content: `đ${i}` } }] })));
+        }
+        controller.close();
+      },
+    });
+    mockFetch(() => new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }));
+    let activity = 0;
+    const started = Date.now();
+    const result = await callGateway(MESSAGES, { config: CONFIG, timeoutMs: 150, onActivity: () => void activity++ });
+    assert.equal(result.content, "đ0đ1đ2đ3đ4đ5đ6đ7");
+    assert.ok(Date.now() - started > 150, "tổng thời gian phải vượt timeoutMs thì test mới có nghĩa");
+    assert.ok(activity >= 9, `onActivity báo phản hồi đầu và từng khối (nhận ${activity})`);
+  });
+
   test("gateway đứt giữa chừng: 502 đúng câu, phần chữ đã nhận vẫn qua onContent", async () => {
     // Chỉ đóng luồng sau khi khúc đầu đã được đọc (pull chạy khi hàng đợi trống)
     const body = new ReadableStream<Uint8Array>({

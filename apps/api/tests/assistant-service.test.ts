@@ -609,6 +609,25 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     assert.doesNotMatch(errorEvent.error.message, /nội bộ/);
   });
 
+  it('đang trả lời thì không hết giờ: gateway báo có dữ liệu đều đặn, tổng thời gian vượt turnTimeoutMs vẫn xong lượt', async () => {
+    // 8 nhịp cách nhau 40ms (~320ms) trong khi turnTimeoutMs chỉ 150ms: đồng hồ tính từ lần cuối có dữ liệu nên không cắt
+    const streaming: GatewayScript = async (_messages, options) => {
+      for (let i = 0; i < 8; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        if (options?.signal?.aborted) throw new ApiError(502, 'AGENT_UNAVAILABLE', 'Chưa kết nối được tới Trợ lý. Thầy/Cô thử lại sau.');
+        options?.onActivity?.();
+        options?.onThinking?.('đang nghĩ ');
+      }
+      return { content: 'Xong.', thinking: '', toolCalls: [], finishReason: 'stop' };
+    };
+    const { events } = await runTurn([streaming], {}, {}, undefined, { turnTimeoutMs: 150 });
+
+    assert.equal(events.find((e) => e.type === 'error'), undefined, 'không được báo lỗi hết giờ khi còn dữ liệu về');
+    const done = events[events.length - 1];
+    assert.equal(done.type === 'done' && done.status, 'complete');
+    assert.equal(textsOf(events), 'Xong.');
+  });
+
   it('hết giờ cả lượt: gateway treo tới khi bị hủy thì phát AGENT_TIMEOUT, lưu status error, vẫn phát done; timeout vòng không vượt phần còn lại', async () => {
     const hanging: GatewayScript = (_messages, options) =>
       new Promise<GatewayCompletion>((_resolve, reject) => {
