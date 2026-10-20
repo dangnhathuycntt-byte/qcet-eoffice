@@ -5,8 +5,9 @@ import { fieldFocusRingClass } from "@/components/ui/focus-ring";
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /** compact: 28px trên desktop (32px trên điện thoại), chữ 13px. Mặc định giữ nguyên. */
   compact?: boolean;
-  /** menu: ô tìm ở đầu popover/menu kiểu Linear — không nền, không viền focus, cao 32px; đặt đường kẻ bên dưới. */
-  variant?: "field" | "menu";
+  /** menu: ô tìm ở đầu popover/menu kiểu Linear — không nền, không viền focus, cao 32px; đặt đường kẻ bên dưới.
+   *  title: tên trong hộp tạo (cuộc họp…) như tiêu đề hộp tạo việc — không nền, không viền, chữ 18px đậm. */
+  variant?: "field" | "menu" | "title";
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -20,6 +21,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           compact ? "h-8 px-2 py-0 text-compact sm:h-7" : "h-10 sm:h-9 px-3.5 py-2 text-base sm:text-sm",
           variant === "menu" &&
             "h-8 sm:h-8 rounded-none bg-transparent px-2 py-0 text-xs sm:text-xs hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none",
+          variant === "title" &&
+            "h-8 sm:h-8 rounded-none bg-transparent px-0 py-0 text-lg sm:text-lg font-semibold placeholder:text-muted-foreground/60 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none aria-invalid:bg-transparent aria-invalid:placeholder:text-destructive/60",
           className
         )}
         ref={ref}

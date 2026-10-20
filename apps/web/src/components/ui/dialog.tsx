@@ -82,21 +82,25 @@ export function StandardDialog({
           <div aria-hidden className="mx-auto my-2 h-1 w-9 shrink-0 rounded-full bg-mark md:hidden" />
           {showHeader ? (
             <>
-              <div className="flex items-center justify-between gap-3 pb-4">
-                <BaseDialog.Title className="text-base font-semibold tracking-tight text-foreground">
-                  {title}
-                </BaseDialog.Title>
+              {/* Mô tả đi sát tiêu đề (4px) rồi mới cách nội dung 16px; trước đây mô tả cách tiêu đề 16px nhưng chỉ cách
+                  nhãn ô đầu 8px nên đọc như dính vào ô (người dùng gửi ảnh hộp Tạo cuộc họp 20/10/2026) */}
+              <div className="flex items-start justify-between gap-3 pb-4">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <BaseDialog.Title className="text-base font-semibold tracking-tight text-foreground">
+                    {title}
+                  </BaseDialog.Title>
+                  <BaseDialog.Description
+                    className={cn(!description && "sr-only", compact ? "text-xs" : "text-sm", "text-muted-foreground")}
+                  >
+                    {description || title}
+                  </BaseDialog.Description>
+                </div>
                 {showCloseButton && (
-                  <BaseDialog.Close render={<Button variant="ghost" size="icon-sm" aria-label="Đóng" />}>
+                  <BaseDialog.Close render={<Button variant="ghost" size="icon-sm" aria-label="Đóng" className="-mt-0.5 shrink-0" />}>
                     <X className="size-4" />
                   </BaseDialog.Close>
                 )}
               </div>
-              <BaseDialog.Description
-                className={cn(!description && "sr-only", compact ? "text-xs" : "text-sm", "text-muted-foreground pb-2")}
-              >
-                {description || title}
-              </BaseDialog.Description>
             </>
           ) : (
             <>

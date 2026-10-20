@@ -10,9 +10,16 @@ import { Pressable } from "@/components/ui/pressable";
 import { useVirtualKeyboard } from "@/hooks/use-virtual-keyboard";
 import { useIsPhone } from "@/hooks/use-is-phone";
 
+/**
+ * Các hàng đang chọn liền nhau (chọn nhiều) gộp thành một khối: bỏ bo góc ở chỗ hai hàng giáp nhau, như các hàng đã chọn
+ * của bảng Nhiệm vụ (người dùng gửi ảnh từng viên tách rời ở menu Thành phần 20/10/2026). Đã chọn là `data-selected`
+ * (Select/Combobox của Base UI) hoặc `aria-current` (`MenuOptionItem`).
+ */
+const SELECTED_RUN_CLASS =
+  "[&[data-selected]:has(+[data-selected])]:rounded-b-none [[data-selected]+&[data-selected]]:rounded-t-none [&[aria-current=true]:has(+[aria-current=true])]:rounded-b-none [[aria-current=true]+&[aria-current=true]]:rounded-t-none";
+
 /** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
-export const MENU_ROW_CLASS =
-  "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors duration-75 outline-none hover:bg-accent focus-visible:bg-accent";
+export const MENU_ROW_CLASS = `flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors duration-75 outline-none hover:bg-accent focus-visible:bg-accent ${SELECTED_RUN_CLASS}`;
 
 /**
  * Hàng chọn giá trị trong Select/Combobox (danh sách có điều hướng phím): mục đang trỏ tới (chuột/phím) nền nhạt,

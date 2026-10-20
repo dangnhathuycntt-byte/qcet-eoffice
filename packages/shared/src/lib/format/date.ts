@@ -238,6 +238,18 @@ export function formatDateTime(
   return `${pad2(p.day)}/${pad2(p.month)}/${p.year} ${pad2(p.hour)}:${pad2(p.minute)}`;
 }
 
+const WEEKDAY_LABELS = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"] as const;
+
+/** Thứ trong tuần theo ngày ICT — "Thứ Hai" … "Chủ nhật"; đi kèm ngày `dd/MM/yyyy`, không thay ngày. */
+export function formatWeekday(
+  input: Date | string | number | null | undefined,
+  fallback: string = DATE_FALLBACK
+): string {
+  const p = toIctDateTimeParts(input);
+  if (!p) return fallback;
+  return WEEKDAY_LABELS[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()]!;
+}
+
 /**
  * Extract an ISO date string (`YYYY-MM-DD`) from any date-like input, returning
  * an empty string when the input is missing or invalid.

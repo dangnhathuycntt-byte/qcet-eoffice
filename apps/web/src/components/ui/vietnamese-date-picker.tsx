@@ -62,6 +62,8 @@ export interface VietnameseDatePickerProps {
   id?: string;
   /** Chip điện thoại: khi chưa chọn ngày chỉ hiện nút tròn có icon (như Linear), chọn rồi mới hiện chữ. */
   compactWhenEmpty?: boolean;
+  /** Hàng chọn theo kỳ (Ngày, Tháng, Quý, Nửa năm, Năm) cho hạn công việc; ngày họp chỉ chọn một ngày nên tắt. Mặc định hiện. */
+  periodPicker?: boolean;
 }
 
 const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -110,6 +112,7 @@ export function VietnameseDatePicker({
   triggerClassName,
   id,
   compactWhenEmpty = false,
+  periodPicker = true,
 }: VietnameseDatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   // Điện thoại: lịch là sheet chỉ để chạm chọn; không tự focus ô ngày (sẽ bật bàn phím che lịch)
@@ -448,6 +451,7 @@ export function VietnameseDatePicker({
         </div>
 
         {/* Granularity Segmented Control (Capsule style) */}
+        {periodPicker ? (
         <div className="flex items-center p-1 bg-secondary rounded-xl mb-3 select-none text-xs gap-1">
           {(
             [
@@ -474,6 +478,7 @@ export function VietnameseDatePicker({
             </button>
           ))}
         </div>
+        ) : null}
 
         {/* MODE 1: DAY CALENDAR */}
         {mode === "day" && (
@@ -533,12 +538,13 @@ export function VietnameseDatePicker({
                   type="button"
                   onClick={() => handleSelectDate(cell.year, cell.month, cell.day)}
                   className={cn(
-                    "size-8 max-md:size-10 mx-auto flex items-center justify-center rounded-full text-xs max-md:text-compact transition-colors cursor-pointer",
+                    // Rê chuột/Tab nền accent như các ô chọn khác (người dùng báo lịch chưa có hover 20/10/2026)
+                    "size-8 max-md:size-10 mx-auto flex items-center justify-center rounded-full text-xs max-md:text-compact transition-colors cursor-pointer outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50",
                     cell.isCurrentMonth
                       ? "text-foreground font-normal"
                       : "text-disabled",
                     cell.isSelected &&
-                      "bg-primary font-semibold text-primary-foreground",
+                      "bg-primary font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:bg-primary/90",
                     cell.isToday && !cell.isSelected && "font-semibold text-primary underline"
                   )}
                 >

@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MEETING_BUCKETS, type MeetingBucket } from "@qcet/contracts/meeting";
-import { formatDisplayDate, formatTime } from "@qcet/shared/lib/format/date";
+import { formatDisplayDate, formatTime, formatWeekday } from "@qcet/shared/lib/format/date";
+import { daysUntil } from "@/lib/format/relative-date";
 import { ListPageCreateButton, ListPageHeader, ListPageTitle } from "@/components/workspace/list-page-header";
 import { CreateMeetingDialog } from "@/components/meetings/create-meeting-dialog";
 import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
@@ -59,6 +60,23 @@ function timeRange(row: MeetingRow) {
   const start = formatTime(row.startTime, "");
   const end = row.endTime ? formatTime(row.endTime, "") : "";
   return end ? `${start} – ${end}` : start;
+}
+
+const NEAR_DAYS: Record<number, string> = { [-1]: "Hôm qua", 0: "Hôm nay", 1: "Ngày mai" };
+
+/**
+ * Ô Thời gian: hôm qua/hôm nay/ngày mai ghi bằng chữ (như lịch họp), ngày khác `dd/MM/yyyy` kèm thứ ở dòng giờ để biết
+ * cuộc họp rơi vào ngày nào trong tuần mà không phải đếm.
+ */
+function meetingWhen(row: MeetingRow) {
+  const diff = daysUntil(row.startTime);
+  const near = diff === null ? undefined : NEAR_DAYS[diff];
+  return {
+    day: near ?? formatDisplayDate(row.startTime),
+    detail: near ? timeRange(row) : `${formatWeekday(row.startTime)} · ${timeRange(row)}`,
+    fullDate: `${formatWeekday(row.startTime)}, ${formatDisplayDate(row.startTime)}`,
+    today: diff === 0,
+  };
 }
 
 /**
@@ -233,6 +251,7 @@ export function MeetingListView() {
             <TableBody>
               {items.map((row) => {
                 const status = meetingStatus(row.status);
+                const when = meetingWhen(row);
                 const href = `/meetings/${encodeURIComponent(row.id)}`;
                 return (
                   <TableRow key={row.id} interactive className="border-b-0" onClick={() => router.push(href)}>
@@ -241,14 +260,17 @@ export function MeetingListView() {
                         <Link href={href} className="truncate font-medium outline-none hover:underline focus-visible:underline" title={row.title}>
                           {row.title}
                         </Link>
-                        <span className="truncate text-xs text-muted-foreground">{row.location || "Chưa có địa điểm"}</span>
+                        {/* Không ghi "Chưa có địa điểm" lặp ở mọi hàng: chưa có thì tên đứng một mình */}
+                        {row.location ? <span className="truncate text-xs text-muted-foreground">{row.location}</span> : null}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
                       <div className="flex flex-col">
-                        <span className="truncate">{formatDisplayDate(row.startTime)}</span>
+                        <span className={cn("truncate", when.today && "font-medium")} title={when.fullDate}>
+                          {when.day}
+                        </span>
                         <span className="truncate text-xs text-muted-foreground">
-                          {timeRange(row)}
+                          {when.detail}
                           {/* Điện thoại không có cột Trạng thái: ghi kèm dưới giờ */}
                           <span className="md:hidden"> · {status.label}</span>
                         </span>
@@ -267,7 +289,9 @@ export function MeetingListView() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden whitespace-nowrap tabular-nums lg:table-cell">{row._count.participants} người</TableCell>
+                    <TableCell className="hidden whitespace-nowrap tabular-nums lg:table-cell">
+                      {row._count.participants > 0 ? `${row._count.participants} người` : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell
                       className={cn(
                         "hidden truncate whitespace-nowrap text-xs md:table-cell",

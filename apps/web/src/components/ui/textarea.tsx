@@ -15,6 +15,8 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   countOnlyNearLimit?: boolean;
   /** compact: chữ 13px, đệm gọn, không đặt chiều cao tối thiểu 96px, không có tay kéo đổi cỡ (form gọn trong hộp thoại/popover; cao hơn thì đặt `min-h-*`). Mặc định giữ nguyên. */
   compact?: boolean;
+  /** bare: không nền, không đệm ngang, không viền focus; ô soạn hòa vào hộp như phần mô tả của hộp tạo việc. Dùng kèm `compact`. */
+  variant?: "field" | "bare";
   /**
    * Tô màu một phần chữ ngay trong ô (ví dụ tên được nhắc): lớp chữ trùng khít cỡ chữ, đệm, ngắt dòng đè lên ô, chữ của ô
    * trong suốt, con trỏ và vùng chọn vẫn là của ô. Chỉ đổi màu, không đổi độ đậm hay cỡ để chữ không lệch con trỏ.
@@ -32,6 +34,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       maxCharacters,
       countOnlyNearLimit = false,
       compact = false,
+      variant = "field",
       renderHighlight,
       maxLength,
       value,
@@ -86,6 +89,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           `w-full rounded-control border-0 bg-secondary text-foreground placeholder:text-muted-foreground outline-none transition-colors duration-100 hover:bg-accent ${fieldFocusRingClass} focus-visible:bg-selected aria-invalid:bg-danger-soft aria-invalid:text-destructive read-only:bg-transparent read-only:hover:bg-transparent read-only:focus-visible:bg-transparent read-only:cursor-default read-only:select-text disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none`,
           compact ? "min-h-8 px-2 py-1.5 text-compact sm:min-h-7" : "min-h-24 px-3.5 py-3 text-base sm:text-sm",
           autoResize ? "resize-none overflow-hidden" : compact ? "resize-none" : "resize-y",
+          variant === "bare" &&
+            "rounded-none bg-transparent px-0 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none aria-invalid:bg-transparent",
           className,
           highlightText !== null && "text-transparent caret-foreground",
         )}
