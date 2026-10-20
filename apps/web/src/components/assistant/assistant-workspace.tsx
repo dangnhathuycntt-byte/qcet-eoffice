@@ -265,7 +265,8 @@ export function AssistantWorkspace({ conversationId, initialContext = null, init
         <div className="flex min-h-0 flex-1">
           {/* Khung cuộn ngoài: màn đầu căn giữa bằng m-auto nên khi màn thấp thì phần trên vẫn cuộn tới được */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-            <div className={cn("flex min-h-0 flex-col", start ? "m-auto w-full gap-5 py-6" : "flex-1")}>
+            {/* `isolate` để vầng sáng của màn đầu nằm sau ô soạn và danh sách nhưng trên nền thẻ */}
+            <div className={cn("flex min-h-0 flex-col", start ? "isolate m-auto w-full gap-5 py-6" : "flex-1")}>
               {/* Màn đầu không có tiêu đề, chỉ ô soạn và danh sách như Linear Agent (người dùng bỏ câu hỏi lớn 17/10/2026) */}
               {start ? null : (
                 <AssistantThread
@@ -291,7 +292,13 @@ export function AssistantWorkspace({ conversationId, initialContext = null, init
               )}
 
               {/* Cột 752px (chữ 704px) như ô soạn và cột tin của Linear Agent, đo cùng tỉ lệ 17/10/2026 */}
-              <div className={cn("mx-auto w-full max-w-[752px] shrink-0 px-4 md:px-6", !start && "pb-4")}>
+              <div className={cn("relative mx-auto w-full max-w-[752px] shrink-0 px-4 md:px-6", !start && "pb-4")}>
+                {start ? (
+                  <div
+                    aria-hidden="true"
+                    className="assistant-glow pointer-events-none absolute inset-x-[33%] top-[30%] -z-10 h-[50%] motion-safe:animate-[fade-in_0.6s_ease-out]"
+                  />
+                ) : null}
                 <AssistantComposer
                   variant={start ? "hero" : "dock"}
                   value={draft}

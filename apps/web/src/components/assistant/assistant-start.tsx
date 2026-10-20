@@ -124,7 +124,7 @@ export function AssistantStartList({ items, status, now, onSuggest, onCreateTask
                   <Pressable
                     onClick={() => (prompt ? onSuggest(prompt) : onCreateTask())}
                     className={cn(
-                      "flex w-full flex-col items-start rounded-lg border border-border/70 p-4 text-left transition-colors duration-100 hover:bg-accent/50",
+                      "flex w-full flex-col items-start rounded-lg border border-border/70 p-4 text-left transition-colors duration-100 hover:bg-background/75",
                       "min-h-32 max-sm:min-h-0 max-sm:flex-row max-sm:items-center max-sm:gap-3 max-sm:px-3 max-sm:py-2.5",
                     )}
                   >
@@ -173,7 +173,8 @@ function RecentRow({ item, now }: { item: AssistantConversationSummaryDTO; now: 
         href={`/assistant/${encodeURIComponent(item.id)}`}
         onMouseEnter={measure}
         className={cn(
-          "flex h-8 items-center gap-3 rounded-md px-4 text-compact text-foreground transition-colors hover:bg-accent/50 max-md:h-11",
+          // Hàng nằm trên vầng sáng xanh: rê chuột thì sáng lên bằng lớp trắng trong như ô soạn, không phủ xám làm đục màu
+          "flex h-8 items-center gap-3 rounded-md px-4 text-compact text-foreground transition-colors hover:bg-background/75 focus-visible:bg-background/75 max-md:h-11",
           focusRingClass,
         )}
       >

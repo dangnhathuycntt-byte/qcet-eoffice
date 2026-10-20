@@ -242,6 +242,7 @@
   --accent-3: #E1EBF8; /* xanh nhạt; vùng đang chọn đã chuyển sang xám trung tính (--selected), hiện không còn nơi dùng */
   --accent-9: #0058A0; /* nút chính, ô tick, chuyển đổi */
   --accent-10: #004A88; /* nút chính khi di chuột */
+  --assistant-glow: #BFDBFC; /* vầng sáng sau ô soạn ở màn đầu Trợ lý; sau khi mờ, chỗ đậm nhất ra #CAE1FB như trang đầu Gemini */
 
   /* Semantic tier: point at the ramp. Keep shadcn names so existing utilities keep working. */
   --background: var(--gray-0);
@@ -738,6 +739,19 @@
     animation: none;
     mask-image: none;
     opacity: 0.5;
+  }
+}
+
+/* Màn đầu Trợ lý: vầng sáng xanh nhạt sau ô soạn như trang đầu của Gemini (người dùng yêu cầu 20/10/2026, đo trên ảnh: đậm
+   nhất ngay dưới ô, nửa đậm cách khoảng 300px ngang và 150px dọc, gõ chữ vẫn giữ nguyên). Vẽ bằng bóng mờ dời xuống của một
+   khối trong suốt nằm hẳn sau ô soạn: bóng chỉ là phần vẽ tràn, không tính vào vùng cuộn, nên màn trống không cuộn được. */
+.assistant-glow {
+  border-radius: 9999px;
+  box-shadow: 0 38px 220px 132px var(--assistant-glow);
+}
+@media (max-width: 640px) {
+  .assistant-glow {
+    box-shadow: 0 28px 140px 100px var(--assistant-glow);
   }
 }
 
