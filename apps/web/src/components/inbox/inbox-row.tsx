@@ -267,8 +267,8 @@ function RowAction({
           {children}
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={4}>
-        {label} <span className="ml-1 text-background/60">{shortcut}</span>
+      <TooltipContent side="top" sideOffset={4} shortcut={shortcut}>
+        {label}
       </TooltipContent>
     </Tooltip>
   );

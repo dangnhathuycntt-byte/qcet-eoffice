@@ -401,8 +401,8 @@ export function AppSidebar() {
                 <div className="h-8 w-1 rounded-full bg-border group-hover/collapse-trigger:bg-muted-foreground/50 transition-colors duration-150" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={10}>
-              {isCollapsed ? "Mở rộng thanh bên [⌘B]" : "Thu gọn thanh bên [⌘B]"}
+            <TooltipContent side="right" sideOffset={10} shortcut={["⌘", "B"]}>
+              {isCollapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
             </TooltipContent>
           </Tooltip>
         </m.div>

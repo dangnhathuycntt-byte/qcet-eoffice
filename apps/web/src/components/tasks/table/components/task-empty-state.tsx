@@ -171,8 +171,10 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       aria-live="polite"
       density="page"
       illustration={illustration}
-      // Từ md: cao gần hết vùng nội dung (chừa thanh lọc và đệm dưới để trang không cuộn), pt-24 kéo khối xuống gần giữa vùng như Linear
-      className={cn("min-h-[66vh] select-none md:min-h-[calc(100dvh-8.5rem)] md:pt-24", className)}
+      // Từ md: cao gần hết vùng nội dung, pt-24 kéo khối xuống gần giữa vùng như Linear. Phần chừa (13rem) phải lớn hơn mọi thứ
+      // quanh vùng cuộn: khung trang, hai hàng thanh công cụ (88px), đệm dưới và thanh trạng thái; chừa thiếu thì trang trống vẫn
+      // cuộn (người dùng báo 20/10/2026: chừa 8.5rem dư 70px ở mọi cỡ màn hình). Chừa dư chỉ làm khối cao lên ít hơn, không cuộn.
+      className={cn("min-h-[66vh] select-none md:min-h-[calc(100dvh-13rem)] md:pt-24", className)}
       title={displayTitle}
       description={
         <>

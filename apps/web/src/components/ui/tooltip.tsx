@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
+import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 
 export interface TooltipProviderProps {
@@ -68,6 +69,11 @@ TooltipTrigger.displayName = "TooltipTrigger";
 
 const SIDE_MAP = { top: "top", bottom: "bottom", left: "left", right: "right" } as const;
 
+/**
+ * Nội dung tooltip, kiểu Linear (người dùng gửi ảnh tooltip "Create new issue  C" của Linear 20/10/2026, thay kiểu viên đen):
+ * thẻ nền sáng `bg-popover` bo 8px (`rounded-sm`), viền và bóng mảnh của `shadow-menu`, chữ `text-xs` đậm vừa; phím tắt (`shortcut`) nằm sau nhãn
+ * trong ô `Kbd` viền mảnh. Truyền một phím ("E") hoặc nhiều phím (["⌘", "B"]).
+ */
 export const TooltipContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
@@ -76,23 +82,35 @@ export const TooltipContent = React.forwardRef<
     /** Căn theo nút: `start` giữ tooltip trong phía nút đứng, không tràn sang vùng bên cạnh (thanh điều hướng). */
     align?: "start" | "center" | "end";
     hidden?: boolean;
+    /** Phím tắt hiện sau nhãn, mỗi phím một ô. */
+    shortcut?: string | readonly string[];
   }
->(({ className, side = "right", sideOffset = 8, align = "center", hidden = false, children, ...props }, ref) => {
+>(({ className, side = "right", sideOffset = 8, align = "center", hidden = false, shortcut, children, ...props }, ref) => {
   if (hidden) return null;
+  const keys = shortcut === undefined ? [] : typeof shortcut === "string" ? [shortcut] : shortcut;
   return (
     <BaseTooltip.Portal>
       <BaseTooltip.Positioner side={SIDE_MAP[side]} sideOffset={sideOffset} align={align} className="z-60">
         <BaseTooltip.Popup
           ref={ref}
           className={cn(
-            "z-60 overflow-hidden rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background shadow-menu whitespace-nowrap pointer-events-none motion-reduce:transition-none",
+            "z-60 flex items-center gap-2 overflow-hidden rounded-sm bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-menu whitespace-nowrap pointer-events-none motion-reduce:transition-none",
             "transition-opacity duration-100 ease-out",
             "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             className,
           )}
           {...props}
         >
-          {children}
+          {keys.length > 0 ? <span className="min-w-0">{children}</span> : children}
+          {keys.length > 0 ? (
+            <span className="flex shrink-0 items-center gap-0.5">
+              {keys.map((key) => (
+                <Kbd key={key} className="bg-background font-medium">
+                  {key}
+                </Kbd>
+              ))}
+            </span>
+          ) : null}
         </BaseTooltip.Popup>
       </BaseTooltip.Positioner>
     </BaseTooltip.Portal>

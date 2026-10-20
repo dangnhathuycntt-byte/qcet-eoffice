@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   Bell,
+  BellOff,
   Share,
   PlusSquare,
   Download,
@@ -10,13 +11,9 @@ import {
   X,
   Smartphone,
   ShieldCheck,
-  AlertCircle,
-  Loader2,
-  Lock,
-  Settings,
   RefreshCw,
   ChevronDown,
-  ChevronUp,
+  type LucideIcon,
 } from "lucide-react";
 import {
   BottomSheet,
@@ -38,10 +35,53 @@ import {
   type PushTopic,
 } from "@qcet/shared/lib/pwa/push-preferences";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { InlineAlert } from "@/components/ui/inline-alert";
 import { Pressable } from "@/components/ui/pressable";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SNOOZE_KEY = "qcet-push-onboarding-dismissed";
 const SNOOZE_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+const TOPIC_PREFERENCE_KEYS: Record<PushTopic, keyof PushPreferences> = {
+  task_assigned: "taskAssigned",
+  task_review: "taskReview",
+  deadline_reminder: "deadlineReminder",
+  document_directive: "documentDirective",
+  task_extension: "taskExtension",
+  task_decline: "taskDecline",
+  unit_request: "unitRequest",
+};
+
+/** Tiêu đề và một dòng mô tả người dùng được gì, theo tình huống đang hiện. */
+const SHEET_HEADERS: Record<"denied" | "ios" | "install" | "push" | "subscribed", { icon: LucideIcon; title: string; description: string }> = {
+  denied: {
+    icon: BellOff,
+    title: "Hướng dẫn mở lại quyền thông báo",
+    description: "Trình duyệt đang chặn thông báo của QCET.",
+  },
+  ios: {
+    icon: Smartphone,
+    title: "Cài QCET E-Office lên màn hình chính",
+    description: "Mở nhanh như ứng dụng và nhận thông báo.",
+  },
+  install: {
+    icon: Download,
+    title: "Cài đặt ứng dụng QCET E-Office",
+    description: "Mở nhanh như ứng dụng, không cần trình duyệt.",
+  },
+  push: {
+    icon: Bell,
+    title: "Bật chuông báo chỉ đạo & việc khẩn",
+    description: "Nhận báo ngay cả khi không mở ứng dụng.",
+  },
+  subscribed: {
+    icon: CheckCircle2,
+    title: "Thông báo đã sẵn sàng",
+    description: "Chuông báo sẽ đến khi có chỉ đạo hoặc việc mới.",
+  },
+};
 
 /**
  * User-scoped snooze key (T63): a dismissed push/install prompt must not
@@ -85,6 +125,121 @@ export interface PermissionRecoveryGuideProps {
   className?: string;
 }
 
+interface OnboardingStep {
+  title: string;
+  detail: React.ReactNode;
+}
+
+const RECOVERY_GUIDES: Record<"chrome" | "safari", { intro: string; steps: readonly OnboardingStep[] }> = {
+  chrome: {
+    intro: "Mở khóa trong Chrome trên máy tính theo 3 bước:",
+    steps: [
+      {
+        title: "Nhấn biểu tượng ổ khóa trên thanh địa chỉ",
+        detail: "Ở bên trái đường dẫn https://…, nhấn biểu tượng ổ khóa hoặc Cài đặt trang web.",
+      },
+      {
+        title: 'Chuyển "Thông báo" sang "Cho phép"',
+        detail: 'Tìm mục Thông báo (Notifications), đổi từ "Chặn" (Block) sang "Cho phép" (Allow).',
+      },
+      {
+        title: "Tải lại trang để áp dụng",
+        detail: 'Nhấn "Tải lại trang ngay" bên dưới hoặc phím F5 (Ctrl+R / Cmd+R).',
+      },
+    ],
+  },
+  safari: {
+    intro: "Bật lại trong Cài đặt (Settings) của iPhone, iPad theo 3 bước:",
+    steps: [
+      {
+        title: "Mở Cài đặt (Settings) trên iPhone, iPad",
+        detail: "Từ màn hình chính, mở Cài đặt, cuộn xuống và chọn QCET E-Office (hoặc Safari).",
+      },
+      {
+        title: 'Bật "Thông báo" (Notifications)',
+        detail: 'Chọn Thông báo và bật "Cho phép thông báo" (Allow Notifications), kèm âm thanh nếu muốn.',
+      },
+      {
+        title: "Quay lại QCET và tải lại",
+        detail: 'Mở lại QCET E-Office từ màn hình chính hoặc nhấn "Tải lại trang ngay" bên dưới.',
+      },
+    ],
+  },
+};
+
+const IOS_INSTALL_STEPS: readonly OnboardingStep[] = [
+  {
+    title: "Nhấn nút Chia sẻ",
+    detail: (
+      <>
+        Nút hình vuông có mũi tên trỏ lên, ở thanh công cụ dưới cùng của Safari.
+        <StepHint icon={Share}>Chia sẻ</StepHint>
+      </>
+    ),
+  },
+  {
+    title: 'Chọn "Thêm vào Màn hình chính"',
+    detail: (
+      <>
+        Cuộn xuống danh sách tùy chọn và chọn &quot;Thêm vào Màn hình chính&quot; (Add to Home Screen).
+        <StepHint icon={PlusSquare}>Thêm vào Màn hình chính</StepHint>
+      </>
+    ),
+  },
+  {
+    title: 'Nhấn "Thêm" để hoàn tất',
+    detail: 'Nhấn "Thêm" (Add) ở góc trên bên phải, rồi mở QCET E-Office từ màn hình chính để bật thông báo.',
+  },
+];
+
+function StepHint({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <span className="mt-1 flex w-fit items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-medium text-foreground">
+      <Icon aria-hidden="true" className="size-3.5" />
+      {children}
+    </span>
+  );
+}
+
+function OnboardingSteps({ steps }: { steps: readonly OnboardingStep[] }) {
+  return (
+    <ol className="flex flex-col gap-3">
+      {steps.map((step, index) => (
+        <li key={step.title} className="flex gap-2.5">
+          <span
+            aria-hidden="true"
+            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium tabular-nums text-foreground"
+          >
+            {index + 1}
+          </span>
+          <div className="min-w-0">
+            <p className="text-compact font-medium text-foreground">{step.title}</p>
+            <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{step.detail}</div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function FeatureList({ items }: { items: readonly { icon: LucideIcon; text: string }[] }) {
+  return (
+    <ul className="flex flex-col gap-2 rounded-lg bg-secondary p-3">
+      {items.map(({ icon: Icon, text }) => (
+        <li key={text} className="flex items-start gap-2 text-compact text-foreground">
+          <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <span>{text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Nút cuối hộp: trên điện thoại xếp dọc, rộng hết, nút chính trên cùng; trên máy tính một hàng bên phải, nút chính ngoài cùng. */
+function OnboardingActions({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-col gap-2 pt-1 md:flex-row-reverse md:justify-start">{children}</div>;
+}
+
 export function PermissionRecoveryGuide({
   initialPlatform = "chrome",
   onReload,
@@ -92,6 +247,7 @@ export function PermissionRecoveryGuide({
   className,
 }: PermissionRecoveryGuideProps) {
   const [platform, setPlatform] = React.useState<"chrome" | "safari">(initialPlatform);
+  const guide = RECOVERY_GUIDES[platform];
 
   const handleReload = () => {
     if (onReload) {
@@ -102,184 +258,26 @@ export function PermissionRecoveryGuide({
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Platform Switcher Tabs */}
-      <div className="flex p-1 bg-secondary rounded-xl border-0">
-        <Pressable
-          onClick={() => setPlatform("chrome")}
-          className={cn(
-            "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center",
-            platform === "chrome"
-              ? "bg-card text-foreground shadow-none border-0"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Google Chrome / Máy tính
-        </Pressable>
-        <Pressable
-          onClick={() => setPlatform("safari")}
-          className={cn(
-            "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center",
-            platform === "safari"
-              ? "bg-card text-foreground shadow-none border-0"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Safari / iOS (iPhone & iPad)
-        </Pressable>
-      </div>
-
-      {/* Info notice */}
-      <div className="flex items-start gap-3 p-3.5 rounded-xl bg-secondary border-0 text-xs sm:text-sm text-foreground leading-relaxed">
-        <Lock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-        <span>
-          {platform === "chrome"
-            ? "Trình duyệt Chrome trên máy tính đã bị chặn gửi thông báo. Hãy làm theo 3 bước bên dưới để mở khóa:"
-            : "Thiết bị iPhone / iPad đã tắt thông báo cho QCET. Hãy làm theo 3 bước bên dưới trong phần Cài đặt (Settings) của máy:"}
-        </span>
-      </div>
-
-      {/* 3 Steps */}
-      {platform === "chrome" ? (
-        <div className="space-y-3 bg-secondary border-0 rounded-2xl p-4 sm:p-5">
-          {/* Step 1 */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
-              1
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-muted-foreground" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
-                  Nhấn vào biểu tượng Ổ khóa trên thanh địa chỉ
-                </p>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Trên thanh địa chỉ trình duyệt Chrome (bên trái đường dẫn URL https://...), nhấn vào biểu tượng Ổ khóa hoặc Cài đặt trang web.
-              </p>
-            </div>
-          </div>
-
-          <div className="h-px bg-transparent ml-11" />
-
-          {/* Step 2 */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
-              2
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-primary" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
-                  Chuyển &quot;Thông báo&quot; sang &quot;Cho phép&quot;
-                </p>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Tìm mục Thông báo (Notifications), chọn gạt công tắc hoặc đổi từ &quot;Chặn&quot; (Block) sang &quot;Cho phép&quot; (Allow).
-              </p>
-            </div>
-          </div>
-
-          <div className="h-px bg-transparent ml-11" />
-
-          {/* Step 3 */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
-              3
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-foreground" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
-                  Tải lại trang để áp dụng
-                </p>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Nhấn nút &quot;Tải lại trang ngay&quot; bên dưới hoặc phím F5 (Ctrl+R / Cmd+R) để hoàn tất cập nhật quyền thông báo.
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3 bg-secondary border-0 rounded-2xl p-4 sm:p-5">
-          {/* Step 1 */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
-              1
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-primary" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
-                  Mở ứng dụng Cài đặt (Settings) trên iOS
-                </p>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Từ màn hình chính iPhone / iPad, mở Cài đặt (Settings), cuộn xuống tìm và chọn ứng dụng QCET E-Office (hoặc Safari).
-              </p>
-            </div>
-          </div>
-
-          <div className="h-px bg-transparent ml-11" />
-
-          {/* Step 2 */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
-              2
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-muted-foreground" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
-                  Bật mục &quot;Thông báo&quot; (Notifications) sang &quot;Cho phép&quot;
-                </p>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Chọn mục Thông báo và bật công tắc &quot;Cho phép thông báo&quot; (Allow Notifications), kèm tùy chọn phát âm thanh chuông.
-              </p>
-            </div>
-          </div>
-
-          <div className="h-px bg-transparent ml-11" />
-
-          {/* Step 3 */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
-              3
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-foreground" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
-                  Quay lại ứng dụng QCET và tải lại
-                </p>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Quay lại ứng dụng QCET E-Office từ màn hình chính hoặc bấm nút tải lại bên dưới để hoàn tất xác thực quyền.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Action CTA: Reload & Dismiss */}
-      <div className="pt-2 space-y-2">
-        <Pressable
-          onClick={handleReload}
-          className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all flex items-center justify-center gap-2.5"
-        >
-          <RefreshCw className="w-5 h-5" />
-          <span>Tải lại trang ngay</span>
-        </Pressable>
-        {onDismiss && (
-          <Pressable
-            onClick={onDismiss}
-            className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-muted-foreground font-medium text-base transition-colors"
-          >
+    <div className={cn("flex flex-col gap-3", className)}>
+      <Tabs value={platform} onValueChange={(next) => setPlatform(next as "chrome" | "safari")}>
+        <TabsList variant="pill" size="sm" aria-label="Thiết bị đang dùng">
+          <TabsTrigger value="chrome">Chrome / máy tính</TabsTrigger>
+          <TabsTrigger value="safari">Safari / iPhone, iPad</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <p className="text-compact text-foreground">{guide.intro}</p>
+      <OnboardingSteps steps={guide.steps} />
+      <OnboardingActions>
+        <Button size="sm" onClick={handleReload} className="max-md:w-full">
+          <RefreshCw aria-hidden="true" />
+          Tải lại trang ngay
+        </Button>
+        {onDismiss ? (
+          <Button variant="ghost" size="sm" onClick={onDismiss} className="max-md:w-full">
             Để sau
-          </Pressable>
-        )}
-      </div>
+          </Button>
+        ) : null}
+      </OnboardingActions>
     </div>
   );
 }
@@ -384,32 +382,7 @@ export function PushOnboardingSheet({
 
   const handleToggleTopic = (topicId: PushTopic) => {
     setPreferences((prev) => {
-      let key: keyof PushPreferences;
-      switch (topicId) {
-        case "task_assigned":
-          key = "taskAssigned";
-          break;
-        case "task_review":
-          key = "taskReview";
-          break;
-        case "deadline_reminder":
-          key = "deadlineReminder";
-          break;
-        case "document_directive":
-          key = "documentDirective";
-          break;
-        case "task_extension":
-          key = "taskExtension";
-          break;
-        case "task_decline":
-          key = "taskDecline";
-          break;
-        case "unit_request":
-          key = "unitRequest";
-          break;
-        default:
-          return prev;
-      }
+      const key = TOPIC_PREFERENCE_KEYS[topicId];
       const updated = { ...prev, [key]: !prev[key] };
       saveLocalPushPreferences(updated, userId);
       return updated;
@@ -430,67 +403,45 @@ export function PushOnboardingSheet({
     }
   };
 
-  const isModeIOS = isIOS && !isStandalone;
-  const isModeAndroidInstall = isInstallable && !isStandalone && !isIOS;
-  const isModePushPrompt = !isSubscribed;
-  const isModeSubscribed = isSubscribed;
+  const mode = isDenied
+    ? "denied"
+    : isIOS && !isStandalone
+    ? "ios"
+    : isInstallable && !isStandalone && !isIOS
+    ? "install"
+    : isSubscribed
+    ? "subscribed"
+    : "push";
+  const header = SHEET_HEADERS[mode];
+  const HeaderIcon = header.icon;
 
   return (
     <BottomSheet open={isOpen} onOpenChange={handleOpenChange}>
-      <BottomSheetContent className="max-h-[92vh] overflow-y-auto px-4 pb-8 sm:px-6">
-        <BottomSheetHeader className="border-0 pb-3 pt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-secondary text-primary border-0 flex items-center justify-center shrink-0">
-                {isModeIOS ? (
-                  <Smartphone className="w-6 h-6 text-primary" />
-                ) : isModeAndroidInstall ? (
-                  <Download className="w-6 h-6 text-primary" />
-                ) : (
-                  <Bell className="w-6 h-6 text-primary" />
-                )}
-              </div>
-              <div>
-                <BottomSheetTitle className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-                  {isDenied
-                    ? "Hướng dẫn mở lại quyền thông báo"
-                    : isModeIOS
-                    ? "Cài đặt QCET E-Office lên màn hình chính"
-                    : isModeAndroidInstall
-                    ? "Cài đặt ứng dụng QCET E-Office"
-                    : isModePushPrompt
-                    ? "Bật chuông báo chỉ đạo & việc khẩn"
-                    : "Thông báo đã sẵn sàng"}
-                </BottomSheetTitle>
-                <BottomSheetDescription className="text-sm sm:text-base text-muted-foreground mt-0.5">
-                  {isDenied
-                    ? "Quyền thông báo đang bị chặn hoặc bị khóa bởi trình duyệt"
-                    : "Hệ thống điều hành tác nghiệp Trường CĐ Kỹ thuật Công nghệ Quy Nhơn (QCET)"}
-                </BottomSheetDescription>
-              </div>
-            </div>
-
-            <BottomSheetClose
-              onClick={handleDismiss}
-              className="flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
-              aria-label="Đóng"
-            >
-              <X className="w-5 h-5" />
-            </BottomSheetClose>
+      {/* Điện thoại: tấm trượt từ đáy. Máy tính: thẻ 400px giữa đáy màn hình như hộp thoại nhỏ (căn bằng mx-auto vì vaul dùng
+          transform để trượt; tắt ::after vaul nối dài nền xuống dưới để che khi kéo, nếu không thẻ có dải nền dưới chân) */}
+      <BottomSheetContent
+        handleClassName="md:hidden"
+        className="md:bottom-6 md:mx-auto md:max-w-[400px] md:rounded-2xl md:pb-5 md:after:hidden"
+      >
+        <BottomSheetHeader className="flex-row items-start gap-3 px-4 pt-3 pb-0 md:px-5 md:pt-5">
+          <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
+            <HeaderIcon className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <BottomSheetTitle>{header.title}</BottomSheetTitle>
+            <BottomSheetDescription className="mt-0.5">{header.description}</BottomSheetDescription>
           </div>
+          <BottomSheetClose asChild>
+            <Button variant="ghost" size="icon-sm" aria-label="Đóng" onClick={handleDismiss} className="-mt-0.5 -mr-1">
+              <X aria-hidden="true" />
+            </Button>
+          </BottomSheetClose>
         </BottomSheetHeader>
 
-        {/* Content Body */}
-        <div className="py-5 space-y-5">
-          {error && (
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-danger-soft border border-destructive/30 text-destructive text-sm font-medium">
-              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-4 md:px-5">
+          {error ? <InlineAlert variant="error">{error}</InlineAlert> : null}
 
-          {/* Mode Denied: Recovery Guide */}
-          {isDenied && (
+          {mode === "denied" ? (
             <PermissionRecoveryGuide
               initialPlatform={isIOS ? "safari" : "chrome"}
               onDismiss={handleDismiss}
@@ -500,263 +451,96 @@ export function PushOnboardingSheet({
                 }
               }}
             />
-          )}
+          ) : null}
 
-          {/* Mode A: iOS Safari Instructions */}
-          {!isDenied && isModeIOS && (
-            <div className="space-y-4">
-              <p className="text-sm text-foreground font-medium leading-relaxed">
-                Để nhận thông báo tức thì và thao tác nhanh chóng như ứng dụng cài đặt trên máy iPhone / iPad, vui lòng làm theo 3 bước sau:
-              </p>
-
-              <div className="space-y-3 bg-secondary border-0 rounded-2xl p-4 sm:p-5">
-                {/* Step 1 */}
-                <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-semibold text-base flex items-center justify-center shrink-0">
-                    1
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      Nhấn nút Chia sẻ
-                    </p>
-                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                      Nhấn nút Chia sẻ (biểu tượng hình vuông có mũi tên trỏ lên) ở thanh điều khiển Safari dưới cùng của màn hình.
-                    </p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border-0 text-xs font-semibold text-foreground mt-1">
-                      <Share className="w-4 h-4 text-primary" />
-                      <span>Nút Chia sẻ Safari</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-transparent ml-13" />
-
-                {/* Step 2 */}
-                <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-semibold text-base flex items-center justify-center shrink-0">
-                    2
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      Chọn &quot;Thêm vào Màn hình chính&quot;
-                    </p>
-                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                      Cuộn xuống trong danh sách tùy chọn và chọn &quot;Thêm vào Màn hình chính&quot; (Add to Home Screen).
-                    </p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border-0 text-xs font-semibold text-foreground mt-1">
-                      <PlusSquare className="w-4 h-4 text-primary" />
-                      <span>Thêm vào Màn hình chính</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-transparent ml-13" />
-
-                {/* Step 3 */}
-                <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-semibold text-base flex items-center justify-center shrink-0">
-                    3
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      Nhấn &quot;Thêm&quot; để hoàn tất
-                    </p>
-                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                      Nhấn nút &quot;Thêm&quot; (Add) ở góc trên bên phải màn hình để đưa biểu tượng QCET E-Office ra màn hình chính, sau đó mở ứng dụng từ màn hình chính để kích hoạt thông báo.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-3">
-                <Pressable
-                  onClick={handleDismiss}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors"
-                >
+          {mode === "ios" ? (
+            <>
+              <OnboardingSteps steps={IOS_INSTALL_STEPS} />
+              <OnboardingActions>
+                <Button variant="secondary" size="sm" onClick={handleDismiss} className="max-md:w-full">
                   Để sau
-                </Pressable>
-              </div>
-            </div>
-          )}
+                </Button>
+              </OnboardingActions>
+            </>
+          ) : null}
 
-          {/* Mode B: Android / Chromium Desktop 1-Click Install */}
-          {!isDenied && isModeAndroidInstall && (
-            <div className="space-y-4">
-              <p className="text-sm text-foreground font-normal leading-relaxed">
-                Truy cập nhanh như ứng dụng di động, không cần mở trình duyệt và không tốn dung lượng máy.
-              </p>
-
-              <div className="p-4 rounded-2xl bg-secondary border-0 space-y-3">
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className="w-6 h-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
-                    Nhẹ, an toàn, không tốn bộ nhớ thiết bị
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Bell className="w-6 h-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
-                    Nhận chuông báo việc khẩn và chỉ đạo ngay cả khi tắt ứng dụng
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-3">
-                <Pressable
-                  onClick={handleInstallClick}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all flex items-center justify-center gap-2.5"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>CÀI ĐẶT 1-CHẠM</span>
-                </Pressable>
-                <Pressable
-                  onClick={handleDismiss}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors"
-                >
+          {mode === "install" ? (
+            <>
+              <FeatureList
+                items={[
+                  { icon: ShieldCheck, text: "Nhẹ, an toàn, không tốn bộ nhớ thiết bị" },
+                  { icon: Bell, text: "Nhận chuông báo việc khẩn và chỉ đạo ngay cả khi tắt ứng dụng" },
+                ]}
+              />
+              <OnboardingActions>
+                <Button size="sm" onClick={() => void handleInstallClick()} className="max-md:w-full">
+                  <Download aria-hidden="true" />
+                  Cài đặt ứng dụng
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDismiss} className="max-md:w-full">
                   Để sau
-                </Pressable>
-              </div>
-            </div>
-          )}
+                </Button>
+              </OnboardingActions>
+            </>
+          ) : null}
 
-          {/* Mode C: Push Prompt */}
-          {!isDenied && !isModeIOS && !isModeAndroidInstall && isModePushPrompt && (
-            <div className="space-y-4">
-              <p className="text-sm text-foreground font-normal leading-relaxed">
-                Nhận thông báo tức thì khi có việc khẩn, văn bản hỏa tốc và ý kiến chỉ đạo từ Ban Giám Hiệu ngay cả khi không mở ứng dụng.
-              </p>
-
-              <div className="p-4 rounded-2xl bg-secondary border-0 space-y-3">
-                <div className="flex items-center gap-3">
-                  <Bell className="w-6 h-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
-                    Thông báo âm thanh rõ ràng cho nhiệm vụ khẩn và hạn chót
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className="w-6 h-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
-                    Chỉ gửi nội dung liên quan công việc QCET, không làm phiền ngoài giờ
-                  </span>
-                </div>
-              </div>
-
-              {/* Granular topic selection */}
-              <div className="border-0 rounded-xl overflow-hidden">
+          {mode === "push" ? (
+            <>
+              <FeatureList
+                items={[
+                  { icon: Bell, text: "Thông báo âm thanh rõ ràng cho nhiệm vụ khẩn và hạn chót" },
+                  { icon: ShieldCheck, text: "Chỉ gửi nội dung liên quan công việc QCET, không làm phiền ngoài giờ" },
+                ]}
+              />
+              <div>
                 <Pressable
+                  aria-expanded={showPreferences}
                   onClick={() => setShowPreferences((v) => !v)}
-                  className="w-full px-4 py-3 bg-secondary hover:bg-secondary flex items-center justify-between text-left transition-colors min-h-[44px]"
+                  className="flex h-8 w-full items-center justify-between gap-2 rounded-md px-2 text-left text-compact font-medium text-foreground transition-colors hover:bg-accent motion-reduce:transition-none"
                 >
-                  <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground">
-                    <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-                    <span>Tùy chỉnh các chủ đề nhận thông báo</span>
-                  </div>
-                  {showPreferences ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  )}
+                  <span>Tùy chỉnh các chủ đề nhận thông báo</span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn("size-4 text-muted-foreground transition-transform motion-reduce:transition-none", showPreferences && "rotate-180")}
+                  />
                 </Pressable>
-
-                {showPreferences && (
-                  <div className="p-4 bg-card  space-y-3">
-                    {PUSH_TOPICS.map((topic) => {
-                      let isChecked = true;
-                      switch (topic.id) {
-                        case "task_assigned":
-                          isChecked = preferences.taskAssigned;
-                          break;
-                        case "task_review":
-                          isChecked = preferences.taskReview;
-                          break;
-                        case "deadline_reminder":
-                          isChecked = preferences.deadlineReminder;
-                          break;
-                        case "document_directive":
-                          isChecked = preferences.documentDirective;
-                          break;
-                        case "task_extension":
-                          isChecked = preferences.taskExtension;
-                          break;
-                        case "task_decline":
-                          isChecked = preferences.taskDecline;
-                          break;
-                        case "unit_request":
-                          isChecked = preferences.unitRequest;
-                          break;
-                      }
-
-                      return (
-                        <label
-                          key={topic.id}
-                          className="pt-3 first:pt-0 flex items-start gap-3 cursor-pointer group"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleToggleTopic(topic.id)}
-                            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0"
-                          />
-                          <div className="flex-1">
-                            <div className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                              {topic.title}
-                            </div>
-                            <div className="text-xs text-muted-foreground leading-normal mt-0.5">
-                              {topic.description}
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
+                {showPreferences ? (
+                  <div className="mt-2 flex flex-col gap-2.5 px-2">
+                    {PUSH_TOPICS.map((topic) => (
+                      <label key={topic.id} className="flex cursor-pointer items-start gap-2.5">
+                        <Checkbox
+                          checked={preferences[TOPIC_PREFERENCE_KEYS[topic.id]]}
+                          onChange={() => handleToggleTopic(topic.id)}
+                          className="mt-0.5"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-compact font-medium text-foreground">{topic.title}</span>
+                          <span className="block text-xs text-muted-foreground">{topic.description}</span>
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                )}
+                ) : null}
               </div>
-
-              <div className="pt-2 flex flex-col gap-3">
-                <Pressable
-                  onClick={handleSubscribeClick}
-                  disabled={isLoading}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Bell className="w-5 h-5" />
-                  )}
-                  <span>Bật thông báo trên thiết bị</span>
-                </Pressable>
-                <Pressable
-                  onClick={handleDismiss}
-                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors"
-                >
+              <OnboardingActions>
+                <Button size="sm" loading={isLoading} onClick={() => void handleSubscribeClick()} className="max-md:w-full">
+                  <Bell aria-hidden="true" />
+                  Bật thông báo trên thiết bị
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDismiss} className="max-md:w-full">
                   Để sau
-                </Pressable>
-              </div>
-            </div>
-          )}
+                </Button>
+              </OnboardingActions>
+            </>
+          ) : null}
 
-          {/* Mode D: Already Subscribed */}
-          {!isDenied && !isModeIOS && !isModeAndroidInstall && isModeSubscribed && (
-            <div className="space-y-4 text-center py-4">
-              <div className="w-16 h-16 rounded-full bg-transparent border-0 text-foreground flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-9 h-9 text-foreground" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-foreground">
-                  Thông báo đã kích hoạt thành công
-                </p>
-                <p className="text-base text-muted-foreground">
-                  Bạn sẽ nhận được chuông thông báo mỗi khi có chỉ đạo mới hoặc nhiệm vụ được phân công.
-                </p>
-              </div>
-              <Pressable
-                onClick={() => handleOpenChange(false)}
-                className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-none hover:bg-primary-hover transition-colors mt-2"
-              >
+          {mode === "subscribed" ? (
+            <OnboardingActions>
+              <Button size="sm" onClick={() => handleOpenChange(false)} className="max-md:w-full">
                 Hoàn tất
-              </Pressable>
-            </div>
-          )}
+              </Button>
+            </OnboardingActions>
+          ) : null}
         </div>
       </BottomSheetContent>
     </BottomSheet>

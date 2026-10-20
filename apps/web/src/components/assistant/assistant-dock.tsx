@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils";
 /** Số cuộc trong menu lịch sử của thanh dưới. */
 const HISTORY_COUNT = 8;
 /** Phím tắt mở/thu nhỏ khung chat như ⌘J của Linear Agent (ghi trong tooltip theo cách ghi ⌘B của sidebar). */
-const TOGGLE_SHORTCUT = "⌘J";
+const TOGGLE_SHORTCUT = ["⌘", "J"] as const;
 
 /* ---------------------------------------------------------------------------------------------------------------
  * Cuộc đang mở trong khung nổi: nhớ theo trình duyệt (mã và tên) để tải lại trang vẫn còn chip. Bộ nhớ chỉ đọc một
@@ -522,7 +522,9 @@ export function AssistantDock() {
                 Trợ lý
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">{dock ? "Cuộc trò chuyện mới" : `Mở Trợ lý [${TOGGLE_SHORTCUT}]`}</TooltipContent>
+            <TooltipContent side="top" shortcut={dock ? undefined : TOGGLE_SHORTCUT}>
+              {dock ? "Cuộc trò chuyện mới" : "Mở Trợ lý"}
+            </TooltipContent>
           </Tooltip>
           <DockHistoryButton
             activeId={dock?.id ?? null}
@@ -664,8 +666,8 @@ const DockChip = React.forwardRef<
             {unread && !pending ? <span className="sr-only">, có trả lời mới</span> : null}
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-80">
-          {title} [{TOGGLE_SHORTCUT}]
+        <TooltipContent side="top" className="max-w-80" shortcut={TOGGLE_SHORTCUT}>
+          <span className="block truncate">{title}</span>
         </TooltipContent>
       </Tooltip>
       <Button

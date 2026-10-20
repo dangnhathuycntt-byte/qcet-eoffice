@@ -12,8 +12,13 @@ const BottomSheetContext = React.createContext<BottomSheetContextValue>({
   open: false,
 });
 
+/**
+ * `autoFocus` mặc định bật (vaul để tắt): không bật thì khi mở, con trỏ bàn phím vẫn ở trang phía sau và Tab đi vòng ngoài
+ * tấm trượt dù tấm trượt là modal. Tấm có ô nhập ngay đầu mà không muốn bàn phím điện thoại bật lên thì truyền `autoFocus={false}`.
+ */
 export const BottomSheet = ({
   shouldScaleBackground = false,
+  autoFocus = true,
   open,
   children,
   ...props
@@ -21,6 +26,7 @@ export const BottomSheet = ({
   <BottomSheetContext.Provider value={{ open }}>
     <VaulDrawer.Root
       shouldScaleBackground={shouldScaleBackground}
+      autoFocus={autoFocus}
       open={open}
       {...props}
     >
@@ -60,12 +66,18 @@ export const BottomSheetOverlay = React.forwardRef<
 ));
 BottomSheetOverlay.displayName = "BottomSheetOverlay";
 
+/**
+ * Thân tấm trượt. Cuộn nội dung bằng một khối con (`min-h-0 flex-1 overflow-y-auto`), đừng đặt `overflow-y-auto` lên chính
+ * thẻ này: vaul gắn `::after` cao 200% ngay dưới thẻ để che khi kéo, cuộn trên thẻ sẽ cuộn được vào khoảng trống đó.
+ */
 export const BottomSheetContent = React.forwardRef<
   React.ElementRef<typeof VaulDrawer.Content>,
   React.ComponentPropsWithoutRef<typeof VaulDrawer.Content> & {
     hideHandle?: boolean;
+    /** Lớp thêm cho tay kéo, ví dụ `md:hidden` khi hộp thành thẻ giữa màn hình trên máy tính. */
+    handleClassName?: string;
   }
->(({ className, children, hideHandle = false, ...props }, ref) => {
+>(({ className, children, hideHandle = false, handleClassName, ...props }, ref) => {
   const { open } = React.useContext(BottomSheetContext);
 
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -79,7 +91,7 @@ export const BottomSheetContent = React.forwardRef<
         )}
       >
         {!hideHandle && (
-          <div className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-mark" />
+          <div className={cn("mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-mark", handleClassName)} />
         )}
         {children}
       </div>
@@ -99,7 +111,7 @@ export const BottomSheetContent = React.forwardRef<
         {...props}
       >
         {!hideHandle && (
-          <div className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-mark" />
+          <div className={cn("mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-mark", handleClassName)} />
         )}
         {children}
       </VaulDrawer.Content>
