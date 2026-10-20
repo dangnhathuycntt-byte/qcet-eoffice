@@ -24,6 +24,7 @@ import {
   offsetTranscriptClock,
   parseMinutesReply,
   planRecordingWindows,
+  RECORDING_SLICE_WINDOW_SEC,
   type TranscribedWindow,
 } from "@qcet/shared/domain/meetings/recording-transcript";
 import { ApiError } from "@/server/api/errors";
@@ -41,6 +42,8 @@ const DEFAULT_AUDIO_MODEL = "gemini-3.8-flash";
  * tối đa (gateway chưa trả byte nào), không phải tổng: với âm thanh gateway thường im cho tới khi chép xong cả đoạn.
  */
 const WINDOW_CALL_TIMEOUT_MS = 180_000;
+/** Đoạn cắt riêng ngắn hơn (6 phút, đo ≈ 41 giây) nên chờ im lặng ít hơn; gateway im quá ngần này là hỏng chứ không phải đang chép. */
+const SLICE_CALL_TIMEOUT_MS = 120_000;
 const WINDOW_OUTPUT_TOKENS = 16_000;
 const MINUTES_CALL_TIMEOUT_MS = 120_000;
 const MINUTES_OUTPUT_TOKENS = 8_000;
@@ -95,7 +98,6 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
   }
 
   const title = recording.meeting.title;
-  const plan = planRecordingWindows(recording.durationSec);
   let windows: TranscribedWindow[] = Array.isArray(recording.windows) ? (recording.windows as unknown as TranscribedWindow[]) : [];
   const runEndsAt = Date.now() + agentJobTimeoutMs() - RUN_SAFETY_MS;
   let stage: "transcribe" | "minutes" = "transcribe";
@@ -103,6 +105,10 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
   try {
     // Có ffmpeg thì gửi từng đoạn đã cắt; không thì gửi cả tệp (chỉ khi tệp vừa trần của chế độ này)
     const slicing = await ffmpegAvailable();
+    const plan = planRecordingWindows(recording.durationSec, slicing ? RECORDING_SLICE_WINDOW_SEC : undefined);
+    const callTimeoutMs = slicing ? SLICE_CALL_TIMEOUT_MS : WINDOW_CALL_TIMEOUT_MS;
+    // Các đoạn đã chép ở lần chạy trước chia theo cỡ khác (máy chủ đổi chế độ cắt): bỏ để không bỏ sót phần âm thanh
+    if (windows.some((done) => plan[done.index]?.startSec !== done.startSec)) windows = [];
     if (!slicing && Number(recording.byteSize) > MEETING_RECORDING_WHOLE_FILE_MAX_BYTES) {
       await failRecording(
         recordingId,
@@ -115,7 +121,7 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
     for (const window of plan) {
       if (windows.some((done) => done.index === window.index)) continue;
       // Không đủ thời gian cho thêm một lần gọi: lưu tiến độ, xếp việc nối tiếp rồi kết thúc êm (luôn làm ít nhất một đoạn mỗi lần chạy)
-      if (processedThisRun > 0 && runEndsAt - Date.now() < WINDOW_CALL_TIMEOUT_MS + 5_000) {
+      if (processedThisRun > 0 && runEndsAt - Date.now() < callTimeoutMs + 5_000) {
         await enqueueContinuation(recordingId, windows.length, job.actorId);
         return;
       }
@@ -147,7 +153,7 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
               ],
             },
           ],
-          { config, signal: job.signal, timeoutMs: WINDOW_CALL_TIMEOUT_MS, outputTokens: WINDOW_OUTPUT_TOKENS, subject: SUBJECT }
+          { config, signal: job.signal, timeoutMs: callTimeoutMs, outputTokens: WINDOW_OUTPUT_TOKENS, subject: SUBJECT }
         );
         text = cleanWindowTranscript(completion.content);
         // Đoạn cắt riêng có mốc giờ từ 00:00: cộng lại giờ bắt đầu để mốc khớp bản ghi gốc

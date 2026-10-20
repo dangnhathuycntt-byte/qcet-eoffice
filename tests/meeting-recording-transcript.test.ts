@@ -10,6 +10,7 @@ import {
   normalizeRecordingMimeType,
 } from "@qcet/contracts/meeting-recordings";
 import {
+  RECORDING_SLICE_WINDOW_SEC,
   RECORDING_WINDOW_SEC,
   buildTranscribeSlicePrompt,
   buildTranscribeWindowPrompt,
@@ -42,6 +43,15 @@ describe("Ghi âm cuộc họp: chia đoạn", () => {
 
   it("4 giờ ghi âm là 20 đoạn", () => {
     assert.equal(planRecordingWindows(MEETING_RECORDING_MAX_DURATION_SEC).length, 20);
+  });
+
+  it("đoạn 6 phút của chế độ cắt âm thanh: bản ghi 2 giờ 16 phút là 23 đoạn liền nhau, đoạn cuối mở", () => {
+    const plan = planRecordingWindows(8180, RECORDING_SLICE_WINDOW_SEC);
+    assert.equal(RECORDING_SLICE_WINDOW_SEC, 360);
+    assert.equal(plan.length, 23);
+    assert.deepEqual([plan[1].startSec, plan[1].endSec], [360, 720]);
+    assert.deepEqual([plan[22].startSec, plan[22].endSec], [22 * 360, null]);
+    assert.equal(planRecordingWindows(8180).length, 12, "không truyền cỡ thì vẫn là 12 phút");
   });
 
   it("mốc giờ có thêm giờ từ 1 giờ trở lên", () => {

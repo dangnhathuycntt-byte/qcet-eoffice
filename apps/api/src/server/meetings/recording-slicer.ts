@@ -1,7 +1,7 @@
 /**
  * Cắt một đoạn âm thanh của bản ghi bằng ffmpeg (nếu máy chủ có) để mỗi lần gọi mô hình chỉ gửi đúng đoạn cần chép thay vì
  * cả tệp: bản ghi dài hàng giờ mới chép được, và mỗi lần gọi nhanh hơn nhiều. Đoạn ra là mp3 mono 16 kHz 32 kbps
- * (đủ cho lời nói, khoảng 3 MB cho 12 phút).
+ * (đủ cho lời nói, khoảng 1,4 MB cho 6 phút).
  *
  * `MEETING_AUDIO_FFMPEG`: không đặt thì dùng `ffmpeg` trong PATH; đặt đường dẫn để dùng bản khác; `none` để tắt (máy chủ quay về
  * gửi cả tệp, tối đa MEETING_RECORDING_WHOLE_FILE_MAX_BYTES). Chỉ coi là có khi ffmpeg chạy được và có bộ mã hóa libmp3lame.
@@ -12,7 +12,7 @@ import { logger } from "@/server/observability/logger";
 
 const PROBE_TIMEOUT_MS = 10_000;
 const SLICE_TIMEOUT_MS = 180_000;
-/** Đoạn 12 phút ở 32 kbps chỉ khoảng 3 MB; trần này chặn ffmpeg xuất dư (ví dụ cờ -t bị bỏ) làm đầy bộ nhớ. */
+/** Đoạn 6 phút ở 32 kbps chỉ khoảng 1,4 MB; trần này chặn ffmpeg xuất dư (ví dụ cờ -t bị bỏ) làm đầy bộ nhớ. */
 const SLICE_MAX_BYTES = 32 * 1024 * 1024;
 const STDERR_TAIL_BYTES = 2_000;
 /** Đoạn mp3 ngắn hơn ngần này là đoạn không có âm thanh (vượt quá cuối tệp). */

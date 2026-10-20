@@ -597,29 +597,48 @@ describe('Ghi âm cuộc họp', () => {
       assert.equal((await create(users.organizer, { byteSize: 100 * 1024 * 1024 })).status, 'UPLOADING');
     });
 
-    it('job chép từng đoạn đã cắt: mỗi lần gửi mp3 riêng, mốc giờ cộng lại giờ bắt đầu đoạn, đoạn vượt cuối tệp không gọi mô hình', async () => {
-      // Khai báo 1500 giây trong khi tệp thật 800 giây: đoạn 3 (từ 24:00) rỗng
+    it('job chép từng đoạn 6 phút đã cắt: mỗi lần gửi mp3 riêng, mốc giờ cộng lại giờ bắt đầu đoạn, đoạn vượt cuối tệp không gọi mô hình', async () => {
+      // Khai báo 1500 giây trong khi tệp thật 800 giây: 5 đoạn 6 phút, hai đoạn cuối (từ 18:00 và 24:00) rỗng
       const id = await queuedAudio(mp3, 1500);
       const calls = mockGateway((call) => (isWindowCall(call) ? '[00:05] Một.\n[00:20] Hai.' : MINUTES_JSON));
       await transcribeMeeting(job(id));
 
       const windowCalls = calls.filter(isWindowCall);
-      assert.equal(windowCalls.length, 2, 'hai đoạn có âm thanh; đoạn thứ ba rỗng nên không gọi');
-      assert.equal(calls.length, 3, 'cộng một lần soạn biên bản');
+      assert.equal(windowCalls.length, 3, 'ba đoạn có âm thanh (0–6, 6–12, 12–13:20); hai đoạn sau rỗng nên không gọi');
+      assert.equal(calls.length, 4, 'cộng một lần soạn biên bản');
       for (const call of windowCalls) {
         assert.match(call.filePart?.file_data ?? '', /^data:audio\/mpeg;base64,/);
         assert.equal(call.filePart?.filename, 'ghi-am.mp3');
         assert.match(call.userText, /đã được cắt riêng/);
       }
       const size = (index: number) => Buffer.from((windowCalls[index].filePart?.file_data ?? '').split(',')[1] ?? '', 'base64').byteLength;
-      assert.ok(size(0) > 2_000_000 && size(0) < 3_300_000, `đoạn 12 phút ≈ 2,9 MB, thực ${size(0)}`);
-      assert.ok(size(1) > 250_000 && size(1) < 450_000, `đoạn còn 80 giây ≈ 0,32 MB, thực ${size(1)}`);
-      assert.match(windowCalls[1].userText, /từ 12:00 đến 24:00/);
+      assert.ok(size(0) > 1_200_000 && size(0) < 1_700_000, `đoạn 6 phút ≈ 1,44 MB, thực ${size(0)}`);
+      assert.ok(size(2) > 250_000 && size(2) < 450_000, `đoạn còn 80 giây ≈ 0,32 MB, thực ${size(2)}`);
+      assert.match(windowCalls[1].userText, /từ 06:00 đến 12:00/);
 
       const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
       assert.equal(row.status, 'READY');
-      assert.match(row.transcript ?? '', /\[00:05\] Một\.\n\[00:20\] Hai\.\n\[12:05\] Một\.\n\[12:20\] Hai\./, 'đoạn hai được cộng 12:00');
+      assert.match(
+        row.transcript ?? '',
+        /\[00:05\] Một\.\n\[00:20\] Hai\.\n\[06:05\] Một\.\n\[06:20\] Hai\.\n\[12:05\] Một\.\n\[12:20\] Hai\./,
+        'mỗi đoạn được cộng giờ bắt đầu của nó'
+      );
       await assert.rejects(fs.stat(path.join(uploadsDir, 'recordings', id)), /ENOENT/);
+    });
+
+    it('các đoạn đã chép theo cỡ khác (đổi chế độ cắt giữa chừng) bị bỏ và chép lại từ đầu, không bỏ sót âm thanh', async () => {
+      const id = await queuedAudio(mp3, 800);
+      // Đoạn đã chép theo cỡ 12 phút của chế độ gửi cả tệp: đoạn 1 bắt đầu ở 12:00, không khớp đoạn 1 của chế độ cắt (06:00)
+      await prisma.meetingRecording.update({
+        where: { id },
+        data: { windows: [{ index: 0, startSec: 0, endSec: 720, text: '[00:01] Bản cũ.' }, { index: 1, startSec: 720, endSec: null, text: '[12:01] Bản cũ.' }] },
+      });
+      const calls = mockGateway((call) => (isWindowCall(call) ? '[00:05] Mới.' : MINUTES_JSON));
+      await transcribeMeeting(job(id));
+      assert.equal(calls.filter(isWindowCall).length, 3, 'chép lại cả ba đoạn có âm thanh');
+      const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
+      assert.equal(row.status, 'READY');
+      assert.equal((row.transcript ?? '').includes('Bản cũ'), false);
     });
 
     it('tệp không giải mã được: lần đầu ném để thử lại, lần thứ ba FAILED với câu tiếng Việt, không gọi mô hình', async () => {

@@ -7,6 +7,12 @@ import type { MeetingRecordingActionItem } from "@qcet/contracts/meeting-recordi
 
 /** Mỗi lần gọi mô hình chép một đoạn dài tối đa ngần này (bản chép của đoạn vừa với giới hạn trả lời). */
 export const RECORDING_WINDOW_SEC = 12 * 60;
+/**
+ * Đoạn khi máy chủ cắt riêng âm thanh. Đo trên gateway ngày 20/10/2026: 3 phút mất 20 giây, 6 phút mất 41 giây, 12 phút mất
+ * 107 giây (và một lần vượt 180 giây); thời gian tỉ lệ độ dài đoạn chứ không phải dung lượng tệp, nên đoạn ngắn hơn ít bị
+ * quá thời gian chờ và mất ít hơn khi phải chép lại.
+ */
+export const RECORDING_SLICE_WINDOW_SEC = 6 * 60;
 /** Chặn bản chép phình vô hạn nếu mô hình lặp chữ. */
 export const RECORDING_TRANSCRIPT_MAX_CHARS = 400_000;
 
@@ -17,14 +23,14 @@ export interface RecordingWindow {
   endSec: number | null;
 }
 
-/** Chia `durationSec` thành các đoạn RECORDING_WINDOW_SEC; đoạn cuối mở. Thời lượng không hợp lệ thì một đoạn mở. */
-export function planRecordingWindows(durationSec: number | null | undefined): RecordingWindow[] {
+/** Chia `durationSec` thành các đoạn `windowSec` (mặc định RECORDING_WINDOW_SEC); đoạn cuối mở. Thời lượng không hợp lệ thì một đoạn mở. */
+export function planRecordingWindows(durationSec: number | null | undefined, windowSec: number = RECORDING_WINDOW_SEC): RecordingWindow[] {
   const total = Number.isFinite(durationSec) && (durationSec ?? 0) > 0 ? Math.ceil(durationSec as number) : 0;
-  const count = Math.max(1, Math.ceil(total / RECORDING_WINDOW_SEC));
+  const count = Math.max(1, Math.ceil(total / windowSec));
   return Array.from({ length: count }, (_, index) => ({
     index,
-    startSec: index * RECORDING_WINDOW_SEC,
-    endSec: index === count - 1 ? null : (index + 1) * RECORDING_WINDOW_SEC,
+    startSec: index * windowSec,
+    endSec: index === count - 1 ? null : (index + 1) * windowSec,
   }));
 }
 
