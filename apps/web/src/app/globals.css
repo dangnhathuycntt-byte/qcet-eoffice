@@ -1018,18 +1018,16 @@
 }
 
 /* Toast theo số đo của toast Linear (đo trên linear.app): thẻ 384px bo 12px, padding 12px, khoảng cách 8px, icon đặc 16px,
-   chữ 13px đậm vừa cao 16px, nút đóng tròn 24px kèm X 12px nằm cuối hàng. Bóng gồm viền 0,5px và ba lớp rất nhạt.
-   Bộ chọn dài hơn CSS sonner chèn lúc chạy nên không cần !important. */
+   chữ 13px đậm vừa cao 16px, nút đóng tròn 24px kèm X 12px nằm cuối hàng. Không viền (người dùng bảo "bỏ hết viền đen"
+   20/10/2026), tách khỏi nền chỉ bằng bóng mềm. Bộ chọn dài hơn CSS sonner chèn lúc chạy nên không cần !important. */
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
   min-height: 0;
   padding: 12px;
   gap: 8px;
   border-radius: 12px;
   box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 0.09),
-    0 6px 18px rgb(0 0 0 / 0.02),
-    0 3px 9px rgb(0 0 0 / 0.04),
-    0 1px 1px rgb(0 0 0 / 0.04);
+    0 8px 24px rgb(26 29 35 / 0.08),
+    0 2px 6px rgb(26 29 35 / 0.06);
   --toast-icon-margin-start: 0px;
   --toast-icon-margin-end: 0px;
   --toast-svg-margin-start: 0px;
@@ -1066,6 +1064,26 @@
 [data-sonner-toaster] [data-sonner-toast][data-styled='true']:hover [data-close-button]:hover {
   background: var(--accent);
   color: var(--foreground);
+}
+/* Nút hành động (Hoàn tác…): nút phụ nền xám nhạt như `Button variant="secondary"`, cao 24px, thay nền đen mặc định của
+   sonner; rê chuột đậm lên một bậc, focus bàn phím dùng viền như `focusRingClass`. */
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--secondary);
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 120ms ease-out;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button]:hover {
+  background: var(--accent);
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button]:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
 }
 
 /* Toast trên điện thoại: giữ giữa đáy màn hình (vùng ngón cái, như Material snackbar) nhưng là viên gọn co theo
