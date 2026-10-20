@@ -53,8 +53,19 @@ export class LiveRecordingSession {
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-    } catch {
-      throw new Error("Chưa dùng được micro. Thầy/Cô cho phép trình duyệt truy cập micro rồi thử lại.");
+    } catch (error) {
+      // Nói rõ phải làm gì theo lý do: bị chặn quyền, không có micro, hay micro đang bận
+      const name = (error as { name?: string } | null)?.name;
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        throw new Error("Trình duyệt đang chặn micro. Bấm biểu tượng ổ khóa cạnh địa chỉ trang, cho phép Micro rồi bấm Thử lại.");
+      }
+      if (name === "NotFoundError" || name === "OverconstrainedError") {
+        throw new Error("Không tìm thấy micro trên máy này. Thầy/Cô cắm micro rồi bấm Thử lại, hoặc dùng Tải tệp ghi âm.");
+      }
+      if (name === "NotReadableError" || name === "AbortError") {
+        throw new Error("Micro đang được ứng dụng khác dùng. Thầy/Cô tắt ứng dụng đó rồi bấm Thử lại.");
+      }
+      throw new Error("Chưa dùng được micro. Thầy/Cô cho phép trình duyệt truy cập micro rồi bấm Thử lại.");
     }
     let recording: MeetingRecordingSummary;
     try {

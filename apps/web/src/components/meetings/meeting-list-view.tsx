@@ -7,6 +7,7 @@ import { MEETING_BUCKETS, type MeetingBucket } from "@qcet/contracts/meeting";
 import { formatDisplayDate, formatTime } from "@qcet/shared/lib/format/date";
 import { ListPageCreateButton, ListPageHeader, ListPageTitle } from "@/components/workspace/list-page-header";
 import { CreateMeetingDialog } from "@/components/meetings/create-meeting-dialog";
+import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
 import { ListToolbarSearchToggle } from "@/components/ui/list-toolbar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -43,16 +44,6 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "upcoming", label: "Sắp diễn ra" },
   { key: "done", label: "Đã họp" },
 ];
-
-/** Nhãn trạng thái như trang chi tiết; `tone` cho biết việc còn lại (biên bản chờ duyệt) hay đã xong/không còn hiệu lực. */
-const STATUS: Record<string, { label: string; tone: "default" | "muted" | "warning" }> = {
-  DRAFT_AGENDA: { label: "Dự thảo chương trình", tone: "muted" },
-  INVITED: { label: "Đã mời", tone: "default" },
-  HELD: { label: "Đã họp", tone: "default" },
-  MINUTES_DRAFT: { label: "Dự thảo biên bản", tone: "warning" },
-  MINUTES_CONFIRMED: { label: "Biên bản đã duyệt", tone: "muted" },
-  CANCELLED: { label: "Đã hủy", tone: "muted" },
-};
 
 const TITLES: Record<TabKey, string> = {
   all: "Tất cả cuộc họp",
@@ -241,7 +232,7 @@ export function MeetingListView() {
             </TableHeader>
             <TableBody>
               {items.map((row) => {
-                const status = STATUS[row.status] ?? { label: row.status, tone: "muted" as const };
+                const status = meetingStatus(row.status);
                 const href = `/meetings/${encodeURIComponent(row.id)}`;
                 return (
                   <TableRow key={row.id} interactive className="border-b-0" onClick={() => router.push(href)}>
@@ -280,7 +271,7 @@ export function MeetingListView() {
                     <TableCell
                       className={cn(
                         "hidden truncate whitespace-nowrap text-xs md:table-cell",
-                        status.tone === "warning" ? "text-warning" : status.tone === "muted" ? "text-muted-foreground" : "text-foreground"
+                        MEETING_STATUS_TONE_CLASS[status.tone]
                       )}
                     >
                       {status.label}

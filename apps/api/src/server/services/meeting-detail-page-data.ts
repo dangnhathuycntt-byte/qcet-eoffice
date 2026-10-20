@@ -23,10 +23,11 @@ export async function readMeetingDetailPageData(id: string, userId: string) {
     where: { id },
     include: {
       unit: { select: { name: true, code: true } },
-      organizer: { select: { name: true, email: true } },
+      // Ảnh đại diện cho cột Thuộc tính / Thành phần của trang chi tiết
+      organizer: { select: { name: true, email: true, avatarUrl: true } },
       participants: {
         include: {
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, email: true, avatarUrl: true } },
         },
         orderBy: { role: "asc" },
       },

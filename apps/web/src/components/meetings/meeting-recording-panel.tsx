@@ -76,12 +76,15 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
   const [access, setAccess] = React.useState<"loading" | "ok" | "denied" | "error">("loading");
   const [recordings, setRecordings] = React.useState<MeetingRecordingSummary[]>([]);
   const [consent, setConsent] = React.useState(false);
+  const [consentError, setConsentError] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [elapsed, setElapsed] = React.useState(0);
   const [uploadedParts, setUploadedParts] = React.useState(0);
   const [fileProgress, setFileProgress] = React.useState<{ uploaded: number; total: number } | null>(null);
   const [problem, setProblem] = React.useState<string | null>(null);
   const [needsResend, setNeedsResend] = React.useState(false);
+  // Lỗi khi bắt đầu ghi trực tiếp (micro bị chặn, không có micro…): câu lỗi kèm "Thử lại"
+  const [startFailed, setStartFailed] = React.useState(false);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [details, setDetails] = React.useState<Record<string, MeetingRecordingDetail>>({});
   const [deleting, setDeleting] = React.useState<MeetingRecordingSummary | null>(null);
@@ -90,6 +93,8 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
 
   const sessionRef = React.useRef<LiveRecordingSession | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const consentRef = React.useRef<HTMLInputElement>(null);
+  const consentErrorId = React.useId();
   const watchIdRef = React.useRef<string | null>(null);
   const mountedRef = React.useRef(true);
   const canRecordLive = React.useMemo(() => (typeof window === "undefined" ? false : pickRecorderMimeType() !== null), []);
@@ -171,9 +176,19 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
     }
   }
 
+  /** Nút ghi và nút tải tệp không khóa khi chưa xác nhận: bấm thì báo dưới ô xác nhận và đưa con trỏ vào đó. */
+  function requireConsent(): boolean {
+    if (consent) return true;
+    setConsentError(true);
+    consentRef.current?.focus();
+    return false;
+  }
+
   async function startLive() {
+    if (!requireConsent()) return;
     setProblem(null);
     setNeedsResend(false);
+    setStartFailed(false);
     setPhase("starting");
     try {
       sessionRef.current = await LiveRecordingSession.start(meetingId, {
@@ -186,6 +201,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
     } catch (error) {
       sessionRef.current = null;
       setProblem(error instanceof Error ? error.message : "Không bắt đầu ghi âm được.");
+      setStartFailed(true);
       setPhase("idle");
     }
   }
@@ -229,6 +245,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
       return;
     }
     setProblem(null);
+    setStartFailed(false);
     setPhase("uploading");
     setFileProgress({ uploaded: 0, total: file.size });
     try {
@@ -281,10 +298,9 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
   if (access === "loading" || access === "denied") return null;
 
   const busy = phase !== "idle";
-  const canStart = consent && !busy;
 
   return (
-    <SectionCard title="Ghi âm cuộc họp" icon={Mic}>
+    <SectionCard title="Ghi âm cuộc họp">
       <div className="space-y-3">
         {access === "error" && (
           <InlineAlert variant="error" actionLabel="Thử lại" onAction={() => void refresh()}>
@@ -306,22 +322,47 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
-              <Checkbox checked={consent} onChange={(event) => setConsent(event.target.checked)} disabled={busy} className="mt-0.5" />
-              <span>
-                Tôi đã thông báo cho những người dự họp biết cuộc họp được ghi âm và đồng ý gửi âm thanh tới dịch vụ AI (Gemini) để chép lời.
-                <span className="block text-muted-foreground">Âm thanh bị xóa sau khi xử lý xong. Kết quả là bản nháp, cần đọc lại trước khi dùng.</span>
-              </span>
-            </label>
+          <div className="space-y-2.5">
+            <div className="space-y-1">
+              <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
+                <Checkbox
+                  ref={consentRef}
+                  checked={consent}
+                  disabled={busy}
+                  className="mt-0.5"
+                  aria-invalid={consentError ? true : undefined}
+                  aria-describedby={consentError ? consentErrorId : undefined}
+                  onChange={(event) => {
+                    setConsent(event.target.checked);
+                    setConsentError(false);
+                  }}
+                />
+                <span>
+                  Đã báo người dự họp và đồng ý gửi âm thanh tới dịch vụ AI (Gemini) để chép lời.
+                  <span className="block text-muted-foreground">Âm thanh bị xóa sau khi xử lý; kết quả là bản nháp, cần đọc lại trước khi dùng.</span>
+                </span>
+              </label>
+              {consentError ? (
+                <p id={consentErrorId} role="alert" className="pl-6 text-xs text-destructive">
+                  Đánh dấu xác nhận trước khi ghi âm hoặc tải tệp.
+                </p>
+              ) : null}
+            </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {canRecordLive && (
-                <Button size="sm" disabled={!canStart} loading={phase === "starting"} onClick={() => void startLive()}>
+                <Button size="sm" disabled={busy} loading={phase === "starting"} onClick={() => void startLive()}>
                   <Mic />
                   Bắt đầu ghi âm
                 </Button>
               )}
-              <Button size="sm" variant="toolbar" disabled={!canStart} onClick={() => fileInputRef.current?.click()}>
+              <Button
+                size="sm"
+                variant="toolbar"
+                disabled={busy}
+                onClick={() => {
+                  if (requireConsent()) fileInputRef.current?.click();
+                }}
+              >
                 <Upload />
                 Tải tệp ghi âm
               </Button>
@@ -338,7 +379,6 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
                 }}
               />
             </div>
-            {!consent && <p className="text-xs text-muted-foreground">Tích xác nhận ở trên để bắt đầu.</p>}
             {!canRecordLive && <p className="text-xs text-muted-foreground">Trình duyệt này không ghi âm trực tiếp được; Thầy/Cô tải tệp ghi âm lên.</p>}
           </div>
         )}
@@ -353,7 +393,12 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
         )}
 
         {problem && (
-          <InlineAlert variant="error" actionLabel={needsResend ? "Gửi lại" : undefined} onAction={needsResend ? () => void finishLive(true) : undefined}>
+          <InlineAlert
+            variant="error"
+            className="items-start [&>svg]:mt-0.5"
+            actionLabel={needsResend ? "Gửi lại" : startFailed ? "Thử lại" : undefined}
+            onAction={needsResend ? () => void finishLive(true) : startFailed ? () => void startLive() : undefined}
+          >
             {problem}
           </InlineAlert>
         )}

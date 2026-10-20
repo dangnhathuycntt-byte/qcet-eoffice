@@ -1,112 +1,32 @@
 "use client";
 
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  MapPin,
-  Users,
-  FileText,
-  CheckCircle2,
-  AlertCircle,
-  User,
-  Building2,
-  Hash,
-  Loader2,
-  Play,
-  FileEdit,
-  Plus,
-  ListChecks,
-  NotebookPen,
-  X,
-} from "lucide-react";
-import * as m from "motion/react-m";
+import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
-
-import { fadeVariants } from "@/lib/motion/variants";
-import { motionTransition } from "@/lib/motion/tokens";
+import { ChevronRight, Link2, Play, Plus } from "lucide-react";
+import type { MeetingDetailPageData } from "@qcet/contracts/page-data";
+import { formatDisplayDate, formatTime } from "@qcet/shared/lib/format/date";
 import { cn } from "@/lib/utils";
-import { useDepartmentList } from "@/hooks/use-department-list";
-import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
+import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/dialog";
+import { useFeedback } from "@/components/ui/feedback-layer";
+import { PropertyRow } from "@/components/ui/property-row";
+import { Textarea } from "@/components/ui/textarea";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { confirmMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
 import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
-import { SectionCard } from "@/components/meetings/section-card";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
+import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
+import { SectionCard } from "@/components/meetings/section-card";
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
-
-interface ParticipantData {
-  id: string;
-  meetingId: string;
-  userId: string;
-  role: string;
-  attendanceStatus: string;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  user: { name: string | null; email: string };
-}
-
-interface ResolutionData {
-  id: string;
-  meetingId: string;
-  code: string | null;
-  title: string;
-  content: string;
-  leadUnitId: string | null;
-  leadUserId: string | null;
-  deadline: string | null;
-  resultingTaskId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  leadUnit: { name: string } | null;
-  leadUser: { name: string | null } | null;
-}
-
-interface MeetingData {
-  id: string;
-  title: string;
-  code: string | null;
-  bodyId: string | null;
-  unitId: string | null;
-  organizerId: string;
-  status: string;
-  startTime: string;
-  endTime: string | null;
-  location: string | null;
-  agenda: string | null;
-  minutes: string | null;
-  materialsUrl: string | null;
-  materialsFileObjectId: string | null;
-  minutesConfirmedAt: string | null;
-  minutesConfirmedById: string | null;
-  createdAt: string;
-  updatedAt: string;
-  unit: { name: string; code: string } | null;
-  organizer: { name: string | null; email: string } | null;
-  participants: ParticipantData[];
-  resolutions: ResolutionData[];
-}
+type MeetingData = MeetingDetailPageData["meeting"];
+type ParticipantData = MeetingData["participants"][number];
 
 interface MeetingDetailViewProps {
   meeting: MeetingData;
   currentUser: { id: string; name: string; role: string };
 }
-
-/* ------------------------------------------------------------------ */
-/*  Status config                                                      */
-/* ------------------------------------------------------------------ */
-
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  DRAFT_AGENDA: { label: "Dự thảo chương trình", className: "bg-muted text-muted-foreground border-border/50" },
-  INVITED: { label: "Đã mời", className: "bg-sky-50 text-sky-700 border-sky-200" },
-  HELD: { label: "Đã họp", className: "bg-warning/10 text-warning border-warning/30" },
-  MINUTES_DRAFT: { label: "Dự thảo biên bản", className: "bg-orange-50 text-orange-700 border-orange-200" },
-  MINUTES_CONFIRMED: { label: "Biên bản đã duyệt", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  CANCELLED: { label: "Đã hủy", className: "bg-red-50 text-red-700 border-red-200" },
-};
 
 const PARTICIPANT_ROLE_LABELS: Record<string, string> = {
   CHAIR: "Chủ tọa",
@@ -117,701 +37,361 @@ const PARTICIPANT_ROLE_LABELS: Record<string, string> = {
 
 const PARTICIPANT_ROLE_ORDER = ["CHAIR", "SECRETARY", "ATTENDEE", "INVITED_GUEST"];
 
-const ATTENDANCE_CONFIG: Record<string, { label: string; className: string }> = {
-  INVITED: { label: "Đã mời", className: "bg-muted text-muted-foreground" },
-  ACCEPTED: { label: "Đã nhận", className: "bg-sky-50 text-sky-700" },
-  DECLINED: { label: "Từ chối", className: "bg-red-50 text-red-700" },
-  ATTENDED: { label: "Có mặt", className: "bg-emerald-50 text-emerald-700" },
-  ABSENT: { label: "Vắng mặt", className: "bg-warning/10 text-warning" },
+/** Điểm danh: chỉ vắng/từ chối mới có màu (`text-warning`), còn lại chữ mờ. */
+const ATTENDANCE: Record<string, { label: string; warn?: boolean }> = {
+  INVITED: { label: "Đã mời" },
+  ACCEPTED: { label: "Đã nhận" },
+  DECLINED: { label: "Từ chối", warn: true },
+  ATTENDED: { label: "Có mặt" },
+  ABSENT: { label: "Vắng mặt", warn: true },
 };
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
+/** Biên bản tối thiểu 10 ký tự như `DraftMinutesSchema` của máy chủ. */
+const MINUTES_MIN_LENGTH = 10;
 
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, className: "bg-muted text-muted-foreground border-border/50" };
-  return (
-    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium", cfg.className)}>
-      {cfg.label}
-    </span>
-  );
+function meetingTime(startIso: string, endIso: string | null): string {
+  const start = formatTime(startIso, "");
+  const end = endIso ? formatTime(endIso, "") : "";
+  return `${formatDisplayDate(startIso)} · ${end ? `${start} – ${end}` : start}`;
 }
 
-function AttendanceBadge({ status }: { status: string }) {
-  const cfg = ATTENDANCE_CONFIG[status] ?? { label: status, className: "bg-muted text-muted-foreground" };
-  return (
-    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", cfg.className)}>
-      {cfg.label}
-    </span>
-  );
+function Muted({ children }: { children: React.ReactNode }) {
+  return <span className="text-muted-foreground">{children}</span>;
 }
 
-function MetaRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-3 py-1.5">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm text-foreground">
-          {value ?? <span className="italic text-muted-foreground/60">—</span>}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
-
-function formatTime(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
-
-function formatDatetime(startIso: string, endIso: string | null): string {
-  const date = formatDate(startIso);
-  const startTime = formatTime(startIso);
-  if (!endIso) return `${date}, ${startTime}`;
-  const endTime = formatTime(endIso);
-  return `${date}, ${startTime} – ${endTime}`;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
-
+/**
+ * Chi tiết cuộc họp (`/meetings/[id]`), theo khung chi tiết nhiệm vụ (người dùng yêu cầu "cải thiện trang chi tiết cuộc họp"
+ * 20/10/2026, sau khi trang danh sách đã theo trang Nhiệm vụ): một thẻ cao hết màn hình, không breadcrumb chung
+ * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", "Bắt đầu họp" (khi đã mời) và sao chép liên kết; cột chính
+ * là tên 20px, nội dung và chương trình, rồi thẻ Ghi âm và thẻ Biên bản ("+ Thêm" để soạn, "Duyệt biên bản" cho lãnh đạo);
+ * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần, Ghi chú của tôi. Dưới 1024px cột phải xếp ngay dưới
+ * tên. Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
+ * máy chủ kiểm lại; ở đây chỉ để ẩn nút không dùng được.
+ */
 export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewProps) {
   const router = useRouter();
-  const [holdLoading, setHoldLoading] = useState(false);
-  const [draftLoading, setDraftLoading] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [showMinutesInput, setShowMinutesInput] = useState(false);
-  const [minutesText, setMinutesText] = useState("");
-
-  /* Resolution creation form state */
-  const [showResolutionForm, setShowResolutionForm] = useState(false);
-  const [resolutionLoading, setResolutionLoading] = useState(false);
-  const [resTitle, setResTitle] = useState("");
-  const [resContent, setResContent] = useState("");
-  const [resCode, setResCode] = useState("");
-  const [resLeadUnitId, setResLeadUnitId] = useState("");
-  const [resLeadUserId, setResLeadUserId] = useState("");
-  const [resDeadline, setResDeadline] = useState("");
-  const [resCreateTask, setResCreateTask] = useState(false);
-  const [resTaskTitle, setResTaskTitle] = useState("");
-  const [resError, setResError] = useState<string | null>(null);
+  const feedback = useFeedback();
+  const ids = React.useId();
+  const [pending, setPending] = React.useState<"hold" | "draft" | "confirm" | null>(null);
+  const [editingMinutes, setEditingMinutes] = React.useState(false);
+  const [minutesText, setMinutesText] = React.useState("");
+  const [minutesError, setMinutesError] = React.useState<string | null>(null);
+  const minutesRef = React.useRef<HTMLTextAreaElement>(null);
 
   const isOrganizer = currentUser.id === meeting.organizerId;
   const isLeader = ["BAN_GIAM_HIEU", "TRUONG_PHONG", "ADMIN"].includes(currentUser.role);
-
   const canHold = meeting.status === "INVITED" && (isLeader || isOrganizer);
   const canDraftMinutes = meeting.status === "HELD" && (isLeader || isOrganizer);
   const canConfirmMinutes = meeting.status === "MINUTES_DRAFT" && isLeader;
-  const canAddResolution =
-    ["HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED"].includes(meeting.status) &&
-    (isLeader || isOrganizer);
-  const showActions = canHold || canDraftMinutes || canConfirmMinutes || canAddResolution;
   // Ghi âm theo quan hệ soạn biên bản của máy chủ (người tổ chức, chủ tọa, thư ký của cuộc họp), trong lúc họp và soạn biên bản
   const isMinutesAuthor =
     isOrganizer || meeting.participants.some((p) => p.userId === currentUser.id && (p.role === "CHAIR" || p.role === "SECRETARY"));
   const canRecord = isMinutesAuthor && ["INVITED", "HELD", "MINUTES_DRAFT"].includes(meeting.status);
-  const useRecordingAsMinutes = useCallback((text: string) => {
-    setMinutesText(text);
-    setShowMinutesInput(true);
-    requestAnimationFrame(() => document.getElementById("meeting-minutes-input")?.scrollIntoView({ block: "center", behavior: "smooth" }));
+  const isHeld = ["HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED"].includes(meeting.status);
+  const status = meetingStatus(meeting.status);
+
+  // Mở khung soạn thì đưa con trỏ vào và cuộn tới (cả khi đến từ "Dùng làm biên bản" của bản ghi âm)
+  React.useEffect(() => {
+    if (!editingMinutes) return;
+    const el = minutesRef.current;
+    el?.focus({ preventScroll: true });
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [editingMinutes]);
+
+  const startMinutes = React.useCallback((text = "") => {
+    setMinutesText((current) => text || current);
+    setMinutesError(null);
+    setEditingMinutes(true);
   }, []);
+  const useRecordingAsMinutes = React.useCallback((text: string) => startMinutes(text), [startMinutes]);
 
-  /* Fetch units/personnel only when resolution form is open */
-  const { departments } = useDepartmentList({ enabled: showResolutionForm });
-  const { personnel } = usePersonnelList({ enabled: showResolutionForm });
-
-  const resetResolutionForm = useCallback(() => {
-    setResTitle("");
-    setResContent("");
-    setResCode("");
-    setResLeadUnitId("");
-    setResLeadUserId("");
-    setResDeadline("");
-    setResCreateTask(false);
-    setResTaskTitle("");
-    setResError(null);
-  }, []);
-
-  const handleCreateResolution = useCallback(async () => {
-    if (!resTitle.trim() || !resContent.trim()) return;
-    setResolutionLoading(true);
-    setResError(null);
+  const run = async (kind: "hold" | "confirm", action: () => Promise<void>, success: string) => {
+    if (pending) return;
+    setPending(kind);
     try {
-      const body: Record<string, unknown> = {
-        title: resTitle.trim(),
-        content: resContent.trim(),
-        createTask: resCreateTask,
-      };
-      if (resCode.trim()) body.code = resCode.trim();
-      if (resLeadUnitId) body.leadUnitId = resLeadUnitId;
-      if (resLeadUserId) body.leadUserId = resLeadUserId;
-      if (resDeadline) body.deadline = new Date(resDeadline).toISOString();
-      if (resCreateTask && resTaskTitle.trim()) body.taskTitle = resTaskTitle.trim();
-
-      const res = await fetch(`/api/meetings/${meeting.id}/resolutions`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        setShowResolutionForm(false);
-        resetResolutionForm();
-        router.refresh();
-      } else {
-        const data = await res.json().catch(() => null);
-        setResError(data?.error?.message || `Lỗi ${res.status}`);
-      }
-    } catch {
-      setResError("Không thể kết nối máy chủ");
+      await action();
+      feedback.notifySuccess(success);
+      router.refresh();
+    } catch (error) {
+      feedback.notifyError(error instanceof Error ? error.message : "Chưa thực hiện được. Thầy/Cô thử lại.");
     } finally {
-      setResolutionLoading(false);
+      setPending(null);
     }
-  }, [
-    resTitle, resContent, resCode, resLeadUnitId, resLeadUserId,
-    resDeadline, resCreateTask, resTaskTitle, meeting.id, router, resetResolutionForm,
-  ]);
+  };
 
-  const showMinutes =
-    meeting.status === "MINUTES_DRAFT" || meeting.status === "MINUTES_CONFIRMED";
+  const saveMinutes = async () => {
+    if (pending) return;
+    if (minutesText.trim().length < MINUTES_MIN_LENGTH) {
+      setMinutesError(`Nhập nội dung biên bản (ít nhất ${MINUTES_MIN_LENGTH} ký tự).`);
+      minutesRef.current?.focus();
+      return;
+    }
+    setPending("draft");
+    try {
+      await draftMinutes(meeting.id, minutesText.trim());
+      setEditingMinutes(false);
+      setMinutesText("");
+      feedback.notifySuccess("Đã lưu dự thảo biên bản.");
+      router.refresh();
+    } catch (error) {
+      setMinutesError(error instanceof Error ? error.message : "Chưa lưu được biên bản.");
+    } finally {
+      setPending(null);
+    }
+  };
 
-  /* Group participants by role */
-  const participantsByRole = PARTICIPANT_ROLE_ORDER.reduce<
-    Record<string, ParticipantData[]>
-  >((acc, role) => {
-    const group = meeting.participants.filter((p) => p.role === role);
-    if (group.length > 0) acc[role] = group;
-    return acc;
-  }, {});
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/meetings/${encodeURIComponent(meeting.id)}`);
+      feedback.notifySuccess("Đã sao chép liên kết");
+    } catch {
+      feedback.notifyError("Không sao chép được liên kết");
+    }
+  };
+
+  const participantsByRole = PARTICIPANT_ROLE_ORDER.map((role) => [role, meeting.participants.filter((p) => p.role === role)] as const).filter(
+    ([, group]) => group.length > 0
+  );
+
+  // Bắt đầu họp là thao tác của cả cuộc họp: ở thanh đầu, luôn thấy khi cuộn. Thao tác biên bản nằm ở thẻ Biên bản
+  // (người dùng bỏ nút "Soạn biên bản" ở thanh đầu 20/10/2026, chọn nút "Thêm" ngay trong thẻ)
+  const primaryAction = canHold ? (
+    <Button variant="toolbar" size="sm" loading={pending === "hold"} onClick={() => void run("hold", () => holdMeeting(meeting.id), "Đã chuyển cuộc họp sang Đã họp.")}>
+      <Play aria-hidden="true" />
+      Bắt đầu họp
+    </Button>
+  ) : null;
+
+  const inspector = (
+    <div className="flex flex-col gap-2">
+      <SectionCard title="Thuộc tính">
+        <div className="text-xs">
+          <PropertyRow label="Trạng thái" density="compact" labelClassName="w-24" valueClassName="justify-start">
+            <span className={MEETING_STATUS_TONE_CLASS[status.tone]}>{status.label}</span>
+          </PropertyRow>
+          <PropertyRow label="Thời gian" density="compact" labelClassName="w-24" valueClassName="justify-start">
+            <span className="tabular-nums">{meetingTime(meeting.startTime, meeting.endTime)}</span>
+          </PropertyRow>
+          <PropertyRow label="Địa điểm" density="compact" labelClassName="w-24" valueClassName="justify-start">
+            <span className="break-words">{meeting.location || <Muted>Chưa có</Muted>}</span>
+          </PropertyRow>
+          <PropertyRow label="Đơn vị chủ trì" density="compact" labelClassName="w-24" valueClassName="justify-start">
+            {/* Tên đơn vị không ghi tắt: xuống tối đa 2 dòng */}
+            <span className="line-clamp-2">{meeting.unit?.name || <Muted>Chưa có</Muted>}</span>
+          </PropertyRow>
+          <PropertyRow label="Người tổ chức" density="compact" labelClassName="w-24" valueClassName="justify-start">
+            {meeting.organizer ? (
+              <span className="flex min-w-0 items-center gap-1.5">
+                <UserAvatar name={meeting.organizer.name ?? meeting.organizer.email} avatarUrl={meeting.organizer.avatarUrl} size="xs" />
+                <span className="truncate">{meeting.organizer.name ?? meeting.organizer.email}</span>
+              </span>
+            ) : (
+              <Muted>Chưa có</Muted>
+            )}
+          </PropertyRow>
+          {meeting.minutesConfirmedAt ? (
+            <PropertyRow label="Duyệt biên bản" density="compact" labelClassName="w-24" valueClassName="justify-start">
+              <span className="tabular-nums">{formatDisplayDate(meeting.minutesConfirmedAt)}</span>
+            </PropertyRow>
+          ) : null}
+          {meeting.code ? (
+            <PropertyRow label="Mã" density="compact" labelClassName="w-24" valueClassName="justify-start">
+              <span className="truncate text-xs tabular-nums text-muted-foreground">{meeting.code}</span>
+            </PropertyRow>
+          ) : null}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Thành phần" count={meeting.participants.length}>
+        {participantsByRole.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {participantsByRole.map(([role, group]) => (
+              <div key={role}>
+                <p className="mb-0.5 text-xs text-muted-foreground">{PARTICIPANT_ROLE_LABELS[role] ?? role}</p>
+                <ul>
+                  {group.map((p) => (
+                    <ParticipantRow key={p.id} participant={p} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Chưa có người dự họp.</p>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Ghi chú của tôi">
+        <MeetingNotesPanel meetingId={meeting.id} />
+      </SectionCard>
+    </div>
+  );
 
   return (
-    <m.div
-      variants={fadeVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={motionTransition}
-      className="mx-auto max-w-5xl space-y-6 p-4 md:p-6"
-    >
-      {/* Back + header */}
-      <div className="flex items-start gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="mt-1 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          aria-label="Quay lại"
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] p-2 max-md:p-0">
+        <div
+          data-slot="meeting-workspace"
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0"
         >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center gap-2">
-            {meeting.code && (
-              <span className="rounded bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                {meeting.code}
+          <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-[18px] max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:px-4 max-md:pt-[env(safe-area-inset-top,0px)]">
+            <nav aria-label="Đường dẫn" className="flex min-w-0 items-center gap-1 text-xs">
+              <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
+              <Link href="/meetings" className="shrink-0 rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:underline">
+                Cuộc họp
+              </Link>
+              <ChevronRight aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/60" />
+              <span aria-current="page" className="min-w-0 truncate font-medium text-foreground">
+                {meeting.title}
               </span>
-            )}
-            <StatusBadge status={meeting.status} />
-          </div>
-          <h1 className="text-lg font-semibold text-foreground">{meeting.title}</h1>
-        </div>
-      </div>
+            </nav>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {primaryAction}
+              <Button variant="ghost" size="icon-md" onClick={() => void copyLink()} title="Sao chép liên kết" aria-label="Sao chép liên kết">
+                <Link2 />
+              </Button>
+            </div>
+          </header>
 
-      {/* Action buttons */}
-      {showActions && (
-        <div className="rounded-xl border border-border/50 bg-card px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {canHold && (
-              <button
-                type="button"
-                disabled={holdLoading}
-                onClick={async () => {
-                  setHoldLoading(true);
-                  try {
-                    const res = await fetch(`/api/meetings/${meeting.id}/actions/hold`, {
-                      method: "POST",
-                      credentials: "include",
-                    });
-                    if (res.ok) router.refresh();
-                  } finally {
-                    setHoldLoading(false);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {holdLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+          <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
+            {/* Màn rộng: lưới hai cột, cột phải trải hai hàng để tên và các thẻ cột chính không bị đẩy cách nhau.
+                Màn hẹp: thứ tự DOM là tên, thuộc tính, các thẻ. */}
+            <div className="grid grid-cols-1 gap-x-8 gap-y-4 px-4 pb-16 pt-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:pl-[clamp(24px,3vw,48px)] lg:pr-4 lg:pt-0">
+              <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:pt-6">
+                <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
+                <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
+                {meeting.agenda ? (
+                  <p className="mt-1 whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground">{meeting.agenda}</p>
                 ) : (
-                  <Play className="h-4 w-4" />
+                  <p className="mt-1 text-compact text-muted-foreground">Chưa có nội dung và chương trình.</p>
                 )}
-                Bắt đầu họp
-              </button>
-            )}
+              </div>
 
-            {canDraftMinutes && !showMinutesInput && (
-              <button
-                type="button"
-                onClick={() => setShowMinutesInput(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <FileEdit className="h-4 w-4" />
-                Soạn biên bản
-              </button>
-            )}
+              <aside aria-label="Thuộc tính cuộc họp" className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:pt-3">
+                {inspector}
+              </aside>
 
-            {canConfirmMinutes && (
-              <button
-                type="button"
-                disabled={confirmLoading}
-                onClick={async () => {
-                  setConfirmLoading(true);
-                  try {
-                    const res = await fetch(`/api/meetings/${meeting.id}/actions/confirm-minutes`, {
-                      method: "POST",
-                      credentials: "include",
-                    });
-                    if (res.ok) router.refresh();
-                  } finally {
-                    setConfirmLoading(false);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {confirmLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" />
-                )}
-                Duyệt biên bản
-              </button>
-            )}
-
-            {canAddResolution && !showResolutionForm && (
-              <button
-                type="button"
-                onClick={() => setShowResolutionForm(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <Plus className="h-4 w-4" />
-                Thêm quyết nghị
-              </button>
-            )}
-          </div>
-
-          {/* Inline minutes textarea */}
-          {showMinutesInput && (
-            <div className="mt-3 space-y-2">
-              <textarea
-                id="meeting-minutes-input"
-                value={minutesText}
-                onChange={(e) => setMinutesText(e.target.value)}
-                placeholder="Nhập nội dung biên bản..."
-                rows={minutesText.length > 400 ? 14 : 5}
-                className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={draftLoading || !minutesText.trim()}
-                  onClick={async () => {
-                    setDraftLoading(true);
-                    try {
-                      const res = await fetch(`/api/meetings/${meeting.id}/actions/draft-minutes`, {
-                        method: "POST",
-                        credentials: "include",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ minutes: minutesText.trim() }),
-                      });
-                      if (res.ok) {
-                        setShowMinutesInput(false);
-                        setMinutesText("");
-                        router.refresh();
-                      }
-                    } finally {
-                      setDraftLoading(false);
+              <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-2">
+                {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
+                {canRecord && (
+                  <MeetingRecordingPanel
+                    meetingId={meeting.id}
+                    onUseAsMinutes={canDraftMinutes ? useRecordingAsMinutes : undefined}
+                    minutesHint={
+                      meeting.status === "INVITED"
+                        ? "Bấm Bắt đầu họp để dùng làm biên bản."
+                        : meeting.status === "MINUTES_DRAFT"
+                          ? "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
+                          : undefined
                     }
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {draftLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Lưu biên bản
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMinutesInput(false);
-                    setMinutesText("");
-                  }}
-                  className="inline-flex items-center rounded-lg border border-border px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  Hủy
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Inline resolution creation form */}
-          {showResolutionForm && (
-            <div className="mt-3 space-y-3 rounded-lg border border-border/30 bg-muted/20 p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <ListChecks className="h-4 w-4 text-muted-foreground" />
-                  Thêm quyết nghị / kết luận
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowResolutionForm(false);
-                    resetResolutionForm();
-                  }}
-                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Đóng"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {resError && (
-                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                  {resError}
-                </div>
-              )}
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Tiêu đề <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={resTitle}
-                    onChange={(e) => setResTitle(e.target.value)}
-                    placeholder="Tiêu đề quyết nghị..."
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Nội dung <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={resContent}
-                    onChange={(e) => setResContent(e.target.value)}
-                    placeholder="Nội dung quyết nghị / chỉ đạo..."
-                    rows={3}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Mã quyết nghị
-                  </label>
-                  <input
-                    type="text"
-                    value={resCode}
-                    onChange={(e) => setResCode(e.target.value)}
-                    placeholder="VD: KL-01"
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Hạn hoàn thành
-                  </label>
-                  <input
-                    type="date"
-                    value={resDeadline}
-                    onChange={(e) => setResDeadline(e.target.value)}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Đơn vị phụ trách
-                  </label>
-                  <select
-                    value={resLeadUnitId}
-                    onChange={(e) => setResLeadUnitId(e.target.value)}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">— Chọn đơn vị —</option>
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Người phụ trách
-                  </label>
-                  <select
-                    value={resLeadUserId}
-                    onChange={(e) => setResLeadUserId(e.target.value)}
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">— Chọn người —</option>
-                    {personnel.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}{p.departmentName ? ` (${p.departmentName})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Create task toggle */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={resCreateTask}
-                    onChange={(e) => setResCreateTask(e.target.checked)}
-                    className="h-4 w-4 rounded border-border/50 text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                  Tạo nhiệm vụ từ quyết nghị
-                </label>
-                {resCreateTask && (
-                  <input
-                    type="text"
-                    value={resTaskTitle}
-                    onChange={(e) => setResTaskTitle(e.target.value)}
-                    placeholder="Tiêu đề nhiệm vụ (để trống sẽ dùng tiêu đề quyết nghị)"
-                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 )}
-              </div>
 
-              {/* Submit / Cancel */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={resolutionLoading || !resTitle.trim() || !resContent.trim()}
-                  onClick={handleCreateResolution}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {resolutionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Ban hành
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowResolutionForm(false);
-                    resetResolutionForm();
-                  }}
-                  className="inline-flex items-center rounded-lg border border-border px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  Hủy
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Two-column layout */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Main content — spans 2 cols */}
-        <div className="space-y-4 md:col-span-2">
-          {/* Meeting info */}
-          <SectionCard title="Thông tin cuộc họp" icon={Calendar}>
-            <div className="space-y-1">
-              <MetaRow
-                icon={Clock}
-                label="Thời gian"
-                value={formatDatetime(meeting.startTime, meeting.endTime)}
-              />
-              <MetaRow
-                icon={MapPin}
-                label="Địa điểm"
-                value={meeting.location}
-              />
-              <MetaRow
-                icon={Building2}
-                label="Đơn vị chủ trì"
-                value={meeting.unit?.name}
-              />
-              <MetaRow
-                icon={User}
-                label="Người tổ chức"
-                value={meeting.organizer?.name ?? meeting.organizer?.email}
-              />
-            </div>
-          </SectionCard>
-
-          {/* Agenda */}
-          <SectionCard title="Nội dung / Chương trình" icon={FileText}>
-            {meeting.agenda ? (
-              <p className="whitespace-pre-wrap text-sm text-foreground">
-                {meeting.agenda}
-              </p>
-            ) : (
-              <p className="text-sm italic text-muted-foreground/60">
-                Chưa có nội dung
-              </p>
-            )}
-          </SectionCard>
-
-          {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
-          {canRecord && (
-            <MeetingRecordingPanel
-              meetingId={meeting.id}
-              onUseAsMinutes={canDraftMinutes ? useRecordingAsMinutes : undefined}
-              minutesHint={
-                meeting.status === "INVITED"
-                  ? "Đánh dấu cuộc họp đã diễn ra để dùng làm biên bản."
-                  : meeting.status === "MINUTES_DRAFT"
-                    ? "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
-                    : undefined
-              }
-            />
-          )}
-
-          {/* Minutes — only shown for MINUTES_DRAFT / MINUTES_CONFIRMED */}
-          {showMinutes && (
-            <SectionCard title="Biên bản" icon={FileText}>
-              {meeting.minutes ? (
-                <p className="whitespace-pre-wrap text-sm text-foreground">
-                  {meeting.minutes}
-                </p>
-              ) : (
-                <p className="text-sm italic text-muted-foreground/60">
-                  Chưa có biên bản
-                </p>
-              )}
-            </SectionCard>
-          )}
-
-          {/* Resolutions */}
-          <SectionCard title="Nghị quyết" icon={CheckCircle2}>
-            {meeting.resolutions.length > 0 ? (
-              <div className="divide-y divide-border/30">
-                {meeting.resolutions.map((res) => (
-                  <div key={res.id} className="py-2.5">
-                    <div className="flex items-start gap-3">
-                      <Hash className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        {res.code && (
-                          <div className="mb-0.5 flex items-center gap-2">
-                            <span className="rounded bg-muted/60 px-1 py-0.5 font-mono text-xs text-muted-foreground">
-                              {res.code}
-                            </span>
-                          </div>
-                        )}
-                        <p className="text-sm font-medium text-foreground">{res.title}</p>
-                        {res.content && (
-                          <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                            {res.content}
-                          </p>
-                        )}
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          {res.deadline && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              Hạn: {formatDate(res.deadline)}
-                            </span>
-                          )}
-                          {res.leadUnit && (
-                            <span className="flex items-center gap-1">
-                              <Building2 className="h-3 w-3" />
-                              {res.leadUnit.name}
-                            </span>
-                          )}
-                          {res.leadUser?.name && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {res.leadUser.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm italic text-muted-foreground/60">
-                Chưa có nghị quyết
-              </p>
-            )}
-          </SectionCard>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          <SectionCard title="Thành phần tham dự" icon={Users}>
-            {meeting.participants.length > 0 ? (
-              <div className="space-y-4">
-                {PARTICIPANT_ROLE_ORDER.map((role) => {
-                  const group = participantsByRole[role];
-                  if (!group) return null;
-                  return (
-                    <div key={role}>
-                      <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-                        {PARTICIPANT_ROLE_LABELS[role] ?? role}
-                      </p>
-                      <div className="space-y-2">
-                        {group.map((p) => (
-                          <div
-                            key={p.id}
-                            className="flex items-center justify-between gap-2"
+                {isHeld && (
+                  <SectionCard
+                    title="Biên bản"
+                    action={
+                      canDraftMinutes && !editingMinutes && !meeting.minutes ? (
+                        <Button variant="ghost" size="xs" aria-label="Thêm biên bản" onClick={() => startMinutes()}>
+                          <Plus aria-hidden="true" />
+                          Thêm
+                        </Button>
+                      ) : canConfirmMinutes ? (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          loading={pending === "confirm"}
+                          onClick={() => void run("confirm", () => confirmMinutes(meeting.id), "Đã duyệt biên bản.")}
+                        >
+                          Duyệt biên bản
+                        </Button>
+                      ) : meeting.status === "MINUTES_DRAFT" ? (
+                        <span className="text-xs text-warning">Dự thảo, chờ duyệt</span>
+                      ) : meeting.status === "MINUTES_CONFIRMED" ? (
+                        <span className="text-xs text-muted-foreground">Đã duyệt</span>
+                      ) : null
+                    }
+                  >
+                    {editingMinutes ? (
+                      <form
+                        noValidate
+                        className="flex flex-col gap-2"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void saveMinutes();
+                        }}
+                      >
+                        <Textarea
+                          ref={minutesRef}
+                          id="meeting-minutes-input"
+                          compact
+                          value={minutesText}
+                          aria-label="Nội dung biên bản"
+                          placeholder="Nhập nội dung biên bản, hoặc bấm Dùng làm biên bản ở một bản ghi âm…"
+                          // `sm:` vì Textarea compact đặt `sm:min-h-7`; biên bản từ bản ghi âm dài thì ô cao hơn
+                          className={minutesText.length > 400 ? "min-h-80 sm:min-h-80" : "min-h-32 sm:min-h-32"}
+                          aria-invalid={minutesError ? true : undefined}
+                          aria-describedby={minutesError ? `${ids}-minutes-error` : undefined}
+                          onChange={(event) => {
+                            setMinutesText(event.target.value);
+                            setMinutesError(null);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+                              event.preventDefault();
+                              void saveMinutes();
+                            }
+                            if (event.key === "Escape" && !minutesText.trim()) setEditingMinutes(false);
+                          }}
+                        />
+                        {minutesError ? <FieldError id={`${ids}-minutes-error`}>{minutesError}</FieldError> : null}
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingMinutes(false);
+                              setMinutesText("");
+                              setMinutesError(null);
+                            }}
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                              <span className="truncate text-sm text-foreground">
-                                {p.user.name ?? p.user.email}
-                              </span>
-                            </div>
-                            <AttendanceBadge status={p.attendanceStatus} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm italic text-muted-foreground/60">
-                Chưa có thành viên
-              </p>
-            )}
-          </SectionCard>
+                            Hủy
+                          </Button>
+                          <Button type="submit" size="sm" loading={pending === "draft"}>
+                            Lưu biên bản
+                          </Button>
+                        </div>
+                      </form>
+                    ) : meeting.minutes ? (
+                      <p className="whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground">{meeting.minutes}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {canDraftMinutes ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm." : "Chưa có biên bản."}
+                      </p>
+                    )}
+                  </SectionCard>
+                )}
 
-          <SectionCard title="Ghi chú của tôi" icon={NotebookPen}>
-            <MeetingNotesPanel meetingId={meeting.id} />
-          </SectionCard>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </m.div>
+
+    </div>
+  );
+}
+
+function ParticipantRow({ participant }: { participant: ParticipantData }) {
+  const name = participant.user.name ?? participant.user.email;
+  const attendance = ATTENDANCE[participant.attendanceStatus] ?? { label: participant.attendanceStatus };
+  return (
+    <li className="flex h-7 items-center gap-1.5 text-xs">
+      <UserAvatar name={name} avatarUrl={participant.user.avatarUrl} size="xs" />
+      <span className="min-w-0 flex-1 truncate text-foreground" title={name}>
+        {name}
+      </span>
+      <span className={cn("shrink-0 text-xs", attendance.warn ? "text-warning" : "text-muted-foreground")}>{attendance.label}</span>
+    </li>
   );
 }

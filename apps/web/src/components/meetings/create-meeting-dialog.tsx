@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { getTodayIctDate } from "@qcet/shared/lib/academic-calendar";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
+import { responseMessage } from "@/components/meetings/meeting-client";
 
 const DEFAULT_START = "08:00";
 const DEFAULT_END = "09:30";
@@ -19,13 +20,6 @@ type FieldName = "title" | "date" | "end";
 /** Giờ ICT (UTC+7) của ô ngày và ô giờ thành ISO UTC, như máy chủ lưu `startTime`. */
 function toMeetingIso(date: string, time: string): string {
   return new Date(`${date}T${time}:00+07:00`).toISOString();
-}
-
-/** Câu lỗi của máy chủ (RFC 9457 `detail`, hoặc `message` của API cũ); không có thì câu mặc định. */
-async function responseMessage(response: Response, fallback: string): Promise<string> {
-  const body = (await response.json().catch(() => null)) as { detail?: unknown; message?: unknown } | null;
-  const text = typeof body?.detail === "string" ? body.detail : typeof body?.message === "string" ? body.message : "";
-  return text || fallback;
 }
 
 /**

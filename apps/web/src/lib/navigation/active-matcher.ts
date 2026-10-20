@@ -41,6 +41,11 @@ export function isTaskSubPagePath(pathname: string | null | undefined): boolean 
   return Boolean(match && TASK_SUB_PAGES.has(match[1]));
 }
 
+/** Chi tiết một cuộc họp (`/meetings/[id]`): khung một thẻ cao hết màn hình như chi tiết nhiệm vụ, tự có thanh đầu. */
+export function isMeetingDetailPath(pathname: string | null | undefined): boolean {
+  return /^\/meetings\/[^/]+$/.test(normalizePath(pathname ?? ""));
+}
+
 /** Trợ lý (`/assistant` và `/assistant/[id]`): khung hai cột cao như Hộp thư, không đệm. */
 export function isAssistantPath(pathname: string | null | undefined): boolean {
   const clean = normalizePath(pathname ?? "");

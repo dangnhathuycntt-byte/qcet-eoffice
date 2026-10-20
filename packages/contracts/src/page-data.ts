@@ -128,7 +128,7 @@ const MeetingParticipantSchema = z.looseObject({
   notes: z.string().nullable(),
   createdAt: IsoDateStringSchema,
   updatedAt: IsoDateStringSchema,
-  user: z.object({ name: z.string().nullable(), email: z.string() }),
+  user: z.object({ name: z.string().nullable(), email: z.string(), avatarUrl: z.string().nullable().optional() }),
 });
 
 const MeetingResolutionSchema = z.looseObject({
@@ -167,7 +167,7 @@ export const MeetingDetailSchema = z.looseObject({
   createdAt: IsoDateStringSchema,
   updatedAt: IsoDateStringSchema,
   unit: z.object({ name: z.string(), code: z.string() }).nullable(),
-  organizer: z.object({ name: z.string().nullable(), email: z.string() }).nullable(),
+  organizer: z.object({ name: z.string().nullable(), email: z.string(), avatarUrl: z.string().nullable().optional() }).nullable(),
   participants: z.array(MeetingParticipantSchema),
   resolutions: z.array(MeetingResolutionSchema),
 });

@@ -16,7 +16,7 @@ import { AgentModelsProvider } from "@/components/agent-chat/agent-models";
 import type { AgentModelCatalog } from "@qcet/shared/domain/agent/agent-models";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@qcet/shared/lib/login-helpers";
-import { isAssistantPath, isCardPagePath, isNotesPath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
+import { isAssistantPath, isCardPagePath, isMeetingDetailPath, isNotesPath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
 import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { useTransform } from "motion/react";
@@ -95,12 +95,14 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
   const isTaskSubPage = isTaskSubPagePath(pathname);
   // Cơ cấu & Danh bạ, Báo cáo và các trang trong menu "Thêm" cũng tự dựng khung một thẻ
   const isCardPage = isCardPagePath(pathname);
-  const isWorkspaceShell = isTaskDetail || isTaskSubPage || isCardPage || pathname === "/documents";
+  // Chi tiết cuộc họp theo khung chi tiết nhiệm vụ: một thẻ cao hết màn hình, tự có thanh đầu và nút mở sidebar
+  const isMeetingDetail = isMeetingDetailPath(pathname);
+  const isWorkspaceShell = isTaskDetail || isMeetingDetail || isTaskSubPage || isCardPage || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản, trang một thẻ: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
   // Trang danh sách khung một thẻ cao hết màn hình như Nhiệm vụ: tự có thanh tiêu đề 44px và nút mở sidebar trên điện thoại
   // (`ListPageHeader`), nội dung cuộn trong thẻ. Cuộc họp học theo Nhiệm vụ (người dùng yêu cầu 20/10/2026).
   const isListPage = pathname === "/tasks" || pathname === "/meetings";
-  const hideDesktopTopbar = isListPage || isTaskDetail || isTaskSubPage || isCardPage || isFullHeightPane || pathname === "/documents";
+  const hideDesktopTopbar = isListPage || isTaskDetail || isMeetingDetail || isTaskSubPage || isCardPage || isFullHeightPane || pathname === "/documents";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isRedirectingRef = React.useRef(false);
@@ -179,7 +181,7 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
         {/* Mobile Header (chỉ dưới md); danh sách, chi tiết nhiệm vụ, hộp thư và sổ văn bản tự có header riêng (nút mở sidebar / nút quay lại) như Linear */}
-        {!isListPage && !isTaskDetail && !isFullHeightPane && pathname !== "/documents" && <AppTopbar showSearch={!isTaskSubPage && !isCardPage} />}
+        {!isListPage && !isTaskDetail && !isMeetingDetail && !isFullHeightPane && pathname !== "/documents" && <AppTopbar showSearch={!isTaskSubPage && !isCardPage} />}
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
         {!hideDesktopTopbar && <DesktopTopbar />}

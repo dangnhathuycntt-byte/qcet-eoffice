@@ -1,22 +1,32 @@
 import * as React from "react";
+import { cn } from "@/lib/utils";
 
-/** Thẻ một khối của trang chi tiết cuộc họp: tiêu đề kèm icon và nội dung bên dưới. */
+/**
+ * Thẻ một khối của trang chi tiết cuộc họp, cùng kiểu thẻ "Thuộc tính"/"Việc con" của chi tiết nhiệm vụ: viền mảnh bo 10px,
+ * tiêu đề 12px đậm (kèm số đếm mờ) và thao tác nhỏ bên phải, không icon.
+ */
 export function SectionCard({
   title,
-  icon: Icon,
+  count,
+  action,
   children,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  children: React.ReactNode;
+  className,
+  ...props
+}: Omit<React.HTMLAttributes<HTMLElement>, "title"> & {
+  title: React.ReactNode;
+  count?: number;
+  action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card">
-      <div className="flex items-center gap-2 border-b border-border/30 px-4 py-3">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium text-foreground">{title}</h3>
+    <section className={cn("rounded-[10px] border border-border bg-card p-3", className)} {...props}>
+      <div className="mb-2 flex min-h-6 items-center justify-between gap-2">
+        <h2 className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-foreground">
+          {title}
+          {typeof count === "number" ? <span className="font-normal tabular-nums text-muted-foreground">{count}</span> : null}
+        </h2>
+        {action ? <div className="flex shrink-0 items-center gap-1">{action}</div> : null}
       </div>
-      <div className="px-4 py-3">{children}</div>
-    </div>
+      {children}
+    </section>
   );
 }
