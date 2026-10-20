@@ -601,47 +601,51 @@ function MagnifierGlyph(props: GlyphProps) {
   );
 }
 
-/* Bảng việc có kẹp và ba dòng việc; dấu tích của dòng đầu bật vào ô. */
+/*
+ * Bảng kẹp đứng hơi ngả ra sau, mặt quay về phía người nhìn (nằm phẳng thì các dòng bị bóp thành vệt chéo, người dùng chê
+ * "chưa đạt" 20/10/2026): bảng nét đậm rơi vào chỗ, rồi dấu tích bật vào ô của dòng đầu.
+ */
 const BOARD = place((c) => {
-  const z = 2.5;
-  const rows = [-6, 1, 8];
-  const [boxX, checkRow] = [-8, rows[0]];
-  const checkAt = c.at([boxX, checkRow, z]);
+  const [w, h, thickness, lean] = [23, 27, 2.4, rad(16)];
+  // Mặt bảng: a theo trục x, b dọc bảng từ tâm lên; đáy bảng chạm nền
+  const up: Vec3 = [0, -Math.sin(lean), Math.cos(lean)];
+  const normal: Vec3 = [0, Math.cos(lean), Math.sin(lean)];
+  const board = (offset: number): Plane => (a, b) => [a + normal[0] * offset, up[1] * (b + h / 2) + normal[1] * offset, up[2] * (b + h / 2) + normal[2] * offset];
+  const face = board(thickness);
+  const rows = [5.2, -1, -7.2];
+  const boxA = -5.8;
   return {
-    board: prism(c, rrect(26, 32, 3), flat([0, 0], 0), [0, 0, z]),
-    clip: prism(c, rrect(10, 4, 1.4), flat([0, -15.5], z), [0, 0, 1.8]),
-    boxes: rows.map((y) => outlinePath(c, rrect(4.2, 4.2, 1), flat([boxX, y], z))).join(" "),
-    done: segment(c, [-3.5, rows[0], z], [8, rows[0], z]),
-    todo: [segment(c, [-3.5, rows[1], z], [8, rows[1], z]), segment(c, [-3.5, rows[2], z], [4, rows[2], z])].join(" "),
-    // Dấu tích vẽ thẳng trên màn hình (chiếu theo mặt bảng thì bẹp, khó đọc), tâm ở ô đầu, nhô lên khỏi ô như dấu tích tay
-    check: (
-      [
-        [-2.4, 0],
-        [-0.7, 1.8],
-        [2.9, -2.6],
-      ] as Vec2[]
-    )
-      .map(([x, y], i) => `${i ? "L" : "M"}${fmt(c.track([checkAt[0] + x, checkAt[1] + y]))}`)
-      .join(" "),
+    floor: outlinePath(c, rrect(32, 18, 5), flat([0, -3], 0)),
+    board: prism(c, rrect(w, h, 3.5), board(0), [normal[0] * thickness, normal[1] * thickness, normal[2] * thickness]),
+    paper: outlinePath(c, rrect(w - 4.4, h - 5.6, 1.4), (a, b) => face(a, b - 1)),
+    clip: prism(c, rrect(10, 4.6, 1.6), (a, b) => face(a, b + h / 2 - 1.4), [normal[0] * 2.2, normal[1] * 2.2, normal[2] * 2.2]),
+    boxes: rows.map((b) => outlinePath(c, rrect(4.8, 4.8, 1.2), (u, v) => face(boxA + u, b + v))).join(" "),
+    done: segment(c, face(-1.8, rows[0]), face(7.6, rows[0])),
+    todo: [segment(c, face(-1.8, rows[1]), face(7.6, rows[1])), segment(c, face(-1.8, rows[2]), face(4, rows[2]))].join(" "),
+    check: polyline(c, [face(boxA - 1.9, rows[0] + 0.1), face(boxA - 0.5, rows[0] - 1.5), face(boxA + 2.5, rows[0] + 2.3)]),
   };
 });
 
 function TasksGlyph(props: GlyphProps) {
   return (
     <GlyphSvg name="tasks" bounds={BOARD.bounds} {...props}>
-      <PrismShape shape={BOARD.board} ink={INK.base} />
-      <path d={BOARD.boxes} strokeOpacity={INK.base} />
-      <path d={BOARD.done} strokeOpacity={INK.base * 0.5} />
-      <path d={BOARD.todo} strokeOpacity={INK.base * 0.8} />
-      <PrismShape shape={BOARD.clip} ink={INK.base} />
-      <DropIn from={{ x: 0, y: -2, scale: 0.3, delay: 0.3, stiffness: 420, damping: 18 }}>
-        <path d={BOARD.check} strokeOpacity={INK.piece} />
+      <path d={BOARD.floor} strokeOpacity={INK.floor} strokeDasharray={DASH} />
+      <DropIn from={{ x: 0, y: -10, rotate: -6 }}>
+        <PrismShape shape={BOARD.board} ink={INK.piece} />
+        <path d={BOARD.paper} strokeOpacity={INK.piece * 0.35} />
+        <path d={BOARD.boxes} strokeOpacity={INK.piece * 0.7} />
+        <path d={BOARD.done} strokeOpacity={INK.piece * 0.3} />
+        <path d={BOARD.todo} strokeOpacity={INK.piece * 0.5} />
+        <PrismShape shape={BOARD.clip} ink={INK.piece} />
+        <DropIn from={{ x: 0, y: -1, scale: 0.3, delay: 0.55, stiffness: 420, damping: 18 }}>
+          <path d={BOARD.check} strokeOpacity={INK.piece} />
+        </DropIn>
       </DropIn>
     </GlyphSvg>
   );
 }
 
-/* Đồng hồ báo thức đứng: kim phút quay gần một vòng rồi dừng ở số 12 (đã quá giờ). */
+/* Đồng hồ báo thức đứng nét đậm rơi vào chỗ, rồi kim phút quay gần một vòng và dừng ở số 12 (đã quá giờ). */
 const CLOCK = place((c) => {
   const [R, depth, lift] = [12.5, 5.5, 3];
   const zc = R + lift;
@@ -669,7 +673,7 @@ const CLOCK = place((c) => {
     cap: outlinePath(c, circle(0.9), face),
   };
 });
-const CLOCK_SWEEP = { from: 60, to: 360, delay: 0.25, duration: 1.4 };
+const CLOCK_SWEEP = { from: 60, to: 360, delay: 0.55, duration: 1.4 };
 
 function ClockGlyph(props: GlyphProps) {
   const reduceMotion = useReducedMotion();
@@ -688,18 +692,20 @@ function ClockGlyph(props: GlyphProps) {
   return (
     <GlyphSvg name="overdue" bounds={CLOCK.bounds} {...props}>
       <path d={CLOCK.floor} strokeOpacity={INK.floor} strokeDasharray={DASH} />
-      {CLOCK.feet.map((foot, index) => (
-        <PrismShape key={`foot${index}`} shape={foot} ink={INK.base} />
-      ))}
-      {CLOCK.bells.map((bell, index) => (
-        <PrismShape key={`bell${index}`} shape={bell} ink={INK.base} />
-      ))}
-      <PrismShape shape={CLOCK.body} ink={INK.base} />
-      <path d={CLOCK.rim} strokeOpacity={INK.base * 0.6} />
-      <path d={CLOCK.ticks} strokeOpacity={INK.base * 0.8} />
-      <path d={CLOCK.hourHand} strokeOpacity={INK.base} />
-      <path ref={handRef} d={CLOCK.minuteHand(CLOCK_SWEEP.from)} strokeOpacity={INK.piece} />
-      <path d={CLOCK.cap} fill="var(--card)" strokeOpacity={INK.piece} />
+      <DropIn from={{ x: 0, y: -9, rotate: -8 }}>
+        {CLOCK.feet.map((foot, index) => (
+          <PrismShape key={`foot${index}`} shape={foot} ink={INK.piece} />
+        ))}
+        {CLOCK.bells.map((bell, index) => (
+          <PrismShape key={`bell${index}`} shape={bell} ink={INK.piece} />
+        ))}
+        <PrismShape shape={CLOCK.body} ink={INK.piece} />
+        <path d={CLOCK.rim} strokeOpacity={INK.piece * 0.4} />
+        <path d={CLOCK.ticks} strokeOpacity={INK.piece * 0.6} />
+        <path d={CLOCK.hourHand} strokeOpacity={INK.piece} />
+        <path ref={handRef} d={CLOCK.minuteHand(CLOCK_SWEEP.from)} strokeOpacity={INK.piece} />
+        <path d={CLOCK.cap} fill="var(--card)" strokeOpacity={INK.piece} />
+      </DropIn>
     </GlyphSvg>
   );
 }
