@@ -15,9 +15,11 @@ import { useFeedback } from "@/components/ui/feedback-layer";
 import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
+import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
+import { addParticipant, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
 import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
+import { ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
 import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
 import { SectionCard } from "@/components/meetings/section-card";
 
@@ -66,7 +68,7 @@ function Muted({ children }: { children: React.ReactNode }) {
  * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", "Bắt đầu họp" (khi đã mời) và sao chép liên kết; cột chính
  * là tên 20px, nội dung và chương trình, rồi thẻ Ghi âm và thẻ Biên bản ("+ Thêm" để soạn, "Duyệt biên bản" cho chủ tọa,
  * "Sửa" và xóa khi còn dự thảo);
- * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần, Ghi chú của tôi. Dưới 1024px cột phải xếp ngay dưới
+ * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần ("+ Thêm" mời người, "Chọn chủ tọa" khi chưa có), Ghi chú của tôi. Dưới 1024px cột phải xếp ngay dưới
  * tên. Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
  * máy chủ kiểm lại; ở đây chỉ để ẩn nút không dùng được.
  */
@@ -74,7 +76,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const router = useRouter();
   const feedback = useFeedback();
   const ids = React.useId();
-  const [pending, setPending] = React.useState<"hold" | "draft" | "confirm" | "discard" | null>(null);
+  const [pending, setPending] = React.useState<"hold" | "draft" | "confirm" | "discard" | "chair" | null>(null);
   const [editingMinutes, setEditingMinutes] = React.useState(false);
   const [minutesText, setMinutesText] = React.useState("");
   const [minutesError, setMinutesError] = React.useState<string | null>(null);
@@ -98,6 +100,24 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const canRecord = isMinutesAuthor && ["INVITED", "HELD", "MINUTES_DRAFT"].includes(meeting.status);
   const isHeld = ["HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED"].includes(meeting.status);
   const status = meetingStatus(meeting.status);
+
+  // Mời người: người tổ chức/chủ tọa (máy chủ tính), đến khi biên bản được duyệt hoặc cuộc họp bị hủy
+  const canManageParticipants = can("meeting.manage_participants") && !["MINUTES_CONFIRMED", "CANCELLED"].includes(meeting.status);
+  // Danh bạ chỉ tải khi mở menu lần đầu
+  const [peopleWanted, setPeopleWanted] = React.useState(false);
+  const { people, loading: peopleLoading } = useMeetingPeople(peopleWanted);
+  const [chairPickerOpen, setChairPickerOpen] = React.useState(false);
+  // Người vừa chọn, hiện ngay như đã chọn trong lúc chờ máy chủ và tải lại trang
+  const [inviting, setInviting] = React.useState<MeetingPerson[]>([]);
+  const participantIds = React.useMemo(() => new Set(meeting.participants.map((p) => p.userId)), [meeting.participants]);
+  const lockedIds = React.useMemo(() => new Set([...participantIds, ...inviting.map((p) => p.id)]), [participantIds, inviting]);
+  const pickerValue = React.useMemo(
+    () => [
+      ...meeting.participants.map((p) => ({ id: p.userId, name: p.user.name ?? p.user.email, email: p.user.email, avatarUrl: p.user.avatarUrl })),
+      ...inviting.filter((p) => !participantIds.has(p.id)),
+    ],
+    [meeting.participants, inviting, participantIds]
+  );
 
   // Mở khung soạn thì đưa con trỏ vào và cuộn tới (cả khi đến từ "Dùng làm biên bản" của bản ghi âm)
   React.useEffect(() => {
@@ -153,6 +173,36 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
       router.refresh();
     } catch (error) {
       setMinutesError(error instanceof Error ? error.message : "Chưa lưu được biên bản.");
+    } finally {
+      setPending(null);
+    }
+  };
+
+  // Mỗi người chọn được mời ngay (thành viên); menu vẫn mở để chọn tiếp. Người đã dự họp không bỏ được ở đây
+  const invite = async (next: MeetingPerson[]) => {
+    const fresh = next.filter((p) => !lockedIds.has(p.id));
+    if (fresh.length === 0) return;
+    setInviting((current) => [...current, ...fresh]);
+    const results = await Promise.allSettled(fresh.map((p) => addParticipant(meeting.id, p.id, "ATTENDEE")));
+    const failed = fresh.filter((_, index) => results[index].status === "rejected");
+    if (failed.length > 0) {
+      const reason = results.find((r): r is PromiseRejectedResult => r.status === "rejected")?.reason;
+      setInviting((current) => current.filter((p) => !failed.some((f) => f.id === p.id)));
+      feedback.notifyError(reason instanceof Error ? reason.message : "Chưa thêm được người dự họp.");
+    }
+    router.refresh();
+  };
+
+  const chooseChair = async (person: MeetingPerson) => {
+    setChairPickerOpen(false);
+    if (pending) return;
+    setPending("chair");
+    try {
+      await addParticipant(meeting.id, person.id, "CHAIR");
+      feedback.notifySuccess(`Đã chọn ${person.name} làm chủ tọa.`);
+      router.refresh();
+    } catch (error) {
+      feedback.notifyError(error instanceof Error ? error.message : "Chưa chọn được chủ tọa.");
     } finally {
       setPending(null);
     }
@@ -220,7 +270,48 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         </div>
       </SectionCard>
 
-      <SectionCard title="Thành phần" count={meeting.participants.length}>
+      <SectionCard
+        title="Thành phần"
+        count={meeting.participants.length}
+        action={
+          canManageParticipants ? (
+            <ParticipantsPicker
+              people={people}
+              value={pickerValue}
+              onChange={(next) => void invite(next)}
+              loading={peopleLoading}
+              lockedIds={lockedIds}
+              align="end"
+              onOpenChange={(open) => open && setPeopleWanted(true)}
+              trigger={
+                <Button variant="ghost" size="xs" aria-label="Thêm người dự họp">
+                  <Plus aria-hidden="true" />
+                  Thêm
+                </Button>
+              }
+            />
+          ) : null
+        }
+      >
+        {/* Chưa có chủ tọa thì không ai duyệt được biên bản: người mời được chọn ngay ở đây */}
+        {canManageParticipants && chairs.length === 0 ? (
+          <div className="mb-2">
+            <p className="mb-0.5 text-xs text-muted-foreground">Chủ tọa</p>
+            <PersonPillPicker
+              people={people}
+              valueId=""
+              onSelect={(person) => void chooseChair(person)}
+              open={chairPickerOpen}
+              onOpenChange={(open) => {
+                setChairPickerOpen(open);
+                if (open) setPeopleWanted(true);
+              }}
+              loading={peopleLoading}
+              emptyLabel="Chọn chủ tọa"
+              menuTitle="Chủ tọa"
+            />
+          </div>
+        ) : null}
         {participantsByRole.length > 0 ? (
           <div className="flex flex-col gap-2">
             {participantsByRole.map(([role, group]) => (
@@ -235,7 +326,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Chưa có người dự họp.</p>
+          <p className="text-xs text-muted-foreground">{canManageParticipants ? "Chưa có người dự họp. Bấm Thêm để mời." : "Chưa có người dự họp."}</p>
         )}
       </SectionCard>
 

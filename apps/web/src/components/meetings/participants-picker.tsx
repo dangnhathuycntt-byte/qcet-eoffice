@@ -9,6 +9,7 @@ import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { useDepartmentList } from "@/hooks/use-department-list";
 
 export interface MeetingPerson {
   id: string;
@@ -21,20 +22,47 @@ export interface MeetingPerson {
 /** Số avatar xếp chồng trên chip trước khi chỉ còn số đếm. */
 const STACK_MAX = 3;
 
+/** Danh bạ cả trường để mời họp: gộp cán bộ các đơn vị, mỗi người một lần (người kiêm nhiệm ở nhiều đơn vị), xếp theo tên. */
+export function useMeetingPeople(enabled: boolean) {
+  const { departments, isLoading } = useDepartmentList({ includePersonnel: true, enabled });
+  const people = React.useMemo(() => {
+    const byId = new Map<string, MeetingPerson>();
+    for (const department of departments) {
+      for (const person of department.personnel ?? []) {
+        if (!byId.has(person.id)) byId.set(person.id, { ...person, departmentName: department.shortName || department.name });
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  }, [departments]);
+  return { people, loading: isLoading };
+}
+
 /**
- * Chip "Thành phần" của hộp tạo cuộc họp: chọn nhiều người (Combobox `multiple` của Base UI), menu giữ mở khi chọn, có ô
- * tìm gõ không dấu theo tên, email, đơn vị. Đang chọn là nền accent và chữ đậm như các menu chọn giá trị khác của app.
+ * Chọn nhiều người dự họp (Combobox `multiple` của Base UI), menu giữ mở khi chọn, có ô tìm gõ không dấu theo tên, email,
+ * đơn vị. Đang chọn là nền accent và chữ đậm như các menu chọn giá trị khác của app. Mặc định là chip "Thành phần" của hộp
+ * tạo cuộc họp; trang chi tiết truyền `trigger` (nút "Thêm") và `lockedIds` (người đã dự họp: hiện như đang chọn, không bỏ
+ * được vì chưa có API bỏ người).
  */
 export function ParticipantsPicker({
   people,
   value,
   onChange,
   loading = false,
+  trigger,
+  lockedIds,
+  onOpenChange,
+  align = "start",
 }: {
   people: MeetingPerson[];
   value: MeetingPerson[];
   onChange: (next: MeetingPerson[]) => void;
   loading?: boolean;
+  /** Nút mở menu thay cho chip mặc định (phần tử dùng làm `render` của `Combobox.Trigger`) */
+  trigger?: React.ReactElement;
+  lockedIds?: ReadonlySet<string>;
+  onOpenChange?: (open: boolean) => void;
+  /** Canh menu theo mép nút: `end` khi nút nằm ở mép phải (đầu thẻ Thành phần) */
+  align?: "start" | "end";
 }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -50,6 +78,7 @@ export function ParticipantsPicker({
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) setQuery("");
+        onOpenChange?.(next);
       }}
       inputValue={query}
       onInputValueChange={setQuery}
@@ -62,25 +91,29 @@ export function ParticipantsPicker({
       isItemEqualToValue={(a, b) => a.id === b.id}
       autoHighlight
     >
-      <Combobox.Trigger
-        aria-label={value.length > 0 ? `Thành phần: ${value.map((p) => p.name).join(", ")}` : "Thành phần"}
-        className={cn(PROPERTY_PILL_CLASS, value.length === 0 && "text-muted-foreground")}
-      >
-        {value.length > 0 ? (
-          <span className="flex -space-x-1">
-            {shown.map((person) => (
-              <UserAvatar key={person.id} name={person.name} avatarUrl={person.avatarUrl} size="xs" className="ring-1 ring-background" />
-            ))}
-          </span>
-        ) : (
-          <Users className="size-3.5 text-muted-foreground" />
-        )}
-        <span className="truncate">{value.length > 0 ? `${value.length} người` : "Thành phần"}</span>
-      </Combobox.Trigger>
+      {trigger ? (
+        <Combobox.Trigger render={trigger} />
+      ) : (
+        <Combobox.Trigger
+          aria-label={value.length > 0 ? `Thành phần: ${value.map((p) => p.name).join(", ")}` : "Thành phần"}
+          className={cn(PROPERTY_PILL_CLASS, value.length === 0 && "text-muted-foreground")}
+        >
+          {value.length > 0 ? (
+            <span className="flex -space-x-1">
+              {shown.map((person) => (
+                <UserAvatar key={person.id} name={person.name} avatarUrl={person.avatarUrl} size="xs" className="ring-1 ring-background" />
+              ))}
+            </span>
+          ) : (
+            <Users className="size-3.5 text-muted-foreground" />
+          )}
+          <span className="truncate">{value.length > 0 ? `${value.length} người` : "Thành phần"}</span>
+        </Combobox.Trigger>
+      )}
 
       <Combobox.Portal>
         <Combobox.Backdrop className={SHEET_BACKDROP_CLASS} />
-        <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12}>
+        <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align={align} sideOffset={4} collisionPadding={12}>
           <Combobox.Popup
             aria-label="Chọn người dự họp"
             className={cn("w-64 max-w-[var(--available-width)]", MENU_POPUP_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
@@ -94,21 +127,25 @@ export function ParticipantsPicker({
               </div>
             </Combobox.Empty>
             <Combobox.List className="max-h-56 overflow-y-auto overscroll-contain outline-none data-[empty]:p-0 max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
-              {(person: MeetingPerson) => (
-                <Combobox.Item
-                  key={person.id}
-                  value={person}
-                  // Tên và đơn vị cắt cuối trong menu 256px: rê chuột thấy đủ
-                  title={person.departmentName ? `${person.name} · ${person.departmentName}` : person.name}
-                  className={MENU_OPTION_ROW_CLASS}
-                >
-                  <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
-                  <span className="min-w-0 flex-1 truncate">{person.name}</span>
-                  {person.departmentName ? (
-                    <span className="max-w-24 shrink-0 truncate font-normal text-muted-foreground">{person.departmentName}</span>
-                  ) : null}
-                </Combobox.Item>
-              )}
+              {(person: MeetingPerson) => {
+                const locked = lockedIds?.has(person.id) ?? false;
+                return (
+                  <Combobox.Item
+                    key={person.id}
+                    value={person}
+                    disabled={locked}
+                    // Tên và đơn vị cắt cuối trong menu 256px: rê chuột thấy đủ
+                    title={[person.name, person.departmentName, locked ? "đã dự họp" : ""].filter(Boolean).join(" · ")}
+                    className={cn(MENU_OPTION_ROW_CLASS, "data-[disabled]:cursor-default")}
+                  >
+                    <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
+                    <span className="min-w-0 flex-1 truncate">{person.name}</span>
+                    {person.departmentName ? (
+                      <span className="max-w-24 shrink-0 truncate font-normal text-muted-foreground">{person.departmentName}</span>
+                    ) : null}
+                  </Combobox.Item>
+                );
+              }}
             </Combobox.List>
           </Combobox.Popup>
         </Combobox.Positioner>

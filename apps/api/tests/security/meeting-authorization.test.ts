@@ -33,6 +33,7 @@ import { POST as draftMinutesRoute } from '@/app/api/meetings/[id]/actions/draft
 import { POST as confirmMinutesRoute } from '@/app/api/meetings/[id]/actions/confirm-minutes/route';
 import { POST as discardMinutesRoute } from '@/app/api/meetings/[id]/actions/discard-minutes/route';
 import { POST as holdMeetingRoute } from '@/app/api/meetings/[id]/actions/hold/route';
+import { POST as addParticipantRoute } from '@/app/api/meetings/[id]/participants/route';
 import { POST as createResolutionRoute } from '@/app/api/meetings/[id]/resolutions/route';
 
 describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', () => {
@@ -408,6 +409,48 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
     const stored = await prisma.meeting.findUniqueOrThrow({ where: { id: testMeeting.id } });
     assert.strictEqual(stored.status, MeetingStatus.MINUTES_CONFIRMED);
     assert.strictEqual(stored.minutes, 'Dự thảo biên bản soạn lại sau khi xóa.');
+  });
+
+  test('9c. Thêm người dự họp: người tham dự, thư ký và người ngoài bị chặn; chủ tọa mời được, mời lại không nhân đôi; biên bản đã duyệt thì chặn', async () => {
+    const meeting = await MeetingService.createMeeting(
+      {
+        code: `MT_PART_${runId}`,
+        title: 'Họp mời thêm người',
+        unitId: testUnit.id,
+        startTime: '2026-09-22T08:00:00.000Z',
+        initialParticipants: [
+          { userId: chairUser.id, role: MeetingParticipantRole.CHAIR },
+          { userId: secretaryUser.id, role: MeetingParticipantRole.SECRETARY },
+          { userId: participantUser.id, role: MeetingParticipantRole.ATTENDEE },
+        ],
+      },
+      chairUser.id
+    );
+    const invite = (meetingId: string, token: string) =>
+      addParticipantRoute(
+        new NextRequest(`http://localhost:3000/api/meetings/${meetingId}/participants`, {
+          method: 'POST',
+          headers: authHeaders(token),
+          body: JSON.stringify({ userId: outsiderUser.id, role: MeetingParticipantRole.ATTENDEE }),
+        }),
+        { params: Promise.resolve({ id: meetingId }) }
+      );
+
+    for (const token of [participantToken, secretaryToken, outsiderToken]) {
+      assert.strictEqual((await invite(meeting.id, token)).status, 403);
+    }
+
+    const added = await invite(meeting.id, chairToken);
+    assert.strictEqual(added.status, 201);
+    const body = await added.json();
+    assert.strictEqual(body.role, MeetingParticipantRole.ATTENDEE);
+    assert.strictEqual(body.attendanceStatus, 'INVITED');
+    assert.strictEqual((await invite(meeting.id, chairToken)).status, 201);
+    assert.strictEqual(await prisma.meetingParticipant.count({ where: { meetingId: meeting.id, userId: outsiderUser.id } }), 1);
+
+    // testMeeting đã duyệt biên bản ở test 9
+    assert.strictEqual((await invite(testMeeting.id, chairToken)).status, 400);
+    assert.strictEqual(await prisma.meetingParticipant.count({ where: { meetingId: testMeeting.id, userId: outsiderUser.id } }), 0);
   });
 
   test('10. Unauthorized user (participant/outsider) creating resolution -> DENY (403)', async () => {

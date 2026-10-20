@@ -14,10 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
-import { useDepartmentList } from "@/hooks/use-department-list";
 import { useAuth } from "@/lib/auth-context";
 import { responseMessage } from "@/components/meetings/meeting-client";
-import { ParticipantsPicker, type MeetingPerson } from "@/components/meetings/participants-picker";
+import { ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
 import { TimeRangeFields, durationText, fromMinutes, toMinutes } from "@/components/meetings/time-range-picker";
 
 const DEFAULT_START = "08:00";
@@ -34,8 +33,8 @@ function toMeetingIso(date: string, time: string): string {
  * Tạo cuộc họp, theo bố cục hộp tạo việc (người dùng yêu cầu "cải thiện modal" 20/10/2026, trước đó là năm ô có nhãn,
  * ô giờ có icon đồng hồ của trình duyệt nằm sau chữ, mô tả dính vào nhãn ô đầu): tên lớn không viền, hàng chip Ngày, Giờ,
  * Địa điểm, Chủ tọa, Thành phần, đường kẻ, rồi ô nội dung không viền. Chủ tọa và thành phần chọn từ danh bạ cán bộ ngay ở
- * đây (`initialParticipants`): trang chi tiết chưa có chỗ thêm người, nên trước đây cuộc họp tạo mới không có chủ tọa để
- * duyệt biên bản. Người tạo luôn dự họp (thư ký, hoặc chủ tọa nếu tự chọn mình). Enter gửi, nút chính không khóa, lỗi báo
+ * đây (`initialParticipants`; thêm sau ở thẻ Thành phần của trang chi tiết), vì trước đây cuộc họp tạo mới không có chủ
+ * tọa để duyệt biên bản. Người tạo luôn dự họp (thư ký, hoặc chủ tọa nếu tự chọn mình). Enter gửi, nút chính không khóa, lỗi báo
  * dưới ô. Tạo xong mở thẳng trang chi tiết.
  */
 export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -58,17 +57,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
   const endRef = React.useRef<HTMLInputElement>(null);
   const dateWrapRef = React.useRef<HTMLDivElement>(null);
 
-  const { departments, isLoading: peopleLoading } = useDepartmentList({ includePersonnel: true, enabled: open });
-  // Danh bạ cả trường: gộp cán bộ các đơn vị, mỗi người một lần (người kiêm nhiệm ở nhiều đơn vị)
-  const people = React.useMemo(() => {
-    const byId = new Map<string, MeetingPerson>();
-    for (const department of departments) {
-      for (const person of department.personnel ?? []) {
-        if (!byId.has(person.id)) byId.set(person.id, { ...person, departmentName: department.shortName || department.name });
-      }
-    }
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "vi"));
-  }, [departments]);
+  const { people, loading: peopleLoading } = useMeetingPeople(open);
   // Người tạo đã dự họp sẵn (thư ký) nên không có trong Thành phần; chủ tọa cũng không lặp lại ở đó
   const attendeeOptions = React.useMemo(() => people.filter((p) => p.id !== user?.id && p.id !== chairId), [people, user?.id, chairId]);
 
