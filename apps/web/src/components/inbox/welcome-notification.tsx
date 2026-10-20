@@ -7,6 +7,7 @@ import { WelcomeInstallDemo } from "@/components/inbox/welcome-install-demo";
 import { AssistantSettingsDialog } from "@/components/assistant/assistant-settings-dialog";
 import { getPreferencesRequest, listConversationsRequest } from "@/components/assistant/assistant-client";
 import { Button } from "@/components/ui/button";
+import { EmptyGlyph, type EmptyGlyphName } from "@/components/ui/empty-glyphs";
 import { Kbd } from "@/components/ui/kbd";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { Progress } from "@/components/ui/progress";
@@ -39,13 +40,13 @@ const INSTALL_ENTRY: WelcomeEntry = {
   description: "Nhận việc mới, nhắc hạn và xử lý văn bản ngay trên điện thoại.",
 };
 
-/** Bốn khu làm việc chính, mỗi khu một cảnh nét mực cùng chủ đề. */
+/** Bốn khu làm việc chính, mỗi khu một icon lớn cùng bộ với trạng thái trống. */
 const AREAS = [
-  { href: "/tasks", title: "Nhiệm vụ", description: "Giao việc, theo dõi tiến độ đến khi hoàn thành.", art: "/design/illustrations/welcome-tasks.webp" },
-  { href: "/documents?type=inbox", title: "Văn bản", description: "Văn bản đến, văn bản đi, tờ trình và hồ sơ công việc.", art: "/design/illustrations/welcome-docs.webp" },
-  { href: "/calendar", title: "Lịch công tác", description: "Lịch họp và lịch công tác chung của đơn vị.", art: "/design/illustrations/welcome-calendar.webp" },
-  { href: "/org", title: "Cơ cấu & Danh bạ", description: "Tra cứu đơn vị, người phụ trách và liên hệ.", art: "/design/illustrations/welcome-people.webp" },
-] as const;
+  { href: "/tasks", title: "Nhiệm vụ", description: "Giao việc, theo dõi tiến độ đến khi hoàn thành.", glyph: "tasks" },
+  { href: "/documents?type=inbox", title: "Văn bản", description: "Văn bản đến, văn bản đi, tờ trình và hồ sơ công việc.", glyph: "doc-in" },
+  { href: "/calendar", title: "Lịch công tác", description: "Lịch họp và lịch công tác chung của đơn vị.", glyph: "calendar" },
+  { href: "/org", title: "Cơ cấu & Danh bạ", description: "Tra cứu đơn vị, người phụ trách và liên hệ.", glyph: "directory" },
+] as const satisfies ReadonlyArray<{ href: string; title: string; description: string; glyph: EmptyGlyphName }>;
 
 /** Câu hỏi mẫu: mở Trợ lý với câu điền sẵn, người dùng tự gửi. */
 const SAMPLE_PROMPTS = [
@@ -181,7 +182,6 @@ function WorkAreas() {
       <SectionTitle id="welcome-areas">Các khu làm việc</SectionTitle>
       <ul className="grid grid-cols-2 gap-2 sm:gap-3">
         {AREAS.map((area) => {
-          const mask = `url(${area.art}) center / contain no-repeat`;
           return (
             <li key={area.href}>
               <Link
@@ -191,9 +191,9 @@ function WorkAreas() {
                   focusRingClass,
                 )}
               >
-                {/* Cảnh nét mực cùng chủ đề, tô màu chữ (mờ) để hợp cả hai chế độ sáng tối */}
-                <span aria-hidden className="relative block aspect-[1600/679] border-b border-border/60 bg-muted/40">
-                  <span className="absolute inset-2 bg-foreground/70 sm:inset-3 transition-colors group-hover/area:bg-foreground/85" style={{ WebkitMask: mask, mask }} />
+                {/* Icon lớn trên nền thẻ (mặt khối tô `--card` nên dải ảnh không có nền riêng), đậm lên khi rê chuột */}
+                <span aria-hidden className="flex aspect-[1600/679] items-center justify-center border-b border-border/60">
+                  <EmptyGlyph name={area.glyph} className="size-20 text-foreground/80 transition-colors group-hover/area:text-foreground" />
                 </span>
                 <span className="flex flex-col gap-0.5 px-3 py-2.5">
                   <span className="flex items-center gap-1 text-compact font-medium text-foreground">

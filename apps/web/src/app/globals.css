@@ -597,19 +597,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Tranh trạng thái trống: hiện một lần, tranh đang nhấc lên và nghiêng thì đặt về chỗ (0,7s ease-out, như khối lập phương
-   rơi vào chỗ ở minh họa trống của Linear). Xoay quanh đáy tranh để giống vật được đặt xuống. */
-@keyframes illustration-settle {
-  from { opacity: 0; transform: translateY(-10px) rotate(-5deg); }
-  35%  { opacity: 1; }
-  to   { opacity: 1; transform: none; }
-}
-
-.animate-illustration-settle {
-  transform-origin: 50% 100%;
-  animation: illustration-settle 0.7s ease-out both;
-}
-
 /* Nhấn giữ hàng nhiệm vụ trên điện thoại: nền lan từ chỗ chạm (--press-at, đặt ở nơi dùng) sang hai bên.
    `round` giữ hai đầu mép đang lan cũng bo góc như hàng (rounded-lg = --radius-lg) thay vì cắt thẳng */
 @keyframes long-press-fill {
@@ -1134,9 +1121,8 @@
     opacity: 0 !important;
   }
 
-  /* Fade-in có trượt nhẹ, tranh trạng thái trống và tw-animate (animate-in + zoom/slide): chỉ còn opacity. */
-  .animate-fade-in,
-  .animate-illustration-settle {
+  /* Fade-in có trượt nhẹ và tw-animate (animate-in + zoom/slide): chỉ còn opacity. */
+  .animate-fade-in {
     animation-name: motion-reduced-fade !important;
   }
 
