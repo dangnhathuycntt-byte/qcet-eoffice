@@ -1,6 +1,8 @@
 /**
- * Việc nền `TRANSCRIBE_MEETING`: chép lời bản ghi âm theo từng đoạn thời gian bằng mô hình nghe được âm thanh (Gemini qua
- * gateway) rồi soạn biên bản đề xuất từ bản chép. Máy chủ có ffmpeg thì cắt riêng từng đoạn (mp3 nhỏ) rồi gửi, nên bản dài
+ * Việc nền `TRANSCRIBE_MEETING`: soạn biên bản đề xuất từ ghi âm bằng mô hình nghe được âm thanh (Gemini qua gateway).
+ * Đường nhanh (mặc định, lần chạy đầu): gửi cả bản ghi một lần và nhận thẳng biên bản (bản 2 giờ 16 phút mất 43 giây, vì chỉ
+ * sinh vài trăm từ); không có bản chép nguyên văn. Không ra kết quả dùng được thì chép lời theo từng đoạn thời gian rồi soạn
+ * biên bản từ bản chép (đường dưới đây), như khi `MEETING_AUDIO_DIRECT=off`. Máy chủ có ffmpeg thì cắt riêng từng đoạn (mp3 nhỏ) rồi gửi, nên bản dài
  * hàng giờ vẫn chép được; không có thì mỗi lần gọi gửi cả tệp kèm khoảng thời gian cần chép (tối đa 48 MB).
  *
  * Việc dài hơn thời gian một lần chạy (AGENT_JOB_TIMEOUT_MS): bản chép từng đoạn được lưu ngay vào CSDL, hết ngân sách
@@ -14,8 +16,10 @@ import { MeetingRecordingStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@qcet/db/prisma";
 import { MEETING_RECORDING_WHOLE_FILE_MAX_BYTES, type MeetingRecordingMimeType } from "@qcet/contracts/meeting-recordings";
 import {
+  DIRECT_MINUTES_SYSTEM_PROMPT,
   MINUTES_SYSTEM_PROMPT,
   TRANSCRIBE_SYSTEM_PROMPT,
+  buildDirectMinutesPrompt,
   buildMinutesPrompt,
   buildTranscribeSlicePrompt,
   buildTranscribeWindowPrompt,
@@ -31,7 +35,7 @@ import { ApiError } from "@/server/api/errors";
 import { logger } from "@/server/observability/logger";
 import { callGateway, readGatewayConfig, type GatewayConfig } from "@/server/services/agent-gateway";
 import { agentJobTimeoutMs, defineAgentJobHandlers, enqueueAgentJob, type AgentJobContext } from "@/server/outbox/agent-jobs";
-import { EMPTY_SLICE_BYTES, ffmpegAvailable, sliceAudio } from "@/server/meetings/recording-slicer";
+import { EMPTY_SLICE_BYTES, WHOLE_AUDIO_MAX_BYTES, ffmpegAvailable, sliceAudio } from "@/server/meetings/recording-slicer";
 import { readRecordingAudio, recordingAudioPath, removeRecordingFiles } from "@/server/meetings/recording-storage";
 
 export const TRANSCRIBE_MEETING_JOB = "TRANSCRIBE_MEETING";
@@ -49,6 +53,14 @@ const WINDOW_CALL_TIMEOUT_MS = 180_000;
  */
 const SLICE_CALL_TIMEOUT_MS = 240_000;
 const WINDOW_OUTPUT_TOKENS = 16_000;
+/**
+ * Soạn biên bản thẳng từ cả bản ghi (một lần gọi): bản 2 giờ 16 phút xong trong 43 giây khi gateway khỏe, nhưng gateway chuyển
+ * tài khoản mỗi lần một tài khoản không trả kết quả nên có lúc im lặng lâu; không quá 270 giây vì lớp fetch tự cắt ở 300 giây.
+ */
+const DIRECT_CALL_TIMEOUT_MS = 270_000;
+const DIRECT_OUTPUT_TOKENS = 8_000;
+/** Bản ghi nén vượt ngần này (khoảng 3 giờ 20 phút) thì không gửi một lần mà chép từng đoạn: thân yêu cầu gateway đã thử tới ≈44 MB. */
+const DIRECT_MAX_BYTES = 48 * 1024 * 1024;
 const MINUTES_CALL_TIMEOUT_MS = 120_000;
 const MINUTES_OUTPUT_TOKENS = 8_000;
 const MAX_RUN_ATTEMPTS = 3;
@@ -68,6 +80,9 @@ export function recordingGatewayConfig(): GatewayConfig {
   const base = readGatewayConfig(SUBJECT);
   return { ...base, model: process.env.MEETING_AUDIO_MODEL?.trim() || DEFAULT_AUDIO_MODEL, thinkingBudget: null };
 }
+
+/** `MEETING_AUDIO_DIRECT=off` tắt đường soạn thẳng từ ghi âm, luôn chép từng đoạn rồi mới soạn (cho gateway không nhận được thân yêu cầu lớn). */
+const directMinutesEnabled = () => process.env.MEETING_AUDIO_DIRECT?.trim().toLowerCase() !== "off";
 
 const ACTIVE_STATUSES: MeetingRecordingStatus[] = [MeetingRecordingStatus.QUEUED, MeetingRecordingStatus.PROCESSING];
 
@@ -119,6 +134,11 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
         `Máy chủ không cắt được âm thanh nên chỉ chép tệp tới ${MEETING_RECORDING_WHOLE_FILE_MAX_BYTES / 1024 / 1024} MB. Thầy/Cô chia nhỏ hoặc nén tệp rồi tải lên lại.`
       );
       return;
+    }
+    // Đường nhanh: nghe cả bản ghi một lần, ra thẳng biên bản (không có bản chép nguyên văn). Chỉ thử ở lần chạy đầu của việc
+    // chưa chép đoạn nào; không ra kết quả dùng được thì rơi về chép từng đoạn như cũ.
+    if (job.attempt === 1 && windows.length === 0 && directMinutesEnabled()) {
+      if (await tryDirectMinutes({ recordingId, title, config, slicing, mimeType: recording.mimeType as MeetingRecordingMimeType, byteSize: Number(recording.byteSize), signal: job.signal })) return;
     }
     let wholeFileBase64: string | null = null;
     let processedThisRun = 0;
@@ -209,6 +229,61 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
   }
 }
 
+interface DirectMinutesInput {
+  recordingId: string;
+  title: string;
+  config: GatewayConfig;
+  slicing: boolean;
+  mimeType: MeetingRecordingMimeType;
+  byteSize: number;
+  signal: AbortSignal;
+}
+
+/**
+ * Gửi cả bản ghi cho mô hình để soạn biên bản trong một lần gọi. Trả true khi đã ghi kết quả (hoặc bản ghi đã bị xóa giữa
+ * chừng), false khi không dùng được (quá lớn, mô hình trả lời không đọc được, lỗi gateway) để nơi gọi chép từng đoạn.
+ * Việc bị hủy (hết thời gian của lần chạy) hay gateway chưa cấu hình thì ném tiếp như các bước khác.
+ */
+async function tryDirectMinutes(input: DirectMinutesInput): Promise<boolean> {
+  const { recordingId, config, signal } = input;
+  try {
+    let attachment: { mimeType: MeetingRecordingMimeType; base64: string };
+    if (input.slicing) {
+      const mp3 = await sliceAudio(recordingAudioPath(recordingId), 0, null, signal, WHOLE_AUDIO_MAX_BYTES);
+      if (mp3.byteLength < EMPTY_SLICE_BYTES || mp3.byteLength > DIRECT_MAX_BYTES) return false;
+      attachment = { mimeType: "audio/mpeg", base64: mp3.toString("base64") };
+    } else {
+      if (input.byteSize > MEETING_RECORDING_WHOLE_FILE_MAX_BYTES) return false;
+      attachment = { mimeType: input.mimeType, base64: (await readRecordingAudio(recordingId)).toString("base64") };
+    }
+    const completion = await callGateway(
+      [
+        { role: "system", content: DIRECT_MINUTES_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: buildDirectMinutesPrompt(input.title) },
+            {
+              type: "file",
+              file: { filename: `ghi-am.${FILE_EXTENSIONS[attachment.mimeType] ?? "webm"}`, file_data: `data:${attachment.mimeType};base64,${attachment.base64}` },
+            },
+          ],
+        },
+      ],
+      { config, signal, timeoutMs: DIRECT_CALL_TIMEOUT_MS, outputTokens: DIRECT_OUTPUT_TOKENS, subject: SUBJECT }
+    );
+    // Không đọc được JSON (hoặc không có biên bản) thì không tin: chép từng đoạn rồi soạn từ bản chép
+    if (!parseMinutesReply(completion.content)) return false;
+    await finishRecording(recordingId, config.model, null, completion.content, null);
+    return true;
+  } catch (error) {
+    if (signal.aborted || (error instanceof ApiError && error.code === "AGENT_NOT_CONFIGURED")) throw error;
+    const reason = error instanceof Error ? error.message : "lỗi không rõ";
+    logger.warn("meeting_recording.direct_minutes_failed", { metadata: { recordingId, reason: reason.slice(0, 200) } });
+    return false;
+  }
+}
+
 async function enqueueContinuation(recordingId: string, doneWindows: number, actorId: string | null) {
   await enqueueAgentJob(prisma, {
     type: TRANSCRIBE_MEETING_JOB,
@@ -219,7 +294,7 @@ async function enqueueContinuation(recordingId: string, doneWindows: number, act
 }
 
 /** Ghi kết quả, đánh dấu READY và xóa âm thanh (không còn dùng, và không giữ giọng nói lâu hơn cần thiết). */
-async function finishRecording(recordingId: string, model: string, transcript: string, minutesReply: string | null, note: string | null) {
+async function finishRecording(recordingId: string, model: string, transcript: string | null, minutesReply: string | null, note: string | null) {
   const parsed = minutesReply ? parseMinutesReply(minutesReply) : null;
   const updated = await prisma.meetingRecording.updateMany({
     where: { id: recordingId, status: MeetingRecordingStatus.PROCESSING },

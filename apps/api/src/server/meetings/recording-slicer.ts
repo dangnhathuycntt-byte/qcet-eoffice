@@ -15,6 +15,8 @@ const PROBE_TIMEOUT_MS = 10_000;
 const SLICE_TIMEOUT_MS = 180_000;
 /** Đoạn 6 phút ở 32 kbps chỉ khoảng 1,4 MB; trần này chặn ffmpeg xuất dư (ví dụ cờ -t bị bỏ) làm đầy bộ nhớ. */
 const SLICE_MAX_BYTES = 32 * 1024 * 1024;
+/** Trần khi nén cả bản ghi để gửi một lần: 4 giờ ở 32 kbps khoảng 58 MB. */
+export const WHOLE_AUDIO_MAX_BYTES = 64 * 1024 * 1024;
 const STDERR_TAIL_BYTES = 2_000;
 /** Đoạn mp3 ngắn hơn ngần này là đoạn không có âm thanh (vượt quá cuối tệp). */
 export const EMPTY_SLICE_BYTES = 1_024;
@@ -98,7 +100,13 @@ export async function recordingWindowSec(): Promise<number> {
  * Cắt `durationSec` giây từ giây `startSec` của tệp (không có `durationSec` thì tới hết tệp) thành mp3. Đoạn rỗng (vượt cuối
  * tệp) trả Buffer ngắn hơn EMPTY_SLICE_BYTES.
  */
-export async function sliceAudio(inputPath: string, startSec: number, durationSec: number | null, signal?: AbortSignal): Promise<Buffer> {
+export async function sliceAudio(
+  inputPath: string,
+  startSec: number,
+  durationSec: number | null,
+  signal?: AbortSignal,
+  maxBytes: number = SLICE_MAX_BYTES
+): Promise<Buffer> {
   const bin = ffmpegBinary();
   if (!bin) throw new AudioSliceError("Máy chủ chưa bật ffmpeg để cắt âm thanh.");
   const args = [
@@ -110,7 +118,7 @@ export async function sliceAudio(inputPath: string, startSec: number, durationSe
   ];
   let out: RunResult;
   try {
-    out = await run(bin, args, SLICE_TIMEOUT_MS, SLICE_MAX_BYTES, signal);
+    out = await run(bin, args, SLICE_TIMEOUT_MS, maxBytes, signal);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new AudioSliceError("Máy chủ không tìm thấy ffmpeg để cắt âm thanh.");
     throw error;

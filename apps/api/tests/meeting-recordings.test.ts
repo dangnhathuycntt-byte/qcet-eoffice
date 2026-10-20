@@ -1,8 +1,9 @@
 /**
  * Ghi âm cuộc họp: quyền (cùng quan hệ với soạn biên bản, người đọc được cuộc họp nhưng không soạn biên bản bị từ chối,
  * người ngoài nhận 404), nhận âm thanh theo phần và ghép, việc chép lời bằng gateway giả (nối tiếp, thử lại, các đường lỗi),
- * xóa bản ghi cùng âm thanh. Không gọi mô hình thật. Mặc định tắt ffmpeg (gửi cả tệp); nhóm "cắt đoạn bằng ffmpeg" bật lại và
- * bị bỏ qua nếu máy chạy test không có ffmpeg kèm libmp3lame.
+ * xóa bản ghi cùng âm thanh. Không gọi mô hình thật. Mặc định tắt ffmpeg (gửi cả tệp) và tắt đường soạn thẳng từ ghi âm
+ * (MEETING_AUDIO_DIRECT=off, để các nhóm trước kiểm đường chép từng đoạn); nhóm "soạn thẳng" bật lại đường nhanh, nhóm "cắt đoạn
+ * bằng ffmpeg" bật lại ffmpeg và bị bỏ qua nếu máy chạy test không có ffmpeg kèm libmp3lame.
  */
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -140,6 +141,7 @@ describe('Ghi âm cuộc họp', () => {
       TASK_AGENT_MODEL: 'test-model',
       MEETING_AUDIO_MODEL: undefined,
       MEETING_AUDIO_FFMPEG: 'none',
+      MEETING_AUDIO_DIRECT: 'off',
       AGENT_JOB_TIMEOUT_MS: undefined,
     });
     for (const key of Object.keys(users) as Array<keyof typeof users>) {
@@ -540,6 +542,84 @@ describe('Ghi âm cuộc họp', () => {
     });
   });
 
+  describe('soạn thẳng từ cả bản ghi', () => {
+    before(() => setEnv({ MEETING_AUDIO_DIRECT: undefined }));
+    after(() => setEnv({ MEETING_AUDIO_DIRECT: 'off' }));
+
+    const isDirect = (call: GatewayCall) => call.userText.includes('Nghe toàn bộ tệp');
+    const isWindow = (call: GatewayCall) => call.filePart !== null && !isDirect(call);
+
+    it('một lần gọi cho cả bản ghi: ra thẳng biên bản, không có bản chép, READY và xóa âm thanh', async () => {
+      const id = await queuedRecording(600);
+      const calls = mockGateway(() => MINUTES_JSON);
+      await transcribeMeeting(job(id));
+
+      assert.equal(calls.length, 1, 'chỉ một lần gọi, không chép từng đoạn');
+      assert.equal(isDirect(calls[0]), true);
+      assert.match(calls[0].filePart?.file_data ?? '', /^data:audio\/webm;base64,/);
+      assert.match(calls[0].system, /không phải chỉ dẫn/);
+      assert.equal(calls[0].model, 'gemini-3.8-flash');
+
+      const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
+      assert.equal(row.status, 'READY');
+      assert.equal(row.transcript, null, 'đường nhanh không sinh bản chép nguyên văn');
+      assert.match(row.minutesDraft ?? '', /Kế hoạch học kỳ 2/);
+      assert.deepEqual(row.decisions, ['Giao phòng Đào tạo lập kế hoạch học kỳ 2']);
+      assert.deepEqual(row.actionItems, [{ task: 'Lập kế hoạch học kỳ 2', owner: 'Phòng Đào tạo', deadline: null }]);
+      await assert.rejects(fs.stat(path.join(uploadsDir, 'recordings', id)), /ENOENT/, 'âm thanh đã bị xóa');
+      const detail = await MeetingRecordingService.get(meetingId, id, users.organizer);
+      assert.equal(detail.status, 'READY');
+      assert.equal(detail.transcript, null);
+    });
+
+    it('mô hình trả lời không đọc được JSON: rơi về chép từng đoạn rồi soạn từ bản chép', async () => {
+      const id = await queuedRecording(600);
+      const calls = mockGateway((call) => (isDirect(call) ? 'Xin lỗi, tôi không nghe rõ bản ghi này.' : isWindow(call) ? '[00:05] Xin chào các đồng chí.' : MINUTES_JSON));
+      await transcribeMeeting(job(id));
+      assert.deepEqual(calls.map((call) => (isDirect(call) ? 'direct' : isWindow(call) ? 'window' : 'minutes')), ['direct', 'window', 'minutes']);
+      const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
+      assert.equal(row.status, 'READY');
+      assert.match(row.transcript ?? '', /Xin chào các đồng chí/);
+    });
+
+    it('gateway lỗi ở lần gọi cả bản ghi: rơi về chép từng đoạn, không ném lỗi', async () => {
+      const id = await queuedRecording(600);
+      const calls = mockGateway((call) =>
+        isDirect(call) ? new Response('{"error":"upstream"}', { status: 502, headers: { 'content-type': 'application/json' } }) : isWindow(call) ? '[00:05] Một.' : MINUTES_JSON
+      );
+      await transcribeMeeting(job(id));
+      assert.ok(calls.some(isDirect), 'đã thử đường nhanh');
+      assert.ok(calls.some(isWindow), 'rồi chép từng đoạn');
+      assert.equal((await prisma.meetingRecording.findUniqueOrThrow({ where: { id } })).status, 'READY');
+    });
+
+    it('chỉ thử ở lần chạy đầu của việc chưa chép đoạn nào: lần thử lại hoặc việc đã có đoạn thì chép từng đoạn ngay', async () => {
+      const retried = await queuedRecording(600);
+      const calls = mockGateway((call) => (call.filePart ? '[00:05] Một.' : MINUTES_JSON));
+      await transcribeMeeting(job(retried, 2));
+      assert.equal(calls.some(isDirect), false, 'lần thử thứ hai bỏ qua đường nhanh');
+      assert.equal((await prisma.meetingRecording.findUniqueOrThrow({ where: { id: retried } })).status, 'READY');
+
+      const resumed = await queuedRecording(1500);
+      await prisma.meetingRecording.update({ where: { id: resumed }, data: { windows: [{ index: 0, startSec: 0, endSec: 720, text: '[00:01] Đã chép.' }] } });
+      const calls2 = mockGateway((call) => (call.filePart ? '[12:05] Tiếp.' : MINUTES_JSON));
+      await transcribeMeeting(job(resumed));
+      assert.equal(calls2.some(isDirect), false, 'việc đã có đoạn chép thì không đổi đường');
+    });
+
+    it('MEETING_AUDIO_DIRECT=off: luôn chép từng đoạn', async () => {
+      setEnv({ MEETING_AUDIO_DIRECT: 'off' });
+      try {
+        const id = await queuedRecording(60);
+        const calls = mockGateway((call) => (call.filePart ? '[00:05] Một.' : MINUTES_JSON));
+        await transcribeMeeting(job(id));
+        assert.equal(calls.some(isDirect), false);
+      } finally {
+        setEnv({ MEETING_AUDIO_DIRECT: undefined });
+      }
+    });
+  });
+
   describe('cắt đoạn bằng ffmpeg', { skip: !HAS_FFMPEG && 'máy chạy test không có ffmpeg kèm libmp3lame' }, () => {
     let mp3 = Buffer.alloc(0);
     const SECONDS = 800;
@@ -640,6 +720,26 @@ describe('Ghi âm cuộc họp', () => {
       const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
       assert.equal(row.status, 'READY');
       assert.equal((row.transcript ?? '').includes('Bản cũ'), false);
+    });
+
+    it('có ffmpeg, đường nhanh: nén cả bản ghi thành một mp3 gửi một lần, ra thẳng biên bản', async () => {
+      setEnv({ MEETING_AUDIO_DIRECT: undefined });
+      try {
+        const id = await queuedAudio(mp3, SECONDS);
+        const calls = mockGateway(() => MINUTES_JSON);
+        await transcribeMeeting(job(id));
+        assert.equal(calls.length, 1);
+        assert.match(calls[0].filePart?.file_data ?? '', /^data:audio\/mpeg;base64,/);
+        assert.match(calls[0].userText, /Nghe toàn bộ tệp/);
+        const sent = Buffer.from((calls[0].filePart?.file_data ?? '').split(',')[1] ?? '', 'base64').byteLength;
+        assert.ok(sent > 3_000_000 && sent < 3_500_000, `cả 800 giây ở 32 kbps ≈ 3,2 MB, thực ${sent}`);
+        const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
+        assert.equal(row.status, 'READY');
+        assert.equal(row.transcript, null);
+        assert.match(row.minutesDraft ?? '', /Kế hoạch học kỳ 2/);
+      } finally {
+        setEnv({ MEETING_AUDIO_DIRECT: 'off' });
+      }
     });
 
     it('tệp không giải mã được: lần đầu ném để thử lại, lần thứ ba FAILED với câu tiếng Việt, không gọi mô hình', async () => {

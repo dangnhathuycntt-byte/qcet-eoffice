@@ -12,6 +12,8 @@ import {
 import {
   RECORDING_SLICE_WINDOW_SEC,
   RECORDING_WINDOW_SEC,
+  buildDirectMinutesPrompt,
+  buildMinutesPrompt,
   buildTranscribeSlicePrompt,
   buildTranscribeWindowPrompt,
   cleanWindowTranscript,
@@ -52,6 +54,17 @@ describe("Ghi âm cuộc họp: chia đoạn", () => {
     assert.deepEqual([plan[1].startSec, plan[1].endSec], [360, 720]);
     assert.deepEqual([plan[22].startSec, plan[22].endSec], [22 * 360, null]);
     assert.equal(planRecordingWindows(8180).length, 12, "không truyền cỡ thì vẫn là 12 phút");
+  });
+
+  it("lời nhắc soạn thẳng từ ghi âm: cùng định dạng JSON với soạn từ bản chép, tiêu đề một dòng không nháy kép", () => {
+    const direct = buildDirectMinutesPrompt('Giao ban "tháng\n10"');
+    assert.match(direct, /^Cuộc họp: "Giao ban tháng 10"\./);
+    assert.match(direct, /Nghe toàn bộ tệp ghi âm đính kèm/);
+    assert.match(direct, /"minutes"[\s\S]*"decisions"[\s\S]*"actionItems"/);
+    assert.equal(direct.includes("<ban_chep_loi>"), false);
+    const fromTranscript = buildMinutesPrompt("Giao ban", "[00:05] Xin chào");
+    assert.equal(fromTranscript.includes('"minutes"'), true);
+    assert.match(fromTranscript, /<ban_chep_loi>\n\[00:05\] Xin chào\n<\/ban_chep_loi>$/);
   });
 
   it("mốc giờ có thêm giờ từ 1 giờ trở lên", () => {
