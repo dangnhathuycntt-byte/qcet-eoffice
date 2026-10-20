@@ -107,6 +107,15 @@ export function assertTransition(
 }
 
 /**
+ * Xóa dự thảo biên bản (người dùng yêu cầu "cho phép sửa xoá biên bản" 20/10/2026) là ngoại lệ đi lùi duy nhất:
+ * MINUTES_DRAFT → HELD qua thao tác xóa riêng để soạn lại. Ma trận chuyển trạng thái chung ở trên vẫn chỉ đi tới; biên bản
+ * đã duyệt không sửa, không xóa được.
+ */
+export function canDiscardMinutes(status: MeetingStatus | string): boolean {
+  return status === "MINUTES_DRAFT";
+}
+
+/**
  * Assert that the meeting has not reached a finalized state, throwing FinalizedMeetingError if it has.
  */
 export function assertMeetingNotFinalized(

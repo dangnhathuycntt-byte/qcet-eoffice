@@ -22,7 +22,7 @@ import assert from 'node:assert/strict';
 const describe: any = (globalThis as any).describe || nodeTest.describe;
 const it: any = (globalThis as any).it || (globalThis as any).test || nodeTest.it;
 
-import { MeetingStatus, MEETING_STATUSES, ALLOWED_MEETING_TRANSITIONS, TERMINAL_MEETING_STATUSES, canTransition, assertTransition, isMeetingFinalized, assertMeetingNotFinalized, InvalidMeetingStateTransitionError, FinalizedMeetingError } from '@qcet/shared/domain/meetings';
+import { MeetingStatus, MEETING_STATUSES, ALLOWED_MEETING_TRANSITIONS, TERMINAL_MEETING_STATUSES, canTransition, canDiscardMinutes, assertTransition, isMeetingFinalized, assertMeetingNotFinalized, InvalidMeetingStateTransitionError, FinalizedMeetingError } from '@qcet/shared/domain/meetings';
 
 // Barrel export reachability proof via alias
 import { canTransition as barrelCanTransition, assertTransition as barrelAssertTransition, isMeetingFinalized as barrelIsMeetingFinalized, assertMeetingNotFinalized as barrelAssertMeetingNotFinalized } from '@qcet/shared/domain/meetings';
@@ -247,6 +247,17 @@ describe('WI-6.1a: Meeting State Machine Formalization', () => {
           return true;
         }
       );
+    });
+  });
+
+  // Xóa dự thảo biên bản là thao tác riêng đi lùi về HELD; ma trận chung vẫn cấm MINUTES_DRAFT -> HELD
+  describe('7. Xóa dự thảo biên bản', () => {
+    it('chỉ xóa được khi đang là dự thảo, đã duyệt hay chưa soạn thì không', () => {
+      assert.equal(canDiscardMinutes('MINUTES_DRAFT'), true);
+      for (const status of MEETING_STATUSES.filter((s) => s !== 'MINUTES_DRAFT')) {
+        assert.equal(canDiscardMinutes(status), false, status);
+      }
+      assert.equal(canTransition('MINUTES_DRAFT', 'HELD'), false);
     });
   });
 });

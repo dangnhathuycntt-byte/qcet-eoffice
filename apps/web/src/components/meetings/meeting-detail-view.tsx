@@ -3,18 +3,19 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Link2, Play, Plus } from "lucide-react";
+import { ChevronRight, Link2, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import type { MeetingDetailPageData } from "@qcet/contracts/page-data";
 import { formatDisplayDate, formatTime } from "@qcet/shared/lib/format/date";
 import { cn } from "@/lib/utils";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { Button } from "@/components/ui/button";
+import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { FieldError } from "@/components/ui/dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { confirmMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
+import { confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
 import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
 import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
@@ -63,7 +64,8 @@ function Muted({ children }: { children: React.ReactNode }) {
  * Chi tiết cuộc họp (`/meetings/[id]`), theo khung chi tiết nhiệm vụ (người dùng yêu cầu "cải thiện trang chi tiết cuộc họp"
  * 20/10/2026, sau khi trang danh sách đã theo trang Nhiệm vụ): một thẻ cao hết màn hình, không breadcrumb chung
  * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", "Bắt đầu họp" (khi đã mời) và sao chép liên kết; cột chính
- * là tên 20px, nội dung và chương trình, rồi thẻ Ghi âm và thẻ Biên bản ("+ Thêm" để soạn, "Duyệt biên bản" cho chủ tọa);
+ * là tên 20px, nội dung và chương trình, rồi thẻ Ghi âm và thẻ Biên bản ("+ Thêm" để soạn, "Duyệt biên bản" cho chủ tọa,
+ * "Sửa" và xóa khi còn dự thảo);
  * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần, Ghi chú của tôi. Dưới 1024px cột phải xếp ngay dưới
  * tên. Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
  * máy chủ kiểm lại; ở đây chỉ để ẩn nút không dùng được.
@@ -72,10 +74,11 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const router = useRouter();
   const feedback = useFeedback();
   const ids = React.useId();
-  const [pending, setPending] = React.useState<"hold" | "draft" | "confirm" | null>(null);
+  const [pending, setPending] = React.useState<"hold" | "draft" | "confirm" | "discard" | null>(null);
   const [editingMinutes, setEditingMinutes] = React.useState(false);
   const [minutesText, setMinutesText] = React.useState("");
   const [minutesError, setMinutesError] = React.useState<string | null>(null);
+  const [discardingMinutes, setDiscardingMinutes] = React.useState(false);
   const minutesRef = React.useRef<HTMLTextAreaElement>(null);
 
   const isOrganizer = currentUser.id === meeting.organizerId;
@@ -85,6 +88,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const canHold = meeting.status === "INVITED" && can("meeting.update");
   const canDraftMinutes = meeting.status === "HELD" && can("meeting.draft_minutes");
   const canConfirmMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.confirm_minutes");
+  // Dự thảo chưa duyệt thì người soạn biên bản sửa hoặc xóa (về Đã họp) được; đã duyệt thì khóa
+  const canEditMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.draft_minutes");
+  const editingSaved = editingMinutes && meeting.status === "MINUTES_DRAFT";
   const chairs = meeting.participants.filter((p) => p.role === "CHAIR");
   // Ghi âm theo quan hệ soạn biên bản của máy chủ (người tổ chức, chủ tọa, thư ký của cuộc họp), trong lúc họp và soạn biên bản
   const isMinutesAuthor =
@@ -107,8 +113,18 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     setEditingMinutes(true);
   }, []);
   const useRecordingAsMinutes = React.useCallback((text: string) => startMinutes(text), [startMinutes]);
+  const editMinutes = () => {
+    setMinutesText(meeting.minutes ?? "");
+    setMinutesError(null);
+    setEditingMinutes(true);
+  };
+  const closeMinutesEditor = () => {
+    setEditingMinutes(false);
+    setMinutesText("");
+    setMinutesError(null);
+  };
 
-  const run = async (kind: "hold" | "confirm", action: () => Promise<void>, success: string) => {
+  const run = async (kind: "hold" | "confirm" | "discard", action: () => Promise<void>, success: string) => {
     if (pending) return;
     setPending(kind);
     try {
@@ -132,9 +148,8 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     setPending("draft");
     try {
       await draftMinutes(meeting.id, minutesText.trim());
-      setEditingMinutes(false);
-      setMinutesText("");
-      feedback.notifySuccess("Đã lưu dự thảo biên bản.");
+      closeMinutesEditor();
+      feedback.notifySuccess(editingSaved ? "Đã lưu biên bản." : "Đã lưu dự thảo biên bản.");
       router.refresh();
     } catch (error) {
       setMinutesError(error instanceof Error ? error.message : "Chưa lưu được biên bản.");
@@ -284,7 +299,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                       meeting.status === "INVITED"
                         ? "Bấm Bắt đầu họp để dùng làm biên bản."
                         : meeting.status === "MINUTES_DRAFT"
-                          ? "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
+                          ? canEditMinutes
+                            ? "Biên bản đã được soạn; sao chép phần cần dùng rồi bấm Sửa ở thẻ Biên bản."
+                            : "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
                           : undefined
                     }
                   />
@@ -294,29 +311,50 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                   <SectionCard
                     title="Biên bản"
                     action={
-                      canDraftMinutes && !editingMinutes && !meeting.minutes ? (
+                      editingMinutes ? null : canDraftMinutes && !meeting.minutes ? (
                         <Button variant="ghost" size="xs" aria-label="Thêm biên bản" onClick={() => startMinutes()}>
                           <Plus aria-hidden="true" />
                           Thêm
                         </Button>
-                      ) : canConfirmMinutes ? (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          loading={pending === "confirm"}
-                          onClick={() => void run("confirm", () => confirmMinutes(meeting.id), "Đã duyệt biên bản.")}
-                        >
-                          Duyệt biên bản
-                        </Button>
                       ) : meeting.status === "MINUTES_DRAFT" ? (
-                        <span
-                          className={cn("max-w-64 truncate text-xs", chairs.length > 0 ? "text-muted-foreground" : "text-warning")}
-                          title="Chỉ chủ tọa duyệt được biên bản; thư ký soạn biên bản không tự duyệt."
-                        >
-                          {chairs.length > 0
-                            ? `Chờ chủ tọa ${chairs.map((p) => p.user.name ?? p.user.email).join(", ")} duyệt`
-                            : "Chưa có chủ tọa để duyệt"}
-                        </span>
+                        <>
+                          {canConfirmMinutes ? (
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              loading={pending === "confirm"}
+                              onClick={() => void run("confirm", () => confirmMinutes(meeting.id), "Đã duyệt biên bản.")}
+                            >
+                              Duyệt biên bản
+                            </Button>
+                          ) : (
+                            <span
+                              className={cn("max-w-64 truncate text-xs", chairs.length > 0 ? "text-muted-foreground" : "text-warning")}
+                              title="Chỉ chủ tọa duyệt được biên bản; thư ký soạn biên bản không tự duyệt."
+                            >
+                              {chairs.length > 0
+                                ? `Chờ chủ tọa ${chairs.map((p) => p.user.name ?? p.user.email).join(", ")} duyệt`
+                                : "Chưa có chủ tọa để duyệt"}
+                            </span>
+                          )}
+                          {canEditMinutes && (
+                            <>
+                              <Button variant="ghost" size="xs" onClick={editMinutes}>
+                                <Pencil aria-hidden="true" />
+                                Sửa
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label="Xóa biên bản"
+                                title="Xóa biên bản"
+                                onClick={() => setDiscardingMinutes(true)}
+                              >
+                                <Trash2 />
+                              </Button>
+                            </>
+                          )}
+                        </>
                       ) : meeting.status === "MINUTES_CONFIRMED" ? (
                         <span className="text-xs text-muted-foreground">Đã duyệt</span>
                       ) : null
@@ -351,20 +389,15 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                               event.preventDefault();
                               void saveMinutes();
                             }
-                            if (event.key === "Escape" && !minutesText.trim()) setEditingMinutes(false);
+                            // Esc chỉ đóng khi chưa gõ gì (hoặc chưa đổi gì so với biên bản đang sửa), không mất chữ vừa nhập
+                            if (event.key === "Escape" && (!minutesText.trim() || (editingSaved && minutesText === meeting.minutes))) {
+                              closeMinutesEditor();
+                            }
                           }}
                         />
                         {minutesError ? <FieldError id={`${ids}-minutes-error`}>{minutesError}</FieldError> : null}
                         <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingMinutes(false);
-                              setMinutesText("");
-                              setMinutesError(null);
-                            }}
-                          >
+                          <Button variant="ghost" size="sm" onClick={closeMinutesEditor}>
                             Hủy
                           </Button>
                           <Button type="submit" size="sm" loading={pending === "draft"}>
@@ -388,6 +421,18 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         </div>
       </div>
 
+      <DestructiveConfirmDialog
+        isOpen={discardingMinutes}
+        onClose={() => pending !== "discard" && setDiscardingMinutes(false)}
+        onConfirm={async () => {
+          await run("discard", () => discardMinutes(meeting.id), "Đã xóa biên bản.");
+          setDiscardingMinutes(false);
+        }}
+        isConfirming={pending === "discard"}
+        title="Xóa biên bản?"
+        description="Dự thảo biên bản bị xóa, cuộc họp về Đã họp để soạn lại. Bản ghi âm và biên bản đề xuất vẫn giữ."
+        confirmLabel="Xóa biên bản"
+      />
     </div>
   );
 }

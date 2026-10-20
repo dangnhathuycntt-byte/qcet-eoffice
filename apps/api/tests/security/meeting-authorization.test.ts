@@ -31,6 +31,7 @@ import { GET as listMeetingsRoute, POST as createMeetingRoute } from '@/app/api/
 import { GET as getMeetingRoute } from '@/app/api/meetings/[id]/route';
 import { POST as draftMinutesRoute } from '@/app/api/meetings/[id]/actions/draft-minutes/route';
 import { POST as confirmMinutesRoute } from '@/app/api/meetings/[id]/actions/confirm-minutes/route';
+import { POST as discardMinutesRoute } from '@/app/api/meetings/[id]/actions/discard-minutes/route';
 import { POST as holdMeetingRoute } from '@/app/api/meetings/[id]/actions/hold/route';
 import { POST as createResolutionRoute } from '@/app/api/meetings/[id]/resolutions/route';
 
@@ -320,6 +321,48 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
     assert.strictEqual(confirmRes.status, 403);
   });
 
+  // 20/10/2026: người dùng yêu cầu "cho phép sửa xoá biên bản": dự thảo chưa duyệt sửa/xóa được, đã duyệt thì khóa
+  const minutesAction = (route: typeof draftMinutesRoute, path: string, token: string, body?: unknown) =>
+    route(
+      new NextRequest(`http://localhost:3000/api/meetings/${testMeeting.id}/actions/${path}`, {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id: testMeeting.id }) }
+    );
+
+  test('7b. Dự thảo biên bản: thư ký sửa được (giữ trạng thái), người tham dự và người ngoài không sửa, không xóa được', async () => {
+    const edited = await minutesAction(draftMinutesRoute, 'draft-minutes', secretaryToken, { minutes: 'Biên bản đã sửa lần một.' });
+    assert.strictEqual(edited.status, 200);
+    const body = await edited.json();
+    assert.strictEqual(body.status, MeetingStatus.MINUTES_DRAFT);
+    assert.strictEqual(body.minutes, 'Biên bản đã sửa lần một.');
+
+    for (const token of [participantToken, outsiderToken]) {
+      assert.strictEqual((await minutesAction(draftMinutesRoute, 'draft-minutes', token, { minutes: 'Người khác sửa biên bản.' })).status, 403);
+      assert.strictEqual((await minutesAction(discardMinutesRoute, 'discard-minutes', token)).status, 403);
+    }
+    const stored = await prisma.meeting.findUniqueOrThrow({ where: { id: testMeeting.id } });
+    assert.strictEqual(stored.minutes, 'Biên bản đã sửa lần một.');
+    assert.strictEqual(stored.status, MeetingStatus.MINUTES_DRAFT);
+  });
+
+  test('7c. Xóa dự thảo biên bản: cuộc họp về Đã họp, nội dung trống, rồi soạn lại được', async () => {
+    const discarded = await minutesAction(discardMinutesRoute, 'discard-minutes', secretaryToken);
+    assert.strictEqual(discarded.status, 200);
+    const stored = await prisma.meeting.findUniqueOrThrow({ where: { id: testMeeting.id } });
+    assert.strictEqual(stored.status, MeetingStatus.HELD);
+    assert.strictEqual(stored.minutes, null);
+
+    // Chưa có dự thảo thì không xóa được nữa
+    assert.strictEqual((await minutesAction(discardMinutesRoute, 'discard-minutes', secretaryToken)).status, 400);
+
+    const redrafted = await minutesAction(draftMinutesRoute, 'draft-minutes', secretaryToken, { minutes: 'Dự thảo biên bản soạn lại sau khi xóa.' });
+    assert.strictEqual(redrafted.status, 200);
+    assert.strictEqual((await redrafted.json()).status, MeetingStatus.MINUTES_DRAFT);
+  });
+
   test('8. Resolution creation before allowed state -> DENY', async () => {
     // Create an un-held meeting (INVITED)
     const invitedMeeting = await MeetingService.createMeeting(
@@ -357,6 +400,14 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
     assert.strictEqual(confirmRes.status, 200);
     const body = await confirmRes.json();
     assert.strictEqual(body.status, MeetingStatus.MINUTES_CONFIRMED);
+  });
+
+  test('9b. Biên bản đã duyệt không sửa, không xóa được', async () => {
+    assert.strictEqual((await minutesAction(draftMinutesRoute, 'draft-minutes', secretaryToken, { minutes: 'Sửa sau khi đã duyệt.' })).status, 400);
+    assert.strictEqual((await minutesAction(discardMinutesRoute, 'discard-minutes', chairToken)).status, 400);
+    const stored = await prisma.meeting.findUniqueOrThrow({ where: { id: testMeeting.id } });
+    assert.strictEqual(stored.status, MeetingStatus.MINUTES_CONFIRMED);
+    assert.strictEqual(stored.minutes, 'Dự thảo biên bản soạn lại sau khi xóa.');
   });
 
   test('10. Unauthorized user (participant/outsider) creating resolution -> DENY (403)', async () => {

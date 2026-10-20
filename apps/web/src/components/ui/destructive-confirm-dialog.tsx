@@ -35,6 +35,9 @@ export function DestructiveConfirmDialog({
   isConfirming = false,
 }: DestructiveConfirmDialogProps) {
   const handleConfirm = async () => { await onConfirm(); };
+  // Mô tả viết tiếp câu sau tên ("sẽ được lưu trữ…") thì nối bằng dấu cách; mô tả là câu mới (chữ hoa) hay không có mô tả thì
+  // chấm câu sau tên, tránh "Bản ghi “x” Âm thanh… sẽ mất"
+  const continuesSentence = description ? /^\p{Ll}/u.test(description) : false;
   // Focus ban đầu vào khung (không phải nút): Enter không vô tình xác nhận xóa, cũng không hiện viền focus dày trên nút Hủy.
   const panelRef = React.useRef<HTMLDivElement>(null);
 
@@ -56,10 +59,10 @@ export function DestructiveConfirmDialog({
               </AlertDialog.Title>
               <AlertDialog.Description className="text-compact text-muted-foreground leading-relaxed">
                 {entityName && (
-                  <>{entityLabel}{" "}<span className="font-medium text-foreground">&ldquo;{entityName}&rdquo;</span>{" "}</>
+                  <>{entityLabel}{" "}<span className="font-medium text-foreground">&ldquo;{entityName}&rdquo;</span>{continuesSentence ? " " : ". "}</>
                 )}
                 {description}
-                {irreversible && <>{description || entityName ? " " : ""}Không thể hoàn tác.</>}
+                {irreversible && <>{description ? " " : ""}Không thể hoàn tác.</>}
               </AlertDialog.Description>
               {children}
             </div>

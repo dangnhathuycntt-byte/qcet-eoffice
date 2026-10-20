@@ -31,5 +31,9 @@ export const holdMeeting = (meetingId: string) => post(`${base(meetingId)}/actio
 export const draftMinutes = (meetingId: string, minutes: string) =>
   post(`${base(meetingId)}/actions/draft-minutes`, "Chưa lưu được biên bản.", { minutes });
 
+/** Xóa dự thảo biên bản để soạn lại (Dự thảo biên bản → Đã họp). */
+export const discardMinutes = (meetingId: string) =>
+  post(`${base(meetingId)}/actions/discard-minutes`, "Chưa xóa được biên bản.");
+
 /** Duyệt biên bản (Dự thảo biên bản → Biên bản đã duyệt). */
 export const confirmMinutes = (meetingId: string) => post(`${base(meetingId)}/actions/confirm-minutes`, "Chưa duyệt được biên bản.");

@@ -1,5 +1,6 @@
 import {
   assertTransition,
+  canDiscardMinutes,
   assertMeetingNotFinalized,
   isMeetingFinalized,
   canTransition,
@@ -383,7 +384,7 @@ export class MeetingService {
   }
 
   /**
-   * 5. Soạn biên bản cuộc họp (HELD -> MINUTES_DRAFT)
+   * 5. Soạn biên bản cuộc họp (HELD -> MINUTES_DRAFT), hoặc sửa dự thảo đã lưu khi chưa duyệt (giữ MINUTES_DRAFT)
    */
   static async draftMinutes(
     meetingId: string,
@@ -421,16 +422,89 @@ export class MeetingService {
       );
     }
 
-    assertTransition(meeting.status, MeetingStatus.MINUTES_DRAFT);
+    const editing = meeting.status === MeetingStatus.MINUTES_DRAFT;
+    if (!editing) assertTransition(meeting.status, MeetingStatus.MINUTES_DRAFT);
 
     return prisma.$transaction(async (tx) => {
-      const updated = await tx.meeting.update({
-        where: { id: meetingId },
+      // Chỉ ghi khi trạng thái chưa đổi từ lúc kiểm quyền (chủ tọa có thể vừa duyệt dự thảo)
+      const { count } = await tx.meeting.updateMany({
+        where: { id: meetingId, status: meeting.status },
         data: {
           minutes: input.minutes,
           status: MeetingStatus.MINUTES_DRAFT,
         },
       });
+      if (count === 0) {
+        throw new ValidationError('Biên bản vừa được duyệt hoặc thay đổi. Thầy/Cô tải lại trang.');
+      }
+
+      await logAuditEvent(tx, {
+        actorId: authContext.userId,
+        action: editing ? AuditAction.TASK_UPDATED : AuditAction.TASK_STATUS_CHANGED,
+        entityType: 'Meeting',
+        entityId: meetingId,
+        requestId,
+        beforeData: { status: meeting.status },
+        afterData: { status: MeetingStatus.MINUTES_DRAFT, minutesEdited: editing },
+      });
+
+      return tx.meeting.findUniqueOrThrow({ where: { id: meetingId } });
+    });
+  }
+
+  /**
+   * 5b. Xóa dự thảo biên bản (MINUTES_DRAFT -> HELD) để soạn lại; cùng người được soạn biên bản. Biên bản đã duyệt không xóa.
+   */
+  static async discardMinutes(
+    meetingId: string,
+    contextOrUserId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
+
+    const authContext =
+      typeof contextOrUserId === 'string'
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    // Kiểm quan hệ trước (như lúc đang dự thảo) để người ngoài không biết được trạng thái biên bản
+    const authResult = authorize(
+      authContext,
+      'meeting.draft_minutes',
+      buildMeetingResource({ ...meeting, status: MeetingStatus.MINUTES_DRAFT })
+    );
+    if (!authResult.allowed) {
+      throw new AuthorizationError(
+        authResult.reason || 'Không có quyền xóa dự thảo biên bản cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+    if (!canDiscardMinutes(meeting.status)) {
+      throw new ValidationError(
+        meeting.status === MeetingStatus.MINUTES_CONFIRMED
+          ? 'Biên bản đã duyệt, không xóa được.'
+          : 'Cuộc họp chưa có dự thảo biên bản để xóa.'
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const { count } = await tx.meeting.updateMany({
+        where: { id: meetingId, status: MeetingStatus.MINUTES_DRAFT },
+        data: { minutes: null, status: MeetingStatus.HELD },
+      });
+      if (count === 0) {
+        throw new ValidationError('Biên bản vừa được duyệt hoặc thay đổi. Thầy/Cô tải lại trang.');
+      }
 
       await logAuditEvent(tx, {
         actorId: authContext.userId,
@@ -438,10 +512,11 @@ export class MeetingService {
         entityType: 'Meeting',
         entityId: meetingId,
         requestId,
-        afterData: { status: MeetingStatus.MINUTES_DRAFT },
+        beforeData: { status: MeetingStatus.MINUTES_DRAFT },
+        afterData: { status: MeetingStatus.HELD, minutesDiscarded: true },
       });
 
-      return updated;
+      return tx.meeting.findUniqueOrThrow({ where: { id: meetingId } });
     });
   }
 
