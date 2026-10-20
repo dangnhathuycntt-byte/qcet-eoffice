@@ -150,7 +150,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
     displayDescription = suggestedCopy.describe(suggestedView.count);
   }
 
-  // Tranh theo ngữ cảnh: lọc rỗng → kính lúp; việc chưa xong đều trễ → đồng hồ báo thức; không có việc trễ hoặc mọi việc đã xong → nằm võng
+  // Icon lớn theo ngữ cảnh: lọc rỗng → kính lúp; việc chưa xong đều trễ → đồng hồ báo thức; không có việc trễ hoặc mọi việc đã xong → tấm xếp chồng; còn lại → bảng việc
   const illustration: IllustrationName = hasFilterActive
     ? "no-results"
     : suggestedCopy && suggestedView?.id === "overdue"
@@ -164,7 +164,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
 
   return (
     <>
-    {/* Bố cục trang trống kiểu Linear (EmptyState density="page"); tranh chọn theo ngữ cảnh ở `illustration` */}
+    {/* Bố cục trang trống kiểu Linear (EmptyState density="page"); icon lớn chọn theo ngữ cảnh ở `illustration` */}
     <EmptyState
       data-slot="workspace-empty-state"
       role="status"

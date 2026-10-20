@@ -197,7 +197,7 @@ export function getLedgerEmptyCopy(ctx: LedgerEmptyContext): LedgerEmptyCopy {
       : { title: "Không có văn bản khớp bộ lọc", description: "Thử bỏ bớt bộ lọc đang chọn." };
   }
   const scoped = ctx.type && ctx.bucket ? EMPTY_SCOPE_COPY[ctx.type]?.[ctx.bucket] : undefined;
-  // Nhóm "chờ xử lý" trống nghĩa là đã xử lý hết: dùng tranh nghỉ ngơi thay vì tranh của sổ
+  // Nhóm "chờ xử lý" trống nghĩa là đã xử lý hết: dùng icon tấm xếp chồng (đã xong) thay vì icon của sổ
   if (scoped) return { ...scoped, illustration: ctx.bucket === "pending" ? "all-done" : EMPTY_TYPE_ILLUSTRATION[ctx.type!] };
   const byType = ctx.type ? EMPTY_TYPE_COPY[ctx.type] : undefined;
   if (byType) return { ...byType, illustration: EMPTY_TYPE_ILLUSTRATION[ctx.type!] };

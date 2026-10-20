@@ -606,17 +606,23 @@ const BOARD = place((c) => {
   const z = 2.5;
   const rows = [-6, 1, 8];
   const [boxX, checkRow] = [-8, rows[0]];
+  const checkAt = c.at([boxX, checkRow, z]);
   return {
     board: prism(c, rrect(26, 32, 3), flat([0, 0], 0), [0, 0, z]),
     clip: prism(c, rrect(10, 4, 1.4), flat([0, -15.5], z), [0, 0, 1.8]),
     boxes: rows.map((y) => outlinePath(c, rrect(4.2, 4.2, 1), flat([boxX, y], z))).join(" "),
     done: segment(c, [-3.5, rows[0], z], [8, rows[0], z]),
     todo: [segment(c, [-3.5, rows[1], z], [8, rows[1], z]), segment(c, [-3.5, rows[2], z], [4, rows[2], z])].join(" "),
-    check: polyline(c, [
-      [boxX - 2, checkRow + 0.2, z],
-      [boxX - 0.5, checkRow + 1.9, z],
-      [boxX + 2.8, checkRow - 2.4, z],
-    ]),
+    // Dấu tích vẽ thẳng trên màn hình (chiếu theo mặt bảng thì bẹp, khó đọc), tâm ở ô đầu, nhô lên khỏi ô như dấu tích tay
+    check: (
+      [
+        [-2.4, 0],
+        [-0.7, 1.8],
+        [2.9, -2.6],
+      ] as Vec2[]
+    )
+      .map(([x, y], i) => `${i ? "L" : "M"}${fmt(c.track([checkAt[0] + x, checkAt[1] + y]))}`)
+      .join(" "),
   };
 });
 
