@@ -45,7 +45,7 @@ async function authorizeRecordingAccess(meetingId: string, userId: string, optio
   });
   if (!meeting) throw new NotFoundError("Cuộc họp không tồn tại");
 
-  const context = await loadAuthorizationContext(userId);
+  const context = await loadAuthorizationContext(userId, new Date(), { useCache: true });
   const read = authorize(context, "meeting.read", buildMeetingResource(meeting));
   if (!read.allowed) throw new NotFoundError("Cuộc họp không tồn tại");
   const relation = authorize(context, "meeting.draft_minutes", buildMeetingResource({ ...meeting, status: MeetingStatus.HELD }));

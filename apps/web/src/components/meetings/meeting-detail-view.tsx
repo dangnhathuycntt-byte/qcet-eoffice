@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
+import { SectionCard } from "@/components/meetings/section-card";
+import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -145,26 +147,6 @@ function AttendanceBadge({ status }: { status: string }) {
   );
 }
 
-function SectionCard({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-card">
-      <div className="flex items-center gap-2 border-b border-border/30 px-4 py-3">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-medium text-foreground">{title}</h3>
-      </div>
-      <div className="px-4 py-3">{children}</div>
-    </div>
-  );
-}
-
 function MetaRow({
   icon: Icon,
   label,
@@ -250,6 +232,15 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     ["HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED"].includes(meeting.status) &&
     (isLeader || isOrganizer);
   const showActions = canHold || canDraftMinutes || canConfirmMinutes || canAddResolution;
+  // Ghi âm theo quan hệ soạn biên bản của máy chủ (người tổ chức, chủ tọa, thư ký của cuộc họp), trong lúc họp và soạn biên bản
+  const isMinutesAuthor =
+    isOrganizer || meeting.participants.some((p) => p.userId === currentUser.id && (p.role === "CHAIR" || p.role === "SECRETARY"));
+  const canRecord = isMinutesAuthor && ["INVITED", "HELD", "MINUTES_DRAFT"].includes(meeting.status);
+  const useRecordingAsMinutes = useCallback((text: string) => {
+    setMinutesText(text);
+    setShowMinutesInput(true);
+    requestAnimationFrame(() => document.getElementById("meeting-minutes-input")?.scrollIntoView({ block: "center", behavior: "smooth" }));
+  }, []);
 
   /* Fetch units/personnel only when resolution form is open */
   const { departments } = useDepartmentList({ enabled: showResolutionForm });
@@ -436,10 +427,11 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           {showMinutesInput && (
             <div className="mt-3 space-y-2">
               <textarea
+                id="meeting-minutes-input"
                 value={minutesText}
                 onChange={(e) => setMinutesText(e.target.value)}
                 placeholder="Nhập nội dung biên bản..."
-                rows={5}
+                rows={minutesText.length > 400 ? 14 : 5}
                 className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <div className="flex items-center gap-2">
@@ -689,6 +681,21 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
               </p>
             )}
           </SectionCard>
+
+          {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
+          {canRecord && (
+            <MeetingRecordingPanel
+              meetingId={meeting.id}
+              onUseAsMinutes={canDraftMinutes ? useRecordingAsMinutes : undefined}
+              minutesHint={
+                meeting.status === "INVITED"
+                  ? "Đánh dấu cuộc họp đã diễn ra để dùng làm biên bản."
+                  : meeting.status === "MINUTES_DRAFT"
+                    ? "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
+                    : undefined
+              }
+            />
+          )}
 
           {/* Minutes — only shown for MINUTES_DRAFT / MINUTES_CONFIRMED */}
           {showMinutes && (
