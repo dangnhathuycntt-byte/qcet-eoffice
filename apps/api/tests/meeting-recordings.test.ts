@@ -1,7 +1,8 @@
 /**
  * Ghi âm cuộc họp: quyền (cùng quan hệ với soạn biên bản, người đọc được cuộc họp nhưng không soạn biên bản bị từ chối,
  * người ngoài nhận 404), nhận âm thanh theo phần và ghép, việc chép lời bằng gateway giả (nối tiếp, thử lại, các đường lỗi),
- * xóa bản ghi cùng âm thanh. Không gọi mô hình thật.
+ * xóa bản ghi cùng âm thanh. Không gọi mô hình thật. Mặc định tắt ffmpeg (gửi cả tệp); nhóm "cắt đoạn bằng ffmpeg" bật lại và
+ * bị bỏ qua nếu máy chạy test không có ffmpeg kèm libmp3lame.
  */
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,6 +10,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { loadEnvConfig } from '@next/env';
 
 loadEnvConfig(process.cwd());
@@ -33,6 +35,7 @@ import { MEETING_RECORDING_PART_MAX_BYTES, CreateMeetingRecordingSchema, Complet
 import { MeetingRecordingService } from '@/server/meetings/recording-service';
 import { transcribeMeeting } from '@/server/meetings/recording-job';
 import { recordingAudioPath } from '@/server/meetings/recording-storage';
+import { AudioSliceError, EMPTY_SLICE_BYTES, ffmpegAvailable, sliceAudio } from '@/server/meetings/recording-slicer';
 import type { AgentJobContext } from '@/server/outbox/agent-jobs';
 
 const runId = crypto.randomBytes(4).toString('hex');
@@ -41,6 +44,11 @@ let meetingId = '';
 let uploadsDir = '';
 const realFetch = globalThis.fetch;
 const savedEnv = new Map<string, string | undefined>();
+
+const HAS_FFMPEG = (() => {
+  const probe = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-encoders'], { encoding: 'utf8' });
+  return probe.status === 0 && probe.stdout.includes('libmp3lame');
+})();
 
 const WEBM = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(200, 7)]);
 const create = (userId: string, overrides: Record<string, unknown> = {}, id = meetingId) =>
@@ -131,6 +139,7 @@ describe('Ghi âm cuộc họp', () => {
       TASK_AGENT_API_KEY: 'test-key',
       TASK_AGENT_MODEL: 'test-model',
       MEETING_AUDIO_MODEL: undefined,
+      MEETING_AUDIO_FFMPEG: 'none',
       AGENT_JOB_TIMEOUT_MS: undefined,
     });
     for (const key of Object.keys(users) as Array<keyof typeof users>) {
@@ -299,6 +308,14 @@ describe('Ghi âm cuộc họp', () => {
         (error: { statusCode?: number }) => error.statusCode === 413,
         'tổng 7 × 8 MB vượt 48 MB'
       );
+    });
+
+    it('không có ffmpeg: tệp báo trước quá 48 MB bị từ chối ngay (413), vừa 48 MB thì mở được; trần của hợp đồng là 128 MB', async () => {
+      const MB = 1024 * 1024;
+      await assert.rejects(create(users.organizer, { byteSize: 49 * MB }), (error: { statusCode?: number }) => error.statusCode === 413);
+      assert.equal((await create(users.organizer, { byteSize: 48 * MB })).status, 'UPLOADING');
+      assert.equal(CreateMeetingRecordingSchema.safeParse({ source: 'file', mimeType: 'audio/webm', consent: true, byteSize: 128 * MB }).success, true);
+      assert.equal(CreateMeetingRecordingSchema.safeParse({ source: 'file', mimeType: 'audio/webm', consent: true, byteSize: 128 * MB + 1 }).success, false);
     });
 
     it('route PUT phần: nhận byte thô, từ chối người dự họp thường và chưa đăng nhập', async () => {
@@ -520,6 +537,100 @@ describe('Ghi âm cuộc họp', () => {
       await transcribeMeeting(job(id));
       assert.equal(calls.length, 1, 'đoạn đầu chép xong thì thấy bản ghi đã biến mất và dừng');
       assert.equal(await prisma.meetingRecording.count({ where: { id } }), 0);
+    });
+  });
+
+  describe('cắt đoạn bằng ffmpeg', { skip: !HAS_FFMPEG && 'máy chạy test không có ffmpeg kèm libmp3lame' }, () => {
+    let mp3 = Buffer.alloc(0);
+    const SECONDS = 800;
+
+    before(async () => {
+      setEnv({ MEETING_AUDIO_FFMPEG: undefined });
+      const out = path.join(uploadsDir, 'sine.mp3');
+      const made = spawnSync(
+        'ffmpeg',
+        ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', `sine=frequency=440:sample_rate=16000:duration=${SECONDS}`, '-ac', '1', '-c:a', 'libmp3lame', '-b:a', '32k', out],
+        { encoding: 'utf8' }
+      );
+      assert.equal(made.status, 0, made.stderr);
+      mp3 = await fs.readFile(out);
+      assert.ok(mp3.byteLength < 8 * 1024 * 1024, 'vừa một phần tải lên');
+    });
+
+    after(() => setEnv({ MEETING_AUDIO_FFMPEG: 'none' }));
+
+    async function queuedAudio(bytes: Buffer, durationSec: number) {
+      const recording = await create(users.organizer, { mimeType: 'audio/mpeg' });
+      await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, bytes, users.organizer);
+      await complete(users.organizer, recording.id, 1, durationSec);
+      return recording.id;
+    }
+
+    it('sliceAudio: đoạn giữa tệp ra mp3 mono đúng độ dài, đoạn vượt cuối tệp rỗng, tệp hỏng báo lỗi tiếng Việt không kèm stderr', async () => {
+      const id = await queuedAudio(mp3, SECONDS);
+      const inputPath = recordingAudioPath(id);
+      const slice = await sliceAudio(inputPath, 100, 60);
+      assert.ok(slice[0] === 0xff || slice.toString('ascii', 0, 3) === 'ID3', 'mp3 hợp lệ');
+      // 60 giây ở 32 kbps ≈ 240 KB
+      assert.ok(slice.byteLength > 150_000 && slice.byteLength < 330_000, `kích thước ${slice.byteLength}`);
+      const tail = await sliceAudio(inputPath, 700, null);
+      assert.ok(tail.byteLength > 300_000 && tail.byteLength < 500_000, 'tới hết tệp (100 giây còn lại)');
+      assert.ok((await sliceAudio(inputPath, SECONDS + 600, 60)).byteLength < EMPTY_SLICE_BYTES, 'vượt cuối tệp thì rỗng');
+
+      const broken = path.join(uploadsDir, 'broken.bin');
+      await fs.writeFile(broken, WEBM);
+      await assert.rejects(sliceAudio(broken, 0, 60), (error: Error) => error instanceof AudioSliceError && /Không đọc được âm thanh/.test(error.message) && !/Invalid|ffmpeg/i.test(error.message));
+    });
+
+    it('ffmpegAvailable: tắt bằng none hoặc trỏ tới đường dẫn không có thì false, bật lại thì true', async () => {
+      assert.equal(await ffmpegAvailable(), true);
+      setEnv({ MEETING_AUDIO_FFMPEG: 'none' });
+      assert.equal(await ffmpegAvailable(), false);
+      await assert.rejects(sliceAudio('/nonexistent.mp3', 0, 10), AudioSliceError);
+      setEnv({ MEETING_AUDIO_FFMPEG: '/nonexistent/ffmpeg' });
+      assert.equal(await ffmpegAvailable(), false);
+      setEnv({ MEETING_AUDIO_FFMPEG: undefined });
+      assert.equal(await ffmpegAvailable(), true);
+    });
+
+    it('có ffmpeg: nhận tệp báo trước 100 MB (quá 48 MB nhưng trong trần 128 MB)', async () => {
+      assert.equal((await create(users.organizer, { byteSize: 100 * 1024 * 1024 })).status, 'UPLOADING');
+    });
+
+    it('job chép từng đoạn đã cắt: mỗi lần gửi mp3 riêng, mốc giờ cộng lại giờ bắt đầu đoạn, đoạn vượt cuối tệp không gọi mô hình', async () => {
+      // Khai báo 1500 giây trong khi tệp thật 800 giây: đoạn 3 (từ 24:00) rỗng
+      const id = await queuedAudio(mp3, 1500);
+      const calls = mockGateway((call) => (isWindowCall(call) ? '[00:05] Một.\n[00:20] Hai.' : MINUTES_JSON));
+      await transcribeMeeting(job(id));
+
+      const windowCalls = calls.filter(isWindowCall);
+      assert.equal(windowCalls.length, 2, 'hai đoạn có âm thanh; đoạn thứ ba rỗng nên không gọi');
+      assert.equal(calls.length, 3, 'cộng một lần soạn biên bản');
+      for (const call of windowCalls) {
+        assert.match(call.filePart?.file_data ?? '', /^data:audio\/mpeg;base64,/);
+        assert.equal(call.filePart?.filename, 'ghi-am.mp3');
+        assert.match(call.userText, /đã được cắt riêng/);
+      }
+      const size = (index: number) => Buffer.from((windowCalls[index].filePart?.file_data ?? '').split(',')[1] ?? '', 'base64').byteLength;
+      assert.ok(size(0) > 2_000_000 && size(0) < 3_300_000, `đoạn 12 phút ≈ 2,9 MB, thực ${size(0)}`);
+      assert.ok(size(1) > 250_000 && size(1) < 450_000, `đoạn còn 80 giây ≈ 0,32 MB, thực ${size(1)}`);
+      assert.match(windowCalls[1].userText, /từ 12:00 đến 24:00/);
+
+      const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
+      assert.equal(row.status, 'READY');
+      assert.match(row.transcript ?? '', /\[00:05\] Một\.\n\[00:20\] Hai\.\n\[12:05\] Một\.\n\[12:20\] Hai\./, 'đoạn hai được cộng 12:00');
+      await assert.rejects(fs.stat(path.join(uploadsDir, 'recordings', id)), /ENOENT/);
+    });
+
+    it('tệp không giải mã được: lần đầu ném để thử lại, lần thứ ba FAILED với câu tiếng Việt, không gọi mô hình', async () => {
+      const id = await queuedAudio(WEBM, 60);
+      const calls = mockGateway(() => MINUTES_JSON);
+      await assert.rejects(transcribeMeeting(job(id, 1)), AudioSliceError);
+      await transcribeMeeting(job(id, 3));
+      const row = await prisma.meetingRecording.findUniqueOrThrow({ where: { id } });
+      assert.equal(row.status, 'FAILED');
+      assert.match(row.error ?? '', /Không đọc được âm thanh/);
+      assert.equal(calls.length, 0);
     });
   });
 

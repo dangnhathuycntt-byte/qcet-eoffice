@@ -29,8 +29,12 @@ export function normalizeRecordingMimeType(raw: string): MeetingRecordingMimeTyp
   return aliases[base] ?? null;
 }
 
-/** Mỗi lần chép một đoạn gửi lại cả tệp cho mô hình, nên giới hạn dung lượng chặt (khoảng 1 giờ ghi âm điện thoại). */
-export const MEETING_RECORDING_MAX_BYTES = 48 * 1024 * 1024;
+/**
+ * Trần dung lượng một bản ghi khi máy chủ có ffmpeg: mỗi đoạn được cắt riêng nên bản dài vài giờ vẫn chép được (4 giờ m4a
+ * ở 64 kbps khoảng 115 MB). Máy chủ không có ffmpeg gửi cả tệp cho mỗi đoạn nên chỉ nhận tới MEETING_RECORDING_WHOLE_FILE_MAX_BYTES.
+ */
+export const MEETING_RECORDING_MAX_BYTES = 128 * 1024 * 1024;
+export const MEETING_RECORDING_WHOLE_FILE_MAX_BYTES = 48 * 1024 * 1024;
 export const MEETING_RECORDING_PART_MAX_BYTES = 8 * 1024 * 1024;
 /** Ghi trực tiếp gửi một phần mỗi phút nên 4 giờ là 240 phần. */
 export const MEETING_RECORDING_MAX_PARTS = 400;
@@ -55,6 +59,8 @@ export const CreateMeetingRecordingSchema = z
         }
         return normalized;
       }),
+    /** Dung lượng tệp khi chọn tệp có sẵn: quá giới hạn của máy chủ thì từ chối ngay, không bắt gửi cả tệp rồi mới báo. Ghi trực tiếp không biết trước. */
+    byteSize: z.number().int().positive().max(MEETING_RECORDING_MAX_BYTES, { error: 'Tệp quá lớn.' }).optional(),
     /** Người ghi xác nhận đã báo cho người dự họp và đồng ý gửi âm thanh tới dịch vụ AI. */
     consent: z.literal(true, { error: 'Cần xác nhận đã thông báo cho người dự họp trước khi ghi âm.' }),
   })

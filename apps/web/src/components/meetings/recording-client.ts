@@ -50,7 +50,7 @@ export const listRecordings = (meetingId: string, signal?: AbortSignal) =>
   request<{ recordings: MeetingRecordingSummary[] }>(base(meetingId), { signal });
 export const getRecording = (meetingId: string, id: string, signal?: AbortSignal) =>
   request<MeetingRecordingDetail>(`${base(meetingId)}/${encodeURIComponent(id)}`, { signal });
-export const createRecording = (meetingId: string, input: { source: MeetingRecordingSource; mimeType: string }) =>
+export const createRecording = (meetingId: string, input: { source: MeetingRecordingSource; mimeType: string; byteSize?: number }) =>
   request<MeetingRecordingSummary>(base(meetingId), jsonInit("POST", { ...input, consent: true }));
 export const completeRecording = (meetingId: string, id: string, input: { partCount: number; durationSec: number }) =>
   request<MeetingRecordingSummary>(`${base(meetingId)}/${encodeURIComponent(id)}/complete`, jsonInit("POST", input));
@@ -143,7 +143,7 @@ export async function uploadAudioFile(
   onProgress: (progress: UploadFileProgress) => void
 ): Promise<MeetingRecordingSummary> {
   if (file.size > MEETING_RECORDING_MAX_BYTES) throw new RecordingRequestError(`Tệp quá lớn (tối đa ${MEETING_RECORDING_MAX_BYTES / 1024 / 1024} MB).`, 413);
-  const created = await createRecording(meetingId, { source: "file", mimeType });
+  const created = await createRecording(meetingId, { source: "file", mimeType, byteSize: file.size });
   const partCount = Math.max(1, Math.ceil(file.size / UPLOAD_PART_BYTES));
   onProgress({ uploadedBytes: 0, totalBytes: file.size });
   for (let index = 0; index < partCount; index += 1) {

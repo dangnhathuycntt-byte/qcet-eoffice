@@ -62,6 +62,39 @@ export function buildTranscribeWindowPrompt(window: RecordingWindow, meetingTitl
   ].join("\n");
 }
 
+/**
+ * Lời nhắc cho một đoạn đã được cắt riêng khỏi bản ghi (máy chủ có ffmpeg): tệp đính kèm chỉ là đoạn này nên mô hình chép hết
+ * và mốc giờ tính từ đầu tệp (00:00); máy chủ tự cộng lại `startSec` bằng `offsetTranscriptClock`.
+ */
+export function buildTranscribeSlicePrompt(window: RecordingWindow, meetingTitle: string): string {
+  const range =
+    window.endSec === null
+      ? `từ ${formatClock(window.startSec)} đến hết bản ghi`
+      : `từ ${formatClock(window.startSec)} đến ${formatClock(window.endSec)}`;
+  return [
+    `Cuộc họp: "${promptTitle(meetingTitle)}".`,
+    `Tệp đính kèm là đoạn ${range} của cuộc họp, đã được cắt riêng. Chép toàn bộ lời nói trong tệp; mốc giờ tính từ đầu tệp này (00:00), không cộng thêm. Nếu tệp không có lời nói thì chỉ trả lời đúng một chữ: HẾT.`,
+    'Mỗi lượt nói một dòng, dạng "[mm:ss] nội dung". Chỉ thêm tên hoặc chức vụ người nói ("[12:05] Hiệu trưởng: …") khi chính ghi âm nói rõ; không đoán.',
+  ].join("\n");
+}
+
+const LINE_CLOCK = /^(\s*)\[\s*(\d{1,3}(?::\d{2}){1,2})\s*\]/;
+
+/** Cộng `offsetSec` vào mốc "[mm:ss]" (hoặc "[h:mm:ss]") đầu mỗi dòng; dòng không có mốc giữ nguyên. */
+export function offsetTranscriptClock(text: string, offsetSec: number): string {
+  if (!text || !Number.isFinite(offsetSec) || offsetSec <= 0) return text;
+  return text
+    .split("\n")
+    .map((line) =>
+      line.replace(LINE_CLOCK, (_match, indent: string, clock: string) => {
+        const parts = clock.split(":").map(Number);
+        const seconds = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
+        return `${indent}[${formatClock(seconds + offsetSec)}]`;
+      }),
+    )
+    .join("\n");
+}
+
 const TIMESTAMP_ONLY_LINE = /^\s*\[\s*\d{1,3}(?::\d{2}){1,2}\s*\]\s*$/;
 
 /** Bỏ rào code, dòng chỉ có mốc giờ (đoạn im lặng) và dòng trống liên tiếp; "HẾT" nghĩa là đoạn không có gì. */

@@ -1,6 +1,7 @@
 /**
  * Việc nền `TRANSCRIBE_MEETING`: chép lời bản ghi âm theo từng đoạn thời gian bằng mô hình nghe được âm thanh (Gemini qua
- * gateway) rồi soạn biên bản đề xuất từ bản chép. Mỗi lần gọi mô hình gửi cả tệp kèm khoảng thời gian cần chép.
+ * gateway) rồi soạn biên bản đề xuất từ bản chép. Máy chủ có ffmpeg thì cắt riêng từng đoạn (mp3 nhỏ) rồi gửi, nên bản dài
+ * hàng giờ vẫn chép được; không có thì mỗi lần gọi gửi cả tệp kèm khoảng thời gian cần chép (tối đa 48 MB).
  *
  * Việc dài hơn thời gian một lần chạy (AGENT_JOB_TIMEOUT_MS): bản chép từng đoạn được lưu ngay vào CSDL, hết ngân sách
  * thời gian thì xếp việc nối tiếp rồi kết thúc bình thường. Không ném lỗi để "làm tiếp sau" vì outbox chỉ thử lại vài lần
@@ -11,14 +12,16 @@
  */
 import { MeetingRecordingStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@qcet/db/prisma";
-import type { MeetingRecordingMimeType } from "@qcet/contracts/meeting-recordings";
+import { MEETING_RECORDING_WHOLE_FILE_MAX_BYTES, type MeetingRecordingMimeType } from "@qcet/contracts/meeting-recordings";
 import {
   MINUTES_SYSTEM_PROMPT,
   TRANSCRIBE_SYSTEM_PROMPT,
   buildMinutesPrompt,
+  buildTranscribeSlicePrompt,
   buildTranscribeWindowPrompt,
   cleanWindowTranscript,
   joinWindowTranscripts,
+  offsetTranscriptClock,
   parseMinutesReply,
   planRecordingWindows,
   type TranscribedWindow,
@@ -27,13 +30,17 @@ import { ApiError } from "@/server/api/errors";
 import { logger } from "@/server/observability/logger";
 import { callGateway, readGatewayConfig, type GatewayConfig } from "@/server/services/agent-gateway";
 import { agentJobTimeoutMs, defineAgentJobHandlers, enqueueAgentJob, type AgentJobContext } from "@/server/outbox/agent-jobs";
-import { readRecordingAudio, removeRecordingFiles } from "@/server/meetings/recording-storage";
+import { EMPTY_SLICE_BYTES, ffmpegAvailable, sliceAudio } from "@/server/meetings/recording-slicer";
+import { readRecordingAudio, recordingAudioPath, removeRecordingFiles } from "@/server/meetings/recording-storage";
 
 export const TRANSCRIBE_MEETING_JOB = "TRANSCRIBE_MEETING";
 const SUBJECT = "Dịch vụ chép lời";
 const DEFAULT_AUDIO_MODEL = "gemini-3.8-flash";
-/** Một đoạn 12 phút cho ra vài nghìn chữ; thời gian chờ và số token dư dả cho cả suy nghĩ ngắn của mô hình. */
-const WINDOW_CALL_TIMEOUT_MS = 150_000;
+/**
+ * Một đoạn 12 phút cho ra vài nghìn chữ; số token dư dả cho cả suy nghĩ ngắn của mô hình. Thời gian chờ là thời gian im lặng
+ * tối đa (gateway chưa trả byte nào), không phải tổng: với âm thanh gateway thường im cho tới khi chép xong cả đoạn.
+ */
+const WINDOW_CALL_TIMEOUT_MS = 180_000;
 const WINDOW_OUTPUT_TOKENS = 16_000;
 const MINUTES_CALL_TIMEOUT_MS = 120_000;
 const MINUTES_OUTPUT_TOKENS = 8_000;
@@ -94,7 +101,16 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
   let stage: "transcribe" | "minutes" = "transcribe";
 
   try {
-    let audioBase64: string | null = null;
+    // Có ffmpeg thì gửi từng đoạn đã cắt; không thì gửi cả tệp (chỉ khi tệp vừa trần của chế độ này)
+    const slicing = await ffmpegAvailable();
+    if (!slicing && Number(recording.byteSize) > MEETING_RECORDING_WHOLE_FILE_MAX_BYTES) {
+      await failRecording(
+        recordingId,
+        `Máy chủ không cắt được âm thanh nên chỉ chép tệp tới ${MEETING_RECORDING_WHOLE_FILE_MAX_BYTES / 1024 / 1024} MB. Thầy/Cô chia nhỏ hoặc nén tệp rồi tải lên lại.`
+      );
+      return;
+    }
+    let wholeFileBase64: string | null = null;
     let processedThisRun = 0;
     for (const window of plan) {
       if (windows.some((done) => done.index === window.index)) continue;
@@ -103,28 +119,41 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
         await enqueueContinuation(recordingId, windows.length, job.actorId);
         return;
       }
-      audioBase64 ??= (await readRecordingAudio(recordingId)).toString("base64");
-      const mimeType = recording.mimeType as MeetingRecordingMimeType;
-      const completion = await callGateway(
-        [
-          { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: buildTranscribeWindowPrompt(window, title) },
-              {
-                type: "file",
-                file: {
-                  filename: `ghi-am.${FILE_EXTENSIONS[mimeType] ?? "webm"}`,
-                  file_data: `data:${mimeType};base64,${audioBase64}`,
+      let text = "";
+      let attachment: { mimeType: MeetingRecordingMimeType; base64: string; prompt: string } | null;
+      if (slicing) {
+        const slice = await sliceAudio(recordingAudioPath(recordingId), window.startSec, window.endSec === null ? null : window.endSec - window.startSec, job.signal);
+        // Đoạn vượt quá cuối tệp (người dùng báo thời lượng dài hơn thật) không có gì để chép, khỏi gọi mô hình
+        attachment = slice.byteLength < EMPTY_SLICE_BYTES ? null : { mimeType: "audio/mpeg", base64: slice.toString("base64"), prompt: buildTranscribeSlicePrompt(window, title) };
+      } else {
+        wholeFileBase64 ??= (await readRecordingAudio(recordingId)).toString("base64");
+        attachment = { mimeType: recording.mimeType as MeetingRecordingMimeType, base64: wholeFileBase64, prompt: buildTranscribeWindowPrompt(window, title) };
+      }
+      if (attachment) {
+        const completion = await callGateway(
+          [
+            { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: attachment.prompt },
+                {
+                  type: "file",
+                  file: {
+                    filename: `ghi-am.${FILE_EXTENSIONS[attachment.mimeType] ?? "webm"}`,
+                    file_data: `data:${attachment.mimeType};base64,${attachment.base64}`,
+                  },
                 },
-              },
-            ],
-          },
-        ],
-        { config, signal: job.signal, timeoutMs: WINDOW_CALL_TIMEOUT_MS, outputTokens: WINDOW_OUTPUT_TOKENS, subject: SUBJECT }
-      );
-      windows = [...windows, { index: window.index, startSec: window.startSec, endSec: window.endSec, text: cleanWindowTranscript(completion.content) }];
+              ],
+            },
+          ],
+          { config, signal: job.signal, timeoutMs: WINDOW_CALL_TIMEOUT_MS, outputTokens: WINDOW_OUTPUT_TOKENS, subject: SUBJECT }
+        );
+        text = cleanWindowTranscript(completion.content);
+        // Đoạn cắt riêng có mốc giờ từ 00:00: cộng lại giờ bắt đầu để mốc khớp bản ghi gốc
+        if (slicing) text = offsetTranscriptClock(text, window.startSec);
+      }
+      windows = [...windows, { index: window.index, startSec: window.startSec, endSec: window.endSec, text }];
       processedThisRun += 1;
       const saved = await prisma.meetingRecording.updateMany({
         where: { id: recordingId, status: MeetingRecordingStatus.PROCESSING },

@@ -223,7 +223,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
       return;
     }
     if (file.size > MEETING_RECORDING_MAX_BYTES) {
-      setProblem(`Tệp quá lớn (tối đa ${MEETING_RECORDING_MAX_BYTES / 1024 / 1024} MB, khoảng 1 giờ ghi âm bằng điện thoại).`);
+      setProblem(`Tệp quá lớn (tối đa ${MEETING_RECORDING_MAX_BYTES / 1024 / 1024} MB).`);
       return;
     }
     setProblem(null);

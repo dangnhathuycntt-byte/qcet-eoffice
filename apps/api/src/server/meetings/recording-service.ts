@@ -27,6 +27,8 @@ import {
   assembleRecording,
   detectRecordingMimeType,
   readRecordingHead,
+  recordingByteLimit,
+  recordingTooLargeError,
   removeRecordingFiles,
   writeRecordingPart,
 } from "@/server/meetings/recording-storage";
@@ -129,6 +131,11 @@ export class MeetingRecordingService {
     await authorizeRecordingAccess(meetingId, userId, { write: true });
     // Chưa cấu hình gateway thì từ chối ngay (503), không để người dùng ghi cả buổi rồi mới báo lỗi
     recordingGatewayConfig();
+    // Tệp có sẵn báo trước dung lượng: quá giới hạn của máy chủ thì từ chối ngay, không bắt người dùng gửi cả tệp rồi mới báo
+    if (input.byteSize !== undefined) {
+      const limit = await recordingByteLimit();
+      if (input.byteSize > limit) throw recordingTooLargeError(limit);
+    }
 
     // Dọn bản tải lên bỏ dở (đóng trình duyệt giữa chừng) để không chiếm chỗ trong giới hạn mỗi cuộc họp
     const stale = await prisma.meetingRecording.findMany({

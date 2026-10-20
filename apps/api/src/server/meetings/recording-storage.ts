@@ -10,9 +10,11 @@ import {
   MEETING_RECORDING_MAX_BYTES,
   MEETING_RECORDING_MAX_PARTS,
   MEETING_RECORDING_PART_MAX_BYTES,
+  MEETING_RECORDING_WHOLE_FILE_MAX_BYTES,
   type MeetingRecordingMimeType,
 } from "@qcet/contracts/meeting-recordings";
 import { PayloadTooLargeError, ValidationError } from "@/server/api/errors";
+import { ffmpegAvailable } from "@/server/meetings/recording-slicer";
 
 const RECORDING_ID_PATTERN = /^[a-z0-9]{20,40}$/;
 const PART_FILE_PATTERN = /^(\d{5})\.part$/;
@@ -25,6 +27,15 @@ function recordingDir(recordingId: string): string {
 
 const partFile = (recordingId: string, index: number) => path.join(recordingDir(recordingId), `${String(index).padStart(5, "0")}.part`);
 export const recordingAudioPath = (recordingId: string) => path.join(recordingDir(recordingId), AUDIO_FILE);
+
+/** Dung lượng tối đa của một bản ghi trên máy chủ này: có ffmpeg thì cắt từng đoạn nên nhận bản dài, không thì phải gửi cả tệp cho mô hình. */
+export async function recordingByteLimit(): Promise<number> {
+  return (await ffmpegAvailable()) ? MEETING_RECORDING_MAX_BYTES : MEETING_RECORDING_WHOLE_FILE_MAX_BYTES;
+}
+
+export function recordingTooLargeError(limit: number): PayloadTooLargeError {
+  return new PayloadTooLargeError(`Bản ghi vượt ${Math.round(limit / 1024 / 1024)} MB. Thầy/Cô chia nhỏ hoặc nén tệp (ví dụ mp3 mono) rồi gửi lại.`);
+}
 
 /** Các phần đã nhận: [{ index, size }] theo thứ tự chỉ số. */
 async function listParts(recordingId: string): Promise<Array<{ index: number; size: number }>> {
@@ -57,9 +68,8 @@ export async function writeRecordingPart(recordingId: string, index: number, byt
   }
   const others = (await listParts(recordingId)).filter((part) => part.index !== index);
   const total = others.reduce((sum, part) => sum + part.size, 0) + bytes.byteLength;
-  if (total > MEETING_RECORDING_MAX_BYTES) {
-    throw new PayloadTooLargeError(`Bản ghi vượt ${MEETING_RECORDING_MAX_BYTES / 1024 / 1024} MB`);
-  }
+  const limit = await recordingByteLimit();
+  if (total > limit) throw recordingTooLargeError(limit);
   await fs.mkdir(recordingDir(recordingId), { recursive: true, mode: 0o700 });
   const target = partFile(recordingId, index);
   const temporary = `${target}.tmp`;
@@ -78,9 +88,8 @@ export async function assembleRecording(recordingId: string, partCount: number):
     throw new ValidationError("Chưa nhận đủ các phần âm thanh, hãy thử gửi lại.");
   }
   const byteSize = parts.reduce((sum, part) => sum + part.size, 0);
-  if (byteSize > MEETING_RECORDING_MAX_BYTES) {
-    throw new PayloadTooLargeError(`Bản ghi vượt ${MEETING_RECORDING_MAX_BYTES / 1024 / 1024} MB`);
-  }
+  const limit = await recordingByteLimit();
+  if (byteSize > limit) throw recordingTooLargeError(limit);
   const output = await fs.open(recordingAudioPath(recordingId), "w", 0o600);
   try {
     for (const part of parts) await output.write(await fs.readFile(partFile(recordingId, part.index)));
@@ -114,7 +123,7 @@ export async function readRecordingHead(recordingId: string, length = 16): Promi
   }
 }
 
-/** Đọc cả tệp ghép (tối đa 48 MB) để gửi mô hình. */
+/** Đọc cả tệp ghép để gửi mô hình khi không cắt được bằng ffmpeg (tối đa MEETING_RECORDING_WHOLE_FILE_MAX_BYTES). */
 export function readRecordingAudio(recordingId: string): Promise<Buffer> {
   return fs.readFile(recordingAudioPath(recordingId));
 }
