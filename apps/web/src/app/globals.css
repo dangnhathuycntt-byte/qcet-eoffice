@@ -185,6 +185,7 @@
   --shadow-dropdown: var(--shadow-menu);
   --shadow-menu: var(--shadow-menu);
   --shadow-dialog: var(--shadow-dialog);
+  --shadow-sheet: var(--shadow-sheet);
   --radius-chip: var(--radius-chip);
   --radius-control: var(--radius-control);
   --radius-card: var(--radius-card);
@@ -283,11 +284,13 @@
   --input: var(--gray-4);
   --ring: var(--gray-8);
 
-  /* Elevation tokens chuẩn: Chỉ 2 token cho overlay */
+  /* Elevation tokens chuẩn: 2 token cho overlay nổi (hộp thoại, popover/menu) và 1 cho khung trượt từ cạnh */
   --shadow-dialog: 0 24px 60px -20px rgb(0 0 0 / 0.35);
   /* Viền mảnh 1px + 3 lớp bóng (theo Linear): popover trắng trên nền trắng vẫn tách khỏi bảng phía sau */
   --shadow-menu: 0 0 0 1px rgb(26 29 35 / 0.09), 0 8px 24px rgb(26 29 35 / 0.08), 0 3px 8px rgb(26 29 35 / 0.06), 0 1px 1px rgb(26 29 35 / 0.06);
   --shadow-dropdown: var(--shadow-menu);
+  /* Khung trượt ra trong thẻ trang (Hộp thư ở thanh bên): chỉ bóng ngang rất nhẹ về bên phải, kèm viền phải của khung; không nổi như popover */
+  --shadow-sheet: 6px 0 16px -8px rgb(26 29 35 / 0.10);
 
   /* Distinct chart colors for data visualization */
   --chart-1: oklch(0.68 0.17 150); /* Emerald */
@@ -876,6 +879,9 @@
   }
   .shadow-dialog {
     box-shadow: var(--shadow-dialog);
+  }
+  .shadow-sheet {
+    box-shadow: var(--shadow-sheet);
   }
 }
 

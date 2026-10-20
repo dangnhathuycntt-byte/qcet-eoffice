@@ -81,26 +81,66 @@ const PAGE_LIST_ROW = '[data-slot="inbox-list-pane"] [role="option"][tabindex="0
 interface PanelFrame {
   left: number;
   top: number;
-  bottom: string;
+  bottom: number;
+  radiusTop: number;
+  radiusBottom: number;
+  /** Chiều cao thanh đầu khung, bằng thanh đầu của trang để hai đường kẻ dưới nối liền. */
+  headerHeight?: number;
 }
 
 /**
- * Khung trùng thẻ trang: mép trái và mép trên lấy từ `#main-content` (trang có thanh trên như Lịch thì thẻ bắt đầu thấp hơn),
- * đáy là lề 8px cộng phần chừa cho thanh dưới (`--app-statusbar` đặt ở vỏ app; khung portal ra body nên đọc qua thẻ trang).
- * Khung lùi vào đúng bề dày viền thẻ: viền 1px của `shadow-menu` (vẽ phía ngoài) đè lên viền thẻ, nên đường kẻ dưới tiêu đề
- * khung thẳng hàng với tiêu đề trang.
+ * Thẻ trang đang hiện: chính `#main-content` (trang thường, khung cao hết màn), hoặc thẻ nằm lùi bên trong nó (chi tiết nhiệm
+ * vụ, Sổ văn bản). Tìm từ điểm gần góc trên trái vùng nội dung ngược lên: phần tử có nền, có bo góc và bắt đầu sát góc đó.
+ */
+function findPageCard(main: HTMLElement): HTMLElement {
+  const area = main.getBoundingClientRect();
+  for (let el = document.elementFromPoint(area.left + 32, area.top + 32); el && el !== main && main.contains(el); el = el.parentElement) {
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    const painted = style.backgroundColor !== "transparent" && style.backgroundColor !== "rgba(0, 0, 0, 0)";
+    if (painted && parseFloat(style.borderTopLeftRadius) > 0 && rect.left - area.left <= 12 && rect.top - area.top <= 12) {
+      return el as HTMLElement;
+    }
+  }
+  return main;
+}
+
+/** Thanh đầu của trang: có kẻ dưới, sát mép trên thẻ, rộng quá nửa thẻ; trang không có (như Lịch) thì khung giữ 44px. */
+function readHeaderHeight(card: HTMLElement, cardRect: DOMRect, innerTop: number): number | undefined {
+  for (let el = document.elementFromPoint(cardRect.left + 40, innerTop + 4); el && el !== card && card.contains(el); el = el.parentElement) {
+    const rect = el.getBoundingClientRect();
+    const ruled = parseFloat(getComputedStyle(el).borderBottomWidth) > 0;
+    if (ruled && Math.abs(rect.top - innerTop) <= 2 && rect.width >= cardRect.width / 2 && rect.height >= 36 && rect.height <= 56) {
+      return rect.height;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Khung là một ngăn nằm trong thẻ trang: lùi vào đúng bề dày viền thẻ ở mép trái, trên, dưới và bo góc trái đồng tâm với thẻ,
+ * nên đường kẻ dưới tiêu đề khung thẳng hàng với tiêu đề trang. Trang có thanh trên như Lịch thì thẻ bắt đầu thấp hơn. Thẻ
+ * thường kéo dài xuống dưới màn (không có viền đáy) thì khung chạy xuống tới thanh dưới, góc dưới vuông.
  */
 function readPanelFrame(fallbackLeft: number): PanelFrame {
   const main = document.getElementById("main-content");
-  if (!main) return { left: fallbackLeft, top: 8, bottom: "8px" };
-  const rect = main.getBoundingClientRect();
-  const style = getComputedStyle(main);
-  const edge = (side: "Left" | "Top" | "Bottom") => parseFloat(style[`border${side}Width`]) || 0;
-  const reserve = style.getPropertyValue("--app-statusbar").trim() || "0px";
+  if (!main) return { left: fallbackLeft, top: 8, bottom: 8, radiusTop: 16, radiusBottom: 16 };
+  const card = findPageCard(main);
+  const rect = card.getBoundingClientRect();
+  const style = getComputedStyle(card);
+  const px = (value: string) => parseFloat(value) || 0;
+  const bar = document.querySelector('[data-slot="assistant-statusbar"]')?.getBoundingClientRect();
+  const floor = window.innerHeight - (bar?.height ?? 0);
+  const cardBottom = rect.bottom - px(style.borderBottomWidth);
+  const bottomVisible = px(style.borderBottomWidth) > 0 && cardBottom <= floor;
+  const top = Math.min(Math.max(rect.top, 8), 120) + px(style.borderTopWidth);
   return {
-    left: rect.left + edge("Left"),
-    top: Math.min(Math.max(rect.top, 8), 120) + edge("Top"),
-    bottom: `calc(${8 + edge("Bottom")}px + ${reserve})`,
+    left: rect.left + px(style.borderLeftWidth),
+    top,
+    bottom: window.innerHeight - Math.min(cardBottom, floor),
+    radiusTop: Math.max(px(style.borderTopLeftRadius) - px(style.borderLeftWidth), 0),
+    radiusBottom: bottomVisible ? Math.max(px(style.borderBottomLeftRadius) - px(style.borderLeftWidth), 0) : 0,
+    headerHeight: readHeaderHeight(card, rect, top),
   };
 }
 
@@ -278,9 +318,9 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
       </Tooltip>
 
       {/* Portal ra body: sidebar là lớp fixed z-40 riêng nên khung đặt bên trong sẽ bị thanh công cụ dính của trang đè.
-          Khung trùng khít mép trái, mép trên và đáy thẻ trang, cùng bo 16px và nền thẻ, nên đọc như một tấm trượt ra từ thanh
-          bên trên chính trang (như Inbox của Notion) chứ không phải một hộp nổi lệch khung; bóng `shadow-menu` (viền mảnh + bóng
-          nhẹ) tách khung khỏi nội dung phía sau. */}
+          Khung là ngăn danh sách mở ra trong chính thẻ trang (như ngăn danh sách của trang /inbox): cùng nền thẻ, bo theo góc
+          trái của thẻ, mép phải là đường kẻ cùng màu viền thẻ kèm bóng ngang rất nhẹ (`shadow-sheet`) để biết khung đang phủ
+          lên trang. Không dùng bóng `shadow-menu` của popover: người dùng thấy khung nổi và sáng quá so với trang (20/10/2026). */}
       {mounted &&
         createPortal(
           <AnimatePresence>
@@ -295,10 +335,17 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
                 initial="initial"
                 animate="animate"
                 exit="exit"
-                style={{ left: frame?.left ?? sidebarWidth, top: frame?.top ?? 8, bottom: frame?.bottom ?? "8px" }}
-                className="fixed z-40 hidden w-96 flex-col overflow-hidden rounded-2xl bg-card text-foreground shadow-menu outline-none md:flex"
+                style={{
+                  left: frame?.left ?? sidebarWidth,
+                  top: frame?.top ?? 8,
+                  bottom: frame?.bottom ?? 8,
+                  borderTopLeftRadius: frame?.radiusTop ?? 16,
+                  borderBottomLeftRadius: frame?.radiusBottom ?? 16,
+                }}
+                className="fixed z-40 hidden w-96 flex-col overflow-hidden border-r border-border bg-card text-foreground shadow-sheet outline-none md:flex"
               >
                 <InboxPanelBody
+                  headerHeight={frame?.headerHeight}
                   onUnreadCount={syncUnread}
                   onNavigate={(href) => {
                     close(false);
@@ -315,9 +362,11 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
 }
 
 function InboxPanelBody({
+  headerHeight,
   onUnreadCount,
   onNavigate,
 }: {
+  headerHeight?: number;
   onUnreadCount: (count: number) => void;
   onNavigate: (href: string) => void;
 }) {
@@ -556,8 +605,8 @@ function InboxPanelBody({
 
   return (
     <>
-      {/* Tiêu đề như tiêu đề trang (cao 44px, đường kẻ dưới, chữ 13px đậm vừa) để khung cùng nhịp với trang phía sau */}
-      <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 pl-4 pr-2">
+      {/* Tiêu đề như tiêu đề trang (cao bằng thanh đầu của trang, mặc định 44px; đường kẻ dưới; chữ 13px đậm vừa) để khung cùng nhịp với trang phía sau */}
+      <div style={{ height: headerHeight }} className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 pl-4 pr-2">
         <h2 className="min-w-0 flex-1 truncate text-compact font-medium text-foreground">Hộp thư</h2>
         <MenuRoot>
           <MenuTrigger

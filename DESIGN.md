@@ -35,6 +35,8 @@ Hover (`accent`) và đang chọn (`selected`) là hai trạng thái khác nhau.
 
 **Popover, menu:** nền trắng, viền mảnh 1px và 3 lớp bóng qua token `--shadow-menu` (theo Linear) để tách khỏi bảng phía sau; không tự vẽ bóng riêng.
 
+**Khung trượt từ cạnh** (Hộp thư mở từ thanh bên): một ngăn nằm trong thẻ trang, cùng nền `bg-card`, bo theo góc trái của thẻ, mép phải `border-r border-border` kèm bóng ngang rất nhẹ `--shadow-sheet`; không dùng `--shadow-menu` (người dùng thấy khung nổi và sáng quá, 20/10/2026).
+
 **Menu và bộ lọc nhiều cấp (chuẩn trang Nhiệm vụ):** dựng từ `ui/menu` (`MENU_POPUP_CLASS`, `MenuOptionItem`, `MenuActionItem`, `MenuSubmenu`, `MenuSubmenuTitle`), không tự viết hàng hay khung. Hàng cao 28px, chữ 12px, icon 16px trong ô `size-4`; hàng đều nhau, không đường kẻ giữa các nhóm (chỉ một đường kẻ mảnh trước nhóm khác loại như "Kỳ tháng" hoặc "Xóa"). Mục đang chọn = nền accent + chữ đậm; **không dấu tick, không ô tích, không mũi tên** (nhóm có số bộ lọc đang bật thì hiện số bên phải). Menu con thả sang trái, mở khi rê chuột ngay (`delay` 0, đóng sau 80ms), tối đa 3 cấp (nhóm → mốc → lịch/lưới tháng). Hàng chọn giá trị không đóng menu (`MenuOptionItem`); hàng thao tác đóng khi bấm (`MenuActionItem`). Nút lọc báo đang lọc bằng chấm (`ListToolbarFilterButton`), không dùng số để bề rộng nút không đổi. Bộ lọc của trang danh sách dựng bằng `ListToolbarFilterPopover`, riêng trang Nhiệm vụ cần nhiều kiểu chọn nên ghép trực tiếp từ các thành phần trên.
 
 **Bo góc:** `--radius-chip` 8px · `--radius-control` 12px · `--radius-card` 14px · `--radius-panel` 16px · `--radius-menu` 14px. Utility Tailwind `rounded-sm/md/lg/xl` = 8/12/14/16px.
