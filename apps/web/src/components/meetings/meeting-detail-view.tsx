@@ -15,11 +15,10 @@ import { useFeedback } from "@/components/ui/feedback-layer";
 import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { addParticipant, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
 import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
-import { ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
+import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
 import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
 import { SectionCard } from "@/components/meetings/section-card";
 
@@ -105,7 +104,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const canManageParticipants = can("meeting.manage_participants") && !["MINUTES_CONFIRMED", "CANCELLED"].includes(meeting.status);
   // Danh bạ chỉ tải khi mở menu lần đầu
   const [peopleWanted, setPeopleWanted] = React.useState(false);
-  const { people, loading: peopleLoading } = useMeetingPeople(peopleWanted);
+  const directory = useMeetingPeople(peopleWanted);
   const [chairPickerOpen, setChairPickerOpen] = React.useState(false);
   // Người vừa chọn, hiện ngay như đã chọn trong lúc chờ máy chủ và tải lại trang
   const [inviting, setInviting] = React.useState<MeetingPerson[]>([]);
@@ -276,10 +275,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         action={
           canManageParticipants ? (
             <ParticipantsPicker
-              people={people}
+              directory={directory}
               value={pickerValue}
               onChange={(next) => void invite(next)}
-              loading={peopleLoading}
               lockedIds={lockedIds}
               align="end"
               onOpenChange={(open) => open && setPeopleWanted(true)}
@@ -297,18 +295,16 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         {canManageParticipants && chairs.length === 0 ? (
           <div className="mb-2">
             <p className="mb-0.5 text-xs text-muted-foreground">Chủ tọa</p>
-            <PersonPillPicker
-              people={people}
-              valueId=""
-              onSelect={(person) => void chooseChair(person)}
+            <ChairPicker
+              directory={directory}
+              value={null}
+              onChange={(person) => void chooseChair(person)}
               open={chairPickerOpen}
               onOpenChange={(open) => {
                 setChairPickerOpen(open);
                 if (open) setPeopleWanted(true);
               }}
-              loading={peopleLoading}
               emptyLabel="Chọn chủ tọa"
-              menuTitle="Chủ tọa"
             />
           </div>
         ) : null}

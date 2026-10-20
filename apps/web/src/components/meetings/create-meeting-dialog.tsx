@@ -12,11 +12,10 @@ import { Input } from "@/components/ui/input";
 import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import { useAuth } from "@/lib/auth-context";
 import { responseMessage } from "@/components/meetings/meeting-client";
-import { ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
+import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
 import { TimeRangeFields, durationText, fromMinutes, toMinutes } from "@/components/meetings/time-range-picker";
 
 const DEFAULT_START = "08:00";
@@ -47,7 +46,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
   const [endTime, setEndTime] = React.useState(DEFAULT_END);
   const [location, setLocation] = React.useState("");
   const [agenda, setAgenda] = React.useState("");
-  const [chairId, setChairId] = React.useState("");
+  const [chair, setChair] = React.useState<MeetingPerson | null>(null);
   const [attendees, setAttendees] = React.useState<MeetingPerson[]>([]);
   const [openPicker, setOpenPicker] = React.useState<"time" | "location" | "chair" | null>(null);
   const [errors, setErrors] = React.useState<Partial<Record<FieldName, string>>>({});
@@ -57,9 +56,9 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
   const endRef = React.useRef<HTMLInputElement>(null);
   const dateWrapRef = React.useRef<HTMLDivElement>(null);
 
-  const { people, loading: peopleLoading } = useMeetingPeople(open);
+  const directory = useMeetingPeople(open);
   // Người tạo đã dự họp sẵn (thư ký) nên không có trong Thành phần; chủ tọa cũng không lặp lại ở đó
-  const attendeeOptions = React.useMemo(() => people.filter((p) => p.id !== user?.id && p.id !== chairId), [people, user?.id, chairId]);
+  const attendeeHidden = React.useMemo(() => new Set([user?.id, chair?.id].filter((id): id is string => Boolean(id))), [user?.id, chair?.id]);
 
   // Mỗi lần mở là một biểu mẫu mới, ngày mặc định là hôm nay
   React.useEffect(() => {
@@ -70,14 +69,14 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
     setEndTime(DEFAULT_END);
     setLocation("");
     setAgenda("");
-    setChairId("");
+    setChair(null);
     setAttendees([]);
     setOpenPicker(null);
     setErrors({});
     setFailure(null);
   }, [open]);
 
-  const isDirty = Boolean(title.trim() || location.trim() || agenda.trim() || chairId || attendees.length > 0);
+  const isDirty = Boolean(title.trim() || location.trim() || agenda.trim() || chair || attendees.length > 0);
   const { handleOpenChange } = useModalDirtyGuard({ isDirty, onConfirmClose: () => onOpenChange(false) });
 
   // Đổi giờ bắt đầu thì giữ nguyên thời lượng (như lịch Google), không bắt sửa lại giờ kết thúc
@@ -107,8 +106,8 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
     setFailure(null);
     try {
       const initialParticipants = [
-        ...(chairId ? [{ userId: chairId, role: "CHAIR" as const }] : []),
-        ...attendees.filter((p) => p.id !== chairId && p.id !== user?.id).map((p) => ({ userId: p.id, role: "ATTENDEE" as const })),
+        ...(chair ? [{ userId: chair.id, role: "CHAIR" as const }] : []),
+        ...attendees.filter((p) => p.id !== chair?.id && p.id !== user?.id).map((p) => ({ userId: p.id, role: "ATTENDEE" as const })),
       ];
       const response = await fetch("/api/meetings", {
         method: "POST",
@@ -268,22 +267,19 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
               </PopoverContent>
             </PopoverRoot>
 
-            <PersonPillPicker
-              people={people}
-              valueId={chairId}
-              onSelect={(person) => {
-                setChairId(person.id);
+            <ChairPicker
+              directory={directory}
+              value={chair}
+              onChange={(person) => {
+                setChair(person);
                 setAttendees((current) => current.filter((p) => p.id !== person.id));
               }}
-              onClear={() => setChairId("")}
+              onClear={() => setChair(null)}
               open={openPicker === "chair"}
               onOpenChange={(next) => setOpenPicker(next ? "chair" : null)}
-              loading={peopleLoading}
-              emptyLabel="Chủ tọa"
-              menuTitle="Chủ tọa"
             />
 
-            <ParticipantsPicker people={attendeeOptions} value={attendees} onChange={setAttendees} loading={peopleLoading} />
+            <ParticipantsPicker directory={directory} value={attendees} onChange={setAttendees} hiddenIds={attendeeHidden} />
           </div>
           {errors.date ? <FieldError id={`${ids}-date-error`}>{errors.date}</FieldError> : null}
           {errors.end ? <FieldError id={`${ids}-end-error`}>{errors.end}</FieldError> : null}

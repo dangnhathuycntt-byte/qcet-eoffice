@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Combobox } from "@base-ui/react/combobox";
-import { User, UserX } from "lucide-react";
+import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { propertyTriggerVariants } from "@/components/ui/property-control-styles";
@@ -33,10 +33,6 @@ export interface PersonPillPickerProps {
   /** Tên nút cho trình đọc màn hình, ví dụ kèm tên việc con; mặc định là `emptyLabel` */
   triggerLabel?: string;
   triggerRef?: React.Ref<HTMLButtonElement>;
-  /** Tiêu đề menu và tên ô tìm (mặc định "Người chủ trì"; hộp tạo cuộc họp dùng "Chủ tọa") */
-  menuTitle?: string;
-  /** Có thì menu có dòng "Bỏ chọn" khi đã chọn người (trường không bắt buộc) */
-  onClear?: () => void;
 }
 
 /** Chip chọn người chủ trì trong hộp tạo việc (pill `PROPERTY_PILL_CLASS`, menu có ô tìm, gõ không dấu vẫn ra). */
@@ -56,8 +52,6 @@ export function PersonPillPicker({
   appearance = "pill",
   triggerLabel,
   triggerRef,
-  menuTitle = "Người chủ trì",
-  onClear,
 }: PersonPillPickerProps) {
   const [query, setQuery] = React.useState("");
   const selected = people.find((p) => p.id === valueId) ?? null;
@@ -83,12 +77,7 @@ export function PersonPillPicker({
       itemToStringValue={(person) => person.id}
       isItemEqualToValue={(a, b) => a.id === b.id}
       onValueChange={(person) => {
-        if (!person) {
-          // Chỉ "Bỏ chọn" (Combobox.Clear) mới đưa về rỗng
-          onClear?.();
-          onOpenChange(false);
-          return;
-        }
+        if (!person) return;
         onSelect(person);
         setQuery("");
         onOpenChange(false);
@@ -121,18 +110,12 @@ export function PersonPillPicker({
         <Combobox.Backdrop className={SHEET_BACKDROP_CLASS} />
         <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12}>
           <Combobox.Popup
-            aria-label={`Chọn ${menuTitle.toLocaleLowerCase("vi")}`}
+            aria-label="Chọn người chủ trì"
             className={cn("w-64 max-w-[var(--available-width)]", MENU_POPUP_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
           >
-            <MenuSheetHeader title={menuTitle} />
-            <Combobox.Input aria-label={`Tìm ${menuTitle.toLocaleLowerCase("vi")}`} placeholder="Tìm người…" render={<Input variant="menu" />} />
+            <MenuSheetHeader title="Người chủ trì" />
+            <Combobox.Input aria-label="Tìm người chủ trì" placeholder="Tìm người…" render={<Input variant="menu" />} />
             <div aria-hidden className="-mx-1 my-1 h-px bg-border" />
-            {onClear && selected && !query ? (
-              <Combobox.Clear className={cn(MENU_OPTION_ROW_CLASS, "w-full text-muted-foreground")}>
-                <UserX className="size-3.5" />
-                Bỏ chọn
-              </Combobox.Clear>
-            ) : null}
             <Combobox.Empty>
               <div className="px-2 py-1.5 text-xs text-muted-foreground">
                 {people.length === 0 ? (loading ? "Đang tải danh sách…" : "Chưa có nhân sự trong đơn vị này") : "Không tìm thấy người phù hợp"}

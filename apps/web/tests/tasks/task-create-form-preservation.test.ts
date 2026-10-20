@@ -265,11 +265,8 @@ describe("CreateTaskModal rendered form (T21 / T23 / SK-03 / SK-04)", () => {
       path.resolve(__dirname, "..", "..", "src", "components", "tasks", "create", "person-pill-picker.tsx"),
       "utf-8"
     );
-    // Nhãn menu dựng từ `menuTitle` (hộp tạo cuộc họp dùng "Chủ tọa"); mặc định vẫn đọc là "Chọn người chủ trì"
     assert.ok(
-      modalSource.includes("<PersonPillPicker") &&
-        pickerSource.includes('menuTitle = "Người chủ trì"') &&
-        pickerSource.includes('aria-label={`Chọn ${menuTitle.toLocaleLowerCase("vi")}`}'),
+      modalSource.includes("<PersonPillPicker") && pickerSource.includes('aria-label="Chọn người chủ trì"'),
       "primary assignee picker must render",
     );
     assert.ok(modalSource.includes('id="create-task-due-date"') && modalSource.includes('title="Hạn hoàn thành"'), "primary due-date field must render with its full name");
