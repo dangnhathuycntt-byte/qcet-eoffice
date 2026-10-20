@@ -47,8 +47,10 @@ function statusText(recording: MeetingRecordingSummary, now: number): string {
     case "QUEUED":
       return "Đang chờ xử lý";
     case "PROCESSING": {
-      const progress = recording.progress ? ` · ${recording.progress.done}/${recording.progress.total} đoạn` : "";
-      return `Đang chép lời${progress} · ${minutesSince(recording.createdAt, now)} phút`;
+      const minutes = minutesSince(recording.createdAt, now);
+      // Chưa chép xong đoạn nào: máy chủ đang nghe cả bản ghi để soạn biên bản (đường nhanh) hoặc đoạn đầu còn chạy, chưa có số đoạn để báo
+      if (!recording.progress || recording.progress.done === 0) return `Đang nghe bản ghi · ${minutes} phút`;
+      return `Đang chép lời · ${recording.progress.done}/${recording.progress.total} đoạn · ${minutes} phút`;
     }
     case "READY":
       return "Sẵn sàng";
