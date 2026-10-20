@@ -24,6 +24,7 @@ import { FILE_PURGE_HANDLERS } from "@/server/files/file-object-purge";
 import { scanDossierReminders } from "@/server/dossiers/dossier-reminder-scanner";
 import { runTaskRecurrences } from "@/server/tasks/task-recurrence-service";
 import { AGENT_JOB_HANDLERS, agentJobTimeoutMs } from "./agent-jobs";
+import { MEETING_RECORDING_JOB_HANDLERS } from "@/server/meetings/recording-job";
 
 export const OUTBOX_HANDLERS = {
   ...TASK_NOTIFICATION_HANDLERS,
@@ -31,6 +32,7 @@ export const OUTBOX_HANDLERS = {
   ...DOSSIER_NOTIFICATION_HANDLERS,
   ...FILE_PURGE_HANDLERS,
   ...AGENT_JOB_HANDLERS,
+  ...MEETING_RECORDING_JOB_HANDLERS,
 };
 
 const BATCH_LIMIT = 50;

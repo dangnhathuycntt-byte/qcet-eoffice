@@ -2111,8 +2111,9 @@ enum MeetingRecordingStatus {
   FAILED
 }
 
-/// Bản ghi âm cuộc họp: tệp âm thanh gửi lên theo từng phần (UPLOADING), ghép thành một FileObject rồi chờ Gemini chép lời và
-/// soạn biên bản đề xuất (QUEUED, PROCESSING, READY). Chỉ người soạn biên bản (chủ tọa, thư ký, người tổ chức) xem và xử lý.
+/// Bản ghi âm cuộc họp: âm thanh gửi lên theo từng phần (UPLOADING), ghép thành một tệp trong `UPLOADS_DIR/recordings/<id>/`
+/// (không qua FileObject, không có đường tải về) rồi chờ Gemini chép lời và soạn biên bản đề xuất (QUEUED, PROCESSING, READY);
+/// âm thanh bị xóa khi xử lý xong. Chỉ người soạn biên bản (chủ tọa, thư ký, người tổ chức) xem và xử lý.
 /// `consentAt`: người ghi đã xác nhận thông báo cho người dự họp trước khi ghi. Kết quả chỉ là bản nháp, người dùng tự duyệt.
 model MeetingRecording {
   id           String                     @id @default(cuid())
@@ -2127,6 +2128,7 @@ model MeetingRecording {
   partCount    Int                        @default(0) @map("part_count")
   byteSize     BigInt                     @default(0) @map("byte_size")
   durationSec  Int?                       @map("duration_sec")
+  /// Chưa dùng: âm thanh lưu ngoài FileObject (xem chú thích model). Giữ cột để không phải xóa cột đã áp dụng ở dev/test.
   fileObjectId String?                    @map("file_object_id")
   fileObject   FileObject?                @relation(fields: [fileObjectId], references: [id], onDelete: SetNull)
   consentAt    DateTime                   @map("consent_at")

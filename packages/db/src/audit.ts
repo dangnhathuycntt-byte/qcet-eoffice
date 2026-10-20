@@ -113,6 +113,10 @@ export const AuditAction = {
   // Việc nền của agent (outbox): một sự kiện tóm tắt mỗi lần chạy, không ghi nội dung payload
   AGENT_JOB_COMPLETED: "AGENT_JOB_COMPLETED",
   AGENT_JOB_FAILED: "AGENT_JOB_FAILED",
+
+  // Ghi âm cuộc họp: chỉ ghi mã bản ghi và cuộc họp, không ghi nội dung chép lời
+  MEETING_RECORDING_CREATED: "MEETING_RECORDING_CREATED",
+  MEETING_RECORDING_DELETED: "MEETING_RECORDING_DELETED",
 } as const;
 
 export type AuditActionType =
@@ -167,6 +171,7 @@ export const AuditEntityType = {
   BODY_MEMBERSHIP: "BodyMembership",
   ASSISTANT_CONVERSATION: "AssistantConversation",
   AGENT_JOB: "AgentJob",
+  MEETING_RECORDING: "MeetingRecording",
 } as const;
 
 /**
