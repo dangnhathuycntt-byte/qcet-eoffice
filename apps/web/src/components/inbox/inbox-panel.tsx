@@ -88,13 +88,18 @@ interface PanelFrame {
   headerHeight?: number;
 }
 
+/** Phần tử trên cùng của `root` tại điểm (bỏ qua lớp phủ như khung đang đóng dần, toast). */
+function topmostWithin(root: HTMLElement, x: number, y: number): Element | undefined {
+  return document.elementsFromPoint(x, y).find((el) => root.contains(el));
+}
+
 /**
  * Thẻ trang đang hiện: chính `#main-content` (trang thường, khung cao hết màn), hoặc thẻ nằm lùi bên trong nó (chi tiết nhiệm
  * vụ, Sổ văn bản). Tìm từ điểm gần góc trên trái vùng nội dung ngược lên: phần tử có nền, có bo góc và bắt đầu sát góc đó.
  */
 function findPageCard(main: HTMLElement): HTMLElement {
   const area = main.getBoundingClientRect();
-  for (let el = document.elementFromPoint(area.left + 32, area.top + 32); el && el !== main && main.contains(el); el = el.parentElement) {
+  for (let el = topmostWithin(main, area.left + 32, area.top + 32); el && el !== main; el = el.parentElement) {
     const style = getComputedStyle(el);
     const rect = el.getBoundingClientRect();
     const painted = style.backgroundColor !== "transparent" && style.backgroundColor !== "rgba(0, 0, 0, 0)";
@@ -107,7 +112,7 @@ function findPageCard(main: HTMLElement): HTMLElement {
 
 /** Thanh đầu của trang: có kẻ dưới, sát mép trên thẻ, rộng quá nửa thẻ; trang không có (như Lịch) thì khung giữ 44px. */
 function readHeaderHeight(card: HTMLElement, cardRect: DOMRect, innerTop: number): number | undefined {
-  for (let el = document.elementFromPoint(cardRect.left + 40, innerTop + 4); el && el !== card && card.contains(el); el = el.parentElement) {
+  for (let el = topmostWithin(card, cardRect.left + 40, innerTop + 4); el && el !== card; el = el.parentElement) {
     const rect = el.getBoundingClientRect();
     const ruled = parseFloat(getComputedStyle(el).borderBottomWidth) > 0;
     if (ruled && Math.abs(rect.top - innerTop) <= 2 && rect.width >= cardRect.width / 2 && rect.height >= 36 && rect.height <= 56) {
