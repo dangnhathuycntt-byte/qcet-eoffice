@@ -20,6 +20,7 @@ import { IconSidebarMail } from "@/components/layout/sidebar-rounded-icons";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
   getInboxEmptyCopy,
+  getInboxEmptyGlyph,
   INBOX_ARCHIVE_KEY,
   INBOX_TOGGLE_READ_KEY,
   INBOX_UNDO_TOAST_MS as UNDO_TOAST_MS,
@@ -687,10 +688,10 @@ function InboxPanelBody({
         ) : items.length === 0 ? (
           <EmptyState
             density="compact"
-            illustration={empty.illustration}
+            glyph={getInboxEmptyGlyph(empty, archivedView && !categoryFiltered)}
             title={empty.title}
             description={empty.description}
-            className="py-12"
+            className="min-h-full justify-center pb-16"
             action={
               categoryFiltered ? (
                 <Button variant="outline" size="xs" onClick={() => changeFilter({ category: "all" })}>

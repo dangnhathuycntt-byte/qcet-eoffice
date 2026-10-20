@@ -6,7 +6,7 @@ import { Archive, ArchiveRestore, Mail, MailOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import type { IllustrationName } from "@/components/ui/empty-state";
+import type { EmptyGlyphName, IllustrationName } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { getTypeBadge } from "@qcet/shared/lib/notification-triage";
 import {
@@ -76,6 +76,21 @@ export function getInboxEmptyCopy({
     return { illustration: "all-done", title: "Đã đọc hết", description: "Không còn thông báo nào chưa đọc.", action: "show-all" };
   }
   return { illustration: "inbox", title: "Không có thông báo", description: "Thông báo gửi tới Thầy/Cô sẽ hiện ở đây." };
+}
+
+/**
+ * Icon lớn cho Hộp thư trống (thay tranh vẽ tay từ 20/10/2026, theo trang trống Hộp thư của Linear): theo khóa tranh của nội dung
+ * ở trên, riêng bộ lọc "Đã lưu trữ" dùng hộp lưu trữ.
+ */
+export function getInboxEmptyGlyph(copy: InboxEmptyCopy, archived: boolean): EmptyGlyphName {
+  switch (copy.illustration) {
+    case "load-error":
+    case "no-results":
+    case "all-done":
+      return copy.illustration;
+    default:
+      return archived ? "archive" : "inbox";
+  }
 }
 
 /** Hàng thông báo hai dòng của Hộp thư (trang /inbox và khung nổi cạnh thanh bên). */

@@ -47,6 +47,7 @@ import {
 import { Pressable } from "@/components/ui/pressable";
 import {
   getInboxEmptyCopy,
+  getInboxEmptyGlyph,
   INBOX_ARCHIVE_KEY,
   INBOX_TOGGLE_READ_KEY,
   INBOX_UNDO_TOAST_MS as UNDO_TOAST_MS,
@@ -791,7 +792,7 @@ export function InboxView() {
               isWide && detailState === "none" ? null : (
                 <EmptyState
                   density="compact"
-                  illustration={emptyCopy.illustration}
+                  glyph={getInboxEmptyGlyph(emptyCopy, archivedView)}
                   title={emptyCopy.title}
                   description={emptyCopy.description}
                   action={emptyActionButton}
@@ -840,20 +841,21 @@ export function InboxView() {
         <section data-slot="inbox-detail-pane" className="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
           {detailState === "none" ? (
             emptyCopy ? (
+              // Icon lớn đặt giữa khung như trang trống Hộp thư của Linear (không dùng khối căn trái của trang danh sách)
               <EmptyState
-                density="page"
-                className="flex-1"
-                illustration={emptyCopy.illustration}
+                density="compact"
+                className="flex-1 justify-center pb-16"
+                glyph={getInboxEmptyGlyph(emptyCopy, archivedView)}
                 title={emptyCopy.title}
                 description={emptyCopy.description}
                 action={emptyActionButton}
               />
             ) : status === "loading" ? null : (
-              // Có thông báo nhưng chưa chọn: tranh cỡ trang, nhân vật chỉ tay sang danh sách bên trái
+              // Có thông báo nhưng chưa chọn: thẻ danh sách có con trỏ, như "No notification selected" của Linear
               <EmptyState
-                density="page"
-                className="flex-1"
-                illustration="inbox-select"
+                density="compact"
+                className="flex-1 justify-center pb-16"
+                glyph="inbox-select"
                 title="Chọn một thông báo để xem"
                 description={unreadCount ? `Còn ${unreadCount} thông báo chưa đọc.` : undefined}
               />
@@ -909,7 +911,7 @@ export function InboxView() {
                 ) : (
                   <EmptyState
                     density="compact"
-                    illustration={detailState === "missing" ? undefined : "load-error"}
+                    glyph={detailState === "missing" ? undefined : "load-error"}
                     title={detailState === "missing" ? "Không thể mở thông báo này" : "Không tải được thông báo"}
                     action={
                       detailState === "missing" ? (

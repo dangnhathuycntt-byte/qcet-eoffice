@@ -88,9 +88,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/portal/') ||
     // Tài liệu hướng dẫn: nội dung tĩnh, ai cũng đọc được (người dùng duyệt 14/10/2026), không gọi API cần đăng nhập.
     pathname === '/docs' ||
-    pathname.startsWith('/docs/') ||
-    // Bảng mẫu thành phần: chỉ tồn tại ở môi trường phát triển (production trả 404).
-    (process.env.NODE_ENV !== 'production' && pathname === '/design')
+    pathname.startsWith('/docs/')
   ) {
     return NextResponse.next();
   }

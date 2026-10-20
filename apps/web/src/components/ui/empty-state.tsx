@@ -5,6 +5,8 @@ export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   icon?: React.ReactNode;
   /** Tranh nét mực trong `public/design/illustrations/` (vd. "dossier"), dùng khi chưa có dữ liệu. Có tranh thì bỏ qua `icon`. */
   illustration?: IllustrationName;
+  /** Icon lớn 56px cho trạng thái thường ngày (Hộp thư trống, chưa chọn, lỗi tải…); có icon lớn thì bỏ qua tranh và `icon`. */
+  glyph?: EmptyGlyphName;
   title: React.ReactNode;
   description?: React.ReactNode;
   /** Nút hành động tiếp theo, ví dụ "Tạo nhiệm vụ" hoặc "Xóa bộ lọc". */
@@ -38,6 +40,27 @@ export type IllustrationName =
   | "reports"
   | "no-results"
   | "welcome";
+
+/** Icon lớn trong `public/design/glyphs/` (ảnh 224px chỉ giữ kênh alpha, hiện 56px). */
+export type EmptyGlyphName = "inbox" | "inbox-select" | "all-done" | "archive" | "no-results" | "load-error";
+
+/**
+ * Icon lớn của trạng thái trống theo icon khay thư ở trang trống Hộp thư của Linear (người dùng gửi ảnh 20/10/2026): một vật
+ * duy nhất, nét viền đôi (dải nét dày viền bằng hai nét mảnh), bo tròn, không tô, không chữ; tấm xếp chồng trên nền viền đứt cho
+ * kết quả lọc rỗng. Tô bằng mask như tranh nét mực nên màu theo `bg-*`. Đứng yên, không có hiệu ứng: trạng thái thường ngày
+ * phải yên. Tranh vẽ tay (`InkIllustration`) để dành cho trang chưa có dữ liệu lần đầu.
+ */
+export function EmptyGlyph({ name, className }: { name: EmptyGlyphName; className?: string }) {
+  const mask = `url(/design/glyphs/${name}.png) center / contain no-repeat`;
+  return (
+    <span
+      data-slot="empty-state-glyph"
+      aria-hidden="true"
+      className={cn("block size-14 shrink-0 bg-foreground/85", className)}
+      style={{ WebkitMask: mask, mask }}
+    />
+  );
+}
 
 /**
  * Tranh có sẵn màu, hiện nguyên ảnh thay cho tranh nét mực tô bằng mask. Hiện chưa có tranh nào: 17/10/2026 người dùng chọn đổi cả bộ
@@ -76,12 +99,14 @@ export function InkIllustration({ name, className, align = "center" }: { name: I
 }
 
 /** Trạng thái không có dữ liệu: nói rõ vì sao trống và việc nên làm tiếp. */
-export function EmptyState({ icon, illustration, title, description, action, density = "default", className, ...props }: EmptyStateProps) {
+export function EmptyState({ icon, illustration, glyph, title, description, action, density = "default", className, ...props }: EmptyStateProps) {
   if (density === "page") {
     return (
       <div data-density={density} className={cn("flex w-full items-center justify-center px-6 py-12", className)} {...props}>
         <div className="flex w-full max-w-[340px] flex-col gap-6 text-left">
-          {illustration ? (
+          {glyph ? (
+            <EmptyGlyph name={glyph} />
+          ) : illustration ? (
             <InkIllustration name={illustration} align="left" className="h-40 w-[172px]" />
           ) : icon ? (
             <div className="text-muted-foreground [&_svg]:size-10">{icon}</div>
@@ -105,7 +130,10 @@ export function EmptyState({ icon, illustration, title, description, action, den
       )}
       {...props}
     >
-      {illustration ? (
+      {glyph ? (
+        // Cách chữ 16px như Linear (gap 6px + 10px)
+        <EmptyGlyph name={glyph} className="mb-2.5" />
+      ) : illustration ? (
         <InkIllustration name={illustration} className="mb-1" />
       ) : icon ? (
         <div className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-muted-foreground [&_svg]:size-6">
