@@ -183,16 +183,18 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
 
         <OfflineBanner />
 
-        {/* Inner Content Panel: White canvas with rounded top-left corner */}
+        {/* Inner Content Panel: White canvas with rounded top-left corner.
+            Thẻ trang cách mép sidebar 8px (`md:ml-2`) như thẻ của chi tiết nhiệm vụ: nút thu gọn thanh bên nằm gọn trong khe đó
+            thay vì đè lên viền thẻ (người dùng yêu cầu 20/10/2026). Trang workspace tự lùi thẻ bằng lề trong của nó. */}
         <main
           id="main-content"
           tabIndex={-1}
           className={isWorkspaceShell
             ? "flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
             : isFullHeightPane
-            ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-2xl md:border md:border-border md:bg-card md:shadow-2xs outline-none overflow-hidden"
+            ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:ml-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-2xl md:border md:border-border md:bg-card md:shadow-2xs outline-none overflow-hidden"
             : cn(
-                "flex-1 flex flex-col md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
+                "flex-1 flex flex-col md:ml-2 md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
                 // Danh sách nhiệm vụ: khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết
                 isTasksList ? "md:rounded-2xl md:border-r md:border-b md:mr-2 md:mb-2" : "md:rounded-tl-2xl",
                 hideDesktopTopbar && (isTasksList ? "md:mt-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px-var(--app-statusbar))]")

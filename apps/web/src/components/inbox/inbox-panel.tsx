@@ -61,7 +61,7 @@ const READ_TABS: { id: ReadFilter; label: string }[] = [
 ];
 
 const CATEGORY_OPTIONS: { id: NotificationTriageTab; label: string }[] = [
-  { id: "all", label: "Mọi loại" },
+  { id: "all", label: "Tất cả" },
   { id: "action_required", label: "Việc cần làm" },
   { id: "reminders", label: "Nhắc hạn" },
 ];
@@ -690,12 +690,13 @@ function InboxPanelBody({
             density="compact"
             glyph={getInboxEmptyGlyph(empty, archivedView && !categoryFiltered)}
             title={empty.title}
-            description={empty.description}
+            // Khung không có ô tìm nên không nhắc "từ khóa" như trang /inbox
+            description={categoryFiltered ? "Chưa có thông báo nào thuộc loại này." : empty.description}
             className="min-h-full justify-center pb-16"
             action={
               categoryFiltered ? (
                 <Button variant="outline" size="xs" onClick={() => changeFilter({ category: "all" })}>
-                  Xem mọi loại
+                  Xem tất cả
                 </Button>
               ) : filter.read !== "all" ? (
                 <Button variant="outline" size="xs" onClick={() => changeFilter({ read: "all" })}>

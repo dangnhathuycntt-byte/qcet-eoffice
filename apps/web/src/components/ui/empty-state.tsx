@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { IsoStackGlyph } from "@/components/ui/iso-stack-glyph";
 
 export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   icon?: React.ReactNode;
@@ -51,6 +52,8 @@ export type EmptyGlyphName = "inbox" | "inbox-select" | "all-done" | "archive" |
  * phải yên. Tranh vẽ tay (`InkIllustration`) để dành cho trang chưa có dữ liệu lần đầu.
  */
 export function EmptyGlyph({ name, className }: { name: EmptyGlyphName; className?: string }) {
+  // Bản thử SVG có chuyển động (theo đoạn quay của người dùng 20/10/2026); các icon khác còn là ảnh chờ người dùng duyệt kiểu
+  if (name === "no-results") return <IsoStackGlyph className={className} />;
   const mask = `url(/design/glyphs/${name}.png) center / contain no-repeat`;
   return (
     <span
