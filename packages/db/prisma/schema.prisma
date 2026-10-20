@@ -194,6 +194,8 @@ model User {
   dossiersArchived                  WorkDossier[]              @relation("DossierArchivedBy")
   dossierItemsAdded                 DossierItem[]              @relation("DossierItemAddedBy")
   organizedMeetings                 Meeting[]                  @relation("MeetingOrganizer")
+  personalNotes                     PersonalNote[]
+  meetingRecordings                 MeetingRecording[]         @relation("MeetingRecordingCreator")
   meetingParticipations             MeetingParticipant[]
   meetingResolutionsLead            MeetingResolution[]        @relation("MeetingResolutionLead")
 
@@ -2049,6 +2051,7 @@ model Meeting {
   organizer            User                   @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
   participants         MeetingParticipant[]
   resolutions          MeetingResolution[]
+  recordings           MeetingRecording[]
   createdAt            DateTime               @default(now()) @map("created_at")
   updatedAt            DateTime               @updatedAt @map("updated_at")
 
@@ -2100,6 +2103,72 @@ model MeetingResolution {
   @@map("meeting_resolutions")
 }
 
+enum MeetingRecordingStatus {
+  UPLOADING
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+/// Bản ghi âm cuộc họp: tệp âm thanh gửi lên theo từng phần (UPLOADING), ghép thành một FileObject rồi chờ Gemini chép lời và
+/// soạn biên bản đề xuất (QUEUED, PROCESSING, READY). Chỉ người soạn biên bản (chủ tọa, thư ký, người tổ chức) xem và xử lý.
+/// `consentAt`: người ghi đã xác nhận thông báo cho người dự họp trước khi ghi. Kết quả chỉ là bản nháp, người dùng tự duyệt.
+model MeetingRecording {
+  id           String                     @id @default(cuid())
+  meetingId    String                     @map("meeting_id")
+  meeting      Meeting                    @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  createdById  String                     @map("created_by_id")
+  createdBy    User                       @relation("MeetingRecordingCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  /// "live" (ghi trực tiếp trên trình duyệt) hoặc "file" (tải tệp có sẵn)
+  source       String                     @db.VarChar(8)
+  status       MeetingRecordingStatus     @default(UPLOADING)
+  mimeType     String                     @map("mime_type") @db.VarChar(64)
+  partCount    Int                        @default(0) @map("part_count")
+  byteSize     BigInt                     @default(0) @map("byte_size")
+  durationSec  Int?                       @map("duration_sec")
+  fileObjectId String?                    @map("file_object_id")
+  fileObject   FileObject?                @relation(fields: [fileObjectId], references: [id], onDelete: SetNull)
+  consentAt    DateTime                   @map("consent_at")
+  /// Bản chép từng đoạn đã xong [{ index, startSec, endSec, text }]: làm lại việc bị ngắt thì chạy tiếp từ đây
+  windows      Json?
+  transcript   String?
+  minutesDraft String?                    @map("minutes_draft")
+  /// Quyết định [string] và việc được giao [{ task, owner, deadline }] do mô hình rút ra
+  decisions    Json?
+  actionItems  Json?                      @map("action_items")
+  model        String?                    @db.VarChar(64)
+  error        String?                    @db.VarChar(500)
+  processedAt  DateTime?                  @map("processed_at")
+  createdAt    DateTime                   @default(now()) @map("created_at")
+  updatedAt    DateTime                   @updatedAt @map("updated_at")
+
+  @@index([meetingId, createdAt(sort: Desc)])
+  @@index([status, updatedAt])
+  @@index([createdById])
+  @@index([fileObjectId])
+  @@map("meeting_recordings")
+}
+
+/// Ghi chú cá nhân. Riêng tư: chỉ chủ nhân xem và sửa, không chia sẻ, không vào tìm kiếm chung, không gửi cho Trợ lý.
+/// Có thể gắn với một đối tượng (`meeting`, `task`) để xem lại cạnh nội dung đó; gắn không cấp thêm quyền xem đối tượng.
+model PersonalNote {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String   @default("") @db.VarChar(200)
+  content    String   @default("")
+  pinned     Boolean  @default(false)
+  entityType String?  @map("entity_type") @db.VarChar(16)
+  entityId   String?  @map("entity_id") @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, pinned, updatedAt(sort: Desc)])
+  @@index([userId, entityType, entityId])
+  @@map("personal_notes")
+}
+
 model FileObject {
   id              String             @id @default(uuid())
   storageKey      String             @unique @map("storage_key") @db.Text
@@ -2124,6 +2193,7 @@ model FileObject {
   attachments      DocumentAttachment[]
   dossierItems     DossierItem[]
   meetingMaterials Meeting[]          @relation("MeetingMaterialsFile")
+  meetingRecordings MeetingRecording[]
 
   @@index([contentHash])
   @@index([uploadedById])
