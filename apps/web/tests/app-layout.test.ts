@@ -14,7 +14,7 @@ describe("Two-Tier Layout Configuration & Breadcrumbs", () => {
     assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", label("/tasks")]);
     // /unit-tasks permanent-redirects into /tasks, so it carries the same title.
     assert.deepStrictEqual(resolveBreadcrumb("/unit-tasks"), ["QCET E-Office", label("/tasks")]);
-    assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", label("/calendar")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/meetings"), ["QCET E-Office", label("/meetings")]);
     // /dashboard redirects to the workbench, its registry alias target.
     assert.deepStrictEqual(resolveBreadcrumb("/dashboard"), ["QCET E-Office", label("/")]);
     assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", label("/org")]);

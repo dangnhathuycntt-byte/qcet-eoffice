@@ -144,6 +144,20 @@ export async function middleware(request: NextRequest) {
     return redirectWithCorrelation(url, 308);
   }
 
+  // Trang Lịch công tác đã bỏ (20/10/2026): /calendar về danh sách Cuộc họp, /calendar/meetings/:id về /meetings/:id.
+  // Giữ vĩnh viễn vì đường dẫn cũ còn nằm trong thông báo, ghi chú và liên kết đã gửi.
+  if (pathname === '/calendar' || pathname === '/calendar/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/meetings';
+    url.search = '';
+    return redirectWithCorrelation(url, 308);
+  }
+  if (pathname.startsWith('/calendar/meetings/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(/^\/calendar\/meetings\//, '/meetings/');
+    return redirectWithCorrelation(url, 308);
+  }
+
   // 4. Extract session token cookie for UI routes
   const token = extractTokenFromRequest(request);
   const hasToken = Boolean(token && token.trim().length > 0);
@@ -167,7 +181,7 @@ export async function middleware(request: NextRequest) {
     return nextWithCorrelation();
   }
 
-  // 8. Protected UI routes (e.g. /tasks, /documents, /calendar, /org, etc.)
+  // 8. Protected UI routes (e.g. /tasks, /documents, /meetings, /org, etc.)
   if (!hasToken) {
     // Completely unauthenticated request -> redirect to /login with returnTo
     const originalPath = `${pathname}${request.nextUrl.search}`;

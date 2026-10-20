@@ -249,14 +249,24 @@ export function resolveUrlMetadata(rawUrl: string, currentTaskTitle?: string): U
           entityType: "document",
         };
       }
-      if (pathname.includes("/schedule/") || pathname.includes("/lich-tuan/") || pathname.includes("/meetings/")) {
+      if (pathname.includes("/meetings/")) {
+        return {
+          url,
+          title: "Cuộc họp",
+          domain: "QCET E-Office",
+          description: "Chương trình, thành phần và biên bản cuộc họp",
+          isInternalQcet: true,
+          entityType: "meeting",
+        };
+      }
+      if (pathname.includes("/schedule/") || pathname.includes("/lich-tuan/")) {
         return {
           url,
           title: "Lịch công tác trường",
           domain: "QCET E-Office",
           description: "Lịch tuần và sự kiện công tác toàn trường",
           isInternalQcet: true,
-          entityType: pathname.includes("/meetings/") ? "meeting" : "schedule",
+          entityType: "schedule",
         };
       }
     }

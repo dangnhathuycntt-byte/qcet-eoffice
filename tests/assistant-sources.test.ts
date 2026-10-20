@@ -19,7 +19,7 @@ const DOC_1 = source("document", "d1", "123/QĐ-UBND", "Quyết định phân c�
 describe("Trợ lý: đường dẫn nguồn", () => {
   test("href theo loại bản ghi, mã văn bản được mã hóa", () => {
     assert.equal(assistantSourceHref("task", "t1"), "/tasks/t1");
-    assert.equal(assistantSourceHref("meeting", "m1"), "/calendar/meetings/m1");
+    assert.equal(assistantSourceHref("meeting", "m1"), "/meetings/m1");
     assert.equal(assistantSourceHref("document", "a b/c"), "/documents?docId=a%20b%2Fc");
   });
 

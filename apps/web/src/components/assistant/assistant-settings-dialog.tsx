@@ -13,7 +13,7 @@ import {
   type AssistantSkillDTO,
 } from "@qcet/contracts/assistant";
 import { Button } from "@/components/ui/button";
-import { DialogFooter, DialogForm, StandardDialog } from "@/components/ui/dialog";
+import { DialogFooter, DialogForm, FieldError, StandardDialog } from "@/components/ui/dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
@@ -434,15 +434,6 @@ function SkillForm({ skill, initialPrompt = "", onDone }: { skill: AssistantSkil
         </Button>
       </DialogFooter>
     </DialogForm>
-  );
-}
-
-/** Lỗi của một ô nhập: dòng `text-xs text-destructive` ngay dưới ô, đọc to khi hiện. */
-function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
-  return (
-    <p id={id} role="alert" className="text-xs text-destructive">
-      {children}
-    </p>
   );
 }
 

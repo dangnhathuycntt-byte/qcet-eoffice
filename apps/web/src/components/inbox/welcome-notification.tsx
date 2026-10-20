@@ -44,7 +44,7 @@ const INSTALL_ENTRY: WelcomeEntry = {
 const AREAS = [
   { href: "/tasks", title: "Nhiệm vụ", description: "Giao việc, theo dõi tiến độ đến khi hoàn thành.", glyph: "tasks" },
   { href: "/documents?type=inbox", title: "Văn bản", description: "Văn bản đến, văn bản đi, tờ trình và hồ sơ công việc.", glyph: "doc-in" },
-  { href: "/calendar", title: "Lịch công tác", description: "Lịch họp và lịch công tác chung của đơn vị.", glyph: "calendar" },
+  { href: "/meetings", title: "Cuộc họp", description: "Chương trình, biên bản và quyết nghị các cuộc họp của đơn vị.", glyph: "calendar" },
   { href: "/org", title: "Cơ cấu & Danh bạ", description: "Tra cứu đơn vị, người phụ trách và liên hệ.", glyph: "directory" },
 ] as const satisfies ReadonlyArray<{ href: string; title: string; description: string; glyph: EmptyGlyphName }>;
 

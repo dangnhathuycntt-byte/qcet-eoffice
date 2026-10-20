@@ -14,7 +14,7 @@ describe("Sprint 2 Integration & Navigation", () => {
     const requiredFiles = [
       "page.tsx",
       "tasks/page.tsx",
-      "calendar/page.tsx",
+      "meetings/page.tsx",
       "org/page.tsx",
     ];
 

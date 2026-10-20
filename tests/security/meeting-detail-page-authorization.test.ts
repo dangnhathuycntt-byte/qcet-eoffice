@@ -31,7 +31,7 @@ import { readMeetingDetailPageData } from '../../apps/api/src/server/services/me
 
 const DAY_MS = 86_400_000;
 
-// Trang /calendar/meetings/[id] phải áp cùng quy tắc meeting.read với GET /api/meetings/[id]:
+// Trang /meetings/[id] phải áp cùng quy tắc meeting.read với GET /api/meetings/[id]:
 // người không có quan hệ với cuộc họp không đọc được chi tiết (trang trả notFound()).
 describe('Trang chi tiết cuộc họp: kiểm quyền đọc theo đối tượng (BOLA)', () => {
   const runId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -168,7 +168,7 @@ describe('Trang chi tiết cuộc họp: kiểm quyền đọc theo đối tư�
 });
 
 describe('Trang chi tiết cuộc họp: metadata không đọc dữ liệu được bảo vệ', () => {
-  const source = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/app/calendar/meetings/[id]/page.tsx'), 'utf8');
+  const source = fs.readFileSync(path.join(process.cwd(), 'apps/web/src/app/meetings/[id]/page.tsx'), 'utf8');
 
   test('generateMetadata trả tiêu đề tĩnh, không gọi service hay prisma', () => {
     const match = source.match(/export async function generateMetadata[\s\S]*?\n\}\n/);

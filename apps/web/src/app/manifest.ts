@@ -58,10 +58,10 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
       },
       {
-        name: "Lịch công tác",
-        short_name: "Lịch",
-        description: "Xem lịch công tác tuần và sự kiện nhà trường",
-        url: "/calendar",
+        name: "Cuộc họp",
+        short_name: "Họp",
+        description: "Xem cuộc họp, biên bản và quyết nghị",
+        url: "/meetings",
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
       },
       {

@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
       bodyId: searchParams.get('bodyId') || undefined,
       unitId: searchParams.get('unitId') || undefined,
       status: searchParams.get('status') || undefined,
+      bucket: searchParams.get('bucket') || undefined,
       search: searchParams.get('search') || undefined,
       from: searchParams.get('from') || undefined,
       to: searchParams.get('to') || undefined,

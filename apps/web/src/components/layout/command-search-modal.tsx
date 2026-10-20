@@ -402,17 +402,17 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         },
       },
       {
-        id: "nav-calendar",
-        title: canonicalNavLabel("/calendar", "Lịch"),
-        description: "Lịch công tác trường và kế hoạch làm việc tuần/tháng",
+        id: "nav-meetings",
+        title: canonicalNavLabel("/meetings", "Cuộc họp"),
+        description: "Cuộc họp của đơn vị: chương trình, biên bản và quyết nghị",
         category: "navigation",
         icon: Calendar,
         shortcut: "C",
-        keywords: ["di toi lich", "lich", "calendar", "ke hoach tuan", "lich cong tac"],
+        keywords: ["di toi cuoc hop", "cuoc hop", "hop", "meetings", "lich hop", "bien ban", "lich cong tac"],
         action: (newTab) => {
           handleClose();
-          if (newTab) window.open("/calendar", "_blank");
-          else router.push("/calendar");
+          if (newTab) window.open("/meetings", "_blank");
+          else router.push("/meetings");
         },
       },
       {

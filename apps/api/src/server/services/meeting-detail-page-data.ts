@@ -2,7 +2,7 @@ import prisma from "@qcet/db/prisma";
 import { ApiError } from "@/server/api/errors";
 import { MeetingService } from "@/server/services/meeting-service";
 
-// Dữ liệu đọc cho trang chi tiết cuộc họp (GET /api/page-data/meetings/[id], trang src/app/calendar/meetings/[id]/page.tsx gọi).
+// Dữ liệu đọc cho trang chi tiết cuộc họp (GET /api/page-data/meetings/[id], trang src/app/meetings/[id]/page.tsx gọi).
 // Kiểm meeting.read qua MeetingService.getMeeting (cùng quy tắc với GET /api/meetings/[id]) trước khi đọc.
 
 /**

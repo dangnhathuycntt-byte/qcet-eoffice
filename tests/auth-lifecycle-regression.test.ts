@@ -125,15 +125,15 @@ describe("Complete Authentication Lifecycle & Regression Suite (Login -> Logout 
       assert.equal(new URL(location).pathname, "/login");
     });
 
-    test("3.2 Unauthenticated user accessing /calendar redirects to /login?returnTo=/calendar", async () => {
-      const req = createRequest("https://eoffice.qcet.edu.vn/calendar");
+    test("3.2 Unauthenticated user accessing /org redirects to /login?returnTo=/org", async () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/org");
       const res = await middleware(req);
       assert.equal(res?.status, 307);
       const location = res?.headers.get("location");
       assert.ok(location);
       const targetUrl = new URL(location);
       assert.equal(targetUrl.pathname, "/login");
-      assert.equal(targetUrl.searchParams.get("returnTo"), "/calendar");
+      assert.equal(targetUrl.searchParams.get("returnTo"), "/org");
     });
 
     test("3.3 Unauthenticated user accessing /login is allowed through (200, no redirect loop)", async () => {

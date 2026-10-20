@@ -99,10 +99,23 @@ export const AddBodyMembershipSchema = z.object({
   expiresAt: z.string().datetime().optional(),
 });
 
+/**
+ * Nhóm trạng thái của trang Cuộc họp (các mục con ở sidebar, như Chờ xử lý / Đã xử lý của Văn bản): "upcoming" là chưa họp
+ * (dự thảo chương trình, đã mời; xếp theo giờ họp tăng dần), "done" là đã họp (kể cả đang dự thảo hay đã duyệt biên bản).
+ * Cuộc họp đã hủy chỉ thấy ở "Tất cả". Máy chủ và trang dùng chung bảng này.
+ */
+export const MEETING_BUCKETS = ['upcoming', 'done'] as const;
+export type MeetingBucket = (typeof MEETING_BUCKETS)[number];
+export const MEETING_BUCKET_STATUSES: Record<MeetingBucket, readonly MeetingStatus[]> = {
+  upcoming: [MeetingStatus.DRAFT_AGENDA, MeetingStatus.INVITED],
+  done: [MeetingStatus.HELD, MeetingStatus.MINUTES_DRAFT, MeetingStatus.MINUTES_CONFIRMED],
+};
+
 export const ListMeetingsQuerySchema = z.object({
   bodyId: z.string().optional(),
   unitId: z.string().optional(),
   status: z.nativeEnum(MeetingStatus).optional(),
+  bucket: z.enum(MEETING_BUCKETS).optional(),
   search: z.string().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),

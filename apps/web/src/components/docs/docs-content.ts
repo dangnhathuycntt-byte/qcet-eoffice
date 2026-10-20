@@ -10,12 +10,12 @@ export const DOC_GROUPS: DocGroup[] = [
         slug: "gioi-thieu-qcet-e-office",
         title: "Giới thiệu QCET E-Office",
         description:
-          "QCET E-Office là hệ thống làm việc nội bộ của Nhà trường, gồm nhiệm vụ, hộp thư, văn bản, lịch công tác và danh bạ đơn vị.",
+          "QCET E-Office là hệ thống làm việc nội bộ của Nhà trường, gồm nhiệm vụ, hộp thư, văn bản, cuộc họp và danh bạ đơn vị.",
         icon: "BookOpen",
         blocks: [
           {
             type: "p",
-            text: "QCET E-Office là hệ thống làm việc nội bộ của Nhà trường. Thầy/Cô dùng hệ thống để theo dõi và xử lý nhiệm vụ, nhận thông báo trong Hộp thư, xử lý văn bản đến và đi, xem lịch công tác và tra cứu cơ cấu tổ chức cùng danh bạ.",
+            text: "QCET E-Office là hệ thống làm việc nội bộ của Nhà trường. Thầy/Cô dùng hệ thống để theo dõi và xử lý nhiệm vụ, nhận thông báo trong Hộp thư, xử lý văn bản đến và đi, quản lý cuộc họp và tra cứu cơ cấu tổ chức cùng danh bạ.",
           },
           {
             type: "h2",
@@ -30,7 +30,7 @@ export const DOC_GROUPS: DocGroup[] = [
             items: [
               "**Hộp thư**: mục đầu tiên của thanh bên. Thông báo gửi tới Thầy/Cô, có lọc và tìm kiếm.",
               "**Nhiệm vụ**: bảng nhiệm vụ, cùng hai mục con **Yêu cầu phối hợp** và **Mẫu và lặp lại**.",
-              "**Lịch công tác**: xem theo **Tuần** hoặc **Tháng**. Bấm một ngày để mở chi tiết ngày đó.",
+              "**Cuộc họp**: danh sách cuộc họp theo giai đoạn **Sắp diễn ra** và **Đã họp**. Bấm một cuộc họp để mở chi tiết.",
               "**Văn bản**: **Văn bản đến**, **Văn bản đi**, **Tờ trình nội bộ** và **Hồ sơ công việc**.",
               "**Đơn vị**: **Cơ cấu & Danh bạ** và **Báo cáo** (số liệu văn bản trong phạm vi được xem).",
               "**Thêm**: mở menu gồm **Ủy quyền tác nghiệp**, **Tìm kiếm**, **Cài đặt hệ thống** và **Tài liệu hướng dẫn**. Tài khoản quản trị hệ thống thấy thêm nhóm **Quản trị**: **Tài khoản và vai trò**, **Nhật ký hệ thống**, **Hồ sơ chờ xóa hẳn**.",
@@ -238,7 +238,7 @@ export const DOC_GROUPS: DocGroup[] = [
             type: "ul",
             items: [
               "`Ctrl` + `B` hoặc `⌘` + `B`: thu gọn hoặc mở rộng thanh bên.",
-              "`1`, `2`, `3`, `5`: mở lần lượt **Hộp thư**, **Nhiệm vụ**, **Lịch công tác**, **Cơ cấu & Danh bạ**. Phím `4` hiện không chuyển trang.",
+              "`1`, `2`, `3`, `5`: mở lần lượt **Hộp thư**, **Nhiệm vụ**, **Cuộc họp**, **Cơ cấu & Danh bạ**. Phím `4` hiện không chuyển trang.",
               "`C`: mở hộp tạo nhiệm vụ mới trên trang **Nhiệm vụ**. Nhấn `N` rồi `P` liền nhau cũng mở hộp này.",
               "`Esc`: đóng hộp thoại hoặc bảng đang mở.",
             ],
@@ -1276,103 +1276,56 @@ export const DOC_GROUPS: DocGroup[] = [
   },
   {
     key: "lich-don-vi",
-    title: "Lịch và đơn vị",
+    title: "Cuộc họp và đơn vị",
     pages: [
       {
-        slug: "lich-cong-tac",
-        title: "Lịch công tác",
+        slug: "cuoc-hop",
+        title: "Cuộc họp",
         description:
-          "Xem nhiệm vụ đến hạn và sự kiện theo tuần hoặc tháng, lọc theo phạm vi, xem chi tiết từng ngày và tạo việc hoặc sự kiện ngay trên lịch.",
+          "Xem danh sách cuộc họp, tạo cuộc họp mới và mở trang chi tiết để soạn biên bản, ghi quyết nghị, ghi âm và chép lời.",
         icon: "CalendarDays",
         blocks: [
           {
             type: "p",
-            text: "Lịch công tác gom nhiệm vụ có hạn và sự kiện, cuộc họp của nhà trường vào một nơi. Thầy/Cô mở trang bằng mục **Lịch công tác** trong thanh bên. Lần đầu mở, trang hiển thị chế độ **Tuần**, phạm vi **Toàn trường** và tuần chứa ngày hôm nay.",
-          },
-          {
-            type: "h2",
-            text: "Chuyển chế độ xem",
-          },
-          {
-            type: "ul",
-            items: [
-              "**Tuần**: dải **Hạn chót** phía trên liệt kê nhiệm vụ đến hạn trong từng ngày. Lưới giờ 07:00 đến 18:00 bên dưới hiển thị sự kiện có giờ trong khung này; sự kiện khác nằm ở dòng riêng phía trên lưới.",
-              "**Tháng**: mỗi ô ngày hiển thị tối đa hai mục. Nhấn **+N việc** để mở bảng chi tiết ngày và xem đủ danh sách.",
-              "Nút ‹ và › chuyển tuần hoặc tháng. Nút **Hôm nay** quay về ngày hiện tại.",
-              "Nút ⋯ (**Tùy chọn hiển thị**) chứa **Năm học** và ô **Lọc lịch hiện tại**. Chọn năm học sẽ chuyển lịch về **Tháng 1** của năm dương lịch đầu tiên trong năm học đó. Năm học tính từ 01/09 đến 31/08 năm sau.",
-            ],
+            text: "Trang **Cuộc họp** liệt kê các cuộc họp Thầy/Cô tổ chức hoặc được mời. Mở trang bằng mục **Cuộc họp** trong thanh bên; hai mục con **Sắp diễn ra** và **Đã họp** mở sẵn từng giai đoạn. Trang Lịch công tác (xem theo tuần hoặc tháng) đã được bỏ; nhiệm vụ có hạn xem ở trang **Nhiệm vụ**.",
           },
           {
             type: "h2",
             text: "Lọc và tìm kiếm",
           },
           {
-            type: "ol",
+            type: "ul",
             items: [
-              "Nhấn nút phạm vi đang dùng trên thanh công cụ (**Toàn trường**, **Đơn vị** hoặc **Của tôi**) để mở bảng lọc.",
-              "Trong mục **Phạm vi**, chọn một trong ba phạm vi trên. Trong mục **Cấp nhiệm vụ**, chọn **Tất cả**, **Trường** hoặc **Đơn vị**. Trong mục **Trạng thái**, chọn **Tất cả**, **Đang làm**, **Hoàn thành** hoặc **Trễ hạn**.",
-              "Để tìm theo tên việc hoặc sự kiện, nhấn nút **⋯** và nhập vào ô **Lọc lịch hiện tại**.",
-              "Khi có bộ lọc, dòng **Bộ lọc:** hiện bên dưới thanh công cụ. Nhấn **Xóa tất cả** để bỏ hết.",
+              "Hàng tab **Tất cả**, **Sắp diễn ra**, **Đã họp** chọn giai đoạn, cùng lựa chọn với hai mục con ở thanh bên. **Sắp diễn ra** là cuộc họp chưa họp (dự thảo chương trình, đã mời), xếp cuộc gần nhất lên đầu. **Đã họp** gồm cuộc đã họp, đang dự thảo biên bản và đã duyệt biên bản. Cuộc họp đã hủy chỉ hiện ở **Tất cả**.",
+              "Ô tìm theo tên cuộc họp; kết quả cập nhật sau khi ngừng gõ.",
+              "Danh sách hiện 20 cuộc họp mỗi lần; bấm **Xem thêm** để tải tiếp.",
             ],
           },
           {
-            type: "ul",
+            type: "h2",
+            text: "Tạo cuộc họp",
+          },
+          {
+            type: "ol",
             items: [
-              "**Toàn trường** hiển thị nhiệm vụ và sự kiện cấp Trường. **Đơn vị** hiển thị việc con và sự kiện cấp Đơn vị.",
-              "**Của tôi** chỉ hiển thị nhiệm vụ mà Thầy/Cô phụ trách hoặc được giao, cùng các sự kiện.",
-              "**Trễ hạn** là nhiệm vụ đã qua hạn nhưng chưa hoàn thành hoặc chưa hủy.",
+              "Nhấn **Tạo cuộc họp**.",
+              "Nhập **Tên cuộc họp** (ít nhất 3 ký tự) và chọn **Ngày**; hai mục này là bắt buộc. **Bắt đầu** mặc định 08:00, **Kết thúc** mặc định 09:30.",
+              "Có thể điền thêm **Địa điểm** và **Nội dung và chương trình**.",
+              "Nhấn **Tạo cuộc họp** hoặc phím Enter. Thiếu mục bắt buộc thì hệ thống báo ngay dưới ô còn thiếu. Tạo xong, trang chi tiết của cuộc họp mở ra.",
             ],
           },
           {
             type: "callout",
             tone: "info",
-            text: "Khi chọn **Trạng thái** khác **Tất cả**, sự kiện bị ẩn và lịch chỉ còn nhiệm vụ.",
+            text: "Thành phần dự họp và chủ tọa được thêm ở trang chi tiết, nơi chọn đúng người trong hệ thống. Cuộc họp chỉ chuyển sang **Đã mời** khi đã có người dự họp.",
           },
           {
             type: "h2",
-            text: "Xem chi tiết một ngày",
+            text: "Trang chi tiết",
           },
           {
             type: "p",
-            text: "Nhấn một ô ngày trong lịch tháng, nhấn tiêu đề ngày (tên thứ và số ngày) trong lịch tuần, hoặc nhấn số **N việc** trong dải **Hạn chót** để mở bảng chi tiết ngày.",
-          },
-          {
-            type: "p",
-            text: "Bảng có nút lọc (mặc định **Tất cả**) với các mục **Tất cả**, **Cần xử lý**, **Trễ hạn** và **Chờ duyệt**. Ô **Lọc nhanh danh sách...** chỉ hiện khi danh sách của ngày có hơn 10 mục.",
-          },
-          {
-            type: "p",
-            text: "Khi xem **Tất cả** và có mục cần xử lý, danh sách chia thành **Cần xử lý** và **Các nhiệm vụ khác**. Mục **Cần xử lý** gồm nhiệm vụ trễ hạn, chờ duyệt hoặc đến hạn trong ngày.",
-          },
-          {
-            type: "p",
-            text: "Chọn một nhiệm vụ để mở chi tiết ở ngăn bên; địa chỉ trang sẽ có thêm mã nhiệm vụ. Sự kiện trong bảng chỉ hiển thị thông tin và không mở được chi tiết.",
-          },
-          {
-            type: "h2",
-            text: "Tạo công việc hoặc sự kiện",
-          },
-          {
-            type: "ol",
-            items: [
-              "Nhấn **Tạo** rồi chọn **Tạo công việc** hoặc **Tạo sự kiện**. Trên điện thoại, dùng nút **+** trên thanh trên cùng.",
-              "Trong biểu mẫu **Tạo sự kiện lịch biểu**, nhập **Tên sự kiện / Cuộc họp** và chọn **Ngày**. Hai mục này là bắt buộc.",
-              "Chọn **Bắt đầu** và **Kết thúc**. Có thể điền thêm **Địa điểm / Phòng họp**, **Chủ trì cuộc họp**, **Thành phần tham dự** và **Nội dung chuẩn bị / Ghi chú**.",
-              "Nhấn **Lưu sự kiện**. Sau khi lưu thành công, lịch tải lại dữ liệu và đóng biểu mẫu.",
-            ],
-          },
-          {
-            type: "p",
-            text: "Trong bảng chi tiết ngày, nút **Tạo** có hai mục: **Nhiệm vụ hạn ngày này** và **Sự kiện ngày này**.",
-          },
-          {
-            type: "callout",
-            tone: "warning",
-            text: "Khi nhấn **+** trong ô giờ trống của lịch tuần (nút hiện khi di chuột vào ô), giờ **Bắt đầu** theo ô đã chọn nhưng **Kết thúc** vẫn là 09:30. Nếu **Kết thúc** không sau **Bắt đầu**, hệ thống báo “Giờ kết thúc phải sau giờ bắt đầu”. Hãy sửa **Kết thúc** trước khi lưu.",
-          },
-          {
-            type: "p",
-            text: "Chủ trì và thành phần được ghi vào phần nội dung sự kiện, theo dạng “Chủ trì: …” và “Thành phần: …”.",
+            text: "Bấm một hàng trong danh sách để mở chi tiết: thông tin cuộc họp, chương trình, thành phần tham dự, biên bản, nghị quyết, **Ghi chú của tôi** (chỉ mình Thầy/Cô xem được) và, với người tổ chức, chủ tọa hoặc thư ký, khung **Ghi âm cuộc họp** để ghi âm hoặc tải tệp rồi nhận bản chép lời và biên bản nháp để chỉnh sửa.",
           },
         ],
       },

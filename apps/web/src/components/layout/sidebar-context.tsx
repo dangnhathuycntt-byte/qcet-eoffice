@@ -72,8 +72,8 @@ export const SINGLE_TIER_NAV_ITEMS: SidebarItem[] = [
   }),
   createNavItem({
     id: "calendar",
-    label: "Lịch công tác",
-    href: "/calendar",
+    label: "Cuộc họp",
+    href: "/meetings",
     icon: Calendar,
     workSection: "work",
     legacySection: "personal",

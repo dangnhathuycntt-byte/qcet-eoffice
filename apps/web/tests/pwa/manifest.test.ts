@@ -156,7 +156,7 @@ describe("Task 5: Web App Manifest Audit, Stable Identity, Maskable Icons & Shor
   });
 
   describe("4. App Shortcuts (Quick Actions)", () => {
-    it("configures essential institutional shortcuts (Tasks, Documents, Calendar)", () => {
+    it("configures essential institutional shortcuts (Tasks, Documents, Meetings)", () => {
       const shortcuts = manifestData.shortcuts;
       assert.ok(Array.isArray(shortcuts), "shortcuts must be an array");
       assert.ok(shortcuts.length >= 3, "Must have at least 3 shortcuts");
@@ -169,9 +169,9 @@ describe("Task 5: Web App Manifest Audit, Stable Identity, Maskable Icons & Shor
       assert.ok(docShortcut, "Must have /documents shortcut");
       assert.strictEqual(docShortcut.name, "Văn bản");
 
-      const calShortcut = shortcuts.find((s) => s.url === "/calendar");
-      assert.ok(calShortcut, "Must have /calendar shortcut");
-      assert.strictEqual(calShortcut.name, "Lịch công tác");
+      const calShortcut = shortcuts.find((s) => s.url === "/meetings");
+      assert.ok(calShortcut, "Must have /meetings shortcut");
+      assert.strictEqual(calShortcut.name, "Cuộc họp");
 
       const createTaskShortcut = shortcuts.find(
         (s) => s.url === "/?action=create_task"

@@ -33,48 +33,8 @@
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/documents/registry/document-pagination.tsx",
-      "text": "strokeWidth={2}"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "apps/web/src/components/documents/registry/document-table.tsx",
-      "text": "<Check className=\"size-3 text-emerald-600\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
-      "text": "<path d=\"M3 3L9 9M9 3L3 9\" stroke=\"currentColor\" strokeWidth=\"1.8\" strokeLinecap=\"round\" />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
-      "text": "<path d=\"M4 2 L32 2 L21 16 L21 28 L15 31 L15 16 Z\" fill=\"white\" stroke=\"currentColor\" strokeWidth=\"1.2\" strokeOpacity=\"0.25\" strokeLinejoin=\"round\" />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
-      "text": "<path d=\"M8 4 L28 4\" stroke=\"currentColor\" strokeWidth=\"0.8\" strokeOpacity=\"0.08\" strokeLinecap=\"round\" />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "apps/web/src/components/tasks/table/components/task-empty-state.tsx",
-      "text": "<rect x=\"0\" y=\"0\" width=\"58\" height=\"72\" rx=\"5\" fill=\"white\" stroke=\"currentColor\" strokeWidth=\"1\" strokeOpacity=\"0.15\" />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
       "file": "apps/web/src/components/tasks/table/components/task-pagination-bar.tsx",
       "text": "{isSelected && <Check className=\"size-3.5 text-primary shrink-0\" strokeWidth={2} />}"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "apps/web/src/components/tasks/table/components/task-row.tsx",
-      "text": "<Check className=\"size-3 text-primary-foreground\" strokeWidth={2.5} />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
-      "text": "<Check className=\"size-3 text-primary-foreground\" strokeWidth={2.5} />"
     },
     {
       "ruleId": "no-arbitrary-color-value",
@@ -95,11 +55,6 @@
       "ruleId": "no-arbitrary-text-size",
       "file": "apps/web/src/app/login/page.tsx",
       "text": "<div className=\"flex size-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-foreground\" style={{ background: bgColor }}>"
-    },
-    {
-      "ruleId": "no-arbitrary-text-size",
-      "file": "apps/web/src/app/login/page.tsx",
-      "text": "<div className=\"mt-5 w-full rounded-[14px] bg-muted p-3 text-center text-[13.5px] leading-relaxed text-foreground\">"
     },
     {
       "ruleId": "no-arbitrary-text-size",
@@ -193,61 +148,6 @@
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconBg: \"bg-blue-500/10 dark:bg-blue-500/20\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconBg: \"bg-destructive/10 dark:bg-destructive/20\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconBg: \"bg-emerald-500/10 dark:bg-emerald-500/20\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconBg: \"bg-sky-500/10 dark:bg-sky-500/20\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconBg: \"bg-warning/10 dark:bg-warning/20\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconColor: \"text-blue-600 dark:text-blue-400\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconColor: \"text-destructive dark:text-destructive\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconColor: \"text-emerald-600 dark:text-emerald-400\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconColor: \"text-sky-600 dark:text-sky-400\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "iconColor: \"text-warning dark:text-warning\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/documents/registry/document-stats-summary.tsx",
-      "text": "textColor: \"text-destructive dark:text-destructive\","
-    },
-    {
-      "ruleId": "no-dark-variant",
       "file": "apps/web/src/components/layout/app-shell.tsx",
       "text": "<div className=\"flex min-h-screen w-full items-center justify-center bg-[#f4f5f7] dark:bg-zinc-950\">"
     },
@@ -255,76 +155,6 @@
       "ruleId": "no-dark-variant",
       "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar dark:bg-zinc-950 select-none\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "apps/web/src/components/layout/app-topbar.tsx",
-      "text": "className=\"md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/calendar/calendar-day-sheet.tsx",
-      "text": "className=\"inline-flex items-center justify-center h-7.5 px-2 text-xs font-medium gap-1 rounded-md border border-border/70 bg-background hover:bg-muted/50 text-foreground cursor-pointer transition-colors active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/documents/registry/document-table.tsx",
-      "text": "className=\"size-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer active:scale-[0.98]\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/layout/app-topbar.tsx",
-      "text": "className=\"size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/layout/app-topbar.tsx",
-      "text": "className=\"size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/layout/app-topbar.tsx",
-      "text": "className=\"size-8 relative flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/layout/scope-switcher.tsx",
-      "text": "className=\"min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/pwa/mobile-app-install-modal.tsx",
-      "text": "className=\"min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
-      "text": "className=\"absolute right-1 top-1/2 -translate-y-1/2 inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
-      "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors active:scale-[0.98]\""
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/app/calendar/calendar-client.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/app/calendar/calendar-client.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/app/calendar/calendar-client.tsx",
-      "text": "<select"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/app/design/design-showcase.tsx",
-      "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
@@ -378,141 +208,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-day-sheet.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-month-grid.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-month-grid.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-toolbar.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/calendar-week-view.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<select"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/calendar/create-event-modal.tsx",
-      "text": "<textarea"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<input"
     },
@@ -530,25 +225,10 @@
       "ruleId": "no-raw-control",
       "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<textarea"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
       "file": "apps/web/src/components/documents/document-audit-timeline.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/documents/document-detail-parts.tsx",
       "text": "<button"
     },
     {
@@ -593,63 +273,8 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/documents/registry/document-card-list.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/documents/registry/document-filter-bar.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/documents/registry/document-filter-bar.tsx",
-      "text": "<select"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/documents/registry/document-ledger.tsx",
       "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-pagination.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-pagination.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-pagination.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-pagination.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-pagination.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "src/components/documents/registry/document-pagination.tsx",
-      "text": "<select"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/documents/registry/document-table.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/documents/registry/document-table.tsx",
-      "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
@@ -713,11 +338,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/inbox/inbox-view.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/layout/app-sidebar.tsx",
       "text": "<button"
     },
@@ -733,21 +353,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/layout/scope-switcher.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/layout/scope-switcher.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/layout/scope-switcher.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/meetings/meeting-detail-view.tsx",
       "text": "<button"
     },
@@ -900,16 +505,6 @@
       "ruleId": "no-raw-control",
       "file": "apps/web/src/components/portal/submit-deliverable-modal.tsx",
       "text": "<textarea"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/pwa/mobile-app-install-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/pwa/mobile-app-install-modal.tsx",
-      "text": "<input"
     },
     {
       "ruleId": "no-raw-control",
@@ -935,31 +530,6 @@
       "ruleId": "no-raw-control",
       "file": "apps/web/src/components/pwa/pwa-install-prompt.tsx",
       "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/create/create-task-modal.tsx",
-      "text": "<textarea"
     },
     {
       "ruleId": "no-raw-control",
@@ -1043,16 +613,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-detail-header-nav.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-detail-header-nav.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<button"
     },
@@ -1090,16 +650,6 @@
       "ruleId": "no-raw-control",
       "file": "apps/web/src/components/tasks/detail/task-evidence-section.tsx",
       "text": "<textarea"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-progress-composer.tsx",
-      "text": "<button"
     },
     {
       "ruleId": "no-raw-control",
@@ -1253,131 +803,6 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "? \"bg-neutral-800 text-white font-semibold shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
       "file": "apps/web/src/components/layout/app-shell.tsx",
       "text": "<div className=\"flex min-h-screen w-full items-center justify-center bg-[#f4f5f7] dark:bg-zinc-950\">"
     },
@@ -1385,11 +810,6 @@
       "ruleId": "no-raw-neutral-palette",
       "file": "apps/web/src/components/layout/app-topbar.tsx",
       "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar dark:bg-zinc-950 select-none\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/layout/app-topbar.tsx",
-      "text": "className=\"md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -1509,22 +929,12 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
-      "text": "<CornerDownRight className=\"size-2.5 text-slate-400 shrink-0\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"divide-y divide-slate-100\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<div className=\"divide-y divide-slate-100\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
-      "text": "<div className=\"flex items-center gap-1 text-xs text-slate-400 truncate\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -1575,11 +985,6 @@
       "ruleId": "no-raw-neutral-palette",
       "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
       "text": "<span className={cn(isItemOverdue ? \"text-destructive font-medium\" : \"text-slate-400\")}>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "apps/web/src/components/workspace/components/universal-action-queue.tsx",
-      "text": "className=\"hover:text-slate-700 truncate text-left\""
     },
     {
       "ruleId": "no-raw-neutral-palette",

@@ -142,3 +142,12 @@ export function DialogForm({ onSubmit, className, children }: { onSubmit: () => 
 export function DialogFooter({ className, children }: { className?: string; children: React.ReactNode }) {
   return <div className={cn("flex justify-end gap-2 pt-1", className)}>{children}</div>;
 }
+
+/** Lỗi của một ô nhập: dòng `text-xs text-destructive` ngay dưới ô (ô đặt `aria-invalid` và `aria-describedby` trỏ tới `id`), đọc to khi hiện. */
+export function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <p id={id} role="alert" className="text-xs text-destructive">
+      {children}
+    </p>
+  );
+}

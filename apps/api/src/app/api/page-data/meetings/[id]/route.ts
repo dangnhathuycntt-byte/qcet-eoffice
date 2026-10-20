@@ -1,6 +1,6 @@
 /**
  * API Route: /api/page-data/meetings/[id]
- * GET - Dữ liệu trang chi tiết cuộc họp (src/app/calendar/meetings/[id]/page.tsx). Kiểm meeting.read như
+ * GET - Dữ liệu trang chi tiết cuộc họp (src/app/meetings/[id]/page.tsx). Kiểm meeting.read như
  * GET /api/meetings/[id]; không có hoặc không được đọc trả 404.
  */
 

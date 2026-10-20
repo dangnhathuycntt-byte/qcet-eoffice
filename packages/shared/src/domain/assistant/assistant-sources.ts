@@ -18,7 +18,7 @@ export function assistantSourceHref(type: AssistantSourceType, id: string): stri
   if (type === "task") return `/tasks/${id}`;
   // Giữ khớp getDocumentHref (lib/documents/document-view-model.ts) nhưng không import để domain không kéo lớp giao diện vào
   if (type === "document") return `/documents?docId=${encodeURIComponent(id)}`;
-  return `/calendar/meetings/${id}`;
+  return `/meetings/${id}`;
 }
 
 /** Khử trùng theo loại + mã bản ghi, giữ phần tử đầu tiên. */

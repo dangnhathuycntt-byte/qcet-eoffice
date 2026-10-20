@@ -99,7 +99,7 @@ export function isRouteActive(
       return targetBase === "/tasks";
     }
     if (zone === "calendar" || view === "calendar" || view === "month") {
-      return targetBase === "/calendar";
+      return targetBase === "/meetings";
     }
     if (zone === "documents") {
       return targetBase === "/documents";
@@ -212,7 +212,7 @@ export function resolveBreadcrumb(
   if (zoneRoute) return ["QCET E-Office", zoneRoute.label];
   if (zone === "portal") return ["QCET E-Office", "Cổng Portal Điều hành"];
   if (view === "calendar" || view === "month") {
-    return ["QCET E-Office", canonicalLabel("/calendar") ?? "Lịch công tác"];
+    return ["QCET E-Office", canonicalLabel("/meetings") ?? "Cuộc họp"];
   }
   if (scope === "school" || scope === "unit") {
     return ["QCET E-Office", canonicalLabel("/tasks") ?? "Quản lý nhiệm vụ"];

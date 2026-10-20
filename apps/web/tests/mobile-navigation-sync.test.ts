@@ -15,15 +15,15 @@ describe("Task 6: Mobile Navigation Synchronization & Touch Ergonomics", () => {
       assert.equal(items.length, 4, "Mobile bottom bar must have exactly 4 canonical route slots");
       assert.deepEqual(
         items.map((i) => i.id),
-        ["tasks", "calendar", "inbox", "documents"]
+        ["tasks", "meetings", "inbox", "documents"]
       );
       assert.equal(items[0].href, "/tasks");
-      assert.equal(items[1].href, "/calendar");
+      assert.equal(items[1].href, "/meetings");
       assert.equal(items[2].href, "/inbox");
       assert.equal(items[3].href, "/documents");
 
       assert.equal(items[0].shortLabel, "Nhiệm vụ");
-      assert.equal(items[1].shortLabel, "Lịch");
+      assert.equal(items[1].shortLabel, "Họp");
       assert.equal(items[2].shortLabel, "Hộp thư");
       assert.equal(items[3].shortLabel, "Văn bản");
     });
@@ -34,7 +34,7 @@ describe("Task 6: Mobile Navigation Synchronization & Touch Ergonomics", () => {
       const deskItem = CANONICAL_ROUTES.find((r) => r.id === "desk")!;
       const tasksItem = CANONICAL_ROUTES.find((r) => r.id === "tasks")!;
       const docsItem = CANONICAL_ROUTES.find((r) => r.id === "documents")!;
-      const calendarItem = CANONICAL_ROUTES.find((r) => r.id === "calendar")!;
+      const calendarItem = CANONICAL_ROUTES.find((r) => r.id === "meetings")!;
 
       // On root without query: desk is active, others are not
       assert.equal(isRouteActive(deskItem.href, "/", null, deskItem.aliases), true);

@@ -26,8 +26,8 @@ import TasksLoading from "../apps/web/src/app/tasks/loading";
 import TasksError from "../apps/web/src/app/tasks/error";
 import DocumentsLoading from "../apps/web/src/app/documents/loading";
 import DocumentsError from "../apps/web/src/app/documents/error";
-import CalendarLoading from "../apps/web/src/app/calendar/loading";
-import CalendarError from "../apps/web/src/app/calendar/error";
+import MeetingsLoading from "../apps/web/src/app/meetings/loading";
+import MeetingsError from "../apps/web/src/app/meetings/error";
 import OrgLoading from "../apps/web/src/app/org/loading";
 import OrgError from "../apps/web/src/app/org/error";
 import NotificationsLoading from "../apps/web/src/app/notifications/loading";
@@ -191,7 +191,7 @@ describe("Phase 9: Route-level Loading & Error Architecture", () => {
   const routes = [
     { name: "/tasks", dir: "apps/web/src/app/tasks" },
     { name: "/documents", dir: "apps/web/src/app/documents" },
-    { name: "/calendar", dir: "apps/web/src/app/calendar" },
+    { name: "/meetings", dir: "apps/web/src/app/meetings" },
     { name: "/org", dir: "apps/web/src/app/org" },
     { name: "/notifications", dir: "apps/web/src/app/notifications" },
   ];
@@ -200,7 +200,7 @@ describe("Phase 9: Route-level Loading & Error Architecture", () => {
     const loadingComponents = [
       { name: "TasksLoading", Component: TasksLoading },
       { name: "DocumentsLoading", Component: DocumentsLoading },
-      { name: "CalendarLoading", Component: CalendarLoading },
+      { name: "MeetingsLoading", Component: MeetingsLoading },
       { name: "OrgLoading", Component: OrgLoading },
       { name: "NotificationsLoading", Component: NotificationsLoading },
     ];
@@ -230,7 +230,7 @@ describe("Phase 9: Route-level Loading & Error Architecture", () => {
     const errorComponents = [
       { name: "TasksError", Component: TasksError },
       { name: "DocumentsError", Component: DocumentsError },
-      { name: "CalendarError", Component: CalendarError },
+      { name: "MeetingsError", Component: MeetingsError },
       { name: "OrgError", Component: OrgError },
       { name: "NotificationsError", Component: NotificationsError },
       { name: "DossierError", Component: DossierError },

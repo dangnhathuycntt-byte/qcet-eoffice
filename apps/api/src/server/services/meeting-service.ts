@@ -26,6 +26,7 @@ import {
   ConfirmMinutesInput,
   CreateMeetingResolutionInput,
   ListMeetingsQuery,
+  MEETING_BUCKET_STATUSES,
 } from '@qcet/contracts/meeting';
 import { logAuditEvent, AuditAction } from '@qcet/db/audit';
 import { publishOutboxEvent } from '@qcet/db/outbox';
@@ -848,7 +849,7 @@ export class MeetingService {
     query: ListMeetingsQuery,
     contextOrUserId?: AuthorizationContext | string
   ) {
-    const { bodyId, unitId, status, search, from, to, limit = 20, page = 1 } = query;
+    const { bodyId, unitId, status, bucket, search, from, to, limit = 20, page = 1 } = query;
 
     let authWhere: Prisma.MeetingWhereInput = {};
 
@@ -865,6 +866,8 @@ export class MeetingService {
     if (bodyId) clientFilterWhere.bodyId = bodyId;
     if (unitId) clientFilterWhere.unitId = unitId;
     if (status) clientFilterWhere.status = status;
+    // Nhóm trạng thái (trang Cuộc họp); đi cùng `status` thì cả hai cùng phải đúng
+    const bucketWhere: Prisma.MeetingWhereInput = bucket ? { status: { in: [...MEETING_BUCKET_STATUSES[bucket]] } } : {};
 
     if (from || to) {
       const timeFilter: Prisma.DateTimeFilter = {};
@@ -881,7 +884,7 @@ export class MeetingService {
     }
 
     const where: Prisma.MeetingWhereInput = {
-      AND: [authWhere, clientFilterWhere],
+      AND: [authWhere, clientFilterWhere, bucketWhere],
     };
 
     const [items, total] = await Promise.all([
@@ -889,7 +892,8 @@ export class MeetingService {
         where,
         take: limit,
         skip: (page - 1) * limit,
-        orderBy: { startTime: 'desc' },
+        // Sắp diễn ra thì cuộc gần nhất lên đầu; các nhóm khác mới nhất lên đầu
+        orderBy: { startTime: bucket === 'upcoming' ? 'asc' : 'desc' },
         include: {
           body: true,
           unit: true,

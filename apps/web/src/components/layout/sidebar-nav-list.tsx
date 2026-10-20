@@ -61,7 +61,8 @@ export interface SidebarNavGroup {
  * Sử dụng bộ icon bo tròn mềm mại đồng bộ với Vector 2758.svg và mẫu UI
  */
 export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
-  // 1. Nhóm chính (Core Workspace): Hộp thư, Trợ lý, Nhiệm vụ, Lịch công tác (bỏ Tổng quan 19/10/2026; `/` chuyển tới Nhiệm vụ)
+  // 1. Nhóm chính (Core Workspace): Hộp thư, Trợ lý, Nhiệm vụ, Cuộc họp (bỏ Tổng quan 19/10/2026; `/` chuyển tới Nhiệm vụ;
+  // Lịch công tác bỏ 20/10/2026, thay bằng danh sách Cuộc họp có mục con như Văn bản)
   {
     id: "core",
     items: [
@@ -91,11 +92,15 @@ export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
         ],
       },
       {
-        id: "calendar",
-        label: "Lịch công tác",
-        href: "/calendar",
+        id: "meetings",
+        label: "Cuộc họp",
+        href: "/meetings",
         icon: IconSidebarCalendar,
-        aliases: ["/meetings"],
+        aliases: ["/calendar"],
+        children: [
+          { id: "meetings-upcoming", label: "Sắp diễn ra", href: "/meetings?bucket=upcoming" },
+          { id: "meetings-done", label: "Đã họp", href: "/meetings?bucket=done" },
+        ],
       },
     ],
   },

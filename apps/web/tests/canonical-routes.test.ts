@@ -79,9 +79,9 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     assert.ok(tasks, "Bottom items must include tasks");
     assert.equal(tasks.href, "/tasks");
 
-    const calendar = bottomItems.find((i) => i.id === "calendar");
-    assert.ok(calendar, "Bottom items must include calendar");
-    assert.equal(calendar.href, "/calendar");
+    const calendar = bottomItems.find((i) => i.id === "meetings");
+    assert.ok(calendar, "Bottom items must include meetings");
+    assert.equal(calendar.href, "/meetings");
 
     const inbox = bottomItems.find((i) => i.id === "inbox");
     assert.ok(inbox, "Bottom items must include inbox");

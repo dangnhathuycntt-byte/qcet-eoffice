@@ -35,7 +35,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
 
   if (!result.ok) {
     if (result.status === 401) {
-      redirect(`/login?returnTo=${encodeURIComponent(`/calendar/meetings/${id}`)}`);
+      redirect(`/login?returnTo=${encodeURIComponent(`/meetings/${id}`)}`);
     }
     if (result.status === 404) notFound();
     throw new Error(`GET /api/page-data/meetings/[id] trả ${result.status}`);

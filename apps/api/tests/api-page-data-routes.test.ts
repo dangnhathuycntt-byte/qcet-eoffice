@@ -11,7 +11,6 @@ import { prisma } from "@qcet/db/prisma";
 import { DossierStatus, TaskActorRole, UnitType, UserRole } from "@prisma/client";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import {
-  CalendarPageDataSchema,
   DossierDetailPageDataSchema,
   MeetingDetailPageDataSchema,
   TaskDetailPageDataSchema,
@@ -19,7 +18,6 @@ import {
 } from "@qcet/contracts/page-data";
 import { GET as getTasksPageData } from "../src/app/api/page-data/tasks/route";
 import { GET as getTaskDetailPageData } from "../src/app/api/page-data/tasks/[id]/route";
-import { GET as getCalendarPageData } from "../src/app/api/page-data/calendar/route";
 import { GET as getMeetingPageData } from "../src/app/api/page-data/meetings/[id]/route";
 import { GET as getDossierPageData } from "../src/app/api/page-data/dossiers/[id]/route";
 import { taskQueryService } from "../src/server/tasks";
@@ -32,12 +30,9 @@ const BASE = "http://localhost:3000";
 /**
  * Date còn lại trong dữ liệu (qua JSON thành chuỗi ISO) đã đối chiếu với nơi dùng, cho cùng kết quả:
  * - `actors[].appointedAt`: adapter truyền nguyên quan hệ actors; giao diện chỉ đọc `actors[].userId`.
- * - cuộc họp ở trang Lịch (MeetingService.listMeetings trả bản ghi Prisma): CalendarClient chỉ đọc
- *   `startTime`/`endTime` qua `new Date(value)`, và thay danh sách bằng JSON của /api/meetings mỗi lần tải lại.
  */
 const EQUIVALENT_DATE_PATHS = [
   /\.actors\[\d+\]\.appointedAt: Date$/,
-  /^\$\.initialMeetings\[\d+\]\.(startTime|endTime|createdAt|updatedAt|unit\.(effectiveFrom|effectiveTo|createdAt|updatedAt)): Date$/,
 ];
 const unexpectedNonJson = (value: unknown) =>
   nonJsonValues(value).filter((entry) => !EQUIVALENT_DATE_PATHS.some((pattern) => pattern.test(entry)));
@@ -133,15 +128,14 @@ describe("GET /api/page-data/*", () => {
     if (unitId) await prisma.organizationalUnit.deleteMany({ where: { id: unitId } });
   });
 
-  test("chưa đăng nhập: cả năm endpoint trả 401", async () => {
+  test("chưa đăng nhập: cả bốn endpoint trả 401", async () => {
     const responses = await Promise.all([
       getTasksPageData(request("/api/page-data/tasks")),
       getTaskDetailPageData(request(`/api/page-data/tasks/${parentTaskId}`), params(parentTaskId)),
-      getCalendarPageData(request("/api/page-data/calendar")),
       getMeetingPageData(request(`/api/page-data/meetings/${meetingId}`), params(meetingId)),
       getDossierPageData(request(`/api/page-data/dossiers/${dossierId}`), params(dossierId)),
     ]);
-    assert.deepEqual(responses.map((r) => r.status), [401, 401, 401, 401, 401]);
+    assert.deepEqual(responses.map((r) => r.status), [401, 401, 401, 401]);
   });
 
   test("tasks: nhiệm vụ gốc kèm thao tác, khớp tính toán của trang cũ, không có Date", async () => {
@@ -197,18 +191,6 @@ describe("GET /api/page-data/*", () => {
     assert.equal(outsider.status, 404);
     const missing = await getTaskDetailPageData(request(`/api/page-data/tasks/missing_${runId}`, "owner"), params(`missing_${runId}`));
     assert.equal(missing.status, 404);
-  });
-
-  test("calendar: nhiệm vụ và cuộc họp tháng hiện tại, không có Date", async () => {
-    captured.length = 0;
-    const response = await getCalendarPageData(request("/api/page-data/calendar", "owner"));
-    assert.equal(response.status, 200);
-    const body = CalendarPageDataSchema.parse(await response.json());
-    const meeting = body.initialMeetings.find((m) => m.id === meetingId);
-    assert.ok(meeting, "cuộc họp vừa tạo nằm trong tháng hiện tại");
-    const stored = await prisma.meeting.findUniqueOrThrow({ where: { id: meetingId } });
-    assert.equal(meeting.startTime, stored.startTime.toISOString());
-    assert.deepEqual(unexpectedNonJson(captured[0]), []);
   });
 
   test("meetings/[id]: người tổ chức đọc được; người ngoài và id không có nhận 404", async () => {

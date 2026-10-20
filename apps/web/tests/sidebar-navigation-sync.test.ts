@@ -31,7 +31,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       // Verify canonical order
       assert.deepEqual(
         ids,
-        ["desk", "tasks", "calendar", "inbox", "documents", "org", "settings"],
+        ["desk", "tasks", "meetings", "inbox", "documents", "org", "settings"],
         "Items must follow canonical order"
       );
     });
@@ -209,7 +209,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       assert.equal(navigatedTo, "/tasks");
       assert.equal(defaultPrevented, true);
 
-      // Number shortcut '3' should navigate to /calendar
+      // Number shortcut '3' should navigate to /meetings
       defaultPrevented = false;
       navigatedTo = null;
       handled = handleSidebarShortcut(
@@ -223,7 +223,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
         mockOptions
       );
       assert.equal(handled, true);
-      assert.equal(navigatedTo, "/calendar");
+      assert.equal(navigatedTo, "/meetings");
       assert.equal(defaultPrevented, true);
 
       // Number shortcut '5' (documents under development) must prevent default and NOT navigate
@@ -250,18 +250,18 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       // Root / without zone
       assert.equal(isRouteActive("/", "/"), true);
       assert.equal(isRouteActive("/tasks", "/"), false);
-      assert.equal(isRouteActive("/calendar", "/"), false);
+      assert.equal(isRouteActive("/meetings", "/"), false);
 
       // Root / with ?zone=tasks activates /tasks and deactivates /
       const taskParams = new URLSearchParams("zone=tasks");
       assert.equal(isRouteActive("/", "/", taskParams), false);
       assert.equal(isRouteActive("/tasks", "/", taskParams), true);
-      assert.equal(isRouteActive("/calendar", "/", taskParams), false);
+      assert.equal(isRouteActive("/meetings", "/", taskParams), false);
 
-      // Root / with ?zone=calendar activates /calendar and deactivates /
+      // Root / with ?zone=calendar activates /meetings and deactivates /
       const calParams = new URLSearchParams("zone=calendar");
       assert.equal(isRouteActive("/", "/", calParams), false);
-      assert.equal(isRouteActive("/calendar", "/", calParams), true);
+      assert.equal(isRouteActive("/meetings", "/", calParams), true);
 
       // Subroute /tasks/task-001 activates /tasks
       assert.equal(isRouteActive("/tasks", "/tasks/task-001"), true);

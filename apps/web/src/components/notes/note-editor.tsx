@@ -29,7 +29,7 @@ export function noteEntityHref(note: Pick<PersonalNote, "entityType" | "entityId
   if (!note.entityType || !note.entityId) return null;
   const id = encodeURIComponent(note.entityId);
   return note.entityType === "meeting"
-    ? { href: `/calendar/meetings/${id}`, label: "Cuộc họp" }
+    ? { href: `/meetings/${id}`, label: "Cuộc họp" }
     : { href: `/tasks/${id}`, label: "Nhiệm vụ" };
 }
 

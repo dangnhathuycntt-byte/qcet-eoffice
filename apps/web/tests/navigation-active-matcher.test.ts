@@ -33,7 +33,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   test("isRouteActive: handles root '/' override by query parameters", () => {
     const calendarParams = new URLSearchParams("view=calendar");
     assert.strictEqual(isRouteActive("/", "/", calendarParams), false);
-    assert.strictEqual(isRouteActive("/calendar", "/", calendarParams), true);
+    assert.strictEqual(isRouteActive("/meetings", "/", calendarParams), true);
 
     const taskParams = new URLSearchParams("zone=tasks");
     assert.strictEqual(isRouteActive("/", "/", taskParams), false);
@@ -43,7 +43,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   test("isRouteActive: accurately activates root '/' when no query parameter is present", () => {
     assert.equal(isRouteActive("/", "/", null), true);
     assert.equal(isRouteActive("/tasks", "/", null), false);
-    assert.equal(isRouteActive("/calendar", "/", null), false);
+    assert.equal(isRouteActive("/meetings", "/", null), false);
   });
 
   test("isRouteActive: root '/' exact match vs subpaths", () => {
@@ -68,9 +68,9 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   });
 
   test("isRouteActive: query-aware zone matching on root '/' across all canonical zones", () => {
-    assert.equal(isRouteActive("/calendar", "/", new URLSearchParams("zone=calendar")), true);
-    assert.equal(isRouteActive("/calendar", "/", new URLSearchParams("view=calendar")), true);
-    assert.equal(isRouteActive("/calendar", "/", new URLSearchParams("view=month")), true);
+    assert.equal(isRouteActive("/meetings", "/", new URLSearchParams("zone=calendar")), true);
+    assert.equal(isRouteActive("/meetings", "/", new URLSearchParams("view=calendar")), true);
+    assert.equal(isRouteActive("/meetings", "/", new URLSearchParams("view=month")), true);
     assert.equal(isRouteActive("/documents", "/", new URLSearchParams("zone=documents")), true);
     assert.equal(isRouteActive("/org", "/", new URLSearchParams("zone=org")), true);
     assert.equal(isRouteActive("/", "/", new URLSearchParams("zone=documents")), false);
@@ -114,7 +114,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
 
   test("T87 · root query zones map to the matching canonical route", () => {
     assert.equal(isRouteActive("/tasks", "/", new URLSearchParams("zone=tasks")), true);
-    assert.equal(isRouteActive("/calendar", "/", new URLSearchParams("view=month")), true);
+    assert.equal(isRouteActive("/meetings", "/", new URLSearchParams("view=month")), true);
     assert.equal(isRouteActive("/documents", "/", new URLSearchParams("zone=documents")), true);
     assert.equal(isRouteActive("/org", "/", new URLSearchParams("zone=org")), true);
     assert.equal(isRouteActive("/", "/", new URLSearchParams("zone=tasks")), false);
@@ -147,7 +147,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
       const hrefs = CANONICAL_ROUTES.map((r) => r.href);
       const uniqueHrefs = new Set(hrefs);
       assert.equal(uniqueHrefs.size, 7, "All route hrefs must be unique");
-      for (const href of ["/", "/calendar", "/tasks", "/documents", "/org", "/inbox", "/settings"]) {
+      for (const href of ["/", "/meetings", "/tasks", "/documents", "/org", "/inbox", "/settings"]) {
         assert.ok(hrefs.includes(href), `Must contain ${href}`);
       }
     });
@@ -161,7 +161,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
       assert.ok(bottomItems.some((item) => item.href === "/inbox"), "Bottom nav must include Inbox");
       assert.ok(bottomItems.some((item) => item.href === "/tasks"), "Bottom nav must include Tasks");
       assert.ok(bottomItems.some((item) => item.href === "/documents"), "Bottom nav must include Documents");
-      assert.ok(bottomItems.some((item) => item.href === "/calendar"), "Bottom nav must include Calendar");
+      assert.ok(bottomItems.some((item) => item.href === "/meetings"), "Bottom nav must include Meetings");
 
       const drawerItems = getMobileDrawerItems();
       assert.ok(drawerItems.some((item) => item.href === "/org"), "Drawer must include Org");
@@ -172,7 +172,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
     test("bottom destinations come from the registry in canonical order", () => {
       assert.deepEqual(
         getMobileBottomBarItems().map((i) => i.id),
-        ["tasks", "calendar", "inbox", "documents"]
+        ["tasks", "meetings", "inbox", "documents"]
       );
     });
   });

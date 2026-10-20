@@ -29,7 +29,7 @@ export default async function RootPage({ searchParams }: RootPageProps) {
   const query = qs ? `?${qs}` : "";
 
   const zoneParam = resolvedParams?.zone;
-  if (zoneParam === "calendar") redirect(`/calendar${query}`);
+  if (zoneParam === "calendar") redirect(`/meetings${query}`);
   if (zoneParam === "org") redirect(`/org${query}`);
   if (zoneParam === "documents") redirect(`/documents${query}`);
   redirect(`/tasks${query}`);

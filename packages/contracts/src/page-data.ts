@@ -119,21 +119,6 @@ export const TaskDetailPageDataSchema = z.discriminatedUnion("outcome", [
 ]);
 export type TaskDetailPageData = z.infer<typeof TaskDetailPageDataSchema>;
 
-/** Cuộc họp trong tháng học hiện tại cho trang Lịch; các trường khác giữ nguyên. */
-export const CalendarMeetingSchema = z.looseObject({
-  id: z.string(),
-  title: z.string(),
-  startTime: IsoDateStringSchema,
-  endTime: NullableIsoDate.optional(),
-});
-
-/** `GET /api/page-data/calendar`: nhiệm vụ và cuộc họp ban đầu của trang Lịch. */
-export const CalendarPageDataSchema = z.object({
-  initialTasks: z.array(SchoolTaskSchema),
-  initialMeetings: z.array(CalendarMeetingSchema),
-});
-export type CalendarPageData = z.infer<typeof CalendarPageDataSchema>;
-
 const MeetingParticipantSchema = z.looseObject({
   id: z.string(),
   meetingId: z.string(),

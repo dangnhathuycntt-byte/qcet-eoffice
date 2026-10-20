@@ -136,7 +136,7 @@ describe("QCET App Shell & Inbox Test Suite", () => {
       const items = getSidebarNavItems();
       assert.equal(items[0].id, "desk");
       assert.equal(items[1].id, "tasks");
-      assert.equal(items[2].id, "calendar");
+      assert.equal(items[2].id, "meetings");
       assert.equal(items[3].id, "inbox");
     });
   });

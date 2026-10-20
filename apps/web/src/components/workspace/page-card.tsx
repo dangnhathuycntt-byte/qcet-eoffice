@@ -12,6 +12,7 @@ export function WorkspacePageCard({
   description,
   actions,
   hideTitleOnMobile = false,
+  hideDescriptionOnMobile = false,
   children,
   className,
 }: {
@@ -21,6 +22,8 @@ export function WorkspacePageCard({
   actions?: React.ReactNode;
   /** Điện thoại: tên trang đã nằm trên thanh trên cùng (AppTopbar) thì chỉ giữ tiêu đề cho trình đọc màn hình, tránh lặp. */
   hideTitleOnMobile?: boolean;
+  /** Điện thoại: ẩn dòng mô tả khi thanh công cụ bên phải đã chiếm gần hết hàng (mô tả bị ép thành cột hẹp từng chữ). */
+  hideDescriptionOnMobile?: boolean;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -34,7 +37,7 @@ export function WorkspacePageCard({
           <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-4 pb-2 pt-2.5 sm:px-6">
             <div className="min-w-0">
               <h1 className={cn("truncate text-compact font-semibold text-foreground", hideTitleOnMobile && "max-md:sr-only")}>{title}</h1>
-              {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
+              {description ? <p className={cn("mt-0.5 text-xs text-muted-foreground", hideDescriptionOnMobile && "max-md:hidden")}>{description}</p> : null}
             </div>
             {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
           </header>

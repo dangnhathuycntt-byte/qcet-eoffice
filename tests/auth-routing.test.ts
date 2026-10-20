@@ -97,6 +97,26 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
       const targetUrl = new URL(location);
       assert.equal(targetUrl.pathname, "/tasks/task-123");
     });
+
+    // Trang Lịch công tác bỏ 20/10/2026; đường dẫn cũ còn trong thông báo, ghi chú và liên kết đã gửi nên phải dẫn về Cuộc họp,
+    // kể cả khi chưa đăng nhập (đăng nhập xong mới tới đúng trang, nên chuyển trước bước kiểm phiên).
+    test("access to retired /calendar redirects to /meetings (308), with or without a session", async () => {
+      for (const cookie of [undefined, validToken]) {
+        const res = await middleware(createRequest("https://eoffice.qcet.edu.vn/calendar?view=month", cookie));
+        assert.equal(res?.status, 308);
+        const targetUrl = new URL(res?.headers.get("location") ?? "");
+        assert.equal(targetUrl.pathname, "/meetings");
+        assert.equal(targetUrl.search, "", "query của trang Lịch không còn nghĩa");
+      }
+    });
+
+    test("access to retired /calendar/meetings/:id redirects to /meetings/:id (308)", async () => {
+      for (const cookie of [undefined, validToken]) {
+        const res = await middleware(createRequest("https://eoffice.qcet.edu.vn/calendar/meetings/cm-abc123", cookie));
+        assert.equal(res?.status, 308);
+        assert.equal(new URL(res?.headers.get("location") ?? "").pathname, "/meetings/cm-abc123");
+      }
+    });
   });
 
   describe("2. Cryptographic JWT Verification & Edge Runtime Invariants", () => {
@@ -211,15 +231,15 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
     });
 
     test("unauthenticated request with dangerous target does not create open redirect", async () => {
-      const req = createRequest("https://eoffice.qcet.edu.vn/calendar");
+      const req = createRequest("https://eoffice.qcet.edu.vn/org");
       const res = await middleware(req);
 
       const location = res?.headers.get("location");
       assert.ok(location);
       const targetUrl = new URL(location);
       const returnTo = targetUrl.searchParams.get("returnTo");
-      assert.equal(returnTo, "/calendar");
-      assert.equal(sanitizeRedirectUrl(returnTo), "/calendar");
+      assert.equal(returnTo, "/org");
+      assert.equal(sanitizeRedirectUrl(returnTo), "/org");
     });
   });
 });

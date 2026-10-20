@@ -254,9 +254,9 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
   // 3. Universal Monthly Bar / Contextual Action Bar renders 12-month switcher
   // ---------------------------------------------------------------------------
   describe("3. Universal Monthly Bar & Contextual Action Bar Architecture", () => {
-    test("Canonical routes include all core partitioned zones: calendar, tasks, documents", () => {
+    test("Canonical routes include all core partitioned zones: meetings, tasks, documents", () => {
       const zoneIds = CANONICAL_ROUTES.map((r) => r.id);
-      assert.ok(zoneIds.includes("calendar"), "Route 'calendar' must exist");
+      assert.ok(zoneIds.includes("meetings"), "Route 'meetings' must exist");
       assert.ok(zoneIds.includes("tasks"), "Route 'tasks' must exist");
       assert.ok(zoneIds.includes("documents"), "Route 'documents' must exist");
     });

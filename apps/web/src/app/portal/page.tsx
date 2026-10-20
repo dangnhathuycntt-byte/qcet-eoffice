@@ -294,10 +294,10 @@ export default function PortalPage() {
               </div>
             </Link>
 
-            {/* Bottom Right Card: Lịch công tác & Cơ cấu */}
+            {/* Bottom Right Card: Cuộc họp & Cơ cấu */}
             <Link
-              href="/calendar"
-              aria-label="Mở Lịch Công Tác & Cơ Cấu Tổ Chức"
+              href="/meetings"
+              aria-label="Mở Cuộc họp & Cơ Cấu Tổ Chức"
               className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
             >
               <div>
@@ -312,15 +312,15 @@ export default function PortalPage() {
                 </div>
 
                 <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-primary transition-colors">
-                  Lịch Công Tác & Cơ Cấu Tổ Chức
+                  Cuộc họp & Cơ Cấu Tổ Chức
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
-                  Tra cứu lịch công tác tuần Ban Giám hiệu, sự kiện đào tạo, lịch làm việc các khoa phòng và sơ đồ tổ chức nhân sự 11 đơn vị.
+                  Tra cứu cuộc họp của Ban Giám hiệu và các khoa phòng: chương trình, thành phần, biên bản, quyết nghị và sơ đồ tổ chức nhân sự 11 đơn vị.
                 </p>
               </div>
 
               <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-primary">
-                <span>Xem lịch công tác & danh bạ</span>
+                <span>Xem cuộc họp & danh bạ</span>
                 <ArrowUpRight size={15} aria-hidden="true" />
               </div>
             </Link>

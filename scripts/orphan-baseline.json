@@ -1,1 +1,6 @@
-[]
+[
+  "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
+  "apps/web/src/hooks/use-dismiss-on-outside.ts",
+  "apps/web/src/lib/dacum-workflow-engine.ts",
+  "apps/web/src/lib/delegation-authority-engine.ts"
+]

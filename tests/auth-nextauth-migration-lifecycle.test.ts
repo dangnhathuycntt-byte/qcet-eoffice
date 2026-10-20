@@ -175,7 +175,7 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
   // =========================================================================
   describe("3. Reload & Navigation Persistence", () => {
     test("3.1 Repeated requests across multiple routes maintain authenticated state", async () => {
-      const routes = ["/tasks", "/documents", "/calendar", "/org"];
+      const routes = ["/tasks", "/documents", "/meetings", "/org"];
 
       for (const route of routes) {
         const req = new NextRequest(`http://localhost:3000${route}`, {
