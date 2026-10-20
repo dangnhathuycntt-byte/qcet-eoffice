@@ -9,6 +9,7 @@
  */
 import { spawn } from "node:child_process";
 import { RECORDING_SLICE_WINDOW_SEC, RECORDING_WINDOW_SEC } from "@qcet/shared/domain/meetings/recording-transcript";
+import { RECORDING_WAVEFORM_SAMPLE_RATE, buildWaveform, waveformBlockSamples } from "@qcet/shared/domain/meetings/recording-waveform";
 import { logger } from "@/server/observability/logger";
 
 const PROBE_TIMEOUT_MS = 10_000;
@@ -20,6 +21,9 @@ export const WHOLE_AUDIO_MAX_BYTES = 64 * 1024 * 1024;
 const STDERR_TAIL_BYTES = 2_000;
 /** Đoạn mp3 ngắn hơn ngần này là đoạn không có âm thanh (vượt quá cuối tệp). */
 export const EMPTY_SLICE_BYTES = 1_024;
+/** Đo sóng âm đọc PCM 16 bit 4 kHz theo dòng (không giữ lại): 4 giờ khoảng 115 MB; trần chặn tệp dài bất thường. */
+const WAVEFORM_MAX_BYTES = 160 * 1024 * 1024;
+const WAVEFORM_TIMEOUT_MS = 180_000;
 
 export class AudioSliceError extends Error {
   constructor(message = "Không đọc được âm thanh của bản ghi (tệp hỏng hoặc định dạng không hỗ trợ). Thầy/Cô ghi hoặc tải lên lại.") {
@@ -41,7 +45,15 @@ interface RunResult {
   code: number | null;
 }
 
-function run(bin: string, args: string[], timeoutMs: number, maxBytes: number, signal?: AbortSignal): Promise<RunResult> {
+/** Chạy ffmpeg, gom stdout (tới `maxBytes`); có `onStdout` thì đưa từng khúc cho nó thay vì gom. */
+function run(
+  bin: string,
+  args: string[],
+  timeoutMs: number,
+  maxBytes: number,
+  signal?: AbortSignal,
+  onStdout?: (chunk: Buffer) => void
+): Promise<RunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
     const chunks: Buffer[] = [];
@@ -67,7 +79,8 @@ function run(bin: string, args: string[], timeoutMs: number, maxBytes: number, s
     child.stdout.on("data", (chunk: Buffer) => {
       size += chunk.byteLength;
       if (size > maxBytes) return kill(new AudioSliceError());
-      chunks.push(chunk);
+      if (onStdout) onStdout(chunk);
+      else chunks.push(chunk);
     });
     child.stderr.on("data", (chunk: Buffer) => {
       stderr = (stderr + chunk.toString("utf8")).slice(-STDERR_TAIL_BYTES);
@@ -128,4 +141,51 @@ export async function sliceAudio(
     throw new AudioSliceError();
   }
   return out.stdout;
+}
+
+/**
+ * Sóng âm của cả bản ghi (cột 0–100, xem `buildWaveform`): ffmpeg giải mã ra PCM mono 4 kHz, đo độ lớn từng khối ngay khi
+ * đọc nên không giữ âm thanh trong bộ nhớ. Bản 2 giờ mất vài giây. Không có ffmpeg trả []; tệp hỏng ném AudioSliceError.
+ */
+export async function computeWaveform(inputPath: string, durationSec: number | null, signal?: AbortSignal): Promise<number[]> {
+  const bin = ffmpegBinary();
+  if (!bin) return [];
+  const blockSamples = waveformBlockSamples(durationSec);
+  const levels: number[] = [];
+  let sum = 0;
+  let count = 0;
+  let carry: Buffer | null = null;
+  const onStdout = (chunk: Buffer) => {
+    const data: Buffer = carry ? Buffer.concat([carry, chunk]) : chunk;
+    const usable = data.length - (data.length % 2);
+    carry = usable < data.length ? data.subarray(usable) : null;
+    for (let i = 0; i < usable; i += 2) {
+      const sample = data.readInt16LE(i) / 32_768;
+      sum += sample * sample;
+      count += 1;
+      if (count === blockSamples) {
+        levels.push(Math.sqrt(sum / count));
+        sum = 0;
+        count = 0;
+      }
+    }
+  };
+  const args = [
+    "-hide_banner", "-loglevel", "error", "-nostdin",
+    "-i", inputPath,
+    "-vn", "-map", "0:a:0?", "-ac", "1", "-ar", String(RECORDING_WAVEFORM_SAMPLE_RATE), "-f", "s16le", "pipe:1",
+  ];
+  let out: RunResult;
+  try {
+    out = await run(bin, args, WAVEFORM_TIMEOUT_MS, WAVEFORM_MAX_BYTES, signal, onStdout);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+  if (out.code !== 0) {
+    logger.warn("meeting_recording.ffmpeg_error", { metadata: { code: out.code, stderr: out.stderr.slice(-400) } });
+    throw new AudioSliceError();
+  }
+  if (count > 0) levels.push(Math.sqrt(sum / count));
+  return buildWaveform(levels);
 }

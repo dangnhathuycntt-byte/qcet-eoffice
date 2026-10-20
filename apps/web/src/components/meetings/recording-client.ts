@@ -51,9 +51,12 @@ export const listRecordings = (meetingId: string, signal?: AbortSignal) =>
 export const getRecording = (meetingId: string, id: string, signal?: AbortSignal) =>
   request<MeetingRecordingDetail>(`${base(meetingId)}/${encodeURIComponent(id)}`, { signal });
 export const createRecording = (meetingId: string, input: { source: MeetingRecordingSource; mimeType: string; byteSize?: number }) =>
-  request<MeetingRecordingSummary>(base(meetingId), jsonInit("POST", { ...input, consent: true }));
+  request<MeetingRecordingSummary>(base(meetingId), jsonInit("POST", input));
 export const completeRecording = (meetingId: string, id: string, input: { partCount: number; durationSec: number }) =>
   request<MeetingRecordingSummary>(`${base(meetingId)}/${encodeURIComponent(id)}/complete`, jsonInit("POST", input));
+/** "Tạo biên bản": người dùng đã đọc lời nhắc cạnh nút (đã báo người dự họp, âm thanh gửi tới dịch vụ AI) và bấm. */
+export const processRecording = (meetingId: string, id: string) =>
+  request<MeetingRecordingSummary>(`${base(meetingId)}/${encodeURIComponent(id)}/process`, jsonInit("POST", { consent: true }));
 export const retryRecording = (meetingId: string, id: string) =>
   request<MeetingRecordingSummary>(`${base(meetingId)}/${encodeURIComponent(id)}/retry`, { method: "POST" });
 export const deleteRecording = (meetingId: string, id: string) =>
@@ -134,16 +137,21 @@ export interface UploadFileProgress {
   totalBytes: number;
 }
 
-/** Tải một tệp có sẵn: mở bản ghi, gửi từng phần 6 MB, hoàn tất. Lỗi giữa chừng để lại bản UPLOADING (máy chủ tự dọn sau 24 giờ). */
+/**
+ * Tải một tệp có sẵn: mở bản ghi, gửi từng phần 6 MB, hoàn tất (UPLOADED, chờ "Tạo biên bản"). `onCreated` báo bản ghi vừa mở
+ * để giao diện hiện ngay hàng đang tải. Lỗi giữa chừng để lại bản UPLOADING (máy chủ tự dọn sau 24 giờ).
+ */
 export async function uploadAudioFile(
   meetingId: string,
   file: File,
   mimeType: MeetingRecordingMimeType,
   durationSec: number,
-  onProgress: (progress: UploadFileProgress) => void
+  onProgress: (progress: UploadFileProgress) => void,
+  onCreated?: (recording: MeetingRecordingSummary) => void
 ): Promise<MeetingRecordingSummary> {
   if (file.size > MEETING_RECORDING_MAX_BYTES) throw new RecordingRequestError(`Tệp quá lớn (tối đa ${MEETING_RECORDING_MAX_BYTES / 1024 / 1024} MB).`, 413);
   const created = await createRecording(meetingId, { source: "file", mimeType, byteSize: file.size });
+  onCreated?.({ ...created, durationSec });
   const partCount = Math.max(1, Math.ceil(file.size / UPLOAD_PART_BYTES));
   onProgress({ uploadedBytes: 0, totalBytes: file.size });
   for (let index = 0; index < partCount; index += 1) {

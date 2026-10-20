@@ -1,5 +1,6 @@
 /**
- * Ghi âm cuộc họp: tạo bản ghi (kèm xác nhận đã thông báo), nhận âm thanh theo từng phần, ghép và xếp việc chép lời.
+ * Ghi âm cuộc họp: tạo bản ghi, nhận âm thanh theo từng phần, ghép (UPLOADED, đo sóng âm), rồi khi người dùng bấm "Tạo
+ * biên bản" (kèm xác nhận đã thông báo và đồng ý gửi tới dịch vụ AI) mới xếp việc chép lời.
  *
  * Quyền: cùng quan hệ với soạn biên bản (chủ tọa, thư ký, người tổ chức, `meeting.draft_minutes`) cho mọi thao tác, kể cả
  * xem bản chép lời. Quyền soạn biên bản chỉ mở khi cuộc họp đã diễn ra, còn ghi âm xảy ra trong lúc họp, nên kiểm với
@@ -12,6 +13,7 @@ import {
   MEETING_RECORDINGS_PER_MEETING_MAX,
   type CompleteMeetingRecordingInput,
   type CreateMeetingRecordingInput,
+  type ProcessMeetingRecordingInput,
   type MeetingRecordingActionItem,
   type MeetingRecordingDetail,
   type MeetingRecordingSummary,
@@ -27,12 +29,14 @@ import {
   assembleRecording,
   detectRecordingMimeType,
   readRecordingHead,
+  recordingAudioPath,
   recordingByteLimit,
   recordingTooLargeError,
   removeRecordingFiles,
   writeRecordingPart,
 } from "@/server/meetings/recording-storage";
-import { recordingWindowSec } from "@/server/meetings/recording-slicer";
+import { computeWaveform, recordingWindowSec } from "@/server/meetings/recording-slicer";
+import { logger } from "@/server/observability/logger";
 
 /** Trạng thái cuộc họp còn ghi âm hoặc gửi thêm được (đang mời, đã diễn ra, đang soạn biên bản). */
 const WRITABLE_MEETING_STATUSES: MeetingStatus[] = [MeetingStatus.INVITED, MeetingStatus.HELD, MeetingStatus.MINUTES_DRAFT];
@@ -82,7 +86,9 @@ function toSummary(row: RecordingWithAuthor, windowSec: number): MeetingRecordin
     byteSize: Number(row.byteSize),
     progress: row.status === "PROCESSING" || row.status === "QUEUED" ? { done: Math.min(done, total), total } : null,
     error: row.error,
+    submittedAt: row.consentAt?.toISOString() ?? null,
     processedAt: row.processedAt?.toISOString() ?? null,
+    waveform: Array.isArray(row.waveform) ? (row.waveform as number[]) : null,
   };
 }
 
@@ -159,7 +165,7 @@ export class MeetingRecordingService {
 
     const row = await prisma.$transaction(async (tx) => {
       const created = await tx.meetingRecording.create({
-        data: { meetingId, createdById: userId, source: input.source, mimeType: input.mimeType, consentAt: new Date() },
+        data: { meetingId, createdById: userId, source: input.source, mimeType: input.mimeType },
         include: { createdBy: { select: { name: true } } },
       });
       await logAuditEvent(tx, {
@@ -184,16 +190,19 @@ export class MeetingRecordingService {
     return { index };
   }
 
-  /** Ghép các phần, kiểm byte đầu tệp khớp định dạng đã khai, rồi chuyển QUEUED và xếp việc chép lời trong cùng giao dịch. */
+  /**
+   * Ghép các phần, kiểm byte đầu tệp khớp định dạng đã khai, rồi chuyển UPLOADED: âm thanh nằm trên máy chủ, chưa gửi tới
+   * dịch vụ AI cho tới khi người dùng bấm "Tạo biên bản" (`process`). Route đo sóng âm sau khi trả lời (`measureWaveform`).
+   */
   static async complete(
     meetingId: string,
     recordingId: string,
     input: CompleteMeetingRecordingInput,
     userId: string
-  ): Promise<{ recording: MeetingRecordingSummary; jobId: string }> {
+  ): Promise<{ recording: MeetingRecordingSummary }> {
     await authorizeRecordingAccess(meetingId, userId, { write: true });
     const row = await findRecording(meetingId, recordingId);
-    if (row.status !== MeetingRecordingStatus.UPLOADING) throw new ConflictError("Bản ghi âm này đã được gửi đi xử lý.", "RECORDING_NOT_UPLOADING");
+    if (row.status !== MeetingRecordingStatus.UPLOADING) throw new ConflictError("Bản ghi âm này đã tải lên xong.", "RECORDING_NOT_UPLOADING");
 
     // Thiếu phần thì ném lỗi và giữ bản ghi UPLOADING để gửi bù rồi hoàn tất lại
     const { byteSize } = await assembleRecording(recordingId, input.partCount);
@@ -205,20 +214,63 @@ export class MeetingRecordingService {
       throw new ValidationError("Tệp không phải âm thanh được hỗ trợ (webm, ogg, mp4/m4a, mp3, wav).");
     }
 
-    const queued = await prisma.$transaction(async (tx) => {
+    const claimed = await prisma.meetingRecording.updateMany({
+      where: { id: recordingId, status: MeetingRecordingStatus.UPLOADING },
+      data: {
+        status: MeetingRecordingStatus.UPLOADED,
+        // Safari ghi mp4 còn Chrome ghi webm: lấy định dạng thật theo nội dung, mime khai báo chỉ để gợi ý
+        mimeType: detected,
+        partCount: input.partCount,
+        byteSize: BigInt(byteSize),
+        durationSec: input.durationSec,
+        error: null,
+      },
+    });
+    if (claimed.count !== 1) throw new ConflictError("Bản ghi âm này đã tải lên xong.", "RECORDING_NOT_UPLOADING");
+    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()) };
+  }
+
+  /**
+   * Đo sóng âm của bản vừa ghép và lưu (route gọi sau khi trả lời). Không có ffmpeg hoặc tệp không đọc được thì lưu [] để giao
+   * diện thôi chờ; bản ghi đã bị xóa hoặc âm thanh đã bị dọn thì bỏ qua.
+   */
+  static async measureWaveform(recordingId: string): Promise<void> {
+    const row = await prisma.meetingRecording.findUnique({ where: { id: recordingId }, select: { durationSec: true, waveform: true } });
+    if (!row || row.waveform !== null) return;
+    let waveform: number[] = [];
+    try {
+      waveform = await computeWaveform(recordingAudioPath(recordingId), row.durationSec);
+    } catch (error) {
+      logger.warn("meeting_recording.waveform_failed", { metadata: { recordingId, reason: error instanceof Error ? error.message.slice(0, 200) : "unknown" } });
+    }
+    await prisma.meetingRecording.updateMany({ where: { id: recordingId }, data: { waveform } });
+  }
+
+  /**
+   * "Tạo biên bản": người dùng xác nhận đã báo người dự họp và đồng ý gửi âm thanh tới dịch vụ AI (lưu `consentAt`), bản ghi
+   * chuyển QUEUED và việc chép lời được xếp trong cùng giao dịch.
+   */
+  static async process(
+    meetingId: string,
+    recordingId: string,
+    _input: ProcessMeetingRecordingInput,
+    userId: string
+  ): Promise<{ recording: MeetingRecordingSummary; jobId: string }> {
+    await authorizeRecordingAccess(meetingId, userId, { write: true });
+    recordingGatewayConfig();
+    const row = await findRecording(meetingId, recordingId);
+    if (row.status !== MeetingRecordingStatus.UPLOADED) {
+      throw new ConflictError(
+        row.status === MeetingRecordingStatus.UPLOADING ? "Bản ghi âm chưa tải lên xong." : "Bản ghi âm này đã được gửi đi soạn biên bản.",
+        "RECORDING_NOT_UPLOADED"
+      );
+    }
+    const jobId = await prisma.$transaction(async (tx) => {
       const claimed = await tx.meetingRecording.updateMany({
-        where: { id: recordingId, status: MeetingRecordingStatus.UPLOADING },
-        data: {
-          status: MeetingRecordingStatus.QUEUED,
-          // Safari ghi mp4 còn Chrome ghi webm: lấy định dạng thật theo nội dung, mime khai báo chỉ để gợi ý
-          mimeType: detected,
-          partCount: input.partCount,
-          byteSize: BigInt(byteSize),
-          durationSec: input.durationSec,
-          error: null,
-        },
+        where: { id: recordingId, status: MeetingRecordingStatus.UPLOADED },
+        data: { status: MeetingRecordingStatus.QUEUED, consentAt: new Date(), error: null },
       });
-      if (claimed.count !== 1) throw new ConflictError("Bản ghi âm này đã được gửi đi xử lý.", "RECORDING_NOT_UPLOADING");
+      if (claimed.count !== 1) throw new ConflictError("Bản ghi âm này đã được gửi đi soạn biên bản.", "RECORDING_NOT_UPLOADED");
       const job = await enqueueAgentJob(tx, {
         type: TRANSCRIBE_MEETING_JOB,
         payload: { recordingId },
@@ -227,7 +279,7 @@ export class MeetingRecordingService {
       });
       return job.id;
     });
-    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId: queued };
+    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId };
   }
 
   /** Bản lỗi (còn âm thanh) chạy lại từ các đoạn đã chép xong. */

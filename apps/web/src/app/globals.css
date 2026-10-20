@@ -720,6 +720,27 @@
   }
 }
 
+/* Agent đang nghe bản ghi: dải sáng quét ngang qua sóng âm, cùng tinh thần chữ shimmer; giảm chuyển động thì đứng yên, sóng đậm vừa */
+@keyframes waveform-scan {
+  from { mask-position: -70% 0; }
+  to { mask-position: 170% 0; }
+}
+
+.animate-waveform-scan {
+  mask-image: linear-gradient(90deg, transparent, #000 35%, #000 65%, transparent);
+  mask-size: 40% 100%;
+  mask-repeat: no-repeat;
+  animation: waveform-scan 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-waveform-scan {
+    animation: none;
+    mask-image: none;
+    opacity: 0.5;
+  }
+}
+
 /* Nền trống của Agent như Linear: lưới icon Nhiệm vụ của sidebar (SVG làm mask nên lấy màu chữ), mờ dần lên trên,
    một icon đậm ở ô giữa hàng cuối ngay trên tiêu đề. Lớp sáng hiện quanh con trỏ (--agent-spot-x/y), rời chuột thì tắt dần. */
 @property --agent-spot-x {

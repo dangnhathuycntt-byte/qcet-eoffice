@@ -61,11 +61,18 @@ export const CreateMeetingRecordingSchema = z
       }),
     /** Dung lượng tệp khi chọn tệp có sẵn: quá giới hạn của máy chủ thì từ chối ngay, không bắt gửi cả tệp rồi mới báo. Ghi trực tiếp không biết trước. */
     byteSize: z.number().int().positive().max(MEETING_RECORDING_MAX_BYTES, { error: 'Tệp quá lớn.' }).optional(),
-    /** Người ghi xác nhận đã báo cho người dự họp và đồng ý gửi âm thanh tới dịch vụ AI. */
-    consent: z.literal(true, { error: 'Cần xác nhận đã thông báo cho người dự họp trước khi ghi âm.' }),
   })
   .strict();
 export type CreateMeetingRecordingInput = z.infer<typeof CreateMeetingRecordingSchema>;
+
+/** "Tạo biên bản" từ bản ghi đã tải lên: lúc này âm thanh mới được gửi tới dịch vụ AI nên bắt buộc xác nhận. */
+export const ProcessMeetingRecordingSchema = z
+  .object({
+    /** Người bấm xác nhận đã báo cho người dự họp và đồng ý gửi âm thanh tới dịch vụ AI. */
+    consent: z.literal(true, { error: 'Cần xác nhận đã thông báo cho người dự họp và đồng ý gửi âm thanh tới dịch vụ AI.' }),
+  })
+  .strict();
+export type ProcessMeetingRecordingInput = z.infer<typeof ProcessMeetingRecordingSchema>;
 
 export const CompleteMeetingRecordingSchema = z
   .object({
@@ -76,7 +83,8 @@ export const CompleteMeetingRecordingSchema = z
   .strict();
 export type CompleteMeetingRecordingInput = z.infer<typeof CompleteMeetingRecordingSchema>;
 
-export const MeetingRecordingStatusSchema = z.enum(['UPLOADING', 'QUEUED', 'PROCESSING', 'READY', 'FAILED']);
+/** UPLOADED: đã tải xong, chờ người dùng bấm "Tạo biên bản" (chưa gửi âm thanh tới dịch vụ AI). */
+export const MeetingRecordingStatusSchema = z.enum(['UPLOADING', 'UPLOADED', 'QUEUED', 'PROCESSING', 'READY', 'FAILED']);
 export type MeetingRecordingStatusValue = z.infer<typeof MeetingRecordingStatusSchema>;
 
 export const MeetingRecordingActionItemSchema = z.object({
@@ -97,7 +105,11 @@ export const MeetingRecordingSummarySchema = z.object({
   /** Số đoạn đã chép trên tổng số đoạn; chỉ có khi đang xử lý. */
   progress: z.object({ done: z.number(), total: z.number() }).nullable(),
   error: z.string().nullable(),
+  /** Lúc bấm "Tạo biên bản" (kèm xác nhận); null khi chưa gửi đi soạn. */
+  submittedAt: z.string().nullable(),
   processedAt: z.string().nullable(),
+  /** Sóng âm để vẽ (độ lớn 0–100 theo khoảng đều nhau); null khi máy chủ chưa tính xong, [] khi không tính được. */
+  waveform: z.array(z.number()).nullable(),
 });
 export type MeetingRecordingSummary = z.infer<typeof MeetingRecordingSummarySchema>;
 

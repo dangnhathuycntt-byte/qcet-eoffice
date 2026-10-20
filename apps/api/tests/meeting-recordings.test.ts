@@ -32,7 +32,13 @@ import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '@/lib/jwt-session';
 import { POST as createRoute, GET as listRoute } from '@/app/api/meetings/[id]/recordings/route';
 import { PUT as partRoute } from '@/app/api/meetings/[id]/recordings/[recordingId]/parts/[index]/route';
-import { MEETING_RECORDING_PART_MAX_BYTES, CreateMeetingRecordingSchema, CompleteMeetingRecordingSchema } from '@qcet/contracts/meeting-recordings';
+import { POST as processRoute } from '@/app/api/meetings/[id]/recordings/[recordingId]/process/route';
+import {
+  MEETING_RECORDING_PART_MAX_BYTES,
+  CreateMeetingRecordingSchema,
+  CompleteMeetingRecordingSchema,
+  ProcessMeetingRecordingSchema,
+} from '@qcet/contracts/meeting-recordings';
 import { MeetingRecordingService } from '@/server/meetings/recording-service';
 import { transcribeMeeting } from '@/server/meetings/recording-job';
 import { recordingAudioPath } from '@/server/meetings/recording-storage';
@@ -53,9 +59,12 @@ const HAS_FFMPEG = (() => {
 
 const WEBM = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(200, 7)]);
 const create = (userId: string, overrides: Record<string, unknown> = {}, id = meetingId) =>
-  MeetingRecordingService.create(id, CreateMeetingRecordingSchema.parse({ source: 'file', mimeType: 'audio/webm', consent: true, ...overrides }), userId);
+  MeetingRecordingService.create(id, CreateMeetingRecordingSchema.parse({ source: 'file', mimeType: 'audio/webm', ...overrides }), userId);
 const complete = (userId: string, recordingId: string, partCount: number, durationSec = 600) =>
   MeetingRecordingService.complete(meetingId, recordingId, CompleteMeetingRecordingSchema.parse({ partCount, durationSec }), userId);
+/** "Tạo biên bản" (kèm xác nhận đồng ý): bản đã tải lên chuyển QUEUED và xếp việc chép lời. */
+const processRecording = (userId: string, recordingId: string) =>
+  MeetingRecordingService.process(meetingId, recordingId, ProcessMeetingRecordingSchema.parse({ consent: true }), userId);
 
 function setEnv(values: Record<string, string | undefined>) {
   for (const [key, value] of Object.entries(values)) {
@@ -118,11 +127,12 @@ function job(recordingId: string, attempt = 1): AgentJobContext {
   };
 }
 
-/** Bản ghi đã ghép sẵn và xếp hàng (QUEUED) với âm thanh thật trên đĩa. */
+/** Bản ghi đã ghép sẵn, đã bấm "Tạo biên bản" (QUEUED) với âm thanh thật trên đĩa. */
 async function queuedRecording(durationSec: number) {
   const recording = await create(users.organizer);
   await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, WEBM, users.organizer);
   await complete(users.organizer, recording.id, 1, durationSec);
+  await processRecording(users.organizer, recording.id);
   return recording.id;
 }
 
@@ -227,7 +237,7 @@ describe('Ghi âm cuộc họp', () => {
       assert.equal(await prisma.meetingRecording.count({ where: { meetingId } }), 0);
     });
 
-    it('route: mở bản ghi 201 kèm cờ không lưu đệm, thiếu xác nhận 400, chưa đăng nhập 401', async () => {
+    it('route: mở bản ghi 201 kèm cờ không lưu đệm (chưa cần xác nhận), chưa đăng nhập 401', async () => {
       const post = (headers: Record<string, string>, body: unknown) =>
         createRoute(
           new NextRequest(`http://localhost:3000/api/meetings/${meetingId}/recordings`, {
@@ -237,19 +247,21 @@ describe('Ghi âm cuộc họp', () => {
           }),
           meetingCtx()
         );
-      const ok = await post(bearer('organizer'), { source: 'live', mimeType: 'audio/webm;codecs=opus', consent: true });
+      const ok = await post(bearer('organizer'), { source: 'live', mimeType: 'audio/webm;codecs=opus' });
       assert.equal(ok.status, 201);
       assert.equal(ok.headers.get('cache-control'), 'private, no-store');
-      assert.equal((await ok.json()).status, 'UPLOADING');
-      assert.equal((await post(bearer('organizer'), { source: 'live', mimeType: 'audio/webm', consent: false })).status, 400);
-      assert.equal((await post({}, { source: 'live', mimeType: 'audio/webm', consent: true })).status, 401);
+      const created = await ok.json();
+      assert.equal(created.status, 'UPLOADING');
+      assert.equal(created.waveform, null);
+      assert.equal((await prisma.meetingRecording.findUniqueOrThrow({ where: { id: created.id } })).consentAt, null, 'chưa gửi AI thì chưa có xác nhận');
+      assert.equal((await post({}, { source: 'live', mimeType: 'audio/webm' })).status, 401);
       const forbidden = await listRoute(new NextRequest(`http://localhost:3000/api/meetings/${meetingId}/recordings`, { headers: bearer('participant') }), meetingCtx());
       assert.equal(forbidden.status, 403);
     });
   });
 
   describe('tải lên và ghép', () => {
-    it('thiếu phần thì không hoàn tất và bản ghi vẫn nhận bù; đủ phần thì QUEUED, ghép đúng thứ tự, xếp một việc chép lời', async () => {
+    it('thiếu phần thì không hoàn tất và bản ghi vẫn nhận bù; đủ phần thì UPLOADED, ghép đúng thứ tự, chưa xếp việc chép lời', async () => {
       const recording = await create(users.organizer);
       await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, WEBM, users.organizer);
       await MeetingRecordingService.uploadPart(meetingId, recording.id, 2, Buffer.from('cc'), users.organizer);
@@ -259,23 +271,66 @@ describe('Ghi âm cuộc họp', () => {
       await MeetingRecordingService.uploadPart(meetingId, recording.id, 1, Buffer.from('bb'), users.organizer);
       // Gửi lại phần 1 (thử lại sau lỗi mạng) ghi đè chứ không nhân đôi
       await MeetingRecordingService.uploadPart(meetingId, recording.id, 1, Buffer.from('bb'), users.organizer);
-      const { recording: queued, jobId } = await complete(users.organizer, recording.id, 3, 1500);
-      assert.equal(queued.status, 'QUEUED');
-      assert.equal(queued.durationSec, 1500);
-      assert.deepEqual(queued.progress, { done: 0, total: 3 });
+      const { recording: uploaded } = await complete(users.organizer, recording.id, 3, 1500);
+      assert.equal(uploaded.status, 'UPLOADED');
+      assert.equal(uploaded.durationSec, 1500);
+      assert.equal(uploaded.progress, null);
 
       const audio = await fs.readFile(recordingAudioPath(recording.id));
       assert.equal(audio.length, WEBM.length + 4);
       assert.equal(audio.subarray(WEBM.length).toString(), 'bbcc');
       assert.deepEqual(await fs.readdir(path.join(uploadsDir, 'recordings', recording.id)), ['audio.bin'], 'các phần đã được dọn');
+      assert.equal(await prisma.outboxEvent.count({ where: { aggregateId: { startsWith: `${recording.id}:` } } }), 0, 'chưa bấm Tạo biên bản thì chưa gửi AI');
 
+      await assert.rejects(complete(users.organizer, recording.id, 3), /đã tải lên xong/, 'không hoàn tất hai lần');
+      await assert.rejects(MeetingRecordingService.uploadPart(meetingId, recording.id, 3, Buffer.from('dd'), users.organizer), /không còn nhận thêm/);
+    });
+
+    it('Tạo biên bản: lưu xác nhận, chuyển QUEUED và xếp một việc chép lời; chưa tải xong, bấm hai lần hay người dự họp thường đều bị chặn', async () => {
+      const recording = await create(users.organizer);
+      await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, WEBM, users.organizer);
+      await assert.rejects(processRecording(users.organizer, recording.id), /chưa tải lên xong/);
+      await complete(users.organizer, recording.id, 1, 1500);
+      await assert.rejects(processRecording(users.participant, recording.id), (error: { statusCode?: number }) => error.statusCode === 403);
+
+      const { recording: queued, jobId } = await processRecording(users.organizer, recording.id);
+      assert.equal(queued.status, 'QUEUED');
+      assert.deepEqual(queued.progress, { done: 0, total: 3 });
+      assert.ok((await prisma.meetingRecording.findUniqueOrThrow({ where: { id: recording.id } })).consentAt, 'lưu thời điểm xác nhận');
       const event = await prisma.outboxEvent.findUniqueOrThrow({ where: { id: jobId } });
       assert.equal(event.eventType, 'AGENT_JOB_TRANSCRIBE_MEETING');
       assert.equal(event.aggregateId, `${recording.id}:0`);
       assert.equal(JSON.stringify(event.payload).includes('WEBM'), false);
+      await assert.rejects(processRecording(users.organizer, recording.id), /đã được gửi đi soạn biên bản/);
+    });
 
-      await assert.rejects(complete(users.organizer, recording.id, 3), /đã được gửi đi xử lý/, 'không hoàn tất hai lần');
-      await assert.rejects(MeetingRecordingService.uploadPart(meetingId, recording.id, 3, Buffer.from('dd'), users.organizer), /không còn nhận thêm/);
+    // Đường thành công gọi `after()` (chỉ chạy trong yêu cầu thật) nên kiểm ở mức service phía trên
+    it('route Tạo biên bản: thiếu xác nhận 400, chưa đăng nhập 401, bản ghi vẫn chờ', async () => {
+      const recording = await create(users.organizer);
+      await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, WEBM, users.organizer);
+      await complete(users.organizer, recording.id, 1, 60);
+      const post = (headers: Record<string, string>, body: unknown) =>
+        processRoute(
+          new NextRequest(`http://localhost:3000/api/meetings/${meetingId}/recordings/${recording.id}/process`, {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }),
+          { params: Promise.resolve({ id: meetingId, recordingId: recording.id }) }
+        );
+      assert.equal((await post(bearer('organizer'), { consent: false })).status, 400);
+      assert.equal((await post(bearer('organizer'), {})).status, 400);
+      assert.equal((await post({}, { consent: true })).status, 401);
+      assert.equal((await prisma.meetingRecording.findUniqueOrThrow({ where: { id: recording.id } })).status, 'UPLOADED');
+    });
+
+    it('không có ffmpeg: đo sóng âm lưu [] để giao diện thôi chờ; bản ghi đã xóa thì bỏ qua', async () => {
+      const recording = await create(users.organizer);
+      await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, WEBM, users.organizer);
+      await complete(users.organizer, recording.id, 1, 60);
+      await MeetingRecordingService.measureWaveform(recording.id);
+      assert.deepEqual((await MeetingRecordingService.get(meetingId, recording.id, users.organizer)).waveform, []);
+      await MeetingRecordingService.measureWaveform('khong_ton_tai');
     });
 
     it('tệp không phải âm thanh (byte đầu lạ) bị từ chối và bản ghi bị bỏ', async () => {
@@ -316,8 +371,8 @@ describe('Ghi âm cuộc họp', () => {
       const MB = 1024 * 1024;
       await assert.rejects(create(users.organizer, { byteSize: 49 * MB }), (error: { statusCode?: number }) => error.statusCode === 413);
       assert.equal((await create(users.organizer, { byteSize: 48 * MB })).status, 'UPLOADING');
-      assert.equal(CreateMeetingRecordingSchema.safeParse({ source: 'file', mimeType: 'audio/webm', consent: true, byteSize: 128 * MB }).success, true);
-      assert.equal(CreateMeetingRecordingSchema.safeParse({ source: 'file', mimeType: 'audio/webm', consent: true, byteSize: 128 * MB + 1 }).success, false);
+      assert.equal(CreateMeetingRecordingSchema.safeParse({ source: 'file', mimeType: 'audio/webm', byteSize: 128 * MB }).success, true);
+      assert.equal(CreateMeetingRecordingSchema.safeParse({ source: 'file', mimeType: 'audio/webm', byteSize: 128 * MB + 1 }).success, false);
     });
 
     it('route PUT phần: nhận byte thô, từ chối người dự họp thường và chưa đăng nhập', async () => {
@@ -643,6 +698,7 @@ describe('Ghi âm cuộc họp', () => {
       const recording = await create(users.organizer, { mimeType: 'audio/mpeg' });
       await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, bytes, users.organizer);
       await complete(users.organizer, recording.id, 1, durationSec);
+      await processRecording(users.organizer, recording.id);
       return recording.id;
     }
 
@@ -660,6 +716,31 @@ describe('Ghi âm cuộc họp', () => {
       const broken = path.join(uploadsDir, 'broken.bin');
       await fs.writeFile(broken, WEBM);
       await assert.rejects(sliceAudio(broken, 0, 60), (error: Error) => error instanceof AudioSliceError && /Không đọc được âm thanh/.test(error.message) && !/Invalid|ffmpeg/i.test(error.message));
+    });
+
+    it('đo sóng âm: phần có tiếng cao, phần im lặng bằng 0, tối đa 240 cột; tệp hỏng lưu [] không ném', async () => {
+      const toneThenSilence = path.join(uploadsDir, 'tone-silence.mp3');
+      const made = spawnSync(
+        'ffmpeg',
+        ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=16000:duration=20', '-af', 'apad=pad_dur=20', '-ac', '1', '-c:a', 'libmp3lame', '-b:a', '32k', toneThenSilence],
+        { encoding: 'utf8' }
+      );
+      assert.equal(made.status, 0, made.stderr);
+      const recording = await create(users.organizer, { mimeType: 'audio/mpeg' });
+      await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, await fs.readFile(toneThenSilence), users.organizer);
+      await complete(users.organizer, recording.id, 1, 40);
+      await MeetingRecordingService.measureWaveform(recording.id);
+      const { waveform } = await MeetingRecordingService.get(meetingId, recording.id, users.organizer);
+      assert.ok(waveform && waveform.length > 100 && waveform.length <= 240, `số cột ${waveform?.length}`);
+      const third = Math.floor(waveform.length / 3);
+      assert.ok(waveform.slice(0, third).every((value) => value >= 90), 'đoạn có tiếng gần mức cao nhất');
+      assert.ok(waveform.slice(-third).every((value) => value <= 5), 'đoạn im lặng gần 0');
+
+      const broken = await create(users.organizer);
+      await MeetingRecordingService.uploadPart(meetingId, broken.id, 0, WEBM, users.organizer);
+      await complete(users.organizer, broken.id, 1, 60);
+      await MeetingRecordingService.measureWaveform(broken.id);
+      assert.deepEqual((await MeetingRecordingService.get(meetingId, broken.id, users.organizer)).waveform, []);
     });
 
     it('ffmpegAvailable: tắt bằng none hoặc trỏ tới đường dẫn không có thì false, bật lại thì true', async () => {

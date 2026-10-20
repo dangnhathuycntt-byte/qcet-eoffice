@@ -2105,6 +2105,7 @@ model MeetingResolution {
 
 enum MeetingRecordingStatus {
   UPLOADING
+  UPLOADED
   QUEUED
   PROCESSING
   READY
@@ -2112,9 +2113,10 @@ enum MeetingRecordingStatus {
 }
 
 /// Bản ghi âm cuộc họp: âm thanh gửi lên theo từng phần (UPLOADING), ghép thành một tệp trong `UPLOADS_DIR/recordings/<id>/`
-/// (không qua FileObject, không có đường tải về) rồi chờ Gemini chép lời và soạn biên bản đề xuất (QUEUED, PROCESSING, READY);
-/// âm thanh bị xóa khi xử lý xong. Chỉ người soạn biên bản (chủ tọa, thư ký, người tổ chức) xem và xử lý.
-/// `consentAt`: người ghi đã xác nhận thông báo cho người dự họp trước khi ghi. Kết quả chỉ là bản nháp, người dùng tự duyệt.
+/// (không qua FileObject, không có đường tải về) rồi chờ người dùng bấm "Tạo biên bản" (UPLOADED); khi đó mới gửi Gemini chép
+/// lời và soạn biên bản đề xuất (QUEUED, PROCESSING, READY); âm thanh bị xóa khi xử lý xong. Chỉ người soạn biên bản (chủ tọa,
+/// thư ký, người tổ chức) xem và xử lý. `consentAt`: lúc bấm "Tạo biên bản", người dùng xác nhận đã thông báo cho người dự họp và
+/// đồng ý gửi âm thanh tới dịch vụ AI (trống khi chưa bấm). Kết quả chỉ là bản nháp, người dùng tự duyệt.
 model MeetingRecording {
   id           String                     @id @default(cuid())
   meetingId    String                     @map("meeting_id")
@@ -2131,7 +2133,9 @@ model MeetingRecording {
   /// Chưa dùng: âm thanh lưu ngoài FileObject (xem chú thích model). Giữ cột để không phải xóa cột đã áp dụng ở dev/test.
   fileObjectId String?                    @map("file_object_id")
   fileObject   FileObject?                @relation(fields: [fileObjectId], references: [id], onDelete: SetNull)
-  consentAt    DateTime                   @map("consent_at")
+  consentAt    DateTime?                  @map("consent_at")
+  /// Sóng âm để vẽ: độ lớn 0–100 theo từng khoảng đều nhau của bản ghi, máy chủ tính bằng ffmpeg sau khi ghép; [] khi không tính được
+  waveform     Json?
   /// Bản chép từng đoạn đã xong [{ index, startSec, endSec, text }]: làm lại việc bị ngắt thì chạy tiếp từ đây
   windows      Json?
   transcript   String?

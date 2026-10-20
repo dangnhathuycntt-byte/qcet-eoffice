@@ -37,6 +37,7 @@ export class LiveRecordingSession {
   private queue: Promise<void> = Promise.resolve();
   private failed: Array<{ index: number; blob: Blob }> = [];
   private wakeLock: { release: () => Promise<void> } | null = null;
+  private meter: { context: AudioContext; analyser: AnalyserNode; samples: Float32Array<ArrayBuffer> } | null = null;
 
   private constructor(
     private readonly meetingId: string,
@@ -81,8 +82,32 @@ export class LiveRecordingSession {
     };
     recorder.start(TIMESLICE_MS);
     session.startedAt = performance.now();
+    session.attachMeter();
     await session.holdScreenAwake();
     return session;
+  }
+
+  /** Đo độ lớn micro để vẽ sóng khi đang ghi (chỉ trên máy này, không gửi đi). Trình duyệt không cho thì bỏ qua. */
+  private attachMeter() {
+    try {
+      const context = new AudioContext();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 1024;
+      context.createMediaStreamSource(this.stream).connect(analyser);
+      this.meter = { context, analyser, samples: new Float32Array(analyser.fftSize) };
+    } catch {
+      this.meter = null;
+    }
+  }
+
+  /** Độ lớn hiện tại 0–100 để vẽ sóng; không đo được thì null. Lời nói thường cho RMS 0,02–0,3: lấy căn để tiếng nhỏ vẫn thấy. */
+  level(): number | null {
+    if (!this.meter) return null;
+    const { analyser, samples } = this.meter;
+    analyser.getFloatTimeDomainData(samples);
+    let sum = 0;
+    for (const value of samples) sum += value * value;
+    return Math.round(Math.min(1, Math.sqrt(Math.sqrt(sum / samples.length) * 4)) * 100);
   }
 
   get elapsedSec(): number {
@@ -128,7 +153,7 @@ export class LiveRecordingSession {
 
   /**
    * Dừng ghi, gửi nốt phần cuối rồi hoàn tất. Còn phần chưa gửi được thì ném lỗi để người dùng gửi lại (bản ghi vẫn mở).
-   * Trả về bản ghi đã được xếp hàng chép lời.
+   * Trả về bản ghi đã tải lên (UPLOADED), chờ người dùng bấm "Tạo biên bản".
    */
   async stop(): Promise<MeetingRecordingSummary> {
     const durationSec = Math.min(MEETING_RECORDING_MAX_DURATION_SEC, Math.max(1, Math.round(this.elapsedSec)));
@@ -141,6 +166,8 @@ export class LiveRecordingSession {
       });
     }
     this.stream.getTracks().forEach((track) => track.stop());
+    await this.meter?.context.close().catch(() => undefined);
+    this.meter = null;
     await this.wakeLock?.release().catch(() => undefined);
     await this.queue;
     if (this.failed.length > 0) throw new Error("Còn phần âm thanh chưa gửi được. Kiểm tra mạng rồi bấm gửi lại.");

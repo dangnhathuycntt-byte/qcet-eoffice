@@ -1,23 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, CheckCircle2, ChevronDown, Loader2, Mic, RotateCcw, Square, Trash2, Upload } from "lucide-react";
+import { AudioLines, Check, Mic, Play, RotateCcw, Square, Trash2, Upload } from "lucide-react";
 import {
   MEETING_RECORDING_MAX_BYTES,
   type MeetingRecordingDetail,
   type MeetingRecordingSummary,
 } from "@qcet/contracts/meeting-recordings";
 import { formatClock } from "@qcet/shared/domain/meetings/recording-transcript";
+import { AgentIcon } from "@/components/icons/agent-icon";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
-import { Progress } from "@/components/ui/progress";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { SectionCard } from "@/components/meetings/section-card";
 import { RecordingResult } from "@/components/meetings/recording-result";
+import { RecordingWaveform } from "@/components/meetings/recording-waveform";
 import {
   RecordingRequestError,
   deleteRecording,
@@ -25,6 +25,7 @@ import {
   estimateDurationSec,
   getRecording,
   listRecordings,
+  processRecording,
   retryRecording,
   uploadAudioFile,
 } from "@/components/meetings/recording-client";
@@ -32,31 +33,85 @@ import { LiveRecordingSession, pickRecorderMimeType } from "@/components/meeting
 import { cn } from "@/lib/utils";
 
 const POLL_MS = 4000;
-const when = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" });
+/** Ghi trực tiếp: mỗi 100 ms một cột sóng (trôi 50px mỗi giây như Ghi âm của iOS). */
+const LIVE_SAMPLE_MS = 100;
+const LIVE_MAX_BARS = 400;
+const TIME_ZONE = "Asia/Ho_Chi_Minh";
+const when = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: TIME_ZONE });
+const megabytes = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
 
 type Phase = "idle" | "starting" | "recording" | "finishing" | "uploading";
+
+const formatSize = (bytes: number) => `${megabytes.format(bytes / 1024 / 1024)} MB`;
+const sourceLabel = (recording: MeetingRecordingSummary) => (recording.source === "live" ? "Ghi trực tiếp" : "Tệp tải lên");
 
 function minutesSince(iso: string, now: number): number {
   return Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60_000));
 }
 
-function statusText(recording: MeetingRecordingSummary, now: number): string {
-  switch (recording.status) {
-    case "UPLOADING":
-      return minutesSince(recording.createdAt, now) >= 10 ? "Chưa gửi xong" : "Đang tải lên";
-    case "QUEUED":
-      return "Đang chờ xử lý";
-    case "PROCESSING": {
-      const minutes = minutesSince(recording.createdAt, now);
-      // Chưa chép xong đoạn nào: máy chủ đang nghe cả bản ghi để soạn biên bản (đường nhanh) hoặc đoạn đầu còn chạy, chưa có số đoạn để báo
-      if (!recording.progress || recording.progress.done === 0) return `Đang nghe bản ghi · ${minutes} phút`;
-      return `Đang chép lời · ${recording.progress.done}/${recording.progress.total} đoạn · ${minutes} phút`;
-    }
-    case "READY":
-      return "Sẵn sàng";
-    case "FAILED":
-      return "Chưa xử lý được";
-  }
+/** Sóng âm khi đang ghi: đọc độ lớn micro của phiên mỗi 100 ms (chỉ khung này vẽ lại, không cả bảng). */
+function LiveMeter({ session }: { session: React.RefObject<LiveRecordingSession | null> }) {
+  const [levels, setLevels] = React.useState<number[]>([]);
+  React.useEffect(() => {
+    const timer = window.setInterval(() => {
+      const level = session.current?.level();
+      if (level === null || level === undefined) return;
+      setLevels((current) => [...current.slice(-(LIVE_MAX_BARS - 1)), level]);
+    }, LIVE_SAMPLE_MS);
+    return () => window.clearInterval(timer);
+  }, [session]);
+  return <RecordingWaveform peaks={levels} live label="Sóng âm đang ghi" />;
+}
+
+type StepState = "done" | "active" | "pending";
+
+function Step({ state, children, trailing }: { state: StepState; children: React.ReactNode; trailing?: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-1.5 text-xs">
+      {state === "done" ? (
+        <Check className="size-3.5 shrink-0 text-muted-foreground" />
+      ) : state === "active" ? (
+        <AgentIcon filled className="size-3.5 text-foreground motion-safe:animate-pulse" />
+      ) : (
+        <span aria-hidden="true" className="flex size-3.5 shrink-0 items-center justify-center">
+          <span className="size-1 rounded-full bg-muted-foreground/40" />
+        </span>
+      )}
+      <span className={cn("min-w-0 truncate", state === "active" ? "animate-text-shimmer" : state === "done" ? "text-muted-foreground" : "text-muted-foreground/60")}>
+        {children}
+      </span>
+      {trailing ? <span className="shrink-0 text-muted-foreground tabular-nums">{trailing}</span> : null}
+    </li>
+  );
+}
+
+/** Đang soạn: các bước như nhật ký làm việc của Agent (đã tải lên → đang nghe/chép → soạn biên bản), chữ đang làm có ánh chạy. */
+function ProcessingSteps({ recording, now }: { recording: MeetingRecordingSummary; now: number }) {
+  const minutes = minutesSince(recording.submittedAt ?? recording.createdAt, now);
+  const elapsed = minutes > 0 ? `${minutes} phút` : undefined;
+  const chunked = recording.progress && recording.progress.done > 0;
+  return (
+    <div className="space-y-1.5" aria-live="polite">
+      <ol className="space-y-1">
+        <Step state="done">Đã tải lên {formatSize(recording.byteSize)}</Step>
+        {recording.status === "QUEUED" ? (
+          <Step state="active">Đang chờ tới lượt…</Step>
+        ) : chunked ? (
+          <>
+            <Step state="active" trailing={elapsed}>
+              Đang chép lời {recording.progress!.done}/{recording.progress!.total} đoạn…
+            </Step>
+            <Step state="pending">Soạn biên bản, quyết định và việc được giao</Step>
+          </>
+        ) : (
+          <Step state="active" trailing={elapsed}>
+            Đang nghe {recording.durationSec ? formatClock(recording.durationSec) : "bản ghi"} và soạn biên bản…
+          </Step>
+        )}
+      </ol>
+      <p className="text-xs text-muted-foreground">Có thể rời trang; biên bản đề xuất sẽ hiện ở đây khi xong.</p>
+    </div>
+  );
 }
 
 export interface MeetingRecordingPanelProps {
@@ -68,33 +123,34 @@ export interface MeetingRecordingPanelProps {
 }
 
 /**
- * Ghi âm hoặc tải tệp ghi âm cuộc họp để AI chép lời và soạn biên bản đề xuất. Chỉ chủ tọa, thư ký, người tổ chức dùng
- * được (máy chủ kiểm quyền; nhận 403/404 thì khung tự ẩn). Âm thanh bị xóa khi xử lý xong.
+ * Ghi âm hoặc tải tệp ghi âm cuộc họp, rồi bấm "Tạo biên bản" để Agent (Gemini) nghe và soạn biên bản đề xuất. Mỗi bản ghi
+ * hiện sóng âm máy chủ đã đo; tải lên chưa gửi tới dịch vụ AI, bấm "Tạo biên bản" mới gửi (lời nhắc cạnh nút: bấm là xác nhận
+ * đã báo người dự họp, như "Start transcribing" của Notion). Chỉ chủ tọa, thư ký, người tổ chức dùng được (máy chủ kiểm quyền;
+ * nhận 403/404 thì khung tự ẩn). Âm thanh bị xóa khi soạn xong.
  */
 export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }: MeetingRecordingPanelProps) {
   const { notifyError } = useFeedback();
   const [access, setAccess] = React.useState<"loading" | "ok" | "denied" | "error">("loading");
   const [recordings, setRecordings] = React.useState<MeetingRecordingSummary[]>([]);
-  const [consent, setConsent] = React.useState(false);
-  const [consentError, setConsentError] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [elapsed, setElapsed] = React.useState(0);
   const [uploadedParts, setUploadedParts] = React.useState(0);
-  const [fileProgress, setFileProgress] = React.useState<{ uploaded: number; total: number } | null>(null);
+  // Tệp đang tải lên từ chính trình duyệt này: mã bản ghi và số byte đã gửi (vạch đỏ trên sóng âm)
+  const [upload, setUpload] = React.useState<{ id: string; uploaded: number; total: number } | null>(null);
   const [problem, setProblem] = React.useState<string | null>(null);
   const [needsResend, setNeedsResend] = React.useState(false);
   // Lỗi khi bắt đầu ghi trực tiếp (micro bị chặn, không có micro…): câu lỗi kèm "Thử lại"
   const [startFailed, setStartFailed] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState<string | null>(null);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [details, setDetails] = React.useState<Record<string, MeetingRecordingDetail>>({});
   const [deleting, setDeleting] = React.useState<MeetingRecordingSummary | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [dragging, setDragging] = React.useState(false);
   const [now, setNow] = React.useState(() => Date.now());
 
   const sessionRef = React.useRef<LiveRecordingSession | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const consentRef = React.useRef<HTMLInputElement>(null);
-  const consentErrorId = React.useId();
   const watchIdRef = React.useRef<string | null>(null);
   const mountedRef = React.useRef(true);
   const canRecordLive = React.useMemo(() => (typeof window === "undefined" ? false : pickRecorderMimeType() !== null), []);
@@ -129,15 +185,18 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
     };
   }, [refresh]);
 
-  const hasActive = recordings.some((r) => r.status === "QUEUED" || r.status === "PROCESSING");
+  // Thăm dò khi đang soạn, hoặc khi bản vừa tải lên còn chờ máy chủ đo sóng âm
+  const needsPolling = recordings.some(
+    (r) => r.status === "QUEUED" || r.status === "PROCESSING" || (r.status === "UPLOADED" && r.waveform === null)
+  );
   React.useEffect(() => {
-    if (!hasActive) return;
+    if (!needsPolling) return;
     const timer = window.setInterval(() => {
       setNow(Date.now());
       void refresh();
     }, POLL_MS);
     return () => window.clearInterval(timer);
-  }, [hasActive, refresh]);
+  }, [needsPolling, refresh]);
 
   // Mở sẵn kết quả của bản vừa gửi khi nó xong
   React.useEffect(() => {
@@ -176,16 +235,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
     }
   }
 
-  /** Nút ghi và nút tải tệp không khóa khi chưa xác nhận: bấm thì báo dưới ô xác nhận và đưa con trỏ vào đó. */
-  function requireConsent(): boolean {
-    if (consent) return true;
-    setConsentError(true);
-    consentRef.current?.focus();
-    return false;
-  }
-
   async function startLive() {
-    if (!requireConsent()) return;
     setProblem(null);
     setNeedsResend(false);
     setStartFailed(false);
@@ -211,9 +261,9 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
     if (!session) return;
     setPhase("finishing");
     try {
-      const recording = resend ? await session.finishAfterRetry() : await session.stop();
+      if (resend) await session.finishAfterRetry();
+      else await session.stop();
       sessionRef.current = null;
-      watchIdRef.current = recording.id;
       setProblem(null);
       setNeedsResend(false);
       setPhase("idle");
@@ -234,7 +284,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
   }
 
   async function handleFile(file: File | undefined) {
-    if (!file) return;
+    if (!file || phase !== "idle") return;
     const mimeType = detectFileMimeType(file);
     if (!mimeType) {
       setProblem("Định dạng chưa được hỗ trợ. Thầy/Cô chọn tệp webm, ogg, m4a/mp4, mp3 hoặc wav.");
@@ -247,22 +297,42 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
     setProblem(null);
     setStartFailed(false);
     setPhase("uploading");
-    setFileProgress({ uploaded: 0, total: file.size });
     try {
       const durationSec = await estimateDurationSec(file);
-      const recording = await uploadAudioFile(meetingId, file, mimeType, durationSec, (progress) =>
-        setFileProgress({ uploaded: progress.uploadedBytes, total: progress.totalBytes })
+      await uploadAudioFile(
+        meetingId,
+        file,
+        mimeType,
+        durationSec,
+        (progress) => setUpload((current) => (current ? { ...current, uploaded: progress.uploadedBytes } : current)),
+        (created) => {
+          // Hiện ngay hàng đang tải (kèm thời lượng đọc được) thay vì đợi tải xong
+          setRecordings((current) => [{ ...created, byteSize: file.size }, ...current.filter((r) => r.id !== created.id)]);
+          setUpload({ id: created.id, uploaded: 0, total: file.size });
+        }
       );
-      watchIdRef.current = recording.id;
-      await refresh();
     } catch (error) {
       setProblem(error instanceof Error ? error.message : "Không tải được tệp lên.");
-      await refresh();
     } finally {
       if (mountedRef.current) {
         setPhase("idle");
-        setFileProgress(null);
+        setUpload(null);
+        await refresh();
       }
+    }
+  }
+
+  async function handleProcess(recording: MeetingRecordingSummary) {
+    setSubmitting(recording.id);
+    try {
+      await processRecording(meetingId, recording.id);
+      watchIdRef.current = recording.id;
+      setNow(Date.now());
+      await refresh();
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : "Chưa gửi đi soạn biên bản được.");
+    } finally {
+      if (mountedRef.current) setSubmitting(null);
     }
   }
 
@@ -298,99 +368,202 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
   if (access === "loading" || access === "denied") return null;
 
   const busy = phase !== "idle";
+  const live = phase === "recording" || phase === "finishing";
+  const pickFile = () => fileInputRef.current?.click();
+
+  const startButtons = (size: "sm" | "xs") => (
+    <>
+      {canRecordLive && (
+        <Button size={size} variant={size === "sm" ? "default" : "ghost"} disabled={busy} loading={phase === "starting"} onClick={() => void startLive()}>
+          <Mic />
+          {size === "sm" ? "Bắt đầu ghi âm" : "Ghi âm"}
+        </Button>
+      )}
+      <Button size={size} variant={size === "sm" ? "toolbar" : "ghost"} disabled={busy} onClick={pickFile}>
+        <Upload />
+        {size === "sm" ? "Tải tệp ghi âm" : "Tải tệp"}
+      </Button>
+    </>
+  );
+
+  function footer(recording: MeetingRecordingSummary) {
+    switch (recording.status) {
+      case "UPLOADING": {
+        if (upload?.id === recording.id) {
+          const percent = Math.round((upload.uploaded / Math.max(1, upload.total)) * 100);
+          return (
+            <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+              Đang tải lên {percent}% · {formatSize(upload.uploaded)}/{formatSize(upload.total)} · giữ tab này mở tới khi xong
+            </p>
+          );
+        }
+        return minutesSince(recording.createdAt, now) >= 10 ? (
+          <p className="text-xs text-warning">Chưa tải lên xong. Thầy/Cô xóa bản này rồi tải lên lại.</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Đang tải lên…</p>
+        );
+      }
+      case "UPLOADED":
+        return (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <Button variant="toolbar" size="pill" loading={submitting === recording.id} onClick={() => void handleProcess(recording)}>
+              <AgentIcon filled data-icon="inline-start" />
+              Tạo biên bản
+            </Button>
+            <p className="min-w-0 flex-1 basis-60 text-xs text-muted-foreground">
+              Bấm là xác nhận đã báo người dự họp. Âm thanh gửi tới Gemini, soạn xong thì xóa khỏi máy chủ.
+            </p>
+          </div>
+        );
+      case "QUEUED":
+      case "PROCESSING":
+        return <ProcessingSteps recording={recording} now={now} />;
+      case "READY": {
+        const expanded = expandedId === recording.id;
+        const detail = details[recording.id];
+        const tookMinutes =
+          recording.submittedAt && recording.processedAt
+            ? Math.max(1, Math.round((new Date(recording.processedAt).getTime() - new Date(recording.submittedAt).getTime()) / 60_000))
+            : null;
+        return (
+          <div className="flex flex-col gap-1.5">
+            <Pressable
+              aria-expanded={expanded}
+              onClick={() => void openRecording(recording.id)}
+              className="-ml-1 inline-flex w-fit items-center gap-1 rounded-sm px-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <Check className="size-3.5" />
+              {tookMinutes ? `Đã soạn biên bản đề xuất trong ${tookMinutes} phút` : "Đã soạn biên bản đề xuất"}
+              <Play className={cn("size-2 fill-current transition-transform duration-150 motion-reduce:transition-none", expanded && "rotate-90")} />
+            </Pressable>
+            {expanded &&
+              (detail ? (
+                <RecordingResult detail={detail} onUseAsMinutes={onUseAsMinutes} minutesHint={minutesHint} />
+              ) : (
+                <p className="text-xs text-muted-foreground">Đang tải kết quả…</p>
+              ))}
+          </div>
+        );
+      }
+      case "FAILED":
+        return (
+          <div className="flex items-start gap-2">
+            <p role="alert" className="min-w-0 flex-1 text-xs text-destructive">
+              {recording.error ?? "Chưa soạn được biên bản."}
+            </p>
+            {recording.durationSec !== null && (
+              <Button variant="ghost" size="xs" onClick={() => void handleRetry(recording)}>
+                <RotateCcw />
+                Thử lại
+              </Button>
+            )}
+          </div>
+        );
+    }
+  }
+
+  function waveformFor(recording: MeetingRecordingSummary) {
+    const name = `Sóng âm ${sourceLabel(recording).toLowerCase()}`;
+    if (recording.status === "UPLOADING") {
+      const head = upload?.id === recording.id ? upload.uploaded / Math.max(1, upload.total) : null;
+      return <RecordingWaveform peaks={null} head={head} label={head === null ? name : `${name}, đang tải lên ${Math.round(head * 100)}%`} />;
+    }
+    const scanning = recording.status === "QUEUED" || recording.status === "PROCESSING";
+    // Bản đã soạn xong hay lỗi mà không có sóng âm (ghi trước khi có tính năng này, máy chủ không đo được): âm thanh đã xóa
+    // hoặc sẽ không đo nữa, bỏ hẳn hàng sóng thay vì để một đường chấm trống
+    if (!recording.waveform?.length && (recording.status === "READY" || recording.status === "FAILED")) return null;
+    return (
+      <RecordingWaveform
+        peaks={recording.waveform}
+        tone={recording.status === "UPLOADED" ? "strong" : "muted"}
+        scanning={scanning}
+        label={scanning ? `${name}, Agent đang nghe` : name}
+      />
+    );
+  }
 
   return (
-    <SectionCard title="Ghi âm cuộc họp">
-      <div className="space-y-3">
+    <SectionCard
+      title="Ghi âm cuộc họp"
+      count={recordings.length || undefined}
+      action={recordings.length > 0 && !live ? <div className="flex items-center gap-0.5">{startButtons("xs")}</div> : undefined}
+    >
+      <div
+        className="relative space-y-3"
+        onDragOver={(event) => {
+          if (busy || !event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={(event) => {
+          if (busy) return;
+          event.preventDefault();
+          setDragging(false);
+          void handleFile(event.dataTransfer.files[0]);
+        }}
+      >
         {access === "error" && (
           <InlineAlert variant="error" actionLabel="Thử lại" onAction={() => void refresh()}>
             Chưa tải được danh sách bản ghi âm.
           </InlineAlert>
         )}
 
-        {phase === "recording" || phase === "finishing" ? (
+        {live ? (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-compact text-foreground">
-              <span aria-hidden className="size-2 animate-pulse rounded-full bg-destructive" />
-              <span className="font-medium tabular-nums">{phase === "finishing" ? "Đang gửi nốt…" : `Đang ghi ${formatClock(elapsed)}`}</span>
-              <span className="text-xs text-muted-foreground">Đã gửi {uploadedParts} phần</span>
-            </div>
-            <p className="text-xs text-muted-foreground">Đừng đóng tab hoặc tắt màn hình khi đang ghi. Âm thanh được gửi dần lên máy chủ mỗi phút.</p>
-            <Button size="sm" variant="destructive" loading={phase === "finishing"} onClick={() => void finishLive()}>
-              <Square />
-              Dừng và gửi
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            <div className="space-y-1">
-              <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
-                <Checkbox
-                  ref={consentRef}
-                  checked={consent}
-                  disabled={busy}
-                  className="mt-0.5"
-                  aria-invalid={consentError ? true : undefined}
-                  aria-describedby={consentError ? consentErrorId : undefined}
-                  onChange={(event) => {
-                    setConsent(event.target.checked);
-                    setConsentError(false);
-                  }}
-                />
-                <span>
-                  Đã báo người dự họp và đồng ý gửi âm thanh tới dịch vụ AI (Gemini) để chép lời.
-                  <span className="block text-muted-foreground">Âm thanh bị xóa sau khi xử lý; kết quả là bản nháp, cần đọc lại trước khi dùng.</span>
-                </span>
-              </label>
-              {consentError ? (
-                <p id={consentErrorId} role="alert" className="pl-6 text-xs text-destructive">
-                  Đánh dấu xác nhận trước khi ghi âm hoặc tải tệp.
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {canRecordLive && (
-                <Button size="sm" disabled={busy} loading={phase === "starting"} onClick={() => void startLive()}>
-                  <Mic />
-                  Bắt đầu ghi âm
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="toolbar"
-                disabled={busy}
-                onClick={() => {
-                  if (requireConsent()) fileInputRef.current?.click();
-                }}
-              >
-                <Upload />
-                Tải tệp ghi âm
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-destructive motion-safe:animate-pulse" />
+              <span className="text-compact font-medium text-foreground tabular-nums">
+                {phase === "finishing" ? "Đang gửi nốt…" : `Đang ghi ${formatClock(elapsed)}`}
+              </span>
+              <span className="text-xs text-muted-foreground tabular-nums">Đã gửi {uploadedParts} phần</span>
+              <Button size="sm" variant="destructive" className="ml-auto" loading={phase === "finishing"} onClick={() => void finishLive()}>
+                <Square />
+                Dừng ghi
               </Button>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*,.m4a,.mp3,.wav,.webm,.ogg,.opus"
-                className="hidden"
-                aria-label="Chọn tệp ghi âm"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  void handleFile(file);
-                }}
-              />
             </div>
-            {!canRecordLive && <p className="text-xs text-muted-foreground">Trình duyệt này không ghi âm trực tiếp được; Thầy/Cô tải tệp ghi âm lên.</p>}
+            <LiveMeter session={sessionRef} />
+            <p className="text-xs text-muted-foreground">Đừng đóng tab hoặc tắt màn hình. Âm thanh được gửi dần lên máy chủ mỗi phút.</p>
           </div>
-        )}
+        ) : recordings.length === 0 ? (
+          // Ô kéo thả gọn trong thẻ (như mục trống của Linear), icon Agent cho biết phần này do AI làm
+          <div
+            className={cn(
+              "flex flex-col gap-2.5 rounded-lg border border-dashed px-3 py-2.5 sm:flex-row sm:items-center",
+              dragging ? "border-primary/60" : "border-muted-foreground/30"
+            )}
+          >
+            <div className="flex min-w-0 flex-1 items-start gap-2.5">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+                <AgentIcon filled className="size-3.5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-compact font-medium text-foreground">Biên bản từ ghi âm</p>
+                <p className="text-xs text-muted-foreground">
+                  {canRecordLive
+                    ? "Ghi âm buổi họp hoặc kéo thả tệp vào đây, Agent nghe và soạn biên bản nháp. Nhớ báo người dự họp trước khi ghi."
+                    : "Kéo thả hoặc chọn tệp ghi âm, Agent nghe và soạn biên bản nháp. Trình duyệt này không ghi âm trực tiếp được."}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-1.5 pl-9.5 sm:pl-0">{startButtons("sm")}</div>
+          </div>
+        ) : null}
 
-        {phase === "uploading" && fileProgress && (
-          <div className="space-y-1" aria-live="polite">
-            <Progress value={fileProgress.uploaded} max={fileProgress.total} />
-            <p className="text-xs text-muted-foreground">
-              Đang tải lên {Math.round((fileProgress.uploaded / Math.max(1, fileProgress.total)) * 100)}% ({(fileProgress.total / 1024 / 1024).toFixed(1)} MB)
-            </p>
-          </div>
-        )}
+        <Input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*,.m4a,.mp3,.wav,.webm,.ogg,.opus"
+          className="hidden"
+          aria-label="Chọn tệp ghi âm"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            void handleFile(file);
+          }}
+        />
 
         {problem && (
           <InlineAlert
@@ -404,61 +577,44 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
         )}
 
         {recordings.length > 0 && (
-          <ul className="-mx-1 space-y-1 border-t border-border/30 pt-2">
-            {recordings.map((recording) => {
-              const detail = details[recording.id];
-              const expanded = expandedId === recording.id;
-              const ready = recording.status === "READY";
-              return (
-                <li key={recording.id} className="rounded-lg">
-                  <div className="flex items-center gap-1 px-1">
-                    <Pressable
-                      disabled={!ready}
-                      onClick={() => void openRecording(recording.id)}
-                      aria-expanded={ready ? expanded : undefined}
-                      className={cn("flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1.5 text-left", ready && "hover:bg-accent/60")}
-                    >
-                      {recording.status === "READY" ? (
-                        <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
-                      ) : recording.status === "FAILED" ? (
-                        <AlertCircle className="size-4 shrink-0 text-destructive" />
-                      ) : (
-                        <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-compact text-foreground">
-                          {recording.source === "live" ? "Ghi trực tiếp" : "Tệp tải lên"} · {when.format(new Date(recording.createdAt))}
-                        </span>
-                        <span className={cn("block text-xs", recording.status === "FAILED" ? "text-destructive" : "truncate text-muted-foreground")}>
-                          {statusText(recording, now)}
-                          {recording.durationSec ? ` · ${formatClock(recording.durationSec)}` : ""}
-                          {recording.status === "FAILED" && recording.error ? ` · ${recording.error}` : ""}
-                        </span>
-                      </span>
-                      {ready && <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", expanded && "rotate-180")} />}
-                    </Pressable>
-                    {recording.status === "FAILED" && recording.durationSec !== null && (
-                      <Button variant="ghost" size="icon-xs" aria-label="Thử lại" title="Thử lại" onClick={() => void handleRetry(recording)}>
-                        <RotateCcw />
-                      </Button>
-                    )}
+          <ul className={cn("divide-y divide-border/40", live && "border-t border-border/40")}>
+            {recordings.map((recording) => (
+              <li key={recording.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                    {recording.source === "live" ? <Mic className="size-4" /> : <AudioLines className="size-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-compact font-medium text-foreground">
+                      {sourceLabel(recording)} · {when.format(new Date(recording.createdAt))}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground tabular-nums">
+                      {[
+                        recording.durationSec ? formatClock(recording.durationSec) : null,
+                        recording.byteSize > 0 ? formatSize(recording.byteSize) : null,
+                        recording.createdByName,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  {upload?.id !== recording.id && (
                     <Button variant="ghost" size="icon-xs" aria-label="Xóa bản ghi" title="Xóa bản ghi" onClick={() => setDeleting(recording)}>
                       <Trash2 />
                     </Button>
-                  </div>
-                  {ready && expanded && (
-                    <div className="px-2 pb-2">
-                      {detail ? (
-                        <RecordingResult detail={detail} onUseAsMinutes={onUseAsMinutes} minutesHint={minutesHint} />
-                      ) : (
-                        <p className="pt-2 text-xs text-muted-foreground">Đang tải kết quả…</p>
-                      )}
-                    </div>
                   )}
-                </li>
-              );
-            })}
+                </div>
+                {waveformFor(recording)}
+                {footer(recording)}
+              </li>
+            ))}
           </ul>
+        )}
+
+        {dragging && (
+          <div className="pointer-events-none absolute -inset-1.5 flex items-center justify-center rounded-lg border border-dashed border-primary/60 bg-background/90 text-compact font-medium text-foreground">
+            Thả tệp ghi âm vào đây
+          </div>
         )}
       </div>
 
@@ -469,8 +625,8 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
         isConfirming={isDeleting}
         title="Xóa bản ghi âm?"
         entityLabel="Bản ghi"
-        entityName={deleting ? `${deleting.source === "live" ? "Ghi trực tiếp" : "Tệp tải lên"} · ${when.format(new Date(deleting.createdAt))}` : undefined}
-        description="Bản chép lời và biên bản đề xuất của bản ghi này sẽ mất."
+        entityName={deleting ? `${sourceLabel(deleting)} · ${when.format(new Date(deleting.createdAt))}` : undefined}
+        description="Âm thanh, sóng âm và biên bản đề xuất của bản ghi này sẽ mất."
       />
     </SectionCard>
   );
