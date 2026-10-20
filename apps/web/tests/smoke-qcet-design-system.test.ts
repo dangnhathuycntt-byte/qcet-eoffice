@@ -6,7 +6,6 @@ import { cn } from "../src/lib/utils";
 import { buttonVariants, Button } from "../src/components/ui/button";
 import { badgeVariants, Badge } from "../src/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "../src/components/ui/card";
-import { Drawer } from "../src/components/ui/drawer";
 import { Progress, ProgressTrack, ProgressIndicator } from "../src/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants } from "../src/components/ui/tabs";
 
@@ -115,7 +114,6 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(typeof CardFooter, "function");
       assert.equal(typeof Badge, "function");
       assert.ok(typeof Button === "function" || typeof Button === "object");
-      assert.equal(typeof Drawer, "function");
       assert.equal(typeof Progress, "function");
       assert.equal(typeof ProgressTrack, "function");
       assert.equal(typeof ProgressIndicator, "function");

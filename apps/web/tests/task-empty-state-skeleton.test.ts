@@ -90,28 +90,28 @@ describe("TaskEmptyState", () => {
     assert.ok(!html.includes(">Tạo việc</button>"), "đang lọc thì chỉ còn Xóa bộ lọc");
   });
 
-  it("Đang thực hiện trống vì việc chưa xong đều đã trễ: nói rõ lý do, nút chữ thường sang Trễ hạn, tranh đồng hồ báo thức", () => {
+  it("Đang thực hiện trống vì việc chưa xong đều đã trễ: nói rõ lý do, nút chữ thường sang Trễ hạn, icon đồng hồ báo thức", () => {
     const html = renderToString(
       React.createElement(TaskEmptyState, { taskTab: "active", suggestedView: { id: "overdue", count: 1, onSelect: () => {} } })
     );
     assert.ok(html.includes("Không có nhiệm vụ nào đang thực hiện"));
     assert.ok(html.includes("Việc chưa xong đều đã quá hạn: 1 nhiệm vụ đang ở Trễ hạn."));
     assert.ok(html.includes(">Xem việc trễ hạn</button>"));
-    assert.ok(html.includes("illustrations/overdue.png"));
+    assert.ok(html.includes('data-glyph="overdue"'));
   });
 
-  it("Trễ hạn trống còn việc đang làm: nêu số việc, tranh nằm võng; Hoàn thành trống: tranh bảng việc", () => {
+  it("Trễ hạn trống còn việc đang làm: nêu số việc, icon tấm xếp chồng; Hoàn thành trống: icon bảng việc", () => {
     const overdue = renderToString(
       React.createElement(TaskEmptyState, { taskTab: "overdue", suggestedView: { id: "active", count: 3, onSelect: () => {} } })
     );
     assert.ok(overdue.includes("3 nhiệm vụ đang thực hiện."));
     assert.ok(overdue.includes(">Xem việc đang thực hiện</button>"));
-    assert.ok(overdue.includes("illustrations/all-done.png"));
+    assert.ok(overdue.includes('data-glyph="all-done"'));
 
     const done = renderToString(
       React.createElement(TaskEmptyState, { taskTab: "done", suggestedView: { id: "active", count: 3, onSelect: () => {} } })
     );
     assert.ok(done.includes("Chưa có nhiệm vụ nào hoàn thành"));
-    assert.ok(done.includes("illustrations/tasks.png"));
+    assert.ok(done.includes('data-glyph="tasks"'));
   });
 });
