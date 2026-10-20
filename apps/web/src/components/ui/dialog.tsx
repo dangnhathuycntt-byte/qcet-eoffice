@@ -112,3 +112,33 @@ export function StandardDialog({
     </BaseDialog.Root>
   );
 }
+
+/**
+ * Biểu mẫu trong hộp thoại: Enter trong ô một dòng gửi (có nút `type="submit"` trong `DialogFooter` và nút đó không bị
+ * `disabled`), Ctrl/Cmd+Enter trong ô nhiều dòng gửi. Tắt kiểm tra của trình duyệt (`noValidate`): nơi gọi tự báo lỗi
+ * từng ô (`aria-invalid` + dòng `text-xs text-destructive` dưới ô) và đưa focus vào ô lỗi đầu tiên.
+ */
+export function DialogForm({ onSubmit, className, children }: { onSubmit: () => void; className?: string; children: React.ReactNode }) {
+  return (
+    <form
+      noValidate
+      className={cn("flex flex-col gap-3", className)}
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey) || event.nativeEvent.isComposing) return;
+        event.preventDefault();
+        event.currentTarget.requestSubmit();
+      }}
+    >
+      {children}
+    </form>
+  );
+}
+
+/** Chân hộp thoại: nút phụ (ghost) bên trái nút chính, dồn phải, cách nhau 8px. Nút chính `type="submit"` + `loading` khi đang gửi. */
+export function DialogFooter({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <div className={cn("flex justify-end gap-2 pt-1", className)}>{children}</div>;
+}

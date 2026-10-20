@@ -13,7 +13,7 @@ import {
   type AssistantSkillDTO,
 } from "@qcet/contracts/assistant";
 import { Button } from "@/components/ui/button";
-import { StandardDialog } from "@/components/ui/dialog";
+import { DialogFooter, DialogForm, StandardDialog } from "@/components/ui/dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
@@ -348,14 +348,26 @@ function SkillForm({ skill, initialPrompt = "", onDone }: { skill: AssistantSkil
   const { showToast } = useFeedback();
   const [name, setName] = React.useState(skill?.name ?? "");
   const [prompt, setPrompt] = React.useState(skill?.prompt ?? initialPrompt);
+  const [nameError, setNameError] = React.useState<string | null>(null);
+  const [promptError, setPromptError] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const nameRef = React.useRef<HTMLInputElement>(null);
+  const promptRef = React.useRef<HTMLTextAreaElement>(null);
   const nameId = React.useId();
   const promptId = React.useId();
-  const valid = name.trim().length > 0 && prompt.trim().length > 0;
 
   const submit = async () => {
-    if (!valid || saving) return;
+    if (saving) return;
+    // Nút không khóa khi thiếu chữ: báo ngay dưới ô còn thiếu và đưa con trỏ vào đó (Enter cũng gửi được)
+    const missingName = name.trim().length === 0;
+    const missingPrompt = prompt.trim().length === 0;
+    setNameError(missingName ? "Nhập tên kỹ năng." : null);
+    setPromptError(missingPrompt ? "Nhập nội dung kỹ năng." : null);
+    if (missingName || missingPrompt) {
+      (missingName ? nameRef : promptRef).current?.focus();
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -372,34 +384,65 @@ function SkillForm({ skill, initialPrompt = "", onDone }: { skill: AssistantSkil
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <DialogForm onSubmit={() => void submit()}>
       <div className="flex flex-col gap-1.5">
         <SectionLabel htmlFor={nameId}>Tên kỹ năng</SectionLabel>
-        <Input id={nameId} compact autoFocus value={name} maxLength={ASSISTANT_SKILL_NAME_MAX} placeholder="Ví dụ: Báo cáo tuần" onChange={(event) => setName(event.target.value)} />
+        <Input
+          ref={nameRef}
+          id={nameId}
+          compact
+          autoFocus
+          value={name}
+          maxLength={ASSISTANT_SKILL_NAME_MAX}
+          placeholder="Ví dụ: Báo cáo tuần"
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={nameError ? `${nameId}-error` : undefined}
+          onChange={(event) => {
+            setName(event.target.value);
+            setNameError(null);
+          }}
+        />
+        {nameError ? <FieldError id={`${nameId}-error`}>{nameError}</FieldError> : null}
       </div>
       <div className="flex flex-col gap-1.5">
         <SectionLabel htmlFor={promptId}>Câu lệnh</SectionLabel>
         <Textarea
+          ref={promptRef}
           id={promptId}
           compact
-          rows={5}
+          rows={4}
           value={prompt}
           maxLength={ASSISTANT_MESSAGE_MAX}
           countOnlyNearLimit
           placeholder="Ví dụ: Tóm tắt nhiệm vụ trễ hạn của đơn vị tôi tuần này, nhóm theo người chủ trì."
-          onChange={(event) => setPrompt(event.target.value)}
+          aria-invalid={promptError ? true : undefined}
+          aria-describedby={promptError ? `${promptId}-error` : undefined}
+          onChange={(event) => {
+            setPrompt(event.target.value);
+            setPromptError(null);
+          }}
         />
+        {promptError ? <FieldError id={`${promptId}-error`}>{promptError}</FieldError> : null}
       </div>
       {error ? <InlineAlert variant="error">{error}</InlineAlert> : null}
-      <div className="flex justify-end gap-2">
+      <DialogFooter>
         <Button variant="ghost" size="sm" onClick={() => onDone(false)}>
           Hủy
         </Button>
-        <Button size="sm" disabled={!valid || saving} onClick={() => void submit()}>
+        <Button type="submit" size="sm" loading={saving}>
           {skill ? "Lưu" : "Thêm kỹ năng"}
         </Button>
-      </div>
-    </div>
+      </DialogFooter>
+    </DialogForm>
+  );
+}
+
+/** Lỗi của một ô nhập: dòng `text-xs text-destructive` ngay dưới ô, đọc to khi hiện. */
+function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <p id={id} role="alert" className="text-xs text-destructive">
+      {children}
+    </p>
   );
 }
 
@@ -407,7 +450,11 @@ function SkillForm({ skill, initialPrompt = "", onDone }: { skill: AssistantSkil
 export function useSaveSkillDialog() {
   const [prompt, setPrompt] = React.useState<string | null>(null);
   const dialog = (
-    <StandardDialog open={prompt !== null} onOpenChange={(open) => !open && setPrompt(null)} title="Lưu thành kỹ năng" size="sm" compact>
+    <StandardDialog open={prompt !== null} onOpenChange={(open) => !open && setPrompt(null)} title="Lưu thành kỹ năng"
+      description="Gõ / ở đầu ô hỏi Trợ lý để dùng lại câu lệnh này."
+      size="sm"
+      compact
+    >
       {prompt !== null ? <SkillForm key={prompt} skill={null} initialPrompt={prompt} onDone={() => setPrompt(null)} /> : null}
     </StandardDialog>
   );
