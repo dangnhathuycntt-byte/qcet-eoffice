@@ -8,7 +8,7 @@ export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   icon?: React.ReactNode;
   /** Tranh nét mực trong `public/design/illustrations/` (vd. "dossier"), dùng khi chưa có dữ liệu. Có tranh thì bỏ qua `icon`. */
   illustration?: IllustrationName;
-  /** Icon lớn 56px (`empty-glyphs`) cho trạng thái thường ngày (Hộp thư trống, chưa chọn, lỗi tải…); có icon lớn thì bỏ qua tranh và `icon`. */
+  /** Icon lớn 96px (`empty-glyphs`) cho trạng thái thường ngày (Hộp thư trống, chưa chọn, lỗi tải…); có icon lớn thì bỏ qua tranh và `icon`. */
   glyph?: EmptyGlyphName;
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -87,7 +87,7 @@ export function EmptyState({ icon, illustration, glyph, title, description, acti
       <div data-density={density} className={cn("flex w-full items-center justify-center px-6 py-12", className)} {...props}>
         <div className="flex w-full max-w-[340px] flex-col gap-6 text-left">
           {glyph ? (
-            <EmptyGlyph name={glyph} />
+            <EmptyGlyph name={glyph} className="size-20" />
           ) : illustration ? (
             <InkIllustration name={illustration} align="left" className="h-40 w-[172px]" />
           ) : icon ? (
@@ -113,8 +113,8 @@ export function EmptyState({ icon, illustration, glyph, title, description, acti
       {...props}
     >
       {glyph ? (
-        // Cách chữ 16px như Linear (gap 6px + 10px)
-        <EmptyGlyph name={glyph} className="mb-2.5" />
+        // Khoảng trống trong khung vẽ đã tạo ~24px tới chữ như Linear (đo khay Hộp thư 20/10/2026), không thêm lề
+        <EmptyGlyph name={glyph} />
       ) : illustration ? (
         <InkIllustration name={illustration} className="mb-1" />
       ) : icon ? (

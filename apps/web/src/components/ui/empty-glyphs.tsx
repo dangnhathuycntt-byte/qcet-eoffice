@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * Icon lớn của trạng thái trống, vẽ SVG theo icon trang trống của Linear (người dùng gửi ảnh và hai đoạn quay 20/10/2026):
- * vật thể chiếu isometric, khối bo tròn, nét 1,25px màu chữ, không chữ. Mỗi icon có đúng một mảnh nét đậm chuyển động, phần còn
+ * vật thể chiếu isometric, khối bo tròn, nét màu chữ, không chữ. Vẽ trên lưới 56, hiện 96px (khay Hộp thư của Linear ~97px,
+ * người dùng chê bản 56px "nhỏ quá"); nét giữ 1,25px trên màn hình ở mọi cỡ nhờ `vector-effect` ở `globals.css`. Mỗi icon có đúng một mảnh nét đậm chuyển động, phần còn
  * lại nét nhạt đứng yên: mảnh đậm rơi vào chỗ một lần khi hiện (lò xo ~0,5 giây), riêng kính lúp của `no-results` trôi chậm liên
  * tục. Mặt khối tô màu nền thẻ (`--card`) để che nét phía sau, nên chỉ đặt trên nền thẻ (khung và trang Hộp thư). Giảm chuyển
  * động: `MotionConfig reducedMotion="user"` bỏ dịch chuyển của mảnh rơi, kính lúp đứng yên.
@@ -106,16 +107,15 @@ function solid(project: Project, f: Footprint, z0: number, z1: number): Solid {
   };
 }
 
-function SolidShape({ shape, ink, nonScaling }: { shape: Solid; ink: number; nonScaling?: boolean }) {
-  const vectorEffect = nonScaling ? "non-scaling-stroke" : undefined;
+function SolidShape({ shape, ink }: { shape: Solid; ink: number }) {
   return (
     <g strokeOpacity={ink}>
-      <path d={shape.bottom} fill="var(--card)" vectorEffect={vectorEffect} />
+      <path d={shape.bottom} fill="var(--card)" />
       <path d={shape.top} fill="var(--card)" stroke="none" />
       <path d={shape.body} fill="var(--card)" stroke="none" />
-      <path d={shape.edges} vectorEffect={vectorEffect} />
-      <path d={shape.top} vectorEffect={vectorEffect} />
-      <path d={shape.crease} strokeOpacity={ink * 0.5} vectorEffect={vectorEffect} />
+      <path d={shape.edges} />
+      <path d={shape.top} />
+      <path d={shape.crease} strokeOpacity={ink * 0.5} />
     </g>
   );
 }
@@ -173,7 +173,7 @@ function GlyphSvg({ className, children }: { className?: string; children: React
       strokeLinejoin="round"
       aria-hidden="true"
       data-slot="empty-state-glyph"
-      className={cn("block size-14 shrink-0 overflow-visible text-foreground", className)}
+      className={cn("block size-24 shrink-0 overflow-visible text-foreground", className)}
     >
       {children}
     </svg>
@@ -182,13 +182,13 @@ function GlyphSvg({ className, children }: { className?: string; children: React
 
 /* Ba tấm xếp chồng trên nền viền đứt: "Đã đọc hết" tấm trên cùng rơi đúng chỗ, "Lỗi tải" tấm trên cùng rơi lệch. */
 const STACK = (() => {
-  const project = projector([28, 38]);
-  const plate = (z: number, f: Partial<Footprint> = {}) => solid(project, { c: [0, 0], w: 22, d: 22, r: 4.5, ...f }, z, z + 2.5);
+  const project = projector([28, 33.5]);
+  const plate = (z: number, f: Partial<Footprint> = {}) => solid(project, { c: [0, 0], w: 21, d: 21, r: 4.5, ...f }, z, z + 2.5);
   return {
-    floor: footprintPath(project, { c: [0, 0], w: 30, d: 30, r: 6 }, 0),
-    base: [plate(4), plate(12.5)],
-    top: plate(21),
-    askew: plate(21, { c: [2.5, -1.5], yaw: 17 }),
+    floor: footprintPath(project, { c: [0, 0], w: 29, d: 29, r: 6 }, 0),
+    base: [plate(4), plate(12)],
+    top: plate(20),
+    askew: plate(20, { c: [2.5, -1.5], yaw: 17 }),
   };
 })();
 
@@ -208,7 +208,7 @@ function StackGlyph({ askew, className }: { askew?: boolean; className?: string 
 
 /* Khay thư để mở hạ xuống nền viền đứt; lòng khay thấy đáy và góc trong phía sau. */
 const TRAY = (() => {
-  const project = projector([28, 30]);
+  const project = projector([28, 32]);
   const outer: Footprint = { c: [0, 0], w: 30, d: 24, r: 5 };
   const inner: Footprint = { c: [0, 0], w: 26, d: 20, r: 3.2 };
   const [height, bed] = [6.5, 1.5];
@@ -246,7 +246,7 @@ function TrayGlyph({ className }: { className?: string }) {
 
 /* Hộp lưu trữ có khe tay cầm ở mặt trái; nắp đậy rơi xuống. */
 const BOX = (() => {
-  const project = projector([28, 34]);
+  const project = projector([28, 32.5]);
   return {
     floor: footprintPath(project, { c: [0, 0], w: 32, d: 32, r: 7 }, 0),
     body: solid(project, { c: [0, 0], w: 24, d: 24, r: 3.5 }, 0, 11),
@@ -270,7 +270,7 @@ function ArchiveGlyph({ className }: { className?: string }) {
 
 /* Hai thẻ danh sách nằm trên mặt phẳng; con trỏ lướt vào chọn thẻ trước. */
 const LIST = (() => {
-  const project = projector([28, 26.5]);
+  const project = projector([28, 30]);
   const [thickness, rows] = [1.75, [-6.5, 6.5]];
   const tip = project([3.5, 7.5, thickness]);
   // Con trỏ mũi tên vẽ thẳng trên màn hình (không chiếu), mũi ở `tip`
@@ -315,7 +315,7 @@ function ListSelectGlyph({ className }: { className?: string }) {
  * ngay dưới tâm kính. Kính dịch `d` thì nhóm phóng to đổi theo: translate(c − s·(under + d)) scale(s), c là tâm kính trên màn hình.
  */
 const LENS = (() => {
-  const project = projector([29, 34]);
+  const project = projector([29, 34.7]);
   const center: Vec3 = [-2.5, -3.5, 12];
   const [outerR, innerR, thickness] = [12.5, 10.3, 1.5];
   const dir: Vec2 = [-0.15, 1];
@@ -349,8 +349,8 @@ const LENS = (() => {
   };
 })();
 
-function Tiles({ ink, nonScaling }: { ink: number; nonScaling?: boolean }) {
-  return LENS.tiles.map((shape, index) => <SolidShape key={index} shape={shape} ink={ink} nonScaling={nonScaling} />);
+function Tiles({ ink }: { ink: number }) {
+  return LENS.tiles.map((shape, index) => <SolidShape key={index} shape={shape} ink={ink} />);
 }
 
 function MagnifierGlyph({ className }: { className?: string }) {
@@ -386,7 +386,7 @@ function MagnifierGlyph({ className }: { className?: string }) {
           <path d={LENS.edges} />
           <g clipPath={`url(#${clipId})`}>
             <g ref={zoomRef} transform={LENS.magnify(0, 0)}>
-              <Tiles ink={INK.base * 0.8} nonScaling />
+              <Tiles ink={INK.base * 0.8} />
             </g>
             <ellipse {...LENS.innerBottom} strokeOpacity={INK.piece * 0.5} />
           </g>

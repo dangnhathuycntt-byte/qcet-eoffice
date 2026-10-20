@@ -557,10 +557,12 @@
 
 /* Nét icon giữ đúng 1,25px trên màn hình ở mọi cỡ. stroke-width tính trên khung vẽ nên icon nhỏ hơn khung thì nét mảnh
    theo: Lucide (khung 24) ở 16px chỉ còn 0,83px, bộ icon sidebar (`SidebarSvg`, lưới 16) ở 14px còn 1,09px.
-   `absoluteStrokeWidth` của Lucide tính theo prop `size` nên vô tác dụng với icon đặt cỡ bằng class. */
+   `absoluteStrokeWidth` của Lucide tính theo prop `size` nên vô tác dụng với icon đặt cỡ bằng class. Icon lớn trạng thái trống
+   (`empty-glyphs`, lưới 56) cũng vậy: hiện 96px mà nét vẫn 1,25px; nhóm phóng to trong kính lúp nhờ đó không dày nét theo. */
 @layer base {
   svg.lucide *,
-  svg[data-slot="sidebar-icon"] * {
+  svg[data-slot="sidebar-icon"] *,
+  svg[data-slot="empty-state-glyph"] * {
     vector-effect: non-scaling-stroke;
   }
 }
