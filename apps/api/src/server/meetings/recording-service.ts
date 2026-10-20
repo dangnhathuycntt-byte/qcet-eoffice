@@ -32,6 +32,7 @@ import {
   removeRecordingFiles,
   writeRecordingPart,
 } from "@/server/meetings/recording-storage";
+import { recordingWindowSec } from "@/server/meetings/recording-slicer";
 
 /** Trạng thái cuộc họp còn ghi âm hoặc gửi thêm được (đang mời, đã diễn ra, đang soạn biên bản). */
 const WRITABLE_MEETING_STATUSES: MeetingStatus[] = [MeetingStatus.INVITED, MeetingStatus.HELD, MeetingStatus.MINUTES_DRAFT];
@@ -68,8 +69,8 @@ function readActionItems(value: unknown): MeetingRecordingActionItem[] {
   return Array.isArray(value) ? (value as MeetingRecordingActionItem[]) : [];
 }
 
-function toSummary(row: RecordingWithAuthor): MeetingRecordingSummary {
-  const total = planRecordingWindows(row.durationSec).length;
+function toSummary(row: RecordingWithAuthor, windowSec: number): MeetingRecordingSummary {
+  const total = planRecordingWindows(row.durationSec, windowSec).length;
   const done = readWindows(row.windows).length;
   return {
     id: row.id,
@@ -85,9 +86,9 @@ function toSummary(row: RecordingWithAuthor): MeetingRecordingSummary {
   };
 }
 
-function toDetail(row: RecordingWithAuthor): MeetingRecordingDetail {
+function toDetail(row: RecordingWithAuthor, windowSec: number): MeetingRecordingDetail {
   return {
-    ...toSummary(row),
+    ...toSummary(row, windowSec),
     transcript: row.transcript,
     minutesDraft: row.minutesDraft,
     decisions: Array.isArray(row.decisions) ? (row.decisions as string[]) : [],
@@ -114,12 +115,13 @@ export class MeetingRecordingService {
       orderBy: { createdAt: "desc" },
       take: MEETING_RECORDINGS_PER_MEETING_MAX,
     });
-    return { recordings: rows.map(toSummary) };
+    const windowSec = await recordingWindowSec();
+    return { recordings: rows.map((row) => toSummary(row, windowSec)) };
   }
 
   static async get(meetingId: string, recordingId: string, userId: string): Promise<MeetingRecordingDetail> {
     await authorizeRecordingAccess(meetingId, userId, { write: false });
-    return toDetail(await findRecording(meetingId, recordingId));
+    return toDetail(await findRecording(meetingId, recordingId), await recordingWindowSec());
   }
 
   static async create(
@@ -170,7 +172,7 @@ export class MeetingRecordingService {
       });
       return created;
     });
-    return toSummary(row);
+    return toSummary(row, await recordingWindowSec());
   }
 
   static async uploadPart(meetingId: string, recordingId: string, index: number, bytes: Buffer, userId: string): Promise<{ index: number }> {
@@ -225,7 +227,7 @@ export class MeetingRecordingService {
       });
       return job.id;
     });
-    return { recording: toSummary(await findRecording(meetingId, recordingId)), jobId: queued };
+    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId: queued };
   }
 
   /** Bản lỗi (còn âm thanh) chạy lại từ các đoạn đã chép xong. */
@@ -247,7 +249,7 @@ export class MeetingRecordingService {
       });
       return job.id;
     });
-    return { recording: toSummary(await findRecording(meetingId, recordingId)), jobId };
+    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId };
   }
 
   /** Xóa cả bản ghi lẫn âm thanh còn lại. Việc đang chạy gặp bản ghi biến mất thì tự dừng. */

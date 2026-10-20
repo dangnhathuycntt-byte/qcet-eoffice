@@ -7,8 +7,8 @@ import { prisma } from "@qcet/db/prisma";
 import { logger } from "@/server/observability/logger";
 import { runOutboxCycle } from "@/server/outbox/outbox-worker";
 
-/** Tối đa số lần nối tiếp trong một lần kick (4 giờ ghi âm là 20 đoạn, mỗi lần chạy làm được vài đoạn). */
-const MAX_ROUNDS = 24;
+/** Tối đa số lần nối tiếp trong một lần kick (4 giờ ghi âm là 40 đoạn 6 phút, mỗi lần chạy làm được 1–2 đoạn, thêm lượt soạn biên bản). */
+const MAX_ROUNDS = 60;
 
 export async function runRecordingJobs(recordingId: string, firstJobId: string): Promise<void> {
   let ids = [firstJobId];

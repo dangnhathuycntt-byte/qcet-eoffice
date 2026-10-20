@@ -8,6 +8,7 @@
  * Lỗi ffmpeg (tệp hỏng, định dạng lạ) đổi thành câu tiếng Việt cho người dùng; phần stderr chỉ ghi log, không đưa ra ngoài.
  */
 import { spawn } from "node:child_process";
+import { RECORDING_SLICE_WINDOW_SEC, RECORDING_WINDOW_SEC } from "@qcet/shared/domain/meetings/recording-transcript";
 import { logger } from "@/server/observability/logger";
 
 const PROBE_TIMEOUT_MS = 10_000;
@@ -86,6 +87,11 @@ export function ffmpegAvailable(): Promise<boolean> {
     .catch(() => false);
   probe = { bin, result };
   return result;
+}
+
+/** Cỡ đoạn chép lời của máy chủ này: đoạn cắt riêng ngắn hơn đoạn gửi kèm cả tệp. Việc chép lời và số đoạn hiển thị phải cùng dùng cỡ này. */
+export async function recordingWindowSec(): Promise<number> {
+  return (await ffmpegAvailable()) ? RECORDING_SLICE_WINDOW_SEC : RECORDING_WINDOW_SEC;
 }
 
 /**

@@ -42,8 +42,12 @@ const DEFAULT_AUDIO_MODEL = "gemini-3.8-flash";
  * tối đa (gateway chưa trả byte nào), không phải tổng: với âm thanh gateway thường im cho tới khi chép xong cả đoạn.
  */
 const WINDOW_CALL_TIMEOUT_MS = 180_000;
-/** Đoạn cắt riêng ngắn hơn (6 phút, đo ≈ 41 giây) nên chờ im lặng ít hơn; gateway im quá ngần này là hỏng chứ không phải đang chép. */
-const SLICE_CALL_TIMEOUT_MS = 120_000;
+/**
+ * Đoạn cắt riêng 6 phút thường mất 20–45 giây, nhưng gateway chuyển sang tài khoản khác mỗi khi một tài khoản trả "không có
+ * kết quả" (mỗi lần ≈ 15–20 giây, có lần nối tiếp nhiều tài khoản) và chỉ trả lời khi xong, nên có lúc im lặng hơn 2 phút
+ * rồi vẫn trả lời bình thường. Cắt sớm hơn chỉ làm lặp lại chính lần chờ đó.
+ */
+const SLICE_CALL_TIMEOUT_MS = 240_000;
 const WINDOW_OUTPUT_TOKENS = 16_000;
 const MINUTES_CALL_TIMEOUT_MS = 120_000;
 const MINUTES_OUTPUT_TOKENS = 8_000;

@@ -600,6 +600,7 @@ describe('Ghi âm cuộc họp', () => {
     it('job chép từng đoạn 6 phút đã cắt: mỗi lần gửi mp3 riêng, mốc giờ cộng lại giờ bắt đầu đoạn, đoạn vượt cuối tệp không gọi mô hình', async () => {
       // Khai báo 1500 giây trong khi tệp thật 800 giây: 5 đoạn 6 phút, hai đoạn cuối (từ 18:00 và 24:00) rỗng
       const id = await queuedAudio(mp3, 1500);
+      assert.equal((await MeetingRecordingService.get(meetingId, id, users.organizer)).progress?.total, 5, 'số đoạn hiển thị khớp cỡ đoạn 6 phút của việc chép lời');
       const calls = mockGateway((call) => (isWindowCall(call) ? '[00:05] Một.\n[00:20] Hai.' : MINUTES_JSON));
       await transcribeMeeting(job(id));
 
