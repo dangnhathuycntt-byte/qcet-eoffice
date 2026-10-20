@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ArchiveX, BookOpen, ChevronDown, ScrollText, Search, Settings, UserRoundCheck, UsersRound, type LucideIcon } from "lucide-react";
+import { ArchiveX, BookOpen, ChevronDown, NotebookPen, ScrollText, Search, Settings, UserRoundCheck, UsersRound, type LucideIcon } from "lucide-react";
 import {
   IconSidebarTasks,
   IconSidebarMail,
@@ -192,6 +192,7 @@ interface SidebarMoreItem {
  */
 export const SIDEBAR_MORE_ITEMS: SidebarMoreItem[] = [
   { id: "delegations", label: "Ủy quyền tác nghiệp", href: "/delegations", icon: UserRoundCheck, section: "work" },
+  { id: "notes", label: "Ghi chú cá nhân", href: "/notes", icon: NotebookPen, section: "work" },
   { id: "search", label: "Tìm kiếm", href: "/search", icon: Search, section: "work" },
   { id: "admin-users", label: "Tài khoản và vai trò", href: "/admin/users", icon: UsersRound, section: "admin" },
   { id: "admin-audit", label: "Nhật ký hệ thống", href: "/admin/audit", icon: ScrollText, section: "admin" },

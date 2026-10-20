@@ -16,7 +16,7 @@ import { AgentModelsProvider } from "@/components/agent-chat/agent-models";
 import type { AgentModelCatalog } from "@qcet/shared/domain/agent/agent-models";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@qcet/shared/lib/login-helpers";
-import { isAssistantPath, isCardPagePath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
+import { isAssistantPath, isCardPagePath, isNotesPath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
 import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { useTransform } from "motion/react";
@@ -86,7 +86,8 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
   // Trợ lý dùng cùng khung cao như Hộp thư: thanh đầu trang và khung tin, không cột phụ. Cờ tắt thì trang là 404, dùng
   // khung thường có thanh đầu
   const isAssistant = assistantEnabled && isAssistantPath(pathname);
-  const isFullHeightPane = isInbox || isAssistant;
+  // Ghi chú cá nhân cũng là hai cột cao như Hộp thư
+  const isFullHeightPane = isInbox || isAssistant || isNotesPath(pathname);
   // Thanh dưới của Trợ lý (máy tính, mọi trang trừ trang Trợ lý): khung trang chừa `--app-statusbar` ở đáy
   const showAssistantBar = assistantEnabled && !isAssistant;
   // Sổ văn bản dùng cùng khung workspace với chi tiết nhiệm vụ: chiều cao cố định, các thẻ tự cuộn

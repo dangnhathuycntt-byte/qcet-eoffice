@@ -47,6 +47,11 @@ export function isAssistantPath(pathname: string | null | undefined): boolean {
   return clean === "/assistant" || clean.startsWith("/assistant/");
 }
 
+/** Ghi chú cá nhân (`/notes`): khung hai cột cao như Hộp thư, không đệm. */
+export function isNotesPath(pathname: string | null | undefined): boolean {
+  return normalizePath(pathname ?? "") === "/notes";
+}
+
 /** Trang tự dựng khung một thẻ (`WorkspacePageCard`): Cơ cấu & Danh bạ, Báo cáo và các trang trong menu "Thêm". */
 const CARD_PAGES = new Set(["/org", "/reports", "/settings", "/delegations", "/search", "/admin/users", "/admin/audit", "/admin/dossiers"]);
 

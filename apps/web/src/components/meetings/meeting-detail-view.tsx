@@ -17,6 +17,7 @@ import {
   FileEdit,
   Plus,
   ListChecks,
+  NotebookPen,
   X,
 } from "lucide-react";
 import * as m from "motion/react-m";
@@ -28,6 +29,7 @@ import { motionTransition } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -796,6 +798,10 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 Chưa có thành viên
               </p>
             )}
+          </SectionCard>
+
+          <SectionCard title="Ghi chú của tôi" icon={NotebookPen}>
+            <MeetingNotesPanel meetingId={meeting.id} />
           </SectionCard>
         </div>
       </div>
