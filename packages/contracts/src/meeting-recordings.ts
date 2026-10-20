@@ -9,6 +9,15 @@ import { z } from 'zod';
 export const MEETING_RECORDING_MIME_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'] as const;
 export type MeetingRecordingMimeType = (typeof MEETING_RECORDING_MIME_TYPES)[number];
 
+/** Đuôi tệp theo định dạng: tên tệp gửi mô hình và tên tệp khi nghe lại. */
+export const MEETING_RECORDING_FILE_EXTENSIONS: Record<MeetingRecordingMimeType, string> = {
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+};
+
 /** Đổi mime trình duyệt gửi (kèm `;codecs=`, tên khác của m4a/wav) về một trong các định dạng nhận; không nhận thì null. */
 export function normalizeRecordingMimeType(raw: string): MeetingRecordingMimeType | null {
   const base = raw.split(';')[0]?.trim().toLowerCase() ?? '';
@@ -61,6 +70,12 @@ export const CreateMeetingRecordingSchema = z
       }),
     /** Dung lượng tệp khi chọn tệp có sẵn: quá giới hạn của máy chủ thì từ chối ngay, không bắt gửi cả tệp rồi mới báo. Ghi trực tiếp không biết trước. */
     byteSize: z.number().int().positive().max(MEETING_RECORDING_MAX_BYTES, { error: 'Tệp quá lớn.' }).optional(),
+    /** Tên tệp gốc khi tải tệp có sẵn, chỉ để hiển thị: bỏ phần thư mục và ký tự điều khiển, tối đa 200 ký tự. */
+    fileName: z
+      .string()
+      .max(1000)
+      .transform((value) => value.split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 200))
+      .optional(),
   })
   .strict();
 export type CreateMeetingRecordingInput = z.infer<typeof CreateMeetingRecordingSchema>;
@@ -97,6 +112,8 @@ export type MeetingRecordingActionItem = z.infer<typeof MeetingRecordingActionIt
 export const MeetingRecordingSummarySchema = z.object({
   id: z.string(),
   source: MeetingRecordingSourceSchema,
+  /** Tên tệp gốc (tải tệp có sẵn); null khi ghi trực tiếp. */
+  fileName: z.string().nullable(),
   status: MeetingRecordingStatusSchema,
   createdAt: z.string(),
   createdByName: z.string().nullable(),
@@ -105,6 +122,8 @@ export const MeetingRecordingSummarySchema = z.object({
   /** Số đoạn đã chép trên tổng số đoạn; chỉ có khi đang xử lý. */
   progress: z.object({ done: z.number(), total: z.number() }).nullable(),
   error: z.string().nullable(),
+  /** Còn âm thanh trên máy chủ để nghe lại (GET …/audio). Bản đã soạn trước 20/10/2026 bị xóa âm thanh khi xong. */
+  hasAudio: z.boolean(),
   /** Lúc bấm "Tạo biên bản" (kèm xác nhận); null khi chưa gửi đi soạn. */
   submittedAt: z.string().nullable(),
   processedAt: z.string().nullable(),

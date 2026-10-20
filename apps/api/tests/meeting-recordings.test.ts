@@ -33,6 +33,7 @@ import { signSessionToken } from '@/lib/jwt-session';
 import { POST as createRoute, GET as listRoute } from '@/app/api/meetings/[id]/recordings/route';
 import { PUT as partRoute } from '@/app/api/meetings/[id]/recordings/[recordingId]/parts/[index]/route';
 import { POST as processRoute } from '@/app/api/meetings/[id]/recordings/[recordingId]/process/route';
+import { GET as audioRoute } from '@/app/api/meetings/[id]/recordings/[recordingId]/audio/route';
 import {
   MEETING_RECORDING_PART_MAX_BYTES,
   CreateMeetingRecordingSchema,
@@ -408,7 +409,7 @@ describe('Ghi âm cuộc họp', () => {
   });
 
   describe('việc chép lời', () => {
-    it('chép từng đoạn kèm tệp âm thanh, soạn biên bản, ghi READY và xóa âm thanh', async () => {
+    it('chép từng đoạn kèm tệp âm thanh, soạn biên bản, ghi READY và giữ âm thanh để nghe lại', async () => {
       const id = await queuedRecording(600);
       const calls = mockGateway((call) => (isWindowCall(call) ? '[00:05] Xin chào các đồng chí.\n[00:09]\n[00:12] Hiệu trưởng: Giao phòng Đào tạo lập kế hoạch.' : MINUTES_JSON));
       await transcribeMeeting(job(id));
@@ -433,7 +434,7 @@ describe('Ghi âm cuộc họp', () => {
       assert.match(row.minutesDraft ?? '', /Kế hoạch học kỳ 2/);
       assert.deepEqual(row.decisions, ['Giao phòng Đào tạo lập kế hoạch học kỳ 2']);
       assert.deepEqual(row.actionItems, [{ task: 'Lập kế hoạch học kỳ 2', owner: 'Phòng Đào tạo', deadline: null }]);
-      await assert.rejects(fs.stat(path.join(uploadsDir, 'recordings', id)), /ENOENT/, 'âm thanh đã bị xóa');
+      assert.ok(await fs.stat(recordingAudioPath(id)), 'âm thanh giữ tới khi người dùng xóa bản ghi');
 
       const detail = await MeetingRecordingService.get(meetingId, id, users.organizer);
       assert.equal(detail.status, 'READY');
@@ -604,7 +605,7 @@ describe('Ghi âm cuộc họp', () => {
     const isDirect = (call: GatewayCall) => call.userText.includes('Nghe toàn bộ tệp');
     const isWindow = (call: GatewayCall) => call.filePart !== null && !isDirect(call);
 
-    it('một lần gọi cho cả bản ghi: ra thẳng biên bản, không có bản chép, READY và xóa âm thanh', async () => {
+    it('một lần gọi cho cả bản ghi: ra thẳng biên bản, không có bản chép, READY và giữ âm thanh', async () => {
       const id = await queuedRecording(600);
       const calls = mockGateway(() => MINUTES_JSON);
       await transcribeMeeting(job(id));
@@ -621,7 +622,7 @@ describe('Ghi âm cuộc họp', () => {
       assert.match(row.minutesDraft ?? '', /Kế hoạch học kỳ 2/);
       assert.deepEqual(row.decisions, ['Giao phòng Đào tạo lập kế hoạch học kỳ 2']);
       assert.deepEqual(row.actionItems, [{ task: 'Lập kế hoạch học kỳ 2', owner: 'Phòng Đào tạo', deadline: null }]);
-      await assert.rejects(fs.stat(path.join(uploadsDir, 'recordings', id)), /ENOENT/, 'âm thanh đã bị xóa');
+      assert.ok(await fs.stat(recordingAudioPath(id)), 'âm thanh giữ tới khi người dùng xóa bản ghi');
       const detail = await MeetingRecordingService.get(meetingId, id, users.organizer);
       assert.equal(detail.status, 'READY');
       assert.equal(detail.transcript, null);
@@ -785,7 +786,7 @@ describe('Ghi âm cuộc họp', () => {
         /\[00:05\] Một\.\n\[00:20\] Hai\.\n\[06:05\] Một\.\n\[06:20\] Hai\.\n\[12:05\] Một\.\n\[12:20\] Hai\./,
         'mỗi đoạn được cộng giờ bắt đầu của nó'
       );
-      await assert.rejects(fs.stat(path.join(uploadsDir, 'recordings', id)), /ENOENT/);
+      assert.ok(await fs.stat(recordingAudioPath(id)), 'âm thanh giữ để nghe lại');
     });
 
     it('các đoạn đã chép theo cỡ khác (đổi chế độ cắt giữa chừng) bị bỏ và chép lại từ đầu, không bỏ sót âm thanh', async () => {
@@ -832,6 +833,47 @@ describe('Ghi âm cuộc họp', () => {
       assert.equal(row.status, 'FAILED');
       assert.match(row.error ?? '', /Không đọc được âm thanh/);
       assert.equal(calls.length, 0);
+    });
+  });
+
+  describe('nghe lại', () => {
+    const audioRequest = (key: keyof typeof users | null, recordingId: string, range?: string) =>
+      audioRoute(
+        new NextRequest(`http://localhost:3000/api/meetings/${meetingId}/recordings/${recordingId}/audio`, {
+          headers: { ...(key ? bearer(key) : {}), ...(range ? { Range: range } : {}) },
+        }),
+        { params: Promise.resolve({ id: meetingId, recordingId }) }
+      );
+
+    it('người soạn biên bản nghe được cả tệp hoặc một khoảng (206) với đúng định dạng, không lưu đệm; người dự họp thường 403, chưa đăng nhập 401', async () => {
+      const recording = await create(users.organizer);
+      await MeetingRecordingService.uploadPart(meetingId, recording.id, 0, WEBM, users.organizer);
+      assert.equal((await audioRequest('organizer', recording.id)).status, 404, 'đang tải lên thì chưa nghe được');
+      await complete(users.organizer, recording.id, 1, 60);
+      assert.equal((await MeetingRecordingService.get(meetingId, recording.id, users.organizer)).hasAudio, true);
+
+      const full = await audioRequest('organizer', recording.id);
+      assert.equal(full.status, 200);
+      assert.equal(full.headers.get('content-type'), 'audio/webm');
+      assert.match(full.headers.get('cache-control') ?? '', /no-store/);
+      assert.equal(Buffer.from(await full.arrayBuffer()).equals(WEBM), true);
+
+      const part = await audioRequest('organizer', recording.id, 'bytes=0-3');
+      assert.equal(part.status, 206);
+      assert.equal(part.headers.get('content-range'), `bytes 0-3/${WEBM.length}`);
+      assert.equal(part.headers.get('content-type'), 'audio/webm');
+      assert.deepEqual([...new Uint8Array(await part.arrayBuffer())], [0x1a, 0x45, 0xdf, 0xa3]);
+
+      assert.equal((await audioRequest('participant', recording.id)).status, 403);
+      assert.equal((await audioRequest('stranger', recording.id)).status, 404);
+      assert.equal((await audioRequest(null, recording.id)).status, 401);
+    });
+
+    it('bản đã mất âm thanh (soạn trước khi giữ âm thanh) báo không còn âm thanh và 404', async () => {
+      const id = await queuedRecording(60);
+      await fs.rm(path.join(uploadsDir, 'recordings', id), { recursive: true, force: true });
+      assert.equal((await MeetingRecordingService.get(meetingId, id, users.organizer)).hasAudio, false);
+      assert.equal((await audioRequest('organizer', id)).status, 404);
     });
   });
 

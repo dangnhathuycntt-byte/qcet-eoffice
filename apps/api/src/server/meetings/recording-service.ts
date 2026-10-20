@@ -29,6 +29,7 @@ import {
   assembleRecording,
   detectRecordingMimeType,
   readRecordingHead,
+  recordingAudioExists,
   recordingAudioPath,
   recordingByteLimit,
   recordingTooLargeError,
@@ -73,12 +74,13 @@ function readActionItems(value: unknown): MeetingRecordingActionItem[] {
   return Array.isArray(value) ? (value as MeetingRecordingActionItem[]) : [];
 }
 
-function toSummary(row: RecordingWithAuthor, windowSec: number): MeetingRecordingSummary {
+function toSummary(row: RecordingWithAuthor, windowSec: number, hasAudio: boolean): MeetingRecordingSummary {
   const total = planRecordingWindows(row.durationSec, windowSec).length;
   const done = readWindows(row.windows).length;
   return {
     id: row.id,
     source: row.source === "file" ? "file" : "live",
+    fileName: row.fileName,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     createdByName: row.createdBy.name,
@@ -86,15 +88,21 @@ function toSummary(row: RecordingWithAuthor, windowSec: number): MeetingRecordin
     byteSize: Number(row.byteSize),
     progress: row.status === "PROCESSING" || row.status === "QUEUED" ? { done: Math.min(done, total), total } : null,
     error: row.error,
+    hasAudio: hasAudio && row.status !== MeetingRecordingStatus.UPLOADING,
     submittedAt: row.consentAt?.toISOString() ?? null,
     processedAt: row.processedAt?.toISOString() ?? null,
     waveform: Array.isArray(row.waveform) ? (row.waveform as number[]) : null,
   };
 }
 
-function toDetail(row: RecordingWithAuthor, windowSec: number): MeetingRecordingDetail {
+/** Tóm tắt kèm kiểm tệp âm thanh còn không (mỗi cuộc họp tối đa 10 bản nên kiểm từng tệp vẫn nhẹ). */
+async function summarize(row: RecordingWithAuthor, windowSec: number): Promise<MeetingRecordingSummary> {
+  return toSummary(row, windowSec, await recordingAudioExists(row.id));
+}
+
+async function toDetail(row: RecordingWithAuthor, windowSec: number): Promise<MeetingRecordingDetail> {
   return {
-    ...toSummary(row, windowSec),
+    ...(await summarize(row, windowSec)),
     transcript: row.transcript,
     minutesDraft: row.minutesDraft,
     decisions: Array.isArray(row.decisions) ? (row.decisions as string[]) : [],
@@ -122,7 +130,7 @@ export class MeetingRecordingService {
       take: MEETING_RECORDINGS_PER_MEETING_MAX,
     });
     const windowSec = await recordingWindowSec();
-    return { recordings: rows.map((row) => toSummary(row, windowSec)) };
+    return { recordings: await Promise.all(rows.map((row) => summarize(row, windowSec))) };
   }
 
   static async get(meetingId: string, recordingId: string, userId: string): Promise<MeetingRecordingDetail> {
@@ -165,7 +173,7 @@ export class MeetingRecordingService {
 
     const row = await prisma.$transaction(async (tx) => {
       const created = await tx.meetingRecording.create({
-        data: { meetingId, createdById: userId, source: input.source, mimeType: input.mimeType },
+        data: { meetingId, createdById: userId, source: input.source, mimeType: input.mimeType, fileName: input.fileName || null },
         include: { createdBy: { select: { name: true } } },
       });
       await logAuditEvent(tx, {
@@ -178,7 +186,7 @@ export class MeetingRecordingService {
       });
       return created;
     });
-    return toSummary(row, await recordingWindowSec());
+    return toSummary(row, await recordingWindowSec(), false);
   }
 
   static async uploadPart(meetingId: string, recordingId: string, index: number, bytes: Buffer, userId: string): Promise<{ index: number }> {
@@ -227,7 +235,7 @@ export class MeetingRecordingService {
       },
     });
     if (claimed.count !== 1) throw new ConflictError("Bản ghi âm này đã tải lên xong.", "RECORDING_NOT_UPLOADING");
-    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()) };
+    return { recording: await summarize(await findRecording(meetingId, recordingId), await recordingWindowSec()) };
   }
 
   /**
@@ -279,7 +287,20 @@ export class MeetingRecordingService {
       });
       return job.id;
     });
-    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId };
+    return { recording: await summarize(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId };
+  }
+
+  /**
+   * Âm thanh để nghe lại (cùng quyền với xem bản ghi): đường dẫn tệp và định dạng thật. Bản đang tải lên, hoặc đã soạn trước
+   * khi giữ âm thanh (tệp đã bị xóa), thì 404.
+   */
+  static async audio(meetingId: string, recordingId: string, userId: string): Promise<{ path: string; mimeType: string }> {
+    await authorizeRecordingAccess(meetingId, userId, { write: false });
+    const row = await findRecording(meetingId, recordingId);
+    if (row.status === MeetingRecordingStatus.UPLOADING || !(await recordingAudioExists(recordingId))) {
+      throw new NotFoundError("Bản ghi này không còn âm thanh để nghe.");
+    }
+    return { path: recordingAudioPath(recordingId), mimeType: row.mimeType };
   }
 
   /** Bản lỗi (còn âm thanh) chạy lại từ các đoạn đã chép xong. */
@@ -301,7 +322,7 @@ export class MeetingRecordingService {
       });
       return job.id;
     });
-    return { recording: toSummary(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId };
+    return { recording: await summarize(await findRecording(meetingId, recordingId), await recordingWindowSec()), jobId };
   }
 
   /** Xóa cả bản ghi lẫn âm thanh còn lại. Việc đang chạy gặp bản ghi biến mất thì tự dừng. */

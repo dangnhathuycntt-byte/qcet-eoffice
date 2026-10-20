@@ -1,7 +1,7 @@
 /**
- * Lưu âm thanh ghi âm cuộc họp ở thư mục riêng `UPLOADS_DIR/recordings/<id>/`, không qua FileObject: âm thanh chỉ để gửi
- * cho mô hình chép lời, không bao giờ trả lại cho trình duyệt (không có đường tải về) và bị xóa khi xử lý xong. Nhờ vậy
- * không phải mở danh sách phần mở rộng tệp cho `/api/upload` hay đường tải tệp chung.
+ * Lưu âm thanh ghi âm cuộc họp ở thư mục riêng `UPLOADS_DIR/recordings/<id>/`, không qua FileObject: âm thanh gửi cho mô
+ * hình chép lời và chỉ trả lại trình duyệt qua route nghe lại riêng (cùng quyền với bản ghi), giữ tới khi người dùng xóa bản
+ * ghi. Nhờ vậy không phải mở danh sách phần mở rộng tệp cho `/api/upload` hay đường tải tệp chung.
  * `id` luôn là mã cuid do máy chủ sinh và đã đọc được từ CSDL trước khi dựng đường dẫn; vẫn kiểm định dạng để chặn lỗi gọi nhầm.
  */
 import fs from "node:fs/promises";
@@ -124,6 +124,15 @@ export async function readRecordingHead(recordingId: string, length = 16): Promi
 }
 
 /** Đọc cả tệp ghép để gửi mô hình khi không cắt được bằng ffmpeg (tối đa MEETING_RECORDING_WHOLE_FILE_MAX_BYTES). */
+/** Bản ghi còn tệp âm thanh để nghe lại không (bản đã soạn trước khi giữ âm thanh thì đã bị xóa). */
+export async function recordingAudioExists(recordingId: string): Promise<boolean> {
+  try {
+    return (await fs.stat(recordingAudioPath(recordingId))).isFile();
+  } catch {
+    return false;
+  }
+}
+
 export function readRecordingAudio(recordingId: string): Promise<Buffer> {
   return fs.readFile(recordingAudioPath(recordingId));
 }

@@ -7,6 +7,7 @@ import {
   CompleteMeetingRecordingSchema,
   CreateMeetingRecordingSchema,
   MEETING_RECORDING_MAX_DURATION_SEC,
+  ProcessMeetingRecordingSchema,
   normalizeRecordingMimeType,
 } from "@qcet/contracts/meeting-recordings";
 import {
@@ -217,19 +218,26 @@ describe("Ghi âm cuộc họp: hợp đồng nhận dữ liệu", () => {
     assert.equal(normalizeRecordingMimeType(""), null);
   });
 
-  it("mở bản ghi bắt buộc xác nhận đã thông báo (đúng giá trị true), không nhận trường lạ", () => {
-    const ok = CreateMeetingRecordingSchema.safeParse({ source: "live", mimeType: "audio/webm;codecs=opus", consent: true });
+  // 20/10/2026: xác nhận chuyển từ lúc mở bản ghi sang lúc bấm "Tạo biên bản" (âm thanh chỉ rời máy chủ khi đó)
+  it("mở bản ghi không nhận xác nhận hay trường lạ; tên tệp bỏ thư mục và ký tự điều khiển", () => {
+    const ok = CreateMeetingRecordingSchema.safeParse({ source: "file", mimeType: "audio/x-m4a", fileName: "C:\\ghi\\Họp\u0007 giao ban.m4a" });
     assert.ok(ok.success);
-    assert.equal(ok.data.mimeType, "audio/webm");
+    assert.equal(ok.data.mimeType, "audio/mp4");
+    assert.equal(ok.data.fileName, "Họp giao ban.m4a");
     for (const bad of [
-      { source: "live", mimeType: "audio/webm" },
-      { source: "live", mimeType: "audio/webm", consent: false },
-      { source: "live", mimeType: "audio/webm", consent: "true" },
-      { source: "live", mimeType: "video/avi", consent: true },
-      { source: "mic", mimeType: "audio/webm", consent: true },
-      { source: "live", mimeType: "audio/webm", consent: true, status: "READY" },
+      { source: "live", mimeType: "video/avi" },
+      { source: "mic", mimeType: "audio/webm" },
+      { source: "live", mimeType: "audio/webm", consent: true },
+      { source: "live", mimeType: "audio/webm", status: "READY" },
     ]) {
       assert.equal(CreateMeetingRecordingSchema.safeParse(bad).success, false, JSON.stringify(bad));
+    }
+  });
+
+  it("tạo biên bản bắt buộc xác nhận đã thông báo (đúng giá trị true), không nhận trường lạ", () => {
+    assert.ok(ProcessMeetingRecordingSchema.safeParse({ consent: true }).success);
+    for (const bad of [{}, { consent: false }, { consent: "true" }, { consent: true, status: "READY" }]) {
+      assert.equal(ProcessMeetingRecordingSchema.safeParse(bad).success, false, JSON.stringify(bad));
     }
   });
 

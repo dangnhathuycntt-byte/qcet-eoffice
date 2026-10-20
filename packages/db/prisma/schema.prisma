@@ -2113,8 +2113,8 @@ enum MeetingRecordingStatus {
 }
 
 /// Bản ghi âm cuộc họp: âm thanh gửi lên theo từng phần (UPLOADING), ghép thành một tệp trong `UPLOADS_DIR/recordings/<id>/`
-/// (không qua FileObject, không có đường tải về) rồi chờ người dùng bấm "Tạo biên bản" (UPLOADED); khi đó mới gửi Gemini chép
-/// lời và soạn biên bản đề xuất (QUEUED, PROCESSING, READY); âm thanh bị xóa khi xử lý xong. Chỉ người soạn biên bản (chủ tọa,
+/// (không qua FileObject; nghe lại qua route riêng cùng quyền) rồi chờ người dùng bấm "Tạo biên bản" (UPLOADED); khi đó mới gửi
+/// Gemini chép lời và soạn biên bản đề xuất (QUEUED, PROCESSING, READY); âm thanh giữ tới khi người dùng xóa bản ghi. Chỉ người soạn biên bản (chủ tọa,
 /// thư ký, người tổ chức) xem và xử lý. `consentAt`: lúc bấm "Tạo biên bản", người dùng xác nhận đã thông báo cho người dự họp và
 /// đồng ý gửi âm thanh tới dịch vụ AI (trống khi chưa bấm). Kết quả chỉ là bản nháp, người dùng tự duyệt.
 model MeetingRecording {
@@ -2125,6 +2125,8 @@ model MeetingRecording {
   createdBy    User                       @relation("MeetingRecordingCreator", fields: [createdById], references: [id], onDelete: Restrict)
   /// "live" (ghi trực tiếp trên trình duyệt) hoặc "file" (tải tệp có sẵn)
   source       String                     @db.VarChar(8)
+  /// Tên tệp gốc khi tải tệp có sẵn (chỉ để hiển thị); ghi trực tiếp thì trống
+  fileName     String?                    @map("file_name") @db.VarChar(200)
   status       MeetingRecordingStatus     @default(UPLOADING)
   mimeType     String                     @map("mime_type") @db.VarChar(64)
   partCount    Int                        @default(0) @map("part_count")

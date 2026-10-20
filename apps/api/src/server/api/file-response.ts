@@ -11,7 +11,9 @@ export async function streamLocalFile(
   req: NextRequest,
   safePath: string,
   requestId: string,
-  disposition: { type: "inline" | "attachment"; filename: string }
+  disposition: { type: "inline" | "attachment"; filename: string },
+  /** Định dạng thật khi tên tệp trên đĩa không có đuôi đúng (âm thanh bản ghi lưu là `audio.bin`). */
+  contentType?: string
 ): Promise<NextResponse> {
   if (!fs.existsSync(safePath)) {
     throw new NotFoundError("Không tìm thấy tệp yêu cầu");
@@ -28,6 +30,7 @@ export async function streamLocalFile(
   headers.set("x-request-id", requestId);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Frame-Options", "DENY");
+  if (contentType && streamResult.status !== 416) headers.set("Content-Type", contentType);
 
   if (streamResult.status === 200) {
     headers.set("Content-Disposition", buildContentDisposition(disposition.type, disposition.filename));

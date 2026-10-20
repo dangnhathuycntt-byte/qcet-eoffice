@@ -10,11 +10,15 @@
  * rồi bỏ. Chỉ lỗi thật mới ném (để outbox thử lại có lùi lịch); sau MAX_RUN_ATTEMPTS lần thì ghi FAILED, người dùng
  * bấm "Thử lại" để chạy tiếp từ các đoạn đã xong.
  *
- * Âm thanh bị xóa khi xử lý xong. Nội dung chép lời và biên bản không ghi vào log hay audit.
+ * Âm thanh giữ lại sau khi xong để nghe đối chiếu (xóa cùng bản ghi). Nội dung chép lời và biên bản không ghi vào log hay audit.
  */
 import { MeetingRecordingStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@qcet/db/prisma";
-import { MEETING_RECORDING_WHOLE_FILE_MAX_BYTES, type MeetingRecordingMimeType } from "@qcet/contracts/meeting-recordings";
+import {
+  MEETING_RECORDING_FILE_EXTENSIONS,
+  MEETING_RECORDING_WHOLE_FILE_MAX_BYTES,
+  type MeetingRecordingMimeType,
+} from "@qcet/contracts/meeting-recordings";
 import {
   DIRECT_MINUTES_SYSTEM_PROMPT,
   MINUTES_SYSTEM_PROMPT,
@@ -36,7 +40,7 @@ import { logger } from "@/server/observability/logger";
 import { callGateway, readGatewayConfig, type GatewayConfig } from "@/server/services/agent-gateway";
 import { agentJobTimeoutMs, defineAgentJobHandlers, enqueueAgentJob, type AgentJobContext } from "@/server/outbox/agent-jobs";
 import { EMPTY_SLICE_BYTES, WHOLE_AUDIO_MAX_BYTES, ffmpegAvailable, sliceAudio } from "@/server/meetings/recording-slicer";
-import { readRecordingAudio, recordingAudioPath, removeRecordingFiles } from "@/server/meetings/recording-storage";
+import { readRecordingAudio, recordingAudioPath } from "@/server/meetings/recording-storage";
 
 export const TRANSCRIBE_MEETING_JOB = "TRANSCRIBE_MEETING";
 const SUBJECT = "Dịch vụ chép lời";
@@ -67,13 +71,6 @@ const MAX_RUN_ATTEMPTS = 3;
 /** Chừa cuối thời gian chạy cho việc ghi CSDL và xếp việc nối tiếp. */
 const RUN_SAFETY_MS = 10_000;
 
-const FILE_EXTENSIONS: Record<MeetingRecordingMimeType, string> = {
-  "audio/webm": "webm",
-  "audio/ogg": "ogg",
-  "audio/mp4": "m4a",
-  "audio/mpeg": "mp3",
-  "audio/wav": "wav",
-};
 
 /** Cấu hình gateway cho ghi âm: dùng chung địa chỉ và khóa của Agent, nhưng mô hình riêng (nghe được âm thanh), không bật suy nghĩ dài. */
 export function recordingGatewayConfig(): GatewayConfig {
@@ -170,7 +167,7 @@ export async function transcribeMeeting(job: AgentJobContext): Promise<void> {
                 {
                   type: "file",
                   file: {
-                    filename: `ghi-am.${FILE_EXTENSIONS[attachment.mimeType] ?? "webm"}`,
+                    filename: `ghi-am.${MEETING_RECORDING_FILE_EXTENSIONS[attachment.mimeType] ?? "webm"}`,
                     file_data: `data:${attachment.mimeType};base64,${attachment.base64}`,
                   },
                 },
@@ -265,7 +262,7 @@ async function tryDirectMinutes(input: DirectMinutesInput): Promise<boolean> {
             { type: "text", text: buildDirectMinutesPrompt(input.title) },
             {
               type: "file",
-              file: { filename: `ghi-am.${FILE_EXTENSIONS[attachment.mimeType] ?? "webm"}`, file_data: `data:${attachment.mimeType};base64,${attachment.base64}` },
+              file: { filename: `ghi-am.${MEETING_RECORDING_FILE_EXTENSIONS[attachment.mimeType] ?? "webm"}`, file_data: `data:${attachment.mimeType};base64,${attachment.base64}` },
             },
           ],
         },
@@ -299,10 +296,10 @@ async function enqueueContinuation(recordingId: string, doneWindows: number, act
   });
 }
 
-/** Ghi kết quả, đánh dấu READY và xóa âm thanh (không còn dùng, và không giữ giọng nói lâu hơn cần thiết). */
+/** Ghi kết quả, đánh dấu READY. Âm thanh giữ lại để nghe đối chiếu với biên bản, tới khi người dùng xóa bản ghi. */
 async function finishRecording(recordingId: string, model: string, transcript: string | null, minutesReply: string | null, note: string | null) {
   const parsed = minutesReply ? parseMinutesReply(minutesReply) : null;
-  const updated = await prisma.meetingRecording.updateMany({
+  await prisma.meetingRecording.updateMany({
     where: { id: recordingId, status: MeetingRecordingStatus.PROCESSING },
     data: {
       status: MeetingRecordingStatus.READY,
@@ -316,7 +313,6 @@ async function finishRecording(recordingId: string, model: string, transcript: s
       processedAt: new Date(),
     },
   });
-  if (updated.count === 1) await removeRecordingFiles(recordingId);
 }
 
 /** Đăng ký vào `OUTBOX_HANDLERS` ở outbox-worker (không đặt trong agent-jobs.ts để tránh vòng import). */
