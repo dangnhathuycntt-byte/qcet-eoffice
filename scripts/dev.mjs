@@ -9,13 +9,18 @@ const args = process.argv.slice(2);
 const portIdx = args.findIndex((a) => a === "-p" || a === "--port");
 const webPort = portIdx >= 0 ? args[portIdx + 1] : process.env.PORT || "3000";
 const apiPort = process.env.API_PORT || "3100";
-const mode = args.includes("--start") ? ["start"] : ["dev", "--turbopack"];
+const start = args.includes("--start");
 const env = { ...process.env, API_PORT: apiPort, API_INTERNAL_URL: process.env.API_INTERNAL_URL || `http://127.0.0.1:${apiPort}` };
 
+// API chạy dev bằng webpack: Next 15.5 + Turbopack không ghi `route/react-loadable-manifest.json` cho route handler mà vẫn đọc
+// thử 3 lần cách 100ms, nên mọi request API ở dev chậm thêm ~200ms (đo 22/10/2026: 250–280ms so với 24–54ms bằng webpack,
+// bộ nhớ ngang nhau). Next 16 đã sửa (vercel/next.js#82739, #82903): lên Next 16 thì trả API về `--turbopack`. Chỉ ảnh hưởng dev,
+// `next start` đọc manifest một lần.
 const children = [
-  ["qcet-api", "apps/api", apiPort],
-  ["qcet-web", "apps/web", webPort],
-].map(([service, dir, port]) => {
+  ["qcet-api", "apps/api", apiPort, ["dev"]],
+  ["qcet-web", "apps/web", webPort, ["dev", "--turbopack"]],
+].map(([service, dir, port, devMode]) => {
+  const mode = start ? ["start"] : devMode;
   const child = spawn("npx", ["next", ...mode, dir, "-p", port], { stdio: "inherit", env: { ...env, SERVICE_NAME: service } });
   child.on("exit", (code) => {
     for (const other of children) if (other !== child && other.exitCode === null) other.kill("SIGTERM");

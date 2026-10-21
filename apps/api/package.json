@@ -4,7 +4,7 @@
   "private": true,
   "description": "API QCET E-Office (route handler /api/*, dịch vụ, phân quyền, worker, cron). Nơi duy nhất chạm DB, Redis, ClamAV, tệp tải lên.",
   "scripts": {
-    "dev": "cd ../.. && next dev --turbopack apps/api -p 3100",
+    "dev": "cd ../.. && next dev apps/api -p 3100",
     "build": "next build",
     "start": "cd ../.. && next start apps/api -p 3100",
     "typecheck": "tsc --noEmit",
