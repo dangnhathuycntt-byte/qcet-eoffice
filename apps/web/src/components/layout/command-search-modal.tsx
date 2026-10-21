@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, Keyboard, Loader2, Search, UserRound, X } from "lucide-react";
+import { ArrowRight, Keyboard, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { getRouteByPath } from "@/lib/navigation/canonical-navigation-registry";
@@ -18,9 +18,10 @@ import {
   IconSidebarPeople,
   IconSidebarSend,
   IconSidebarTasks,
+  SIDEBAR_INK_ICONS,
 } from "@/components/layout/sidebar-rounded-icons";
 import { SIDEBAR_MORE_ITEMS, SIDEBAR_NAV_GROUPS } from "@/components/layout/sidebar-nav-list";
-import { TaskIconStatusReview } from "@qcet/shared/lib/icons/task-icons";
+import { TaskIconAssignee, TaskIconStatusReview } from "@qcet/shared/lib/icons/task-icons";
 import { askAssistantInDock } from "@/components/assistant/assistant-model";
 import { Kbd } from "@/components/ui/kbd";
 import { highlightMatchSegments, scoreVietnameseSearch } from "@qcet/shared/lib/search/vietnamese-search";
@@ -114,7 +115,7 @@ export function canonicalNavLabel(href: string, fallback: string): string {
   return getRouteByPath(href)?.label || fallback;
 }
 
-/** Icon cùng bộ với sidebar (`sidebar-rounded-icons`, nét 1,25px) và Lucide (cùng nét qua LucideProvider) */
+/** Icon bộ sidebar kiểu "mực" (`ink`), xem `PaletteIcon` */
 const DOCUMENT_TYPE_ICON: Record<string, React.ElementType> = {
   VAN_BAN_DEN: IconSidebarInboxIn,
   VAN_BAN_DI: IconSidebarSend,
@@ -122,6 +123,14 @@ const DOCUMENT_TYPE_ICON: Record<string, React.ElementType> = {
 };
 
 const ICON_CLASS = "size-4 shrink-0 text-muted-foreground";
+
+/**
+ * Icon của dòng theo kiểu "mực" như menu chuột phải (người dùng gửi ảnh menu chuột phải và hộp lệnh của Linear 22/10/2026):
+ * icon bộ sidebar bật `ink` (tô một mảng chính, nét 1,25px); icon `task-icons` vốn đã có mảng tô; Lucide giữ nét viền.
+ */
+function PaletteIcon({ icon: Icon }: { icon: React.ElementType }) {
+  return SIDEBAR_INK_ICONS.has(Icon) ? <Icon ink aria-hidden className={ICON_CLASS} /> : <Icon aria-hidden className={ICON_CLASS} />;
+}
 
 /** Phần khớp in đậm (như Linear), không tô màu nền */
 function HighlightedText({ text, query }: { text: string; query: string }) {
@@ -350,7 +359,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         id: "action-my-tasks",
         title: "Đổi sang Của tôi",
         category: "action",
-        icon: UserRound,
+        icon: TaskIconAssignee,
         keywords: ["doi sang cua toi", "cua toi", "ca nhan", "my tasks", "my", "toi"],
         action: (newTab) => {
           window.dispatchEvent(new CustomEvent("qcet:set-task-scope", { detail: { scope: "my" } }));
@@ -751,7 +760,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={(e) => executeItem(item, e.metaKey || e.ctrlKey)}
                     // Hàng 46px, nền dòng chọn lùi 2px trên dưới, bo 8px (Linear)
-                    className="h-11.5 cursor-pointer select-none py-0.5 text-compact text-foreground"
+                    // Chữ 12px như menu chuột phải (13px của Be Vietnam Pro trông to hơn Inter cùng cỡ của Linear)
+                    className="h-11.5 cursor-pointer select-none py-0.5 text-xs text-foreground"
                   >
                     <div className={cn("flex h-full items-center gap-3 rounded-sm px-3", index === activeIndex && "bg-accent")}>
                       <PaletteRow item={item} query={trimmedQuery} />
@@ -762,7 +772,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             </div>
           ))}
           {showEmpty ? (
-            <p className="px-2 py-6 text-center text-compact text-muted-foreground">
+            <p className="px-2 py-6 text-center text-xs text-muted-foreground">
               <span className="text-destructive">Chưa tìm được, thử lại sau.</span>
             </p>
           ) : null}
@@ -784,7 +794,7 @@ function PaletteRow({ item, query }: { item: FlatItem; query: string }) {
       const Icon = item.item.icon;
       return (
         <>
-          <Icon aria-hidden className={ICON_CLASS} />
+          <PaletteIcon icon={Icon} />
           <span className="min-w-0 flex-1 truncate">
             <HighlightedText text={item.item.title} query={query} />
           </span>
@@ -806,7 +816,7 @@ function PaletteRow({ item, query }: { item: FlatItem; query: string }) {
       const number = doc.originalNumber || (doc.registrationNumber ? `Số đến ${doc.registrationNumber}` : "");
       return (
         <>
-          <DocIcon aria-hidden className={ICON_CLASS} />
+          <PaletteIcon icon={DocIcon} />
           <span className="min-w-0 flex-1 truncate" title={doc.summary}>
             <HighlightedText text={doc.summary || "(Chưa có trích yếu)"} query={query} />
           </span>
