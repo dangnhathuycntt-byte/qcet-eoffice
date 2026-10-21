@@ -262,8 +262,10 @@ export class PWAConnectivityManager {
     this.stopHeartbeat();
     if (typeof window === "undefined") return;
 
+    // Tab đang ẩn thì bỏ nhịp (trước đây gửi HEAD /api/health 30 s một lần kể cả khi ẩn); hiện lại thì
+    // handleVisibilityChange kiểm ngay
     this.heartbeatTimer = setInterval(() => {
-      if (this.state !== "OFFLINE") {
+      if (this.state !== "OFFLINE" && !(typeof document !== "undefined" && document.hidden)) {
         this.checkConnectivity();
       }
     }, HEARTBEAT_INTERVAL_MS);
