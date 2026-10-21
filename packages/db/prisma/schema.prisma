@@ -196,6 +196,7 @@ model User {
   organizedMeetings                 Meeting[]                  @relation("MeetingOrganizer")
   personalNotes                     PersonalNote[]
   meetingRecordings                 MeetingRecording[]         @relation("MeetingRecordingCreator")
+  taskCollabDocuments               TaskCollabDocument[]       @relation("TaskCollabDocumentEditor")
   meetingParticipations             MeetingParticipant[]
   meetingResolutionsLead            MeetingResolution[]        @relation("MeetingResolutionLead")
 
@@ -262,6 +263,7 @@ model Task {
   parentTaskId    String?               @map("parent_task_id")
   parentTask      Task?                 @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subTasks        Task[]                @relation("SubTasks")
+  collabDocument  TaskCollabDocument?
   deliverables    TaskDeliverable[]
   resolutions     ExecutiveResolution[]
   linkedDocument  Document?
@@ -2117,6 +2119,22 @@ enum MeetingRecordingStatus {
 /// Gemini chép lời và soạn biên bản đề xuất (QUEUED, PROCESSING, READY); âm thanh giữ tới khi người dùng xóa bản ghi. Chỉ người soạn biên bản (chủ tọa,
 /// thư ký, người tổ chức) xem và xử lý. `consentAt`: lúc bấm "Tạo biên bản", người dùng xác nhận đã thông báo cho người dự họp và
 /// đồng ý gửi âm thanh tới dịch vụ AI (trống khi chưa bấm). Kết quả chỉ là bản nháp, người dùng tự duyệt.
+/// Trạng thái Yjs của mô tả nhiệm vụ khi nhiều người cùng sửa trực tiếp (ADR-014). `Task.description` vẫn là bản để đọc
+/// (máy chủ cộng tác ghi lại sau mỗi lần lưu); bảng này giữ trạng thái CRDT để lần mở sau nối tiếp đúng chỗ. Không có dòng
+/// (hoặc dòng bị xóa khi mô tả đổi qua PATCH) thì lần mở sau seed lại từ `Task.description`.
+model TaskCollabDocument {
+  taskId      String   @id @map("task_id")
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// `Y.encodeStateAsUpdate` của cả tài liệu
+  state       Bytes
+  /// Người có thay đổi cuối cùng trước lần lưu này
+  updatedById String?  @map("updated_by_id")
+  updatedBy   User?    @relation("TaskCollabDocumentEditor", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("task_collab_documents")
+}
+
 model MeetingRecording {
   id           String                     @id @default(cuid())
   meetingId    String                     @map("meeting_id")

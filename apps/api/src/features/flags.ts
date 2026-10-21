@@ -34,7 +34,8 @@ export type FeatureFlagKey =
   | "internalDocuments"
   | "userProvisioning"
   | "taskAgent"
-  | "assistant";
+  | "assistant"
+  | "taskCollab";
 
 export interface FeatureFlagDefinition {
   readonly key: FeatureFlagKey;
@@ -192,6 +193,15 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
       "Trang Trợ lý (/assistant): hỏi đáp chỉ đọc về nhiệm vụ, văn bản, lịch họp trong quyền của người hỏi, có lịch sử chat; " +
       "soạn đề xuất nhiệm vụ để người dùng tự tạo trong hộp tạo nhiệm vụ (ADR-010). " +
       "Dùng chung gateway TASK_AGENT_* ở server. Tắt mặc định.",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  taskCollab: {
+    key: "taskCollab",
+    description:
+      "Nhiều người cùng sửa trực tiếp mô tả nhiệm vụ và việc con (Yjs + Hocuspocus, ADR-014): qcet-api mở máy chủ cộng tác ở " +
+      "COLLAB_PORT, web nối qua /collab. Tắt thì editor lưu mô tả qua PATCH như cũ. Tắt mặc định.",
     defaultValue: false,
     isKillSwitch: false,
     isPublic: true,

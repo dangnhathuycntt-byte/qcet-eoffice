@@ -15,7 +15,7 @@ import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { markSelectionStartTarget } from "./block-selection-canvas";
-import { TaskBlockEditor } from "./task-block-editor";
+import { TaskDescriptionEditor } from "./task-description-editor";
 import { updateTaskStatus, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
@@ -542,7 +542,8 @@ export function SubtaskDetailDrawer({
             {!description && !canEditContent && (
               <p className="text-xs text-muted-foreground/50 italic px-1 mb-1.5">Chưa có mô tả.</p>
             )}
-            <TaskBlockEditor
+            <TaskDescriptionEditor
+              currentUser={currentUser}
               selectionContainerSelector='[data-selection-canvas="peek"]'
               key={subtask.id}
               taskId={subtask.id}

@@ -209,8 +209,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - collab (WebSocket của máy chủ cộng tác, ADR-014: tự xác thực ở onAuthenticate; middleware chặn thì upgrade treo)
      * - public files
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|collab$|collab/).*)',
   ],
 };

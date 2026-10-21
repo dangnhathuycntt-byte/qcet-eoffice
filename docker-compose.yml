@@ -80,6 +80,10 @@ services:
       CLAMAV_PORT: 3310
       FILE_SCAN_WORKER_ENABLED: "true"
       OUTBOX_WORKER_ENABLED: ${OUTBOX_WORKER_ENABLED:-true}
+      # Cùng sửa mô tả nhiệm vụ (ADR-014): máy chủ cộng tác nghe COLLAB_PORT trong mạng compose, cloudflared chuyển /collab tới đây
+      FEATURE_FLAG_TASK_COLLAB: ${FEATURE_FLAG_TASK_COLLAB:-false}
+      COLLAB_HOST: 0.0.0.0
+      COLLAB_PORT: 3101
       TZ: Asia/Ho_Chi_Minh
     # Không publish cổng: tunnel và web gọi qua mạng compose; trên host dùng /api qua cổng của web hoặc docker exec
     volumes:

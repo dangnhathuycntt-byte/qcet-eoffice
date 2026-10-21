@@ -173,8 +173,13 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       identityContent.includes("<DirectInlineEditor"),
       "TaskIdentityBlock must use DirectInlineEditor for task title"
     );
+    // Từ 21/10/2026 (ADR-014) trang bọc editor khối trong TaskDescriptionEditor (chọn PATCH hay cùng sửa theo cờ taskCollab)
+    const descriptionContent = fs.readFileSync(
+      path.join(process.cwd(), "src/components/tasks/detail/task-description-editor.tsx"),
+      "utf-8"
+    );
     assert.ok(
-      detailContent.includes("<TaskBlockEditor"),
+      detailContent.includes("<TaskDescriptionEditor") && descriptionContent.includes("<TaskBlockEditor"),
       "TaskDetailPage must edit the task description with TaskBlockEditor"
     );
   });

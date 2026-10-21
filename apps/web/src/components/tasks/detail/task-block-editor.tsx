@@ -132,6 +132,7 @@ import {
   IndentDecrease,
   MoreHorizontal,
 } from "lucide-react";
+import { YjsPlugin } from "@platejs/yjs/react";
 import { cn } from "@/lib/utils";
 import { uploadFile, type UploadedFile } from "@/lib/files/upload-file";
 import { usePersonnelList, type PersonnelOption } from "@/hooks/use-personnel-list";
@@ -207,6 +208,29 @@ export interface TaskBlockEditorProps {
   ariaLabel?: string;
   /** Đặt con trỏ vào cuối nội dung ngay khi gắn (ô ghi chú vừa mở). */
   autoFocus?: boolean;
+  /**
+   * Cùng sửa trực tiếp (ADR-014): nội dung đi qua tài liệu Yjs của máy chủ cộng tác, `onSaveContent` không được gọi (máy chủ tự
+   * lưu và chiếu ra mô tả). Đọc lúc gắn: đổi chế độ thì gắn lại editor (`key`).
+   */
+  collab?: TaskEditorCollabOptions;
+}
+
+/** Một người khác đang mở cùng tài liệu (awareness của Yjs). */
+export interface CollabPeer {
+  clientId: number;
+  userId: string;
+  name: string;
+  color: string;
+}
+
+export interface TaskEditorCollabOptions {
+  /** `task:<id>` */
+  documentName: string;
+  /** ws(s)://<cùng tên miền>/collab */
+  url: string;
+  user: { id: string; name: string; color: string };
+  onSyncChange?: (synced: boolean) => void;
+  onPeersChange?: (peers: CollabPeer[]) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -2245,8 +2269,11 @@ export function TaskBlockEditor({
   variant = "page",
   ariaLabel,
   autoFocus = false,
+  collab,
 }: TaskBlockEditorProps) {
   const compose = variant === "compose";
+  // Chế độ chốt lúc gắn: plugin của editor không đổi được sau khi tạo
+  const collabRef = React.useRef(collab);
   // Global file drop state
   const [isGlobalDragging, setIsGlobalDragging] = React.useState(false);
   const dragCounterRef = React.useRef(0);
@@ -2268,7 +2295,9 @@ export function TaskBlockEditor({
   // Create Plate editor with full v53 plugins
   const editor = usePlateEditor({
     id: taskId,
-    value: initialValue as any,
+    // Cùng sửa: nội dung lấy từ tài liệu Yjs khi `init` (máy chủ seed từ mô tả), không khởi tạo bằng mô tả ở client
+    value: collabRef.current ? undefined : (initialValue as any),
+    skipInitialization: Boolean(collabRef.current),
     plugins: [
       BaseParagraphPlugin.withComponent(ParagraphEl),
       BaseH1Plugin.withComponent(H1El).extend({ inputRules: [HeadingRules.markdown()] }).configure({
@@ -2337,6 +2366,19 @@ export function TaskBlockEditor({
         },
       }),
       TrailingBlockPlugin.configure({ options: { type: "p" } }),
+      ...(collabRef.current
+        ? [
+            YjsPlugin.configure({
+              options: {
+                cursors: { data: collabRef.current.user },
+                providers: [
+                  { type: "hocuspocus", options: { name: collabRef.current.documentName, url: collabRef.current.url } },
+                ],
+                onSyncChange: ({ isSynced }: { isSynced: boolean }) => collabRef.current?.onSyncChange?.(isSynced),
+              },
+            }),
+          ]
+        : []),
     ],
     override: {
       components: {
@@ -2354,6 +2396,40 @@ export function TaskBlockEditor({
       },
     },
   }, []);
+
+  // Nối máy chủ cộng tác. StrictMode chạy effect hai lần (gắn → gỡ → gắn) trên cùng editor: tạo provider ngay thì lần gỡ đầu
+  // để lại kết nối dở ("already connected"), nên hoãn một nhịp để lần gỡ đầu hủy trước khi có provider nào.
+  React.useEffect(() => {
+    const options = collabRef.current;
+    if (!options) return;
+    const api = editor.getApi(YjsPlugin).yjs;
+    const awareness = editor.getOption(YjsPlugin, "awareness");
+    const reportPeers = () => {
+      if (!awareness) return;
+      const seen = new Set<string>();
+      const peers: CollabPeer[] = [];
+      awareness.getStates().forEach((state, clientId) => {
+        const data = (state as { data?: { id?: string; name?: string; color?: string } }).data;
+        if (clientId === awareness.clientID || !data?.id || data.id === options.user.id || seen.has(data.id)) return;
+        seen.add(data.id);
+        peers.push({ clientId, userId: data.id, name: data.name || "Người dùng", color: data.color || "" });
+      });
+      options.onPeersChange?.(peers);
+    };
+    awareness?.on("change", reportPeers);
+    const timer = window.setTimeout(() => {
+      void api.init({ id: options.documentName, value: null, autoSelect: false });
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      awareness?.off("change", reportPeers);
+      // `destroy` của @platejs/yjs chỉ ngắt provider đã kết nối xong; hủy hẳn provider Hocuspocus (cả kết nối đang mở dở) để
+      // rời trang không để lại kết nối và "người đang mở" ảo
+      const providers = editor.getOption(YjsPlugin, "_providers") as Array<{ provider?: { destroy?: () => void } }>;
+      api.destroy();
+      for (const wrapper of providers ?? []) wrapper.provider?.destroy?.();
+    };
+  }, [editor]);
 
   // Chờ một khung hình: Plate chuẩn hóa giá trị lúc gắn (gán id khối, thêm dòng cuối) làm mất vùng chọn đặt ngay trong effect
   React.useEffect(() => {
@@ -2395,6 +2471,8 @@ export function TaskBlockEditor({
     (plateValue: PlateValue) => {
       // Skip the initial onValueChange from Plate mount
       if (!editorReadyRef.current) return;
+      // Cùng sửa: máy chủ cộng tác lưu, không PATCH mô tả
+      if (collabRef.current) return;
       const contentBlocks = plateToBlocks(plateValue);
       // Filter out blocks with blob: URLs (still uploading) instead of skipping entire save
       const savableBlocks = contentBlocks.filter((b) => !b.url?.startsWith("blob:"));
@@ -2793,7 +2871,8 @@ export function TaskBlockEditor({
                   placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
                   className={cn("outline-none text-sm leading-relaxed flex-1", compose ? "pb-4" : "pl-8 sm:pl-9 pr-4 pb-32")}
                   onBlur={() => {
-                    if (canEdit) pruneEmptyBlocks(editor);
+                    // Cùng sửa thì không dọn: khối rỗng có thể là khối người khác vừa tạo và đang gõ
+                    if (canEdit && !collabRef.current) pruneEmptyBlocks(editor);
                   }}
                 />
                 <FloatingToolbar editor={editor} />

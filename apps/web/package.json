@@ -13,6 +13,7 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@floating-ui/react": "^0.26.28",
+    "@hocuspocus/provider": "^3.4.4",
     "@next/env": "^15.5.27",
     "@platejs/basic-nodes": "^53.0.0",
     "@platejs/callout": "^53.0.0",
@@ -28,6 +29,7 @@
     "@platejs/table": "^53.0.9",
     "@platejs/toc": "^53.0.0",
     "@platejs/toggle": "^53.0.0",
+    "@platejs/yjs": "^53.2.0",
     "@qcet/contracts": "*",
     "@qcet/shared": "*",
     "class-variance-authority": "^0.7.1",
@@ -48,6 +50,7 @@
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.0.2",
     "vaul": "^1.1.2",
+    "yjs": "^13.6.33",
     "zod": "^4.5.4"
   },
   "devDependencies": {

@@ -32,6 +32,20 @@ const apiInternalUrl = (
 ).replace(/\/+$/, "");
 if (!apiInternalUrl) throw new Error("API_INTERNAL_URL chưa đặt (bắt buộc khi build/chạy production)");
 
+/**
+ * Máy chủ cộng tác mô tả nhiệm vụ (ADR-014) nằm trong qcet-api ở cổng riêng COLLAB_PORT (mặc định 3101). Production cloudflared
+ * định tuyến /collab thẳng tới đó; rewrite dưới đây cho dev và khi gọi thẳng web (Next chuyển tiếp cả upgrade WebSocket).
+ * Mặc định cùng máy với API_INTERNAL_URL, đổi cổng; COLLAB_INTERNAL_URL ghi đè.
+ */
+const collabInternalUrl = (
+  process.env.COLLAB_INTERNAL_URL ||
+  (() => {
+    const url = new URL(apiInternalUrl);
+    url.port = process.env.COLLAB_PORT || "3101";
+    return url.origin;
+  })()
+).replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
   // E2E chạy server riêng với NEXT_DIST_DIR khác để không đụng .next của dev server đang mở
   distDir: process.env.NEXT_DIST_DIR || ".next",
@@ -87,7 +101,10 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${apiInternalUrl}/api/:path*` }];
+    return [
+      { source: "/api/:path*", destination: `${apiInternalUrl}/api/:path*` },
+      { source: "/collab/:path*", destination: `${collabInternalUrl}/collab/:path*` },
+    ];
   },
   async redirects() {
     return [

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-export type RuntimeFeatureKey = "taskAgent" | "assistant";
+export type RuntimeFeatureKey = "taskAgent" | "assistant" | "taskCollab";
 
 // Cờ công khai từ server, đọc một lần cho cả phiên; mọi người gọi cùng chia sẻ một lần tải
 let featuresPromise: Promise<Record<string, boolean>> | null = null;

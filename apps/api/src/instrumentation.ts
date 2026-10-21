@@ -29,6 +29,17 @@ export async function register(): Promise<void> {
         },
       });
 
+      // Máy chủ cộng tác mô tả nhiệm vụ (ADR-014), sau cờ taskCollab
+      if (process.env.NEXT_RUNTIME === 'nodejs') {
+        const { isFeatureEnabled } = await import('@/features/flags');
+        if (isFeatureEnabled('taskCollab')) {
+          const { startCollabServer, stopCollabServer } = await import('@/server/collab/collab-server');
+          const { registerShutdownHook } = await import('@/server/lifecycle/shutdown');
+          await startCollabServer();
+          registerShutdownHook(stopCollabServer, { name: 'collab-server', priority: 10 });
+        }
+      }
+
       if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.FILE_SCAN_WORKER_ENABLED === 'true') {
         const { startFileScanWorker } = await import('@/server/files/file-scan-worker');
         startFileScanWorker();

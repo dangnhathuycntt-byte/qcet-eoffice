@@ -2,11 +2,18 @@ tunnel: 514f4f82-5355-4eaa-840e-dfa3f548b61c
 credentials-file: /etc/cloudflared/credentials.json
 
 # Cùng tên miền cho trang và API (D6): /api và /api/* tới qcet-api, còn lại tới qcet-web.
-# Rule /api phải đứng trước rule web của cùng hostname (cloudflared khớp từ trên xuống).
+# /collab (WebSocket của máy chủ cộng tác mô tả nhiệm vụ, ADR-014) tới cổng COLLAB_PORT của qcet-api; chỉ có máy chủ nghe khi bật
+# FEATURE_FLAG_TASK_COLLAB. Rule /api, /collab phải đứng trước rule web của cùng hostname (cloudflared khớp từ trên xuống).
 ingress:
   - hostname: qcet.dixxie.store
     path: ^/api(/|$)
     service: http://qcet-api:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+  - hostname: qcet.dixxie.store
+    path: ^/collab(/|$)
+    service: http://qcet-api:3101
     originRequest:
       connectTimeout: 30s
       noTLSVerify: true
@@ -18,6 +25,12 @@ ingress:
   - hostname: qcet.dixxi.store
     path: ^/api(/|$)
     service: http://qcet-api:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+  - hostname: qcet.dixxi.store
+    path: ^/collab(/|$)
+    service: http://qcet-api:3101
     originRequest:
       connectTimeout: 30s
       noTLSVerify: true
@@ -29,6 +42,12 @@ ingress:
   - hostname: qcet.dixxi.store.dixxie.store
     path: ^/api(/|$)
     service: http://qcet-api:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+  - hostname: qcet.dixxi.store.dixxie.store
+    path: ^/collab(/|$)
+    service: http://qcet-api:3101
     originRequest:
       connectTimeout: 30s
       noTLSVerify: true

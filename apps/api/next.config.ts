@@ -21,7 +21,9 @@ const nextConfig: NextConfig = {
   // E2E chạy server riêng với NEXT_DIST_DIR khác để không đụng .next của dev server đang mở
   distDir: process.env.NEXT_DIST_DIR || ".next",
   output: "standalone",
-  serverExternalPackages: ["web-push"],
+  // Gói Yjs nạp bằng require của Node: bundle của instrumentation (máy chủ cộng tác) và của route handler phải dùng chung một bản
+  // `yjs`, không thì "Type with the name content has already been defined with a different constructor" (ADR-014).
+  serverExternalPackages: ["web-push", "yjs", "y-protocols", "lib0", "@slate-yjs/core", "@hocuspocus/server", "ws"],
   // Gốc repo: standalone mang theo packages/ dùng chung
   outputFileTracingRoot: repoRoot,
   turbopack: {

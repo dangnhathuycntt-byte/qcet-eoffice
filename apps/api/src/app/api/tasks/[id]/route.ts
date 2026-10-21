@@ -22,6 +22,8 @@ import { loadAuthorizationContext, loadCachedAuthorizationContext } from '@/serv
 import { authorize } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
 import { toTaskDetailDTO } from '@/server/dto/task-dto';
+import { syncCollabAfterDescriptionPatch } from '@/server/collab/collab-sync';
+import { logger } from '@/server/observability/logger';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -224,6 +226,13 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       priority: validatedBody.priority,
       expectedVersion,
     });
+
+    // ADR-014: tài liệu cộng tác theo mô tả mới. Lỗi ở đây không làm hỏng lần lưu đã xong.
+    if (validatedBody.description !== undefined) {
+      await syncCollabAfterDescriptionPatch(id, updated.description ?? null, authUser.id).catch((error) =>
+        logger.error('collab.patch_sync.error', { metadata: { taskId: id } }, error)
+      );
+    }
 
     const taskDetail = toTaskDetailDTO(updated);
 

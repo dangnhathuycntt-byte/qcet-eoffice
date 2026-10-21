@@ -34,7 +34,7 @@ import { TaskApprovalProcess } from "@/components/tasks/detail/task-approval-pro
 import { TaskUnitRequests } from "@/components/tasks/detail/task-unit-requests";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
-import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
+import { TaskDescriptionEditor } from "@/components/tasks/detail/task-description-editor";
 import { TaskDetailSplitLayout, useStackedTaskDetail } from "@/components/tasks/detail/task-detail-split-layout";
 import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
@@ -888,7 +888,8 @@ export function TaskDetailPage({
               {/* Bình luận kiểu Notion ngay dưới tên nhiệm vụ: mô tả dài không đẩy bình luận khuất xuống */}
               <TaskComments taskId={task.id} className="mb-4 mt-6 border-b border-border/60 pb-3" />
 
-              <TaskBlockEditor
+              <TaskDescriptionEditor
+                currentUser={currentUser}
                 selectionContainerSelector="body"
                 globalFileDrop={!activeSubtask}
                 taskId={task.id}
