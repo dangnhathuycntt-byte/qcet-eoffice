@@ -156,7 +156,7 @@ function PeopleMenuBody({
             ? units.map((unit) => {
                 const count = unit.people.filter((p) => isSelected(p.id)).length;
                 return (
-                  <MenuSubmenu key={unit.id} label={unit.label} title={unit.name} hint={count || undefined} active={count > 0} popupClassName="w-64">
+                  <MenuSubmenu key={unit.id} label={unit.label} title={unit.name} hint={count || undefined} active={count > 0} popupClassName="w-64" side="right">
                     {unit.people.map((person) => personRow(person, false))}
                   </MenuSubmenu>
                 );

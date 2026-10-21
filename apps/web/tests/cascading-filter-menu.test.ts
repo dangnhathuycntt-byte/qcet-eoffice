@@ -53,11 +53,11 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "Root MenuPositioner must have z-50 outline-none"
     );
 
-    // 2. Submenu positioner nằm trong MenuSubmenu dùng chung: side=left, sideOffset=2, z-50 outline-none
+    // 2. Submenu positioner nằm trong MenuSubmenu dùng chung: side theo prop (mặc định left), sideOffset=2, z-50 outline-none
     const menuSource = fs.readFileSync(path.resolve(process.cwd(), "src/components/ui/menu.tsx"), "utf-8");
     assert.ok(
-      /side="left"\s+align="start"\s+sideOffset=\{2\}\s+alignOffset=\{-4\}\s+collisionPadding=\{12\}\s+className=\{cn\("z-50 outline-none", SHEET_POSITIONER_CLASS\)\}/.test(menuSource),
-      "Shared MenuSubmenu positioner must have side=left and z-50 outline-none to avoid overlapping root menu"
+      /side=\{side\}\s+align="start"\s+sideOffset=\{2\}\s+alignOffset=\{-4\}\s+collisionPadding=\{12\}\s+className=\{cn\("z-50 outline-none", SHEET_POSITIONER_CLASS\)\}/.test(menuSource),
+      "Shared MenuSubmenu positioner must take its side from the prop and keep z-50 outline-none to avoid overlapping root menu"
     );
     assert.ok(source.includes("<MenuSubmenu"), "Toolbar must build nested filter menus from the shared MenuSubmenu");
 
@@ -269,8 +269,8 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     );
     const menuSource = fs.readFileSync(path.resolve(process.cwd(), "src/components/ui/menu.tsx"), "utf-8");
     assert.ok(
-      menuSource.includes('side="left"'),
-      "Shared submenu positioner must open to side='left'"
+      menuSource.includes('side = "left"'),
+      "Shared submenu positioner must open to side='left' unless a caller asks for the other side (bộ lọc không truyền side)"
     );
   });
 });

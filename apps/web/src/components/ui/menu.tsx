@@ -240,14 +240,16 @@ export interface MenuSubmenuProps {
   title?: React.ReactNode;
   /** Lớp bổ sung cho khung menu con (độ rộng, chiều cao tối đa). */
   popupClassName?: string;
+  /** Phía thả menu con; mặc định `left` (bộ lọc ở mép phải), menu chọn người dự họp thả `right`. Hết chỗ thì tự lật phía kia. */
+  side?: "left" | "right";
   children: React.ReactNode;
 }
 
 /**
- * Hàng mở menu con thả sang trái: rê chuột là mở ngay (delay 0), đóng sau 80ms; trên điện thoại chỉ mở khi bấm.
+ * Hàng mở menu con thả sang trái (hoặc phải khi truyền `side="right"`): rê chuột là mở ngay (delay 0), đóng sau 80ms; trên điện thoại chỉ mở khi bấm.
  * Không mũi tên; hàng mở có nền accent. Dùng chung cho mọi bộ lọc nhiều cấp.
  */
-export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, children }: MenuSubmenuProps) {
+export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, side = "left", children }: MenuSubmenuProps) {
   // Điều khiển trạng thái mở để nút "Quay lại" của bottom sheet (điện thoại) đóng được riêng menu con.
   const [open, setOpen] = React.useState(false);
   // Điện thoại: submenu là sheet phủ lên, chỉ mở khi bấm; rê chuột (trình giả lập, chuột gắn máy) không được tự nhảy sang
@@ -266,7 +268,7 @@ export function MenuSubmenu({ icon, label, hint, active, title, popupClassName, 
       </BaseMenu.SubmenuTrigger>
       <BaseMenu.Portal>
         <BaseMenu.Positioner
-          side="left"
+          side={side}
           align="start"
           sideOffset={2}
           alignOffset={-4}
