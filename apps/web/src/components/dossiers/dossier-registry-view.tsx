@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FolderOpen,
   Archive,
@@ -9,13 +10,13 @@ import {
   Plus,
   RefreshCw,
   ChevronRight,
-  Building2,
-  User,
   Calendar,
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Table, TableBody, TableCell, TableEmptyValue, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Pressable } from "@/components/ui/pressable";
 import { Button } from "@/components/ui/button";
 import { MobileTopbarActions } from "@/components/layout/app-topbar";
@@ -88,36 +89,27 @@ const STATUS_LABELS: Record<DossierStatus, string> = {
   ARCHIVED: "Đã lưu trữ",
 };
 
-const STATUS_STYLES: Record<DossierStatus, string> = {
-  OPEN: "bg-muted/80 text-muted-foreground border-border/60",
-  ACTIVE: "bg-blue-500/8 text-blue-700 border-blue-500/15",
-  CLOSED: "bg-muted/60 text-muted-foreground border-border/40",
-  READY_FOR_ARCHIVE: "bg-warning/8 text-warning border-warning/15",
-  SUBMITTED_TO_ARCHIVE: "bg-warning/12 text-warning border-warning/20",
-  ACCEPTED: "bg-emerald-500/8 text-emerald-700 border-emerald-500/15",
-  ARCHIVED: "bg-emerald-500/12 text-emerald-700 border-emerald-500/20",
+/** Màu chữ trạng thái (bảng chỉ tô chữ như bảng Nhiệm vụ): việc còn phải làm để lưu trữ là màu cảnh báo, còn lại chữ mờ. */
+const STATUS_TONE: Partial<Record<DossierStatus, string>> = {
+  READY_FOR_ARCHIVE: "text-warning",
+  SUBMITTED_TO_ARCHIVE: "text-warning",
 };
 
-const CLASSIFICATION_MAP: Record<
-  DossierClassification,
-  { label: string; style: string }
-> = {
-  PUBLIC: {
-    label: "Công khai",
-    style: "bg-muted/50 text-muted-foreground border-border/40",
-  },
-  INTERNAL: {
-    label: "Nội bộ",
-    style: "bg-muted/50 text-muted-foreground border-border/40",
-  },
-  RESTRICTED: {
-    label: "Hạn chế",
-    style: "bg-warning/8 text-warning border-warning/15",
-  },
-  PERSONAL_DATA: {
-    label: "DLCN",
-    style: "bg-red-500/8 text-red-700 border-red-500/15",
-  },
+/** Bề rộng cột như `TASK_COLUMN_CLASS` của bảng Nhiệm vụ; khung bảng hẹp thì bớt cột (container query). */
+const DOSSIER_COLUMN_CLASS = {
+  unit: "w-[176px] @max-[900px]:hidden",
+  owner: "w-[168px] @max-[760px]:hidden",
+  classification: "w-[96px] @max-[1040px]:hidden",
+  items: "w-[80px] @max-[1040px]:hidden",
+  opened: "w-[104px] @max-[560px]:hidden",
+  status: "w-[136px]",
+} as const;
+
+const CLASSIFICATION_MAP: Record<DossierClassification, { label: string; tone: string }> = {
+  PUBLIC: { label: "Công khai", tone: "text-muted-foreground" },
+  INTERNAL: { label: "Nội bộ", tone: "text-muted-foreground" },
+  RESTRICTED: { label: "Hạn chế", tone: "text-warning" },
+  PERSONAL_DATA: { label: "DLCN", tone: "text-destructive" },
 };
 
 const PAGE_SIZE = 20;
@@ -127,6 +119,7 @@ const PAGE_SIZE = 20;
 // ---------------------------------------------------------------------------
 
 export function DossierRegistryView() {
+  const router = useRouter();
 
   // Data
   const [items, setItems] = React.useState<DossierItem[]>([]);
@@ -410,136 +403,89 @@ export function DossierRegistryView() {
 
       {/* Table */}
       {!fetchError && (
-        <div className="empty-fill overflow-x-auto rounded-xl border border-border/50 bg-card shadow-2xs">
-          <table className="w-full text-sm">
-            <thead className={cn(isColdStartEmpty && "hidden")}>
-              <tr className="border-b border-border/40 text-left text-xs font-medium text-muted-foreground">
-                <th className="whitespace-nowrap px-4 py-2.5">Mã hồ sơ</th>
-                <th className="px-4 py-2.5">Tiêu đề</th>
-                <th className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
-                  Đơn vị
-                </th>
-                <th className="hidden whitespace-nowrap px-4 py-2.5 lg:table-cell">
-                  Người phụ trách
-                </th>
-                <th className="whitespace-nowrap px-4 py-2.5">Trạng thái</th>
-                <th className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
-                  Phân loại
-                </th>
-                <th className="hidden whitespace-nowrap px-4 py-2.5 text-center lg:table-cell">
-                  Tài liệu
-                </th>
-                <th className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
-                  Ngày mở
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="empty-fill rounded-xl border border-border/50 bg-card shadow-2xs">
+          {/* Bảng dùng chung như bảng Nhiệm vụ: cột tên lấy phần còn lại, cột thuộc tính rộng cố định, bớt cột theo bề rộng khung */}
+          <Table density="two-line" className="table-fixed" containerClassName="@container">
+            <TableHeader className={cn(isColdStartEmpty && "hidden")}>
+              <TableRow>
+                <TableHead>Hồ sơ</TableHead>
+                <TableHead className={DOSSIER_COLUMN_CLASS.unit}>Đơn vị</TableHead>
+                <TableHead className={DOSSIER_COLUMN_CLASS.owner}>Phụ trách</TableHead>
+                <TableHead className={DOSSIER_COLUMN_CLASS.classification}>Phân loại</TableHead>
+                <TableHead className={cn("text-right", DOSSIER_COLUMN_CLASS.items)}>Tài liệu</TableHead>
+                <TableHead className={DOSSIER_COLUMN_CLASS.opened}>Ngày mở</TableHead>
+                <TableHead className={DOSSIER_COLUMN_CLASS.status}>Trạng thái</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading
                 ? Array.from({ length: 5 }).map((_, i) => (
-                    <tr
-                      key={`skeleton-${i}`}
-                      className="border-b border-border/20"
-                    >
-                      {Array.from({ length: 8 }).map((__, j) => (
-                        <td
-                          key={j}
-                          className={cn(
-                            "px-4 py-3",
-                            j >= 2 && j <= 3 && "hidden md:table-cell",
-                            j === 3 && "hidden lg:table-cell",
-                            j >= 5 && "hidden md:table-cell",
-                            j === 6 && "hidden lg:table-cell",
-                          )}
-                        >
-                          <div className="h-4 animate-pulse rounded bg-muted/60" />
-                        </td>
+                    <TableRow key={`skeleton-${i}`}>
+                      {[undefined, ...Object.values(DOSSIER_COLUMN_CLASS)].map((columnClass, j) => (
+                        <TableCell key={j} className={columnClass}>
+                          <div className="h-3.5 animate-pulse rounded bg-muted/60" />
+                        </TableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))
-                : items.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="group border-b border-border/20 transition-colors hover:bg-muted/30"
-                    >
-                      {/* Code */}
-                      <td className="whitespace-nowrap px-4 py-2.5">
-                        <Link
-                          href={`/dossiers/${item.id}`}
-                          className="font-mono text-xs font-medium text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          {item.code}
-                        </Link>
-                      </td>
-
-                      {/* Title */}
-                      <td className="max-w-[200px] truncate px-4 py-2.5 lg:max-w-[320px]">
-                        <span
-                          className="text-sm text-foreground"
-                          title={item.title}
-                        >
-                          {item.title}
-                        </span>
-                      </td>
-
-                      {/* Owning unit */}
-                      <td className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Building2 className="size-3" />
-                          {item.owningUnit.name}
-                        </span>
-                      </td>
-
-                      {/* Responsible person */}
-                      <td className="hidden whitespace-nowrap px-4 py-2.5 lg:table-cell">
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <User className="size-3" />
-                          {item.responsiblePerson.name}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="whitespace-nowrap px-4 py-2.5">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
-                            STATUS_STYLES[item.status],
-                          )}
-                        >
-                          {STATUS_LABELS[item.status]}
-                        </span>
-                      </td>
-
-                      {/* Classification */}
-                      <td className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
-                            CLASSIFICATION_MAP[item.classification].style,
-                          )}
-                        >
-                          {CLASSIFICATION_MAP[item.classification].label}
-                        </span>
-                      </td>
-
-                      {/* Item count */}
-                      <td className="hidden whitespace-nowrap px-4 py-2.5 text-center lg:table-cell">
-                        <span className="text-xs text-muted-foreground">
+                : items.map((item) => {
+                    const href = `/dossiers/${item.id}`;
+                    const classification = CLASSIFICATION_MAP[item.classification];
+                    return (
+                      <TableRow
+                        key={item.id}
+                        interactive
+                        tabIndex={0}
+                        onClick={() => router.push(href)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && event.target === event.currentTarget) {
+                            event.preventDefault();
+                            router.push(href);
+                          }
+                        }}
+                      >
+                        <TableCell>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Link
+                              href={href}
+                              tabIndex={-1}
+                              onClick={(event) => event.stopPropagation()}
+                              className="min-w-0 truncate font-medium text-foreground outline-none transition-colors group-hover:text-primary"
+                              title={item.title}
+                            >
+                              {item.title}
+                            </Link>
+                            <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground/60">{item.code}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className={DOSSIER_COLUMN_CLASS.unit}>
+                          <span className="line-clamp-2 break-words text-xs leading-snug text-muted-foreground" title={item.owningUnit.name}>
+                            {item.owningUnit.name}
+                          </span>
+                        </TableCell>
+                        <TableCell className={DOSSIER_COLUMN_CLASS.owner}>
+                          <span className="flex min-w-0 items-center gap-2" title={item.responsiblePerson.name}>
+                            <UserAvatar name={item.responsiblePerson.name} size="xs" />
+                            <span className="min-w-0 truncate text-xs">{item.responsiblePerson.name}</span>
+                          </span>
+                        </TableCell>
+                        <TableCell className={cn("whitespace-nowrap text-xs", classification.tone, DOSSIER_COLUMN_CLASS.classification)}>
+                          {classification.label}
+                        </TableCell>
+                        <TableCell className={cn("whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground", DOSSIER_COLUMN_CLASS.items)}>
                           {item._count?.items ?? 0}
-                        </span>
-                      </td>
-
-                      {/* Opened date */}
-                      <td className="hidden whitespace-nowrap px-4 py-2.5 md:table-cell">
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="size-3" />
-                          {formatDate(item.openedAt)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-            </tbody>
-          </table>
+                        </TableCell>
+                        <TableCell className={cn("whitespace-nowrap text-xs tabular-nums text-muted-foreground", DOSSIER_COLUMN_CLASS.opened)}>
+                          {formatDate(item.openedAt) || <TableEmptyValue />}
+                        </TableCell>
+                        <TableCell className={cn("whitespace-nowrap text-xs", STATUS_TONE[item.status] ?? "text-muted-foreground", DOSSIER_COLUMN_CLASS.status)}>
+                          <span className="block truncate">{STATUS_LABELS[item.status]}</span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+            </TableBody>
+          </Table>
 
           {/* Empty state */}
           {!isLoading && items.length === 0 && (

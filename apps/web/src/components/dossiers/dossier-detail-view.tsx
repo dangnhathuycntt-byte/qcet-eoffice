@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { fadeVariants } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
+import { Table, TableBody, TableCell, TableEmptyValue, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { confirmAction } from "@/components/ui/confirm-host";
 import { DossierDisposalPanel } from "./dossier-disposal-panel";
 import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
@@ -124,6 +125,15 @@ const CLASSIFICATION_LABEL: Record<string, string> = {
   RESTRICTED: "Hạn chế",
   PERSONAL_DATA: "Dữ liệu cá nhân",
 };
+
+/** Bề rộng cột của bảng tài liệu trong hồ sơ (như `TASK_COLUMN_CLASS`); khung hẹp thì bớt cột. */
+const ITEM_COLUMN_CLASS = {
+  type: "w-[96px] @max-[640px]:hidden",
+  number: "w-[120px] @max-[640px]:hidden",
+  date: "w-[104px]",
+  pages: "w-[64px] @max-[760px]:hidden",
+  addedBy: "w-[144px] @max-[760px]:hidden",
+} as const;
 
 const ITEM_TYPE_LABEL: Record<string, string> = {
   DOCUMENT: "Văn bản",
@@ -526,88 +536,80 @@ export function DossierDetailView({
                   Chưa có tài liệu nào trong hồ sơ.
                 </p>
               ) : (
-                <div className="overflow-x-auto -mx-4 px-4">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-border/60">
-                        <th className="text-left font-medium text-muted-foreground pb-2 pr-3 w-10">
-                          STT
-                        </th>
-                        <th className="text-left font-medium text-muted-foreground pb-2 pr-3">
-                          Tiêu đề
-                        </th>
-                        <th className="hidden md:table-cell text-left font-medium text-muted-foreground pb-2 pr-3 w-24">
-                          Loại
-                        </th>
-                        <th className="hidden md:table-cell text-left font-medium text-muted-foreground pb-2 pr-3 w-28">
-                          Số văn bản
-                        </th>
-                        <th className="text-left font-medium text-muted-foreground pb-2 pr-3 w-24">
-                          Ngày VB
-                        </th>
-                        <th className="hidden md:table-cell text-right font-medium text-muted-foreground pb-2 pr-3 w-14">
-                          Trang
-                        </th>
-                        <th className="hidden md:table-cell text-left font-medium text-muted-foreground pb-2 w-28">
-                          Người thêm
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dossier.items.map((item, idx) => {
-                        const href = itemDetailHref(
-                          item.itemType,
-                          item.itemId,
-                        );
-                        return (
-                          <tr
-                            key={item.id}
-                            className="border-b border-border/30 last:border-0"
-                          >
-                            <td className="py-2 pr-3 text-muted-foreground tabular-nums">
-                              {item.sequence ?? idx + 1}
-                            </td>
-                            <td className="py-2 pr-3">
+                // Bảng dùng chung như bảng Nhiệm vụ, tràn ra mép thẻ để cột đầu thẳng với chữ trong thẻ
+                <Table density="two-line" className="table-fixed" containerClassName="@container -mx-4 w-[calc(100%+2rem)]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-14">STT</TableHead>
+                      <TableHead>Tiêu đề</TableHead>
+                      <TableHead className={ITEM_COLUMN_CLASS.type}>Loại</TableHead>
+                      <TableHead className={ITEM_COLUMN_CLASS.number}>Số văn bản</TableHead>
+                      <TableHead className={ITEM_COLUMN_CLASS.date}>Ngày VB</TableHead>
+                      <TableHead className={cn("text-right", ITEM_COLUMN_CLASS.pages)}>Trang</TableHead>
+                      <TableHead className={ITEM_COLUMN_CLASS.addedBy}>Người thêm</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dossier.items.map((item, idx) => {
+                      const href = itemDetailHref(item.itemType, item.itemId);
+                      return (
+                        <TableRow
+                          key={item.id}
+                          interactive={Boolean(href)}
+                          tabIndex={href ? 0 : undefined}
+                          onClick={href ? () => router.push(href) : undefined}
+                          onKeyDown={
+                            href
+                              ? (event) => {
+                                  if (event.key === "Enter" && event.target === event.currentTarget) {
+                                    event.preventDefault();
+                                    router.push(href);
+                                  }
+                                }
+                              : undefined
+                          }
+                        >
+                          <TableCell className="text-xs tabular-nums text-muted-foreground">{item.sequence ?? idx + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex min-w-0 flex-col">
                               {href ? (
                                 <Link
                                   href={href}
-                                  className="text-foreground hover:underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring rounded"
+                                  tabIndex={-1}
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="truncate font-medium text-foreground outline-none transition-colors group-hover:text-primary"
+                                  title={item.title}
                                 >
                                   {item.title}
                                 </Link>
                               ) : (
-                                <span className="text-foreground">
+                                <span className="truncate font-medium text-foreground" title={item.title}>
                                   {item.title}
                                 </span>
                               )}
-                              {item.notes && (
-                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                  {item.notes}
-                                </p>
-                              )}
-                            </td>
-                            <td className="hidden md:table-cell py-2 pr-3 text-muted-foreground">
-                              {ITEM_TYPE_LABEL[item.itemType] ??
-                                item.itemType}
-                            </td>
-                            <td className="hidden md:table-cell py-2 pr-3 font-mono text-foreground">
-                              {item.documentNumber ?? "—"}
-                            </td>
-                            <td className="py-2 pr-3 text-muted-foreground tabular-nums">
-                              {formatDate(item.documentDate) || "—"}
-                            </td>
-                            <td className="hidden md:table-cell py-2 pr-3 text-right text-muted-foreground tabular-nums">
-                              {item.pageCount ?? "—"}
-                            </td>
-                            <td className="hidden md:table-cell py-2 text-muted-foreground">
-                              {item.addedBy?.name ?? "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              {item.notes && <span className="truncate text-xs text-muted-foreground">{item.notes}</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell className={cn("truncate text-xs text-muted-foreground", ITEM_COLUMN_CLASS.type)}>
+                            {ITEM_TYPE_LABEL[item.itemType] ?? item.itemType}
+                          </TableCell>
+                          <TableCell className={cn("truncate font-mono text-xs", ITEM_COLUMN_CLASS.number)}>
+                            {item.documentNumber ?? <TableEmptyValue />}
+                          </TableCell>
+                          <TableCell className={cn("whitespace-nowrap text-xs tabular-nums text-muted-foreground", ITEM_COLUMN_CLASS.date)}>
+                            {formatDate(item.documentDate) || <TableEmptyValue />}
+                          </TableCell>
+                          <TableCell className={cn("text-right text-xs tabular-nums text-muted-foreground", ITEM_COLUMN_CLASS.pages)}>
+                            {item.pageCount ?? <TableEmptyValue />}
+                          </TableCell>
+                          <TableCell className={cn("truncate text-xs text-muted-foreground", ITEM_COLUMN_CLASS.addedBy)}>
+                            {item.addedBy?.name ?? <TableEmptyValue />}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               )}
             </SectionCard>
           </div>
