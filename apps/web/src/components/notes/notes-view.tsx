@@ -28,7 +28,9 @@ import { cn } from "@/lib/utils";
 
 const SEARCH_DEBOUNCE_MS = 250;
 /** Thẻ chờ tải cao thấp khác nhau như lưới thật. */
-const SKELETON_ITEMS = [96, 148, 72, 120, 168, 88, 112, 136].map((height, index) => ({ id: `skeleton-${index}`, height }));
+const SKELETON_SECTIONS = [
+  { key: "skeleton", items: [96, 148, 72, 120, 168, 88, 112, 136].map((height, index) => ({ id: `skeleton-${index}`, height })) },
+];
 
 type LoadedNote = { id: string; state: "loading" | "ready" | "missing" | "error"; note?: PersonalNote };
 
@@ -279,6 +281,14 @@ export function NotesView() {
     const visible = captureOpen && captureNoteId ? notes.filter((item) => item.id !== captureNoteId) : notes;
     return { pinnedNotes: visible.filter((item) => item.pinned), otherNotes: visible.filter((item) => !item.pinned) };
   }, [notes, captureOpen, captureNoteId]);
+  // Một lưới chung cho cả hai nhóm để thẻ trượt sang nhóm kia khi ghim; chỉ có nhãn nhóm khi có ghi chú ghim
+  const sections = React.useMemo(
+    () => [
+      { key: "pinned", heading: "Đã ghim", items: pinnedNotes },
+      { key: "other", heading: pinnedNotes.length > 0 ? "Khác" : undefined, items: otherNotes },
+    ],
+    [pinnedNotes, otherNotes]
+  );
   const isEmpty = pinnedNotes.length === 0 && otherNotes.length === 0;
 
   const deleteConfirm = (
@@ -384,7 +394,7 @@ export function NotesView() {
             {status === "loading" ? (
               <div aria-hidden>
                 <NoteMasonry
-                  items={SKELETON_ITEMS}
+                  sections={SKELETON_SECTIONS}
                   label="Đang tải ghi chú"
                   renderItem={(item) => (
                     <div className="rounded-lg border border-border bg-card p-4">
@@ -420,15 +430,7 @@ export function NotesView() {
               )
             ) : (
               <div className="flex flex-col gap-8">
-                {pinnedNotes.length > 0 && <NoteMasonry items={pinnedNotes} label="Đã ghim" heading="Đã ghim" renderItem={renderCard} />}
-                {otherNotes.length > 0 && (
-                  <NoteMasonry
-                    items={otherNotes}
-                    label={pinnedNotes.length > 0 ? "Khác" : "Ghi chú"}
-                    heading={pinnedNotes.length > 0 ? "Khác" : undefined}
-                    renderItem={renderCard}
-                  />
-                )}
+                <NoteMasonry sections={sections} label="Ghi chú" renderItem={renderCard} />
                 {hasMore && (
                   <p className="text-center text-xs text-muted-foreground">Chỉ hiện các ghi chú mới nhất. Dùng ô tìm để tìm ghi chú cũ hơn.</p>
                 )}
