@@ -2,7 +2,7 @@
  * Phần không phải giao diện của trang Cuộc họp: hàng danh sách, khoảng thời gian của bộ lọc, thao tác được phép trên một hàng,
  * dữ liệu xuất Excel và tùy chọn hiển thị (cột, sắp xếp) lưu ở trình duyệt.
  */
-import { MEETING_BUCKET_STATUSES, MEETING_SORT_FIELDS, type MeetingBucket, type MeetingSortField } from "@qcet/contracts/meeting";
+import { MEETING_SORT_FIELDS, type MeetingBucket, type MeetingSortField } from "@qcet/contracts/meeting";
 import { addCalendarDays } from "@qcet/shared/lib/academic-calendar";
 import { formatDisplayDate, formatTime, formatWeekday } from "@qcet/shared/lib/format/date";
 import { meetingStatus } from "@/components/meetings/meeting-status";
@@ -23,9 +23,12 @@ export interface MeetingRow {
 
 export const MEETING_STATUSES = ["DRAFT_AGENDA", "INVITED", "HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED", "CANCELLED"] as const;
 
-/** Trạng thái chọn được trong bộ lọc: theo tab đang mở (tab Sắp diễn ra chỉ có các trạng thái chưa họp). */
+/**
+ * Trạng thái chọn được trong bộ lọc theo tab đang mở. Tab chia theo thời gian nên cuộc họp đã qua giờ mà còn "Dự thảo chương
+ * trình" nằm ở Đã họp; mọi trạng thái trừ Đã hủy (chỉ ở Tất cả) đều có thể gặp ở cả hai tab.
+ */
 export function statusOptionsFor(bucket: MeetingBucket | "all"): string[] {
-  return bucket === "all" ? [...MEETING_STATUSES] : [...MEETING_BUCKET_STATUSES[bucket]];
+  return bucket === "all" ? [...MEETING_STATUSES] : MEETING_STATUSES.filter((status) => status !== "CANCELLED");
 }
 
 export const MEETING_TIME_FILTERS = [

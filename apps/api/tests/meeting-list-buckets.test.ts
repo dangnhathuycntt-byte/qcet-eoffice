@@ -1,7 +1,8 @@
 /**
- * Danh sách cuộc họp theo nhóm trạng thái (trang Cuộc họp, các mục con "Sắp diễn ra" / "Đã họp" ở sidebar):
- * `bucket=upcoming` là chưa họp xếp theo giờ họp tăng dần, `bucket=done` là đã họp xếp mới nhất trước, không có `bucket` thì
- * có cả cuộc họp đã hủy; nhóm không mở rộng phạm vi xem (người không liên quan vẫn không thấy gì) và đi cùng `status` thì cả hai cùng đúng.
+ * Danh sách cuộc họp theo nhóm (trang Cuộc họp, các mục con "Sắp diễn ra" / "Đã họp" ở sidebar), tính theo thời gian chứ không
+ * theo trạng thái (người dùng yêu cầu 21/10/2026): `bucket=upcoming` là chưa qua giờ kết thúc (kể cả đang họp) xếp theo giờ họp
+ * tăng dần, `bucket=done` là đã qua giờ kết thúc (không có thì theo giờ bắt đầu) xếp mới nhất trước, không có `bucket` thì có cả
+ * cuộc họp đã hủy; nhóm không mở rộng phạm vi xem (người không liên quan vẫn không thấy gì) và đi cùng `status` thì cả hai cùng đúng.
  */
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,10 +27,11 @@ import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '@/lib/jwt-session';
 import { GET as listRoute } from '@/app/api/meetings/route';
 import { MeetingService } from '@/server/services/meeting-service';
-import { ListMeetingsQuerySchema, MEETING_BUCKET_STATUSES } from '@qcet/contracts/meeting';
+import { ListMeetingsQuerySchema, meetingBucketOf } from '@qcet/contracts/meeting';
 
 const runId = crypto.randomBytes(4).toString('hex');
-const DAY = 86_400_000;
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 const users = { organizer: '', outsider: '' };
 let unitId = '';
 const meetingIds: Record<string, string> = {};
@@ -41,7 +43,7 @@ const mine = (result: { items: Array<{ id: string; title: string }> }) => result
 const keys = (result: { items: Array<{ id: string; title: string }> }) =>
   mine(result).map((m) => Object.entries(meetingIds).find(([, id]) => id === m.id)?.[0]);
 
-describe('Danh sách cuộc họp theo nhóm trạng thái', () => {
+describe('Danh sách cuộc họp theo nhóm thời gian', () => {
   before(async () => {
     for (const key of ['organizer', 'outsider'] as const) {
       users[key] = (
@@ -53,18 +55,33 @@ describe('Danh sách cuộc họp theo nhóm trạng thái', () => {
     }
     unitId = (await prisma.organizationalUnit.create({ data: { code: `OU_MB_${runId}`, name: `Đơn vị họp ${runId}`, type: UnitType.DEPARTMENT } })).id;
     const now = Date.now();
-    const seed: Array<[string, MeetingStatus, number]> = [
-      ['draft', MeetingStatus.DRAFT_AGENDA, 2],
-      ['invited', MeetingStatus.INVITED, 1],
-      ['held', MeetingStatus.HELD, -1],
-      ['minutesDraft', MeetingStatus.MINUTES_DRAFT, -2],
-      ['confirmed', MeetingStatus.MINUTES_CONFIRMED, -3],
-      ['cancelled', MeetingStatus.CANCELLED, 3],
+    // [khóa, trạng thái, giờ bắt đầu, giờ kết thúc] tính từ lúc chạy test
+    const seed: Array<[string, MeetingStatus, number, number?]> = [
+      ['draft', MeetingStatus.DRAFT_AGENDA, 2 * DAY],
+      ['invited', MeetingStatus.INVITED, DAY],
+      // Đang họp: đã bắt đầu, chưa tới giờ kết thúc
+      ['ongoing', MeetingStatus.INVITED, -HOUR, HOUR],
+      // Đã kết thúc trong ngày dù trạng thái chưa chuyển
+      ['endedToday', MeetingStatus.INVITED, -3 * HOUR, -HOUR],
+      ['held', MeetingStatus.HELD, -DAY],
+      ['minutesDraft', MeetingStatus.MINUTES_DRAFT, -2 * DAY],
+      ['confirmed', MeetingStatus.MINUTES_CONFIRMED, -3 * DAY],
+      // Quá giờ mà vẫn "Dự thảo chương trình" (ca người dùng báo)
+      ['staleDraft', MeetingStatus.DRAFT_AGENDA, -4 * DAY],
+      ['cancelled', MeetingStatus.CANCELLED, 3 * DAY],
     ];
-    for (const [key, status, days] of seed) {
+    for (const [key, status, start, end] of seed) {
       meetingIds[key] = (
         await prisma.meeting.create({
-          data: { code: `MT_MB_${runId}_${key}`, title: `Họp ${key} ${runId}`, unitId, organizerId: users.organizer, status, startTime: new Date(now + days * DAY) },
+          data: {
+            code: `MT_MB_${runId}_${key}`,
+            title: `Họp ${key} ${runId}`,
+            unitId,
+            organizerId: users.organizer,
+            status,
+            startTime: new Date(now + start),
+            endTime: end === undefined ? null : new Date(now + end),
+          },
         })
       ).id;
     }
@@ -78,27 +95,34 @@ describe('Danh sách cuộc họp theo nhóm trạng thái', () => {
     await prisma.$disconnect();
   });
 
-  it('bảng nhóm: upcoming là chưa họp, done là đã họp (kể cả biên bản), không nhóm nào chứa cuộc họp đã hủy', () => {
-    assert.deepEqual([...MEETING_BUCKET_STATUSES.upcoming], ['DRAFT_AGENDA', 'INVITED']);
-    assert.deepEqual([...MEETING_BUCKET_STATUSES.done], ['HELD', 'MINUTES_DRAFT', 'MINUTES_CONFIRMED']);
-    assert.equal([...MEETING_BUCKET_STATUSES.upcoming, ...MEETING_BUCKET_STATUSES.done].includes('CANCELLED' as MeetingStatus), false);
+  it('meetingBucketOf: theo giờ kết thúc (không có thì giờ bắt đầu), không theo trạng thái; đã hủy không thuộc nhóm nào', () => {
+    const now = new Date('2026-10-21T03:00:00.000Z');
+    const at = (iso: string) => new Date(iso);
+    assert.equal(meetingBucketOf({ status: 'DRAFT_AGENDA', startTime: at('2026-10-20T01:00:00.000Z') }, now), 'done');
+    assert.equal(meetingBucketOf({ status: 'HELD', startTime: at('2026-10-22T01:00:00.000Z') }, now), 'upcoming');
+    assert.equal(meetingBucketOf({ status: 'INVITED', startTime: at('2026-10-21T02:00:00.000Z'), endTime: at('2026-10-21T04:00:00.000Z') }, now), 'upcoming');
+    assert.equal(meetingBucketOf({ status: 'INVITED', startTime: '2026-10-21T01:00:00.000Z', endTime: '2026-10-21T03:00:00.000Z' }, now), 'done');
+    assert.equal(meetingBucketOf({ status: 'CANCELLED', startTime: at('2026-10-22T01:00:00.000Z') }, now), null);
   });
 
-  it('upcoming: chỉ cuộc chưa họp, gần nhất lên đầu', async () => {
-    assert.deepEqual(keys(await list(users.organizer, { bucket: 'upcoming' })), ['invited', 'draft']);
+  it('upcoming: chưa qua giờ kết thúc (kể cả đang họp), gần nhất lên đầu', async () => {
+    assert.deepEqual(keys(await list(users.organizer, { bucket: 'upcoming' })), ['ongoing', 'invited', 'draft']);
   });
 
-  it('done: chỉ cuộc đã họp, mới nhất lên đầu', async () => {
-    assert.deepEqual(keys(await list(users.organizer, { bucket: 'done' })), ['held', 'minutesDraft', 'confirmed']);
+  it('done: đã qua giờ kết thúc dù trạng thái chưa chuyển, mới nhất lên đầu', async () => {
+    assert.deepEqual(keys(await list(users.organizer, { bucket: 'done' })), ['endedToday', 'held', 'minutesDraft', 'confirmed', 'staleDraft']);
   });
 
-  it('không có nhóm: đủ sáu cuộc kể cả đã hủy, mới nhất lên đầu', async () => {
-    assert.deepEqual(keys(await list(users.organizer)), ['cancelled', 'draft', 'invited', 'held', 'minutesDraft', 'confirmed']);
+  it('không có nhóm: đủ các cuộc kể cả đã hủy, mới nhất lên đầu', async () => {
+    assert.deepEqual(keys(await list(users.organizer)), [
+      'cancelled', 'draft', 'invited', 'ongoing', 'endedToday', 'held', 'minutesDraft', 'confirmed', 'staleDraft',
+    ]);
   });
 
-  it('nhóm đi cùng status thì cả hai cùng đúng: done + INVITED rỗng, done + HELD chỉ còn cuộc đã họp', async () => {
-    assert.deepEqual(keys(await list(users.organizer, { bucket: 'done', status: 'INVITED' })), []);
-    assert.deepEqual(keys(await list(users.organizer, { bucket: 'done', status: 'HELD' })), ['held']);
+  it('nhóm đi cùng status thì cả hai cùng đúng: done + INVITED chỉ cuộc đã mời mà đã qua giờ, upcoming + HELD rỗng', async () => {
+    assert.deepEqual(keys(await list(users.organizer, { bucket: 'done', status: 'INVITED' })), ['endedToday']);
+    assert.deepEqual(keys(await list(users.organizer, { bucket: 'done', status: 'DRAFT_AGENDA' })), ['staleDraft']);
+    assert.deepEqual(keys(await list(users.organizer, { bucket: 'upcoming', status: 'HELD' })), []);
   });
 
   it('nhóm không mở rộng phạm vi xem: người không liên quan không thấy cuộc nào của bài test', async () => {
@@ -113,7 +137,7 @@ describe('Danh sách cuộc họp theo nhóm trạng thái', () => {
     const ok = await listRoute(new NextRequest('http://localhost:3000/api/meetings?bucket=upcoming&limit=50', { headers: auth }));
     assert.equal(ok.status, 200);
     const body = (await ok.json()) as { items: Array<{ id: string; title: string }> };
-    assert.deepEqual(keys(body), ['invited', 'draft']);
+    assert.deepEqual(keys(body), ['ongoing', 'invited', 'draft']);
 
     const bad = await listRoute(new NextRequest('http://localhost:3000/api/meetings?bucket=all', { headers: auth }));
     assert.equal(bad.status, 400);

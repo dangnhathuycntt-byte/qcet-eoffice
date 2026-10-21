@@ -193,7 +193,7 @@ export function MeetingListView() {
       const q = (next.q ?? urlQuery).trim();
       if (q) params.set("q", q);
       else params.delete("q");
-      // Trạng thái không thuộc tab mới (Đã họp khi sang Sắp diễn ra) thì bỏ, không để danh sách rỗng khó hiểu
+      // Trạng thái không có ở tab mới (Đã hủy khi sang Sắp diễn ra/Đã họp) thì bỏ, không để danh sách rỗng khó hiểu
       const nextStatus = next.status === undefined ? status : next.status;
       if (nextStatus && statusOptionsFor(bucket).includes(nextStatus)) params.set("status", nextStatus);
       else params.delete("status");

@@ -27,7 +27,7 @@ import {
   ConfirmMinutesInput,
   CreateMeetingResolutionInput,
   ListMeetingsQuery,
-  MEETING_BUCKET_STATUSES,
+  type MeetingBucket,
 } from '@qcet/contracts/meeting';
 import { logAuditEvent, AuditAction } from '@qcet/db/audit';
 import { publishOutboxEvent } from '@qcet/db/outbox';
@@ -144,6 +144,15 @@ async function assertInvitableUsers(userIds: string[]): Promise<void> {
   if (found !== ids.length) {
     throw new ValidationError('Có người được mời không tồn tại hoặc đã ngừng hoạt động.');
   }
+}
+
+/** Điều kiện của nhóm Sắp diễn ra / Đã họp, cùng định nghĩa với `meetingBucketOf`: mốc là giờ kết thúc, không có thì giờ bắt đầu. */
+function meetingBucketWhere(bucket: MeetingBucket, now: Date): Prisma.MeetingWhereInput {
+  const side = bucket === 'upcoming' ? { gt: now } : { lte: now };
+  return {
+    status: { not: MeetingStatus.CANCELLED },
+    OR: [{ endTime: side }, { endTime: null, startTime: side }],
+  };
 }
 
 export class MeetingService {
@@ -958,8 +967,8 @@ export class MeetingService {
     if (bodyId) clientFilterWhere.bodyId = bodyId;
     if (unitId) clientFilterWhere.unitId = unitId;
     if (status) clientFilterWhere.status = status;
-    // Nhóm trạng thái (trang Cuộc họp); đi cùng `status` thì cả hai cùng phải đúng
-    const bucketWhere: Prisma.MeetingWhereInput = bucket ? { status: { in: [...MEETING_BUCKET_STATUSES[bucket]] } } : {};
+    // Nhóm theo thời gian (trang Cuộc họp, như `meetingBucketOf`); đi cùng `status` thì cả hai cùng phải đúng
+    const bucketWhere: Prisma.MeetingWhereInput = bucket ? meetingBucketWhere(bucket, new Date()) : {};
 
     if (from || to) {
       const timeFilter: Prisma.DateTimeFilter = {};

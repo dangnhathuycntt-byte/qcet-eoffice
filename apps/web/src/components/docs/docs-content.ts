@@ -1296,7 +1296,7 @@ export const DOC_GROUPS: DocGroup[] = [
           {
             type: "ul",
             items: [
-              "Hàng tab **Tất cả**, **Sắp diễn ra**, **Đã họp** chọn giai đoạn, cùng lựa chọn với hai mục con ở thanh bên. **Sắp diễn ra** là cuộc họp chưa họp (dự thảo chương trình, đã mời), xếp cuộc gần nhất lên đầu. **Đã họp** gồm cuộc đã họp, đang dự thảo biên bản và đã duyệt biên bản. Cuộc họp đã hủy chỉ hiện ở **Tất cả**.",
+              "Hàng tab **Tất cả**, **Sắp diễn ra**, **Đã họp** chọn giai đoạn, cùng lựa chọn với hai mục con ở thanh bên. Hai giai đoạn tính theo thời gian, không theo trạng thái: **Sắp diễn ra** là cuộc họp chưa tới giờ kết thúc (kể cả đang họp), xếp cuộc gần nhất lên đầu. **Đã họp** là cuộc họp đã qua giờ kết thúc (không ghi giờ kết thúc thì tính theo giờ bắt đầu), kể cả khi trạng thái chưa chuyển. Cuộc họp đã hủy chỉ hiện ở **Tất cả**.",
               "Ô tìm theo tên cuộc họp; kết quả cập nhật sau khi ngừng gõ.",
               "Danh sách hiện 20 cuộc họp mỗi lần; bấm **Xem thêm** để tải tiếp.",
             ],

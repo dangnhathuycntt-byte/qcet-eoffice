@@ -60,8 +60,10 @@ describe("Bộ lọc thời gian cuộc họp", () => {
     });
   });
 
-  test("trạng thái chọn được theo tab: Sắp diễn ra chỉ có trạng thái chưa họp", () => {
-    assert.deepEqual(statusOptionsFor("upcoming"), ["DRAFT_AGENDA", "INVITED"]);
+  test("trạng thái chọn được theo tab: tab chia theo thời gian nên có mọi trạng thái trừ Đã hủy (chỉ ở Tất cả)", () => {
+    const notCancelled = ["DRAFT_AGENDA", "INVITED", "HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED"];
+    assert.deepEqual(statusOptionsFor("upcoming"), notCancelled);
+    assert.deepEqual(statusOptionsFor("done"), notCancelled);
     assert.equal(statusOptionsFor("all").length, 6);
   });
 });

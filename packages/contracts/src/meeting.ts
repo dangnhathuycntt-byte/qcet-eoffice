@@ -113,16 +113,23 @@ export const AddBodyMembershipSchema = z.object({
 });
 
 /**
- * Nhóm trạng thái của trang Cuộc họp (các mục con ở sidebar, như Chờ xử lý / Đã xử lý của Văn bản): "upcoming" là chưa họp
- * (dự thảo chương trình, đã mời; xếp theo giờ họp tăng dần), "done" là đã họp (kể cả đang dự thảo hay đã duyệt biên bản).
- * Cuộc họp đã hủy chỉ thấy ở "Tất cả". Máy chủ và trang dùng chung bảng này.
+ * Nhóm của trang Cuộc họp (các mục con ở sidebar, như Chờ xử lý / Đã xử lý của Văn bản), tính theo thời gian chứ không theo
+ * trạng thái (người dùng báo cuộc họp hôm qua còn "Dự thảo chương trình" vẫn nằm ở Sắp diễn ra, 21/10/2026): "upcoming" là
+ * cuộc họp chưa kết thúc (kể cả đang họp; xếp theo giờ họp tăng dần), "done" là đã qua giờ kết thúc, không ghi giờ kết thúc
+ * thì tính theo giờ bắt đầu (`meetingBucketOf`). Cuộc họp đã hủy chỉ thấy ở "Tất cả". Máy chủ và trang dùng chung định nghĩa này.
  */
 export const MEETING_BUCKETS = ['upcoming', 'done'] as const;
 export type MeetingBucket = (typeof MEETING_BUCKETS)[number];
-export const MEETING_BUCKET_STATUSES: Record<MeetingBucket, readonly MeetingStatus[]> = {
-  upcoming: [MeetingStatus.DRAFT_AGENDA, MeetingStatus.INVITED],
-  done: [MeetingStatus.HELD, MeetingStatus.MINUTES_DRAFT, MeetingStatus.MINUTES_CONFIRMED],
-};
+
+/** Nhóm của một cuộc họp lúc `now`; `null` khi đã hủy (chỉ ở "Tất cả"). */
+export function meetingBucketOf(
+  meeting: { status: MeetingStatus | string; startTime: Date | string; endTime?: Date | string | null },
+  now: Date
+): MeetingBucket | null {
+  if (meeting.status === MeetingStatus.CANCELLED) return null;
+  const end = new Date(meeting.endTime ?? meeting.startTime).getTime();
+  return end > now.getTime() ? 'upcoming' : 'done';
+}
 
 /** Cột sắp xếp của trang Cuộc họp (đầu cột và tùy chọn hiển thị); không truyền thì theo nhóm (sắp diễn ra: gần nhất trước). */
 export const MEETING_SORT_FIELDS = ['startTime', 'createdAt', 'title'] as const;
