@@ -39,6 +39,10 @@ interface MeetingDetailViewProps {
   currentUser: { id: string; name: string; role: string };
 }
 
+/** Nhóm vai trò dài hơn thế này thì chỉ hiện chừng ấy người, còn lại sau nút "Xem thêm" (cuộc họp mời cả trường 270 người
+ * kéo thẻ Thành phần dài cả chục màn hình, người dùng báo 21/10/2026). */
+const PARTICIPANT_PREVIEW_LIMIT = 8;
+
 const PARTICIPANT_ROLE_LABELS: Record<string, string> = {
   CHAIR: "Chủ tọa",
   SECRETARY: "Thư ký",
@@ -135,6 +139,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const [peopleWanted, setPeopleWanted] = React.useState(false);
   const directory = useMeetingPeople(peopleWanted);
   const [chairPickerOpen, setChairPickerOpen] = React.useState(false);
+  const [expandedRoles, setExpandedRoles] = React.useState<string[]>([]);
   // Người vừa chọn, hiện ngay như đã chọn trong lúc chờ máy chủ và tải lại trang
   const [inviting, setInviting] = React.useState<MeetingPerson[]>([]);
   const participantIds = React.useMemo(() => new Set(meeting.participants.map((p) => p.userId)), [meeting.participants]);
@@ -357,16 +362,37 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         ) : null}
         {participantsByRole.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {participantsByRole.map(([role, group]) => (
-              <div key={role}>
-                <p className="mb-0.5 text-xs text-muted-foreground">{PARTICIPANT_ROLE_LABELS[role] ?? role}</p>
-                <ul>
-                  {group.map((p) => (
-                    <ParticipantRow key={p.id} participant={p} />
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {participantsByRole.map(([role, group]) => {
+              const long = group.length > PARTICIPANT_PREVIEW_LIMIT;
+              const expanded = expandedRoles.includes(role);
+              const shown = long && !expanded ? group.slice(0, PARTICIPANT_PREVIEW_LIMIT) : group;
+              return (
+                <div key={role}>
+                  <p className="mb-0.5 text-xs text-muted-foreground">
+                    {PARTICIPANT_ROLE_LABELS[role] ?? role}
+                    {long ? <span className="tabular-nums"> · {group.length}</span> : null}
+                  </p>
+                  <ul>
+                    {shown.map((p) => (
+                      <ParticipantRow key={p.id} participant={p} />
+                    ))}
+                  </ul>
+                  {long ? (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="-ml-1.5 mt-0.5 text-muted-foreground"
+                      aria-expanded={expanded}
+                      onClick={() =>
+                        setExpandedRoles((current) => (expanded ? current.filter((r) => r !== role) : [...current, role]))
+                      }
+                    >
+                      {expanded ? "Thu gọn" : `Xem thêm ${group.length - PARTICIPANT_PREVIEW_LIMIT} người`}
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">{canManageParticipants ? "Chưa có người dự họp. Bấm Thêm để mời." : "Chưa có người dự họp."}</p>
