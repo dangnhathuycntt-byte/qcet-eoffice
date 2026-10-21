@@ -152,6 +152,7 @@ import {
   type ContentBlockType,
 } from "@qcet/shared/lib/tasks/plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
+import { Kbd } from "@/components/ui/kbd";
 import { ImageViewerTrigger } from "@/components/ui/image-viewer";
 import { MENU_POPUP_CLASS, MenuActionItem, MenuContent, MenuRoot, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
 import { rankSlashOptions, type SlashSearchable } from "./slash-menu-search";
@@ -330,25 +331,26 @@ interface MenuItemOption extends SlashSearchable {
 }
 
 // Hai nhóm như "Basic blocks"/"Media" của Notion (trước 21/10/2026 là tám nhóm, nhóm 1–2 mục làm menu dài và phải cuộn).
-// Từ khóa gồm tên tiếng Anh quen dùng ở Notion/Linear để gõ "/h1", "/todo", "/image" vẫn ra.
+// Từ khóa gồm tên tiếng Anh quen dùng ở Notion/Linear để gõ "/h1", "/todo", "/image" vẫn ra. Mô tả hiện ở chân menu cho mục
+// đang chọn (tên như "Khối thu gọn", "Dấu trang web" chưa đủ rõ) nên giữ một dòng, vừa menu rộng 256px.
 export const MENU_OPTIONS: MenuItemOption[] = [
-  { id: "opt-text", type: "text", group: "Khối cơ bản", title: "Văn bản", description: "Văn bản thuần túy, tự do định dạng", icon: TaskIconBlockText, keywords: ["text", "paragraph", "doan van"] },
-  { id: "opt-h1", type: "heading", level: 1, group: "Khối cơ bản", title: "Tiêu đề 1", description: "Tiêu đề lớn phân mục chính", icon: TaskIconBlockHeading1, shortcut: "#", keywords: ["h1", "heading 1"] },
-  { id: "opt-h2", type: "heading", level: 2, group: "Khối cơ bản", title: "Tiêu đề 2", description: "Tiêu đề vừa", icon: TaskIconBlockHeading2, shortcut: "##", keywords: ["h2", "heading 2"] },
-  { id: "opt-h3", type: "heading", level: 3, group: "Khối cơ bản", title: "Tiêu đề 3", description: "Tiêu đề nhỏ", icon: TaskIconBlockHeading3, shortcut: "###", keywords: ["h3", "heading 3"] },
-  { id: "opt-bulleted", type: "bulleted_list", group: "Khối cơ bản", title: "Danh sách dấu đầu dòng", description: "Danh sách dấu chấm đầu dòng", icon: TaskIconBlockBulletList, shortcut: "-", keywords: ["bullet", "ul", "list", "gach dau dong"] },
-  { id: "opt-numbered", type: "numbered_list", group: "Khối cơ bản", title: "Danh sách đánh số", description: "Danh sách đánh số thứ tự", icon: TaskIconBlockNumberedList, shortcut: "1.", keywords: ["numbered", "ol", "list", "so thu tu"] },
-  { id: "opt-checklist", type: "checklist", group: "Khối cơ bản", title: "Checklist", description: "Danh sách việc cần làm có ô đánh dấu", icon: TaskIconBlockChecklist, shortcut: "[]", keywords: ["todo", "to-do", "task", "viec can lam"] },
-  { id: "opt-toggle", type: "toggle", group: "Khối cơ bản", title: "Khối thu gọn", description: "Thu gọn hướng dẫn, danh mục dài", icon: TaskIconBlockToggle, keywords: ["toggle", "collapse", "an hien"] },
-  { id: "opt-quote", type: "quote", group: "Khối cơ bản", title: "Trích dẫn", description: "Trích dẫn ý kiến hoặc chỉ đạo", icon: TaskIconBlockQuote, shortcut: ">", keywords: ["quote", "blockquote"] },
-  { id: "opt-callout", type: "callout", group: "Khối cơ bản", title: "Ghi chú nổi bật", description: "Hộp lưu ý hoặc thông điệp quan trọng", icon: TaskIconBlockCallout, keywords: ["callout", "note", "luu y"] },
-  { id: "opt-divider", type: "divider", group: "Khối cơ bản", title: "Đường phân cách", description: "Đường kẻ chia tách phân đoạn", icon: TaskIconBlockDivider, shortcut: "---", keywords: ["divider", "hr", "line", "ke ngang"] },
-  { id: "opt-table", type: "table", group: "Khối cơ bản", title: "Bảng biểu", description: "Tạo bảng dữ liệu phân công, báo cáo", icon: TaskIconBlockTable, keywords: ["table"] },
-  { id: "opt-image", type: "image", group: "Tệp & liên kết", title: "Hình ảnh", description: "Tải lên hoặc dán hình ảnh trực quan", icon: TaskIconBlockImage, keywords: ["image", "img", "photo", "picture", "anh"] },
-  { id: "opt-attachment", type: "attachment", group: "Tệp & liên kết", title: "Tệp đính kèm", description: "Đính kèm tệp PDF, DOCX, bảng tính", icon: TaskIconBlockAttachment, keywords: ["file", "attach", "attachment", "pdf", "tai lieu"] },
-  { id: "opt-media-embed", type: "media_embed", group: "Tệp & liên kết", title: "Nhúng phương tiện", description: "Nhúng video hướng dẫn YouTube/Loom/Drive", icon: TaskIconBlockEmbed, keywords: ["embed", "video", "youtube", "loom", "drive"] },
-  { id: "opt-link", type: "link", group: "Tệp & liên kết", title: "Liên kết", description: "Đường dẫn liên kết web hoặc tài liệu ngoài", icon: TaskIconBlockLink, keywords: ["link", "url"] },
-  { id: "opt-bookmark", type: "bookmark", group: "Tệp & liên kết", title: "Dấu trang web", description: "Thẻ xem trước trực quan cho liên kết", icon: TaskIconBlockBookmark, keywords: ["bookmark", "preview"] },
+  { id: "opt-text", type: "text", group: "Khối cơ bản", title: "Văn bản", description: "Đoạn văn thường", icon: TaskIconBlockText, keywords: ["text", "paragraph", "doan van"] },
+  { id: "opt-h1", type: "heading", level: 1, group: "Khối cơ bản", title: "Tiêu đề 1", description: "Tiêu đề lớn cho phần chính", icon: TaskIconBlockHeading1, shortcut: "#", keywords: ["h1", "heading 1"] },
+  { id: "opt-h2", type: "heading", level: 2, group: "Khối cơ bản", title: "Tiêu đề 2", description: "Tiêu đề vừa cho từng mục", icon: TaskIconBlockHeading2, shortcut: "##", keywords: ["h2", "heading 2"] },
+  { id: "opt-h3", type: "heading", level: 3, group: "Khối cơ bản", title: "Tiêu đề 3", description: "Tiêu đề nhỏ cho ý trong mục", icon: TaskIconBlockHeading3, shortcut: "###", keywords: ["h3", "heading 3"] },
+  { id: "opt-bulleted", type: "bulleted_list", group: "Khối cơ bản", title: "Danh sách dấu đầu dòng", description: "Liệt kê các ý không theo thứ tự", icon: TaskIconBlockBulletList, shortcut: "-", keywords: ["bullet", "ul", "list", "gach dau dong"] },
+  { id: "opt-numbered", type: "numbered_list", group: "Khối cơ bản", title: "Danh sách đánh số", description: "Liệt kê theo thứ tự 1, 2, 3", icon: TaskIconBlockNumberedList, shortcut: "1.", keywords: ["numbered", "ol", "list", "so thu tu"] },
+  { id: "opt-checklist", type: "checklist", group: "Khối cơ bản", title: "Checklist", description: "Việc cần làm có ô đánh dấu", icon: TaskIconBlockChecklist, shortcut: "[]", keywords: ["todo", "to-do", "task", "viec can lam"] },
+  { id: "opt-toggle", type: "toggle", group: "Khối cơ bản", title: "Khối thu gọn", description: "Ẩn bớt nội dung dài, bấm để mở ra", icon: TaskIconBlockToggle, keywords: ["toggle", "collapse", "an hien"] },
+  { id: "opt-quote", type: "quote", group: "Khối cơ bản", title: "Trích dẫn", description: "Trích ý kiến hoặc chỉ đạo", icon: TaskIconBlockQuote, shortcut: ">", keywords: ["quote", "blockquote"] },
+  { id: "opt-callout", type: "callout", group: "Khối cơ bản", title: "Ghi chú nổi bật", description: "Hộp làm nổi bật lưu ý quan trọng", icon: TaskIconBlockCallout, keywords: ["callout", "note", "luu y"] },
+  { id: "opt-divider", type: "divider", group: "Khối cơ bản", title: "Đường phân cách", description: "Kẻ ngang chia tách các phần", icon: TaskIconBlockDivider, shortcut: "---", keywords: ["divider", "hr", "line", "ke ngang"] },
+  { id: "opt-table", type: "table", group: "Khối cơ bản", title: "Bảng biểu", description: "Bảng phân công, số liệu báo cáo", icon: TaskIconBlockTable, keywords: ["table"] },
+  { id: "opt-image", type: "image", group: "Tệp & liên kết", title: "Hình ảnh", description: "Tải lên hoặc dán ảnh", icon: TaskIconBlockImage, keywords: ["image", "img", "photo", "picture", "anh"] },
+  { id: "opt-attachment", type: "attachment", group: "Tệp & liên kết", title: "Tệp đính kèm", description: "Đính kèm PDF, DOCX, bảng tính", icon: TaskIconBlockAttachment, keywords: ["file", "attach", "attachment", "pdf", "tai lieu"] },
+  { id: "opt-media-embed", type: "media_embed", group: "Tệp & liên kết", title: "Nhúng phương tiện", description: "Video YouTube, Loom, Google Drive", icon: TaskIconBlockEmbed, keywords: ["embed", "video", "youtube", "loom", "drive"] },
+  { id: "opt-link", type: "link", group: "Tệp & liên kết", title: "Liên kết", description: "Đường dẫn tới trang web hoặc tài liệu", icon: TaskIconBlockLink, keywords: ["link", "url"] },
+  { id: "opt-bookmark", type: "bookmark", group: "Tệp & liên kết", title: "Dấu trang web", description: "Thẻ xem trước của một trang web", icon: TaskIconBlockBookmark, keywords: ["bookmark", "preview"] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1965,10 +1967,10 @@ function SlashInputElement({ attributes, children, element }: any) {
     inputRef.current?.focus();
   }, []);
 
-  // Neo menu vào chính ô nhập (vị trí thật của con trỏ), không phụ thuộc node void của Slate
-  const [anchorEl, setAnchorEl] = React.useState<HTMLInputElement | null>(null);
-  const setInputRef = React.useCallback((node: HTMLInputElement | null) => {
-    inputRef.current = node;
+  // Neo menu vào cụm "/" + ô nhập (vị trí thật của con trỏ), không phụ thuộc node void của Slate. Neo cả cụm để mép trái menu
+  // thẳng dấu "/" như Notion/Linear (trước 21/10/2026 neo ô nhập nên menu lệch phải một ký tự).
+  const [anchorEl, setAnchorEl] = React.useState<HTMLSpanElement | null>(null);
+  const setAnchorRef = React.useCallback((node: HTMLSpanElement | null) => {
     setAnchorEl((prev) => (prev === node ? prev : node));
   }, []);
 
@@ -1976,10 +1978,10 @@ function SlashInputElement({ attributes, children, element }: any) {
 
   return (
     <span {...attributes}>
-      <span contentEditable={false} className="inline-flex items-baseline text-muted-foreground">
+      <span ref={setAnchorRef} contentEditable={false} className="inline-flex items-baseline text-muted-foreground">
         <span aria-hidden="true">/</span>
         <input
-          ref={setInputRef}
+          ref={inputRef}
           value={query}
           // Dấu "/" đã hiện sẵn bên trái ô; gõ thêm "/" ở đầu (nhấn đúp, giữ phím, dán "/image") sẽ thành "//" nên bỏ đi
           onChange={(e) => setQuery(e.target.value.replace(/^\/+/, ""))}
@@ -2092,6 +2094,8 @@ function SlashMenu({
   const menuItemRefs = React.useRef<Map<number, HTMLButtonElement>>(new Map());
   // Đang gõ thì xếp theo độ khớp, bỏ tên nhóm (một danh sách phẳng như Notion); ô trống mới chia nhóm
   const searching = searchQuery.trim().length > 0;
+  const descriptionId = `${listboxId}-description`;
+  const activeOption = filteredOptions[activeIndex];
 
   const { refs, floatingStyles, update } = useFloating({
     strategy: "fixed",
@@ -2158,55 +2162,64 @@ function SlashMenu({
 
   if (!isOpen || typeof document === "undefined") return null;
 
+  // Khung ngoài nhận maxHeight (middleware `size`) và bo góc; danh sách cuộn trong khung riêng để thanh cuộn không đè lên góc bo,
+  // chân menu (mô tả mục đang chọn) luôn hiện.
   return createPortal(
     <div
       ref={refs.setFloating}
       style={floatingStyles}
       // Bấm vào menu không lấy tiêu điểm khỏi ô nhập "/" (ô mất tiêu điểm thì phím mũi tên, Esc không còn tới đây)
       onMouseDown={(e) => e.preventDefault()}
-      className={cn(MENU_POPUP_CLASS, "w-64 max-w-[calc(100vw-28px)] overflow-y-auto overscroll-contain animate-in fade-in-0 zoom-in-95 duration-100")}
+      className={cn(MENU_POPUP_CLASS, "flex w-64 max-w-[calc(100vw-28px)] flex-col overflow-hidden p-0 animate-in fade-in-0 zoom-in-95 duration-100")}
     >
-      <div ref={menuListRef} id={listboxId} role="listbox" aria-label="Chèn khối nội dung">
-        {filteredOptions.map((opt, idx) => {
-          const Icon = opt.icon;
-          const isSelected = idx === activeIndex;
-          const showGroup = !searching && (idx === 0 || filteredOptions[idx - 1].group !== opt.group);
-          return (
-            <React.Fragment key={opt.id}>
-              {showGroup && (
-                <div role="presentation" className={cn("flex h-7 items-center px-2 text-xs text-muted-foreground", idx > 0 && "mt-1")}>
-                  {opt.group}
-                </div>
-              )}
-              <Pressable
-                ref={(el) => { if (el) menuItemRefs.current.set(idx, el); else menuItemRefs.current.delete(idx); }}
-                id={`${listboxId}-${opt.id}`}
-                role="option"
-                tabIndex={-1}
-                aria-selected={isSelected}
-                onMouseMove={() => setActiveIndex((prev) => (prev === idx ? prev : idx))}
-                onClick={() => onSelect(opt)}
-                className={cn(
-                  "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-foreground transition-colors duration-75",
-                  isSelected && "bg-accent"
+      <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
+        <div ref={menuListRef} id={listboxId} role="listbox" aria-label="Chèn khối nội dung">
+          {filteredOptions.map((opt, idx) => {
+            const Icon = opt.icon;
+            const isSelected = idx === activeIndex;
+            const showGroup = !searching && (idx === 0 || filteredOptions[idx - 1].group !== opt.group);
+            return (
+              <React.Fragment key={opt.id}>
+                {showGroup && (
+                  <div role="presentation" className={cn("flex h-7 items-center px-2 text-xs font-medium text-muted-foreground", idx > 0 && "mt-1")}>
+                    {opt.group}
+                  </div>
                 )}
-              >
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">{opt.title}</span>
-                {opt.shortcut && (
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground/80">{opt.shortcut}</span>
-                )}
-              </Pressable>
-            </React.Fragment>
-          );
-        })}
-        {filteredOptions.length === 0 && (
-          <div role="status" className="px-2 py-1.5 text-muted-foreground">
-            <p>Không có khối nào khớp “{searchQuery.trim()}”</p>
-            <p className="mt-0.5 text-muted-foreground/80">Gõ Space để viết tiếp như chữ thường</p>
-          </div>
-        )}
+                <Pressable
+                  ref={(el) => { if (el) menuItemRefs.current.set(idx, el); else menuItemRefs.current.delete(idx); }}
+                  id={`${listboxId}-${opt.id}`}
+                  role="option"
+                  tabIndex={-1}
+                  aria-selected={isSelected}
+                  aria-describedby={isSelected ? descriptionId : undefined}
+                  onMouseMove={() => setActiveIndex((prev) => (prev === idx ? prev : idx))}
+                  onClick={() => onSelect(opt)}
+                  className={cn(
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-foreground transition-colors duration-75",
+                    isSelected && "bg-accent"
+                  )}
+                >
+                  <Icon className={cn("size-4 shrink-0", isSelected ? "text-foreground" : "text-muted-foreground")} />
+                  <span className="min-w-0 flex-1 truncate">{opt.title}</span>
+                  {/* Phím markdown gõ ở đầu dòng: ô phím như gợi ý phím tắt ở Ctrl+K, để "-", ">" không trông như ký tự lạc */}
+                  {opt.shortcut && <Kbd className="shrink-0 tracking-wide">{opt.shortcut}</Kbd>}
+                </Pressable>
+              </React.Fragment>
+            );
+          })}
+          {filteredOptions.length === 0 && (
+            <div role="status" className="px-2 py-1.5 text-muted-foreground">
+              <p>Không có khối nào khớp “{searchQuery.trim()}”</p>
+              <p className="mt-0.5 text-muted-foreground/80">Gõ Space để viết tiếp như chữ thường</p>
+            </div>
+          )}
+        </div>
       </div>
+      {activeOption && (
+        <p id={descriptionId} className="shrink-0 truncate border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+          {activeOption.description}
+        </p>
+      )}
     </div>,
     document.body
   );
