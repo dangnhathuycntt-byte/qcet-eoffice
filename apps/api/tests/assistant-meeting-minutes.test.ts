@@ -214,7 +214,41 @@ describe('Trợ lý: soạn biên bản cuộc họp từ bản ghi âm', () => 
     assert.ok(own);
     assert.equal(own.source.type, 'meeting');
     assert.match(own.summary, new RegExp(`Họp giao ban ${runId}`));
-    assert.match(own.summary, /bản ghi âm: 1/);
+    // Người soạn biên bản thấy id bản ghi ngay trong ngữ cảnh để gọi thẳng get_meeting_recording; người dự họp chỉ thấy số bản
+    assert.match(own.summary, /Bản ghi âm: 1/);
+    assert.ok(own.summary.includes(`- id ${recordingId}: "Ghi trực tiếp"`), own.summary);
+    const attendee = await describeAssistantContext(await contextFor('attendee'), { type: 'meeting', id: heldId });
+    assert.ok(attendee);
+    assert.match(attendee.summary, /Bản ghi âm: 1 \(chỉ chủ tọa, thư ký, người tổ chức xem được\)/);
+    assert.equal(attendee.summary.includes(recordingId), false);
     assert.equal(await describeAssistantContext(await contextFor('stranger'), { type: 'meeting', id: heldId }), null);
+  });
+
+  // Người dùng hỏi 21/10/2026 "sao có biên bản rồi mà bên trợ lý chưa xong": mô hình chép lại cả biên bản vào tham số mất
+  // hơn một phút. Nay truyền recordingId, máy chủ ghép đúng chữ "Dùng làm biên bản nháp" điền vào ô soạn
+  it('propose_minutes với recordingId: thẻ mang biên bản đề xuất + Quyết định + Việc được giao của bản ghi; bản chưa soạn xong hay truyền cả hai thì không soạn thẻ', async () => {
+    const outcome = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId, recordingId }), await contextFor('organizer'));
+    assert.equal(outcome.ok, true, outcome.content);
+    assert.ok(outcome.action && outcome.action.view.kind === 'meeting_minutes');
+    assert.equal(
+      outcome.action.view.minutes,
+      'Nội dung thảo luận:\n- Rà soát vị trí việc làm\n\nKết luận:\n- Đơn vị thiếu nhân sự\n\nQuyết định:\n- Giữ kiêm nhiệm vị trí dạy học số\n\nViệc được giao:\n- Lập danh sách vị trí khuyết (Phòng Tổ chức)'
+    );
+
+    const queued = await prisma.meetingRecording.create({
+      data: { meetingId: heldId, createdById: u.organizer.id, source: 'file', fileName: 'chua-xong.m4a', mimeType: 'audio/mp4', status: MeetingRecordingStatus.QUEUED },
+      select: { id: true },
+    });
+    try {
+      const pending = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId, recordingId: queued.id }), await contextFor('organizer'));
+      assert.equal(pending.ok, false);
+      assert.match(String(payloadOf(pending.content).error), /chưa soạn xong \(Đang chờ soạn\)/);
+    } finally {
+      await prisma.meetingRecording.delete({ where: { id: queued.id } });
+    }
+    const both = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId, recordingId, minutes: 'Kết luận:\n- Thử' }), await contextFor('organizer'));
+    assert.equal(both.ok, false);
+    const neither = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId }), await contextFor('organizer'));
+    assert.equal(neither.ok, false);
   });
 });

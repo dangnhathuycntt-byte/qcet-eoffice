@@ -6,25 +6,8 @@ import type { MeetingRecordingDetail } from "@qcet/contracts/meeting-recordings"
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { composeRecordingMinutes } from "@qcet/shared/domain/meetings/minutes-format";
 import { MinutesText } from "@/components/meetings/minutes-text";
-
-/** Biên bản đề xuất kèm quyết định và việc được giao, thành một khối chữ để điền vào ô soạn biên bản. */
-export function composeMinutesText(detail: MeetingRecordingDetail): string {
-  const sections = [detail.minutesDraft?.trim() ?? ""];
-  if (detail.decisions.length > 0) sections.push(["Quyết định:", ...detail.decisions.map((decision) => `- ${decision}`)].join("\n"));
-  if (detail.actionItems.length > 0) {
-    sections.push(
-      [
-        "Việc được giao:",
-        ...detail.actionItems.map((item) => {
-          const extra = [item.owner, item.deadline ? `hạn ${item.deadline}` : null].filter(Boolean).join(", ");
-          return `- ${item.task}${extra ? ` (${extra})` : ""}`;
-        }),
-      ].join("\n")
-    );
-  }
-  return sections.filter(Boolean).join("\n\n");
-}
 
 /**
  * Kết quả của một bản ghi đã xử lý xong. Mọi chữ là văn bản thuần (không HTML): nội dung do mô hình soạn từ lời nói,
@@ -32,7 +15,7 @@ export function composeMinutesText(detail: MeetingRecordingDetail): string {
  *
  * Một tầng duy nhất (người dùng chê "chỗ này dày thông tin quá", ảnh 21/10/2026: trước đó là khung cảnh báo, nhãn "Biên bản
  * đề xuất", khung nền chứa biên bản, các khung "Việc được giao" rồi hàng nút): biên bản đề xuất kẻ trái như trích dẫn, hiện
- * đúng chữ sẽ được điền khi bấm "Dùng làm biên bản nháp" (biên bản, Quyết định, Việc được giao ghép bằng `composeMinutesText`),
+ * đúng chữ sẽ được điền khi bấm "Dùng làm biên bản nháp" (biên bản, Quyết định, Việc được giao ghép bằng `composeRecordingMinutes`),
  * lời nhắc AI thành một dòng chữ mờ cạnh nút.
  */
 export function RecordingResult({
@@ -47,7 +30,7 @@ export function RecordingResult({
   minutesHint?: string;
 }) {
   const { notifySuccess, notifyError } = useFeedback();
-  const text = React.useMemo(() => composeMinutesText(detail), [detail]);
+  const text = React.useMemo(() => composeRecordingMinutes(detail), [detail]);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);

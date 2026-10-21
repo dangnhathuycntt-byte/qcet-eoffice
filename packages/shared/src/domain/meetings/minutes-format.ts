@@ -37,3 +37,30 @@ export function minutesToReplyMarkup(text: string): string {
     })
     .join("\n");
 }
+
+export interface RecordingMinutesParts {
+  minutesDraft: string | null;
+  decisions: string[];
+  actionItems: Array<{ task: string; owner: string | null; deadline: string | null }>;
+}
+
+/**
+ * Biên bản đề xuất của một bản ghi kèm quyết định và việc được giao, thành một khối chữ: đúng chữ "Dùng làm biên bản nháp"
+ * điền vào ô soạn và thẻ biên bản của Trợ lý lưu khi soạn từ bản ghi (`propose_minutes` với `recordingId`).
+ */
+export function composeRecordingMinutes(detail: RecordingMinutesParts): string {
+  const sections = [detail.minutesDraft?.trim() ?? ""];
+  if (detail.decisions.length > 0) sections.push(["Quyết định:", ...detail.decisions.map((decision) => `- ${decision}`)].join("\n"));
+  if (detail.actionItems.length > 0) {
+    sections.push(
+      [
+        "Việc được giao:",
+        ...detail.actionItems.map((item) => {
+          const extra = [item.owner, item.deadline ? `hạn ${item.deadline}` : null].filter(Boolean).join(", ");
+          return `- ${item.task}${extra ? ` (${extra})` : ""}`;
+        }),
+      ].join("\n")
+    );
+  }
+  return sections.filter(Boolean).join("\n\n");
+}

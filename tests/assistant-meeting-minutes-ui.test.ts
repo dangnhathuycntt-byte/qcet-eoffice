@@ -21,8 +21,9 @@ describe("Trợ lý soạn biên bản: lời nhắc, ngữ cảnh cuộc họp,
 
   it("quy tắc 10 có propose_minutes; quy tắc 12 bắt đọc bản ghi trước, không tự soạn khi bản ghi chưa xong", () => {
     assert.match(prompt, /propose_minutes \(lưu dự thảo biên bản một cuộc họp/);
-    assert.match(prompt, /12\. Soạn biên bản cuộc họp: gọi get_meeting/);
-    assert.match(prompt, /get_meeting_recording/);
+    assert.match(prompt, /12\. Soạn biên bản cuộc họp: gọi get_meeting_recording/);
+    // Chép lại cả biên bản vào tham số mất hơn một phút (người dùng hỏi 21/10/2026): lấy thẳng từ bản ghi bằng recordingId
+    assert.match(prompt, /propose_minutes với recordingId của bản đó, không chép lại biên bản/);
     assert.match(prompt, /không tự soạn biên bản khi chưa có nội dung/);
   });
 
