@@ -124,6 +124,10 @@ export const MEETING_BUCKET_STATUSES: Record<MeetingBucket, readonly MeetingStat
   done: [MeetingStatus.HELD, MeetingStatus.MINUTES_DRAFT, MeetingStatus.MINUTES_CONFIRMED],
 };
 
+/** Cột sắp xếp của trang Cuộc họp (đầu cột và tùy chọn hiển thị); không truyền thì theo nhóm (sắp diễn ra: gần nhất trước). */
+export const MEETING_SORT_FIELDS = ['startTime', 'createdAt', 'title'] as const;
+export type MeetingSortField = (typeof MEETING_SORT_FIELDS)[number];
+
 export const ListMeetingsQuerySchema = z.object({
   bodyId: z.string().optional(),
   unitId: z.string().optional(),
@@ -132,8 +136,14 @@ export const ListMeetingsQuerySchema = z.object({
   search: z.string().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
+  sort: z.enum(MEETING_SORT_FIELDS).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
   page: z.coerce.number().min(1).default(1),
 });
 
 export type ListMeetingsQuery = z.infer<typeof ListMeetingsQuerySchema>;
+
+/** Hủy cuộc họp (chưa họp): lý do tùy chọn, ghi vào nhật ký. */
+export const CancelMeetingSchema = z.object({ reason: z.string().trim().max(500).optional() }).strict();
+export type CancelMeetingInput = z.infer<typeof CancelMeetingSchema>;

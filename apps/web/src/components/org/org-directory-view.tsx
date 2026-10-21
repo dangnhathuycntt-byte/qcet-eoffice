@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { focusRingClass } from "@/components/ui/focus-ring";
+import { downloadCsv } from "@/lib/csv";
 import { cn } from "@/lib/utils";
 
 type Tab = "people" | "units";
@@ -121,15 +122,7 @@ export function OrgDirectoryView() {
   };
 
   const exportCsv = () => {
-    const blob = new Blob(["﻿" + directoryToCsv(sections)], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `danh-ba-qcet-${unit ? unit.code.toLowerCase() : "toan-truong"}-${ICT_DATE.format(new Date())}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadCsv(`danh-ba-qcet-${unit ? unit.code.toLowerCase() : "toan-truong"}-${ICT_DATE.format(new Date())}.csv`, directoryToCsv(sections));
   };
 
   const categories: ListFilterCategory[] = directory

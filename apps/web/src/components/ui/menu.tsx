@@ -189,7 +189,8 @@ export const MenuOptionItem = React.forwardRef<HTMLDivElement, MenuOptionItemPro
       {leading ? <MenuRowLeading>{leading}</MenuRowLeading> : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {hint ? <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground/80">{hint}</span> : null}
-      {shortcut ? <kbd className="shrink-0 font-sans text-xs font-normal tabular-nums text-muted-foreground/80">{shortcut}</kbd> : null}
+      {/* Phím tắt chỉ có nghĩa với bàn phím: bottom sheet trên điện thoại ẩn đi (như menu chuột phải của Nhiệm vụ) */}
+      {shortcut ? <kbd className="shrink-0 font-sans text-xs font-normal tabular-nums text-muted-foreground/80 max-md:hidden">{shortcut}</kbd> : null}
     </BaseMenu.Item>
   )
 );

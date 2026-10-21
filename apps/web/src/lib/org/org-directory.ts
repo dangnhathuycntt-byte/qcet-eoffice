@@ -1,4 +1,5 @@
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
+import { toCsv } from "@/lib/csv";
 
 /**
  * Mô hình trang Cơ cấu & Danh bạ (`/org`), dựng từ `GET /api/departments?includePersonnel=true`:
@@ -209,14 +210,8 @@ export function countPeople(sections: DirectorySection[]): number {
   return new Set(sections.flatMap((s) => s.members.map((m) => m.id))).size;
 }
 
-/** Ô CSV: bọc ngoặc kép, nhân đôi ngoặc kép bên trong; chặn công thức Excel ở đầu ô (=, @, +/- không theo sau là số). */
-function csvCell(value: string): string {
-  const safe = /^[=@\t\r]/.test(value) || /^[+-](?!\d)/.test(value) ? `'${value}` : value;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
-
 export function directoryToCsv(sections: DirectorySection[]): string {
   const header = ["Họ và tên", "Chức vụ", "Đơn vị", "Email", "Điện thoại"];
   const rows = sections.flatMap((s) => s.members.map((m) => [m.name, m.position ?? "", m.unitName, m.email, m.phone ?? ""]));
-  return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+  return toCsv([header, ...rows]);
 }

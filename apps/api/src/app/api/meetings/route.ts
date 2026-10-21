@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
       search: searchParams.get('search') || undefined,
       from: searchParams.get('from') || undefined,
       to: searchParams.get('to') || undefined,
+      sort: searchParams.get('sort') || undefined,
+      order: searchParams.get('order') || undefined,
       limit: searchParams.get('limit') || undefined,
       page: searchParams.get('page') || undefined,
     });

@@ -27,6 +27,10 @@ const base = (meetingId: string) => `/api/meetings/${encodeURIComponent(meetingI
 /** Đánh dấu cuộc họp đã diễn ra (Đã mời → Đã họp). */
 export const holdMeeting = (meetingId: string) => post(`${base(meetingId)}/actions/hold`, "Chưa chuyển được cuộc họp sang Đã họp.");
 
+/** Hủy cuộc họp chưa diễn ra (→ Đã hủy); lý do ghi vào nhật ký. */
+export const cancelMeeting = (meetingId: string, reason?: string) =>
+  post(`${base(meetingId)}/actions/cancel`, "Chưa hủy được cuộc họp.", reason ? { reason } : undefined);
+
 /** Lưu dự thảo biên bản (Đã họp → Dự thảo biên bản). */
 export const draftMinutes = (meetingId: string, minutes: string) =>
   post(`${base(meetingId)}/actions/draft-minutes`, "Chưa lưu được biên bản.", { minutes });

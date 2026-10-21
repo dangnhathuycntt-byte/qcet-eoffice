@@ -58,11 +58,13 @@ function TableRow({ className, interactive = false, selected = false, current = 
       aria-selected={selected || undefined}
       aria-current={current ? "true" : undefined}
       className={cn(
-        "border-b border-border/60 transition-colors",
+        // Nền hàng (`--row-bg`) tô trên từng ô kèm bóng 1px sang phải: tô trên <tr> thì Chrome vẽ theo từng ô và để lộ vạch sáng
+        // 1px ở ranh giới cột rơi vào lẻ pixel (thấy rõ khi chọn hàng, 21/10/2026). Nơi gọi đổi nền bằng `[--row-bg:…]`.
+        "border-b border-border/60 [--row-bg:transparent] [&>td]:bg-(--row-bg) [&>td]:transition-[background-color,box-shadow] [&>td:not(:last-child)]:shadow-[1px_0_0_0_var(--row-bg)]",
         rowHeightClass[density],
         interactive && "cursor-pointer",
-        interactive && !selected && !current && "hover:bg-accent",
-        (selected || current) && "bg-selected",
+        interactive && !selected && !current && "hover:[--row-bg:var(--color-accent)]",
+        (selected || current) && "[--row-bg:var(--color-selected)]",
         className,
       )}
       {...props}

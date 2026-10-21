@@ -940,12 +940,13 @@ export class MeetingService {
     query: ListMeetingsQuery,
     contextOrUserId?: AuthorizationContext | string
   ) {
-    const { bodyId, unitId, status, bucket, search, from, to, limit = 20, page = 1 } = query;
+    const { bodyId, unitId, status, bucket, search, from, to, sort, order, limit = 20, page = 1 } = query;
 
     let authWhere: Prisma.MeetingWhereInput = {};
+    let authContext: AuthorizationContext | null = null;
 
     if (contextOrUserId) {
-      const authContext =
+      authContext =
         typeof contextOrUserId === 'string'
           ? await loadAuthorizationContext(contextOrUserId)
           : contextOrUserId;
@@ -983,10 +984,15 @@ export class MeetingService {
         where,
         take: limit,
         skip: (page - 1) * limit,
-        // Sắp diễn ra thì cuộc gần nhất lên đầu; các nhóm khác mới nhất lên đầu
-        orderBy: { startTime: bucket === 'upcoming' ? 'asc' : 'desc' },
+        // Sắp diễn ra thì cuộc gần nhất lên đầu; các nhóm khác mới nhất lên đầu. Chọn cột sắp xếp thì theo cột đó, cùng giá
+        // trị thì theo giờ họp để thứ tự giữa các trang ổn định.
+        orderBy: sort
+          ? [{ [sort]: order ?? (sort === 'title' ? 'asc' : 'desc') }, { startTime: 'desc' }, { id: 'asc' }]
+          : { startTime: bucket === 'upcoming' ? 'asc' : 'desc' },
         include: {
-          body: true,
+          // Thành viên tổ chức và người dự họp chỉ để tính thao tác được phép của từng dòng, bỏ trước khi trả về
+          body: { include: { memberships: { select: { userId: true } } } },
+          participants: { select: { userId: true, role: true } },
           unit: true,
           // Ảnh đại diện cho cột Người tổ chức của trang Cuộc họp (avatar 16px như cột Phụ trách của Nhiệm vụ)
           organizer: {
@@ -1003,8 +1009,17 @@ export class MeetingService {
       prisma.meeting.count({ where }),
     ]);
 
+    // Thao tác được phép của từng dòng (menu chuột phải, thanh thao tác hàng loạt), tính một lần ngữ cảnh quyền cho cả trang
+    const rows = items.map(({ participants, body, ...meeting }) => ({
+      ...meeting,
+      body: body ? { ...body, memberships: undefined } : body,
+      availableActions: authContext
+        ? computeAvailableActions(authContext, buildMeetingResource({ ...meeting, participants, body }))
+        : [],
+    }));
+
     return {
-      items,
+      items: rows,
       total,
       page,
       limit,
