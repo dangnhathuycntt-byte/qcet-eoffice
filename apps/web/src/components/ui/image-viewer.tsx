@@ -135,7 +135,9 @@ export const ImageViewerTrigger = React.forwardRef<HTMLButtonElement, ImageViewe
 });
 
 // Trình xem nằm trong cây React của nơi mở (editor, khung chat, hộp tạo việc) dù hiển thị ở portal: sự kiện React vẫn nổi
-// lên các tổ tiên đó (bấm vào nền trang nhiệm vụ đưa con trỏ vào editor, dán, thả tệp…). Chặn tại trình xem.
+// lên các tổ tiên đó (bấm vào nền trang nhiệm vụ đưa con trỏ vào editor, dán, thả tệp…). Chặn tại trình xem. Riêng tiêu
+// điểm vẫn cho nổi: nơi mở coi tiêu điểm trong portal của mình là "bên trong" (ô ghi nhanh ở /notes đóng khi tiêu điểm ra
+// ngoài), chặn thì mở trình xem là đóng luôn ô đang soạn. Bấm vào trình xem thì ô đó bỏ qua nhờ `role="dialog"`.
 const stop = (event: React.SyntheticEvent) => event.stopPropagation();
 const ISOLATE = {
   onClick: stop,
@@ -146,8 +148,6 @@ const ISOLATE = {
   onPointerUp: stop,
   onContextMenu: stop,
   onKeyUp: stop,
-  onFocus: stop,
-  onBlur: stop,
   onPaste: stop,
   onCopy: stop,
   onDragOver: stop,
