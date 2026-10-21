@@ -55,6 +55,21 @@ export const AddParticipantSchema = z.object({
 
 export type AddParticipantInput = z.infer<typeof AddParticipantSchema>;
 
+/**
+ * Mời nhiều người làm thành viên trong một lệnh (dòng "all" của đơn vị, "Toàn trường"; người dùng yêu cầu 21/10/2026): mỗi
+ * người một lệnh thì vượt giới hạn 60 lệnh/phút. Trần 500 như `initialParticipants` khi tạo cuộc họp.
+ */
+export const AddParticipantsSchema = z
+  .object({
+    userIds: z.array(z.string().min(1)).min(1, 'Chọn ít nhất một người').max(500, 'Tối đa 500 người mỗi lần mời'),
+  })
+  .refine((value) => new Set(value.userIds).size === value.userIds.length, {
+    path: ['userIds'],
+    message: 'Một người được chọn hai lần',
+  });
+
+export type AddParticipantsInput = z.infer<typeof AddParticipantsSchema>;
+
 export const UpdateAttendanceSchema = z.object({
   attendanceStatus: z.nativeEnum(AttendanceStatus),
   notes: z.string().optional(),

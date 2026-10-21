@@ -42,6 +42,10 @@ export const discardMinutes = (meetingId: string) =>
 /** Duyệt biên bản (Dự thảo biên bản → Biên bản đã duyệt). */
 export const confirmMinutes = (meetingId: string) => post(`${base(meetingId)}/actions/confirm-minutes`, "Chưa duyệt được biên bản.");
 
+/** Mời nhiều người làm thành viên trong một lệnh; người đã có trong cuộc họp giữ vai trò cũ. */
+export const addParticipants = (meetingId: string, userIds: string[]) =>
+  post(`${base(meetingId)}/participants/batch`, "Chưa mời được người dự họp.", { userIds });
+
 /** Mời một người dự họp (người tạo, chủ tọa); người đã có trong cuộc họp thì máy chủ đổi vai trò. */
 export const addParticipant = (meetingId: string, userId: string, role: "CHAIR" | "ATTENDEE") =>
   post(`${base(meetingId)}/participants`, "Chưa thêm được người dự họp.", { userId, role });

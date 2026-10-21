@@ -22,6 +22,7 @@ import {
 import {
   CreateMeetingInput,
   AddParticipantInput,
+  AddParticipantsInput,
   UpdateAttendanceInput,
   DraftMinutesInput,
   ConfirmMinutesInput,
@@ -330,6 +331,81 @@ export class MeetingService {
       });
 
       return participant;
+    });
+  }
+
+  /**
+   * 2b. Mời nhiều người làm thành viên trong một lệnh. Người đã có trong cuộc họp giữ vai trò cũ (không hạ chủ tọa, thư ký
+   * xuống thành viên); chỉ người mới được thêm và nhận thông báo mời.
+   */
+  static async addParticipants(
+    meetingId: string,
+    input: AddParticipantsInput,
+    contextOrUserId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
+
+    const authContext =
+      typeof contextOrUserId === 'string'
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    const authResult = authorize(authContext, 'meeting.manage_participants', buildMeetingResource(meeting));
+    if (!authResult.allowed) {
+      throw new AuthorizationError(
+        authResult.reason || 'Không có quyền quản lý thành phần tham dự cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+
+    assertMeetingNotFinalized(meeting.status, "mời thành viên tham gia");
+    await assertInvitableUsers(input.userIds);
+
+    const existing = new Set(meeting.participants.map((p) => p.userId));
+    const fresh = input.userIds.filter((userId) => !existing.has(userId));
+
+    return prisma.$transaction(async (tx) => {
+      if (fresh.length > 0) {
+        await tx.meetingParticipant.createMany({
+          data: fresh.map((userId) => ({
+            meetingId,
+            userId,
+            role: MeetingParticipantRole.ATTENDEE,
+            attendanceStatus: AttendanceStatus.INVITED,
+          })),
+          skipDuplicates: true,
+        });
+
+        if (meeting.status === MeetingStatus.DRAFT_AGENDA) {
+          assertTransition(meeting.status, MeetingStatus.INVITED);
+          await tx.meeting.update({
+            where: { id: meetingId },
+            data: { status: MeetingStatus.INVITED },
+          });
+        }
+
+        for (const userId of fresh) {
+          await publishOutboxEvent(tx, {
+            eventType: 'MEETING_INVITED',
+            aggregateType: 'Meeting',
+            aggregateId: meetingId,
+            payload: { meetingId, userId, role: MeetingParticipantRole.ATTENDEE, meetingTitle: meeting.title },
+          });
+        }
+      }
+
+      return { added: fresh.length, alreadyIn: input.userIds.length - fresh.length };
     });
   }
 

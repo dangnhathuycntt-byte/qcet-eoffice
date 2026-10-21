@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { User, UserX, Users } from "lucide-react";
+import { School, User, UserX, Users } from "lucide-react";
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import { MENTION_ALL_NAME } from "@qcet/shared/domain/tasks/comment-mentions";
 import { cn } from "@/lib/utils";
@@ -73,7 +73,8 @@ const MENU_NAV_KEYS = ["ArrowDown", "ArrowUp", "Escape", "Enter", "Tab"];
  * Thân menu chọn người: ô tìm, rồi các đơn vị (rê chuột mở menu con nhân sự, như bộ lọc nhiều cấp của trang Nhiệm vụ;
  * người dùng yêu cầu "2 sub menu là đơn vị - nhân sự" 20/10/2026). Đang gõ tìm thì hiện thẳng người khớp ở cả trường.
  * Đơn vị có người đang chọn thì chữ đậm và ghi số bên phải. Có `onPickAll` (chọn nhiều) thì đầu mỗi menu con có dòng "all"
- * chọn cả đơn vị, cùng tên với "@all" của bình luận (người dùng yêu cầu "thêm @all cho từng đơn vị" 21/10/2026).
+ * chọn cả đơn vị, cùng tên với "@all" của bình luận (người dùng yêu cầu "thêm @all cho từng đơn vị" 21/10/2026), và dưới ô
+ * tìm có dòng "Toàn trường" chọn mọi người (người dùng yêu cầu cùng ngày).
  */
 function PeopleMenuBody({
   directory,
@@ -129,6 +130,24 @@ function PeopleMenuBody({
     );
   };
   const note = (text: string) => <div className="px-2 py-1.5 text-xs text-muted-foreground">{text}</div>;
+  // Dòng chọn cả một nhóm: đã chọn hết thì đậm như đang chọn; toàn người đã dự họp thì mờ
+  const groupRow = (people: MeetingPerson[], label: string, title: string, icon: React.ReactNode) => (
+    <MenuOptionItem
+      selected={people.length > 0 && people.every((p) => isSelected(p.id))}
+      disabled={Boolean(isLocked) && people.every((p) => isLocked?.(p.id))}
+      title={title}
+      leading={
+        <span aria-hidden className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          {icon}
+        </span>
+      }
+      hint={`${people.length} người`}
+      onClick={() => onPickAll?.(people)}
+    >
+      {label}
+    </MenuOptionItem>
+  );
+  const everyone = directory.people.filter(visible);
 
   return (
     <>
@@ -145,6 +164,12 @@ function PeopleMenuBody({
         className="mb-1 border-b border-border/60"
       />
       {topRows}
+      {onPickAll && !folded && everyone.length > 0 ? (
+        <>
+          {groupRow(everyone, "Toàn trường", `Chọn cả ${everyone.length} cán bộ của trường`, <School className="size-3" />)}
+          <MenuSeparator />
+        </>
+      ) : null}
       {/* Đủ chỗ cho cả 15 đơn vị khi màn cao; màn thấp thì vừa chỗ còn lại (trừ ô tìm). Danh sách đơn vị cao ít nhất ~7
           hàng: dưới nút không đủ chỗ thì menu lật lên trên thay vì co còn vài hàng */}
       <div
@@ -160,25 +185,11 @@ function PeopleMenuBody({
           : units.length > 0
             ? units.map((unit) => {
                 const count = unit.people.filter((p) => isSelected(p.id)).length;
-                const allLocked = Boolean(isLocked) && unit.people.every((p) => isLocked?.(p.id));
                 return (
                   <MenuSubmenu key={unit.id} label={unit.label} title={unit.name} hint={count || undefined} active={count > 0} popupClassName="w-64" side="right">
                     {onPickAll ? (
                       <>
-                        <MenuOptionItem
-                          selected={count === unit.people.length}
-                          disabled={allLocked}
-                          title={`Chọn cả ${unit.people.length} người của ${unit.name}`}
-                          leading={
-                            <span aria-hidden className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                              <Users className="size-3" />
-                            </span>
-                          }
-                          hint={`${unit.people.length} người`}
-                          onClick={() => onPickAll(unit.people)}
-                        >
-                          {MENTION_ALL_NAME}
-                        </MenuOptionItem>
+                        {groupRow(unit.people, MENTION_ALL_NAME, `Chọn cả ${unit.people.length} người của ${unit.name}`, <Users className="size-3" />)}
                         <MenuSeparator />
                       </>
                     ) : null}

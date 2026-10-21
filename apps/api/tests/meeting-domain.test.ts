@@ -11,6 +11,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { MeetingService } from '../src/server/services/meeting-service';
+import { AddParticipantsSchema } from '@qcet/contracts/meeting';
 
 describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions Domain', () => {
   const runId = `meet_${Date.now()}`;
@@ -229,6 +230,47 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
       organizerUser.id
     );
     assert.equal(drafted.status, MeetingStatus.MINUTES_DRAFT);
+  });
+
+  it('2c. Mời nhiều người một lệnh ("all" của đơn vị, "Toàn trường"): người đã có giữ vai trò, chỉ người mới được thêm', async () => {
+    const meeting = await MeetingService.createMeeting(
+      {
+        code: `MT_${runId}_02c`,
+        title: 'Họp toàn trường đầu tháng',
+        unitId: testUnit.id,
+        startTime: '2026-09-18T01:00:00.000Z',
+        initialParticipants: [{ userId: participantUser1.id, role: MeetingParticipantRole.CHAIR }],
+      },
+      organizerUser.id
+    );
+
+    const invitedCount = () => prisma.outboxEvent.count({ where: { aggregateId: meeting.id, eventType: 'MEETING_INVITED' } });
+    const invitedBefore = await invitedCount();
+    const result = await MeetingService.addParticipants(
+      meeting.id,
+      { userIds: [participantUser1.id, participantUser2.id] },
+      organizerUser.id
+    );
+    assert.deepEqual(result, { added: 1, alreadyIn: 1 });
+    assert.equal((await invitedCount()) - invitedBefore, 1, 'chỉ người mới có thông báo mời');
+
+    const participants = await prisma.meetingParticipant.findMany({ where: { meetingId: meeting.id } });
+    const roleOf = (userId: string) => participants.find((p) => p.userId === userId)?.role;
+    assert.equal(roleOf(participantUser1.id), MeetingParticipantRole.CHAIR, 'chủ tọa không bị hạ xuống thành viên');
+    assert.equal(roleOf(participantUser2.id), MeetingParticipantRole.ATTENDEE);
+
+    await assert.rejects(
+      MeetingService.addParticipants(meeting.id, { userIds: ['khong_co_nguoi_nay'] }, organizerUser.id),
+      /không tồn tại hoặc đã ngừng hoạt động/
+    );
+    await assert.rejects(
+      MeetingService.addParticipants(meeting.id, { userIds: [participantUser2.id] }, participantUser2.id),
+      /quyền/i,
+      'người dự họp không mời thêm được'
+    );
+    assert.equal(AddParticipantsSchema.safeParse({ userIds: ['a', 'a'] }).success, false, 'một người chọn hai lần');
+    assert.equal(AddParticipantsSchema.safeParse({ userIds: [] }).success, false);
+    assert.equal(AddParticipantsSchema.safeParse({ userIds: Array.from({ length: 501 }, (_, i) => `u${i}`) }).success, false);
   });
 
   it('3. Luân chuyển vòng đời cuộc họp: INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED', async () => {

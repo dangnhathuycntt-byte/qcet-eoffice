@@ -23,7 +23,7 @@ import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } fro
 import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { addParticipant, cancelMeeting, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
+import { addParticipant, addParticipants, cancelMeeting, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
 import { canCancelMeeting, canStartMeeting, MEETING_CANCEL_NOTICE, meetingSummaryText } from "@/components/meetings/meeting-list-model";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
 import { MinutesText } from "@/components/meetings/minutes-text";
@@ -215,17 +215,17 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     }
   };
 
-  // Mỗi người chọn được mời ngay (thành viên); menu vẫn mở để chọn tiếp. Người đã dự họp không bỏ được ở đây
+  // Người chọn được mời ngay (thành viên); menu vẫn mở để chọn tiếp. Người đã dự họp không bỏ được ở đây. Một lệnh cho
+  // cả nhóm ("all" của đơn vị, "Toàn trường"): mỗi người một lệnh thì vượt giới hạn 60 lệnh/phút của máy chủ
   const invite = async (next: MeetingPerson[]) => {
     const fresh = next.filter((p) => !lockedIds.has(p.id));
     if (fresh.length === 0) return;
     setInviting((current) => [...current, ...fresh]);
-    const results = await Promise.allSettled(fresh.map((p) => addParticipant(meeting.id, p.id, "ATTENDEE")));
-    const failed = fresh.filter((_, index) => results[index].status === "rejected");
-    if (failed.length > 0) {
-      const reason = results.find((r): r is PromiseRejectedResult => r.status === "rejected")?.reason;
-      setInviting((current) => current.filter((p) => !failed.some((f) => f.id === p.id)));
-      feedback.notifyError(reason instanceof Error ? reason.message : "Chưa thêm được người dự họp.");
+    try {
+      await addParticipants(meeting.id, fresh.map((p) => p.id));
+    } catch (error) {
+      setInviting((current) => current.filter((p) => !fresh.some((f) => f.id === p.id)));
+      feedback.notifyError(error instanceof Error ? error.message : "Chưa thêm được người dự họp.");
     }
     router.refresh();
   };
