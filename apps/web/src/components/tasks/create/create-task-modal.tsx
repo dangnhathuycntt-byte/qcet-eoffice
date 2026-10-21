@@ -370,6 +370,8 @@ export function CreateTaskModal({
     return form.isLoadingDepartments ? "Đang tải…" : "Chưa có đơn vị";
   }, [form.availableDepartments, form.formData.selectedDeptCode, form.isLoadingDepartments]);
 
+  const deptIsDefault = !form.formData.selectedDeptCode || form.formData.selectedDeptCode === form.defaultDeptCode;
+
   // Editor khối chỉ đọc giá trị lúc gắn: mô tả đổi từ bên ngoài (Agent điền, khôi phục nháp, làm mới form) thì gắn lại
   const editorDescriptionRef = React.useRef(form.formData.description);
   const [descriptionEditorKey, setDescriptionEditorKey] = React.useState(0);
@@ -721,14 +723,16 @@ export function CreateTaskModal({
                         window.setTimeout(() => setOpenDropdown("dri"), 0);
                       }}
                     >
+                        {/* Đang ở đơn vị mặc định thì chỉ ghi "Đơn vị" mờ như các chip chưa chọn (người dùng: "để mỗi chữ đơn vị thôi
+                            rồi chọn cho đẹp" 21/10/2026); chọn đơn vị khác mới hiện tên. Tên đầy đủ luôn ở tooltip và nhãn đọc màn hình. */}
                         <Select.Trigger
                           aria-label={`Đơn vị: ${currentDeptName}`}
                           title={`Đơn vị: ${currentDeptName}`}
                           disabled={form.availableDepartments.length === 0}
-                          className={PROPERTY_PILL_CLASS}
+                          className={cn(PROPERTY_PILL_CLASS, deptIsDefault && "text-muted-foreground")}
                         >
                           <Building2 className="text-muted-foreground" />
-                          <span className="max-w-[240px] truncate max-md:max-w-[120px]">{currentDeptName}</span>
+                          <span className="max-w-[240px] truncate max-md:max-w-[120px]">{deptIsDefault ? "Đơn vị" : currentDeptName}</span>
                         </Select.Trigger>
 
                         <Select.Portal>

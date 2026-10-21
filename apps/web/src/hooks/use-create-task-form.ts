@@ -653,6 +653,8 @@ export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
     isDirty,
     hasRestoredDraft,
     isExecutive,
+    /** Đơn vị mặc định khi mở hộp (đơn vị của người tạo, hoặc đơn vị nơi mở hộp) */
+    defaultDeptCode,
     availableDepartments,
     isLoadingDepartments,
     availablePersonnel,
