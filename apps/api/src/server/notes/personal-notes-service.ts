@@ -14,17 +14,11 @@ import {
   type PersonalNoteSummary,
   type UpdatePersonalNoteInput,
 } from "@qcet/contracts/personal-notes";
-import { toNotePreview } from "@qcet/shared/domain/notes/note-preview";
+import { noteContentText, toNoteExcerpt, toNotePreview } from "@qcet/shared/domain/notes/note-preview";
 import { NotFoundError, ValidationError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { findReadableTaskId } from "@/server/tasks/task-query-service";
 import { buildMeetingReadWhere } from "@/server/services/meeting-service";
-
-const EXCERPT_LENGTH = 160;
-
-function toExcerpt(content: string): string {
-  return content.replace(/\s+/g, " ").trim().slice(0, EXCERPT_LENGTH);
-}
 
 function entityTypeOf(row: PersonalNoteRow): PersonalNoteEntityType | null {
   return row.entityType === "meeting" || row.entityType === "task" ? row.entityType : null;
@@ -34,7 +28,7 @@ function toSummary(row: PersonalNoteRow): PersonalNoteSummary {
   return {
     id: row.id,
     title: row.title,
-    excerpt: toExcerpt(row.content),
+    excerpt: toNoteExcerpt(row.content),
     preview: toNotePreview(row.content),
     pinned: row.pinned,
     entityType: entityTypeOf(row),
@@ -86,7 +80,12 @@ export async function listPersonalNotes(
     orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
     take: query.limit + 1,
   });
-  return { notes: rows.slice(0, query.limit).map(toSummary), hasMore: rows.length > query.limit };
+  // Nội dung soạn bằng editor khối là JSON: từ khóa trùng tên trường ("type", "text"…) hay đường dẫn ảnh thì CSDL vẫn khớp,
+  // nên lọc lại trên chữ thật của ghi chú
+  const q = query.q?.toLocaleLowerCase("vi");
+  const matches = (row: PersonalNoteRow) =>
+    !q || row.title.toLocaleLowerCase("vi").includes(q) || noteContentText(row.content).toLocaleLowerCase("vi").includes(q);
+  return { notes: rows.slice(0, query.limit).filter(matches).map(toSummary), hasMore: rows.length > query.limit };
 }
 
 async function findOwned(userId: string, id: string): Promise<PersonalNoteRow> {

@@ -129,6 +129,29 @@ describe('Ghi chú cá nhân', () => {
     assert.equal((await list(users.me, { limit: '2' })).hasMore, true);
   });
 
+  it('nội dung soạn bằng editor khối: thẻ và dòng trích là chữ thật, tìm không khớp tên trường JSON', async () => {
+    await prisma.personalNote.deleteMany({ where: { userId: users.me } });
+    const content = JSON.stringify({
+      qcetBlocks: true,
+      version: 1,
+      blocks: [
+        { id: 'b1', type: 'heading', level: 2, content: 'Chuẩn bị họp' },
+        { id: 'b2', type: 'bulleted_list', content: 'In tài liệu' },
+        { id: 'b3', type: 'checklist', content: 'Đặt phòng', checked: true },
+        { id: 'b4', type: 'checklist', content: 'Gửi giấy mời', checked: false },
+      ],
+    });
+    const note = await create(users.me, { title: 'Khối', content });
+
+    const row = (await list(users.me)).notes.find((n) => n.id === note.id)!;
+    assert.equal(row.preview, 'Chuẩn bị họp\n• In tài liệu\n☑ Đặt phòng\n☐ Gửi giấy mời');
+    assert.equal(row.excerpt, 'Chuẩn bị họp • In tài liệu ☑ Đặt phòng ☐ Gửi giấy mời');
+
+    assert.deepEqual((await list(users.me, { q: 'giấy mời' })).notes.map((n) => n.id), [note.id]);
+    assert.equal((await list(users.me, { q: 'qcetBlocks' })).notes.length, 0, 'tên trường JSON không phải chữ của ghi chú');
+    assert.equal((await list(users.me, { q: 'checklist' })).notes.length, 0);
+  });
+
   it('gắn cuộc họp: người tổ chức được, người không liên quan bị từ chối; gỡ liên kết bằng null', async () => {
     const linked = await create(users.me, { title: 'Ghi chú họp', entityType: 'meeting', entityId: meetingId });
     assert.equal(linked.entityId, meetingId);

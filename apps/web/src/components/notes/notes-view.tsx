@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import type { PersonalNote, PersonalNoteSummary } from "@qcet/contracts/personal-notes";
-import { toNotePreview } from "@qcet/shared/domain/notes/note-preview";
+import { toNoteExcerpt, toNotePreview } from "@qcet/shared/domain/notes/note-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +14,7 @@ import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-di
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { NoteCard } from "@/components/notes/note-card";
-import { NoteEditor } from "@/components/notes/note-editor";
+import { NoteEditor, preloadNoteBodyEditor } from "@/components/notes/note-editor";
 import { NoteMasonry } from "@/components/notes/note-masonry";
 import {
   NotesRequestError,
@@ -34,16 +34,6 @@ type LoadedNote = { id: string; state: "loading" | "ready" | "missing" | "error"
 
 function sortNotes(notes: PersonalNoteSummary[]): PersonalNoteSummary[] {
   return [...notes].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt));
-}
-
-function excerptOf(content: string): string {
-  return content.replace(/\s+/g, " ").trim().slice(0, 160);
-}
-
-function focusEnd(el: HTMLTextAreaElement | null) {
-  if (!el) return;
-  el.focus();
-  el.setSelectionRange(el.value.length, el.value.length);
 }
 
 /**
@@ -73,8 +63,8 @@ export function NotesView() {
   const [captureNoteId, setCaptureNoteId] = React.useState<string | null>(null);
 
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const captureRef = React.useRef<HTMLDivElement>(null);
-  const dialogContentRef = React.useRef<HTMLTextAreaElement>(null);
+  const pointerInsideCaptureRef = React.useRef(false);
+  const focusInsideCaptureRef = React.useRef(false);
   const pushedRef = React.useRef(false);
   /** Bản mới nhất của từng ghi chú đã mở (kèm chữ đang soạn) để mở lại không phải chờ hay lệch với phần chưa lưu. */
   const cacheRef = React.useRef(new Map<string, PersonalNote>());
@@ -140,16 +130,15 @@ export function NotesView() {
   if (current) shownRef.current = current;
   const shown = current ?? shownRef.current;
 
-  // Tải xong (lần đầu mở thẻ) thì con trỏ vào cuối nội dung, như khi mở từ bản nhớ tạm
-  const readyId = current?.state === "ready" ? current.id : null;
+  // Editor nội dung tách chunk riêng: tải lúc rảnh để ô ghi nhanh và hộp sửa hiện editor ngay
   React.useEffect(() => {
-    if (!readyId) return;
-    const frame = requestAnimationFrame(() => {
-      const el = dialogContentRef.current;
-      if (el && document.activeElement?.tagName !== "TEXTAREA") focusEnd(el);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [readyId]);
+    if (typeof window.requestIdleCallback !== "function") {
+      preloadNoteBodyEditor();
+      return;
+    }
+    const id = window.requestIdleCallback(preloadNoteBodyEditor);
+    return () => window.cancelIdleCallback(id);
+  }, []);
 
   const patchSummary = React.useCallback((id: string, patch: Partial<PersonalNoteSummary>) => {
     setNotes((prev) => sortNotes(prev.map((item) => (item.id === id ? { ...item, ...patch } : item))));
@@ -163,7 +152,7 @@ export function NotesView() {
       if (cached) cacheRef.current.set(id, { ...cached, ...patch });
       patchSummary(id, {
         ...(patch.title !== undefined ? { title: patch.title } : {}),
-        ...(patch.content !== undefined ? { excerpt: excerptOf(patch.content), preview: toNotePreview(patch.content) } : {}),
+        ...(patch.content !== undefined ? { excerpt: toNoteExcerpt(patch.content), preview: toNotePreview(patch.content) } : {}),
         updatedAt: new Date().toISOString(),
       });
     },
@@ -191,23 +180,47 @@ export function NotesView() {
 
   // Đóng ô ghi nhanh: trình soạn gỡ ra thì lưu nốt; chưa gõ gì thì không còn gì
   const closeCapture = React.useCallback(() => {
+    if (!captureStateRef.current.open) return;
     setCaptureOpen(false);
     setCaptureNoteId(null);
     setCaptureKey((key) => key + 1);
   }, []);
 
-  // Bấm ra ngoài ô ghi nhanh thì đóng như Keep (hộp xác nhận xóa, toast không tính là ngoài)
+  // Bấm ra ngoài ô ghi nhanh thì đóng như Keep, chữ đã gõ thành thẻ luôn (hộp xác nhận xóa, toast không tính là ngoài). Menu
+  // "/", thanh định dạng của editor nằm ở portal ngoài ô nhưng vẫn trong cây React của ô, nên "bên trong" được đánh dấu bằng
+  // sự kiện React của ô (đi qua portal) chứ không dùng `contains` trên DOM; xét sau khi sự kiện chạy hết. Trình nghe gắn ở
+  // `window` để chạy trước React (Next gắn trình nghe của React ở `document`), không xóa mất dấu "bên trong" vừa đặt.
   React.useEffect(() => {
     if (!captureOpen) return;
     const onPointerDown = (event: PointerEvent) => {
+      pointerInsideCaptureRef.current = false;
       const target = event.target as Element | null;
-      if (!target || captureRef.current?.contains(target)) return;
-      if (target.closest('[role="dialog"], [role="alertdialog"], [data-sonner-toaster]')) return;
-      closeCapture();
+      window.setTimeout(() => {
+        if (pointerInsideCaptureRef.current || !target) return;
+        if (target.closest('[role="dialog"], [role="alertdialog"], [data-sonner-toaster]')) return;
+        closeCapture();
+      }, 0);
     };
-    document.addEventListener("pointerdown", onPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => window.removeEventListener("pointerdown", onPointerDown, true);
   }, [captureOpen, closeCapture]);
+
+  // Tiêu điểm rời ô (Tab ra ngoài) cũng đóng. Không có phần tử nhận tiêu điểm mới (bấm chỗ trống, rời cửa sổ), hoặc tiêu
+  // điểm về khung bao ngoài ô (Chrome cho khung cuộn nhận tiêu điểm khi bấm vào lề trống trong ô) thì để trình nghe bấm chuột
+  // ở trên lo.
+  const captureFocusHandlers = {
+    onFocus: () => {
+      focusInsideCaptureRef.current = true;
+    },
+    onBlur: (event: React.FocusEvent) => {
+      focusInsideCaptureRef.current = false;
+      const next = event.relatedTarget;
+      if (!next || next.contains(event.currentTarget)) return;
+      window.setTimeout(() => {
+        if (!focusInsideCaptureRef.current) closeCapture();
+      }, 0);
+    },
+  };
 
   const openNote = (id: string) => {
     pushedRef.current = true;
@@ -342,8 +355,11 @@ export function NotesView() {
           {/* Đang tìm thì ẩn ô ghi nhanh, chỉ còn kết quả (như Keep) */}
           {!hasQuery && (
             <div
-              ref={captureRef}
               data-slot="note-capture"
+              onPointerDownCapture={() => {
+                pointerInsideCaptureRef.current = true;
+              }}
+              {...(captureOpen ? captureFocusHandlers : {})}
               className={cn(
                 "mx-auto w-full max-w-[600px] rounded-lg border border-border bg-card transition-shadow",
                 captureOpen ? "shadow-md" : "shadow-sm"
@@ -424,27 +440,33 @@ export function NotesView() {
       {/* Hộp sửa: Esc, bấm ra ngoài, "Đóng" hay Ctrl/Cmd+Enter đều đóng. */}
       <StandardDialog
         open={Boolean(selectedId)}
-        onOpenChange={(open) => {
-          if (!open) closeNote();
+        onOpenChange={(open, details) => {
+          if (open) return;
+          // Menu "/", thanh định dạng của editor nằm ở portal ngoài hộp: chỉ nhấn vào nền mờ mới là nhấn ra ngoài
+          const target = details?.event?.target;
+          if (details?.reason === "outside-press" && !(target instanceof Element && target.closest('[data-slot="dialog-backdrop"]'))) return;
+          closeNote();
         }}
         title="Sửa ghi chú"
         showHeader={false}
         size="md"
-        initialFocus={dialogContentRef}
+        // Editor tự lấy tiêu điểm khi gắn (con trỏ cuối nội dung); hộp chuyển tiêu điểm vào khung trước thì con trỏ về đầu
+        initialFocus={false}
         className="overflow-hidden p-0 sm:p-0"
       >
         {shown?.state === "ready" && shown.note ? (
-          <NoteEditor
-            key={shown.note.id}
-            variant="dialog"
-            note={shown.note}
-            contentRef={dialogContentRef}
-            onClose={closeNote}
-            onSaved={handleSaved}
-            onCreated={() => undefined}
-            onDraft={handleDraft}
-            onDelete={askDelete}
-          />
+          <div data-slot="note-dialog-body" className="flex min-h-0 flex-1 flex-col">
+            <NoteEditor
+              key={shown.note.id}
+              variant="dialog"
+              note={shown.note}
+              onClose={closeNote}
+              onSaved={handleSaved}
+              onCreated={() => undefined}
+              onDraft={handleDraft}
+              onDelete={askDelete}
+            />
+          </div>
         ) : shown?.state === "missing" || shown?.state === "error" ? (
           <EmptyState
             density="compact"

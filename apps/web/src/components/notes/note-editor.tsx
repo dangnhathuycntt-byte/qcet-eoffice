@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowUpRight, Pin, PinOff, Trash2 } from "lucide-react";
 import type { PersonalNote } from "@qcet/contracts/personal-notes";
@@ -15,14 +16,23 @@ import { formatRecencyTime } from "@qcet/shared/lib/format/recency";
 import { updateNote } from "@/components/notes/notes-client";
 import { useNoteAutosave, type NoteSaveState } from "@/components/notes/use-note-autosave";
 
-const SAVE_LABEL: Record<NoteSaveState, string> = {
-  idle: "",
-  dirty: "Chưa lưu",
-  saving: "Đang lưu…",
-  saved: "Đã lưu",
+/** Tự lưu nên không báo "Đang lưu…/Đã lưu" (người dùng bỏ 21/10/2026); chỉ báo khi lưu hỏng. */
+const SAVE_PROBLEM: Partial<Record<NoteSaveState, string>> = {
   error: "Chưa lưu được",
   gone: "Ghi chú đã bị xóa",
 };
+
+// Nội dung soạn bằng editor khối như mô tả nhiệm vụ (menu "/", thanh định dạng khi bôi đen, dán ảnh). Editor nặng nên tách
+// chunk; trang Ghi chú tải trước lúc rảnh (`preloadNoteBodyEditor`).
+const loadBodyEditor = () => import("@/components/tasks/detail/task-block-editor");
+const BodyEditor = dynamic(() => loadBodyEditor().then((m) => m.TaskBlockEditor), {
+  ssr: false,
+  loading: () => <p className="text-sm leading-relaxed text-muted-foreground">Ghi chú…</p>,
+});
+
+export function preloadNoteBodyEditor() {
+  void loadBodyEditor();
+}
 
 /** Đường dẫn tới đối tượng ghi chú gắn vào (cuộc họp, nhiệm vụ). */
 export function noteEntityHref(note: Pick<PersonalNote, "entityType" | "entityId">): { href: string; label: string } | null {
@@ -50,8 +60,6 @@ export interface NoteEditorProps {
   /** Mỗi lần gõ: để thẻ và bản nhớ tạm theo kịp chữ đang soạn, không chờ lưu xong. Chưa tạo thì `noteId` null. */
   onDraft: (noteId: string | null, patch: DraftPatch) => void;
   onDelete: (noteId: string) => void;
-  /** Ô nội dung, để hộp sửa đặt tiêu điểm vào khi mở. */
-  contentRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 /**
@@ -68,15 +76,14 @@ export function NoteEditor({
   onCreated,
   onDraft,
   onDelete,
-  contentRef: externalContentRef,
 }: NoteEditorProps) {
   const [title, setTitle] = React.useState(note?.title ?? "");
   const [content, setContent] = React.useState(note?.content ?? "");
   const [pinned, setPinned] = React.useState(note?.pinned ?? false);
   const [pinError, setPinError] = React.useState(false);
   const [editedAt, setEditedAt] = React.useState(note?.updatedAt ?? null);
-  const internalContentRef = React.useRef<HTMLTextAreaElement>(null);
-  const contentRef = externalContentRef ?? internalContentRef;
+  const [tooLong, setTooLong] = React.useState(false);
+  const bodyRef = React.useRef<HTMLDivElement>(null);
   const { state, noteId, schedule: scheduleSave, retry } = useNoteAutosave(note?.id ?? null, {
     onSaved: (saved) => {
       setEditedAt(saved.updatedAt);
@@ -113,43 +120,73 @@ export function NoteEditor({
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       onClose();
-    } else if (event.key === "Escape" && variant === "capture") {
-      event.preventDefault();
-      onClose();
     }
   };
 
+  // Esc đóng như Keep. Bắt ở pha capture vì editor dùng Esc để chọn khối và chặn lan lên (hộp thoại không nhận được); ô tìm
+  // của menu "/" là <input> riêng, Esc ở đó chỉ đóng menu. Tiêu đề trong hộp sửa thì để hộp thoại tự đóng.
+  const handleKeyDownCapture = (event: React.KeyboardEvent) => {
+    if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
+    const target = event.target as HTMLElement;
+    if (target.tagName === "INPUT") return;
+    if (variant === "dialog" && !target.isContentEditable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onClose();
+  };
+
+  // Editor báo nội dung (khối QCET JSON) ngay sau mỗi thay đổi; quá giới hạn thì giữ trên màn hình, không gửi lên để khỏi
+  // bị từ chối lặp lại
+  const handleContent = (next: string) => {
+    if (next.length > PERSONAL_NOTE_CONTENT_MAX) {
+      setTooLong(true);
+      return;
+    }
+    setTooLong(false);
+    setContent(next);
+    schedule({ content: next });
+  };
+
+  const focusBody = () => bodyRef.current?.querySelector<HTMLElement>("[data-slate-editor]")?.focus();
+
+  // Ô ghi nhanh thu gọn cũng là editor (chỉ thiếu tiêu đề và thanh dưới): tiêu điểm vào thì mở ra, không phải đổi ô nhập. Lúc
+  // thu gọn ẩn tay kéo khối (một dòng "Ghi chú…" rê chuột vào hiện tay kéo trông như lỗi)
   const contentField = (
-    <Textarea
-      ref={contentRef}
-      variant="bare"
-      autoResize
-      compact
-      countOnlyNearLimit
-      rows={1}
-      value={content}
-      maxLength={PERSONAL_NOTE_CONTENT_MAX}
-      disabled={gone}
-      placeholder="Ghi chú…"
-      aria-label={collapsed ? "Viết ghi chú mới" : "Nội dung ghi chú"}
+    <div
+      ref={bodyRef}
+      data-slot="note-body"
       onFocus={collapsed ? onExpand : undefined}
-      onChange={(event) => {
-        setContent(event.target.value);
-        schedule({ content: event.target.value });
-      }}
-      className={cn("leading-6", collapsed ? "py-2.5" : "py-0", variant === "dialog" && "min-h-12")}
-    />
+      className={cn("flex min-h-6 flex-col [&_[data-slate-editor]]:pb-0", collapsed && "py-2.5 [&_[data-slot=block-handle]]:invisible", variant === "dialog" && "min-h-12")}
+    >
+      <BodyEditor
+        variant="compose"
+        taskId={`note-${note?.id ?? "new"}`}
+        initialDescription={note?.content ?? ""}
+        onSaveContent={handleContent}
+        canEdit={!gone}
+        globalFileDrop={false}
+        autoFocus={variant === "dialog"}
+        ariaLabel={collapsed ? "Viết ghi chú mới" : "Nội dung ghi chú"}
+        placeholder={collapsed ? "Ghi chú…" : "Ghi chú… Gõ / để chèn danh sách, tiêu đề, ảnh"}
+      />
+    </div>
   );
 
   // Thu gọn chỉ còn ô nội dung (như ô "Ghi chú…" của Keep). Cùng một cây với lúc mở (tiêu đề, thanh dưới chỉ ẩn/hiện) để ô
   // nội dung không bị gắn lại và mất tiêu điểm khi mở ra.
   return (
-    <div data-slot="note-editor" className="flex min-h-0 flex-1 flex-col" onKeyDown={collapsed ? undefined : handleKeyDown}>
+    <div
+      data-slot="note-editor"
+      className="flex min-h-0 flex-1 flex-col"
+      onKeyDown={collapsed ? undefined : handleKeyDown}
+      onKeyDownCapture={collapsed ? undefined : handleKeyDownCapture}
+    >
+      {/* Lề 24px trên máy tính: tay kéo khối của editor nằm trong lề này (điện thoại không có tay kéo) */}
       <div
         className={cn(
-          "flex flex-col gap-2 px-4",
+          "flex flex-col gap-2 px-4 md:px-6",
           !collapsed && "pt-3",
-          variant === "dialog" && "thin-scrollbar min-h-0 flex-1 overflow-y-auto pt-4 sm:px-5"
+          variant === "dialog" && "thin-scrollbar min-h-0 flex-1 overflow-y-auto pt-4"
         )}
       >
         {!collapsed && (
@@ -174,7 +211,7 @@ export function NoteEditor({
               // Enter ở tiêu đề chuyển xuống nội dung (Ctrl/Cmd+Enter vẫn là "Đóng")
               if (event.key === "Enter" && !event.metaKey && !event.ctrlKey && !event.nativeEvent.isComposing) {
                 event.preventDefault();
-                contentRef.current?.focus();
+                focusBody();
               }
             }}
             className="py-0 text-base font-semibold leading-snug tracking-tight text-foreground sm:text-base"
@@ -198,7 +235,7 @@ export function NoteEditor({
         )}
       </div>
       {!collapsed && (
-        <footer className="flex h-11 shrink-0 items-center gap-1 px-2.5">
+        <footer className="flex h-11 shrink-0 items-center gap-1 px-2.5 md:px-4.5">
           {/* Chưa gõ gì thì chưa có ghi chú để ghim hay xóa */}
           {noteId && (
             <>
@@ -218,12 +255,8 @@ export function NoteEditor({
               </Button>
             </>
           )}
-          <span
-            role="status"
-            aria-live="polite"
-            className={cn("ml-auto text-xs", state === "error" || gone ? "text-destructive" : "text-muted-foreground")}
-          >
-            {pinError ? "Chưa ghim được" : SAVE_LABEL[state]}
+          <span role="status" aria-live="polite" className="ml-auto text-xs text-destructive">
+            {pinError ? "Chưa ghim được" : tooLong ? "Ghi chú quá dài, phần mới chưa lưu" : SAVE_PROBLEM[state]}
           </span>
           {state === "error" && (
             <Button variant="ghost" size="xs" onClick={() => void retry()}>

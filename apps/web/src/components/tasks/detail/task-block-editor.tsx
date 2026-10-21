@@ -198,6 +198,8 @@ export interface TaskBlockEditorProps {
   variant?: "page" | "compose";
   /** Nhãn truy cập của vùng soạn (contenteditable). */
   ariaLabel?: string;
+  /** Đặt con trỏ vào cuối nội dung ngay khi gắn (ô ghi chú vừa mở). */
+  autoFocus?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1651,6 +1653,7 @@ function BlockRowDraggable({ children, element, compact }: { children: React.Rea
       data-plate-selectable="true"
     >
       <div
+        data-slot="block-handle"
         className={cn(
           "shrink-0 mr-1 flex items-center justify-center h-6 mt-0.5 relative select-none",
           // compact (hộp tạo việc): khe 24px vừa lề của hộp; điện thoại không rê chuột nên ẩn tay kéo
@@ -1984,6 +1987,7 @@ export function TaskBlockEditor({
   className,
   variant = "page",
   ariaLabel,
+  autoFocus = false,
 }: TaskBlockEditorProps) {
   const compose = variant === "compose";
   // Global file drop state
@@ -2092,6 +2096,18 @@ export function TaskBlockEditor({
         [PT.mediaEmbed]: MediaEmbedEl,
       },
     },
+  }, []);
+
+  // Chờ một khung hình: Plate chuẩn hóa giá trị lúc gắn (gán id khối, thêm dòng cuối) làm mất vùng chọn đặt ngay trong effect
+  React.useEffect(() => {
+    if (!autoFocus) return;
+    const frame = requestAnimationFrame(() => {
+      editor.tf.select(editor.api.end([]));
+      editor.tf.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+    // Chỉ lúc gắn
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Phạm vi kéo chọn khối: cả vùng cuộn của trang (kiểu Notion) thay vì chỉ khung soạn thảo.

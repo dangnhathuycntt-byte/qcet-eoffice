@@ -20,8 +20,8 @@ export const DialogTrigger = BaseDialog.Trigger;
 
 export interface StandardDialogProps {
   open: boolean;
-  /** `eventDetails.reason` (Base UI): "outside-press", "escape-key", "close-press"… */
-  onOpenChange: (open: boolean, eventDetails?: { reason?: string }) => void;
+  /** `eventDetails.reason` (Base UI): "outside-press", "escape-key", "close-press"…; `event` là sự kiện gây ra. */
+  onOpenChange: (open: boolean, eventDetails?: { reason?: string; event?: Event }) => void;
   title: string;
   description?: string;
   children: React.ReactNode;
@@ -66,7 +66,8 @@ export function StandardDialog({
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal keepMounted={open}>
-        <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none" />
+        {/* data-slot: nơi gọi phân biệt nhấn nền mờ với nhấn vào portal của nội dung (menu "/" của editor) */}
+        <BaseDialog.Backdrop data-slot="dialog-backdrop" className="fixed inset-0 z-50 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none" />
         <BaseDialog.Popup
           initialFocus={initialFocus}
           className={cn(

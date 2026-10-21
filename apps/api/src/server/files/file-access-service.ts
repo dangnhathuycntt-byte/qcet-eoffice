@@ -119,7 +119,7 @@ export async function assertFilePathDownloadAllowed(
 
 /**
  * Tải tệp theo FileObject: tệp phải liên kết với ít nhất một tài nguyên người dùng được đọc (văn bản,
- * sản phẩm nhiệm vụ, hồ sơ, cuộc họp, nhiệm vụ trong metadata/mô tả, cuộc Trợ lý của chính mình) và đã quét sạch. Trả về bản ghi
+ * sản phẩm nhiệm vụ, hồ sơ, cuộc họp, nhiệm vụ trong metadata/mô tả, cuộc Trợ lý hay ghi chú cá nhân của chính mình) và đã quét sạch. Trả về bản ghi
  * (đã cập nhật trạng thái quét khi tự sửa ở môi trường dev) để route kiểm tệp trên đĩa rồi stream.
  */
 export async function authorizeFileObjectDownload({
@@ -208,6 +208,16 @@ export async function authorizeFileObjectDownload({
       });
       hasAuthorizedResource = Boolean(conversation);
     }
+  }
+
+  if (!hasAuthorizedResource && file.uploadedById === authUser.id) {
+    // Ảnh/tệp chèn vào ghi chú cá nhân (tải lên chưa gắn đối tượng nào): chỉ chủ ghi chú, cũng là người tải lên, mở được, khi
+    // còn ghi chú chứa mã tệp
+    const note = await prisma.personalNote.findFirst({
+      where: { userId: authUser.id, content: { contains: file.id } },
+      select: { id: true },
+    });
+    hasAuthorizedResource = Boolean(note);
   }
 
   if (!hasAuthorizedResource) {

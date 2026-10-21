@@ -5,7 +5,7 @@ import type {
   PersonalNoteSummary,
   UpdatePersonalNoteInput,
 } from "@qcet/contracts/personal-notes";
-import { toNotePreview } from "@qcet/shared/domain/notes/note-preview";
+import { toNoteExcerpt, toNotePreview } from "@qcet/shared/domain/notes/note-preview";
 
 // Gọi API ghi chú cá nhân (/api/notes) từ trình duyệt; dùng chung cho trang Ghi chú và khung ghi chú trong cuộc họp.
 
@@ -73,7 +73,7 @@ export function toNoteSummary(note: PersonalNote): PersonalNoteSummary {
   return {
     id: note.id,
     title: note.title,
-    excerpt: note.content.replace(/\s+/g, " ").trim().slice(0, 160),
+    excerpt: toNoteExcerpt(note.content),
     preview: toNotePreview(note.content),
     pinned: note.pinned,
     entityType: note.entityType,

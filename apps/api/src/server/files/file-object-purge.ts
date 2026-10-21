@@ -63,6 +63,7 @@ export async function countFileObjectReferences(db: DbClient, file: Pick<FileObj
     await db.meeting.count({ where: { materialsFileObjectId: id } }),
     await db.task.count({ where: { description: { contains: id } } }),
     await db.taskComment.count({ where: { body: { contains: id } } }),
+    await db.personalNote.count({ where: { content: { contains: id } } }),
   ];
   const meta = file.metadata && typeof file.metadata === "object" && !Array.isArray(file.metadata)
     ? (file.metadata as Record<string, unknown>)
