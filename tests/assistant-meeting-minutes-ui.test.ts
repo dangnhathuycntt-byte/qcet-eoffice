@@ -2,7 +2,13 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { AssistantActionView } from "@qcet/contracts/assistant";
 import { assistantDateFrame, buildAssistantSystemPrompt } from "@qcet/shared/domain/assistant/assistant-prompt";
-import { actionHistoryNote, describeAssistantAction } from "@qcet/shared/domain/assistant/assistant-actions";
+import {
+  actionHistoryNote,
+  assistantActionHeading,
+  assistantActionResult,
+  assistantActionTarget,
+  describeAssistantAction,
+} from "@qcet/shared/domain/assistant/assistant-actions";
 import {
   ASSISTANT_ASK_EVENT,
   askAssistantInDock,
@@ -49,6 +55,29 @@ describe("Trợ lý soạn biên bản: lời nhắc, ngữ cảnh cuộc họp,
     ]);
     assert.match(note, /Lưu dự thảo biên bản/);
     assert.match(note, /Giao phòng Đào tạo/);
+  });
+
+  // Ảnh người dùng 21/10/2026: "Thay dự thảo biên bản "H…" cắt mất tên cuộc họp. Tiêu đề thẻ là quyết định, tên đứng riêng
+  it("chữ trên thẻ: tiêu đề là quyết định (không kèm tên), đối tượng riêng một dòng; đã làm thì nói việc đã làm", () => {
+    const longTitle = "Họp thử tính năng ghi chú và ghi âm của Trung tâm Số và Truyền thông quý IV năm 2026";
+    const view: AssistantActionView = {
+      kind: "meeting_minutes",
+      meeting: { id: "m1", title: longTitle },
+      from: "MINUTES_DRAFT",
+      minutes: "Kết luận:\n- Đồng ý",
+      replaces: true,
+      baseUpdatedAt: "2026-10-21T01:00:00.000Z",
+    };
+    assert.equal(assistantActionHeading(view), "Thay dự thảo biên bản");
+    assert.equal(assistantActionTarget(view), longTitle, "đủ tên, cắt do giao diện (tối đa 2 dòng)");
+    assert.equal(assistantActionResult(view), "Đã thay dự thảo biên bản");
+    assert.equal(assistantActionResult({ ...view, replaces: false }), "Đã lưu dự thảo biên bản");
+    const task = { id: "t1", code: "NV-2026-10-001", title: "Rà soát phòng máy" };
+    assert.equal(assistantActionHeading({ kind: "task_comment", task, body: "Nhờ cập nhật" }), "Bình luận vào NV-2026-10-001");
+    assert.equal(assistantActionTarget({ kind: "task_comment", task, body: "Nhờ cập nhật" }), "Rà soát phòng máy");
+    assert.equal(assistantActionResult({ kind: "task_status", task, from: "IN_PROGRESS", to: "COMPLETED" }), "Đã chuyển NV-2026-10-001 sang Hoàn thành");
+    assert.equal(assistantActionTarget({ kind: "memory_save", content: "Thích bảng" }), null);
+    assert.equal(assistantActionResult({ kind: "memory_save", content: "Thích bảng" }), "Đã lưu ghi nhớ");
   });
 });
 

@@ -41,6 +41,39 @@ export function describeAssistantAction(view: AssistantActionView): string {
   }
 }
 
+/**
+ * Chữ trên thẻ (người dùng 21/10/2026 gửi ảnh thẻ "Thay dự thảo biên bản "H…": tên cuộc họp bị cắt mất nghĩa). Tiêu đề là
+ * quyết định đang hỏi, đối tượng đứng riêng một dòng (như Approval card của Hightouch UI); thẻ đã xử lý thì tiêu đề nói việc
+ * đã làm. `describeAssistantAction` vẫn là tên một dòng cho khối ghi lại và nhãn trợ năng.
+ */
+export function assistantActionHeading(view: AssistantActionView): string {
+  if (view.kind === "meeting_minutes") return view.replaces ? "Thay dự thảo biên bản" : "Lưu dự thảo biên bản";
+  return describeAssistantAction(view);
+}
+
+/** Đối tượng thẻ tác động: tên nhiệm vụ, tên cuộc họp; ghi nhớ thì không có. */
+export function assistantActionTarget(view: AssistantActionView): string | null {
+  if ("task" in view) return view.task.title;
+  if (view.kind === "meeting_minutes") return view.meeting.title;
+  return null;
+}
+
+/** Tiêu đề thẻ đã thực hiện: việc đã làm, như "Đã lưu dự thảo biên bản". */
+export function assistantActionResult(view: AssistantActionView): string {
+  switch (view.kind) {
+    case "task_comment":
+      return `Đã bình luận vào ${taskName(view.task)}`;
+    case "task_status":
+      return `Đã chuyển ${taskName(view.task)} sang ${assistantTaskStatusLabel(view.to)}`;
+    case "task_remind":
+      return `Đã nhắc việc ${taskName(view.task)}`;
+    case "memory_save":
+      return "Đã lưu ghi nhớ";
+    case "meeting_minutes":
+      return view.replaces ? "Đã thay dự thảo biên bản" : "Đã lưu dự thảo biên bản";
+  }
+}
+
 /** Nhãn trạng thái nhiệm vụ trong thẻ đổi trạng thái. */
 export function assistantTaskStatusLabel(status: string): string {
   return getStatusDisplay(status).label;
