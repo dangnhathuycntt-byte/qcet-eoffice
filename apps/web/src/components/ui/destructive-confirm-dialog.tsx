@@ -43,12 +43,14 @@ export function DestructiveConfirmDialog({
   return (
     <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <AlertDialog.Portal>
+        {/* z-50 như StandardDialog: xác nhận mở từ trong một hộp thoại (xóa ghi chú trong hộp sửa) phải nằm trên lớp phủ của
+            hộp đó; z-40 cũ bị lớp phủ chặn, không bấm được (21/10/2026) */}
         <AlertDialog.Backdrop
-          className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
+          className="fixed inset-0 z-50 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
         />
         <AlertDialog.Popup
           initialFocus={panelRef}
-          className="fixed inset-0 z-40 flex items-center justify-center p-4 outline-none motion-reduce:transition-none"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 outline-none motion-reduce:transition-none"
         >
           {/* Gọn kiểu Linear: không icon, câu "không thể hoàn tác" là chữ phụ cùng đoạn; chỉ nút xác nhận mang màu đỏ */}
           <div ref={panelRef} tabIndex={-1} className="bg-card rounded-xl shadow-dialog border-0 max-w-sm w-full p-4 flex flex-col gap-4 outline-none">
