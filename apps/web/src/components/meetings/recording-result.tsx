@@ -29,6 +29,11 @@ export function composeMinutesText(detail: MeetingRecordingDetail): string {
 /**
  * Kết quả của một bản ghi đã xử lý xong. Mọi chữ là văn bản thuần (không HTML): nội dung do mô hình soạn từ lời nói,
  * chỉ là bản nháp để người soạn biên bản đọc lại, sửa rồi mới dùng.
+ *
+ * Một tầng duy nhất (người dùng chê "chỗ này dày thông tin quá", ảnh 21/10/2026: trước đó là khung cảnh báo, nhãn "Biên bản
+ * đề xuất", khung nền chứa biên bản, các khung "Việc được giao" rồi hàng nút): biên bản đề xuất kẻ trái như trích dẫn, hiện
+ * đúng chữ sẽ được điền khi bấm "Dùng làm biên bản nháp" (biên bản, Quyết định, Việc được giao ghép bằng `composeMinutesText`),
+ * lời nhắc AI thành một dòng chữ mờ cạnh nút.
  */
 export function RecordingResult({
   detail,
@@ -42,9 +47,10 @@ export function RecordingResult({
   minutesHint?: string;
 }) {
   const { notifySuccess, notifyError } = useFeedback();
+  const text = React.useMemo(() => composeMinutesText(detail), [detail]);
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(composeMinutesText(detail));
+      await navigator.clipboard.writeText(text);
       notifySuccess("Đã sao chép biên bản đề xuất.");
     } catch {
       notifyError("Không sao chép được. Thầy/Cô chọn chữ và sao chép thủ công.");
@@ -52,46 +58,14 @@ export function RecordingResult({
   };
 
   return (
-    // Bề ngang theo cột chính của trang chi tiết (`READING_COLUMN_CLASS`), không tự đặt thêm
-    <div className="space-y-3 pt-2">
-      <InlineAlert variant="info">Bản nháp do AI soạn từ ghi âm, có thể nghe nhầm tên và con số. Thầy/Cô đọc lại trước khi dùng.</InlineAlert>
+    <div className="space-y-2.5 pt-1.5">
       {detail.error && <InlineAlert variant="warning">{detail.error}</InlineAlert>}
 
-      {detail.minutesDraft && (
-        <section>
-          <h4 className="mb-1 text-xs font-medium text-muted-foreground">Biên bản đề xuất</h4>
-          <div className="rounded-md border border-border/50 bg-muted/20 px-3 py-2">
-            <MinutesText text={detail.minutesDraft} />
-          </div>
-        </section>
-      )}
-
-      {detail.decisions.length > 0 && (
-        <section>
-          <h4 className="mb-1 text-xs font-medium text-muted-foreground">Quyết định</h4>
-          <ul className="list-disc space-y-0.5 pl-5 text-compact text-foreground">
-            {detail.decisions.map((decision, index) => (
-              <li key={index}>{decision}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {detail.actionItems.length > 0 && (
-        <section>
-          <h4 className="mb-1 text-xs font-medium text-muted-foreground">Việc được giao</h4>
-          <ul className="space-y-1 text-compact text-foreground">
-            {detail.actionItems.map((item, index) => (
-              <li key={index} className="rounded-md border border-border/40 px-3 py-1.5">
-                <span className="block">{item.task}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {[item.owner ? `Giao cho: ${item.owner}` : "Chưa rõ người nhận", item.deadline ? `Hạn: ${item.deadline}` : null].filter(Boolean).join(" · ")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {text ? (
+        <div className="border-l-2 border-border pl-3">
+          <MinutesText text={text} />
+        </div>
+      ) : null}
 
       {detail.transcript && (
         <details className="group">
@@ -102,18 +76,22 @@ export function RecordingResult({
         </details>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5 pt-1">
-        {onUseAsMinutes && (
-          <Button size="sm" onClick={() => onUseAsMinutes(composeMinutesText(detail))}>
-            <FileEdit />
-            Dùng làm biên bản nháp
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <div className="flex shrink-0 items-center gap-1">
+          {onUseAsMinutes && (
+            <Button size="sm" variant="toolbar" onClick={() => onUseAsMinutes(text)}>
+              <FileEdit />
+              Dùng làm biên bản nháp
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => void copy()}>
+            <Copy />
+            Sao chép
           </Button>
-        )}
-        <Button size="sm" variant="toolbar" onClick={() => void copy()}>
-          <Copy />
-          Sao chép
-        </Button>
-        {!onUseAsMinutes && minutesHint && <span className="text-xs text-muted-foreground">{minutesHint}</span>}
+        </div>
+        <p className="min-w-0 flex-1 basis-56 text-xs text-muted-foreground">
+          {!onUseAsMinutes && minutesHint ? `${minutesHint} ` : ""}AI soạn từ ghi âm, có thể nghe nhầm tên và con số; Thầy/Cô đọc lại trước khi dùng.
+        </p>
       </div>
     </div>
   );

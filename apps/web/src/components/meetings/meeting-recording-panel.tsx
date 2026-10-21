@@ -133,6 +133,10 @@ function RecordingRow({
   children: React.ReactNode;
 }) {
   const expanded = !collapsible || open;
+  // Thời lượng đã ở cuối thanh phát; dòng phụ chỉ ghi khi không có thanh phát (hàng thu gọn, bản không còn âm thanh, đang tải
+  // lên). Dung lượng chuyển vào tooltip của tên: dòng phụ từng dồn bốn thứ "giờ · thời lượng · dung lượng · người ghi" (ảnh 21/10/2026)
+  const showDuration = !expanded || !recording.hasAudio || recording.status === "UPLOADING";
+  const size = recording.byteSize > 0 ? formatSize(recording.byteSize) : null;
   const heading = (
     <>
       <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background text-muted-foreground">
@@ -144,15 +148,14 @@ function RecordingRow({
             <span className="block truncate text-compact font-medium text-foreground">{recordingTitle(recording)}</span>
           </TooltipTrigger>
           <TooltipContent side="top" align="start">
-            {recordingTitle(recording)}
+            {size ? `${recordingTitle(recording)} · ${size}` : recordingTitle(recording)}
           </TooltipContent>
         </Tooltip>
         {/* Điện thoại: dòng phụ xuống dòng thay vì cắt tên người ghi ("… 51 KB · Đặng Nhật …") */}
         <span className="block truncate text-xs text-muted-foreground tabular-nums max-md:overflow-visible max-md:whitespace-normal">
           {[
             recordedAt(recording.createdAt),
-            recording.durationSec ? formatClock(recording.durationSec) : null,
-            recording.byteSize > 0 ? formatSize(recording.byteSize) : null,
+            showDuration && recording.durationSec ? formatClock(recording.durationSec) : null,
             recording.createdByName,
           ]
             .filter(Boolean)
@@ -523,7 +526,19 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, 
             </Pressable>
             {expanded &&
               (detail ? (
-                <RecordingResult detail={detail} onUseAsMinutes={onUseAsMinutes} minutesHint={minutesHint} />
+                <RecordingResult
+                  detail={detail}
+                  // Dùng xong thì thu kết quả lại: chữ đã nằm trong ô soạn ở khối Biên bản, không hiện hai lần (ảnh 21/10/2026)
+                  onUseAsMinutes={
+                    onUseAsMinutes
+                      ? (text) => {
+                          setExpandedId(null);
+                          onUseAsMinutes(text);
+                        }
+                      : undefined
+                  }
+                  minutesHint={minutesHint}
+                />
               ) : (
                 <p className="text-xs text-muted-foreground">Đang tải kết quả…</p>
               ))}

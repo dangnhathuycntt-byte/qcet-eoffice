@@ -358,15 +358,18 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     <MeetingRecordingPanel
       meetingId={meeting.id}
       collapseReady={Boolean(meeting.minutes)}
-      onUseAsMinutes={canDraftMinutes ? useRecordingAsMinutes : undefined}
+      // Đang soạn dở thì không cho "Dùng làm biên bản nháp": bấm sẽ ghi đè chữ đang gõ trong ô soạn
+      onUseAsMinutes={canDraftMinutes && !editingMinutes ? useRecordingAsMinutes : undefined}
       minutesHint={
         meeting.status === "INVITED"
           ? "Bấm Bắt đầu họp để dùng làm biên bản."
-          : meeting.status === "MINUTES_DRAFT"
-            ? canEditMinutes
-              ? "Biên bản đã được soạn; sao chép phần cần dùng rồi bấm Sửa ở thẻ Biên bản."
-              : "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
-            : undefined
+          : editingMinutes
+            ? "Biên bản đang soạn ở khối Biên bản; sao chép phần cần dùng."
+            : meeting.status === "MINUTES_DRAFT"
+              ? canEditMinutes
+                ? "Biên bản đã được soạn; sao chép phần cần dùng rồi bấm Sửa ở khối Biên bản."
+                : "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
+              : undefined
       }
     />
   ) : null;
