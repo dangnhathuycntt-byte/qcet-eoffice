@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, Keyboard, Loader2, UserRound, X } from "lucide-react";
+import { ArrowRight, Keyboard, Loader2, Search, UserRound, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { getRouteByPath } from "@/lib/navigation/canonical-navigation-registry";
@@ -147,10 +147,10 @@ type FlatItem =
   | { kind: "task"; item: SearchTaskResult }
   | { kind: "document"; item: SearchDocumentResult }
   | { kind: "user"; item: SearchUserResult }
-  | { kind: "all-results"; query: string };
+  | { kind: "all-results"; query: string; empty?: boolean };
 
 function flatItemKey(item: FlatItem): string {
-  if (item.kind === "all-results") return "all-results";
+  if (item.kind === "all-results") return item.empty ? "no-results" : "all-results";
   return `${item.kind}-${item.item.id}`;
 }
 
@@ -567,10 +567,13 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       push("user", COMMAND_INTENT_LABELS.user, users.slice(0, GROUP_LIMIT).map((item) => ({ kind: "user", item })));
       if (tasks.length + documents.length + users.length > 0) {
         push("all-results", undefined, [{ kind: "all-results", query: trimmedQuery }]);
+      } else if (!isLoading && !searchFailed) {
+        // Như Linear: không có kết quả vẫn là một dòng chọn được, Enter mở trang Tìm kiếm thay vì đoạn chữ cụt
+        push("no-results", `Kết quả cho “${trimmedQuery}”`, [{ kind: "all-results", query: trimmedQuery, empty: true }]);
       }
     }
     return result;
-  }, [trimmedQuery, recentSearches, filteredActions, tasks, documents, users]);
+  }, [trimmedQuery, recentSearches, filteredActions, tasks, documents, users, isLoading, searchFailed]);
 
   const flatItems = React.useMemo(() => groups.flatMap((group) => group.items), [groups]);
   const activeIndex = flatItems.length === 0 ? -1 : Math.min(selectedIndex, flatItems.length - 1);
@@ -647,7 +650,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     document.getElementById(`${LISTBOX_ID}-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
-  const showEmpty = Boolean(trimmedQuery) && !isLoading && flatItems.length === 0;
+  const showEmpty = Boolean(trimmedQuery) && !isLoading && searchFailed;
   let runningIndex = 0;
 
   return (
@@ -659,12 +662,13 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       size="lg"
       showHeader={false}
       initialFocus={inputRef}
-      className={cn("gap-0 overflow-hidden p-0 sm:p-0", className)}
+      // Linear (đo DOM 21/10/2026): bo 12px, viền 0,5px kèm bóng; điện thoại giữ tấm đáy chung
+      className={cn("gap-0 overflow-hidden p-0 sm:p-0 md:rounded-md md:border-[0.5px] md:border-border", className)}
     >
       <div data-slot="command-palette" className="flex min-h-0 flex-1 flex-col">
-        {/* Theo hộp lệnh của Linear (ảnh người dùng gửi 21/10/2026): ô nhập không icon, không kẻ ngăn với danh sách, chữ thẳng
-            mép icon các dòng (18px), bên phải "Hỏi Trợ lý · Tab" */}
-        <div className="flex h-13 shrink-0 items-center gap-2 pl-4.5 pr-3">
+        {/* Theo hộp lệnh của Linear (đo DOM trên app Linear 21/10/2026): ô nhập 40px chữ 13px lùi 6px vào hộp, không icon, không
+            kẻ ngăn với danh sách, chữ thẳng mép icon các dòng; bên phải "Hỏi Trợ lý · Tab" */}
+        <div className="mx-1.5 mt-1.5 flex h-10 shrink-0 items-center gap-2 pl-3 pr-1.5">
           <input
             ref={inputRef}
             type="text"
@@ -683,7 +687,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             }}
             onKeyDown={handleInputKeyDown}
             placeholder="Gõ lệnh hoặc tìm nhiệm vụ, văn bản, cán bộ…"
-            className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
+            className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
           />
           {isLoading ? <Loader2 aria-label="Đang tìm" className={cn(ICON_CLASS, "animate-spin")} /> : null}
           {query ? (
@@ -720,9 +724,9 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-1.5 empty:hidden md:max-h-[min(480px,60dvh)]"
         >
           {groups.map((group) => (
-            <div key={group.key} role={group.label ? "group" : undefined} aria-label={group.label} className="not-first:mt-1">
+            <div key={group.key} role={group.label ? "group" : undefined} aria-label={group.label}>
               {group.label ? (
-                <div className="flex h-8 items-center justify-between px-3 text-xs text-muted-foreground">
+                <div className="flex h-7.5 items-center justify-between px-3 text-xs font-medium text-muted-foreground">
                   <span aria-hidden>{group.label}</span>
                   {group.key === "recent" ? (
                     <Pressable
@@ -746,12 +750,12 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                     onMouseMove={() => index !== activeIndex && setSelectedIndex(index)}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={(e) => executeItem(item, e.metaKey || e.ctrlKey)}
-                    className={cn(
-                      "flex h-10 cursor-pointer select-none items-center gap-2.5 rounded-lg px-3 text-compact text-foreground",
-                      index === activeIndex && "bg-accent"
-                    )}
+                    // Hàng 46px, nền dòng chọn lùi 2px trên dưới, bo 8px (Linear)
+                    className="h-11.5 cursor-pointer select-none py-0.5 text-compact text-foreground"
                   >
-                    <PaletteRow item={item} query={trimmedQuery} />
+                    <div className={cn("flex h-full items-center gap-3 rounded-sm px-3", index === activeIndex && "bg-accent")}>
+                      <PaletteRow item={item} query={trimmedQuery} />
+                    </div>
                   </div>
                 );
               })}
@@ -759,11 +763,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           ))}
           {showEmpty ? (
             <p className="px-2 py-6 text-center text-compact text-muted-foreground">
-              {searchFailed ? (
-                <span className="text-destructive">Chưa tìm được, thử lại sau.</span>
-              ) : (
-                <>Không có kết quả cho “{trimmedQuery}”. Thử mã nhiệm vụ, số văn bản hoặc tên cán bộ.</>
-              )}
+              <span className="text-destructive">Chưa tìm được, thử lại sau.</span>
             </p>
           ) : null}
         </div>
@@ -776,7 +776,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
   );
 }
 
-/** Một dòng 40px như Linear: icon 16px · tên cắt cuối · thông tin phụ hoặc phím tắt bên phải (text-xs) */
+/** Một dòng 46px như Linear: icon 16px cách chữ 12px · tên cắt cuối · thông tin phụ hoặc phím tắt bên phải (text-xs) */
 function PaletteRow({ item, query }: { item: FlatItem; query: string }) {
   switch (item.kind) {
     case "navigation":
@@ -836,7 +836,14 @@ function PaletteRow({ item, query }: { item: FlatItem; query: string }) {
       );
     }
     case "all-results":
-      return (
+      return item.empty ? (
+        <>
+          <Search aria-hidden className={ICON_CLASS} />
+          <span className="min-w-0 flex-1 truncate">
+            Không có kết quả <span className="ml-1.5 text-muted-foreground">Mở trang Tìm kiếm</span>
+          </span>
+        </>
+      ) : (
         <>
           <ArrowRight aria-hidden className={ICON_CLASS} />
           <span className="min-w-0 flex-1 truncate text-muted-foreground">
