@@ -51,11 +51,12 @@ const ATTENDANCE: Record<string, { label: string; warn?: boolean }> = {
 };
 
 /**
- * Bề ngang tối đa của văn bản dài (nội dung họp, biên bản): `max-w-2xl` (672px, đo được khoảng 110 ký tự một dòng ở chữ
- * 13px). Màn rộng 1800px từng cho dòng chữ 1068px, tới 160 ký tự, khó đọc (người dùng gửi ảnh 21/10/2026). Thẻ vẫn rộng
- * hết cột, chỉ chữ co lại.
+ * Bề ngang của cả cột chính (tên, nội dung, biên bản, ghi âm): `max-w-2xl` (672px, đo được khoảng 110 ký tự một dòng ở chữ
+ * 13px). Màn rộng 1800px từng cho dòng chữ 1068px, tới 160 ký tự (ảnh 21/10/2026); sau đó chỉ chữ co lại còn thẻ vẫn rộng
+ * hết cột nên trong thẻ trống một mảng lớn bên phải và nút ở góc thẻ xa chữ (ảnh 21/10/2026). Nay cả cột theo bề ngang đọc,
+ * như cột nội dung của Linear/Notion; phần dư của màn rộng nằm giữa cột chính và cột phải.
  */
-const PROSE_MAX_CLASS = "max-w-2xl";
+const READING_COLUMN_CLASS = "max-w-2xl";
 
 /** Biên bản tối thiểu 10 ký tự như `DraftMinutesSchema` của máy chủ. */
 const MINUTES_MIN_LENGTH = 10;
@@ -74,8 +75,8 @@ function Muted({ children }: { children: React.ReactNode }) {
  * Chi tiết cuộc họp (`/meetings/[id]`), theo khung chi tiết nhiệm vụ (người dùng yêu cầu "cải thiện trang chi tiết cuộc họp"
  * 20/10/2026, sau khi trang danh sách đã theo trang Nhiệm vụ): một thẻ cao hết màn hình, không breadcrumb chung
  * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", "Bắt đầu họp" (khi đã mời) và sao chép liên kết; cột chính
- * là tên 20px, nội dung và chương trình, rồi thẻ Ghi âm và thẻ Biên bản ("+ Thêm" để soạn, "Duyệt biên bản" cho chủ tọa,
- * "Sửa" và xóa khi còn dự thảo);
+ * rộng theo bề ngang đọc (672px) như trang tài liệu: tên 20px, nội dung và chương trình, rồi khối Biên bản ("+ Thêm" để soạn,
+ * "Duyệt biên bản" cho chủ tọa, "Sửa" và xóa khi còn dự thảo) và khối Ghi âm, không viền, cách nhau bằng đường kẻ mảnh;
  * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần ("+ Thêm" mời người, "Chọn chủ tọa" khi chưa có), Ghi chú của tôi. Dưới 1024px cột phải xếp ngay dưới
  * tên. Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
  * máy chủ kiểm lại; ở đây chỉ để ẩn nút không dùng được.
@@ -369,9 +370,30 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     />
   ) : null;
 
+  // Trạng thái biên bản ngay cạnh tiêu đề khối, không bắt người đọc nhìn sang cột Thuộc tính cách 500px
+  const minutesState =
+    meeting.status === "MINUTES_DRAFT"
+      ? "Dự thảo"
+      : meeting.status === "MINUTES_CONFIRMED"
+        ? meeting.minutesConfirmedAt
+          ? `Đã duyệt ${formatDisplayDate(meeting.minutesConfirmedAt)}`
+          : "Đã duyệt"
+        : null;
+
   const minutesSection = isHeld ? (
     <SectionCard
-      title="Biên bản"
+      variant="plain"
+      title={
+        <>
+          Biên bản
+          {minutesState ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="font-normal tabular-nums">{minutesState}</span>
+            </>
+          ) : null}
+        </>
+      }
       action={
         editingMinutes ? null : canDraftMinutes && !meeting.minutes ? (
           <Button variant="ghost" size="xs" aria-label="Thêm biên bản" onClick={() => startMinutes()}>
@@ -415,15 +437,13 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
               </>
             )}
           </>
-        ) : meeting.status === "MINUTES_CONFIRMED" ? (
-          <span className="text-xs text-muted-foreground">Đã duyệt</span>
         ) : null
       }
     >
       {editingMinutes ? (
         <form
           noValidate
-          className={cn("flex flex-col gap-2", PROSE_MAX_CLASS)}
+          className="flex flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
             void saveMinutes();
@@ -466,9 +486,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           </div>
         </form>
       ) : meeting.minutes ? (
-        <div className={PROSE_MAX_CLASS}>
-          <MinutesText text={meeting.minutes} />
-        </div>
+        <MinutesText text={meeting.minutes} />
       ) : (
         <p className="text-xs text-muted-foreground">
           {canDraftMinutes ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm." : "Chưa có biên bản."}
@@ -507,11 +525,11 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
             {/* Màn rộng: lưới hai cột, cột phải trải hai hàng để tên và các thẻ cột chính không bị đẩy cách nhau.
                 Màn hẹp: thứ tự DOM là tên, thuộc tính, các thẻ. */}
             <div className="grid grid-cols-1 gap-x-8 gap-y-4 px-4 pb-16 pt-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:pl-[clamp(24px,3vw,48px)] lg:pr-4 lg:pt-0">
-              <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:pt-6">
+              <div className={cn("min-w-0 lg:col-start-1 lg:row-start-1 lg:pt-6", READING_COLUMN_CLASS)}>
                 <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
                 <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
                 {meeting.agenda ? (
-                  <div className={cn("mt-1", PROSE_MAX_CLASS)}>
+                  <div className="mt-1">
                     <MinutesText text={meeting.agenda} />
                   </div>
                 ) : (
@@ -523,7 +541,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 {inspector}
               </aside>
 
-              <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-2">
+              <div className={cn("flex min-w-0 flex-col gap-6 pt-2 lg:col-start-1 lg:row-start-2", READING_COLUMN_CLASS)}>
                 {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
                 {meeting.minutes ? (
                   <>

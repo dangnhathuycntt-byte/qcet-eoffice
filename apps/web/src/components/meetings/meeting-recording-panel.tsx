@@ -498,6 +498,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
 
   return (
     <SectionCard
+      variant="plain"
       title="Ghi âm cuộc họp"
       count={recordings.length || undefined}
       action={recordings.length > 0 && !live ? <div className="flex items-center gap-0.5">{startButtons("xs")}</div> : undefined}
