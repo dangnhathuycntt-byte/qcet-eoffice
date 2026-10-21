@@ -46,6 +46,11 @@ describe("minutesToReplyMarkup: biên bản chữ thuần thành mục và danh 
     assert.equal(minutesToReplyMarkup("Kết luận: đồng ý phương án 2."), "Kết luận: đồng ý phương án 2.");
   });
 
+  it("gõ tay không có dòng trống: \"Kết luận:\" sát dưới ý cuối vẫn là tiêu đề; dòng không dấu hai chấm sát dưới ý thì không", () => {
+    assert.equal(minutesToReplyMarkup("- Ý cuối\nKết luận:\n- Đồng ý"), "- Ý cuối\n### Kết luận\n- Đồng ý");
+    assert.equal(minutesToReplyMarkup("- Rà soát vị trí\nviệc làm\n- Ý sau"), "- Rà soát vị trí\nviệc làm\n- Ý sau");
+  });
+
   it("chữ thường không có dấu hiệu định dạng giữ nguyên từng ký tự", () => {
     const plain = "Cuộc họp tạm để kiểm thử ghi âm; sẽ xóa sau khi kiểm.";
     assert.equal(minutesToReplyMarkup(plain), plain);

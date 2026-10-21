@@ -14,12 +14,16 @@ const HEADING_MAX_WORDS = 8;
 function isHeadingLine(line: string, prev: string | undefined, next: string | undefined): boolean {
   const text = line.trim();
   if (!text || LIST_LINE.test(line) || MARKUP_LINE.test(line)) return false;
-  // Đứng riêng: đầu văn bản hoặc sau dòng trống (dòng nối tiếp của một đoạn không phải tiêu đề)
-  if (prev !== undefined && prev.trim()) return false;
+  // Đứng riêng: đầu văn bản, sau dòng trống, hoặc ngay sau một ý (người gõ tay hay viết "Kết luận:" sát ý cuối của mục trước).
+  // Dòng nối tiếp của một đoạn văn thì không phải tiêu đề.
+  const afterBreak = prev === undefined || !prev.trim();
+  const afterItem = prev !== undefined && LIST_LINE.test(prev);
+  if (!afterBreak && !afterItem) return false;
   if (text.split(/\s+/).length > HEADING_MAX_WORDS) return false;
   if (/[:：]$/.test(text)) return true;
-  // Agent đôi khi bỏ dấu hai chấm ("Kết luận" rồi xuống dòng là các ý): dòng ngắn không có dấu câu cuối, ngay trên một ý
-  return !/[.!?…;,]$/.test(text) && next !== undefined && LIST_LINE.test(next);
+  // Agent đôi khi bỏ dấu hai chấm ("Kết luận" rồi xuống dòng là các ý): dòng ngắn không có dấu câu cuối, ngay trên một ý. Chỉ
+  // nhận khi đứng sau dòng trống: sát dưới một ý thì đó có thể là phần ý bị gõ xuống dòng
+  return afterBreak && !/[.!?…;,]$/.test(text) && next !== undefined && LIST_LINE.test(next);
 }
 
 export function minutesToReplyMarkup(text: string): string {
