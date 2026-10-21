@@ -1233,8 +1233,8 @@ function InlineLinkEl({ attributes, children, element }: any) {
 /**
  * Hiệu ứng mở của menu nổi (Floating UI): chỉ chuyển `opacity` và `scale`. Floating UI dựng menu ở (0,0) rồi mới đặt vào chỗ neo;
  * `duration-*` không kèm `transition-[…]` là chuyển mọi thuộc tính (mặc định `all`), nên menu trượt từ góc trên trái màn hình tới
- * chỗ neo (người dùng quay màn hình menu "/" ngày 21/10/2026). `animate-in`/`zoom-in-95` không có tác dụng vì `tw-animate-css` chưa
- * được import. Đi kèm `useFloating({ transform: false })` (đặt bằng top/left; để transform thì `scale` co cả khoảng dịch, menu
+ * chỗ neo (người dùng quay màn hình menu "/" ngày 21/10/2026). Không dùng `animate-in zoom-in-*` (keyframe ghi `transform`, kèm
+ * `duration-*` trần). Đi kèm `useFloating({ transform: false })` (đặt bằng top/left; để transform thì `scale` co cả khoảng dịch, menu
  * vẫn trượt vài chục px) và `transformOrigin: floatingOrigin(placement)` để menu phóng to từ phía chạm chỗ neo.
  */
 const FLOATING_ENTER_CLASS =
@@ -2207,8 +2207,9 @@ function SlashMenu({
 
   if (!isOpen || typeof document === "undefined") return null;
 
-  // Khung ngoài nhận maxHeight (middleware `size`) và bo góc; danh sách cuộn trong khung riêng để thanh cuộn không đè lên góc bo,
-  // chân menu (mô tả mục đang chọn) luôn hiện.
+  // Khung ngoài nhận maxHeight (middleware `size`) và bo góc; danh sách cuộn trong khung riêng, chân menu (mô tả mục đang chọn)
+  // luôn hiện. Khung cuộn cách mép 4px (`m-1`, không `p-1`) để thanh cuộn nằm trong thẻ, không dính mép phải và góc bo (người
+  // dùng chụp thanh cuộn "lệch ra ngoài" 21/10/2026).
   return createPortal(
     <div
       ref={refs.setFloating}
@@ -2217,7 +2218,7 @@ function SlashMenu({
       onMouseDown={(e) => e.preventDefault()}
       className={cn(MENU_POPUP_CLASS, "flex w-64 max-w-[calc(100vw-28px)] flex-col overflow-hidden p-0", FLOATING_ENTER_CLASS)}
     >
-      <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
+      <div className="thin-scrollbar m-1 min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div ref={menuListRef} id={listboxId} role="listbox" aria-label="Chèn khối nội dung">
           {filteredOptions.map((opt, idx) => {
             const Icon = opt.icon;

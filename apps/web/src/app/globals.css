@@ -65,6 +65,9 @@
 }
 
 @import "tailwindcss";
+/* Lớp chuyển động animate-in/out, fade-in-*, zoom-in-*, slide-in-from-* (khai báo ở apps/web/package.json; trước 21/10/2026 chưa
+   import nên các lớp này không chạy). Giảm chuyển động: xem khối prefers-reduced-motion bên dưới, chỉ còn opacity. */
+@import "tw-animate-css";
 /* Class Tailwind trong mã dùng chung (icon, cấu hình hiển thị nhiệm vụ) nằm ngoài thư mục app */
 @source "../../../../packages/shared/src";
 
@@ -535,6 +538,9 @@
 .overflow-y-auto:not(.no-scrollbar):not(.scrollbar-none)::-webkit-scrollbar-track,
 .overflow-auto:not(.no-scrollbar):not(.scrollbar-none)::-webkit-scrollbar-track {
   background: transparent;
+  /* Thanh cuộn dọc chừa đầu và cuối: khung cuộn bo góc (popover, menu, bộ lọc) không để thanh cuộn chạm phần góc bo, trông như
+     lòi ra ngoài thẻ (người dùng chụp menu "/" 21/10/2026). */
+  margin-block: 6px;
 }
 .thin-scrollbar::-webkit-scrollbar-thumb,
 .overflow-x-auto:not(.no-scrollbar):not(.scrollbar-none)::-webkit-scrollbar-thumb,

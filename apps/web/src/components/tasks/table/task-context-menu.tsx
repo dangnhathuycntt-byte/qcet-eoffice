@@ -521,7 +521,7 @@ export function TaskContextMenu({
       ref={menuRef}
       aria-label="Thao tác nhanh nhiệm vụ"
       className={cn(
-        "w-60 select-none rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu animate-in fade-in-0 zoom-in-95 duration-100",
+        "w-60 select-none rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu origin-top-left animate-in fade-in-0 zoom-in-95 duration-100",
         SHEET_POPUP_CLASS,
         "max-md:animate-none max-md:[&_[data-submenu]>[aria-haspopup=true][aria-expanded=true]]:hidden max-md:[&_[data-slot=menu-submenu-title]]:hidden",
         activeSubmenu && SUBMENU_ONLY_ON_MOBILE[activeSubmenu]

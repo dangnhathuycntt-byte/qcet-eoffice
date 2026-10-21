@@ -230,7 +230,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
               style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
               role="listbox"
               aria-label={itemLabel === "nhiệm vụ" ? "Chọn số lượng công việc mỗi trang" : `Chọn số lượng ${itemLabel} mỗi trang`}
-              className="min-w-[124px] rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg shadow-black/10 animate-in fade-in-0 zoom-in-95 duration-100 text-popover-foreground"
+              className="min-w-[124px] rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg shadow-black/10 origin-bottom-left animate-in fade-in-0 zoom-in-95 duration-100 text-popover-foreground"
             >
               <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border/40 mb-1">
                 Kích thước trang

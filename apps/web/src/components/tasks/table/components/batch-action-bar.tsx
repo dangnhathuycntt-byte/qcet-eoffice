@@ -145,7 +145,7 @@ function BulkMenu({
       <MenuPortal>
         <MenuPositioner side="top" align="start" sideOffset={8} className="z-50">
           <MenuPopup
-            className="min-w-56 rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none animate-in fade-in-0 zoom-in-95 duration-100"
+            className="min-w-56 rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none origin-bottom-left animate-in fade-in-0 zoom-in-95 duration-100"
             onKeyDown={(e) => {
               if (onDigit && /^[0-9]$/.test(e.key) && onDigit(Number(e.key))) {
                 e.preventDefault();

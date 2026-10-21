@@ -2,7 +2,7 @@
  * Menu nổi đặt bằng Floating UI không được chuyển động vị trí. Floating UI dựng menu ở (0,0) rồi mới đặt vào chỗ neo; lớp
  * `duration-*` không kèm `transition-[…]` chuyển mọi thuộc tính (mặc định `all`), nên menu trượt từ góc trên trái màn hình tới
  * chỗ neo (người dùng quay màn hình menu "/" ở ô ghi nhanh /notes ngày 21/10/2026). Hiệu ứng mở dùng `FLOATING_ENTER_CLASS`
- * (chỉ `opacity` và `scale`) cùng `transform: false`. `animate-in`/`zoom-in-*` không có tác dụng: `tw-animate-css` chưa được import.
+ * (chỉ `opacity` và `scale`) cùng `transform: false`, không dùng `animate-in`/`zoom-in-*` (keyframe ghi `transform`).
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
