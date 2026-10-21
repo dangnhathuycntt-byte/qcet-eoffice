@@ -2,10 +2,9 @@
 
 import type { SelectionGroupPosition } from "@/lib/selection-group";
 import * as React from "react";
-import { Check, Ellipsis } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { Button } from "@/components/ui/button";
+import { TableCell, TableEmptyValue, TableRow, TableRowActions, TableRowSelector } from "@/components/ui/table";
 import type { SchoolTask, TaskStatus } from "@qcet/contracts/types/dashboard";
 import type { TableDensity, TableColumnVisibility } from "../types";
 import {
@@ -127,18 +126,8 @@ export function parseLeadAssignee(
   };
 }
 
-/** Ô chưa có dữ liệu: dấu gạch mờ cho mắt, "Chưa có" cho trình đọc màn hình */
-function EmptyCell() {
-  return (
-    <span className="text-xs text-muted-foreground/50">
-      <span aria-hidden="true">–</span>
-      <span className="sr-only">Chưa có</span>
-    </span>
-  );
-}
-
-/** Ô ngày dùng chung cho cột Ngày tạo và Hạn (cùng padding, căn trái) */
-const TASK_DATE_CELL_CLASS = "align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-1.5 text-left";
+/** Ô ngày (Bắt đầu, Hạn, Ngày tạo) và Trạng thái: đệm phải rộng như cột cuối, căn trái */
+const TASK_DATE_CELL_CLASS = "whitespace-nowrap pl-2.5 pr-4 sm:pr-5";
 
 /** Hiển thị ngày dùng chung cho cột Ngày tạo và Hạn: cùng cỡ chữ, số căn đều */
 function TaskDateValue({
@@ -309,28 +298,8 @@ export const TaskRow = React.memo(function TaskRow({
       ? "Đang thực hiện"
       : "Mới";
 
-  const rowHeightClass = "h-12 min-h-[48px]";
-  // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
-  const radiusTop = "[&>td:first-child]:rounded-tl-md [&>td:last-child]:rounded-tr-md";
-  const radiusBottom = "[&>td:first-child]:rounded-bl-md [&>td:last-child]:rounded-br-md";
-  // Hàng chưa chọn chỉ bo góc khi có nền riêng (hover, đang xem, menu chuột phải). Nếu bo sẵn, lúc
-  // bỏ chọn hàng loạt nền xanh còn đang mờ dần sẽ lộ các góc bo rời rạc giữa các hàng liền nhau.
-  const hoverRadiusClass = "hover:[&>td:first-child]:rounded-l-md hover:[&>td:last-child]:rounded-r-md";
-  const hasStandaloneBg = isPreviewing || isActive || isContextMenuTarget || isExpanded;
-  const selectionRadiusClass = !isSelected
-    ? hasStandaloneBg
-      ? cn(radiusTop, radiusBottom)
-      : hoverRadiusClass
-    : selectionGroupPosition === "only" || selectionGroupPosition === null
-    ? cn(radiusTop, radiusBottom)
-    : selectionGroupPosition === "first"
-    ? radiusTop
-    : selectionGroupPosition === "last"
-    ? radiusBottom
-    : "";
-
   return (
-    <tr
+    <TableRow
       role="row"
       tabIndex={0}
       onClick={handleRowClick}
@@ -340,69 +309,26 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       data-slot="task-row"
       aria-selected={isSelected}
+      interactive
+      selected={isSelected}
+      current={isActive}
+      previewing={isPreviewing}
+      menuTarget={isContextMenuTarget}
+      groupPosition={selectionGroupPosition}
       className={cn(
-        // Nền và bo góc đặt trên <td> (<tr> trong bảng border-collapse không bo được;
-        // pseudo-element trong <tr> thì bị coi là một ô thừa và làm lệch cột)
-        "group cursor-pointer select-none text-foreground outline-none [&>td]:transition-colors",
-        rowHeightClass,
-        selectionRadiusClass,
-        // State 1: Hover on unselected row
-        !isSelected && "hover:[&>td]:bg-muted/40",
-        // State 2: Selected row
-        isSelected && "[&>td]:bg-selected/80 hover:[&>td]:bg-selected",
-        // State 3: Focus (WCAG 2.2 AA Focus visible)
-        "focus-visible:[--row-ring-w:2px] focus-visible:[--row-ring-c:var(--color-primary)]",
-        // State 4: Previewing (Peek preview)
-        isPreviewing && "[&>td]:bg-selected/70",
-        // State 5: Opened / Active detail
-        isActive && !isPreviewing && !isSelected && "[&>td]:bg-selected",
-        // State 6: Đích của menu chuột phải (giữ bôi nền khi menu mở, vì con trỏ đã rời dòng)
-        isContextMenuTarget && !isSelected && !isPreviewing && "[&>td]:bg-accent",
-        isExpanded && "[&>td]:bg-muted/20",
+        isExpanded && !isSelected && !isPreviewing && !isActive && !isContextMenuTarget && "[--row-bg:color-mix(in_oklab,var(--color-muted)_20%,var(--color-card))]",
         className
       )}
     >
       {/* 1. Tên nhiệm vụ Column: Selector + Status Circle + Title + Code + Subtask Count */}
-      <td className={cn("relative align-middle pl-4 sm:pl-5 pr-11 py-1.5", TASK_COLUMN_CLASS.title)}>
+      <TableCell className={cn("relative pr-11", TASK_COLUMN_CLASS.title)}>
         <div className="flex items-center gap-2 min-w-0">
-          {/* Integrated leading selector */}
-          <div
-            role="checkbox"
-            aria-checked={isSelected}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === " " || e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
-              }
-            }}
-            className="size-7 sm:size-8 -my-2 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
-            onClick={handleCheckboxClick}
+          <TableRowSelector
+            checked={isSelected}
+            onToggle={(e) => onToggleSelect?.(task.id, e as unknown as React.MouseEvent)}
+            aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
             title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
-          >
-            <input
-              type="checkbox"
-              checked={isSelected}
-              readOnly
-              className="sr-only"
-              aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
-              tabIndex={-1}
-            />
-            {isSelected ? (
-              <div
-                className="size-3.5 rounded-[3px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-[opacity,transform] active:scale-[0.98] pointer-events-none"
-                aria-hidden="true"
-              >
-                <Check className="size-2.5 text-primary-foreground" />
-              </div>
-            ) : (
-              <div
-                className="size-3.5 rounded-[3px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-[opacity,transform,border-color,background-color] duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
-                aria-hidden="true"
-              />
-            )}
-          </div>
+          />
 
           <div className="flex flex-col flex-1 min-w-0 gap-0.5">
             <div className="flex items-center gap-2 min-w-0">
@@ -473,38 +399,27 @@ export const TaskRow = React.memo(function TaskRow({
             </div>
           </div>
         </div>
-        {/* Nút thao tác: hiện khi rê chuột / focus dòng; màn cảm ứng luôn hiện vì không có hover */}
         {onContextMenu && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 aria-expanded:opacity-100"
-            aria-label={`Thao tác với nhiệm vụ ${task.title}`}
-            aria-haspopup="menu"
-            aria-expanded={isContextMenuTarget}
-            onClick={(e) => {
-              e.stopPropagation();
-              onContextMenu(task, e);
-            }}
-            onKeyDown={(e) => e.stopPropagation()}
-          >
-            <Ellipsis />
-          </Button>
+          <TableRowActions
+            label={`Thao tác với nhiệm vụ ${task.title}`}
+            open={isContextMenuTarget}
+            onOpen={(e) => onContextMenu(task, e)}
+          />
         )}
-      </td>
+      </TableCell>
 
       {/* 3. Ưu tiên Column */}
       {visibleColumns?.priority !== false && (
-        <td className={cn("align-middle whitespace-nowrap px-3 py-1.5", TASK_COLUMN_CLASS.priority)}>
+        <TableCell className={cn("whitespace-nowrap", TASK_COLUMN_CLASS.priority)}>
           <div className="flex items-center">
             <PrioritySignalBars priority={task.priority} />
           </div>
-        </td>
+        </TableCell>
       )}
 
       {/* 4. Phụ trách Column: Avatar + Name */}
       {visibleColumns?.leadAssignee !== false && (
-        <td className={cn("align-middle px-3 py-1.5", TASK_COLUMN_CLASS.leadAssignee)}>
+        <TableCell className={TASK_COLUMN_CLASS.leadAssignee}>
           <div className="flex items-center gap-2 min-w-0" title={driInfo.primaryName || undefined}>
             {driInfo.primaryName ? (
               <>
@@ -518,15 +433,15 @@ export const TaskRow = React.memo(function TaskRow({
                 </span>
               </>
             ) : (
-              <EmptyCell />
+              <TableEmptyValue />
             )}
           </div>
-        </td>
+        </TableCell>
       )}
 
       {/* 4b. Phối hợp Column */}
       {visibleColumns?.coAssignees === true && (
-        <td className={cn("align-middle whitespace-nowrap px-3 py-1.5", TASK_COLUMN_CLASS.coAssignees)}>
+        <TableCell className={cn("whitespace-nowrap", TASK_COLUMN_CLASS.coAssignees)}>
           {coAssigneesList.length > 0 && (
             <div className="flex items-center -space-x-1" title={coAssigneesList.join(", ")}>
               {coAssigneeEntries.slice(0, 3).map((entry) => (
@@ -539,24 +454,24 @@ export const TaskRow = React.memo(function TaskRow({
               )}
             </div>
           )}
-        </td>
+        </TableCell>
       )}
 
       {/* 2. Đơn vị Column */}
       {visibleColumns?.department !== false && (
-        <td className={cn("align-middle px-3 py-1.5", TASK_COLUMN_CLASS.department)}>
+        <TableCell className={TASK_COLUMN_CLASS.department}>
           <span
             className="text-xs leading-snug text-muted-foreground line-clamp-2 break-words"
             title={departmentName || undefined}
           >
             {departmentName || "-"}
           </span>
-        </td>
+        </TableCell>
       )}
 
       {/* Bắt đầu Column */}
       {visibleColumns?.startDate === true && (
-        <td className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.startDate)}>
+        <TableCell className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.startDate)}>
           {task.startDate ? (
             <TaskDateValue
               value={task.startDate}
@@ -564,14 +479,14 @@ export const TaskRow = React.memo(function TaskRow({
               title={formatTableDate(task.startDate)}
             />
           ) : (
-            <EmptyCell />
+            <TableEmptyValue />
           )}
-        </td>
+        </TableCell>
       )}
 
       {/* Hạn Column */}
       {visibleColumns?.dueDate !== false && (
-        <td className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.dueDate, "relative group/due")}>
+        <TableCell className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.dueDate, "relative group/due")}>
           <div>
             {task.dueDate ? (
               <TaskDateValue
@@ -591,15 +506,15 @@ export const TaskRow = React.memo(function TaskRow({
                 srText={dueHint}
               />
             ) : (
-              <EmptyCell />
+              <TableEmptyValue />
             )}
           </div>
-        </td>
+        </TableCell>
       )}
 
       {/* Ngày tạo Column (đứng sau Hạn) */}
       {visibleColumns?.createdAt === true && (
-        <td className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.createdAt)}>
+        <TableCell className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.createdAt)}>
           {task.createdAt ? (
             <TaskDateValue
               value={task.createdAt}
@@ -607,14 +522,14 @@ export const TaskRow = React.memo(function TaskRow({
               title={formatTableDate(task.createdAt)}
             />
           ) : (
-            <EmptyCell />
+            <TableEmptyValue />
           )}
-        </td>
+        </TableCell>
       )}
 
       {/* Trạng thái Column */}
       {visibleColumns?.status === true && (
-        <td className={cn("align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-1.5", TASK_COLUMN_CLASS.status)}>
+        <TableCell className={cn(TASK_DATE_CELL_CLASS, TASK_COLUMN_CLASS.status)}>
           <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
             {statusLabel === "Trễ hạn" ? (
               <TaskIconStatusOverdue className="size-4 shrink-0 text-destructive" />
@@ -623,8 +538,8 @@ export const TaskRow = React.memo(function TaskRow({
             )}
             <span className={cn("truncate", statusLabel === "Trễ hạn" && "font-semibold text-destructive")}>{statusLabel}</span>
           </span>
-        </td>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 });

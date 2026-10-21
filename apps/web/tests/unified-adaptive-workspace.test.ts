@@ -413,7 +413,7 @@ describe("Task 4: Full-Width Task Canvas & Adaptive Detail Surface", () => {
 
       // Verify selected row is active
       assert.ok(
-        html.includes("td]:bg-selected"),
+        html.includes('aria-current="true"') && html.includes("[--row-bg:var(--color-selected)]"),
         "Selected task row must have active styling"
       );
     });

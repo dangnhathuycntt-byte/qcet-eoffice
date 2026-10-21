@@ -33,17 +33,22 @@ function render(props: Record<string, unknown> = {}) {
 }
 
 describe("TaskRow: nền nổi bật khi là đích của menu chuột phải", () => {
-  it("giữ nền bg-accent khi isContextMenuTarget=true", () => {
-    assert.ok(render({ isContextMenuTarget: true }).includes("bg-accent"));
+  // Nền hàng đặt bằng --row-bg của bảng dùng chung (ui/table), không còn lớp bg-* trên từng ô
+  const ACCENT_BG = "[--row-bg:var(--color-accent)]";
+
+  it("giữ nền accent khi isContextMenuTarget=true", () => {
+    const html = render({ isContextMenuTarget: true });
+    assert.ok(html.includes("data-menu-target") && html.includes(ACCENT_BG));
   });
 
-  it("không có nền bg-accent mặc định khi không phải đích menu", () => {
-    assert.ok(!render({ isContextMenuTarget: false }).includes(" bg-accent"));
+  it("không có nền accent mặc định khi không phải đích menu", () => {
+    const html = render({ isContextMenuTarget: false });
+    assert.ok(!html.includes("data-menu-target") && !html.includes(ACCENT_BG));
   });
 
   it("dòng đang chọn giữ nền chọn, không bị đè bởi nền menu", () => {
     const html = render({ isContextMenuTarget: true, isSelected: true });
-    assert.ok(html.includes("bg-selected"));
-    assert.ok(!html.includes(" bg-accent "));
+    assert.ok(html.includes("var(--color-selected)"));
+    assert.ok(!html.includes(ACCENT_BG));
   });
 });

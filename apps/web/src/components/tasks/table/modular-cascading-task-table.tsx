@@ -56,6 +56,7 @@ import { useTaskUrlSync } from "./hooks/use-task-url-sync";
 import { useTaskKeyboardNav } from "./hooks/use-task-keyboard-nav";
 
 import { TaskTableHeader } from "./components/task-table-header";
+import { Table } from "@/components/ui/table";
 import { TaskRow } from "./components/task-row";
 import { TaskContextMenu } from "./task-context-menu";
 import { TaskPeekPreviewModal } from "@/components/tasks/preview/task-peek-preview-modal";
@@ -1518,8 +1519,7 @@ export function ModularCascadingTaskTable({
         <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
           {/* Desktop Table View (>= 768px) — Clean borderless table surface (Linear-style) */}
           <div className="hidden md:block">
-            <div className="@container overflow-x-clip thin-scrollbar">
-              <table className="w-full text-left border-collapse table-fixed">
+            <Table density="two-line" className="table-fixed" containerClassName="@container overflow-x-clip thin-scrollbar">
                 <colgroup>
                   <col className={TASK_COLUMN_CLASS.title} />
                   {effectiveVisibleColumns.priority !== false && <col className={TASK_COLUMN_CLASS.priority} />}
@@ -1686,8 +1686,7 @@ export function ModularCascadingTaskTable({
                     })
                   )}
                 </tbody>
-              </table>
-            </div>
+            </Table>
           </div>
 
           {/* Mobile Card Feed View (< 768px) */}

@@ -3,10 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarX2, MoreHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarX2 } from "lucide-react";
 import { MEETING_BUCKETS, MEETING_SORT_FIELDS, type MeetingBucket, type MeetingSortField } from "@qcet/contracts/meeting";
 import { getTodayIctDate } from "@qcet/shared/lib/academic-calendar";
-import { formatDisplayDate, formatTime, formatWeekday } from "@qcet/shared/lib/format/date";
+import { formatCompactDate, formatDisplayDate, formatTime, formatWeekday } from "@qcet/shared/lib/format/date";
 import { TaskIconDisplay, TaskIconExport, TaskIconLink } from "@qcet/shared/lib/icons/task-icons";
 import { daysUntil } from "@/lib/format/relative-date";
 import { downloadCsv, toCsv } from "@/lib/csv";
@@ -48,12 +48,32 @@ import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-di
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmptyValue,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableRowActions,
+  TableRowSelector,
+  TableSortButton,
+  tableAriaSort,
+  type TableSortDirection,
+} from "@/components/ui/table";
+import type { SelectionGroupPosition } from "@/lib/selection-group";
+import {
+  TaskIconDue,
+  TaskIconStatusCancelled,
+  TaskIconStatusDone,
+  TaskIconStatusInProgress,
+  TaskIconStatusNew,
+  TaskIconStatusReview,
+} from "@qcet/shared/lib/icons/task-icons";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Pressable } from "@/components/ui/pressable";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -95,6 +115,8 @@ function meetingWhen(row: MeetingRow) {
   return {
     day: near ?? formatDisplayDate(row.startTime),
     detail: near ? meetingTimeRangeLabel(row) : `${formatWeekday(row.startTime)} · ${meetingTimeRangeLabel(row)}`,
+    /** Ô một dòng: `dd/MM` như cột Hạn của Nhiệm vụ (năm, thứ và khoảng giờ ở tooltip). */
+    shortDay: near ?? formatCompactDate(row.startTime),
     start: formatTime(row.startTime, ""),
     fullDate: `${formatWeekday(row.startTime)}, ${formatDisplayDate(row.startTime)}`,
     today: diff === 0,
@@ -480,28 +502,29 @@ export function MeetingListView() {
         />
       ) : (
         <>
-          <Table density="two-line" className="table-fixed" containerClassName="md:overflow-x-visible">
+          <Table density="two-line" className="table-fixed" containerClassName="@container md:overflow-x-visible">
             <TableHeader className="md:sticky md:top-[88px] md:z-10">
-              <TableRow className="h-8 border-b-0">
-                <TableHead className="h-8 w-[48%] md:w-[38%]" aria-sort={ariaSort(sort, "title")}>
+              <TableRow>
+                <TableHead className={COLUMN_WIDTH.title} aria-sort={tableAriaSort(sortDirection(sort, "title"))}>
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      className="size-3.5 max-md:hidden"
+                    <TableRowSelector
+                      className="-my-1.5 max-md:hidden"
                       checked={selection.allSelected}
                       indeterminate={selection.someSelected}
-                      onChange={selection.toggleAll}
+                      onToggle={selection.toggleAll}
                       aria-label={selection.allSelected ? "Bỏ chọn tất cả cuộc họp đang hiện" : "Chọn tất cả cuộc họp đang hiện"}
-                      title={selection.allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                      title={selection.allSelected ? "Bỏ chọn tất cả (X)" : "Chọn tất cả (X)"}
                     />
-                    <SortHeader label="Cuộc họp" field="title" sort={sort} onSort={toggleSort} />
+                    <TableSortButton label="Cuộc họp" direction={sortDirection(sort, "title")} onSort={() => toggleSort("title")} />
                   </div>
                 </TableHead>
-                <TableHead className="h-8 w-[52%] md:w-[16%]" aria-sort={ariaSort(sort, "startTime")}>
-                  <SortHeader label="Thời gian" field="startTime" sort={sort} onSort={toggleSort} />
+                {columns.location ? <TableHead className={COLUMN_WIDTH.location}>Địa điểm</TableHead> : null}
+                <TableHead className={COLUMN_WIDTH.time} aria-sort={tableAriaSort(sortDirection(sort, "startTime"))}>
+                  <TableSortButton label="Thời gian" direction={sortDirection(sort, "startTime")} onSort={() => toggleSort("startTime")} />
                 </TableHead>
-                {showOrganizer ? <TableHead className="hidden h-8 w-[22%] md:table-cell">Người tổ chức</TableHead> : null}
-                {showParticipants ? <TableHead className="hidden h-8 w-[10%] lg:table-cell">Thành phần</TableHead> : null}
-                {showStatus ? <TableHead className="hidden h-8 md:table-cell md:w-[24%] lg:w-[14%]">Trạng thái</TableHead> : null}
+                {showOrganizer ? <TableHead className={COLUMN_WIDTH.organizer}>Người tổ chức</TableHead> : null}
+                {showParticipants ? <TableHead className={COLUMN_WIDTH.participants}>Thành phần</TableHead> : null}
+                {showStatus ? <TableHead className={COLUMN_WIDTH.status}>Trạng thái</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -511,6 +534,7 @@ export function MeetingListView() {
                   row={row}
                   columns={columns}
                   selected={selection.selected.has(row.id)}
+                  groupPosition={selection.groupPositions.get(row.id) ?? null}
                   menuTarget={menu.open && menu.meeting?.id === row.id}
                   isPhone={isPhone}
                   onToggle={selection.toggle}
@@ -602,41 +626,40 @@ export function MeetingListView() {
   );
 }
 
-function ariaSort(sort: MeetingDisplayPrefs["sort"], field: MeetingSortField) {
-  if (sort?.field !== field) return "none" as const;
-  return sort.order === "asc" ? ("ascending" as const) : ("descending" as const);
-}
+/**
+ * Bề rộng cột như bảng Nhiệm vụ (`TASK_COLUMN_CLASS`; người dùng: bảng Nhiệm vụ "gọn đẹp", bảng này "dàn trải quá"
+ * 21/10/2026): cột thuộc tính hẹp, cố định, dồn về bên phải; cột tên lấy phần còn lại. Khung bảng hẹp thì bớt cột theo bề
+ * rộng khung (container query): dưới 560px như điện thoại (ô Thời gian hai dòng kèm trạng thái), địa điểm hết chỗ thì nằm
+ * dưới tên.
+ */
+const COLUMN_WIDTH = {
+  title: "@max-[560px]:w-[48%]",
+  location: "w-[152px] @max-[1040px]:hidden",
+  time: "w-[148px] @max-[560px]:w-[52%]",
+  organizer: "w-[176px] @max-[760px]:hidden",
+  participants: "w-[96px] @max-[940px]:hidden",
+  status: "w-[184px] @max-[560px]:hidden",
+} as const;
 
-/** Tiêu đề cột bấm để sắp xếp: bấm lần đầu theo chiều mặc định của cột, bấm lại đổi chiều. */
-function SortHeader({
-  label,
-  field,
-  sort,
-  onSort,
-}: {
-  label: string;
-  field: MeetingSortField;
-  sort: MeetingDisplayPrefs["sort"];
-  onSort: (field: MeetingSortField) => void;
-}) {
-  const active = sort?.field === field;
-  const Arrow = active ? (sort.order === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
-  return (
-    <Pressable
-      onClick={() => onSort(field)}
-      title={active ? (sort.order === "asc" ? "Đang tăng dần, bấm để đổi chiều" : "Đang giảm dần, bấm để đổi chiều") : `Sắp xếp theo ${label.toLowerCase()}`}
-      className={cn("group/sort -mx-1 inline-flex h-6 items-center gap-1 rounded-md px-1 hover:text-foreground", active && "text-foreground")}
-    >
-      {label}
-      <Arrow aria-hidden className={cn("size-3", !active && "opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60")} />
-    </Pressable>
-  );
+/** Icon trạng thái lấy từ bộ icon trạng thái của Nhiệm vụ, theo bậc của cuộc họp: dự thảo → đã mời → chờ biên bản → xong. */
+const MEETING_STATUS_ICON: Record<string, (props: { className?: string }) => React.ReactElement> = {
+  DRAFT_AGENDA: TaskIconStatusNew,
+  INVITED: TaskIconStatusInProgress,
+  HELD: TaskIconStatusReview,
+  MINUTES_DRAFT: TaskIconStatusReview,
+  MINUTES_CONFIRMED: TaskIconStatusDone,
+  CANCELLED: TaskIconStatusCancelled,
+};
+
+function sortDirection(sort: MeetingDisplayPrefs["sort"], field: MeetingSortField): TableSortDirection {
+  return sort?.field === field ? sort.order : null;
 }
 
 interface MeetingListRowProps {
   row: MeetingRow;
   columns: MeetingDisplayPrefs["columns"];
   selected: boolean;
+  groupPosition: SelectionGroupPosition | null;
   menuTarget: boolean;
   isPhone: boolean;
   onToggle: (id: string, range?: boolean) => void;
@@ -649,8 +672,9 @@ interface MeetingListRowProps {
  * mở menu thao tác. Chuột: bấm mở, chuột phải mở menu tại con trỏ, ô chọn và "⋯" hiện khi rê. Điện thoại: nhấn giữ mở menu
  * dạng bottom sheet (không có ô chọn).
  */
-const MeetingListRow = React.memo(function MeetingListRow({ row, columns, selected, menuTarget, isPhone, onToggle, onOpen, onMenu }: MeetingListRowProps) {
+const MeetingListRow = React.memo(function MeetingListRow({ row, columns, selected, groupPosition, menuTarget, isPhone, onToggle, onOpen, onMenu }: MeetingListRowProps) {
   const status = meetingStatus(row.status);
+  const StatusIcon = MEETING_STATUS_ICON[row.status] ?? TaskIconStatusNew;
   const when = meetingWhen(row);
   const href = meetingPath(row.id);
   const longPress = useLongPress<HTMLTableRowElement>(isPhone ? (anchor) => onMenu(row, anchor) : undefined);
@@ -679,14 +703,10 @@ const MeetingListRow = React.memo(function MeetingListRow({ row, columns, select
     <TableRow
       interactive
       selected={selected}
+      groupPosition={groupPosition}
+      menuTarget={menuTarget}
       tabIndex={0}
       data-meeting-id={row.id}
-      className={cn(
-        // Tiêu điểm bàn phím: vạch 2px màu chính ở mép trái (thấy cả khi hàng đang chọn), hàng chưa chọn thì thêm nền
-        "group border-b-0 outline-none focus-visible:[&>td:first-child]:shadow-[inset_2px_0_0_0_var(--color-primary),1px_0_0_0_var(--row-bg)]",
-        !selected && "focus-visible:[--row-bg:var(--color-accent)]",
-        menuTarget && !selected && "[--row-bg:var(--color-accent)]"
-      )}
       onClick={(event) => {
         if (longPress.consumeClick()) return;
         // Shift/Ctrl/Cmd+bấm trên hàng là chọn (như bảng Nhiệm vụ), không mở trang
@@ -707,14 +727,13 @@ const MeetingListRow = React.memo(function MeetingListRow({ row, columns, select
       }
       {...longPress.handlers}
     >
-      <TableCell className="relative md:pr-9">
+      <TableCell className="relative md:pr-11">
         <div className="flex min-w-0 items-center gap-2">
-          <Checkbox
-            className={cn("size-3.5 max-md:hidden", !selected && "opacity-60 group-hover:opacity-100")}
+          <TableRowSelector
+            className="max-md:hidden"
             checked={selected}
             tabIndex={-1}
-            onClick={(event) => event.stopPropagation()}
-            onChange={(event) => onToggle(row.id, (event.nativeEvent as MouseEvent).shiftKey)}
+            onToggle={(event) => onToggle(row.id, event.shiftKey)}
             aria-label={selected ? `Bỏ chọn cuộc họp ${row.title}` : `Chọn cuộc họp ${row.title}`}
             title={selected ? "Bỏ chọn (X)" : "Chọn (X)"}
           />
@@ -723,69 +742,82 @@ const MeetingListRow = React.memo(function MeetingListRow({ row, columns, select
               href={href}
               tabIndex={-1}
               onClick={(event) => event.stopPropagation()}
-              className="truncate font-medium outline-none hover:underline"
+              className="truncate font-medium outline-none transition-colors group-hover:text-primary"
               title={row.title}
             >
               {row.title}
             </Link>
-            {/* Không ghi "Chưa có địa điểm" lặp ở mọi hàng: chưa có thì tên đứng một mình */}
-            {columns.location && row.location ? <span className="truncate text-xs text-muted-foreground">{row.location}</span> : null}
+            {/* Khung hẹp chưa có cột Địa điểm: ghi dưới tên. Không ghi "Chưa có địa điểm" lặp ở mọi hàng */}
+            {columns.location && row.location ? <span className="truncate text-xs text-muted-foreground @min-[1040px]:hidden">{row.location}</span> : null}
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          tabIndex={-1}
-          aria-label={`Thao tác cuộc họp ${row.title}`}
-          title="Thao tác (chuột phải)"
-          className={cn(
-            "absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 max-md:hidden",
-            menuTarget && "bg-accent opacity-100"
-          )}
-          onClick={(event) => {
-            event.stopPropagation();
-            onMenu(row, event.currentTarget);
-          }}
-        >
-          <MoreHorizontal />
-        </Button>
+        {isPhone ? null : (
+          <TableRowActions
+            label={`Thao tác cuộc họp ${row.title}`}
+            open={menuTarget}
+            tabIndex={-1}
+            onOpen={(event) => onMenu(row, event.currentTarget)}
+          />
+        )}
       </TableCell>
+      {columns.location ? (
+        <TableCell className={COLUMN_WIDTH.location}>
+          {row.location ? (
+            <span className="block truncate text-xs text-muted-foreground" title={row.location}>
+              {row.location}
+            </span>
+          ) : (
+            <TableEmptyValue />
+          )}
+        </TableCell>
+      ) : null}
       <TableCell className="whitespace-nowrap tabular-nums">
-        <div className="flex flex-col">
+        {/* Máy tính: một dòng như cột Hạn của Nhiệm vụ (icon lịch, ngày · giờ), thứ trong tuần ở tooltip */}
+        <span className="flex min-w-0 items-center gap-2 text-xs @max-[560px]:hidden" title={`${when.fullDate} · ${meetingTimeRangeLabel(row)}`}>
+          <TaskIconDue aria-hidden className={cn("size-4 shrink-0", when.today ? "text-foreground" : "text-muted-foreground/70")} />
+          <span className={cn("truncate", when.today ? "font-medium text-foreground" : "text-muted-foreground")}>
+            {when.shortDay} · {when.start}
+          </span>
+        </span>
+        {/* Khung dưới 560px không có cột Trạng thái: ngày ở dòng trên, giờ bắt đầu và trạng thái ở dòng dưới, màu như cột đó. Chỉ giờ
+            bắt đầu thôi (cả khoảng giờ ở tooltip và trang chi tiết) để nhãn không bị cắt thành "Dự th…" (ảnh 390px 21/10/2026) */}
+        <div className="flex flex-col @min-[560px]:hidden">
           <span className={cn("truncate", when.today && "font-medium")} title={when.fullDate}>
             {when.day}
           </span>
           <span className="truncate text-xs text-muted-foreground" title={`${meetingTimeRangeLabel(row)} · ${status.label}`}>
-            <span className="max-md:hidden">{when.detail}</span>
-            {/* Điện thoại không có cột Trạng thái: ghi kèm dưới giờ, màu như cột đó. Chỉ giờ bắt đầu thôi (cả
-                khoảng giờ ở tooltip và trang chi tiết) để nhãn không bị cắt thành "Dự th…" (ảnh 390px 21/10/2026) */}
-            <span className="md:hidden">{when.start}</span>
-            <span className={cn("md:hidden", MEETING_STATUS_TONE_CLASS[status.tone])}> · {status.label}</span>
+            {when.start}
+            <span className={MEETING_STATUS_TONE_CLASS[status.tone]}> · {status.label}</span>
           </span>
         </div>
       </TableCell>
       {columns.organizer ? (
-        <TableCell className="hidden md:table-cell">
+        <TableCell className={COLUMN_WIDTH.organizer}>
           {row.organizer ? (
-            <div className="flex min-w-0 flex-col">
-              <span className="flex min-w-0 items-center gap-1.5">
-                <UserAvatar name={row.organizer.name} avatarUrl={row.organizer.avatarUrl} size="xs" />
-                <span className="truncate">{row.organizer.name}</span>
-              </span>
-              {row.unit?.name ? <span className="truncate pl-5.5 text-xs text-muted-foreground">{row.unit.name}</span> : null}
-            </div>
+            <span
+              className="flex min-w-0 items-center gap-2"
+              title={row.unit?.name ? `${row.organizer.name} · ${row.unit.name}` : row.organizer.name}
+            >
+              <UserAvatar name={row.organizer.name} avatarUrl={row.organizer.avatarUrl} size="xs" />
+              <span className="min-w-0 truncate text-xs">{row.organizer.name}</span>
+            </span>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <TableEmptyValue />
           )}
         </TableCell>
       ) : null}
       {columns.participants ? (
-        <TableCell className="hidden whitespace-nowrap tabular-nums lg:table-cell">
-          {row._count.participants > 0 ? `${row._count.participants} người` : <span className="text-muted-foreground">—</span>}
+        <TableCell className={cn("whitespace-nowrap text-xs tabular-nums", COLUMN_WIDTH.participants)}>
+          {row._count.participants > 0 ? `${row._count.participants} người` : <TableEmptyValue />}
         </TableCell>
       ) : null}
       {columns.status ? (
-        <TableCell className={cn("hidden truncate whitespace-nowrap text-xs md:table-cell", MEETING_STATUS_TONE_CLASS[status.tone])}>{status.label}</TableCell>
+        <TableCell className={cn("whitespace-nowrap", COLUMN_WIDTH.status)}>
+          <span className="flex min-w-0 items-center gap-2 text-xs" title={status.label}>
+            <StatusIcon className="size-4 shrink-0 text-foreground/70" />
+            <span className={cn("truncate", status.tone === "warning" ? "text-warning" : "text-muted-foreground")}>{status.label}</span>
+          </span>
+        </TableCell>
       ) : null}
     </TableRow>
   );

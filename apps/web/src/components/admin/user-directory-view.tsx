@@ -137,7 +137,7 @@ export function UserDirectoryView() {
           <>
             <Table density="two-line" aria-busy={loading || undefined} className="min-w-[680px] table-fixed">
               <TableHeader>
-                <TableRow className="border-b border-border/60">
+                <TableRow>
                   <TableHead className="w-[34%]">Họ tên</TableHead>
                   <TableHead className="w-[22%]">Chức vụ</TableHead>
                   <TableHead className="w-[26%]">Đơn vị</TableHead>
@@ -146,7 +146,7 @@ export function UserDirectoryView() {
               </TableHeader>
               <TableBody className={loading ? "opacity-60" : undefined}>
                 {users.map((user) => (
-                  <TableRow key={user.id} className="border-b border-border/40">
+                  <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex min-w-0 items-center gap-2.5">
                         <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="sm" />

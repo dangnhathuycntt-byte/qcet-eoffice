@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { getSelectionGroupPositions } from "@/lib/selection-group";
 
 /**
  * Chọn nhiều hàng trên trang danh sách (ô tích ở hàng, Shift+bấm chọn cả dải, ô tích tiêu đề chọn/bỏ tất cả), như bảng
@@ -49,8 +50,12 @@ export function useListSelection(ids: readonly string[]) {
     anchorRef.current = null;
   }, [allSelected, ids]);
 
+  const groupPositions = React.useMemo(() => getSelectionGroupPositions(ids, selected), [ids, selected]);
+
   return {
     selected,
+    /** Vị trí từng hàng đang chọn trong khối chọn liền nhau, cho `TableRow groupPosition` (chỉ bo góc ngoài khối). */
+    groupPositions,
     count: selected.size,
     allSelected,
     /** Có chọn nhưng chưa hết: ô tích tiêu đề ở trạng thái "một phần". */

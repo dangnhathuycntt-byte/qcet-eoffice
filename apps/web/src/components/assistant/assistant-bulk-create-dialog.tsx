@@ -7,12 +7,11 @@ import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { planProposalBatch, type ProposalBatchRow } from "@qcet/shared/domain/assistant/assistant-task-proposal";
 import type { AssistantProposalTask } from "@qcet/contracts/assistant";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { StandardDialog } from "@/components/ui/dialog";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowSelector } from "@/components/ui/table";
 import { PersonPillPicker } from "@/components/tasks/create/person-pill-picker";
 import { describeCreateTaskFailure, performCreateTaskSubmission, useCreateTaskDepartments } from "@/hooks/use-create-task-form";
 import type { CreateTaskDraft } from "@/lib/adapters/create-task-mapper";
@@ -224,13 +223,15 @@ export function AssistantBulkCreateDialog({
           <Table>
             <TableHeader className="sticky top-0 z-10">
               <TableRow>
-                <TableHead className="w-8 pl-1">
-                  <Checkbox
+                {/* Trong hộp thoại: cột chọn sát mép nội dung hộp, không thụt 16–20px như bảng trên trang */}
+                <TableHead className="w-10 first:pl-1 sm:first:pl-1">
+                  <TableRowSelector
+                    className="-my-1.5"
                     aria-label="Chọn tất cả đề xuất tạo được"
                     checked={allChecked}
                     indeterminate={selected.length > 0 && !allChecked}
                     disabled={running || selectable.length === 0}
-                    onChange={(e) => setExcluded(e.currentTarget.checked ? new Set() : new Set(selectable.map(keyOf)))}
+                    onToggle={() => setExcluded(allChecked ? new Set(selectable.map(keyOf)) : new Set())}
                   />
                 </TableHead>
                 <TableHead>Nhiệm vụ</TableHead>
@@ -248,15 +249,17 @@ export function AssistantBulkCreateDialog({
                 const subtasks = row.draft.subtasks?.length ?? 0;
                 return (
                   <TableRow key={key}>
-                    <TableCell className="pl-1">
+                    <TableCell className="first:pl-1 sm:first:pl-1">
                       {result?.status === "created" ? (
-                        <Check aria-label="Đã tạo" className="size-4 text-foreground" />
+                        <span className="flex size-7 items-center justify-center sm:size-8">
+                          <Check aria-label="Đã tạo" className="size-4 text-foreground" />
+                        </span>
                       ) : (
-                        <Checkbox
+                        <TableRowSelector
                           aria-label={`Tạo nhiệm vụ: ${item.proposal.title}`}
                           checked={ready && !excluded.has(key)}
                           disabled={running || !ready}
-                          onChange={(e) => toggle(key, e.currentTarget.checked)}
+                          onToggle={() => toggle(key, !(ready && !excluded.has(key)))}
                         />
                       )}
                     </TableCell>

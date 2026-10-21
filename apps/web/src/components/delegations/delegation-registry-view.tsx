@@ -198,7 +198,7 @@ export function DelegationRegistryView() {
           <>
             <Table density="two-line" className="min-w-[760px] table-fixed">
               <TableHeader>
-                <TableRow className="border-b border-border/60">
+                <TableRow>
                   <TableHead className="w-[21%]">Người ủy quyền</TableHead>
                   <TableHead className="w-[21%]">Người được ủy quyền</TableHead>
                   <TableHead className="w-[19%]">Phạm vi</TableHead>
@@ -212,7 +212,7 @@ export function DelegationRegistryView() {
                   const left = daysUntil(d.validUntil);
                   const expiringSoon = d.status === "ACTIVE" && left !== null && left >= 0 && left <= 7;
                   return (
-                    <TableRow key={d.id} className="border-b border-border/40">
+                    <TableRow key={d.id}>
                       <TableCell>
                         <PersonCell assignment={d.grantorAssignment} />
                       </TableCell>

@@ -575,7 +575,8 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       );
 
       // 1. Selection Checkbox
-      assert.ok(html.includes('type="checkbox"'), "Should render selection checkbox");
+      // Ô chọn dùng chung của bảng (ui/table TableRowSelector) là role="checkbox", không còn <input> ẩn lồng bên trong
+      assert.ok(html.includes('role="checkbox"'), "Should render selection checkbox");
       assert.ok(html.includes(`data-task-id="${mockTask.id}"`), "Preserves internal task id");
 
       // 2. Nhiệm vụ (Title)

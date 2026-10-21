@@ -294,10 +294,10 @@ function PeopleTab({
       ) : (
         <Table density="two-line" className="table-fixed">
           <TableHeader>
-            <TableRow className="h-8 border-b border-border/60">
-              <TableHead className="h-8 w-full @xl:w-[46%]">Họ tên</TableHead>
-              <TableHead className="hidden h-8 @xl:table-cell @xl:w-[36%]">Chức vụ</TableHead>
-              <TableHead className="hidden h-8 @xl:table-cell @xl:w-[18%]">Điện thoại</TableHead>
+            <TableRow>
+              <TableHead className="w-full @xl:w-[46%]">Họ tên</TableHead>
+              <TableHead className="hidden @xl:table-cell @xl:w-[36%]">Chức vụ</TableHead>
+              <TableHead className="hidden @xl:table-cell @xl:w-[18%]">Điện thoại</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -305,7 +305,7 @@ function PeopleTab({
               <React.Fragment key={section.unit.id}>
                 <GroupBand label={section.unit.name} count={section.members.length} colSpan={3} />
                 {section.members.map((member) => (
-                  <TableRow key={`${section.unit.id}:${member.id}`} interactive className="border-b border-border/40" onClick={() => onOpenPerson(member)}>
+                  <TableRow key={`${section.unit.id}:${member.id}`} interactive onClick={() => onOpenPerson(member)}>
                     <TableCell>
                       <Pressable
                         onClick={(e) => {
@@ -358,10 +358,10 @@ function UnitsTab({ directory, query, onOpenUnit }: { directory: OrgDirectory; q
   return (
     <Table className="table-fixed">
       <TableHeader>
-        <TableRow className="h-8 border-b border-border/60">
-          <TableHead className="h-8 w-full @xl:w-[46%]">Đơn vị</TableHead>
-          <TableHead className="hidden h-8 @xl:table-cell @xl:w-[40%]">Lãnh đạo</TableHead>
-          <TableHead className="h-8 w-20 text-right @xl:w-[14%]">Nhân sự</TableHead>
+        <TableRow>
+          <TableHead className="w-full @xl:w-[46%]">Đơn vị</TableHead>
+          <TableHead className="hidden @xl:table-cell @xl:w-[40%]">Lãnh đạo</TableHead>
+          <TableHead className="w-20 text-right @xl:w-[14%]">Nhân sự</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -371,7 +371,7 @@ function UnitsTab({ directory, query, onOpenUnit }: { directory: OrgDirectory; q
             {group.units.map((unit) => {
               const [first, ...rest] = unit.leaders;
               return (
-                <TableRow key={unit.id} interactive className="border-b border-border/40" onClick={() => onOpenUnit(unit)}>
+                <TableRow key={unit.id} interactive onClick={() => onOpenUnit(unit)}>
                   <TableCell>
                     <Pressable
                       onClick={(e) => {

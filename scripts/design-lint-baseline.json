@@ -613,26 +613,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/table/components/task-row.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/table/components/task-table-header.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<input"
     },

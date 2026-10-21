@@ -196,7 +196,7 @@ export function AuditLogView() {
           <>
             <Table aria-busy={loading || undefined} className="min-w-[760px] table-fixed">
               <TableHeader>
-                <TableRow className="border-b border-border/60">
+                <TableRow>
                   <TableHead className="w-[17%]">Thời gian</TableHead>
                   <TableHead className="w-[22%]">Hành động</TableHead>
                   <TableHead className="w-[27%]">Đối tượng</TableHead>
@@ -206,7 +206,7 @@ export function AuditLogView() {
               </TableHeader>
               <TableBody className={loading ? "opacity-60" : undefined}>
                 {entries.map((entry) => (
-                  <TableRow key={entry.id} className="border-b border-border/40">
+                  <TableRow key={entry.id}>
                     <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">{formatDateTime(entry.createdAt)}</TableCell>
                     <TableCell className="truncate font-mono text-xs" title={entry.action}>
                       {entry.action}
