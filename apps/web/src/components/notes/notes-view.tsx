@@ -2,51 +2,35 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Plus, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import type { PersonalNote, PersonalNoteSummary } from "@qcet/contracts/personal-notes";
+import { toNotePreview } from "@qcet/shared/domain/notes/note-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pressable } from "@/components/ui/pressable";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StandardDialog } from "@/components/ui/dialog";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
+import { NoteCard } from "@/components/notes/note-card";
 import { NoteEditor } from "@/components/notes/note-editor";
+import { NoteMasonry } from "@/components/notes/note-masonry";
 import {
   NotesRequestError,
   deleteNote,
   fetchNote,
   fetchNotes,
   toNoteSummary,
+  updateNote,
 } from "@/components/notes/notes-client";
-import { IconSidebarCalendar, IconSidebarTasks } from "@/components/layout/sidebar-rounded-icons";
-import { formatTime } from "@qcet/shared/lib/format/date";
-import { formatRecencyTime, groupByRecency, type RecencyGroup } from "@qcet/shared/lib/format/recency";
 import { cn } from "@/lib/utils";
 
-/** Từ bề rộng này hiện hai khung (danh sách + soạn); hẹp hơn thì một khung như Hộp thư. */
-const WIDE_MIN_WIDTH = 720;
 const SEARCH_DEBOUNCE_MS = 250;
-/** Ghi chú gắn với cuộc họp/nhiệm vụ: icon nhỏ cuối tiêu đề, cùng icon với mục đó ở sidebar. */
-const NOTE_ENTITY = {
-  meeting: { Icon: IconSidebarCalendar, label: "Gắn với cuộc họp" },
-  task: { Icon: IconSidebarTasks, label: "Gắn với nhiệm vụ" },
-} as const;
-/** Đích điều hướng tới bản nháp ghi chú mới (`?new=1`). */
-const NEW_NOTE = "__new__";
-/** Địa chỉ không chọn ghi chú nào. */
-const NO_NOTE = "";
+/** Thẻ chờ tải cao thấp khác nhau như lưới thật. */
+const SKELETON_ITEMS = [96, 148, 72, 120, 168, 88, 112, 136].map((height, index) => ({ id: `skeleton-${index}`, height }));
 
 type LoadedNote = { id: string; state: "loading" | "ready" | "missing" | "error"; note?: PersonalNote };
-/**
- * Ghi chú đang soạn từ nút "+": chưa có `note` là chưa lưu gì; `key` giữ nguyên trình soạn cả lúc ghi chú vừa được tạo (đổi
- * `?new=1` thành `?id=`), để con trỏ không nhảy. `target` là địa chỉ của bản nháp; `from` là địa chỉ đang rời đi, để trong lúc
- * URL chưa đổi kịp vẫn hiện bản nháp thay vì nháy về ghi chú cũ.
- */
-type Composing = { key: string; note: PersonalNote | null; target: string; from: string | null };
-
-let composeSeq = 0;
 
 function sortNotes(notes: PersonalNoteSummary[]): PersonalNoteSummary[] {
   return [...notes].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt));
@@ -56,14 +40,22 @@ function excerptOf(content: string): string {
   return content.replace(/\s+/g, " ").trim().slice(0, 160);
 }
 
+function focusEnd(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.focus();
+  el.setSelectionRange(el.value.length, el.value.length);
+}
+
+/**
+ * Trang Ghi chú cá nhân theo bố cục Google Keep (người dùng gửi ảnh Keep 21/10/2026): ô "Ghi chú…" ghi nhanh ở giữa đầu trang,
+ * dưới là lưới thẻ so le (Đã ghim, Khác), bấm thẻ mở hộp sửa. Hộp sửa gắn với `?id=` (mở bằng push nên nút Back đóng hộp).
+ */
 export function NotesView() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { notifyError } = useFeedback();
   const selectedId = searchParams.get("id");
-  /** `?new=1`: đang soạn ghi chú mới chưa lưu (có trong URL để nút quay lại của điện thoại về danh sách). */
-  const isNewRoute = !selectedId && searchParams.get("new") === "1";
 
   const [notes, setNotes] = React.useState<PersonalNoteSummary[]>([]);
   const [hasMore, setHasMore] = React.useState(false);
@@ -71,22 +63,25 @@ export function NotesView() {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [queryInput, setQueryInput] = React.useState("");
   const [query, setQuery] = React.useState("");
-  const [isWide, setIsWide] = React.useState(true);
   const [loaded, setLoaded] = React.useState<LoadedNote | null>(null);
   const [loadAttempt, setLoadAttempt] = React.useState(0);
-  const [composing, setComposing] = React.useState<Composing | null>(null);
   const [deleting, setDeleting] = React.useState<{ id: string; title: string } | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  // Ô ghi nhanh: mỗi lượt mở một trình soạn mới (`captureKey`); ghi chú tạo trong lượt đó chỉ hiện thành thẻ khi đóng ô
+  const [captureOpen, setCaptureOpen] = React.useState(false);
+  const [captureKey, setCaptureKey] = React.useState(0);
+  const [captureNoteId, setCaptureNoteId] = React.useState<string | null>(null);
 
-  const rootRef = React.useRef<HTMLDivElement>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const captureRef = React.useRef<HTMLDivElement>(null);
+  const dialogContentRef = React.useRef<HTMLTextAreaElement>(null);
   const pushedRef = React.useRef(false);
   /** Bản mới nhất của từng ghi chú đã mở (kèm chữ đang soạn) để mở lại không phải chờ hay lệch với phần chưa lưu. */
   const cacheRef = React.useRef(new Map<string, PersonalNote>());
 
   const navigate = React.useCallback(
     (id: string | null, mode: "push" | "replace" = "replace") => {
-      const href = id === NEW_NOTE ? `${pathname}?new=1` : id ? `${pathname}?id=${encodeURIComponent(id)}` : pathname;
+      const href = id ? `${pathname}?id=${encodeURIComponent(id)}` : pathname;
       if (mode === "push") router.push(href, { scroll: false });
       else router.replace(href, { scroll: false });
     },
@@ -117,15 +112,7 @@ export function NotesView() {
     return () => controller.abort();
   }, [query, loadList]);
 
-  React.useEffect(() => {
-    const el = rootRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => setIsWide(entry.contentRect.width >= WIDE_MIN_WIDTH));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // Ghi chú đang chọn: lấy từ bản nhớ tạm nếu đã mở, không thì tải
+  // Ghi chú đang mở: lấy từ bản nhớ tạm nếu đã mở, không thì tải (thẻ chỉ có đoạn đầu, không sửa trên đoạn đầu được)
   React.useEffect(() => {
     if (!selectedId) return;
     const cached = cacheRef.current.get(selectedId);
@@ -148,18 +135,35 @@ export function NotesView() {
   }, [selectedId, loadAttempt]);
 
   const current: LoadedNote | null = selectedId ? (loaded?.id === selectedId ? loaded : { id: selectedId, state: "loading" }) : null;
+  // Lúc hộp đang đóng dần vẫn giữ nội dung cũ, không nháy trống
+  const shownRef = React.useRef<LoadedNote | null>(null);
+  if (current) shownRef.current = current;
+  const shown = current ?? shownRef.current;
+
+  // Tải xong (lần đầu mở thẻ) thì con trỏ vào cuối nội dung, như khi mở từ bản nhớ tạm
+  const readyId = current?.state === "ready" ? current.id : null;
+  React.useEffect(() => {
+    if (!readyId) return;
+    const frame = requestAnimationFrame(() => {
+      const el = dialogContentRef.current;
+      if (el && document.activeElement?.tagName !== "TEXTAREA") focusEnd(el);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [readyId]);
 
   const patchSummary = React.useCallback((id: string, patch: Partial<PersonalNoteSummary>) => {
     setNotes((prev) => sortNotes(prev.map((item) => (item.id === id ? { ...item, ...patch } : item))));
   }, []);
 
+  // Mỗi lần gõ: thẻ phía sau hộp sửa và bản nhớ tạm theo kịp chữ đang soạn
   const handleDraft = React.useCallback(
-    (id: string, patch: { title?: string; content?: string }) => {
+    (id: string | null, patch: { title?: string; content?: string }) => {
+      if (!id) return;
       const cached = cacheRef.current.get(id);
       if (cached) cacheRef.current.set(id, { ...cached, ...patch });
       patchSummary(id, {
         ...(patch.title !== undefined ? { title: patch.title } : {}),
-        ...(patch.content !== undefined ? { excerpt: excerptOf(patch.content) } : {}),
+        ...(patch.content !== undefined ? { excerpt: excerptOf(patch.content), preview: toNotePreview(patch.content) } : {}),
         updatedAt: new Date().toISOString(),
       });
     },
@@ -176,60 +180,61 @@ export function NotesView() {
     [patchSummary]
   );
 
-  const routeKey = selectedId ?? (isNewRoute ? NEW_NOTE : NO_NOTE);
-  const composingRef = React.useRef(composing);
-  composingRef.current = composing;
-  // Trình soạn của bản nháp chỉ hiện khi URL trỏ tới nó (hoặc đang rời địa chỉ cũ để tới nó)
-  const composingShown = composing !== null && (routeKey === composing.target || routeKey === composing.from);
+  const handleCaptureCreated = React.useCallback((note: PersonalNote) => {
+    cacheRef.current.set(note.id, note);
+    setNotes((prev) => sortNotes([toNoteSummary(note), ...prev.filter((item) => item.id !== note.id)]));
+    setCaptureNoteId(note.id);
+  }, []);
+
+  // Đóng ô ghi nhanh: trình soạn gỡ ra thì lưu nốt; chưa gõ gì thì không còn gì
+  const closeCapture = React.useCallback(() => {
+    setCaptureOpen(false);
+    setCaptureNoteId(null);
+    setCaptureKey((key) => key + 1);
+  }, []);
+
+  // Bấm ra ngoài ô ghi nhanh thì đóng như Keep (hộp xác nhận xóa, toast không tính là ngoài)
   React.useEffect(() => {
-    if (composing) {
-      if (!composingShown) setComposing(null);
-      else if (composing.from !== null && routeKey === composing.target) setComposing({ ...composing, from: null });
-    } else if (routeKey === NEW_NOTE) {
-      setComposing({ key: `new-${++composeSeq}`, note: null, target: NEW_NOTE, from: null });
-    }
-  }, [composing, composingShown, routeKey]);
-
-  // "+" chỉ mở trình soạn trống, chưa gọi API: gõ chữ đầu tiên mới tạo ghi chú, nên không còn ghi chú trống bị bỏ lại
-  const handleCreate = () => {
-    setQueryInput("");
-    setQuery("");
-    setSearchOpen(false);
-    if (composing && !composing.note && composingShown) {
-      document.querySelector<HTMLTextAreaElement>('[data-slot="note-editor"] textarea[aria-label="Tiêu đề ghi chú"]')?.focus();
-      return;
-    }
-    setComposing({ key: `new-${++composeSeq}`, note: null, target: NEW_NOTE, from: routeKey });
-    const push = routeKey === NO_NOTE && !isWide;
-    if (push) pushedRef.current = true;
-    navigate(NEW_NOTE, push ? "push" : "replace");
-  };
-
-  const handleCreated = React.useCallback(
-    (key: string, note: PersonalNote) => {
-      cacheRef.current.set(note.id, note);
-      setNotes((prev) => sortNotes([toNoteSummary(note), ...prev.filter((item) => item.id !== note.id)]));
-      // Còn đang soạn bản đó thì gắn mã vào URL (thay `?new=1`); đã rời đi thì chỉ thêm vào danh sách
-      if (composingRef.current?.key !== key) return;
-      setComposing({ key, note, target: note.id, from: NEW_NOTE });
-      navigate(note.id);
-    },
-    [navigate]
-  );
+    if (!captureOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (!target || captureRef.current?.contains(target)) return;
+      if (target.closest('[role="dialog"], [role="alertdialog"], [data-sonner-toaster]')) return;
+      closeCapture();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [captureOpen, closeCapture]);
 
   const openNote = (id: string) => {
-    if (id === selectedId) return;
-    if (!selectedId && !isWide) pushedRef.current = true;
-    navigate(id, !selectedId && !isWide ? "push" : "replace");
+    pushedRef.current = true;
+    navigate(id, "push");
   };
 
-  const closeDetail = () => {
+  const closeNote = React.useCallback(() => {
     if (pushedRef.current) {
       pushedRef.current = false;
       router.back();
     } else {
       navigate(null);
     }
+  }, [navigate, router]);
+
+  const togglePin = async (item: PersonalNoteSummary) => {
+    const next = !item.pinned;
+    patchSummary(item.id, { pinned: next });
+    try {
+      handleSaved(await updateNote(item.id, { pinned: next }));
+    } catch (error) {
+      patchSummary(item.id, { pinned: item.pinned });
+      notifyError(error instanceof Error ? error.message : "Không ghim được ghi chú.");
+    }
+  };
+
+  const askDelete = (id: string) => {
+    const summary = notes.find((item) => item.id === id);
+    const title = cacheRef.current.get(id)?.title || summary?.title || summary?.excerpt || "Ghi chú trống";
+    setDeleting({ id, title });
   };
 
   const confirmDelete = async () => {
@@ -246,317 +251,227 @@ export function NotesView() {
       }
     }
     cacheRef.current.delete(deleting.id);
-    const index = notes.findIndex((item) => item.id === deleting.id);
-    const neighbour = notes[index + 1] ?? notes[index - 1];
     setNotes((prev) => prev.filter((item) => item.id !== deleting.id));
-    if (selectedId === deleting.id) {
-      pushedRef.current = false;
-      navigate(isWide && neighbour ? neighbour.id : null);
-    }
+    if (selectedId === deleting.id) closeNote();
+    if (captureNoteId === deleting.id) closeCapture();
     setDeleting(null);
     setIsDeleting(false);
   };
 
-  const showList = isWide || (!selectedId && !isNewRoute);
-  const showDetail = isWide || Boolean(selectedId) || isNewRoute;
-  const now = new Date();
   const hasQuery = query.length > 0;
-  const pinnedNotes = notes.filter((item) => item.pinned);
-  const listGroups: RecencyGroup<PersonalNoteSummary>[] = [
-    ...(pinnedNotes.length > 0 ? [{ key: "pinned", label: "Đã ghim", items: pinnedNotes }] : []),
-    ...groupByRecency(
-      notes.filter((item) => !item.pinned),
-      (item) => item.updatedAt,
-      now
-    ),
-  ];
+  const { pinnedNotes, otherNotes } = React.useMemo(() => {
+    const visible = captureOpen && captureNoteId ? notes.filter((item) => item.id !== captureNoteId) : notes;
+    return { pinnedNotes: visible.filter((item) => item.pinned), otherNotes: visible.filter((item) => !item.pinned) };
+  }, [notes, captureOpen, captureNoteId]);
+  const isEmpty = pinnedNotes.length === 0 && otherNotes.length === 0;
 
-  const listEmpty =
-    status === "error" ? (
-      <EmptyState
-        density="compact"
-        glyph="load-error"
-        title="Không tải được ghi chú"
-        description="Kiểm tra kết nối rồi thử lại."
-        action={
-          <Button size="pill" onClick={() => void loadList(query)}>
-            Thử lại
-          </Button>
-        }
-      />
-    ) : hasQuery ? (
-      <EmptyState density="compact" glyph="no-results" title="Không có ghi chú phù hợp" description="Thử từ khóa khác." />
-    ) : (
-      <EmptyState
-        density="compact"
-        glyph="dossier"
-        title="Chưa có ghi chú"
-        description="Ghi lại ý riêng cho cuộc họp, công việc. Chỉ mình bạn xem được."
-        action={
-          <Button size="pill" onClick={handleCreate}>
-            <Plus />
-            Ghi chú mới
-          </Button>
-        }
-      />
-    );
+  const deleteConfirm = (
+    <DestructiveConfirmDialog
+      isOpen={Boolean(deleting)}
+      onClose={() => !isDeleting && setDeleting(null)}
+      onConfirm={confirmDelete}
+      isConfirming={isDeleting}
+      title="Xóa ghi chú?"
+      entityLabel="Ghi chú"
+      entityName={deleting?.title}
+      description="Nội dung ghi chú sẽ mất hẳn."
+    />
+  );
+
+  const renderCard = (item: PersonalNoteSummary) => (
+    <NoteCard item={item} onOpen={() => openNote(item.id)} onTogglePin={() => void togglePin(item)} onDelete={() => askDelete(item.id)} />
+  );
 
   return (
-    <div ref={rootRef} data-slot="notes-workspace" className="flex min-h-0 flex-1 overflow-hidden">
-      {showList && (
-        <aside
-          data-slot="notes-list-pane"
-          className={cn("flex min-h-0 flex-col", isWide ? "w-[320px] shrink-0 border-r border-border/60" : "w-full", "max-md:bg-card")}
-        >
-          <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
-            <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
-            {searchOpen ? (
-              <>
-                <Search aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-                <Input
-                  ref={searchInputRef}
-                  variant="menu"
-                  type="text"
-                  value={queryInput}
-                  maxLength={100}
-                  autoFocus
-                  onChange={(event) => setQueryInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Escape") return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if (queryInput) setQueryInput("");
-                    else setSearchOpen(false);
-                  }}
-                  placeholder="Tìm trong ghi chú"
-                  aria-label="Tìm kiếm ghi chú"
-                  className="h-7 min-w-0 flex-1 px-1.5 text-compact sm:h-7 sm:text-compact"
+    <div data-slot="notes-workspace" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
+        <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
+        {searchOpen ? (
+          <>
+            <Search aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+            <Input
+              ref={searchInputRef}
+              variant="menu"
+              type="text"
+              value={queryInput}
+              maxLength={100}
+              autoFocus
+              onChange={(event) => setQueryInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                event.stopPropagation();
+                if (queryInput) setQueryInput("");
+                else setSearchOpen(false);
+              }}
+              placeholder="Tìm trong ghi chú"
+              aria-label="Tìm kiếm ghi chú"
+              className="h-7 min-w-0 flex-1 px-1.5 text-compact sm:h-7 sm:text-compact"
+            />
+          </>
+        ) : (
+          <h1 className="truncate text-compact font-medium text-foreground">Ghi chú cá nhân</h1>
+        )}
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+          {searchOpen ? (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Đóng tìm kiếm"
+              title="Đóng tìm kiếm (Esc)"
+              onClick={() => {
+                setQueryInput("");
+                setSearchOpen(false);
+              }}
+            >
+              <X />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon-xs" aria-label="Tìm kiếm ghi chú" title="Tìm kiếm" onClick={() => setSearchOpen(true)}>
+              <Search />
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <div data-slot="notes-board" className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
+        <div className="px-4 pb-16 pt-6 sm:px-6">
+          {/* Đang tìm thì ẩn ô ghi nhanh, chỉ còn kết quả (như Keep) */}
+          {!hasQuery && (
+            <div
+              ref={captureRef}
+              data-slot="note-capture"
+              className={cn(
+                "mx-auto w-full max-w-[600px] rounded-lg border border-border bg-card transition-shadow",
+                captureOpen ? "shadow-md" : "shadow-sm"
+              )}
+            >
+              <NoteEditor
+                key={captureKey}
+                variant="capture"
+                note={null}
+                collapsed={!captureOpen}
+                onExpand={() => setCaptureOpen(true)}
+                onClose={closeCapture}
+                onSaved={handleSaved}
+                onCreated={handleCaptureCreated}
+                onDraft={handleDraft}
+                onDelete={askDelete}
+              />
+            </div>
+          )}
+
+          <div className={cn(!hasQuery && "mt-8")}>
+            {status === "loading" ? (
+              <div aria-hidden>
+                <NoteMasonry
+                  items={SKELETON_ITEMS}
+                  label="Đang tải ghi chú"
+                  renderItem={(item) => (
+                    <div className="rounded-lg border border-border bg-card p-4">
+                      <Skeleton className="w-full rounded" style={{ height: item.height - 34 }} />
+                    </div>
+                  )}
                 />
-              </>
+              </div>
+            ) : status === "error" ? (
+              <EmptyState
+                density="compact"
+                glyph="load-error"
+                title="Không tải được ghi chú"
+                description="Kiểm tra kết nối rồi thử lại."
+                action={
+                  <Button size="pill" onClick={() => void loadList(query)}>
+                    Thử lại
+                  </Button>
+                }
+              />
+            ) : isEmpty ? (
+              hasQuery ? (
+                <EmptyState density="compact" glyph="no-results" title="Không có ghi chú phù hợp" description="Thử từ khóa khác." />
+              ) : (
+                <EmptyState
+                  density="compact"
+                  className="pt-8"
+                  glyph="dossier"
+                  title="Ghi chú bạn thêm sẽ hiện ở đây"
+                  description="Ghi lại ý riêng cho cuộc họp, công việc. Chỉ mình bạn xem được."
+                />
+              )
             ) : (
-              <h1 className="truncate text-compact font-medium text-foreground">Ghi chú cá nhân</h1>
+              <div className="flex flex-col gap-8">
+                {pinnedNotes.length > 0 && <NoteMasonry items={pinnedNotes} label="Đã ghim" heading="Đã ghim" renderItem={renderCard} />}
+                {otherNotes.length > 0 && (
+                  <NoteMasonry
+                    items={otherNotes}
+                    label={pinnedNotes.length > 0 ? "Khác" : "Ghi chú"}
+                    heading={pinnedNotes.length > 0 ? "Khác" : undefined}
+                    renderItem={renderCard}
+                  />
+                )}
+                {hasMore && (
+                  <p className="text-center text-xs text-muted-foreground">Chỉ hiện các ghi chú mới nhất. Dùng ô tìm để tìm ghi chú cũ hơn.</p>
+                )}
+              </div>
             )}
-            <div className="ml-auto flex shrink-0 items-center gap-0.5">
-              {searchOpen ? (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Đóng tìm kiếm"
-                  title="Đóng tìm kiếm (Esc)"
-                  onClick={() => {
-                    setQueryInput("");
-                    setSearchOpen(false);
-                  }}
-                >
-                  <X />
+          </div>
+        </div>
+      </div>
+
+      {/* Hộp sửa: Esc, bấm ra ngoài, "Đóng" hay Ctrl/Cmd+Enter đều đóng. */}
+      <StandardDialog
+        open={Boolean(selectedId)}
+        onOpenChange={(open) => {
+          if (!open) closeNote();
+        }}
+        title="Sửa ghi chú"
+        showHeader={false}
+        size="md"
+        initialFocus={dialogContentRef}
+        className="overflow-hidden p-0 sm:p-0"
+      >
+        {shown?.state === "ready" && shown.note ? (
+          <NoteEditor
+            key={shown.note.id}
+            variant="dialog"
+            note={shown.note}
+            contentRef={dialogContentRef}
+            onClose={closeNote}
+            onSaved={handleSaved}
+            onCreated={() => undefined}
+            onDraft={handleDraft}
+            onDelete={askDelete}
+          />
+        ) : shown?.state === "missing" || shown?.state === "error" ? (
+          <EmptyState
+            density="compact"
+            className="py-10"
+            glyph={shown.state === "missing" ? "no-results" : "load-error"}
+            title={shown.state === "missing" ? "Ghi chú không còn" : "Không mở được ghi chú"}
+            description={shown.state === "missing" ? "Ghi chú đã bị xóa hoặc không phải của bạn." : "Kiểm tra kết nối rồi thử lại."}
+            action={
+              shown.state === "error" ? (
+                <Button size="pill" onClick={() => setLoadAttempt((n) => n + 1)}>
+                  Thử lại
                 </Button>
               ) : (
-                <Button variant="ghost" size="icon-xs" aria-label="Tìm kiếm ghi chú" title="Tìm kiếm" onClick={() => setSearchOpen(true)}>
-                  <Search />
+                <Button size="pill" variant="outline" onClick={closeNote}>
+                  Đóng
                 </Button>
-              )}
-              <Button variant="ghost" size="icon-xs" aria-label="Ghi chú mới" title="Ghi chú mới" onClick={handleCreate}>
-                <Plus />
-              </Button>
-            </div>
+              )
+            }
+          />
+        ) : (
+          <div aria-hidden className="flex h-40 items-center justify-center">
+            <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
-
-          <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
-            {status === "loading" ? (
-              <div aria-hidden className="space-y-0.5">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex h-12 animate-pulse flex-col justify-center gap-1.5 px-3">
-                    <div className="h-3 w-1/2 rounded bg-muted" />
-                    <div className="h-2.5 w-3/4 rounded bg-muted/60" />
-                  </div>
-                ))}
-              </div>
-            ) : notes.length === 0 ? (
-              // Rộng và chưa chọn: trạng thái trống đã ở khung phải, không lặp tranh ở hai khung
-              isWide && !selectedId ? null : listEmpty
-            ) : (
-              <>
-                {/* Chia theo thời gian như Apple Notes: ghi chú ghim lên đầu, rồi Hôm nay, Hôm qua, 7 ngày qua, từng tháng. Giờ
-                    nằm đầu dòng phụ như Apple Notes thay cho cột "17 giờ" lặp lại ở mọi hàng. */}
-                <div data-slot="notes-list" aria-label="Danh sách ghi chú" role="group">
-                  {listGroups.map((group) => (
-                    <div key={group.key}>
-                      <p className="flex h-7 select-none items-center px-3 text-xs text-muted-foreground">{group.label}</p>
-                      <ul aria-label={group.label} className="space-y-0.5">
-                        {group.items.map((item) => (
-                          <li key={item.id}>
-                            <NoteRow
-                              item={item}
-                              timeOnly={group.key === "today" || group.key === "yesterday"}
-                              selected={item.id === selectedId}
-                              now={now}
-                              onOpen={() => openNote(item.id)}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                {hasMore && (
-                  <p className="px-3 pt-2 text-xs text-muted-foreground">Chỉ hiện các ghi chú mới nhất. Dùng ô tìm để tìm ghi chú cũ hơn.</p>
-                )}
-              </>
-            )}
-          </div>
-        </aside>
-      )}
-
-      {showDetail && (
-        <section data-slot="notes-detail-pane" className="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
-          {composing && composingShown ? (
-            <NoteEditor
-              key={composing.key}
-              note={composing.note}
-              onBack={isWide ? undefined : closeDetail}
-              onSaved={handleSaved}
-              onCreated={(note) => handleCreated(composing.key, note)}
-              onDraft={(patch) => composing.note && handleDraft(composing.note.id, patch)}
-              onDelete={(id) => setDeleting({ id, title: cacheRef.current.get(id)?.title || "Ghi chú không tên" })}
-            />
-          ) : !current ? (
-            status === "loading" ? null : status === "ready" && notes.length === 0 && !hasQuery ? (
-              <EmptyState
-                density="compact"
-                className="flex-1 justify-center pb-16"
-                glyph="dossier"
-                title="Chưa có ghi chú"
-                description="Ghi lại ý riêng cho cuộc họp, công việc. Chỉ mình bạn xem được."
-                action={
-                  <Button size="pill" onClick={handleCreate}>
-                    <Plus />
-                    Ghi chú mới
-                  </Button>
-                }
-              />
-            ) : (
-              <EmptyState density="compact" className="flex-1 justify-center pb-16" glyph="inbox-select" title="Chọn một ghi chú để xem" />
-            )
-          ) : current.state === "ready" && current.note ? (
-            <NoteEditor
-              key={current.note.id}
-              note={current.note}
-              onBack={isWide ? undefined : closeDetail}
-              onSaved={handleSaved}
-              onCreated={() => undefined}
-              onDraft={(patch) => handleDraft(current.note!.id, patch)}
-              onDelete={(id) => setDeleting({ id, title: cacheRef.current.get(id)?.title || "Ghi chú không tên" })}
-            />
-          ) : current.state === "loading" ? (
-            <div aria-hidden className="flex flex-1 items-center justify-center">
-              <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            </div>
-          ) : (
-            <>
-              {!isWide && (
-                <header className="flex h-11 shrink-0 items-center border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
-                  <Button variant="ghost" size="icon-xs" onClick={closeDetail} aria-label="Quay lại danh sách ghi chú">
-                    <X />
-                  </Button>
-                </header>
-              )}
-              <EmptyState
-                density="compact"
-                className="flex-1 justify-center pb-16"
-                glyph={current.state === "missing" ? "no-results" : "load-error"}
-                title={current.state === "missing" ? "Ghi chú không còn" : "Không mở được ghi chú"}
-                description={current.state === "missing" ? "Ghi chú đã bị xóa hoặc không phải của bạn." : "Kiểm tra kết nối rồi thử lại."}
-                action={
-                  current.state === "error" ? (
-                    <Button size="pill" onClick={() => setLoadAttempt((n) => n + 1)}>
-                      Thử lại
-                    </Button>
-                  ) : undefined
-                }
-              />
-            </>
-          )}
-        </section>
-      )}
-
-      <DestructiveConfirmDialog
-        isOpen={Boolean(deleting)}
-        onClose={() => !isDeleting && setDeleting(null)}
-        onConfirm={confirmDelete}
-        isConfirming={isDeleting}
-        title="Xóa ghi chú?"
-        entityLabel="Ghi chú"
-        entityName={deleting?.title}
-        description="Nội dung ghi chú sẽ mất hẳn."
-      />
-    </div>
-  );
-}
-
-/**
- * Một hàng 48px như Apple Notes: tiêu đề (chưa đặt thì đoạn đầu nội dung) cắt cuối kèm tooltip khi bị cắt, icon nhỏ nếu gắn
- * với cuộc họp/nhiệm vụ; dòng phụ là giờ rồi đoạn đầu nội dung. Nhóm Hôm nay/Hôm qua đã nói ngày nên chỉ hiện giờ.
- */
-function NoteRow({
-  item,
-  timeOnly,
-  selected,
-  now,
-  onOpen,
-}: {
-  item: PersonalNoteSummary;
-  timeOnly: boolean;
-  selected: boolean;
-  now: Date;
-  onOpen: () => void;
-}) {
-  const titleRef = React.useRef<HTMLSpanElement>(null);
-  const [titleCut, setTitleCut] = React.useState(false);
-  const title = item.title.trim();
-  const rowTitle = title || item.excerpt || "Ghi chú trống";
-  const preview = title ? item.excerpt || "Chưa có nội dung" : "";
-  const time = formatRecencyTime(item.updatedAt, now);
-  const entity = item.entityType ? NOTE_ENTITY[item.entityType] : null;
-  return (
-    <Pressable
-      onClick={onOpen}
-      onPointerEnter={() => {
-        const el = titleRef.current;
-        if (el) setTitleCut(el.scrollWidth > el.clientWidth);
-      }}
-      aria-current={selected ? "true" : undefined}
-      className={cn(
-        "flex h-12 w-full flex-col justify-center gap-0.5 rounded-lg px-3 text-left transition-colors focus-visible:ring-inset",
-        selected ? "bg-selected" : "hover:bg-accent/60"
-      )}
-    >
-      <span className="flex w-full min-w-0 items-center gap-1.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              ref={titleRef}
-              className={cn("min-w-0 flex-1 truncate text-compact", title || item.excerpt ? "font-medium text-foreground" : "text-muted-foreground")}
-            >
-              {rowTitle}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top" align="start" hidden={!titleCut}>
-            {rowTitle}
-          </TooltipContent>
-        </Tooltip>
-        {entity && (
-          <span title={entity.label} className="flex shrink-0 text-muted-foreground">
-            <entity.Icon size={12} className="size-3" />
-            <span className="sr-only">{entity.label}</span>
-          </span>
         )}
-      </span>
-      <span className="flex w-full min-w-0 items-center gap-2 text-xs text-muted-foreground">
-        <span className="shrink-0 tabular-nums" title={time.full}>
-          {timeOnly ? formatTime(item.updatedAt) : time.short}
-        </span>
-        {preview && <span className="min-w-0 truncate">{preview}</span>}
-      </span>
-    </Pressable>
+        {/* Lồng trong hộp sửa để Base UI coi là hộp con: hộp mở ở gốc trang bị lớp phủ của hộp sửa chặn, không bấm được */}
+        {selectedId && deleteConfirm}
+      </StandardDialog>
+
+      {/* Xóa từ thẻ: hộp xác nhận ở trang; xóa từ hộp sửa: lồng trong hộp sửa (xem dưới) */}
+      {!selectedId && deleteConfirm}
+    </div>
   );
 }
