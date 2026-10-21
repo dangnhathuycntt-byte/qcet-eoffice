@@ -41,16 +41,18 @@ const POLL_MS = 4000;
 const LIVE_SAMPLE_MS = 100;
 const LIVE_MAX_BARS = 400;
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
-const when = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: TIME_ZONE });
 const clock = new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: TIME_ZONE });
 const megabytes = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
 
 type Phase = "idle" | "starting" | "recording" | "finishing" | "uploading";
 
-const formatSize = (bytes: number) => `${megabytes.format(bytes / 1024 / 1024)} MB`;
+/** Dưới 1 MB ghi KB: bản ghi 17 giây nặng ~130 KB từng hiện "0 MB" (người dùng gửi ảnh 21/10/2026). */
+const formatSize = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${megabytes.format(bytes / 1024 / 1024)} MB`);
 const sourceLabel = (recording: MeetingRecordingSummary) => (recording.source === "live" ? "Ghi trực tiếp" : "Tệp tải lên");
-/** Tên hiện của bản ghi: tên tệp gốc nếu có, không thì nguồn kèm giờ ghi. */
-const recordingTitle = (recording: MeetingRecordingSummary) => recording.fileName || `${sourceLabel(recording)} · ${when.format(new Date(recording.createdAt))}`;
+/** Tên hiện trên hàng: tên tệp gốc nếu có, không thì nguồn. Giờ ghi đã ở dòng phụ ngay dưới nên không lặp lại trong tên. */
+const recordingTitle = (recording: MeetingRecordingSummary) => recording.fileName || sourceLabel(recording);
+/** Tên đủ để nhận ra đúng bản ghi trong hộp xác nhận xóa (hai bản cùng tên tệp hoặc cùng "Ghi trực tiếp" phân biệt bằng giờ ghi). */
+const recordingFullName = (recording: MeetingRecordingSummary) => `${recordingTitle(recording)} · ${recordedAt(recording.createdAt)}`;
 
 /** Giờ ghi ngắn gọn: "Hôm nay 16:49", "Hôm qua 09:05", còn lại "16:49 18/10/2026". */
 function recordedAt(iso: string): string {
@@ -642,7 +644,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
         isConfirming={isDeleting}
         title="Xóa bản ghi âm?"
         entityLabel="Bản ghi"
-        entityName={deleting ? recordingTitle(deleting) : undefined}
+        entityName={deleting ? recordingFullName(deleting) : undefined}
         description="Âm thanh, sóng âm và biên bản đề xuất của bản ghi này sẽ mất."
       />
     </SectionCard>

@@ -51,7 +51,8 @@ export function RecordingResult({
   };
 
   return (
-    <div className="space-y-3 pt-2">
+    // Chữ co lại bằng bề ngang văn bản của trang (`max-w-2xl`, như `PROSE_MAX_CLASS` ở trang chi tiết); sóng âm và hàng bản ghi phía trên vẫn rộng hết thẻ
+    <div className="max-w-2xl space-y-3 pt-2">
       <InlineAlert variant="info">Bản nháp do AI soạn từ ghi âm, có thể nghe nhầm tên và con số. Thầy/Cô đọc lại trước khi dùng.</InlineAlert>
       {detail.error && <InlineAlert variant="warning">{detail.error}</InlineAlert>}
 

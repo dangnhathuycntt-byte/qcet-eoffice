@@ -48,6 +48,13 @@ const ATTENDANCE: Record<string, { label: string; warn?: boolean }> = {
   ABSENT: { label: "Vắng mặt", warn: true },
 };
 
+/**
+ * Bề ngang tối đa của văn bản dài (nội dung họp, biên bản): `max-w-2xl` (672px, đo được khoảng 110 ký tự một dòng ở chữ
+ * 13px). Màn rộng 1800px từng cho dòng chữ 1068px, tới 160 ký tự, khó đọc (người dùng gửi ảnh 21/10/2026). Thẻ vẫn rộng
+ * hết cột, chỉ chữ co lại.
+ */
+const PROSE_MAX_CLASS = "max-w-2xl";
+
 /** Biên bản tối thiểu 10 ký tự như `DraftMinutesSchema` của máy chủ. */
 const MINUTES_MIN_LENGTH = 10;
 
@@ -366,7 +373,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
                 <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
                 {meeting.agenda ? (
-                  <p className="mt-1 whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground">{meeting.agenda}</p>
+                  <p className={cn("mt-1 whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground", PROSE_MAX_CLASS)}>{meeting.agenda}</p>
                 ) : (
                   <p className="mt-1 text-compact text-muted-foreground">Chưa có nội dung và chương trình.</p>
                 )}
@@ -450,7 +457,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                     {editingMinutes ? (
                       <form
                         noValidate
-                        className="flex flex-col gap-2"
+                        className={cn("flex flex-col gap-2", PROSE_MAX_CLASS)}
                         onSubmit={(event) => {
                           event.preventDefault();
                           void saveMinutes();
@@ -493,7 +500,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                         </div>
                       </form>
                     ) : meeting.minutes ? (
-                      <p className="whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground">{meeting.minutes}</p>
+                      <p className={cn("whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground", PROSE_MAX_CLASS)}>{meeting.minutes}</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">
                         {canDraftMinutes ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm." : "Chưa có biên bản."}
