@@ -7,6 +7,7 @@ import { formatBytes } from "@/lib/pwa/storage-manager";
 import { Button } from "@/components/ui/button";
 import { FileTypeIcon } from "@/components/documents/file-type-icon";
 import { focusRingClass } from "@/components/ui/focus-ring";
+import { ImageViewerTrigger } from "@/components/ui/image-viewer";
 import type { AssistantAttachmentDTO } from "@qcet/contracts/assistant";
 import { getTaskAgentAttachmentKind, type TaskAgentAttachmentKind } from "@qcet/shared/domain/tasks/task-agent-attachments";
 
@@ -32,7 +33,10 @@ export function createChatAttachment(file: File, previewUrls: Set<string>): Chat
 
 const RING = "shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]";
 
-/** Thẻ ảnh/tệp như Linear: ảnh hiện hình thu nhỏ, tệp hiện icon loại tệp, tên và dung lượng. */
+/**
+ * Thẻ ảnh/tệp như Linear: ảnh hiện hình thu nhỏ (bấm để xem lớn; khối chứa gắn `data-image-viewer-group` để xem nối tiếp các
+ * ảnh cùng tin nhắn hoặc cùng ô soạn), tệp hiện icon loại tệp, tên và dung lượng.
+ */
 export function AttachmentCard({ attachment, onRemove, compact = false }: { attachment: ChatAttachment; onRemove?: () => void; compact?: boolean }) {
   const { file } = attachment;
   const remove = onRemove ? (
@@ -51,8 +55,10 @@ export function AttachmentCard({ attachment, onRemove, compact = false }: { atta
   if (attachment.kind === "image" && attachment.previewUrl) {
     return (
       <div className="relative shrink-0">
-        {/* Ảnh cục bộ (object URL) nên không qua next/image */}
-        <img src={attachment.previewUrl} alt={file.name} title={file.name} className={cn("rounded-lg object-cover", RING, compact ? "size-14" : "size-24")} />
+        <ImageViewerTrigger src={attachment.previewUrl} title={file.name} className="rounded-lg">
+          {/* Ảnh cục bộ (object URL) nên không qua next/image */}
+          <img src={attachment.previewUrl} alt={file.name} title={file.name} draggable={false} className={cn("rounded-lg object-cover", RING, compact ? "size-14" : "size-24")} />
+        </ImageViewerTrigger>
         {remove}
       </div>
     );
@@ -73,16 +79,16 @@ export function AttachmentCard({ attachment, onRemove, compact = false }: { atta
 
 /**
  * Thẻ tệp đã lưu của Trợ lý (mở lại cuộc): cùng dáng với thẻ trong phiên, bấm mở tệp ở thẻ mới (chỉ chủ cuộc mở được).
- * Ảnh hiện hình thu nhỏ tải từ máy chủ.
+ * Ảnh hiện hình thu nhỏ tải từ máy chủ, bấm thì xem lớn trong trình xem ảnh (có Tải về).
  */
 export function StoredAttachmentCard({ attachment }: { attachment: AssistantAttachmentDTO }) {
   const label = `Mở tệp ${attachment.name}`;
   if (attachment.kind === "image") {
     return (
-      <a href={attachment.url} target="_blank" rel="noopener noreferrer" aria-label={label} title={attachment.name} className={cn("shrink-0 rounded-lg", focusRingClass)}>
+      <ImageViewerTrigger src={attachment.url} title={attachment.name} className="shrink-0 rounded-lg">
         {/* Ảnh qua API tệp có kiểm quyền nên không qua next/image */}
-        <img src={attachment.url} alt={attachment.name} loading="lazy" className={cn("size-24 rounded-lg bg-muted object-cover", RING)} />
-      </a>
+        <img src={attachment.url} alt={attachment.name} title={attachment.name} loading="lazy" draggable={false} className={cn("size-24 rounded-lg bg-muted object-cover", RING)} />
+      </ImageViewerTrigger>
     );
   }
   return (

@@ -228,7 +228,7 @@ function UserTurn({
     onEdit(next);
   };
   return (
-    <div className={cn("group/question flex flex-col items-end gap-1.5", ENTER_MOTION)}>
+    <div data-image-viewer-group="" className={cn("group/question flex flex-col items-end gap-1.5", ENTER_MOTION)}>
       {/* Tệp gửi kèm hiện trên câu hỏi như panel Agent tạo nhiệm vụ: bản trong phiên (có ảnh xem trước sẵn), mở lại cuộc
           thì bản đã lưu ở máy chủ */}
       {message.attachments?.length

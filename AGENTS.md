@@ -53,6 +53,7 @@
   | Hộp thoại có ô nhập | `StandardDialog` + `DialogForm` (Enter gửi, Ctrl/Cmd+Enter trong ô nhiều dòng) + `DialogFooter`; nút chính `type="submit"` |
   | Menu thao tác, menu lọc nhiều cấp | `ui/menu`: `MENU_POPUP_CLASS`, `MenuActionItem` (thao tác, đóng khi bấm), `MenuOptionItem` (chọn giá trị, giữ mở), `MenuSubmenu`; bộ lọc trang danh sách: `ListToolbarFilterPopover`. Đang chọn = nền accent + chữ đậm, không tick/ô tích/mũi tên |
   | Rỗng; thông báo trong trang; avatar; tooltip | `EmptyState`; `InlineAlert`; `UserAvatar`; `Tooltip` |
+  | Ảnh nội dung bấm để xem lớn | `ImageViewerTrigger` (`ui/image-viewer`) + `data-image-viewer-group` trên khối chứa |
   | Màu tín hiệu | `text-destructive`, `bg-danger-soft`, `bg-destructive/10`; `text-warning`, `bg-warning/10` |
   | Cỡ chữ | `text-xs`, `text-compact`, `text-sm`… (thang ở `DESIGN.md`) |
 

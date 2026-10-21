@@ -149,6 +149,7 @@ import {
   type ContentBlockType,
 } from "@qcet/shared/lib/tasks/plate-block-codec";
 import { Pressable } from "@/components/ui/pressable";
+import { ImageViewerTrigger } from "@/components/ui/image-viewer";
 import { MENU_POPUP_CLASS, MenuActionItem, MenuContent, MenuRoot, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 
@@ -828,13 +829,17 @@ function ImageEl({ attributes, children, element }: any) {
           <div className="relative group/image my-2 max-w-full">
             <div style={{ width: `${imageWidth}%` }} className="relative mx-auto transition-all duration-150">
               {!imageLoadError ? (
-                <img
-                  src={localImagePreviews.get(url) ?? url}
-                  alt={caption || "Hình ảnh"}
-                  className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none"
-                  loading="lazy"
-                  onError={() => setImageLoadError(true)}
-                />
+                // Bấm ảnh mở trình xem toàn màn hình; các ảnh khác trong cùng editor xem nối tiếp (nhóm ở khung editor)
+                <ImageViewerTrigger src={localImagePreviews.get(url) ?? url} title={caption || "Hình ảnh"} className="w-full rounded-lg">
+                  <img
+                    src={localImagePreviews.get(url) ?? url}
+                    alt={caption || "Hình ảnh"}
+                    draggable={false}
+                    className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none"
+                    loading="lazy"
+                    onError={() => setImageLoadError(true)}
+                  />
+                </ImageViewerTrigger>
               ) : (
                 <div className="flex flex-col items-center justify-center p-6 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 text-center my-2">
                   <ImageIcon className="size-8 text-destructive/60 mb-2" />
@@ -2496,6 +2501,7 @@ export function TaskBlockEditor({
         <div
           ref={containerRef}
           data-slot="task-block-editor"
+          data-image-viewer-group=""
         data-plate-selectable="true"
         onPaste={handleContainerPaste}
         onDrop={handleContainerDrop}

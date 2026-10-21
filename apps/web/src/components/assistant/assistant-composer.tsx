@@ -151,7 +151,7 @@ export function AssistantComposer({
         }}
       >
         {attachments.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 px-1 pt-1">
+          <div data-image-viewer-group="" className="flex flex-wrap gap-1.5 px-1 pt-1">
             {attachments.map((a) => (
               <AttachmentCard key={a.id} attachment={a} compact onRemove={onRemoveAttachment ? () => onRemoveAttachment(a.id) : undefined} />
             ))}

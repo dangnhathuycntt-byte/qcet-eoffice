@@ -361,7 +361,7 @@ export function TaskAgentPanel({
             )}
             {messages.map((m, i) =>
               m.role === "user" ? (
-                <div key={i} className="ml-10 flex flex-col items-end gap-1.5 motion-safe:animate-[fade-in_0.3s_cubic-bezier(0.16,1,0.3,1)]">
+                <div key={i} data-image-viewer-group="" className="ml-10 flex flex-col items-end gap-1.5 motion-safe:animate-[fade-in_0.3s_cubic-bezier(0.16,1,0.3,1)]">
                   {m.attachments?.map((a) => <AttachmentCard key={a.id} attachment={a} />)}
                   <p className="whitespace-pre-wrap text-right text-compact text-foreground">{m.content}</p>
                   {i === 0 && (
@@ -418,7 +418,7 @@ export function TaskAgentPanel({
         {/* Như Linear: khung ô soạn giữ nguyên viền mảnh khi đang gõ, chỉ có con trỏ nhập báo focus */}
         <div className={cn("flex flex-col gap-1 rounded-xl bg-background p-2", RING)}>
           {files.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 px-1 pt-1">
+            <div data-image-viewer-group="" className="flex flex-wrap gap-1.5 px-1 pt-1">
               {files.map((a) => (
                 <AttachmentCard key={a.id} attachment={a} compact onRemove={() => removeFile(a.id)} />
               ))}

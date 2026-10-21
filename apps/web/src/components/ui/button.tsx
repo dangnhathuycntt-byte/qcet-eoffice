@@ -22,6 +22,9 @@ const buttonVariants = cva(
         premium:
           "bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:bg-primary-hover",
         link: "text-primary underline-offset-4 hover:underline",
+        // Nút trên nền tối của trình xem ảnh (`bg-scrim-strong`): chữ trắng mờ, rê/tiêu điểm nền trắng 10–15%, viền tiêu điểm trắng
+        overlay:
+          "text-white/80 hover:bg-white/10 hover:text-white focus-visible:bg-white/15 focus-visible:text-white focus-visible:outline-white",
         // Nút phụ nền trắng như Linear (Documentation, Add filter): vòng 0,5px thay viền và bóng rất nhẹ (đo trên linear.app 14/10/2026).
         toolbar:
           "bg-background text-foreground shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)] hover:bg-accent",

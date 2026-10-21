@@ -102,6 +102,7 @@
   --color-brand-accent: var(--brand-accent);
   --color-icon-accent: var(--icon-accent);
   --color-overlay: var(--overlay);
+  --color-scrim-strong: var(--scrim-strong);
   --color-bg-app: var(--gray-1);
   --color-bg-panel: var(--gray-2);
   --color-bg-control: var(--gray-3);
@@ -279,6 +280,7 @@
   --brand-accent: #F8F000; /* vàng logo trường */
   --icon-accent: #C0D0F4; /* nền chip icon nghiệp vụ và mảng nhấn */
   --overlay: rgba(0, 0, 0, 0.40); /* lớp tối sau hộp thoại */
+  --scrim-strong: rgba(16, 16, 18, 0.96); /* nền trình xem ảnh: bề mặt tối duy nhất của giao diện sáng (như trình xem ảnh của Google Keep) */
   --on-action: #FAFAFA; /* chữ trên nút chính */
   /* Borders are being phased out; until components stop using them keep them faint. */
   --border: var(--gray-4);
