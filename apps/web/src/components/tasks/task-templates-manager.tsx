@@ -172,7 +172,7 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
         ) : null
       }
     >
-      <section aria-label="Mẫu nhiệm vụ" className={cn("space-y-3", className)}>
+      <section aria-label="Mẫu nhiệm vụ" className={cn("empty-fill space-y-3", className)}>
         {error && <InlineAlert variant="error">{error}</InlineAlert>}
 
         {form && (

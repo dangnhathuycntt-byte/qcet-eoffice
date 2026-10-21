@@ -104,7 +104,7 @@ export function UnitRequestInbox({ className }: { className?: string }) {
   if (rows === null && !error) return <p className={cn("text-xs text-muted-foreground", className)}>Đang tải…</p>;
 
   return (
-    <section aria-label="Yêu cầu phối hợp" className={cn("space-y-2", className)}>
+    <section aria-label="Yêu cầu phối hợp" className={cn("empty-fill space-y-2", className)}>
       {error && <InlineAlert variant="error">{error}</InlineAlert>}
       {rows && rows.length === 0 && (
         <EmptyState

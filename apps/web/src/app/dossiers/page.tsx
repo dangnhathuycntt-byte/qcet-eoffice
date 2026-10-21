@@ -20,7 +20,7 @@ export default async function DossiersPage() {
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className="empty-fill w-full space-y-4">
       <React.Suspense
         fallback={
           <div className="max-w-[1440px] w-full mx-auto p-6 space-y-4 animate-pulse">

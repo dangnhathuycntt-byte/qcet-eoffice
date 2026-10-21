@@ -90,7 +90,7 @@ export function DisposedDossiersView() {
       hideTitleOnMobile
       className="max-w-3xl"
     >
-      <div className="flex flex-col gap-4 pb-6">
+      <div className="empty-fill flex flex-col gap-4 pb-6">
         {notice ? <InlineAlert variant="info">{notice}</InlineAlert> : null}
         {error ? (
           <InlineAlert actionLabel={error.retry ? "Thử lại" : undefined} onAction={error.retry ? () => void load() : undefined}>
@@ -107,7 +107,8 @@ export function DisposedDossiersView() {
           )
         ) : items.length === 0 ? (
           <EmptyState
-            density="compact"
+            role="status"
+            density="page"
             illustration="all-done"
             title="Không có hồ sơ nào chờ xóa hẳn"
             description="Hồ sơ được hủy theo quyết định và có biên bản sẽ hiện ở đây."

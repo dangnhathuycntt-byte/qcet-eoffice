@@ -18,7 +18,8 @@ export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
    * compact: chữ 13px/12px và khoảng cách gọn cho khung trong bảng hoặc panel hẹp.
    * page: trang danh sách trống kiểu Linear (đo linear.app 14/10/2026): khối rộng 340px đặt giữa vùng, chữ căn trái,
    * icon lớn vừa khít nét vẽ, mép trái thẳng mép chữ như Linear; tiêu đề 14px đậm, mô tả 13px; icon, chữ và nút cách nhau 24px;
-   * nút `Button size="pill"` cách nhau 8px.
+   * nút `Button size="pill"` cách nhau 8px. Tự giãn lấp phần còn lại của khối cha dạng cột (khối bao gắn `empty-fill`) và đứng
+   * giữa, đệm trên 96px từ md để khối hơi thấp hơn giữa như trang Nhiệm vụ.
    */
   density?: "default" | "compact" | "page";
 }
@@ -31,7 +32,7 @@ export function EmptyState({ icon, illustration, glyph, title, description, acti
   const art = glyph ?? illustration;
   if (density === "page") {
     return (
-      <div data-density={density} className={cn("flex w-full items-center justify-center px-6 py-12", className)} {...props}>
+      <div data-density={density} className={cn("flex w-full shrink-0 grow items-center justify-center px-6 py-12 md:pt-24", className)} {...props}>
         <div className="flex w-full max-w-[340px] flex-col gap-6 text-left">
           {art ? (
             <EmptyGlyph name={art} fit="tight" />

@@ -139,7 +139,7 @@ export function AuditLogView() {
         )
       }
     >
-      <div className="flex flex-col gap-4 pb-6">
+      <div className="empty-fill flex flex-col gap-4 pb-6">
         {forbidden ? null : (
           <div role="group" aria-label="Lọc nhật ký" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             {textFilter("action", "Hành động", "Hành động")}
@@ -186,7 +186,9 @@ export function AuditLogView() {
           </div>
         ) : entries.length === 0 ? (
           <EmptyState
-            density="compact"
+            role="status"
+            density="page"
+            glyph={hasFilters ? "no-results" : "archive"}
             title={hasFilters ? "Không có sự kiện phù hợp" : "Chưa có sự kiện nào được ghi"}
             description={hasFilters ? "Thử bỏ bớt điều kiện lọc hoặc mở rộng khoảng ngày." : undefined}
           />

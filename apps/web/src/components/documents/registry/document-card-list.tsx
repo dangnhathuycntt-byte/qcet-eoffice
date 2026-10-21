@@ -88,8 +88,8 @@ export function DocumentCardList({
   // Error State
   if (error) {
     return (
-      <div className={className} data-slot="document-card-list">
-        <DocumentLoadError title="Không thể tải dữ liệu văn bản" message={error} onRetry={onRetry} />
+      <div className={cn("empty-fill", className)} data-slot="document-card-list">
+        <DocumentLoadError density="page" title="Không thể tải dữ liệu văn bản" message={error} onRetry={onRetry} />
       </div>
     );
   }
@@ -97,15 +97,10 @@ export function DocumentCardList({
   // Empty State
   if (documents.length === 0) {
     return (
-      <div
-        className={cn(
-          "border border-dashed border-border/70 rounded-xl bg-muted/10 m-3 select-none",
-          className
-        )}
-        data-slot="document-card-list"
-      >
+      <div className={cn("empty-fill select-none", className)} data-slot="document-card-list">
         <EmptyState
-          density="compact"
+          role="status"
+          density="page"
           icon={<FileText />}
           illustration={emptyIllustration}
           title={emptyTitle}

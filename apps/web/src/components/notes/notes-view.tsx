@@ -350,8 +350,8 @@ export function NotesView() {
         </div>
       </header>
 
-      <div data-slot="notes-board" className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
-        <div className="px-4 pb-16 pt-6 sm:px-6">
+      <div data-slot="notes-board" className="thin-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="empty-fill px-4 pb-16 pt-6 sm:px-6">
           {/* Đang tìm thì ẩn ô ghi nhanh, chỉ còn kết quả (như Keep) */}
           {!hasQuery && (
             <div
@@ -380,7 +380,7 @@ export function NotesView() {
             </div>
           )}
 
-          <div className={cn(!hasQuery && "mt-8")}>
+          <div className={cn("empty-fill", !hasQuery && "mt-8")}>
             {status === "loading" ? (
               <div aria-hidden>
                 <NoteMasonry
@@ -395,7 +395,8 @@ export function NotesView() {
               </div>
             ) : status === "error" ? (
               <EmptyState
-                density="compact"
+                role="alert"
+                density="page"
                 glyph="load-error"
                 title="Không tải được ghi chú"
                 description="Kiểm tra kết nối rồi thử lại."
@@ -407,11 +408,11 @@ export function NotesView() {
               />
             ) : isEmpty ? (
               hasQuery ? (
-                <EmptyState density="compact" glyph="no-results" title="Không có ghi chú phù hợp" description="Thử từ khóa khác." />
+                <EmptyState role="status" density="page" glyph="no-results" title="Không có ghi chú phù hợp" description="Thử từ khóa khác." />
               ) : (
                 <EmptyState
-                  density="compact"
-                  className="pt-8"
+                  role="status"
+                  density="page"
                   glyph="dossier"
                   title="Ghi chú bạn thêm sẽ hiện ở đây"
                   description="Ghi lại ý riêng cho cuộc họp, công việc. Chỉ mình bạn xem được."

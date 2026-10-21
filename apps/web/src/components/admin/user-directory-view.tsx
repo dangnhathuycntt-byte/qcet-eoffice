@@ -97,7 +97,7 @@ export function UserDirectoryView() {
         <ListToolbarSearch value={search} onChange={setSearch} placeholder="Tìm tên hoặc email…" aria-label="Tìm tài khoản" />
       }
     >
-      <div className="flex flex-col gap-4 pb-6">
+      <div className="empty-fill flex flex-col gap-4 pb-6">
         <Tabs
           value={roleFilter}
           onValueChange={(next) => {
@@ -127,7 +127,9 @@ export function UserDirectoryView() {
           </div>
         ) : users.length === 0 ? (
           <EmptyState
-            density="compact"
+            role="status"
+            density="page"
+            glyph={debouncedSearch || roleFilter ? "no-results" : "directory"}
             title="Không có tài khoản phù hợp"
             description={debouncedSearch || roleFilter ? "Thử từ khóa khác hoặc chọn vai trò khác." : "Chưa có tài khoản nào đang có chức vụ tại đơn vị."}
           />

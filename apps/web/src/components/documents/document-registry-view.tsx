@@ -439,16 +439,16 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
               ref={listRef}
               tabIndex={-1}
               data-slot="document-list-region"
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-0 pb-6 pt-1 outline-none sm:px-4 sm:pt-4 md:pb-8"
+              className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-0 pb-6 pt-1 outline-none sm:px-4 sm:pt-4 md:pb-8"
             >
-              <div>
+              <div className="empty-fill">
                 {/* Văn bản đang xem không thuộc kết quả của bộ lọc/trang hiện tại: nói rõ, không tự chuyển sang dòng khác */}
                 {pane.docId && !paneDoc && !isLoading && !fetchError ? (
                   <p role="status" className="flex h-8 items-center px-2 text-xs text-muted-foreground">
                     Văn bản đang xem nằm ngoài kết quả hiện tại.
                   </p>
                 ) : null}
-                <div className="hidden sm:block">
+                <div className="hidden sm:empty-fill sm:block">
                   <DocumentLedgerTable
                     documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
                     numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
@@ -458,7 +458,7 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
                     onOpen={handleOpenDetail} onNavigate={handleNavigate} onFocusDetail={handleFocusDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
                   />
                 </div>
-                <div className="block sm:hidden">
+                <div className="block max-sm:empty-fill sm:hidden">
                   <DocumentCardList
                     documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
                     emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description} emptyIllustration={emptyCopy.illustration}

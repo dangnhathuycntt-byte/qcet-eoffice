@@ -854,17 +854,17 @@ export function DocumentLedgerTable({
 
   if (error) {
     return (
-      <div data-slot="document-ledger-table">
-        <DocumentLoadError title="Không thể tải danh sách văn bản" message={error} onRetry={onRetry} />
+      <div data-slot="document-ledger-table" className="empty-fill">
+        <DocumentLoadError density="page" title="Không thể tải danh sách văn bản" message={error} onRetry={onRetry} />
       </div>
     );
   }
 
   if (documents.length === 0) {
     const copy = emptyCopy ?? getLedgerEmptyCopy({ isResultFiltered: Boolean(isFiltered) });
-    // Đặt giữa vùng danh sách như trạng thái rỗng của Nhiệm vụ, không dạt lên đầu để lại khoảng trắng lớn
+    // Đặt giữa vùng danh sách như trạng thái rỗng của Nhiệm vụ (khối bao `empty-fill`), không dạt lên đầu để lại khoảng trắng lớn
     return (
-      <div data-slot="document-ledger-table" className="relative flex min-h-[48vh] items-center justify-center">
+      <div data-slot="document-ledger-table" className="empty-fill relative">
         <EmptyState
           role="status"
           density="page"

@@ -154,7 +154,7 @@ export function DelegationRegistryView() {
         />
       }
     >
-      <div className="flex flex-col gap-4 pb-6">
+      <div className="empty-fill flex flex-col gap-4 pb-6">
         <Tabs
           value={statusFilter}
           onValueChange={(next) => {
@@ -184,7 +184,9 @@ export function DelegationRegistryView() {
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            density="compact"
+            role="status"
+            density="page"
+            glyph={search.trim() ? "no-results" : "directory"}
             title={search.trim() ? "Không có ủy quyền phù hợp" : statusFilter === "ACTIVE" ? "Chưa có ủy quyền nào đang có hiệu lực" : "Không có ủy quyền nào"}
             description={
               search.trim()

@@ -226,7 +226,6 @@ export function MeetingListView() {
         <EmptyState
           density="page"
           glyph={searching ? "no-results" : "calendar"}
-          className="md:pt-20"
           title={searching ? "Không có cuộc họp phù hợp" : tab === "upcoming" ? "Chưa có cuộc họp sắp diễn ra" : tab === "done" ? "Chưa có cuộc họp nào đã họp" : "Chưa có cuộc họp nào"}
           description={searching ? "Thử từ khóa khác hoặc xem giai đoạn khác." : "Cuộc họp Thầy/Cô tổ chức hoặc được mời sẽ hiện ở đây."}
           action={

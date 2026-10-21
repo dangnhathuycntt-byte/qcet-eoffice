@@ -41,8 +41,8 @@ export function WorkspacePageCard({
             </div>
             {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
-            <div className={cn("mx-auto w-full max-w-4xl", className)}>{children}</div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6">
+            <div className={cn("empty-fill mx-auto w-full max-w-4xl", className)}>{children}</div>
           </div>
         </main>
       </div>

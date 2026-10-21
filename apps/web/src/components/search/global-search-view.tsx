@@ -139,7 +139,7 @@ export function GlobalSearchView() {
       hideTitleOnMobile
       className="max-w-4xl"
     >
-      <div className="flex flex-col gap-4 pb-6">
+      <div className="empty-fill flex flex-col gap-4 pb-6">
         <div role="search" className="relative">
           <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -191,7 +191,9 @@ export function GlobalSearchView() {
           </div>
         ) : total === 0 ? (
           <EmptyState
-            density="compact"
+            role="status"
+            density="page"
+            glyph="no-results"
             title={`Không tìm thấy kết quả cho “${query}”`}
             description="Thử từ khóa ngắn hơn, mã nhiệm vụ hoặc số ký hiệu văn bản. Chỉ hiện những gì Thầy/Cô có quyền xem."
           />

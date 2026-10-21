@@ -828,6 +828,17 @@
   100% { transform: translateX(100%); }
 }
 
+/* Khối bao trạng thái rỗng kiểu trang: có EmptyState density="page" bên trong thì thành cột lấp hết phần còn lại, để khối trống
+   đứng giữa vùng như trang Nhiệm vụ (người dùng báo trang Yêu cầu phối hợp nằm cao 21/10/2026). Gắn trên mọi khối bao giữa vùng
+   cuộn (vùng cuộn để `flex flex-col`) và EmptyState; EmptyState trang tự giãn (`grow`). */
+@utility empty-fill {
+  &:has([data-density="page"]) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+  }
+}
+
 @utility content-auto {
   content-visibility: auto;
   contain-intrinsic-size: 1px 64px;

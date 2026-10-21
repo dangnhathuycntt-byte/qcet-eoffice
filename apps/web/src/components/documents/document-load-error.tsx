@@ -14,15 +14,18 @@ export interface DocumentLoadErrorProps {
   /** Nút phụ cạnh "Thử lại", ví dụ liên kết về danh sách. */
   children?: React.ReactNode;
   className?: string;
+  /** page: lỗi thay cả danh sách, bố cục trang trống như Nhiệm vụ (icon lớn, khối giữa vùng); mặc định gọn cho khung nhỏ. */
+  density?: "compact" | "page";
 }
 
 /** Lỗi tải dữ liệu phân hệ Văn bản: dùng chung cho sổ, thẻ điện thoại và các route lỗi. */
-export function DocumentLoadError({ title, message, digest, onRetry, retryLabel = "Thử lại", children, className }: DocumentLoadErrorProps) {
+export function DocumentLoadError({ title, message, digest, onRetry, retryLabel = "Thử lại", children, className, density = "compact" }: DocumentLoadErrorProps) {
   return (
     <EmptyState
       role="alert"
-      density="compact"
+      density={density}
       icon={<AlertCircle />}
+      glyph={density === "page" ? "load-error" : undefined}
       title={title}
       description={
         <>
@@ -32,7 +35,7 @@ export function DocumentLoadError({ title, message, digest, onRetry, retryLabel 
       }
       action={
         onRetry || children ? (
-          <div className="flex items-center justify-center gap-2">
+          <div className={density === "page" ? "flex items-center gap-2" : "flex items-center justify-center gap-2"}>
             {onRetry ? (
               <Button variant="outline" size="sm" onClick={onRetry}>
                 <RefreshCw />

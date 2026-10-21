@@ -228,7 +228,7 @@ export function DossierRegistryView() {
 
   return (
     <div
-      className="mx-auto w-full max-w-[1440px] space-y-5 pb-6 md:pb-10"
+      className="empty-fill mx-auto w-full max-w-[1440px] space-y-5 pb-6 md:pb-10"
       data-slot="dossier-registry-view"
     >
       {/* Header */}
@@ -410,7 +410,7 @@ export function DossierRegistryView() {
 
       {/* Table */}
       {!fetchError && (
-        <div className="overflow-x-auto rounded-xl border border-border/50 bg-card shadow-2xs">
+        <div className="empty-fill overflow-x-auto rounded-xl border border-border/50 bg-card shadow-2xs">
           <table className="w-full text-sm">
             <thead className={cn(isColdStartEmpty && "hidden")}>
               <tr className="border-b border-border/40 text-left text-xs font-medium text-muted-foreground">
@@ -547,7 +547,6 @@ export function DossierRegistryView() {
               <EmptyState
                 role="status"
                 density="page"
-                className="min-h-[48vh]"
                 icon={<FolderOpen />}
                 title="Không tìm thấy hồ sơ nào"
                 description="Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."
@@ -556,7 +555,6 @@ export function DossierRegistryView() {
               <EmptyState
                 role="status"
                 density="page"
-                className="min-h-[48vh]"
                 illustration="dossier"
                 title="Chưa có hồ sơ công việc"
                 description="Hồ sơ công việc đã lập sẽ hiện ở đây."
