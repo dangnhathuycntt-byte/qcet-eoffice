@@ -216,7 +216,7 @@ export const DOC_GROUPS: DocGroup[] = [
           },
           {
             type: "p",
-            text: "Bấm `Ctrl` + `K` hoặc `⌘` + `K` để mở **Tìm kiếm nhanh**. Khi chưa gõ, hộp hiện các mục mở gần đây, **Hành động** và **Đi tới**. Gõ tên nhiệm vụ, mã số, trích yếu hoặc số văn bản, họ tên cán bộ: kết quả chia nhóm **Nhiệm vụ**, **Văn bản**, **Cán bộ**, mỗi nhóm tối đa 5 dòng; dòng cuối **Xem tất cả kết quả** mở trang Tìm kiếm. Chọn một cán bộ sẽ mở danh bạ lọc theo tên người đó.",
+            text: "Bấm `Ctrl` + `K` hoặc `⌘` + `K` để mở **Tìm kiếm nhanh**. Khi chưa gõ, hộp hiện các mục mở gần đây, **Hành động** và **Đi tới**. Gõ tên nhiệm vụ, mã số, trích yếu hoặc số văn bản, họ tên cán bộ: kết quả chia nhóm **Nhiệm vụ**, **Văn bản**, **Cán bộ**, mỗi nhóm tối đa 5 dòng; dòng cuối **Xem tất cả kết quả** mở trang Tìm kiếm. Chọn một cán bộ sẽ mở danh bạ lọc theo tên người đó. Gõ tên trang (ví dụ \"văn bản đi\", \"ghi chú\") để đi tới trang đó.",
           },
           {
             type: "ul",
@@ -224,6 +224,7 @@ export const DOC_GROUPS: DocGroup[] = [
               "`↑` và `↓` để chọn kết quả, `Enter` để mở.",
               "`Ctrl` + `Enter` hoặc `⌘` + `Enter` để mở trong tab mới.",
               "`Esc` để đóng.",
+              "`Tab` để hỏi Trợ lý câu đang gõ (khi Trợ lý được bật).",
             ],
           },
           {

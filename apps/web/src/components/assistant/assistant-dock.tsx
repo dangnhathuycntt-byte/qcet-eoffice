@@ -421,7 +421,7 @@ export function AssistantDock() {
     chat.setPendingContext(detail.context);
     // Sau newChat (newChat xóa ô soạn): câu hỏi điền sẵn để người dùng xem rồi tự gửi, hoặc gửi luôn khi ngữ cảnh đã vào
     // cuộc mới (lượt gửi đọc ngữ cảnh của lần vẽ sau, nên gửi ở effect bên dưới, không gửi ngay tại đây)
-    if (detail.prompt && detail.send) setAutoSend({ context: detail.context, prompt: detail.prompt });
+    if (detail.prompt && detail.send && detail.context) setAutoSend({ context: detail.context, prompt: detail.prompt });
     else if (detail.prompt) setDraft(detail.prompt);
     openPanel();
   };

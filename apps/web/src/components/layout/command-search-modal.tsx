@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight, LayoutDashboard, Loader2, Search, UserRound, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ArrowRight, Keyboard, Loader2, UserRound, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { getRouteByPath } from "@/lib/navigation/canonical-navigation-registry";
@@ -19,7 +19,10 @@ import {
   IconSidebarSend,
   IconSidebarTasks,
 } from "@/components/layout/sidebar-rounded-icons";
+import { SIDEBAR_MORE_ITEMS, SIDEBAR_NAV_GROUPS } from "@/components/layout/sidebar-nav-list";
 import { TaskIconStatusReview } from "@qcet/shared/lib/icons/task-icons";
+import { askAssistantInDock } from "@/components/assistant/assistant-model";
+import { Kbd } from "@/components/ui/kbd";
 import { highlightMatchSegments, scoreVietnameseSearch } from "@qcet/shared/lib/search/vietnamese-search";
 import type { SearchTaskResult, SearchUserResult, SearchDocumentResult } from "@qcet/contracts/search";
 import { StandardDialog } from "@/components/ui/dialog";
@@ -38,6 +41,10 @@ export interface QuickAction {
   category: "navigation" | "action";
   icon: React.ElementType;
   keywords?: string[];
+  /** Phím tắt thật của lệnh (chạy ngoài hộp), hiện bên phải dòng để người dùng học dần */
+  shortcut?: string[];
+  /** Chỉ hiện khi gõ chữ (trang con của sidebar), ô rỗng không liệt kê để danh sách ngắn */
+  searchOnly?: boolean;
   action: (inNewTab?: boolean) => void;
 }
 
@@ -149,6 +156,7 @@ function flatItemKey(item: FlatItem): string {
 
 export function CommandSearchModal({ className }: CommandSearchModalProps = {}) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const assistantEnabled = useRuntimeFeature("assistant");
   const recentStorageKey = React.useMemo(() => scopedRecentSearchesKey(user?.id), [user?.id]);
@@ -286,14 +294,42 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     [go, saveRecentItem]
   );
 
+  // Trang con lấy từ chính danh mục sidebar (một nguồn), chỉ hiện khi gõ; bỏ trang trùng với mục Đi tới chính, mục "Thêm",
+  // trang quản trị và báo cáo cần quyền riêng
+  const sidebarDestinations = React.useMemo<QuickAction[]>(() => {
+    const primary = new Set(["/tasks", "/documents", "/meetings", "/inbox", "/org", "/assistant"]);
+    const entries: QuickAction[] = [];
+    const add = (id: string, title: string, href: string, icon: React.ElementType) => {
+      if (primary.has(href) || entries.some((entry) => entry.id === id)) return;
+      entries.push({ id: `nav-sidebar-${id}`, title, category: "navigation", icon, searchOnly: true, action: (newTab) => go(href, newTab) });
+    };
+    for (const group of SIDEBAR_NAV_GROUPS) {
+      for (const item of group.items) {
+        if (item.more || (item.feature === "assistant" && !assistantEnabled)) continue;
+        add(item.id, item.label, item.href, item.icon);
+        for (const child of item.children ?? []) {
+          if (child.requiresApprovalReport) continue;
+          add(child.id, child.href.includes("?") ? `${item.label} · ${child.label}` : child.label, child.href, item.icon);
+        }
+      }
+    }
+    for (const item of SIDEBAR_MORE_ITEMS) {
+      if (item.section !== "admin") add(item.id, item.label, item.href, item.icon);
+    }
+    return entries;
+  }, [assistantEnabled, go]);
+
   const quickActions = React.useMemo<QuickAction[]>(() => {
     return [
       {
         id: "create-task",
-        title: "Tạo nhiệm vụ",
+        // "…" như Linear: lệnh mở hộp nhập tiếp
+        title: "Tạo nhiệm vụ…",
         category: "action",
         icon: IconSidebarCompose,
         keywords: ["tao nhiem vu", "tao cong viec", "them nhiem vu", "new task", "create task"],
+        // Phím C chỉ chạy ở khu Nhiệm vụ (useTaskShortcuts)
+        ...(pathname?.startsWith("/tasks") ? { shortcut: ["C"] } : {}),
         action: () => {
           handleClose();
           window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
@@ -320,6 +356,18 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           window.dispatchEvent(new CustomEvent("qcet:set-task-scope", { detail: { scope: "my" } }));
           window.dispatchEvent(new CustomEvent("qcet:set-smart-tab", { detail: { tab: "my_tasks" } }));
           go("/tasks?scope=my", newTab);
+        },
+      },
+      {
+        id: "action-shortcuts",
+        title: "Xem phím tắt",
+        category: "action",
+        icon: Keyboard,
+        keywords: ["phim tat", "ban phim", "shortcuts", "keyboard", "tro giup"],
+        shortcut: ["?"],
+        action: () => {
+          handleClose();
+          window.dispatchEvent(new CustomEvent("qcet:open-shortcuts"));
         },
       },
       {
@@ -355,14 +403,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         action: (newTab) => go("/inbox", newTab),
       },
       {
-        id: "nav-portal",
-        title: "Cổng chỉ đạo Ban Giám hiệu",
-        category: "navigation",
-        icon: LayoutDashboard,
-        keywords: ["cong chi dao", "ban giam hieu", "portal", "diem nghen"],
-        action: (newTab) => go("/", newTab),
-      },
-      {
         id: "nav-org",
         title: canonicalNavLabel("/org", "Tổ chức"),
         category: "navigation",
@@ -370,6 +410,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         keywords: ["co cau to chuc", "nhan su", "phong ban", "khoa", "to chuc", "danh ba"],
         action: (newTab) => go("/org", newTab),
       },
+      ...sidebarDestinations,
       // Trợ lý chỉ hiện khi cờ bật
       ...(assistantEnabled
         ? [
@@ -384,7 +425,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           ]
         : []),
     ];
-  }, [handleClose, go, assistantEnabled]);
+  }, [handleClose, go, assistantEnabled, pathname, sidebarDestinations]);
 
   // Ctrl/Cmd+K bật/tắt, sự kiện mở từ sidebar/topbar, Esc đóng
   React.useEffect(() => {
@@ -490,7 +531,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
   const trimmedQuery = query.trim();
 
   const filteredActions = React.useMemo(() => {
-    if (!trimmedQuery) return quickActions;
+    if (!trimmedQuery) return quickActions.filter((action) => !action.searchOnly);
     return quickActions
       .map((action) => ({
         action,
@@ -565,10 +606,23 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     [go, handleSelectTask, handleSelectDocument, handleSelectUser]
   );
 
+  // Tab chuyển câu đang gõ sang khung Trợ lý (như "Ask Linear"); không có khung (điện thoại, trang Trợ lý) thì mở trang Trợ lý
+  const askAssistant = () => {
+    const prompt = query.trim();
+    handleClose();
+    if (!askAssistantInDock(null, prompt ? { prompt } : undefined)) router.push("/assistant");
+  };
+
   // T42: Lên/Xuống chuyển dòng đang chọn (focus vẫn ở ô nhập), Enter mở, Cmd/Ctrl+Enter mở tab mới. Esc và giữ focus
   // trong hộp do Dialog lo. Đang gõ bộ gõ (IME) thì bỏ qua.
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.nativeEvent.isComposing || flatItems.length === 0) return;
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === "Tab" && !e.shiftKey && assistantEnabled) {
+      e.preventDefault();
+      askAssistant();
+      return;
+    }
+    if (flatItems.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedIndex((activeIndex + 1) % flatItems.length);
@@ -602,14 +656,15 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       onOpenChange={(open) => (open ? setIsOpen(true) : handleClose())}
       title="Tìm kiếm nhanh"
       description="Tìm nhiệm vụ, văn bản, cán bộ hoặc chạy lệnh. Lên/Xuống để chọn, Enter để mở, Ctrl+Enter mở tab mới."
-      size="md"
+      size="lg"
       showHeader={false}
       initialFocus={inputRef}
       className={cn("gap-0 overflow-hidden p-0 sm:p-0", className)}
     >
       <div data-slot="command-palette" className="flex min-h-0 flex-1 flex-col">
-        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 max-md:px-3">
-          <Search aria-hidden className={ICON_CLASS} />
+        {/* Theo hộp lệnh của Linear (ảnh người dùng gửi 21/10/2026): ô nhập không icon, không kẻ ngăn với danh sách, chữ thẳng
+            mép icon các dòng (18px), bên phải "Hỏi Trợ lý · Tab" */}
+        <div className="flex h-13 shrink-0 items-center gap-2 pl-4.5 pr-3">
           <input
             ref={inputRef}
             type="text"
@@ -627,8 +682,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
               setSelectedIndex(0);
             }}
             onKeyDown={handleInputKeyDown}
-            placeholder="Tìm nhiệm vụ, văn bản, cán bộ hoặc lệnh…"
-            className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
+            placeholder="Gõ lệnh hoặc tìm nhiệm vụ, văn bản, cán bộ…"
+            className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
           />
           {isLoading ? <Loader2 aria-label="Đang tìm" className={cn(ICON_CLASS, "animate-spin")} /> : null}
           {query ? (
@@ -645,6 +700,16 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
               <X />
             </Button>
           ) : null}
+          {assistantEnabled ? (
+            <Pressable
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={askAssistant}
+              className="flex h-7 shrink-0 items-center gap-1.5 rounded-sm px-1.5 text-xs text-muted-foreground hover:text-foreground max-md:hidden"
+            >
+              Hỏi Trợ lý
+              <Kbd>Tab</Kbd>
+            </Pressable>
+          ) : null}
         </div>
 
         <div
@@ -652,12 +717,12 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           id={LISTBOX_ID}
           role="listbox"
           aria-label="Kết quả"
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 empty:hidden md:max-h-[min(440px,60dvh)]"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-1.5 empty:hidden md:max-h-[min(480px,60dvh)]"
         >
           {groups.map((group) => (
-            <div key={group.key} role={group.label ? "group" : undefined} aria-label={group.label} className="not-first:mt-2">
+            <div key={group.key} role={group.label ? "group" : undefined} aria-label={group.label} className="not-first:mt-1">
               {group.label ? (
-                <div className="flex h-7 items-center justify-between px-2 text-xs text-muted-foreground">
+                <div className="flex h-8 items-center justify-between px-3 text-xs text-muted-foreground">
                   <span aria-hidden>{group.label}</span>
                   {group.key === "recent" ? (
                     <Pressable
@@ -682,7 +747,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={(e) => executeItem(item, e.metaKey || e.ctrlKey)}
                     className={cn(
-                      "flex h-8 cursor-pointer select-none items-center gap-2.5 rounded-md px-2 text-compact text-foreground max-md:h-10",
+                      "flex h-10 cursor-pointer select-none items-center gap-2.5 rounded-lg px-3 text-compact text-foreground",
                       index === activeIndex && "bg-accent"
                     )}
                   >
@@ -702,12 +767,16 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             </p>
           ) : null}
         </div>
+
+        <p aria-live="polite" className="sr-only">
+          {trimmedQuery && !isLoading ? `${flatItems.length} kết quả` : ""}
+        </p>
       </div>
     </StandardDialog>
   );
 }
 
-/** Một dòng 32px: icon 16px · tên cắt cuối · thông tin phụ bên phải (text-xs) */
+/** Một dòng 40px như Linear: icon 16px · tên cắt cuối · thông tin phụ hoặc phím tắt bên phải (text-xs) */
 function PaletteRow({ item, query }: { item: FlatItem; query: string }) {
   switch (item.kind) {
     case "navigation":
@@ -719,6 +788,13 @@ function PaletteRow({ item, query }: { item: FlatItem; query: string }) {
           <span className="min-w-0 flex-1 truncate">
             <HighlightedText text={item.item.title} query={query} />
           </span>
+          {item.item.shortcut ? (
+            <span className="flex shrink-0 gap-1 max-md:hidden" aria-label={`Phím tắt ${item.item.shortcut.join(" ")}`}>
+              {item.item.shortcut.map((key) => (
+                <Kbd key={key}>{key}</Kbd>
+              ))}
+            </span>
+          ) : null}
         </>
       );
     }

@@ -87,12 +87,13 @@ export interface AssistantAsk {
   send?: boolean;
 }
 export interface AssistantAskEventDetail extends Partial<AssistantAsk> {
-  context: AssistantContextRef;
+  /** `null`: hỏi chung, không gắn mục nào (Tab trong hộp Tìm kiếm nhanh, như "Ask Linear") */
+  context: AssistantContextRef | null;
   handled: boolean;
 }
 
 /** Mở khung chat nổi hỏi về `context`; không có khung (điện thoại, trang Trợ lý) thì trả false để nơi gọi chuyển trang. */
-export function askAssistantInDock(context: AssistantContextRef, ask?: AssistantAsk): boolean {
+export function askAssistantInDock(context: AssistantContextRef | null, ask?: AssistantAsk): boolean {
   if (typeof window === "undefined") return false;
   const detail: AssistantAskEventDetail = { context, ...ask, handled: false };
   window.dispatchEvent(new CustomEvent<AssistantAskEventDetail>(ASSISTANT_ASK_EVENT, { detail }));
