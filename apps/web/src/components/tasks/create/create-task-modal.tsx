@@ -184,8 +184,14 @@ export function CreateTaskModal({
   const sourceDocumentRef = React.useRef<SourceDocumentOption | null>(null);
   sourceDocumentRef.current = sourceDocument;
   const { showToast } = useFeedback();
+  // Đã bấm chọn đơn vị trong menu: chip hiện tên kể cả khi chọn đúng đơn vị mặc định (bấm mục đang chọn không đổi giá trị
+  // nên trước đây chip vẫn ghi "Đơn vị", người dùng tưởng "không chọn được đơn vị" 21/10/2026)
+  const [deptPicked, setDeptPicked] = React.useState(false);
   React.useEffect(() => {
-    if (!isOpen) setSourceDocument(null);
+    if (!isOpen) {
+      setSourceDocument(null);
+      setDeptPicked(false);
+    }
   }, [isOpen]);
   const form = useCreateTaskForm({
     isOpen,
@@ -370,7 +376,8 @@ export function CreateTaskModal({
     return form.isLoadingDepartments ? "Đang tải…" : "Chưa có đơn vị";
   }, [form.availableDepartments, form.formData.selectedDeptCode, form.isLoadingDepartments]);
 
-  const deptIsDefault = !form.formData.selectedDeptCode || form.formData.selectedDeptCode === form.defaultDeptCode;
+  const deptIsDefault =
+    !deptPicked && (!form.formData.selectedDeptCode || form.formData.selectedDeptCode === form.defaultDeptCode);
 
   // Editor khối chỉ đọc giá trị lúc gắn: mô tả đổi từ bên ngoài (Agent điền, khôi phục nháp, làm mới form) thì gắn lại
   const editorDescriptionRef = React.useRef(form.formData.description);
@@ -714,7 +721,14 @@ export function CreateTaskModal({
                     <Select.Root
                       value={form.formData.selectedDeptCode}
                       open={openDropdown === "dept"}
-                      onOpenChange={(open) => setOpenDropdown(open ? "dept" : null)}
+                      onOpenChange={(open, details) => {
+                        setOpenDropdown(open ? "dept" : null);
+                        if (!open && details.reason === "item-press") {
+                          setDeptPicked(true);
+                          // Chọn lại đúng đơn vị đang có mà chưa có chủ trì: vẫn đi tiếp sang chọn người như khi đổi đơn vị
+                          if (!form.formData.leadAssigneeId) window.setTimeout(() => setOpenDropdown("dri"), 0);
+                        }
+                      }}
                       onValueChange={(code) => {
                         if (!code || code === form.formData.selectedDeptCode) return;
                         form.setField("selectedDeptCode", code);
@@ -723,8 +737,9 @@ export function CreateTaskModal({
                         window.setTimeout(() => setOpenDropdown("dri"), 0);
                       }}
                     >
-                        {/* Đang ở đơn vị mặc định thì chỉ ghi "Đơn vị" mờ như các chip chưa chọn (người dùng: "để mỗi chữ đơn vị thôi
-                            rồi chọn cho đẹp" 21/10/2026); chọn đơn vị khác mới hiện tên. Tên đầy đủ luôn ở tooltip và nhãn đọc màn hình. */}
+                        {/* Chưa bấm chọn và đang ở đơn vị mặc định thì chỉ ghi "Đơn vị" mờ như các chip chưa chọn (người dùng: "để mỗi chữ
+                            đơn vị thôi rồi chọn cho đẹp" 21/10/2026); bấm chọn (kể cả đơn vị mặc định) thì hiện tên. Tên đầy đủ luôn ở
+                            tooltip và nhãn đọc màn hình. */}
                         <Select.Trigger
                           aria-label={`Đơn vị: ${currentDeptName}`}
                           title={`Đơn vị: ${currentDeptName}`}
@@ -751,9 +766,6 @@ export function CreateTaskModal({
                                   </Select.Item>
                                 ))}
                               </Select.List>
-                              {!form.isExecutive && form.availableDepartments.length === 1 ? (
-                                <p className="px-2 pb-1 pt-1.5 text-xs text-muted-foreground">Nhiệm vụ Thầy/Cô tạo thuộc đơn vị mình công tác.</p>
-                              ) : null}
                             </Select.Popup>
                           </Select.Positioner>
                         </Select.Portal>
