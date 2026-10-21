@@ -26,6 +26,8 @@ import {
   type TaskTimeFilter,
 } from "@/lib/task-time-filter";
 import { Pressable } from "@/components/ui/pressable";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface ActiveFilterSummaryParams {
   dept?: string;
@@ -207,7 +209,10 @@ export function getOriginDisplayLabel(origin: string): string {
   return getSingleOriginDisplayLabel(origin);
 }
 
-/** Linear-style segmented filter chip (Property | Value | ✕) */
+/**
+ * Chip bộ lọc chia đoạn kiểu Linear: [icon + thuộc tính] | [giá trị] | [✕], viền mảnh nền trắng cao 24px (người dùng gửi ảnh
+ * hàng lọc và yêu cầu cải thiện 21/10/2026: chip cũ nền mờ không viền trông như chữ trơn, nút ✕ chỉ 14px khó bấm).
+ */
 export interface FilterSegmentChipProps {
   icon?: React.ComponentType<any>;
   label: string;
@@ -228,21 +233,65 @@ export function FilterSegmentChip({
   return (
     <span
       data-slot={dataSlot}
-      className="inline-flex min-w-0 max-w-full items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none group"
+      className="inline-flex h-6 min-w-0 max-w-full shrink-0 items-stretch divide-x divide-border rounded-sm border border-border bg-background text-xs text-foreground select-none"
     >
-      {Icon && <Icon className="size-3.5 text-muted-foreground/75 shrink-0" />}
-      <span className="text-muted-foreground text-xs whitespace-nowrap">{label}:</span>
-      <span className="min-w-0 font-medium text-xs truncate max-w-[240px]">{value}</span>
+      <span className="flex shrink-0 items-center gap-1 whitespace-nowrap px-1.5 text-muted-foreground">
+        {Icon && <Icon className="size-3.5 shrink-0" />}
+        {label}
+      </span>
+      <FilterChipValue value={value} />
       {onRemove && (
         <Pressable
-          onClick={onRemove}
+          data-filter-remove=""
+          onClick={(event) => keepFocusInFilterBar(event.currentTarget, onRemove)}
           aria-label={removeAriaLabel || `Xóa lọc ${label}`}
-          className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors"
+          className="flex w-6 shrink-0 items-center justify-center rounded-r-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          <X className="size-2.5" />
+          <X className="size-3.5" />
         </Pressable>
       )}
     </span>
+  );
+}
+
+/**
+ * Bỏ chip (hoặc xóa hết) bằng bàn phím: nút đang giữ tiêu điểm biến mất nên tiêu điểm rơi về `body`. Chuyển sang nút ✕ của
+ * chip kế bên; không còn chip nào (hàng lọc ẩn đi) thì về nút Bộ lọc của thanh công cụ gần nhất.
+ */
+function keepFocusInFilterBar(button: HTMLElement, action: () => void) {
+  const hadFocus = document.activeElement === button;
+  const bar = button.closest<HTMLElement>("[data-filter-bar]");
+  const removes = bar ? Array.from(bar.querySelectorAll<HTMLElement>("[data-filter-remove]")) : [];
+  const index = removes.indexOf(button);
+  const sibling = index < 0 ? undefined : removes[index + 1] ?? removes[index - 1];
+  // Tìm trước khi xóa: hàng lọc ẩn đi thì không đi ngược lên từ nó được nữa
+  let scope: HTMLElement | null = bar;
+  while (scope && !scope.querySelector("[data-list-filter-button]")) scope = scope.parentElement;
+  const filterButton = scope?.querySelector<HTMLElement>("[data-list-filter-button]");
+  action();
+  if (!hadFocus) return;
+  requestAnimationFrame(() => {
+    if (sibling?.isConnected) sibling.focus();
+    else filterButton?.focus();
+  });
+}
+
+/** Giá trị bị cắt (tên người, nhiều trạng thái) thì rê chuột hiện đủ trong tooltip; không bị cắt thì không có tooltip. */
+function FilterChipValue({ value }: { value: React.ReactNode }) {
+  const ref = React.useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = React.useState(false);
+  return (
+    <Tooltip
+      open={open}
+      onOpenChange={(next) => setOpen(next && Boolean(ref.current && ref.current.scrollWidth > ref.current.clientWidth + 1))}
+    >
+      <TooltipTrigger asChild>
+        <span className="flex min-w-0 max-w-80 items-center px-1.5 font-medium">
+          <span ref={ref} className="truncate">{value}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{value}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -287,6 +336,37 @@ export interface ActiveFilterBreadcrumbProps {
   className?: string;
 }
 
+/** Giá trị bộ lọc quyết định chip nào hiện ở hàng bộ lọc. */
+export type ActiveFilterValues = Pick<
+  ActiveFilterBreadcrumbProps,
+  "department" | "workbox" | "status" | "search" | "overdue" | "timeFilter" | "deadline" | "priority" | "category" | "health" | "lead" | "origin" | "collaborator"
+>;
+
+function getActiveFilterFlags({ department, workbox, status, search, overdue, timeFilter, deadline, priority, category, health, lead, origin, collaborator }: ActiveFilterValues) {
+  const hasDeadlineOverdue = deadline === "overdue";
+  return {
+    hasDept: Boolean(department && department !== "ALL"),
+    // Thời hạn "Trễ hạn" cũng ghi attention=overdue nên Hộp việc tự thành "overdue": chỉ hiện một chip (Thời hạn)
+    hasWorkbox: Boolean(workbox && workbox !== "ALL" && !(workbox === "overdue" && hasDeadlineOverdue)),
+    hasOverdue: Boolean(overdue && workbox !== "overdue" && !hasDeadlineOverdue),
+    hasSearch: Boolean(search && search.trim().length > 0),
+    hasStatus: Boolean(status && status !== "ALL" && status !== "all"),
+    hasTimeFilter: Boolean(timeFilter && timeFilter.kind !== "none"),
+    hasDeadline: Boolean(deadline && deadline !== "all" && deadline !== "ALL"),
+    hasPriority: Boolean(priority && priority !== "ALL"),
+    hasCategory: Boolean(category && category !== "ALL"),
+    hasHealth: Boolean(health && health !== "all"),
+    hasLead: Boolean(lead && lead !== "all"),
+    hasOrigin: Boolean(origin && origin !== "all"),
+    hasCollaborator: Boolean(collaborator && collaborator !== "all"),
+  };
+}
+
+/** Số chip hàng bộ lọc sẽ hiện, cùng điều kiện với `ActiveFilterBreadcrumb` (khung trống dùng để nói đúng số bộ lọc). */
+export function countActiveFilters(values: ActiveFilterValues): number {
+  return Object.values(getActiveFilterFlags(values)).filter(Boolean).length;
+}
+
 export function ActiveFilterBreadcrumb({
   scope,
   department,
@@ -324,23 +404,10 @@ export function ActiveFilterBreadcrumb({
   inline,
   className = "",
 }: ActiveFilterBreadcrumbProps) {
-  const hasDept = Boolean(department && department !== "ALL");
-  const hasDeadlineOverdue = deadline === "overdue";
-  // Thời hạn "Trễ hạn" cũng ghi attention=overdue nên Hộp việc tự thành "overdue": chỉ hiện một chip (Thời hạn)
-  const hasWorkbox = Boolean(workbox && workbox !== "ALL" && !(workbox === "overdue" && hasDeadlineOverdue));
-  const hasOverdue = Boolean(overdue && workbox !== "overdue" && !hasDeadlineOverdue);
-  const hasSearch = Boolean(search && search.trim().length > 0);
-  const hasStatus = Boolean(status && status !== "ALL" && status !== "all");
-
-  const hasTimeFilter = Boolean(timeFilter && timeFilter.kind !== "none");
-  const hasDeadline = Boolean(deadline && deadline !== "all" && deadline !== "ALL");
-  const hasPriority = Boolean(priority && priority !== "ALL");
-  const hasCategory = Boolean(category && category !== "ALL");
-  const hasHealth = Boolean(health && health !== "all");
-  const hasLead = Boolean(lead && lead !== "all");
-  const hasOrigin = Boolean(origin && origin !== "all");
-  const hasCollaborator = Boolean(collaborator && collaborator !== "all");
-
+  const {
+    hasDept, hasWorkbox, hasOverdue, hasSearch, hasStatus, hasTimeFilter, hasDeadline, hasPriority, hasCategory, hasHealth,
+    hasLead, hasOrigin, hasCollaborator,
+  } = getActiveFilterFlags({ department, workbox, status, search, overdue, timeFilter, deadline, priority, category, health, lead, origin, collaborator });
   const hasAnySecondaryFilter =
     hasDept || hasWorkbox || hasSearch || hasStatus || hasOverdue || hasTimeFilter || hasDeadline || hasPriority ||
     hasCategory || hasHealth || hasLead || hasOrigin || hasCollaborator;
@@ -521,7 +588,7 @@ export interface ActiveFilterBarProps {
   /** Các `FilterSegmentChip` đang áp dụng. */
   children: React.ReactNode;
   onClearAll?: () => void;
-  /** Số kết quả sau lọc; `totalCount` (nếu biết) hiện dạng "x kết quả / y". */
+  /** Số kết quả sau lọc; `totalCount` (nếu biết) hiện dạng "x/y kết quả". */
   filteredCount?: number;
   totalCount?: number;
   /** Nằm trong hàng toolbar: một dòng, chip cuộn ngang thay vì xuống dòng */
@@ -532,38 +599,42 @@ export interface ActiveFilterBarProps {
 
 /**
  * Hàng bộ lọc đang áp dụng dưới thanh công cụ danh sách: chip bên trái, "Xóa lọc" và số kết quả bên phải.
- * Dùng chung Nhiệm vụ và Văn bản.
+ * Dùng chung Nhiệm vụ, Văn bản, Cuộc họp, Cơ cấu tổ chức. Số kết quả đọc lên cho trình đọc màn hình mỗi khi đổi bộ lọc.
  */
 export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCount, inline, className, dataSlot = "active-filter-bar" }: ActiveFilterBarProps) {
   return (
     <div
       data-slot={dataSlot}
+      data-filter-bar=""
       className={cn(
         inline
           ? "flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-2 text-xs"
-          : "flex flex-wrap items-center justify-between gap-2 py-1 text-xs min-h-[30px]",
+          : "flex min-h-8 flex-wrap items-center gap-1.5 text-xs",
         className
       )}
     >
-      {/* Active Filter Chips (Linear segmented compounds) */}
-      <div className={cn("flex items-center gap-1.5 min-w-0 flex-1", inline ? "flex-nowrap overflow-x-auto thin-scrollbar" : "flex-wrap")}>{children}</div>
+      {/* Hàng thường: chip và cụm bên phải cùng xuống dòng như chữ, chip không bị cắt (390px trước đây cắt "Chờ duy…"),
+          cụm "Xóa lọc" đứng cạnh chip cuối khi còn chỗ */}
+      <div className={inline ? "flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto thin-scrollbar" : "contents"}>{children}</div>
 
-      <div className="flex items-center gap-2.5 shrink-0 ml-auto">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {onClearAll && (
-          <Pressable
+          <Button
             data-slot="clear-all-filters"
-            onClick={onClearAll}
+            variant="ghost"
+            size="xs"
+            onClick={(event) => keepFocusInFilterBar(event.currentTarget, onClearAll)}
             aria-label="Xóa tất cả bộ lọc"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground/80 hover:text-foreground transition-colors rounded px-1.5 py-0.5 hover:bg-muted/60"
+            className="text-muted-foreground"
           >
-            <RotateCcw className="size-3" />
-            <span>Xóa lọc</span>
-          </Pressable>
+            <RotateCcw />
+            Xóa lọc
+          </Button>
         )}
 
         {filteredCount !== undefined && (
-          <span className="text-muted-foreground/70 text-xs font-mono tabular-nums shrink-0">
-            {filteredCount} kết quả{totalCount !== undefined ? ` / ${totalCount}` : ""}
+          <span role="status" aria-live="polite" className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {totalCount !== undefined ? `${filteredCount}/${totalCount}` : filteredCount} kết quả
           </span>
         )}
       </div>

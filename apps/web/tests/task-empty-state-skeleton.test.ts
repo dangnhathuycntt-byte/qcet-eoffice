@@ -90,6 +90,19 @@ describe("TaskEmptyState", () => {
     assert.ok(!html.includes(">Tạo việc</button>"), "đang lọc thì chỉ còn Xóa bộ lọc");
   });
 
+  it("đếm theo số chip của hàng bộ lọc: lọc Chờ duyệt không thành \"2 bộ lọc khác\", chừa chỗ cho hàng bộ lọc", () => {
+    // Lọc trạng thái Chờ duyệt cũng đổi activeTab: tự đếm tính hai lần (người dùng gửi ảnh hàng lọc 21/10/2026)
+    const props = { status: "WAITING_APPROVAL", activeTab: "waiting_approval", onResetFilters: () => {} };
+    const guessed = renderToString(React.createElement(TaskEmptyState, props));
+    assert.ok(guessed.includes("2 bộ lọc"), "không truyền số chip thì vẫn tự đếm như cũ");
+    const html = renderToString(React.createElement(TaskEmptyState, { ...props, activeFilterCount: 1 }));
+    assert.ok(html.includes("Đang áp dụng 1 bộ lọc."));
+    assert.ok(!html.includes("bộ lọc khác"));
+    assert.ok(html.includes("md:min-h-[calc(100dvh-15.5rem)]"), "có hàng bộ lọc thì chừa thêm chỗ để trang trống không cuộn");
+    const unfiltered = renderToString(React.createElement(TaskEmptyState, { activeFilterCount: 0 }));
+    assert.ok(unfiltered.includes("md:min-h-[calc(100dvh-13rem)]"));
+  });
+
   it("Đang thực hiện trống vì việc chưa xong đều đã trễ: nói rõ lý do, nút chữ thường sang Trễ hạn, icon đồng hồ báo thức", () => {
     const html = renderToString(
       React.createElement(TaskEmptyState, { taskTab: "active", suggestedView: { id: "overdue", count: 1, onSelect: () => {} } })

@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ActiveFilterBreadcrumb } from "../src/components/workspace/components/active-filter-breadcrumb";
+import { ActiveFilterBar, ActiveFilterBreadcrumb, countActiveFilters } from "../src/components/workspace/components/active-filter-breadcrumb";
 
 describe("ActiveFilterBreadcrumb Component & Logic", () => {
 
@@ -102,5 +102,34 @@ describe("ActiveFilterBreadcrumb Component & Logic", () => {
     assert.ok(html.includes('data-slot="filter-chip-deadline"'));
     assert.ok(!html.includes('data-slot="filter-chip-workbox"'));
     assert.ok(!html.includes('data-slot="filter-chip-overdue"'));
+  });
+
+  test("countActiveFilters khớp số chip hiện ra (Thời hạn Trễ hạn gộp Hộp việc/Trạng thái Trễ hạn thành một)", () => {
+    assert.equal(countActiveFilters({ status: "WAITING_APPROVAL" }), 1);
+    assert.equal(countActiveFilters({ status: "ALL", department: "ALL", search: "  " }), 0);
+    assert.equal(countActiveFilters({ workbox: "overdue", overdue: true, deadline: "overdue" }), 1);
+    assert.equal(countActiveFilters({ status: "IN_PROGRESS", priority: "HIGH", lead: "Nguyễn Văn A" }), 3);
+  });
+
+  test("hàng bộ lọc: chip viền mảnh cao 24px, nút ✕ rộng 24px, số kết quả \"x/y kết quả\" chữ thường đọc cho trình đọc màn hình", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ActiveFilterBreadcrumb, {
+        status: "WAITING_APPROVAL",
+        totalFilteredCount: 0,
+        totalCount: 2,
+        onResetFilters: () => {},
+        onRemoveStatus: () => {},
+      })
+    );
+    assert.ok(html.includes("h-6") && html.includes("border-border") && html.includes("divide-x"));
+    assert.ok(/aria-label="Xóa lọc Trạng thái: WAITING_APPROVAL"[^>]*class="[^"]*\bw-6\b/.test(html) || /class="[^"]*\bw-6\b[^"]*"[^>]*aria-label="Xóa lọc Trạng thái/.test(html));
+    assert.ok(html.includes("0/2 kết quả"));
+    assert.ok(html.includes('role="status"') && html.includes('aria-live="polite"'));
+    assert.ok(!html.includes("font-mono"));
+  });
+
+  test("ActiveFilterBar không có totalCount thì chỉ ghi số kết quả", () => {
+    const html = renderToStaticMarkup(React.createElement(ActiveFilterBar, { filteredCount: 4, children: null }));
+    assert.ok(html.includes(">4 kết quả<"));
   });
 });

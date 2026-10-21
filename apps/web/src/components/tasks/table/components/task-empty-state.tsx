@@ -24,6 +24,11 @@ export interface TaskEmptyStateProps {
   /** View đang chọn của trang (Đang thực hiện, Trễ hạn, Hoàn thành); view không phải bộ lọc nên không đếm vào bộ lọc */
   taskTab?: TaskTab;
   userName?: string;
+  /**
+   * Số chip ở hàng bộ lọc phía trên (`countActiveFilters`). Có thì dùng thay cho tự đếm (tự đếm tính trùng: lọc trạng thái Chờ
+   * duyệt cũng đổi `activeTab`, nên một chip thành "2 bộ lọc khác") và chừa chỗ cho hàng bộ lọc để trang trống không cuộn.
+   */
+  activeFilterCount?: number;
   /** View khác còn việc khi view đang chọn trống: nêu số việc và nút chuyển sang. */
   suggestedView?: { id: TaskTab; count: number; onSelect: () => void };
   onResetFilters?: () => void;
@@ -61,6 +66,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   taskTab,
   userName,
   suggestedView,
+  activeFilterCount,
   onResetFilters,
   onAddTask,
   canAddTask = false,
@@ -71,7 +77,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   let isIntro = false;
   const isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
 
-  const activeFiltersCount = [
+  const activeFiltersCount = activeFilterCount ?? [
     Boolean(isSearchEmpty),
     Boolean(department && department !== "ALL"),
     Boolean(category && category !== "ALL"),
@@ -91,7 +97,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   ].filter(Boolean) as string[];
   const otherFilters = activeFiltersCount - filterSummary.length;
   const filterNote = hasFilterActive
-    ? `Đang áp dụng ${[...filterSummary, otherFilters > 0 ? `${otherFilters} bộ lọc khác` : null].filter(Boolean).join(", ")}.`
+    ? `Đang áp dụng ${[...filterSummary, otherFilters > 0 ? `${otherFilters} bộ lọc${filterSummary.length > 0 ? " khác" : ""}` : null].filter(Boolean).join(", ")}.`
     : null;
 
   if (!displayTitle) {
@@ -114,7 +120,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
     ) {
       displayTitle = "Không có nhiệm vụ nào chờ phê duyệt";
       displayDescription =
-        "Hiện tại không có nhiệm vụ hoặc báo cáo nào đang chờ duyệt từ bạn.";
+        "Hiện không có nhiệm vụ hoặc báo cáo nào đang chờ duyệt.";
     } else if (taskTab === "active" && activeFiltersCount === 0) {
       displayTitle = "Không có nhiệm vụ nào đang thực hiện";
       displayDescription = "Mọi nhiệm vụ đã hoàn thành, hoặc chưa có việc nào được giao. Chọn \"Tất cả\" để xem toàn bộ.";
@@ -174,7 +180,13 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       // Từ md: cao gần hết vùng nội dung, pt-24 kéo khối xuống gần giữa vùng như Linear. Phần chừa (13rem) phải lớn hơn mọi thứ
       // quanh vùng cuộn: khung trang, hai hàng thanh công cụ (88px), đệm dưới và thanh trạng thái; chừa thiếu thì trang trống vẫn
       // cuộn (người dùng báo 20/10/2026: chừa 8.5rem dư 70px ở mọi cỡ màn hình). Chừa dư chỉ làm khối cao lên ít hơn, không cuộn.
-      className={cn("min-h-[66vh] select-none md:min-h-[calc(100dvh-13rem)] md:pt-24", className)}
+      // Có hàng bộ lọc (cao 32px, cách 6px) thì chừa thêm 2.5rem. Màn thấp (≤ 700px) đệm trên 48px: đệm 96px cộng dòng "Đang áp
+      // dụng…" làm khối cao hơn phần chừa và trang trống cuộn (1000×600 dư 12px).
+      className={cn(
+        "min-h-[66vh] select-none md:pt-24 md:[@media(max-height:700px)]:pt-12",
+        activeFilterCount ? "md:min-h-[calc(100dvh-15.5rem)]" : "md:min-h-[calc(100dvh-13rem)]",
+        className,
+      )}
       title={displayTitle}
       description={
         <>

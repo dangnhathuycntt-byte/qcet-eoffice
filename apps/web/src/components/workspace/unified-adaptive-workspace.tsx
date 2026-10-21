@@ -45,7 +45,7 @@ import {
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActionQueueShell } from "./action-queue-shell";
-import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
+import { ActiveFilterBreadcrumb, countActiveFilters, type ActiveFilterValues } from "./components/active-filter-breadcrumb";
 import { TaskTabPills } from "@/components/tasks/task-tab-pills";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import type { SortDirection, TableColumnVisibility, TaskSortField } from "@/components/tasks/table/types";
@@ -1989,19 +1989,29 @@ function UnifiedAdaptiveWorkspaceInner({
   const effectiveError = errorMessage || internalError;
   const isUnassigned = isUserUnassignedDepartment(user);
 
+  // Giá trị của hàng chip bộ lọc; khung trống đếm cùng điều kiện nên câu "Đang áp dụng n bộ lọc" khớp số chip đang hiện
+  const activeFilterValues: ActiveFilterValues = {
+    department: currentDept,
+    workbox: currentWorkbox,
+    status: currentStatus,
+    search: currentSearch,
+    overdue: Boolean(currentOverdue),
+    timeFilter,
+    deadline: internalDeadline,
+    priority: currentPriority,
+    category: currentCategory,
+    health: healthFilter,
+    lead: getPersonFilterLabel(leadFilter, filterFacets.leadPeople, "Chưa có người chủ trì"),
+    collaborator: getPersonFilterLabel(collaboratorFilter, filterFacets.collaboratorPeople, "Không có người phối hợp"),
+  };
+  const activeFilterCount = countActiveFilters(activeFilterValues);
+
   // Chip bộ lọc đang áp: hàng riêng ngay dưới toolbar (hàng trên chỉ có view và công cụ); cuộn đi cùng trang, toolbar giữ nguyên 88px nên không đổi mốc dính của tiêu đề cột
   const renderActiveFilters = () => (
       <ActiveFilterBreadcrumb
         className="-mt-2"
         scope={activeScope}
-        department={currentDept}
-        workbox={currentWorkbox}
-        status={currentStatus}
-        search={currentSearch}
-        overdue={Boolean(currentOverdue)}
-        timeFilter={timeFilter}
-        deadline={internalDeadline}
-        priority={currentPriority}
+        {...activeFilterValues}
         totalFilteredCount={displayedTasks.length}
         totalCount={scopedTasks.length}
         onResetFilters={handleResetFilters}
@@ -2031,13 +2041,9 @@ function UnifiedAdaptiveWorkspaceInner({
         }}
         onRemoveDeadline={() => handleDeadlineFilterChange("all")}
         onRemovePriority={() => handlePriorityChange("ALL")}
-        category={currentCategory}
         onRemoveCategory={() => handleCategoryChange("ALL")}
-        health={healthFilter}
         onRemoveHealth={() => setHealthFilter(null)}
-        lead={getPersonFilterLabel(leadFilter, filterFacets.leadPeople, "Chưa có người chủ trì")}
         onRemoveLead={() => setLeadFilter(null)}
-        collaborator={getPersonFilterLabel(collaboratorFilter, filterFacets.collaboratorPeople, "Không có người phối hợp")}
         onRemoveCollaborator={() => setCollaboratorFilter(null)}
       />
   );
@@ -2073,6 +2079,7 @@ function UnifiedAdaptiveWorkspaceInner({
       }
       emptyStateProps={{
         searchQuery: currentSearch,
+        activeFilterCount,
         activeTab: effectiveActiveTab,
         attention: workspaceQuery?.queryState.attention,
         status: currentStatus !== "ALL" ? currentStatus : undefined,
@@ -2349,6 +2356,7 @@ function UnifiedAdaptiveWorkspaceInner({
                 priority={currentPriority}
                 academicMonth={currentMonth}
                 activeTab={effectiveActiveTab}
+                activeFilterCount={activeFilterCount}
               />
             ) : (
               <div className="pt-0.5">
@@ -2429,6 +2437,7 @@ function UnifiedAdaptiveWorkspaceInner({
                 priority={currentPriority}
                 academicMonth={currentMonth}
                 activeTab={effectiveActiveTab}
+                activeFilterCount={activeFilterCount}
               />
           ) : (
             <div>

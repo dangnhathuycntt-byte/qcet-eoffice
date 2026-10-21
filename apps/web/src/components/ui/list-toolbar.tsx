@@ -356,6 +356,8 @@ export const ListToolbarFilterButton = React.forwardRef<
   return (
     <Pressable
       ref={ref}
+      // Hàng lọc đưa tiêu điểm về đây khi bỏ chip cuối cùng (`ActiveFilterBar`)
+      data-list-filter-button=""
       aria-label={label}
       title={activeCount > 0 ? `Bộ lọc (F) · ${activeCount} đang áp dụng` : "Bộ lọc (F)"}
       className={cn(listToolbarIconButtonClass(open || activeCount > 0), "relative", className)}
