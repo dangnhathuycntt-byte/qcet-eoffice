@@ -50,9 +50,23 @@ export interface ListToolbarSearchProps extends Omit<React.InputHTMLAttributes<H
   /** Chiều rộng khi chưa focus và khi focus (mặc định chuẩn trang danh sách); ô tự mở rộng bằng transition */
   collapsedWidthClassName?: string;
   expandedWidthClassName?: string;
+  /**
+   * Phím tắt mở ô ("/"), chỉ truyền khi trang thật sự nghe phím đó; hiện khi ô trống và chưa focus. Trước đây ô nào cũng
+   * hiện "/" kể cả trang không gắn phím (Ủy quyền, Danh bạ tài khoản, Cơ cấu đơn vị).
+   */
+  shortcutHint?: string;
+  /** Phím khi đang gõ mà ô trống ("Esc" ở ô thu gọn được), thay cho phím tắt mở ô: đã ở trong ô thì "/" vô nghĩa. */
+  focusHint?: string;
 }
 
-/** Ô tìm kiếm của thanh công cụ danh sách: gợi ý phím "/" khi trống, nút xoá khi có từ khóa */
+const searchKbdClass =
+  "hidden h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/60 px-1 font-mono text-xs leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex";
+
+/**
+ * Ô tìm kiếm của thanh công cụ danh sách (người dùng 21/10/2026 "research cải thiện ui ux component này"; theo Search Input
+ * của Paragon UI: gợi ý phím mờ đi khi focus và đổi thành Esc, nút xóa thay chỗ khi có chữ): bo tròn như các nút tròn
+ * bên cạnh, gợi ý phím đúng trạng thái, nút xóa khi có từ khóa (vùng chạm 44px trên điện thoại).
+ */
 export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarSearchProps>(function ListToolbarSearch(
   {
     value,
@@ -62,6 +76,8 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
     wrapperClassName,
     collapsedWidthClassName = LIST_TOOLBAR_SEARCH_COLLAPSED,
     expandedWidthClassName = LIST_TOOLBAR_SEARCH_EXPANDED,
+    shortcutHint,
+    focusHint,
     className,
     onFocus,
     onBlur,
@@ -70,6 +86,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
   ref
 ) {
   const [focused, setFocused] = React.useState(false);
+  const hint = value ? null : focused ? focusHint : shortcutHint;
   return (
     <div
       className={cn(
@@ -82,6 +99,9 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
       <input
         ref={ref}
         type="text"
+        enterKeyHint="search"
+        autoComplete="off"
+        spellCheck={false}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={(e) => {
@@ -93,7 +113,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
           onBlur?.(e);
         }}
         className={cn(
-          `h-8 sm:h-7 w-full rounded-md border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border outline-none ${fieldFocusRingClass} focus-visible:-outline-offset-1 transition-colors`,
+          `h-8 sm:h-7 w-full rounded-full border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border outline-none ${fieldFocusRingClass} focus-visible:-outline-offset-1 transition-colors`,
           className
         )}
         {...inputProps}
@@ -105,15 +125,15 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
             type="button"
             onClick={() => (onClear ? onClear() : onChange(""))}
             aria-label="Xóa từ khóa tìm kiếm"
-            className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer touch-manipulation"
+            className="touch-target-expand-44 size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer touch-manipulation"
           >
             <X className="size-3" />
           </button>
-        ) : (
-          <kbd className="hidden h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/60 px-1 font-mono text-xs leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex">
-            /
+        ) : hint ? (
+          <kbd aria-hidden className={searchKbdClass}>
+            {hint}
           </kbd>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -186,6 +206,9 @@ export const ListToolbarSearchToggle = React.forwardRef<HTMLInputElement, ListTo
         value={value}
         onChange={onChange}
         aria-label={label}
+        // Mở từ nút tròn 28px rồi giãn ra (không nhảy hình); còn từ khóa mà rời ô thì giữ bề ngang đọc được từ khóa
+        collapsedWidthClassName={value ? LIST_TOOLBAR_SEARCH_COLLAPSED : "w-7"}
+        focusHint="Esc"
         // Bấm X xóa xong con trỏ ở lại ô để gõ tiếp (nút X biến mất, không thì tiêu điểm rơi ra trang và ô không thu lại)
         onClear={() => {
           if (onClear) onClear();
