@@ -9,6 +9,7 @@ import { ZodError } from 'zod';
 import { prisma } from '@qcet/db/prisma';
 import {
   createTaskComment,
+  CreateTaskCommentSchema,
   deleteTaskComment,
   listTaskComments,
   setTaskCommentReaction,
@@ -189,5 +190,14 @@ describe('T-03 bình luận nhiệm vụ', () => {
     } finally {
       await prisma.task.update({ where: { id: taskId }, data: { archivedAt: null } });
     }
+  });
+});
+
+describe('"@Tất cả": trần số người được nhắc trong một bình luận', () => {
+  // Người dùng yêu cầu 21/10/2026 "thêm cái tag everyone": nhắc cả đơn vị một lần nên trần 10 nâng lên 30 (MENTION_ALL_MAX)
+  test('nhận tới 30 mã người được nhắc, 31 thì từ chối', () => {
+    const ids = (n: number) => Array.from({ length: n }, (_, i) => `user-${i}`);
+    assert.equal(CreateTaskCommentSchema.safeParse({ body: '@Tất cả xem qua nhé', mentionUserIds: ids(30) }).success, true);
+    assert.equal(CreateTaskCommentSchema.safeParse({ body: '@Tất cả xem qua nhé', mentionUserIds: ids(31) }).success, false);
   });
 });

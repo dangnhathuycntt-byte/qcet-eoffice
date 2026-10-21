@@ -15,6 +15,7 @@
 import { z } from "zod";
 import { AssignmentStatus, TaskActorRole } from "@prisma/client";
 import { prisma } from "@qcet/db/prisma";
+import { MENTION_ALL_MAX } from "@qcet/shared/domain/tasks/comment-mentions";
 import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
 import type { SessionPayload } from "@/lib/jwt-session";
@@ -36,7 +37,8 @@ const COMMENT_BODY = z
 export const CreateTaskCommentSchema = z
   .object({
     body: COMMENT_BODY,
-    mentionUserIds: z.array(z.string().trim().min(1)).max(10).optional(),
+    // Trần bằng MENTION_ALL_MAX: "@Tất cả" nhắc tới 30 người một lần (người dùng yêu cầu 21/10/2026; trước là 10)
+    mentionUserIds: z.array(z.string().trim().min(1)).max(MENTION_ALL_MAX).optional(),
   })
   .strict();
 

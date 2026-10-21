@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { fetchWithRetry, RATE_LIMIT_MESSAGE } from "@/lib/fetch-with-retry";
-import { ArrowUp, AtSign, ChevronRight, MoreHorizontal, Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { ArrowUp, AtSign, ChevronRight, MoreHorizontal, Pencil, SmilePlus, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-host";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,9 @@ import {
   filterMentionCandidates,
   findMentionQuery,
   insertMention,
+  MENTION_ALL_ID,
+  MENTION_ALL_NAME,
+  offersMentionAll,
   resolveMentionIds,
   splitMentions,
   type MentionCandidate,
@@ -305,8 +308,16 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
   const visibleComments = comments.slice(hiddenCount);
 
   const mention = React.useMemo(() => findMentionQuery(draft, caret), [draft, caret]);
-  const suggestions = React.useMemo(
-    () => (mention ? filterMentionCandidates(participants, mention.query) : []),
+  // "Tất cả" đứng cuối khi từ đang gõ khớp (xem offersMentionAll): gõ "@" rồi Enter vẫn nhắc người đầu danh sách như
+  // trước, không lỡ tay nhắc cả đơn vị; gõ "all"/"tat" thì nó là mục duy nhất
+  const suggestions = React.useMemo<MentionCandidate[]>(
+    () =>
+      mention
+        ? [
+            ...filterMentionCandidates(participants, mention.query),
+            ...(offersMentionAll(participants, mention.query) ? [{ id: MENTION_ALL_ID, name: MENTION_ALL_NAME }] : []),
+          ]
+        : [],
     [mention, participants]
   );
   // Gợi ý chỉ hiện khi đang gõ trong ô viết; rời ô thì đóng
@@ -316,7 +327,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
   const mentionEmpty = composerFocused && Boolean(mention) && suggestions.length === 0;
   // Tên được tô màu khi hiển thị: người có thể nhắc, người đang xem và tác giả các bình luận
   const mentionNames = React.useMemo(
-    () => [...participants.map((p) => p.name), viewer?.name ?? "", ...comments.map((c) => c.author.name)],
+    () => [MENTION_ALL_NAME, ...participants.map((p) => p.name), viewer?.name ?? "", ...comments.map((c) => c.author.name)],
     [participants, viewer, comments]
   );
 
@@ -373,7 +384,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
       const res = await fetch(`/api/tasks/${taskId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body, mentionUserIds: resolveMentionIds(body, chosen) }),
+        body: JSON.stringify({ body, mentionUserIds: resolveMentionIds(body, chosen, participants) }),
       });
       if (!res.ok) throw new Error(await readError(res, "Không gửi được bình luận"));
       const json = await res.json();
@@ -693,9 +704,38 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
               className={cn(MENU_POPUP_CLASS, "absolute left-7 top-full mt-1 w-64", MENTION_ABOVE_ON_PHONE, "max-md:max-h-48 max-md:overflow-y-auto")}
             >
               {suggestions.map((s, i) => {
-                // Tiêu đề nhóm khi đổi từ người trong nhiệm vụ sang người cùng đơn vị (danh sách đã xếp theo nhóm)
-                const group = s.inTask === false ? "Cùng đơn vị" : "Trong nhiệm vụ";
-                const prevGroup = i > 0 ? (suggestions[i - 1].inTask === false ? "Cùng đơn vị" : "Trong nhiệm vụ") : null;
+                const everyone = s.id === MENTION_ALL_ID;
+                if (everyone) {
+                  return (
+                    <React.Fragment key={s.id}>
+                      {i > 0 && <li role="presentation" aria-hidden className="mx-1.5 my-1 h-px bg-border" />}
+                      <li role="option" aria-selected={i === highlight}>
+                        <Pressable
+                          tabIndex={-1}
+                          onMouseDown={(e) => { e.preventDefault(); pick(s); }}
+                          onMouseEnter={() => setHighlight(i)}
+                          title={`Nhắc cả ${participants.length} người trong nhiệm vụ và cùng đơn vị`}
+                          className={cn(
+                            "flex h-8 w-full items-center gap-2 rounded-md px-1.5 text-left text-compact text-foreground",
+                            i === highlight && "bg-accent"
+                          )}
+                        >
+                          <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                            <Users className="size-3.5" />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate">{MENTION_ALL_NAME}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{participants.length} người</span>
+                        </Pressable>
+                      </li>
+                    </React.Fragment>
+                  );
+                }
+                // Tiêu đề nhóm khi đổi từ người trong nhiệm vụ sang người cùng đơn vị (danh sách đã xếp theo nhóm; mục
+                // "Tất cả" ở cuối không thuộc nhóm nào)
+                const groupOf = (c: MentionCandidate) => (c.inTask === false ? "Cùng đơn vị" : "Trong nhiệm vụ");
+                const group = groupOf(s);
+                const prev = suggestions[i - 1];
+                const prevGroup = prev && prev.id !== MENTION_ALL_ID ? groupOf(prev) : null;
                 return (
                   <React.Fragment key={s.id}>
                     {group !== prevGroup && (

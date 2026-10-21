@@ -41,13 +41,33 @@ export function insertMention(
   return { text: next, caret: start + insertion.length };
 }
 
-/** Mã người dùng còn được nhắc trong nội dung cuối cùng. */
-export function resolveMentionIds(text: string, chosen: MentionCandidate[]): string[] {
+/**
+ * "@Tất cả" (người dùng yêu cầu 21/10/2026 "thêm cái tag everyone", như @All của Zalo): một lần nhắc mọi người trong danh
+ * sách nhắc được (người trong nhiệm vụ và người cùng đơn vị). Chỉ có khi danh sách từ 2 tới `MENTION_ALL_MAX` người, bằng
+ * trần số người được nhắc của máy chủ, để không lỡ tay nhắc cả trăm người của một khối lớn.
+ */
+export const MENTION_ALL_NAME = "Tất cả";
+export const MENTION_ALL_ID = "__all__";
+export const MENTION_ALL_MAX = 30;
+const MENTION_ALL_KEYWORDS = ["tat ca", "tatca", "all", "everyone", "moi nguoi"];
+
+/** Có hiện mục "Tất cả" cho từ đang gõ sau "@" không (gõ "tat", "all", "every", "moi"… hoặc chưa gõ gì). */
+export function offersMentionAll(candidates: MentionCandidate[], query: string): boolean {
+  if (candidates.length < 2 || candidates.length > MENTION_ALL_MAX) return false;
+  const q = foldVietnamese(query);
+  return MENTION_ALL_KEYWORDS.some((keyword) => keyword.startsWith(q));
+}
+
+/** Mã người dùng còn được nhắc trong nội dung cuối cùng; còn "@Tất cả" thì nhắc cả `everyone`. */
+export function resolveMentionIds(text: string, chosen: MentionCandidate[], everyone: MentionCandidate[] = []): string[] {
   const ids = new Set<string>();
   for (const candidate of chosen) {
-    if (text.includes(`@${candidate.name}`)) ids.add(candidate.id);
+    if (candidate.id !== MENTION_ALL_ID && text.includes(`@${candidate.name}`)) ids.add(candidate.id);
   }
-  return [...ids];
+  if (chosen.some((candidate) => candidate.id === MENTION_ALL_ID) && splitMentions(text, [MENTION_ALL_NAME]).some((part) => part.mention)) {
+    for (const person of everyone.slice(0, MENTION_ALL_MAX)) ids.add(person.id);
+  }
+  return [...ids].slice(0, MENTION_ALL_MAX);
 }
 
 /**

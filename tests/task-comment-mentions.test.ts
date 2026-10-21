@@ -5,6 +5,10 @@ import {
   filterMentionCandidates,
   findMentionQuery,
   insertMention,
+  MENTION_ALL_ID,
+  MENTION_ALL_MAX,
+  MENTION_ALL_NAME,
+  offersMentionAll,
   resolveMentionIds,
   splitMentions,
 } from '@qcet/shared/domain/tasks/comment-mentions';
@@ -52,5 +56,32 @@ describe('T-03 nhắc tên', () => {
       { text: 'gửi a@Trần Văn Hải.vn và @Người Lạ', mention: false },
     ]);
     assert.deepEqual(splitMentions('không nhắc ai', names), [{ text: 'không nhắc ai', mention: false }]);
+  });
+});
+
+/** Người dùng 21/10/2026: "thêm cái tag everyone" (gõ tay 6 người cùng đơn vị cho một bình luận). */
+describe('"@Tất cả" nhắc mọi người trong danh sách nhắc được', () => {
+  const all = { id: MENTION_ALL_ID, name: MENTION_ALL_NAME };
+
+  test('hiện khi chưa gõ gì hoặc gõ tat/all/every/moi (không dấu); ẩn khi gõ tên người, dưới 2 người hoặc quá trần', () => {
+    for (const query of ['', 'tat', 'Tất', 'tatca', 'all', 'every', 'moi']) assert.equal(offersMentionAll(people, query), true, query);
+    assert.equal(offersMentionAll(people, 'trinh'), false);
+    assert.equal(offersMentionAll(people.slice(0, 1), ''), false, 'một người thì nhắc thẳng người đó');
+    const many = Array.from({ length: MENTION_ALL_MAX + 1 }, (_, i) => ({ id: `u${i}`, name: `Người ${i}` }));
+    assert.equal(offersMentionAll(many, ''), false, 'quá 30 người thì chọn từng người');
+    assert.equal(offersMentionAll(many.slice(0, MENTION_ALL_MAX), ''), true);
+  });
+
+  test('chèn một token "@Tất cả", gửi mã của mọi người; xóa token thì không nhắc ai; tô màu như một lần nhắc', () => {
+    const inserted = insertMention('@', 1, 0, all);
+    assert.equal(inserted.text, '@Tất cả ');
+    const body = `${inserted.text}xem qua nhé`;
+    assert.deepEqual(resolveMentionIds(body, [all], people).sort(), ['a', 'b', 'c']);
+    assert.deepEqual(resolveMentionIds('xem qua nhé', [all], people), []);
+    assert.deepEqual(resolveMentionIds('@Tất cảnh báo', [all], people), [], 'chữ dính sau không phải token');
+    assert.deepEqual(splitMentions(body, [MENTION_ALL_NAME]), [
+      { text: '@Tất cả', mention: true },
+      { text: ' xem qua nhé', mention: false },
+    ]);
   });
 });
