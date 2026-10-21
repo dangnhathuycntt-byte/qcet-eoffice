@@ -196,7 +196,7 @@ export function NotesView() {
     setQuery("");
     setSearchOpen(false);
     if (composing && !composing.note && composingShown) {
-      document.querySelector<HTMLInputElement>('[data-slot="note-editor"] input')?.focus();
+      document.querySelector<HTMLTextAreaElement>('[data-slot="note-editor"] textarea[aria-label="Tiêu đề ghi chú"]')?.focus();
       return;
     }
     setComposing({ key: `new-${++composeSeq}`, note: null, target: NEW_NOTE, from: routeKey });

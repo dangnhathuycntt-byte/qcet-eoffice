@@ -64,7 +64,9 @@ export function NoteEditor({ note, onBack, onSaved, onCreated, onDraft, onDelete
     },
     onCreated: (created) => {
       setEditedAt(created.updatedAt);
-      onCreated(created);
+      // Chữ gõ thêm trong lúc đang tạo chưa có trong bản máy chủ trả về: đưa chữ đang soạn lên để danh sách và bản nhớ tạm
+      // (mở lại ghi chú) không lùi về lúc tạo
+      onCreated({ ...created, title, content });
     },
   });
   const schedule = (patch: { title?: string; content?: string }) => {
