@@ -224,6 +224,8 @@ export interface AssistantActionMeeting {
 
 /** Biên bản Trợ lý soạn dài tối đa chừng này ký tự (tham số `minutes` của propose_minutes). */
 export const ASSISTANT_MINUTES_MAX = 10000;
+/** Số chỗ cần kiểm lại tối đa trên thẻ biên bản, mỗi chỗ tối đa 200 ký tự. */
+export const ASSISTANT_MINUTES_CHECKS_MAX = 6;
 
 /** Nội dung thẻ hành động, hiện đủ để người dùng biết chính xác điều sẽ xảy ra trước khi duyệt. */
 export type AssistantActionView =
@@ -243,6 +245,10 @@ export type AssistantActionView =
       minutes: string;
       replaces: boolean;
       baseUpdatedAt: string;
+      /** Bản ghi biên bản lấy từ (`propose_minutes` với `recordingId`); thẻ cũ không có. */
+      recording?: { id: string; name: string };
+      /** Chỗ nghe chưa chắc cần Thầy/Cô kiểm trước khi lưu (tên người, con số, mã); thẻ cũ không có. */
+      checks?: string[];
     };
 
 /** Thẻ hành động chờ duyệt (ADR-012): chưa thay đổi gì cho tới khi người dùng bấm Duyệt. */

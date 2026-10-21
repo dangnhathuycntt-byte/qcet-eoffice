@@ -14,6 +14,7 @@ import {
   describeAssistantAction,
 } from "@qcet/shared/domain/assistant/assistant-actions";
 import { Button } from "@/components/ui/button";
+import { InlineAlert } from "@/components/ui/inline-alert";
 import { assistantErrorText, decideActionRequest } from "@/components/assistant/assistant-client";
 import { MinutesText } from "@/components/meetings/minutes-text";
 import { cn } from "@/lib/utils";
@@ -161,6 +162,11 @@ export function AssistantActionCard({ action, onChange }: { action: AssistantAct
             {target}
           </p>
         ) : null}
+        {view.kind === "meeting_minutes" && view.recording ? (
+          <p className="truncate text-xs text-muted-foreground" title={view.recording.name}>
+            Từ bản ghi “{view.recording.name}”
+          </p>
+        ) : null}
       </div>
 
       <ActionDetail view={view} />
@@ -206,10 +212,25 @@ function ActionDetail({ view }: { view: AssistantActionView }) {
     );
   }
   if (view.kind === "meeting_minutes") {
-    // Đủ nguyên văn biên bản sẽ lưu, dựng có cấu trúc như trên trang cuộc họp; dài thì cuộn trong thẻ
+    // Chỗ nghe chưa chắc đứng trước biên bản, sát chỗ ra quyết định (trước đây nằm ở gạch cuối câu trả lời, dễ bị bỏ qua);
+    // rồi đủ nguyên văn biên bản sẽ lưu, dựng có cấu trúc như trên trang cuộc họp, dài thì cuộn trong thẻ
     return (
-      <div className="thin-scrollbar max-h-80 overflow-y-auto rounded-md bg-muted px-3 py-2.5">
-        <MinutesText text={view.minutes} />
+      <div className="flex flex-col gap-3">
+        {view.checks?.length ? (
+          <div className="flex flex-col gap-1">
+            <InlineAlert variant="warning">Cần kiểm lại trước khi lưu</InlineAlert>
+            <ul className="flex list-disc flex-col gap-0.5 pl-5 text-xs text-foreground">
+              {view.checks.map((item, index) => (
+                <li key={index} className="break-words">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <div className="thin-scrollbar max-h-80 overflow-y-auto rounded-md bg-muted px-3 py-2.5">
+          <MinutesText text={view.minutes} />
+        </div>
       </div>
     );
   }

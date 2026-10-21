@@ -227,9 +227,13 @@ describe('Trợ lý: soạn biên bản cuộc họp từ bản ghi âm', () => 
   // Người dùng hỏi 21/10/2026 "sao có biên bản rồi mà bên trợ lý chưa xong": mô hình chép lại cả biên bản vào tham số mất
   // hơn một phút. Nay truyền recordingId, máy chủ ghép đúng chữ "Dùng làm biên bản nháp" điền vào ô soạn
   it('propose_minutes với recordingId: thẻ mang biên bản đề xuất + Quyết định + Việc được giao của bản ghi; bản chưa soạn xong hay truyền cả hai thì không soạn thẻ', async () => {
-    const outcome = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId, recordingId }), await contextFor('organizer'));
+    const checks = ['Tên "anh Vinh" nghe chưa rõ', '  Mã   D1 đến D8  '];
+    const outcome = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId, recordingId, checks }), await contextFor('organizer'));
     assert.equal(outcome.ok, true, outcome.content);
     assert.ok(outcome.action && outcome.action.view.kind === 'meeting_minutes');
+    // Thẻ ghi nguồn (bản ghi) và các chỗ cần kiểm để hiện sát nút duyệt
+    assert.deepEqual(outcome.action.view.recording, { id: recordingId, name: 'Ghi trực tiếp' });
+    assert.deepEqual(outcome.action.view.checks, ['Tên "anh Vinh" nghe chưa rõ', 'Mã D1 đến D8']);
     assert.equal(
       outcome.action.view.minutes,
       'Nội dung thảo luận:\n- Rà soát vị trí việc làm\n\nKết luận:\n- Đơn vị thiếu nhân sự\n\nQuyết định:\n- Giữ kiêm nhiệm vị trí dạy học số\n\nViệc được giao:\n- Lập danh sách vị trí khuyết (Phòng Tổ chức)'
@@ -250,5 +254,7 @@ describe('Trợ lý: soạn biên bản cuộc họp từ bản ghi âm', () => 
     assert.equal(both.ok, false);
     const neither = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId }), await contextFor('organizer'));
     assert.equal(neither.ok, false);
+    const tooMany = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId, recordingId, checks: Array(7).fill('Kiểm tên') }), await contextFor('organizer'));
+    assert.equal(tooMany.ok, false, 'tối đa 6 chỗ cần kiểm');
   });
 });

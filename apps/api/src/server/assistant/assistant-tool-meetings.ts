@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { MeetingRecordingStatus, MeetingStatus } from "@prisma/client";
 import type { AssistantSourceRef } from "@qcet/contracts/assistant";
-import { ASSISTANT_MINUTES_MAX } from "@qcet/contracts/assistant";
+import { ASSISTANT_MINUTES_CHECKS_MAX, ASSISTANT_MINUTES_MAX } from "@qcet/contracts/assistant";
 import { prisma } from "@qcet/db/prisma";
 import { assistantSourceHref } from "@qcet/shared/domain/assistant/assistant-sources";
 import { composeRecordingMinutes } from "@qcet/shared/domain/meetings/minutes-format";
@@ -46,7 +46,12 @@ const RecordingId = z.string().trim().min(1).max(64);
  * xong"), nên `minutes` chỉ dùng khi Thầy/Cô nhờ sửa hay gộp nhiều bản ghi.
  */
 export const ProposeMinutesArgs = z
-  .object({ meetingId: MeetingId, recordingId: RecordingId.optional(), minutes: z.string().trim().min(10).max(ASSISTANT_MINUTES_MAX).optional() })
+  .object({
+    meetingId: MeetingId,
+    recordingId: RecordingId.optional(),
+    minutes: z.string().trim().min(10).max(ASSISTANT_MINUTES_MAX).optional(),
+    checks: z.array(z.string().trim().min(1).max(200)).max(ASSISTANT_MINUTES_CHECKS_MAX).optional(),
+  })
   .strict()
   .refine((args) => (args.recordingId === undefined) !== (args.minutes === undefined), {
     message: "Truyền đúng một trong recordingId (lấy biên bản đề xuất của bản ghi) hoặc minutes (biên bản đã sửa).",
@@ -66,7 +71,8 @@ export const PROPOSE_MINUTES_DESCRIPTION =
   "Soạn thẻ lưu dự thảo biên bản cho một cuộc họp để Thầy/Cô duyệt; chỉ dùng khi Thầy/Cô nhờ soạn hoặc tạo biên bản. " +
   "Truyền đúng một trong hai: recordingId khi lấy nguyên biên bản đề xuất của một bản ghi đã soạn xong (máy chủ tự ghép " +
   "biên bản, Quyết định, Việc được giao; không chép lại nội dung vào tham số), hoặc minutes khi Thầy/Cô nhờ sửa, gộp nhiều " +
-  "bản ghi hay viết lại. minutes là nguyên văn biên bản (chữ thuần, tối đa 10.000 ký tự): mỗi mục một dòng riêng kết thúc bằng dấu hai chấm " +
+  "bản ghi hay viết lại. checks (tùy chọn, tối đa 6 ý ngắn): chỗ nghe chưa chắc Thầy/Cô cần kiểm trước khi lưu, như tên " +
+  "người, con số, mã hiệu; thẻ hiện ngay trên nút duyệt. minutes là nguyên văn biên bản (chữ thuần, tối đa 10.000 ký tự): mỗi mục một dòng riêng kết thúc bằng dấu hai chấm " +
   "(Nội dung thảo luận:, Kết luận:, Quyết định:, Việc được giao:), mỗi ý một dòng bắt đầu bằng \"- \", ý con bằng \"+ \". " +
   "Chỉ ghi điều có trong cuộc họp, không bịa tên, số liệu, hạn. Biên bản chỉ được lưu khi Thầy/Cô bấm \"Lưu dự thảo biên " +
   "bản\" trên thẻ; cuộc họp đã có dự thảo thì thẻ thay dự thảo đó.";
@@ -248,14 +254,14 @@ export async function getMeetingRecording(args: z.output<typeof GetMeetingRecord
 }
 
 /** Biên bản đề xuất của bản ghi (đã kiểm quyền qua service), đúng chữ "Dùng làm biên bản nháp" điền vào ô soạn. */
-async function recordingMinutes(meetingId: string, recordingId: string, userId: string): Promise<string> {
+async function recordingMinutes(meetingId: string, recordingId: string, userId: string): Promise<{ text: string; recording: { id: string; name: string } }> {
   const detail = await MeetingRecordingService.get(meetingId, recordingId, userId);
   if (detail.status !== MeetingRecordingStatus.READY) {
     throw new ToolFailure(`Bản ghi ${quotedLabel(recordingName(detail))} chưa soạn xong (${RECORDING_STATUS_LABEL[detail.status] ?? detail.status}). Gọi get_meeting_recording để chờ kết quả.`);
   }
   const text = composeRecordingMinutes(detail);
   if (text.length < 10) throw new ToolFailure("Bản ghi không có biên bản đề xuất. Báo Thầy/Cô, không tự soạn biên bản khi chưa có nội dung.");
-  return text;
+  return { text, recording: { id: detail.id, name: clip(recordingName(detail), 120) } };
 }
 
 export async function proposeMinutes(args: z.output<typeof ProposeMinutesArgs>, ctx: AssistantToolContext): Promise<ToolRun> {
@@ -268,7 +274,9 @@ export async function proposeMinutes(args: z.output<typeof ProposeMinutesArgs>, 
   if (!meeting.availableActions.includes("meeting.draft_minutes")) {
     throw new ToolFailure("Thầy/Cô không có quyền soạn biên bản cuộc họp này (chỉ chủ tọa, thư ký, người tổ chức).");
   }
-  const minutes = args.recordingId ? await recordingMinutes(args.meetingId, args.recordingId, ctx.userId) : (args.minutes ?? "");
+  const fromRecording = args.recordingId ? await recordingMinutes(args.meetingId, args.recordingId, ctx.userId) : null;
+  const minutes = fromRecording?.text ?? args.minutes ?? "";
+  const checks = (args.checks ?? []).map((item) => item.replace(/\s+/g, " ")).filter(Boolean);
   const title = clip(meeting.title, 160);
   const action = await createPendingAction({
     userId: ctx.userId,
@@ -280,6 +288,8 @@ export async function proposeMinutes(args: z.output<typeof ProposeMinutesArgs>, 
       minutes,
       replaces: Boolean(meeting.minutes?.trim()),
       baseUpdatedAt: meeting.updatedAt.toISOString(),
+      ...(fromRecording ? { recording: fromRecording.recording } : {}),
+      ...(checks.length > 0 ? { checks } : {}),
     },
   });
   return actionRun(action, `Soạn biên bản ${quotedLabel(meeting.title)}`, { meeting: title, replaces: Boolean(meeting.minutes?.trim()) });

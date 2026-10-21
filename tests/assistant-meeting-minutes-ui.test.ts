@@ -29,7 +29,9 @@ describe("Trợ lý soạn biên bản: lời nhắc, ngữ cảnh cuộc họp,
     assert.match(prompt, /propose_minutes \(lưu dự thảo biên bản một cuộc họp/);
     assert.match(prompt, /12\. Soạn biên bản cuộc họp: gọi get_meeting_recording/);
     // Chép lại cả biên bản vào tham số mất hơn một phút (người dùng hỏi 21/10/2026): lấy thẳng từ bản ghi bằng recordingId
-    assert.match(prompt, /propose_minutes với recordingId của bản đó, không chép lại biên bản/);
+    assert.match(prompt, /propose_minutes với recordingId của bản đó \(không chép lại biên bản vào tham số\) và checks/);
+    // Chỗ cần kiểm nằm trên thẻ, câu trả lời không lặp lại và không hướng dẫn bấm nút (ảnh người dùng 21/10/2026)
+    assert.match(prompt, /Không liệt kê lại các chỗ cần kiểm \(thẻ đã hiện\) và không hướng dẫn bấm nút trên thẻ/);
     assert.match(prompt, /không tự soạn biên bản khi chưa có nội dung/);
   });
 
