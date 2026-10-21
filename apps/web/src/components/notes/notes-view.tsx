@@ -180,10 +180,13 @@ export function NotesView() {
     [patchSummary]
   );
 
-  const handleCaptureCreated = React.useCallback((note: PersonalNote) => {
+  // Lượt ô ghi nhanh đang mở; lần tạo về muộn (sau khi đã đóng ô) không được ẩn thẻ ở lượt mở sau
+  const captureStateRef = React.useRef({ open: captureOpen, key: captureKey });
+  captureStateRef.current = { open: captureOpen, key: captureKey };
+  const handleCaptureCreated = React.useCallback((note: PersonalNote, key: number) => {
     cacheRef.current.set(note.id, note);
     setNotes((prev) => sortNotes([toNoteSummary(note), ...prev.filter((item) => item.id !== note.id)]));
-    setCaptureNoteId(note.id);
+    if (captureStateRef.current.open && captureStateRef.current.key === key) setCaptureNoteId(note.id);
   }, []);
 
   // Đóng ô ghi nhanh: trình soạn gỡ ra thì lưu nốt; chưa gõ gì thì không còn gì
@@ -354,7 +357,7 @@ export function NotesView() {
                 onExpand={() => setCaptureOpen(true)}
                 onClose={closeCapture}
                 onSaved={handleSaved}
-                onCreated={handleCaptureCreated}
+                onCreated={(note) => handleCaptureCreated(note, captureKey)}
                 onDraft={handleDraft}
                 onDelete={askDelete}
               />
