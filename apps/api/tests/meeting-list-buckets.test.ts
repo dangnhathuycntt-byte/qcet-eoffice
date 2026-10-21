@@ -27,7 +27,7 @@ import { prisma } from '@qcet/db/prisma';
 import { signSessionToken } from '@/lib/jwt-session';
 import { GET as listRoute } from '@/app/api/meetings/route';
 import { MeetingService } from '@/server/services/meeting-service';
-import { ListMeetingsQuerySchema, meetingBucketOf } from '@qcet/contracts/meeting';
+import { ListMeetingsQuerySchema } from '@qcet/contracts/meeting';
 
 const runId = crypto.randomBytes(4).toString('hex');
 const HOUR = 3_600_000;
@@ -93,16 +93,6 @@ describe('Danh sách cuộc họp theo nhóm thời gian', () => {
     await prisma.user.deleteMany({ where: { id: { in: Object.values(users) } } });
     await prisma.organizationalUnit.deleteMany({ where: { id: unitId } });
     await prisma.$disconnect();
-  });
-
-  it('meetingBucketOf: theo giờ kết thúc (không có thì giờ bắt đầu), không theo trạng thái; đã hủy không thuộc nhóm nào', () => {
-    const now = new Date('2026-10-21T03:00:00.000Z');
-    const at = (iso: string) => new Date(iso);
-    assert.equal(meetingBucketOf({ status: 'DRAFT_AGENDA', startTime: at('2026-10-20T01:00:00.000Z') }, now), 'done');
-    assert.equal(meetingBucketOf({ status: 'HELD', startTime: at('2026-10-22T01:00:00.000Z') }, now), 'upcoming');
-    assert.equal(meetingBucketOf({ status: 'INVITED', startTime: at('2026-10-21T02:00:00.000Z'), endTime: at('2026-10-21T04:00:00.000Z') }, now), 'upcoming');
-    assert.equal(meetingBucketOf({ status: 'INVITED', startTime: '2026-10-21T01:00:00.000Z', endTime: '2026-10-21T03:00:00.000Z' }, now), 'done');
-    assert.equal(meetingBucketOf({ status: 'CANCELLED', startTime: at('2026-10-22T01:00:00.000Z') }, now), null);
   });
 
   it('upcoming: chưa qua giờ kết thúc (kể cả đang họp), gần nhất lên đầu', async () => {

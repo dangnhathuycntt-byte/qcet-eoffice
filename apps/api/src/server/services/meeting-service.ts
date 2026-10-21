@@ -146,7 +146,7 @@ async function assertInvitableUsers(userIds: string[]): Promise<void> {
   }
 }
 
-/** Điều kiện của nhóm Sắp diễn ra / Đã họp, cùng định nghĩa với `meetingBucketOf`: mốc là giờ kết thúc, không có thì giờ bắt đầu. */
+/** Điều kiện của nhóm Sắp diễn ra / Đã họp (`MEETING_BUCKETS`): mốc là giờ kết thúc, không có thì giờ bắt đầu; đã hủy không thuộc nhóm nào. */
 function meetingBucketWhere(bucket: MeetingBucket, now: Date): Prisma.MeetingWhereInput {
   const side = bucket === 'upcoming' ? { gt: now } : { lte: now };
   return {
@@ -967,7 +967,7 @@ export class MeetingService {
     if (bodyId) clientFilterWhere.bodyId = bodyId;
     if (unitId) clientFilterWhere.unitId = unitId;
     if (status) clientFilterWhere.status = status;
-    // Nhóm theo thời gian (trang Cuộc họp, như `meetingBucketOf`); đi cùng `status` thì cả hai cùng phải đúng
+    // Nhóm theo thời gian (trang Cuộc họp); đi cùng `status` thì cả hai cùng phải đúng
     const bucketWhere: Prisma.MeetingWhereInput = bucket ? meetingBucketWhere(bucket, new Date()) : {};
 
     if (from || to) {
