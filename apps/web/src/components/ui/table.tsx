@@ -90,8 +90,9 @@ function rowRadiusClass(selected: boolean, standalone: boolean, interactive: boo
 /**
  * Nền hàng đặt bằng `--row-bg` (vẽ trên từng ô ở `globals.css`, `[data-table-row]`). Màu đã trộn sẵn với nền thẻ nên đục:
  * bóng 1px lấp ranh giới cột chồng lên ô kế bên mà không thành vạch đậm. Ưu tiên: đang chọn > xem trước > đang mở > đích menu.
+ * Bảng dựng bằng lưới div (Sổ văn bản) dùng chung màu này kèm `bg-(--row-bg)` trên hàng.
  */
-function rowBackgroundClass({ interactive, selected, current, previewing, menuTarget }: Required<Pick<TableRowProps, "interactive" | "selected" | "current" | "previewing" | "menuTarget">>) {
+export function tableRowBackgroundClass({ interactive, selected, current, previewing, menuTarget }: Required<Pick<TableRowProps, "interactive" | "selected" | "current" | "previewing" | "menuTarget">>) {
   if (selected) return "[--row-bg:color-mix(in_oklab,var(--color-selected)_80%,var(--color-card))] hover:[--row-bg:var(--color-selected)]";
   if (previewing) return "[--row-bg:color-mix(in_oklab,var(--color-selected)_70%,var(--color-card))]";
   if (current) return "[--row-bg:var(--color-selected)]";
@@ -123,7 +124,7 @@ function TableRow({
         "group text-foreground outline-none",
         rowHeightClass[density],
         rowRadiusClass(selected, previewing || current || menuTarget, interactive, groupPosition),
-        rowBackgroundClass({ interactive, selected, current, previewing, menuTarget }),
+        tableRowBackgroundClass({ interactive, selected, current, previewing, menuTarget }),
         interactive && "cursor-pointer select-none focus-visible:[--row-ring-c:var(--color-primary)] focus-visible:[--row-ring-w:2px]",
         className,
       )}

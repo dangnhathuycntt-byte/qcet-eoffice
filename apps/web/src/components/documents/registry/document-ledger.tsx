@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
-import { CalendarPlus, Check, ChevronDown, Minus, MoreHorizontal, Plus, Inbox, SearchX } from "lucide-react";
+import { CalendarPlus, ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
 import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import type { OfficialDocument } from "@qcet/contracts/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -46,7 +46,7 @@ import {
   todayInVietnam,
 } from "@qcet/shared/lib/documents/document-ledger-format";
 import { Pressable } from "@/components/ui/pressable";
-import { Button } from "@/components/ui/button";
+import { TableRowActions, TableRowSelector, tableRowBackgroundClass } from "@/components/ui/table";
 
 const URGENCY_OPTIONS = [
   { value: "ALL", label: "Tất cả mức khẩn" },
@@ -513,11 +513,12 @@ export function DocumentActiveFilters({ filters, onClearAll, total }: DocumentAc
  * Ba mẫu lưới theo độ rộng của chính bảng (container query), không theo viewport:
  * hẹp (< 720px, Quick View đang mở) / vừa / rộng (≥ 1100px, thêm cơ quan ban hành và chủ trì).
  * Ô nào không có trong mẫu của mức hiện tại phải ẩn để các ô còn lại vẫn thẳng hàng.
- * Hàng và tiêu đề tối thiểu 40px (cỡ medium của Carbon data table), tiêu đề cột cao bằng hàng.
+ * Hàng tối thiểu 40px, tiêu đề cột 32px chữ thường như bảng dùng chung (`ui/table`, lấy từ bảng Nhiệm vụ 21/10/2026); ô chọn,
+ * nút "⋯" và màu trạng thái hàng cũng lấy từ đó. Từ md đệm trái 24px để ô chọn thẳng cột với ô chọn của bảng Nhiệm vụ.
  * Trích yếu một dòng (cắt cuối, có tooltip); tên cơ quan ban hành/chủ trì không cắt mà xuống tối đa 2 dòng (hàng 48px).
  */
 const GRID =
-  "grid min-h-10 items-center py-1 gap-x-2 px-2 [grid-template-columns:var(--ledger-cols-sm)] @[720px]/ledger:[grid-template-columns:var(--ledger-cols)] @[1100px]/ledger:[grid-template-columns:var(--ledger-cols-xl)]";
+  "grid min-h-10 items-center py-1 gap-x-2 px-2 md:pl-6 md:pr-5 [grid-template-columns:var(--ledger-cols-sm)] @[720px]/ledger:[grid-template-columns:var(--ledger-cols)] @[1100px]/ledger:[grid-template-columns:var(--ledger-cols-xl)]";
 /** Ô ẩn ở mức hẹp, hiện từ mức vừa. */
 const FROM_MEDIUM = "hidden @[720px]/ledger:block";
 /** Ô ẩn dưới mức rộng, hiện từ mức rộng. */
@@ -537,48 +538,6 @@ const STEP_STATUS: Record<LedgerStepKind, string> = {
 
 const numberLabel = (doc: OfficialDocument): string | null =>
   doc.registrationNumber != null ? String(doc.registrationNumber).padStart(4, "0") : null;
-
-/** Ô chọn của dòng và tiêu đề: Shift+bấm chọn cả dải từ dòng bấm trước; tiêu đề có trạng thái "một phần" khi chọn chưa hết. */
-function RowSelector({
-  checked,
-  indeterminate = false,
-  label,
-  onToggle,
-  always,
-}: {
-  checked: boolean;
-  indeterminate?: boolean;
-  label: string;
-  onToggle: (range: boolean) => void;
-  always?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={indeterminate ? "mixed" : checked}
-      aria-label={label}
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle(e.shiftKey);
-      }}
-      className="relative flex size-7 items-center justify-center rounded outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
-    >
-      {checked || indeterminate ? (
-        <span className="flex size-4 items-center justify-center rounded-[4px] bg-primary text-primary-foreground">
-          {checked ? <Check className="size-3" /> : <Minus className="size-3" />}
-        </span>
-      ) : (
-        <span
-          className={cn(
-            "size-4 rounded-[4px] border border-border/70 bg-background/60 transition-opacity",
-            always ? "opacity-60" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-within:opacity-100"
-          )}
-        />
-      )}
-    </button>
-  );
-}
 
 /** Nhãn mức khẩn dạng "Thượng khẩn"; null khi văn bản không khẩn. */
 function urgencyText(doc: OfficialDocument): { label: string; toneClass: string } | null {
@@ -688,7 +647,6 @@ interface LedgerRowProps {
   selected: boolean;
   groupPosition?: SelectionGroupPosition;
   isOpen: boolean;
-  showSelectors: boolean;
   numberHeader: string;
   visibleColumns: LedgerColumnVisibility;
   filterYear?: number;
@@ -701,7 +659,7 @@ interface LedgerRowProps {
   menuTarget: boolean;
 }
 
-function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelectors, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect, onRowMenu, menuTarget }: LedgerRowProps) {
+function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect, onRowMenu, menuTarget }: LedgerRowProps) {
   const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
   const no = numberLabel(doc);
   const urgent = urgencyText(doc);
@@ -790,11 +748,19 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelect
         "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
         !selected || groupPosition === "only" || !groupPosition ? "rounded-md" : groupPosition === "first" ? "rounded-t-md" : groupPosition === "last" ? "rounded-b-md" : "rounded-none",
-        isOpen ? "bg-selected" : selected ? "bg-muted/60 hover:bg-muted/80" : menuTarget ? "bg-muted/60" : "hover:bg-muted/40"
+        "bg-(--row-bg)",
+        tableRowBackgroundClass({ interactive: true, selected, current: isOpen, previewing: false, menuTarget })
       )}
     >
       <span role="cell" className="flex items-center">
-        <RowSelector checked={selected} label={`Chọn văn bản ${doc.documentNumber || no || doc.summary}`} onToggle={(range) => onToggleSelect(doc.id, range)} always={showSelectors} />
+        <TableRowSelector
+          className="size-6 sm:size-6"
+          checked={selected}
+          tabIndex={-1}
+          aria-label={`Chọn văn bản ${doc.documentNumber || no || doc.summary}`}
+          title={selected ? "Bỏ chọn (X)" : "Chọn (X)"}
+          onToggle={(event) => onToggleSelect(doc.id, event.shiftKey)}
+        />
       </span>
       <span role="cell" className="flex min-w-0 items-center gap-1.5">
         {/* Bảng hẹp không có cột mức khẩn: văn bản khẩn hiện icon ngay đầu ô */}
@@ -816,20 +782,14 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelect
           </span>
         ) : null}
         {onRowMenu ? (
-          <Button
-            variant="ghost"
-            size="icon-xs"
+          <TableRowActions
+            label={`Thao tác văn bản ${doc.documentNumber || no || doc.summary}`}
+            open={menuTarget}
             tabIndex={-1}
-            aria-label={`Thao tác văn bản ${doc.documentNumber || no || doc.summary}`}
-            title="Thao tác (chuột phải)"
-            className={cn("-my-1 ml-auto opacity-0 group-hover:opacity-100", menuTarget && "bg-accent opacity-100")}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRowMenu(doc, e.currentTarget);
-            }}
-          >
-            <MoreHorizontal />
-          </Button>
+            // Nằm cuối ô Văn bản trong lưới (không phải ô bảng có `relative`)
+            className="static -my-1 ml-auto translate-y-0"
+            onOpen={(e) => onRowMenu(doc, e.currentTarget)}
+          />
         ) : null}
       </span>
       {visibleColumns.urgency ? <span role="cell" className={FROM_MEDIUM}><UrgencyCell doc={doc} /></span> : null}
@@ -886,14 +846,15 @@ export function DocumentLedgerTable({
   } as CSSProperties;
 
   const header = (
-    <div role="row" className={cn(GRID, "whitespace-nowrap text-xs font-medium text-muted-foreground select-none")}>
+    <div role="row" className={cn(GRID, "group/th min-h-8 py-0 whitespace-nowrap text-xs font-normal text-muted-foreground select-none")}>
       <span role="columnheader" className="flex items-center">
-        <RowSelector
+        <TableRowSelector
+          className="-my-1.5 size-6 sm:size-6"
           checked={allSelected}
           indeterminate={someSelected}
-          label={allSelected ? "Bỏ chọn tất cả văn bản trên trang này" : "Chọn tất cả văn bản trên trang này"}
+          aria-label={allSelected ? "Bỏ chọn tất cả văn bản trên trang này" : "Chọn tất cả văn bản trên trang này"}
+          title={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
           onToggle={() => onSelectAll()}
-          always
         />
       </span>
       <span role="columnheader">Văn bản</span>
@@ -964,7 +925,6 @@ export function DocumentLedgerTable({
           selected={selectedIds.has(doc.id)}
           groupPosition={groupPositions.get(doc.id)}
           isOpen={selectedDocumentId === doc.id}
-          showSelectors={selectedIds.size > 0}
           numberHeader={numberHeader}
           visibleColumns={visibleColumns}
           filterYear={filterYear}
