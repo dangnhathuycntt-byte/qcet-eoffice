@@ -61,8 +61,8 @@ describe('T-03 nhắc tên', () => {
 });
 
 /** Người dùng 21/10/2026: "thêm cái tag everyone" (gõ tay 6 người cùng đơn vị cho một bình luận). */
-// Cùng ngày đổi tên token "@Tất cả" thành "@Mọi người" (người dùng: "everyone là mọi người"); bình luận cũ vẫn tô màu.
-describe('"@Mọi người" nhắc mọi người trong danh sách nhắc được', () => {
+// Cùng ngày đổi tên token "@Tất cả" → "@Mọi người" → "@all" (người dùng: "cứ để all đi không cần mọi người"); bình luận cũ vẫn tô màu.
+describe('"@all" nhắc mọi người trong danh sách nhắc được', () => {
   const all = { id: MENTION_ALL_ID, name: MENTION_ALL_NAME };
 
   test('hiện khi chưa gõ gì hoặc gõ moi/every/all/tat (không dấu); ẩn khi gõ tên người, dưới 2 người hoặc quá trần', () => {
@@ -74,23 +74,25 @@ describe('"@Mọi người" nhắc mọi người trong danh sách nhắc đư�
     assert.equal(offersMentionAll(many.slice(0, MENTION_ALL_MAX), ''), true);
   });
 
-  test('chèn một token "@Mọi người", gửi mã của mọi người; xóa token thì không nhắc ai; tô màu như một lần nhắc', () => {
+  test('chèn một token "@all", gửi mã của mọi người; xóa token thì không nhắc ai; tô màu như một lần nhắc', () => {
     const inserted = insertMention('@', 1, 0, all);
-    assert.equal(inserted.text, '@Mọi người ');
+    assert.equal(inserted.text, '@all ');
     const body = `${inserted.text}xem qua nhé`;
     assert.deepEqual(resolveMentionIds(body, [all], people).sort(), ['a', 'b', 'c']);
     assert.deepEqual(resolveMentionIds('xem qua nhé', [all], people), []);
-    assert.deepEqual(resolveMentionIds('@Mọi ngườiơi', [all], people), [], 'chữ dính sau không phải token');
+    assert.deepEqual(resolveMentionIds('@allo', [all], people), [], 'chữ dính sau không phải token');
     assert.deepEqual(splitMentions(body, [MENTION_ALL_NAME]), [
-      { text: '@Mọi người', mention: true },
+      { text: '@all', mention: true },
       { text: ' xem qua nhé', mention: false },
     ]);
   });
 
-  test('bình luận đã gửi với tên cũ "@Tất cả" vẫn tô như một lần nhắc', () => {
-    assert.deepEqual(splitMentions('@Tất cả xem qua', [MENTION_ALL_NAME, ...MENTION_ALL_LEGACY_NAMES]), [
-      { text: '@Tất cả', mention: true },
-      { text: ' xem qua', mention: false },
-    ]);
+  test('bình luận đã gửi với tên cũ "@Tất cả", "@Mọi người" vẫn tô như một lần nhắc', () => {
+    for (const legacy of ['@Tất cả', '@Mọi người']) {
+      assert.deepEqual(splitMentions(`${legacy} xem qua`, [MENTION_ALL_NAME, ...MENTION_ALL_LEGACY_NAMES]), [
+        { text: legacy, mention: true },
+        { text: ' xem qua', mention: false },
+      ]);
+    }
   });
 });

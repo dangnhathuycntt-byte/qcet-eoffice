@@ -309,7 +309,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
   const visibleComments = comments.slice(hiddenCount);
 
   const mention = React.useMemo(() => findMentionQuery(draft, caret), [draft, caret]);
-  // "Mọi người" đứng cuối khi từ đang gõ khớp (xem offersMentionAll): gõ "@" rồi Enter vẫn nhắc người đầu danh sách như
+  // "all" đứng cuối khi từ đang gõ khớp (xem offersMentionAll): gõ "@" rồi Enter vẫn nhắc người đầu danh sách như
   // trước, không lỡ tay nhắc cả đơn vị; gõ "moi"/"every"/"all" thì nó là mục duy nhất
   const suggestions = React.useMemo<MentionCandidate[]>(
     () =>
@@ -326,7 +326,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
   const listOpen = composerFocused && suggestions.length > 0;
   // Gõ "@" mà không có ai phù hợp: báo lý do thay vì im lặng
   const mentionEmpty = composerFocused && Boolean(mention) && suggestions.length === 0;
-  // Tên được tô màu khi hiển thị: người có thể nhắc, người đang xem, tác giả các bình luận, và "@Mọi người" (cả tên cũ
+  // Tên được tô màu khi hiển thị: người có thể nhắc, người đang xem, tác giả các bình luận, và "@all" (cả tên cũ
   // "@Tất cả" của bình luận đã gửi)
   const mentionNames = React.useMemo(
     () => [MENTION_ALL_NAME, ...MENTION_ALL_LEGACY_NAMES, ...participants.map((p) => p.name), viewer?.name ?? "", ...comments.map((c) => c.author.name)],
@@ -733,7 +733,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
                   );
                 }
                 // Tiêu đề nhóm khi đổi từ người trong nhiệm vụ sang người cùng đơn vị (danh sách đã xếp theo nhóm; mục
-                // "Mọi người" ở cuối không thuộc nhóm nào)
+                // "all" ở cuối không thuộc nhóm nào)
                 const groupOf = (c: MentionCandidate) => (c.inTask === false ? "Cùng đơn vị" : "Trong nhiệm vụ");
                 const group = groupOf(s);
                 const prev = suggestions[i - 1];

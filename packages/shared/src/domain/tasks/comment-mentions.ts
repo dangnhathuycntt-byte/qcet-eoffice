@@ -42,26 +42,27 @@ export function insertMention(
 }
 
 /**
- * "@Mọi người" (người dùng yêu cầu 21/10/2026 "thêm cái tag everyone", như @everyone; cùng ngày đổi tên từ "Tất cả":
- * "everyone là mọi người"): một lần nhắc mọi người trong danh sách nhắc được (người trong nhiệm vụ và người cùng đơn vị).
+ * "@all" (người dùng yêu cầu 21/10/2026 "thêm cái tag everyone", như @everyone; cùng ngày đổi tên "Tất cả" → "Mọi người"
+ * → "all": "cứ để all đi không cần mọi người"): một lần nhắc mọi người trong danh sách nhắc được (người trong nhiệm vụ và
+ * người cùng đơn vị).
  * Chỉ có khi danh sách từ 2 tới `MENTION_ALL_MAX` người, bằng trần số người được nhắc của máy chủ, để không lỡ tay nhắc cả
  * trăm người của một khối lớn.
  */
-export const MENTION_ALL_NAME = "Mọi người";
-/** Tên cũ của token: bình luận đã gửi với "@Tất cả" vẫn được tô như một lần nhắc khi hiển thị. */
-export const MENTION_ALL_LEGACY_NAMES = ["Tất cả"];
+export const MENTION_ALL_NAME = "all";
+/** Tên cũ của token: bình luận đã gửi với "@Tất cả", "@Mọi người" vẫn được tô như một lần nhắc khi hiển thị. */
+export const MENTION_ALL_LEGACY_NAMES = ["Tất cả", "Mọi người"];
 export const MENTION_ALL_ID = "__all__";
 export const MENTION_ALL_MAX = 30;
 const MENTION_ALL_KEYWORDS = ["moi nguoi", "moinguoi", "everyone", "all", "tat ca", "tatca"];
 
-/** Có hiện mục "Mọi người" cho từ đang gõ sau "@" không (gõ "moi", "every", "all", "tat"… hoặc chưa gõ gì). */
+/** Có hiện mục "all" cho từ đang gõ sau "@" không (gõ "moi", "every", "all", "tat"… hoặc chưa gõ gì). */
 export function offersMentionAll(candidates: MentionCandidate[], query: string): boolean {
   if (candidates.length < 2 || candidates.length > MENTION_ALL_MAX) return false;
   const q = foldVietnamese(query);
   return MENTION_ALL_KEYWORDS.some((keyword) => keyword.startsWith(q));
 }
 
-/** Mã người dùng còn được nhắc trong nội dung cuối cùng; còn "@Mọi người" thì nhắc cả `everyone`. */
+/** Mã người dùng còn được nhắc trong nội dung cuối cùng; còn "@all" thì nhắc cả `everyone`. */
 export function resolveMentionIds(text: string, chosen: MentionCandidate[], everyone: MentionCandidate[] = []): string[] {
   const ids = new Set<string>();
   for (const candidate of chosen) {
