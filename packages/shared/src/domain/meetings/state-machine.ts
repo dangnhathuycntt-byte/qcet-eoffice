@@ -3,6 +3,8 @@
  *
  * Formal state transition engine for institutional meetings:
  * DRAFT_AGENDA -> INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED
+ * DRAFT_AGENDA -> HELD: cuộc họp chưa mời ai vẫn bắt đầu họp được (người dùng chọn 21/10/2026: tạo xong là ghi âm, soạn
+ * biên bản được ngay, kể cả cuộc họp tạo lại sau khi đã họp).
  * Terminal States: MINUTES_CONFIRMED, CANCELLED
  *
  * Invariants:
@@ -28,7 +30,7 @@ export type MeetingStatus = (typeof MEETING_STATUSES)[number];
  * Every forward transition is strictly defined; CANCELLED is reachable from all active states.
  */
 export const ALLOWED_MEETING_TRANSITIONS: Record<MeetingStatus, readonly MeetingStatus[]> = {
-  DRAFT_AGENDA: ["INVITED", "CANCELLED"],
+  DRAFT_AGENDA: ["INVITED", "HELD", "CANCELLED"],
   INVITED: ["HELD", "CANCELLED"],
   HELD: ["MINUTES_DRAFT", "CANCELLED"],
   MINUTES_DRAFT: ["MINUTES_CONFIRMED", "CANCELLED"],

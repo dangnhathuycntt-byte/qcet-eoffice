@@ -226,9 +226,17 @@ describe('Ghi âm cuộc họp', () => {
       await assert.rejects(MeetingRecordingService.list('khong_co_cuoc_hop', users.organizer), (error: { statusCode?: number }) => error.statusCode === 404);
     });
 
+    it('cuộc họp mới tạo (Dự thảo chương trình, chưa mời ai) ghi âm được ngay', async () => {
+      // Người dùng chọn 21/10/2026: tạo xong là ghi âm được, không phải mời người trước
+      await prisma.meeting.update({ where: { id: meetingId }, data: { status: MeetingStatus.DRAFT_AGENDA } });
+      const recording = await create(users.organizer);
+      assert.equal(recording.status, 'UPLOADING');
+      await MeetingRecordingService.remove(meetingId, recording.id, users.organizer);
+    });
+
     it('cuộc họp đã hủy hoặc đã duyệt biên bản không ghi âm thêm được, nhưng vẫn xem và xóa được', async () => {
       const recording = await create(users.organizer);
-      for (const status of [MeetingStatus.CANCELLED, MeetingStatus.MINUTES_CONFIRMED, MeetingStatus.DRAFT_AGENDA]) {
+      for (const status of [MeetingStatus.CANCELLED, MeetingStatus.MINUTES_CONFIRMED]) {
         await prisma.meeting.update({ where: { id: meetingId }, data: { status } });
         await assert.rejects(create(users.organizer), /không còn ghi âm được/, status);
         await assert.rejects(MeetingRecordingService.uploadPart(meetingId, recording.id, 0, WEBM, users.organizer), /không còn ghi âm được/, status);

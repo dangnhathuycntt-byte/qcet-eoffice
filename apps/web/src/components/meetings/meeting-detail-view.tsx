@@ -24,7 +24,7 @@ import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { addParticipant, cancelMeeting, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
-import { canCancelMeeting, MEETING_CANCEL_NOTICE, meetingSummaryText } from "@/components/meetings/meeting-list-model";
+import { canCancelMeeting, canStartMeeting, MEETING_CANCEL_NOTICE, meetingSummaryText } from "@/components/meetings/meeting-list-model";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
 import { MinutesText } from "@/components/meetings/minutes-text";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
@@ -111,7 +111,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   // Theo quyền máy chủ tính, không đoán theo vai trò: bắt đầu họp là người tổ chức/chủ tọa, soạn biên bản là thư ký/chủ
   // tọa/người tổ chức, duyệt biên bản chỉ chủ tọa (thư ký soạn biên bản không tự duyệt)
   const can = (action: string) => meeting.availableActions.includes(action);
-  const canHold = meeting.status === "INVITED" && can("meeting.update");
+  const canHold = canStartMeeting(meeting);
   const canCancel = canCancelMeeting(meeting);
   const canDraftMinutes = meeting.status === "HELD" && can("meeting.draft_minutes");
   const canConfirmMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.confirm_minutes");
@@ -119,11 +119,14 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const canEditMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.draft_minutes");
   const editingSaved = editingMinutes && meeting.status === "MINUTES_DRAFT";
   const chairs = meeting.participants.filter((p) => p.role === "CHAIR");
-  // Ghi âm theo quan hệ soạn biên bản của máy chủ (người tổ chức, chủ tọa, thư ký của cuộc họp), trong lúc họp và soạn biên bản
+  // Ghi âm theo quan hệ soạn biên bản của máy chủ (người tạo, chủ tọa, thư ký của cuộc họp), từ lúc tạo tới khi soạn biên bản
   const isMinutesAuthor =
     isOrganizer || meeting.participants.some((p) => p.userId === currentUser.id && (p.role === "CHAIR" || p.role === "SECRETARY"));
-  const canRecord = isMinutesAuthor && ["INVITED", "HELD", "MINUTES_DRAFT"].includes(meeting.status);
+  const canRecord = isMinutesAuthor && ["DRAFT_AGENDA", "INVITED", "HELD", "MINUTES_DRAFT"].includes(meeting.status);
   const isHeld = ["HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED"].includes(meeting.status);
+  // Chưa họp: khối Biên bản vẫn hiện, nói rõ bấm Bắt đầu họp để soạn (người dùng báo "tạo xong không có phần ghi âm, phần
+  // biên bản gì hết" 21/10/2026)
+  const beforeHeld = meeting.status === "DRAFT_AGENDA" || meeting.status === "INVITED";
   const status = meetingStatus(meeting.status);
 
   // Mời người: người tổ chức/chủ tọa (máy chủ tính), đến khi biên bản được duyệt hoặc cuộc họp bị hủy
@@ -383,7 +386,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
       // Đang soạn dở thì không cho "Dùng làm biên bản nháp": bấm sẽ ghi đè chữ đang gõ trong ô soạn
       onUseAsMinutes={canDraftMinutes && !editingMinutes ? useRecordingAsMinutes : undefined}
       minutesHint={
-        meeting.status === "INVITED"
+        beforeHeld
           ? "Bấm Bắt đầu họp để dùng làm biên bản."
           : editingMinutes
             ? "Biên bản đang soạn ở khối Biên bản; sao chép phần cần dùng."
@@ -406,7 +409,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           : "Đã duyệt"
         : null;
 
-  const minutesSection = isHeld ? (
+  const minutesSection = isHeld || beforeHeld ? (
     <SectionCard
       variant="plain"
       title={
@@ -515,7 +518,11 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         <MinutesText text={meeting.minutes} />
       ) : (
         <p className="text-xs text-muted-foreground">
-          {canDraftMinutes ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm." : "Chưa có biên bản."}
+          {canDraftMinutes
+            ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm."
+            : canHold
+              ? "Chưa có biên bản. Bấm Bắt đầu họp để soạn biên bản."
+              : "Chưa có biên bản."}
         </p>
       )}
     </SectionCard>

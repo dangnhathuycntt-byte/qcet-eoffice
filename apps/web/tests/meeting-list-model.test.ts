@@ -77,9 +77,12 @@ describe("Thao tác trên một hàng", () => {
     assert.equal(canCancelMeeting(row({ availableActions: ["meeting.read"] })), false, "người dự họp không hủy được");
   });
 
-  test("bắt đầu họp: chỉ cuộc Đã mời và có meeting.update", () => {
+  test("bắt đầu họp: cuộc chưa họp (Dự thảo chương trình hoặc Đã mời) và có meeting.update", () => {
     assert.equal(canStartMeeting(row()), true);
-    assert.equal(canStartMeeting(row({ status: "DRAFT_AGENDA" })), false);
+    // Chưa mời ai vẫn bắt đầu được (người dùng chọn 21/10/2026)
+    assert.equal(canStartMeeting(row({ status: "DRAFT_AGENDA" })), true);
+    assert.equal(canStartMeeting(row({ status: "HELD" })), false);
+    assert.equal(canStartMeeting(row({ status: "CANCELLED" })), false);
     assert.equal(canStartMeeting(row({ availableActions: ["meeting.read"] })), false);
   });
 

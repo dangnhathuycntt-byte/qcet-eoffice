@@ -213,6 +213,24 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
     assert.equal(updatedAttendance.attendanceStatus, AttendanceStatus.ATTENDED);
   });
 
+  it('2b. Cuộc họp chưa mời ai: bắt đầu họp thẳng từ Dự thảo chương trình rồi soạn biên bản (người dùng chọn 21/10/2026)', async () => {
+    const meeting = await MeetingService.createMeeting(
+      { code: `MT_${runId}_02b`, title: 'Họp tạo lại sau khi đã họp', unitId: testUnit.id, startTime: '2026-09-17T01:00:00.000Z' },
+      organizerUser.id
+    );
+    assert.equal(meeting.status, MeetingStatus.DRAFT_AGENDA);
+
+    const held = await MeetingService.holdMeeting(meeting.id, organizerUser.id);
+    assert.equal(held.status, MeetingStatus.HELD);
+
+    const drafted = await MeetingService.draftMinutes(
+      meeting.id,
+      { minutes: 'Biên bản họp tạo lại: đã thống nhất các nội dung chính.' },
+      organizerUser.id
+    );
+    assert.equal(drafted.status, MeetingStatus.MINUTES_DRAFT);
+  });
+
   it('3. Luân chuyển vòng đời cuộc họp: INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED', async () => {
     const meeting = await MeetingService.createMeeting(
       {

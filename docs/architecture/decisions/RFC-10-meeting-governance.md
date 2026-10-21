@@ -117,7 +117,7 @@ Mỗi Quyết nghị / Kết luận họp (`MeetingResolution`) khi ban hành (`
 ### 3.2. Ma trận Chuyển đổi Hợp lệ (`ALLOWED_MEETING_TRANSITIONS`)
 ```typescript
 export const ALLOWED_MEETING_TRANSITIONS: Record<MeetingStatus, readonly MeetingStatus[]> = {
-  DRAFT_AGENDA: ['INVITED', 'CANCELLED'],
+  DRAFT_AGENDA: ['INVITED', 'HELD', 'CANCELLED'], // HELD: bổ sung 21/10/2026, xem 3.3
   INVITED: ['HELD', 'CANCELLED'],
   HELD: ['MINUTES_DRAFT', 'CANCELLED'],
   MINUTES_DRAFT: ['MINUTES_CONFIRMED', 'CANCELLED'],
@@ -128,7 +128,7 @@ export const ALLOWED_MEETING_TRANSITIONS: Record<MeetingStatus, readonly Meeting
 
 ### 3.3. Các chuyển đổi bị cấm (Disallowed & Anti-Skip Invariants)
 1. **Cấm nhảy cóc vòng đời (No Skipping)**:
-   - `DRAFT_AGENDA` $\to$ `HELD` (Không được họp khi chưa phát giấy mời).
+   - ~~`DRAFT_AGENDA` $\to$ `HELD` (Không được họp khi chưa phát giấy mời).~~ **Bỏ ngày 21/10/2026** theo quyết định của người dùng: tạo cuộc họp chưa mời ai (kể cả tạo lại sau khi đã họp) vẫn ghi âm và bấm "Bắt đầu họp" được ngay rồi soạn biên bản. Ghi âm mở từ `DRAFT_AGENDA`; soạn biên bản vẫn chỉ khi `HELD`/`MINUTES_DRAFT`.
    - `DRAFT_AGENDA` $\to$ `MINUTES_DRAFT` / `MINUTES_CONFIRMED` (Không thể có biên bản khi chưa họp).
    - `INVITED` $\to$ `MINUTES_CONFIRMED` (Bắt buộc phải qua bước Thư ký lập dự thảo).
 2. **Cấm hồi tố trạng thái (No Backward Transitions)**:

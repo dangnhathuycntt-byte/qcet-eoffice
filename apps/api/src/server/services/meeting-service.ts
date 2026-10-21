@@ -7,7 +7,7 @@ import {
 } from "@qcet/shared/domain/meetings";
 /**
  * QCET E-Office — Meeting & Institutional Resolutions Domain Service (Phase 8 / Task 5)
- * Implements workflow: DRAFT_AGENDA -> INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED
+ * Implements workflow: DRAFT_AGENDA -> INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED (DRAFT_AGENDA -> HELD khi chưa mời ai)
  * Handles Meeting Resolutions, automated Task derivation, and canonical authorization.
  */
 

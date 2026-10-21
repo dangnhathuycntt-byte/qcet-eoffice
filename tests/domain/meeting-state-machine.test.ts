@@ -3,7 +3,7 @@
  *
  * Verifies:
  * 1. Canonical transitions:
- *    - DRAFT_AGENDA -> [INVITED, CANCELLED]
+ *    - DRAFT_AGENDA -> [INVITED, HELD, CANCELLED] (HELD: chưa mời ai vẫn bắt đầu họp được, người dùng chọn 21/10/2026)
  *    - INVITED -> [HELD, CANCELLED]
  *    - HELD -> [MINUTES_DRAFT, CANCELLED]
  *    - MINUTES_DRAFT -> [MINUTES_CONFIRMED, CANCELLED]
@@ -52,6 +52,10 @@ describe('WI-6.1a: Meeting State Machine Formalization', () => {
       assert.equal(canTransition('DRAFT_AGENDA', 'INVITED'), true);
     });
 
+    it('allows DRAFT_AGENDA -> HELD (cuộc họp chưa mời ai bắt đầu họp ngay)', () => {
+      assert.equal(canTransition('DRAFT_AGENDA', 'HELD'), true);
+    });
+
     it('allows DRAFT_AGENDA -> CANCELLED', () => {
       assert.equal(canTransition('DRAFT_AGENDA', 'CANCELLED'), true);
     });
@@ -82,8 +86,7 @@ describe('WI-6.1a: Meeting State Machine Formalization', () => {
   });
 
   describe('3. canTransition - Invalid Forward & Skip-Stage Transitions', () => {
-    it('denies skipping stages from DRAFT_AGENDA', () => {
-      assert.equal(canTransition('DRAFT_AGENDA', 'HELD'), false);
+    it('denies skipping stages from DRAFT_AGENDA (vẫn phải họp rồi mới có biên bản)', () => {
       assert.equal(canTransition('DRAFT_AGENDA', 'MINUTES_DRAFT'), false);
       assert.equal(canTransition('DRAFT_AGENDA', 'MINUTES_CONFIRMED'), false);
     });

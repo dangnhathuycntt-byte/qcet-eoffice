@@ -39,8 +39,11 @@ import {
 import { computeWaveform, recordingWindowSec } from "@/server/meetings/recording-slicer";
 import { logger } from "@/server/observability/logger";
 
-/** Trạng thái cuộc họp còn ghi âm hoặc gửi thêm được (đang mời, đã diễn ra, đang soạn biên bản). */
-const WRITABLE_MEETING_STATUSES: MeetingStatus[] = [MeetingStatus.INVITED, MeetingStatus.HELD, MeetingStatus.MINUTES_DRAFT];
+/**
+ * Trạng thái cuộc họp còn ghi âm hoặc gửi thêm được: từ lúc tạo (dự thảo chương trình, kể cả chưa mời ai; người dùng chọn
+ * 21/10/2026), đang mời, đã diễn ra, đang soạn biên bản.
+ */
+const WRITABLE_MEETING_STATUSES: MeetingStatus[] = [MeetingStatus.DRAFT_AGENDA, MeetingStatus.INVITED, MeetingStatus.HELD, MeetingStatus.MINUTES_DRAFT];
 /** Bản đang tải lên bỏ dở quá thời gian này bị dọn khi tạo bản mới. */
 const STALE_UPLOAD_MS = 24 * 60 * 60 * 1000;
 
