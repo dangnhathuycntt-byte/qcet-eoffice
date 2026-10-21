@@ -2,7 +2,7 @@ import * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Khung chờ của chi tiết cuộc họp: cùng khung một thẻ với trang thật (thanh đầu 40px, tên, cột thuộc tính 340px). Không có
+ * Khung chờ của chi tiết cuộc họp: cùng khung một thẻ với trang thật (thanh đầu 40px, dưới 1024px hai hàng 88px; tên, cột thuộc tính 340px). Không có
  * tệp này thì `meetings/loading.tsx` (khung danh sách) hiện khi mở một cuộc họp.
  */
 export default function MeetingDetailLoading() {
@@ -10,7 +10,8 @@ export default function MeetingDetailLoading() {
     <div className="flex min-h-0 flex-1 flex-col animate-pulse" role="status" aria-label="Đang tải cuộc họp…">
       <div className="grid min-h-0 flex-1 p-2 max-md:p-0">
         <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0">
-          <div className="flex h-10 items-center justify-between border-b border-border/40 px-[18px] max-md:h-11 max-md:px-4">
+          {/* Dưới 1024px thanh đầu hai hàng 44px như trang thật: khung giữ đủ 88px để nội dung không nhảy khi tải xong */}
+          <div className="flex h-10 items-center justify-between border-b border-border/40 px-[18px] max-lg:h-[calc(88px+env(safe-area-inset-top,0px))] max-lg:border-b-0 max-lg:px-4 max-lg:pb-11 max-lg:pt-[env(safe-area-inset-top,0px)]">
             <Skeleton className="h-3.5 w-48" />
             <Skeleton className="h-7 w-28 rounded-lg" />
           </div>

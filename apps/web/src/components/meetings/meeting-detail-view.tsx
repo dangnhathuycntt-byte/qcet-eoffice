@@ -3,20 +3,28 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Link2, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { CalendarX2, Check, ChevronRight, Ellipsis, Link2, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import type { MeetingDetailPageData } from "@qcet/contracts/page-data";
 import { formatDisplayDate, formatTime } from "@qcet/shared/lib/format/date";
+import { TaskIconCopy } from "@qcet/shared/lib/icons/task-icons";
 import { cn } from "@/lib/utils";
+import { useRuntimeFeature } from "@/lib/runtime-features";
+import { AgentIcon } from "@/components/icons/agent-icon";
+import { askAssistantInDock } from "@/components/assistant/assistant-model";
+import { IconSidebarPanelRight } from "@/components/layout/sidebar-rounded-icons";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
+import { useStackedTaskDetail } from "@/components/tasks/detail/task-detail-split-layout";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-host";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { FieldError } from "@/components/ui/dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { addParticipant, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
+import { addParticipant, cancelMeeting, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
+import { canCancelMeeting, MEETING_CANCEL_NOTICE, meetingSummaryText } from "@/components/meetings/meeting-list-model";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
 import { MinutesText } from "@/components/meetings/minutes-text";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
@@ -56,7 +64,7 @@ const ATTENDANCE: Record<string, { label: string; warn?: boolean }> = {
  * 24px như `TaskDetailSplitLayout`. Mốc 1440px viết `min-[90rem]`: Tailwind chỉ xếp sau `lg` (64rem) khi cùng đơn vị rem.
  */
 const DETAIL_GRID_CLASS =
-  "grid grid-cols-1 gap-y-4 px-4 pb-16 pt-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:gap-x-6 lg:pl-6 lg:pr-0 lg:pt-0 min-[90rem]:pl-12";
+  "grid grid-cols-1 gap-y-4 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:gap-x-6 lg:pl-6 lg:pr-0 lg:pt-0 min-[90rem]:pl-12";
 
 /** Biên bản tối thiểu 10 ký tự như `DraftMinutesSchema` của máy chủ. */
 const MINUTES_MIN_LENGTH = 10;
@@ -78,26 +86,33 @@ function Muted({ children }: { children: React.ReactNode }) {
  * rộng theo bề ngang đọc (672px) như trang tài liệu: tên 20px, nội dung và chương trình, rồi khối Biên bản ("+ Thêm" để soạn,
  * "Duyệt biên bản" cho chủ tọa, "Sửa" và xóa khi còn dự thảo) và khối Ghi âm, không viền, cách nhau bằng đường kẻ mảnh;
  * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần ("+ Thêm" mời người, "Chọn chủ tọa" khi chưa có); khối Ghi chú của tôi đã bỏ
- * (người dùng yêu cầu 21/10/2026, ghi chú xem ở trang Ghi chú cá nhân). Dưới 1024px cột phải xếp ngay dưới
- * tên. Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
+ * (người dùng yêu cầu 21/10/2026, ghi chú xem ở trang Ghi chú cá nhân). Dưới 1024px theo chi tiết nhiệm vụ trên điện thoại
+ * (người dùng gửi ảnh 21/10/2026): thanh đầu hai hàng 44px, cột phải thành thẻ nổi bật bằng nút Thuộc tính ở hàng dưới,
+ * mặc định đóng để nội dung lên trước. Menu "⋯": sao chép tên/giờ/địa điểm, Hỏi Trợ lý, Hủy cuộc họp (như menu của hàng ở
+ * danh sách). Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
  * máy chủ kiểm lại; ở đây chỉ để ẩn nút không dùng được.
  */
 export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewProps) {
   const router = useRouter();
   const feedback = useFeedback();
   const ids = React.useId();
-  const [pending, setPending] = React.useState<"hold" | "draft" | "confirm" | "discard" | "chair" | null>(null);
+  const [pending, setPending] = React.useState<"hold" | "draft" | "confirm" | "discard" | "chair" | "cancel" | null>(null);
   const [editingMinutes, setEditingMinutes] = React.useState(false);
   const [minutesText, setMinutesText] = React.useState("");
   const [minutesError, setMinutesError] = React.useState<string | null>(null);
   const [discardingMinutes, setDiscardingMinutes] = React.useState(false);
+  const [cancelling, setCancelling] = React.useState(false);
   const minutesRef = React.useRef<HTMLTextAreaElement>(null);
+  // Màn hẹp (< 1024px, cùng mốc chi tiết nhiệm vụ): Thuộc tính và Thành phần là thẻ nổi, bật bằng nút ở thanh đầu
+  const stacked = useStackedTaskDetail();
+  const [peekOpen, setPeekOpen] = React.useState(false);
 
   const isOrganizer = currentUser.id === meeting.organizerId;
   // Theo quyền máy chủ tính, không đoán theo vai trò: bắt đầu họp là người tổ chức/chủ tọa, soạn biên bản là thư ký/chủ
   // tọa/người tổ chức, duyệt biên bản chỉ chủ tọa (thư ký soạn biên bản không tự duyệt)
   const can = (action: string) => meeting.availableActions.includes(action);
   const canHold = meeting.status === "INVITED" && can("meeting.update");
+  const canCancel = canCancelMeeting(meeting);
   const canDraftMinutes = meeting.status === "HELD" && can("meeting.draft_minutes");
   const canConfirmMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.confirm_minutes");
   // Dự thảo chưa duyệt thì người soạn biên bản sửa hoặc xóa (về Đã họp) được; đã duyệt thì khóa
@@ -154,7 +169,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     setMinutesError(null);
   };
 
-  const run = async (kind: "hold" | "confirm" | "discard", action: () => Promise<void>, success: string) => {
+  const run = async (kind: "hold" | "confirm" | "discard" | "cancel", action: () => Promise<void>, success: string) => {
     if (pending) return;
     setPending(kind);
     try {
@@ -243,15 +258,23 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   // Bắt đầu họp là thao tác của cả cuộc họp: ở thanh đầu, luôn thấy khi cuộn. Thao tác biên bản nằm ở thẻ Biên bản
   // (người dùng bỏ nút "Soạn biên bản" ở thanh đầu 20/10/2026, chọn nút "Thêm" ngay trong thẻ)
   const primaryAction = canHold ? (
-    <Button variant="toolbar" size="sm" loading={pending === "hold"} onClick={() => void run("hold", () => holdMeeting(meeting.id), "Đã chuyển cuộc họp sang Đã họp.")}>
+    <Button
+      variant="toolbar"
+      size="sm"
+      className="max-lg:[grid-area:2/1] max-lg:justify-self-start"
+      loading={pending === "hold"}
+      onClick={() => void run("hold", () => holdMeeting(meeting.id), "Đã chuyển cuộc họp sang Đã họp.")}
+    >
       <Play aria-hidden="true" />
       Bắt đầu họp
     </Button>
   ) : null;
 
-  const inspector = (
+  // Một thể hiện mỗi lúc: cột phải ở màn rộng, thẻ nổi ở màn hẹp (picker dùng chung trạng thái mở nên không dựng hai bản).
+  // Thẻ nổi như chi tiết nhiệm vụ: viền 0,5px nền trắng trên nền thẻ trang, không bóng.
+  const renderInspector = (floating: boolean) => (
     <div className="flex flex-col gap-2">
-      <SectionCard title="Thuộc tính">
+      <SectionCard title="Thuộc tính" className={floating ? "border-[0.5px] bg-background" : undefined}>
         <div className="text-xs">
           <PropertyRow label="Trạng thái" density="compact" labelClassName="w-24" valueClassName="justify-start">
             <span className={MEETING_STATUS_TONE_CLASS[status.tone]}>{status.label}</span>
@@ -291,6 +314,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
 
       <SectionCard
         title="Thành phần"
+        className={floating ? "border-[0.5px] bg-background" : undefined}
         count={meeting.participants.length}
         action={
           canManageParticipants ? (
@@ -504,26 +528,68 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           data-slot="meeting-workspace"
           className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0"
         >
-          <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-[18px] max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:px-4 max-md:pt-[env(safe-area-inset-top,0px)]">
-            <nav aria-label="Đường dẫn" className="flex min-w-0 items-center gap-1 text-xs">
-              <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
-              <Link href="/meetings" className="shrink-0 rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:underline">
+          {/* Màn hẹp: hai hàng 44px như chi tiết nhiệm vụ trên điện thoại; hàng trên menu, tên, "⋯", liên kết (kẻ mảnh bên
+              dưới), hàng dưới Bắt đầu họp và nút Thuộc tính */}
+          <header
+            data-slot="meeting-detail-header"
+            className="relative flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-[18px] max-lg:grid max-lg:h-auto max-lg:grid-cols-[minmax(0,1fr)_auto_auto] max-lg:grid-rows-[44px_44px] max-lg:gap-x-1 max-lg:gap-y-0 max-lg:border-b-0 max-lg:px-2 max-lg:pt-[env(safe-area-inset-top,0px)]"
+          >
+            <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+44px)] border-t-[0.5px] border-border lg:hidden" />
+            <nav aria-label="Đường dẫn" className="flex min-w-0 items-center gap-1 text-xs max-lg:[grid-area:1/1]">
+              <MobileMenuButton className="mr-2 md:hidden" />
+              <Link href="/meetings" className="shrink-0 rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:underline max-md:hidden">
                 Cuộc họp
               </Link>
-              <ChevronRight aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/60" />
-              <span aria-current="page" className="min-w-0 truncate font-medium text-foreground">
+              <ChevronRight aria-hidden="true" className="size-3 shrink-0 text-muted-foreground/60 max-md:hidden" />
+              <span aria-current="page" className="min-w-0 truncate font-medium text-foreground max-md:text-compact">
                 {meeting.title}
               </span>
             </nav>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5 max-lg:contents">
               {primaryAction}
-              <Button variant="ghost" size="icon-md" onClick={() => void copyLink()} title="Sao chép liên kết" aria-label="Sao chép liên kết">
+              <MeetingMoreMenu
+                title={meeting.title}
+                summary={meetingSummaryText(meeting)}
+                meetingId={meeting.id}
+                onCancel={canCancel ? () => setCancelling(true) : undefined}
+                className="max-lg:[grid-area:1/2]"
+              />
+              <Button
+                variant="ghost"
+                size="icon-md"
+                className="max-lg:[grid-area:1/3]"
+                onClick={() => void copyLink()}
+                title="Sao chép liên kết"
+                aria-label="Sao chép liên kết"
+              >
                 <Link2 />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-md"
+                className={cn("lg:hidden max-lg:[grid-area:2/3]", peekOpen && "text-foreground")}
+                onClick={() => setPeekOpen((open) => !open)}
+                title={peekOpen ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
+                aria-label={peekOpen ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
+                aria-pressed={peekOpen}
+              >
+                <IconSidebarPanelRight size={14} active={peekOpen} />
               </Button>
             </div>
           </header>
 
           <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
+            {/* Thẻ nổi neo cao 0, dính đầu vùng cuộn nên luôn ngay dưới thanh đầu dù đã cuộn; cách mép phải 8px, rộng 338px */}
+            {stacked && peekOpen ? (
+              <div className="sticky top-0 z-40 h-0">
+                <div
+                  data-slot="meeting-properties-peek"
+                  className="absolute right-2 top-0 max-h-[min(72dvh,560px)] w-[min(338px,calc(100%-16px))] overflow-y-auto overscroll-contain motion-safe:animate-[peek-reveal_160ms_ease-out]"
+                >
+                  {renderInspector(true)}
+                </div>
+              </div>
+            ) : null}
             {/* Màn rộng: lưới hai cột, cột phải trải hai hàng để tên và các thẻ cột chính không bị đẩy cách nhau.
                 Màn hẹp: thứ tự DOM là tên, thuộc tính, các thẻ. */}
             <div className={DETAIL_GRID_CLASS}>
@@ -539,9 +605,12 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 )}
               </div>
 
-              <aside aria-label="Thuộc tính cuộc họp" className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-2 lg:pt-3">
-                {inspector}
-              </aside>
+              {/* Màn hẹp dùng thẻ nổi; `max-lg:hidden` giữ đúng khi dựng ở máy chủ (chưa biết bề ngang) */}
+              {stacked ? null : (
+                <aside aria-label="Thuộc tính cuộc họp" className="min-w-0 max-lg:hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-2 lg:pt-3">
+                  {renderInspector(false)}
+                </aside>
+              )}
 
               <div className="flex min-w-0 flex-col gap-6 pt-2 lg:col-start-1 lg:row-start-2">
                 {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
@@ -575,7 +644,89 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         description="Dự thảo biên bản bị xóa, cuộc họp về Đã họp để soạn lại. Bản ghi âm và biên bản đề xuất vẫn giữ."
         confirmLabel="Xóa biên bản"
       />
+
+      <DestructiveConfirmDialog
+        isOpen={cancelling}
+        onClose={() => pending !== "cancel" && setCancelling(false)}
+        onConfirm={async () => {
+          await run("cancel", () => cancelMeeting(meeting.id), "Đã hủy cuộc họp.");
+          setCancelling(false);
+        }}
+        isConfirming={pending === "cancel"}
+        title="Hủy cuộc họp?"
+        entityLabel="Cuộc họp"
+        entityName={meeting.title}
+        description={`sẽ chuyển sang Đã hủy. ${MEETING_CANCEL_NOTICE}`}
+        confirmLabel="Hủy cuộc họp"
+      />
     </div>
+  );
+}
+
+const menuIcon = "size-4 text-muted-foreground";
+
+/** Menu "⋯" ở thanh đầu, cùng mục với menu của hàng ở danh sách (trừ Xem chi tiết, Bắt đầu họp, Sao chép liên kết đã có nút riêng). */
+function MeetingMoreMenu({
+  meetingId,
+  title,
+  summary,
+  onCancel,
+  className,
+}: {
+  meetingId: string;
+  title: string;
+  summary: string;
+  onCancel?: () => void;
+  className?: string;
+}) {
+  const router = useRouter();
+  const feedback = useFeedback();
+  const [open, setOpen] = React.useState(false);
+  // Cờ Trợ lý chỉ tải khi menu mở lần đầu
+  const assistantOn = useRuntimeFeature("assistant", open);
+
+  const copySummary = async () => {
+    try {
+      await navigator.clipboard.writeText(summary);
+      feedback.notifySuccess("Đã sao chép thông tin cuộc họp");
+    } catch {
+      feedback.notifyError("Không sao chép được");
+    }
+  };
+
+  // Khung chat nổi hỏi về cuộc họp; không có khung (điện thoại) thì mở trang Trợ lý với cuộc họp làm ngữ cảnh
+  const askAssistant = () => {
+    if (!askAssistantInDock({ type: "meeting", id: meetingId })) {
+      router.push(`/assistant?context=${encodeURIComponent(`meeting:${meetingId}`)}`);
+    }
+  };
+
+  return (
+    <MenuRoot open={open} onOpenChange={setOpen}>
+      <MenuTrigger asChild>
+        <Button variant="ghost" size="icon-md" aria-label="Thao tác khác" title="Thao tác khác" className={className}>
+          <Ellipsis />
+        </Button>
+      </MenuTrigger>
+      <MenuContent align="end" mobileSheet sheetTitle={title} positionerClassName="z-50" className="w-56">
+        <MenuActionItem leading={<TaskIconCopy className={menuIcon} />} onClick={() => void copySummary()}>
+          Sao chép tên, giờ, địa điểm
+        </MenuActionItem>
+        {assistantOn ? (
+          <MenuActionItem leading={<AgentIcon className={menuIcon} />} onClick={askAssistant}>
+            Hỏi Trợ lý
+          </MenuActionItem>
+        ) : null}
+        {onCancel ? (
+          <>
+            <MenuSeparator className="my-1 border-t border-border/40" />
+            <MenuActionItem destructive leading={<CalendarX2 className="size-4" />} onClick={onCancel}>
+              Hủy cuộc họp
+            </MenuActionItem>
+          </>
+        ) : null}
+      </MenuContent>
+    </MenuRoot>
   );
 }
 

@@ -23,6 +23,7 @@ import { cancelMeeting, holdMeeting } from "@/components/meetings/meeting-client
 import { MeetingRowMenu, type MeetingMenuAnchor } from "@/components/meetings/meeting-row-menu";
 import {
   DEFAULT_MEETING_DISPLAY,
+  MEETING_CANCEL_NOTICE,
   MEETING_COLUMNS,
   MEETING_SORT_LABELS,
   MEETING_TIME_FILTERS,
@@ -573,8 +574,8 @@ export function MeetingListView() {
         entityName={cancelTargets?.rows.length === 1 ? cancelTargets.rows[0].title : undefined}
         description={
           cancelTargets?.rows.length === 1
-            ? "sẽ chuyển sang Đã hủy. Hệ thống chưa tự báo cho người được mời, Thầy/Cô báo giúp nếu cần."
-            : "Các cuộc họp chuyển sang Đã hủy. Hệ thống chưa tự báo cho người được mời, Thầy/Cô báo giúp nếu cần."
+            ? `sẽ chuyển sang Đã hủy. ${MEETING_CANCEL_NOTICE}`
+            : `Các cuộc họp chuyển sang Đã hủy. ${MEETING_CANCEL_NOTICE}`
         }
         confirmLabel="Hủy cuộc họp"
       >

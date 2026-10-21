@@ -598,6 +598,12 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Thẻ thuộc tính nổi của trang chi tiết ở màn hẹp (Cuộc họp; Nhiệm vụ có bản riêng trong task-detail-page.module.css) */
+@keyframes peek-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Nhấn giữ hàng nhiệm vụ trên điện thoại: nền lan từ chỗ chạm (--press-at, đặt ở nơi dùng) sang hai bên.
    `round` giữ hai đầu mép đang lan cũng bo góc như hàng (rounded-lg = --radius-lg) thay vì cắt thẳng */
 @keyframes long-press-fill {

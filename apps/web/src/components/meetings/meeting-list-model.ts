@@ -70,13 +70,19 @@ export function meetingTimeRange(filter: MeetingTimeFilter, today: string): { fr
   return { from: ictDayStart(start).toISOString(), to: new Date(ictDayStart(end).getTime() - 1).toISOString() };
 }
 
-const can = (row: MeetingRow, action: string) => row.availableActions.includes(action);
+/** Hàng danh sách hoặc cuộc họp ở trang chi tiết: đủ để biết thao tác nào được phép. */
+type MeetingActionSubject = Pick<MeetingRow, "status" | "availableActions">;
+
+const can = (row: MeetingActionSubject, action: string) => row.availableActions.includes(action);
 
 /** Bắt đầu họp (Đã mời → Đã họp): người tổ chức/chủ tọa, như nút ở trang chi tiết. */
-export const canStartMeeting = (row: MeetingRow) => row.status === "INVITED" && can(row, "meeting.update");
+export const canStartMeeting = (row: MeetingActionSubject) => row.status === "INVITED" && can(row, "meeting.update");
 
 /** Hủy họp: người tổ chức/chủ tọa, chỉ khi chưa họp (đã họp thì giữ để còn biên bản). */
-export const canCancelMeeting = (row: MeetingRow) => (row.status === "DRAFT_AGENDA" || row.status === "INVITED") && can(row, "meeting.update");
+export const canCancelMeeting = (row: MeetingActionSubject) => (row.status === "DRAFT_AGENDA" || row.status === "INVITED") && can(row, "meeting.update");
+
+/** Câu nhắc trong hộp xác nhận hủy họp (danh sách và trang chi tiết): outbox cuộc họp chưa gửi thông báo hủy. */
+export const MEETING_CANCEL_NOTICE = "Hệ thống chưa tự báo cho người được mời, Thầy/Cô báo giúp nếu cần.";
 
 export const meetingPath = (id: string) => `/meetings/${encodeURIComponent(id)}`;
 
@@ -87,7 +93,7 @@ export function meetingTimeRangeLabel(row: Pick<MeetingRow, "startTime" | "endTi
 }
 
 /** Một dòng chữ để dán vào tin nhắn: tên · thứ, ngày · giờ · địa điểm (có thì mới ghi). */
-export function meetingSummaryText(row: MeetingRow): string {
+export function meetingSummaryText(row: Pick<MeetingRow, "title" | "startTime" | "endTime" | "location">): string {
   return [row.title, `${formatWeekday(row.startTime)}, ${formatDisplayDate(row.startTime)}`, meetingTimeRangeLabel(row), row.location]
     .filter(Boolean)
     .join(" · ");
