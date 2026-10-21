@@ -45,6 +45,23 @@ export function noteEntityHref(note: Pick<PersonalNote, "entityType" | "entityId
 
 type DraftPatch = { title?: string; content?: string };
 
+/**
+ * Ô ghi nhanh mở ra có chuyển động (người dùng gửi ảnh ô thu gọn và lúc mở, yêu cầu thêm hiệu ứng 21/10/2026): đệm và khoảng
+ * cách chuyển mượt, tiêu đề và thanh dưới mở dần từ cao 0 (`Reveal`). Chỉ chạy khi mở; đóng lại vẫn thu ngay như Keep.
+ */
+const EXPAND_TRANSITION =
+  "transition-[gap,padding] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-enter)] motion-reduce:transition-none";
+
+/** Hiện dần từ cao 0 khi vừa gắn vào (`@starting-style`): lưới 0fr → 1fr kèm mờ → rõ. */
+function Reveal({ animate, children }: { animate: boolean; children: React.ReactNode }) {
+  if (!animate) return <>{children}</>;
+  return (
+    <div className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-enter)] starting:grid-rows-[0fr] starting:opacity-0 motion-reduce:transition-none">
+      <div className="min-h-0 overflow-hidden">{children}</div>
+    </div>
+  );
+}
+
 export interface NoteEditorProps {
   /** null: ghi chú mới chưa lưu; gõ chữ đầu tiên mới tạo (xem `useNoteAutosave`). */
   note: PersonalNote | null;
@@ -156,7 +173,12 @@ export function NoteEditor({
       ref={bodyRef}
       data-slot="note-body"
       onFocus={collapsed ? onExpand : undefined}
-      className={cn("flex min-h-6 flex-col [&_[data-slate-editor]]:pb-0", collapsed && "py-2.5 [&_[data-slot=block-handle]]:invisible", variant === "dialog" && "min-h-12")}
+      className={cn(
+        "flex min-h-6 flex-col [&_[data-slate-editor]]:pb-0",
+        collapsed && "py-2.5 [&_[data-slot=block-handle]]:invisible",
+        variant === "capture" && !collapsed && EXPAND_TRANSITION,
+        variant === "dialog" && "min-h-12"
+      )}
     >
       <BodyEditor
         variant="compose"
@@ -184,38 +206,41 @@ export function NoteEditor({
       {/* Lề 24px trên máy tính: tay kéo khối của editor nằm trong lề này (điện thoại không có tay kéo) */}
       <div
         className={cn(
-          "flex flex-col gap-2 px-4 md:px-6",
-          !collapsed && "pt-3",
+          "flex flex-col px-4 md:px-6",
+          collapsed ? "gap-0" : "gap-2 pt-3",
+          variant === "capture" && !collapsed && EXPAND_TRANSITION,
           variant === "dialog" && "thin-scrollbar min-h-0 flex-1 overflow-y-auto pt-4"
         )}
       >
         {!collapsed && (
-          <Textarea
-            variant="bare"
-            compact
-            autoResize
-            countOnlyNearLimit
-            rows={1}
-            value={title}
-            maxLength={PERSONAL_NOTE_TITLE_MAX}
-            disabled={gone}
-            placeholder="Tiêu đề"
-            aria-label="Tiêu đề ghi chú"
-            onChange={(event) => {
-              // Tiêu đề một đoạn: dán chữ nhiều dòng thì nối lại bằng dấu cách
-              const next = event.target.value.replace(/\s*\r?\n\s*/g, " ");
-              setTitle(next);
-              schedule({ title: next });
-            }}
-            onKeyDown={(event) => {
-              // Enter ở tiêu đề chuyển xuống nội dung (Ctrl/Cmd+Enter vẫn là "Đóng")
-              if (event.key === "Enter" && !event.metaKey && !event.ctrlKey && !event.nativeEvent.isComposing) {
-                event.preventDefault();
-                focusBody();
-              }
-            }}
-            className="py-0 text-base font-semibold leading-snug tracking-tight text-foreground sm:text-base"
-          />
+          <Reveal animate={variant === "capture"}>
+            <Textarea
+              variant="bare"
+              compact
+              autoResize
+              countOnlyNearLimit
+              rows={1}
+              value={title}
+              maxLength={PERSONAL_NOTE_TITLE_MAX}
+              disabled={gone}
+              placeholder="Tiêu đề"
+              aria-label="Tiêu đề ghi chú"
+              onChange={(event) => {
+                // Tiêu đề một đoạn: dán chữ nhiều dòng thì nối lại bằng dấu cách
+                const next = event.target.value.replace(/\s*\r?\n\s*/g, " ");
+                setTitle(next);
+                schedule({ title: next });
+              }}
+              onKeyDown={(event) => {
+                // Enter ở tiêu đề chuyển xuống nội dung (Ctrl/Cmd+Enter vẫn là "Đóng")
+                if (event.key === "Enter" && !event.metaKey && !event.ctrlKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  focusBody();
+                }
+              }}
+              className="py-0 text-base font-semibold leading-snug tracking-tight text-foreground sm:text-base"
+            />
+          </Reveal>
         )}
         {contentField}
         {variant === "dialog" && (entity || editedAt) && (
@@ -235,38 +260,40 @@ export function NoteEditor({
         )}
       </div>
       {!collapsed && (
-        <footer className="flex h-11 shrink-0 items-center gap-1 px-2.5 md:px-4.5">
-          {/* Chưa gõ gì thì chưa có ghi chú để ghim hay xóa */}
-          {noteId && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                title={pinned ? "Bỏ ghim" : "Ghim"}
-                aria-label={pinned ? "Bỏ ghim ghi chú" : "Ghim ghi chú"}
-                aria-pressed={pinned}
-                disabled={gone}
-                onClick={() => void togglePin()}
-              >
-                {pinned ? <PinOff /> : <Pin />}
+        <Reveal animate={variant === "capture"}>
+          <footer className="flex h-11 shrink-0 items-center gap-1 px-2.5 md:px-4.5">
+            {/* Chưa gõ gì thì chưa có ghi chú để ghim hay xóa */}
+            {noteId && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  title={pinned ? "Bỏ ghim" : "Ghim"}
+                  aria-label={pinned ? "Bỏ ghim ghi chú" : "Ghim ghi chú"}
+                  aria-pressed={pinned}
+                  disabled={gone}
+                  onClick={() => void togglePin()}
+                >
+                  {pinned ? <PinOff /> : <Pin />}
+                </Button>
+                <Button variant="ghost" size="icon-xs" title="Xóa ghi chú" aria-label="Xóa ghi chú" onClick={() => onDelete(noteId)}>
+                  <Trash2 />
+                </Button>
+              </>
+            )}
+            <span role="status" aria-live="polite" className="ml-auto text-xs text-destructive">
+              {pinError ? "Chưa ghim được" : tooLong ? "Ghi chú quá dài, phần mới chưa lưu" : SAVE_PROBLEM[state]}
+            </span>
+            {state === "error" && (
+              <Button variant="ghost" size="xs" onClick={() => void retry()}>
+                Thử lại
               </Button>
-              <Button variant="ghost" size="icon-xs" title="Xóa ghi chú" aria-label="Xóa ghi chú" onClick={() => onDelete(noteId)}>
-                <Trash2 />
-              </Button>
-            </>
-          )}
-          <span role="status" aria-live="polite" className="ml-auto text-xs text-destructive">
-            {pinError ? "Chưa ghim được" : tooLong ? "Ghi chú quá dài, phần mới chưa lưu" : SAVE_PROBLEM[state]}
-          </span>
-          {state === "error" && (
-            <Button variant="ghost" size="xs" onClick={() => void retry()}>
-              Thử lại
+            )}
+            <Button variant="ghost" size="sm" onClick={onClose} title="Đóng (Ctrl+Enter)">
+              Đóng
             </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={onClose} title="Đóng (Ctrl+Enter)">
-            Đóng
-          </Button>
-        </footer>
+          </footer>
+        </Reveal>
       )}
     </div>
   );
