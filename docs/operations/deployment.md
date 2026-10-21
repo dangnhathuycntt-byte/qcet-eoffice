@@ -109,7 +109,9 @@ server {
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    # microphone=(self): ghi âm cuộc họp trực tiếp cần micro. Ứng dụng đã tự gửi header này; nếu proxy thêm `microphone=()`
+    # thì hai header gộp lại và micro bị chặn hẳn (trình duyệt lấy giá trị chặt hơn, không hỏi quyền).
+    add_header Permissions-Policy "camera=(), microphone=(self), geolocation=()" always;
 
     # Payload Caps: Allow up to 50MB for document uploads and task deliverables
     client_max_body_size 50M;

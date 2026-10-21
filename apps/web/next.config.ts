@@ -14,7 +14,12 @@ const { getNextSecurityHeaders }: typeof import("../../packages/shared/src/confi
 loadEnvConfig(repoRoot, process.env.NODE_ENV !== "production", console, true);
 
 const isProduction = process.env.NODE_ENV === "production";
-const securityHeaders = getNextSecurityHeaders(isProduction);
+// Micro cho chính trang này (ghi âm cuộc họp trực tiếp, `getUserMedia`). Mặc định `microphone=()` chặn hẳn micro: trình
+// duyệt không hỏi quyền, người dùng không bật được dù bấm ổ khóa (người dùng báo 21/10/2026). Camera, vị trí, thanh
+// toán vẫn tắt; iframe nhúng từ nơi khác không được dùng micro.
+const securityHeaders = getNextSecurityHeaders(isProduction, {
+  permissionsPolicy: "camera=(), microphone=(self), geolocation=(), payment=()",
+});
 
 /**
  * API nội bộ (D6). Trình duyệt gọi /api cùng tên miền; production định tuyến /api tới qcet-api ở cloudflared,

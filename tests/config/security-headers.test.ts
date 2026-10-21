@@ -159,6 +159,18 @@ describe("Security Headers & CSP Engine", () => {
       assert.ok(headerMap.has("Content-Security-Policy-Report-Only"));
     });
 
+    it("cho micro của chính trang (ghi âm cuộc họp trực tiếp) nhưng vẫn tắt camera, vị trí, thanh toán", async () => {
+      const rules = await nextConfig.headers!();
+      const catchAllRule = rules.find((r) => r.source === "/:path*");
+      const policy = catchAllRule!.headers.find((h) => h.key === "Permissions-Policy")?.value ?? "";
+      // `microphone=()` chặn hẳn micro: getUserMedia thất bại ngay, trình duyệt không hỏi quyền và người dùng không bật được
+      assert.ok(policy.includes("microphone=(self)"), `Permissions-Policy phải cho micro cùng nguồn, đang là: ${policy}`);
+      assert.ok(!policy.includes("microphone=()"));
+      assert.ok(policy.includes("camera=()"));
+      assert.ok(policy.includes("geolocation=()"));
+      assert.ok(policy.includes("payment=()"));
+    });
+
     it("preserves service worker caching header configuration", async () => {
       const rules = await nextConfig.headers!();
       const swRule = rules.find((r) => r.source === "/sw.js");
