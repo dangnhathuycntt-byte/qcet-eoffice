@@ -505,6 +505,11 @@ export function TaskContextMenu({
     submenuPlacement.side === "right" ? "left-full ml-0.5 before:-left-3" : "right-full mr-0.5 before:-right-3",
     // Nâng lên so với hàng gốc để chuột đi chéo từ hàng sang mục đầu tiên không trượt ra ngoài
     submenuPlacement.align === "top" ? "-top-3" : "-bottom-3",
+    // Hiệu ứng zoom-in-95 phóng từ góc sát hàng gốc, không từ giữa (từ giữa thì menu con trượt vài px khi mở). Viết đủ tên lớp
+    // để Tailwind sinh CSS.
+    submenuPlacement.side === "right"
+      ? submenuPlacement.align === "top" ? "origin-top-left" : "origin-bottom-left"
+      : submenuPlacement.align === "top" ? "origin-top-right" : "origin-bottom-right",
   );
 
   return (
