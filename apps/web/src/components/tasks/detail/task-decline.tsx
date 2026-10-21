@@ -26,6 +26,8 @@ export interface TaskDeclineProps {
   taskId: string;
   version: number;
   status?: string;
+  /** Người chủ trì hiện tại: lời từ chối chỉ còn hiệu lực tới khi giao người khác. */
+  leadId?: string;
   onVersionChange?: (version: number) => void;
   className?: string;
 }
@@ -34,7 +36,7 @@ export interface TaskDeclineProps {
  * Từ chối nhận việc (T-02). Không có trạng thái "từ chối" (ADR-003): người chủ trì giữ nguyên
  * cho đến khi người giao giao lại, nên khối này chỉ ghi lý do và báo cho mọi người trong nhiệm vụ.
  */
-export function TaskDecline({ taskId, version, status, onVersionChange, className }: TaskDeclineProps) {
+export function TaskDecline({ taskId, version, status, leadId, onVersionChange, className }: TaskDeclineProps) {
   const [state, setState] = React.useState<DeclineState | null>(null);
   const [open, setOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
@@ -51,9 +53,11 @@ export function TaskDecline({ taskId, version, status, onVersionChange, classNam
     }
   }, [taskId]);
 
+  // Tải lại khi trạng thái hoặc người chủ trì đổi, không theo `version`: mô tả tự lưu sau mỗi lần ngừng gõ làm tăng version,
+  // trước đây mỗi lần lưu kéo theo một GET (gửi lời từ chối thì `submit` tự tải lại).
   React.useEffect(() => {
     void load();
-  }, [load, status, version]);
+  }, [load, status, leadId]);
 
   const submit = async () => {
     setBusy(true);

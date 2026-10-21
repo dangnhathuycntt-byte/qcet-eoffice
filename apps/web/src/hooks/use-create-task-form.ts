@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  STATIC_FALLBACK_DEPARTMENTS,
   useDepartmentList,
   type DepartmentPersonnel,
   type DepartmentOption,
@@ -312,9 +313,11 @@ function clearDraftStorage(): void {
 // ─── Hook ─────────────────────────────────────────────────────
 /**
  * Đơn vị người dùng được tạo nhiệm vụ, kèm nhân sự: lãnh đạo thấy mọi đơn vị, người khác chỉ đơn vị của mình. Dùng
- * chung cho hộp tạo nhiệm vụ và "Tạo tất cả" đề xuất của Trợ lý.
+ * chung cho hộp tạo nhiệm vụ và "Tạo tất cả" đề xuất của Trợ lý. `enabled: false` thì chưa tải: danh bạ kèm nhân sự nặng
+ * (~180KB với 275 người) mà hộp tạo việc được gắn sẵn ở dạng đóng trên /tasks và trang chi tiết (người dùng báo web chậm
+ * 22/10/2026). `departmentsLoaded` = đã có danh sách thật (chưa tải thì là danh sách dự phòng tĩnh, không có nhân sự).
  */
-export function useCreateTaskDepartments() {
+export function useCreateTaskDepartments({ enabled = true }: { enabled?: boolean } = {}) {
   const { user } = useAuth();
   const isExecutive = isExecutiveUser(user);
 
@@ -329,7 +332,9 @@ export function useCreateTaskDepartments() {
   // ── Department + Personnel ──────────────────────────────────
   const { departments: allDepartments, isLoading: isLoadingDepartments } = useDepartmentList({
     includePersonnel: true,
+    enabled,
   });
+  const departmentsLoaded = allDepartments !== STATIC_FALLBACK_DEPARTMENTS;
 
   const availableDepartments = React.useMemo<DepartmentOption[]>(() => {
     if (isExecutive) return allDepartments;
@@ -341,17 +346,20 @@ export function useCreateTaskDepartments() {
     return filtered.length > 0 ? filtered : [];
   }, [isExecutive, allDepartments, userDeptCode, user?.department]);
 
-  return { user, isExecutive, userDeptCode, availableDepartments, isLoadingDepartments };
+  return { user, isExecutive, userDeptCode, availableDepartments, isLoadingDepartments, departmentsLoaded };
 }
 
 export function useCreateTaskForm(options: UseCreateTaskFormOptions = {}) {
-  const { isExecutive, userDeptCode, availableDepartments, isLoadingDepartments } = useCreateTaskDepartments();
+  const { isExecutive, userDeptCode, availableDepartments, isLoadingDepartments, departmentsLoaded } =
+    useCreateTaskDepartments({ enabled: options.isOpen ?? true });
 
   // ── Initial form data ───────────────────────────────────────
+  // Danh bạ chỉ tải khi hộp mở: mở trước khi tải xong thì để trống (chip ghi "Đơn vị", lúc gửi `currentDept` lấy đơn vị đầu
+  // của danh sách thật như trước), không lấy đơn vị đầu của danh sách dự phòng tĩnh.
   const defaultDeptCode =
     options.initialDepartmentCode ||
     userDeptCode ||
-    availableDepartments[0]?.code ||
+    (departmentsLoaded ? availableDepartments[0]?.code : "") ||
     "";
 
   const buildInitialData = React.useCallback((): CreateTaskFormData => {

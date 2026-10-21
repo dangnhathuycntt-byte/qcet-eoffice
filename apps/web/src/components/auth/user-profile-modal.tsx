@@ -23,7 +23,8 @@ import { Pressable } from "@/components/ui/pressable";
 
 export function UserProfileModal() {
   const { user, updateProfile, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
-  const { departments } = useDepartmentList();
+  // Hộp được gắn sẵn ở thanh bên mọi trang: chỉ tải danh sách đơn vị khi mở (trước đó dùng danh sách dự phòng tĩnh)
+  const { departments } = useDepartmentList({ enabled: isProfileModalOpen });
 
   const [name, setName] = React.useState(user?.name || "");
   const [departmentCode, setDepartmentCode] = React.useState(user?.departmentCode || "QCET");

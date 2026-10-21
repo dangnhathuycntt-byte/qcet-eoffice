@@ -82,7 +82,8 @@ export function SubtaskDetailDrawer({
 
   // Dropdown states
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const { personnel: personnelList, isLoading: personnelLoading } = usePersonnelList({ departmentId: getTaskUnitId(subtask) });
+  // Ngăn được gắn sẵn ở dạng đóng (subtask = null): chưa có việc con thì không tải danh sách người (khỏi gọi /api/users cả trường)
+  const { personnel: personnelList, isLoading: personnelLoading } = usePersonnelList({ departmentId: getTaskUnitId(subtask), enabled: Boolean(subtask) });
 
   // FSM guard: compute allowed status transitions
   const actorContext = React.useMemo(() => buildActorContext(currentUser), [currentUser]);

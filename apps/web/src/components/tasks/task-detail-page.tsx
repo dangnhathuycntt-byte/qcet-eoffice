@@ -768,6 +768,7 @@ export function TaskDetailPage({
         taskId={task.id}
         version={Number((task as any).version ?? 0)}
         status={String((task as any).status ?? "")}
+        leadId={(task as any).leadAssigneeId || (task as any).assigneeId}
         onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
         className={inspectorVisible ? "basis-full pl-2 pr-0" : undefined}
       />
