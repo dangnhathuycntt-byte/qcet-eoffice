@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { AssistantConversationActivityDTO, AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
+import type { AssistantContextRef, AssistantConversationActivityDTO, AssistantConversationSummaryDTO } from "@qcet/contracts/assistant";
 import { formatConversationTime, groupConversationsByRecency } from "@qcet/shared/domain/assistant/assistant-history";
 import {
   assistantErrorText,
@@ -408,6 +408,9 @@ export function AssistantDock() {
     return () => window.removeEventListener(ASSISTANT_CONVERSATION_EVENT, onChange);
   }, []);
 
+  // Câu hỏi gửi luôn từ nút "Tạo biên bản" (gửi ở effect sau khi ngữ cảnh vào cuộc mới, xem autoSendTurnRef)
+  const [autoSend, setAutoSend] = React.useState<{ context: AssistantContextRef; prompt: string } | null>(null);
+
   // "Hỏi Trợ lý" từ menu nhiệm vụ: cuộc mới với nhiệm vụ làm ngữ cảnh ngay trong khung nổi, không sang trang Trợ lý.
   // Cuộc đang mở (kể cả đang trả lời: lượt vẫn chạy ở máy chủ) về lịch sử. Điện thoại không có khung nên không nhận.
   const onAskRef = React.useRef<(detail: AssistantAskEventDetail) => void>(() => undefined);
@@ -416,8 +419,10 @@ export function AssistantDock() {
     detail.handled = true;
     newChat();
     chat.setPendingContext(detail.context);
-    // Sau newChat (newChat xóa ô soạn): câu hỏi điền sẵn để người dùng xem rồi tự gửi
-    if (detail.prompt) setDraft(detail.prompt);
+    // Sau newChat (newChat xóa ô soạn): câu hỏi điền sẵn để người dùng xem rồi tự gửi, hoặc gửi luôn khi ngữ cảnh đã vào
+    // cuộc mới (lượt gửi đọc ngữ cảnh của lần vẽ sau, nên gửi ở effect bên dưới, không gửi ngay tại đây)
+    if (detail.prompt && detail.send) setAutoSend({ context: detail.context, prompt: detail.prompt });
+    else if (detail.prompt) setDraft(detail.prompt);
     openPanel();
   };
   React.useEffect(() => {
@@ -442,6 +447,17 @@ export function AssistantDock() {
     stickToBottomRef.current = true;
     void chat.send(text, restoreDraft);
   };
+
+  // Câu hỏi gửi luôn: chờ cuộc mới nhận đúng ngữ cảnh rồi gửi một lần, không lấy tệp ở ô soạn
+  const autoSendTurnRef = React.useRef<() => void>(() => undefined);
+  autoSendTurnRef.current = () => {
+    const ctx = chat.pendingContext;
+    if (!autoSend || !canSend || chat.activeId || ctx?.type !== autoSend.context.type || ctx.id !== autoSend.context.id) return;
+    setAutoSend(null);
+    stickToBottomRef.current = true;
+    void chat.send(autoSend.prompt, restoreDraft, []);
+  };
+  React.useEffect(() => autoSendTurnRef.current(), [autoSend, canSend, chat.pendingContext, chat.activeId]);
 
   const confirmDelete = async () => {
     const id = dock?.id;

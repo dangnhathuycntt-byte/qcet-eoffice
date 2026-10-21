@@ -78,19 +78,64 @@ export type AssistantConversationEventDetail =
  * chuyển sang trang Trợ lý (người dùng yêu cầu 19/10/2026). Khung nhận thì đặt `handled`.
  */
 export const ASSISTANT_ASK_EVENT = "qcet:assistant-ask";
-export interface AssistantAskEventDetail {
+export interface AssistantAsk {
+  prompt: string;
+  /**
+   * Gửi luôn thay vì điền sẵn vào ô soạn. Chỉ dùng khi chính người dùng vừa bấm một nút nói rõ việc cần làm ("Tạo biên
+   * bản", người dùng yêu cầu 21/10/2026); kỹ năng và bản tin sáng vẫn chỉ điền sẵn.
+   */
+  send?: boolean;
+}
+export interface AssistantAskEventDetail extends Partial<AssistantAsk> {
   context: AssistantContextRef;
-  /** Câu hỏi điền sẵn vào ô soạn (người dùng xem rồi tự gửi, như kỹ năng và bản tin sáng của ADR-012). */
-  prompt?: string;
   handled: boolean;
 }
 
 /** Mở khung chat nổi hỏi về `context`; không có khung (điện thoại, trang Trợ lý) thì trả false để nơi gọi chuyển trang. */
-export function askAssistantInDock(context: AssistantContextRef, prompt?: string): boolean {
+export function askAssistantInDock(context: AssistantContextRef, ask?: AssistantAsk): boolean {
   if (typeof window === "undefined") return false;
-  const detail: AssistantAskEventDetail = { context, prompt, handled: false };
+  const detail: AssistantAskEventDetail = { context, ...ask, handled: false };
   window.dispatchEvent(new CustomEvent<AssistantAskEventDetail>(ASSISTANT_ASK_EVENT, { detail }));
   return detail.handled;
+}
+
+/**
+ * Không có khung nổi mà cần gửi luôn: câu hỏi chuyển sang trang Trợ lý qua `sessionStorage` (cùng tab, cùng tên miền),
+ * không qua đường dẫn, để một liên kết từ nơi khác không gửi được câu hỏi thay người dùng. Trang chỉ gửi khi đúng ngữ
+ * cảnh của đường dẫn và câu còn mới.
+ */
+const AUTO_SEND_KEY = "qcet.assistant.autoSend";
+const AUTO_SEND_MAX_AGE_MS = 60_000;
+
+export function queueAssistantAutoSend(context: AssistantContextRef, prompt: string, now = Date.now()): void {
+  try {
+    window.sessionStorage.setItem(AUTO_SEND_KEY, JSON.stringify({ ...context, prompt, at: now }));
+  } catch {
+    // Không lưu được (chế độ riêng tư chặn): trang Trợ lý mở với ngữ cảnh, người dùng tự hỏi
+  }
+}
+
+export function parseQueuedAutoSend(raw: string | null, context: AssistantContextRef, now: number): string | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as { type?: unknown; id?: unknown; prompt?: unknown; at?: unknown };
+    if (value.type !== context.type || value.id !== context.id || typeof value.at !== "number") return null;
+    if (now - value.at < 0 || now - value.at > AUTO_SEND_MAX_AGE_MS) return null;
+    return typeof value.prompt === "string" ? parseAssistantPromptParam(value.prompt) || null : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Lấy (và xóa) câu hỏi chờ gửi của đúng ngữ cảnh này; mỗi câu chỉ gửi một lần. */
+export function takeAssistantAutoSend(context: AssistantContextRef, now = Date.now()): string | null {
+  try {
+    const raw = window.sessionStorage.getItem(AUTO_SEND_KEY);
+    window.sessionStorage.removeItem(AUTO_SEND_KEY);
+    return parseQueuedAutoSend(raw, context, now);
+  } catch {
+    return null;
+  }
 }
 
 export const ASSISTANT_RATE_LIMIT_MESSAGE = "Thầy/Cô gửi hơi nhanh. Chờ một phút rồi thử lại.";

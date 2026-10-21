@@ -33,7 +33,7 @@ import {
   uploadAudioFile,
 } from "@/components/meetings/recording-client";
 import { LiveRecordingSession, pickRecorderMimeType } from "@/components/meetings/live-recording-session";
-import { askAssistantInDock } from "@/components/assistant/assistant-model";
+import { askAssistantInDock, queueAssistantAutoSend } from "@/components/assistant/assistant-model";
 import { daysUntil } from "@/lib/format/relative-date";
 import { useRuntimeFeature } from "@/lib/runtime-features";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,7 @@ const recordingTitle = (recording: MeetingRecordingSummary) => recording.fileNam
 const recordingFullName = (recording: MeetingRecordingSummary) => `${recordingTitle(recording)} · ${recordedAt(recording.createdAt)}`;
 
 /**
- * Câu hỏi điền sẵn khi mở Trợ lý soạn biên bản: tên bản ghi và giờ ghi đầy đủ ("08:38 21/10/2026", cùng cách ghi với công
+ * Câu hỏi gửi Trợ lý khi bấm "Tạo biên bản": tên bản ghi và giờ ghi đầy đủ ("08:38 21/10/2026", cùng cách ghi với công
  * cụ get_meeting của Trợ lý) để Trợ lý chọn đúng bản trong danh sách.
  */
 function minutesAssistantPrompt(recording: Pick<MeetingRecordingSummary, "fileName" | "source" | "createdAt">): string {
@@ -425,8 +425,9 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, 
 
   /**
    * Bấm "Tạo biên bản": gửi soạn như trước (bấm là xác nhận đã báo người dự họp), rồi mở Trợ lý ở cuộc trò chuyện mới gắn
-   * với cuộc họp, câu hỏi điền sẵn để Thầy/Cô gửi; Trợ lý chờ bản ghi soạn xong, trao đổi rồi đề xuất thẻ lưu biên bản
-   * (người dùng yêu cầu 21/10/2026). Không có khung Trợ lý (điện thoại) thì sang trang Trợ lý; Trợ lý tắt thì như cũ.
+   * với cuộc họp và gửi luôn câu nhờ soạn biên bản (bấm nút đã nói rõ việc cần làm; người dùng yêu cầu 21/10/2026). Trợ lý
+   * chờ bản ghi soạn xong rồi đề xuất thẻ lưu biên bản, lưu chỉ khi Thầy/Cô duyệt. Không có khung Trợ lý (điện thoại) thì
+   * sang trang Trợ lý, câu hỏi đi qua sessionStorage; Trợ lý tắt thì như cũ.
    */
   async function handleProcess(recording: MeetingRecordingSummary) {
     setSubmitting(recording.id);
@@ -436,9 +437,11 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, 
       setNow(Date.now());
       await refresh();
       if (assistantEnabled) {
+        const context = { type: "meeting", id: meetingId } as const;
         const prompt = minutesAssistantPrompt(recording);
-        if (!askAssistantInDock({ type: "meeting", id: meetingId }, prompt)) {
-          router.push(`/assistant?context=${encodeURIComponent(`meeting:${meetingId}`)}&prompt=${encodeURIComponent(prompt)}`);
+        if (!askAssistantInDock(context, { prompt, send: true })) {
+          queueAssistantAutoSend(context, prompt);
+          router.push(`/assistant?context=${encodeURIComponent(`meeting:${meetingId}`)}`);
         }
       }
     } catch (error) {
@@ -524,7 +527,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, 
             </Button>
             <p className="min-w-0 flex-1 basis-60 text-xs text-muted-foreground">
               {assistantEnabled
-                ? "Bấm là xác nhận đã báo người dự họp. Âm thanh gửi tới Gemini để soạn, rồi Trợ lý mở ra để Thầy/Cô trao đổi và duyệt biên bản; bản ghi lưu tới khi Thầy/Cô xóa."
+                ? "Bấm là xác nhận đã báo người dự họp. Âm thanh gửi tới Gemini để soạn, rồi Trợ lý mở ra soạn biên bản để Thầy/Cô duyệt; bản ghi lưu tới khi Thầy/Cô xóa."
                 : "Bấm là xác nhận đã báo người dự họp. Âm thanh gửi tới Gemini để soạn; bản ghi lưu tới khi Thầy/Cô xóa."}
             </p>
           </div>

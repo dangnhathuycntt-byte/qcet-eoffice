@@ -10,6 +10,7 @@ import {
   conversationIdFromPath,
   conversationOutline,
   shouldApplyRenamedTitle,
+  takeAssistantAutoSend,
   type AssistantConversationEventDetail,
 } from "@/components/assistant/assistant-model";
 import { assistantErrorText } from "@/components/assistant/assistant-client";
@@ -160,6 +161,22 @@ export function AssistantWorkspace({ conversationId, initialContext = null, init
     stickToBottomRef.current = true;
     chat.replaceLast(restoreDraft, text);
   };
+
+  // Nút "Tạo biên bản" trên điện thoại chuyển sang đây kèm câu hỏi gửi luôn (qua sessionStorage, không qua đường dẫn).
+  // Lấy khi gắn rồi gửi ở lần vẽ sau: gửi ngay trong effect lúc gắn thì lần gắn thử của Strict Mode hủy lượt vừa gửi
+  const [autoSend, setAutoSend] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const queued = initialContext && !conversationId ? takeAssistantAutoSend(initialContext) : null;
+    if (queued) setAutoSend(queued);
+  }, [initialContext, conversationId]);
+  const autoSendTurnRef = React.useRef<() => void>(() => undefined);
+  autoSendTurnRef.current = () => {
+    if (!autoSend || !canSubmit || activeId) return;
+    setAutoSend(null);
+    stickToBottomRef.current = true;
+    void chat.send(autoSend, restoreDraft, []);
+  };
+  React.useEffect(() => autoSendTurnRef.current(), [autoSend, canSubmit, activeId]);
 
   const retry = (replyKey: string) => {
     if (pending) return;
