@@ -134,7 +134,8 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
       const overview = detailPageContent.slice(detailPageContent.indexOf('activeTab === "overview"'), detailPageContent.indexOf('activeTab === "activity" && ('));
       const identity = overview.indexOf("<TaskIdentityBlock");
       const comments = overview.indexOf("<TaskComments");
-      const editor = overview.indexOf("<TaskBlockEditor");
+      // Từ 21/10/2026 (ADR-014) mô tả là TaskDescriptionEditor, bọc TaskBlockEditor (PATCH hay cùng sửa theo cờ taskCollab)
+      const editor = overview.indexOf("<TaskDescriptionEditor");
       assert.ok(identity >= 0 && identity < comments && comments < editor);
       const history = detailPageContent.slice(detailPageContent.indexOf('activeTab === "activity" && ('));
       assert.ok(!history.includes("<TaskComments"));
@@ -231,7 +232,9 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
     it("drawer uses DirectInlineEditor and real API mutations", () => {
       assert.ok(drawerContent.includes("<DirectInlineEditor"));
       assert.ok(drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"));
-      assert.ok(drawerContent.includes("<TaskBlockEditor"));
+      // Từ 21/10/2026 (ADR-014) mô tả việc con là TaskDescriptionEditor, bọc TaskBlockEditor
+      assert.ok(drawerContent.includes("<TaskDescriptionEditor"));
+      assert.ok(fs.readFileSync(path.resolve("src/components/tasks/detail/task-description-editor.tsx"), "utf-8").includes("<TaskBlockEditor"));
     });
 
     it("drawer accepts siblings, onSelectSibling, onAddSubtask props", () => {
