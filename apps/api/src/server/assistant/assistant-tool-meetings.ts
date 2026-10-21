@@ -268,9 +268,8 @@ export async function proposeMinutes(args: z.output<typeof ProposeMinutesArgs>, 
   const conversationId = conversationOf(ctx);
   const meeting = await readMeeting(ctx.authz, args.meetingId);
   if (meeting.status === MeetingStatus.MINUTES_CONFIRMED) throw new ToolFailure("Biên bản cuộc họp này đã được duyệt, không thay được nữa.");
-  if (meeting.status !== MeetingStatus.HELD && meeting.status !== MeetingStatus.MINUTES_DRAFT) {
-    throw new ToolFailure("Cuộc họp chưa ở trạng thái Đã họp. Thầy/Cô bấm \"Bắt đầu họp\" trên trang cuộc họp trước khi lưu biên bản.");
-  }
+  // Cuộc họp chưa họp vẫn soạn được: duyệt thẻ thì máy chủ tự chuyển qua Đã họp (bỏ bước "Bắt đầu họp" 21/10/2026)
+  if (meeting.status === MeetingStatus.CANCELLED) throw new ToolFailure("Cuộc họp đã hủy, không soạn biên bản được.");
   if (!meeting.availableActions.includes("meeting.draft_minutes")) {
     throw new ToolFailure("Thầy/Cô không có quyền soạn biên bản cuộc họp này (chỉ chủ tọa, thư ký, người tạo cuộc họp).");
   }

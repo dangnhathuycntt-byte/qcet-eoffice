@@ -19,7 +19,7 @@ import { ActiveFilterBar, FilterSegmentChip } from "@/components/workspace/compo
 import { FilterIconMonth, FilterIconStatus } from "@/components/dashboard/task-filter-icons";
 import { CreateMeetingDialog } from "@/components/meetings/create-meeting-dialog";
 import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
-import { cancelMeeting, holdMeeting } from "@/components/meetings/meeting-client";
+import { cancelMeeting } from "@/components/meetings/meeting-client";
 import { MeetingRowMenu, type MeetingMenuAnchor } from "@/components/meetings/meeting-row-menu";
 import {
   DEFAULT_MEETING_DISPLAY,
@@ -174,7 +174,6 @@ export function MeetingListView() {
   });
   const [cancelTargets, setCancelTargets] = React.useState<{ rows: MeetingRow[]; skipped: number } | null>(null);
   const [cancelling, setCancelling] = React.useState(false);
-  const [starting, setStarting] = React.useState(false);
 
   React.useEffect(() => setDisplay(readMeetingDisplay()), []);
   const updateDisplay = React.useCallback((next: MeetingDisplayPrefs) => {
@@ -332,21 +331,6 @@ export function MeetingListView() {
 
   const exportRows = (rows: MeetingRow[]) => {
     downloadCsv(`cuoc-hop-${getTodayIctDate()}.csv`, toCsv(meetingCsvRows(rows)));
-  };
-
-  // Bắt đầu họp từ danh sách rồi mở trang cuộc họp (ghi âm, soạn biên bản ở đó), như nút cùng tên ở trang chi tiết
-  const startMeeting = async (meeting: MeetingRow) => {
-    if (starting) return;
-    setStarting(true);
-    try {
-      await holdMeeting(meeting.id);
-      feedback.notifySuccess("Đã chuyển cuộc họp sang Đã họp.");
-      router.push(meetingPath(meeting.id));
-    } catch (error) {
-      feedback.notifyError(error instanceof Error ? error.message : "Chưa chuyển được cuộc họp sang Đã họp.");
-    } finally {
-      setStarting(false);
-    }
   };
 
   // Hủy lần lượt từng cuộc (máy chủ kiểm quyền và trạng thái từng cuộc); lỗi ở cuộc nào thì dừng và báo, cuộc đã hủy vẫn giữ
@@ -582,7 +566,6 @@ export function MeetingListView() {
         anchor={menu.anchor}
         open={menu.open}
         onOpenChange={(open) => setMenu((current) => ({ ...current, open }))}
-        onStart={(meeting) => void startMeeting(meeting)}
         onCancel={(meeting) => setCancelTargets({ rows: [meeting], skipped: 0 })}
       />
 

@@ -524,7 +524,10 @@ export class MeetingService {
     }
 
     const editing = meeting.status === MeetingStatus.MINUTES_DRAFT;
-    if (!editing) assertTransition(meeting.status, MeetingStatus.MINUTES_DRAFT);
+    // Không còn bước "Bắt đầu họp" (người dùng yêu cầu 21/10/2026): cuộc họp chưa họp đi qua HELD trong cùng lệnh lưu
+    const heldNow = meeting.status === MeetingStatus.DRAFT_AGENDA || meeting.status === MeetingStatus.INVITED;
+    if (heldNow) assertTransition(meeting.status, MeetingStatus.HELD);
+    if (!editing) assertTransition(heldNow ? MeetingStatus.HELD : meeting.status, MeetingStatus.MINUTES_DRAFT);
 
     return prisma.$transaction(async (tx) => {
       // Chỉ ghi khi trạng thái chưa đổi từ lúc kiểm quyền (chủ tọa có thể vừa duyệt dự thảo)
@@ -546,7 +549,7 @@ export class MeetingService {
         entityId: meetingId,
         requestId,
         beforeData: { status: meeting.status },
-        afterData: { status: MeetingStatus.MINUTES_DRAFT, minutesEdited: editing },
+        afterData: { status: MeetingStatus.MINUTES_DRAFT, minutesEdited: editing, ...(heldNow ? { heldWithMinutes: true } : {}) },
       });
 
       return tx.meeting.findUniqueOrThrow({ where: { id: meetingId } });

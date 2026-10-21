@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CalendarX2, Play } from "lucide-react";
+import { CalendarX2 } from "lucide-react";
 import { TaskIconCopy, TaskIconLink, TaskIconView } from "@qcet/shared/lib/icons/task-icons";
 import { AgentIcon } from "@/components/icons/agent-icon";
 import { askAssistantInDock } from "@/components/assistant/assistant-model";
@@ -11,7 +11,6 @@ import { useFeedback } from "@/components/ui/feedback-layer";
 import { useRuntimeFeature } from "@/lib/runtime-features";
 import {
   canCancelMeeting,
-  canStartMeeting,
   meetingPath,
   meetingSummaryText,
   type MeetingRow,
@@ -25,7 +24,6 @@ export interface MeetingRowMenuProps {
   anchor: MeetingMenuAnchor | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStart: (meeting: MeetingRow) => void;
   onCancel: (meeting: MeetingRow) => void;
 }
 
@@ -35,7 +33,7 @@ const icon = "size-4 text-muted-foreground";
  * Menu thao tác một cuộc họp (chuột phải, nút "⋯", phím Menu/Shift+F10, nhấn giữ trên điện thoại thành bottom sheet), cùng
  * kiểu menu chuột phải của bảng Nhiệm vụ. Thao tác sửa chỉ hiện khi máy chủ cho phép (`availableActions` của hàng).
  */
-export function MeetingRowMenu({ meeting, anchor, open, onOpenChange, onStart, onCancel }: MeetingRowMenuProps) {
+export function MeetingRowMenu({ meeting, anchor, open, onOpenChange, onCancel }: MeetingRowMenuProps) {
   const router = useRouter();
   const feedback = useFeedback();
   // Cờ Trợ lý chỉ tải khi menu mở lần đầu
@@ -77,11 +75,6 @@ export function MeetingRowMenu({ meeting, anchor, open, onOpenChange, onStart, o
         <MenuActionItem leading={<TaskIconView className={icon} />} shortcut="Enter" onClick={() => router.push(meetingPath(meeting.id))}>
           Xem chi tiết
         </MenuActionItem>
-        {canStartMeeting(meeting) ? (
-          <MenuActionItem leading={<Play className={icon} />} onClick={() => onStart(meeting)}>
-            Bắt đầu họp
-          </MenuActionItem>
-        ) : null}
         <MenuSeparator className="my-1 border-t border-border/40" />
         <MenuActionItem
           leading={<TaskIconLink className={icon} />}

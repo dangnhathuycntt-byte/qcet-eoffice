@@ -1317,7 +1317,7 @@ export const DOC_GROUPS: DocGroup[] = [
           {
             type: "callout",
             tone: "info",
-            text: "Thành phần dự họp và chủ tọa được thêm ở trang chi tiết, nơi chọn đúng người trong hệ thống. Cuộc họp chỉ chuyển sang **Đã mời** khi đã có người dự họp. Chưa mời ai vẫn ghi âm và bấm **Bắt đầu họp** được ngay để soạn biên bản, kể cả cuộc họp tạo lại sau khi đã họp.",
+            text: "Thành phần dự họp và chủ tọa được thêm ở trang chi tiết, nơi chọn đúng người trong hệ thống. Cuộc họp chỉ chuyển sang **Đã mời** khi đã có người dự họp. Không cần bước bắt đầu họp: ngay khi tạo, người tạo, chủ tọa hoặc thư ký đã ghi âm và soạn biên bản được (kể cả cuộc họp tạo lại sau khi đã họp); lưu biên bản thì cuộc họp tự chuyển sang **Đã họp** rồi **Dự thảo biên bản**.",
           },
           {
             type: "h2",

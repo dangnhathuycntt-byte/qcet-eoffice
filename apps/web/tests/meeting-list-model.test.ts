@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_MEETING_DISPLAY,
   canCancelMeeting,
-  canStartMeeting,
   meetingCsvRows,
   meetingTimeRange,
   readMeetingDisplay,
@@ -75,15 +74,6 @@ describe("Thao tác trên một hàng", () => {
     assert.equal(canCancelMeeting(row({ status: "HELD" })), false, "đã họp thì giữ để còn biên bản");
     assert.equal(canCancelMeeting(row({ status: "CANCELLED" })), false);
     assert.equal(canCancelMeeting(row({ availableActions: ["meeting.read"] })), false, "người dự họp không hủy được");
-  });
-
-  test("bắt đầu họp: cuộc chưa họp (Dự thảo chương trình hoặc Đã mời) và có meeting.update", () => {
-    assert.equal(canStartMeeting(row()), true);
-    // Chưa mời ai vẫn bắt đầu được (người dùng chọn 21/10/2026)
-    assert.equal(canStartMeeting(row({ status: "DRAFT_AGENDA" })), true);
-    assert.equal(canStartMeeting(row({ status: "HELD" })), false);
-    assert.equal(canStartMeeting(row({ status: "CANCELLED" })), false);
-    assert.equal(canStartMeeting(row({ availableActions: ["meeting.read"] })), false);
   });
 
   test("xuất Excel: một dòng mỗi cuộc họp, chặn công thức ở đầu ô", () => {

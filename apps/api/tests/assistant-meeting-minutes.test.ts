@@ -196,17 +196,17 @@ describe('Trợ lý: soạn biên bản cuộc họp từ bản ghi âm', () => 
     assert.equal(meeting.minutes, 'Kết luận:\n- Thư ký vừa sửa tay', 'không ghi đè bản vừa sửa');
   });
 
-  it('người không có quyền soạn biên bản và cuộc họp chưa diễn ra thì không soạn được thẻ', async () => {
+  it('người không có quyền soạn biên bản không soạn được thẻ; cuộc họp chưa họp vẫn soạn được (bỏ bước Bắt đầu họp 21/10/2026)', async () => {
     // Đếm theo người của file này: file test khác chạy song song cũng tạo thẻ
     const mine = { where: { userId: { in: [u.attendee.id, u.organizer.id] } } };
     const before = await prisma.assistantAction.count(mine);
     const attendee = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: heldId, minutes: 'Kết luận:\n- Thử' }), await contextFor('attendee'));
     assert.equal(attendee.ok, false);
     assert.match(String(payloadOf(attendee.content).error), /không có quyền soạn biên bản/);
+    assert.equal(await prisma.assistantAction.count(mine), before, 'người không có quyền không lưu thẻ nào');
     const invited = await runAssistantTool('propose_minutes', JSON.stringify({ meetingId: invitedId, minutes: 'Kết luận:\n- Thử' }), await contextFor('organizer'));
-    assert.equal(invited.ok, false);
-    assert.match(String(payloadOf(invited.content).error), /Bắt đầu họp/);
-    assert.equal(await prisma.assistantAction.count(mine), before, 'không lưu thẻ nào');
+    assert.equal(invited.ok, true, 'cuộc họp Đã mời vẫn soạn được thẻ biên bản');
+    assert.equal(await prisma.assistantAction.count(mine), before + 1);
   });
 
   it('ngữ cảnh "meeting": cuộc trò chuyện mở từ trang cuộc họp có tóm tắt cuộc họp; người ngoài không có', async () => {

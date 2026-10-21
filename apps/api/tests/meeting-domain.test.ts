@@ -214,15 +214,33 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
     assert.equal(updatedAttendance.attendanceStatus, AttendanceStatus.ATTENDED);
   });
 
-  it('2b. Cuộc họp chưa mời ai: bắt đầu họp thẳng từ Dự thảo chương trình rồi soạn biên bản (người dùng chọn 21/10/2026)', async () => {
+  it('2b. Không cần "Bắt đầu họp": lưu biên bản ngay khi Dự thảo chương trình hay Đã mời (người dùng yêu cầu 21/10/2026)', async () => {
     const meeting = await MeetingService.createMeeting(
       { code: `MT_${runId}_02b`, title: 'Họp tạo lại sau khi đã họp', unitId: testUnit.id, startTime: '2026-09-17T01:00:00.000Z' },
       organizerUser.id
     );
     assert.equal(meeting.status, MeetingStatus.DRAFT_AGENDA);
 
-    const held = await MeetingService.holdMeeting(meeting.id, organizerUser.id);
-    assert.equal(held.status, MeetingStatus.HELD);
+    // Từ Đã mời cũng được
+    const invitedMeeting = await MeetingService.createMeeting(
+      {
+        code: `MT_${runId}_02b2`,
+        title: 'Họp đã mời chưa bắt đầu',
+        unitId: testUnit.id,
+        startTime: '2026-09-17T03:00:00.000Z',
+        initialParticipants: [{ userId: participantUser1.id, role: MeetingParticipantRole.ATTENDEE }],
+      },
+      organizerUser.id
+    );
+    assert.equal(invitedMeeting.status, MeetingStatus.INVITED);
+    const fromInvited = await MeetingService.draftMinutes(invitedMeeting.id, { minutes: 'Biên bản: thống nhất kế hoạch tháng.' }, organizerUser.id);
+    assert.equal(fromInvited.status, MeetingStatus.MINUTES_DRAFT);
+
+    // Người dự họp không phải thư ký/chủ tọa/người tạo vẫn không soạn được
+    await assert.rejects(
+      MeetingService.draftMinutes(meeting.id, { minutes: 'Biên bản của người không có quyền.' }, participantUser2.id),
+      /quyền/i
+    );
 
     const drafted = await MeetingService.draftMinutes(
       meeting.id,

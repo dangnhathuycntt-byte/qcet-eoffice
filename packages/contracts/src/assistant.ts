@@ -234,14 +234,15 @@ export type AssistantActionView =
   | { kind: "task_remind"; task: AssistantActionTask; message: string; recipients: string[] }
   | { kind: "memory_save"; content: string }
   /**
-   * Lưu dự thảo biên bản (Đã họp → Dự thảo biên bản, hoặc thay dự thảo chưa duyệt). `from` và `baseUpdatedAt` là trạng thái
+   * Lưu dự thảo biên bản (→ Dự thảo biên bản, hoặc thay dự thảo chưa duyệt; cuộc họp chưa họp thì máy chủ tự chuyển qua Đã
+   * họp vì không còn bước "Bắt đầu họp" từ 21/10/2026). `from` và `baseUpdatedAt` là trạng thái
    * và lần sửa cuối của cuộc họp lúc soạn thẻ: đổi rồi (có người vừa lưu, sửa hay duyệt biên bản) thì không lưu chồng;
    * `replaces` khi cuộc họp đã có dự thảo (thẻ nói rõ sẽ thay).
    */
   | {
       kind: "meeting_minutes";
       meeting: AssistantActionMeeting;
-      from: "HELD" | "MINUTES_DRAFT";
+      from: "DRAFT_AGENDA" | "INVITED" | "HELD" | "MINUTES_DRAFT";
       minutes: string;
       replaces: boolean;
       baseUpdatedAt: string;

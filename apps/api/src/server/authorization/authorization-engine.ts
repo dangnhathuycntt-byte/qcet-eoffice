@@ -1348,9 +1348,12 @@ export function authorize(
     }
   }
 
-  // Meeting draft minutes: meeting must be in HELD or MINUTES_DRAFT or IN_PROGRESS
+  // Meeting draft minutes: mọi trạng thái chưa kết thúc. Từ 21/10/2026 bỏ bước "Bắt đầu họp" (người dùng yêu cầu): lưu biên
+  // bản cho cuộc họp chưa họp thì MeetingService.draftMinutes tự chuyển qua HELD rồi MINUTES_DRAFT.
   if (action === 'meeting.draft_minutes') {
     if (
+      status !== 'DRAFT_AGENDA' &&
+      status !== 'INVITED' &&
       status !== 'HELD' &&
       status !== 'MINUTES_DRAFT' &&
       status !== 'MINUTES_DRAFTED' &&
@@ -1361,7 +1364,7 @@ export function authorize(
         granted: false,
         rejectionCode: 'INVALID_WORKFLOW_STATE',
         statusCode: 'INVALID_WORKFLOW_STATE',
-        reason: 'Biên bản chỉ được soạn khi cuộc họp đã diễn ra (HELD hoặc MINUTES_DRAFT).',
+        reason: 'Cuộc họp đã hủy hoặc biên bản đã duyệt, không soạn biên bản được nữa.',
         auditRecord: {
           ...baseAuditRecord,
           decision: 'DENY',

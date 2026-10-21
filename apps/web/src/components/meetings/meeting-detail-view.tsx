@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarX2, Check, ChevronRight, Ellipsis, Link2, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { CalendarX2, Check, ChevronRight, Ellipsis, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import type { MeetingDetailPageData } from "@qcet/contracts/page-data";
 import { formatDisplayDate, formatTime } from "@qcet/shared/lib/format/date";
 import { TaskIconCopy } from "@qcet/shared/lib/icons/task-icons";
@@ -23,8 +23,8 @@ import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } fro
 import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { addParticipant, addParticipants, cancelMeeting, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
-import { canCancelMeeting, canStartMeeting, MEETING_CANCEL_NOTICE, meetingSummaryText } from "@/components/meetings/meeting-list-model";
+import { addParticipant, addParticipants, cancelMeeting, confirmMinutes, discardMinutes, draftMinutes } from "@/components/meetings/meeting-client";
+import { canCancelMeeting, MEETING_CANCEL_NOTICE, meetingSummaryText } from "@/components/meetings/meeting-list-model";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
 import { MinutesText } from "@/components/meetings/minutes-text";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
@@ -86,7 +86,7 @@ function Muted({ children }: { children: React.ReactNode }) {
 /**
  * Chi tiết cuộc họp (`/meetings/[id]`), theo khung chi tiết nhiệm vụ (người dùng yêu cầu "cải thiện trang chi tiết cuộc họp"
  * 20/10/2026, sau khi trang danh sách đã theo trang Nhiệm vụ): một thẻ cao hết màn hình, không breadcrumb chung
- * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", "Bắt đầu họp" (khi đã mời) và sao chép liên kết; cột chính
+ * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", menu "⋯" và sao chép liên kết; cột chính
  * rộng theo bề ngang đọc (672px) như trang tài liệu: tên 20px, nội dung và chương trình, rồi khối Biên bản ("+ Thêm" để soạn,
  * "Duyệt biên bản" cho chủ tọa, "Sửa" và xóa khi còn dự thảo) và khối Ghi âm, không viền, cách nhau bằng đường kẻ mảnh;
  * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần ("+ Thêm" mời người, "Chọn chủ tọa" khi chưa có); khối Ghi chú của tôi đã bỏ
@@ -115,9 +115,10 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   // Theo quyền máy chủ tính, không đoán theo vai trò: bắt đầu họp là người tạo/chủ tọa, soạn biên bản là thư ký/chủ
   // tọa/người tạo, duyệt biên bản chỉ chủ tọa (thư ký soạn biên bản không tự duyệt)
   const can = (action: string) => meeting.availableActions.includes(action);
-  const canHold = canStartMeeting(meeting);
   const canCancel = canCancelMeeting(meeting);
-  const canDraftMinutes = meeting.status === "HELD" && can("meeting.draft_minutes");
+  // Không có bước "Bắt đầu họp" (người dùng bỏ 21/10/2026): người soạn biên bản soạn được từ lúc tạo, lưu thì máy chủ tự chuyển
+  // cuộc họp qua Đã họp
+  const canDraftMinutes = ["DRAFT_AGENDA", "INVITED", "HELD"].includes(meeting.status) && can("meeting.draft_minutes");
   const canConfirmMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.confirm_minutes");
   // Dự thảo chưa duyệt thì người soạn biên bản sửa hoặc xóa (về Đã họp) được; đã duyệt thì khóa
   const canEditMinutes = meeting.status === "MINUTES_DRAFT" && can("meeting.draft_minutes");
@@ -128,7 +129,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     isOrganizer || meeting.participants.some((p) => p.userId === currentUser.id && (p.role === "CHAIR" || p.role === "SECRETARY"));
   const canRecord = isMinutesAuthor && ["DRAFT_AGENDA", "INVITED", "HELD", "MINUTES_DRAFT"].includes(meeting.status);
   const isHeld = ["HELD", "MINUTES_DRAFT", "MINUTES_CONFIRMED"].includes(meeting.status);
-  // Chưa họp: khối Biên bản vẫn hiện, nói rõ bấm Bắt đầu họp để soạn (người dùng báo "tạo xong không có phần ghi âm, phần
+  // Chưa họp: khối Biên bản vẫn hiện, soạn được ngay (người dùng báo "tạo xong không có phần ghi âm, phần
   // biên bản gì hết" 21/10/2026)
   const beforeHeld = meeting.status === "DRAFT_AGENDA" || meeting.status === "INVITED";
   const status = meetingStatus(meeting.status);
@@ -262,21 +263,6 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const participantsByRole = PARTICIPANT_ROLE_ORDER.map((role) => [role, meeting.participants.filter((p) => p.role === role)] as const).filter(
     ([, group]) => group.length > 0
   );
-
-  // Bắt đầu họp là thao tác của cả cuộc họp: ở thanh đầu, luôn thấy khi cuộn. Thao tác biên bản nằm ở thẻ Biên bản
-  // (người dùng bỏ nút "Soạn biên bản" ở thanh đầu 20/10/2026, chọn nút "Thêm" ngay trong thẻ)
-  const primaryAction = canHold ? (
-    <Button
-      variant="toolbar"
-      size="sm"
-      className="max-lg:[grid-area:2/1] max-lg:justify-self-start"
-      loading={pending === "hold"}
-      onClick={() => void run("hold", () => holdMeeting(meeting.id), "Đã chuyển cuộc họp sang Đã họp.")}
-    >
-      <Play aria-hidden="true" />
-      Bắt đầu họp
-    </Button>
-  ) : null;
 
   // Một thể hiện mỗi lúc: cột phải ở màn rộng, thẻ nổi ở màn hẹp (picker dùng chung trạng thái mở nên không dựng hai bản).
   // Thẻ nổi như chi tiết nhiệm vụ: viền 0,5px nền trắng trên nền thẻ trang, không bóng.
@@ -412,9 +398,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
       // Đang soạn dở thì không cho "Dùng làm biên bản nháp": bấm sẽ ghi đè chữ đang gõ trong ô soạn
       onUseAsMinutes={canDraftMinutes && !editingMinutes ? useRecordingAsMinutes : undefined}
       minutesHint={
-        beforeHeld
-          ? "Bấm Bắt đầu họp để dùng làm biên bản."
-          : editingMinutes
+        editingMinutes
             ? "Biên bản đang soạn ở khối Biên bản; sao chép phần cần dùng."
             : meeting.status === "MINUTES_DRAFT"
               ? canEditMinutes
@@ -546,9 +530,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         <p className="text-xs text-muted-foreground">
           {canDraftMinutes
             ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm."
-            : canHold
-              ? "Chưa có biên bản. Bấm Bắt đầu họp để soạn biên bản."
-              : "Chưa có biên bản."}
+            : "Chưa có biên bản."}
         </p>
       )}
     </SectionCard>
@@ -562,7 +544,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0"
         >
           {/* Màn hẹp: hai hàng 44px như chi tiết nhiệm vụ trên điện thoại; hàng trên menu, tên, "⋯", liên kết (kẻ mảnh bên
-              dưới), hàng dưới Bắt đầu họp và nút Thuộc tính */}
+              dưới), hàng dưới nút Thuộc tính. Không còn nút "Bắt đầu họp" (người dùng bỏ 21/10/2026) */}
           <header
             data-slot="meeting-detail-header"
             className="relative flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-[18px] max-lg:grid max-lg:h-auto max-lg:grid-cols-[minmax(0,1fr)_auto_auto] max-lg:grid-rows-[44px_44px] max-lg:gap-x-1 max-lg:gap-y-0 max-lg:border-b-0 max-lg:px-2 max-lg:pt-[env(safe-area-inset-top,0px)]"
@@ -579,7 +561,6 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
               </span>
             </nav>
             <div className="flex shrink-0 items-center gap-1.5 max-lg:contents">
-              {primaryAction}
               <MeetingMoreMenu
                 title={meeting.title}
                 summary={meetingSummaryText(meeting)}
@@ -698,7 +679,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
 
 const menuIcon = "size-4 text-muted-foreground";
 
-/** Menu "⋯" ở thanh đầu, cùng mục với menu của hàng ở danh sách (trừ Xem chi tiết, Bắt đầu họp, Sao chép liên kết đã có nút riêng). */
+/** Menu "⋯" ở thanh đầu, cùng mục với menu của hàng ở danh sách (trừ Xem chi tiết, Sao chép liên kết đã có nút riêng). */
 function MeetingMoreMenu({
   meetingId,
   title,

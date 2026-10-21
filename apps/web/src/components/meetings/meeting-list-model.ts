@@ -78,13 +78,6 @@ type MeetingActionSubject = Pick<MeetingRow, "status" | "availableActions">;
 
 const can = (row: MeetingActionSubject, action: string) => row.availableActions.includes(action);
 
-/**
- * Bắt đầu họp (Dự thảo chương trình hoặc Đã mời → Đã họp): người tạo/chủ tọa, như nút ở trang chi tiết. Chưa mời ai vẫn
- * bắt đầu được (người dùng chọn 21/10/2026: tạo xong là ghi âm, soạn biên bản được ngay).
- */
-export const canStartMeeting = (row: MeetingActionSubject) =>
-  (row.status === "DRAFT_AGENDA" || row.status === "INVITED") && can(row, "meeting.update");
-
 /** Hủy họp: người tạo/chủ tọa, chỉ khi chưa họp (đã họp thì giữ để còn biên bản). */
 export const canCancelMeeting = (row: MeetingActionSubject) => (row.status === "DRAFT_AGENDA" || row.status === "INVITED") && can(row, "meeting.update");
 

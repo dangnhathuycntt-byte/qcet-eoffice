@@ -128,7 +128,7 @@ export const ALLOWED_MEETING_TRANSITIONS: Record<MeetingStatus, readonly Meeting
 
 ### 3.3. Các chuyển đổi bị cấm (Disallowed & Anti-Skip Invariants)
 1. **Cấm nhảy cóc vòng đời (No Skipping)**:
-   - ~~`DRAFT_AGENDA` $\to$ `HELD` (Không được họp khi chưa phát giấy mời).~~ **Bỏ ngày 21/10/2026** theo quyết định của người dùng: tạo cuộc họp chưa mời ai (kể cả tạo lại sau khi đã họp) vẫn ghi âm và bấm "Bắt đầu họp" được ngay rồi soạn biên bản. Ghi âm mở từ `DRAFT_AGENDA`; soạn biên bản vẫn chỉ khi `HELD`/`MINUTES_DRAFT`.
+   - ~~`DRAFT_AGENDA` $\to$ `HELD` (Không được họp khi chưa phát giấy mời).~~ **Bỏ ngày 21/10/2026** theo quyết định của người dùng: tạo cuộc họp chưa mời ai (kể cả tạo lại sau khi đã họp) vẫn ghi âm và bấm "Bắt đầu họp" được ngay rồi soạn biên bản. Ghi âm mở từ `DRAFT_AGENDA`. Cùng ngày người dùng bỏ luôn nút "Bắt đầu họp": `meeting.draft_minutes` cho mọi trạng thái chưa kết thúc (`DRAFT_AGENDA`, `INVITED`, `HELD`, `MINUTES_DRAFT`); lưu biên bản cho cuộc họp chưa họp thì `draftMinutes` đi `→ HELD → MINUTES_DRAFT` trong cùng một transaction (vẫn qua `assertTransition`, không nhảy cóc ma trận).
    - `DRAFT_AGENDA` $\to$ `MINUTES_DRAFT` / `MINUTES_CONFIRMED` (Không thể có biên bản khi chưa họp).
    - `INVITED` $\to$ `MINUTES_CONFIRMED` (Bắt buộc phải qua bước Thư ký lập dự thảo).
 2. **Cấm hồi tố trạng thái (No Backward Transitions)**:
