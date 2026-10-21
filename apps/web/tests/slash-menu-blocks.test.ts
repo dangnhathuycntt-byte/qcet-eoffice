@@ -108,7 +108,8 @@ describe("Menu '/' — giao diện", () => {
     const el = src.slice(src.indexOf("function SlashInputElement"), src.indexOf("function SlashMenu({"));
     assert.ok(el.includes("<input") && el.includes("inputRef.current?.focus()"), "phải tự lấy focus để gõ tiếp");
     assert.ok(el.includes("editor.tf.focus()"), "đóng/chọn xong phải trả focus về trình soạn thảo");
-    assert.ok(el.includes("foldVietnamese("), "lọc không phân biệt dấu để gõ 'hinh anh' vẫn khớp");
+    // Lọc không dấu nằm ở rankSlashOptions (21/10/2026), hành vi kiểm ở slash-menu-search.test.ts
+    assert.ok(el.includes("rankSlashOptions("), "lọc không phân biệt dấu để gõ 'hinh anh' vẫn khớp");
   });
 
   it("khối nhúng không còn URL mặc định có sẵn", () => {

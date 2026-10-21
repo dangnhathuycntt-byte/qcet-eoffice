@@ -287,8 +287,9 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         componentContent.includes("Backspace") || componentContent.includes("Plate"),
         "Backspace on empty block must convert to text or delete"
       );
+      // Ô nhập của menu "/" xử lý phím bằng `switch (e.key)` nên chấp nhận cả `case "Escape"`
       assert.ok(
-        componentContent.includes('e.key === "Escape"'),
+        componentContent.includes('e.key === "Escape"') || componentContent.includes('case "Escape"'),
         "Escape must close slash menu"
       );
     });
