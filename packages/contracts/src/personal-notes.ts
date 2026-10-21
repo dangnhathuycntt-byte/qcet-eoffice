@@ -13,11 +13,18 @@ export const PERSONAL_NOTE_CONTENT_MAX = 50_000;
 /** Mỗi người tối đa số ghi chú này (chống lạm dụng bộ nhớ). */
 export const PERSONAL_NOTES_PER_USER_MAX = 2000;
 
-/** Dòng trong danh sách: chỉ trích đoạn đầu nội dung, nội dung đầy đủ lấy ở chi tiết. */
+/** Đoạn đầu nội dung của thẻ ghi chú (giữ xuống dòng), xem `toNotePreview`. */
+export const PERSONAL_NOTE_PREVIEW_MAX = 600;
+
+/**
+ * Dòng trong danh sách: chỉ trích đoạn đầu nội dung, nội dung đầy đủ lấy ở chi tiết. `excerpt` một dòng (khoảng trắng gộp,
+ * 160 ký tự); `preview` nhiều dòng cho thẻ kiểu Google Keep.
+ */
 export const PersonalNoteSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
   excerpt: z.string(),
+  preview: z.string(),
   pinned: z.boolean(),
   entityType: PersonalNoteEntityTypeSchema.nullable(),
   entityId: z.string().nullable(),
@@ -25,7 +32,7 @@ export const PersonalNoteSummarySchema = z.object({
 });
 export type PersonalNoteSummary = z.infer<typeof PersonalNoteSummarySchema>;
 
-export const PersonalNoteSchema = PersonalNoteSummarySchema.omit({ excerpt: true }).extend({
+export const PersonalNoteSchema = PersonalNoteSummarySchema.omit({ excerpt: true, preview: true }).extend({
   content: z.string(),
   createdAt: z.string(),
 });

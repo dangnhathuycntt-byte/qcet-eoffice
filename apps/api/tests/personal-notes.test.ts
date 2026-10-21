@@ -87,6 +87,9 @@ describe('Ghi chú cá nhân', () => {
     const row = notes.find((n) => n.id === note.id)!;
     assert.equal(row.excerpt.length <= 160, true);
     assert.equal(row.excerpt.startsWith('dòng một dòng hai'), true, 'khoảng trắng gộp một');
+    // Thẻ kiểu Google Keep (21/10/2026): đoạn đầu giữ xuống dòng, gộp dòng trống, tối đa 600 ký tự
+    assert.equal(row.preview.startsWith('dòng một\n\n  dòng hai'), true, 'preview giữ xuống dòng');
+    assert.equal(row.preview.length <= 600, true);
     assert.equal('content' in row, false, 'danh sách không chở nội dung đầy đủ');
 
     const updated = await updatePersonalNote(users.me, note.id, UpdatePersonalNoteSchema.parse({ title: 'Đã đổi', pinned: true }));

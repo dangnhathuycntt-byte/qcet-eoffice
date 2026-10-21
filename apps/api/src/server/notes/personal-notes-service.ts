@@ -14,6 +14,7 @@ import {
   type PersonalNoteSummary,
   type UpdatePersonalNoteInput,
 } from "@qcet/contracts/personal-notes";
+import { toNotePreview } from "@qcet/shared/domain/notes/note-preview";
 import { NotFoundError, ValidationError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { findReadableTaskId } from "@/server/tasks/task-query-service";
@@ -34,6 +35,7 @@ function toSummary(row: PersonalNoteRow): PersonalNoteSummary {
     id: row.id,
     title: row.title,
     excerpt: toExcerpt(row.content),
+    preview: toNotePreview(row.content),
     pinned: row.pinned,
     entityType: entityTypeOf(row),
     entityId: row.entityId,
