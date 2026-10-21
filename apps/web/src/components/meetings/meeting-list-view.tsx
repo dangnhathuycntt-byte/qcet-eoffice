@@ -74,6 +74,7 @@ function meetingWhen(row: MeetingRow) {
   return {
     day: near ?? formatDisplayDate(row.startTime),
     detail: near ? timeRange(row) : `${formatWeekday(row.startTime)} · ${timeRange(row)}`,
+    start: formatTime(row.startTime, ""),
     fullDate: `${formatWeekday(row.startTime)}, ${formatDisplayDate(row.startTime)}`,
     today: diff === 0,
   };
@@ -241,8 +242,8 @@ export function MeetingListView() {
           <Table density="two-line" className="table-fixed" containerClassName="md:overflow-x-visible">
             <TableHeader className="md:sticky md:top-[88px] md:z-10">
               <TableRow className="h-8 border-b-0">
-                <TableHead className="h-8 w-[58%] md:w-[38%]">Cuộc họp</TableHead>
-                <TableHead className="h-8 w-[42%] md:w-[16%]">Thời gian</TableHead>
+                <TableHead className="h-8 w-[48%] md:w-[38%]">Cuộc họp</TableHead>
+                <TableHead className="h-8 w-[52%] md:w-[16%]">Thời gian</TableHead>
                 <TableHead className="hidden h-8 w-[22%] md:table-cell">Người tổ chức</TableHead>
                 <TableHead className="hidden h-8 w-[10%] lg:table-cell">Thành phần</TableHead>
                 <TableHead className="hidden h-8 md:table-cell md:w-[24%] lg:w-[14%]">Trạng thái</TableHead>
@@ -269,10 +270,12 @@ export function MeetingListView() {
                         <span className={cn("truncate", when.today && "font-medium")} title={when.fullDate}>
                           {when.day}
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {when.detail}
-                          {/* Điện thoại không có cột Trạng thái: ghi kèm dưới giờ */}
-                          <span className="md:hidden"> · {status.label}</span>
+                        <span className="truncate text-xs text-muted-foreground" title={`${timeRange(row)} · ${status.label}`}>
+                          <span className="max-md:hidden">{when.detail}</span>
+                          {/* Điện thoại không có cột Trạng thái: ghi kèm dưới giờ, màu như cột đó. Chỉ giờ bắt đầu thôi (cả
+                              khoảng giờ ở tooltip và trang chi tiết) để nhãn không bị cắt thành "Dự th…" (ảnh 390px 21/10/2026) */}
+                          <span className="md:hidden">{when.start}</span>
+                          <span className={cn("md:hidden", MEETING_STATUS_TONE_CLASS[status.tone])}> · {status.label}</span>
                         </span>
                       </div>
                     </TableCell>

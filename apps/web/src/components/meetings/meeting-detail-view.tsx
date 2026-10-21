@@ -3,12 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Link2, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Link2, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import type { MeetingDetailPageData } from "@qcet/contracts/page-data";
 import { formatDisplayDate, formatTime } from "@qcet/shared/lib/format/date";
 import { cn } from "@/lib/utils";
 import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-host";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { FieldError } from "@/components/ui/dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -162,6 +163,15 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     } finally {
       setPending(null);
     }
+  };
+
+  const approveMinutes = async () => {
+    const ok = await confirmAction({
+      title: "Duyệt biên bản?",
+      description: "Sau khi duyệt, biên bản không sửa hay xóa được nữa và cuộc họp được chốt.",
+      confirmLabel: "Duyệt biên bản",
+    });
+    if (ok) await run("confirm", () => confirmMinutes(meeting.id), "Đã duyệt biên bản.");
   };
 
   const saveMinutes = async () => {
@@ -339,6 +349,131 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
     </div>
   );
 
+  // Biên bản là thứ người dùng cần đọc, bản ghi âm chỉ là nguồn: đã có biên bản thì biên bản lên trước (trên điện thoại nó
+  // từng nằm dưới cả ba bản ghi, ảnh 390px 21/10/2026). Thứ tự DOM đổi theo, không dùng CSS `order`, để đọc màn hình và phím
+  // Tab đi đúng thứ tự nhìn thấy.
+  const recordingSection = canRecord ? (
+    <MeetingRecordingPanel
+      meetingId={meeting.id}
+      onUseAsMinutes={canDraftMinutes ? useRecordingAsMinutes : undefined}
+      minutesHint={
+        meeting.status === "INVITED"
+          ? "Bấm Bắt đầu họp để dùng làm biên bản."
+          : meeting.status === "MINUTES_DRAFT"
+            ? canEditMinutes
+              ? "Biên bản đã được soạn; sao chép phần cần dùng rồi bấm Sửa ở thẻ Biên bản."
+              : "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
+            : undefined
+      }
+    />
+  ) : null;
+
+  const minutesSection = isHeld ? (
+    <SectionCard
+      title="Biên bản"
+      action={
+        editingMinutes ? null : canDraftMinutes && !meeting.minutes ? (
+          <Button variant="ghost" size="xs" aria-label="Thêm biên bản" onClick={() => startMinutes()}>
+            <Plus aria-hidden="true" />
+            Thêm
+          </Button>
+        ) : meeting.status === "MINUTES_DRAFT" ? (
+          <>
+            {canConfirmMinutes ? (
+              // Việc chốt của chủ tọa nên là nút thấy ngay (`toolbar`, không phải chữ mờ như Sửa); và không hoàn tác được nên
+              // phải xác nhận: một cú bấm nhầm từng duyệt luôn, khóa biên bản và cuộc họp
+              <Button variant="toolbar" size="xs" loading={pending === "confirm"} onClick={() => void approveMinutes()}>
+                <Check aria-hidden="true" />
+                Duyệt biên bản
+              </Button>
+            ) : (
+              <span
+                className={cn("max-w-64 truncate text-xs", chairs.length > 0 ? "text-muted-foreground" : "text-warning")}
+                title="Chỉ chủ tọa duyệt được biên bản; thư ký soạn biên bản không tự duyệt."
+              >
+                {chairs.length > 0
+                  ? `Chờ chủ tọa ${chairs.map((p) => p.user.name ?? p.user.email).join(", ")} duyệt`
+                  : "Chưa có chủ tọa để duyệt"}
+              </span>
+            )}
+            {canEditMinutes && (
+              <>
+                <Button variant="ghost" size="xs" onClick={editMinutes}>
+                  <Pencil aria-hidden="true" />
+                  Sửa
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Xóa biên bản"
+                  title="Xóa biên bản"
+                  onClick={() => setDiscardingMinutes(true)}
+                >
+                  <Trash2 />
+                </Button>
+              </>
+            )}
+          </>
+        ) : meeting.status === "MINUTES_CONFIRMED" ? (
+          <span className="text-xs text-muted-foreground">Đã duyệt</span>
+        ) : null
+      }
+    >
+      {editingMinutes ? (
+        <form
+          noValidate
+          className={cn("flex flex-col gap-2", PROSE_MAX_CLASS)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void saveMinutes();
+          }}
+        >
+          <Textarea
+            ref={minutesRef}
+            id="meeting-minutes-input"
+            compact
+            value={minutesText}
+            aria-label="Nội dung biên bản"
+            placeholder="Nhập nội dung biên bản, hoặc bấm Dùng làm biên bản ở một bản ghi âm…"
+            // `sm:` vì Textarea compact đặt `sm:min-h-7`; biên bản từ bản ghi âm dài thì ô cao hơn
+            className={minutesText.length > 400 ? "min-h-80 sm:min-h-80" : "min-h-32 sm:min-h-32"}
+            aria-invalid={minutesError ? true : undefined}
+            aria-describedby={minutesError ? `${ids}-minutes-error` : undefined}
+            onChange={(event) => {
+              setMinutesText(event.target.value);
+              setMinutesError(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                void saveMinutes();
+              }
+              // Esc chỉ đóng khi chưa gõ gì (hoặc chưa đổi gì so với biên bản đang sửa), không mất chữ vừa nhập
+              if (event.key === "Escape" && (!minutesText.trim() || (editingSaved && minutesText === meeting.minutes))) {
+                closeMinutesEditor();
+              }
+            }}
+          />
+          {minutesError ? <FieldError id={`${ids}-minutes-error`}>{minutesError}</FieldError> : null}
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={closeMinutesEditor}>
+              Hủy
+            </Button>
+            <Button type="submit" size="sm" loading={pending === "draft"}>
+              Lưu biên bản
+            </Button>
+          </div>
+        </form>
+      ) : meeting.minutes ? (
+        <p className={cn("whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground", PROSE_MAX_CLASS)}>{meeting.minutes}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {canDraftMinutes ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm." : "Chưa có biên bản."}
+        </p>
+      )}
+    </SectionCard>
+  ) : null;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] p-2 max-md:p-0">
@@ -385,128 +520,16 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
 
               <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-2">
                 {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
-                {canRecord && (
-                  <MeetingRecordingPanel
-                    meetingId={meeting.id}
-                    onUseAsMinutes={canDraftMinutes ? useRecordingAsMinutes : undefined}
-                    minutesHint={
-                      meeting.status === "INVITED"
-                        ? "Bấm Bắt đầu họp để dùng làm biên bản."
-                        : meeting.status === "MINUTES_DRAFT"
-                          ? canEditMinutes
-                            ? "Biên bản đã được soạn; sao chép phần cần dùng rồi bấm Sửa ở thẻ Biên bản."
-                            : "Biên bản đã được soạn; Thầy/Cô sao chép phần cần dùng."
-                          : undefined
-                    }
-                  />
-                )}
-
-                {isHeld && (
-                  <SectionCard
-                    title="Biên bản"
-                    action={
-                      editingMinutes ? null : canDraftMinutes && !meeting.minutes ? (
-                        <Button variant="ghost" size="xs" aria-label="Thêm biên bản" onClick={() => startMinutes()}>
-                          <Plus aria-hidden="true" />
-                          Thêm
-                        </Button>
-                      ) : meeting.status === "MINUTES_DRAFT" ? (
-                        <>
-                          {canConfirmMinutes ? (
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              loading={pending === "confirm"}
-                              onClick={() => void run("confirm", () => confirmMinutes(meeting.id), "Đã duyệt biên bản.")}
-                            >
-                              Duyệt biên bản
-                            </Button>
-                          ) : (
-                            <span
-                              className={cn("max-w-64 truncate text-xs", chairs.length > 0 ? "text-muted-foreground" : "text-warning")}
-                              title="Chỉ chủ tọa duyệt được biên bản; thư ký soạn biên bản không tự duyệt."
-                            >
-                              {chairs.length > 0
-                                ? `Chờ chủ tọa ${chairs.map((p) => p.user.name ?? p.user.email).join(", ")} duyệt`
-                                : "Chưa có chủ tọa để duyệt"}
-                            </span>
-                          )}
-                          {canEditMinutes && (
-                            <>
-                              <Button variant="ghost" size="xs" onClick={editMinutes}>
-                                <Pencil aria-hidden="true" />
-                                Sửa
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                aria-label="Xóa biên bản"
-                                title="Xóa biên bản"
-                                onClick={() => setDiscardingMinutes(true)}
-                              >
-                                <Trash2 />
-                              </Button>
-                            </>
-                          )}
-                        </>
-                      ) : meeting.status === "MINUTES_CONFIRMED" ? (
-                        <span className="text-xs text-muted-foreground">Đã duyệt</span>
-                      ) : null
-                    }
-                  >
-                    {editingMinutes ? (
-                      <form
-                        noValidate
-                        className={cn("flex flex-col gap-2", PROSE_MAX_CLASS)}
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          void saveMinutes();
-                        }}
-                      >
-                        <Textarea
-                          ref={minutesRef}
-                          id="meeting-minutes-input"
-                          compact
-                          value={minutesText}
-                          aria-label="Nội dung biên bản"
-                          placeholder="Nhập nội dung biên bản, hoặc bấm Dùng làm biên bản ở một bản ghi âm…"
-                          // `sm:` vì Textarea compact đặt `sm:min-h-7`; biên bản từ bản ghi âm dài thì ô cao hơn
-                          className={minutesText.length > 400 ? "min-h-80 sm:min-h-80" : "min-h-32 sm:min-h-32"}
-                          aria-invalid={minutesError ? true : undefined}
-                          aria-describedby={minutesError ? `${ids}-minutes-error` : undefined}
-                          onChange={(event) => {
-                            setMinutesText(event.target.value);
-                            setMinutesError(null);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
-                              event.preventDefault();
-                              void saveMinutes();
-                            }
-                            // Esc chỉ đóng khi chưa gõ gì (hoặc chưa đổi gì so với biên bản đang sửa), không mất chữ vừa nhập
-                            if (event.key === "Escape" && (!minutesText.trim() || (editingSaved && minutesText === meeting.minutes))) {
-                              closeMinutesEditor();
-                            }
-                          }}
-                        />
-                        {minutesError ? <FieldError id={`${ids}-minutes-error`}>{minutesError}</FieldError> : null}
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={closeMinutesEditor}>
-                            Hủy
-                          </Button>
-                          <Button type="submit" size="sm" loading={pending === "draft"}>
-                            Lưu biên bản
-                          </Button>
-                        </div>
-                      </form>
-                    ) : meeting.minutes ? (
-                      <p className={cn("whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground", PROSE_MAX_CLASS)}>{meeting.minutes}</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        {canDraftMinutes ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm." : "Chưa có biên bản."}
-                      </p>
-                    )}
-                  </SectionCard>
+                {meeting.minutes ? (
+                  <>
+                    {minutesSection}
+                    {recordingSection}
+                  </>
+                ) : (
+                  <>
+                    {recordingSection}
+                    {minutesSection}
+                  </>
                 )}
 
               </div>

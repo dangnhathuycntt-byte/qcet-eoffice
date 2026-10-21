@@ -607,7 +607,8 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
                         {recordingTitle(recording)}
                       </TooltipContent>
                     </Tooltip>
-                    <p className="truncate text-xs text-muted-foreground tabular-nums">
+                    {/* Điện thoại: dòng phụ xuống dòng thay vì cắt tên người ghi ("… 51 KB · Đặng Nhật …") */}
+                    <p className="truncate text-xs text-muted-foreground tabular-nums max-md:overflow-visible max-md:whitespace-normal">
                       {[
                         recordedAt(recording.createdAt),
                         recording.durationSec ? formatClock(recording.durationSec) : null,

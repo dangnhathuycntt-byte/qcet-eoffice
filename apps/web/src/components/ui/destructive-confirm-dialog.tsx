@@ -3,7 +3,6 @@
 import * as React from "react";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export interface DestructiveConfirmDialogProps {
   isOpen: boolean;
@@ -74,14 +73,9 @@ export function DestructiveConfirmDialog({
               >
                 Hủy
               </AlertDialog.Close>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleConfirm}
-                disabled={isConfirming}
-                className={cn(isConfirming && "opacity-70")}
-              >
-                {isConfirming ? "Đang xử lý..." : confirmLabel}
+              {/* `loading` (vòng xoay, giữ nhãn) như nút chính của hộp biểu mẫu, thay vì đổi chữ thành "Đang xử lý..." */}
+              <Button variant="destructive" size="sm" onClick={handleConfirm} loading={isConfirming}>
+                {confirmLabel}
               </Button>
             </div>
           </div>
