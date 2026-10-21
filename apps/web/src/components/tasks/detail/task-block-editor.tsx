@@ -159,6 +159,7 @@ import { MENU_POPUP_CLASS, MenuActionItem, MenuContent, MenuRoot, MenuSubmenu, M
 import { rankSlashOptions, type SlashSearchable } from "./slash-menu-search";
 import { insertSlashBlock } from "./slash-insert-block";
 import { pruneEmptyBlocks } from "./prune-empty-blocks";
+import { collabNodeIdPlugin } from "./collab-node-id";
 
 /** Props chung cho mọi element renderer trong QCET Plate editor */
 type ElProps = RenderElementProps & {
@@ -2345,7 +2346,7 @@ export function TaskBlockEditor({
       QcetAttachmentPlugin.withComponent(AttachmentEl),
       QcetLinkBlockPlugin.withComponent(LinkBlockEl),
       QcetBookmarkPlugin.withComponent(BookmarkEl),
-      NodeIdPlugin,
+      collabRef.current ? collabNodeIdPlugin : NodeIdPlugin,
       BlockSelectionPlugin.configure({
         options: {
           enableContextMenu: true,
@@ -2372,7 +2373,12 @@ export function TaskBlockEditor({
               options: {
                 cursors: { data: collabRef.current.user },
                 providers: [
-                  { type: "hocuspocus", options: { name: collabRef.current.documentName, url: collabRef.current.url } },
+                  {
+                    type: "hocuspocus",
+                    // Provider Hocuspocus 3 tự nối ngay khi tạo, rồi `init` của Plate gọi `connect()` lần nữa: kết nối đầu bị bỏ
+                    // giữa chừng ("closed before the connection is established"). Để `init` nối một lần.
+                    options: { name: collabRef.current.documentName, url: collabRef.current.url, autoConnect: false },
+                  },
                 ],
                 onSyncChange: ({ isSynced }: { isSynced: boolean }) => collabRef.current?.onSyncChange?.(isSynced),
               },
@@ -2404,6 +2410,8 @@ export function TaskBlockEditor({
     if (!options) return;
     const api = editor.getApi(YjsPlugin).yjs;
     const awareness = editor.getOption(YjsPlugin, "awareness");
+    // Awareness đổi mỗi lần ai đó di con trỏ (cả của chính mình): chỉ báo khi danh sách người đổi, kẻo render lại theo từng phím
+    let lastPeersKey = "";
     const reportPeers = () => {
       if (!awareness) return;
       const seen = new Set<string>();
@@ -2414,15 +2422,22 @@ export function TaskBlockEditor({
         seen.add(data.id);
         peers.push({ clientId, userId: data.id, name: data.name || "Người dùng", color: data.color || "" });
       });
+      const key = peers.map((peer) => `${peer.userId}:${peer.name}`).join("|");
+      if (key === lastPeersKey) return;
+      lastPeersKey = key;
       options.onPeersChange?.(peers);
     };
     awareness?.on("change", reportPeers);
+    let started = false;
     const timer = window.setTimeout(() => {
+      started = true;
       void api.init({ id: options.documentName, value: null, autoSelect: false });
     }, 0);
     return () => {
       window.clearTimeout(timer);
       awareness?.off("change", reportPeers);
+      // Chưa init (lần gỡ đầu của StrictMode) thì không có gì để hủy: `destroy` lúc đó gỡ trình nghe chưa gắn, yjs báo lỗi
+      if (!started) return;
       // `destroy` của @platejs/yjs chỉ ngắt provider đã kết nối xong; hủy hẳn provider Hocuspocus (cả kết nối đang mở dở) để
       // rời trang không để lại kết nối và "người đang mở" ảo
       const providers = editor.getOption(YjsPlugin, "_providers") as Array<{ provider?: { destroy?: () => void } }>;

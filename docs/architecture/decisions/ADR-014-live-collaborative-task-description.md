@@ -1,6 +1,6 @@
 # ADR-014: Nhiều người cùng sửa mô tả nhiệm vụ trực tiếp (Yjs + Hocuspocus)
 
-- **Status**: PROPOSED. Người dùng chọn "sửa trực tiếp kiểu Google Docs" ngày 21/10/2026 và giao Claude tự quyết phần còn lại. Các số đo dưới đây lấy từ spike cùng ngày (code spike đã gỡ). Bản MVP làm sau cờ `taskCollab`, mặc định tắt; chưa triển khai production.
+- **Status**: PROPOSED. Người dùng chọn "sửa trực tiếp kiểu Google Docs" ngày 21/10/2026 và giao Claude tự quyết phần còn lại. Context ghi số đo của spike cùng ngày (code spike đã gỡ); mục "Kết quả MVP" ghi số đo của bản MVP sau cờ `taskCollab` (mặc định tắt). Chưa triển khai production; chờ chủ sở hữu duyệt để chuyển ACCEPTED.
 - **Date**: 2026-10-21
 - **Deciders**: Chủ sở hữu dự án (chọn hướng, giao tự quyết chi tiết). Các mặc định đổi được khi người dùng duyệt lại.
 
@@ -44,10 +44,22 @@ Spike 21/10/2026 (next dev 15.5.27 Turbopack, Node 22.23.2) đo bốn câu hỏi
    - Trước lần đồng bộ đầu, editor hiện mô tả lấy từ REST ở chế độ chỉ đọc. Quá 10 s chưa đồng bộ được thì giữ chỉ đọc, hiện `InlineAlert` có nút thử lại. Không để người dùng gõ vào tài liệu rỗng chưa đồng bộ: `init` của Plate thôi chờ sau 5 s rồi vẫn cho gõ.
    - Hộp tạo việc (chưa có `taskId`) không cộng tác.
    - Khởi tạo provider được chặn để không chạy hai lần trong StrictMode (Context, mục 4): `init` hoãn một nhịp, lần gỡ đầu hủy trước khi có provider. Khi gỡ editor, hủy hẳn provider Hocuspocus bên dưới: `destroy` của `@platejs/yjs` chỉ ngắt provider đã kết nối xong, kết nối đang mở dở sẽ còn lại.
+   - Provider tạo với `autoConnect: false`: `init` của Plate tự gọi `connect`, mà `connect` khi đang nối dở sẽ hủy socket đó và mở socket mới ("WebSocket is closed before the connection is established").
+   - Ở chế độ cộng tác, `NodeIdPlugin` chạy với `priority: 50` (`collab-node-id.ts`), dưới `YjsPlugin` (100). Plate xếp plugin theo `priority` giảm dần rồi bọc lần lượt, nên với độ ưu tiên mặc định `withYjs` nằm trong `withNodeId`: Yjs ghi thao tác tách khối (Enter) trước khi NodeId đổi `id` của khối mới. Kết quả là tài liệu có hai khối trùng `id` và mỗi máy tự gán một `id` khác cho khối đó. Không đẩy `YjsPlugin` lên cao hơn được, vì khi đó `HistoryPlugin` sẽ đè hoàn tác của Yjs.
    - MVP hiện danh sách người đang mở (awareness) cạnh editor. Con trỏ của người khác trong chữ cần thêm `@slate-yjs/react`, để bước sau.
 8. **Kiểm thử.**
    - `node:test`: dựng máy chủ ở cổng 0 cùng hai provider thật (Node, `ws`), kiểm đồng bộ, chỉ đọc khi thiếu quyền, từ chối khi sai `Origin` hoặc không có phiên, seed từ mô tả, bản chiếu về `Task.description` không tăng `version`, PATCH thay nội dung tài liệu đang mở.
    - Thử trên trình duyệt bằng hai tab. Không sửa nhiệm vụ thật; cần nhiệm vụ thử thì hỏi người dùng.
+
+## Kết quả MVP (21/10/2026)
+
+Đo trên một bộ dev riêng: api 3200, web 3201, máy chủ cộng tác 3202, CSDL `qcet_test`, `FEATURE_FLAG_TASK_COLLAB=true`. Nhiệm vụ và người dùng là dữ liệu thử tạo riêng, không đụng nhiệm vụ thật. Mỗi phiên Playwright đăng nhập một người dùng.
+
+- **Hai người cùng sửa.** Chữ của hai bên hội tụ. Hàng "Đang cùng sửa" có avatar của người kia (cao 20 px, chữ 12 px, avatar 16 px) và tự tắt khi người kia rời trang. Người cuối rời đi thì mô tả được chiếu về `Task.description`, `version` vẫn là 1. Mỗi trang mở đúng một WebSocket, console không có lỗi hay cảnh báo.
+- **Tách khối.** Trước khi sửa thứ tự plugin (Decision 7), `id` bị trùng và hai máy lệch nhau. Sau khi sửa, `id` giống nhau ở mọi máy và không trùng. Test hồi quy: `apps/web/tests/collab-node-id.test.ts`.
+- **Người chỉ có quyền xem.** Editor có `contenteditable="false"`; chữ người đó gõ không tới ai, nhưng chữ người khác gõ hiện ngay. Phía máy chủ thì `apps/api/tests/collab-server.test.ts` kiểm scope `readonly`.
+- **Không nối được máy chủ** (chặn `/collab` bằng `routeWebSocket`). Trong lúc chờ, trang hiện mô tả đã lưu ở chế độ chỉ xem. Cảnh báo hiện sau khoảng 10 s kể từ khi editor gắn (11,5 s tính từ lúc điều hướng). Đưa tiêu điểm vào "Thử lại" rồi Enter thì mở socket mới và cho sửa. Ở 390 px, cảnh báo xuống hai dòng (cao 36 px) và trang không cuộn ngang.
+- **Lưu ý khi viết kịch bản thử.** Playwright gõ phím chưa tới 1 ms sau cú click, trước khi trình duyệt phát `selectionchange`. Khi đó slate-react coi vùng đích của `beforeinput` là chỗ "người dùng chưa chọn": chèn ký tự đầu vào đó rồi trả con trỏ về vị trí cũ, nên các ký tự sau rơi vào chỗ cũ. Editor thường (hộp tạo việc) bị y hệt, nên đây không phải lỗi cộng tác. Người dùng thật không gặp, vì khoảng cách giữa click và phím luôn dài hơn nhiều. Kịch bản nên chờ ≥ 100 ms sau click rồi mới gõ.
 
 ## Alternatives Considered
 
