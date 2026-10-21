@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Dialog as BaseDialog } from "@base-ui/react/dialog";
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SHEET_MOTION_CLASS, SheetKeyboardSync } from "@/components/ui/menu";
@@ -146,6 +146,24 @@ export function DialogForm({ onSubmit, className, children }: { onSubmit: () => 
 /** Chân hộp thoại: nút phụ (ghost) bên trái nút chính, dồn phải, cách nhau 8px. Nút chính `type="submit"` + `loading` khi đang gửi. */
 export function DialogFooter({ className, children }: { className?: string; children: React.ReactNode }) {
   return <div className={cn("flex justify-end gap-2 pt-1", className)}>{children}</div>;
+}
+
+/**
+ * Dòng đầu hộp tạo/soạn thay cho tiêu đề lớn: nơi chứa › việc đang làm, chữ 12px, mục đầu đậm (hộp Tạo cuộc họp, Soạn văn
+ * bản đi, Tạo nhiệm vụ). Mục giữa dài (tên việc cha) thì cắt cuối, nơi gọi gắn `title` để xem đủ.
+ */
+export function DialogBreadcrumb({ items, icon, className }: { items: React.ReactNode[]; icon?: React.ReactNode; className?: string }) {
+  return (
+    <div data-slot="dialog-breadcrumb" className={cn("flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground", className)}>
+      {icon}
+      {items.map((item, index) => (
+        <React.Fragment key={index}>
+          {index > 0 ? <ChevronRight className="size-3 shrink-0 text-muted-foreground/60" aria-hidden /> : null}
+          <span className={index === 0 ? "shrink-0 font-medium text-foreground" : "min-w-0 truncate"}>{item}</span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
 }
 
 /** Lỗi của một ô nhập: dòng `text-xs text-destructive` ngay dưới ô (ô đặt `aria-invalid` và `aria-describedby` trỏ tới `id`), đọc to khi hiện. */

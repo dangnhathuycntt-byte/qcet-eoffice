@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, FileText, Paperclip, X } from "lucide-react";
-import { StandardDialog, DialogClose } from "@/components/ui/dialog";
+import { FileText, Paperclip, X } from "lucide-react";
+import { StandardDialog, DialogBreadcrumb, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -224,12 +224,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
         }}
       >
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-5 py-2.5 sm:px-6">
-          <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <FileText className="size-3.5 shrink-0" aria-hidden />
-            <span className="font-medium text-foreground">Văn bản đi</span>
-            <ChevronRight className="size-3 shrink-0 text-muted-foreground/60" aria-hidden />
-            <span>Soạn dự thảo</span>
-          </div>
+          <DialogBreadcrumb icon={<FileText className="size-3.5 shrink-0" aria-hidden />} items={["Văn bản đi", "Soạn dự thảo"]} />
           <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 max-md:size-8" />}>
             <X />
           </DialogClose>

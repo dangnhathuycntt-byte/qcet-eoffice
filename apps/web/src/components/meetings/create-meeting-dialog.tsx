@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, ChevronRight, Clock, MapPin, X } from "lucide-react";
+import { Calendar, Clock, MapPin, X } from "lucide-react";
 import { getTodayIctDate } from "@qcet/shared/lib/academic-calendar";
 import { cn } from "@/lib/utils";
 import { Button, PROPERTY_PILL_CLASS } from "@/components/ui/button";
-import { DialogClose, DialogFooter, DialogForm, FieldError, StandardDialog } from "@/components/ui/dialog";
+import { DialogBreadcrumb, DialogClose, DialogFooter, DialogForm, FieldError, StandardDialog } from "@/components/ui/dialog";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
 import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
@@ -148,11 +148,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
       <DialogForm onSubmit={() => void submit()} className="gap-3">
         {/* Đầu hộp gọn một dòng 12px như hộp Soạn văn bản đi; bỏ tiêu đề 16px và câu mô tả (người dùng: "xoá cho gọn" 20/10/2026) */}
         <div className="-mt-1 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Cuộc họp</span>
-            <ChevronRight className="size-3 shrink-0 text-muted-foreground/60" aria-hidden />
-            <span>Tạo mới</span>
-          </div>
+          <DialogBreadcrumb items={["Cuộc họp", "Tạo mới"]} />
           <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0" />}>
             <X />
           </DialogClose>

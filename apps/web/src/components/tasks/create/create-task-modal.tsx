@@ -14,6 +14,7 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { Select } from "@base-ui/react/select";
 import { Dialog } from "@base-ui/react/dialog";
+import { DialogBreadcrumb } from "@/components/ui/dialog";
 import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import type { CreateTaskLevel } from "@/lib/adapters/create-task-mapper";
 import {
@@ -572,17 +573,17 @@ export function CreateTaskModal({
                 )}
               >
                 {/* ── Modal Top Header ──────────────────────────── */}
-                <header className="flex shrink-0 items-center gap-2 px-5 pt-5 max-md:pt-3">
-                  {/* Bỏ dòng breadcrumb (người dùng chọn 17/10/2026): tiêu đề hộp chỉ còn cho trình đọc màn hình;
-                      đơn vị chọn ở chip đầu hàng thuộc tính, giao việc con thì vẫn nêu việc cha cho rõ ngữ cảnh */}
-                  <div className="flex min-w-0 items-center text-compact text-muted-foreground">
-                    <Dialog.Title className="sr-only">{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</Dialog.Title>
-                    {initialParentTaskTitle && (
-                      <span className="truncate" title={initialParentTaskTitle}>
-                        Việc con của {initialParentTaskTitle}
-                      </span>
-                    )}
-                  </div>
+                <header className="flex shrink-0 items-center gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
+                  {/* Breadcrumb như hộp Tạo cuộc họp (người dùng yêu cầu thêm lại 21/10/2026, thay quyết định bỏ ngày 17/10);
+                      tiêu đề hộp cho trình đọc màn hình. Giao việc con thì nêu việc cha ở giữa cho rõ ngữ cảnh */}
+                  <Dialog.Title className="sr-only">{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</Dialog.Title>
+                  <DialogBreadcrumb
+                    items={
+                      initialParentTaskTitle
+                        ? ["Nhiệm vụ", <span key="parent" title={initialParentTaskTitle}>{initialParentTaskTitle}</span>, "Tạo việc con"]
+                        : ["Nhiệm vụ", "Tạo mới"]
+                    }
+                  />
 
                   {agentAvailable && !agentOpen && (
                     <Button
