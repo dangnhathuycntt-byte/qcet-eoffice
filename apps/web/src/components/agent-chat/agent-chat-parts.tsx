@@ -36,6 +36,17 @@ export function ReplyInline({ parts, sources }: { parts: AgentReplyInline[]; sou
   );
 }
 
+/** Gom mục con (cấp 1) vào mục cấp 0 đứng trước; mục con đứng đầu danh sách thì thành mục cấp 0. */
+function groupListItems(items: AgentReplyInline[][], depths?: number[]) {
+  const groups: { item: AgentReplyInline[]; children: AgentReplyInline[][] }[] = [];
+  items.forEach((item, index) => {
+    const parent = groups[groups.length - 1];
+    if (depths?.[index] && parent) parent.children.push(item);
+    else groups.push({ item, children: [] });
+  });
+  return groups;
+}
+
 /**
  * Câu trả lời có định dạng (đoạn, tiêu đề, danh sách, trích dẫn, chữ đậm, bảng) theo nhịp của Linear (đo ảnh 16/10/2026):
  * chữ 13px dòng ~21px, đoạn cách 16px, tiêu đề sát danh sách 6px, mục cách 6px, thụt 24px.
@@ -86,9 +97,19 @@ export function AgentReplyText({ text, sources }: { text: string; sources?: Assi
           <hr key={i} className="border-border/60" />
         ) : block.type === "list" ? (
           <ul key={i} className={cn("flex flex-col gap-1.5 pl-6 marker:text-muted-foreground", block.ordered ? "list-decimal" : "list-disc")}>
-            {block.items.map((item, j) => (
+            {groupListItems(block.items, block.depths).map((group, j) => (
               <li key={j} className="pl-0.5">
-                <ReplyInline parts={item} sources={sources} />
+                <ReplyInline parts={group.item} sources={sources} />
+                {group.children.length > 0 ? (
+                  // Mục con là danh sách lồng thật (đọc màn hình biết cấp), chấm rỗng như Notion/Linear, cùng nhịp 6px
+                  <ul className="mt-1.5 flex list-[circle] flex-col gap-1.5 pl-5">
+                    {group.children.map((child, k) => (
+                      <li key={k} className="pl-0.5">
+                        <ReplyInline parts={child} sources={sources} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>

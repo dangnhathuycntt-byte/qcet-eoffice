@@ -19,6 +19,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { addParticipant, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
 import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
+import { MinutesText } from "@/components/meetings/minutes-text";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
 import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
 import { SectionCard } from "@/components/meetings/section-card";
@@ -465,7 +466,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           </div>
         </form>
       ) : meeting.minutes ? (
-        <p className={cn("whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground", PROSE_MAX_CLASS)}>{meeting.minutes}</p>
+        <div className={PROSE_MAX_CLASS}>
+          <MinutesText text={meeting.minutes} />
+        </div>
       ) : (
         <p className="text-xs text-muted-foreground">
           {canDraftMinutes ? "Chưa có biên bản. Bấm Thêm để soạn, hoặc dùng kết quả của một bản ghi âm." : "Chưa có biên bản."}
@@ -508,7 +511,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
                 <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
                 {meeting.agenda ? (
-                  <p className={cn("mt-1 whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground", PROSE_MAX_CLASS)}>{meeting.agenda}</p>
+                  <div className={cn("mt-1", PROSE_MAX_CLASS)}>
+                    <MinutesText text={meeting.agenda} />
+                  </div>
                 ) : (
                   <p className="mt-1 text-compact text-muted-foreground">Chưa có nội dung và chương trình.</p>
                 )}

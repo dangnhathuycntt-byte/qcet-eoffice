@@ -1,7 +1,7 @@
 /**
- * Định dạng tối giản cho câu trả lời của Agent (một phần Markdown): đoạn văn, tiêu đề `#`, danh sách `-`/`*`/`1.`,
- * trích dẫn `>`, đường kẻ `---`, chữ đậm `**…**` và bảng kiểu GFM (dòng tiêu đề, dòng `|---|`, các dòng dữ liệu). Thuần, trả cấu trúc để giao diện dựng
- * thành phần tử React (không chèn HTML).
+ * Định dạng tối giản cho câu trả lời của Agent (một phần Markdown): đoạn văn, tiêu đề `#`, danh sách `-`/`*`/`1.` (thụt từ 2
+ * dấu cách là mục con, một cấp), trích dẫn `>`, đường kẻ `---`, chữ đậm `**…**` và bảng kiểu GFM (dòng tiêu đề, dòng `|---|`,
+ * các dòng dữ liệu). Thuần, trả cấu trúc để giao diện dựng thành phần tử React (không chèn HTML).
  */
 
 export type AgentReplyInline = { text: string; bold: boolean };
@@ -13,7 +13,11 @@ export type AgentReplyBlock =
   | { type: "quote"; inline: AgentReplyInline[] }
   /** Dòng chỉ có `---` (hay `***`, `___`): mô hình dùng để ngăn hai phần của câu trả lời. */
   | { type: "divider" }
-  | { type: "list"; ordered: boolean; items: AgentReplyInline[][] }
+  /**
+   * `depths[i]` là cấp của mục thứ i (0 hoặc 1, mục con thuộc mục cấp 0 đứng trước nó). Chỉ có khi danh sách có mục con, nên
+   * danh sách phẳng giữ nguyên dạng cũ.
+   */
+  | { type: "list"; ordered: boolean; items: AgentReplyInline[][]; depths?: number[] }
   /** Mỗi ô là chữ đã tách đậm; mọi dòng có đúng số ô của dòng tiêu đề (thiếu thì thêm ô rỗng, thừa thì bỏ). */
   | { type: "table"; header: AgentReplyInline[][]; rows: AgentReplyInline[][][] };
 
@@ -32,7 +36,7 @@ export function parseAgentReplyInline(text: string): AgentReplyInline[] {
   return out.filter((part) => part.text.length > 0);
 }
 
-const LIST_ITEM = /^\s*(?:([-*•])|(\d+)[.)])\s+(.*)$/;
+const LIST_ITEM = /^(\s*)(?:([-*•])|(\d+)[.)])\s+(.*)$/;
 const HEADING = /^\s*#{1,6}\s+(.*)$/;
 const QUOTE = /^\s*>\s?(.*)$/;
 const DIVIDER = /^\s*([-*_])(?:\s*\1){2,}\s*$/;
@@ -100,11 +104,19 @@ export function parseAgentReply(text: string): AgentReplyBlock[] {
     const item = line.match(LIST_ITEM);
     if (item) {
       flushParagraph();
-      const ordered = Boolean(item[2]);
+      const ordered = Boolean(item[3]);
       const prev = blocks[blocks.length - 1];
-      const inline = parseAgentReplyInline(item[3].trim());
-      if (prev?.type === "list" && prev.ordered === ordered) prev.items.push(inline);
-      else blocks.push({ type: "list", ordered, items: [inline] });
+      const inline = parseAgentReplyInline(item[4].trim());
+      // Thụt từ 2 dấu cách (tab tính như thụt) ngay sau một danh sách: mục con của mục trước, kể cả khác kiểu đánh số
+      const nested = item[1].replace(/\t/g, "  ").length >= 2 && prev?.type === "list";
+      if (nested) {
+        prev.depths ??= prev.items.map(() => 0);
+        prev.items.push(inline);
+        prev.depths.push(1);
+      } else if (prev?.type === "list" && prev.ordered === ordered) {
+        prev.items.push(inline);
+        prev.depths?.push(0);
+      } else blocks.push({ type: "list", ordered, items: [inline] });
       continue;
     }
     paragraph.push(line.trim());
@@ -118,7 +130,12 @@ export function agentReplyToPlainText(text: string): string {
   return parseAgentReply(text)
     .map((block) => {
       const join = (inline: AgentReplyInline[]) => inline.map((part) => part.text).join("");
-      if (block.type === "list") return block.items.map((item, i) => `${block.ordered ? `${i + 1}.` : "-"} ${join(item)}`).join("\n");
+      if (block.type === "list") {
+        let number = 0;
+        return block.items
+          .map((item, i) => (block.depths?.[i] ? `  - ${join(item)}` : `${block.ordered ? `${++number}.` : "-"} ${join(item)}`))
+          .join("\n");
+      }
       // Bảng sao chép thành các dòng cách nhau bằng Tab: dán vào Excel hay Word ra đúng cột
       if (block.type === "table") return [block.header, ...block.rows].map((row) => row.map(join).join("\t")).join("\n");
       if (block.type === "divider") return "";

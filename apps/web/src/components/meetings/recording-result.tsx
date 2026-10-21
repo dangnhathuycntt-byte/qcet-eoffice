@@ -6,6 +6,7 @@ import type { MeetingRecordingDetail } from "@qcet/contracts/meeting-recordings"
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { MinutesText } from "@/components/meetings/minutes-text";
 
 /** Biên bản đề xuất kèm quyết định và việc được giao, thành một khối chữ để điền vào ô soạn biên bản. */
 export function composeMinutesText(detail: MeetingRecordingDetail): string {
@@ -59,7 +60,9 @@ export function RecordingResult({
       {detail.minutesDraft && (
         <section>
           <h4 className="mb-1 text-xs font-medium text-muted-foreground">Biên bản đề xuất</h4>
-          <div className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-compact text-foreground">{detail.minutesDraft}</div>
+          <div className="rounded-md border border-border/50 bg-muted/20 px-3 py-2">
+            <MinutesText text={detail.minutesDraft} />
+          </div>
         </section>
       )}
 
