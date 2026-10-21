@@ -3,6 +3,7 @@
 import * as React from "react";
 import { User, UserX, Users } from "lucide-react";
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
+import { MENTION_ALL_NAME } from "@qcet/shared/domain/tasks/comment-mentions";
 import { cn } from "@/lib/utils";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +72,8 @@ const MENU_NAV_KEYS = ["ArrowDown", "ArrowUp", "Escape", "Enter", "Tab"];
 /**
  * Thân menu chọn người: ô tìm, rồi các đơn vị (rê chuột mở menu con nhân sự, như bộ lọc nhiều cấp của trang Nhiệm vụ;
  * người dùng yêu cầu "2 sub menu là đơn vị - nhân sự" 20/10/2026). Đang gõ tìm thì hiện thẳng người khớp ở cả trường.
- * Đơn vị có người đang chọn thì chữ đậm và ghi số bên phải.
+ * Đơn vị có người đang chọn thì chữ đậm và ghi số bên phải. Có `onPickAll` (chọn nhiều) thì đầu mỗi menu con có dòng "all"
+ * chọn cả đơn vị, cùng tên với "@all" của bình luận (người dùng yêu cầu "thêm @all cho từng đơn vị" 21/10/2026).
  */
 function PeopleMenuBody({
   directory,
@@ -84,6 +86,7 @@ function PeopleMenuBody({
   closeOnPick,
   searchLabel,
   topRows,
+  onPickAll,
 }: {
   directory: MeetingDirectory;
   query: string;
@@ -96,6 +99,8 @@ function PeopleMenuBody({
   searchLabel: string;
   /** Hàng thao tác ngay dưới ô tìm ("Bỏ chọn") */
   topRows?: React.ReactNode;
+  /** Bấm dòng "all" của một đơn vị: chọn hết người của đơn vị, đã chọn hết thì bỏ chọn */
+  onPickAll?: (people: MeetingPerson[]) => void;
 }) {
   const Item = closeOnPick ? MenuActionItem : MenuOptionItem;
   const visible = (person: MeetingPerson) => !hiddenIds?.has(person.id);
@@ -155,8 +160,28 @@ function PeopleMenuBody({
           : units.length > 0
             ? units.map((unit) => {
                 const count = unit.people.filter((p) => isSelected(p.id)).length;
+                const allLocked = Boolean(isLocked) && unit.people.every((p) => isLocked?.(p.id));
                 return (
                   <MenuSubmenu key={unit.id} label={unit.label} title={unit.name} hint={count || undefined} active={count > 0} popupClassName="w-64" side="right">
+                    {onPickAll ? (
+                      <>
+                        <MenuOptionItem
+                          selected={count === unit.people.length}
+                          disabled={allLocked}
+                          title={`Chọn cả ${unit.people.length} người của ${unit.name}`}
+                          leading={
+                            <span aria-hidden className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                              <Users className="size-3" />
+                            </span>
+                          }
+                          hint={`${unit.people.length} người`}
+                          onClick={() => onPickAll(unit.people)}
+                        >
+                          {MENTION_ALL_NAME}
+                        </MenuOptionItem>
+                        <MenuSeparator />
+                      </>
+                    ) : null}
                     {unit.people.map((person) => personRow(person, false))}
                   </MenuSubmenu>
                 );
@@ -201,6 +226,17 @@ export function ParticipantsPicker({
     if (lockedIds?.has(person.id)) return;
     onChange(selectedIds.has(person.id) ? value.filter((p) => p.id !== person.id) : [...value, person]);
   };
+  // Cả đơn vị: thêm người chưa chọn; đã chọn hết thì bỏ những người bỏ được (người đã dự họp giữ nguyên)
+  const toggleAll = (people: MeetingPerson[]) => {
+    const free = people.filter((p) => !lockedIds?.has(p.id));
+    if (free.length === 0) return;
+    const freeIds = new Set(free.map((p) => p.id));
+    onChange(
+      free.every((p) => selectedIds.has(p.id))
+        ? value.filter((p) => !freeIds.has(p.id))
+        : [...value, ...free.filter((p) => !selectedIds.has(p.id))]
+    );
+  };
 
   return (
     <MenuRoot
@@ -237,6 +273,7 @@ export function ParticipantsPicker({
           isLocked={lockedIds ? (id) => lockedIds.has(id) : undefined}
           hiddenIds={hiddenIds}
           onPick={toggle}
+          onPickAll={toggleAll}
           closeOnPick={false}
           searchLabel="Tìm người dự họp"
         />
