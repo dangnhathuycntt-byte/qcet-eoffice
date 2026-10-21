@@ -80,7 +80,8 @@ Spike 21/10/2026 (next dev 15.5.27 Turbopack, Node 22.23.2) đo bốn câu hỏi
 
 ### Tiêu cực / giới hạn đã biết
 - Tài liệu đang mở nằm trong bộ nhớ của một process: chạy nhiều bản qcet-api phải thêm `@hocuspocus/extension-redis`. Hiện production chạy một container.
-- Bundle web thêm `y-webrtc`, `simple-peer` và `y-indexeddb` do `@platejs/yjs` import tĩnh, dù không dùng.
+- `@platejs/yjs` kéo theo `y-webrtc`, `simple-peer`, `y-indexeddb` dù không dùng. Từ 22/10/2026 phần này nằm trong `task-collab-runtime.ts`, chỉ tải khi cờ bật (trước đó vào bundle của mọi trang có hộp tạo việc, ~1MB bản dev).
+- Cờ `taskCollab` chỉ đọc ở client qua `/api/runtime-config`, lần render đầu luôn coi là tắt: khi cờ bật, trang chi tiết dựng editor thường rồi bỏ, dựng bản chỉ xem, rồi dựng thêm bản cộng tác (ba lần, editor nặng nhất trang). Trước khi bật ở production nên truyền cờ runtime từ server (layout đã có `getRuntimeConfig()`) xuống client.
 - Trong `next dev`, sửa mã máy chủ cộng tác phải khởi động lại dev server: instrumentation chỉ chạy một lần.
 - Quyền chỉ kiểm lúc kết nối; mất mạng khi đang gõ thì thay đổi giữ trong bộ nhớ tab, kết nối lại thì gộp, nhưng đóng tab lúc mất mạng thì mất (MVP chưa dùng IndexedDB).
 - Production cần thêm luật `/collab` trong `cloudflared.yml` (đặt trước luật web, cho từng hostname), mở `COLLAB_PORT` trong mạng compose và đặt `COLLAB_HOST=0.0.0.0` cho container api; deploy api trước hoặc cùng web.
