@@ -52,15 +52,19 @@ export async function GET(
 
     const { id } = await Promise.resolve(context.params);
 
-    const authContext = await loadAuthorizationContext(authUser.id);
-    const { document, docResource } = await readDocumentForUser(authContext, id);
+    // Dấu đánh dấu chỉ phụ thuộc người dùng và mã văn bản: đọc song song với nạp quyền + đọc văn bản (chỉ trả về khi đọc được)
+    const [{ authContext, document, docResource }, marked] = await Promise.all([
+      loadAuthorizationContext(authUser.id).then(async (authContext) => ({
+        authContext,
+        ...(await readDocumentForUser(authContext, id)),
+      })),
+      isDocumentMarked(id, authUser.id),
+    ]);
 
     const availableActions = computeAvailableActions(
       authContext,
       docResource
     );
-
-    const marked = await isDocumentMarked(id, authUser.id);
     const documentDTO = toDocumentDetailDTO(document);
     // Cùng điều kiện với PATCH và bổ sung tệp: UI chỉ hiện "Sửa"/"Thêm tệp" khi thao tác thực sự được phép
     const canEdit = canUpdateDocument(authContext, document) && !isDocumentImmutable(document);

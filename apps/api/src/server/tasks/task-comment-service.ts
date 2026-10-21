@@ -155,13 +155,13 @@ async function listMentionCandidates(task: { createdById: string; actors: Array<
 
 export async function listTaskComments(session: SessionPayload, taskId: string): Promise<TaskCommentList> {
   const task = await authorizeOnTask(session, taskId, "task.read");
-  const rows = await prisma.taskComment.findMany({
-    where: { taskId },
-    include: { author: AUTHOR_SELECT, reactions: REACTIONS_INCLUDE },
-    orderBy: { createdAt: "asc" },
-    take: 500,
-  });
-  const [participants, viewer, commentCheck] = await Promise.all([
+  const [rows, participants, viewer, commentCheck] = await Promise.all([
+    prisma.taskComment.findMany({
+      where: { taskId },
+      include: { author: AUTHOR_SELECT, reactions: REACTIONS_INCLUDE },
+      orderBy: { createdAt: "asc" },
+      take: 500,
+    }),
     listMentionCandidates(task, session.id),
     prisma.user.findUnique({ where: { id: session.id }, ...AUTHOR_SELECT }),
     can(session, "task.comment", task),
