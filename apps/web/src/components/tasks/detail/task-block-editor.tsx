@@ -86,6 +86,7 @@ import {
   shift,
   size,
   useFloating,
+  type Placement,
 } from "@floating-ui/react";
 import {
   Copy,
@@ -1229,6 +1230,21 @@ function InlineLinkEl({ attributes, children, element }: any) {
 // Toolbar Dropdown primitive (click-to-toggle, closes on outside click)
 // ---------------------------------------------------------------------------
 
+/**
+ * Hiệu ứng mở của menu nổi (Floating UI): chỉ chuyển `opacity` và `scale`. Floating UI dựng menu ở (0,0) rồi mới đặt vào chỗ neo;
+ * `duration-*` không kèm `transition-[…]` là chuyển mọi thuộc tính (mặc định `all`), nên menu trượt từ góc trên trái màn hình tới
+ * chỗ neo (người dùng quay màn hình menu "/" ngày 21/10/2026). `animate-in`/`zoom-in-95` không có tác dụng vì `tw-animate-css` chưa
+ * được import. Đi kèm `useFloating({ transform: false })` (đặt bằng top/left; để transform thì `scale` co cả khoảng dịch, menu
+ * vẫn trượt vài chục px) và `transformOrigin: floatingOrigin(placement)` để menu phóng to từ phía chạm chỗ neo.
+ */
+const FLOATING_ENTER_CLASS =
+  "transition-[opacity,scale] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-enter)] starting:opacity-0 starting:scale-95";
+
+function floatingOrigin(placement: Placement): string {
+  const [side, align] = placement.split("-");
+  return `${side === "top" ? "bottom" : "top"} ${align === "start" ? "left" : align === "end" ? "right" : "center"}`;
+}
+
 function ToolbarDropdown({
   trigger,
   children,
@@ -1242,9 +1258,10 @@ function ToolbarDropdown({
   const wrapRef = React.useRef<HTMLDivElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
 
-  const { refs, floatingStyles } = useFloating({
+  const { refs, floatingStyles, placement } = useFloating({
     strategy: "fixed",
     placement: "bottom-start",
+    transform: false,
     whileElementsMounted: autoUpdate,
     middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
   });
@@ -1269,9 +1286,10 @@ function ToolbarDropdown({
       {open && typeof document !== "undefined" && createPortal(
         <div
           ref={(el) => { (panelRef as any).current = el; refs.setFloating(el); }}
-          style={floatingStyles}
+          style={{ ...floatingStyles, transformOrigin: floatingOrigin(placement) }}
           className={cn(
-            "z-[100] min-w-[140px] rounded-lg border border-border/80 bg-card p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100",
+            "z-[100] min-w-[140px] rounded-lg border border-border/80 bg-card p-1 shadow-lg",
+            FLOATING_ENTER_CLASS,
             className,
           )}
           onMouseDown={(e) => e.preventDefault()}
@@ -1468,9 +1486,10 @@ function FloatingToolbar({ editor }: { editor: any }) {
   const [visible, setVisible] = React.useState(false);
   const readOnly = editor.api.isReadOnly();
 
-  const { refs, floatingStyles } = useFloating({
+  const { refs, floatingStyles, placement } = useFloating({
     strategy: "fixed",
     placement: "top",
+    transform: false,
     whileElementsMounted: autoUpdate,
     middleware: [offset(8), flip(), shift({ padding: 8 })],
   });
@@ -1546,8 +1565,8 @@ function FloatingToolbar({ editor }: { editor: any }) {
   return createPortal(
     <div
       ref={refs.setFloating}
-      style={floatingStyles}
-      className="z-50 flex items-center gap-0.5 rounded-lg border border-border/80 bg-card p-0.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+      style={{ ...floatingStyles, transformOrigin: floatingOrigin(placement) }}
+      className={cn("z-50 flex items-center gap-0.5 rounded-lg border border-border/80 bg-card p-0.5 shadow-lg", FLOATING_ENTER_CLASS)}
     >
       {marks.map(({ key, icon: Icon, label }) => (
         <Pressable
@@ -2122,9 +2141,10 @@ function SlashMenu({
   const descriptionId = `${listboxId}-description`;
   const activeOption = filteredOptions[activeIndex];
 
-  const { refs, floatingStyles, update } = useFloating({
+  const { refs, floatingStyles, placement, update } = useFloating({
     strategy: "fixed",
     placement: "bottom-start",
+    transform: false,
     // animationFrame: đo lại mỗi frame, tránh kẹt vị trí cũ khi Slate/void node dựng lại DOM
     whileElementsMounted: (reference, floating, updateFn) =>
       autoUpdate(reference, floating, updateFn, { animationFrame: true }),
@@ -2192,10 +2212,10 @@ function SlashMenu({
   return createPortal(
     <div
       ref={refs.setFloating}
-      style={floatingStyles}
+      style={{ ...floatingStyles, transformOrigin: floatingOrigin(placement) }}
       // Bấm vào menu không lấy tiêu điểm khỏi ô nhập "/" (ô mất tiêu điểm thì phím mũi tên, Esc không còn tới đây)
       onMouseDown={(e) => e.preventDefault()}
-      className={cn(MENU_POPUP_CLASS, "flex w-64 max-w-[calc(100vw-28px)] flex-col overflow-hidden p-0 animate-in fade-in-0 zoom-in-95 duration-100")}
+      className={cn(MENU_POPUP_CLASS, "flex w-64 max-w-[calc(100vw-28px)] flex-col overflow-hidden p-0", FLOATING_ENTER_CLASS)}
     >
       <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
         <div ref={menuListRef} id={listboxId} role="listbox" aria-label="Chèn khối nội dung">

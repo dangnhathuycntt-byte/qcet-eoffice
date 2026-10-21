@@ -1,0 +1,62 @@
+/**
+ * Menu nổi đặt bằng Floating UI không được chuyển động vị trí. Floating UI dựng menu ở (0,0) rồi mới đặt vào chỗ neo; lớp
+ * `duration-*` không kèm `transition-[…]` chuyển mọi thuộc tính (mặc định `all`), nên menu trượt từ góc trên trái màn hình tới
+ * chỗ neo (người dùng quay màn hình menu "/" ở ô ghi nhanh /notes ngày 21/10/2026). Hiệu ứng mở dùng `FLOATING_ENTER_CLASS`
+ * (chỉ `opacity` và `scale`) cùng `transform: false`. `animate-in`/`zoom-in-*` không có tác dụng: `tw-animate-css` chưa được import.
+ */
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return sourceFiles(path);
+    return /\.tsx$/.test(name) ? [path] : [];
+  });
+}
+
+test("phần tử đặt bằng floatingStyles không chuyển động vị trí", () => {
+  const elements: string[] = [];
+  const offenders: string[] = [];
+  for (const file of sourceFiles("src")) {
+    const source = readFileSync(file, "utf8");
+    for (const match of source.matchAll(/style=\{[^}]*floatingStyles/g)) {
+      const start = match.index ?? 0;
+      // Thẻ mở của phần tử: tới dòng chỉ có ">" (các menu viết thuộc tính mỗi dòng một cái)
+      const end = source.slice(start).search(/\n\s*>\n/);
+      const tag = source.slice(start, end < 0 ? start + 600 : start + end);
+      const where = `${relative("src", file)}:${source.slice(0, start).split("\n").length}`;
+      elements.push(where);
+      if (/animate-in|transition-all|\bduration-|\btransition\b(?!-)/.test(tag)) offenders.push(where);
+    }
+  }
+  assert.ok(elements.length >= 3, `phải tìm thấy các menu nổi của editor, chỉ thấy: ${elements.join(", ")}`);
+  assert.deepEqual(offenders, [], "dùng FLOATING_ENTER_CLASS (chỉ opacity, scale) thay cho duration-*/animate-in trên menu nổi");
+});
+
+test("useFloating đặt vị trí bằng top/left để `scale` không kéo menu trượt", () => {
+  const calls: string[] = [];
+  const offenders: string[] = [];
+  for (const file of sourceFiles("src")) {
+    const source = readFileSync(file, "utf8");
+    for (const match of source.matchAll(/useFloating\(\{/g)) {
+      const start = match.index ?? 0;
+      const options = source.slice(start, source.indexOf("\n  });", start));
+      const where = `${relative("src", file)}:${source.slice(0, start).split("\n").length}`;
+      calls.push(where);
+      if (!/\btransform:\s*false\b/.test(options)) offenders.push(where);
+    }
+  }
+  assert.ok(calls.length >= 3, `chỉ thấy: ${calls.join(", ")}`);
+  assert.deepEqual(offenders, []);
+});
+
+test("FLOATING_ENTER_CLASS chỉ chuyển opacity và scale", () => {
+  const source = readFileSync("src/components/tasks/detail/task-block-editor.tsx", "utf8");
+  const value = source.match(/const FLOATING_ENTER_CLASS =\s*"([^"]+)"/)?.[1];
+  assert.ok(value, "không tìm thấy FLOATING_ENTER_CLASS");
+  assert.match(value, /(^|\s)transition-\[opacity,scale\](\s|$)/);
+  assert.doesNotMatch(value, /transition-all|transform|translate|left|top/);
+});
