@@ -100,9 +100,14 @@ function meetingWhen(row: MeetingRow) {
   };
 }
 
-/** Ô đang mở menu/hộp thoại riêng: phím tắt của trang (F) không chen vào. */
+/** Đang gõ chữ hoặc đang ở menu/hộp thoại/popover: phím tắt của trang (F) không chen vào. Ô tích của hàng không tính. */
 const isTypingTarget = (target: EventTarget | null) =>
-  target instanceof Element && Boolean(target.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], [role='menu'], [role='dialog']"));
+  target instanceof Element &&
+  Boolean(
+    target.closest(
+      "input:not([type='checkbox']):not([type='radio']), textarea, select, [contenteditable='true'], [role='textbox'], [role='menu'], [role='dialog'], [role='alertdialog'], [role='listbox'], [data-list-toolbar-popover]"
+    )
+  );
 
 /**
  * Cuộc họp (`/meetings`, mục "Cuộc họp" ở sidebar; thay trang Lịch công tác đã bỏ 20/10/2026): danh sách cuộc họp mình

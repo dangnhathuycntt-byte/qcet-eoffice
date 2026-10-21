@@ -6,9 +6,12 @@ import { TaskIconChecklist, TaskIconClose } from "@qcet/shared/lib/icons/task-ic
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** Esc trong menu, hộp thoại, popover hay ô nhập là của lớp đó (đóng lớp, xóa chữ), không bỏ chọn các hàng. */
+/**
+ * Esc trong menu, hộp thoại, popover hay ô nhập chữ là của lớp đó (đóng lớp, xóa chữ), không bỏ chọn các hàng. Ô tích của
+ * hàng không tính: vừa bấm ô tích thì tiêu điểm nằm ở đó, Esc vẫn phải bỏ chọn.
+ */
 const OWN_ESCAPE_SELECTOR =
-  "[role='menu'], [role='dialog'], [role='alertdialog'], [role='listbox'], [data-list-toolbar-popover], input, textarea, select, [contenteditable='true']";
+  "[role='menu'], [role='dialog'], [role='alertdialog'], [role='listbox'], [data-list-toolbar-popover], input:not([type='checkbox']):not([type='radio']), textarea, select, [contenteditable='true']";
 
 export interface SelectionActionBarProps {
   /** Số hàng đang chọn; 0 thì không hiện thanh. */

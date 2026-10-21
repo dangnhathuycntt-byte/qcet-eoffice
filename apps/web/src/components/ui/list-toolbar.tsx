@@ -191,7 +191,8 @@ export const ListToolbarSearchToggle = React.forwardRef<HTMLInputElement, ListTo
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable='true'], [role='textbox']")) return;
+      // Ô tích của hàng (vừa bấm chọn) không phải ô gõ chữ: "/" vẫn mở ô tìm
+      if (target?.closest("input:not([type='checkbox']):not([type='radio']), textarea, select, [contenteditable='true'], [role='textbox']")) return;
       event.preventDefault();
       openAndFocus();
     };
