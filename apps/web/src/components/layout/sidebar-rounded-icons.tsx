@@ -99,6 +99,17 @@ export function IconSidebarDocLines(props: SidebarIconProps) {
   );
 }
 
+/** Ghi chú cá nhân: sổ tay có gáy lò xo (hình theo `Notebook` của Lucide, thu về lưới 16) */
+export function IconSidebarNotes(props: SidebarIconProps) {
+  return (
+    <SidebarSvg {...props}>
+      <path d="M5.25 1.75h5.5a2.5 2.5 0 0 1 2.5 2.5v7.5a2.5 2.5 0 0 1-2.5 2.5h-5.5a2.5 2.5 0 0 1-2.5-2.5v-7.5a2.5 2.5 0 0 1 2.5-2.5Z" />
+      <path d="M1.75 5h2M1.75 8h2M1.75 11h2" />
+      <path d="M7.25 5.75h3M7.25 8.25h3" />
+    </SidebarSvg>
+  );
+}
+
 /** 8. Hồ sơ công việc: thư mục */
 export function IconSidebarFolder(props: SidebarIconProps) {
   return (

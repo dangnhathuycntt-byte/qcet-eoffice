@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ArchiveX, BookOpen, ChevronDown, NotebookPen, ScrollText, Search, Settings, UserRoundCheck, UsersRound, type LucideIcon } from "lucide-react";
+import { ArchiveX, BookOpen, ChevronDown, ScrollText, Search, Settings, UserRoundCheck, UsersRound, type LucideIcon } from "lucide-react";
 import {
   IconSidebarTasks,
   IconSidebarMail,
@@ -16,6 +16,7 @@ import {
   IconSidebarChart,
   IconSidebarMore,
   IconSidebarAssistant,
+  IconSidebarNotes,
 } from "@/components/layout/sidebar-rounded-icons";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
@@ -61,8 +62,9 @@ export interface SidebarNavGroup {
  * Sử dụng bộ icon bo tròn mềm mại đồng bộ với Vector 2758.svg và mẫu UI
  */
 export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
-  // 1. Nhóm chính (Core Workspace): Hộp thư, Trợ lý, Nhiệm vụ, Cuộc họp (bỏ Tổng quan 19/10/2026; `/` chuyển tới Nhiệm vụ;
-  // Lịch công tác bỏ 20/10/2026, thay bằng danh sách Cuộc họp có mục con như Văn bản)
+  // 1. Nhóm chính (Core Workspace): Hộp thư, Trợ lý, Ghi chú cá nhân, Nhiệm vụ, Cuộc họp (bỏ Tổng quan 19/10/2026; `/` chuyển
+  // tới Nhiệm vụ; Lịch công tác bỏ 20/10/2026, thay bằng danh sách Cuộc họp có mục con như Văn bản; Ghi chú cá nhân từ menu
+  // "Thêm" lên dưới Trợ lý 21/10/2026 theo yêu cầu người dùng)
   {
     id: "core",
     items: [
@@ -79,6 +81,12 @@ export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
         href: "/assistant",
         icon: IconSidebarAssistant,
         feature: "assistant",
+      },
+      {
+        id: "notes",
+        label: "Ghi chú cá nhân",
+        href: "/notes",
+        icon: IconSidebarNotes,
       },
       {
         id: "tasks",
@@ -197,7 +205,6 @@ interface SidebarMoreItem {
  */
 export const SIDEBAR_MORE_ITEMS: SidebarMoreItem[] = [
   { id: "delegations", label: "Ủy quyền tác nghiệp", href: "/delegations", icon: UserRoundCheck, section: "work" },
-  { id: "notes", label: "Ghi chú cá nhân", href: "/notes", icon: NotebookPen, section: "work" },
   { id: "search", label: "Tìm kiếm", href: "/search", icon: Search, section: "work" },
   { id: "admin-users", label: "Tài khoản và vai trò", href: "/admin/users", icon: UsersRound, section: "admin" },
   { id: "admin-audit", label: "Nhật ký hệ thống", href: "/admin/audit", icon: ScrollText, section: "admin" },

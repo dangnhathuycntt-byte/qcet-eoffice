@@ -17,7 +17,6 @@ import { PropertyRow } from "@/components/ui/property-row";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { addParticipant, confirmMinutes, discardMinutes, draftMinutes, holdMeeting } from "@/components/meetings/meeting-client";
-import { MeetingNotesPanel } from "@/components/meetings/meeting-notes-panel";
 import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-panel";
 import { MinutesText } from "@/components/meetings/minutes-text";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
@@ -78,7 +77,8 @@ function Muted({ children }: { children: React.ReactNode }) {
  * (`app-shell`); thanh đầu 40px có đường dẫn "Cuộc họp › tên", "Bắt đầu họp" (khi đã mời) và sao chép liên kết; cột chính
  * rộng theo bề ngang đọc (672px) như trang tài liệu: tên 20px, nội dung và chương trình, rồi khối Biên bản ("+ Thêm" để soạn,
  * "Duyệt biên bản" cho chủ tọa, "Sửa" và xóa khi còn dự thảo) và khối Ghi âm, không viền, cách nhau bằng đường kẻ mảnh;
- * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần ("+ Thêm" mời người, "Chọn chủ tọa" khi chưa có), Ghi chú của tôi. Dưới 1024px cột phải xếp ngay dưới
+ * cột phải 340px là thẻ Thuộc tính (lưới nhãn–giá trị), Thành phần ("+ Thêm" mời người, "Chọn chủ tọa" khi chưa có); khối Ghi chú của tôi đã bỏ
+ * (người dùng yêu cầu 21/10/2026, ghi chú xem ở trang Ghi chú cá nhân). Dưới 1024px cột phải xếp ngay dưới
  * tên. Phần Quyết nghị đã bỏ khỏi trang theo yêu cầu người dùng (20/10/2026); API quyết nghị vẫn còn. Quyền thao tác do
  * máy chủ kiểm lại; ở đây chỉ để ẩn nút không dùng được.
  */
@@ -346,9 +346,6 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
         )}
       </SectionCard>
 
-      <SectionCard title="Ghi chú của tôi">
-        <MeetingNotesPanel meetingId={meeting.id} />
-      </SectionCard>
     </div>
   );
 
