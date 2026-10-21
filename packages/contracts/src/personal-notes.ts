@@ -13,18 +13,27 @@ export const PERSONAL_NOTE_CONTENT_MAX = 50_000;
 /** Mỗi người tối đa số ghi chú này (chống lạm dụng bộ nhớ). */
 export const PERSONAL_NOTES_PER_USER_MAX = 2000;
 
-/** Đoạn đầu nội dung của thẻ ghi chú (giữ xuống dòng), xem `toNotePreview`. */
+/** Số ký tự tối đa của các dòng chữ trên thẻ ghi chú, xem `toNotePreviewLines`. */
 export const PERSONAL_NOTE_PREVIEW_MAX = 600;
+
+/** Ảnh hiện ở đầu thẻ ghi chú (đã tải lên máy chủ). */
+export const NoteCardImageSchema = z.object({ url: z.string(), caption: z.string() });
+export type NoteCardImage = z.infer<typeof NoteCardImageSchema>;
+
+/** Một dòng chữ của thẻ ghi chú; `heading`: tiêu đề khối, thẻ in đậm. */
+export const NotePreviewLineSchema = z.object({ text: z.string(), heading: z.boolean().optional() });
+export type NotePreviewLine = z.infer<typeof NotePreviewLineSchema>;
 
 /**
  * Dòng trong danh sách: chỉ trích đoạn đầu nội dung, nội dung đầy đủ lấy ở chi tiết. `excerpt` một dòng (khoảng trắng gộp,
- * 160 ký tự); `preview` nhiều dòng cho thẻ kiểu Google Keep.
+ * 160 ký tự); `previewLines` và `images` cho thẻ kiểu Google Keep (ảnh ở đầu thẻ, tiêu đề khối in đậm).
  */
 export const PersonalNoteSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
   excerpt: z.string(),
-  preview: z.string(),
+  previewLines: z.array(NotePreviewLineSchema),
+  images: z.array(NoteCardImageSchema),
   pinned: z.boolean(),
   entityType: PersonalNoteEntityTypeSchema.nullable(),
   entityId: z.string().nullable(),
@@ -32,7 +41,7 @@ export const PersonalNoteSummarySchema = z.object({
 });
 export type PersonalNoteSummary = z.infer<typeof PersonalNoteSummarySchema>;
 
-export const PersonalNoteSchema = PersonalNoteSummarySchema.omit({ excerpt: true, preview: true }).extend({
+export const PersonalNoteSchema = PersonalNoteSummarySchema.omit({ excerpt: true, previewLines: true, images: true }).extend({
   content: z.string(),
   createdAt: z.string(),
 });

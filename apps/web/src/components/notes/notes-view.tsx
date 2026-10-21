@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import type { PersonalNote, PersonalNoteSummary } from "@qcet/contracts/personal-notes";
-import { toNoteExcerpt, toNotePreview } from "@qcet/shared/domain/notes/note-preview";
+import { toNoteCardFields } from "@qcet/shared/domain/notes/note-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -152,7 +152,7 @@ export function NotesView() {
       if (cached) cacheRef.current.set(id, { ...cached, ...patch });
       patchSummary(id, {
         ...(patch.title !== undefined ? { title: patch.title } : {}),
-        ...(patch.content !== undefined ? { excerpt: toNoteExcerpt(patch.content), preview: toNotePreview(patch.content) } : {}),
+        ...(patch.content !== undefined ? toNoteCardFields(patch.content) : {}),
         updatedAt: new Date().toISOString(),
       });
     },

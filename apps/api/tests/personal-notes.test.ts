@@ -88,8 +88,9 @@ describe('Ghi chú cá nhân', () => {
     assert.equal(row.excerpt.length <= 160, true);
     assert.equal(row.excerpt.startsWith('dòng một dòng hai'), true, 'khoảng trắng gộp một');
     // Thẻ kiểu Google Keep (21/10/2026): đoạn đầu giữ xuống dòng, gộp dòng trống, tối đa 600 ký tự
-    assert.equal(row.preview.startsWith('dòng một\n\n  dòng hai'), true, 'preview giữ xuống dòng');
-    assert.equal(row.preview.length <= 600, true);
+    const previewText = row.previewLines.map((line) => line.text).join('\n');
+    assert.equal(previewText.startsWith('dòng một\n\n  dòng hai'), true, 'thẻ giữ xuống dòng');
+    assert.equal(previewText.length <= 600, true);
     assert.equal('content' in row, false, 'danh sách không chở nội dung đầy đủ');
 
     const updated = await updatePersonalNote(users.me, note.id, UpdatePersonalNoteSchema.parse({ title: 'Đã đổi', pinned: true }));
@@ -144,12 +145,43 @@ describe('Ghi chú cá nhân', () => {
     const note = await create(users.me, { title: 'Khối', content });
 
     const row = (await list(users.me)).notes.find((n) => n.id === note.id)!;
-    assert.equal(row.preview, 'Chuẩn bị họp\n• In tài liệu\n☑ Đặt phòng\n☐ Gửi giấy mời');
+    assert.deepEqual(row.previewLines, [
+      { text: 'Chuẩn bị họp', heading: true },
+      { text: '• In tài liệu' },
+      { text: '☑ Đặt phòng' },
+      { text: '☐ Gửi giấy mời' },
+    ]);
     assert.equal(row.excerpt, 'Chuẩn bị họp • In tài liệu ☑ Đặt phòng ☐ Gửi giấy mời');
 
     assert.deepEqual((await list(users.me, { q: 'giấy mời' })).notes.map((n) => n.id), [note.id]);
     assert.equal((await list(users.me, { q: 'qcetBlocks' })).notes.length, 0, 'tên trường JSON không phải chữ của ghi chú');
     assert.equal((await list(users.me, { q: 'checklist' })).notes.length, 0);
+  });
+
+  it('thẻ hiện ảnh đã tải lên ở đầu (như Keep) thay cho dòng "Ảnh: tên tệp"; tiêu đề khối được đánh dấu để in đậm', async () => {
+    // Người dùng gửi ảnh thẻ 21/10/2026: ảnh chỉ hiện thành chữ "Ảnh: Screenshot….png", tiêu đề khối như chữ thường
+    await prisma.personalNote.deleteMany({ where: { userId: users.me } });
+    const content = JSON.stringify({
+      qcetBlocks: true,
+      version: 1,
+      blocks: [
+        { id: 'b1', type: 'image', content: 'so-do.png', url: '/api/file-objects/aaaa', caption: 'so-do.png', imageWidth: 100 },
+        { id: 'b2', type: 'text', content: 'thông tin cần nhớ\n' },
+        { id: 'b3', type: 'heading', level: 1, content: 'Đặc biệt ' },
+        { id: 'b4', type: 'image', content: 'cuc-bo.png', url: 'blob:http://localhost/x', caption: 'cuc-bo.png' },
+      ],
+    });
+    const note = await create(users.me, { content });
+    const row = (await list(users.me)).notes.find((n) => n.id === note.id)!;
+
+    assert.deepEqual(row.images, [{ url: '/api/file-objects/aaaa', caption: 'so-do.png' }], 'chỉ ảnh đã tải lên máy chủ');
+    assert.deepEqual(row.previewLines, [
+      { text: 'thông tin cần nhớ' },
+      { text: 'Đặc biệt', heading: true },
+      { text: 'Ảnh: cuc-bo.png' },
+    ]);
+    assert.ok(row.excerpt.includes('Ảnh: so-do.png'), 'dòng trích và tìm kiếm vẫn có tên ảnh');
+    assert.deepEqual((await list(users.me, { q: 'so-do' })).notes.map((n) => n.id), [note.id]);
   });
 
   it('gắn cuộc họp: người tổ chức được, người không liên quan bị từ chối; gỡ liên kết bằng null', async () => {
