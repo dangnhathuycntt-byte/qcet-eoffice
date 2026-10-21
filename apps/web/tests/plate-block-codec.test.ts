@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { blocksToPlate, plateToBlocks, parseContentToBlocks, serializeBlocksToContent, parseToPlateValue, isMeaningfulBlock, plainTextToContent, contentToPlainText, PLATE_NODE_TYPES as PT } from "@qcet/shared/lib/tasks/plate-block-codec";
+import { blocksToPlate, plateToBlocks, parseContentToBlocks, serializeBlocksToContent, parseToPlateValue, isMeaningfulBlock, plainTextToContent, contentToPlainText, imageRowAt, PLATE_NODE_TYPES as PT } from "@qcet/shared/lib/tasks/plate-block-codec";
 import type { ContentBlockItem } from "../src/components/tasks/detail/task-block-editor";
 
 // ---------------------------------------------------------------------------
@@ -328,5 +328,32 @@ describe("chữ thuần ↔ nội dung khối (Agent soạn nhiệm vụ)", () =
     assert.equal(contentToPlainText(content), "Mở đầu\n- Ý một\n1. Bước một\n2. Bước hai\n- [x] Nộp báo cáo");
     assert.equal(contentToPlainText("  Mô tả cũ  "), "Mô tả cũ");
     assert.equal(contentToPlainText(""), "");
+  });
+});
+
+describe("hàng ảnh (ảnh xếp cạnh nhau)", () => {
+  const image = (id: string, rowId?: string): ContentBlockItem => ({ id, type: "image", content: "", url: `/f/${id}.png`, ...(rowId ? { rowId } : {}) });
+
+  it("rowId của ảnh cùng hàng giữ nguyên qua lưu rồi mở lại", () => {
+    const blocks = [image("a", "r1"), image("b", "r1"), makeBlock({ type: "text", content: "x" })];
+    const result = roundTrip(blocks);
+    assert.equal(result[0].rowId, "r1");
+    assert.equal(result[1].rowId, "r1");
+    const reparsed = parseContentToBlocks(serializeBlocksToContent(result));
+    assert.deepEqual(reparsed.map((b) => b.rowId), ["r1", "r1", undefined]);
+  });
+
+  it("ảnh còn lẻ một mình trong hàng thì bỏ rowId khi lưu", () => {
+    const result = roundTrip([image("a", "r1"), makeBlock({ type: "text", content: "x" }), image("b", "r1")]);
+    assert.equal("rowId" in result[0], false);
+    assert.equal("rowId" in result[2], false);
+  });
+
+  it("imageRowAt chỉ gom ảnh liền nhau cùng rowId", () => {
+    const nodes = blocksToPlate([image("a", "r1"), image("b", "r1"), image("c", "r2"), image("d")]);
+    assert.deepEqual(imageRowAt(nodes, 0), { start: 0, position: 0, size: 2 });
+    assert.deepEqual(imageRowAt(nodes, 1), { start: 0, position: 1, size: 2 });
+    assert.deepEqual(imageRowAt(nodes, 2), { start: 2, position: 0, size: 1 });
+    assert.deepEqual(imageRowAt(nodes, 3), { start: 3, position: 0, size: 1 });
   });
 });

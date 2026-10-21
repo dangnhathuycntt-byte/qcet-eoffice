@@ -10,6 +10,7 @@ import {
   usePluginOption,
   usePlateEditor,
   useEditorRef,
+  useEditorSelector,
   createPlatePlugin,
 } from "@platejs/core/react";
 import {
@@ -65,8 +66,8 @@ import {
 } from "@qcet/shared/lib/icons/task-icons";
 import { SlashPlugin, SlashInputPlugin } from "@platejs/slash-command/react";
 import { BlockSelectionPlugin, useBlockSelectable, useBlockSelected } from "@platejs/selection/react";
-import { DndPlugin, useDraggable, useDropLine } from "@platejs/dnd";
-import { DndContext, DndProvider } from "react-dnd";
+import { DRAG_ITEM_BLOCK, DndPlugin, getDropPath, onHoverNode, useDragNode, useDraggable, useDropLine } from "@platejs/dnd";
+import { DndContext, DndProvider, type DropTargetMonitor } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   TablePlugin,
@@ -144,6 +145,8 @@ import {
   parseContentToBlocks,
   serializeBlocksToContent,
   isMeaningfulBlock,
+  imageRowAt,
+  IMAGE_ROW_MAX,
   PLATE_NODE_TYPES as PT,
   type ContentBlockItem,
   type ContentBlockType,
@@ -734,6 +737,14 @@ const localImagePreviews = new Map<string, string>();
 function ImageEl({ attributes, children, element }: any) {
   const editor = useEditorRef();
   const uploadCtx = React.useContext(TaskEditorUploadContext);
+  // Kéo bằng chính ảnh (không chỉ tay kéo ⠿): thả vào mép trái/phải ảnh khác để xếp cạnh nhau (BlockRowDraggable nhận thả).
+  // Bấm không kéo vẫn mở trình xem; sau khi kéo trình duyệt không phát click nên không mở nhầm.
+  const [{ isDragging: imageDragging }, imageDragRef] = useDragNode(editor, {
+    element,
+    type: DRAG_ITEM_BLOCK,
+    canDrag: () => !editor.api.isReadOnly(),
+  });
+  const { dropLine: sideDropLine } = useDropLine({ orientation: "horizontal" });
   const { url, caption, imageWidth = 100 } = element;
   const [captionValue, setCaptionValue] = React.useState(caption || "");
   const [isUploading, setIsUploading] = React.useState(false);
@@ -827,7 +838,19 @@ function ImageEl({ attributes, children, element }: any) {
       <div contentEditable={false} className="py-1">
         {url ? (
           <div className="relative group/image my-2 max-w-full">
-            <div style={{ width: `${imageWidth}%` }} className="relative mx-auto transition-all duration-150">
+            {/* Trong hàng ảnh: ảnh lấp đầy ô của nó (bỏ cỡ 25–100%), ẩn thanh chọn cỡ */}
+            <div
+              ref={(node) => {
+                imageDragRef(node);
+              }}
+              data-image-frame=""
+              style={{ width: `${imageWidth}%` }}
+              className={cn(
+                "relative mx-auto transition-all duration-150 group-data-[image-row=true]/block:w-full!",
+                // Kéo bằng ảnh thì mờ như kéo bằng tay kéo (cờ isDragging của khối chỉ theo tay kéo)
+                imageDragging && "opacity-50"
+              )}
+            >
               {!imageLoadError ? (
                 // Bấm ảnh mở trình xem toàn màn hình; các ảnh khác trong cùng editor xem nối tiếp (nhóm ở khung editor)
                 <ImageViewerTrigger src={localImagePreviews.get(url) ?? url} title={caption || "Hình ảnh"} className="w-full rounded-lg">
@@ -878,8 +901,18 @@ function ImageEl({ attributes, children, element }: any) {
                   </div>
                 </div>
               )}
+              {sideDropLine === "left" || sideDropLine === "right" ? (
+                <div
+                  aria-hidden="true"
+                  data-slot="image-side-drop-indicator"
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 z-20 w-0.5 rounded-full bg-primary",
+                    sideDropLine === "left" ? "-left-1.5" : "-right-1.5"
+                  )}
+                />
+              ) : null}
               {!editor.api.isReadOnly() && !imageLoadError && (
-                <div className={cn("absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 select-none", IMAGE_TOOLBAR_REVEAL)}>
+                <div className={cn("absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 select-none group-data-[image-row=true]/block:hidden", IMAGE_TOOLBAR_REVEAL)}>
                   {[25, 50, 75, 100].map((w) => (
                     <Pressable
                       key={w}
@@ -912,7 +945,7 @@ function ImageEl({ attributes, children, element }: any) {
             {!editor.api.isReadOnly() ? (
               // Điện thoại: CSS chung ép ô nhập 16px để iPhone không phóng trang khi chạm; giữ 16px thật nhưng thu hình còn 12px
               // (scale 0.75, rộng bù 133% và lùi lề để vẫn căn giữa đúng bề rộng ảnh), nên chú thích không to hơn chữ phụ
-              <div style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }}>
+              <div style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }} className="group-data-[image-row=true]/block:max-w-full!">
               <input
                 type="text"
                 value={captionValue}
@@ -931,7 +964,7 @@ function ImageEl({ attributes, children, element }: any) {
               </div>
             ) : caption ? (
               <p
-                className="block w-full mt-1.5 text-xs text-muted-foreground text-center italic"
+                className="block w-full mt-1.5 text-xs text-muted-foreground text-center italic group-data-[image-row=true]/block:max-w-full!"
                 style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }}
               >
                 {caption}
@@ -1627,34 +1660,180 @@ function BlockMenu({ editor, state, onClose }: { editor: any; state: BlockMenuSt
   );
 }
 
+const SINGLE_IMAGE_ROW = { start: 0, position: 0, size: 1 };
+/** Khe giữa các ảnh trong một hàng */
+const IMAGE_ROW_GAP_PX = 12;
+
+/**
+ * Thả một ảnh vào mép trái/phải của ảnh khác: hai ảnh vào chung một hàng (cùng `rowId`), ảnh kéo đứng ngay bên cạnh. Mọi bước
+ * tra node theo id vì `moveNodes`/`setNodes` thay đối tượng node (tra theo đối tượng cũ sẽ hụt).
+ */
+function joinImageRow(
+  editor: any,
+  dragItem: any,
+  target: any,
+  monitor: DropTargetMonitor,
+  nodeRef: React.RefObject<HTMLElement | null>,
+  canDropNode: (args: any) => boolean
+) {
+  const draggedId = dragItem.id as string;
+  const rowId =
+    target.rowId ?? (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `row-${Date.now()}`);
+  const move = getDropPath(editor, { canDropNode, dragItem, element: target, monitor, nodeRef: nodeRef as any, orientation: "horizontal" });
+  editor.tf.withoutNormalizing(() => {
+    if (move?.dragPath) editor.tf.moveNodes({ at: move.dragPath, to: move.to });
+    for (const id of [target.id, draggedId]) {
+      const entry = editor.api.node({ id, at: [] });
+      if (entry && entry[0].rowId !== rowId) editor.tf.setNodes({ rowId }, { at: entry[1] });
+    }
+  });
+}
+
+/** Kéo một ảnh ra khỏi hàng của nó (thả lên nửa trên/dưới một ảnh cùng hàng): ảnh đứng riêng trước/sau cả hàng */
+function leaveImageRow(editor: any, draggedId: string, rowMate: any, line: "top" | "bottom") {
+  const dragEntry = editor.api.node({ id: draggedId, at: [] });
+  const mateIndex = editor.api.node({ id: rowMate.id, at: [] })?.[1]?.[0];
+  if (!dragEntry || mateIndex === undefined) return;
+  const dragIndex: number = dragEntry[1][0];
+  const row = imageRowAt(editor.children, mateIndex);
+  const target = line === "top" ? row.start : row.start + row.size;
+  editor.tf.withoutNormalizing(() => {
+    editor.tf.moveNodes({ at: [dragIndex], to: [dragIndex < target ? target - 1 : target] });
+    const moved = editor.api.node({ id: draggedId, at: [] });
+    if (moved) editor.tf.unsetNodes("rowId", { at: moved[1] });
+  });
+}
+
 function BlockRowDraggable({ children, element, compact }: { children: React.ReactNode; element: any; compact?: boolean }) {
   const { props: selectableProps } = useBlockSelectable();
   const isSelected = useBlockSelected(element?.id);
   const editor = useEditorRef();
   const readOnly = editor.api.isReadOnly();
   const previewRef = React.useRef<HTMLDivElement>(null);
+  const nodeRefHolder = React.useRef<React.RefObject<HTMLDivElement | null> | null>(null);
+  const isImage = element?.type === PT.image;
+
+  // Hàng ảnh: chạy lại khi khối kề bên đổi (một ảnh vào/ra hàng), không chỉ khi chính khối này đổi. Tra vị trí theo id:
+  // `findPath` đọc bảng vị trí Slate chỉ cập nhật lúc render, selector chạy trước đó nên sau khi đổi chỗ ảnh nhận vị trí cũ
+  const elementId: string | undefined = element?.id;
+  const row = useEditorSelector(
+    (ed) => {
+      if (!isImage) return SINGLE_IMAGE_ROW;
+      const index = (ed.children as any[]).findIndex((node) => node.id === elementId);
+      return index < 0 ? SINGLE_IMAGE_ROW : imageRowAt(ed.children as any, index);
+    },
+    [elementId, isImage],
+    { equalityFn: (a, b) => a.start === b.start && a.position === b.position && a.size === b.size }
+  );
+  const inRow = row.size > 1;
+
+  const canDropNode = React.useCallback(
+    ({ dragItem }: any) => !("editorId" in dragItem) || dragItem.editorId === editor.id,
+    [editor]
+  );
+
+  // Ảnh đang kéo trỏ vào 1/4 mép trái/phải của khung ảnh này (tối đa 96px) thì là thả để xếp cạnh nhau
+  const sideOf = (dragItem: any, monitor: DropTargetMonitor): "left" | "right" | null => {
+    if (!isImage || readOnly) return null;
+    const dragged = dragItem?.element;
+    if (!dragged || dragged.type !== PT.image || Array.isArray(dragItem.id) || dragItem.editorId !== editor.id || dragged.id === element.id) return null;
+    const frame = nodeRefHolder.current?.current?.querySelector<HTMLElement>("[data-image-frame]");
+    const offset = monitor.getClientOffset();
+    if (!frame || !offset) return null;
+    const rect = frame.getBoundingClientRect();
+    if (offset.y < rect.top || offset.y > rect.bottom) return null;
+    const zone = Math.min(rect.width / 4, 96);
+    const side = offset.x < rect.left + zone ? "left" : offset.x > rect.right - zone ? "right" : null;
+    if (!side) return null;
+    const sameRow = Boolean(element.rowId) && dragged.rowId === element.rowId;
+    return sameRow || row.size < IMAGE_ROW_MAX ? side : null;
+  };
+
+  // Ảnh trong hàng kéo lên nửa trên/dưới một ảnh cùng hàng: Plate coi là không đổi chỗ (thứ tự phẳng đã liền nhau) nên tự xử lý
+  const leaveLineOf = (dragItem: any, monitor: DropTargetMonitor): "top" | "bottom" | null => {
+    const dragged = dragItem?.element;
+    if (!isImage || readOnly || !dragged?.rowId || dragged.rowId !== element.rowId || dragged.id === element.id || typeof dragItem.id !== "string") return null;
+    const rect = nodeRefHolder.current?.current?.getBoundingClientRect();
+    const offset = monitor.getClientOffset();
+    if (!rect || !offset) return null;
+    return offset.y < rect.top + rect.height / 2 ? "top" : "bottom";
+  };
+
   const { isDragging, nodeRef, handleRef } = useDraggable({
     element,
     orientation: "vertical",
     preview: { ref: previewRef },
-    canDropNode: ({ dragItem }) => !("editorId" in dragItem) || dragItem.editorId === editor.id,
+    canDropNode,
+    drop: {
+      hover: (item: any, monitor: DropTargetMonitor) => {
+        const line = sideOf(item, monitor) ?? leaveLineOf(item, monitor);
+        if (line) {
+          const current = editor.getOption(DndPlugin, "dropTarget");
+          if (current?.id !== element.id || current?.line !== line) {
+            editor.setOption(DndPlugin, "dropTarget", { id: element.id, line });
+          }
+          return;
+        }
+        if (nodeRefHolder.current) {
+          onHoverNode(editor, { canDropNode, dragItem: item, element, monitor, nodeRef: nodeRefHolder.current as any, orientation: "vertical" });
+        }
+      },
+    },
+    onDropHandler: (_editor, { dragItem, monitor, nodeRef: dropNodeRef }) => {
+      const side = sideOf(dragItem, monitor);
+      if (side) {
+        joinImageRow(editor, dragItem, element, monitor, dropNodeRef, canDropNode);
+        // Plate chỉ xóa vạch thả khi bắt được sự kiện drop ở document; xóa luôn ở đây để vạch không còn đọng giữa hai ảnh
+        editor.setOption(DndPlugin, "dropTarget", { id: null, line: "" });
+        return true;
+      }
+      const leave = leaveLineOf(dragItem, monitor);
+      if (leave) {
+        leaveImageRow(editor, (dragItem as any).id, element, leave);
+        editor.setOption(DndPlugin, "dropTarget", { id: null, line: "" });
+        return true;
+      }
+      // Thả ảnh lên trên/dưới khối khác: ảnh rời hàng. Plate chuyển khối ngay sau handler này nên gỡ rowId sau đó, tra theo id
+      const item = dragItem as any;
+      if (item.element?.rowId && typeof item.id === "string" && getDropPath(editor, { canDropNode, dragItem: item, element, monitor, nodeRef: dropNodeRef as any, orientation: "vertical" })) {
+        const draggedId: string = item.id;
+        queueMicrotask(() => {
+          const entry = editor.api.node({ id: draggedId, at: [] });
+          if (entry) editor.tf.unsetNodes("rowId", { at: entry[1] });
+        });
+      }
+      return false;
+    },
   });
+  nodeRefHolder.current = nodeRef ?? null;
   const { dropLine } = useDropLine({ id: element.id, orientation: "vertical" });
   const blockMenu = React.useContext(BlockMenuContext);
   const showBlockMenu = blockMenu?.openId === element.id;
+  const isLastInRow = row.position === row.size - 1;
 
   return (
     <div
       ref={nodeRef}
       {...selectableProps}
       className={cn(
-        "group/block relative flex items-start outline-hidden select-auto",
+        "group/block relative items-start outline-hidden select-auto",
+        // Ảnh cùng hàng: các khối liền nhau đứng thành hàng (inline-flex, chia đều bề rộng trừ khe)
+        inRow ? "inline-flex align-top" : "flex",
         selectableProps.className,
         isDragging && "opacity-50",
       )}
+      style={
+        inRow
+          ? {
+              width: `calc((100% - ${(row.size - 1) * IMAGE_ROW_GAP_PX}px) / ${row.size} - 0.5px)`,
+              marginRight: isLastInRow ? undefined : IMAGE_ROW_GAP_PX,
+            }
+          : undefined
+      }
       data-block-id={element.id}
       data-slot="task-editor-block"
       data-block-selected={isSelected ? "true" : undefined}
+      data-image-row={inRow ? "true" : undefined}
       data-plate-selectable="true"
     >
       <div
@@ -1663,7 +1842,8 @@ function BlockRowDraggable({ children, element, compact }: { children: React.Rea
           "shrink-0 mr-1 flex items-center justify-center h-6 mt-0.5 relative select-none",
           // compact (hộp tạo việc): khe 24px vừa lề của hộp; điện thoại không rê chuột nên ẩn tay kéo
           compact ? "w-5 -ml-6 max-md:hidden" : "w-6 -ml-7",
-          readOnly && "invisible"
+          // Ảnh thứ hai trở đi trong hàng: tay kéo sẽ đè lên ảnh bên trái, kéo bằng chính ảnh
+          (readOnly || row.position > 0) && "invisible"
         )}
         contentEditable={false}
         data-plate-selectable="true"

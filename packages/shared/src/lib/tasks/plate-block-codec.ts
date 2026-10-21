@@ -45,6 +45,8 @@ export interface ContentBlockItem {
   fileType?: string;
   caption?: string;
   imageWidth?: number;
+  /** Ảnh liền nhau cùng `rowId` hiện cạnh nhau trên một hàng (kéo thả vào mép trái/phải ảnh khác); vẫn lưu phẳng nên bản cũ chỉ thấy ảnh xếp dọc */
+  rowId?: string;
   description?: string;
   favicon?: string;
   thumbnailUrl?: string;
@@ -114,6 +116,7 @@ export interface PlateElement {
   fileType?: string;
   caption?: string;
   imageWidth?: number;
+  rowId?: string;
   description?: string;
   favicon?: string;
   thumbnailUrl?: string;
@@ -179,6 +182,7 @@ function blockToPlateElement(block: ContentBlockItem): PlateElement {
         url: block.url,
         caption: block.caption ?? (block.content || undefined),
         imageWidth: block.imageWidth,
+        ...(block.rowId ? { rowId: block.rowId } : {}),
       };
 
     case "attachment":
@@ -320,6 +324,7 @@ function plateElementToBlock(el: PlateElement): ContentBlockItem {
         url: el.url,
         caption: el.caption !== undefined ? el.caption : (content || undefined),
         imageWidth: el.imageWidth,
+        ...(el.rowId ? { rowId: el.rowId } : {}),
       };
 
     case PT.attachment:
@@ -346,8 +351,36 @@ function plateElementToBlock(el: PlateElement): ContentBlockItem {
   }
 }
 
+/** Số ảnh tối đa trên một hàng ảnh */
+export const IMAGE_ROW_MAX = 4;
+
+/**
+ * Hàng ảnh chứa khối thứ `index`: các ảnh liền nhau cùng `rowId`. `size` = 1 nghĩa là ảnh đứng riêng (không có `rowId`, hoặc
+ * hàng chỉ còn mình nó sau khi kéo các ảnh kia đi).
+ */
+export function imageRowAt(
+  nodes: ReadonlyArray<{ type: string; rowId?: string }>,
+  index: number
+): { start: number; position: number; size: number } {
+  const node = nodes[index];
+  const isImage = (n: { type: string } | undefined) => n?.type === PT.image || n?.type === "image";
+  if (!node || !isImage(node) || !node.rowId) return { start: index, position: 0, size: 1 };
+  let start = index;
+  while (start > 0 && isImage(nodes[start - 1]) && nodes[start - 1].rowId === node.rowId) start -= 1;
+  let end = index;
+  while (end < nodes.length - 1 && isImage(nodes[end + 1]) && nodes[end + 1].rowId === node.rowId) end += 1;
+  return { start, position: index - start, size: end - start + 1 };
+}
+
 export function plateToBlocks(value: PlateValue): ContentBlockItem[] {
-  return value.map(plateElementToBlock);
+  const blocks = value.map(plateElementToBlock);
+  // Ảnh còn lẻ một mình trong hàng thì bỏ rowId để nội dung lưu không giữ hàng rỗng
+  return blocks.map((block, index) => {
+    if (!block.rowId || imageRowAt(blocks, index).size >= 2) return block;
+    const single = { ...block };
+    delete single.rowId;
+    return single;
+  });
 }
 
 // ---------------------------------------------------------------------------
