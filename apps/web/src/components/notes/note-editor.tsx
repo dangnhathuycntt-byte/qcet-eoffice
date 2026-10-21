@@ -34,44 +34,50 @@ export function noteEntityHref(note: Pick<PersonalNote, "entityType" | "entityId
 }
 
 export interface NoteEditorProps {
-  note: PersonalNote;
+  /** null: ghi chú mới chưa lưu; gõ chữ đầu tiên mới tạo (xem `useNoteAutosave`). */
+  note: PersonalNote | null;
   /** Điện thoại: hiện nút quay lại danh sách. */
   onBack?: () => void;
   onSaved: (note: PersonalNote) => void;
+  onCreated: (note: PersonalNote) => void;
   /** Mỗi lần gõ: để danh sách và bản nhớ tạm theo kịp chữ đang soạn, không chờ lưu xong. */
   onDraft: (patch: { title?: string; content?: string }) => void;
-  onDelete: () => void;
+  onDelete: (noteId: string) => void;
 }
 
 /**
- * Soạn một ghi chú: tiêu đề + nội dung tự lưu sau khi ngừng gõ. Component được `key` theo mã ghi chú nên mỗi ghi chú
- * khởi tạo lại phần nháp, không lẫn chữ giữa hai ghi chú.
+ * Soạn một ghi chú: tiêu đề + nội dung tự lưu sau khi ngừng gõ. Component được `key` theo từng ghi chú (ghi chú mới giữ
+ * nguyên key cả lúc vừa được tạo, để con trỏ không nhảy) nên mỗi ghi chú khởi tạo lại phần nháp, không lẫn chữ.
  */
-export function NoteEditor({ note, onBack, onSaved, onDraft, onDelete }: NoteEditorProps) {
-  const [title, setTitle] = React.useState(note.title);
-  const [content, setContent] = React.useState(note.content);
-  const [pinned, setPinned] = React.useState(note.pinned);
+export function NoteEditor({ note, onBack, onSaved, onCreated, onDraft, onDelete }: NoteEditorProps) {
+  const [title, setTitle] = React.useState(note?.title ?? "");
+  const [content, setContent] = React.useState(note?.content ?? "");
+  const [pinned, setPinned] = React.useState(note?.pinned ?? false);
   const [pinError, setPinError] = React.useState(false);
   const titleRef = React.useRef<HTMLInputElement>(null);
-  const { state, schedule: scheduleSave, retry } = useNoteAutosave(note.id, onSaved);
+  const contentId = React.useId();
+  const { state, noteId, schedule: scheduleSave, retry } = useNoteAutosave(note?.id ?? null, { onSaved, onCreated });
   const schedule = (patch: { title?: string; content?: string }) => {
     onDraft(patch);
     scheduleSave(patch);
   };
-  const entity = noteEntityHref(note);
+  const entity = note ? noteEntityHref(note) : null;
   const gone = state === "gone";
 
-  // Ghi chú mới tạo (trống) mở ra là gõ được ngay
+  // Ghi chú trống (vừa bấm "+") mở ra là gõ được ngay
   React.useEffect(() => {
-    if (!note.title && !note.content) titleRef.current?.focus();
-  }, [note.id, note.title, note.content]);
+    if (!titleRef.current?.value && !(document.getElementById(contentId) as HTMLTextAreaElement | null)?.value) {
+      titleRef.current?.focus();
+    }
+  }, [contentId]);
 
   const togglePin = async () => {
+    if (!noteId) return;
     const next = !pinned;
     setPinned(next);
     setPinError(false);
     try {
-      onSaved(await updateNote(note.id, { pinned: next }));
+      onSaved(await updateNote(noteId, { pinned: next }));
     } catch {
       setPinned(!next);
       setPinError(true);
@@ -110,20 +116,25 @@ export function NoteEditor({ note, onBack, onSaved, onDraft, onDelete }: NoteEdi
               Thử lại
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            title={pinned ? "Bỏ ghim" : "Ghim lên đầu danh sách"}
-            aria-label={pinned ? "Bỏ ghim ghi chú" : "Ghim ghi chú"}
-            aria-pressed={pinned}
-            disabled={gone}
-            onClick={() => void togglePin()}
-          >
-            {pinned ? <PinOff /> : <Pin />}
-          </Button>
-          <Button variant="ghost" size="icon-xs" title="Xóa ghi chú" aria-label="Xóa ghi chú" onClick={onDelete}>
-            <Trash2 />
-          </Button>
+          {/* Chưa gõ gì thì chưa có ghi chú để ghim hay xóa: rời đi là xong */}
+          {noteId && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                title={pinned ? "Bỏ ghim" : "Ghim lên đầu danh sách"}
+                aria-label={pinned ? "Bỏ ghim ghi chú" : "Ghim ghi chú"}
+                aria-pressed={pinned}
+                disabled={gone}
+                onClick={() => void togglePin()}
+              >
+                {pinned ? <PinOff /> : <Pin />}
+              </Button>
+              <Button variant="ghost" size="icon-xs" title="Xóa ghi chú" aria-label="Xóa ghi chú" onClick={() => onDelete(noteId)}>
+                <Trash2 />
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
@@ -145,13 +156,13 @@ export function NoteEditor({ note, onBack, onSaved, onDraft, onDelete }: NoteEdi
               // Enter ở tiêu đề chuyển xuống nội dung như trình soạn thảo ghi chú thông thường
               if (event.key === "Enter") {
                 event.preventDefault();
-                document.getElementById(`note-content-${note.id}`)?.focus();
+                document.getElementById(contentId)?.focus();
               }
             }}
             className="h-9 px-0 text-lg font-semibold sm:h-9 sm:text-lg"
           />
           <Textarea
-            id={`note-content-${note.id}`}
+            id={contentId}
             autoResize
             compact
             countOnlyNearLimit

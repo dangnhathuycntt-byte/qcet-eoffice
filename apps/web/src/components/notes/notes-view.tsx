@@ -14,7 +14,6 @@ import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
 import { NoteEditor } from "@/components/notes/note-editor";
 import {
   NotesRequestError,
-  createNote,
   deleteNote,
   fetchNote,
   fetchNotes,
@@ -26,8 +25,20 @@ import { cn } from "@/lib/utils";
 /** Từ bề rộng này hiện hai khung (danh sách + soạn); hẹp hơn thì một khung như Hộp thư. */
 const WIDE_MIN_WIDTH = 720;
 const SEARCH_DEBOUNCE_MS = 250;
+/** Đích điều hướng tới bản nháp ghi chú mới (`?new=1`). */
+const NEW_NOTE = "__new__";
+/** Địa chỉ không chọn ghi chú nào. */
+const NO_NOTE = "";
 
 type LoadedNote = { id: string; state: "loading" | "ready" | "missing" | "error"; note?: PersonalNote };
+/**
+ * Ghi chú đang soạn từ nút "+": chưa có `note` là chưa lưu gì; `key` giữ nguyên trình soạn cả lúc ghi chú vừa được tạo (đổi
+ * `?new=1` thành `?id=`), để con trỏ không nhảy. `target` là địa chỉ của bản nháp; `from` là địa chỉ đang rời đi, để trong lúc
+ * URL chưa đổi kịp vẫn hiện bản nháp thay vì nháy về ghi chú cũ.
+ */
+type Composing = { key: string; note: PersonalNote | null; target: string; from: string | null };
+
+let composeSeq = 0;
 
 function sortNotes(notes: PersonalNoteSummary[]): PersonalNoteSummary[] {
   return [...notes].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt));
@@ -43,6 +54,8 @@ export function NotesView() {
   const searchParams = useSearchParams();
   const { notifyError } = useFeedback();
   const selectedId = searchParams.get("id");
+  /** `?new=1`: đang soạn ghi chú mới chưa lưu (có trong URL để nút quay lại của điện thoại về danh sách). */
+  const isNewRoute = !selectedId && searchParams.get("new") === "1";
 
   const [notes, setNotes] = React.useState<PersonalNoteSummary[]>([]);
   const [hasMore, setHasMore] = React.useState(false);
@@ -53,7 +66,7 @@ export function NotesView() {
   const [isWide, setIsWide] = React.useState(true);
   const [loaded, setLoaded] = React.useState<LoadedNote | null>(null);
   const [loadAttempt, setLoadAttempt] = React.useState(0);
-  const [isCreating, setIsCreating] = React.useState(false);
+  const [composing, setComposing] = React.useState<Composing | null>(null);
   const [deleting, setDeleting] = React.useState<{ id: string; title: string } | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
@@ -65,7 +78,7 @@ export function NotesView() {
 
   const navigate = React.useCallback(
     (id: string | null, mode: "push" | "replace" = "replace") => {
-      const href = id ? `${pathname}?id=${encodeURIComponent(id)}` : pathname;
+      const href = id === NEW_NOTE ? `${pathname}?new=1` : id ? `${pathname}?id=${encodeURIComponent(id)}` : pathname;
       if (mode === "push") router.push(href, { scroll: false });
       else router.replace(href, { scroll: false });
     },
@@ -155,24 +168,46 @@ export function NotesView() {
     [patchSummary]
   );
 
-  const handleCreate = async () => {
-    if (isCreating) return;
-    setIsCreating(true);
-    try {
-      const note = await createNote();
-      cacheRef.current.set(note.id, note);
-      setQueryInput("");
-      setQuery("");
-      setSearchOpen(false);
-      setNotes((prev) => sortNotes([toNoteSummary(note), ...prev]));
-      if (!selectedId && !isWide) pushedRef.current = true;
-      navigate(note.id, !selectedId && !isWide ? "push" : "replace");
-    } catch (error) {
-      notifyError(error instanceof Error ? error.message : "Không tạo được ghi chú.");
-    } finally {
-      setIsCreating(false);
+  const routeKey = selectedId ?? (isNewRoute ? NEW_NOTE : NO_NOTE);
+  const composingRef = React.useRef(composing);
+  composingRef.current = composing;
+  // Trình soạn của bản nháp chỉ hiện khi URL trỏ tới nó (hoặc đang rời địa chỉ cũ để tới nó)
+  const composingShown = composing !== null && (routeKey === composing.target || routeKey === composing.from);
+  React.useEffect(() => {
+    if (composing) {
+      if (!composingShown) setComposing(null);
+      else if (composing.from !== null && routeKey === composing.target) setComposing({ ...composing, from: null });
+    } else if (routeKey === NEW_NOTE) {
+      setComposing({ key: `new-${++composeSeq}`, note: null, target: NEW_NOTE, from: null });
     }
+  }, [composing, composingShown, routeKey]);
+
+  // "+" chỉ mở trình soạn trống, chưa gọi API: gõ chữ đầu tiên mới tạo ghi chú, nên không còn ghi chú trống bị bỏ lại
+  const handleCreate = () => {
+    setQueryInput("");
+    setQuery("");
+    setSearchOpen(false);
+    if (composing && !composing.note && composingShown) {
+      document.querySelector<HTMLInputElement>('[data-slot="note-editor"] input')?.focus();
+      return;
+    }
+    setComposing({ key: `new-${++composeSeq}`, note: null, target: NEW_NOTE, from: routeKey });
+    const push = routeKey === NO_NOTE && !isWide;
+    if (push) pushedRef.current = true;
+    navigate(NEW_NOTE, push ? "push" : "replace");
   };
+
+  const handleCreated = React.useCallback(
+    (key: string, note: PersonalNote) => {
+      cacheRef.current.set(note.id, note);
+      setNotes((prev) => sortNotes([toNoteSummary(note), ...prev.filter((item) => item.id !== note.id)]));
+      // Còn đang soạn bản đó thì gắn mã vào URL (thay `?new=1`); đã rời đi thì chỉ thêm vào danh sách
+      if (composingRef.current?.key !== key) return;
+      setComposing({ key, note, target: note.id, from: NEW_NOTE });
+      navigate(note.id);
+    },
+    [navigate]
+  );
 
   const openNote = (id: string) => {
     if (id === selectedId) return;
@@ -214,8 +249,8 @@ export function NotesView() {
     setIsDeleting(false);
   };
 
-  const showList = isWide || !selectedId;
-  const showDetail = isWide || Boolean(selectedId);
+  const showList = isWide || (!selectedId && !isNewRoute);
+  const showDetail = isWide || Boolean(selectedId) || isNewRoute;
   const now = new Date();
   const hasQuery = query.length > 0;
 
@@ -241,7 +276,7 @@ export function NotesView() {
         title="Chưa có ghi chú"
         description="Ghi lại ý riêng cho cuộc họp, công việc. Chỉ mình bạn xem được."
         action={
-          <Button size="pill" onClick={() => void handleCreate()} loading={isCreating}>
+          <Button size="pill" onClick={handleCreate}>
             <Plus />
             Ghi chú mới
           </Button>
@@ -303,7 +338,7 @@ export function NotesView() {
                   <Search />
                 </Button>
               )}
-              <Button variant="ghost" size="icon-xs" aria-label="Ghi chú mới" title="Ghi chú mới" disabled={isCreating} onClick={() => void handleCreate()}>
+              <Button variant="ghost" size="icon-xs" aria-label="Ghi chú mới" title="Ghi chú mới" onClick={handleCreate}>
                 <Plus />
               </Button>
             </div>
@@ -358,7 +393,17 @@ export function NotesView() {
 
       {showDetail && (
         <section data-slot="notes-detail-pane" className="flex min-h-0 min-w-0 flex-1 flex-col bg-card">
-          {!current ? (
+          {composing && composingShown ? (
+            <NoteEditor
+              key={composing.key}
+              note={composing.note}
+              onBack={isWide ? undefined : closeDetail}
+              onSaved={handleSaved}
+              onCreated={(note) => handleCreated(composing.key, note)}
+              onDraft={(patch) => composing.note && handleDraft(composing.note.id, patch)}
+              onDelete={(id) => setDeleting({ id, title: cacheRef.current.get(id)?.title || "Ghi chú không tên" })}
+            />
+          ) : !current ? (
             status === "loading" ? null : status === "ready" && notes.length === 0 && !hasQuery ? (
               <EmptyState
                 density="compact"
@@ -367,7 +412,7 @@ export function NotesView() {
                 title="Chưa có ghi chú"
                 description="Ghi lại ý riêng cho cuộc họp, công việc. Chỉ mình bạn xem được."
                 action={
-                  <Button size="pill" onClick={() => void handleCreate()} loading={isCreating}>
+                  <Button size="pill" onClick={handleCreate}>
                     <Plus />
                     Ghi chú mới
                   </Button>
@@ -382,8 +427,9 @@ export function NotesView() {
               note={current.note}
               onBack={isWide ? undefined : closeDetail}
               onSaved={handleSaved}
+              onCreated={() => undefined}
               onDraft={(patch) => handleDraft(current.note!.id, patch)}
-              onDelete={() => setDeleting({ id: current.note!.id, title: cacheRef.current.get(current.note!.id)?.title || "Ghi chú không tên" })}
+              onDelete={(id) => setDeleting({ id, title: cacheRef.current.get(id)?.title || "Ghi chú không tên" })}
             />
           ) : current.state === "loading" ? (
             <div aria-hidden className="flex flex-1 items-center justify-center">
