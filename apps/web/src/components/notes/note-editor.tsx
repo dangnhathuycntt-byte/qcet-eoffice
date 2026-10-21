@@ -2,16 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Pin, PinOff, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Lock, Pin, PinOff, Trash2 } from "lucide-react";
 import type { PersonalNote } from "@qcet/contracts/personal-notes";
 import {
   PERSONAL_NOTE_CONTENT_MAX,
   PERSONAL_NOTE_TITLE_MAX,
 } from "@qcet/contracts/personal-notes";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { formatRecencyTime } from "@qcet/shared/lib/format/recency";
 import { updateNote } from "@/components/notes/notes-client";
 import { useNoteAutosave, type NoteSaveState } from "@/components/notes/use-note-autosave";
 
@@ -54,9 +54,19 @@ export function NoteEditor({ note, onBack, onSaved, onCreated, onDraft, onDelete
   const [content, setContent] = React.useState(note?.content ?? "");
   const [pinned, setPinned] = React.useState(note?.pinned ?? false);
   const [pinError, setPinError] = React.useState(false);
-  const titleRef = React.useRef<HTMLInputElement>(null);
-  const contentId = React.useId();
-  const { state, noteId, schedule: scheduleSave, retry } = useNoteAutosave(note?.id ?? null, { onSaved, onCreated });
+  const [editedAt, setEditedAt] = React.useState(note?.updatedAt ?? null);
+  const titleRef = React.useRef<HTMLTextAreaElement>(null);
+  const contentRef = React.useRef<HTMLTextAreaElement>(null);
+  const { state, noteId, schedule: scheduleSave, retry } = useNoteAutosave(note?.id ?? null, {
+    onSaved: (saved) => {
+      setEditedAt(saved.updatedAt);
+      onSaved(saved);
+    },
+    onCreated: (created) => {
+      setEditedAt(created.updatedAt);
+      onCreated(created);
+    },
+  });
   const schedule = (patch: { title?: string; content?: string }) => {
     onDraft(patch);
     scheduleSave(patch);
@@ -66,10 +76,8 @@ export function NoteEditor({ note, onBack, onSaved, onCreated, onDraft, onDelete
 
   // Ghi chú trống (vừa bấm "+") mở ra là gõ được ngay
   React.useEffect(() => {
-    if (!titleRef.current?.value && !(document.getElementById(contentId) as HTMLTextAreaElement | null)?.value) {
-      titleRef.current?.focus();
-    }
-  }, [contentId]);
+    if (!titleRef.current?.value && !contentRef.current?.value) titleRef.current?.focus();
+  }, []);
 
   const togglePin = async () => {
     if (!noteId) return;
@@ -84,24 +92,21 @@ export function NoteEditor({ note, onBack, onSaved, onCreated, onDraft, onDelete
     }
   };
 
+  const focusContentEnd = () => {
+    const el = contentRef.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  };
+
   return (
     <div data-slot="note-editor" className="flex min-h-0 flex-1 flex-col">
+      {/* Thanh đầu chỉ còn thao tác; nơi gắn và giờ sửa nằm dưới tiêu đề như dòng thông tin của tài liệu */}
       <header className="flex h-11 shrink-0 items-center gap-1.5 border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
         {onBack && (
           <Button variant="ghost" size="icon-xs" onClick={onBack} aria-label="Quay lại danh sách ghi chú">
             <ArrowLeft />
           </Button>
-        )}
-        {entity ? (
-          <Link
-            href={entity.href}
-            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            Gắn với {entity.label.toLowerCase()}
-            <ArrowUpRight className="size-3.5" />
-          </Link>
-        ) : (
-          <span className="truncate text-xs text-muted-foreground">Chỉ mình bạn xem được</span>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <span
@@ -138,45 +143,73 @@ export function NoteEditor({ note, onBack, onSaved, onCreated, onDraft, onDelete
         </div>
       </header>
 
+      {/* Một mặt viết liền như Notion/Bear: tiêu đề, dòng thông tin, nội dung; lề trái như trang chi tiết nhiệm vụ, không đóng
+          khung giữa (người dùng chê cột hẹp giữa trang rộng ở trang cuộc họp 21/10/2026). Bấm vào khoảng trống bên dưới là
+          viết tiếp cuối nội dung. */}
       <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-1 px-4 py-5 sm:px-8">
-          <Input
+        <div className="flex min-h-full flex-col px-4 pb-16 pt-6 sm:px-6 min-[90rem]:px-12">
+          <Textarea
             ref={titleRef}
-            variant="menu"
+            variant="bare"
+            compact
+            autoResize
+            countOnlyNearLimit
+            rows={1}
             value={title}
             maxLength={PERSONAL_NOTE_TITLE_MAX}
             disabled={gone}
-            placeholder="Tiêu đề ghi chú"
+            placeholder="Tiêu đề"
             aria-label="Tiêu đề ghi chú"
             onChange={(event) => {
-              setTitle(event.target.value);
-              schedule({ title: event.target.value });
+              // Tiêu đề một đoạn: dán chữ nhiều dòng thì nối lại bằng dấu cách
+              const next = event.target.value.replace(/\s*\r?\n\s*/g, " ");
+              setTitle(next);
+              schedule({ title: next });
             }}
             onKeyDown={(event) => {
-              // Enter ở tiêu đề chuyển xuống nội dung như trình soạn thảo ghi chú thông thường
-              if (event.key === "Enter") {
+              // Enter ở tiêu đề chuyển xuống nội dung như trình soạn ghi chú thông thường
+              if (event.key === "Enter" && !event.nativeEvent.isComposing) {
                 event.preventDefault();
-                document.getElementById(contentId)?.focus();
+                contentRef.current?.focus();
               }
             }}
-            className="h-9 px-0 text-lg font-semibold sm:h-9 sm:text-lg"
+            className="py-0 text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-xl"
           />
+          {/* Không dùng dấu "·" ngăn cách: xuống dòng ở điện thoại thì dấu treo cuối dòng */}
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <Lock aria-hidden className="size-3" />
+              Chỉ mình bạn xem được
+            </span>
+            {entity && (
+              <Link href={entity.href} className="inline-flex items-center gap-0.5 rounded-sm transition-colors hover:text-foreground hover:underline">
+                {entity.label}
+                <ArrowUpRight aria-hidden className="size-3" />
+              </Link>
+            )}
+            {editedAt && <span>Sửa lúc {formatRecencyTime(editedAt, new Date()).full}</span>}
+          </p>
           <Textarea
-            id={contentId}
+            ref={contentRef}
+            variant="bare"
             autoResize
             compact
             countOnlyNearLimit
             value={content}
             maxLength={PERSONAL_NOTE_CONTENT_MAX}
             disabled={gone}
-            placeholder="Viết ghi chú… (chỉ mình bạn xem được)"
+            placeholder="Viết ghi chú…"
             aria-label="Nội dung ghi chú"
             onChange={(event) => {
               setContent(event.target.value);
               schedule({ content: event.target.value });
             }}
-            className="min-h-[50vh] bg-transparent px-0 py-1 leading-6 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none sm:min-h-[50vh]"
+            className="mt-4 py-0 leading-6"
           />
+          <div aria-hidden className="min-h-16 flex-1 cursor-text" onMouseDown={(event) => {
+            event.preventDefault();
+            focusContentEnd();
+          }} />
         </div>
       </div>
     </div>
