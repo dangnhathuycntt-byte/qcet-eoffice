@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Pin, Plus, Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import type { PersonalNote, PersonalNoteSummary } from "@qcet/contracts/personal-notes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -19,12 +20,19 @@ import {
   fetchNotes,
   toNoteSummary,
 } from "@/components/notes/notes-client";
-import { formatNotificationTime } from "@/lib/notification-inbox";
+import { IconSidebarCalendar, IconSidebarTasks } from "@/components/layout/sidebar-rounded-icons";
+import { formatTime } from "@qcet/shared/lib/format/date";
+import { formatRecencyTime, groupByRecency, type RecencyGroup } from "@qcet/shared/lib/format/recency";
 import { cn } from "@/lib/utils";
 
 /** Từ bề rộng này hiện hai khung (danh sách + soạn); hẹp hơn thì một khung như Hộp thư. */
 const WIDE_MIN_WIDTH = 720;
 const SEARCH_DEBOUNCE_MS = 250;
+/** Ghi chú gắn với cuộc họp/nhiệm vụ: icon nhỏ cuối tiêu đề, cùng icon với mục đó ở sidebar. */
+const NOTE_ENTITY = {
+  meeting: { Icon: IconSidebarCalendar, label: "Gắn với cuộc họp" },
+  task: { Icon: IconSidebarTasks, label: "Gắn với nhiệm vụ" },
+} as const;
 /** Đích điều hướng tới bản nháp ghi chú mới (`?new=1`). */
 const NEW_NOTE = "__new__";
 /** Địa chỉ không chọn ghi chú nào. */
@@ -253,6 +261,15 @@ export function NotesView() {
   const showDetail = isWide || Boolean(selectedId) || isNewRoute;
   const now = new Date();
   const hasQuery = query.length > 0;
+  const pinnedNotes = notes.filter((item) => item.pinned);
+  const listGroups: RecencyGroup<PersonalNoteSummary>[] = [
+    ...(pinnedNotes.length > 0 ? [{ key: "pinned", label: "Đã ghim", items: pinnedNotes }] : []),
+    ...groupByRecency(
+      notes.filter((item) => !item.pinned),
+      (item) => item.updatedAt,
+      now
+    ),
+  ];
 
   const listEmpty =
     status === "error" ? (
@@ -359,29 +376,28 @@ export function NotesView() {
               isWide && !selectedId ? null : listEmpty
             ) : (
               <>
-                <ul aria-label="Danh sách ghi chú" className="space-y-0.5">
-                  {notes.map((item) => (
-                    <li key={item.id}>
-                      <Pressable
-                        onClick={() => openNote(item.id)}
-                        aria-current={item.id === selectedId ? "true" : undefined}
-                        className={cn(
-                          "flex h-12 w-full flex-col justify-center gap-0.5 rounded-lg px-3 text-left transition-colors focus-visible:ring-inset",
-                          item.id === selectedId ? "bg-selected" : "hover:bg-accent/60"
-                        )}
-                      >
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <span className={cn("min-w-0 flex-1 truncate text-compact", item.title ? "font-medium text-foreground" : "text-muted-foreground")}>
-                            {item.title || "Ghi chú không tên"}
-                          </span>
-                          {item.pinned && <Pin aria-label="Đã ghim" className="size-3 shrink-0 text-muted-foreground" />}
-                          <span className="shrink-0 text-xs text-muted-foreground">{formatNotificationTime(item.updatedAt, now)}</span>
-                        </span>
-                        <span className="truncate text-xs text-muted-foreground">{item.excerpt || "Chưa có nội dung"}</span>
-                      </Pressable>
-                    </li>
+                {/* Chia theo thời gian như Apple Notes: ghi chú ghim lên đầu, rồi Hôm nay, Hôm qua, 7 ngày qua, từng tháng. Giờ
+                    nằm đầu dòng phụ như Apple Notes thay cho cột "17 giờ" lặp lại ở mọi hàng. */}
+                <div data-slot="notes-list" aria-label="Danh sách ghi chú" role="group">
+                  {listGroups.map((group) => (
+                    <div key={group.key}>
+                      <p className="flex h-7 select-none items-center px-3 text-xs text-muted-foreground">{group.label}</p>
+                      <ul aria-label={group.label} className="space-y-0.5">
+                        {group.items.map((item) => (
+                          <li key={item.id}>
+                            <NoteRow
+                              item={item}
+                              timeOnly={group.key === "today" || group.key === "yesterday"}
+                              selected={item.id === selectedId}
+                              now={now}
+                              onOpen={() => openNote(item.id)}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
                 {hasMore && (
                   <p className="px-3 pt-2 text-xs text-muted-foreground">Chỉ hiện các ghi chú mới nhất. Dùng ô tìm để tìm ghi chú cũ hơn.</p>
                 )}
@@ -474,5 +490,73 @@ export function NotesView() {
         description="Nội dung ghi chú sẽ mất hẳn."
       />
     </div>
+  );
+}
+
+/**
+ * Một hàng 48px như Apple Notes: tiêu đề (chưa đặt thì đoạn đầu nội dung) cắt cuối kèm tooltip khi bị cắt, icon nhỏ nếu gắn
+ * với cuộc họp/nhiệm vụ; dòng phụ là giờ rồi đoạn đầu nội dung. Nhóm Hôm nay/Hôm qua đã nói ngày nên chỉ hiện giờ.
+ */
+function NoteRow({
+  item,
+  timeOnly,
+  selected,
+  now,
+  onOpen,
+}: {
+  item: PersonalNoteSummary;
+  timeOnly: boolean;
+  selected: boolean;
+  now: Date;
+  onOpen: () => void;
+}) {
+  const titleRef = React.useRef<HTMLSpanElement>(null);
+  const [titleCut, setTitleCut] = React.useState(false);
+  const title = item.title.trim();
+  const rowTitle = title || item.excerpt || "Ghi chú trống";
+  const preview = title ? item.excerpt || "Chưa có nội dung" : "";
+  const time = formatRecencyTime(item.updatedAt, now);
+  const entity = item.entityType ? NOTE_ENTITY[item.entityType] : null;
+  return (
+    <Pressable
+      onClick={onOpen}
+      onPointerEnter={() => {
+        const el = titleRef.current;
+        if (el) setTitleCut(el.scrollWidth > el.clientWidth);
+      }}
+      aria-current={selected ? "true" : undefined}
+      className={cn(
+        "flex h-12 w-full flex-col justify-center gap-0.5 rounded-lg px-3 text-left transition-colors focus-visible:ring-inset",
+        selected ? "bg-selected" : "hover:bg-accent/60"
+      )}
+    >
+      <span className="flex w-full min-w-0 items-center gap-1.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              ref={titleRef}
+              className={cn("min-w-0 flex-1 truncate text-compact", title || item.excerpt ? "font-medium text-foreground" : "text-muted-foreground")}
+            >
+              {rowTitle}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="start" hidden={!titleCut}>
+            {rowTitle}
+          </TooltipContent>
+        </Tooltip>
+        {entity && (
+          <span title={entity.label} className="flex shrink-0 text-muted-foreground">
+            <entity.Icon size={12} className="size-3" />
+            <span className="sr-only">{entity.label}</span>
+          </span>
+        )}
+      </span>
+      <span className="flex w-full min-w-0 items-center gap-2 text-xs text-muted-foreground">
+        <span className="shrink-0 tabular-nums" title={time.full}>
+          {timeOnly ? formatTime(item.updatedAt) : time.short}
+        </span>
+        {preview && <span className="min-w-0 truncate">{preview}</span>}
+      </span>
+    </Pressable>
   );
 }
