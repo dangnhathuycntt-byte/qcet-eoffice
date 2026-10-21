@@ -17,6 +17,32 @@ import { loadAuthorizationContext } from '@/server/authorization/authorization-c
 import { buildTaskReadWhere } from '@/server/tasks/task-query-service';
 import { buildDocumentReadWhere } from '@/server/policies/document-policy';
 
+/**
+ * Có từ khóa thì lấy dư ứng viên rồi mới chấm điểm và cắt. Trước đây lấy đúng `limit` dòng theo A→Z (hoặc theo hạn) rồi
+ * mới chấm, nên gõ "Huy" thì 20 người có chức danh "Chuyên viên" (chứa "huy") chiếm chỗ, "Đặng Nhật Huy" không lọt vào.
+ */
+const CANDIDATE_POOL = { tasks: 100, users: 200, documents: 50 } as const;
+
+/**
+ * Điểm của một người: khớp tên (kèm email, điện thoại) xếp trên khớp chức danh cùng bậc. Tên riêng tiếng Việt đứng cuối nên
+ * khớp trọn chữ ("Huy" trong "Đặng Nhật Huy") được xếp trên khớp đầu chuỗi ("Huỳnh…" bỏ dấu cũng bắt đầu bằng "huy").
+ */
+export function scoreSearchUser(
+  user: { name: string; email: string; phone?: string | null; title?: string | null },
+  q: string
+): number {
+  const rawQ = q.trim().toLowerCase();
+  const rawName = ` ${user.name.toLowerCase()} `;
+  const wholeWord = rawName.includes(` ${rawQ} `)
+    ? 88
+    : ` ${foldVietnamese(user.name)} `.includes(` ${foldVietnamese(rawQ)} `)
+      ? 82
+      : 0;
+  const nameScore = scoreVietnameseSearch(user.name, q, [user.email, user.phone || ''].filter(Boolean));
+  const titleScore = user.title ? Math.min(scoreVietnameseSearch(user.title, q), 60) : 0;
+  return Math.max(nameScore, wholeWord, titleScore);
+}
+
 export async function searchGlobal(
   userId: string,
   { q, limit, scope }: { q: string; limit: number; scope?: z.infer<typeof OperationalScopeSchema> }
@@ -187,7 +213,7 @@ export async function searchGlobal(
         },
       },
       orderBy: q ? [{ dueDate: 'asc' }, { updatedAt: 'desc' }] : [{ updatedAt: 'desc' }],
-      take: Math.min(limit, 50),
+      take: q ? CANDIDATE_POOL.tasks : Math.min(limit, 50),
     }),
     prisma.user.findMany({
       where: usersWhere,
@@ -201,7 +227,7 @@ export async function searchGlobal(
         avatarUrl: true,
       },
       orderBy: { name: 'asc' },
-      take: Math.min(limit, 20),
+      take: q ? CANDIDATE_POOL.users : Math.min(limit, 20),
     }),
     prisma.document.findMany({
       where: documentsWhere,
@@ -218,7 +244,7 @@ export async function searchGlobal(
         urgency: true,
       },
       orderBy: [{ issuedDate: "desc" }],
-      take: q ? 20 : 5,
+      take: q ? CANDIDATE_POOL.documents : 5,
     }).catch(() => []),
   ]);
 
@@ -247,18 +273,7 @@ export async function searchGlobal(
       .map((item) => item.task);
 
     sortedUsers = [...rawUsers]
-      .map((user) => {
-        const keywords = [
-          user.email,
-          user.phone || '',
-          user.title || '',
-        ].filter(Boolean);
-        const score = Math.max(
-          scoreVietnameseSearch(user.name, q, keywords),
-          user.title ? scoreVietnameseSearch(user.title, q) : 0
-        );
-        return { user, score };
-      })
+      .map((user) => ({ user, score: scoreSearchUser(user, q) }))
       .sort((a, b) => b.score - a.score)
       .slice(0, Math.min(limit, 20))
       .map((item) => item.user);

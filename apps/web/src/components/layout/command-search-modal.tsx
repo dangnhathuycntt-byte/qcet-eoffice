@@ -2,53 +2,41 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  X,
-  CheckSquare,
-  Users,
-  LayoutDashboard,
-  Calendar,
-  FileText,
-  Building2,
-  Inbox,
-  PlusCircle,
-  ArrowRight,
-  Loader2,
-  Mail,
-  Phone,
-  ChevronRight,
-  ShieldCheck,
-  Clock,
-  ExternalLink,
-  Trash2,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, LayoutDashboard, Loader2, Search, UserRound, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { getRouteByPath } from "@/lib/navigation/canonical-navigation-registry";
 import { useRuntimeFeature } from "@/lib/runtime-features";
-import { AgentIcon } from "@/components/icons/agent-icon";
 import {
-  highlightMatchSegments,
-  scoreVietnameseSearch,
-} from "@qcet/shared/lib/search/vietnamese-search";
-import type {
-  SearchTaskResult,
-  SearchUserResult,
-  SearchDocumentResult,
-} from "@qcet/contracts/search";
+  IconSidebarAssistant,
+  IconSidebarCalendar,
+  IconSidebarCompose,
+  IconSidebarDocLines,
+  IconSidebarHistory,
+  IconSidebarInboxIn,
+  IconSidebarMail,
+  IconSidebarPeople,
+  IconSidebarSend,
+  IconSidebarTasks,
+} from "@/components/layout/sidebar-rounded-icons";
+import { TaskIconStatusReview } from "@qcet/shared/lib/icons/task-icons";
+import { highlightMatchSegments, scoreVietnameseSearch } from "@qcet/shared/lib/search/vietnamese-search";
+import type { SearchTaskResult, SearchUserResult, SearchDocumentResult } from "@qcet/contracts/search";
 import { StandardDialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { DUE_SOON_DAYS } from "@/components/tasks/table/utils/table-date-helpers";
+import { daysUntil, formatRelativeDate } from "@/lib/format/relative-date";
 import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
+import { formatDisplayDate } from "@qcet/shared/lib/format/date";
 
 export interface QuickAction {
   id: string;
   title: string;
-  description: string;
   category: "navigation" | "action";
   icon: React.ElementType;
-  shortcut?: string;
   keywords?: string[];
   action: (inNewTab?: boolean) => void;
 }
@@ -75,21 +63,7 @@ export interface CommandSearchModalProps {
  * - "task" | "document" | "user" -> global search result intents
  * - "recent"     -> account-scoped recently viewed entities
  */
-export type CommandPaletteItemKind =
-  | "navigation"
-  | "command"
-  | "task"
-  | "document"
-  | "user"
-  | "recent";
-
-export type CommandPaletteTab =
-  | "all"
-  | "navigation"
-  | "tasks"
-  | "documents"
-  | "people"
-  | "commands";
+export type CommandPaletteItemKind = "navigation" | "command" | "task" | "document" | "user" | "recent";
 
 // T39: one label per intent group, rendered as visually separated sections.
 export const COMMAND_INTENT_LABELS: Record<CommandPaletteItemKind, string> = {
@@ -103,6 +77,9 @@ export const COMMAND_INTENT_LABELS: Record<CommandPaletteItemKind, string> = {
 
 const RECENT_SEARCHES_STORAGE_KEY = "qcet_recent_searches";
 const MAX_RECENT_ITEMS = 5;
+/** Mỗi nhóm kết quả hiện tối đa 5 dòng; muốn xem hết thì mở trang Tìm kiếm ở dòng cuối */
+const GROUP_LIMIT = 5;
+const LISTBOX_ID = "command-palette-listbox";
 
 /**
  * T41: Account-safe recents. The storage namespace is derived from the
@@ -118,10 +95,7 @@ export function scopedRecentSearchesKey(userId?: string | null): string {
  * authenticated account so a client-side account switch (without a full reload)
  * can never surface the previous account's cached tasks/documents/users.
  */
-export function scopedSearchCacheKey(
-  userId: string | null | undefined,
-  query: string
-): string {
+export function scopedSearchCacheKey(userId: string | null | undefined, query: string): string {
   return `${userId || "anonymous"}::${query.trim()}`;
 }
 
@@ -133,50 +107,55 @@ export function canonicalNavLabel(href: string, fallback: string): string {
   return getRouteByPath(href)?.label || fallback;
 }
 
-function HighlightedText({
-  text,
-  query,
-  className,
-}: {
-  text: string;
-  query: string;
-  className?: string;
-}) {
-  const segments = React.useMemo(
-    () => highlightMatchSegments(text, query),
-    [text, query]
-  );
+/** Icon cùng bộ với sidebar (`sidebar-rounded-icons`, nét 1,25px) và Lucide (cùng nét qua LucideProvider) */
+const DOCUMENT_TYPE_ICON: Record<string, React.ElementType> = {
+  VAN_BAN_DEN: IconSidebarInboxIn,
+  VAN_BAN_DI: IconSidebarSend,
+  TO_TRINH_NOI_BO: IconSidebarDocLines,
+};
 
+const ICON_CLASS = "size-4 shrink-0 text-muted-foreground";
+
+/** Phần khớp in đậm (như Linear), không tô màu nền */
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  const segments = React.useMemo(() => highlightMatchSegments(text, query), [text, query]);
   return (
-    <span className={className}>
+    <>
       {segments.map((segment, idx) =>
         segment.match ? (
-          <mark
-            key={idx}
-            className="bg-warning/15 text-warning font-medium rounded-xs px-0.5"
-          >
+          <span key={idx} className="font-semibold">
             {segment.text}
-          </mark>
+          </span>
         ) : (
-          <span key={idx}>{segment.text}</span>
+          <React.Fragment key={idx}>{segment.text}</React.Fragment>
         )
       )}
-    </span>
+    </>
   );
+}
+
+type FlatItem =
+  | { kind: "recent"; item: RecentSearchItem }
+  | { kind: "navigation" | "command"; item: QuickAction }
+  | { kind: "task"; item: SearchTaskResult }
+  | { kind: "document"; item: SearchDocumentResult }
+  | { kind: "user"; item: SearchUserResult }
+  | { kind: "all-results"; query: string };
+
+function flatItemKey(item: FlatItem): string {
+  if (item.kind === "all-results") return "all-results";
+  return `${item.kind}-${item.item.id}`;
 }
 
 export function CommandSearchModal({ className }: CommandSearchModalProps = {}) {
   const router = useRouter();
   const { user } = useAuth();
   const assistantEnabled = useRuntimeFeature("assistant");
-  const recentStorageKey = React.useMemo(
-    () => scopedRecentSearchesKey(user?.id),
-    [user?.id]
-  );
+  const recentStorageKey = React.useMemo(() => scopedRecentSearchesKey(user?.id), [user?.id]);
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [activeTab, setActiveTab] = React.useState<CommandPaletteTab>("all");
   const [isLoading, setIsLoading] = React.useState(false);
+  const [searchFailed, setSearchFailed] = React.useState(false);
   const [tasks, setTasks] = React.useState<SearchTaskResult[]>([]);
   const [documents, setDocuments] = React.useState<SearchDocumentResult[]>([]);
   const [users, setUsers] = React.useState<SearchUserResult[]>([]);
@@ -185,17 +164,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
-  const dialogRef = React.useRef<HTMLDivElement>(null);
-  const tabsRef = React.useRef<HTMLDivElement>(null);
   const searchCacheRef = React.useRef<
-    Map<
-      string,
-      {
-        tasks: SearchTaskResult[];
-        documents: SearchDocumentResult[];
-        users: SearchUserResult[];
-      }
-    >
+    Map<string, { tasks: SearchTaskResult[]; documents: SearchDocumentResult[]; users: SearchUserResult[] }>
   >(new Map());
 
   // Load account-scoped recent searches whenever the modal opens or the
@@ -214,50 +184,49 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       setRecentSearches([]);
     } catch {
       setRecentSearches([]);
-      // Ignore localStorage errors
     }
   }, [isOpen, recentStorageKey]);
 
   const saveRecentItem = React.useCallback(
     (item: RecentSearchItem) => {
-      try {
-        setRecentSearches((prev) => {
-          const filtered = prev.filter((i) => i.id !== item.id);
-          const updated = [item, ...filtered].slice(0, MAX_RECENT_ITEMS);
-          try {
-            localStorage.setItem(recentStorageKey, JSON.stringify(updated));
-          } catch {
-            // ignore
-          }
-          return updated;
-        });
-      } catch {
-        // ignore
-      }
+      setRecentSearches((prev) => {
+        const updated = [item, ...prev.filter((i) => i.id !== item.id)].slice(0, MAX_RECENT_ITEMS);
+        try {
+          localStorage.setItem(recentStorageKey, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
     },
     [recentStorageKey]
   );
 
-  const clearRecentSearches = React.useCallback(
-    (e?: React.MouseEvent) => {
-      if (e) e.stopPropagation();
-      try {
-        localStorage.removeItem(recentStorageKey);
-        setRecentSearches([]);
-      } catch {
-        // ignore
-      }
-    },
-    [recentStorageKey]
-  );
+  const clearRecentSearches = React.useCallback(() => {
+    try {
+      localStorage.removeItem(recentStorageKey);
+    } catch {
+      // ignore
+    }
+    setRecentSearches([]);
+    setSelectedIndex(0);
+    inputRef.current?.focus();
+  }, [recentStorageKey]);
 
-  // Close modal helper
   const handleClose = React.useCallback(() => {
     setIsOpen(false);
     setQuery("");
   }, []);
 
-  // Task click / select handler
+  const go = React.useCallback(
+    (href: string, inNewTab = false) => {
+      handleClose();
+      if (inNewTab) window.open(href, "_blank");
+      else router.push(href);
+    },
+    [handleClose, router]
+  );
+
   const handleSelectTask = React.useCallback(
     (task: SearchTaskResult, inNewTab = false) => {
       saveRecentItem({
@@ -276,11 +245,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         return;
       }
 
-      window.dispatchEvent(
-        new CustomEvent("qcet:open-task-detail", {
-          detail: { taskId: task.id },
-        })
-      );
+      window.dispatchEvent(new CustomEvent("qcet:open-task-detail", { detail: { taskId: task.id } }));
 
       const params = new URLSearchParams(window.location.search);
       params.set("taskId", task.id);
@@ -290,7 +255,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     [handleClose, router, saveRecentItem]
   );
 
-  // Document click / select handler
   const handleSelectDocument = React.useCallback(
     (doc: SearchDocumentResult, inNewTab = false) => {
       saveRecentItem({
@@ -301,49 +265,34 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         timestamp: Date.now(),
         data: doc,
       });
-
-      handleClose();
-
-      const targetUrl = getDocumentHref(doc.id);
-      if (inNewTab) {
-        window.open(targetUrl, "_blank");
-      } else {
-        router.push(targetUrl);
-      }
+      go(getDocumentHref(doc.id), inNewTab);
     },
-    [handleClose, router, saveRecentItem]
+    [go, saveRecentItem]
   );
 
-  // User contact handler
+  // Hàng không hiện email nên Enter mở danh bạ lọc theo tên người đó, không bật ứng dụng thư
   const handleSelectUser = React.useCallback(
-    (user: SearchUserResult) => {
+    (person: SearchUserResult, inNewTab = false) => {
       saveRecentItem({
-        id: `user-${user.id}`,
+        id: `user-${person.id}`,
         type: "user",
-        title: user.name,
-        subtitle: `${user.title || "Cán bộ"} · QCET`,
+        title: person.name,
+        subtitle: person.title || "Cán bộ",
         timestamp: Date.now(),
-        data: user,
+        data: person,
       });
-
-      handleClose();
-      if (user.email) {
-        window.location.href = `mailto:${user.email}`;
-      }
+      go(`/org?q=${encodeURIComponent(person.name)}`, inNewTab);
     },
-    [handleClose, saveRecentItem]
+    [go, saveRecentItem]
   );
 
-  // Define Quick Actions
   const quickActions = React.useMemo<QuickAction[]>(() => {
     return [
       {
         id: "create-task",
         title: "Tạo nhiệm vụ",
-        description: "Khởi tạo công việc / nhiệm vụ mới cấp trường hoặc cấp đơn vị",
         category: "action",
-        icon: PlusCircle,
-        shortcut: "N",
+        icon: IconSidebarCompose,
         keywords: ["tao nhiem vu", "tao cong viec", "them nhiem vu", "new task", "create task"],
         action: () => {
           handleClose();
@@ -353,152 +302,95 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       {
         id: "action-review-tasks",
         title: "Xem việc chờ duyệt",
-        description: "Lọc các nhiệm vụ đang chờ phê duyệt hoặc nghiệm thu kết quả",
         category: "action",
-        icon: ShieldCheck,
-        shortcut: "P",
+        icon: TaskIconStatusReview,
         keywords: ["xem viec cho duyet", "cho duyet", "phe duyet", "nghiem thu", "kiem tra", "pending", "review"],
         action: (newTab) => {
-          handleClose();
-          window.dispatchEvent(
-            new CustomEvent("qcet:set-smart-tab", { detail: { tab: "review" } })
-          );
-          if (newTab) window.open("/tasks?tab=review", "_blank");
-          else router.push("/tasks?tab=review");
+          window.dispatchEvent(new CustomEvent("qcet:set-smart-tab", { detail: { tab: "review" } }));
+          go("/tasks?tab=review", newTab);
         },
       },
       {
         id: "action-my-tasks",
         title: "Đổi sang Của tôi",
-        description: "Chuyển phạm vi xem sang công việc cá nhân được giao",
         category: "action",
-        icon: CheckSquare,
-        shortcut: "M",
+        icon: UserRound,
         keywords: ["doi sang cua toi", "cua toi", "ca nhan", "my tasks", "my", "toi"],
         action: (newTab) => {
-          handleClose();
-          window.dispatchEvent(
-            new CustomEvent("qcet:set-task-scope", { detail: { scope: "my" } })
-          );
-          window.dispatchEvent(
-            new CustomEvent("qcet:set-smart-tab", { detail: { tab: "my_tasks" } })
-          );
-          if (newTab) window.open("/tasks?scope=my", "_blank");
-          else router.push("/tasks?scope=my");
-        },
-      },
-      {
-        id: "nav-documents",
-        title: canonicalNavLabel("/documents", "Văn bản"),
-        description: "Sổ văn bản điện tử, văn bản đến, đi và chỉ đạo điều hành",
-        category: "navigation",
-        icon: FileText,
-        shortcut: "V",
-        keywords: ["di toi van ban", "van ban", "vb", "so van ban", "cong van", "tai lieu", "documents"],
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/documents", "_blank");
-          else router.push("/documents");
-        },
-      },
-      {
-        id: "nav-meetings",
-        title: canonicalNavLabel("/meetings", "Cuộc họp"),
-        description: "Cuộc họp của đơn vị: chương trình, biên bản và quyết nghị",
-        category: "navigation",
-        icon: Calendar,
-        shortcut: "C",
-        keywords: ["di toi cuoc hop", "cuoc hop", "hop", "meetings", "lich hop", "bien ban", "lich cong tac"],
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/meetings", "_blank");
-          else router.push("/meetings");
+          window.dispatchEvent(new CustomEvent("qcet:set-task-scope", { detail: { scope: "my" } }));
+          window.dispatchEvent(new CustomEvent("qcet:set-smart-tab", { detail: { tab: "my_tasks" } }));
+          go("/tasks?scope=my", newTab);
         },
       },
       {
         id: "nav-tasks",
         title: canonicalNavLabel("/tasks", "Nhiệm vụ"),
-        description: "Xem và quản lý bảng nhiệm vụ, tiến độ phân công",
         category: "navigation",
-        icon: CheckSquare,
-        shortcut: "T",
+        icon: IconSidebarTasks,
         keywords: ["danh sach cong viec", "nhiem vu", "tasks"],
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/tasks", "_blank");
-          else router.push("/tasks");
-        },
+        action: (newTab) => go("/tasks", newTab),
       },
       {
-        id: "nav-portal",
-        title: "Cổng chỉ đạo Ban Giám hiệu",
-        description: "Trung tâm điều hành và giải quyết điểm nghẽn toàn trường",
+        id: "nav-documents",
+        title: canonicalNavLabel("/documents", "Văn bản"),
         category: "navigation",
-        icon: ShieldCheck,
-        keywords: ["cong chi dao", "ban giam hieu", "portal", "diem nghen"],
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/", "_blank");
-          else router.push("/");
-        },
+        icon: IconSidebarInboxIn,
+        keywords: ["di toi van ban", "van ban", "vb", "so van ban", "cong van", "tai lieu", "documents"],
+        action: (newTab) => go("/documents", newTab),
       },
       {
-        id: "nav-org",
-        title: canonicalNavLabel("/org", "Tổ chức"),
-        description: "Sơ đồ phòng ban, khoa và thông tin cán bộ giảng viên",
+        id: "nav-meetings",
+        title: canonicalNavLabel("/meetings", "Cuộc họp"),
         category: "navigation",
-        icon: Building2,
-        keywords: ["co cau to chuc", "nhan su", "phong ban", "khoa", "to chuc"],
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/org", "_blank");
-          else router.push("/org");
-        },
+        icon: IconSidebarCalendar,
+        keywords: ["di toi cuoc hop", "cuoc hop", "hop", "meetings", "lich hop", "bien ban", "lich cong tac"],
+        action: (newTab) => go("/meetings", newTab),
       },
       {
         id: "nav-inbox",
         title: canonicalNavLabel("/inbox", "Hộp thư"),
-        description: "Hộp thư thông báo chỉ đạo, cảnh báo hạn chót và giao việc",
         category: "navigation",
-        icon: Inbox,
-        shortcut: "I",
+        icon: IconSidebarMail,
         keywords: ["hop thu", "inbox", "thong bao", "notifications", "canh bao", "nhat ky"],
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/inbox", "_blank");
-          else router.push("/inbox");
-        },
+        action: (newTab) => go("/inbox", newTab),
       },
-      // Trợ lý chỉ hiện khi cờ bật; không gán phím tắt để không trùng các phím đã dùng
+      {
+        id: "nav-portal",
+        title: "Cổng chỉ đạo Ban Giám hiệu",
+        category: "navigation",
+        icon: LayoutDashboard,
+        keywords: ["cong chi dao", "ban giam hieu", "portal", "diem nghen"],
+        action: (newTab) => go("/", newTab),
+      },
+      {
+        id: "nav-org",
+        title: canonicalNavLabel("/org", "Tổ chức"),
+        category: "navigation",
+        icon: IconSidebarPeople,
+        keywords: ["co cau to chuc", "nhan su", "phong ban", "khoa", "to chuc", "danh ba"],
+        action: (newTab) => go("/org", newTab),
+      },
+      // Trợ lý chỉ hiện khi cờ bật
       ...(assistantEnabled
         ? [
             {
               id: "nav-assistant",
               title: "Trợ lý",
-              description: "Hỏi đáp chỉ đọc về nhiệm vụ, văn bản và lịch họp",
               category: "navigation" as const,
-              icon: AgentIcon,
+              icon: IconSidebarAssistant,
               keywords: ["tro ly", "tro ly ai", "hoi dap", "assistant", "agent", "hoi"],
-              action: (newTab?: boolean) => {
-                handleClose();
-                if (newTab) window.open("/assistant", "_blank");
-                else router.push("/assistant");
-              },
+              action: (newTab?: boolean) => go("/assistant", newTab),
             },
           ]
         : []),
     ];
-  }, [handleClose, router, assistantEnabled]);
+  }, [handleClose, go, assistantEnabled]);
 
-  // Global event listeners
+  // Ctrl/Cmd+K bật/tắt, sự kiện mở từ sidebar/topbar, Esc đóng
   React.useEffect(() => {
     const handleOpenEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{ open?: boolean } | undefined>;
-      if (customEvent?.detail?.open !== undefined) {
-        setIsOpen(customEvent.detail.open);
-      } else {
-        setIsOpen(true);
-      }
+      setIsOpen(customEvent?.detail?.open ?? true);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -509,14 +401,12 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           handleClose();
           return;
         }
-
         if (!e.defaultPrevented) {
           e.preventDefault();
           setIsOpen(true);
         }
         return;
       }
-
       if (e.key === "Escape" && isOpen) {
         e.preventDefault();
         handleClose();
@@ -525,39 +415,33 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
 
     window.addEventListener("qcet:open-command-search", handleOpenEvent);
     window.addEventListener("keydown", handleKeyDown);
-
     return () => {
       window.removeEventListener("qcet:open-command-search", handleOpenEvent);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, handleClose]);
 
-  // Auto focus input when opened
-  React.useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 50);
-    }
-  }, [isOpen]);
-
-  // Debounced search with client in-memory cache
+  // Ô rỗng không gọi máy chủ: chỉ hiện Gần đây, Hành động, Đi tới. Gõ chữ thì chờ 150ms rồi tìm, có cache theo tài khoản.
   React.useEffect(() => {
     if (!isOpen) return;
 
     const trimmed = query.trim();
+    setSearchFailed(false);
+    if (!trimmed) {
+      setIsLoading(false);
+      return;
+    }
+
     // T41 / Server Truth: key the cache by the authenticated account id so a
     // no-reload account switch can never read back the previous account's
     // cached results.
     const cacheKey = scopedSearchCacheKey(user?.id, trimmed);
-    if (searchCacheRef.current.has(cacheKey)) {
-      const cached = searchCacheRef.current.get(cacheKey)!;
+    const cached = searchCacheRef.current.get(cacheKey);
+    if (cached) {
       setTasks(cached.tasks);
       setDocuments(cached.documents);
       setUsers(cached.users);
       setIsLoading(false);
-      setSelectedIndex(0);
       return;
     }
 
@@ -569,17 +453,15 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
 
     const timer = setTimeout(async () => {
       try {
-        const url = trimmed
-          ? `/api/search?q=${encodeURIComponent(trimmed)}`
-          : "/api/search";
-        const res = await fetch(url, { signal: controller.signal });
+        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal });
         if (!res.ok) throw new Error("Search failed");
         const json = await res.json();
-        if (isMounted && json.success) {
-          const t: SearchTaskResult[] = json.results?.tasks || [];
-          const d: SearchDocumentResult[] = json.results?.documents || [];
-          const u: SearchUserResult[] = json.results?.users || [];
-          searchCacheRef.current.set(cacheKey, { tasks: t, documents: d, users: u });
+        if (!json.success) throw new Error("Search failed");
+        const t: SearchTaskResult[] = json.results?.tasks || [];
+        const d: SearchDocumentResult[] = json.results?.documents || [];
+        const u: SearchUserResult[] = json.results?.users || [];
+        searchCacheRef.current.set(cacheKey, { tasks: t, documents: d, users: u });
+        if (isMounted) {
           setTasks(t);
           setDocuments(d);
           setUsers(u);
@@ -591,11 +473,10 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           setTasks([]);
           setDocuments([]);
           setUsers([]);
+          setSearchFailed(true);
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     }, 150);
 
@@ -606,788 +487,324 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     };
   }, [isOpen, query, user?.id]);
 
-  // Filter actions based on query and score
+  const trimmedQuery = query.trim();
+
   const filteredActions = React.useMemo(() => {
-    const q = query.trim();
-    if (!q) return quickActions;
+    if (!trimmedQuery) return quickActions;
     return quickActions
-      .map((a) => {
-        const keywords = [a.description, ...(a.keywords || [])];
-        const score = Math.max(
-          scoreVietnameseSearch(a.title, q, keywords),
-          a.shortcut && a.shortcut.toLowerCase() === q.toLowerCase() ? 95 : 0
-        );
-        return { action: a, score };
-      })
+      .map((action) => ({
+        action,
+        score: scoreVietnameseSearch(action.title, trimmedQuery, action.keywords),
+      }))
       .filter((entry) => entry.score > 0)
       .sort((a, b) => b.score - a.score)
       .map((entry) => entry.action);
-  }, [query, quickActions]);
+  }, [trimmedQuery, quickActions]);
 
-  // T39: split quick actions into the two command intents.
-  const navigationActions = React.useMemo(
-    () => filteredActions.filter((a) => a.category === "navigation"),
-    [filteredActions]
-  );
-  const commandActions = React.useMemo(
-    () => filteredActions.filter((a) => a.category === "action"),
-    [filteredActions]
-  );
-
-  // T38: an explicit per-group visibility rule keyed by classification.
-  const isGroupVisible = React.useCallback(
-    (tab: CommandPaletteTab, kind: Exclude<CommandPaletteItemKind, "recent">): boolean =>
-      tab === "all" ||
-      (tab === "navigation" && kind === "navigation") ||
-      (tab === "tasks" && kind === "task") ||
-      (tab === "documents" && kind === "document") ||
-      (tab === "people" && kind === "user") ||
-      (tab === "commands" && kind === "command"),
-    []
-  );
-
-  // Filtered lists according to the active intent tab
-  const displayNavigation = isGroupVisible(activeTab, "navigation") ? navigationActions : [];
-  const displayTasks = isGroupVisible(activeTab, "task") ? tasks : [];
-  const displayDocuments = isGroupVisible(activeTab, "document") ? documents : [];
-  const displayUsers = isGroupVisible(activeTab, "user") ? users : [];
-  const displayCommands = isGroupVisible(activeTab, "command") ? commandActions : [];
-  const showRecent = !query.trim() && recentSearches.length > 0 && activeTab === "all";
-
-  // Build flat items list for keyboard navigation, ordered to match the rendered
-  // intent groups: Gần đây -> Đi tới -> Nhiệm vụ -> Văn bản -> Cán bộ -> Hành động.
-  type FlatItem =
-    | { kind: "recent"; item: RecentSearchItem }
-    | { kind: "navigation"; item: QuickAction }
-    | { kind: "command"; item: QuickAction }
-    | { kind: "task"; item: SearchTaskResult }
-    | { kind: "document"; item: SearchDocumentResult }
-    | { kind: "user"; item: SearchUserResult };
-
-  const flatItems = React.useMemo<FlatItem[]>(() => {
-    const items: FlatItem[] = [];
-    if (showRecent) {
-      recentSearches.forEach((r) => items.push({ kind: "recent", item: r }));
+  // T39: thứ tự nhóm Gần đây → Hành động → Đi tới → Nhiệm vụ → Văn bản → Cán bộ; dòng "Xem tất cả" ở cuối khi đang gõ
+  const groups = React.useMemo(() => {
+    const result: Array<{ key: string; label?: string; items: FlatItem[] }> = [];
+    const push = (key: string, label: string | undefined, items: FlatItem[]) => {
+      if (items.length > 0) result.push({ key, label, items });
+    };
+    if (!trimmedQuery) {
+      push("recent", COMMAND_INTENT_LABELS.recent, recentSearches.map((item) => ({ kind: "recent", item })));
     }
-    displayNavigation.forEach((a) => items.push({ kind: "navigation", item: a }));
-    displayTasks.forEach((t) => items.push({ kind: "task", item: t }));
-    displayDocuments.forEach((d) => items.push({ kind: "document", item: d }));
-    displayUsers.forEach((u) => items.push({ kind: "user", item: u }));
-    displayCommands.forEach((a) => items.push({ kind: "command", item: a }));
-    return items;
-  }, [
-    showRecent,
-    displayNavigation,
-    displayTasks,
-    displayDocuments,
-    displayUsers,
-    displayCommands,
-    recentSearches,
-  ]);
+    push(
+      "command",
+      COMMAND_INTENT_LABELS.command,
+      filteredActions.filter((a) => a.category === "action").map((item) => ({ kind: "command", item }))
+    );
+    push(
+      "navigation",
+      COMMAND_INTENT_LABELS.navigation,
+      filteredActions.filter((a) => a.category === "navigation").map((item) => ({ kind: "navigation", item }))
+    );
+    if (trimmedQuery) {
+      push("task", COMMAND_INTENT_LABELS.task, tasks.slice(0, GROUP_LIMIT).map((item) => ({ kind: "task", item })));
+      push("document", COMMAND_INTENT_LABELS.document, documents.slice(0, GROUP_LIMIT).map((item) => ({ kind: "document", item })));
+      push("user", COMMAND_INTENT_LABELS.user, users.slice(0, GROUP_LIMIT).map((item) => ({ kind: "user", item })));
+      if (tasks.length + documents.length + users.length > 0) {
+        push("all-results", undefined, [{ kind: "all-results", query: trimmedQuery }]);
+      }
+    }
+    return result;
+  }, [trimmedQuery, recentSearches, filteredActions, tasks, documents, users]);
 
-  // Execute selected item
+  const flatItems = React.useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const activeIndex = flatItems.length === 0 ? -1 : Math.min(selectedIndex, flatItems.length - 1);
+
   const executeItem = React.useCallback(
     (item: FlatItem, inNewTab = false) => {
-      if (item.kind === "navigation" || item.kind === "command") {
-        item.item.action(inNewTab);
-      } else if (item.kind === "task") {
-        handleSelectTask(item.item, inNewTab);
-      } else if (item.kind === "document") {
-        handleSelectDocument(item.item, inNewTab);
-      } else if (item.kind === "user") {
-        handleSelectUser(item.item);
-      } else if (item.kind === "recent") {
-        if (item.item.type === "task" && item.item.data) {
-          handleSelectTask(item.item.data, inNewTab);
-        } else if (item.item.type === "document" && item.item.data) {
-          handleSelectDocument(item.item.data, inNewTab);
-        } else if (item.item.type === "user" && item.item.data) {
-          handleSelectUser(item.item.data);
+      switch (item.kind) {
+        case "navigation":
+        case "command":
+          item.item.action(inNewTab);
+          return;
+        case "task":
+          handleSelectTask(item.item, inNewTab);
+          return;
+        case "document":
+          handleSelectDocument(item.item, inNewTab);
+          return;
+        case "user":
+          handleSelectUser(item.item, inNewTab);
+          return;
+        case "all-results":
+          go(`/search?q=${encodeURIComponent(item.query)}`, inNewTab);
+          return;
+        case "recent": {
+          const { type, data } = item.item;
+          if (!data) return;
+          if (type === "task") handleSelectTask(data, inNewTab);
+          else if (type === "document") handleSelectDocument(data, inNewTab);
+          else if (type === "user") handleSelectUser(data, inNewTab);
         }
       }
     },
-    [handleSelectTask, handleSelectDocument, handleSelectUser]
+    [go, handleSelectTask, handleSelectDocument, handleSelectUser]
   );
 
-  const PALETTE_TAB_ORDER: CommandPaletteTab[] = [
-    "all",
-    "navigation",
-    "tasks",
-    "documents",
-    "people",
-    "commands",
-  ];
-
-  // T42: keyboard + focus containment. Up/Down move the roving selection,
-  // Enter activates (Cmd/Ctrl+Enter opens in a new tab), Escape closes, and
-  // Tab / Shift+Tab are trapped inside the dialog so focus can never escape.
-  // While the tab strip is focused, Left/Right switch the active intent group
-  // (ARIA tabs pattern) instead of hijacking Tab. IME-safe: composition
-  // keystrokes never trigger commands.
-  const handleKeyDownInList = (e: React.KeyboardEvent) => {
-    if (e.nativeEvent?.isComposing) return;
-
-    if (e.key === "Tab") {
-      const root = dialogRef.current;
-      if (!root) return;
-      const focusable = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-      const inside = Boolean(active && root.contains(active));
-      if (e.shiftKey) {
-        if (!inside || active === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (!inside || active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-      return;
-    }
-
-    const focused = document.activeElement as HTMLElement | null;
-    const tabBarFocused = Boolean(
-      focused && tabsRef.current && tabsRef.current.contains(focused)
-    );
-    if (tabBarFocused && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-      e.preventDefault();
-      const currentIdx = PALETTE_TAB_ORDER.indexOf(activeTab);
-      const nextIdx =
-        e.key === "ArrowRight"
-          ? (currentIdx + 1) % PALETTE_TAB_ORDER.length
-          : (currentIdx - 1 + PALETTE_TAB_ORDER.length) % PALETTE_TAB_ORDER.length;
-      setActiveTab(PALETTE_TAB_ORDER[nextIdx]);
-      setSelectedIndex(0);
-      return;
-    }
-
-    if (flatItems.length === 0) return;
-
+  // T42: Lên/Xuống chuyển dòng đang chọn (focus vẫn ở ô nhập), Enter mở, Cmd/Ctrl+Enter mở tab mới. Esc và giữ focus
+  // trong hộp do Dialog lo. Đang gõ bộ gõ (IME) thì bỏ qua.
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing || flatItems.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % flatItems.length);
+      setSelectedIndex((activeIndex + 1) % flatItems.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + flatItems.length) % flatItems.length);
+      setSelectedIndex((activeIndex - 1 + flatItems.length) % flatItems.length);
+    } else if (e.key === "Home" && e.ctrlKey) {
+      e.preventDefault();
+      setSelectedIndex(0);
+    } else if (e.key === "End" && e.ctrlKey) {
+      e.preventDefault();
+      setSelectedIndex(flatItems.length - 1);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const target = flatItems[selectedIndex];
-      if (target) {
-        const inNewTab = e.metaKey || e.ctrlKey;
-        executeItem(target, inNewTab);
-      }
+      const target = flatItems[activeIndex];
+      if (target) executeItem(target, e.metaKey || e.ctrlKey);
     }
   };
 
-  // Auto scroll active option into view
   React.useEffect(() => {
-    if (!listRef.current) return;
-    const selectedEl = listRef.current.querySelector(
-      '[aria-selected="true"]'
-    ) as HTMLElement | null;
-    if (selectedEl) {
-      selectedEl.scrollIntoView({ block: "nearest" });
-    }
-  }, [selectedIndex]);
+    if (activeIndex < 0) return;
+    document.getElementById(`${LISTBOX_ID}-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
+
+  const showEmpty = Boolean(trimmedQuery) && !isLoading && flatItems.length === 0;
+  let runningIndex = 0;
 
   return (
     <StandardDialog
       open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) {
-          handleClose();
-        } else {
-          setIsOpen(true);
-        }
-      }}
-      title="Tìm kiếm nhanh hệ thống (Command Palette)"
-      description="Tìm kiếm theo tên việc, mã số, văn bản, viết tắt khoa hoặc họ tên cán bộ"
-      size="lg"
-      showCloseButton={false}
-      className={cn(
-        "p-0 max-w-2xl bg-card rounded-xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[85vh]",
-        "[&>div:first-child]:sr-only [&>p]:sr-only",
-        className
-      )}
+      onOpenChange={(open) => (open ? setIsOpen(true) : handleClose())}
+      title="Tìm kiếm nhanh"
+      description="Tìm nhiệm vụ, văn bản, cán bộ hoặc chạy lệnh. Lên/Xuống để chọn, Enter để mở, Ctrl+Enter mở tab mới."
+      size="md"
+      showHeader={false}
+      initialFocus={inputRef}
+      className={cn("gap-0 overflow-hidden p-0 sm:p-0", className)}
     >
-      <div
-        ref={dialogRef}
-        data-slot="command-palette"
-        className="flex flex-col flex-1 min-h-0 overflow-hidden"
-        onKeyDown={handleKeyDownInList}
-      >
-        {/* Search Header Input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-white">
-          <Search className="w-5 h-5 text-muted-foreground shrink-0" />
+      <div data-slot="command-palette" className="flex min-h-0 flex-1 flex-col">
+        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 max-md:px-3">
+          <Search aria-hidden className={ICON_CLASS} />
           <input
             ref={inputRef}
             type="text"
             role="combobox"
+            aria-label="Tìm kiếm nhanh"
             aria-expanded={flatItems.length > 0}
+            aria-controls={LISTBOX_ID}
             aria-autocomplete="list"
+            aria-activedescendant={activeIndex >= 0 ? `${LISTBOX_ID}-${activeIndex}` : undefined}
+            autoComplete="off"
+            spellCheck={false}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Tìm theo tên việc, mã số, văn bản, viết tắt khoa (cntt, vb)..."
-            className="flex-1 bg-transparent text-sm sm:text-base font-normal text-foreground placeholder:text-muted-foreground focus:outline-hidden"
+            onKeyDown={handleInputKeyDown}
+            placeholder="Tìm nhiệm vụ, văn bản, cán bộ hoặc lệnh…"
+            className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
           />
-          {isLoading && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0" />}
-          {query && !isLoading && (
-            <Pressable
+          {isLoading ? <Loader2 aria-label="Đang tìm" className={cn(ICON_CLASS, "animate-spin")} /> : null}
+          {query ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Xóa nội dung tìm kiếm"
               onClick={() => {
                 setQuery("");
+                setSelectedIndex(0);
                 inputRef.current?.focus();
               }}
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              aria-label="Xóa nội dung tìm kiếm"
             >
-              <X className="w-4 h-4" />
-            </Pressable>
-          )}
-          <Pressable
-            onClick={handleClose}
-            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-muted-foreground bg-secondary hover:bg-accent rounded border border-border transition-colors"
-          >
-            ESC
-          </Pressable>
+              <X />
+            </Button>
+          ) : null}
         </div>
 
-        {/* Intent tabs (T39) */}
-        <div
-          ref={tabsRef}
-          className="flex items-center gap-1.5 px-4 py-2 bg-card/70 border-b border-border/60 text-xs overflow-x-auto"
-        >
-          <Pressable
-            onClick={() => {
-              setActiveTab("all");
-              setSelectedIndex(0);
-            }}
-            className={cn(
-              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap",
-              activeTab === "all"
-                ? "bg-white text-foreground shadow-2xs border border-border"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            Tất cả
-          </Pressable>
-          <Pressable
-            onClick={() => {
-              setActiveTab("navigation");
-              setSelectedIndex(0);
-            }}
-            className={cn(
-              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
-              activeTab === "navigation"
-                ? "bg-white text-foreground shadow-2xs border border-border"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5 text-muted-foreground" />
-            Đi tới
-          </Pressable>
-          <Pressable
-            onClick={() => {
-              setActiveTab("tasks");
-              setSelectedIndex(0);
-            }}
-            className={cn(
-              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
-              activeTab === "tasks"
-                ? "bg-white text-foreground shadow-2xs border border-border"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
-            Nhiệm vụ {tasks.length > 0 && `(${tasks.length})`}
-          </Pressable>
-          <Pressable
-            onClick={() => {
-              setActiveTab("documents");
-              setSelectedIndex(0);
-            }}
-            className={cn(
-              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
-              activeTab === "documents"
-                ? "bg-white text-foreground shadow-2xs border border-border"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <FileText className="w-3.5 h-3.5 text-warning" />
-            Văn bản {documents.length > 0 && `(${documents.length})`}
-          </Pressable>
-          <Pressable
-            onClick={() => {
-              setActiveTab("commands");
-              setSelectedIndex(0);
-            }}
-            className={cn(
-              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
-              activeTab === "commands"
-                ? "bg-white text-foreground shadow-2xs border border-border"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <Zap className="w-3.5 h-3.5 text-violet-600" />
-            Hành động
-          </Pressable>
-          <Pressable
-            onClick={() => {
-              setActiveTab("people");
-              setSelectedIndex(0);
-            }}
-            className={cn(
-              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
-              activeTab === "people"
-                ? "bg-white text-foreground shadow-2xs border border-border"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            )}
-          >
-            <Users className="w-3.5 h-3.5 text-emerald-600" />
-            Cán bộ {users.length > 0 && `(${users.length})`}
-          </Pressable>
-        </div>
-
-        {/* Results List */}
         <div
           ref={listRef}
+          id={LISTBOX_ID}
           role="listbox"
-          className="flex-1 overflow-y-auto p-2 space-y-4 max-h-[52vh] focus:outline-hidden"
+          aria-label="Kết quả"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 empty:hidden md:max-h-[min(440px,60dvh)]"
         >
-          {/* Empty State */}
-          {!isLoading && flatItems.length === 0 && (
-            <div className="py-12 px-4 text-center">
-              <Search className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">
-                Không tìm thấy kết quả phù hợp cho &ldquo;{query}&rdquo;
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                Thử tìm theo mã công việc (ví dụ: NV-2026), số văn bản (ví dụ: 125/QĐ), viết tắt khoa (cntt, dbcl) hoặc họ tên cán bộ.
-              </p>
-            </div>
-          )}
-
-          {/* Section: Gần đây (account-scoped recents) */}
-          {showRecent && (
-            <div>
-              <div className="flex items-center justify-between px-2.5 py-1 mb-1">
-                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 text-muted-foreground" />
-                  {COMMAND_INTENT_LABELS.recent}
-                </span>
-                <Pressable
-                  onClick={clearRecentSearches}
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Xóa lịch sử
-                </Pressable>
-              </div>
-              <div className="space-y-0.5">
-                {recentSearches.map((item, idx) => {
-                  const isSelected = selectedIndex === idx;
-                  return (
-                    <div
-                      key={item.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => executeItem({ kind: "recent", item })}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
-                        isSelected
-                          ? "bg-selected text-foreground font-medium"
-                          : "text-foreground hover:bg-accent"
-                      )}
+          {groups.map((group) => (
+            <div key={group.key} role={group.label ? "group" : undefined} aria-label={group.label} className="not-first:mt-2">
+              {group.label ? (
+                <div className="flex h-7 items-center justify-between px-2 text-xs text-muted-foreground">
+                  <span aria-hidden>{group.label}</span>
+                  {group.key === "recent" ? (
+                    <Pressable
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={clearRecentSearches}
+                      className="rounded-sm px-1 text-xs text-muted-foreground hover:text-foreground"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <div className="min-w-0 flex-1 truncate">
-                          <span className="text-sm text-foreground">{item.title}</span>
-                          {item.subtitle && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {item.subtitle}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0" />
-                    </div>
-                  );
-                })}
-              </div>
+                      Xóa
+                    </Pressable>
+                  ) : null}
+                </div>
+              ) : null}
+              {group.items.map((item) => {
+                const index = runningIndex++;
+                return (
+                  <div
+                    key={flatItemKey(item)}
+                    id={`${LISTBOX_ID}-${index}`}
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    onMouseMove={() => index !== activeIndex && setSelectedIndex(index)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => executeItem(item, e.metaKey || e.ctrlKey)}
+                    className={cn(
+                      "flex h-8 cursor-pointer select-none items-center gap-2.5 rounded-md px-2 text-compact text-foreground max-md:h-10",
+                      index === activeIndex && "bg-accent"
+                    )}
+                  >
+                    <PaletteRow item={item} query={trimmedQuery} />
+                  </div>
+                );
+              })}
             </div>
-          )}
-
-          {/* Section: Đi tới (navigation intent) */}
-          {displayNavigation.length > 0 && (
-            <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                {COMMAND_INTENT_LABELS.navigation}
-              </div>
-              <div className="space-y-0.5">
-                {displayNavigation.map((action) => {
-                  const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.kind === "navigation" && f.item.id === action.id
-                  );
-                  const isSelected = selectedIndex === currentFlatIndex;
-                  const Icon = action.icon;
-
-                  return (
-                    <div
-                      key={action.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => action.action()}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
-                        isSelected
-                          ? "bg-selected text-foreground font-medium"
-                          : "text-foreground hover:bg-accent"
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className={cn(
-                            "w-7 h-7 rounded-md flex items-center justify-center shrink-0",
-                            action.category === "action"
-                              ? "bg-blue-50 text-blue-600"
-                              : "bg-secondary text-muted-foreground"
-                          )}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm text-foreground">
-                            <HighlightedText text={action.title} query={query} />
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            <HighlightedText text={action.description} query={query} />
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        {action.shortcut && (
-                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-muted-foreground bg-white rounded border border-border">
-                            {action.shortcut}
-                          </kbd>
-                        )}
-                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Section: Tasks */}
-          {displayTasks.length > 0 && (
-            <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span>{COMMAND_INTENT_LABELS.task} ({displayTasks.length})</span>
-                <span className="text-xs text-muted-foreground lowercase">phím ↵ để mở</span>
-              </div>
-              <div className="space-y-1">
-                {displayTasks.map((task) => {
-                  const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.kind === "task" && f.item.id === task.id
-                  );
-                  const isSelected = selectedIndex === currentFlatIndex;
-
-                  return (
-                    <div
-                      key={task.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelectTask(task)}
-                      className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
-                        isSelected
-                          ? "bg-selected border-border shadow-2xs"
-                          : "border-transparent hover:bg-accent hover:border-border"
-                      )}
-                    >
-                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                        <CheckSquare className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono font-medium text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border">
-                              <HighlightedText text={task.code} query={query} />
-                            </span>
-                            <span className="text-sm font-medium text-foreground truncate">
-                              <HighlightedText text={task.title} query={query} />
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                            {task.leadUnit && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <Building2 className="w-3 h-3 text-muted-foreground" />
-                                <HighlightedText
-                                  text={task.leadUnit.name}
-                                  query={query}
-                                />
-                              </span>
-                            )}
-                            <span>Tiến độ: {task.progressPercent}%</span>
-                            {task.dueDate && (
-                              <span>
-                                Hạn: {new Date(task.dueDate).toLocaleDateString("vi-VN")}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                        <span>Chi tiết</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Section: Documents */}
-          {displayDocuments.length > 0 && (
-            <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-warning" />
-                  {COMMAND_INTENT_LABELS.document} ({displayDocuments.length})
-                </span>
-                <span className="text-xs text-muted-foreground lowercase">phím ↵ để mở</span>
-              </div>
-              <div className="space-y-1">
-                {displayDocuments.map((doc) => {
-                  const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.kind === "document" && f.item.id === doc.id
-                  );
-                  const isSelected = selectedIndex === currentFlatIndex;
-
-                  return (
-                    <div
-                      key={doc.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelectDocument(doc)}
-                      className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
-                        isSelected
-                          ? "bg-selected border-border shadow-2xs"
-                          : "border-transparent hover:bg-accent hover:border-border"
-                      )}
-                    >
-                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                        <FileText className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono font-bold text-warning bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20">
-                              <HighlightedText text={doc.originalNumber || "VB-QCET"} query={query} />
-                            </span>
-                            <span className="text-xs font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
-                              {doc.category || "Văn bản"}
-                            </span>
-                            <span className="text-sm font-medium text-foreground truncate">
-                              <HighlightedText text={doc.summary} query={query} />
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                            {doc.issuingAuthority && (
-                              <span className="text-muted-foreground">
-                                {doc.issuingAuthority}
-                              </span>
-                            )}
-                            {doc.issuedDate && (
-                              <span className="text-muted-foreground">
-                                Ngày: {new Date(doc.issuedDate).toLocaleDateString("vi-VN")}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                        <span>Xem</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Section: Users */}
-          {displayUsers.length > 0 && (
-            <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span>{COMMAND_INTENT_LABELS.user} ({displayUsers.length})</span>
-                <span className="text-xs text-muted-foreground lowercase">phím ↵ để liên hệ</span>
-              </div>
-              <div className="space-y-1">
-                {displayUsers.map((user) => {
-                  const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.kind === "user" && f.item.id === user.id
-                  );
-                  const isSelected = selectedIndex === currentFlatIndex;
-
-                  return (
-                    <div
-                      key={user.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelectUser(user)}
-                      className={cn(
-                        "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
-                        isSelected
-                          ? "bg-selected border-border shadow-2xs"
-                          : "border-transparent hover:bg-accent hover:border-border"
-                      )}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-xs flex items-center justify-center shrink-0 border border-blue-200">
-                          {user.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">
-                              <HighlightedText text={user.name} query={query} />
-                            </span>
-                            {user.title && (
-                              <span className="text-xs text-muted-foreground">
-                                {user.title}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
-                            {user.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="w-3 h-3 text-muted-foreground" />
-                                <HighlightedText text={user.email} query={query} />
-                              </span>
-                            )}
-                            {user.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-muted-foreground" />
-                                {user.phone}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                        <span>Email</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Section: Hành động (command intent) */}
-          {displayCommands.length > 0 && (
-            <div>
-              <div className="px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                {COMMAND_INTENT_LABELS.command}
-              </div>
-              <div className="space-y-0.5">
-                {displayCommands.map((action) => {
-                  const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.kind === "command" && f.item.id === action.id
-                  );
-                  const isSelected = selectedIndex === currentFlatIndex;
-                  const Icon = action.icon;
-
-                  return (
-                    <div
-                      key={action.id}
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => action.action()}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
-                        isSelected
-                          ? "bg-selected text-foreground font-medium"
-                          : "text-foreground hover:bg-accent"
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm text-foreground">
-                            <HighlightedText text={action.title} query={query} />
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            <HighlightedText text={action.description} query={query} />
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        {action.shortcut && (
-                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-muted-foreground bg-white rounded border border-border">
-                            {action.shortcut}
-                          </kbd>
-                        )}
-                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer shortcuts hint bar */}
-        <div className="px-4 py-2.5 bg-card border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
-                ↵
-              </kbd>
-              <span>Mở</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
-                ⌘↵
-              </kbd>
-              <span>Mở tab mới</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
-                ← →
-              </kbd>
-              <span>Chuyển nhóm</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
-                ↑↓
-              </kbd>
-              <span>Di chuyển</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-border text-muted-foreground">
-              Esc
-            </kbd>
-            <span>Đóng</span>
-          </div>
+          ))}
+          {showEmpty ? (
+            <p className="px-2 py-6 text-center text-compact text-muted-foreground">
+              {searchFailed ? (
+                <span className="text-destructive">Chưa tìm được, thử lại sau.</span>
+              ) : (
+                <>Không có kết quả cho “{trimmedQuery}”. Thử mã nhiệm vụ, số văn bản hoặc tên cán bộ.</>
+              )}
+            </p>
+          ) : null}
         </div>
       </div>
     </StandardDialog>
+  );
+}
+
+/** Một dòng 32px: icon 16px · tên cắt cuối · thông tin phụ bên phải (text-xs) */
+function PaletteRow({ item, query }: { item: FlatItem; query: string }) {
+  switch (item.kind) {
+    case "navigation":
+    case "command": {
+      const Icon = item.item.icon;
+      return (
+        <>
+          <Icon aria-hidden className={ICON_CLASS} />
+          <span className="min-w-0 flex-1 truncate">
+            <HighlightedText text={item.item.title} query={query} />
+          </span>
+        </>
+      );
+    }
+    case "task":
+      return <TaskRowContent task={item.item} query={query} />;
+    case "document": {
+      const doc = item.item;
+      const DocIcon = DOCUMENT_TYPE_ICON[doc.type ?? ""] ?? IconSidebarDocLines;
+      const number = doc.originalNumber || (doc.registrationNumber ? `Số đến ${doc.registrationNumber}` : "");
+      return (
+        <>
+          <DocIcon aria-hidden className={ICON_CLASS} />
+          <span className="min-w-0 flex-1 truncate" title={doc.summary}>
+            <HighlightedText text={doc.summary || "(Chưa có trích yếu)"} query={query} />
+          </span>
+          {number ? (
+            <span className="max-w-[140px] shrink-0 truncate text-xs text-muted-foreground max-md:hidden">
+              <HighlightedText text={number} query={query} />
+            </span>
+          ) : null}
+          {doc.issuedDate ? (
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatDisplayDate(doc.issuedDate)}</span>
+          ) : null}
+        </>
+      );
+    }
+    case "user": {
+      const person = item.item;
+      return (
+        <>
+          <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="xs" />
+          <span className="min-w-0 flex-1 truncate">
+            <HighlightedText text={person.name} query={query} />
+          </span>
+          {person.title ? (
+            <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">{person.title}</span>
+          ) : null}
+        </>
+      );
+    }
+    case "all-results":
+      return (
+        <>
+          <ArrowRight aria-hidden className={ICON_CLASS} />
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">
+            Xem tất cả kết quả cho “<span className="text-foreground">{item.query}</span>”
+          </span>
+        </>
+      );
+    case "recent":
+      return (
+        <>
+          <IconSidebarHistory className={ICON_CLASS} />
+          <span className="min-w-0 flex-1 truncate">{item.item.title}</span>
+          {item.item.subtitle ? (
+            <span className="max-w-[40%] shrink-0 truncate text-xs text-muted-foreground">{item.item.subtitle}</span>
+          ) : null}
+        </>
+      );
+  }
+}
+
+function TaskRowContent({ task, query }: { task: SearchTaskResult; query: string }) {
+  // Việc đã xong/hủy không hiện hạn (tránh "Trễ hạn" cho việc đã hoàn thành)
+  const done = task.status === "COMPLETED" || task.status === "CANCELLED";
+  const days = task.dueDate && !done ? daysUntil(task.dueDate) : null;
+  const dueTone = days === null ? "" : days < 0 ? "text-destructive" : days <= DUE_SOON_DAYS ? "text-warning" : "text-muted-foreground";
+  const lead = task.actors?.find((actor) => actor.isPrimaryDRI)?.user;
+  return (
+    <>
+      <TaskStatusCircle status={task.status} />
+      <span className="min-w-0 flex-1 truncate" title={task.title}>
+        <HighlightedText text={task.title} query={query} />
+      </span>
+      {/* Mã dài cỡ 110px (NV-2026-10-029) nên đứng sau tên, không chiếm đầu dòng; điện thoại ẩn mã */}
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground max-md:hidden">
+        <HighlightedText text={task.code} query={query} />
+      </span>
+      {/* Cột hạn và avatar rộng cố định (kể cả khi trống) để mã các dòng thẳng cột */}
+      <span className={cn("w-24 shrink-0 truncate text-right text-xs tabular-nums", dueTone)}>
+        {days !== null ? formatRelativeDate(task.dueDate) : null}
+      </span>
+      <span className="flex size-4 shrink-0 items-center justify-center">
+        {lead ? <UserAvatar name={lead.name} avatarUrl={lead.avatarUrl} size="xs" /> : null}
+      </span>
+    </>
   );
 }
 

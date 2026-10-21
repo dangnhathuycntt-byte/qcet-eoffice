@@ -216,7 +216,7 @@ export const DOC_GROUPS: DocGroup[] = [
           },
           {
             type: "p",
-            text: "Bấm `Ctrl` + `K` hoặc `⌘` + `K` để mở **Tìm kiếm nhanh hệ thống**. Gõ tên nhiệm vụ, mã số, tên văn bản, viết tắt khoa như cntt, hoặc họ tên cán bộ. Kết quả chia theo nhóm **Đi tới**, **Nhiệm vụ**, **Văn bản**, **Cán bộ** và **Hành động**; nút **Tất cả** hiện mọi nhóm.",
+            text: "Bấm `Ctrl` + `K` hoặc `⌘` + `K` để mở **Tìm kiếm nhanh**. Khi chưa gõ, hộp hiện các mục mở gần đây, **Hành động** và **Đi tới**. Gõ tên nhiệm vụ, mã số, trích yếu hoặc số văn bản, họ tên cán bộ: kết quả chia nhóm **Nhiệm vụ**, **Văn bản**, **Cán bộ**, mỗi nhóm tối đa 5 dòng; dòng cuối **Xem tất cả kết quả** mở trang Tìm kiếm. Chọn một cán bộ sẽ mở danh bạ lọc theo tên người đó.",
           },
           {
             type: "ul",
