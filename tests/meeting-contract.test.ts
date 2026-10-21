@@ -51,6 +51,37 @@ describe('CreateMeetingSchema', () => {
     assert.equal(r.success, false);
   });
 
+  test('rejects endTime not after startTime (máy chủ không tin giao diện)', () => {
+    for (const endTime of [ISO_NOW, new Date(new Date(ISO_NOW).getTime() - 3600_000).toISOString()]) {
+      const r = CreateMeetingSchema.safeParse({ title: 'Họp giao ban', startTime: ISO_NOW, endTime });
+      assert.equal(r.success, false, `endTime ${endTime} must be rejected`);
+      if (!r.success) assert.deepEqual(r.error.issues[0].path, ['endTime']);
+    }
+  });
+
+  test('rejects the same person invited twice and over 500 invitees', () => {
+    const twice = CreateMeetingSchema.safeParse({
+      title: 'Họp giao ban',
+      startTime: ISO_NOW,
+      initialParticipants: [{ userId: 'u1' }, { userId: 'u2' }, { userId: 'u1', role: 'CHAIR' }],
+    });
+    assert.equal(twice.success, false);
+    if (!twice.success) assert.deepEqual(twice.error.issues[0].path, ['initialParticipants', 2, 'userId']);
+
+    const many = CreateMeetingSchema.safeParse({
+      title: 'Họp giao ban',
+      startTime: ISO_NOW,
+      initialParticipants: Array.from({ length: 501 }, (_, index) => ({ userId: `u${index}` })),
+    });
+    assert.equal(many.success, false);
+    const ok = CreateMeetingSchema.safeParse({
+      title: 'Họp giao ban',
+      startTime: ISO_NOW,
+      initialParticipants: Array.from({ length: 500 }, (_, index) => ({ userId: `u${index}` })),
+    });
+    assert.equal(ok.success, true);
+  });
+
   test('accepts participants with all valid roles', () => {
     for (const role of ['CHAIR', 'SECRETARY', 'ATTENDEE', 'INVITED_GUEST']) {
       const r = CreateMeetingSchema.safeParse({

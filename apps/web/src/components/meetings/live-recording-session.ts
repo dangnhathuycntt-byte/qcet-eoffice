@@ -17,6 +17,17 @@ export function pickRecorderMimeType(): string | null {
   return MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
 }
 
+/**
+ * Chính sách quyền của trang chặn micro (`Permissions-Policy: microphone=()`): `getUserMedia` thất bại ngay với cùng
+ * `NotAllowedError` như khi người dùng từ chối, nhưng trình duyệt không hề hỏi quyền nên ổ khóa cạnh địa chỉ không có mục
+ * Micro để bật. Hai nguyên nhân cần hai câu hướng dẫn khác nhau (người dùng gặp đúng chuyện này 21/10/2026).
+ */
+export function micBlockedByPolicy(): boolean {
+  if (typeof document === "undefined") return false;
+  const policy = (document as Document & { permissionsPolicy?: { allowsFeature?: (feature: string) => boolean } }).permissionsPolicy;
+  return typeof policy?.allowsFeature === "function" && !policy.allowsFeature("microphone");
+}
+
 export interface LiveRecordingCallbacks {
   /** Số phần đã gửi xong (để hiện "đã gửi N phần"). */
   onUploaded?: (uploadedParts: number) => void;
@@ -51,6 +62,11 @@ export class LiveRecordingSession {
   static async start(meetingId: string, callbacks: LiveRecordingCallbacks = {}): Promise<LiveRecordingSession> {
     const mimeType = pickRecorderMimeType();
     if (!mimeType) throw new Error("Trình duyệt này không ghi âm được. Thầy/Cô dùng Chrome, Edge hoặc Firefox, hoặc tải tệp ghi âm lên.");
+    if (micBlockedByPolicy()) {
+      throw new Error(
+        "Trang này chưa được cấu hình cho phép micro nên bật quyền ở trình duyệt cũng không dùng được. Thầy/Cô báo quản trị hệ thống; trong lúc chờ, dùng Tải tệp ghi âm."
+      );
+    }
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });

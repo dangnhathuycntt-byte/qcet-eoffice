@@ -25,11 +25,24 @@ export const CreateMeetingSchema = z.object({
   materialsUrl: z.string().optional(),
   initialParticipants: z.array(
     z.object({
-      userId: z.string(),
+      userId: z.string().min(1, 'userId là bắt buộc'),
       role: z.nativeEnum(MeetingParticipantRole).default(MeetingParticipantRole.ATTENDEE),
       notes: z.string().optional(),
     })
-  ).optional(),
+  ).max(500, 'Tối đa 500 người được mời khi tạo cuộc họp').optional(),
+}).superRefine((value, ctx) => {
+  // Máy chủ không tin giao diện: giờ kết thúc không sau giờ bắt đầu, hay một người mời hai lần, là yêu cầu sai (400),
+  // không để rơi xuống CSDL thành lỗi ràng buộc (500).
+  if (value.endTime && new Date(value.endTime).getTime() <= new Date(value.startTime).getTime()) {
+    ctx.addIssue({ code: 'custom', path: ['endTime'], message: 'Giờ kết thúc phải sau giờ bắt đầu' });
+  }
+  const seen = new Set<string>();
+  (value.initialParticipants ?? []).forEach((participant, index) => {
+    if (seen.has(participant.userId)) {
+      ctx.addIssue({ code: 'custom', path: ['initialParticipants', index, 'userId'], message: 'Một người chỉ được mời một lần' });
+    }
+    seen.add(participant.userId);
+  });
 });
 
 export type CreateMeetingInput = z.infer<typeof CreateMeetingSchema>;

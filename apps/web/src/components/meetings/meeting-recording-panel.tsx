@@ -429,7 +429,8 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
             <Pressable
               aria-expanded={expanded}
               onClick={() => void openRecording(recording.id)}
-              className="-ml-1 inline-flex w-fit items-center gap-1 rounded-sm px-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+              // py-1 cùng -my-1 nới vùng bấm từ 16px lên 24px (32px trên điện thoại) mà hàng không cao thêm
+              className="-my-1 -ml-1 inline-flex w-fit items-center gap-1 rounded-sm px-1 py-1 text-xs font-medium text-muted-foreground hover:text-foreground max-md:-my-2 max-md:py-2"
             >
               <Check className="size-3.5" />
               {tookMinutes ? `Đã soạn biên bản đề xuất trong ${tookMinutes} phút` : "Đã soạn biên bản đề xuất"}

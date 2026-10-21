@@ -133,6 +133,19 @@ export function buildMeetingReadWhere(
   return { OR: orConditions };
 }
 
+/**
+ * Người được mời phải có thật và còn hoạt động. Không kiểm thì mã không tồn tại làm vi phạm khóa ngoại và cả yêu cầu trả
+ * 500 "Internal server error" mà người dùng không biết sửa gì (phát hiện khi rà soát 21/10/2026).
+ */
+async function assertInvitableUsers(userIds: string[]): Promise<void> {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return;
+  const found = await prisma.user.count({ where: { id: { in: ids }, isActive: true } });
+  if (found !== ids.length) {
+    throw new ValidationError('Có người được mời không tồn tại hoặc đã ngừng hoạt động.');
+  }
+}
+
 export class MeetingService {
   /**
    * 1. Khởi tạo cuộc họp (DRAFT_AGENDA)
@@ -161,6 +174,8 @@ export class MeetingService {
         authResult.rejectionCode
       );
     }
+
+    await assertInvitableUsers((input.initialParticipants ?? []).map((p) => p.userId));
 
     return prisma.$transaction(async (tx) => {
       const code = input.code || `MEET-${Date.now()}`;
@@ -262,6 +277,7 @@ export class MeetingService {
     }
 
     assertMeetingNotFinalized(meeting.status, "mời thành viên tham gia");
+    await assertInvitableUsers([input.userId]);
 
     return prisma.$transaction(async (tx) => {
       const participant = await tx.meetingParticipant.upsert({

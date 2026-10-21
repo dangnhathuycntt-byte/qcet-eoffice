@@ -453,6 +453,62 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
     assert.strictEqual(await prisma.meetingParticipant.count({ where: { meetingId: testMeeting.id, userId: outsiderUser.id } }), 0);
   });
 
+  test('9d. Người được mời không có thật, bị vô hiệu hoặc bị trùng: 400 rõ ràng, không 500, không để lại cuộc họp hay người dự', async () => {
+    const meeting = await MeetingService.createMeeting(
+      {
+        code: `MT_BAD_${runId}`,
+        title: 'Họp kiểm tra người được mời',
+        unitId: testUnit.id,
+        startTime: '2026-09-23T08:00:00.000Z',
+        initialParticipants: [{ userId: chairUser.id, role: MeetingParticipantRole.CHAIR }],
+      },
+      chairUser.id
+    );
+    const invite = (userId: string) =>
+      addParticipantRoute(
+        new NextRequest(`http://localhost:3000/api/meetings/${meeting.id}/participants`, {
+          method: 'POST',
+          headers: authHeaders(chairToken),
+          body: JSON.stringify({ userId, role: MeetingParticipantRole.ATTENDEE }),
+        }),
+        { params: Promise.resolve({ id: meeting.id }) }
+      );
+    const before = await prisma.meetingParticipant.count({ where: { meetingId: meeting.id } });
+
+    // Mã không tồn tại: trước đây vi phạm khóa ngoại và trả 500
+    const unknown = await invite('khong-ton-tai-123');
+    assert.strictEqual(unknown.status, 400);
+    assert.match((await unknown.json()).message, /không tồn tại hoặc đã ngừng hoạt động/);
+
+    // Người đã bị vô hiệu hóa
+    const retired = await prisma.user.create({
+      data: { email: `retired_${runId}@qnc.edu.vn`, name: 'Người đã nghỉ', role: UserRole.CHUYEN_VIEN, isActive: false },
+    });
+    try {
+      assert.strictEqual((await invite(retired.id)).status, 400);
+    } finally {
+      await prisma.user.delete({ where: { id: retired.id } });
+    }
+    assert.strictEqual(await prisma.meetingParticipant.count({ where: { meetingId: meeting.id } }), before);
+
+    // Tạo cuộc họp với người không có thật: 400 và cuộc họp không được tạo
+    const createReq = (body: unknown) =>
+      createMeetingRoute(
+        new NextRequest('http://localhost:3000/api/meetings', { method: 'POST', headers: authHeaders(chairToken), body: JSON.stringify(body) })
+      );
+    const base = { code: `MT_BAD2_${runId}`, title: 'Họp có người không có thật', unitId: testUnit.id, startTime: '2026-09-24T08:00:00.000Z' };
+    const ghost = await createReq({ ...base, initialParticipants: [{ userId: 'khong-ton-tai-456', role: 'ATTENDEE' }] });
+    assert.strictEqual(ghost.status, 400);
+    assert.strictEqual(await prisma.meeting.count({ where: { code: base.code } }), 0);
+
+    // Một người mời hai lần, hoặc giờ kết thúc không sau giờ bắt đầu: 400 từ hợp đồng
+    const twice = await createReq({ ...base, initialParticipants: [{ userId: participantUser.id }, { userId: participantUser.id }] });
+    assert.strictEqual(twice.status, 400);
+    const backwards = await createReq({ ...base, endTime: '2026-09-24T07:00:00.000Z' });
+    assert.strictEqual(backwards.status, 400);
+    assert.strictEqual(await prisma.meeting.count({ where: { code: base.code } }), 0);
+  });
+
   test('10. Unauthorized user (participant/outsider) creating resolution -> DENY (403)', async () => {
     // Participant
     const partReq = new NextRequest(`http://localhost:3000/api/meetings/${testMeeting.id}/resolutions`, {
