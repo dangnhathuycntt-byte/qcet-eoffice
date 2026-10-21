@@ -10,6 +10,9 @@ import {
 } from "../src/components/documents/registry/document-bulk-toolbar";
 import * as registryExports from "../src/components/documents/registry";
 import { AuthContext, type AuthContextType } from "../src/lib/auth-context";
+import { documentCsvRows } from "../src/components/documents/registry/document-list-export";
+import { toCsv } from "../src/lib/csv";
+import type { OfficialDocument } from "@qcet/contracts/types/document";
 
 function renderToolbarAs(dbRole: string | null) {
   // Thanh công cụ chỉ đọc `user.dbRole` từ ngữ cảnh đăng nhập
@@ -112,5 +115,41 @@ test("Document Bulk Toolbar: bỏ chọn khi lô có văn bản đã xử lý, k
       outcome: null,
       clearSelection: true,
     });
+  });
+});
+
+test("Document Bulk Toolbar: sao chép liên kết và xuất Excel các văn bản đang chọn (21/10/2026)", async (t) => {
+  const doc = {
+    id: "doc-1",
+    type: "inbox",
+    documentNumber: "=12/SGDĐT-VP",
+    registrationNumber: 7,
+    issuedDate: "2026-10-12",
+    dueDate: "2026-10-20",
+    issuingAuthority: "Sở Giáo dục và Đào tạo",
+    summary: "Về việc báo cáo tuyển sinh",
+    urgency: "urgent",
+    status: "pending_assignment",
+    leadDepartment: "Chưa phân công",
+    signatory: "",
+  } as unknown as OfficialDocument;
+
+  await t.test("có văn bản đang chọn thì thanh có Sao chép liên kết và Xuất Excel", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        AuthContext.Provider,
+        { value: { user: null } as unknown as AuthContextType },
+        React.createElement(DocumentBulkToolbar, { selectedCount: 1, selectedIds: ["doc-1"], selectedDocuments: [doc], onClearSelection: () => {} })
+      )
+    );
+    assert.ok(html.includes("Xuất Excel"));
+    assert.ok(html.includes("Sao chép liên kết"));
+    assert.ok(html.includes("Lưu hồ sơ"));
+  });
+
+  await t.test("bảng CSV theo cột của sổ, số đến 4 chữ số, chặn công thức ở đầu ô", () => {
+    const [header, line] = toCsv(documentCsvRows([doc], "Số đến")).split("\r\n");
+    assert.equal(header, '"Số đến","Số, ký hiệu","Ngày ban hành","Cơ quan ban hành","Trích yếu","Mức khẩn","Đơn vị chủ trì","Hạn xử lý","Bước xử lý"');
+    assert.ok(line.startsWith(`"0007","'=12/SGDĐT-VP","12/10/2026","Sở Giáo dục và Đào tạo","Về việc báo cáo tuyển sinh","Khẩn","","20/10/2026",`), line);
   });
 });

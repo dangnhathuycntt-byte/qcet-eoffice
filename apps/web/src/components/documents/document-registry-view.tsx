@@ -5,6 +5,9 @@ import type { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus, D
 import { Button } from "@/components/ui/button";
 import { CreateButtonWithHint } from "@/components/ui/onboarding-hint";
 import { useDocumentUrlFilters } from "@/hooks/use-document-url-filters";
+import { useListSelection } from "@/hooks/use-list-selection";
+import { DocumentRowMenu, type DocumentMenuAnchor } from "./registry/document-row-menu";
+import type { BulkActionType } from "./registry/document-bulk-toolbar";
 import { useDocumentPane } from "@/hooks/use-document-pane";
 import { PaneResizeHandle } from "@/components/ui/pane-resize-handle";
 import { cn } from "@/lib/utils";
@@ -41,6 +44,7 @@ interface ApiDoc {
   signatures?: Array<unknown> | null;
   attachments?: Array<{ id?: string; fileName: string; fileSize?: number; fileUrl?: string; mimeType?: string }> | null;
   fileAttachment?: { name: string; size: string; url?: string } | null;
+  securityLevel?: string | null; notes?: string | null;
 }
 
 function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
@@ -90,6 +94,8 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
       mimeType: a.mimeType,
     })),
     signatures: item.signatures || undefined,
+    securityLevel: item.securityLevel || undefined,
+    notes: item.notes ?? null,
   };
 }
 
@@ -112,7 +118,13 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
   const [totalCount, setTotalCount] = React.useState<number>(0);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  // Menu thao tác của một dòng; thao tác Giao đơn vị / Lưu hồ sơ từ menu mở hộp của thanh hàng loạt cho riêng văn bản đó
+  const [rowMenu, setRowMenu] = React.useState<{ doc: OfficialDocument | null; anchor: DocumentMenuAnchor | null; open: boolean }>({
+    doc: null,
+    anchor: null,
+    open: false,
+  });
+  const [actionRequest, setActionRequest] = React.useState<{ type: BulkActionType; ids: string[]; key: number } | null>(null);
   // Cột tùy chọn chỉ là trình bày, không đi vào query; giữ theo vòng đời trang
   const [visibleColumns, setVisibleColumns] = React.useState<LedgerColumnVisibility>(DEFAULT_LEDGER_COLUMNS);
 
@@ -275,32 +287,25 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
 
   const paneDoc = pane.docId ? documents.find((d) => d.id === pane.docId) ?? null : null;
 
-  // Chọn nhiều chỉ áp dụng cho các dòng đang xem: đổi loại, bộ lọc, từ khóa hoặc trang thì bỏ chọn
+  // Chọn nhiều chỉ áp dụng cho các dòng đang xem: đổi loại, bộ lọc, từ khóa hoặc trang thì bỏ chọn; dòng biến mất sau khi tải
+  // lại thì tự rời lựa chọn (useListSelection), Shift chọn dải
+  const documentIds = React.useMemo(() => documents.map((d) => d.id), [documents]);
+  const selection = useListSelection(documentIds);
+  const selectedIds = selection.selected;
   const listKey = [filters.type, filters.search, filters.status, filters.bucket, filters.urgency, filters.leadUnitId, filters.documentYear ?? "", filters.page, filters.pageSize].join("|");
+  const clearSelection = selection.clear;
   React.useEffect(() => {
-    setSelectedIds(new Set());
-  }, [listKey]);
-  React.useEffect(() => {
-    setSelectedIds((prev) => {
-      if (prev.size === 0) return prev;
-      const visible = new Set(documents.map((d) => d.id));
-      const next = new Set(Array.from(prev).filter((id) => visible.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [documents]);
+    clearSelection();
+  }, [listKey, clearSelection]);
+  const selectedDocuments = React.useMemo(() => documents.filter((d) => selectedIds.has(d.id)), [documents, selectedIds]);
 
-  // Multi-selection handlers
-  const handleToggleSelect = React.useCallback((docId: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(docId) ? next.delete(docId) : next.add(docId);
-      return next;
-    });
+  const handleToggleSelect = selection.toggle;
+  const handleSelectAll = selection.toggleAll;
+  const handleClearSelection = selection.clear;
+  const handleRowMenu = React.useCallback((doc: OfficialDocument, anchor: DocumentMenuAnchor) => setRowMenu({ doc, anchor, open: true }), []);
+  const handleRowAction = React.useCallback((type: BulkActionType, doc: OfficialDocument) => {
+    setActionRequest((prev) => ({ type, ids: [doc.id], key: (prev?.key ?? 0) + 1 }));
   }, []);
-  const handleSelectAll = React.useCallback(() => {
-    setSelectedIds(selectedIds.size === documents.length ? new Set() : new Set(documents.map((d) => d.id)));
-  }, [selectedIds.size, documents]);
-  const handleClearSelection = React.useCallback(() => setSelectedIds(new Set()), []);
 
   // Mở Quick View từ danh sách (click dòng / Enter): focus về nút Đóng của pane
   const handleOpenDetail = React.useCallback((doc: OfficialDocument) => {
@@ -318,6 +323,7 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
     if (pane.docId) pane.switchDocument(doc.id);
   }, [pane]);
 
+  const numberHeader = filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số";
   const typeTitle: Record<string, string> = { all: "Sổ văn bản", inbox: "Văn bản đến", outbox: "Văn bản đi", submission: "Tờ trình nội bộ" };
   const bucketLabels: Record<string, string> = filters.type === "outbox"
     ? { pending: "Chờ xử lý", done: "Đã xử lý", issued: "Đã phát hành" }
@@ -451,11 +457,12 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
                 <div className="hidden sm:empty-fill sm:block">
                   <DocumentLedgerTable
                     documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
-                    numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
+                    numberHeader={numberHeader}
                     visibleColumns={visibleColumns} filterYear={filters.documentYear} isFiltered={isResultFiltered} emptyCopy={emptyCopy}
                     emptyAction={emptyAction}
                     isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
                     onOpen={handleOpenDetail} onNavigate={handleNavigate} onFocusDetail={handleFocusDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
+                    onRowMenu={handleRowMenu} menuDocId={rowMenu.open ? rowMenu.doc?.id : null}
                   />
                 </div>
                 <div className="block max-sm:empty-fill sm:hidden">
@@ -502,7 +509,16 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
       <DocumentBulkToolbar
         selectedCount={selectedIds.size} selectedIds={selectedIds} totalCount={totalCount}
         onClearSelection={handleClearSelection} onRefresh={() => { fetchDocuments(); }}
-        onSuccess={() => { setSelectedIds(new Set()); fetchDocuments(); }}
+        selectedDocuments={selectedDocuments} numberHeader={numberHeader} actionRequest={actionRequest}
+      />
+
+      <DocumentRowMenu
+        doc={rowMenu.doc}
+        anchor={rowMenu.anchor}
+        open={rowMenu.open}
+        onOpenChange={(open) => setRowMenu((current) => ({ ...current, open }))}
+        onOpen={handleOpenDetail}
+        onAction={handleRowAction}
       />
 
       <DocumentQuickEntryModal

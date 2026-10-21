@@ -158,6 +158,9 @@ export interface OfficialDocument {
   /** Toàn bộ tệp đính kèm (`fileAttachment` luôn là tệp đầu tiên). */
   attachments?: OfficialDocumentFile[];
   signatures?: any[];
+  /** Độ mật và ghi chú: menu thao tác của dòng chỉ hiện "Hỏi Trợ lý" khi Trợ lý được đọc (`isAssistantEligibleDocument`). */
+  securityLevel?: string;
+  notes?: string | null;
 }
 
 export interface OfficialDocumentFile {

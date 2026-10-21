@@ -1114,9 +1114,11 @@ describe("Trợ lý UI: thanh dưới và khung chat nổi trên mọi trang (nh
   });
 
   test("rà soát đối kháng vòng 3 (17/10): lớp nổi không bị che, cuộc của tab giữ trong tab, lượt đang chạy không bị bỏ ngang", () => {
-    for (const file of ["apps/web/src/components/tasks/table/components/batch-action-bar.tsx", "apps/web/src/components/documents/registry/document-bulk-toolbar.tsx", "apps/web/src/components/pwa/pwa-sync-status.tsx"]) {
+    // Thanh hàng loạt của Văn bản và Cuộc họp dùng chung SelectionActionBar (21/10/2026): vị trí nổi trên thanh dưới nằm ở đó
+    for (const file of ["apps/web/src/components/tasks/table/components/batch-action-bar.tsx", "apps/web/src/components/ui/selection-action-bar.tsx", "apps/web/src/components/pwa/pwa-sync-status.tsx"]) {
       assert.ok(read(file).includes("md:bottom-[calc(1.5rem+var(--app-statusbar,0px))]"), `${file}: nổi trên thanh dưới`);
     }
+    assert.ok(read("apps/web/src/components/documents/registry/document-bulk-toolbar.tsx").includes("<SelectionActionBar"), "thanh hàng loạt Văn bản dùng SelectionActionBar");
     assert.ok(read("apps/web/src/components/pwa/pwa-install-prompt.tsx").includes("md:bottom-[calc(1rem+var(--app-statusbar,0px))]"));
 
     const dock = read("apps/web/src/components/assistant/assistant-dock.tsx");

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
-import { CalendarPlus, Check, ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, Minus, MoreHorizontal, Plus, Inbox, SearchX } from "lucide-react";
 import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import type { OfficialDocument } from "@qcet/contracts/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -46,6 +46,7 @@ import {
   todayInVietnam,
 } from "@qcet/shared/lib/documents/document-ledger-format";
 import { Pressable } from "@/components/ui/pressable";
+import { Button } from "@/components/ui/button";
 
 const URGENCY_OPTIONS = [
   { value: "ALL", label: "Tất cả mức khẩn" },
@@ -537,22 +538,35 @@ const STEP_STATUS: Record<LedgerStepKind, string> = {
 const numberLabel = (doc: OfficialDocument): string | null =>
   doc.registrationNumber != null ? String(doc.registrationNumber).padStart(4, "0") : null;
 
-function RowSelector({ checked, label, onToggle, always }: { checked: boolean; label: string; onToggle: () => void; always?: boolean }) {
+/** Ô chọn của dòng và tiêu đề: Shift+bấm chọn cả dải từ dòng bấm trước; tiêu đề có trạng thái "một phần" khi chọn chưa hết. */
+function RowSelector({
+  checked,
+  indeterminate = false,
+  label,
+  onToggle,
+  always,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  label: string;
+  onToggle: (range: boolean) => void;
+  always?: boolean;
+}) {
   return (
     <button
       type="button"
       role="checkbox"
-      aria-checked={checked}
+      aria-checked={indeterminate ? "mixed" : checked}
       aria-label={label}
       onClick={(e) => {
         e.stopPropagation();
-        onToggle();
+        onToggle(e.shiftKey);
       }}
       className="relative flex size-7 items-center justify-center rounded outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
     >
-      {checked ? (
+      {checked || indeterminate ? (
         <span className="flex size-4 items-center justify-center rounded-[4px] bg-primary text-primary-foreground">
-          <Check className="size-3" />
+          {checked ? <Check className="size-3" /> : <Minus className="size-3" />}
         </span>
       ) : (
         <span
@@ -640,7 +654,7 @@ function IssuedDateCell({ doc, filterYear }: { doc: OfficialDocument; filterYear
 
 export interface DocumentLedgerTableProps {
   documents: OfficialDocument[];
-  selectedIds: Set<string>;
+  selectedIds: ReadonlySet<string>;
   selectedDocumentId?: string | null;
   numberHeader: string;
   visibleColumns: LedgerColumnVisibility;
@@ -659,8 +673,13 @@ export interface DocumentLedgerTableProps {
   onNavigate?: (doc: OfficialDocument) => void;
   /** → trên dòng đang xem: chuyển focus sang tiêu đề Quick View. */
   onFocusDetail?: () => void;
-  onToggleSelect: (id: string) => void;
+  /** Bật/tắt một dòng; `range` (Shift) chọn từ dòng bấm trước tới dòng này. */
+  onToggleSelect: (id: string, range?: boolean) => void;
   onSelectAll: () => void;
+  /** Mở menu thao tác của dòng (chuột phải tại con trỏ, nút "⋯" hoặc phím Menu/Shift+F10 neo vào dòng). */
+  onRowMenu?: (doc: OfficialDocument, anchor: { x: number; y: number } | HTMLElement) => void;
+  /** Dòng đang mở menu thao tác: giữ nền khi con trỏ đã rời dòng. */
+  menuDocId?: string | null;
 }
 
 interface LedgerRowProps {
@@ -677,10 +696,12 @@ interface LedgerRowProps {
   onOpen: (doc: OfficialDocument) => void;
   onNavigate?: (doc: OfficialDocument) => void;
   onFocusDetail?: () => void;
-  onToggleSelect: (id: string) => void;
+  onToggleSelect: (id: string, range?: boolean) => void;
+  onRowMenu?: (doc: OfficialDocument, anchor: { x: number; y: number } | HTMLElement) => void;
+  menuTarget: boolean;
 }
 
-function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelectors, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect }: LedgerRowProps) {
+function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelectors, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect, onRowMenu, menuTarget }: LedgerRowProps) {
   const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
   const no = numberLabel(doc);
   const urgent = urgencyText(doc);
@@ -706,7 +727,22 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelect
       aria-selected={selected}
       aria-current={isOpen ? "true" : undefined}
       aria-keyshortcuts={isOpen && onFocusDetail ? "ArrowRight" : undefined}
-      onClick={() => onOpen(doc)}
+      onClick={(e) => {
+        // Shift/Ctrl/Cmd+bấm trên dòng là chọn (như bảng Nhiệm vụ), không mở Quick View
+        if (e.shiftKey || e.metaKey || e.ctrlKey) {
+          onToggleSelect(doc.id, e.shiftKey);
+          return;
+        }
+        onOpen(doc);
+      }}
+      onContextMenu={
+        onRowMenu
+          ? (e) => {
+              e.preventDefault();
+              onRowMenu(doc, { x: e.clientX, y: e.clientY });
+            }
+          : undefined
+      }
       onFocus={(e) => {
         if (e.target === e.currentTarget && e.currentTarget.matches(":focus-visible")) setFocused(true);
       }}
@@ -714,7 +750,19 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelect
         if (e.target === e.currentTarget) setFocused(false);
       }}
       onKeyDown={(e) => {
-        if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+        if (e.target !== e.currentTarget) return;
+        // Phím Menu hoặc Shift+F10: menu thao tác như chuột phải; Space/X chọn dòng (Shift chọn dải)
+        if (onRowMenu && (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey))) {
+          e.preventDefault();
+          onRowMenu(doc, e.currentTarget);
+          return;
+        }
+        if ((e.key === " " || e.key === "x" || e.key === "X") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          onToggleSelect(doc.id, e.shiftKey);
+          return;
+        }
+        if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
         if (e.key === "Enter") {
           e.preventDefault();
           onOpen(doc);
@@ -742,11 +790,11 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelect
         "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
         !selected || groupPosition === "only" || !groupPosition ? "rounded-md" : groupPosition === "first" ? "rounded-t-md" : groupPosition === "last" ? "rounded-b-md" : "rounded-none",
-        isOpen ? "bg-selected" : selected ? "bg-muted/60 hover:bg-muted/80" : "hover:bg-muted/40"
+        isOpen ? "bg-selected" : selected ? "bg-muted/60 hover:bg-muted/80" : menuTarget ? "bg-muted/60" : "hover:bg-muted/40"
       )}
     >
       <span role="cell" className="flex items-center">
-        <RowSelector checked={selected} label={`Chọn văn bản ${doc.documentNumber || no || doc.summary}`} onToggle={() => onToggleSelect(doc.id)} always={showSelectors} />
+        <RowSelector checked={selected} label={`Chọn văn bản ${doc.documentNumber || no || doc.summary}`} onToggle={(range) => onToggleSelect(doc.id, range)} always={showSelectors} />
       </span>
       <span role="cell" className="flex min-w-0 items-center gap-1.5">
         {/* Bảng hẹp không có cột mức khẩn: văn bản khẩn hiện icon ngay đầu ô */}
@@ -757,15 +805,31 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, showSelect
               {doc.summary}
             </span>
           </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6} className="max-w-96 whitespace-normal py-1.5 leading-snug">
+          <TooltipContent side="bottom" sideOffset={6} className="max-w-96 flex-col items-start gap-0.5 whitespace-normal py-1.5 leading-snug">
             {doc.summary}
-            {identifiers ? <span className="mt-0.5 block font-mono font-normal opacity-70">{identifiers}</span> : null}
+            {identifiers ? <span className="block font-mono font-normal opacity-70">{identifiers}</span> : null}
           </TooltipContent>
         </Tooltip>
         {doc.documentNumber ? (
           <span className="hidden min-w-0 max-w-40 shrink-[2] truncate font-mono text-xs text-muted-foreground @[1100px]/ledger:inline" title={`Số, ký hiệu: ${doc.documentNumber}`}>
             {doc.documentNumber}
           </span>
+        ) : null}
+        {onRowMenu ? (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            tabIndex={-1}
+            aria-label={`Thao tác văn bản ${doc.documentNumber || no || doc.summary}`}
+            title="Thao tác (chuột phải)"
+            className={cn("-my-1 ml-auto opacity-0 group-hover:opacity-100", menuTarget && "bg-accent opacity-100")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRowMenu(doc, e.currentTarget);
+            }}
+          >
+            <MoreHorizontal />
+          </Button>
         ) : null}
       </span>
       {visibleColumns.urgency ? <span role="cell" className={FROM_MEDIUM}><UrgencyCell doc={doc} /></span> : null}
@@ -809,9 +873,12 @@ export function DocumentLedgerTable({
   onFocusDetail,
   onToggleSelect,
   onSelectAll,
+  onRowMenu,
+  menuDocId,
 }: DocumentLedgerTableProps) {
   const today = React.useMemo(() => todayInVietnam(), []);
-  const allSelected = documents.length > 0 && selectedIds.size === documents.length;
+  const allSelected = documents.length > 0 && documents.every((d) => selectedIds.has(d.id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
   const wrapperStyle = {
     "--ledger-cols-sm": buildCompactColumnTemplate(visibleColumns),
     "--ledger-cols": buildColumnTemplate(visibleColumns, false),
@@ -821,7 +888,13 @@ export function DocumentLedgerTable({
   const header = (
     <div role="row" className={cn(GRID, "whitespace-nowrap text-xs font-medium text-muted-foreground select-none")}>
       <span role="columnheader" className="flex items-center">
-        <RowSelector checked={allSelected} label="Chọn tất cả văn bản trên trang này" onToggle={onSelectAll} always />
+        <RowSelector
+          checked={allSelected}
+          indeterminate={someSelected}
+          label={allSelected ? "Bỏ chọn tất cả văn bản trên trang này" : "Chọn tất cả văn bản trên trang này"}
+          onToggle={() => onSelectAll()}
+          always
+        />
       </span>
       <span role="columnheader">Văn bản</span>
       {visibleColumns.urgency ? (
@@ -900,6 +973,8 @@ export function DocumentLedgerTable({
           onNavigate={onNavigate}
           onFocusDetail={onFocusDetail}
           onToggleSelect={onToggleSelect}
+          onRowMenu={onRowMenu}
+          menuTarget={menuDocId === doc.id}
         />
       ))}
     </div>

@@ -18,7 +18,7 @@ import {
 export interface DocumentCardListProps {
   documents: OfficialDocument[];
   selectedDocument?: OfficialDocument | null;
-  selectedIds?: Set<string>;
+  selectedIds?: ReadonlySet<string>;
   onSelectDocument?: (doc: OfficialDocument) => void;
   onToggleSelect?: (docId: string, isShift?: boolean) => void;
   isLoading?: boolean;

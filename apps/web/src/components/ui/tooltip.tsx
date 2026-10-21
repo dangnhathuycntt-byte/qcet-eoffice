@@ -90,7 +90,7 @@ export const TooltipContent = React.forwardRef<
   const keys = shortcut === undefined ? [] : typeof shortcut === "string" ? [shortcut] : shortcut;
   return (
     <BaseTooltip.Portal>
-      <BaseTooltip.Positioner side={SIDE_MAP[side]} sideOffset={sideOffset} align={align} className="z-60">
+      <BaseTooltip.Positioner side={SIDE_MAP[side]} sideOffset={sideOffset} align={align} className="pointer-events-none z-60">
         <BaseTooltip.Popup
           ref={ref}
           className={cn(

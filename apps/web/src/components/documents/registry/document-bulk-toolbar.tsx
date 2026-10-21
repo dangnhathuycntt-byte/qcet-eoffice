@@ -1,16 +1,13 @@
 "use client";
 
 import * as React from "react";
-import * as m from "motion/react-m";
-import { AnimatePresence } from "motion/react";
-import {
-  Building2,
-  Archive,
-  X,
-  CheckSquare,
-  Loader2,
-} from "lucide-react";
+import { Building2, Archive, Loader2 } from "lucide-react";
+import type { OfficialDocument } from "@qcet/contracts/types/document";
+import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
+import { TaskIconExport, TaskIconLink } from "@qcet/shared/lib/icons/task-icons";
 import { Button } from "@/components/ui/button";
+import { SelectionActionBar, SelectionActionButton, SelectionActionDivider } from "@/components/ui/selection-action-bar";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,8 +17,9 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { useAuth } from "@/lib/auth-context";
 import { getIncomingActions } from "@/lib/documents/incoming-workflow";
-import { motionSpring, motionDuration, motionEase } from "@/lib/motion/tokens";
-import { cn } from "@/lib/utils";
+import { downloadCsv, toCsv } from "@/lib/csv";
+import { todayInVietnam } from "@qcet/shared/lib/documents/document-ledger-format";
+import { documentCsvRows } from "./document-list-export";
 
 // Hoàn tất hàng loạt đã bỏ: giải quyết văn bản cần báo cáo kết quả và hồ sơ như thao tác đơn lẻ.
 export type BulkActionType = "assign-unit" | "file";
@@ -92,7 +90,7 @@ export interface DocumentBulkToolbarProps {
   /** Số lượng văn bản đã chọn */
   selectedCount: number;
   /** Danh sách ID các văn bản đã chọn */
-  selectedIds?: Set<string> | string[];
+  selectedIds?: ReadonlySet<string> | string[];
   /** Tổng số văn bản trên danh sách (hiển thị /tổng nếu có) */
   totalCount?: number;
   /** Callback xóa lựa chọn */
@@ -107,6 +105,15 @@ export interface DocumentBulkToolbarProps {
   className?: string;
   /** Trạng thái đang tải từ bên ngoài */
   isLoading?: boolean;
+  /** Các văn bản đang chọn (theo thứ tự trên sổ): sao chép liên kết, xuất Excel. */
+  selectedDocuments?: OfficialDocument[];
+  /** Tiêu đề cột số của sổ đang xem ("Số đến", "Số đi", "Số") cho bảng xuất Excel. */
+  numberHeader?: string;
+  /**
+   * Mở hộp Giao đơn vị / Lưu hồ sơ cho đúng các văn bản này (menu thao tác của một dòng), không đụng lựa chọn đang có.
+   * `key` đổi mỗi lần yêu cầu để mở lại được cùng thao tác.
+   */
+  actionRequest?: { type: BulkActionType; ids: string[]; key: number } | null;
 }
 
 interface ActionModalState {
@@ -129,7 +136,13 @@ export function DocumentBulkToolbar({
   onError,
   className,
   isLoading = false,
+  selectedDocuments = [],
+  numberHeader = "Số",
+  actionRequest,
 }: DocumentBulkToolbarProps) {
+  const feedback = useFeedback();
+  // Văn bản của hộp thoại đang mở: `null` là các văn bản đang chọn, mảng là văn bản mở từ menu của một dòng
+  const [targetIds, setTargetIds] = React.useState<string[] | null>(null);
   const [modalState, setModalState] = React.useState<ActionModalState>({
     type: null,
     isOpen: false,
@@ -156,30 +169,15 @@ export function DocumentBulkToolbar({
   // Chuyển đổi selectedIds sang array chuẩn
   const resolvedIds = React.useMemo(() => {
     if (!selectedIds) return [];
-    if (selectedIds instanceof Set) {
-      return Array.from(selectedIds);
-    }
-    return Array.isArray(selectedIds) ? selectedIds : [];
+    return Array.isArray(selectedIds) ? selectedIds : Array.from(selectedIds);
   }, [selectedIds]);
 
-  const effectiveCount = selectedCount || resolvedIds.length;
+  const selectionCount = selectedCount || resolvedIds.length;
+  const actionIds = targetIds ?? resolvedIds;
+  const effectiveCount = targetIds ? targetIds.length : selectionCount;
 
-  // Lắng nghe phím ESC để bỏ chọn khi không có modal nào mở
-  React.useEffect(() => {
-    if (effectiveCount <= 0 || modalState.isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClearSelection();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [effectiveCount, modalState.isOpen, onClearSelection]);
-
-  const openModal = (type: BulkActionType) => {
+  const openModal = (type: BulkActionType, ids: string[] | null = null) => {
+    setTargetIds(ids);
     setErrorMessage(null);
     setBatchOutcome(null);
     setSelectedUnitId("");
@@ -188,6 +186,13 @@ export function DocumentBulkToolbar({
     setFilingNotes("");
     setModalState({ type, isOpen: true });
   };
+
+  const requestKey = actionRequest?.key;
+  React.useEffect(() => {
+    if (actionRequest) openModal(actionRequest.type, actionRequest.ids);
+    // Chỉ mở khi có yêu cầu mới (key đổi)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestKey]);
 
   const closeModal = () => {
     if (isSubmitting) return;
@@ -221,14 +226,14 @@ export function DocumentBulkToolbar({
         modalState.type === "assign-unit"
           ? {
               action: "ASSIGN_LEAD_UNIT",
-              documentIds: resolvedIds,
+              documentIds: actionIds,
               leadUnitId: selectedUnitId,
               leadershipInstruction: instruction.trim(),
               deadline: deadline || undefined,
             }
           : {
               action: "FILE_DOCUMENTS",
-              documentIds: resolvedIds,
+              documentIds: actionIds,
               filingNotes: filingNotes.trim() || undefined,
               archiveReason: filingNotes.trim() || undefined,
             };
@@ -252,7 +257,8 @@ export function DocumentBulkToolbar({
 
       // Server xử lý từng văn bản độc lập: văn bản không xử lý được nằm trong `failed` kèm lý do.
       const { outcome, clearSelection } = resolveBulkBatchResult(json?.data, effectiveCount);
-      if (clearSelection) onClearSelection();
+      // Thao tác mở từ menu của một dòng không bỏ lựa chọn đang có của các dòng khác
+      if (clearSelection && !targetIds) onClearSelection();
       if (outcome) {
         setBatchOutcome(outcome);
         if (clearSelection && onRefresh) {
@@ -275,119 +281,56 @@ export function DocumentBulkToolbar({
     }
   };
 
-  const isBarVisible = effectiveCount > 0;
+  const copyLinks = async () => {
+    try {
+      await navigator.clipboard.writeText(selectedDocuments.map((doc) => `${window.location.origin}${getDocumentHref(doc.id)}`).join("\n"));
+      feedback.notifySuccess(selectedDocuments.length === 1 ? "Đã sao chép liên kết" : `Đã sao chép ${selectedDocuments.length} liên kết`);
+    } catch {
+      feedback.notifyError("Không sao chép được liên kết");
+    }
+  };
 
   return (
     <>
-      <AnimatePresence>
-        {isBarVisible && (
-          <m.aside
-            key="document-bulk-toolbar"
-            role="region"
-            aria-label="Thao tác hàng loạt trên văn bản"
-            aria-live="polite"
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              transition: motionSpring.snappy,
-            }}
-            exit={{
-              opacity: 0,
-              y: 24,
-              scale: 0.96,
-              transition: {
-                duration: motionDuration.fast,
-                ease: motionEase.exit,
-              },
-            }}
-            className={cn(
-              // Điện thoại: thanh rộng gần hết màn, hàng 1 = số đã chọn + bỏ chọn, hàng 2 = các thao tác chia đều
-              "fixed bottom-6 md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max select-none max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+12px)] max-sm:w-[calc(100vw-24px)]",
-              className
-            )}
-          >
-            <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card px-2 py-1 shadow-lg text-foreground">
-              {/* Badge hiển thị số lượng */}
-              <div className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 text-compact font-medium text-foreground whitespace-nowrap max-sm:flex-1">
-                <CheckSquare
-                  className="size-3.5 text-primary shrink-0"
-                />
-                <span className="flex items-center gap-1">
-                  Đã chọn{" "}
-                  <strong className="font-semibold font-mono tabular-nums px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
-                    {effectiveCount}
-                  </strong>
-                  {totalCount ? (
-                    <span className="text-muted-foreground font-normal">
-                      /{totalCount}
-                    </span>
-                  ) : null}
-                  <span className="hidden xs:inline">văn bản</span>
-                </span>
-              </div>
-
-              <div
-                className="h-4 w-px bg-border/80 mx-0.5 shrink-0 max-sm:hidden"
-                aria-hidden="true"
-              />
-
-              {/* [Nút Giao đơn vị]: chỉ người có quyền bút phê văn bản đến */}
-              {canAssignUnit ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openModal("assign-unit")}
-                  disabled={isLoading || isSubmitting}
-                  className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
-                  title="Giao đơn vị chủ trì xử lý các văn bản đã chọn"
-                >
-                  <Building2 className="text-primary" />
-                  <span>Giao đơn vị</span>
-                </Button>
-              ) : null}
-
-              {/* [Nút Lưu hồ sơ] */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openModal("file")}
-                disabled={isLoading || isSubmitting}
-                className="text-foreground max-sm:order-2 max-sm:h-9 max-sm:flex-1"
-                title="Lập hồ sơ và đưa vào lưu trữ theo dõi"
-              >
-                <Archive className="text-primary" />
-                <span>Lưu hồ sơ</span>
-              </Button>
-
-              <div
-                className="h-4 w-px bg-border/80 mx-0.5 shrink-0 max-sm:hidden"
-                aria-hidden="true"
-              />
-
-              {/* [Nút Bỏ chọn (ESC)] */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClearSelection}
-                disabled={isLoading || isSubmitting}
-                aria-label="Bỏ chọn tất cả văn bản"
-                title="Bỏ chọn (Esc)"
-                className="max-sm:order-1 max-sm:size-9 max-sm:px-0"
-              >
-                <X />
-                <span className="hidden sm:inline">Bỏ chọn</span>
-                <kbd className="hidden sm:inline-flex items-center rounded border border-border/80 bg-muted/80 px-1 font-mono text-xs text-muted-foreground leading-none font-medium">
-                  Esc
-                </kbd>
-              </Button>
-              {/* Điện thoại: ngắt hàng sau nút bỏ chọn để các thao tác nằm riêng hàng dưới */}
-              <div aria-hidden="true" className="hidden h-0 basis-full max-sm:order-1 max-sm:block" />
-            </div>
-          </m.aside>
-        )}
-      </AnimatePresence>
+      {/* Cùng thanh thao tác hàng loạt của bảng Nhiệm vụ và trang Cuộc họp (SelectionActionBar): đáy trang, nổi trên thanh
+          dưới; điện thoại rộng gần hết màn, thao tác xuống hàng dưới */}
+      <SelectionActionBar
+        count={selectionCount}
+        total={totalCount}
+        noun="văn bản"
+        onClear={onClearSelection}
+        busy={isLoading || isSubmitting}
+        className={className}
+      >
+        {/* Giao đơn vị: chỉ người có quyền bút phê văn bản đến */}
+        {canAssignUnit ? (
+          <SelectionActionButton onClick={() => openModal("assign-unit")} disabled={isLoading || isSubmitting} title="Giao đơn vị chủ trì xử lý các văn bản đã chọn">
+            <Building2 className="size-4" />
+            Giao đơn vị
+          </SelectionActionButton>
+        ) : null}
+        <SelectionActionButton onClick={() => openModal("file")} disabled={isLoading || isSubmitting} title="Lập hồ sơ và đưa vào lưu trữ theo dõi">
+          <Archive className="size-4" />
+          Lưu hồ sơ
+        </SelectionActionButton>
+        {selectedDocuments.length > 0 ? (
+          <>
+            <SelectionActionDivider />
+            <SelectionActionButton onClick={() => void copyLinks()} title="Sao chép liên kết các văn bản đã chọn">
+              <TaskIconLink className="size-4" />
+              <span className="max-sm:hidden">Sao chép liên kết</span>
+              <span className="sm:hidden">Liên kết</span>
+            </SelectionActionButton>
+            <SelectionActionButton
+              onClick={() => downloadCsv(`so-van-ban-${todayInVietnam()}.csv`, toCsv(documentCsvRows(selectedDocuments, numberHeader)))}
+              title="Tải bảng các văn bản đã chọn (mở bằng Excel)"
+            >
+              <TaskIconExport className="size-4" />
+              Xuất Excel
+            </SelectionActionButton>
+          </>
+        ) : null}
+      </SelectionActionBar>
 
       {/* Dialog xác nhận hành động hàng loạt */}
       <StandardDialog
@@ -401,7 +344,9 @@ export function DocumentBulkToolbar({
           // Lựa chọn có thể đã được bỏ khi hiện kết quả, nên lấy tổng số từ kết quả lô
           batchOutcome
             ? `Kết quả xử lý ${batchOutcome.total} văn bản`
-            : `Áp dụng đồng loạt cho ${effectiveCount} văn bản đã chọn`
+            : targetIds?.length === 1
+              ? "Áp dụng cho văn bản này"
+              : `Áp dụng đồng loạt cho ${effectiveCount} văn bản đã chọn`
         }
         size="md"
       >
@@ -484,7 +429,7 @@ export function DocumentBulkToolbar({
             <div className="space-y-3">
               <div className="rounded-md bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground">
-                  Lập hồ sơ lưu trữ cho {effectiveCount} văn bản đã chọn.
+                  {targetIds?.length === 1 ? "Lập hồ sơ lưu trữ cho văn bản này." : `Lập hồ sơ lưu trữ cho ${effectiveCount} văn bản đã chọn.`}
                 </p>
                 <p>
                   Văn bản sẽ được đánh dấu lưu theo dõi và đưa vào danh mục hồ sơ lưu trữ theo chuẩn quy định.
