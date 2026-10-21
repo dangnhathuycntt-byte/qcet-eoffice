@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" };
 
-/** GET /api/meetings/{id}/recordings — các bản ghi âm của cuộc họp (chủ tọa, thư ký, người tổ chức). */
+/** GET /api/meetings/{id}/recordings — các bản ghi âm của cuộc họp (chủ tọa, thư ký, người tạo cuộc họp). */
 export async function GET(request: NextRequest, context: TaskSubresourceContext) {
   let requestId = crypto.randomUUID();
   try {

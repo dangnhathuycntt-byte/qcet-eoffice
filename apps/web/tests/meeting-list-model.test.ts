@@ -89,7 +89,7 @@ describe("Thao tác trên một hàng", () => {
   test("xuất Excel: một dòng mỗi cuộc họp, chặn công thức ở đầu ô", () => {
     const csv = toCsv(meetingCsvRows([row({ title: "=HYPERLINK(1)", location: null })]));
     const [header, line] = csv.split("\r\n");
-    assert.equal(header, '"Cuộc họp","Ngày","Giờ","Địa điểm","Người tổ chức","Đơn vị","Thành phần","Trạng thái"');
+    assert.equal(header, '"Cuộc họp","Ngày","Giờ","Địa điểm","Người tạo","Đơn vị","Thành phần","Trạng thái"');
     assert.ok(line.startsWith(`"'=HYPERLINK(1)","22/10/2026","08:00 – 09:30","","Người tổ chức","Phòng Đào tạo","6","Đã mời"`), line);
   });
 });

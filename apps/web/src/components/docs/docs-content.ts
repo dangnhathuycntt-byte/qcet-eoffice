@@ -1325,7 +1325,7 @@ export const DOC_GROUPS: DocGroup[] = [
           },
           {
             type: "p",
-            text: "Bấm một hàng trong danh sách để mở chi tiết: thông tin cuộc họp, chương trình, thành phần tham dự, biên bản, nghị quyết, **Ghi chú của tôi** (chỉ mình Thầy/Cô xem được) và, với người tổ chức, chủ tọa hoặc thư ký, khung **Ghi âm cuộc họp** để ghi âm hoặc tải tệp rồi nhận bản chép lời và biên bản nháp để chỉnh sửa.",
+            text: "Bấm một hàng trong danh sách để mở chi tiết: thông tin cuộc họp, chương trình, thành phần tham dự, biên bản và, với người tạo cuộc họp, chủ tọa hoặc thư ký, khung **Ghi âm cuộc họp** để ghi âm hoặc tải tệp rồi nhận bản chép lời và biên bản nháp để chỉnh sửa.",
           },
         ],
       },

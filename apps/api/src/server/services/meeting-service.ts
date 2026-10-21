@@ -1003,7 +1003,7 @@ export class MeetingService {
           body: { include: { memberships: { select: { userId: true } } } },
           participants: { select: { userId: true, role: true } },
           unit: true,
-          // Ảnh đại diện cho cột Người tổ chức của trang Cuộc họp (avatar 16px như cột Phụ trách của Nhiệm vụ)
+          // Ảnh đại diện cho cột Người tạo của trang Cuộc họp (avatar 16px như cột Phụ trách của Nhiệm vụ)
           organizer: {
             select: { id: true, name: true, email: true, avatarUrl: true },
           },

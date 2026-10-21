@@ -108,8 +108,8 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const [peekOpen, setPeekOpen] = React.useState(false);
 
   const isOrganizer = currentUser.id === meeting.organizerId;
-  // Theo quyền máy chủ tính, không đoán theo vai trò: bắt đầu họp là người tổ chức/chủ tọa, soạn biên bản là thư ký/chủ
-  // tọa/người tổ chức, duyệt biên bản chỉ chủ tọa (thư ký soạn biên bản không tự duyệt)
+  // Theo quyền máy chủ tính, không đoán theo vai trò: bắt đầu họp là người tạo/chủ tọa, soạn biên bản là thư ký/chủ
+  // tọa/người tạo, duyệt biên bản chỉ chủ tọa (thư ký soạn biên bản không tự duyệt)
   const can = (action: string) => meeting.availableActions.includes(action);
   const canHold = canStartMeeting(meeting);
   const canCancel = canCancelMeeting(meeting);
@@ -129,7 +129,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const beforeHeld = meeting.status === "DRAFT_AGENDA" || meeting.status === "INVITED";
   const status = meetingStatus(meeting.status);
 
-  // Mời người: người tổ chức/chủ tọa (máy chủ tính), đến khi biên bản được duyệt hoặc cuộc họp bị hủy
+  // Mời người: người tạo/chủ tọa (máy chủ tính), đến khi biên bản được duyệt hoặc cuộc họp bị hủy
   const canManageParticipants = can("meeting.manage_participants") && !["MINUTES_CONFIRMED", "CANCELLED"].includes(meeting.status);
   // Danh bạ chỉ tải khi mở menu lần đầu
   const [peopleWanted, setPeopleWanted] = React.useState(false);
@@ -292,7 +292,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
             {/* Tên đơn vị không ghi tắt: xuống tối đa 2 dòng */}
             <span className="line-clamp-2">{meeting.unit?.name || <Muted>Chưa có</Muted>}</span>
           </PropertyRow>
-          <PropertyRow label="Người tổ chức" density="compact" labelClassName="w-24" valueClassName="justify-start">
+          <PropertyRow label="Người tạo" density="compact" labelClassName="w-24" valueClassName="justify-start">
             {meeting.organizer ? (
               <span className="flex min-w-0 items-center gap-1.5">
                 <UserAvatar name={meeting.organizer.name ?? meeting.organizer.email} avatarUrl={meeting.organizer.avatarUrl} size="xs" />

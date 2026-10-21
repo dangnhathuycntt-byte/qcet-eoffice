@@ -223,7 +223,7 @@ export interface MeetingRecordingPanelProps {
  * Ghi âm hoặc tải tệp ghi âm cuộc họp, rồi bấm "Tạo biên bản" để Agent (Gemini) nghe và soạn biên bản đề xuất. Mỗi bản ghi
  * hiện sóng âm máy chủ đã đo; tải lên chưa gửi tới dịch vụ AI, bấm "Tạo biên bản" mới gửi (lời nhắc cạnh nút: bấm là xác nhận
  * đã báo người dự họp, như "Start transcribing" của Notion). Nghe lại được trên sóng âm; âm thanh lưu tới khi xóa bản ghi.
- * Chỉ chủ tọa, thư ký, người tổ chức dùng được (máy chủ kiểm quyền; nhận 403/404 thì khung tự ẩn).
+ * Chỉ chủ tọa, thư ký, người tạo cuộc họp dùng được (máy chủ kiểm quyền; nhận 403/404 thì khung tự ẩn).
  */
 export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, collapseReady = false }: MeetingRecordingPanelProps) {
   const { notifyError } = useFeedback();

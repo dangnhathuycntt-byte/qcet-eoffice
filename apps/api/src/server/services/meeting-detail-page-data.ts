@@ -6,7 +6,7 @@ import { MeetingService } from "@/server/services/meeting-service";
 // Kiểm meeting.read qua MeetingService.getMeeting (cùng quy tắc với GET /api/meetings/[id]) trước khi đọc.
 
 /**
- * Cuộc họp kèm đơn vị, người tổ chức, người tham dự, kết luận và các thao tác người xem làm được; ngày giờ đã đổi sang ISO.
+ * Cuộc họp kèm đơn vị, người tạo, người tham dự, kết luận và các thao tác người xem làm được; ngày giờ đã đổi sang ISO.
  * `null` khi không có hoặc `userId` không có quyền đọc (trang trả notFound()).
  */
 export async function readMeetingDetailPageData(id: string, userId: string) {

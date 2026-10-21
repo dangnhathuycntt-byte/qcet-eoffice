@@ -2,7 +2,7 @@
  * Ghi âm cuộc họp: tạo bản ghi, nhận âm thanh theo từng phần, ghép (UPLOADED, đo sóng âm), rồi khi người dùng bấm "Tạo
  * biên bản" (kèm xác nhận đã thông báo và đồng ý gửi tới dịch vụ AI) mới xếp việc chép lời.
  *
- * Quyền: cùng quan hệ với soạn biên bản (chủ tọa, thư ký, người tổ chức, `meeting.draft_minutes`) cho mọi thao tác, kể cả
+ * Quyền: cùng quan hệ với soạn biên bản (chủ tọa, thư ký, người tạo cuộc họp, `meeting.draft_minutes`) cho mọi thao tác, kể cả
  * xem bản chép lời. Quyền soạn biên bản chỉ mở khi cuộc họp đã diễn ra, còn ghi âm xảy ra trong lúc họp, nên kiểm với
  * trạng thái HELD rồi tự chặn các trạng thái không còn ghi âm được. Người không đọc được cuộc họp nhận 404.
  */
@@ -61,7 +61,7 @@ async function authorizeRecordingAccess(meetingId: string, userId: string, optio
   if (!read.allowed) throw new NotFoundError("Cuộc họp không tồn tại");
   const relation = authorize(context, "meeting.draft_minutes", buildMeetingResource({ ...meeting, status: MeetingStatus.HELD }));
   if (!relation.allowed) {
-    throw new AuthorizationError("Chỉ chủ tọa, thư ký hoặc người tổ chức mới ghi âm và xem bản chép lời của cuộc họp.");
+    throw new AuthorizationError("Chỉ chủ tọa, thư ký hoặc người tạo cuộc họp mới ghi âm và xem bản chép lời của cuộc họp.");
   }
   if (options.write && !WRITABLE_MEETING_STATUSES.includes(meeting.status)) {
     throw new ValidationError("Cuộc họp ở trạng thái này không còn ghi âm được.");

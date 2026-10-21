@@ -522,7 +522,7 @@ export function MeetingListView() {
                 <TableHead className={COLUMN_WIDTH.time} aria-sort={tableAriaSort(sortDirection(sort, "startTime"))}>
                   <TableSortButton label="Thời gian" direction={sortDirection(sort, "startTime")} onSort={() => toggleSort("startTime")} />
                 </TableHead>
-                {showOrganizer ? <TableHead className={COLUMN_WIDTH.organizer}>Người tổ chức</TableHead> : null}
+                {showOrganizer ? <TableHead className={COLUMN_WIDTH.organizer}>Người tạo</TableHead> : null}
                 {showParticipants ? <TableHead className={COLUMN_WIDTH.participants}>Thành phần</TableHead> : null}
                 {showStatus ? <TableHead className={COLUMN_WIDTH.status}>Trạng thái</TableHead> : null}
               </TableRow>
@@ -616,7 +616,7 @@ export function MeetingListView() {
         ) : null}
         {cancelTargets && cancelTargets.skipped > 0 ? (
           <p className="mt-1 text-xs text-muted-foreground">
-            {cancelTargets.skipped} cuộc đã chọn giữ nguyên vì đã họp, đã hủy hoặc Thầy/Cô không phải người tổ chức, chủ tọa.
+            {cancelTargets.skipped} cuộc đã chọn giữ nguyên vì đã họp, đã hủy hoặc Thầy/Cô không phải người tạo, chủ tọa.
           </p>
         ) : null}
       </DestructiveConfirmDialog>

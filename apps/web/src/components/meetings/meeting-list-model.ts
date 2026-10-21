@@ -85,7 +85,7 @@ const can = (row: MeetingActionSubject, action: string) => row.availableActions.
 export const canStartMeeting = (row: MeetingActionSubject) =>
   (row.status === "DRAFT_AGENDA" || row.status === "INVITED") && can(row, "meeting.update");
 
-/** Hủy họp: người tổ chức/chủ tọa, chỉ khi chưa họp (đã họp thì giữ để còn biên bản). */
+/** Hủy họp: người tạo/chủ tọa, chỉ khi chưa họp (đã họp thì giữ để còn biên bản). */
 export const canCancelMeeting = (row: MeetingActionSubject) => (row.status === "DRAFT_AGENDA" || row.status === "INVITED") && can(row, "meeting.update");
 
 /** Câu nhắc trong hộp xác nhận hủy họp (danh sách và trang chi tiết): outbox cuộc họp chưa gửi thông báo hủy. */
@@ -109,7 +109,7 @@ export function meetingSummaryText(row: Pick<MeetingRow, "title" | "startTime" |
 /** Bảng xuất Excel của các cuộc họp đã chọn, theo thứ tự trên màn hình. */
 export function meetingCsvRows(rows: MeetingRow[]): string[][] {
   return [
-    ["Cuộc họp", "Ngày", "Giờ", "Địa điểm", "Người tổ chức", "Đơn vị", "Thành phần", "Trạng thái"],
+    ["Cuộc họp", "Ngày", "Giờ", "Địa điểm", "Người tạo", "Đơn vị", "Thành phần", "Trạng thái"],
     ...rows.map((row) => [
       row.title,
       formatDisplayDate(row.startTime),
@@ -126,7 +126,7 @@ export function meetingCsvRows(rows: MeetingRow[]): string[][] {
 /** `wide`: cột chỉ có từ màn hình máy tính bảng (điện thoại chỉ có Cuộc họp và Thời gian), chip của nó ẩn trên điện thoại. */
 export const MEETING_COLUMNS = [
   { id: "location", label: "Địa điểm", wide: false },
-  { id: "organizer", label: "Người tổ chức", wide: true },
+  { id: "organizer", label: "Người tạo", wide: true },
   { id: "participants", label: "Thành phần", wide: true },
   { id: "status", label: "Trạng thái", wide: true },
 ] as const;

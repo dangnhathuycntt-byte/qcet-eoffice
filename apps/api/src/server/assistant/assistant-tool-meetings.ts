@@ -121,7 +121,7 @@ export async function readMeetingContext(authz: AuthorizationContext, id: string
     }
   } catch (error) {
     if (!isAccessDenial(error)) throw error;
-    lines.push(`Bản ghi âm: ${await prisma.meetingRecording.count({ where: { meetingId: meeting.id } })} (chỉ chủ tọa, thư ký, người tổ chức xem được)`);
+    lines.push(`Bản ghi âm: ${await prisma.meetingRecording.count({ where: { meetingId: meeting.id } })} (chỉ chủ tọa, thư ký, người tạo cuộc họp xem được)`);
   }
   return { source: meetingSource(meeting), summary: clip(lines.join("\n"), 2000) };
 }
@@ -142,7 +142,7 @@ export async function getMeeting(args: z.output<typeof GetMeetingArgs>, ctx: Ass
     }));
   } catch (error) {
     if (!isAccessDenial(error)) throw error;
-    recordingsNote = "Chỉ chủ tọa, thư ký hoặc người tổ chức xem được bản ghi âm của cuộc họp.";
+    recordingsNote = "Chỉ chủ tọa, thư ký hoặc người tạo cuộc họp xem được bản ghi âm của cuộc họp.";
   }
   const participants = meeting.participants.map((p) => clip(p.user.name ?? "", 80)).filter(Boolean);
   return {
@@ -272,7 +272,7 @@ export async function proposeMinutes(args: z.output<typeof ProposeMinutesArgs>, 
     throw new ToolFailure("Cuộc họp chưa ở trạng thái Đã họp. Thầy/Cô bấm \"Bắt đầu họp\" trên trang cuộc họp trước khi lưu biên bản.");
   }
   if (!meeting.availableActions.includes("meeting.draft_minutes")) {
-    throw new ToolFailure("Thầy/Cô không có quyền soạn biên bản cuộc họp này (chỉ chủ tọa, thư ký, người tổ chức).");
+    throw new ToolFailure("Thầy/Cô không có quyền soạn biên bản cuộc họp này (chỉ chủ tọa, thư ký, người tạo cuộc họp).");
   }
   const fromRecording = args.recordingId ? await recordingMinutes(args.meetingId, args.recordingId, ctx.userId) : null;
   const minutes = fromRecording?.text ?? args.minutes ?? "";

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/meetings/{id}/recordings/{recordingId}/audio — nghe lại bản ghi (thẻ `<audio>` của trang chi tiết), cùng quyền với
- * xem bản ghi (chủ tọa, thư ký, người tổ chức). Hỗ trợ `Range` để tua; không lưu đệm.
+ * xem bản ghi (chủ tọa, thư ký, người tạo cuộc họp). Hỗ trợ `Range` để tua; không lưu đệm.
  */
 export async function GET(request: NextRequest, context: TaskSubresourceContext) {
   let requestId = crypto.randomUUID();

@@ -115,7 +115,7 @@ describe('Trợ lý: soạn biên bản cuộc họp từ bản ghi âm', () => 
 
     const attendee = payloadOf((await runAssistantTool('get_meeting', JSON.stringify({ id: heldId }), await contextFor('attendee'))).content);
     assert.equal(attendee.recordings, null);
-    assert.match(String(attendee.recordingsNote), /Chỉ chủ tọa, thư ký hoặc người tổ chức/);
+    assert.match(String(attendee.recordingsNote), /Chỉ chủ tọa, thư ký hoặc người tạo cuộc họp/);
     assert.equal(attendee.canDraftMinutes, false);
 
     const stranger = await runAssistantTool('get_meeting', JSON.stringify({ id: heldId }), await contextFor('stranger'));
@@ -219,7 +219,7 @@ describe('Trợ lý: soạn biên bản cuộc họp từ bản ghi âm', () => 
     assert.ok(own.summary.includes(`- id ${recordingId}: "Ghi trực tiếp"`), own.summary);
     const attendee = await describeAssistantContext(await contextFor('attendee'), { type: 'meeting', id: heldId });
     assert.ok(attendee);
-    assert.match(attendee.summary, /Bản ghi âm: 1 \(chỉ chủ tọa, thư ký, người tổ chức xem được\)/);
+    assert.match(attendee.summary, /Bản ghi âm: 1 \(chỉ chủ tọa, thư ký, người tạo cuộc họp xem được\)/);
     assert.equal(attendee.summary.includes(recordingId), false);
     assert.equal(await describeAssistantContext(await contextFor('stranger'), { type: 'meeting', id: heldId }), null);
   });
