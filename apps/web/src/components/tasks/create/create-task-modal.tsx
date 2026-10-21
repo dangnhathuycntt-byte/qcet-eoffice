@@ -705,8 +705,10 @@ export function CreateTaskModal({
 
                   {/* 2. Thuộc tính: pill ngay dưới tên, luôn thấy kể cả khi mô tả dài */}
                   <div className="mt-2.5 flex shrink-0 flex-wrap items-center gap-2">
-                    {/* 3.0 Đơn vị: chỉ hiện khi có nhiều đơn vị để chọn (đổi đơn vị thì xóa chủ trì đã chọn) */}
-                    {form.availableDepartments.length > 1 && (
+                    {/* 3.0 Đơn vị chủ trì, luôn hiện (người dùng yêu cầu 21/10/2026): mặc định đơn vị của người tạo; người không thuộc
+                        lãnh đạo chỉ có đơn vị mình (máy chủ chặn tạo ngoài đơn vị). Đổi đơn vị thì xóa chủ trì đã chọn và mở luôn
+                        danh sách nhân sự của đơn vị mới: chọn đơn vị → chọn người chủ trì. */}
+                    {(form.availableDepartments.length > 0 || form.isLoadingDepartments) && (
                     <Select.Root
                       value={form.formData.selectedDeptCode}
                       open={openDropdown === "dept"}
@@ -715,9 +717,16 @@ export function CreateTaskModal({
                         if (!code || code === form.formData.selectedDeptCode) return;
                         form.setField("selectedDeptCode", code);
                         form.setField("leadAssigneeId", "");
+                        // Sau khi menu đơn vị đóng (cùng lượt bấm nó đặt openDropdown về null)
+                        window.setTimeout(() => setOpenDropdown("dri"), 0);
                       }}
                     >
-                        <Select.Trigger aria-label={`Đơn vị: ${currentDeptName}`} title={`Đơn vị: ${currentDeptName}`} className={PROPERTY_PILL_CLASS}>
+                        <Select.Trigger
+                          aria-label={`Đơn vị: ${currentDeptName}`}
+                          title={`Đơn vị: ${currentDeptName}`}
+                          disabled={form.availableDepartments.length === 0}
+                          className={PROPERTY_PILL_CLASS}
+                        >
                           <Building2 className="text-muted-foreground" />
                           <span className="max-w-[240px] truncate max-md:max-w-[120px]">{currentDeptName}</span>
                         </Select.Trigger>
@@ -738,6 +747,9 @@ export function CreateTaskModal({
                                   </Select.Item>
                                 ))}
                               </Select.List>
+                              {!form.isExecutive && form.availableDepartments.length === 1 ? (
+                                <p className="px-2 pb-1 pt-1.5 text-xs text-muted-foreground">Nhiệm vụ Thầy/Cô tạo thuộc đơn vị mình công tác.</p>
+                              ) : null}
                             </Select.Popup>
                           </Select.Positioner>
                         </Select.Portal>
