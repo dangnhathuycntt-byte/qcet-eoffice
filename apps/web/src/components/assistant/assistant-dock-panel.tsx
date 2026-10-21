@@ -140,16 +140,30 @@ export function AssistantDockPanel({
         {pending ? "Trợ lý đang trả lời." : ""}
       </div>
 
-      <div className="flex h-12 shrink-0 items-center gap-1 pl-4 pr-2">
-        <h2 className="min-w-0 truncate text-compact font-medium text-foreground">{title ?? "Cuộc trò chuyện mới"}</h2>
+      {/* Điều khiển khung (Đóng, Thu nhỏ, Mở toàn trang) ở mép trái theo thứ tự cửa sổ macOS; "⋯" luôn là nút cuối bên phải
+          (người dùng yêu cầu 21/10/2026, DESIGN.md "Vị trí nút ⋯") */}
+      <div className="flex h-12 shrink-0 items-center gap-1 px-2">
+        <div className="flex shrink-0 items-center gap-0.5">
+          <HeaderButton label="Đóng" onClick={onClose}>
+            <X />
+          </HeaderButton>
+          <HeaderButton label="Thu nhỏ" onClick={onMinimize}>
+            <Minus />
+          </HeaderButton>
+          {/* Đang trả lời thì chưa mở toàn trang: trang đọc lại cuộc từ máy chủ, câu trả lời dở chưa được lưu */}
+          <HeaderButton label={pending ? "Chờ Trợ lý trả lời xong để mở toàn trang" : "Mở trong trang Trợ lý"} onClick={onExpand} disabled={pending}>
+            <Maximize2 />
+          </HeaderButton>
+        </div>
+        <h2 className="ml-1 min-w-0 truncate text-compact font-medium text-foreground">{title ?? "Cuộc trò chuyện mới"}</h2>
         {conversationId ? (
           <MenuRoot modal={false}>
             <MenuTrigger asChild>
-              <Button variant="ghost" size="icon-xs" aria-label="Thao tác với cuộc trò chuyện">
+              <Button variant="ghost" size="icon-xs" aria-label="Thao tác với cuộc trò chuyện" className="ml-auto shrink-0">
                 <Ellipsis />
               </Button>
             </MenuTrigger>
-            <MenuContent align="start" className="w-56 min-w-0">
+            <MenuContent align="end" className="w-56 min-w-0">
               <MenuActionItem leading={<IconSidebarCompose className="size-3.5" />} onClick={onNewChat}>
                 Cuộc trò chuyện mới
               </MenuActionItem>
@@ -163,19 +177,6 @@ export function AssistantDockPanel({
             </MenuContent>
           </MenuRoot>
         ) : null}
-
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
-          <HeaderButton label="Thu nhỏ" onClick={onMinimize}>
-            <Minus />
-          </HeaderButton>
-          {/* Đang trả lời thì chưa mở toàn trang: trang đọc lại cuộc từ máy chủ, câu trả lời dở chưa được lưu */}
-          <HeaderButton label={pending ? "Chờ Trợ lý trả lời xong để mở toàn trang" : "Mở trong trang Trợ lý"} onClick={onExpand} disabled={pending}>
-            <Maximize2 />
-          </HeaderButton>
-          <HeaderButton label="Đóng" onClick={onClose}>
-            <X />
-          </HeaderButton>
-        </div>
       </div>
 
       {start ? (

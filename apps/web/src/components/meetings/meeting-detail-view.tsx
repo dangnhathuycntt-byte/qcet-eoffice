@@ -543,8 +543,8 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           data-slot="meeting-workspace"
           className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0"
         >
-          {/* Màn hẹp: hai hàng 44px như chi tiết nhiệm vụ trên điện thoại; hàng trên menu, tên, "⋯", liên kết (kẻ mảnh bên
-              dưới), hàng dưới nút Thuộc tính. Không còn nút "Bắt đầu họp" (người dùng bỏ 21/10/2026) */}
+          {/* Màn hẹp: hai hàng 44px như chi tiết nhiệm vụ trên điện thoại; hàng trên menu, tên, liên kết, "⋯" (luôn cuối bên
+              phải; kẻ mảnh bên dưới), hàng dưới nút Thuộc tính. Không còn nút "Bắt đầu họp" (người dùng bỏ 21/10/2026) */}
           <header
             data-slot="meeting-detail-header"
             className="relative flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-[18px] max-lg:grid max-lg:h-auto max-lg:grid-cols-[minmax(0,1fr)_auto_auto] max-lg:grid-rows-[44px_44px] max-lg:gap-x-1 max-lg:gap-y-0 max-lg:border-b-0 max-lg:px-2 max-lg:pt-[env(safe-area-inset-top,0px)]"
@@ -561,23 +561,23 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
               </span>
             </nav>
             <div className="flex shrink-0 items-center gap-1.5 max-lg:contents">
-              <MeetingMoreMenu
-                title={meeting.title}
-                summary={meetingSummaryText(meeting)}
-                meetingId={meeting.id}
-                onCancel={canCancel ? () => setCancelling(true) : undefined}
-                className="max-lg:[grid-area:1/2]"
-              />
               <Button
                 variant="ghost"
                 size="icon-md"
-                className="max-lg:[grid-area:1/3]"
+                className="max-lg:[grid-area:1/2]"
                 onClick={() => void copyLink()}
                 title="Sao chép liên kết"
                 aria-label="Sao chép liên kết"
               >
                 <Link2 />
               </Button>
+              <MeetingMoreMenu
+                title={meeting.title}
+                summary={meetingSummaryText(meeting)}
+                meetingId={meeting.id}
+                onCancel={canCancel ? () => setCancelling(true) : undefined}
+                className="max-lg:[grid-area:1/3]"
+              />
               <Button
                 variant="ghost"
                 size="icon-md"

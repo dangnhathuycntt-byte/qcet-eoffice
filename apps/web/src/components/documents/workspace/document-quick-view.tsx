@@ -30,7 +30,7 @@ const PRINT_DETAIL_CSS = `@media print {
 
 /**
  * "Thao tác khác": sửa thông tin và bổ sung tệp (khi server cho phép), in phiếu thông tin văn bản
- * (không phải in tệp PDF đang xem), xem chữ ký số khi có. Header giữ Sao chép liên kết, menu này và Đóng.
+ * (không phải in tệp PDF đang xem), xem chữ ký số khi có. Header: Đóng bên trái; Sao chép liên kết rồi menu này bên phải.
  */
 function MoreActionsMenu({
   onPrint,
@@ -215,16 +215,22 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
   const header = (
     <header
       className={cn(
-        "flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 pl-4 pr-2 select-none",
-        backAsClose && "h-[calc(44px+env(safe-area-inset-top,0px))] pl-2 pt-[env(safe-area-inset-top,0px)]",
+        "flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 pl-2 pr-2 select-none",
+        backAsClose && "h-[calc(44px+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)]",
       )}
     >
+      {/* Đóng (máy tính) / Quay lại (điện thoại) ở mép trái như khung xem nhanh của Notion; mép phải là thao tác, "⋯" luôn cuối
+          cùng (người dùng yêu cầu 21/10/2026, DESIGN.md "Vị trí nút ⋯") */}
       <div className="flex min-w-0 items-center gap-1">
         {backAsClose ? (
           <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Quay lại danh sách văn bản">
             <ChevronLeft />
           </Button>
-        ) : null}
+        ) : (
+          <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Đóng" title="Đóng" className="text-muted-foreground hover:text-foreground">
+            <X className="size-4" />
+          </Button>
+        )}
         <p className="min-w-0 truncate text-xs text-muted-foreground">{typeLine}</p>
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
@@ -245,11 +251,6 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
           onEdit={canEdit ? () => setEditing(true) : undefined}
           onAddFiles={canEdit && !upload.busy ? upload.open : undefined}
         />
-        {backAsClose ? null : (
-          <Button ref={closeRef} variant="ghost" size="icon-sm" onClick={onClose} aria-label="Đóng" title="Đóng" className="text-muted-foreground hover:text-foreground">
-            <X className="size-4" />
-          </Button>
-        )}
       </div>
     </header>
   );

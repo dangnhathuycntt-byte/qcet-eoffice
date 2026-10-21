@@ -653,36 +653,7 @@ export function InboxView() {
                 />
               </>
             ) : (
-              <>
-                <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
-                <MenuRoot>
-                  <MenuTrigger
-                    render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" title="Tùy chọn" />}
-                  >
-                    <MoreHorizontal />
-                  </MenuTrigger>
-                  <MenuContent align="start" className="w-60">
-                    <MenuActionItem
-                      disabled={!unreadCount || isMarkingAll || pendingIds.size > 0}
-                      onClick={() => void markAllRead()}
-                      leading={<CheckCheck />}
-                    >
-                      Đánh dấu tất cả đã đọc
-                    </MenuActionItem>
-                    <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
-                    <MenuActionItem onClick={() => void archiveBulk("read")} leading={<Archive />}>
-                      Lưu trữ thông báo đã đọc
-                    </MenuActionItem>
-                    <MenuActionItem onClick={() => void archiveBulk("all")} leading={<Archive />}>
-                      Lưu trữ tất cả
-                    </MenuActionItem>
-                    <MenuSeparator className="my-1 border-t border-border/40" />
-                    <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
-                      Làm mới
-                    </MenuActionItem>
-                  </MenuContent>
-                </MenuRoot>
-              </>
+              <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
             )}
 
             <div className="ml-auto flex shrink-0 items-center gap-0.5">
@@ -749,6 +720,34 @@ export function InboxView() {
                       {opt.label}
                     </MenuActionItem>
                   ))}
+                </MenuContent>
+              </MenuRoot>
+              {/* "⋯" luôn là nút cuối bên phải (người dùng yêu cầu 21/10/2026), như khung Hộp thư */}
+              <MenuRoot>
+                <MenuTrigger
+                  render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" title="Tùy chọn" />}
+                >
+                  <MoreHorizontal />
+                </MenuTrigger>
+                <MenuContent align="end" className="w-60">
+                  <MenuActionItem
+                    disabled={!unreadCount || isMarkingAll || pendingIds.size > 0}
+                    onClick={() => void markAllRead()}
+                    leading={<CheckCheck />}
+                  >
+                    Đánh dấu tất cả đã đọc
+                  </MenuActionItem>
+                  <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
+                  <MenuActionItem onClick={() => void archiveBulk("read")} leading={<Archive />}>
+                    Lưu trữ thông báo đã đọc
+                  </MenuActionItem>
+                  <MenuActionItem onClick={() => void archiveBulk("all")} leading={<Archive />}>
+                    Lưu trữ tất cả
+                  </MenuActionItem>
+                  <MenuSeparator className="my-1 border-t border-border/40" />
+                  <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
+                    Làm mới
+                  </MenuActionItem>
                 </MenuContent>
               </MenuRoot>
             </div>
