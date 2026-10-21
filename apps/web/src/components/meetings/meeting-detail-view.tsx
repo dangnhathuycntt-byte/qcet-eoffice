@@ -51,13 +51,13 @@ const ATTENDANCE: Record<string, { label: string; warn?: boolean }> = {
 };
 
 /**
- * Bề ngang trang chi tiết: cột chính và cột thuộc tính đứng sát nhau trong một khung tối đa 1200px căn giữa (như trang
- * issue của GitHub), cột chính rộng tới khoảng 770px (~125 ký tự một dòng ở chữ 13px). Trước đây chỉ cột chính bị giới
- * hạn 672px và căn trái, còn cột phải bám mép phải nên màn rộng để trống một mảng lớn giữa hai cột (người dùng chê 21/10/2026
- * "trang ngang rộng mà phần nội dung chính thừa khoảng trống nhiều quá"); trước nữa không giới hạn thì dòng chữ tới 160 ký
- * tự. Nay phần dư của màn rộng chia đều hai bên mép trang.
+ * Bố cục theo trang chi tiết nhiệm vụ (người dùng yêu cầu 21/10/2026 "học layout trang chi tiết nhiệm vụ", sau khi chê
+ * cột chính 672px căn trái để trống một mảng lớn ở màn rộng): cột chính không giới hạn bề ngang, lề trái 24px (48px từ
+ * 1440px), đo đúng như trang nhiệm vụ; cột thuộc tính 340px bám mép phải, lề trong 8px, cách cột chính
+ * 24px như `TaskDetailSplitLayout`. Mốc 1440px viết `min-[90rem]`: Tailwind chỉ xếp sau `lg` (64rem) khi cùng đơn vị rem.
  */
-const DETAIL_FRAME_CLASS = "mx-auto w-full max-w-[1200px]";
+const DETAIL_GRID_CLASS =
+  "grid grid-cols-1 gap-y-4 px-4 pb-16 pt-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:gap-x-6 lg:pl-6 lg:pr-0 lg:pt-0 min-[90rem]:pl-12";
 
 /** Biên bản tối thiểu 10 ký tự như `DraftMinutesSchema` của máy chủ. */
 const MINUTES_MIN_LENGTH = 10;
@@ -529,7 +529,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
           <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
             {/* Màn rộng: lưới hai cột, cột phải trải hai hàng để tên và các thẻ cột chính không bị đẩy cách nhau.
                 Màn hẹp: thứ tự DOM là tên, thuộc tính, các thẻ. */}
-            <div className={cn("grid grid-cols-1 gap-x-8 gap-y-4 px-4 pb-16 pt-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:px-8 lg:pt-0", DETAIL_FRAME_CLASS)}>
+            <div className={DETAIL_GRID_CLASS}>
               <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:pt-6">
                 <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
                 <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
@@ -542,7 +542,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 )}
               </div>
 
-              <aside aria-label="Thuộc tính cuộc họp" className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:pt-3">
+              <aside aria-label="Thuộc tính cuộc họp" className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-2 lg:pt-3">
                 {inspector}
               </aside>
 

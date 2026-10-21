@@ -14,7 +14,7 @@ export default function MeetingDetailLoading() {
             <Skeleton className="h-3.5 w-48" />
             <Skeleton className="h-7 w-28 rounded-lg" />
           </div>
-          <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-8 px-4 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+          <div className="grid grid-cols-1 gap-8 px-4 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-6 lg:pl-6 lg:pr-0 min-[90rem]:pl-12">
             <div className="flex flex-col gap-3">
               <Skeleton className="h-6 w-2/3" />
               <Skeleton className="mt-3 h-3 w-32" />
@@ -22,7 +22,7 @@ export default function MeetingDetailLoading() {
               <Skeleton className="h-3.5 w-4/5" />
               <Skeleton className="mt-4 h-40 w-full rounded-[10px]" />
             </div>
-            <div className="flex flex-col gap-2 max-lg:hidden">
+            <div className="flex flex-col gap-2 px-2 max-lg:hidden">
               <Skeleton className="h-48 w-full rounded-[10px]" />
               <Skeleton className="h-28 w-full rounded-[10px]" />
             </div>
