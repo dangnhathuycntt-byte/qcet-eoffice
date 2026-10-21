@@ -357,6 +357,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
   const recordingSection = canRecord ? (
     <MeetingRecordingPanel
       meetingId={meeting.id}
+      collapseReady={Boolean(meeting.minutes)}
       onUseAsMinutes={canDraftMinutes ? useRecordingAsMinutes : undefined}
       minutesHint={
         meeting.status === "INVITED"

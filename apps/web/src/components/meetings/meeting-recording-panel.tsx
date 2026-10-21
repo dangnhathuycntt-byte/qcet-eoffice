@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AudioLines, Check, Mic, Play, RotateCcw, Square, Trash2, Upload } from "lucide-react";
+import { AudioLines, Check, ChevronRight, Mic, Play, RotateCcw, Square, Trash2, Upload } from "lucide-react";
 import {
   MEETING_RECORDING_MAX_BYTES,
   type MeetingRecordingDetail,
@@ -113,12 +113,95 @@ function ProcessingStatus({ recording }: { recording: MeetingRecordingSummary })
   );
 }
 
+/**
+ * Một bản ghi: biểu tượng nguồn, tên (cắt cuối kèm tooltip), dòng phụ giờ · thời lượng · dung lượng · người ghi, nút xóa;
+ * dưới là sóng âm và phần trạng thái (`children`). `collapsible` thì tên là nút mở/thu (Enter/Space), thu thì ẩn `children`.
+ */
+function RecordingRow({
+  recording,
+  collapsible,
+  open,
+  onToggle,
+  onDelete,
+  children,
+}: {
+  recording: MeetingRecordingSummary;
+  collapsible: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onDelete?: () => void;
+  children: React.ReactNode;
+}) {
+  const expanded = !collapsible || open;
+  const heading = (
+    <>
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background text-muted-foreground">
+        {recording.source === "live" ? <Mic className="size-3.5" /> : <AudioLines className="size-3.5" />}
+      </span>
+      <span className="block min-w-0 flex-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="block truncate text-compact font-medium text-foreground">{recordingTitle(recording)}</span>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="start">
+            {recordingTitle(recording)}
+          </TooltipContent>
+        </Tooltip>
+        {/* Điện thoại: dòng phụ xuống dòng thay vì cắt tên người ghi ("… 51 KB · Đặng Nhật …") */}
+        <span className="block truncate text-xs text-muted-foreground tabular-nums max-md:overflow-visible max-md:whitespace-normal">
+          {[
+            recordedAt(recording.createdAt),
+            recording.durationSec ? formatClock(recording.durationSec) : null,
+            recording.byteSize > 0 ? formatSize(recording.byteSize) : null,
+            recording.createdByName,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+      </span>
+    </>
+  );
+  return (
+    <li className={cn("py-3 first:pt-0 last:pb-0", expanded && "space-y-2")}>
+      <div className="flex items-center gap-2">
+        {collapsible ? (
+          // Cả hàng là vùng bấm (như hàng của Ghi âm iOS); -m-1 p-1 cho nền rê chuột thò ra một chút mà hàng không cao thêm
+          <Pressable
+            aria-expanded={open}
+            onClick={onToggle}
+            className="-m-1 flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left hover:bg-muted/60"
+          >
+            {heading}
+            <ChevronRight
+              aria-hidden="true"
+              className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none", open && "rotate-90")}
+            />
+          </Pressable>
+        ) : (
+          heading
+        )}
+        {onDelete && (
+          <Button variant="ghost" size="icon-xs" aria-label="Xóa bản ghi" title="Xóa bản ghi" onClick={onDelete}>
+            <Trash2 />
+          </Button>
+        )}
+      </div>
+      {expanded ? children : null}
+    </li>
+  );
+}
+
 export interface MeetingRecordingPanelProps {
   meetingId: string;
   /** Có thì kết quả có nút "Dùng làm biên bản nháp" (cuộc họp đã ở trạng thái soạn được biên bản). */
   onUseAsMinutes?: (text: string) => void;
   /** Lý do chưa điền thẳng vào biên bản được, hiện cạnh nút Sao chép. */
   minutesHint?: string;
+  /**
+   * Cuộc họp đã có biên bản: bản ghi đã soạn xong chỉ còn là nguồn, thu thành một hàng (tên, giờ, thời lượng), bấm mới hiện
+   * sóng âm và kết quả, như danh sách của Ghi âm iOS. Bản đang tải lên, chờ "Tạo biên bản", đang soạn hay lỗi vẫn mở sẵn.
+   */
+  collapseReady?: boolean;
 }
 
 /**
@@ -127,7 +210,7 @@ export interface MeetingRecordingPanelProps {
  * đã báo người dự họp, như "Start transcribing" của Notion). Nghe lại được trên sóng âm; âm thanh lưu tới khi xóa bản ghi.
  * Chỉ chủ tọa, thư ký, người tổ chức dùng được (máy chủ kiểm quyền; nhận 403/404 thì khung tự ẩn).
  */
-export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }: MeetingRecordingPanelProps) {
+export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, collapseReady = false }: MeetingRecordingPanelProps) {
   const { notifyError } = useFeedback();
   const [access, setAccess] = React.useState<"loading" | "ok" | "denied" | "error">("loading");
   const [recordings, setRecordings] = React.useState<MeetingRecordingSummary[]>([]);
@@ -142,6 +225,8 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
   const [startFailed, setStartFailed] = React.useState(false);
   const [submitting, setSubmitting] = React.useState<string | null>(null);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  // Hàng đã thu gọn mà người dùng mở ra (chỉ dùng khi `collapseReady`)
+  const [openRows, setOpenRows] = React.useState<ReadonlySet<string>>(() => new Set());
   const [details, setDetails] = React.useState<Record<string, MeetingRecordingDetail>>({});
   const [deleting, setDeleting] = React.useState<MeetingRecordingSummary | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -594,41 +679,23 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint }
         {recordings.length > 0 && (
           <ul className={cn("divide-y divide-border/40", live && "border-t border-border/40")}>
             {recordings.map((recording) => (
-              <li key={recording.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background text-muted-foreground">
-                    {recording.source === "live" ? <Mic className="size-3.5" /> : <AudioLines className="size-3.5" />}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <p className="truncate text-compact font-medium text-foreground">{recordingTitle(recording)}</p>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" align="start">
-                        {recordingTitle(recording)}
-                      </TooltipContent>
-                    </Tooltip>
-                    {/* Điện thoại: dòng phụ xuống dòng thay vì cắt tên người ghi ("… 51 KB · Đặng Nhật …") */}
-                    <p className="truncate text-xs text-muted-foreground tabular-nums max-md:overflow-visible max-md:whitespace-normal">
-                      {[
-                        recordedAt(recording.createdAt),
-                        recording.durationSec ? formatClock(recording.durationSec) : null,
-                        recording.byteSize > 0 ? formatSize(recording.byteSize) : null,
-                        recording.createdByName,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  {upload?.id !== recording.id && (
-                    <Button variant="ghost" size="icon-xs" aria-label="Xóa bản ghi" title="Xóa bản ghi" onClick={() => setDeleting(recording)}>
-                      <Trash2 />
-                    </Button>
-                  )}
-                </div>
+              <RecordingRow
+                key={recording.id}
+                recording={recording}
+                collapsible={collapseReady && recording.status === "READY"}
+                open={openRows.has(recording.id)}
+                onToggle={() =>
+                  setOpenRows((current) => {
+                    const next = new Set(current);
+                    if (!next.delete(recording.id)) next.add(recording.id);
+                    return next;
+                  })
+                }
+                onDelete={upload?.id !== recording.id ? () => setDeleting(recording) : undefined}
+              >
                 {waveformFor(recording)}
                 <div className="pl-9">{footer(recording)}</div>
-              </li>
+              </RecordingRow>
             ))}
           </ul>
         )}
