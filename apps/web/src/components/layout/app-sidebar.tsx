@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   ChevronDown,
@@ -155,33 +155,12 @@ export function AppSidebar() {
     isCollapsed,
     toggleCollapse,
     sidebarWidthMotion,
-    setBadgeCounts,
   } = useSidebar();
-  const pathname = usePathname();
   const router = useRouter();
   const { user, logout, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const accountTriggerRef = React.useRef<HTMLButtonElement>(null);
-
-  // Quyền xem "Báo cáo thời gian duyệt" (menu con của Tờ trình nội bộ), làm mới khi chuyển trang.
-  const docsUserId = user?.id;
-  React.useEffect(() => {
-    if (!docsUserId) return;
-    const ctrl = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch("/api/documents/stats", { signal: ctrl.signal });
-        if (!res.ok) return;
-        const json = await res.json();
-        const canViewReport = json?.data?.canViewApprovalReport === true;
-        setBadgeCounts((prev) => ({ ...prev, docsApprovalReport: canViewReport ? 1 : 0 }));
-      } catch {
-        // giữ nguyên trạng thái cũ khi lỗi mạng
-      }
-    })();
-    return () => ctrl.abort();
-  }, [docsUserId, pathname, setBadgeCounts]);
 
   // Automatic profile prompt on first visit if user has unassigned department
   React.useEffect(() => {

@@ -327,6 +327,9 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
     assert.ok(data.technicalCapabilities.includes('task.read'));
     assert.ok(data.technicalCapabilities.includes('document.read'));
     assert.equal(data.technicalCapabilities.includes('SYSTEM_ADMIN'), false);
+
+    // Thanh bên đọc quyền xem "Báo cáo thời gian duyệt" từ đây: chuyên viên không có
+    assert.equal(data.canViewApprovalReport, false);
   });
 
   test('2. Disabled account returns 401 ACCOUNT_DISABLED', async () => {
@@ -427,6 +430,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
     assert.ok(data.technicalCapabilities.includes('integration.manage'));
 
     // NO institutional authority
+    assert.equal(data.canViewApprovalReport, false);
     assert.equal(data.activeAssignments.length, 0);
     assert.equal(data.responsibilityAreas.length, 0);
     assert.equal(data.delegations.length, 0);

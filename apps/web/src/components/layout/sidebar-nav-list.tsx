@@ -215,38 +215,45 @@ export const SIDEBAR_MORE_ITEMS: SidebarMoreItem[] = [
   { id: "docs", label: "Tài liệu hướng dẫn", href: "/docs", icon: BookOpen, section: "system" },
 ];
 
-const systemAdminChecks = new Map<string, Promise<boolean>>();
+type NavContext = { isSystemAdmin: boolean; canViewApprovalReport: boolean };
+const NO_NAV_CONTEXT: NavContext = { isSystemAdmin: false, canViewApprovalReport: false };
+const navContextChecks = new Map<string, Promise<NavContext>>();
 
 /**
- * Người dùng là quản trị hệ thống (`technicalCapabilities` của /api/me/context có `SYSTEM_ADMIN`). Chỉ để ẩn/hiện mục menu;
- * quyền thật do API của từng trang kiểm. Gọi một lần cho mỗi người dùng, sidebar và ngăn kéo điện thoại dùng chung kết quả.
+ * Cờ ẩn/hiện mục menu từ /api/me/context: quản trị hệ thống (`technicalCapabilities` có `SYSTEM_ADMIN`) và quyền xem "Báo
+ * cáo thời gian duyệt". Chỉ để ẩn/hiện; quyền thật do API của từng trang kiểm. Gọi một lần cho mỗi người dùng, sidebar và
+ * ngăn kéo điện thoại dùng chung kết quả (trước đây cờ báo cáo lấy từ /api/documents/stats ở mỗi lần chuyển trang: mười truy
+ * vấn đếm văn bản để đọc một giá trị đúng/sai, người dùng báo web chậm 22/10/2026).
  */
-function useIsSystemAdmin() {
+function useNavContext(): NavContext {
   const { user } = useAuth();
   const userId = user?.id;
-  const [isSystemAdmin, setIsSystemAdmin] = React.useState(false);
+  const [navContext, setNavContext] = React.useState<NavContext>(NO_NAV_CONTEXT);
   React.useEffect(() => {
     if (!userId) return;
     let alive = true;
-    let check = systemAdminChecks.get(userId);
+    let check = navContextChecks.get(userId);
     if (!check) {
       check = fetch("/api/me/context")
         .then((res) => (res.ok ? res.json() : null))
-        .then((ctx) => Array.isArray(ctx?.technicalCapabilities) && ctx.technicalCapabilities.includes("SYSTEM_ADMIN"))
+        .then((ctx) => ({
+          isSystemAdmin: Array.isArray(ctx?.technicalCapabilities) && ctx.technicalCapabilities.includes("SYSTEM_ADMIN"),
+          canViewApprovalReport: ctx?.canViewApprovalReport === true,
+        }))
         .catch(() => {
-          systemAdminChecks.delete(userId);
-          return false;
+          navContextChecks.delete(userId);
+          return NO_NAV_CONTEXT;
         });
-      systemAdminChecks.set(userId, check);
+      navContextChecks.set(userId, check);
     }
     check.then((value) => {
-      if (alive) setIsSystemAdmin(value);
+      if (alive) setNavContext(value);
     });
     return () => {
       alive = false;
     };
   }, [userId]);
-  return isSystemAdmin;
+  return navContext;
 }
 
 function navRowClass({ isCollapsed, compact, active }: { isCollapsed: boolean; compact: boolean; active: boolean }) {
@@ -314,7 +321,7 @@ function SidebarMoreMenu({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isSystemAdmin = useIsSystemAdmin();
+  const { isSystemAdmin } = useNavContext();
   const entries = SIDEBAR_MORE_ITEMS.filter((entry) => entry.section !== "admin" || isSystemAdmin);
   const isCurrent = (entry: SidebarMoreItem) => isRouteActive(entry.href, pathname, searchParams);
   const active = entries.some(isCurrent);
@@ -446,7 +453,7 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
   const { badgeCounts } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const canViewApprovalReport = Number(badgeCounts?.docsApprovalReport) === 1;
+  const { canViewApprovalReport } = useNavContext();
   const unreadCount = Number(badgeCounts?.notifications) || 0;
   const assistantEnabled = useRuntimeFeature("assistant");
   // Mục theo cờ: ẩn khi cờ tắt (desktop và ngăn kéo điện thoại dùng chung danh sách này)

@@ -2,6 +2,7 @@ import { JobCatalogGroup } from '@prisma/client';
 import { UserContextResponse } from '@qcet/contracts/me';
 import { loadCachedAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { AuthorizationContext } from '@/server/authorization/authorization-context';
+import { canViewApprovalReportFor } from '@/server/documents/submission-approval-service';
 
 /**
  * Service providing the display context DTO for the current user.
@@ -180,6 +181,8 @@ export class UserContextService {
       technicalCapabilities,
       delegations,
       highestPositionLevel,
+      // Mục "Báo cáo thời gian duyệt" ở thanh bên: đọc ở đây (cùng lần gọi với quyền quản trị) thay cho /api/documents/stats
+      canViewApprovalReport: canViewApprovalReportFor(authContext),
     };
   }
 }

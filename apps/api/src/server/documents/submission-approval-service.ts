@@ -802,10 +802,13 @@ function toRow(key: string, label: string, stage: ApprovalReportRow["stage"], ho
  */
 const REPORT_PROBE = { id: "report", securityLevel: "THUONG", status: "CHO_PHE_DUYET", registeredById: "" };
 
-/** Lãnh đạo hoặc trưởng đơn vị mới xem được báo cáo; thanh bên dùng cùng điều kiện để ẩn mục. */
-export async function canViewApprovalReport(session: SessionPayload): Promise<boolean> {
-  const ctx = await loadContext(session);
+/** Lãnh đạo hoặc trưởng đơn vị mới xem được báo cáo; thanh bên đọc cùng điều kiện qua `/api/me/context` để ẩn mục. */
+export function canViewApprovalReportFor(ctx: AuthorizationContext): boolean {
   return canDo(ctx, "document.submission.approve", REPORT_PROBE) || unitsHeadedBy(ctx).size > 0;
+}
+
+export async function canViewApprovalReport(session: SessionPayload): Promise<boolean> {
+  return canViewApprovalReportFor(await loadContext(session));
 }
 
 export async function getApprovalReport(session: SessionPayload, query: { from?: string; to?: string } = {}): Promise<ApprovalReport> {

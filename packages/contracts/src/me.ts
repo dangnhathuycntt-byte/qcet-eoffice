@@ -68,6 +68,7 @@ export const UserContextResponseSchema = z.object({
   technicalCapabilities: z.array(z.string()),
   delegations: z.array(UserDelegationSummarySchema),
   highestPositionLevel: z.string().optional(),
+  canViewApprovalReport: z.boolean(),
 });
 
 export type UserContextResponse = z.infer<typeof UserContextResponseSchema>;
