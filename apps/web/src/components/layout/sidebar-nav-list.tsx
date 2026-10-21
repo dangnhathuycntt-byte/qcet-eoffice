@@ -20,7 +20,9 @@ import {
 } from "@/components/layout/sidebar-rounded-icons";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
+import { formatUnreadBadge } from "@/lib/notification-inbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { Pressable } from "@/components/ui/pressable";
 import { MENU_POPUP_CLASS, Menu, MenuActionItem, MenuGroup, MenuGroupLabel, MenuPopup, MenuSeparator } from "@/components/ui/menu";
 import { useAuth } from "@/lib/auth-context";
@@ -257,7 +259,20 @@ function navRowClass({ isCollapsed, compact, active }: { isCollapsed: boolean; c
   );
 }
 
-function NavRowContent({ item, isCollapsed, compact, active }: { item: SidebarNavSubItem; isCollapsed: boolean; compact: boolean; active: boolean }) {
+function NavRowContent({
+  item,
+  isCollapsed,
+  compact,
+  active,
+  count,
+}: {
+  item: SidebarNavSubItem;
+  isCollapsed: boolean;
+  compact: boolean;
+  active: boolean;
+  /** Số chưa đọc ở cuối hàng (chỉ Hộp thư của ngăn kéo điện thoại: nút menu có chấm thì mở ra phải thấy số ở đây). */
+  count?: string;
+}) {
   const Icon = item.icon;
   return (
     <>
@@ -272,6 +287,11 @@ function NavRowContent({ item, isCollapsed, compact, active }: { item: SidebarNa
         />
       </span>
       {!isCollapsed && <span className="truncate flex-1 text-compact tracking-tight">{item.label}</span>}
+      {!isCollapsed && count ? (
+        <Badge aria-hidden variant="primary-soft" size="count">
+          {count}
+        </Badge>
+      ) : null}
     </>
   );
 }
@@ -418,12 +438,16 @@ export interface SidebarNavListProps {
   className?: string;
 }
 
-/** Danh sách điều hướng dùng chung cho sidebar desktop và drawer mobile: cùng nhóm, icon, menu con (không hiện số đếm). */
+/**
+ * Danh sách điều hướng dùng chung cho sidebar desktop và drawer mobile: cùng nhóm, icon, menu con. Không hiện số đếm, trừ số chưa
+ * đọc của Hộp thư (chỉ ngăn kéo điện thoại có hàng này; desktop dùng nút Hộp thư ở đầu sidebar).
+ */
 export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance, compact = false, hiddenItemIds, className }: SidebarNavListProps) {
   const { badgeCounts } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const canViewApprovalReport = Number(badgeCounts?.docsApprovalReport) === 1;
+  const unreadCount = Number(badgeCounts?.notifications) || 0;
   const assistantEnabled = useRuntimeFeature("assistant");
   // Mục theo cờ: ẩn khi cờ tắt (desktop và ngăn kéo điện thoại dùng chung danh sách này)
   const navGroups = SIDEBAR_NAV_GROUPS.map((group) => ({
@@ -504,6 +528,7 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                     );
                   }
 
+                  const count = item.id === "inbox" ? formatUnreadBadge(unreadCount) : "";
                   return (
                     <React.Fragment key={item.id}>
                     <div className="relative">
@@ -520,10 +545,10 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                             onNavigate?.();
                           }}
                           aria-current={active ? "page" : undefined}
-                          aria-label={item.label}
+                          aria-label={count ? `${item.label}, ${unreadCount} thông báo chưa đọc` : item.label}
                           className={cn(navRowClass({ isCollapsed, compact, active }), !isCollapsed && children && "pr-7")}
                         >
-                          <NavRowContent item={item} isCollapsed={isCollapsed} compact={compact} active={active} />
+                          <NavRowContent item={item} isCollapsed={isCollapsed} compact={compact} active={active} count={count} />
                         </Link>
                       </TooltipTrigger>
                       {isCollapsed && (

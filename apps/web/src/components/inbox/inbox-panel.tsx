@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { Archive, ArrowUpRight, CheckCheck, ListFilter, MoreHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -287,6 +288,10 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
   }, [pathname]);
 
   const label = unreadCount > 0 ? `Hộp thư, ${unreadCount} thông báo chưa đọc` : "Hộp thư";
+  // Số chưa đọc đứng sau icon, không đè lên góc icon: badge 16px chữ 12px đè lên icon 16px che mất góc khay và nặng hơn cả
+  // icon (ảnh người dùng 21/10/2026). Theo M3, chỗ chật (sidebar thu gọn) chỉ dùng chấm 6px; nền nhạt thay nền đặc như Slack
+  // đổi badge sang màu dịu để gây chú ý mà không giục.
+  const showCount = Boolean(badge) && !isCollapsed;
 
   return (
     <>
@@ -295,7 +300,7 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
           <Button
             ref={triggerRef}
             variant="ghost"
-            size="icon-sm"
+            size={showCount ? "sm" : "icon-sm"}
             aria-label={label}
             aria-haspopup={onInboxPage ? undefined : "dialog"}
             aria-expanded={onInboxPage ? undefined : open}
@@ -304,17 +309,24 @@ export function SidebarInbox({ isCollapsed }: { isCollapsed: boolean }) {
             onClick={() => (open ? close(false) : openPanel())}
             className={cn(
               "relative shrink-0 text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+              showCount && "gap-1 rounded-sm px-1.5",
               (open || onInboxPage) && "bg-sidebar-accent text-foreground"
             )}
           >
-            <IconSidebarMail />
-            {badge ? (
+            <IconSidebarMail className="size-4" />
+            {showCount ? (
+              <Badge aria-hidden data-slot="inbox-unread-count" variant="primary-soft" size="count">
+                {badge}
+              </Badge>
+            ) : badge ? (
               <span
                 aria-hidden
-                className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium leading-none tabular-nums text-primary-foreground ring-2 ring-sidebar"
-              >
-                {badge}
-              </span>
+                data-slot="inbox-unread-dot"
+                className={cn(
+                  "absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary ring-2",
+                  open || onInboxPage ? "ring-sidebar-accent" : "ring-sidebar"
+                )}
+              />
             ) : null}
           </Button>
         </TooltipTrigger>

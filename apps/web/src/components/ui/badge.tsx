@@ -39,10 +39,19 @@ const badgeVariants = cva(
         // Tín hiệu sắp tới hạn (text-warning). Tên khác `warning` vì alias đó giữ màu cũ cho màn nghiệp vụ.
         "warning-soft":
           "bg-warning/10 text-warning",
+        // Số chưa đọc (Hộp thư): nền nhạt thay nền đặc để gây chú ý mà không giục, như Slack đổi badge sang màu dịu
+        "primary-soft":
+          "bg-primary/12 text-primary",
+      },
+      size: {
+        default: "",
+        // Số đếm cạnh icon/nhãn: cao 16px, tối thiểu tròn, rộng ra theo số ("9+")
+        count: "h-4 min-w-4 rounded-full px-1 py-0 leading-none",
       },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   }
 );
@@ -51,11 +60,11 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant = "default", ...props }: BadgeProps) {
+function Badge({ className, variant = "default", size = "default", ...props }: BadgeProps) {
   return (
     <span
       data-slot="badge"
-      className={cn(badgeVariants({ variant }), className)}
+      className={cn(badgeVariants({ variant, size }), className)}
       {...props}
     />
   );

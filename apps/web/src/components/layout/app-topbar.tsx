@@ -7,7 +7,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import {
-  useSidebar,
   useSidebarLayout,
   resolveBreadcrumb,
 } from "@/components/layout/sidebar-context";
@@ -129,9 +128,6 @@ export function MobileTopbarActions({ children }: { children: React.ReactNode })
  */
 export function AppTopbar({ showSearch = true }: { showSearch?: boolean } = {}) {
   const pathname = usePathname();
-  const { badgeCounts } = useSidebar();
-
-  const unreadCount = Number(badgeCounts?.notifications) || 0;
 
   const handleOpenSearch = React.useCallback(() => {
     window.dispatchEvent(new CustomEvent("qcet:open-command-search", { detail: { open: true } }));
@@ -142,15 +138,8 @@ export function AppTopbar({ showSearch = true }: { showSearch?: boolean } = {}) 
       data-slot="app-topbar"
       className="md:hidden sticky top-0 z-30 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-full shrink-0 items-center gap-1 border-b border-border/60 bg-card/95 px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md select-none"
     >
-      {/* Hộp thư có thông báo chưa đọc: chấm trên nút mở sidebar, số nằm ở mục Hộp thư trong sidebar */}
-      <MobileMenuButton
-        aria-label={unreadCount > 0 ? `Mở menu, ${unreadCount} thông báo chưa đọc` : "Mở menu"}
-        className="relative -ml-1.5 mr-1"
-      >
-        {unreadCount > 0 && (
-          <span aria-hidden className="absolute right-1 top-1 size-2 rounded-full bg-primary ring-2 ring-card" />
-        )}
-      </MobileMenuButton>
+      {/* Hộp thư có thông báo chưa đọc: nút tự hiện chấm, số nằm ở mục Hộp thư trong ngăn kéo */}
+      <MobileMenuButton className="-ml-1.5 mr-1" />
 
       <Suspense fallback={<MobileHeaderTitleFallback pathname={pathname} />}>
         <MobileHeaderTitle pathname={pathname} />
