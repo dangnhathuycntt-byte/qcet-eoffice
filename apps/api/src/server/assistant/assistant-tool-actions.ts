@@ -58,7 +58,7 @@ export const REMEMBER_DESCRIPTION =
   "Ghi nhớ chỉ được lưu khi Thầy/Cô bấm \"Lưu ghi nhớ\" trên thẻ. Không ghi số điện thoại, email, mật khẩu hay dữ liệu nhạy cảm.";
 
 /** Thẻ soạn cần cuộc trò chuyện đã có (để lưu kèm); ngoài lượt hội thoại thì không soạn được. */
-function conversationOf(ctx: AssistantToolContext): string {
+export function conversationOf(ctx: AssistantToolContext): string {
   if (!ctx.conversationId) throw new ToolFailure("Chưa soạn được thẻ ở đây.");
   return ctx.conversationId;
 }
@@ -73,7 +73,7 @@ async function loadActionTask(ctx: AssistantToolContext, ref: { id?: string; cod
   return { task, resource, view };
 }
 
-function actionRun(action: AssistantActionDTO, label: string, payload: Record<string, unknown>): ToolRun {
+export function actionRun(action: AssistantActionDTO, label: string, payload: Record<string, unknown>): ToolRun {
   return {
     payload: { actionId: action.id, status: "pending", ...payload, note: "Thẻ đã hiện cho Thầy/Cô; chỉ thực hiện khi Thầy/Cô bấm nút trên thẻ." },
     lists: [],

@@ -27,6 +27,8 @@ export interface AssistantToolContext {
   today: string;
   /** Cuộc trò chuyện của lượt (có sau khi lưu câu hỏi); công cụ soạn thẻ hành động cần để lưu thẻ kèm cuộc. */
   conversationId?: string;
+  /** Hủy của lượt (Dừng hoặc hết giờ): công cụ chờ lâu (get_meeting_recording) dừng theo. */
+  signal?: AbortSignal;
 }
 
 export interface AssistantToolOutcome {
@@ -165,11 +167,14 @@ export function toolErrorMessage(error: unknown, toolName: string): string {
   return GENERIC_READ_ERROR;
 }
 
-/** Tham số JSON từ model: rỗng là đối tượng rỗng; quá dài hoặc hỏng thì từ chối. */
-export function parseRawArgs(rawArgs: unknown): unknown {
+/**
+ * Tham số JSON từ model: rỗng là đối tượng rỗng; quá dài hoặc hỏng thì từ chối. `maxChars` riêng cho công cụ cần tham số
+ * dài (propose_minutes mang cả biên bản); còn lại dùng ASSISTANT_TOOL_ARGS_MAX_CHARS.
+ */
+export function parseRawArgs(rawArgs: unknown, maxChars: number = ASSISTANT_TOOL_ARGS_MAX_CHARS): unknown {
   if (typeof rawArgs !== "string") return {};
   const text = rawArgs.trim();
-  if (text.length > ASSISTANT_TOOL_ARGS_MAX_CHARS) {
+  if (text.length > maxChars) {
     throw new ToolFailure("Tham số không hợp lệ: nội dung quá dài.");
   }
   if (!text) return {};

@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, BellRing, Bookmark, Check, CircleDot, MessageSquare, Minus, TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, BellRing, Bookmark, Check, CircleDot, FileText, MessageSquare, Minus, TriangleAlert } from "lucide-react";
 import type { AssistantActionDecision, AssistantActionDTO, AssistantActionView } from "@qcet/contracts/assistant";
 import {
   ASSISTANT_ACTION_STATUS_LABEL,
@@ -11,12 +12,14 @@ import {
 } from "@qcet/shared/domain/assistant/assistant-actions";
 import { Button } from "@/components/ui/button";
 import { assistantErrorText, decideActionRequest } from "@/components/assistant/assistant-client";
+import { MinutesText } from "@/components/meetings/minutes-text";
 
 const APPROVE_LABEL: Record<AssistantActionView["kind"], string> = {
   task_comment: "Đăng bình luận",
   task_status: "Đổi trạng thái",
   task_remind: "Gửi lời nhắc",
   memory_save: "Lưu ghi nhớ",
+  meeting_minutes: "Lưu dự thảo biên bản",
 };
 const DECIDE_FAILED = "Chưa gửi được quyết định. Thầy/Cô thử lại.";
 
@@ -24,11 +27,15 @@ function KindIcon({ kind, className }: { kind: AssistantActionView["kind"]; clas
   if (kind === "task_comment") return <MessageSquare className={className} aria-hidden />;
   if (kind === "task_status") return <CircleDot className={className} aria-hidden />;
   if (kind === "task_remind") return <BellRing className={className} aria-hidden />;
+  if (kind === "meeting_minutes") return <FileText className={className} aria-hidden />;
   return <Bookmark className={className} aria-hidden />;
 }
 
-function taskHref(view: AssistantActionView): string | null {
-  return "task" in view ? `/tasks/${encodeURIComponent(view.task.id)}` : null;
+/** Trang của đối tượng thẻ tác động, cho nút "Mở …" sau khi đã thực hiện. */
+function targetLink(view: AssistantActionView): { href: string; label: string } | null {
+  if ("task" in view) return { href: `/tasks/${encodeURIComponent(view.task.id)}`, label: "Mở nhiệm vụ" };
+  if ("meeting" in view) return { href: `/meetings/${encodeURIComponent(view.meeting.id)}`, label: "Mở cuộc họp" };
+  return null;
 }
 
 /**
@@ -39,16 +46,20 @@ function taskHref(view: AssistantActionView): string | null {
 export function AssistantActionCard({ action, onChange }: { action: AssistantActionDTO; onChange?: (action: AssistantActionDTO) => void }) {
   const [busy, setBusy] = React.useState<AssistantActionDecision | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const router = useRouter();
   const view = action.view;
   const title = describeAssistantAction(view);
-  const href = taskHref(view);
+  const target = targetLink(view);
 
   const decide = async (decision: AssistantActionDecision) => {
     if (busy) return;
     setBusy(decision);
     setError(null);
     try {
-      onChange?.(await decideActionRequest(action.id, decision));
+      const next = await decideActionRequest(action.id, decision);
+      onChange?.(next);
+      // Biên bản vừa lưu: trang cuộc họp đang nằm dưới khung chat tải lại dữ liệu để hiện ngay, không phải tự tải lại
+      if (next.status === "done" && view.kind === "meeting_minutes") router.refresh();
     } catch (failure) {
       setError(assistantErrorText(failure, DECIDE_FAILED));
     } finally {
@@ -84,10 +95,10 @@ export function AssistantActionCard({ action, onChange }: { action: AssistantAct
               {busy === "undo" ? "Đang hoàn tác…" : "Hoàn tác"}
             </Button>
           ) : null}
-          {href && done ? (
+          {target && done ? (
             <Button asChild variant="ghost" size="sm" className="shrink-0 text-foreground max-md:min-h-11">
-              <Link href={href}>
-                Mở nhiệm vụ
+              <Link href={target.href}>
+                {target.label}
                 <ArrowUpRight aria-hidden />
               </Link>
             </Button>
@@ -110,6 +121,9 @@ export function AssistantActionCard({ action, onChange }: { action: AssistantAct
           <p className="truncate text-xs text-muted-foreground" title={view.task.title}>
             {view.task.title}
           </p>
+        ) : null}
+        {view.kind === "meeting_minutes" && view.replaces ? (
+          <p className="text-xs text-warning">Cuộc họp đã có dự thảo biên bản; duyệt thì bản dưới đây thay bản đó.</p>
         ) : null}
       </div>
 
@@ -152,6 +166,14 @@ function ActionDetail({ view }: { view: AssistantActionView }) {
         <dt className="text-muted-foreground">Lời nhắc</dt>
         <dd className="whitespace-pre-wrap break-words text-foreground">{view.message}</dd>
       </dl>
+    );
+  }
+  if (view.kind === "meeting_minutes") {
+    // Đủ nguyên văn biên bản sẽ lưu, dựng có cấu trúc như trên trang cuộc họp; dài thì cuộn trong thẻ
+    return (
+      <div className="thin-scrollbar max-h-80 overflow-y-auto rounded-md bg-muted px-3 py-2.5">
+        <MinutesText text={view.minutes} />
+      </div>
     );
   }
   const text = view.kind === "task_comment" ? view.body : view.content;

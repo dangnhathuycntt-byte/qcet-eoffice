@@ -25,7 +25,7 @@ const DOCUMENT_RESOURCE_TYPES = new Set(["INCOMING_DOCUMENT", "OUTGOING_DOCUMENT
 const RESTRICTED_DOSSIER_CLASSES = new Set(["RESTRICTED", "PERSONAL_DATA"]);
 
 /** Nhãn trạng thái cuộc họp, khớp STATUS_CONFIG trong meeting-detail-view.tsx. */
-const MEETING_STATUS_LABEL: Record<string, string> = {
+export const MEETING_STATUS_LABEL: Record<string, string> = {
   DRAFT_AGENDA: "Dự thảo chương trình",
   INVITED: "Đã mời",
   HELD: "Đã họp",

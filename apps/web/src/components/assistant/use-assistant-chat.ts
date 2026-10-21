@@ -128,11 +128,15 @@ export function useAssistantChat({ conversationId, initialContext, onUpsert, onT
     const url =
       ctxType === "task"
         ? `/api/tasks/${encodeURIComponent(ctxId)}`
-        : `/api/documents/${encodeURIComponent(ctxId)}`;
+        : ctxType === "meeting"
+          ? `/api/meetings/${encodeURIComponent(ctxId)}`
+          : `/api/documents/${encodeURIComponent(ctxId)}`;
     fetch(url, { credentials: "same-origin", cache: "no-store", signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { data?: unknown } | null) => {
-        if (!controller.signal.aborted) setContextLabel(describeContextTarget(ctxType, body?.data ?? null));
+        // Nhiệm vụ, văn bản bọc trong `data`; chi tiết cuộc họp trả thẳng đối tượng
+        const data = body && typeof body === "object" && "data" in body ? body.data : body;
+        if (!controller.signal.aborted) setContextLabel(describeContextTarget(ctxType, data ?? null));
       })
       .catch(() => undefined);
     return () => controller.abort();

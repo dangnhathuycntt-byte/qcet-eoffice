@@ -377,6 +377,7 @@ async function runTurn(
 
   // Hủy: do client ngắt, hoặc hết giờ cả lượt. Phân biệt hai trường hợp khi báo lỗi.
   const turn = new AbortController();
+  toolCtx.signal = turn.signal;
   const onClientAbort = () => turn.abort();
   if (options.signal?.aborted) turn.abort();
   options.signal?.addEventListener("abort", onClientAbort, { once: true });

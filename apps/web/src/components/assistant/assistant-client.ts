@@ -7,6 +7,7 @@ import {
   type AssistantActionDecision,
   type AssistantActionDTO,
   type AssistantChatRequest,
+  type AssistantContextType,
   type AssistantConversationActivityDTO,
   type AssistantConversationDetailDTO,
   type AssistantConversationListDTO,
@@ -59,7 +60,7 @@ function conversationUrl(id: string): string {
 export interface ConversationListQuery {
   q?: string;
   cursor?: string;
-  contextType?: "task" | "document";
+  contextType?: AssistantContextType;
   contextId?: string;
 }
 

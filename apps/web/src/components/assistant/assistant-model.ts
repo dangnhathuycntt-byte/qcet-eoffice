@@ -80,13 +80,15 @@ export type AssistantConversationEventDetail =
 export const ASSISTANT_ASK_EVENT = "qcet:assistant-ask";
 export interface AssistantAskEventDetail {
   context: AssistantContextRef;
+  /** Câu hỏi điền sẵn vào ô soạn (người dùng xem rồi tự gửi, như kỹ năng và bản tin sáng của ADR-012). */
+  prompt?: string;
   handled: boolean;
 }
 
 /** Mở khung chat nổi hỏi về `context`; không có khung (điện thoại, trang Trợ lý) thì trả false để nơi gọi chuyển trang. */
-export function askAssistantInDock(context: AssistantContextRef): boolean {
+export function askAssistantInDock(context: AssistantContextRef, prompt?: string): boolean {
   if (typeof window === "undefined") return false;
-  const detail: AssistantAskEventDetail = { context, handled: false };
+  const detail: AssistantAskEventDetail = { context, prompt, handled: false };
   window.dispatchEvent(new CustomEvent<AssistantAskEventDetail>(ASSISTANT_ASK_EVENT, { detail }));
   return detail.handled;
 }
@@ -527,10 +529,11 @@ export function describeContextTarget(type: AssistantContextType, data: unknown)
     const task = data as TaskContextPayload;
     return [task.code, task.title].filter(Boolean).join(" ") || null;
   }
+  if (type === "meeting") return (data as { title?: string | null }).title || null;
   const doc = data as DocumentContextPayload;
   return [doc.originalNumber, doc.summary].filter(Boolean).join(" · ") || null;
 }
 
 export function contextTypeLabel(type: AssistantContextType): string {
-  return type === "task" ? "nhiệm vụ" : "văn bản";
+  return type === "task" ? "nhiệm vụ" : type === "meeting" ? "cuộc họp" : "văn bản";
 }

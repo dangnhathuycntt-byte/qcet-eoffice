@@ -158,14 +158,16 @@ describe('Trợ lý: thẻ hành động chờ duyệt (ADR-012)', () => {
   });
 
   it('người không có quyền bình luận không soạn được thẻ; người không xem được nhiệm vụ nhận câu "không tìm thấy"', async () => {
-    const before = await prisma.assistantAction.count();
+    // Đếm theo đúng hai người thử: file test khác chạy song song cũng tạo thẻ
+    const mine = { where: { userId: { in: [u.observer.id, u.stranger.id] } } };
+    const before = await prisma.assistantAction.count(mine);
     const observer = await runAssistantTool('propose_comment', JSON.stringify({ id: taskId, body: 'Xin chào' }), await contextFor('observer'));
     assert.equal(observer.ok, false);
     assert.match(payloadOf(observer.content).error as string, /không có quyền bình luận/);
     const stranger = await runAssistantTool('propose_comment', JSON.stringify({ id: taskId, body: 'Xin chào' }), await contextFor('stranger'));
     assert.equal(stranger.ok, false);
     assert.match(payloadOf(stranger.content).error as string, /Không tìm thấy hoặc Thầy\/Cô không có quyền xem/);
-    assert.equal(await prisma.assistantAction.count(), before, 'không lưu thẻ nào');
+    assert.equal(await prisma.assistantAction.count(mine), before, 'không lưu thẻ nào');
   });
 
   it('ngoài lượt hội thoại (chưa có cuộc) thì không soạn được thẻ', async () => {

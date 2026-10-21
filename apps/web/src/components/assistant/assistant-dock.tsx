@@ -416,6 +416,8 @@ export function AssistantDock() {
     detail.handled = true;
     newChat();
     chat.setPendingContext(detail.context);
+    // Sau newChat (newChat xóa ô soạn): câu hỏi điền sẵn để người dùng xem rồi tự gửi
+    if (detail.prompt) setDraft(detail.prompt);
     openPanel();
   };
   React.useEffect(() => {

@@ -5,7 +5,7 @@
  * `runAssistantTool` không bao giờ ném lỗi: mọi lỗi thành JSON `{ "error": … }` gửi lại cho model.
  */
 import { z } from "zod";
-import type { AssistantSourceRef, AssistantStep, AssistantToolName } from "@qcet/contracts/assistant";
+import type { AssistantContextType, AssistantSourceRef, AssistantStep, AssistantToolName } from "@qcet/contracts/assistant";
 import { ASSISTANT_TOOL_NAMES } from "@qcet/contracts/assistant";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import type { GatewayToolDefinition } from "@/server/services/agent-gateway";
@@ -78,6 +78,19 @@ import {
   proposeReminder,
   proposeStatusChange,
 } from "./assistant-tool-actions";
+import {
+  GET_MEETING_DESCRIPTION,
+  GET_MEETING_RECORDING_DESCRIPTION,
+  GetMeetingArgs,
+  GetMeetingRecordingArgs,
+  PROPOSE_MINUTES_ARGS_MAX_CHARS,
+  PROPOSE_MINUTES_DESCRIPTION,
+  ProposeMinutesArgs,
+  getMeeting,
+  getMeetingRecording,
+  proposeMinutes,
+  readMeetingContext,
+} from "./assistant-tool-meetings";
 
 export { ASSISTANT_TOOL_RESULT_MAX_CHARS, RESTRICTED_MESSAGE, ToolFailure } from "./assistant-tool-shared";
 export type { AssistantToolContext, AssistantToolOutcome } from "./assistant-tool-shared";
@@ -91,6 +104,8 @@ interface ToolSpec<A extends z.ZodType> {
   failLabel: string;
   label: (args: z.output<A>) => string;
   run: (args: z.output<A>, ctx: AssistantToolContext) => Promise<ToolRun>;
+  /** Trần ký tự của tham số khi công cụ cần tham số dài (mặc định ASSISTANT_TOOL_ARGS_MAX_CHARS). */
+  maxArgsChars?: number;
 }
 
 interface RegisteredTool {
@@ -104,7 +119,7 @@ function register<A extends z.ZodType>(name: AssistantToolName, spec: ToolSpec<A
   const handle: ToolHandler = async (rawArgs, ctx) => {
     let label = spec.failLabel;
     try {
-      const parsed = spec.schema.safeParse(parseRawArgs(rawArgs));
+      const parsed = spec.schema.safeParse(parseRawArgs(rawArgs, spec.maxArgsChars));
       if (!parsed.success) throw formatArgIssues(parsed.error);
       const args = parsed.data as z.output<A>;
       label = spec.label(args);
@@ -339,6 +354,20 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
       };
     },
   }),
+  get_meeting: register("get_meeting", {
+    description: GET_MEETING_DESCRIPTION,
+    schema: GetMeetingArgs,
+    failLabel: "Đọc cuộc họp",
+    label: () => "Đọc cuộc họp",
+    run: getMeeting,
+  }),
+  get_meeting_recording: register("get_meeting_recording", {
+    description: GET_MEETING_RECORDING_DESCRIPTION,
+    schema: GetMeetingRecordingArgs,
+    failLabel: "Nghe bản ghi âm",
+    label: () => "Nghe bản ghi âm",
+    run: getMeetingRecording,
+  }),
   propose_task: register("propose_task", {
     description: PROPOSE_TASK_DESCRIPTION,
     schema: ProposeTaskArgs,
@@ -374,6 +403,14 @@ const TOOLS: Record<AssistantToolName, RegisteredTool> = {
     label: () => "Soạn ghi nhớ",
     run: proposeMemory,
   }),
+  propose_minutes: register("propose_minutes", {
+    description: PROPOSE_MINUTES_DESCRIPTION,
+    schema: ProposeMinutesArgs,
+    failLabel: "Soạn biên bản",
+    label: () => "Soạn biên bản",
+    run: proposeMinutes,
+    maxArgsChars: PROPOSE_MINUTES_ARGS_MAX_CHARS,
+  }),
 };
 
 /** Đủ tool theo ASSISTANT_TOOL_NAMES; tham số lấy từ zod nên khớp với lúc kiểm. */
@@ -407,7 +444,7 @@ export async function runAssistantTool(
  */
 async function loadContextRecord(
   authz: AuthorizationContext,
-  ref: { type: "task" | "document"; id: string }
+  ref: { type: AssistantContextType; id: string }
 ): Promise<{ source: AssistantSourceRef; summary: string } | null> {
   try {
     if (ref.type === "task") {
@@ -418,6 +455,7 @@ async function loadContextRecord(
       const detail = await readDocumentDetail(authz, ref.id);
       return { source: detail.self, summary: documentContextSummary(detail.view) };
     }
+    if (ref.type === "meeting") return await readMeetingContext(authz, ref.id);
     return null;
   } catch (error) {
     if (error instanceof ToolFailure) throw error;
@@ -450,7 +488,7 @@ function documentContextSummary(view: Record<string, unknown>): string {
 /** Nguồn để gắn link; null khi không đọc được hoặc văn bản bị loại (chỉ cần link, không cần câu giải thích). */
 export async function resolveAssistantContextSource(
   authz: AuthorizationContext,
-  ref: { type: "task" | "document"; id: string }
+  ref: { type: AssistantContextType; id: string }
 ): Promise<AssistantSourceRef | null> {
   try {
     const record = await loadContextRecord(authz, ref);
@@ -467,7 +505,7 @@ export async function resolveAssistantContextSource(
  */
 export async function describeAssistantContext(
   ctx: AssistantToolContext,
-  ref: { type: "task" | "document"; id: string }
+  ref: { type: AssistantContextType; id: string }
 ): Promise<{ source: AssistantSourceRef; summary: string } | null> {
   return loadContextRecord(ctx.authz, ref);
 }

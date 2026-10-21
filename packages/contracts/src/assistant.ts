@@ -17,7 +17,7 @@ export const ASSISTANT_TITLE_MAX = 120;
  */
 export const ASSISTANT_MAX_PROPOSALS_PER_TURN = 60;
 
-export const ASSISTANT_CONTEXT_TYPES = ["task", "document"] as const;
+export const ASSISTANT_CONTEXT_TYPES = ["task", "document", "meeting"] as const;
 export type AssistantContextType = (typeof ASSISTANT_CONTEXT_TYPES)[number];
 
 export const ASSISTANT_TOOL_NAMES = [
@@ -28,16 +28,19 @@ export const ASSISTANT_TOOL_NAMES = [
   "get_document",
   "my_inbox",
   "list_meetings",
+  "get_meeting",
+  "get_meeting_recording",
   "propose_task",
   "propose_comment",
   "propose_status_change",
   "propose_reminder",
   "remember",
+  "propose_minutes",
 ] as const;
 export type AssistantToolName = (typeof ASSISTANT_TOOL_NAMES)[number];
 
 /** Công cụ chỉ soạn thẻ hành động chờ duyệt (ADR-012); không thay đổi gì cho tới khi người dùng bấm Duyệt. */
-export const ASSISTANT_ACTION_TOOL_NAMES = ["propose_comment", "propose_status_change", "propose_reminder", "remember"] as const;
+export const ASSISTANT_ACTION_TOOL_NAMES = ["propose_comment", "propose_status_change", "propose_reminder", "remember", "propose_minutes"] as const;
 
 /** Số thẻ hành động tối đa mỗi lượt: mỗi thẻ người dùng phải đọc và duyệt riêng. */
 export const ASSISTANT_MAX_ACTIONS_PER_TURN = 5;
@@ -202,7 +205,7 @@ export interface AssistantAttachmentDTO {
   url: string;
 }
 
-export type AssistantActionKind = "task_comment" | "task_status" | "task_remind" | "memory_save";
+export type AssistantActionKind = "task_comment" | "task_status" | "task_remind" | "memory_save" | "meeting_minutes";
 export type AssistantActionStatus = "pending" | "done" | "rejected" | "failed" | "undone" | "expired";
 export type AssistantTaskStatusValue = "NOT_STARTED" | "IN_PROGRESS" | "WAITING_APPROVAL" | "COMPLETED" | "CANCELLED";
 
@@ -213,12 +216,34 @@ export interface AssistantActionTask {
   title: string;
 }
 
+/** Cuộc họp mà thẻ biên bản tác động (đã kiểm quyền soạn biên bản lúc soạn thẻ). */
+export interface AssistantActionMeeting {
+  id: string;
+  title: string;
+}
+
+/** Biên bản Trợ lý soạn dài tối đa chừng này ký tự (tham số `minutes` của propose_minutes). */
+export const ASSISTANT_MINUTES_MAX = 10000;
+
 /** Nội dung thẻ hành động, hiện đủ để người dùng biết chính xác điều sẽ xảy ra trước khi duyệt. */
 export type AssistantActionView =
   | { kind: "task_comment"; task: AssistantActionTask; body: string }
   | { kind: "task_status"; task: AssistantActionTask; from: AssistantTaskStatusValue; to: AssistantTaskStatusValue }
   | { kind: "task_remind"; task: AssistantActionTask; message: string; recipients: string[] }
-  | { kind: "memory_save"; content: string };
+  | { kind: "memory_save"; content: string }
+  /**
+   * Lưu dự thảo biên bản (Đã họp → Dự thảo biên bản, hoặc thay dự thảo chưa duyệt). `from` và `baseUpdatedAt` là trạng thái
+   * và lần sửa cuối của cuộc họp lúc soạn thẻ: đổi rồi (có người vừa lưu, sửa hay duyệt biên bản) thì không lưu chồng;
+   * `replaces` khi cuộc họp đã có dự thảo (thẻ nói rõ sẽ thay).
+   */
+  | {
+      kind: "meeting_minutes";
+      meeting: AssistantActionMeeting;
+      from: "HELD" | "MINUTES_DRAFT";
+      minutes: string;
+      replaces: boolean;
+      baseUpdatedAt: string;
+    };
 
 /** Thẻ hành động chờ duyệt (ADR-012): chưa thay đổi gì cho tới khi người dùng bấm Duyệt. */
 export interface AssistantActionDTO {

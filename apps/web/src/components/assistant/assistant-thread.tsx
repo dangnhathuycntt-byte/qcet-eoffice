@@ -311,7 +311,7 @@ function UserTurn({
 }
 
 /** Công cụ soạn (không đọc thêm dữ liệu để trả lời): đề xuất nhiệm vụ và thẻ hành động (ADR-012). */
-const COMPOSE_TOOLS: ReadonlySet<string> = new Set(["propose_task", "propose_comment", "propose_status_change", "propose_reminder", "remember"]);
+const COMPOSE_TOOLS: ReadonlySet<string> = new Set(["propose_task", "propose_comment", "propose_status_change", "propose_reminder", "remember", "propose_minutes"]);
 
 /**
  * Lượt chỉ soạn (có thể kèm đọc tệp gửi kèm) thì ghi "soạn đề xuất" (chỉ đề xuất nhiệm vụ) hoặc "soạn thẻ" (có thẻ hành

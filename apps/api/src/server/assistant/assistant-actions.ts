@@ -27,13 +27,15 @@ import { logger } from "@/server/observability/logger";
 import { createTaskComment, deleteTaskComment } from "@/server/tasks/task-comment-service";
 import { taskDomainActionService } from "@/server/tasks/task-domain-actions";
 import { addAssistantMemory, deleteAssistantMemory } from "@/server/assistant/assistant-profile";
+import { MeetingService } from "@/server/services/meeting-service";
 
-const ACTION_KINDS: readonly AssistantActionKind[] = ["task_comment", "task_status", "task_remind", "memory_save"];
+const ACTION_KINDS: readonly AssistantActionKind[] = ["task_comment", "task_status", "task_remind", "memory_save", "meeting_minutes"];
 const STATUSES: readonly AssistantActionStatus[] = ["pending", "done", "rejected", "failed", "undone", "expired"];
 /**
  * Loại hành động hoàn tác được sau khi đã thực hiện. Nhắc việc đã gửi thì không thu hồi được; đổi trạng thái cũng không,
  * vì luật chuyển trạng thái không cho người thực hiện quay lại (đang làm về chưa bắt đầu, chờ duyệt về đang làm chỉ người
- * duyệt được), nên nút Hoàn tác sẽ luôn lỗi.
+ * duyệt được), nên nút Hoàn tác sẽ luôn lỗi. Biên bản cũng không: xóa dự thảo đưa cuộc họp về Đã họp và mất cả dự thảo cũ
+ * nếu thẻ đã thay một dự thảo có sẵn.
  */
 const UNDOABLE: ReadonlySet<AssistantActionKind> = new Set(["task_comment", "memory_save"]);
 const FAILED_MESSAGE = "Chưa thực hiện được. Thầy/Cô thử lại hoặc làm trực tiếp trên màn hình.";
@@ -155,6 +157,16 @@ async function execute(session: SessionPayload, view: AssistantActionView): Prom
       const memory = await addAssistantMemory(session.id, view.content, "assistant");
       return { memoryId: memory.id };
     }
+    case "meeting_minutes": {
+      const meeting = await prisma.meeting.findUnique({ where: { id: view.meeting.id }, select: { status: true, updatedAt: true } });
+      if (!meeting) throw new NotFoundError("Không tìm thấy cuộc họp");
+      // Cuộc họp đã đổi từ lúc soạn (có người vừa lưu, sửa hay duyệt biên bản): không lưu chồng lên
+      if (meeting.status !== view.from || meeting.updatedAt.toISOString() !== view.baseUpdatedAt) {
+        throw new ApiError(409, "ACTION_STALE", "Biên bản cuộc họp đã thay đổi từ lúc soạn. Thầy/Cô hỏi lại Trợ lý để soạn thẻ mới.");
+      }
+      await MeetingService.draftMinutes(view.meeting.id, { minutes: view.minutes }, session.id);
+      return {};
+    }
   }
 }
 
@@ -256,6 +268,7 @@ async function recordActionAudit(userId: string, row: AssistantAction, decision:
         decision,
         status: row.status,
         ...(view && "task" in view ? { taskId: view.task.id } : {}),
+        ...(view && "meeting" in view ? { meetingId: view.meeting.id } : {}),
       },
     });
   } catch {

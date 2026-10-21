@@ -36,6 +36,8 @@ export function describeAssistantAction(view: AssistantActionView): string {
       return `Nhắc việc ${taskName(view.task)}`;
     case "memory_save":
       return "Ghi nhớ cho các cuộc sau";
+    case "meeting_minutes":
+      return `${view.replaces ? "Thay dự thảo biên bản" : "Lưu dự thảo biên bản"} "${clipText(view.meeting.title, 60)}"`;
   }
 }
 
@@ -55,6 +57,8 @@ function historyDetail(view: AssistantActionView): string {
       return `"${clipText(view.message, HISTORY_TEXT_MAX)}"`;
     case "memory_save":
       return `"${clipText(view.content, HISTORY_TEXT_MAX)}"`;
+    case "meeting_minutes":
+      return `"${clipText(view.minutes, HISTORY_TEXT_MAX)}"`;
   }
 }
 

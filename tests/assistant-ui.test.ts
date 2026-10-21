@@ -76,10 +76,12 @@ const SOURCE: AssistantSourceRef = {
 };
 
 describe("Trợ lý UI: tham số ngữ cảnh", () => {
-  test("đọc đúng task và document, bỏ qua dạng sai", () => {
+  test("đọc đúng task, document và meeting, bỏ qua dạng sai", () => {
     assert.deepEqual(parseAssistantContextParam("task:abc123"), { type: "task", id: "abc123" });
     assert.deepEqual(parseAssistantContextParam("document:d-9"), { type: "document", id: "d-9" });
-    assert.equal(parseAssistantContextParam("meeting:1"), null);
+    // Cuộc họp là ngữ cảnh từ 21/10/2026 (bấm "Tạo biên bản" mở Trợ lý gắn với cuộc họp)
+    assert.deepEqual(parseAssistantContextParam("meeting:1"), { type: "meeting", id: "1" });
+    assert.equal(parseAssistantContextParam("user:1"), null);
     assert.equal(parseAssistantContextParam("task"), null);
     assert.equal(parseAssistantContextParam(":abc"), null);
     assert.equal(parseAssistantContextParam("task:"), null);
