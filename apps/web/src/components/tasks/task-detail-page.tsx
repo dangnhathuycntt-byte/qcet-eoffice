@@ -112,6 +112,9 @@ export function TaskDetailPage({
   const canvasRef = React.useRef<HTMLDivElement>(null);
   React.useLayoutEffect(() => {
     if (canvasRef.current) canvasRef.current.scrollTop = 0;
+    // Màn rộng: cột nội dung tự cuộn (TaskDetailSplitLayout)
+    const main = canvasRef.current?.querySelector<HTMLElement>("[data-slot='task-detail-main']");
+    if (main) main.scrollTop = 0;
   }, [activeTab]);
   React.useEffect(() => {
     if (DETAIL_TABS.includes(tabParam as DetailTab)) {

@@ -66,9 +66,10 @@ const ATTENDANCE: Record<string, { label: string; warn?: boolean }> = {
  * cột chính 672px căn trái để trống một mảng lớn ở màn rộng): cột chính không giới hạn bề ngang, lề trái 24px (48px từ
  * 1440px), đo đúng như trang nhiệm vụ; cột thuộc tính 340px bám mép phải, lề trong 8px, cách cột chính
  * 24px như `TaskDetailSplitLayout`. Mốc 1440px viết `min-[90rem]`: Tailwind chỉ xếp sau `lg` (64rem) khi cùng đơn vị rem.
+ * Từ `lg` lưới cao đúng vùng còn lại, hai cột cuộn riêng (cột thuộc tính đứng yên khi cuộn nội dung, như trang nhiệm vụ).
  */
 const DETAIL_GRID_CLASS =
-  "grid grid-cols-1 gap-y-4 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr] lg:gap-x-6 lg:pl-6 lg:pr-0 lg:pt-0 min-[90rem]:pl-12";
+  "grid grid-cols-1 px-4 pb-16 pt-6 sm:px-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[minmax(0,1fr)] lg:gap-x-6 lg:pb-0 lg:pl-6 lg:pr-0 lg:pt-0 min-[90rem]:pl-12";
 
 /** Biên bản tối thiểu 10 ký tự như `DraftMinutesSchema` của máy chủ. */
 const MINUTES_MIN_LENGTH = 10;
@@ -592,7 +593,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
             </div>
           </header>
 
-          <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
+          {/* Màn rộng: vùng này không cuộn; cột chính và cột thuộc tính cuộn riêng (như trang nhiệm vụ, người dùng yêu cầu
+              21/10/2026 "cột properties cố định, scroll nội dung thôi"). Màn hẹp: cả trang cuộn một khối. */}
+          <div className="thin-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
             {/* Thẻ nổi neo cao 0, dính đầu vùng cuộn nên luôn ngay dưới thanh đầu dù đã cuộn; cách mép phải 8px, rộng 338px */}
             {stacked && peekOpen ? (
               <div className="sticky top-0 z-40 h-0">
@@ -604,43 +607,43 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
                 </div>
               </div>
             ) : null}
-            {/* Màn rộng: lưới hai cột, cột phải trải hai hàng để tên và các thẻ cột chính không bị đẩy cách nhau.
-                Màn hẹp: thứ tự DOM là tên, thuộc tính, các thẻ. */}
             <div className={DETAIL_GRID_CLASS}>
-              <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:pt-6">
-                <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
-                <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
-                {meeting.agenda ? (
-                  <div className="mt-1">
-                    <MinutesText text={meeting.agenda} />
-                  </div>
-                ) : (
-                  <p className="mt-1 text-compact text-muted-foreground">Chưa có nội dung và chương trình.</p>
-                )}
+              <div className="flex min-w-0 flex-col gap-4 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain lg:pb-16 lg:pt-6 thin-scrollbar">
+                <div className="min-w-0">
+                  <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
+                  <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
+                  {meeting.agenda ? (
+                    <div className="mt-1">
+                      <MinutesText text={meeting.agenda} />
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-compact text-muted-foreground">Chưa có nội dung và chương trình.</p>
+                  )}
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-6 pt-2">
+                  {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
+                  {meeting.minutes ? (
+                    <>
+                      {minutesSection}
+                      {recordingSection}
+                    </>
+                  ) : (
+                    <>
+                      {recordingSection}
+                      {minutesSection}
+                    </>
+                  )}
+
+                </div>
               </div>
 
               {/* Màn hẹp dùng thẻ nổi; `max-lg:hidden` giữ đúng khi dựng ở máy chủ (chưa biết bề ngang) */}
               {stacked ? null : (
-                <aside aria-label="Thuộc tính cuộc họp" className="min-w-0 max-lg:hidden lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:px-2 lg:pt-3">
+                <aside aria-label="Thuộc tính cuộc họp" className="min-w-0 max-lg:hidden lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain lg:px-2 lg:pb-6 lg:pt-3 thin-scrollbar">
                   {renderInspector(false)}
                 </aside>
               )}
-
-              <div className="flex min-w-0 flex-col gap-6 pt-2 lg:col-start-1 lg:row-start-2">
-                {/* Ghi âm và biên bản đề xuất bằng AI: chỉ người soạn biên bản của cuộc họp */}
-                {meeting.minutes ? (
-                  <>
-                    {minutesSection}
-                    {recordingSection}
-                  </>
-                ) : (
-                  <>
-                    {recordingSection}
-                    {minutesSection}
-                  </>
-                )}
-
-              </div>
             </div>
           </div>
         </div>
