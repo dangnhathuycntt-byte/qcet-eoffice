@@ -69,6 +69,12 @@ describe("Quick View (SSR markup)", () => {
     assert.ok(!render("pane", { onViewSignature: () => {} }).includes('aria-label="Xem chữ ký số"'));
   });
 
+  test("header có Sao chép liên kết ở cả pane và overlay (21/10/2026, như menu của dòng và chi tiết nhiệm vụ)", () => {
+    for (const mode of ["pane", "overlay"] as const) {
+      assert.ok(render(mode).includes('aria-label="Sao chép liên kết"'), mode);
+    }
+  });
+
   test("tiêu đề là h2 16/24px tối đa 2 dòng, focus được bằng chương trình; không còn popover Chi tiết", () => {
     const html = render("pane");
     const title = html.match(/<h2[^>]*data-slot="document-quick-title"[^>]*>/)?.[0] ?? "";

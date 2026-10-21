@@ -3,13 +3,14 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import * as React from "react";
 import Link from "next/link";
-import { ChevronLeft, Ellipsis, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
+import { ChevronLeft, Ellipsis, Link2, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import { cn } from "@/lib/utils";
 import { MenuActionItem, MenuContent, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import type { DocumentItem, OfficialDocument } from "@qcet/contracts/types/document";
 import { useDocumentDetail } from "@/hooks/use-document-detail";
-import { fromDocumentItem, fromOfficialDocument, type DocumentViewModel } from "@qcet/shared/lib/documents/document-view-model";
+import { fromDocumentItem, fromOfficialDocument, getDocumentHref, type DocumentViewModel } from "@qcet/shared/lib/documents/document-view-model";
 import { resolveActiveFileId } from "@qcet/shared/lib/documents/file-viewer-state";
 import { DocumentFileRows, DocumentFileScreen, DocumentFileViewer } from "../document-file-viewer";
 import { useIsPhone } from "@/hooks/use-is-phone";
@@ -29,7 +30,7 @@ const PRINT_DETAIL_CSS = `@media print {
 
 /**
  * "Thao tác khác": sửa thông tin và bổ sung tệp (khi server cho phép), in phiếu thông tin văn bản
- * (không phải in tệp PDF đang xem), xem chữ ký số khi có. Header chỉ giữ Mở rộng, menu này và Đóng.
+ * (không phải in tệp PDF đang xem), xem chữ ký số khi có. Header giữ Sao chép liên kết, menu này và Đóng.
  */
 function MoreActionsMenu({
   onPrint,
@@ -121,6 +122,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
   const { state, refresh } = useDocumentDetail(docId);
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const rootRef = React.useRef<HTMLElement>(null);
+  const feedback = useFeedback();
   // Cờ Trợ lý: chỉ hiện "Hỏi Trợ lý" trong menu Thao tác khác khi bật
   const assistantOn = useRuntimeFeature("assistant");
 
@@ -198,6 +200,16 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
     "Chi tiết văn bản"
   );
 
+  // Liên kết mở lại đúng văn bản này trên sổ (như "Sao chép liên kết" ở menu của dòng và thanh đầu chi tiết nhiệm vụ)
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${getDocumentHref(docId)}`);
+      feedback.notifySuccess("Đã sao chép liên kết");
+    } catch {
+      feedback.notifyError("Không sao chép được liên kết");
+    }
+  };
+
   // Điện thoại: nút quay lại bên trái (như chi tiết nhiệm vụ / Linear) thay cho nút đóng bên phải; chừa safe area
   const backAsClose = isPhone && mode === "overlay";
   const header = (
@@ -216,6 +228,16 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
         <p className="min-w-0 truncate text-xs text-muted-foreground">{typeLine}</p>
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => void copyLink()}
+          aria-label="Sao chép liên kết"
+          title="Sao chép liên kết"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Link2 className="size-4" />
+        </Button>
         <MoreActionsMenu
           askAssistantHref={canAskAssistant ? `/assistant?context=document:${encodeURIComponent(docId)}` : undefined}
           onPrint={() => window.print()}
