@@ -133,7 +133,6 @@ import {
   IndentDecrease,
   MoreHorizontal,
 } from "lucide-react";
-import { YjsPlugin } from "@platejs/yjs/react";
 import { cn } from "@/lib/utils";
 import { uploadFile, type UploadedFile } from "@/lib/files/upload-file";
 import { usePersonnelList, type PersonnelOption } from "@/hooks/use-personnel-list";
@@ -161,6 +160,7 @@ import { rankSlashOptions, type SlashSearchable } from "./slash-menu-search";
 import { insertSlashBlock } from "./slash-insert-block";
 import { pruneEmptyBlocks } from "./prune-empty-blocks";
 import { collabNodeIdPlugin } from "./collab-node-id";
+import type { TaskCollabRuntime } from "./task-collab-runtime";
 
 /** Props chung cho mọi element renderer trong QCET Plate editor */
 type ElProps = RenderElementProps & {
@@ -233,6 +233,8 @@ export interface TaskEditorCollabOptions {
   user: { id: string; name: string; color: string };
   onSyncChange?: (synced: boolean) => void;
   onPeersChange?: (peers: CollabPeer[]) => void;
+  /** Phần Yjs (`task-collab-runtime`), nơi gọi import động: editor không import tĩnh để bản thường không phải tải Yjs. */
+  runtime: TaskCollabRuntime;
 }
 
 // ---------------------------------------------------------------------------
@@ -2389,22 +2391,7 @@ export function TaskBlockEditor({
       }),
       TrailingBlockPlugin.configure({ options: { type: "p" } }),
       ...(collabRef.current
-        ? [
-            YjsPlugin.configure({
-              options: {
-                cursors: { data: collabRef.current.user },
-                providers: [
-                  {
-                    type: "hocuspocus",
-                    // Provider Hocuspocus 3 tự nối ngay khi tạo, rồi `init` của Plate gọi `connect()` lần nữa: kết nối đầu bị bỏ
-                    // giữa chừng ("closed before the connection is established"). Để `init` nối một lần.
-                    options: { name: collabRef.current.documentName, url: collabRef.current.url, autoConnect: false },
-                  },
-                ],
-                onSyncChange: ({ isSynced }: { isSynced: boolean }) => collabRef.current?.onSyncChange?.(isSynced),
-              },
-            }),
-          ]
+        ? [collabRef.current.runtime.collabPlugin(collabRef.current, (synced) => collabRef.current?.onSyncChange?.(synced))]
         : []),
     ],
     override: {
@@ -2424,47 +2411,11 @@ export function TaskBlockEditor({
     },
   }, []);
 
-  // Nối máy chủ cộng tác. StrictMode chạy effect hai lần (gắn → gỡ → gắn) trên cùng editor: tạo provider ngay thì lần gỡ đầu
-  // để lại kết nối dở ("already connected"), nên hoãn một nhịp để lần gỡ đầu hủy trước khi có provider nào.
+  // Nối máy chủ cộng tác (chi tiết và cách tránh khởi tạo đôi của StrictMode ở `connectCollab`)
   React.useEffect(() => {
     const options = collabRef.current;
     if (!options) return;
-    const api = editor.getApi(YjsPlugin).yjs;
-    const awareness = editor.getOption(YjsPlugin, "awareness");
-    // Awareness đổi mỗi lần ai đó di con trỏ (cả của chính mình): chỉ báo khi danh sách người đổi, kẻo render lại theo từng phím
-    let lastPeersKey = "";
-    const reportPeers = () => {
-      if (!awareness) return;
-      const seen = new Set<string>();
-      const peers: CollabPeer[] = [];
-      awareness.getStates().forEach((state, clientId) => {
-        const data = (state as { data?: { id?: string; name?: string; color?: string } }).data;
-        if (clientId === awareness.clientID || !data?.id || data.id === options.user.id || seen.has(data.id)) return;
-        seen.add(data.id);
-        peers.push({ clientId, userId: data.id, name: data.name || "Người dùng", color: data.color || "" });
-      });
-      const key = peers.map((peer) => `${peer.userId}:${peer.name}`).join("|");
-      if (key === lastPeersKey) return;
-      lastPeersKey = key;
-      options.onPeersChange?.(peers);
-    };
-    awareness?.on("change", reportPeers);
-    let started = false;
-    const timer = window.setTimeout(() => {
-      started = true;
-      void api.init({ id: options.documentName, value: null, autoSelect: false });
-    }, 0);
-    return () => {
-      window.clearTimeout(timer);
-      awareness?.off("change", reportPeers);
-      // Chưa init (lần gỡ đầu của StrictMode) thì không có gì để hủy: `destroy` lúc đó gỡ trình nghe chưa gắn, yjs báo lỗi
-      if (!started) return;
-      // `destroy` của @platejs/yjs chỉ ngắt provider đã kết nối xong; hủy hẳn provider Hocuspocus (cả kết nối đang mở dở) để
-      // rời trang không để lại kết nối và "người đang mở" ảo
-      const providers = editor.getOption(YjsPlugin, "_providers") as Array<{ provider?: { destroy?: () => void } }>;
-      api.destroy();
-      for (const wrapper of providers ?? []) wrapper.provider?.destroy?.();
-    };
+    return options.runtime.connectCollab(editor, options);
   }, [editor]);
 
   // Chờ một khung hình: Plate chuẩn hóa giá trị lúc gắn (gán id khối, thêm dòng cuối) làm mất vùng chọn đặt ngay trong effect
