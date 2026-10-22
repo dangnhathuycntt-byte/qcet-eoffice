@@ -21,6 +21,7 @@ const mockRouter = {
   back: () => {},
   forward: () => {},
   refresh: () => {},
+  bfcacheId: "test",
 };
 
 function renderWorkspace(element: React.ReactElement): string {

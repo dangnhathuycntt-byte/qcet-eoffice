@@ -48,7 +48,7 @@ qcet-eoffice/
 │   │   ├── src/components/       # UI (ui/, layout/, tasks/, workspace/, documents/, dashboard/)
 │   │   ├── src/hooks/, src/context/
 │   │   ├── src/lib/              # UI-only helpers; server-api.ts = serverApiFetch, getWebSession, fetchPageData
-│   │   ├── src/middleware.ts     # canonical redirects, /login, session-cookie presence; /api passes through
+│   │   ├── src/proxy.ts          # canonical redirects, /login, session-cookie presence; /api passes through
 │   │   ├── public/               # static assets, sw.js, icons
 │   │   ├── next.config.ts        # rewrites /api/:path* → API_INTERNAL_URL (fixed at build), proxyTimeout 340 s
 │   │   └── Dockerfile
@@ -56,7 +56,7 @@ qcet-eoffice/
 │       ├── src/app/api/          # REST handlers, incl. GET /api/page-data/* and /api/auth/me for the web
 │       ├── src/server/           # services, authorization, outbox worker + agent jobs, observability
 │       ├── src/lib/, src/domain/ # server-side helpers (jwt-session.ts, …)
-│       ├── src/middleware.ts     # full /api logic: session, correlation id, security
+│       ├── src/proxy.ts          # full /api logic: session, correlation id, security
 │       ├── src/instrumentation.ts # starts outbox / file-scan workers
 │       ├── Dockerfile, docker-entrypoint.sh  # prisma migrate deploy, then apps/api/server.js
 │       └── next.config.ts

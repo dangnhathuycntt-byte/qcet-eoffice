@@ -49,7 +49,7 @@
     "react-resizable-panels": "^4.12.4"
   },
   "devDependencies": {
-    "@next/env": "^15.5.27",
+    "@next/env": "^16.4.2",
     "@playwright/test": "^1.64.0",
     "@types/node": "^20.17.19",
     "prisma": "^6.19.3",

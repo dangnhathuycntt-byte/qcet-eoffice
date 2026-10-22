@@ -21,15 +21,13 @@ const devNodeOptions = /--max[-_]old[-_]space[-_]size/.test(process.env.NODE_OPT
   ? process.env.NODE_OPTIONS
   : [process.env.NODE_OPTIONS, `--max-old-space-size=${DEV_MAX_HEAP_MB}`].filter(Boolean).join(" ");
 
-// API chạy dev bằng webpack: Next 15.5 + Turbopack không ghi `route/react-loadable-manifest.json` cho route handler mà vẫn đọc
-// thử 3 lần cách 100ms, nên mọi request API ở dev chậm thêm ~200ms (đo 22/10/2026: 250–280ms so với 24–54ms bằng webpack,
-// bộ nhớ ngang nhau). Next 16 đã sửa (vercel/next.js#82739, #82903): lên Next 16 thì trả API về `--turbopack`. Chỉ ảnh hưởng dev,
-// `next start` đọc manifest một lần.
+// Next 16: `next dev` dùng Turbopack mặc định cho cả hai app (API từng chạy webpack ở Next 15.5 vì Turbopack đọc thử manifest
+// của route handler 3 lần, đã sửa ở vercel/next.js#82739, #82903).
 const children = [
-  ["qcet-api", "apps/api", apiPort, ["dev"]],
-  ["qcet-web", "apps/web", webPort, ["dev", "--turbopack"]],
-].map(([service, dir, port, devMode]) => {
-  const mode = start ? ["start"] : devMode;
+  ["qcet-api", "apps/api", apiPort],
+  ["qcet-web", "apps/web", webPort],
+].map(([service, dir, port]) => {
+  const mode = start ? ["start"] : ["dev"];
   const childEnv = { ...env, SERVICE_NAME: service, ...(start ? {} : { NODE_OPTIONS: devNodeOptions }) };
   const child = spawn("npx", ["next", ...mode, dir, "-p", port], { stdio: "inherit", env: childEnv });
   child.on("exit", (code) => {

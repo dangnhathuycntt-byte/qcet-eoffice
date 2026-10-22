@@ -8,17 +8,8 @@ import {
 import { verifySessionTokenAsync } from '@/lib/jwt-session';
 
 /**
- * Next.js Middleware runtime (official API for the installed Next.js 15.5:
- * `export const config = { runtime: 'nodejs', matcher: [...] }`).
- *
- * Verified against the installed compiler (node_modules/next@15.5.25):
- * - `dist/build/index.js` registers Node middleware only when the
- *   middleware file's static info resolves `runtime === 'nodejs'`
- *   (`functionsConfigManifest.functions['/_middleware']`, `hasNodeMiddleware`).
- * - `dist/build/analysis/get-page-static-info.js` resolves it as
- *   `config.runtime ?? config.config?.runtime`, i.e. from this `config`
- *   object, and emits `.next/server/middleware.js` (Node) instead of an
- *   Edge bundle.
+ * Proxy của API (Next 16 đổi tên Middleware thành Proxy). Proxy luôn chạy Node.js runtime và không được khai
+ * `runtime` trong `config` (Next báo lỗi), nên đọc được CSDL như route handler.
  *
  * Issue #27: production login uses Auth.js + PrismaAdapter with
  * `session.strategy === "database"` (opaque `sessionToken` stored in the
@@ -107,7 +98,7 @@ function extractTokenFromRequest(request: NextRequest): string | null {
  *    Handlers / Services MUST keep `requireAuthenticated()` and
  *    object/business `authorize()` checks as the source of truth.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Skip middleware for static assets, next internal files, and public assets
@@ -223,10 +214,9 @@ export async function middleware(request: NextRequest) {
   return nextWithCorrelation();
 }
 
-export default middleware;
+export default proxy;
 
 export const config = {
-  runtime: 'nodejs',
   matcher: [
     '/api/:path*',
     /*

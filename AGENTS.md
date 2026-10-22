@@ -7,7 +7,7 @@
 - Đọc `git status --short` và diff của file sắp sửa để phân biệt thay đổi có sẵn. Tìm bằng `rg`; bắt đầu từ route/component đang được dùng và test liên quan, không đọc toàn bộ docs hoặc quét hết repo theo thói quen.
 - Việc phức tạp: lập kế hoạch ngắn trong chat, kiểm tra giả định và trường hợp biên rồi thực hiện đến khi đủ tiêu chí. Việc nhỏ sửa trực tiếp. Chỉ tạo tài liệu kế hoạch khi cần bàn giao hoặc người dùng yêu cầu.
 - Ưu tiên một agent hoàn thành xuyên suốt. Khi người dùng yêu cầu làm song song, giao từng phần độc lập với phạm vi file và tiêu chí rõ; tránh hai agent cùng sửa một file, kiểm chứng lại kết quả tích hợp.
-- Dùng skill đúng tác vụ, chỉ đọc phần cần thiết. Khi cần web search, ưu tiên tài liệu chính thức; đối chiếu phiên bản trong `package.json`/lockfile trước khi áp dụng API.
+- Dùng skill đúng tác vụ, chỉ đọc phần cần thiết. Khi cần web search, ưu tiên tài liệu chính thức; đối chiếu phiên bản trong `package.json`/lockfile trước khi áp dụng API. Next.js 16 khác nhiều so với bản cũ (`proxy.ts` thay `middleware.ts`, Turbopack mặc định): tra tài liệu đúng phiên bản ở `node_modules/next/dist/docs/` trước khi viết code Next.
 
 ## Tìm đúng chỗ
 | Công việc | Điểm vào |
@@ -77,7 +77,7 @@
 
 
 ## Kiểm tra
-- Dùng npm theo `package-lock.json`. Tận dụng dev server hiện có; nếu cần khởi chạy, dùng `npm run dev -- -p 3001` sau khi kiểm tra cổng (chạy cả api ở cổng `API_PORT`, mặc định 3100, và web ở cổng `-p`; web chuyển `/api` tới api). Server treo (không phản hồi) thì kill tiến trình của repo này và khởi động lại, không chờ thêm. Dev chậm dần sau nhiều giờ (người dùng báo "sao chậm nữa rồi" 22/10/2026): đọc heap trong `apps/<app>/.next/trace` (`memory-usage`, `heapUsed`) và thời gian `handle-request`; heap phình thì sửa hoặc chạm `apps/<app>/next.config.ts` để Next khởi động lại server đó với heap mới (không dừng cả `npm run dev`). `scripts/dev.mjs` giới hạn heap 3GB để Next tự khởi động lại trước khi phình vào swap. Không xóa `.next/` để verify.
+- Dùng npm theo `package-lock.json`. Tận dụng dev server hiện có; nếu cần khởi chạy, dùng `npm run dev -- -p 3001` sau khi kiểm tra cổng (chạy cả api ở cổng `API_PORT`, mặc định 3100, và web ở cổng `-p`; web chuyển `/api` tới api). Server treo (không phản hồi) thì kill tiến trình của repo này và khởi động lại, không chờ thêm. Dev chậm dần sau nhiều giờ (người dùng báo "sao chậm nữa rồi" 22/10/2026): đọc heap trong `apps/<app>/.next/dev/trace` (`memory-usage`, `heapUsed`) và thời gian `handle-request`; heap phình thì sửa hoặc chạm `apps/<app>/next.config.ts` để Next khởi động lại server đó với heap mới (không dừng cả `npm run dev`). `scripts/dev.mjs` giới hạn heap 3GB để Next tự khởi động lại trước khi phình vào swap. Không xóa `.next/` để verify.
 - Không dùng `next build` / `npm run build` để verify; chỉ chạy production build khi người dùng yêu cầu trực tiếp.
 - Thay đổi TypeScript/logic: chạy `npm run typecheck`, `npm run lint` và test liên quan. Sửa docs: kiểm tra link/path và `git diff --check`; không cần chạy toàn bộ suite. `npm run verify` gồm typecheck + lint + toàn bộ test, dùng khi phạm vi thực sự cần.
 - Chạy test cụ thể: `node scripts/run-tests.mjs --files apps/<app>/tests/<file>.test.ts` (hoặc `tests/<file>.test.ts`); mỗi workspace chạy với cwd của nó và in tổng kết riêng. Thay placeholder bằng file tồn tại; đọc số test đã chạy và số skip. Runner hiện bỏ qua đường dẫn không tồn tại và có thể thoát 0 khi không chọn được test; đó không phải bằng chứng pass. Thiếu `--files` có thể chạy toàn bộ suite.

@@ -562,7 +562,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     });
 
     test("POST /api/upload returns 413 (not 500) when the multipart body is truncated/unreadable", async () => {
-      // Next cắt body ở middlewareClientMaxBodySize → formData() ném lỗi parse
+      // Next cắt body ở proxyClientMaxBodySize → formData() ném lỗi parse
       const req = new NextRequest("http://localhost:3000/api/upload", {
         method: "POST",
         headers: {

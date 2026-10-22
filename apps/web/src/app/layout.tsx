@@ -83,6 +83,9 @@ export default async function RootLayout({
   return (
     <html
       lang="vi"
+      // `scroll-smooth` ở globals.css: Next 16 không tự tắt cuộn mượt khi chuyển trang nữa, thuộc tính này giữ hành vi cũ
+      // (chuyển trang nhảy ngay lên đầu, cuộn trong trang vẫn mượt)
+      data-scroll-behavior="smooth"
       className={`light ${fontSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >

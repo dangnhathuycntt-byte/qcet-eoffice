@@ -563,6 +563,8 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       back: () => {},
       forward: () => {},
       refresh: () => {},
+      // AppRouterInstance của Next 16 có thêm khóa định danh lượt khôi phục bfcache
+      bfcacheId: "test",
     };
 
     function TestHookComponent() {
