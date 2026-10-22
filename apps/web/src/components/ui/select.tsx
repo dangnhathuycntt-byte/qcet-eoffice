@@ -5,6 +5,7 @@ import { Select as BaseSelect } from "@base-ui/react/select";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fieldFocusRingClass } from "@/components/ui/focus-ring";
+import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 export interface SelectOption {
@@ -39,6 +40,23 @@ export interface SelectProps {
   positionerClassName?: string;
   /** compact: 28px trên desktop (32px trên điện thoại), chữ 13px, mục menu ≤ 32px. Mặc định giữ nguyên. */
   compact?: boolean;
+  /**
+   * pill: chip thuộc tính 24px như hàng thuộc tính của hộp tạo việc/cuộc họp (`PROPERTY_PILL_CLASS`): không mũi tên, menu
+   * mở dưới chip canh trái, mục menu ≤ 32px. Mặc định `field` (ô chọn nền xám).
+   */
+  variant?: "field" | "pill";
+  /** Chỉ cho `pill`: icon đầu chip; nơi gọi tự đặt màu (thường `text-muted-foreground`). */
+  icon?: React.ReactNode;
+  /**
+   * Chỉ cho `pill`: giá trị mặc định không mang tín hiệu (ví dụ "Thường"). Đang ở giá trị này thì chip ghi `idleLabel` (tên
+   * thuộc tính) bằng chữ mờ thay vì giá trị, như chip "Đơn vị" ở hộp tạo việc; chọn giá trị khác thì hiện giá trị.
+   */
+  idleValue?: string;
+  idleLabel?: string;
+  /** Gợi ý khi rê chuột lên nút chọn. */
+  title?: string;
+  /** Tiêu đề bảng chọn trên điện thoại; mặc định `label`, rồi `aria-label`. Đặt khi `aria-label` đã kèm giá trị (chip: "Độ khẩn: Thường"). */
+  sheetTitle?: string;
 }
 
 function renderItem(option: SelectOption, compact = false) {
@@ -84,7 +102,15 @@ export function Select({
   "aria-invalid": ariaInvalid,
   positionerClassName,
   compact = false,
+  variant = "field",
+  icon,
+  idleValue,
+  idleLabel,
+  title,
+  sheetTitle,
 }: SelectProps) {
+  const isPill = variant === "pill";
+  const isIdle = isPill && idleValue !== undefined && value === idleValue;
   const items = React.useMemo(
     () => options.map(({ value: v, label: l }) => ({ value: v, label: l })),
     [options],
@@ -117,31 +143,44 @@ export function Select({
       ) : null}
       <BaseSelect.Trigger
         id={id}
+        title={title}
         aria-describedby={ariaDescribedBy}
         aria-label={label ? undefined : ariaLabel}
         aria-invalid={invalid || ariaInvalid || undefined}
         className={cn(
-          "flex w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-secondary outline-none select-none",
-          compact ? "h-8 px-2 text-compact sm:h-7" : "h-10 px-3 text-base sm:h-9 sm:text-sm",
-          "transition-colors duration-100 motion-reduce:transition-none",
-          `hover:bg-accent focus-visible:bg-selected ${fieldFocusRingClass} data-[popup-open]:bg-selected`,
-          "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
-          "aria-invalid:bg-danger-soft aria-invalid:text-destructive",
+          isPill
+            ? PROPERTY_PILL_CLASS
+            : [
+                "flex w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-secondary outline-none select-none",
+                compact ? "h-8 px-2 text-compact sm:h-7" : "h-10 px-3 text-base sm:h-9 sm:text-sm",
+                "transition-colors duration-100 motion-reduce:transition-none",
+                `hover:bg-accent focus-visible:bg-selected ${fieldFocusRingClass} data-[popup-open]:bg-selected`,
+                "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
+                "aria-invalid:bg-danger-soft aria-invalid:text-destructive",
+              ],
           className,
         )}
       >
-        <BaseSelect.Value
-          placeholder={placeholder}
-          className="truncate data-[placeholder]:text-muted-foreground"
-        />
-        <BaseSelect.Icon className="text-muted-foreground">
-          <ChevronsUpDown className={compact ? "size-3.5" : "size-4"} />
-        </BaseSelect.Icon>
+        {isPill ? icon : null}
+        {isIdle ? (
+          <span className="truncate text-muted-foreground">{idleLabel ?? placeholder}</span>
+        ) : (
+          <BaseSelect.Value
+            placeholder={placeholder}
+            className="truncate data-[placeholder]:text-muted-foreground"
+          />
+        )}
+        {isPill ? null : (
+          <BaseSelect.Icon className="text-muted-foreground">
+            <ChevronsUpDown className={compact ? "size-3.5" : "size-4"} />
+          </BaseSelect.Icon>
+        )}
       </BaseSelect.Trigger>
       <BaseSelect.Portal>
         <BaseSelect.Backdrop className={SHEET_BACKDROP_CLASS} />
         <BaseSelect.Positioner
           sideOffset={4}
+          align={isPill ? "start" : undefined}
           alignItemWithTrigger={false}
           collisionPadding={12}
           className={cn("z-30 outline-none", positionerClassName, SHEET_POSITIONER_CLASS)}
@@ -152,10 +191,11 @@ export function Select({
               "transition-opacity duration-100 ease-out motion-reduce:transition-none",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
               SHEET_POPUP_CLASS,
+              isPill && "min-w-44",
               popupClassName,
             )}
           >
-            <MenuSheetHeader title={label ?? ariaLabel ?? placeholder} />
+            <MenuSheetHeader title={sheetTitle ?? label ?? ariaLabel ?? placeholder} />
             <BaseSelect.List className="max-h-[var(--available-height)] overflow-y-auto">
               {groups.map(([group, list]) =>
                 group ? (
@@ -163,10 +203,10 @@ export function Select({
                     <BaseSelect.GroupLabel className="px-2.5 pt-2 pb-1 text-xs font-medium text-muted-foreground">
                       {group}
                     </BaseSelect.GroupLabel>
-                    {list.map((o) => renderItem(o, compact))}
+                    {list.map((o) => renderItem(o, compact || isPill))}
                   </BaseSelect.Group>
                 ) : (
-                  list.map((o) => renderItem(o, compact))
+                  list.map((o) => renderItem(o, compact || isPill))
                 ),
               )}
             </BaseSelect.List>

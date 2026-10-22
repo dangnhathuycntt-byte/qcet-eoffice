@@ -6,6 +6,7 @@ import { AttentionBadge } from "../src/components/workspace/attention-badge";
 import { ActionQueueShell } from "../src/components/workspace/action-queue-shell";
 import { parseZoneParam } from "@qcet/contracts/types/workspace";
 import { resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
+import { getRouteByPath } from "../src/lib/navigation/canonical-navigation-registry";
 
 describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
 
@@ -93,7 +94,7 @@ test("parseZoneParam defaults to 'dashboard' when param is null or undefined (B�
   assert.equal(parseZoneParam("calendar"), "calendar");
 });
 
-test("resolveBreadcrumb for root path '/' resolves to 'Tổng quan'", () => {
+test("resolveBreadcrumb for root path '/' resolves to Nhiệm vụ (bỏ Tổng quan 19/10/2026, `/` chuyển tới /tasks)", () => {
   const crumbs = resolveBreadcrumb("/");
-  assert.deepEqual(crumbs, ["QCET E-Office", "Tổng quan"]);
+  assert.deepEqual(crumbs, ["QCET E-Office", getRouteByPath("/tasks")!.label]);
 });

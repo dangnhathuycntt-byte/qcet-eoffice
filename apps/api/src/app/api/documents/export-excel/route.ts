@@ -14,7 +14,7 @@ import { listDocuments } from "@/server/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
 import { isFeatureEnabled } from "@/features/flags";
 import { ValidationError } from "@/server/api/errors";
-import { canReadDocument } from "@/server/policies/document-policy";
+import { buildDocumentReadWhere, canReadDocument } from "@/server/policies/document-policy";
 import type { DocumentType } from "@qcet/contracts/types/document";
 import { resolveDocumentTypeParam } from "@qcet/shared/domain/documents/document-type-param";
 
@@ -41,11 +41,12 @@ async function exportRegistry(authUser: AuthenticatedUser, raw: unknown, invalid
   const type: DocumentType = resolveDocumentTypeParam(query.data.type) === "VAN_BAN_DEN" ? "VAN_BAN_DEN" : "VAN_BAN_DI";
   const year = query.data.year || query.data.documentYear || new Date().getFullYear();
 
+  // Sổ đăng ký theo Phụ lục IV chỉ gồm văn bản đúng loại; văn bản đi của đơn vị khác gửi tới không vào sổ đến (ADR-015).
   const documents = await listDocuments({
     type,
     documentYear: year,
     limit: 5000,
-    userContext: authUser,
+    aclWhere: buildDocumentReadWhere(authUser, { delivered: false }),
   });
 
   // Sort ascending by registrationNumber for chronological registry book ordering

@@ -102,12 +102,13 @@ describe("Task 1: Security & Session Binding on Document Endpoints", () => {
     const fakeAttackerId = "spoofed-attacker-user-id";
     const req = new NextRequest("http://localhost:3001/api/documents", {
       method: "POST",
+      // Tờ trình: văn bản đến không tạo được (ADR-015); test chỉ kiểm chống mạo danh registeredById.
       body: JSON.stringify({
-        type: "VAN_BAN_DEN",
+        type: "TO_TRINH_NOI_BO",
         originalNumber: "SEC-TEST-001",
         issuedDate: new Date().toISOString(),
-        issuingAuthority: "Bộ GD&ĐT",
-        category: "Quyết định",
+        issuingAuthority: "Văn phòng",
+        category: "Tờ trình",
         summary: "Văn bản thử nghiệm chống mạo danh registeredById",
         urgency: "THUONG",
         securityLevel: "THUONG",

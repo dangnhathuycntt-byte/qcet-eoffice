@@ -16,22 +16,22 @@ import {
 describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)", () => {
 
   describe("Canonical Navigation Registry Synchronization", () => {
-    test("canonical registry produces 7 items matching canonical routes with no duplicates", () => {
+    test("canonical registry produces 6 items matching canonical routes with no duplicates", () => {
       const items = getSidebarNavItems();
-      assert.equal(items.length, 7, "getSidebarNavItems must return 7 canonical items");
+      assert.equal(items.length, 6, "getSidebarNavItems must return 6 canonical items");
 
       const ids = items.map((i) => i.id);
       const uniqueIds = new Set(ids);
-      assert.equal(uniqueIds.size, 7, "All route IDs must be unique");
+      assert.equal(uniqueIds.size, 6, "All route IDs must be unique");
 
       const hrefs = items.map((i) => i.href);
       const uniqueHrefs = new Set(hrefs);
-      assert.equal(uniqueHrefs.size, 7, "All route hrefs must be unique");
+      assert.equal(uniqueHrefs.size, 6, "All route hrefs must be unique");
 
-      // Verify canonical order
+      // Bỏ Tổng quan 19/10/2026: Hộp thư lên đầu
       assert.deepEqual(
         ids,
-        ["desk", "tasks", "meetings", "inbox", "documents", "org", "settings"],
+        ["inbox", "tasks", "meetings", "documents", "org", "settings"],
         "Items must follow canonical order"
       );
     });
@@ -41,7 +41,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       const workItems = items.filter((i) => i.section === "work");
       const orgItems = items.filter((i) => i.section === "org");
 
-      assert.equal(workItems.length, 5, "Work section has Desk, Tasks, Calendar, Notifications, Documents");
+      assert.equal(workItems.length, 4, "Work section has Inbox, Tasks, Meetings, Documents");
       assert.equal(orgItems.length, 2, "Org section has Org, Settings");
     });
   });
@@ -192,7 +192,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       assert.equal(toggled, true);
       assert.equal(defaultPrevented, true);
 
-      // Number shortcut '2' should navigate to /tasks (2nd canonical item excluding settings)
+      // Number shortcut '2' should navigate to /tasks (2nd canonical item excluding settings: 1 Hộp thư, 2 Nhiệm vụ, 3 Cuộc họp, 4 Văn bản, 5 Cơ cấu)
       defaultPrevented = false;
       navigatedTo = null;
       handled = handleSidebarShortcut(
@@ -226,7 +226,24 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       assert.equal(navigatedTo, "/meetings");
       assert.equal(defaultPrevented, true);
 
-      // Number shortcut '5' (documents under development) must prevent default and NOT navigate
+      // Number shortcut '4' navigates to /documents like the other modules
+      defaultPrevented = false;
+      navigatedTo = null;
+      handled = handleSidebarShortcut(
+        {
+          key: "4",
+          target: buttonTarget,
+          preventDefault: () => {
+            defaultPrevented = true;
+          },
+        },
+        mockOptions
+      );
+      assert.equal(handled, true);
+      assert.equal(navigatedTo, "/documents");
+      assert.equal(defaultPrevented, true);
+
+      // Number shortcut '5' navigates to /org
       defaultPrevented = false;
       navigatedTo = null;
       handled = handleSidebarShortcut(
@@ -240,8 +257,25 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
         mockOptions
       );
       assert.equal(handled, true);
-      assert.equal(navigatedTo, null, "Shortcut 5 for documents must not trigger navigation");
+      assert.equal(navigatedTo, "/org");
       assert.equal(defaultPrevented, true);
+
+      // '6' has no module (settings is excluded), so the key is left alone
+      defaultPrevented = false;
+      navigatedTo = null;
+      handled = handleSidebarShortcut(
+        {
+          key: "6",
+          target: buttonTarget,
+          preventDefault: () => {
+            defaultPrevented = true;
+          },
+        },
+        mockOptions
+      );
+      assert.equal(handled, false);
+      assert.equal(navigatedTo, null);
+      assert.equal(defaultPrevented, false);
     });
   });
 
@@ -272,11 +306,12 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
   });
 
   describe("Plan 10.3: Canonical Order, Visual Groups & Footer Discipline", () => {
-    test("canonical order: tasks immediately follows workbench (desk)", () => {
+    test("canonical order: tasks immediately follows inbox (no Tổng quan since 19/10/2026)", () => {
       const items = getSidebarNavItems();
       const ids = items.map((i) => i.id);
-      assert.equal(ids[0], "desk", "First canonical item must be desk (workbench)");
-      assert.equal(ids[1], "tasks", "Second canonical item must be tasks, immediately after desk");
+      assert.equal(ids[0], "inbox", "First canonical item must be inbox");
+      assert.equal(ids[1], "tasks", "Second canonical item must be tasks, immediately after inbox");
+      assert.equal(ids.includes("desk"), false, "Tổng quan (desk) was removed");
     });
 
     test("mục thanh dưới của registry là tập con của registry chuẩn", () => {

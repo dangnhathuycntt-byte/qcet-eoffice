@@ -1038,29 +1038,32 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       });
     });
 
-    it("POST /api/documents/incoming registers document successfully", async () => {
+    // ADR-015: QCET chỉ gửi nhận trong trường, route vào sổ văn bản đến trả 403 kể cả với văn thư. Các bước sau là luồng
+    // của văn bản đến đã vào sổ trước đó, nên văn bản cho chúng tạo thẳng bằng dịch vụ.
+    it("POST /api/documents/incoming refuses to register, even for the clerk", async () => {
+      const body = {
+        title: `Văn bản API Route Test - ${testRunId}`,
+        documentNumber: `CV-API-${testRunId.slice(-6)}`,
+        issuingAuthority: "Bộ Thông tin và Truyền thông",
+        documentType: DocumentType.CONG_VAN,
+        urgency: DocumentUrgency.THUONG,
+        securityLevel: DocumentSecurityLevel.THUONG,
+      };
       const req = new NextRequest("http://localhost:3000/api/documents/incoming", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${clerkToken}`,
         },
-        body: JSON.stringify({
-          title: `Văn bản API Route Test - ${testRunId}`,
-          documentNumber: `CV-API-${testRunId.slice(-6)}`,
-          issuingAuthority: "Bộ Thông tin và Truyền thông",
-          documentType: DocumentType.CONG_VAN,
-          urgency: DocumentUrgency.THUONG,
-          securityLevel: DocumentSecurityLevel.THUONG,
-        }),
+        body: JSON.stringify(body),
       });
 
       const res = await incomingRegisterRoute(req);
-      assert.equal(res.status, 201);
-      const json = await res.json();
-      assert.ok(json.document?.id);
-      assert.equal(json.workflow?.status, IncomingDocumentStatus.REGISTERED);
-      apiDocId = json.document.id;
+      assert.equal(res.status, 403);
+
+      const { document, workflow } = await registerIncomingDocument(body, clerkUser, `req-api-${testRunId}`);
+      assert.equal(workflow.status, IncomingDocumentStatus.REGISTERED);
+      apiDocId = document.id;
     });
 
     it("POST /api/documents/[id]/actions/present presents document to leadership", async () => {

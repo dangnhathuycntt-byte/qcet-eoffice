@@ -13,6 +13,7 @@ import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
+import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import { useAuth } from "@/lib/auth-context";
 import { responseMessage } from "@/components/meetings/meeting-client";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
@@ -52,6 +53,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
   const [errors, setErrors] = React.useState<Partial<Record<FieldName, string>>>({});
   const [failure, setFailure] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
   const titleRef = React.useRef<HTMLInputElement>(null);
   const endRef = React.useRef<HTMLInputElement>(null);
   const dateWrapRef = React.useRef<HTMLDivElement>(null);
@@ -74,6 +76,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
     setOpenPicker(null);
     setErrors({});
     setFailure(null);
+    setModKey(getPlatformModifierKey());
   }, [open]);
 
   const isDirty = Boolean(title.trim() || location.trim() || agenda.trim() || chair || attendees.length > 0);
@@ -144,166 +147,193 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
       title="Tạo cuộc họp"
       showHeader={false}
       size="lg"
+      className="gap-0 bg-background p-0 sm:p-0 max-md:pb-0!"
     >
-      <DialogForm onSubmit={() => void submit()} className="gap-3">
-        {/* Đầu hộp gọn một dòng 12px như hộp Soạn văn bản đi; bỏ tiêu đề 16px và câu mô tả (người dùng: "xoá cho gọn" 20/10/2026) */}
-        <div className="-mt-1 flex items-center justify-between gap-2">
+      {/* Khung theo hộp Tạo nhiệm vụ như hộp Soạn văn bản đi (người dùng: "đồng bộ hộp tạo cuộc họp theo khung mới" 22/10/2026):
+          nền trắng, đầu hộp không kẻ đệm 20/20/0/24, tên 24px, chip cách tên 10px, đường kẻ là viền trên của phần nội dung,
+          chân hộp trắng kẻ trên. Đầu hộp chỉ một dòng 12px (người dùng: "xoá cho gọn" tiêu đề 16px và câu mô tả 20/10/2026) */}
+      <DialogForm onSubmit={() => void submit()} className="min-h-0 flex-1 gap-0">
+        <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
           <DialogBreadcrumb items={["Cuộc họp", "Tạo mới"]} />
-          <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0" />}>
+          <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 rounded-full max-md:size-8" />}>
             <X />
           </DialogClose>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`${ids}-title`} className="sr-only">
-            Tên cuộc họp
-          </label>
-          <Input
-            ref={titleRef}
-            id={`${ids}-title`}
-            variant="title"
-            autoFocus
-            value={title}
-            maxLength={500}
-            placeholder="Tên cuộc họp"
-            aria-invalid={errors.title ? true : undefined}
-            aria-describedby={errors.title ? `${ids}-title-error` : undefined}
-            onChange={(event) => {
-              setTitle(event.target.value);
-              setErrors((current) => ({ ...current, title: undefined }));
-            }}
-          />
-          {errors.title ? <FieldError id={`${ids}-title-error`}>{errors.title}</FieldError> : null}
-        </div>
+        </header>
 
-        <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div ref={dateWrapRef} className="flex">
-              <VietnameseDatePicker
-                id={`${ids}-date`}
-                variant="pill"
-                value={date}
-                clearable={false}
-                error={errors.date ? true : undefined}
-                icon={<Calendar className={errors.date ? "text-destructive" : "text-muted-foreground"} />}
-                periodPicker={false}
-                placeholder="Ngày"
-                title="Ngày họp"
-                onChange={(value) => {
-                  setDate(value);
-                  setErrors((current) => ({ ...current, date: undefined }));
-                }}
-                className="flex"
-              />
-            </div>
-
-            <PopoverRoot open={openPicker === "time"} onOpenChange={(next) => setOpenPicker(next ? "time" : null)}>
-              <PopoverTrigger
-                aria-label={`Giờ họp: ${startTime} đến ${endTime}`}
-                aria-invalid={errors.end ? true : undefined}
-                className={cn(PROPERTY_PILL_CLASS, errors.end && "text-destructive")}
-              >
-                <Clock className={cn("size-3.5", errors.end ? "text-destructive" : "text-muted-foreground")} />
-                <span className="tabular-nums">{endTime ? `${startTime} – ${endTime}` : startTime}</span>
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                sideOffset={4}
-                mobileSheet
-                sheetTitle="Giờ họp"
-                positionerClassName="z-[60]"
-                className="z-[60] w-80 p-3"
-                initialFocus={errors.end ? endRef : undefined}
-              >
-                <PopoverTitle className="sr-only">Giờ họp</PopoverTitle>
-                <TimeRangeFields
-                  start={startTime}
-                  end={endTime}
-                  onStartChange={changeStart}
-                  onEndChange={(next) => {
-                    setEndTime(next);
-                    setErrors((current) => ({ ...current, end: undefined }));
-                  }}
-                  endRef={endRef}
-                  endInvalid={Boolean(errors.end)}
-                  endDescribedBy={errors.end ? `${ids}-end-error` : undefined}
-                />
-                {/* Lỗi đã được đọc ở dòng báo dưới hàng chip (role="alert"); ở đây chỉ hiện lại cho thấy */}
-                <p className={cn("mt-2 text-xs", errors.end ? "text-destructive" : "text-muted-foreground")}>
-                  {errors.end ?? (duration ? `Kéo dài ${duration}` : "Chọn giờ kết thúc sau giờ bắt đầu.")}
-                </p>
-              </PopoverContent>
-            </PopoverRoot>
-
-            <PopoverRoot open={openPicker === "location"} onOpenChange={(next) => setOpenPicker(next ? "location" : null)}>
-              <PopoverTrigger
-                aria-label={location ? `Địa điểm: ${location}` : "Địa điểm"}
-                className={cn(PROPERTY_PILL_CLASS, !location && "text-muted-foreground")}
-              >
-                <MapPin className="size-3.5 text-muted-foreground" />
-                <span className="max-w-40 truncate">{location || "Địa điểm"}</span>
-              </PopoverTrigger>
-              <PopoverContent align="start" sideOffset={4} mobileSheet sheetTitle="Địa điểm" positionerClassName="z-[60]" className="z-[60] w-64 p-1">
-                <PopoverTitle className="sr-only">Địa điểm</PopoverTitle>
-                <Input
-                  variant="menu"
-                  autoFocus
-                  value={location}
-                  maxLength={255}
-                  aria-label="Địa điểm"
-                  placeholder="Ví dụ: Phòng họp số 1"
-                  onChange={(event) => setLocation(event.target.value)}
-                  onKeyDown={(event) => {
-                    // Ô nằm ngoài biểu mẫu (portal) nên Enter không gửi: Enter là xong, quay về hộp
-                    if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-                      event.preventDefault();
-                      setOpenPicker(null);
-                    }
-                  }}
-                />
-              </PopoverContent>
-            </PopoverRoot>
-
-            <ChairPicker
-              directory={directory}
-              value={chair}
-              onChange={(person) => {
-                setChair(person);
-                setAttendees((current) => current.filter((p) => p.id !== person.id));
-              }}
-              onClear={() => setChair(null)}
-              open={openPicker === "chair"}
-              onOpenChange={(next) => setOpenPicker(next ? "chair" : null)}
-            />
-
-            <ParticipantsPicker directory={directory} value={attendees} onChange={setAttendees} hiddenIds={attendeeHidden} />
+        {/* Lỗi gửi nằm ngoài vùng cuộn như hộp Tạo nhiệm vụ để luôn thấy */}
+        {failure ? (
+          <div className="shrink-0 px-5 pt-3 md:px-6">
+            <InlineAlert variant="error" aria-live="assertive">
+              {failure}
+            </InlineAlert>
           </div>
-          {errors.date ? <FieldError id={`${ids}-date-error`}>{errors.date}</FieldError> : null}
-          {errors.end ? <FieldError id={`${ids}-end-error`}>{errors.end}</FieldError> : null}
+        ) : null}
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-4 md:px-6">
+          <div className="flex shrink-0 flex-col gap-0.5">
+            <label htmlFor={`${ids}-title`} className="sr-only">
+              Tên cuộc họp
+            </label>
+            <Input
+              ref={titleRef}
+              id={`${ids}-title`}
+              variant="title"
+              autoFocus
+              value={title}
+              maxLength={500}
+              placeholder="Tên cuộc họp"
+              aria-invalid={errors.title ? true : undefined}
+              aria-describedby={errors.title ? `${ids}-title-error` : undefined}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                setErrors((current) => ({ ...current, title: undefined }));
+              }}
+            />
+            {errors.title ? <FieldError id={`${ids}-title-error`}>{errors.title}</FieldError> : null}
+          </div>
+
+          <div className="mt-2.5 flex shrink-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div ref={dateWrapRef} className="flex">
+                <VietnameseDatePicker
+                  id={`${ids}-date`}
+                  variant="pill"
+                  value={date}
+                  clearable={false}
+                  error={errors.date ? true : undefined}
+                  icon={<Calendar className={errors.date ? "text-destructive" : "text-muted-foreground"} />}
+                  periodPicker={false}
+                  placeholder="Ngày"
+                  title="Ngày họp"
+                  onChange={(value) => {
+                    setDate(value);
+                    setErrors((current) => ({ ...current, date: undefined }));
+                  }}
+                  className="flex"
+                />
+              </div>
+
+              <PopoverRoot open={openPicker === "time"} onOpenChange={(next) => setOpenPicker(next ? "time" : null)}>
+                <PopoverTrigger
+                  aria-label={`Giờ họp: ${startTime} đến ${endTime}`}
+                  aria-invalid={errors.end ? true : undefined}
+                  className={cn(PROPERTY_PILL_CLASS, errors.end && "text-destructive")}
+                >
+                  <Clock className={cn("size-3.5", errors.end ? "text-destructive" : "text-muted-foreground")} />
+                  <span className="tabular-nums">{endTime ? `${startTime} – ${endTime}` : startTime}</span>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  sideOffset={4}
+                  mobileSheet
+                  sheetTitle="Giờ họp"
+                  positionerClassName="z-[60]"
+                  className="z-[60] w-80 p-3"
+                  initialFocus={errors.end ? endRef : undefined}
+                >
+                  <PopoverTitle className="sr-only">Giờ họp</PopoverTitle>
+                  <TimeRangeFields
+                    start={startTime}
+                    end={endTime}
+                    onStartChange={changeStart}
+                    onEndChange={(next) => {
+                      setEndTime(next);
+                      setErrors((current) => ({ ...current, end: undefined }));
+                    }}
+                    endRef={endRef}
+                    endInvalid={Boolean(errors.end)}
+                    endDescribedBy={errors.end ? `${ids}-end-error` : undefined}
+                  />
+                  {/* Lỗi đã được đọc ở dòng báo dưới hàng chip (role="alert"); ở đây chỉ hiện lại cho thấy */}
+                  <p className={cn("mt-2 text-xs", errors.end ? "text-destructive" : "text-muted-foreground")}>
+                    {errors.end ?? (duration ? `Kéo dài ${duration}` : "Chọn giờ kết thúc sau giờ bắt đầu.")}
+                  </p>
+                </PopoverContent>
+              </PopoverRoot>
+
+              <PopoverRoot open={openPicker === "location"} onOpenChange={(next) => setOpenPicker(next ? "location" : null)}>
+                <PopoverTrigger
+                  aria-label={location ? `Địa điểm: ${location}` : "Địa điểm"}
+                  className={cn(PROPERTY_PILL_CLASS, !location && "text-muted-foreground")}
+                >
+                  <MapPin className="size-3.5 text-muted-foreground" />
+                  <span className="max-w-40 truncate">{location || "Địa điểm"}</span>
+                </PopoverTrigger>
+                <PopoverContent align="start" sideOffset={4} mobileSheet sheetTitle="Địa điểm" positionerClassName="z-[60]" className="z-[60] w-64 p-1">
+                  <PopoverTitle className="sr-only">Địa điểm</PopoverTitle>
+                  <Input
+                    variant="menu"
+                    autoFocus
+                    value={location}
+                    maxLength={255}
+                    aria-label="Địa điểm"
+                    placeholder="Địa điểm họp"
+                    onChange={(event) => setLocation(event.target.value)}
+                    onKeyDown={(event) => {
+                      // Ô nằm ngoài biểu mẫu (portal) nên Enter không gửi: Enter là xong, quay về hộp
+                      if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                        event.preventDefault();
+                        setOpenPicker(null);
+                      }
+                    }}
+                  />
+                </PopoverContent>
+              </PopoverRoot>
+
+              <ChairPicker
+                directory={directory}
+                value={chair}
+                onChange={(person) => {
+                  setChair(person);
+                  setAttendees((current) => current.filter((p) => p.id !== person.id));
+                }}
+                onClear={() => setChair(null)}
+                open={openPicker === "chair"}
+                onOpenChange={(next) => setOpenPicker(next ? "chair" : null)}
+              />
+
+              <ParticipantsPicker directory={directory} value={attendees} onChange={setAttendees} hiddenIds={attendeeHidden} />
+            </div>
+            {errors.date ? <FieldError id={`${ids}-date-error`}>{errors.date}</FieldError> : null}
+            {errors.end ? <FieldError id={`${ids}-end-error`}>{errors.end}</FieldError> : null}
+          </div>
+
+          {/* Dưới đường kẻ như phần mô tả của hộp Tạo nhiệm vụ: cách chip 20px, đệm trên 24px, đệm dưới 16px, chữ 14px */}
+          <div className="mt-5 flex flex-col border-t border-border/60 pt-6 pb-4">
+            <label htmlFor={`${ids}-agenda`} className="sr-only">
+              Nội dung và chương trình
+            </label>
+            <Textarea
+              id={`${ids}-agenda`}
+              variant="bare"
+              compact
+              autoResize
+              value={agenda}
+              placeholder="Nội dung và chương trình (không bắt buộc)"
+              className="min-h-24 text-sm leading-relaxed sm:min-h-24"
+              onChange={(event) => setAgenda(event.target.value)}
+            />
+          </div>
         </div>
 
-        <div aria-hidden className="h-px bg-border" />
-
-        <label htmlFor={`${ids}-agenda`} className="sr-only">
-          Nội dung và chương trình
-        </label>
-        <Textarea
-          id={`${ids}-agenda`}
-          variant="bare"
-          compact
-          autoResize
-          value={agenda}
-          placeholder="Nội dung và chương trình, tài liệu cần chuẩn bị…"
-          className="min-h-24 sm:min-h-24"
-          onChange={(event) => setAgenda(event.target.value)}
-        />
-
-        {failure ? <InlineAlert variant="error">{failure}</InlineAlert> : null}
-        <DialogFooter>
+        <DialogFooter className="shrink-0 items-center border-t border-border/60 px-5 py-3 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
           <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
             Hủy
           </Button>
-          <Button type="submit" size="sm" loading={saving}>
-            Tạo cuộc họp
+          <Button
+            type="submit"
+            size="sm"
+            loading={saving}
+            aria-keyshortcuts="Meta+Enter Control+Enter"
+            title={`${modKey} + Enter`}
+            className="max-md:px-4"
+          >
+            <span>{saving ? "Đang tạo…" : "Tạo cuộc họp"}</span>
+            {saving ? null : (
+              <kbd className="hidden font-sans text-xs text-primary-foreground/60 sm:inline" aria-hidden="true">
+                {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
+              </kbd>
+            )}
           </Button>
         </DialogFooter>
       </DialogForm>

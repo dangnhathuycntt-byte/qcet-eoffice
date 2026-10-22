@@ -7,6 +7,7 @@ import { resetRateLimits } from '@/server/security/rate-limit';
 import { JobCatalogGroup } from '@prisma/client';
 
 import { GET as listDocumentsRoute, POST as createDocumentRoute } from '@/app/api/documents/route';
+import { createDocument } from '@/server/documents/document-service';
 import {
   GET as getDocumentRoute,
   PATCH as patchDocumentRoute,
@@ -329,7 +330,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           cookie: `qcet_session=${adminToken}`,
         },
         body: JSON.stringify({
-          type: 'VAN_BAN_DEN',
+          type: 'TO_TRINH_NOI_BO',
           originalNumber: 'CSRF-01',
           summary: 'CSRF attempt',
         }),
@@ -345,12 +346,13 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           'content-type': 'application/json',
           authorization: `Bearer ${adminToken}`,
         },
+        // Tờ trình: văn bản đến không tạo được (ADR-015), test này chỉ kiểm cơ chế xác thực Bearer.
         body: JSON.stringify({
-          type: 'VAN_BAN_DEN',
+          type: 'TO_TRINH_NOI_BO',
           originalNumber: 'BEARER-AUTH-01',
           issuedDate: new Date().toISOString(),
           summary: 'Bearer authentication valid create',
-          issuingAuthority: 'Sở GD&ĐT',
+          issuingAuthority: 'Phòng Thử Nghiệm 1',
           category: 'Công văn',
         }),
       });
@@ -371,11 +373,11 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           cookie: `qcet_session=${adminToken}`,
         },
         body: JSON.stringify({
-          type: 'VAN_BAN_DEN',
+          type: 'TO_TRINH_NOI_BO',
           originalNumber: 'ORIGIN-VALID-01',
           issuedDate: new Date().toISOString(),
           summary: 'Origin header valid create',
-          issuingAuthority: 'Sở GD&ĐT',
+          issuingAuthority: 'Phòng Thử Nghiệm 1',
           category: 'Công văn',
         }),
       });
@@ -519,7 +521,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
   describe('5. Successful Queries, Operations & DTO Sanitization', () => {
     let testDocId: string;
 
-    it('POST /api/documents creates document with automatic registration number and returns DTO', async () => {
+    it('POST /api/documents refuses to create an incoming document, even for admin (ADR-015)', async () => {
       const req = new NextRequest('http://localhost:3000/api/documents', {
         method: 'POST',
         headers: {
@@ -539,12 +541,26 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         }),
       });
       const res = await createDocumentRoute(req);
-      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.status, 403);
       const json = await res.json();
-      assert.strictEqual(json.success, true);
-      assert.ok(json.data.id);
-      assert.ok(json.data.registrationNumber);
-      testDocId = json.data.id;
+      assert.strictEqual(json.success, false);
+      assert.match(json.error, /chỉ gửi nhận trong trường/);
+
+      // Các bước sau cần một văn bản đến đã có (dữ liệu cũ, trước ADR-015): tạo thẳng bằng dịch vụ, số đến tự cấp.
+      const seeded = await createDocument({
+        type: 'VAN_BAN_DEN',
+        originalNumber: 'VB-SUCCESS-001',
+        issuedDate: new Date(),
+        summary: 'Văn bản kiểm thử thành công',
+        issuingAuthority: 'UBND Tỉnh',
+        category: 'Chỉ thị',
+        urgency: 'KHAN',
+        securityLevel: 'THUONG',
+        leadUnitId: managerUnitId,
+        registeredById: adminUser.id,
+      });
+      assert.ok(seeded.registrationNumber);
+      testDocId = seeded.id;
       createdDocIds.push(testDocId);
     });
 

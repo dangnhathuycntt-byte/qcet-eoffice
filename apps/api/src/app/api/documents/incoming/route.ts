@@ -1,12 +1,11 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { registerIncomingDocument, listIncomingWorkflows } from "@/server/documents/incoming-document-service";
-import { IncomingWorkflowListQuerySchema, RegisterIncomingDocumentSchema } from "@qcet/contracts/documents";
-import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
-import { parseAndValidateJson } from "@/server/api/validation";
+import { listIncomingWorkflows } from "@/server/documents/incoming-document-service";
+import { IncomingWorkflowListQuerySchema } from "@qcet/contracts/documents";
 import { assertCsrf } from "@/server/security/csrf";
-import { assertRateLimit } from "@/server/security/rate-limit";
+import { AuthorizationError } from "@/server/api/errors";
+import { INCOMING_CREATE_FORBIDDEN_MESSAGE } from "@/server/policies/document-policy";
 import { loadCachedAuthorizationContext } from "@/server/authorization/authorization-context-service";
 
 export async function GET(req: NextRequest) {
@@ -48,34 +47,18 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Không còn vào sổ văn bản đến (ADR-015): QCET chỉ gửi nhận trong trường, văn bản đến của đơn vị là văn bản đi đã
+ * phát hành tới đơn vị đó. Giữ route để client cũ nhận 403 có lý do thay vì 405.
+ */
 export async function POST(req: NextRequest) {
   let requestId = crypto.randomUUID();
   try {
     const context = await getApiContext(req);
     requestId = context.requestId;
-    const authUser = requireAuthenticated(context);
-
+    requireAuthenticated(context);
     assertCsrf(req);
-    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
-
-    const { acknowledgeDuplicate, ...body } = await parseAndValidateJson(req, RegisterIncomingDocumentSchema);
-
-    await assertNoSuspectedDuplicate(authUser, {
-      originalNumber: body.originalNumber || body.originalDocNumber || (typeof body.documentNumber === "string" ? body.documentNumber : null),
-      issuingAuthority: body.issuingAuthority || body.sender,
-      acknowledgeDuplicate,
-    });
-
-    const result = await registerIncomingDocument(
-      body,
-      authUser as any,
-      requestId
-    );
-
-    return apiSuccess(result, {
-      requestId,
-      status: 201,
-    });
+    throw new AuthorizationError(INCOMING_CREATE_FORBIDDEN_MESSAGE, "FORBIDDEN");
   } catch (error) {
     return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }

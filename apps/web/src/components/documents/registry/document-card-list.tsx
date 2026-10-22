@@ -59,7 +59,7 @@ export function DocumentCardList({
   error = null,
   onRetry,
   emptyTitle = "Chưa có văn bản nào",
-  emptyDescription = "Vào sổ văn bản mới để bắt đầu.",
+  emptyDescription = "Soạn văn bản đi hoặc tờ trình để bắt đầu.",
   emptyIllustration,
   emptyAction,
   className,

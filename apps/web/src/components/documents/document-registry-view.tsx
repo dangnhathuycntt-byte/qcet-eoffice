@@ -331,11 +331,14 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
   const urgencyLabels: Record<string, string> = { flash: "Hỏa tốc", top_urgent: "Thượng khẩn", urgent: "Khẩn", normal: "Thường" };
   const statusLabels: Record<string, string> = { pending_assignment: "Chờ bút phê", processing: "Đang xử lý", approved: "Chờ phê duyệt", completed: "Đã lập hồ sơ" };
 
-  const primaryAction = filters.type === "outbox"
-    ? canComposeOutgoing ? { label: "Soạn văn bản đi", run: () => setIsComposeOutgoingOpen(true) } : null
+  // Chỉ soạn văn bản đi hoặc tờ trình; văn bản đến không tạo được mà phát sinh khi đơn vị khác phát hành văn bản
+  // gửi đơn vị mình (QCET chỉ gửi nhận trong trường, ADR-015), nên sổ Văn bản đến không có nút tạo.
+  const composeOutgoing = canComposeOutgoing ? { label: "Soạn văn bản đi", run: () => setIsComposeOutgoingOpen(true) } : null;
+  const primaryAction = filters.type === "submission"
+    ? { label: "Soạn tờ trình", run: () => setIsQuickEntryOpen(true) }
     : filters.type === "inbox"
-    ? { label: "Vào sổ văn bản đến", run: () => setIsQuickEntryOpen(true) }
-    : { label: filters.type === "submission" ? "Soạn tờ trình" : "Soạn văn bản", run: () => setIsQuickEntryOpen(true) };
+    ? null
+    : composeOutgoing;
 
   const leadUnitName = filters.leadUnitId
     ? departments.find((d) => d.id === filters.leadUnitId)?.name ?? (isDepartmentsLoading ? "Đang tải…" : "Không rõ đơn vị")
@@ -524,8 +527,6 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
       <DocumentQuickEntryModal
         isOpen={isQuickEntryOpen} onClose={() => setIsQuickEntryOpen(false)}
         onSuccess={(newDoc) => { setIsQuickEntryOpen(false); fetchDocuments(); if (newDoc?.id) pane.open(newDoc.id); }}
-        defaultType={filters.type === "outbox" ? "VAN_BAN_DI" : filters.type === "submission" ? "TO_TRINH_NOI_BO" : "VAN_BAN_DEN"}
-        lockType={filters.type !== "all"}
       />
 
       <ComposeOutgoingDialog

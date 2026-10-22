@@ -28,7 +28,11 @@ export interface PersonnelOption {
 const _cache = new Map<string, PersonnelOption[]>();
 const _inflight = new Map<string, Promise<PersonnelOption[]>>();
 
-async function fetchPersonnel(departmentId?: string): Promise<PersonnelOption[]> {
+/**
+ * Chỉ ghi vào bộ nhớ đệm khi máy chủ trả về danh sách hợp lệ; lỗi mạng, 401/429/5xx hay thân không phải danh sách thì trả
+ * rỗng mà không ghi gì (trước đây bị lưu thành danh sách rỗng đến khi tải lại trang), lần mở sau tải lại.
+ */
+export async function fetchPersonnel(departmentId?: string): Promise<PersonnelOption[]> {
   const key = departmentId ?? "";
   const cached = _cache.get(key);
   if (cached) return cached;
@@ -40,31 +44,32 @@ async function fetchPersonnel(departmentId?: string): Promise<PersonnelOption[]>
   const request = fetch(url)
     .then((r) => r.json())
     .then((data): PersonnelOption[] => {
-      const list: PersonnelOption[] =
-        data.success && Array.isArray(data.users)
-          ? data.users.map((u: any) => ({
-              id: u.id,
-              name: u.name,
-              email: u.email,
-              departmentName: u.department?.name || u.departmentName || "Đơn vị",
-              title: u.position || u.title || null,
-              role: u.role || null,
-              avatarUrl: u.avatarUrl || null,
-            }))
-          : [];
+      if (!(data?.success && Array.isArray(data.users))) return [];
+      const list: PersonnelOption[] = data.users.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        departmentName: u.department?.name || u.departmentName || "Đơn vị",
+        title: u.position || u.title || null,
+        role: u.role || null,
+        avatarUrl: u.avatarUrl || null,
+      }));
       _cache.set(key, list);
       return list;
     })
-    .catch((): PersonnelOption[] => {
-      _cache.set(key, []);
-      return [];
-    })
+    .catch((): PersonnelOption[] => [])
     .finally(() => {
       _inflight.delete(key);
     });
 
   _inflight.set(key, request);
   return request;
+}
+
+/** Xóa bộ nhớ đệm (dùng trong kiểm thử). */
+export function resetPersonnelListCache(): void {
+  _cache.clear();
+  _inflight.clear();
 }
 
 /**

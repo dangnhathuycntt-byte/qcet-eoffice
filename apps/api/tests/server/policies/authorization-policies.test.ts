@@ -127,6 +127,13 @@ describe('Document Authorization Policy (document-policy.ts)', () => {
       assert.strictEqual(canCreateDocument(staffDeptA), true);
       assert.strictEqual(canCreateDocument(clerkUser), true);
     });
+
+    it('refuses incoming documents for everyone, clerk included (ADR-015)', () => {
+      for (const user of [adminUser, managerDeptA, staffDeptA, clerkUser]) {
+        assert.strictEqual(canCreateDocument(user, 'VAN_BAN_DEN'), false);
+        assert.strictEqual(canCreateDocument(user, 'TO_TRINH_NOI_BO'), true);
+      }
+    });
   });
 
   describe('canUpdateDocument', () => {

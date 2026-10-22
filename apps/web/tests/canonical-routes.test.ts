@@ -6,16 +6,14 @@ import {
   getSidebarNavItems,
   getMobileBottomNavItems,
   getMobileDrawerItems,
+  resolveCanonicalHref,
 } from "../src/lib/navigation/canonical-navigation-registry.js";
 import { isRouteActive, isTaskDetailPath, isTaskSubPagePath } from "../src/lib/navigation/active-matcher.js";
 
 describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
-  test("Canonical navigation registry defines single canonical routes for Desk and Tasks", () => {
-    const desk = CANONICAL_ROUTES.find((r) => r.id === "desk");
-    assert.ok(desk, "Desk route must exist");
-    assert.equal(desk.href, "/", "Desk must point to root '/'");
-    assert.equal(desk.label, "Tổng quan");
-    assert.ok(desk.aliases?.includes("/dashboard"), "Desk must alias /dashboard");
+  test("Canonical navigation registry has no Tổng quan route and a single canonical Tasks route", () => {
+    // Bỏ Tổng quan 19/10/2026: `/` và `/dashboard` chuyển tới /tasks, không còn mục nào trỏ về `/`
+    assert.equal(CANONICAL_ROUTES.some((r) => r.id === "desk" || r.href === "/"), false);
 
     const tasks = CANONICAL_ROUTES.find((r) => r.id === "tasks");
     assert.ok(tasks, "Tasks route must exist");
@@ -25,15 +23,16 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
   });
 
   test("getRouteByPath resolves canonical routes and legacy aliases correctly", () => {
-    assert.equal(getRouteByPath("/")?.id, "desk");
-    assert.equal(getRouteByPath("/dashboard")?.id, "desk");
+    assert.equal(getRouteByPath("/"), undefined);
     assert.equal(getRouteByPath("/tasks")?.id, "tasks");
     assert.equal(getRouteByPath("/unit-tasks")?.id, "tasks");
+    assert.equal(getRouteByPath("/notifications")?.id, "inbox");
+    // `/dashboard` chuyển tới /tasks như redirect ở next.config.ts
+    assert.equal(resolveCanonicalHref("/dashboard"), "/tasks");
+    assert.equal(getRouteByPath(resolveCanonicalHref("/dashboard"))?.id, "tasks");
   });
 
-  test("Active matcher marks / active for root and /dashboard, and /tasks for tasks and /unit-tasks", () => {
-    assert.equal(isRouteActive("/", "/"), true);
-    assert.equal(isRouteActive("/", "/dashboard"), true);
+  test("Active matcher marks /tasks for tasks and /unit-tasks", () => {
     assert.equal(isRouteActive("/tasks", "/tasks"), true);
     assert.equal(isRouteActive("/tasks", "/unit-tasks"), true);
 
@@ -43,21 +42,14 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     assert.equal(isRouteActive("/", "/", searchParamsTasks), false);
   });
 
-  test("Canonical navigation registry points to canonical / and /tasks", () => {
-    const deskRoute = CANONICAL_ROUTES.find((r) => r.id === "desk");
-    assert.ok(deskRoute, "Desk route must exist");
-    assert.equal(deskRoute.href, "/", "Workbench must point to '/'");
-    assert.equal(deskRoute.label, "Tổng quan");
-
+  test("Canonical navigation registry points to canonical /tasks", () => {
     const tasksRoute = CANONICAL_ROUTES.find((r) => r.id === "tasks");
     assert.ok(tasksRoute, "Tasks route must exist");
     assert.equal(tasksRoute.href, "/tasks", "Tasks must point to '/tasks'");
     assert.equal(tasksRoute.label, "Nhiệm vụ");
 
     const sidebarItems = getSidebarNavItems();
-    const deskItem = sidebarItems.find((item) => item.id === "desk" || item.href === "/");
-    assert.ok(deskItem, "Item 'Tổng quan' must exist in sidebar items");
-    assert.equal(deskItem.href, "/");
+    assert.equal(sidebarItems.find((item) => item.href === "/"), undefined, "Sidebar items must not contain '/'");
 
     const taskItem = sidebarItems.find((item) => item.id === "tasks" || item.href === "/tasks");
     assert.ok(taskItem, "Item 'Nhiệm vụ' must exist in sidebar items");
@@ -90,11 +82,6 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     const docs = bottomItems.find((i) => i.id === "documents");
     assert.ok(docs, "Bottom items must include documents");
     assert.equal(docs.href, "/documents");
-
-    // Desk route remains canonical at '/' in the registry
-    const desk = CANONICAL_ROUTES.find((r) => r.id === "desk");
-    assert.ok(desk, "Desk must exist in canonical routes");
-    assert.equal(desk.href, "/", "Desk must point to '/'");
   });
 
 });

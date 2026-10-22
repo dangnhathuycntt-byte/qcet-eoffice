@@ -662,7 +662,13 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       const keys = Object.keys(dto);
       assert.deepStrictEqual(
         keys.sort(),
-        ['actorName', 'category', 'createdAt', 'id', 'isRead', 'link', 'message', 'readAt', 'title', 'type', 'userId'].sort()
+        ['actorName', 'archivedAt', 'category', 'createdAt', 'id', 'isRead', 'link', 'message', 'readAt', 'title', 'type', 'userId'].sort()
+      );
+      // Lưu trữ thông báo (20/10/2026): chưa lưu trữ thì archivedAt là null, đã lưu trữ thì dạng ISO
+      assert.strictEqual(dto.archivedAt, null);
+      assert.strictEqual(
+        toNotificationDTO({ ...rawNotification, archivedAt: new Date('2026-09-09T01:00:00.000Z') })?.archivedAt,
+        '2026-09-09T01:00:00.000Z'
       );
       // Thiếu người gửi/danh mục thì trả null, không dựng giá trị mặc định
       assert.strictEqual(dto.actorName, null);

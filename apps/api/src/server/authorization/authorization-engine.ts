@@ -70,54 +70,14 @@ import {
 import { canAccessClassification } from './document-classification';
 import { logger } from '../observability/logger';
 import { checkSeparationOfDuties } from '@qcet/shared/domain/tasks/contract';
+import { isExecutivePosition, isUnitLeaderPosition, isDeputyUnitLeaderPosition } from '@qcet/shared/domain/organization/position-groups';
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-export function isExecutivePosition(posCode?: string): boolean {
-  const code = (posCode || '').toUpperCase();
-  return (
-    code === 'HIEU_TRUONG' ||
-    code === 'PHO_HIEU_TRUONG' ||
-    code === 'PHO_HIEU_TRUONG_DT' ||
-    code === 'PHO_HIEU_TRUONG_HC' ||
-    code === 'BGH' ||
-    code === 'BAN_GIAM_HIEU' ||
-    code === 'BGH_HT' ||
-    code === 'BGH_PHT_DT' ||
-    code === 'BGH_PHT_CSVC'
-  );
-}
-
-export function isUnitLeaderPosition(posCode?: string): boolean {
-  const code = (posCode || '').toUpperCase();
-  return (
-    code === 'TRUONG_DON_VI' ||
-    code === 'TRUONG_DON_VI_CANONICAL' ||
-    code === 'TRUONG_PHONG' ||
-    code === 'TRUONG_KHOA' ||
-    code === 'GIAM_DOC_TRUNG_TAM' ||
-    code === 'TRUONG_BO_MON' ||
-    code === 'TRUONG_XUONG' ||
-    code === 'KE_TOAN_TRUONG' ||
-    code.startsWith('TRUONG_') ||
-    code.startsWith('POS_MGR_')
-  );
-}
-
-export function isDeputyUnitLeaderPosition(posCode?: string): boolean {
-  const code = (posCode || '').toUpperCase();
-  return (
-    code === 'PHO_TRUONG_DON_VI' ||
-    code === 'PHO_TRUONG_PHONG' ||
-    code === 'PHO_TRUONG_KHOA' ||
-    code === 'PHO_GIAM_DOC_TRUNG_TAM' ||
-    code === 'PHO_DON_VI' ||
-    code === 'PHO_TRUONG_BO_MON' ||
-    code === 'PHO_TRUONG_XUONG'
-  );
-}
+// Nhóm chức vụ dùng chung với web (bộ chọn người dự họp theo phạm vi): định nghĩa ở packages/shared
+export { isExecutivePosition, isUnitLeaderPosition, isDeputyUnitLeaderPosition };
 
 function isClerkPosition(posCode?: string): boolean {
   const code = (posCode || '').toUpperCase();

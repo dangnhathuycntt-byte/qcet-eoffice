@@ -4,11 +4,10 @@ import * as React from "react";
 import { StandardDialog } from "@/components/ui/dialog";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import { Select } from "@/components/ui/select";
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, FileText, AlertCircle, CheckCircle2, Paperclip, X } from "lucide-react";
+import { ChevronRight, AlertCircle, CheckCircle2, Paperclip, X } from "lucide-react";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { attachFileToDocument } from "./workspace/document-edit";
 import type {
-  DocumentType,
   DocumentUrgency,
   DocumentSecurityLevel,
   DocumentItem,
@@ -20,33 +19,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { formatIsoDate } from "@/lib/format";
-import { InlineAlert } from "@/components/ui/inline-alert";
-import {
-  DUPLICATE_SUSPECT_CODE,
-  describeDuplicates,
-  fetchDuplicateMatches,
-} from "@/lib/documents/duplicate-check-client";
-import { cn } from "@/lib/utils";
 import { Pressable } from "@/components/ui/pressable";
 
 export interface DocumentQuickEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (newDoc: DocumentItem) => void;
-  defaultType?: DocumentType;
-  /** Mở từ một sổ cụ thể (đến / đi / tờ trình): ẩn bộ chọn loại, loại đã rõ theo trang. */
-  lockType?: boolean;
   departments?: Array<{ id: string; name: string; shortName?: string; code?: string }>;
 }
-
-const COMMON_AUTHORITIES = [
-  "UBND Tỉnh Bình Định",
-  "Bộ Lao động - Thương binh và Xã hội",
-  "Tổng cục Giáo dục Nghề nghiệp",
-  "Sở Lao động - Thương binh và Xã hội",
-  "Sở Giáo dục và Đào tạo",
-  "Trường CĐ Kỹ thuật Công nghệ Quy Nhơn",
-];
 
 const COMMON_CATEGORIES = [
   "Công văn",
@@ -69,12 +49,14 @@ const URGENCY_CHOICES: { value: DocumentUrgency; label: string }[] = [
 
 type QuickEntryFieldErrors = Partial<Record<"originalNumber" | "issuingAuthority" | "summary", string>>;
 
+/**
+ * Soạn tờ trình nội bộ (sổ Tờ trình). Văn bản đi soạn bằng `ComposeOutgoingDialog`; văn bản đến không tạo được
+ * vì QCET chỉ gửi nhận trong trường, văn bản đến phát sinh khi đơn vị khác phát hành văn bản đi (ADR-015).
+ */
 export function DocumentQuickEntryModal({
   isOpen,
   onClose,
   onSuccess,
-  defaultType = "VAN_BAN_DEN",
-  lockType = false,
   departments: propDepartments = [],
 }: DocumentQuickEntryModalProps) {
   const { departments: fetchedDepartments, isLoading: isDepartmentsLoading } = useDepartmentList({
@@ -86,7 +68,6 @@ export function DocumentQuickEntryModal({
       ? propDepartments
       : fetchedDepartments;
 
-  const [docType, setDocType] = React.useState<DocumentType>(defaultType);
   const [originalNumber, setOriginalNumber] = React.useState<string>("");
   const [issuedDate, setIssuedDate] = React.useState<string>(() => {
     return formatIsoDate(new Date());
@@ -96,13 +77,7 @@ export function DocumentQuickEntryModal({
   const [summary, setSummary] = React.useState<string>("");
   const [urgency, setUrgency] = React.useState<DocumentUrgency>("THUONG");
   const securityLevel: DocumentSecurityLevel = "THUONG";
-  const [leadUnitId, setLeadUnitId] = React.useState<string>("");
   const [dueDate, setDueDate] = React.useState<string>("");
-
-  // Outgoing specific
-  const [signerName, setSignerName] = React.useState<string>("");
-  const [signerTitle, setSignerTitle] = React.useState<string>("Hiệu trưởng");
-  const [recipientList, setRecipientList] = React.useState<string>("");
 
   const [attachmentFile, setAttachmentFile] = React.useState<File | null>(null);
   // Văn bản đã vào sổ nhưng tệp chưa đính kèm được: modal giữ lại để báo, nút chính thành "Đóng"
@@ -112,13 +87,10 @@ export function DocumentQuickEntryModal({
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
-  // Cảnh báo trùng số ký hiệu: gắn với cặp số/cơ quan đã kiểm; sửa một trong hai thì cảnh báo ẩn.
-  const [duplicate, setDuplicate] = React.useState<{ key: string; message: string } | null>(null);
-  const duplicateKey = `${originalNumber.trim()}|${issuingAuthority.trim()}`;
-  const duplicateAcknowledged = docType === "VAN_BAN_DEN" && duplicate?.key === duplicateKey;
 
   const firstInputRef = React.useRef<HTMLInputElement>(null);
-  const issuingAuthorityRef = React.useRef<HTMLInputElement>(null);
+  // Bọc ô chọn Đơn vị đề xuất: Select không nhận ref, thiếu đơn vị thì đưa focus vào nút mở danh sách bên trong.
+  const issuingAuthorityRef = React.useRef<HTMLDivElement>(null);
   const summaryRef = React.useRef<HTMLTextAreaElement>(null);
   const [fieldErrors, setFieldErrors] = React.useState<QuickEntryFieldErrors>({});
   const clearFieldError = (key: keyof QuickEntryFieldErrors) =>
@@ -129,10 +101,7 @@ export function DocumentQuickEntryModal({
     issuingAuthority.trim() ||
     summary.trim() ||
     dueDate ||
-    signerName.trim() ||
-    recipientList.trim() ||
     attachmentFile ||
-    docType !== defaultType ||
     category !== "Công văn" ||
     urgency !== "THUONG"
   );
@@ -142,29 +111,19 @@ export function DocumentQuickEntryModal({
     onConfirmClose: onClose,
   });
 
-  // Không chọn sẵn đơn vị chủ trì (quyết định nghiệp vụ). Giá trị không còn trong danh sách thật
-  // (danh sách dự phòng lúc đang tải dùng id khác) thì đưa về "Chưa phân công", tránh hiện mã thô.
-  React.useEffect(() => {
-    if (isOpen && leadUnitId && departmentList.length > 0 && !departmentList.some((d) => d.id === leadUnitId)) {
-      setLeadUnitId("");
-    }
-  }, [isOpen, departmentList, leadUnitId]);
-
-  // Sync default type when opened
+  // Mở lại hộp: xóa thông báo của lần trước
   React.useEffect(() => {
     if (isOpen) {
-      setDocType(defaultType);
       setErrorMessage(null);
       setSuccessMessage(null);
       setFieldErrors({});
-      setDuplicate(null);
       setSavedWithoutFile(false);
       const timer = setTimeout(() => {
         firstInputRef.current?.focus();
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, defaultType]);
+  }, [isOpen]);
 
   const handleAddDaysToDueDate = (days: number) => {
     const target = new Date();
@@ -189,14 +148,14 @@ export function DocumentQuickEntryModal({
     // Kiểm tra theo đúng thứ tự cũ; báo lỗi cạnh từng trường và đưa focus về trường đầu tiên còn thiếu
     const errors: QuickEntryFieldErrors = {};
     if (!originalNumber.trim()) errors.originalNumber = "Vui lòng nhập Số ký hiệu văn bản gốc.";
-    if (!issuingAuthority.trim()) errors.issuingAuthority = "Vui lòng nhập Cơ quan ban hành.";
+    if (!issuingAuthority.trim()) errors.issuingAuthority = "Vui lòng chọn Đơn vị đề xuất.";
     if (!summary.trim()) errors.summary = "Vui lòng nhập Trích yếu nội dung văn bản.";
     const firstError = errors.originalNumber ?? errors.issuingAuthority ?? errors.summary;
     if (firstError) {
       setFieldErrors(errors);
       setErrorMessage(firstError);
       if (errors.originalNumber) firstInputRef.current?.focus();
-      else if (errors.issuingAuthority) issuingAuthorityRef.current?.focus();
+      else if (errors.issuingAuthority) issuingAuthorityRef.current?.querySelector<HTMLElement>("button")?.focus();
       else summaryRef.current?.focus();
       return;
     }
@@ -207,8 +166,8 @@ export function DocumentQuickEntryModal({
     setSuccessMessage(null);
 
     try {
-      const payload: any = {
-        type: docType,
+      const payload = {
+        type: "TO_TRINH_NOI_BO",
         originalNumber: originalNumber.trim(),
         issuedDate: new Date(issuedDate).toISOString(),
         issuingAuthority: issuingAuthority.trim(),
@@ -216,16 +175,8 @@ export function DocumentQuickEntryModal({
         summary: summary.trim(),
         urgency,
         securityLevel,
-        leadUnitId: docType === "VAN_BAN_DEN" ? leadUnitId || undefined : undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        acknowledgeDuplicate: duplicateAcknowledged || undefined,
       };
-
-      if (docType === "VAN_BAN_DI") {
-        payload.signerName = signerName.trim() || undefined;
-        payload.signerTitle = signerTitle.trim() || undefined;
-        payload.recipientList = recipientList.trim() || undefined;
-      }
 
       const res = await fetch("/api/documents", {
         method: "POST",
@@ -235,12 +186,7 @@ export function DocumentQuickEntryModal({
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        if (errJson.code === DUPLICATE_SUSPECT_CODE) {
-          const matches = await fetchDuplicateMatches(originalNumber.trim(), issuingAuthority.trim());
-          setDuplicate({ key: duplicateKey, message: describeDuplicates(matches) });
-          return;
-        }
-        throw new Error(errJson.error || "Không thể lưu văn bản vào hệ thống");
+        throw new Error(errJson.error || errJson.detail || "Không thể lưu tờ trình vào hệ thống");
       }
 
       const data = await res.json();
@@ -258,7 +204,7 @@ export function DocumentQuickEntryModal({
           return;
         }
       }
-      setSuccessMessage("Đã lưu văn bản.");
+      setSuccessMessage("Đã lưu tờ trình.");
 
       setTimeout(() => {
         if (onSuccess && data.document) {
@@ -273,21 +219,6 @@ export function DocumentQuickEntryModal({
     }
   };
 
-  const TYPE_TITLE: Record<string, string> = {
-    VAN_BAN_DEN: "Vào sổ văn bản đến",
-    VAN_BAN_DI: "Tạo văn bản đi",
-    TO_TRINH_NOI_BO: "Tạo tờ trình nội bộ",
-  };
-  const SUBMIT_LABEL: Record<string, string> = {
-    VAN_BAN_DEN: "Vào sổ",
-    VAN_BAN_DI: "Tạo văn bản",
-    TO_TRINH_NOI_BO: "Tạo tờ trình",
-  };
-  const TYPE_CHOICES: { value: DocumentType; label: string; Icon: React.ComponentType<{ strokeWidth?: number }> }[] = [
-    { value: "VAN_BAN_DEN", label: "Văn bản đến", Icon: ArrowDownLeft },
-    { value: "VAN_BAN_DI", label: "Văn bản đi", Icon: ArrowUpRight },
-    { value: "TO_TRINH_NOI_BO", label: "Tờ trình nội bộ", Icon: FileText },
-  ];
   const LABEL_CLASS = "text-xs font-medium text-foreground";
   const OPTIONAL_HINT = <span className="ml-1.5 font-normal text-muted-foreground">(không bắt buộc)</span>;
   const dateTriggerClass = "h-11 w-full rounded-md px-2 font-sans sm:h-7";
@@ -297,31 +228,12 @@ export function DocumentQuickEntryModal({
       compact
       open={isOpen}
       onOpenChange={handleOpenChange}
-      title={TYPE_TITLE[docType]}
+      title="Tạo tờ trình nội bộ"
       size="lg"
       className="max-h-[90vh] flex flex-col overflow-hidden sm:max-w-xl"
     >
       <form onSubmit={handleSubmit} noValidate className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
         <div className="overflow-y-auto px-6 py-4 space-y-4 flex-1">
-          {/* Chỉ hiện khi mở từ "Tất cả": mở từ sổ cụ thể thì loại đã rõ theo trang */}
-          {!lockType && (
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Loại văn bản">
-              {TYPE_CHOICES.map(({ value, label, Icon }) => (
-                <Button
-                  key={value}
-                  size="sm"
-                  variant={docType === value ? "secondary" : "ghost"}
-                  aria-pressed={docType === value}
-                  onClick={() => setDocType(value)}
-                  className={cn(docType === value ? "bg-selected text-foreground" : "text-muted-foreground")}
-                >
-                  <Icon />
-                  <span>{label}</span>
-                </Button>
-              ))}
-            </div>
-          )}
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Số, ký hiệu" error={fieldErrors.originalNumber}>
               <Input
@@ -354,62 +266,26 @@ export function DocumentQuickEntryModal({
             </div>
           </div>
 
-          <div>
-            {docType === "TO_TRINH_NOI_BO" ? (
-              <div className="flex flex-col gap-1.5">
-                <span className={LABEL_CLASS}>Đơn vị đề xuất</span>
-                <Select
-                  compact
-                  positionerClassName="z-50"
-                  aria-label="Đơn vị đề xuất"
-                  placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị…" : "Chọn đơn vị đề xuất"}
-                  options={departmentList.map((d) => ({ value: d.name, label: d.name }))}
-                  value={issuingAuthority || null}
-                  onValueChange={(val) => {
-                    if (val) {
-                      setIssuingAuthority(val);
-                      clearFieldError("issuingAuthority");
-                    }
-                  }}
-                  disabled={isDepartmentsLoading}
-                />
-                {fieldErrors.issuingAuthority ? <p role="alert" className="text-xs text-destructive">{fieldErrors.issuingAuthority}</p> : null}
-              </div>
-            ) : (
-              <>
-                <FormField label="Cơ quan ban hành" error={fieldErrors.issuingAuthority}>
-                  <Input
-                    compact
-                    ref={issuingAuthorityRef}
-                    type="text"
-                    value={issuingAuthority}
-                    onChange={(e) => {
-                      setIssuingAuthority(e.target.value);
-                      clearFieldError("issuingAuthority");
-                    }}
-                    placeholder="Nhập hoặc chọn cơ quan ban hành"
-                    list="common-authorities-list"
-                    required
-                  />
-                </FormField>
-                <datalist id="common-authorities-list">
-                  {COMMON_AUTHORITIES.map((auth) => (
-                    <option key={auth} value={auth} />
-                  ))}
-                </datalist>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {COMMON_AUTHORITIES.slice(0, 3).map((auth) => (
-                    <Pressable
-                      key={auth}
-                      onClick={() => setIssuingAuthority(auth)}
-                      className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      {auth}
-                    </Pressable>
-                  ))}
-                </div>
-              </>
-            )}
+          <div ref={issuingAuthorityRef} className="flex flex-col gap-1.5">
+            <span className={LABEL_CLASS}>Đơn vị đề xuất</span>
+            <Select
+              compact
+              positionerClassName="z-50"
+              aria-label="Đơn vị đề xuất"
+              placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị…" : "Chọn đơn vị đề xuất"}
+              // Giá trị là mã đơn vị (tên có thể trùng), gửi đi vẫn là tên đơn vị như trước
+              options={departmentList.map((d) => ({ value: d.id, label: d.name }))}
+              value={departmentList.find((d) => d.name === issuingAuthority)?.id ?? null}
+              onValueChange={(val) => {
+                const unit = departmentList.find((d) => d.id === val);
+                if (unit) {
+                  setIssuingAuthority(unit.name);
+                  clearFieldError("issuingAuthority");
+                }
+              }}
+              disabled={isDepartmentsLoading}
+            />
+            {fieldErrors.issuingAuthority ? <p role="alert" className="text-xs text-destructive">{fieldErrors.issuingAuthority}</p> : null}
           </div>
 
           <FormField label="Trích yếu nội dung" error={fieldErrors.summary}>
@@ -426,23 +302,6 @@ export function DocumentQuickEntryModal({
               required
             />
           </FormField>
-
-          {/* Đơn vị chủ trì chỉ áp dụng cho văn bản đến (API chỉ nhận ở loại này); không chọn sẵn */}
-          {docType === "VAN_BAN_DEN" && (
-            <div className="flex flex-col gap-1.5">
-              <span className={LABEL_CLASS}>Đơn vị chủ trì xử lý{OPTIONAL_HINT}</span>
-              <Select
-                compact
-                positionerClassName="z-50"
-                aria-label="Đơn vị chủ trì xử lý"
-                placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị…" : "Chưa phân công"}
-                options={[{ value: "", label: "Chưa phân công" }, ...departmentList.map((dept) => ({ value: dept.id, label: dept.name }))]}
-                value={leadUnitId}
-                onValueChange={(val) => setLeadUnitId(val || "")}
-                disabled={isDepartmentsLoading}
-              />
-            </div>
-          )}
 
           {/* Tệp đính kèm lưu cùng văn bản sau khi tạo */}
           <div className="flex flex-wrap items-center gap-2">
@@ -528,23 +387,8 @@ export function DocumentQuickEntryModal({
                 </div>
               </div>
 
-              {docType === "VAN_BAN_DI" && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField label="Người ký" optional>
-                    <Input compact type="text" value={signerName} onChange={(e) => setSignerName(e.target.value)} placeholder="Họ tên người ký" />
-                  </FormField>
-                  <FormField label="Chức vụ người ký" optional>
-                    <Input compact type="text" value={signerTitle} onChange={(e) => setSignerTitle(e.target.value)} placeholder="Hiệu trưởng" />
-                  </FormField>
-                  <FormField label="Nơi nhận" optional className="sm:col-span-2">
-                    <Input compact type="text" value={recipientList} onChange={(e) => setRecipientList(e.target.value)} placeholder="Ngăn cách bằng dấu chấm phẩy" />
-                  </FormField>
-                </div>
-              )}
             </Collapsible.Panel>
           </Collapsible.Root>
-
-          {duplicateAcknowledged && duplicate && <InlineAlert variant="warning">{duplicate.message}</InlineAlert>}
 
           {errorMessage && (
             <div role="alert" className="flex items-start gap-2 rounded-lg bg-danger-soft p-3 text-xs text-destructive">
@@ -568,7 +412,7 @@ export function DocumentQuickEntryModal({
             </Button>
           )}
           <Button type="submit" size="sm" disabled={isSubmitting} aria-busy={isSubmitting}>
-            {savedWithoutFile ? "Đóng" : isSubmitting ? "Đang lưu…" : SUBMIT_LABEL[docType]}
+            {savedWithoutFile ? "Đóng" : isSubmitting ? "Đang lưu…" : "Tạo tờ trình"}
           </Button>
         </div>
       </form>

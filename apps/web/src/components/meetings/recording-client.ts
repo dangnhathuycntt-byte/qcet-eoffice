@@ -28,7 +28,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, { ...init, credentials: "include" });
-  } catch {
+  } catch (error) {
+    // Hủy chủ động (rời trang, đổi cuộc họp, React dựng lại hiệu ứng) không phải mất mạng: giữ nguyên để nơi gọi bỏ qua
+    if ((error as Error)?.name === "AbortError") throw error;
     throw new RecordingRequestError("Mất kết nối. Kiểm tra mạng rồi thử lại.", 0);
   }
   const json = await res.json().catch(() => null);

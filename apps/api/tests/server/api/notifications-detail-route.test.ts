@@ -78,6 +78,7 @@ describe('GET /api/notifications/[id]', () => {
       category: row.category && row.category.trim() ? row.category.trim() : null,
       isRead: row.isRead,
       readAt: row.readAt ? row.readAt.toISOString() : null,
+      archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
       createdAt: row.createdAt.toISOString(),
     };
   }

@@ -96,8 +96,8 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
     // /unit-tasks is an alias of /tasks in CANONICAL_ROUTES
     assert.equal(isRouteActive("/tasks", "/unit-tasks"), true);
     assert.equal(isRouteActive("/tasks", "/unit-tasks/abc-123"), true);
-    // /dashboard is an alias of the workbench route "/"
-    assert.equal(isRouteActive("/", "/dashboard"), true);
+    // /notifications is an alias of /inbox
+    assert.equal(isRouteActive("/inbox", "/notifications"), true);
   });
 
   test("isRouteActive: handles query parameters in target href", () => {
@@ -129,10 +129,10 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   test("resolveBreadcrumb: maps routes and query states to clean Vietnamese titles", () => {
     // T88: the breadcrumb title is the canonical registry label for the route,
     // read from the registry here so the expectation can never drift again.
-    const label = (href: string) =>
-      CANONICAL_ROUTES.find((r) => r.href === href)?.label ?? "Hộp thư";
+    const label = (href: string) => getRouteByPath(href)!.label;
 
-    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", label("/")]);
+    // `/` không còn trang riêng (bỏ Tổng quan 19/10/2026) mà chuyển tới Nhiệm vụ
+    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", label("/tasks")]);
     assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", label("/calendar")]);
     assert.deepStrictEqual(resolveBreadcrumb("/inbox"), ["QCET E-Office", label("/inbox")]);
     assert.deepStrictEqual(resolveBreadcrumb("/documents"), ["QCET E-Office", label("/documents")]);
@@ -142,12 +142,13 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   });
 
   describe("Canonical Navigation Registry (single source of truth)", () => {
-    test("defines exactly 7 canonical routes with zero duplicates", () => {
-      assert.equal(CANONICAL_ROUTES.length, 7);
+    test("defines exactly 6 canonical routes with zero duplicates", () => {
+      assert.equal(CANONICAL_ROUTES.length, 6);
       const hrefs = CANONICAL_ROUTES.map((r) => r.href);
       const uniqueHrefs = new Set(hrefs);
-      assert.equal(uniqueHrefs.size, 7, "All route hrefs must be unique");
-      for (const href of ["/", "/meetings", "/tasks", "/documents", "/org", "/inbox", "/settings"]) {
+      assert.equal(uniqueHrefs.size, 6, "All route hrefs must be unique");
+      assert.equal(hrefs.includes("/"), false, "Tổng quan (`/`) was removed");
+      for (const href of ["/meetings", "/tasks", "/documents", "/org", "/inbox", "/settings"]) {
         assert.ok(hrefs.includes(href), `Must contain ${href}`);
       }
     });
@@ -205,13 +206,16 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
       assert.equal(page, getRouteByPath("/tasks")!.label);
     });
 
-    test("resolveBreadcrumb names pages outside the registry instead of falling back to the home title", () => {
-      // Thanh trên điện thoại hiện tên này làm tiêu đề trang; rơi về "Tổng quan" là sai tên.
+    test("resolveBreadcrumb names pages outside the registry instead of falling back to the default title", () => {
+      // Thanh trên điện thoại hiện tên này làm tiêu đề trang; rơi về tên mặc định là sai tên.
       assert.deepEqual(resolveBreadcrumb("/dossiers"), ["QCET E-Office", "Hồ sơ công việc"]);
       assert.deepEqual(resolveBreadcrumb("/dossiers/abc"), ["QCET E-Office", "Hồ sơ công việc"]);
       assert.deepEqual(resolveBreadcrumb("/reports"), ["QCET E-Office", "Báo cáo thống kê"]);
       assert.deepEqual(resolveBreadcrumb("/admin/dossiers"), ["QCET E-Office", "Hồ sơ chờ xóa hẳn"]);
-      assert.deepEqual(resolveBreadcrumb("/unknown-page"), ["QCET E-Office", "Tổng quan"]);
+      // Không khớp trang nào thì lấy tên trang mặc định Nhiệm vụ (`/` và `/dashboard` cũng chuyển tới đó)
+      const tasks = getRouteByPath("/tasks")!.label;
+      assert.deepEqual(resolveBreadcrumb("/unknown-page"), ["QCET E-Office", tasks]);
+      assert.deepEqual(resolveBreadcrumb("/dashboard"), ["QCET E-Office", tasks]);
     });
   });
 });

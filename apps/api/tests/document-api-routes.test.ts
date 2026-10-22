@@ -213,7 +213,8 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
       assert.ok(body.errors.length > 0);
     });
 
-    test("registers incoming document with auto-assigned registration number", async () => {
+    // ADR-015: QCET chỉ gửi nhận trong trường, văn bản đến phát sinh khi đơn vị gửi phát hành văn bản đi.
+    test("refuses to register an incoming document directly (403)", async () => {
       const req = new NextRequest("http://localhost:3000/api/documents", {
         method: "POST",
         headers: {
@@ -234,18 +235,11 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
       });
 
       const res = await createDocumentRoute(req);
-      assert.equal(res.status, 201);
+      assert.equal(res.status, 403);
 
       const body = await res.json();
-      assert.equal(body.success, true);
-      assert.ok(body.data);
-      assert.ok(body.data.id);
-      assert.equal(typeof body.data.registrationNumber, "number");
-      assert.ok(body.data.registrationNumber > 0);
-      assert.equal(body.data.originalNumber, "123/UBND-VX");
-      assert.equal(body.data.urgency, "HOA_TOC");
-
-      createdDocumentIds.push(body.data.id);
+      assert.equal(body.success, false);
+      assert.equal(await prisma.document.count({ where: { originalNumber: "123/UBND-VX", registeredById: seededUserId } }), 0);
     });
   });
 

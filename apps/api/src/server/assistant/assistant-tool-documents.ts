@@ -68,11 +68,12 @@ export function isRestrictedDocument(doc: { securityLevel?: string | null; notes
  * Điều kiện ACL của danh sách văn bản. Quản trị hệ thống không có chức danh không đọc nghiệp vụ văn bản
  * (cùng quy tắc canAccessClassification), nên không lấy gì cả.
  */
-function documentAclWhere(authz: AuthorizationContext): Prisma.DocumentWhereInput {
+function documentAclWhere(authz: AuthorizationContext, type?: DocumentType): Prisma.DocumentWhereInput {
   if (authz.isSystemAdmin() && authz.positions.length === 0) {
     return { id: "__DENY_SYSTEM_ADMIN_WITHOUT_POSITION__" };
   }
-  return buildDocumentReadWhere(authz);
+  // Như sổ trên trang: văn bản đơn vị khác gửi tới nằm ở văn bản đến, không ở văn bản đi (ADR-015).
+  return buildDocumentReadWhere(authz, { delivered: type !== DocumentType.VAN_BAN_DI });
 }
 
 /** Loại trừ ở DB các văn bản có ghi chú hạn chế; NULL được giữ lại (NOT với NULL sẽ làm rơi dòng). */
@@ -143,12 +144,14 @@ export async function listReadableDocuments(
   authz: AuthorizationContext,
   filter: { type?: DocumentType; bucket?: "pending" | "done" | "issued" | "recalled"; status?: DocumentStatus; query?: string; limit: number }
 ): Promise<DocumentListRead> {
-  const acl = documentAclWhere(authz);
+  const acl = documentAclWhere(authz, filter.type);
   const base = {
     type: filter.type,
     bucket: filter.bucket,
     status: filter.status,
     search: filter.query,
+    // Văn bản đến gồm cả văn bản đi đã phát hành tới đơn vị người hỏi, nhóm chờ/đã xử lý theo tiếp nhận (ADR-015).
+    authUser: authz,
   };
   const readable = await listDocuments({
     ...base,

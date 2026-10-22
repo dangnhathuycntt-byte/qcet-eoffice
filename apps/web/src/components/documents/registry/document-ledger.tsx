@@ -161,8 +161,8 @@ export interface LedgerEmptyContext {
 
 const EMPTY_SCOPE_COPY: Record<string, Record<string, { title: string; description: string }>> = {
   inbox: {
-    pending: { title: "Không có văn bản đến chờ xử lý", description: "Văn bản đến chưa hoàn thành xử lý sẽ hiện ở đây." },
-    done: { title: "Chưa có văn bản đến đã xử lý", description: "Văn bản đến đã hoàn thành hoặc đã lập hồ sơ sẽ hiện ở đây." },
+    pending: { title: "Không có văn bản đến chờ xử lý", description: "Văn bản đơn vị khác gửi tới mà đơn vị bạn chưa tiếp nhận hoặc chưa xử lý xong sẽ hiện ở đây." },
+    done: { title: "Chưa có văn bản đến đã xử lý", description: "Văn bản đến đã tiếp nhận, đã hoàn thành hoặc đã lập hồ sơ sẽ hiện ở đây." },
   },
   outbox: {
     pending: { title: "Không có văn bản đi chờ xử lý", description: "Dự thảo đang soạn, chờ duyệt hoặc chờ ký sẽ hiện ở đây." },
@@ -172,7 +172,7 @@ const EMPTY_SCOPE_COPY: Record<string, Record<string, { title: string; descripti
 };
 
 const EMPTY_TYPE_COPY: Record<string, { title: string; description: string }> = {
-  inbox: { title: "Chưa có văn bản đến", description: "Vào sổ văn bản đến để bắt đầu theo dõi và giao xử lý." },
+  inbox: { title: "Chưa có văn bản đến", description: "Văn bản đơn vị khác phát hành gửi đơn vị bạn sẽ hiện ở đây." },
   outbox: { title: "Chưa có văn bản đi", description: "Soạn văn bản đi để trình duyệt, ký và phát hành." },
   submission: { title: "Chưa có tờ trình", description: "Soạn tờ trình để trình lãnh đạo xem xét." },
 };
@@ -202,7 +202,7 @@ export function getLedgerEmptyCopy(ctx: LedgerEmptyContext): LedgerEmptyCopy {
   if (scoped) return { ...scoped, illustration: ctx.bucket === "pending" ? "all-done" : EMPTY_TYPE_ILLUSTRATION[ctx.type!] };
   const byType = ctx.type ? EMPTY_TYPE_COPY[ctx.type] : undefined;
   if (byType) return { ...byType, illustration: EMPTY_TYPE_ILLUSTRATION[ctx.type!] };
-  return { title: "Chưa có văn bản nào", description: "Vào sổ hoặc soạn văn bản mới để bắt đầu.", illustration: "doc-in" };
+  return { title: "Chưa có văn bản nào", description: "Soạn văn bản đi hoặc tờ trình để bắt đầu.", illustration: "doc-in" };
 }
 
 export interface LedgerFilterOption {

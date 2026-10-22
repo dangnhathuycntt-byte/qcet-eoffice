@@ -928,11 +928,15 @@ describe("Trợ lý UI: điều hướng và khung trang", () => {
     assert.equal(CANONICAL_ROUTES.some((route) => route.href.startsWith("/assistant")), false);
   });
 
-  test("mục sidebar nằm sau Lịch công tác và chỉ hiện theo cờ", () => {
+  test("mục sidebar nằm ngay sau Hộp thư, trước Nhiệm vụ, và chỉ hiện theo cờ", () => {
+    // Thứ tự nhóm chính từ khi bỏ Tổng quan 19/10/2026: Hộp thư, Trợ lý, Ghi chú cá nhân, Nhiệm vụ, Cuộc họp
     const src = read("apps/web/src/components/layout/sidebar-nav-list.tsx");
-    const calendarAt = src.indexOf('id: "calendar"');
+    const inboxAt = src.indexOf('id: "inbox"');
     const assistantAt = src.indexOf('id: "assistant"');
-    assert.ok(calendarAt > 0 && assistantAt > calendarAt, "Trợ lý phải đứng sau Lịch công tác");
+    const notesAt = src.indexOf('id: "notes"');
+    const tasksAt = src.indexOf('id: "tasks"');
+    assert.ok(inboxAt > 0 && assistantAt > inboxAt, "Trợ lý phải đứng sau Hộp thư");
+    assert.ok(notesAt > assistantAt && tasksAt > notesAt, "Trợ lý phải đứng trước Ghi chú cá nhân và Nhiệm vụ");
     assert.ok(src.includes('feature: "assistant"'));
     assert.ok(src.includes('useRuntimeFeature("assistant")'));
     assert.ok(src.includes("navGroups.map"), "danh sách hiển thị phải đi qua bộ lọc theo cờ");

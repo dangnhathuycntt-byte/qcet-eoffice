@@ -12,6 +12,15 @@ const apiPort = process.env.API_PORT || "3100";
 const start = args.includes("--start");
 const env = { ...process.env, API_PORT: apiPort, API_INTERNAL_URL: process.env.API_INTERNAL_URL || `http://127.0.0.1:${apiPort}` };
 
+// Giới hạn heap cho server dev. Next dev tự đặt giới hạn bằng 50% RAM (8GB trên máy 16GB) và chỉ tự khởi động lại server khi
+// heap dùng quá 80% giới hạn đó (6,4GB). Đo 22/10/2026: heap server api dev tăng 0,27 → 4,3GB sau 8 giờ sửa code, phần lớn bị đẩy
+// ra swap nên mỗi lần GC làm request chậm 5–8 giây. Giới hạn 3GB thì GC dọn sớm hơn, heap chạm ~2,4GB Next tự khởi động lại server
+// (lần đầu mở mỗi route sau đó mất vài giây biên dịch lại) thay vì phình vào swap. NODE_OPTIONS có sẵn giới hạn thì giữ nguyên.
+const DEV_MAX_HEAP_MB = 3072;
+const devNodeOptions = /--max[-_]old[-_]space[-_]size/.test(process.env.NODE_OPTIONS ?? "")
+  ? process.env.NODE_OPTIONS
+  : [process.env.NODE_OPTIONS, `--max-old-space-size=${DEV_MAX_HEAP_MB}`].filter(Boolean).join(" ");
+
 // API chạy dev bằng webpack: Next 15.5 + Turbopack không ghi `route/react-loadable-manifest.json` cho route handler mà vẫn đọc
 // thử 3 lần cách 100ms, nên mọi request API ở dev chậm thêm ~200ms (đo 22/10/2026: 250–280ms so với 24–54ms bằng webpack,
 // bộ nhớ ngang nhau). Next 16 đã sửa (vercel/next.js#82739, #82903): lên Next 16 thì trả API về `--turbopack`. Chỉ ảnh hưởng dev,
@@ -21,7 +30,8 @@ const children = [
   ["qcet-web", "apps/web", webPort, ["dev", "--turbopack"]],
 ].map(([service, dir, port, devMode]) => {
   const mode = start ? ["start"] : devMode;
-  const child = spawn("npx", ["next", ...mode, dir, "-p", port], { stdio: "inherit", env: { ...env, SERVICE_NAME: service } });
+  const childEnv = { ...env, SERVICE_NAME: service, ...(start ? {} : { NODE_OPTIONS: devNodeOptions }) };
+  const child = spawn("npx", ["next", ...mode, dir, "-p", port], { stdio: "inherit", env: childEnv });
   child.on("exit", (code) => {
     for (const other of children) if (other !== child && other.exitCode === null) other.kill("SIGTERM");
     process.exitCode = code ?? 0;
