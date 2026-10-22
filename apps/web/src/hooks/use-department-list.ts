@@ -48,7 +48,12 @@ const _cacheTimestamp: Record<string, number> = {};
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const _inflight: Record<string, Promise<DepartmentOption[]> | null> = {};
 
-async function fetchDepartments(
+/**
+ * Chỉ ghi vào bộ nhớ đệm khi máy chủ trả về danh sách hợp lệ. Lỗi mạng, 401/429/5xx hoặc thân không phải danh sách thì
+ * ném lỗi mà không ghi gì: trước đây lỗi thoáng qua bị lưu thành danh sách rỗng 5 phút, bộ chọn người báo "chưa có
+ * danh sách cán bộ" và không có cách tải lại.
+ */
+export async function fetchDepartments(
   includePersonnel: boolean,
 ): Promise<DepartmentOption[]> {
   const key = includePersonnel ? "with-personnel" : "basic";
@@ -63,32 +68,34 @@ async function fetchDepartments(
     : "/api/departments";
 
   _inflight[key] = fetch(url)
-    .then((r) => r.json())
-    .then((data): DepartmentOption[] => {
-      const items = Array.isArray(data.data)
-        ? data.data
-        : Array.isArray(data.departments)
-        ? data.departments
-        : null;
-      if (items) {
-        _cache[key] = items;
-        _cacheTimestamp[key] = Date.now();
-      } else {
-        _cache[key] = [];
-        _cacheTimestamp[key] = Date.now();
-      }
-      return _cache[key]!;
-    })
-    .catch((): DepartmentOption[] => {
-      _cache[key] = [];
+    .then(async (response): Promise<DepartmentOption[]> => {
+      const data = await response.json().catch(() => null);
+      const items = !response.ok
+        ? null
+        : Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data?.departments)
+            ? data.departments
+            : null;
+      if (!items) throw new Error(`Không tải được danh sách đơn vị (${response.status})`);
+      _cache[key] = items;
       _cacheTimestamp[key] = Date.now();
-      return _cache[key]!;
+      return items;
     })
     .finally(() => {
       _inflight[key] = null;
     });
 
   return _inflight[key]!;
+}
+
+/** Xóa bộ nhớ đệm (dùng trong kiểm thử). */
+export function resetDepartmentListCache(): void {
+  for (const key of Object.keys(_cache)) {
+    delete _cache[key];
+    delete _cacheTimestamp[key];
+    _inflight[key] = null;
+  }
 }
 
 /**
@@ -102,7 +109,7 @@ async function fetchDepartments(
  */
 export function useDepartmentList(
   options?: { enabled?: boolean; includePersonnel?: boolean },
-): { departments: DepartmentOption[]; isLoading: boolean } {
+): { departments: DepartmentOption[]; isLoading: boolean; error: boolean; reload: () => void } {
   const enabled = options?.enabled ?? true;
   const includePersonnel = options?.includePersonnel ?? false;
   const key = includePersonnel ? "with-personnel" : "basic";
@@ -111,26 +118,42 @@ export function useDepartmentList(
     _cache[key] ?? STATIC_FALLBACK_DEPARTMENTS,
   );
   const [isLoading, setIsLoading] = React.useState(!_cache[key] && enabled);
+  const [error, setError] = React.useState(false);
+  // Tăng khi người dùng bấm "Thử lại" sau một lần tải lỗi
+  const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
     if (!enabled) return;
     if (_cache[key]) {
       setDepartments(_cache[key]!);
       setIsLoading(false);
+      setError(false);
       return;
     }
     let cancelled = false;
     setIsLoading(true);
-    void fetchDepartments(includePersonnel).then((list) => {
-      if (!cancelled) {
-        setDepartments(list);
-        setIsLoading(false);
-      }
-    });
+    setError(false);
+    fetchDepartments(includePersonnel).then(
+      (list) => {
+        if (!cancelled) {
+          setDepartments(list);
+          setIsLoading(false);
+        }
+      },
+      () => {
+        // Lỗi không vào bộ nhớ đệm: lần mở sau hoặc "Thử lại" tải lại
+        if (!cancelled) {
+          setDepartments([]);
+          setError(true);
+          setIsLoading(false);
+        }
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [enabled, includePersonnel, key]);
+  }, [enabled, includePersonnel, key, attempt]);
 
-  return { departments, isLoading };
+  const reload = React.useCallback(() => setAttempt((n) => n + 1), []);
+  return { departments, isLoading, error, reload };
 }

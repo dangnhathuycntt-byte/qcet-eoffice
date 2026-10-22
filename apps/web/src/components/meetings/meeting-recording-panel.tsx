@@ -256,15 +256,19 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, 
   const mountedRef = React.useRef(true);
   const canRecordLive = React.useMemo(() => (typeof window === "undefined" ? false : pickRecorderMimeType() !== null), []);
 
+  // Lần tải mới nhất thắng: phản hồi của lần tải đã bị thay thế (hủy khi React dựng lại hiệu ứng, đổi cuộc họp, thăm dò
+  // chồng nhau) không được ghi đè trạng thái, kể cả ghi lỗi trong lúc lần tải sau còn đang chạy
+  const loadSeqRef = React.useRef(0);
   const refresh = React.useCallback(
     async (signal?: AbortSignal) => {
+      const seq = ++loadSeqRef.current;
       try {
         const { recordings: list } = await listRecordings(meetingId, signal);
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || seq !== loadSeqRef.current) return;
         setRecordings(list);
         setAccess("ok");
       } catch (error) {
-        if ((error as Error).name === "AbortError" || !mountedRef.current) return;
+        if ((error as Error).name === "AbortError" || !mountedRef.current || seq !== loadSeqRef.current) return;
         if (error instanceof RecordingRequestError && (error.status === 403 || error.status === 404)) setAccess("denied");
         else setAccess((current) => (current === "ok" ? current : "error"));
       }
