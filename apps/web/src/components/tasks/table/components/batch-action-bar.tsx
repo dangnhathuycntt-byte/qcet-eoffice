@@ -9,6 +9,7 @@ import {
   MenuPositioner,
   MenuPopup,
   MenuItem,
+  MenuShortcut,
 } from "@/components/ui/menu";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import {
@@ -298,7 +299,7 @@ export function BatchActionBar({
                   <TaskStatusCircle status={option.value} />
                   <span>{option.label}</span>
                 </span>
-                <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground">{index + 1}</kbd>
+                <MenuShortcut>{index + 1}</MenuShortcut>
               </MenuItem>
             ))}
           </BulkMenu>
@@ -339,7 +340,7 @@ export function BatchActionBar({
             {PRIORITY_DISPLAY_CONFIG.map((option, index) => (
               <MenuItem key={option.value} className={menuItemCls} onClick={() => onBulkPriorityChange(option.value as BulkPriority)}>
                 <span>{option.label}</span>
-                <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground">{index}</kbd>
+                <MenuShortcut>{index}</MenuShortcut>
               </MenuItem>
             ))}
           </BulkMenu>
@@ -369,7 +370,7 @@ export function BatchActionBar({
                   onClick={() => onBulkExtendDeadline(option.days)}
                 >
                   <span>{option.label}</span>
-                  <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground">{BULK_DEADLINE_OPTIONS.indexOf(option) + 1}</kbd>
+                  <MenuShortcut>{BULK_DEADLINE_OPTIONS.indexOf(option) + 1}</MenuShortcut>
                 </MenuItem>
               );
             })}

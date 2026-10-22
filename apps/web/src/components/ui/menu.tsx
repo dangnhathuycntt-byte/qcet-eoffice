@@ -58,6 +58,11 @@ export function SheetKeyboardSync() {
   return null;
 }
 
+/** Phím tắt ở cuối mục menu (số 1–9, chữ cái): chữ 11px mờ; điện thoại không có bàn phím nên ẩn đi. */
+export function MenuShortcut({ className, ...props }: React.ComponentProps<"kbd">) {
+  return <kbd className={cn("shrink-0 font-sans text-micro font-medium tabular-nums text-muted-foreground max-md:hidden", className)} {...props} />;
+}
+
 /** Đầu bottom sheet (chỉ hiện trên điện thoại): thanh kéo, tiêu đề, nút quay lại khi đang ở menu con. */
 export function MenuSheetHeader({ title, onBack }: { title?: React.ReactNode; onBack?: () => void }) {
   return (
@@ -128,7 +133,12 @@ export const MenuPopup = React.forwardRef<HTMLDivElement, React.ComponentPropsWi
   }
 );
 export const MenuItem = BaseMenu.Item;
-export const MenuSeparator = BaseMenu.Separator;
+/** Đường kẻ mảnh trước nhóm mục khác loại (như "Xóa"), theo menu trang Nhiệm vụ; giữa các nhóm cùng loại thì không kẻ. */
+export const MenuSeparator = React.forwardRef<
+  HTMLDivElement,
+  Omit<React.ComponentPropsWithoutRef<typeof BaseMenu.Separator>, "className"> & { className?: string }
+>(({ className, ...props }, ref) => <BaseMenu.Separator ref={ref} className={cn("my-1 border-t border-border/40", className)} {...props} />);
+MenuSeparator.displayName = "MenuSeparator";
 export const MenuGroup = BaseMenu.Group;
 export const MenuGroupLabel = BaseMenu.GroupLabel;
 export const MenuBackdrop = BaseMenu.Backdrop;
@@ -193,7 +203,7 @@ export const MenuOptionItem = React.forwardRef<HTMLDivElement, MenuOptionItemPro
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {hint ? <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground/80">{hint}</span> : null}
       {/* Phím tắt chỉ có nghĩa với bàn phím: bottom sheet trên điện thoại ẩn đi (như menu chuột phải của Nhiệm vụ) */}
-      {shortcut ? <kbd className="shrink-0 font-sans text-micro font-medium tabular-nums text-muted-foreground max-md:hidden">{shortcut}</kbd> : null}
+      {shortcut ? <MenuShortcut>{shortcut}</MenuShortcut> : null}
     </BaseMenu.Item>
   )
 );

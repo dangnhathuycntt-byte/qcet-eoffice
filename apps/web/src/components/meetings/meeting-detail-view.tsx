@@ -738,7 +738,7 @@ function MeetingMoreMenu({
         ) : null}
         {onCancel ? (
           <>
-            <MenuSeparator className="my-1 border-t border-border/40" />
+            <MenuSeparator />
             <MenuActionItem destructive leading={<CalendarX2 className="size-4" />} onClick={onCancel}>
               Hủy cuộc họp
             </MenuActionItem>

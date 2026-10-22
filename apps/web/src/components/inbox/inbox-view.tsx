@@ -14,11 +14,9 @@ import {
   MailOpen,
   MoreHorizontal,
   RotateCcw,
-  Search,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { TaskStatusIcon } from "@/components/ui/task-status-icon";
 import { PriorityIndicator } from "@/components/ui/priority-indicator";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -26,7 +24,7 @@ import { MenuRoot, MenuTrigger, MenuContent, MenuActionItem, MenuSeparator } fro
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { getStatusLabel } from "@qcet/shared/domain/tasks/state-machine";
 import { cn } from "@/lib/utils";
-import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
+import { PaneSearchHeader } from "@/components/workspace/pane-search-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WelcomeNotification } from "@/components/inbox/welcome-notification";
 import { useSidebar } from "@/components/layout/sidebar-context";
@@ -627,131 +625,87 @@ export function InboxView() {
           )}
         >
           {/* Điện thoại: header riêng thay topbar chung (nút mở sidebar, chừa safe area) như trang Nhiệm vụ */}
-          <div className="flex h-11 shrink-0 items-center gap-1 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
-            <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
-            {searchOpen ? (
-              // Tìm ngay trên hàng tiêu đề như Linear: không thêm hàng, không khung viền
+          <PaneSearchHeader
+            title="Hộp thư"
+            searchOpen={searchOpen}
+            onSearchOpenChange={setSearchOpen}
+            query={queryInput}
+            onQueryChange={setQueryInput}
+            searchLabel="Tìm kiếm thông báo"
+            searchPlaceholder="Tìm trong hộp thư"
+            searchButtonTitle="Tìm kiếm (Ctrl/⌘ F)"
+            inputRef={searchInputRef}
+            actions={
               <>
-                <Search aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-                <Input
-                  ref={searchInputRef}
-                  variant="menu"
-                  type="text"
-                  value={queryInput}
-                  maxLength={100}
-                  onChange={(e) => setQueryInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Escape") return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (queryInput) setQueryInput("");
-                    else setSearchOpen(false);
-                  }}
-                  placeholder="Tìm trong hộp thư"
-                  aria-label="Tìm kiếm thông báo"
-                  className="h-7 min-w-0 flex-1 px-1.5 text-compact sm:h-7 sm:text-compact"
-                />
-              </>
-            ) : (
-              <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
-            )}
-
-            <div className="ml-auto flex shrink-0 items-center gap-0.5">
-              {searchOpen ? (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Đóng tìm kiếm"
-                  title="Đóng tìm kiếm (Esc)"
-                  onClick={() => {
-                    setQueryInput("");
-                    setSearchOpen(false);
-                  }}
-                >
-                  <X />
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label="Tìm kiếm thông báo"
-                  title="Tìm kiếm (Ctrl/⌘ F)"
-                  onClick={() => {
-                    setSearchOpen(true);
-                    requestAnimationFrame(() => searchInputRef.current?.focus());
-                  }}
-                >
-                  <Search />
-                </Button>
-              )}
-              <MenuRoot>
-                <MenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="Lọc thông báo"
-                      title="Lọc"
-                      className={cn((readFilter !== "all" || category !== "all") && "bg-accent text-foreground")}
-                    />
-                  }
-                >
-                  <ListFilter />
-                </MenuTrigger>
-                <MenuContent align="end" className="w-56">
-                  <MenuActionItem
-                    selected={readFilter === "unread"}
-                    leading={<MailOpen />}
-                    hint={unreadCount !== null ? unreadCount : undefined}
-                    onClick={() => navigate({ filter: readFilter === "unread" ? "all" : "unread" })}
+                <MenuRoot>
+                  <MenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Lọc thông báo"
+                        title="Lọc"
+                        className={cn((readFilter !== "all" || category !== "all") && "bg-accent text-foreground")}
+                      />
+                    }
                   >
-                    Chỉ chưa đọc
-                  </MenuActionItem>
-                  <MenuActionItem
-                    selected={archivedView}
-                    leading={<Archive />}
-                    onClick={() => navigate({ filter: archivedView ? "all" : "archived", id: null })}
-                  >
-                    Đã lưu trữ
-                  </MenuActionItem>
-                  <MenuSeparator className="my-1 border-t border-border/40" />
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <MenuActionItem key={opt.id} selected={category === opt.id} onClick={() => navigate({ category: opt.id })}>
-                      {opt.label}
+                    <ListFilter />
+                  </MenuTrigger>
+                  <MenuContent align="end" className="w-56">
+                    <MenuActionItem
+                      selected={readFilter === "unread"}
+                      leading={<MailOpen />}
+                      hint={unreadCount !== null ? unreadCount : undefined}
+                      onClick={() => navigate({ filter: readFilter === "unread" ? "all" : "unread" })}
+                    >
+                      Chỉ chưa đọc
                     </MenuActionItem>
-                  ))}
-                </MenuContent>
-              </MenuRoot>
-              {/* "⋯" luôn là nút cuối bên phải (người dùng yêu cầu 21/10/2026), như khung Hộp thư */}
-              <MenuRoot>
-                <MenuTrigger
-                  render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" title="Tùy chọn" />}
-                >
-                  <MoreHorizontal />
-                </MenuTrigger>
-                <MenuContent align="end" className="w-60">
-                  <MenuActionItem
-                    disabled={!unreadCount || isMarkingAll || pendingIds.size > 0}
-                    onClick={() => void markAllRead()}
-                    leading={<CheckCheck />}
+                    <MenuActionItem
+                      selected={archivedView}
+                      leading={<Archive />}
+                      onClick={() => navigate({ filter: archivedView ? "all" : "archived", id: null })}
+                    >
+                      Đã lưu trữ
+                    </MenuActionItem>
+                    <MenuSeparator />
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <MenuActionItem key={opt.id} selected={category === opt.id} onClick={() => navigate({ category: opt.id })}>
+                        {opt.label}
+                      </MenuActionItem>
+                    ))}
+                  </MenuContent>
+                </MenuRoot>
+                {/* "⋯" luôn là nút cuối bên phải (người dùng yêu cầu 21/10/2026), như khung Hộp thư */}
+                <MenuRoot>
+                  <MenuTrigger
+                    render={<Button variant="ghost" size="icon-xs" aria-label="Tùy chọn hộp thư" title="Tùy chọn" />}
                   >
-                    Đánh dấu tất cả đã đọc
-                  </MenuActionItem>
-                  <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
-                  <MenuActionItem onClick={() => void archiveBulk("read")} leading={<Archive />}>
-                    Lưu trữ thông báo đã đọc
-                  </MenuActionItem>
-                  <MenuActionItem onClick={() => void archiveBulk("all")} leading={<Archive />}>
-                    Lưu trữ tất cả
-                  </MenuActionItem>
-                  <MenuSeparator className="my-1 border-t border-border/40" />
-                  <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
-                    Làm mới
-                  </MenuActionItem>
-                </MenuContent>
-              </MenuRoot>
-            </div>
-          </div>
+                    <MoreHorizontal />
+                  </MenuTrigger>
+                  <MenuContent align="end" className="w-60">
+                    <MenuActionItem
+                      disabled={!unreadCount || isMarkingAll || pendingIds.size > 0}
+                      onClick={() => void markAllRead()}
+                      leading={<CheckCheck />}
+                    >
+                      Đánh dấu tất cả đã đọc
+                    </MenuActionItem>
+                    <p className="px-2 pb-1 pl-8 text-xs text-muted-foreground">Áp dụng cho toàn bộ hộp thư</p>
+                    <MenuActionItem onClick={() => void archiveBulk("read")} leading={<Archive />}>
+                      Lưu trữ thông báo đã đọc
+                    </MenuActionItem>
+                    <MenuActionItem onClick={() => void archiveBulk("all")} leading={<Archive />}>
+                      Lưu trữ tất cả
+                    </MenuActionItem>
+                    <MenuSeparator />
+                    <MenuActionItem onClick={() => void loadList("refresh")} leading={<RotateCcw />}>
+                      Làm mới
+                    </MenuActionItem>
+                  </MenuContent>
+                </MenuRoot>
+              </>
+            }
+          />
 
           {(readFilter !== "all" || category !== "all") && (
             <div className="flex shrink-0 flex-wrap items-center gap-1 px-4 pb-2 pt-2">

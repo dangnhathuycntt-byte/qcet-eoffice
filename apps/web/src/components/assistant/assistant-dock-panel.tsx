@@ -170,7 +170,7 @@ export function AssistantDockPanel({
               <MenuActionItem leading={<Maximize2 />} onClick={onExpand} disabled={pending}>
                 Mở trong trang Trợ lý
               </MenuActionItem>
-              <MenuSeparator className="my-1 border-t border-border/40" />
+              <MenuSeparator />
               <MenuActionItem leading={<Trash2 />} destructive onClick={onDeleteRequest} disabled={pending}>
                 Xóa
               </MenuActionItem>

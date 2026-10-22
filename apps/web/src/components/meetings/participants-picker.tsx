@@ -384,7 +384,7 @@ export function ChairPicker({
                 <MenuActionItem leading={<UserX />} className="text-muted-foreground" onClick={onClear}>
                   Bỏ chọn
                 </MenuActionItem>
-                <MenuSeparator className="my-1 border-t border-border/40" />
+                <MenuSeparator />
               </>
             ) : null
           }

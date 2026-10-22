@@ -451,7 +451,7 @@ function PersonFilterOptions({
             {noneLabel}
           </MenuOptionItem>
         ) : null}
-        {visiblePeople.length > 0 && (showMe || showNone) ? <MenuSeparator className="my-1 border-t border-border/40" /> : null}
+        {visiblePeople.length > 0 && (showMe || showNone) ? <MenuSeparator /> : null}
         {visiblePeople.map((person) => (
           <MenuOptionItem
             key={person.key}
@@ -1005,7 +1005,7 @@ export function UnifiedTaskToolbar({
               );
             })}
 
-            <MenuSeparator className="my-1 border-t border-border/40" />
+            <MenuSeparator />
 
             <MenuSubmenu
               icon={<TaskIconTime className="size-4 text-muted-foreground" />}

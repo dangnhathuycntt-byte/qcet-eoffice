@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { Kbd } from "@/components/ui/kbd";
+import { KeyHint } from "@/components/ui/kbd";
 import { MenuActionItem, MenuContent, MenuOptionItem, MenuRoot, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Pressable } from "@/components/ui/pressable";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -661,7 +661,7 @@ function InboxPanelBody({
             <MenuActionItem disabled={bulkBusy} leading={<Archive />} onClick={() => void archiveBulk("all")}>
               Lưu trữ tất cả
             </MenuActionItem>
-            <MenuSeparator className="my-1 border-t border-border/40" />
+            <MenuSeparator />
             <MenuActionItem leading={<ArrowUpRight />} onClick={() => onNavigate("/inbox")}>
               Mở trang Hộp thư
             </MenuActionItem>
@@ -791,16 +791,5 @@ function InboxPanelBody({
         </div>
       ) : null}
     </>
-  );
-}
-
-function KeyHint({ keys, label }: { keys: string[]; label: string }) {
-  return (
-    <span className="flex items-center gap-1">
-      {keys.map((key) => (
-        <Kbd key={key}>{key}</Kbd>
-      ))}
-      {label}
-    </span>
   );
 }

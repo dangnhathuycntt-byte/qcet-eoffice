@@ -416,14 +416,14 @@ function SidebarMoreMenu({
             {section("work").map(renderEntry)}
             {section("admin").length > 0 ? (
               <>
-                <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+                <MenuSeparator />
                 <MenuGroup>
                   <MenuGroupLabel className="px-2 pb-1 pt-1 text-xs text-muted-foreground select-none">Quản trị</MenuGroupLabel>
                   {section("admin").map(renderEntry)}
                 </MenuGroup>
               </>
             ) : null}
-            <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+            <MenuSeparator />
             {section("system").map(renderEntry)}
           </MenuPopup>
         </Menu.Positioner>

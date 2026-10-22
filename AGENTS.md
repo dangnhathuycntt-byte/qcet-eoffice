@@ -51,11 +51,13 @@
   | Ngày; người nhận việc | `VietnameseDatePicker`; `TaskAssigneePicker` (`tasks/detail/task-property-controls`) |
   | Toolbar, ô tìm, hàng bộ lọc trang danh sách | `list-toolbar` (`ListToolbarSearch`…), `ActiveFilterBar` |
   | Hộp thoại; xác nhận xóa; popover | `Dialog`; `DestructiveConfirmDialog`; `Popover` |
-  | Hộp thoại có ô nhập | `StandardDialog` + `DialogForm` (Enter gửi, Ctrl/Cmd+Enter trong ô nhiều dòng) + `DialogFooter`; nút chính `type="submit"` |
-  | Menu thao tác, menu lọc nhiều cấp | `ui/menu`: `MENU_POPUP_CLASS`, `MenuActionItem` (thao tác, đóng khi bấm), `MenuOptionItem` (chọn giá trị, giữ mở), `MenuSubmenu`; bộ lọc trang danh sách: `ListToolbarFilterPopover`. Đang chọn = nền accent + chữ đậm, không tick/ô tích/mũi tên |
+  | Hộp thoại có ô nhập | `StandardDialog` + `DialogForm` (Enter gửi, Ctrl/Cmd+Enter trong ô nhiều dòng) + `DialogFooter`; nút chính `type="submit"`; hộp tạo/soạn: `variant="compose"` + `DialogComposeHeader`/`DialogComposeFooter`, ⌘↵ trong nút là `SubmitShortcutHint` |
+  | Menu thao tác, menu lọc nhiều cấp | `ui/menu`: `MENU_POPUP_CLASS`, `MenuActionItem` (thao tác, đóng khi bấm), `MenuOptionItem` (chọn giá trị, giữ mở), `MenuSubmenu`, `MenuSeparator` (đã có style, không truyền class), `MenuShortcut`; bộ lọc trang danh sách: `ListToolbarFilterPopover`. Đang chọn = nền accent + chữ đậm, không tick/ô tích/mũi tên |
   | Bảng danh sách: hàng, ô chọn, "⋯", sắp xếp, ô trống | `Table`… (`ui/table`): `TableRow` (`interactive`, `selected`, `menuTarget`, `groupPosition`), `TableRowSelector`, `TableRowActions`, `TableSortButton`, `TableEmptyValue` |
   | Đầu hộp tạo/soạn "Nơi › Việc" | `DialogBreadcrumb` (`ui/dialog`) |
   | Rỗng; thông báo trong trang; avatar; tooltip | `EmptyState`; `InlineAlert`; `UserAvatar`; `Tooltip` |
+  | Keycap; phím + nhãn ở chân khung | `Kbd`; `KeyHint` (`ui/kbd`) |
+  | Đầu khối quy trình trang chi tiết; thẻ cột thuộc tính; đầu khung có ô tìm | `SectionHeader`/`SectionRow`; `SectionCard`; `PaneSearchHeader` (`workspace/pane-search-header`) |
   | Ảnh nội dung bấm để xem lớn | `ImageViewerTrigger` (`ui/image-viewer`) + `data-image-viewer-group` trên khối chứa |
   | Màu tín hiệu | `text-destructive`, `bg-danger-soft`, `bg-destructive/10`; `text-warning`, `bg-warning/10` |
   | Cỡ chữ | `text-xs`, `text-compact`, `text-sm`… (thang ở `DESIGN.md`); keycap/gợi ý phím tắt `text-micro` |

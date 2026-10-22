@@ -48,6 +48,7 @@ import {
   MENU_ROW_CLASS as ROW,
   MenuSubmenuTitle as SubmenuTitle,
   MenuSheetHeader,
+  MenuShortcut,
   SHEET_BACKDROP_CLASS,
   SHEET_POPUP_CLASS,
   SHEET_POSITIONER_CLASS,
@@ -65,11 +66,6 @@ const SUBMENU_ONLY_ON_MOBILE = {
 
 /** Rê chuột mở/đóng menu con chỉ hợp ở popover desktop; ở bottom sheet (dưới md) menu con thay cả nội dung nên chỉ mở khi bấm. */
 const isDesktopPopover = () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
-
-/** Phím tắt chỉ có nghĩa với bàn phím: điện thoại (bottom sheet) ẩn đi cho hàng thoáng. */
-function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground max-md:hidden">{children}</kbd>;
-}
 
 /** Hàng thao tác ở menu chính: icon · nhãn · phím tắt. */
 function MenuRow({
@@ -93,7 +89,7 @@ function MenuRow({
     >
       <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
       <span className="flex-1 truncate">{label}</span>
-      {shortcut ? <Kbd>{shortcut}</Kbd> : null}
+      {shortcut ? <MenuShortcut>{shortcut}</MenuShortcut> : null}
     </Pressable>
   );
 }
@@ -160,7 +156,7 @@ function SubmenuRow({
       >
         <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
         <span className="flex-1 truncate">{label}</span>
-        <Kbd>{shortcut}</Kbd>
+        <MenuShortcut>{shortcut}</MenuShortcut>
         <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" />
       </Pressable>
       {expanded ? (

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { CalendarClock, FileText, FileUp, Lock, Plus, X, Zap } from "lucide-react";
-import { StandardDialog, DialogBreadcrumb, DialogClose, DialogFooter, DialogForm, FieldError } from "@/components/ui/dialog";
+import { StandardDialog, DialogComposeFooter, DialogComposeHeader, DialogForm, FieldError, SubmitShortcutHint } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
 import { DRAFT_FILE_ACCEPT, describeDraftRejections, partitionDraftFiles } from "@/lib/documents/draft-files";
 import { formatBytes } from "@/lib/pwa/storage-manager";
-import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
+import { useModifierKey } from "@/hooks/use-modifier-key";
 import { cn } from "@/lib/utils";
 import type { DocumentSecurityLevel, DocumentUrgency } from "@qcet/contracts/types/document";
 import { FileTypeIcon } from "./file-type-icon";
@@ -84,7 +84,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   // Bản nháp đã lưu nhưng có tệp chưa đính kèm được: giữ modal để báo, nút chính thành "Đóng"
   const [savedWithoutFiles, setSavedWithoutFiles] = React.useState(false);
-  const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
+  const modKey = useModifierKey();
   const [isDragging, setIsDragging] = React.useState(false);
   const summaryRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -116,7 +116,6 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
     setErrorMessage(null);
     setSavedWithoutFiles(false);
     setIsDragging(false);
-    setModKey(getPlatformModifierKey());
     const timer = setTimeout(() => summaryRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, [open]);
@@ -213,7 +212,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
       title="Soạn văn bản đi"
       showHeader={false}
       size="lg"
-      className="gap-0 bg-background p-0 sm:p-0 max-md:pb-0!"
+      variant="compose"
     >
       <DialogForm onSubmit={() => void handleSubmit()} className="min-h-0 flex-1 gap-0">
         {/* Kéo tệp vào bất cứ đâu trong hộp là đính kèm; khung báo phủ lên hộp không bắt chuột (pointer-events-none) để con trỏ
@@ -235,12 +234,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
             addFiles(Array.from(e.dataTransfer.files));
           }}
         >
-          <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
-            <DialogBreadcrumb items={["Văn bản đi", "Soạn dự thảo"]} />
-            <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 rounded-full max-md:size-8" />}>
-              <X />
-            </DialogClose>
-          </header>
+          <DialogComposeHeader items={["Văn bản đi", "Soạn dự thảo"]} />
 
           {errorMessage ? (
             <div className="shrink-0 px-5 pt-3 sm:px-6">
@@ -440,7 +434,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 items-center border-t border-border/60 px-5 py-3 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+          <DialogComposeFooter>
             {savedWithoutFiles ? null : (
               <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
                 Hủy
@@ -455,13 +449,9 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
               className="max-md:px-4"
             >
               <span>{savedWithoutFiles ? "Đóng" : isSubmitting ? "Đang lưu…" : "Lưu bản nháp"}</span>
-              {isSubmitting || savedWithoutFiles ? null : (
-                <kbd className="hidden font-sans text-micro text-primary-foreground/60 sm:inline" aria-hidden="true">
-                  {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
-                </kbd>
-              )}
+              {isSubmitting || savedWithoutFiles ? null : <SubmitShortcutHint />}
             </Button>
-          </DialogFooter>
+          </DialogComposeFooter>
           {isDragging ? (
             <div
               aria-hidden

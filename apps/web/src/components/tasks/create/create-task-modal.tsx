@@ -14,8 +14,8 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { Select } from "@base-ui/react/select";
 import { Dialog } from "@base-ui/react/dialog";
-import { DialogBreadcrumb } from "@/components/ui/dialog";
-import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
+import { DialogBreadcrumb, SubmitShortcutHint } from "@/components/ui/dialog";
+import { useModifierKey } from "@/hooks/use-modifier-key";
 import type { CreateTaskLevel } from "@/lib/adapters/create-task-mapper";
 import {
   useCreateTaskForm,
@@ -264,8 +264,7 @@ export function CreateTaskModal({
     if (active instanceof HTMLElement && active.matches("input, textarea")) active.blur();
   }, [isPhone, openDropdown]);
   // Đọc nền tảng sau khi mount để không lệch HTML giữa server và client
-  const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
-  React.useEffect(() => setModKey(getPlatformModifierKey()), []);
+  const modKey = useModifierKey();
 
   const titleInputRef = React.useRef<HTMLTextAreaElement>(null);
   const descriptionRef = React.useRef<HTMLDivElement>(null);
@@ -944,11 +943,7 @@ export function CreateTaskModal({
                           : initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}
                       </span>
                       {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
-                      {form.isSubmitting || contextUpload.pending > 0 ? null : (
-                        <kbd className="hidden sm:inline font-sans text-micro text-primary-foreground/60" aria-hidden="true">
-                          {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
-                        </kbd>
-                      )}
+                      {form.isSubmitting || contextUpload.pending > 0 ? null : <SubmitShortcutHint />}
                     </Button>
 
                   </div>

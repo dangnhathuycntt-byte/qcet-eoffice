@@ -146,6 +146,20 @@ const DESIGN_RULES = [
       /<(?:button|select|textarea)\b/.test(line) ||
       (/<input\b/.test(line) && !/type=["'](?:hidden|file)["']/.test(line)),
   },
+  {
+    id: "no-raw-kbd",
+    message:
+      "Raw <kbd>. Keycap is Kbd, key + label hint is KeyHint (@/components/ui/kbd), shortcut at the end of a menu row is MenuShortcut (@/components/ui/menu), ⌘↵ inside a dialog's primary button is SubmitShortcutHint (@/components/ui/dialog).",
+    appliesTo: (relPath) => !relPath.startsWith("apps/web/src/components/ui/"),
+    test: (line) => /<kbd\b/.test(line),
+  },
+  {
+    id: "no-menu-separator-class",
+    message:
+      "MenuSeparator already draws the standard menu divider (my-1 border-t border-border/40). Drop the className instead of restyling it per screen.",
+    appliesTo: (relPath) => !relPath.startsWith("apps/web/src/components/ui/"),
+    test: (line) => /<MenuSeparator\s+className=/.test(line),
+  },
 ];
 
 /** `design-lint-ignore <rule-id>: <reason>` on the same or previous line. */

@@ -81,7 +81,7 @@ export function DocumentRowMenu({ doc, anchor, open, onOpenChange, onOpen, onAct
         <MenuActionItem leading={<Archive className={icon} />} onClick={() => onAction("file", doc)}>
           Lưu hồ sơ…
         </MenuActionItem>
-        <MenuSeparator className="my-1 border-t border-border/40" />
+        <MenuSeparator />
         <MenuActionItem
           leading={<TaskIconLink className={icon} />}
           onClick={() => void copy(`${window.location.origin}${getDocumentHref(doc.id)}`, "Đã sao chép liên kết")}
