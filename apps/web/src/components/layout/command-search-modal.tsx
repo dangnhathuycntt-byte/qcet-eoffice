@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, Keyboard, Loader2, Search, X } from "lucide-react";
+import { ArrowRight, Keyboard, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { getRouteByPath } from "@/lib/navigation/canonical-navigation-registry";
@@ -28,6 +28,7 @@ import { highlightMatchSegments, scoreVietnameseSearch } from "@qcet/shared/lib/
 import type { SearchTaskResult, SearchUserResult, SearchDocumentResult } from "@qcet/contracts/search";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Pressable } from "@/components/ui/pressable";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -678,6 +679,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         {/* Theo hộp lệnh của Linear (đo DOM trên app Linear 21/10/2026): ô nhập 40px chữ 13px lùi 6px vào hộp, không icon, không
             kẻ ngăn với danh sách, chữ thẳng mép icon các dòng; bên phải "Hỏi Trợ lý · Tab" */}
         <div className="mx-1.5 mt-1.5 flex h-10 shrink-0 items-center gap-2 pl-3 pr-1.5">
+          {/* design-lint-ignore no-raw-control: ô lệnh của bảng ⌘K, chữ không nền như Linear; ui/Input là ô có nền và chiều cao cố định */}
           <input
             ref={inputRef}
             type="text"
@@ -698,7 +700,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             placeholder="Gõ lệnh hoặc tìm nhiệm vụ, văn bản, cán bộ…"
             className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
           />
-          {isLoading ? <Loader2 aria-label="Đang tìm" className={cn(ICON_CLASS, "animate-spin")} /> : null}
+          {isLoading ? <Spinner size="md" tone="muted" label="Đang tìm" /> : null}
           {query ? (
             <Button
               variant="ghost"

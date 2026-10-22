@@ -103,56 +103,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/layout/command-search-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<button"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input type=\"text\" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === \"Enter\" && draftUrl.trim()) setBookmarkUrl(draftUrl); }} placeholder=\"Dán link web để tạo thẻ dấu trang (nhấn Enter)...\" className=\"flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs\" />"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/tasks/detail/task-block-editor.tsx",
-      "text": "<input type=\"text\" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === \"Enter\" && draftUrl.trim()) setLinkUrl(draftUrl); }} placeholder=\"Dán đường dẫn liên kết (nhấn Enter)...\" className=\"flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs\" />"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/tasks/table/components/task-table-toolbar.tsx",
       "text": "<input"
     },
