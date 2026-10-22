@@ -495,7 +495,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
             compact
             value={minutesText}
             aria-label="Nội dung biên bản"
-            placeholder="Nhập nội dung biên bản, hoặc bấm Dùng làm biên bản ở một bản ghi âm…"
+            placeholder="Nhập nội dung biên bản…"
             // `sm:` vì Textarea compact đặt `sm:min-h-7`; biên bản từ bản ghi âm dài thì ô cao hơn
             className={minutesText.length > 400 ? "min-h-80 sm:min-h-80" : "min-h-32 sm:min-h-32"}
             aria-invalid={minutesError ? true : undefined}
@@ -608,7 +608,9 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
               </div>
             ) : null}
             <div className={DETAIL_GRID_CLASS}>
-              <div className="flex min-w-0 flex-col gap-4 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain lg:pb-16 lg:pt-6 thin-scrollbar">
+              {/* `lg:-mx-1 lg:px-1`: cột cuộn cắt phần thò ra ngoài (overflow-x-hidden), nên viền focus 1px của ô nhập kín bề ngang
+                  (ô biên bản) mất hai cạnh bên nếu cột sát mép ô; lấn ra 4px mỗi bên để viền hiện đủ, nội dung vẫn thẳng cột */}
+              <div className="flex min-w-0 flex-col gap-4 lg:-mx-1 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain lg:px-1 lg:pb-16 lg:pt-6 thin-scrollbar">
                 <div className="min-w-0">
                   <h1 className="break-words text-xl font-semibold leading-snug tracking-tight text-foreground">{meeting.title}</h1>
                   <h2 className="mt-4 text-xs font-medium text-muted-foreground">Nội dung và chương trình</h2>
