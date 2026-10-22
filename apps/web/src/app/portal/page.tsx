@@ -140,7 +140,7 @@ export default function PortalPage() {
                 width={32}
                 height={32}
                 className="object-contain"
-                priority
+                preload
               />
             </div>
 

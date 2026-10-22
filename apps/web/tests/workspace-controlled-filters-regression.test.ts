@@ -20,6 +20,7 @@ const mockRouter = {
   back: () => {},
   forward: () => {},
   refresh: () => {},
+  bfcacheId: "test",
 };
 
 function renderWorkspaceWithUrl(

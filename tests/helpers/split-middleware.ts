@@ -3,8 +3,8 @@
  * khác tới middleware của web. Test middleware viết từ khi còn một ứng dụng gọi một hàm cho cả hai loại đường dẫn.
  */
 import type { NextRequest } from "next/server";
-import { middleware as apiMiddleware } from "../../apps/api/src/middleware";
-import { middleware as webMiddleware } from "../../apps/web/src/middleware";
+import { proxy as apiMiddleware } from "../../apps/api/src/proxy";
+import { proxy as webMiddleware } from "../../apps/web/src/proxy";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

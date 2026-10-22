@@ -65,7 +65,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               title="QCET E-Office"
               className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
-              <Image src="/logo-qcet.png" alt="QCET" width={24} height={24} className="size-6 shrink-0 rounded-full object-contain" priority />
+              <Image src="/logo-qcet.png" alt="QCET" width={24} height={24} className="size-6 shrink-0 rounded-full object-contain" preload />
               <span className="truncate text-compact font-semibold tracking-tight text-foreground">QCET E-Office</span>
             </Link>
           </div>

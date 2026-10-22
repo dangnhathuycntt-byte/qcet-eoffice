@@ -13,7 +13,7 @@ import { sanitizeRedirectUrl } from '@qcet/shared/lib/login-helpers';
  * API là nơi quyết định (phiên hết hạn, thu hồi, tài khoản khóa).
  *
  * Yêu cầu /api/* chỉ được gắn x-request-id rồi đi tiếp tới rewrite (API_INTERNAL_URL); middleware của API
- * xác thực. Chạy Node runtime như bản trước khi tách (giới hạn đệm body ở next.config).
+ * xác thực. Proxy (Next 16, trước là Middleware) luôn chạy Node runtime; giới hạn đệm body ở next.config.
  */
 
 /**
@@ -76,7 +76,7 @@ function extractTokenFromRequest(request: NextRequest): string | null {
  * 4. Public assets, static chunks, PWA manifest, /portal and /docs (user guide): Always accessible.
  * 5. Canonical singular to plural redirects (/task -> /tasks).
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Skip middleware for static assets, next internal files, and public assets
@@ -192,10 +192,9 @@ export async function middleware(request: NextRequest) {
   return nextWithCorrelation();
 }
 
-export default middleware;
+export default proxy;
 
 export const config = {
-  runtime: 'nodejs',
   matcher: [
     '/api/:path*',
     /*

@@ -52,7 +52,7 @@ function LoginSkeleton() {
 }
 
 function Logo() {
-  return <Image src="/design/login-logo.png" alt="Logo QCET" width={64} height={64} priority className="size-14 min-[600px]:size-16 rounded-full object-contain select-none" />;
+  return <Image src="/design/login-logo.png" alt="Logo QCET" width={64} height={64} preload className="size-14 min-[600px]:size-16 rounded-full object-contain select-none" />;
 }
 
 function SupportFooter() {
@@ -68,7 +68,7 @@ function CampusChrome() {
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 bottom-[30px] z-0 hidden min-[600px]:flex justify-center select-none overflow-hidden">
-        <Image src="/design/campus-illustration.webp" alt="" width={1800} height={444} priority className="w-full max-w-[1800px] h-auto object-contain object-bottom" />
+        <Image src="/design/campus-illustration.webp" alt="" width={1800} height={444} preload className="w-full max-w-[1800px] h-auto object-contain object-bottom" />
       </div>
       <div className="absolute inset-x-0 bottom-0 pb-7 text-center text-xs min-[600px]:hidden" style={{ color: C.sub }}>
         Gặp sự cố?{" "}

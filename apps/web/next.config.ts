@@ -60,10 +60,10 @@ const nextConfig: NextConfig = {
     // @qcet/* là mã nguồn TS ngoài thư mục app (tsconfig paths)
     externalDir: true,
     optimizePackageImports: ["lucide-react", "qrcode", "vaul", "motion", "@base-ui/react"],
-    // Middleware chạy Node runtime nên Next đệm body request và cắt ở 10MB (mặc định), làm
+    // Proxy (Next 16, trước là Middleware) chạy Node runtime nên Next đệm body request và cắt ở 10MB (mặc định), làm
     // upload ~10MB lỗi "Failed to parse body as FormData". Chừa dư cho overhead multipart
-    // (giới hạn tệp thực tế 10MB vẫn do /api/upload kiểm tra). /api/* đi qua middleware này trước rewrite.
-    middlewareClientMaxBodySize: "12mb",
+    // (giới hạn tệp thực tế 10MB vẫn do /api/upload kiểm tra). /api/* đi qua proxy này trước rewrite.
+    proxyClientMaxBodySize: "12mb",
     // Rewrite /api chờ API tới 340 s: luồng chat của Trợ lý chạy tối đa 330 s (maxDuration của route, ADR-009)
     proxyTimeout: 340_000,
   },

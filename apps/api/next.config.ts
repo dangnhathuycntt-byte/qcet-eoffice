@@ -33,14 +33,10 @@ const nextConfig: NextConfig = {
   experimental: {
     // @qcet/* là mã nguồn TS ngoài thư mục app (tsconfig paths)
     externalDir: true,
-    // Middleware chạy Node runtime nên Next đệm body request và cắt ở 10MB (mặc định), làm
+    // Proxy (Next 16, trước là Middleware) chạy Node runtime nên Next đệm body request và cắt ở 10MB (mặc định), làm
     // upload ~10MB lỗi "Failed to parse body as FormData". Chừa dư cho overhead multipart
     // (giới hạn tệp thực tế 10MB vẫn do /api/upload kiểm tra).
-    middlewareClientMaxBodySize: "12mb",
-    // API chạy dev bằng webpack (scripts/dev.mjs): giảm bộ nhớ đỉnh của webpack, đổi lại biên dịch chậm hơn chút (tài liệu Next
-    // "Memory Usage", từ 15.0). Đo 22/10/2026: heap server api dev tăng 0,27 → 4,3GB sau 8 giờ sửa code, phần lớn nằm trong swap
-    // nên mỗi lần GC làm request chậm 5–8 giây. Không ảnh hưởng `next start`.
-    webpackMemoryOptimizations: true,
+    proxyClientMaxBodySize: "12mb",
   },
   async headers() {
     return [
