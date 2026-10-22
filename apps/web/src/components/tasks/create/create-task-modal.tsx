@@ -236,6 +236,9 @@ export function CreateTaskModal({
   // Phóng to như hộp Soạn văn bản đi/Tạo cuộc họp (giữ qua các lần mở); mở Agent thì hộp luôn cao hết khung
   const [expanded, setExpanded] = React.useState(false);
   const tall = expanded || agentOpen;
+  // Chỉ mở/ẩn Agent mới chuyển động bề ngang khung; phóng to/thu nhỏ đổi ngay như hai hộp kia (bề ngang trượt trong khi
+  // chiều cao nhảy ngay thì lệch). Cờ đổi cùng lượt vẽ với bề rộng nên trình duyệt lấy transition theo kiểu sau khi đổi
+  const [widthMotion, setWidthMotion] = React.useState(true);
   // Ẩn panel vẫn giữ cuộc trò chuyện; đóng hộp mới bỏ
   const [agentStarted, setAgentStarted] = React.useState(false);
   const agentToggleRef = React.useRef<HTMLButtonElement>(null);
@@ -509,6 +512,7 @@ export function CreateTaskModal({
     return () => cancelAnimationFrame(frame);
   }, [isOpen, initialProposal, form.isLoadingDepartments, attachContextFiles]);
   const closeAgent = React.useCallback(() => {
+    setWidthMotion(true);
     setAgentOpen(false);
     requestAnimationFrame(() => agentToggleRef.current?.focus());
   }, []);
@@ -566,7 +570,7 @@ export function CreateTaskModal({
               className={cn(
                 "pointer-events-auto relative flex max-h-full w-full max-w-[720px] overflow-hidden rounded-2xl bg-background shadow-dialog border-0",
                 tall && "md:h-full md:max-w-[820px]",
-                "lg:[transition:max-width_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,background-color_100ms_ease] motion-reduce:lg:[transition:none]",
+                widthMotion && "lg:[transition:max-width_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,background-color_100ms_ease] motion-reduce:lg:[transition:none]",
                 // 820 thẻ + 16 lề + 380 panel
                 agentOpen && "lg:max-w-[1216px] lg:bg-sidebar",
                 // Điện thoại: thẻ cao gần hết màn hình như hộp tạo mới của Linear
@@ -605,6 +609,7 @@ export function CreateTaskModal({
                         variant="toolbar"
                         size="pill-xs"
                         onClick={() => {
+                          setWidthMotion(true);
                           setAgentStarted(true);
                           setAgentOpen(true);
                         }}
@@ -616,7 +621,15 @@ export function CreateTaskModal({
                       </Button>
                     )}
                     {/* Mở Agent thì hộp đã cao hết khung */}
-                    {agentOpen ? null : <DialogExpandButton expanded={expanded} onToggle={() => setExpanded((value) => !value)} />}
+                    {agentOpen ? null : (
+                      <DialogExpandButton
+                        expanded={expanded}
+                        onToggle={() => {
+                          setWidthMotion(false);
+                          setExpanded((value) => !value);
+                        }}
+                      />
+                    )}
                     <Button
                       variant="ghost"
                       size="icon-xs"
