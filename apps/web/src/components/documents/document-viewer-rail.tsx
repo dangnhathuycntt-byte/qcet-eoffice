@@ -257,7 +257,7 @@ function ZoomMenu({ zoom, onZoomChange }: { zoom: number; onZoomChange: (zoom: n
         </TooltipContent>
       </Tooltip>
       <PopoverContent mobileSheet sheetTitle="Tỷ lệ so với vừa chiều rộng" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
-        <PopoverTitle className="px-2 pb-1 pt-1.5 text-xs font-normal text-muted-foreground">Tỷ lệ so với vừa chiều rộng</PopoverTitle>
+        <PopoverTitle className="px-2 pb-1 pt-1.5 text-xs font-normal text-muted-foreground max-md:sr-only">Tỷ lệ so với vừa chiều rộng</PopoverTitle>
         <Pressable className={MENU_ITEM} disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
           <ZoomIn />
           Phóng to
@@ -295,7 +295,7 @@ function ViewToolsMenu({ pages }: { pages: RailPages }) {
         </TooltipContent>
       </Tooltip>
       <PopoverContent mobileSheet sheetTitle="Trang" side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1.5">
-        <PopoverTitle className="px-0.5 pb-1.5 text-xs font-normal text-muted-foreground">Trang</PopoverTitle>
+        <PopoverTitle className="px-0.5 pb-1.5 text-xs font-normal text-muted-foreground max-md:sr-only">Trang</PopoverTitle>
         <div className="flex items-center gap-1">
           <Pressable aria-label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)} className={cn(RAIL_BUTTON, "size-7")}>
             <ChevronUp />

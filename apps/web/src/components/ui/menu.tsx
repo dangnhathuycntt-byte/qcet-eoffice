@@ -137,8 +137,8 @@ export const MenuSubmenuRoot = BaseMenu.SubmenuRoot;
 export const MenuSubmenuTrigger = BaseMenu.SubmenuTrigger;
 
 /** Tiêu đề nhỏ ở đầu menu con ("Độ ưu tiên", "Hạn hoàn thành"…). */
-export function MenuSubmenuTitle({ children }: { children: React.ReactNode }) {
-  return <div data-slot="menu-submenu-title" className="px-2 pt-1 pb-1 text-xs text-muted-foreground select-none">{children}</div>;
+export function MenuSubmenuTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div data-slot="menu-submenu-title" className={cn("px-2 pt-1 pb-1 text-xs text-muted-foreground select-none", className)}>{children}</div>;
 }
 
 /** Ô icon 16px dẫn đầu hàng menu, để mọi hàng thẳng cột dù icon lớn nhỏ khác nhau. */

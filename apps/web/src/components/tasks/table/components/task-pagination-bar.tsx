@@ -208,7 +208,8 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
             mobileSheet
             sheetTitle="Kích thước trang"
           >
-            <MenuSubmenuTitle>Kích thước trang</MenuSubmenuTitle>
+            {/* Điện thoại: tiêu đề đã nằm ở đầu sheet (sheetTitle) */}
+            <MenuSubmenuTitle className="max-md:hidden">Kích thước trang</MenuSubmenuTitle>
             {effectivePageSizeOptions.map((size) => (
               <MenuActionItem
                 key={size}
