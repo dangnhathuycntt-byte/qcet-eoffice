@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { FileText, Paperclip, X } from "lucide-react";
-import { StandardDialog, DialogBreadcrumb, DialogClose } from "@/components/ui/dialog";
+import { CalendarClock, FileText, FileUp, Lock, X, Zap } from "lucide-react";
+import { StandardDialog, DialogBreadcrumb, DialogClose, DialogFooter, DialogForm, FieldError } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,9 +10,12 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Pressable } from "@/components/ui/pressable";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
+import { DRAFT_FILE_ACCEPT, describeDraftRejections, partitionDraftFiles } from "@/lib/documents/draft-files";
+import { formatBytes } from "@/lib/pwa/storage-manager";
 import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
 import { cn } from "@/lib/utils";
 import type { DocumentSecurityLevel, DocumentUrgency } from "@qcet/contracts/types/document";
+import { FileTypeIcon } from "./file-type-icon";
 import { attachFileToDocument } from "./workspace/document-edit";
 
 /**
@@ -43,8 +46,9 @@ const SECURITY_OPTIONS: { value: DocumentSecurityLevel; label: string }[] = [
   { value: "TUYET_MAT", label: "Tuyệt mật" },
 ];
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const SUMMARY_MAX_LENGTH = 2000;
+
+const optionLabel = (options: { value: string; label: string }[], value: string) => options.find((o) => o.value === value)?.label ?? value;
 
 type FieldErrors = Partial<Record<"summary" | "files", string>>;
 
@@ -62,8 +66,9 @@ const errorMessageOf = (json: unknown): string | null => {
 };
 
 /**
- * Soạn văn bản đi (dự thảo), bố cục như hộp tạo nhiệm vụ: trích yếu là dòng tiêu đề, thuộc tính xếp thành lưới nhãn–giá trị,
- * tệp dự thảo bắt buộc như VNPT iOffice. Số và ngày ban hành do văn thư cấp khi phát hành nên không có ở đây.
+ * Soạn văn bản đi (dự thảo), bố cục như hộp Tạo cuộc họp/Tạo nhiệm vụ: trích yếu là dòng tiêu đề, thuộc tính là hàng chip
+ * (Hình thức, Độ khẩn, Độ mật, Hạn xử lý), tệp dự thảo bắt buộc như VNPT iOffice kéo thả được. Số và ngày ban hành do văn thư
+ * cấp khi phát hành nên không có ở đây; nơi nhận chọn lúc phát hành (ADR-015).
  * Chưa có (cần thêm cột): Lĩnh vực, Loại văn bản (mới/thu hồi/thay thế), Hình thức sao, VB nội/ngoại tỉnh, Văn bản liên quan, Đơn vị soạn thảo.
  */
 export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgoingDialogProps) {
@@ -80,8 +85,11 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
   // Bản nháp đã lưu nhưng có tệp chưa đính kèm được: giữ modal để báo, nút chính thành "Đóng"
   const [savedWithoutFiles, setSavedWithoutFiles] = React.useState(false);
   const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
+  const [isDragging, setIsDragging] = React.useState(false);
   const summaryRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // Nút "chọn tệp"/"Thêm tệp" (chỉ một trong hai hiện): nhận focus khi thiếu tệp
+  const attachRef = React.useRef<HTMLButtonElement>(null);
 
   const isDirty = Boolean(
     summary.trim() ||
@@ -107,32 +115,26 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
     setFieldErrors({});
     setErrorMessage(null);
     setSavedWithoutFiles(false);
+    setIsDragging(false);
     setModKey(getPlatformModifierKey());
     const timer = setTimeout(() => summaryRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, [open]);
 
-  // Trích yếu tự giãn theo nội dung
-  React.useLayoutEffect(() => {
-    const el = summaryRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [summary, open]);
+  const canEditFiles = !savedWithoutFiles && !isSubmitting;
+
+  // Chọn từ hộp thoại hay kéo thả đều qua đây: `accept` của ô chọn tệp không áp cho tệp kéo vào
+  const addFiles = (incoming: File[]) => {
+    if (incoming.length === 0) return;
+    const { accepted, rejected } = partitionDraftFiles(incoming, files);
+    if (accepted.length > 0) setFiles((prev) => [...prev, ...accepted]);
+    setFieldErrors((prev) => ({ ...prev, files: describeDraftRejections(rejected) }));
+  };
 
   const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []);
     e.target.value = "";
-    const tooLarge = picked.filter((f) => f.size > MAX_FILE_BYTES);
-    const accepted = picked.filter((f) => f.size <= MAX_FILE_BYTES);
-    if (accepted.length > 0) {
-      // Chọn lại cùng tệp thì không thêm lần nữa
-      setFiles((prev) => [...prev, ...accepted.filter((f) => !prev.some((p) => p.name === f.name && p.size === f.size))]);
-    }
-    setFieldErrors((prev) => ({
-      ...prev,
-      files: tooLarge.length > 0 ? `${tooLarge.map((f) => `"${f.name}"`).join(", ")} vượt quá 10MB.` : undefined,
-    }));
+    addFiles(picked);
   };
 
   const handleSubmit = async () => {
@@ -141,13 +143,15 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
       onClose();
       return;
     }
-    const text = summary.trim();
+    // Trích yếu là một dòng tiêu đề: dán nhiều dòng thì gộp thành một
+    const text = summary.replace(/\s*\n+\s*/g, " ").trim();
     const errors: FieldErrors = {};
     if (text.length < 3) errors.summary = "Nhập trích yếu, ít nhất 3 ký tự.";
     if (files.length === 0) errors.files = "Đính kèm tệp dự thảo văn bản.";
     if (errors.summary || errors.files) {
       setFieldErrors(errors);
       if (errors.summary) summaryRef.current?.focus();
+      else attachRef.current?.focus();
       return;
     }
     setFieldErrors({});
@@ -196,8 +200,11 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
     }
   };
 
-  const labelClass = "text-xs text-muted-foreground";
-  const fieldClass = "w-full sm:w-auto sm:min-w-40";
+  const urgencyLabel = optionLabel(URGENCY_OPTIONS, urgency);
+  const securityLabel = optionLabel(SECURITY_OPTIONS, securityLevel);
+  // Tín hiệu bằng token: khẩn = destructive, mật = warning; mặc định "Thường" ghi tên thuộc tính bằng chữ mờ
+  const urgencyTone = urgency === "THUONG" ? undefined : "text-destructive";
+  const securityTone = securityLevel === "THUONG" ? undefined : "text-warning";
 
   return (
     <StandardDialog
@@ -208,21 +215,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
       size="lg"
       className="gap-0 p-0 sm:max-w-[680px] sm:p-0 max-md:pb-0!"
     >
-      <form
-        noValidate
-        className="flex min-h-0 flex-1 flex-col"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void handleSubmit();
-        }}
-        onKeyDown={(e) => {
-          // Cmd/Ctrl+Enter lưu; bỏ qua khi bộ gõ Telex/IME đang soạn chữ
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
-            e.preventDefault();
-            void handleSubmit();
-          }
-        }}
-      >
+      <DialogForm onSubmit={() => void handleSubmit()} className="min-h-0 flex-1 gap-0">
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-5 py-2.5 sm:px-6">
           <DialogBreadcrumb icon={<FileText className="size-3.5 shrink-0" aria-hidden />} items={["Văn bản đi", "Soạn dự thảo"]} />
           <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 max-md:size-8" />}>
@@ -238,167 +231,239 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
           </div>
         ) : null}
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4 sm:px-6">
-          <div className="space-y-1">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-1">
             <label htmlFor="compose-outgoing-summary" className="sr-only">
               Trích yếu
             </label>
-            {/* design-lint-ignore no-raw-control: trích yếu là dòng tiêu đề không viền như hộp tạo nhiệm vụ, ui/Textarea ép nền và đệm */}
-            <textarea
+            <Textarea
               id="compose-outgoing-summary"
               ref={summaryRef}
+              variant="bare"
+              compact
+              autoResize
               rows={1}
               value={summary}
               maxLength={SUMMARY_MAX_LENGTH}
+              countOnlyNearLimit
               aria-required="true"
-              aria-invalid={Boolean(fieldErrors.summary)}
+              aria-invalid={Boolean(fieldErrors.summary) || undefined}
               aria-describedby={fieldErrors.summary ? "compose-outgoing-summary-error" : undefined}
               disabled={savedWithoutFiles}
               onChange={(e) => {
                 setSummary(e.target.value);
                 if (fieldErrors.summary) setFieldErrors((prev) => ({ ...prev, summary: undefined }));
               }}
+              onKeyDown={(e) => {
+                // Trích yếu là một dòng tiêu đề: Enter gửi như ô tên của các hộp tạo khác. Shift+Enter xuống dòng;
+                // Cmd/Ctrl+Enter do biểu mẫu xử lý; bỏ qua khi bộ gõ Telex/IME đang soạn chữ
+                if (e.key !== "Enter" || e.shiftKey || e.metaKey || e.ctrlKey || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }}
               placeholder="Trích yếu: V/v …"
-              className={cn(
-                "block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-base font-semibold leading-snug text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-0",
-                fieldErrors.summary && "placeholder:text-destructive/60",
-              )}
+              className="min-h-0 py-0 text-lg font-semibold leading-snug placeholder:text-muted-foreground/60 aria-invalid:text-foreground aria-invalid:placeholder:text-destructive/60 sm:min-h-0"
             />
-            {fieldErrors.summary ? (
-              <p id="compose-outgoing-summary-error" role="alert" className="text-xs font-medium text-destructive">
-                {fieldErrors.summary}
-              </p>
-            ) : null}
+            {fieldErrors.summary ? <FieldError id="compose-outgoing-summary-error">{fieldErrors.summary}</FieldError> : null}
           </div>
 
-          {/* Lưới nhãn–giá trị căn thẳng cột; điện thoại xếp một cột */}
-          <div className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[88px_minmax(0,1fr)_72px_minmax(0,1fr)]">
-            <span id="compose-outgoing-form-label" className={labelClass}>Hình thức</span>
+          {/* Hàng chip thuộc tính như hộp Tạo cuộc họp: điện thoại tự xuống dòng */}
+          <div className="flex flex-wrap items-center gap-1.5">
             <Select
-              compact
-              className={fieldClass}
+              variant="pill"
+              icon={<FileText className="text-muted-foreground" />}
+              title="Hình thức văn bản"
+              sheetTitle="Hình thức"
+              aria-label={`Hình thức: ${category}`}
               positionerClassName="z-50"
-              aria-label="Hình thức"
+              popupClassName="w-52"
               options={DOCUMENT_FORMS}
               value={category}
               onValueChange={(value) => value && setCategory(value)}
               disabled={savedWithoutFiles}
             />
-            <span className={labelClass}>Độ khẩn</span>
             <Select
-              compact
-              className={fieldClass}
+              variant="pill"
+              icon={<Zap className={urgencyTone ?? "text-muted-foreground"} />}
+              title="Độ khẩn"
+              sheetTitle="Độ khẩn"
+              aria-label={`Độ khẩn: ${urgencyLabel}`}
+              className={urgencyTone}
               positionerClassName="z-50"
-              aria-label="Độ khẩn"
               options={URGENCY_OPTIONS}
+              idleValue="THUONG"
+              idleLabel="Độ khẩn"
               value={urgency}
               onValueChange={(value) => value && setUrgency(value as DocumentUrgency)}
               disabled={savedWithoutFiles}
             />
-            <label htmlFor="compose-outgoing-due" className={labelClass}>Hạn xử lý</label>
-            <VietnameseDatePicker
-              id="compose-outgoing-due"
-              value={dueDate}
-              onChange={setDueDate}
-              variant="input"
-              placeholder="Không đặt hạn"
-              triggerClassName="h-8 w-full rounded-control px-2 font-sans sm:h-7"
-              className={fieldClass}
-            />
-            <span className={labelClass}>Độ mật</span>
             <Select
-              compact
-              className={fieldClass}
+              variant="pill"
+              icon={<Lock className={securityTone ?? "text-muted-foreground"} />}
+              title="Độ mật"
+              sheetTitle="Độ mật"
+              aria-label={`Độ mật: ${securityLabel}`}
+              className={securityTone}
               positionerClassName="z-50"
-              aria-label="Độ mật"
               options={SECURITY_OPTIONS}
+              idleValue="THUONG"
+              idleLabel="Độ mật"
               value={securityLevel}
               onValueChange={(value) => value && setSecurityLevel(value as DocumentSecurityLevel)}
               disabled={savedWithoutFiles}
             />
+            <VietnameseDatePicker
+              id="compose-outgoing-due"
+              variant="pill"
+              periodPicker={false}
+              // Bọc inline-block lệch dòng 1px so với các chip khác trong hàng flex
+              className="flex"
+              value={dueDate}
+              onChange={setDueDate}
+              label={dueDate ? "Hạn xử lý:" : undefined}
+              placeholder="Hạn xử lý"
+              title="Hạn xử lý"
+              icon={<CalendarClock className="text-muted-foreground" />}
+              disabled={savedWithoutFiles}
+            />
           </div>
 
-          {/* Tệp dự thảo: bắt buộc, nhiều tệp, tải lên sau khi bản nháp được tạo */}
-          <div className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-x-3">
-            <span className={cn(labelClass, "pt-1.5")}>Tệp dự thảo</span>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <input type="file"
-                ref={fileInputRef}
-                multiple
-                accept=".pdf,.doc,.docx,application/pdf"
-                onChange={handleFilesPicked}
-                className="sr-only"
-                aria-label="Chọn tệp dự thảo"
-                tabIndex={-1}
-              />
+          <div aria-hidden className="h-px bg-border" />
+
+          {/* Tệp dự thảo: bắt buộc, nhiều tệp, kéo thả hoặc chọn; tải lên sau khi bản nháp được tạo */}
+          <div className="flex flex-col gap-1">
+            <input type="file"
+              ref={fileInputRef}
+              multiple
+              accept={DRAFT_FILE_ACCEPT}
+              onChange={handleFilesPicked}
+              className="sr-only"
+              aria-label="Chọn tệp dự thảo"
+              tabIndex={-1}
+            />
+            <div
+              onDragOver={(e) => {
+                if (!canEditFiles || !e.dataTransfer.types.includes("Files")) return;
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                if (!canEditFiles) return;
+                e.preventDefault();
+                setIsDragging(false);
+                addFiles(Array.from(e.dataTransfer.files));
+              }}
+              // Vùng trống bấm được cả ô (mục tiêu chạm đủ lớn trên điện thoại); bàn phím dùng nút "chọn tệp" bên trong, click nổi bọt lên đây
+              onClick={canEditFiles && files.length === 0 ? () => fileInputRef.current?.click() : undefined}
+              className={cn(
+                "flex flex-col rounded-lg border border-dashed transition-colors duration-100 motion-reduce:transition-none",
+                files.length === 0 ? "items-center gap-0.5 px-3 py-3.5 text-center" : "gap-1 p-1.5",
+                canEditFiles && files.length === 0 && "cursor-pointer hover:bg-accent/40",
+                isDragging
+                  ? "border-primary/60 bg-selected"
+                  : fieldErrors.files && files.length === 0
+                    ? "border-destructive/60"
+                    : files.length === 0
+                      ? "border-muted-foreground/30"
+                      : "border-transparent",
+              )}
+            >
               {files.length > 0 ? (
                 <ul className="flex flex-col gap-1">
                   {files.map((file) => (
-                    <li key={`${file.name}-${file.size}`} className="flex h-7 min-w-0 items-center gap-1.5 rounded-md bg-secondary pl-2 pr-1 text-xs text-foreground">
-                      <Paperclip className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                    <li key={`${file.name}-${file.size}`} className="flex h-8 min-w-0 items-center gap-2 rounded-md bg-secondary pl-2 pr-1 text-compact text-foreground">
+                      <FileTypeIcon fileName={file.name} mimeType={file.type} />
                       <span className="min-w-0 flex-1 truncate" title={file.name}>{file.name}</span>
-                      <span className="shrink-0 tabular-nums text-muted-foreground">{Math.max(1, Math.round(file.size / 1024))} KB</span>
-                      {!savedWithoutFiles ? (
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatBytes(file.size)}</span>
+                      {canEditFiles ? (
                         <Pressable
                           aria-label={`Bỏ tệp ${file.name}`}
                           onClick={() => setFiles((prev) => prev.filter((f) => f !== file))}
-                          className="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                          className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
-                          <X className="size-3" />
+                          <X className="size-3.5" />
                         </Pressable>
                       ) : null}
                     </li>
                   ))}
                 </ul>
-              ) : null}
-              {!savedWithoutFiles ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="-ml-2"
-                    aria-invalid={Boolean(fieldErrors.files) || undefined}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Paperclip />
-                    {files.length > 0 ? "Thêm tệp" : "Đính kèm tệp"}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</span>
-                </div>
-              ) : null}
-              {fieldErrors.files ? (
-                <p role="alert" className="text-xs font-medium text-destructive">
-                  {fieldErrors.files}
-                </p>
+              ) : (
+                <FileUp className="size-4 text-muted-foreground" aria-hidden />
+              )}
+              {canEditFiles ? (
+                files.length === 0 ? (
+                  <>
+                    <p className="text-compact text-foreground">
+                      {/* Điện thoại không kéo thả được: chỉ còn lời mời chọn tệp */}
+                      <span className="max-sm:hidden">Kéo thả tệp dự thảo vào đây hoặc </span>
+                      <Pressable
+                        ref={attachRef}
+                        aria-invalid={Boolean(fieldErrors.files) || undefined}
+                        aria-describedby={fieldErrors.files ? "compose-outgoing-files-error" : undefined}
+                        className="rounded-sm font-medium underline underline-offset-2 hover:text-primary"
+                      >
+                        <span className="max-sm:hidden">chọn tệp</span>
+                        <span className="sm:hidden">Chọn tệp dự thảo</span>
+                      </Pressable>
+                    </p>
+                    <p className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</p>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      ref={attachRef}
+                      size="xs"
+                      variant="ghost"
+                      aria-describedby={fieldErrors.files ? "compose-outgoing-files-error" : undefined}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <FileUp />
+                      Thêm tệp
+                    </Button>
+                    <span className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</span>
+                  </div>
+                )
               ) : null}
             </div>
+            {fieldErrors.files ? <FieldError id="compose-outgoing-files-error">{fieldErrors.files}</FieldError> : null}
           </div>
 
-          <div className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-x-3">
-            <label htmlFor="compose-outgoing-notes" className={cn(labelClass, "pt-1.5")}>Ghi chú</label>
-            <Textarea
-              id="compose-outgoing-notes"
-              compact
-              rows={2}
-              value={notes}
-              maxLength={2000}
-              countOnlyNearLimit
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ý kiến gửi kèm cho người xử lý tiếp theo (không bắt buộc)"
-              disabled={savedWithoutFiles}
-            />
-          </div>
+          <label htmlFor="compose-outgoing-notes" className="sr-only">
+            Ghi chú
+          </label>
+          <Textarea
+            id="compose-outgoing-notes"
+            variant="bare"
+            compact
+            autoResize
+            rows={1}
+            value={notes}
+            maxLength={2000}
+            countOnlyNearLimit
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Ghi chú gửi kèm cho người xử lý tiếp theo (không bắt buộc)"
+            disabled={savedWithoutFiles}
+            className="min-h-10 sm:min-h-10"
+          />
         </div>
 
-        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-5 py-2.5 sm:px-6 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
-          <p className="min-w-0 text-xs text-muted-foreground max-sm:hidden">Số và ngày ban hành do văn thư cấp khi phát hành.</p>
+        <DialogFooter className="shrink-0 items-center border-t border-border/60 bg-muted/20 px-5 py-2.5 sm:px-6 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
+          <p className="mr-auto min-w-0 text-xs text-muted-foreground max-sm:hidden">Số và ngày ban hành do văn thư cấp khi phát hành.</p>
+          {savedWithoutFiles ? null : (
+            <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
+              Hủy
+            </Button>
+          )}
           <Button
             type="submit"
             size="sm"
             loading={isSubmitting}
             aria-keyshortcuts="Meta+Enter Control+Enter"
             title={savedWithoutFiles ? undefined : `${modKey} + Enter`}
-            className="ml-auto max-md:px-4"
+            className="max-md:px-4"
           >
             <span>{savedWithoutFiles ? "Đóng" : isSubmitting ? "Đang lưu…" : "Lưu bản nháp"}</span>
             {isSubmitting || savedWithoutFiles ? null : (
@@ -407,8 +472,8 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
               </kbd>
             )}
           </Button>
-        </footer>
-      </form>
+        </DialogFooter>
+      </DialogForm>
     </StandardDialog>
   );
 }

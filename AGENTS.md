@@ -47,7 +47,7 @@
   |---|---|
   | Nút có kiểu (chính, phụ, ghost, icon) | `Button` (`ui/button`), `size` `sm`/`xs`/`icon-sm` trong hàng và toolbar |
   | Vùng bấm tùy biến: hàng, ô lịch, thẻ, tab/mục tự dựng | `Pressable` (`ui/pressable`) |
-  | Ô nhập, nhiều dòng, chọn, tích | `Input`, `Textarea`, `Select`, `Checkbox` |
+  | Ô nhập, nhiều dòng, chọn, tích | `Input`, `Textarea`, `Select`, `Checkbox`; chip thuộc tính ở hàng dưới tên hộp tạo (Hình thức, Độ khẩn…): `Select variant="pill"` |
   | Ngày; người nhận việc | `VietnameseDatePicker`; `TaskAssigneePicker` (`tasks/detail/task-property-controls`) |
   | Toolbar, ô tìm, hàng bộ lọc trang danh sách | `list-toolbar` (`ListToolbarSearch`…), `ActiveFilterBar` |
   | Hộp thoại; xác nhận xóa; popover | `Dialog`; `DestructiveConfirmDialog`; `Popover` |
