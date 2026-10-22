@@ -5,9 +5,10 @@ import { FileText } from "lucide-react";
 import { OfficialDocument, DocumentType } from "@qcet/contracts/types/document";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { cn } from "@/lib/utils";
-import { formatLedgerDate, getLedgerStepLabel } from "@qcet/shared/lib/documents/document-ledger-format";
+import { formatLedgerDate, getLedgerDueNote, getLedgerStepLabel, isLedgerDone, todayInVietnam } from "@qcet/shared/lib/documents/document-ledger-format";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { TaskIconLink } from "@qcet/shared/lib/icons/task-icons";
 import { useLongPress } from "@/hooks/use-long-press";
@@ -68,16 +69,16 @@ export function DocumentCardList({
   // Loading Skeleton State: cùng nhịp với hàng thật (trích yếu + ngày, dòng phụ)
   if (isLoading) {
     return (
-      <div className={cn("select-none motion-safe:animate-pulse", className)} data-slot="document-card-list">
+      <div className={cn("select-none", className)} data-slot="document-card-list" aria-busy="true" aria-label="Đang tải văn bản">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={`mob-skel-${idx}`} className="mx-2 flex min-h-[52px] items-start gap-3 px-2 py-2">
-            <div className="mt-0.5 size-4 shrink-0 rounded-full bg-muted" />
+            <Skeleton className="mt-0.5 size-4 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-1.5 pt-0.5">
               <div className="flex justify-between gap-3">
-                <div className="h-3.5 w-3/4 rounded bg-muted" />
-                <div className="h-3 w-10 rounded bg-muted/60" />
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-10" />
               </div>
-              <div className="h-3 w-1/2 rounded bg-muted/60" />
+              <Skeleton className="h-3 w-1/2" />
             </div>
           </div>
         ))}
@@ -161,6 +162,9 @@ function DocumentMobileRow({
   // Năm nay thì bỏ năm cho gọn (như Linear), năm khác giữ đủ để không nhầm
   const shortDate = fullDate && fullDate.endsWith(currentYearSuffix) ? fullDate.slice(0, -currentYearSuffix.length) : fullDate;
   const meta = [code, doc.issuingAuthority].filter(Boolean).join(" · ");
+  // Hạn gấp (trễ, hôm nay, còn ≤ 2 ngày) như cột Hạn xử lý của bảng: điện thoại không có cột hạn nên nói ở dòng phụ
+  const dueNote = getLedgerDueNote(doc.dueDate, isLedgerDone(doc.status), todayInVietnam());
+  const urgentDue = dueNote && dueNote.tone !== "muted" ? dueNote : null;
 
   // Nhấn giữ: chọn văn bản (mở chế độ chọn), không mở chi tiết
   const toggle = React.useCallback(() => onToggleSelect?.(doc.id), [onToggleSelect, doc.id]);
@@ -178,7 +182,7 @@ function DocumentMobileRow({
       data-doc-id={doc.id}
       data-slot="mobile-document-card"
       aria-pressed={selectionMode ? selected : undefined}
-      aria-label={`${typeLabel} ${code || ""}: ${doc.summary}. ${step.label}${isUrgent ? `. ${urgencyConfig.label}` : ""}`}
+      aria-label={`${typeLabel} ${code || ""}: ${doc.summary}. ${step.label}${isUrgent ? `. ${urgencyConfig.label}` : ""}${urgentDue ? `. ${urgentDue.text}` : ""}`}
       onClick={() => {
         if (consumeClick()) return;
         activate();
@@ -218,6 +222,12 @@ function DocumentMobileRow({
             <span className={cn("font-medium", urgencyConfig.className.includes("destructive") ? "text-destructive" : "text-warning")}>
               {urgencyConfig.label}
               {meta ? " · " : ""}
+            </span>
+          ) : null}
+          {urgentDue ? (
+            <span className={cn("font-medium", urgentDue.tone === "danger" ? "text-destructive" : "text-warning")}>
+              {urgentDue.text}
+              {" · "}
             </span>
           ) : null}
           {meta || typeLabel}

@@ -155,7 +155,7 @@ export const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
       {
         id: "docs-dossiers",
         label: "Hồ sơ công việc",
-        href: "/documents?tab=dossiers",
+        href: "/dossiers",
         icon: IconSidebarFolder,
         aliases: ["/documents/dossiers", "/documents?tab=archive", "/documents?type=dossier", "/dossiers"],
       },

@@ -8,11 +8,14 @@ import {
   buildCompactColumnTemplate,
   DEFAULT_LEDGER_COLUMNS,
   DocumentLedgerTable,
+  DocumentLedgerToolbar,
   type LedgerColumnVisibility,
 } from "../src/components/documents/registry/document-ledger";
 import type { OfficialDocument } from "@qcet/contracts/types/document";
+import { todayInVietnam } from "@qcet/shared/lib/documents/document-ledger-format";
 
 const ALL_OFF: LedgerColumnVisibility = {
+  documentNumber: false,
   urgency: false,
   issuingAuthority: false,
   leadUnit: false,
@@ -29,23 +32,22 @@ describe("document-ledger column template", () => {
     assert.equal(tracks[1], "minmax(0,1fr)");
   });
 
-  it("màn hình hẹp bỏ hai cột chỉ hiện từ xl, nên số track khớp số ô hiển thị", () => {
+  it("mức vừa bỏ hai cột chỉ hiện ở mức rộng (cơ quan, chủ trì), nên số track khớp số ô hiển thị", () => {
     const narrow = buildColumnTemplate(DEFAULT_LEDGER_COLUMNS, false).split(" ");
-    assert.equal(narrow.length, 6);
-    assert.ok(!narrow.includes("minmax(144px,0.4fr)"), "cơ quan và chủ trì không được có trong mẫu vừa");
+    assert.deepEqual(narrow, ["24px", "minmax(0,1fr)", "28px", "104px", "88px", "112px"]);
   });
 
-  it("mức vừa chỉ hiện icon mức khẩn (28px); mức rộng đủ chỗ cho nhãn (112px)", () => {
+  it("mức vừa chỉ hiện icon mức khẩn (28px); mức rộng đủ chỗ cho nhãn Thượng khẩn kèm icon (104px)", () => {
     const medium = buildColumnTemplate({ ...ALL_OFF, urgency: true }, false).split(" ");
     const wide = buildColumnTemplate({ ...ALL_OFF, urgency: true }, true).split(" ");
     assert.equal(medium[2], "28px");
-    assert.equal(wide[2], "112px");
+    assert.equal(wide[2], "104px");
   });
 
   it("cột người dùng tắt bị bỏ khỏi mẫu, giữ đúng thứ tự cột còn lại", () => {
     const visible = { ...DEFAULT_LEDGER_COLUMNS, issuingAuthority: false, status: false };
     const wide = buildColumnTemplate(visible, true).split(" ");
-    assert.deepEqual(wide, ["24px", "minmax(0,1fr)", "112px", "minmax(144px,0.4fr)", "96px", "96px"]);
+    assert.deepEqual(wide, ["24px", "minmax(0,1fr)", "104px", "minmax(144px,0.4fr)", "104px", "88px"]);
   });
 
   it("chỉ còn ô chọn và văn bản khi tắt mọi cột tùy chọn", () => {
@@ -60,24 +62,28 @@ describe("document-ledger column template", () => {
   });
 
   it("bảng hẹp (Quick View mở) chỉ giữ chọn, văn bản, hạn xử lý và trạng thái", () => {
-    assert.deepEqual(buildCompactColumnTemplate(DEFAULT_LEDGER_COLUMNS).split(" "), ["24px", "minmax(0,1fr)", "96px", "112px"]);
+    assert.deepEqual(buildCompactColumnTemplate(DEFAULT_LEDGER_COLUMNS).split(" "), ["24px", "minmax(0,1fr)", "104px", "112px"]);
     assert.equal(buildCompactColumnTemplate({ ...DEFAULT_LEDGER_COLUMNS, dueDate: false, status: false }), "24px minmax(0,1fr)");
   });
 
-  // SPEC §17.4B: gap 8px, padding ngang 8px mỗi bên; ô văn bản còn đủ chỗ ở cận dưới của từng mức
-  const textWidth = (template: string, tableWidth: number) => {
+  // SPEC §17.4B: gap 8px; đệm ngang 8px mỗi bên (16px), từ md đệm trái 24px + phải 20px (44px). Track `minmax(Npx,…)` tính
+  // theo cận dưới N: bảng chật thì các cột đó co về đúng N, phần còn lại mới là của ô văn bản.
+  const textWidth = (template: string, tableWidth: number, padding = 16) => {
     const tracks = template.split(" ");
-    const fixed = tracks.filter((track) => track.endsWith("px")).reduce((sum, track) => sum + parseInt(track, 10), 0);
-    return tableWidth - 16 - (tracks.length - 1) * 8 - fixed;
+    const fixed = tracks.reduce((sum, track) => {
+      const min = /^minmax\((\d+)px,/.exec(track)?.[1] ?? (track.endsWith("px") ? track : "0");
+      return sum + parseInt(min, 10);
+    }, 0);
+    return tableWidth - padding - (tracks.length - 1) * 8 - fixed;
   };
 
-  it("mức hẹp tại 480px còn 208px cho ô văn bản (480 − 16 − 24 − 24 − 96 − 112)", () => {
-    assert.equal(textWidth(buildCompactColumnTemplate(DEFAULT_LEDGER_COLUMNS), 480), 208);
+  it("mức hẹp tại 480px còn 200px cho ô văn bản (480 − 16 − 24 − 24 − 104 − 112)", () => {
+    assert.equal(textWidth(buildCompactColumnTemplate(DEFAULT_LEDGER_COLUMNS), 480), 200);
   });
 
-  it("mức vừa tại 720px và mức rộng tại 1100px vẫn để ô văn bản ≥ 200px", () => {
-    assert.ok(textWidth(buildColumnTemplate(DEFAULT_LEDGER_COLUMNS, false), 720) >= 200);
-    assert.ok(textWidth(buildColumnTemplate(DEFAULT_LEDGER_COLUMNS, true), 1100) >= 200);
+  it("mức vừa tại 720px và mức rộng tại 1100px (đệm 44px của md) vẫn để ô văn bản ≥ 200px", () => {
+    assert.ok(textWidth(buildColumnTemplate(DEFAULT_LEDGER_COLUMNS, false), 720, 44) >= 200);
+    assert.ok(textWidth(buildColumnTemplate(DEFAULT_LEDGER_COLUMNS, true), 1100, 44) >= 200);
   });
 });
 
@@ -122,9 +128,12 @@ describe("hàng sổ văn bản (SPEC §17.4)", () => {
     assert.ok(!rowTag(html, "b").includes("aria-current"));
   });
 
-  it("hàng tối thiểu 40px (Carbon medium); trích yếu cắt cuối, cơ quan/chủ trì xuống dòng thay vì ghi tắt", () => {
+  it("hàng hai dòng 48px khi có số, ký hiệu, tắt thì một dòng 40px; trích yếu cắt cuối, cơ quan/chủ trì xuống dòng thay vì ghi tắt", () => {
     const html = renderTable();
-    assert.ok(rowTag(html, "a").includes("min-h-10"));
+    const desktop48 = /[\s"]min-h-12[\s"]/;
+    assert.ok(desktop48.test(rowTag(html, "a")));
+    const oneLine = rowTag(renderTable({ visibleColumns: { ...DEFAULT_LEDGER_COLUMNS, documentNumber: false } }), "a");
+    assert.ok(oneLine.includes("min-h-10") && !desktop48.test(oneLine));
     assert.ok(rowTag(html, "a").includes("max-md:min-h-12"), "điện thoại: hàng 48px như danh sách nhiệm vụ");
     assert.ok(html.includes("truncate text-compact font-medium"));
     assert.ok(html.includes("break-words text-xs leading-5 text-muted-foreground line-clamp-2"));
@@ -149,6 +158,60 @@ describe("hàng sổ văn bản (SPEC §17.4)", () => {
     assert.ok(html.includes('aria-label="Mức khẩn: Hỏa tốc"'));
     assert.ok(html.includes('aria-label="Mức khẩn: Thường"'));
     assert.ok(html.includes('aria-label="Chọn tất cả văn bản trên trang này"'));
+  });
+
+  it("văn bản thường không có chữ \"Thường\" hay cột tín hiệu: chỉ ba gạch mờ, tên truy cập vẫn đủ; văn bản khẩn giữ nhãn", () => {
+    const html = renderTable();
+    assert.ok(!/>Thường</.test(html), "không in chữ Thường trên hàng");
+    assert.ok(html.includes('aria-label="Mức khẩn: Thường"'));
+    assert.ok(html.includes('aria-label="Độ ưu tiên: Không ưu tiên"') === false, "nhãn truy cập nói mức khẩn, không nói độ ưu tiên");
+    assert.ok(/>Hỏa tốc</.test(html), "văn bản khẩn vẫn có nhãn ở mức rộng");
+  });
+
+  it("số, ký hiệu nằm dòng dưới trích yếu ở mọi mức bảng, không chen sau trích yếu bằng chữ mono bị cắt", () => {
+    const html = renderTable();
+    const number = html.match(/<span data-slot="document-number" class="([^"]+)"[^>]*>a\/UBND<\/span>/);
+    assert.ok(number, "có dòng số, ký hiệu");
+    assert.ok(!number[1].includes("hidden"), "không chỉ hiện ở mức rộng");
+    assert.ok(!html.includes("font-mono"), "không còn chữ mono trong bảng");
+    assert.ok(!html.includes("shrink-[2]"));
+    const off = renderTable({ visibleColumns: { ...DEFAULT_LEDGER_COLUMNS, documentNumber: false } });
+    assert.ok(!off.includes('data-slot="document-number"'), "tắt trong Hiển thị thì không còn dòng số");
+  });
+
+  it("ngày ban hành không có icon (như cột Ngày tạo của bảng Nhiệm vụ)", () => {
+    const html = renderTable();
+    const cell = html.match(/<span[^>]*title="Ban hành 09\/10\/2026"[^>]*>.*?<\/span>/)?.[0] ?? "";
+    assert.ok(cell, "có ô ngày ban hành");
+    assert.ok(!cell.includes("<svg"), cell);
+  });
+
+  it("chữ hạn xử lý mang màu theo độ gấp như bảng Nhiệm vụ, không tô đậm màu chữ thường", () => {
+    const shift = (days: number) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + days);
+      return todayInVietnam(d);
+    };
+    const html = renderTable({
+      documents: [doc("late", { dueDate: shift(-3) }), doc("soon", { dueDate: shift(1) }), doc("far", { dueDate: shift(10) })],
+    });
+    const dueText = (id: string) => {
+      const row = html.slice(html.indexOf(`data-doc-id="${id}"`));
+      return row.match(/<span class="truncate ([^"]+)">\d{2}\/\d{2}/)?.[1] ?? "";
+    };
+    assert.equal(dueText("late"), "text-destructive");
+    assert.equal(dueText("soon"), "text-warning");
+    assert.equal(dueText("far"), "text-muted-foreground");
+    assert.ok(!/<span class="truncate font-medium[^"]*">\d{2}\/\d{2}/.test(html), "chữ hạn không tô đậm");
+  });
+
+  it("đang tải: khối aria-busy với hàng giữ chỗ theo cột (Skeleton), không phải một vạch dài mỗi hàng", () => {
+    const html = renderTable({ isLoading: true });
+    assert.ok(html.includes('aria-busy="true"'));
+    const rows = html.match(/<div aria-hidden="true" class="grid /g) ?? [];
+    assert.equal(rows.length, 10);
+    assert.ok((html.match(/data-slot="skeleton"/g) ?? []).length >= 10 * 5, "mỗi hàng có ô giữ chỗ cho từng cột");
+    assert.ok(!html.includes("animate-pulse"));
   });
 
   it("dòng đang xem có lối tắt → sang Quick View khi có xử lý", () => {
@@ -177,5 +240,33 @@ describe("trạng thái rỗng theo ngữ cảnh", () => {
     assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "outbox", bucket: "issued" }).illustration, "doc-out");
     assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "outbox", bucket: "pending" }).illustration, "all-done");
     assert.equal(getLedgerEmptyCopy({ isResultFiltered: false, type: "submission" }).illustration, "submission");
+  });
+});
+
+describe("thanh công cụ sổ văn bản", () => {
+  const renderToolbar = (count: number | null) =>
+    renderToStaticMarkup(
+      React.createElement(DocumentLedgerToolbar, {
+        title: "Văn bản đến",
+        count,
+        searchValue: "",
+        onSearchChange: () => {},
+        urgency: "ALL",
+        onUrgencyChange: () => {},
+        status: "ALL",
+        onStatusChange: () => {},
+        onYearChange: () => {},
+        leadUnitId: "",
+        leadUnitOptions: [],
+        onLeadUnitChange: () => {},
+        onClearFilters: () => {},
+        visibleColumns: DEFAULT_LEDGER_COLUMNS,
+        onVisibleColumnsChange: () => {},
+      }),
+    );
+
+  it("số văn bản nằm cạnh tiêu đề; không có số (đang tải, lỗi, hàng lọc đã hiện số) thì không in số cũ", () => {
+    assert.ok(/data-slot="document-ledger-count"[^>]*>37<span class="sr-only"> văn bản<\/span>/.test(renderToolbar(37)));
+    assert.ok(!renderToolbar(null).includes("document-ledger-count"));
   });
 });

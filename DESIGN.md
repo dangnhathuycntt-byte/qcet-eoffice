@@ -128,15 +128,16 @@ Kiến trúc đã duyệt ở [document-workspace.md](docs/product/specs/documen
 **Sổ văn bản** (`/documents`)
 - Loại sổ và nhóm ở sidebar (Chờ xử lý / Đã xử lý / Đã phát hành, `bucket`) là phạm vi xem, không phải bộ lọc: không hiện chip, "Xóa lọc" không bỏ đi, trạng thái rỗng không báo "không khớp bộ lọc".
 - Trạng thái rỗng (`getLedgerEmptyCopy`) đặt giữa vùng danh sách (khối bao `empty-fill`, như trang Nhiệm vụ), có icon, nội dung theo ngữ cảnh: có từ khóa thì nêu từ khóa; chỉ bộ lọc thì "không khớp bộ lọc" + "Xóa bộ lọc"; nhóm trống thì nói nhóm đó sẽ hiện gì (Đã xử lý/Đã phát hành có lối "Xem văn bản chờ xử lý"); sổ trống thì nút tạo theo loại sổ.
-- Thanh công cụ và hàng bộ lọc theo mục *Trang danh sách*. Ô tìm có placeholder "Tìm văn bản… /", tìm theo số, ký hiệu, trích yếu.
-- Hàng và tiêu đề cột tối thiểu 40px (cỡ medium của Carbon). `line-clamp-*` đặt `display: -webkit-box`, nên không đặt chung thẻ với `hidden` của ô ẩn theo độ rộng (làm lệch cột); đặt ở thẻ con. Trích yếu một dòng, cắt cuối, tooltip hiện toàn văn khi hover/focus và chỉ khi bị cắt. Cơ quan ban hành và Chủ trì không ghi tắt: cột giãn theo chỗ trống (`minmax(144px,0.4fr)`), tên dài xuống tối đa 2 dòng (hàng 48px). Số, ký hiệu (do cơ quan ban hành cấp, hiển thị nguyên văn) nằm sau trích yếu khi bảng ≥ 1100px. Số đến không hiện trong hàng.
-- Cột đổi theo độ rộng **của bảng** (container query):
-  - < 720px: chọn · văn bản · hạn 96 · bước xử lý 112.
-  - 720–1099px: thêm mức khẩn (icon, 28) và ngày ban hành.
-  - ≥ 1100px: thêm cơ quan ban hành và chủ trì (144 mỗi cột); mức khẩn có nhãn (112).
-- Mức khẩn mỗi mức một icon: Hỏa tốc dấu chấm than, Thượng khẩn 3 cột (`destructive`), Khẩn 2 cột (`warning`), Thường 1 cột. Màu không thay nhãn.
-- Hạn: `destructive` khi trễ, `warning` khi hôm nay hoặc còn ≤ 2 ngày. Ngưỡng này khác Nhiệm vụ (≤ 7 ngày) **có chủ đích**: SPEC §17.4B không áp quy tắc hạn của nhiệm vụ sang văn bản.
-- Ngày luôn có năm `dd/MM/yyyy`, chỉ rút gọn `dd/MM` khi đang lọc đúng năm đó. Giá trị rỗng hiện `—` kèm tên truy cập.
+- Thanh công cụ và hàng bộ lọc theo mục *Trang danh sách*. Ô tìm có placeholder "Tìm văn bản… /", tìm theo số, ký hiệu, trích yếu. Số văn bản (`text-xs` mờ) đứng cạnh tiêu đề sổ; ẩn khi đang tải, lỗi, bằng 0 hoặc khi hàng bộ lọc đã hiện "N kết quả" (không lặp hai nơi).
+- Hàng hai dòng 48px như hàng bảng Nhiệm vụ: trích yếu (13px, một dòng, cắt cuối, tooltip toàn văn khi hover/focus và chỉ khi bị cắt), dưới là số, ký hiệu (`text-xs` mờ, chữ thường không mono, do cơ quan ban hành cấp, hiển thị nguyên văn) ở mọi mức bảng. Tắt "Số, ký hiệu" trong Hiển thị thì hàng một dòng 40px. Không chen số, ký hiệu sau trích yếu (người dùng gửi ảnh số mono bị cắt cụt 22/10/2026). Tiêu đề cột 32px. `line-clamp-*` đặt `display: -webkit-box`, nên không đặt chung thẻ với `hidden` của ô ẩn theo độ rộng (làm lệch cột); đặt ở thẻ con. Cơ quan ban hành và Chủ trì không ghi tắt: cột giãn theo chỗ trống (`minmax(144px,0.4fr)`, bảng 1623px thì 242px mỗi cột), tên dài xuống tối đa 2 dòng (vừa hàng 48px). Số đến không hiện trong hàng.
+- Cột đổi theo độ rộng **của bảng** (container query); độ rộng đo theo chữ thật `text-xs`:
+  - < 720px: chọn · văn bản · hạn 104 · bước xử lý 112.
+  - 720–1099px: thêm mức khẩn (icon, 28) và ngày ban hành (88, không icon như cột Ngày tạo của Nhiệm vụ).
+  - ≥ 1100px: thêm cơ quan ban hành và chủ trì; mức khẩn có nhãn (104, vừa "Thượng khẩn" kèm icon).
+- Mức khẩn mỗi mức một icon: Hỏa tốc dấu chấm than, Thượng khẩn 3 cột (`destructive`), Khẩn 2 cột (`warning`). Văn bản thường không có độ khẩn (NĐ 30/2020 chỉ đánh dấu Khẩn, Thượng khẩn, Hỏa tốc) nên chỉ hiện ba gạch mờ như "Không ưu tiên" của Nhiệm vụ, không có chữ "Thường" (tên vẫn có trong nhãn truy cập). Màu không thay nhãn.
+- Hạn: icon và chữ cùng màu như cột Hạn của Nhiệm vụ (`TaskDateValue`), không tô đậm: `destructive` khi trễ, `warning` khi hôm nay hoặc còn ≤ 2 ngày, còn lại chữ mờ. Ngưỡng này khác Nhiệm vụ (≤ 7 ngày) **có chủ đích**: SPEC §17.4B không áp quy tắc hạn của nhiệm vụ sang văn bản. Điện thoại không có cột hạn: hạn gấp (trễ, hôm nay, còn ≤ 2 ngày) nằm ở dòng phụ của thẻ, sau mức khẩn.
+- Ngày luôn có năm `dd/MM/yyyy`, chỉ rút gọn `dd/MM` khi đang lọc đúng năm đó. Giá trị rỗng là `TableEmptyValue` ("–" mờ) kèm tên truy cập cụ thể ("Chưa có hạn xử lý").
+- Đang tải: hàng `Skeleton` cùng lưới và cùng ô ẩn/hiện theo mức như hàng thật, trong khối `aria-busy`; khung chờ của route dựng trong cùng thẻ bo tròn với sổ để trang không nhảy khung.
 - Đang xem: `aria-current` + `bg-selected`. Đã chọn để thao tác hàng loạt: checkbox + `aria-selected`. Hai trạng thái độc lập.
 - **Thao tác trên sổ** (như bảng Nhiệm vụ, người dùng yêu cầu 21/10/2026): chuột phải, nút "⋯" cuối ô văn bản (hiện khi rê hoặc tiêu điểm) hoặc phím Menu/Shift+F10 mở menu của dòng ([document-row-menu.tsx](apps/web/src/components/documents/registry/document-row-menu.tsx)): Xem nhanh, Giao đơn vị chủ trì… (văn bản đến, người có quyền bút phê), Lưu hồ sơ…, Sao chép liên kết, Sao chép số, ký hiệu, Hỏi Trợ lý (chỉ văn bản Trợ lý được đọc). Đang mở menu thì dòng giữ nền. Space/X chọn dòng, Shift chọn dải; Shift/Ctrl/Cmd+bấm cũng là chọn; ô tích tiêu đề có trạng thái "một phần". Thanh hàng loạt là `SelectionActionBar`: Giao đơn vị (theo quyền), Lưu hồ sơ, Sao chép liên kết, Xuất Excel (CSV chặn công thức, cùng nhãn cột của sổ). Thao tác từ menu một dòng chỉ áp cho dòng đó và giữ nguyên lựa chọn khác. Điện thoại: nhấn giữ thẻ để chọn, menu là bottom sheet.
 
@@ -164,6 +165,12 @@ Kiến trúc đã duyệt ở [document-workspace.md](docs/product/specs/documen
 - PDF dựng theo cửa sổ trang; tìm kiếm chạy trên mọi trang. Bản scan không có lớp chữ thì báo rõ không tìm được.
 
 **Full Page:** trình xem chiếm phần chính; panel thông tin 320px không modal, mặc định đóng. Tệp đang xem theo `?file=`.
+
+**Hồ sơ công việc** (`/dossiers`) và **Báo cáo thời gian duyệt** (`/documents/approval-report`)
+- Khung một thẻ `WorkspacePageCard` (có trong `CARD_PAGES`) như các trang cùng nhóm; mục "Hồ sơ công việc" ở sidebar trỏ `/dossiers` (trước 22/10/2026 trỏ nhầm `/documents?tab=dossiers` nên mở sổ văn bản; liên kết cũ chuyển hướng).
+- Hồ sơ công việc: mô tả kèm số hồ sơ, tìm + `ListToolbarFilterPopover` (Trạng thái, Phân loại) + hàng chip như Sổ văn bản; bảng `ui/table` hai dòng (tên, dưới là mã hồ sơ chữ thường không mono), `TaskPaginationBar`. Không thẻ thống kê: số chỉ đếm trên trang đang tải sai với tổng. Chưa có hộp tạo hồ sơ nên không có nút tạo (API `POST /api/dossiers` đã có).
+- Báo cáo thời gian duyệt: chọn ngày bằng `VietnameseDatePicker` (không dùng ô ngày của trình duyệt), ngày trong dòng tổng `dd/MM/yyyy`, đang tải hiện `Skeleton`.
+- Chi tiết hồ sơ: lỗi thao tác là `InlineAlert` dưới hàng nút, từ chối lưu trữ là hộp `StandardDialog` + `DialogForm` có ô lý do bắt buộc; không dùng `alert`/`prompt` của trình duyệt.
 
 ## Hộp thư
 

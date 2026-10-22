@@ -57,8 +57,8 @@ export function isNotesPath(pathname: string | null | undefined): boolean {
   return normalizePath(pathname ?? "") === "/notes";
 }
 
-/** Trang tự dựng khung một thẻ (`WorkspacePageCard`): Cơ cấu & Danh bạ, Báo cáo và các trang trong menu "Thêm". */
-const CARD_PAGES = new Set(["/org", "/reports", "/settings", "/delegations", "/search", "/admin/users", "/admin/audit", "/admin/dossiers"]);
+/** Trang tự dựng khung một thẻ (`WorkspacePageCard`): Cơ cấu & Danh bạ, Báo cáo, các trang trong menu "Thêm", Hồ sơ công việc và Báo cáo thời gian duyệt. */
+const CARD_PAGES = new Set(["/org", "/reports", "/settings", "/delegations", "/search", "/admin/users", "/admin/audit", "/admin/dossiers", "/dossiers", "/documents/approval-report"]);
 
 export function isCardPagePath(pathname: string | null | undefined): boolean {
   return CARD_PAGES.has(normalizePath(pathname ?? ""));
@@ -237,6 +237,8 @@ export function resolveBreadcrumb(
   const taskSubPage = /^\/tasks\/([^/]+)$/.exec(cleanPath);
   const taskSubPageTitle = taskSubPage ? TASK_SUB_PAGES.get(taskSubPage[1]) : undefined;
   if (taskSubPageTitle) return ["QCET E-Office", taskSubPageTitle];
+  // Trang con tĩnh của Văn bản có tên riêng, không kế thừa "Văn bản & Công văn" từ tiền tố /documents
+  if (cleanPath === "/documents/approval-report") return ["QCET E-Office", "Báo cáo thời gian duyệt"];
 
   const matchedRoute =
     getRouteByPath(cleanPath) ??
