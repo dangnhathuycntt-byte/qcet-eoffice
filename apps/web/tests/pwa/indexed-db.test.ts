@@ -224,4 +224,29 @@ describe("Task 3: User-Isolated IndexedDB Offline Data Layer & Logout Purge", ()
       assert.strictEqual(queue.length, 0);
     });
   });
+
+  describe("6. Đăng xuất xóa Cache Storage riêng tư", () => {
+    afterEach(() => {
+      delete (globalThis as { caches?: unknown }).caches;
+    });
+
+    test("bỏ cache shell (trang HTML đã mở mang dữ liệu người dùng), giữ tài nguyên tĩnh", async () => {
+      const deleted: string[] = [];
+      Object.defineProperty(globalThis, "caches", {
+        value: {
+          keys: async () => ["qcet-static-2026.09.10.1", "qcet-shell-2026.09.10.1"],
+          delete: async (name: string) => {
+            deleted.push(name);
+            return true;
+          },
+          open: async () => ({ keys: async () => [], delete: async () => true }),
+        },
+        configurable: true,
+        writable: true,
+      });
+
+      await purgeUserOfflineData("user-shared-device");
+      assert.deepEqual(deleted, ["qcet-shell-2026.09.10.1"]);
+    });
+  });
 });

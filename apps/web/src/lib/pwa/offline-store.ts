@@ -435,6 +435,14 @@ export async function purgeUserOfflineData(userId: string): Promise<void> {
           continue;
         }
 
+        // Trang HTML đã mở (cache shell của sw.js, kể cả /tasks tải lúc cài) chứa dữ liệu của người vừa đăng xuất: máy dùng chung mất
+        // mạng thì sw.js trả lại bản này cho người sau. Đăng xuất đã xóa danh tính lưu tạm nên không còn khởi động ngoại tuyến được,
+        // bỏ shell không mất gì (khác `clearUserOfflineData` ở storage-manager, giữ shell cho người vẫn đăng nhập).
+        if (name.startsWith("qcet-shell")) {
+          await cacheStorage.delete(name);
+          continue;
+        }
+
         // Clean user-specific requests from runtime caches
         if (name.includes("api") || name.includes("runtime")) {
           try {

@@ -44,7 +44,8 @@ export async function GET(req: NextRequest) {
       const attachment = await getReadableAttachmentForDownload(authUser, attachmentId);
 
       if (attachment.fileObjectId) {
-        return NextResponse.redirect(new URL(`/api/file-objects/${attachment.fileObjectId}`, req.url));
+        // Đường dẫn tương đối: qua rewrite của web req.url là địa chỉ nội bộ của api, proxy không sửa Location tuyệt đối
+        return new NextResponse(null, { status: 307, headers: { Location: `/api/file-objects/${attachment.fileObjectId}` } });
       }
 
       let fileRelPath = attachment.fileUrl;

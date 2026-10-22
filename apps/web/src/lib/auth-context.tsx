@@ -12,6 +12,7 @@ import { signOut } from "next-auth/react";
 import { AuthUser, CachedUser, UserRole, OnboardingData, AuthState } from "@qcet/contracts/types/auth";
 import type { AuthMeUser } from "@qcet/contracts/page-data";
 import { purgeUserOfflineData } from "./pwa/offline-store";
+import { broadcastLogout, onLogoutBroadcast } from "./logout-broadcast";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";
 export const REGISTERED_USERS_KEY = "qcet_registered_users";
@@ -156,6 +157,14 @@ export const AuthContext = createContext<AuthContextType>({
   completeOnboarding: async () => ({ success: false, error: "Not initialized" }),
   isLoading: true,
 });
+
+// Đang đăng xuất: `logout()` tự chuyển sang /login sau khi máy chủ xóa phiên. AppShell thấy trạng thái chưa đăng nhập không được tự
+// chuyển trước: tải lại trang hủy giữa chừng việc xóa dữ liệu ngoại tuyến và `signOut`, và /login có thể tải khi cookie cũ còn
+// rồi đẩy người dùng về lại trang trong (22/10/2026).
+let logoutInProgress = false;
+export function isLogoutInProgress(): boolean {
+  return logoutInProgress;
+}
 
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
@@ -403,6 +412,16 @@ export function AuthProvider({
     };
   }, [applyResolution, rememberLastLogin, seed]);
 
+  // Tab khác đăng xuất (cùng trình duyệt): rời trang đang mở. Bỏ qua khi chính tab này đang đăng xuất, `logout()` tự chuyển trang.
+  useEffect(
+    () =>
+      onLogoutBroadcast(() => {
+        if (logoutInProgress || window.location.pathname.startsWith("/login")) return;
+        window.location.replace("/login");
+      }),
+    []
+  );
+
   const login = useCallback(
     async (_email: string, _password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
       return {
@@ -423,11 +442,9 @@ export function AuthProvider({
     []
   );
 
-  const isLoggingOutRef = React.useRef(false);
-
   const logout = useCallback(async (): Promise<void> => {
-    if (isLoggingOutRef.current) return;
-    isLoggingOutRef.current = true;
+    if (logoutInProgress) return;
+    logoutInProgress = true;
 
     let userIdToPurge = user?.id;
     if (!userIdToPurge && typeof window !== "undefined") {
@@ -502,6 +519,10 @@ export function AuthProvider({
     } finally {
       window.clearTimeout(logoutTimeout);
     }
+    broadcastLogout();
+
+    // Bước 4–5 là dọn dẹp sau khi đã gọi xóa phiên ở máy chủ: treo (IndexedDB bị chặn, Auth.js không phản hồi) thì vẫn sang /login.
+    const cleanupDeadline = window.setTimeout(() => window.location.replace("/login"), 3000);
 
     // 4. Purge user offline data
     if (userIdToPurge) {
@@ -512,16 +533,16 @@ export function AuthProvider({
       }
     }
 
-    // 5. Sign out via NextAuth / Auth.js with hard redirect fallback
+    // 5. Auth.js xóa phiên của nó, rồi tự chuyển trang: để signOut chuyển thì URL tính từ AUTH_URL hoặc req.url của api, sau proxy
+    // có thể là địa chỉ nội bộ (Auth.js không đọc x-forwarded-host ở route handler). `replace` để Back không về trang vừa rời.
     try {
-      await signOut({ callbackUrl: "/login" });
+      await signOut({ redirect: false });
     } catch {
-      if (typeof window !== "undefined") {
-        window.location.replace("/login");
-      }
-    } finally {
-      isLoggingOutRef.current = false;
+      // Route đăng xuất ở bước 3 đã xóa cookie phiên
     }
+    window.clearTimeout(cleanupDeadline);
+    window.location.replace("/login");
+    logoutInProgress = false;
   }, [user?.id]);
 
   const switchRole = useCallback((role: UserRole) => {

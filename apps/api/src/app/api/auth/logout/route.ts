@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME, SECURE_SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { revokeSession } from "@/server/auth/session-policy";
 import { extractTokensFromRequest } from "@/server/auth/current-session";
+import { getAllowedOrigins, parseHttpOrigin } from "@/server/security/csrf";
 
 const COOKIES_TO_CLEAR = [
   SESSION_COOKIE_NAME,
@@ -22,10 +23,13 @@ const COOKIES_TO_CLEAR = [
 ];
 
 export async function POST(req: NextRequest | Request): Promise<NextResponse> {
-  const requestUrl = new URL(req.url);
+  // Origin so với tập nguồn tin cậy dùng chung của CSRF, không so với req.url: trình duyệt gọi ở tên miền web, web rewrite sang
+  // api (ADR-011, `changeOrigin`) nên req.url là địa chỉ nội bộ của api, tên miền gốc nằm ở `x-forwarded-host`. Thiếu Origin vẫn
+  // cho đăng xuất (không như `assertCsrf`): đăng xuất chỉ xóa phiên của chính người gửi.
   const origin = req.headers.get("origin");
   const fetchSite = req.headers.get("sec-fetch-site");
-  if ((origin && origin !== requestUrl.origin) || fetchSite === "cross-site") {
+  const normalizedOrigin = origin ? parseHttpOrigin(origin) : null;
+  if ((origin && (!normalizedOrigin || !getAllowedOrigins(req).has(normalizedOrigin))) || fetchSite === "cross-site") {
     return NextResponse.json(
       { success: false, error: "Cross-site logout request rejected" },
       { status: 403, headers: { "Cache-Control": "no-store" } }

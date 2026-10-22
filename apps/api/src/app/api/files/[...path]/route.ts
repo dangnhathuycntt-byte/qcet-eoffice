@@ -72,7 +72,8 @@ export async function GET(
       normalizedRelative,
     });
     if (canonicalFileObjectId !== null) {
-      return NextResponse.redirect(new URL(`/api/file-objects/${canonicalFileObjectId}`, req.url));
+      // Đường dẫn tương đối: qua rewrite của web req.url là địa chỉ nội bộ của api, proxy không sửa Location tuyệt đối
+      return new NextResponse(null, { status: 307, headers: { Location: `/api/file-objects/${canonicalFileObjectId}` } });
     }
 
     return streamLocalFile(req, safeResolvedPath, requestId, { type: "inline", filename: fileName });
