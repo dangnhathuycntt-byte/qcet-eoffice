@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useSyncExternalStore } from "react";
 
 export type DisplayDensity = "comfortable" | "compact";
 
@@ -12,66 +12,63 @@ export interface DisplayDensityContextValue {
 
 const STORAGE_KEY = "qcet-display-density";
 
-const DisplayDensityContext = createContext<DisplayDensityContextValue>({
-  density: "comfortable",
-  setDensity: () => {},
-  toggleDensity: () => {},
-});
+// Mật độ nằm ở `data-density` của <html> (script chống FOUC trong layout đặt từ localStorage trước khi vẽ). Đọc qua
+// useSyncExternalStore thay cho state của provider: lần hydrate dùng giá trị server, chỉ component đọc mật độ vẽ lại.
+// State/context đổi ở provider ngay lúc mount làm khung trang đang stream bị bỏ HTML server và vẽ lại cả trang.
+const listeners = new Set<() => void>();
 
-export function useDisplayDensity() {
-  return useContext(DisplayDensityContext);
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function readDensity(): DisplayDensity {
+  return document.documentElement.getAttribute("data-density") === "compact" ? "compact" : "comfortable";
+}
+
+function serverDensity(): DisplayDensity {
+  return "comfortable";
+}
+
+function applyDensity(next: DisplayDensity, persist: boolean) {
+  document.documentElement.setAttribute("data-density", next);
+  if (persist) {
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+      window.dispatchEvent(new CustomEvent("qcet:density-change", { detail: { density: next } }));
+    } catch {
+      // Ignore private browsing storage errors
+    }
+  }
+  listeners.forEach((listener) => listener());
+}
+
+function setDensity(density: DisplayDensity) {
+  applyDensity(density, true);
+}
+
+function toggleDensity() {
+  applyDensity(readDensity() === "comfortable" ? "compact" : "comfortable", true);
+}
+
+export function useDisplayDensity(): DisplayDensityContextValue {
+  const density = useSyncExternalStore(subscribe, readDensity, serverDensity);
+  return useMemo(() => ({ density, setDensity, toggleDensity }), [density]);
 }
 
 export function DisplayDensityProvider({ children }: { children: React.ReactNode }) {
-  const [density, setDensityState] = useState<DisplayDensity>("comfortable");
-
-  // Sync state on mount from DOM attribute (set by anti-FOUC head script) or localStorage
-  useEffect(() => {
-    const fromAttr = document.documentElement.getAttribute("data-density") as DisplayDensity | null;
-    const fromStorage = localStorage.getItem(STORAGE_KEY) as DisplayDensity | null;
-    const initial: DisplayDensity = fromAttr === "compact" || fromStorage === "compact" ? "compact" : "comfortable";
-
-    setDensityState(initial);
-    document.documentElement.setAttribute("data-density", initial);
-  }, []);
-
   // Listen to cross-tab storage events
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
-        const nextDensity: DisplayDensity = e.newValue === "compact" ? "compact" : "comfortable";
-        setDensityState(nextDensity);
-        document.documentElement.setAttribute("data-density", nextDensity);
+        applyDensity(e.newValue === "compact" ? "compact" : "comfortable", false);
       }
     };
 
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, []);
-
-  const setDensity = useCallback((newDensity: DisplayDensity) => {
-    setDensityState(newDensity);
-    try {
-      localStorage.setItem(STORAGE_KEY, newDensity);
-      document.documentElement.setAttribute("data-density", newDensity);
-      window.dispatchEvent(new CustomEvent("qcet:density-change", { detail: { density: newDensity } }));
-    } catch {
-      // Ignore private browsing storage errors
-    }
-  }, []);
-
-  const toggleDensity = useCallback(() => {
-    setDensityState((prev) => {
-      const next: DisplayDensity = prev === "comfortable" ? "compact" : "comfortable";
-      try {
-        localStorage.setItem(STORAGE_KEY, next);
-        document.documentElement.setAttribute("data-density", next);
-        window.dispatchEvent(new CustomEvent("qcet:density-change", { detail: { density: next } }));
-      } catch {
-        // Ignore private browsing storage errors
-      }
-      return next;
-    });
   }, []);
 
   // Global keyboard shortcut: Shift + D to toggle density
@@ -96,11 +93,7 @@ export function DisplayDensityProvider({ children }: { children: React.ReactNode
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleDensity]);
+  }, []);
 
-  return (
-    <DisplayDensityContext.Provider value={{ density, setDensity, toggleDensity }}>
-      {children}
-    </DisplayDensityContext.Provider>
-  );
+  return <>{children}</>;
 }

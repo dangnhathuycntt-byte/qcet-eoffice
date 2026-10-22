@@ -158,7 +158,6 @@ export interface SidebarLayoutContextType {
   toggleMobile: () => void;
   currentModule: NavigationModule;
   setCurrentModule: (module: NavigationModule) => void;
-  isMounted: boolean;
   sidebarWidth: number;
   sidebarWidthMotion: MotionValue<number>;
   breadcrumbItems: Array<{ label: string; href?: string; mono?: boolean }> | null;
@@ -196,7 +195,6 @@ export function SidebarLayoutProvider({
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = React.useState<boolean>(initialCollapsed);
   const [isMobileOpen, setIsMobileOpen] = React.useState<boolean>(false);
-  const [isMounted, setIsMounted] = React.useState<boolean>(false);
   const [breadcrumbItems, setBreadcrumbItems] = React.useState<
     Array<{ label: string; href?: string; mono?: boolean }> | null
   >(null);
@@ -209,8 +207,9 @@ export function SidebarLayoutProvider({
     // Pure derivation from pathname, setter retained for interface contract compatibility
   }, []);
 
+  // Không đặt state lúc mount (kiểu `isMounted`): giá trị context đổi trước khi khung trang đang stream kịp hydrate
+  // làm React bỏ phần HTML server đã gửi và vẽ lại cả trang ở client
   React.useEffect(() => {
-    setIsMounted(true);
     // Chuyển trạng thái cũ từ localStorage sang cookie một lần; từ lần tải sau server đã render đúng
     if (readSidebarCollapsedFromCookieString(document.cookie) !== null) return;
     try {
@@ -263,7 +262,6 @@ export function SidebarLayoutProvider({
       toggleMobile,
       currentModule,
       setCurrentModule,
-      isMounted,
       sidebarWidth,
       sidebarWidthMotion,
       breadcrumbItems,
@@ -277,7 +275,6 @@ export function SidebarLayoutProvider({
       setIsMobileOpen,
       toggleMobile,
       currentModule,
-      isMounted,
       sidebarWidth,
       sidebarWidthMotion,
       breadcrumbItems,

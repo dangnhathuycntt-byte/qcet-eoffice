@@ -12,7 +12,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
 import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
 import { parseSidebarCollapsed, SIDEBAR_COLLAPSED_COOKIE } from "@/lib/navigation/sidebar-state";
-import { getRuntimeConfig } from "@/lib/server-api";
+import { getRuntimeConfig, getWebSession } from "@/lib/server-api";
 import { RuntimeFeaturesProvider } from "@/lib/runtime-features";
 
 const fontSans = Be_Vietnam_Pro({
@@ -67,6 +67,10 @@ export default async function RootLayout({
   // Đọc ở server để sidebar thu gọn đúng ngay lần vẽ đầu (đọc localStorage sau hydrate làm sidebar co lại mỗi lần tải trang)
   const cookieStore = await cookies();
   const initialSidebarCollapsed = parseSidebarCollapsed(cookieStore.get(SIDEBAR_COLLAPSED_COOKIE)?.value) === true;
+  // Phiên đọc ở server (song song với cấu hình) để AuthProvider có người dùng ngay lần vẽ đầu: phiên về sau hydrate đổi
+  // context đúng lúc khung trang stream còn chờ hiện, làm React bỏ HTML server và vẽ lại cả trang. API lỗi thì AuthProvider
+  // tự đọc phiên ở client như trước
+  const sessionUser = getWebSession().catch(() => null);
   // Cờ Trợ lý đọc ở server, cùng nguồn với trang /assistant (cờ và gateway đủ cấu hình): khung trang chừa chỗ thanh dưới
   // ngay lần vẽ đầu (đọc cờ sau hydrate làm mọi trang co lại)
   // Đọc qua GET /api/runtime-config; API lỗi thì coi như tắt Trợ lý (khung trang không chừa thanh dưới)
@@ -74,6 +78,7 @@ export default async function RootLayout({
   const assistantEnabled = runtimeConfig?.features.assistant ?? false;
   // Model chọn được ở ô soạn của Trợ lý và Agent tạo nhiệm vụ, cùng danh sách máy chủ dùng để kiểm
   const agentModels = runtimeConfig?.agentModels ?? null;
+  const initialUser = await sessionUser;
 
   return (
     <html
@@ -104,7 +109,7 @@ export default async function RootLayout({
             không co theo cỡ icon. Icon không cần truyền strokeWidth. */}
         <LucideProvider strokeWidth={1.25}>
           <MotionProvider>
-            <AuthProvider>
+            <AuthProvider initialUser={initialUser}>
               <DisplayDensityProvider>
                 <FeedbackProvider>
                   <a

@@ -26,6 +26,7 @@
 ## Phạm vi và cách làm
 - Giữ các thay đổi đang làm dở. Không tự commit, push, merge hoặc deploy nếu người dùng chưa yêu cầu.
 - Sửa nguyên nhân trong phạm vi yêu cầu; tránh refactor, dependency hay abstraction không cần thiết. Giải thích lý do khi thay đổi kiến trúc.
+- Provider bọc cả app (`app/layout.tsx`, `AppShell`) không đổi giá trị context ngay sau hydrate: không `setState` lúc mount, không fetch rồi set, không tải lười rồi dựng giá trị mới. React 19.2 hiện khung trang stream theo đợt (~300ms), context đổi trong lúc đó làm React vẽ lại cả trang ở client (chi tiết nhiệm vụ 22/10/2026). Giá trị biết ở server thì truyền từ layout (như `initialUser`, `initialSidebarCollapsed`); giá trị chỉ có ở trình duyệt thì đọc bằng `useSyncExternalStore` ở component dùng nó (như `useDisplayDensity`). Test `apps/web/tests/shell-hydration-stability.test.ts`.
 - Tái sử dụng component, dependency và helper chung. Không tạo workspace, bảng, toolbar hoặc định nghĩa metric song song.
 - Trước khi tự viết một tính năng, tra xem thư viện đã cài (Plate, Base UI, …) và component chung đã hỗ trợ chưa (tài liệu chính thức đúng phiên bản). Chỉ tự viết khi chưa có, hoặc có sẵn nhưng chưa đủ tốt; khi đó nêu rõ thiếu gì.
 - Không bịa dữ liệu nghiệp vụ, số đếm hay metadata. Dùng thuật ngữ tiếng Việt hiện có; ngày nghiệp vụ dùng `packages/shared/src/lib/academic-calendar.ts`, múi giờ `Asia/Ho_Chi_Minh`. Logic domain phải deterministic, không có side effect ẩn.

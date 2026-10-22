@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import type { z } from "zod";
 import {
@@ -60,16 +61,19 @@ export async function fetchPageData<T>(path: string, schema: z.ZodType<T>): Prom
   return { ok: true, data: schema.parse(await response.json()) };
 }
 
-/** Người dùng đang đăng nhập theo `GET /api/auth/me`; `null` khi chưa đăng nhập hoặc tài khoản đã khóa. */
-export async function getWebSession(): Promise<AuthMeUser | null> {
+/**
+ * Người dùng đang đăng nhập theo `GET /api/auth/me`; `null` khi chưa đăng nhập hoặc tài khoản đã khóa.
+ * `cache`: layout gốc và trang cùng gọi trong một yêu cầu thì chỉ một lần tới API.
+ */
+export const getWebSession = cache(async (): Promise<AuthMeUser | null> => {
   const response = await serverApiFetch("/api/auth/me");
   if (!response.ok) throw new Error(`GET /api/auth/me trả ${response.status}`);
   const body = AuthMeResponseSchema.parse(await response.json());
   return body.authenticated ? body.user : null;
-}
+});
 
-/** Cấu hình công khai theo `GET /api/runtime-config`; `null` khi API lỗi hoặc không gọi được. */
-export async function getRuntimeConfig(): Promise<PublicRuntimeConfig | null> {
+/** Cấu hình công khai theo `GET /api/runtime-config`; `null` khi API lỗi hoặc không gọi được. Một lần mỗi yêu cầu (`cache`). */
+export const getRuntimeConfig = cache(async (): Promise<PublicRuntimeConfig | null> => {
   try {
     const response = await serverApiFetch("/api/runtime-config");
     if (!response.ok) return null;
@@ -77,4 +81,4 @@ export async function getRuntimeConfig(): Promise<PublicRuntimeConfig | null> {
   } catch {
     return null;
   }
-}
+});

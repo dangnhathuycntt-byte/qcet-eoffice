@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { signOut } from "next-auth/react";
 import { AuthUser, CachedUser, UserRole, OnboardingData, AuthState } from "@qcet/contracts/types/auth";
+import type { AuthMeUser } from "@qcet/contracts/page-data";
 import { purgeUserOfflineData } from "./pwa/offline-store";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";
@@ -329,14 +330,26 @@ export async function performSessionSync(
   return resolution;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
-  const [user, setUser] = useState<AuthUser | CachedUser | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isOfflineReadOnly, setIsOfflineReadOnly] = useState<boolean>(false);
-  const [canMutate, setCanMutate] = useState<boolean>(false);
+export function AuthProvider({
+  children,
+  initialUser,
+}: {
+  children: ReactNode;
+  /**
+   * Người dùng layout gốc đọc ở server (`GET /api/auth/me`): có thì vẽ đầu đã ở trạng thái đăng nhập và không đọc lại phiên lúc
+   * mount (context đổi sau hydrate làm khung trang stream còn chờ hiện bị vẽ lại cả trang). `null` (chưa đăng nhập, API lỗi):
+   * đọc phiên ở client như trước để còn dùng bản lưu ngoại tuyến.
+   */
+  initialUser?: AuthMeUser | null;
+}) {
+  const [seed] = useState(() => (initialUser ? resolveSessionState({ authenticated: true, user: initialUser }, null) : null));
+  const [authState, setAuthState] = useState<AuthState>(seed?.state ?? { status: "loading" });
+  const [user, setUser] = useState<AuthUser | CachedUser | null>(seed?.user ?? null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(seed?.isAuthenticated ?? false);
+  const [isOfflineReadOnly, setIsOfflineReadOnly] = useState<boolean>(seed?.isOfflineReadOnly ?? false);
+  const [canMutate, setCanMutate] = useState<boolean>(seed?.canMutate ?? false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!seed);
 
   // Helper to load registered users from localStorage
   const getRegisteredUsers = (): AuthUser[] => {
@@ -362,19 +375,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const applyResolution = useCallback((resolution: SessionResolutionResult) => {
-    setAuthState(resolution.state);
-    setUser(resolution.user);
-    setIsAuthenticated(resolution.isAuthenticated);
-    setIsOfflineReadOnly(resolution.isOfflineReadOnly);
-    setCanMutate(resolution.canMutate);
-    setIsLoading(false);
-
-    if (resolution.user?.name && resolution.user?.email && typeof window !== "undefined") {
+  const rememberLastLogin = useCallback((resolvedUser: AuthUser | CachedUser | null) => {
+    if (resolvedUser?.name && resolvedUser?.email && typeof window !== "undefined") {
       try {
         localStorage.setItem(
           "qcet_last_login_user",
-          JSON.stringify({ name: resolution.user.name, email: resolution.user.email, avatar: resolution.user.avatar || undefined })
+          JSON.stringify({ name: resolvedUser.name, email: resolvedUser.email, avatar: resolvedUser.avatar || undefined })
         );
       } catch {
         // ignore
@@ -382,8 +388,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Sync session with server /api/auth/me on mount.
+  const applyResolution = useCallback((resolution: SessionResolutionResult) => {
+    setAuthState(resolution.state);
+    setUser(resolution.user);
+    setIsAuthenticated(resolution.isAuthenticated);
+    setIsOfflineReadOnly(resolution.isOfflineReadOnly);
+    setCanMutate(resolution.canMutate);
+    setIsLoading(false);
+    rememberLastLogin(resolution.user);
+  }, [rememberLastLogin]);
+
+  // Sync session with server /api/auth/me on mount, trừ khi server đã gửi kèm phiên (chỉ lưu bản ngoại tuyến như performSessionSync).
   useEffect(() => {
+    if (seed?.user) {
+      try {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(toCachedUser(seed.user as AuthUser)));
+      } catch {
+        // ignore
+      }
+      rememberLastLogin(seed.user);
+      return;
+    }
     let isMounted = true;
 
     async function syncSession() {
@@ -397,7 +422,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, [applyResolution]);
+  }, [applyResolution, rememberLastLogin, seed]);
 
   const login = useCallback(
     async (_email: string, _password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
