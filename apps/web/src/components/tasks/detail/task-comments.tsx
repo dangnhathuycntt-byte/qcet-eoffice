@@ -606,7 +606,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, initia
                     </div>
                   </div>
                 ) : (
-                  <p className="whitespace-pre-wrap break-words text-compact leading-relaxed text-foreground">
+                  <p className="whitespace-pre-wrap break-words text-compact leading-relaxed text-body-foreground">
                     {renderMentions(c.body ?? "", true)}
                   </p>
                 )}
@@ -724,7 +724,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, initia
                           onMouseEnter={() => setHighlight(i)}
                           title={`Nhắc cả ${participants.length} người trong nhiệm vụ và cùng đơn vị`}
                           className={cn(
-                            "flex h-8 w-full items-center gap-2 rounded-md px-1.5 text-left text-compact text-foreground",
+                            "flex h-8 w-full items-center gap-2 rounded-sm px-1.5 text-left text-compact text-foreground",
                             i === highlight && "bg-accent"
                           )}
                         >
@@ -758,7 +758,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, initia
                         onMouseEnter={() => setHighlight(i)}
                         title={s.inTask === false ? `${s.name}: chưa tham gia, nhắc tên sẽ thêm làm người theo dõi` : s.name}
                         className={cn(
-                          "flex h-8 w-full items-center gap-2 rounded-md px-1.5 text-left text-compact text-foreground",
+                          "flex h-8 w-full items-center gap-2 rounded-sm px-1.5 text-left text-compact text-foreground",
                           i === highlight && "bg-accent"
                         )}
                       >

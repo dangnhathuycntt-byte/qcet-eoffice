@@ -86,7 +86,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         maxLength={limit}
         onChange={handleChange}
         className={cn(
-          `w-full rounded-control border-0 bg-secondary text-foreground placeholder:text-muted-foreground outline-none transition-colors duration-100 hover:bg-accent ${fieldFocusRingClass} focus-visible:bg-selected aria-invalid:bg-danger-soft aria-invalid:text-destructive read-only:bg-transparent read-only:hover:bg-transparent read-only:focus-visible:bg-transparent read-only:cursor-default read-only:select-text disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none`,
+          `w-full rounded-control border-0 bg-secondary text-foreground placeholder:text-faint outline-none transition-colors duration-100 hover:bg-accent ${fieldFocusRingClass} focus-visible:bg-selected aria-invalid:bg-danger-soft aria-invalid:text-destructive read-only:bg-transparent read-only:hover:bg-transparent read-only:focus-visible:bg-transparent read-only:cursor-default read-only:select-text disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none`,
           compact ? "min-h-8 px-2 py-1.5 text-compact sm:min-h-7" : "min-h-24 px-3.5 py-3 text-base sm:text-sm",
           autoResize ? "resize-none overflow-hidden" : compact ? "resize-none" : "resize-y",
           variant === "bare" &&

@@ -393,7 +393,7 @@ function GroupBand({ label, count, colSpan }: { label: string; count: number; co
   return (
     <tr data-slot="group-header">
       <td colSpan={colSpan} className="sticky top-4 z-[1] bg-card px-0 py-px">
-        <div className="flex h-8 items-center gap-2 rounded-md bg-muted px-2 text-xs">
+        <div className="flex h-8 items-center gap-2 rounded-sm bg-muted px-2 text-xs">
           <span className="truncate font-medium text-foreground">{label}</span>
           <span className="shrink-0 tabular-nums text-muted-foreground">{count}</span>
         </div>

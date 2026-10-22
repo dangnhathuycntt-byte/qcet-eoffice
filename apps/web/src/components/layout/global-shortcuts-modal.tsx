@@ -10,11 +10,11 @@ import {
   X,
 } from "lucide-react";
 import { StandardDialog } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { Pressable } from "@/components/ui/pressable";
 
 import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
 interface ShortcutGroup {
   id: string;
   title: string;
@@ -205,15 +205,7 @@ export function GlobalShortcutsModal() {
 
                         <div className="flex items-center gap-1 shrink-0">
                           {item.keys.map((key, kIdx) => (
-                            <kbd
-                              key={kIdx}
-                              className={cn(
-                                "inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-[4px] font-mono text-xs font-medium leading-none",
-                                "bg-background text-foreground border border-border shadow-2xs"
-                              )}
-                            >
-                              {key}
-                            </kbd>
+                            <Kbd key={kIdx}>{key}</Kbd>
                           ))}
                         </div>
                       </div>
@@ -228,7 +220,7 @@ export function GlobalShortcutsModal() {
         {/* Footer Note */}
         <div className="border-t border-border px-6 py-2.5 bg-muted/20 flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            Nhấn <kbd className="px-1 py-0.5 font-mono text-xs bg-background rounded border border-border/80 text-foreground">?</kbd> bất cứ lúc nào để mở bảng này
+            Nhấn <Kbd>?</Kbd> bất cứ lúc nào để mở bảng này
           </span>
           <span className="font-mono text-xs">QCET E-Office</span>
         </div>

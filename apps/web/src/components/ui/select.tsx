@@ -66,8 +66,8 @@ function renderItem(option: SelectOption, compact = false) {
       value={option.value}
       disabled={option.disabled}
       className={cn(
-        "flex cursor-pointer items-center rounded-lg px-2.5 text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        compact ? "min-h-8 py-1 text-xs sm:min-h-7" : "py-2 text-sm sm:py-1.5",
+        "flex cursor-pointer items-center rounded-sm px-2.5 text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        compact ? "min-h-8 py-1 text-compact" : "py-2 text-sm sm:py-1.5",
       )}
     >
       <BaseSelect.ItemText className="min-w-0 truncate">

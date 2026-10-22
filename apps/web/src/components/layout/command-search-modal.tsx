@@ -698,7 +698,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             }}
             onKeyDown={handleInputKeyDown}
             placeholder="Gõ lệnh hoặc tìm nhiệm vụ, văn bản, cán bộ…"
-            className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
+            className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-faint max-md:text-base"
           />
           {isLoading ? <Spinner size="md" tone="muted" label="Đang tìm" /> : null}
           {query ? (
@@ -762,8 +762,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={(e) => executeItem(item, e.metaKey || e.ctrlKey)}
                     // Hàng 46px, nền dòng chọn lùi 2px trên dưới, bo 8px (Linear)
-                    // Chữ 12px như menu chuột phải (13px của Be Vietnam Pro trông to hơn Inter cùng cỡ của Linear)
-                    className="h-11.5 cursor-pointer select-none py-0.5 text-xs text-foreground"
+                    // Chữ 13px như Linear và các menu (đổi 22/10/2026; trước đó 12px vì Be Vietnam Pro 13px trông to hơn Inter cùng cỡ)
+                    className="h-11.5 cursor-pointer select-none py-0.5 text-compact text-foreground"
                   >
                     <div className={cn("flex h-full items-center gap-3 rounded-sm px-3", index === activeIndex && "bg-accent")}>
                       <PaletteRow item={item} query={trimmedQuery} />

@@ -310,7 +310,7 @@ export function NotesView() {
 
   return (
     <div data-slot="notes-workspace" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
+      <header className="flex h-11 shrink-0 items-center gap-1 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
         <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
         {searchOpen ? (
           <>

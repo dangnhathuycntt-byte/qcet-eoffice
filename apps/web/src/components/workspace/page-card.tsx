@@ -32,9 +32,9 @@ export function WorkspacePageCard({
       <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-1.5 p-2 max-md:p-0">
         <main
           data-slot="workspace-page-card"
-          className="@container flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-foreground max-md:rounded-none max-md:border-0"
+          className="@container flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border-hairline border-border bg-card text-foreground shadow-low max-md:rounded-none max-md:border-0 max-md:shadow-none"
         >
-          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-4 pb-2 pt-2.5 sm:px-6">
+          <header className="flex shrink-0 items-start justify-between gap-3 px-4 pb-2 pt-2.5 sm:px-6">
             <div className="min-w-0">
               <h1 className={cn("truncate text-compact font-semibold text-foreground", hideTitleOnMobile && "max-md:sr-only")}>{title}</h1>
               {description ? <p className={cn("mt-0.5 text-xs text-muted-foreground", hideDescriptionOnMobile && "max-md:hidden")}>{description}</p> : null}
