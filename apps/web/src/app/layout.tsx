@@ -13,6 +13,7 @@ import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-man
 import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
 import { parseSidebarCollapsed, SIDEBAR_COLLAPSED_COOKIE } from "@/lib/navigation/sidebar-state";
 import { getRuntimeConfig } from "@/lib/server-api";
+import { RuntimeFeaturesProvider } from "@/lib/runtime-features";
 
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -112,9 +113,11 @@ export default async function RootLayout({
                   >
                     Chuyển đến nội dung chính
                   </a>
-                  <AppShell initialSidebarCollapsed={initialSidebarCollapsed} assistantEnabled={assistantEnabled} agentModels={agentModels}>
-                    {children}
-                  </AppShell>
+                  <RuntimeFeaturesProvider features={runtimeConfig?.features ?? null}>
+                    <AppShell initialSidebarCollapsed={initialSidebarCollapsed} assistantEnabled={assistantEnabled} agentModels={agentModels}>
+                      {children}
+                    </AppShell>
+                  </RuntimeFeaturesProvider>
                   <PWAServiceWorkerManager />
                   <WebVitalsReporter />
                   <ConfirmHost />

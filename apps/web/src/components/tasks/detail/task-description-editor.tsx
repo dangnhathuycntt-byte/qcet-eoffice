@@ -30,7 +30,8 @@ interface TaskDescriptionEditorProps extends Omit<TaskBlockEditorProps, "collab"
 
 /**
  * Ô mô tả của nhiệm vụ đã có (trang chi tiết, ngăn việc con). Cờ `taskCollab` bật thì nhiều người cùng sửa trực tiếp (ADR-014),
- * tắt thì editor lưu qua PATCH như cũ. Cờ tải sau lần render đầu nên editor có thể đổi chế độ một lần ngay khi mở.
+ * tắt thì editor lưu qua PATCH như cũ. Cờ đến từ server cùng trang (`RuntimeFeaturesProvider`); chỉ khi server không đọc được
+ * cờ thì cờ tải sau lần render đầu và editor có thể đổi chế độ một lần ngay khi mở.
  */
 export function TaskDescriptionEditor({ currentUser, ...props }: TaskDescriptionEditorProps) {
   const collabEnabled = useRuntimeFeature("taskCollab");
