@@ -135,6 +135,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadFile, type UploadedFile } from "@/lib/files/upload-file";
+import { selectionTextRect } from "@/lib/selection-rect";
 import { usePersonnelList, type PersonnelOption } from "@/hooks/use-personnel-list";
 import type { StaffTask } from "@qcet/contracts/types/dashboard";
 import {
@@ -1525,15 +1526,16 @@ function FloatingToolbar({ editor }: { editor: any }) {
         setVisible(false);
         return;
       }
-      const range = domSel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
+      // Neo theo khung của phần chữ được chọn, không theo khung các khối chứa nó (chọn qua nhiều mục danh sách thì khung
+      // khối rộng hết editor, thanh bị đẩy sang phải). Tính lại mỗi lần đo để thanh đi theo chữ khi cuộn.
+      const range = domSel.getRangeAt(0).cloneRange();
+      const textRect = () => selectionTextRect(range) ?? range.getBoundingClientRect();
+      const rect = textRect();
       if (rect.width === 0 && rect.height === 0) {
         setVisible(false);
         return;
       }
-      refs.setPositionReference({
-        getBoundingClientRect: () => rect,
-      });
+      refs.setPositionReference({ getBoundingClientRect: textRect });
       setVisible(true);
     };
 
