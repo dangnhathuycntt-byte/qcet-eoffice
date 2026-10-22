@@ -60,3 +60,25 @@ test("FLOATING_ENTER_CLASS chỉ chuyển opacity và scale", () => {
   assert.match(value, /(^|\s)transition-\[opacity,scale\](\s|$)/);
   assert.doesNotMatch(value, /transition-all|transform|translate|left|top/);
 });
+
+// Menu có ô tìm và danh sách cao cố định: khung cao tối đa bằng chỗ trống (MENU_POPUP_FIT_CLASS), danh sách co lại. Danh sách
+// tự trừ chiều cao phần phía trên (`calc(var(--available-height)-48px)`) thì thêm một hàng là menu cao hơn chỗ trống: nút nằm
+// thấp (hàng chip dưới thân hộp tạo) thì menu lật lên và ô tìm ra ngoài mép trên màn hình (22/10/2026)
+test("menu chọn người/văn bản vừa chỗ trống cạnh nút", () => {
+  const fit = readFileSync("src/components/ui/menu.tsx", "utf8").match(/export const MENU_POPUP_FIT_CLASS = "([^"]+)"/)?.[1];
+  assert.equal(fit, "md:flex md:max-h-[var(--available-height)] md:flex-col");
+  for (const file of [
+    "src/components/meetings/participants-picker.tsx",
+    "src/components/tasks/create/person-pill-picker.tsx",
+    "src/components/tasks/create/source-document-chip.tsx",
+    "src/components/tasks/detail/task-property-controls.tsx",
+  ]) {
+    const source = readFileSync(file, "utf8");
+    assert.ok(source.includes("MENU_POPUP_FIT_CLASS"), `${file}: khung menu phải gắn MENU_POPUP_FIT_CLASS`);
+    assert.match(source, /max-h-(56|60|64|\[420px\]) min-h-0 overflow-y-auto/, `${file}: danh sách phải co lại được (min-h-0)`);
+  }
+  const offenders = sourceFiles("src")
+    .filter((file) => /calc\(var\(--available-height\)-\d+px\)/.test(readFileSync(file, "utf8")))
+    .map((file) => relative("src", file));
+  assert.deepEqual(offenders, [], "không tự trừ chiều cao phần phía trên khỏi --available-height");
+});

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Dialog as BaseDialog } from "@base-ui/react/dialog";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SHEET_MOTION_CLASS, SheetKeyboardSync } from "@/components/ui/menu";
@@ -35,11 +35,15 @@ export interface StandardDialogProps {
   /** Phần tử nhận focus khi mở (Base UI `initialFocus`); mặc định là phần tử tab được đầu tiên. */
   initialFocus?: React.ComponentProps<typeof BaseDialog.Popup>["initialFocus"];
   /**
-   * compose: hộp tạo/soạn theo khung hộp Tạo nhiệm vụ (Soạn văn bản đi, Tạo cuộc họp): nền trắng, không đệm để
-   * `DialogComposeHeader`, phần thân và `DialogComposeFooter` tự chia lề. Dùng kèm `showHeader={false}`.
+   * compose: hộp tạo/soạn theo hộp New issue của Linear (Soạn văn bản đi, Tạo cuộc họp): nền trắng, không đệm để
+   * `DialogComposeHeader`, `DialogComposeBody`, `DialogComposeProperties` và `DialogComposeFooter` tự chia lề; nút phóng to ở
+   * đầu hộp. Dùng kèm `showHeader={false}`.
    */
   variant?: "default" | "compose";
 }
+
+/** Trạng thái phóng to của hộp `variant="compose"`; nút ở `DialogComposeHeader` đọc và đổi. Giữ qua các lần mở trong phiên. */
+const ComposeExpandContext = React.createContext<{ expanded: boolean; toggle: () => void } | null>(null);
 
 const sizeClasses: Record<NonNullable<StandardDialogProps["size"]>, string> = {
   sm: "max-w-[400px]",
@@ -70,6 +74,8 @@ export function StandardDialog({
   initialFocus,
   variant = "default",
 }: StandardDialogProps) {
+  const [expanded, setExpanded] = React.useState(false);
+  const compose = React.useMemo(() => ({ expanded, toggle: () => setExpanded((value) => !value) }), [expanded]);
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal keepMounted={open}>
@@ -84,6 +90,9 @@ export function StandardDialog({
             SHEET_MOTION_CLASS,
             sizeClasses[size],
             variant === "compose" && "gap-0 bg-background p-0 sm:p-0 max-md:pb-0!",
+            // Phóng to như Linear (đo 22/10/2026: 750 → 820px, cao gần hết màn): giữ mép trên 10%, chiều cao cố định để phần
+            // thân giãn và hàng chip cùng chân hộp xuống đáy. Điện thoại đã là tấm đáy nên bỏ qua
+            variant === "compose" && expanded && "md:h-[85dvh] md:max-w-[820px]",
             className
           )}
         >
@@ -119,7 +128,7 @@ export function StandardDialog({
               </BaseDialog.Description>
             </>
           )}
-          {children}
+          {variant === "compose" ? <ComposeExpandContext.Provider value={compose}>{children}</ComposeExpandContext.Provider> : children}
         </BaseDialog.Popup>
       </BaseDialog.Portal>
     </BaseDialog.Root>
@@ -174,22 +183,64 @@ export function DialogBreadcrumb({ items, icon, className }: { items: React.Reac
   );
 }
 
-/** Đầu hộp tạo/soạn (`StandardDialog variant="compose"`): dòng `DialogBreadcrumb` và nút đóng tròn, lề 20/20/0/24 như hộp Tạo nhiệm vụ. */
+/**
+ * Đầu hộp tạo/soạn (`StandardDialog variant="compose"`): dòng `DialogBreadcrumb`, nút phóng to/thu nhỏ (từ md) và nút đóng
+ * tròn, lề 20/20/0/24 như hộp Tạo nhiệm vụ.
+ */
 export function DialogComposeHeader({ items }: { items: React.ReactNode[] }) {
+  const compose = React.useContext(ComposeExpandContext);
   return (
-    <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
+    <header className="flex shrink-0 items-center gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
       <DialogBreadcrumb items={items} />
-      <BaseDialog.Close render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 rounded-full max-md:size-8" />}>
-        <X />
-      </BaseDialog.Close>
+      <div className="ml-auto flex shrink-0 items-center gap-0.5">
+        {compose ? <DialogExpandButton expanded={compose.expanded} onToggle={compose.toggle} /> : null}
+        <BaseDialog.Close render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="rounded-full max-md:size-8" />}>
+          <X />
+        </BaseDialog.Close>
+      </div>
     </header>
   );
 }
 
-/** Chân hộp tạo/soạn: nền trắng kẻ trên, lề 12/20, chừa vùng an toàn đáy trên điện thoại. */
-export function DialogComposeFooter({ className, children }: { className?: string; children: React.ReactNode }) {
+/** Nút phóng to/thu nhỏ hộp tạo/soạn, tròn 28px; chỉ từ md (điện thoại hộp đã là tấm đáy hoặc gần hết màn). */
+function DialogExpandButton({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  const label = expanded ? "Thu nhỏ" : "Phóng to";
   return (
-    <DialogFooter className={cn("shrink-0 items-center border-t border-border/60 px-5 py-3 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]", className)}>
+    <Button variant="ghost" size="icon-xs" aria-label={label} title={label} onClick={onToggle} className="rounded-full max-md:hidden">
+      {expanded ? <Minimize2 /> : <Maximize2 />}
+    </Button>
+  );
+}
+
+/**
+ * Phần thân cuộn của hộp tạo/soạn theo hộp New issue của Linear: tên, mô tả ngay dưới tên (không đường kẻ), rồi phần đi kèm
+ * như danh sách tệp. Hàng chip và chân hộp nằm ngoài vùng cuộn nên luôn thấy; hộp phóng to thì phần này giãn hết chỗ còn lại.
+ */
+export function DialogComposeBody({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <div className={cn("flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-4 pb-3 md:px-6", className)}>{children}</div>;
+}
+
+/**
+ * Hàng chip thuộc tính của hộp tạo/soạn (`Select variant="pill"`, `VietnameseDatePicker variant="pill"`…), nằm dưới phần thân
+ * như Linear: chip cách nhau 8px, tự xuống dòng. `errors`: dòng `FieldError` của chip (ngày, giờ, tệp) ngay dưới hàng.
+ */
+export function DialogComposeProperties({ errors, children }: { errors?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex shrink-0 flex-col gap-1 px-5 md:px-6">
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+      {errors}
+    </div>
+  );
+}
+
+/**
+ * Chân hộp tạo/soạn: không kẻ (cách hàng chip 24px là đủ tách, như Linear), lề trái thẳng hàng chip, lề phải thẳng nút đóng,
+ * chừa vùng an toàn đáy trên điện thoại. `start`: thao tác phụ bên trái (nút đính kèm); nút Hủy và nút chính ở `children`.
+ */
+export function DialogComposeFooter({ start, className, children }: { start?: React.ReactNode; className?: string; children: React.ReactNode }) {
+  return (
+    <DialogFooter className={cn("shrink-0 items-center px-5 pt-6 pb-3 md:pl-6 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]", className)}>
+      {start ? <div className="mr-auto flex items-center gap-2">{start}</div> : null}
       {children}
     </DialogFooter>
   );

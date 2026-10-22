@@ -54,6 +54,13 @@ describe("UI Components Ergonomics & Touch Targets", () => {
       assert.ok(html.includes("sm:h-9"), "Desktop input height must be 36px");
       assert.match(html, /\btext-sm\b/, "Input should have text-sm (14px font size)");
     });
+
+    // globals.css ép ô nhập trên điện thoại về 16px (chống iPhone phóng trang) trừ ô có data-large-text; ô tên hộp Tạo cuộc họp
+    // từng bị ép từ 20px xuống 16px (22/10/2026)
+    it("title variant keeps its 20px phone size out of the 16px input rule", () => {
+      assert.match(renderToStaticMarkup(React.createElement(Input, { variant: "title" })), /data-large-text="true"/);
+      assert.doesNotMatch(renderToStaticMarkup(React.createElement(Input)), /data-large-text/);
+    });
   });
 
   describe("UserAvatar & Initials Standards", () => {

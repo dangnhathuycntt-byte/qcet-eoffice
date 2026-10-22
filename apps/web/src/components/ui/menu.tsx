@@ -34,6 +34,13 @@ export const MENU_POPUP_CLASS =
   "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-compact text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] data-[closed]:hidden";
 
 /**
+ * Thêm vào khung menu/popover có ô tìm và danh sách cao cố định (chọn người, chọn văn bản): khung cao tối đa bằng chỗ trống
+ * cạnh nút (`--available-height` của Base UI), danh sách gắn `min-h-0` thì co lại, ô tìm luôn thấy. Thiếu nó thì khi nút nằm
+ * thấp (hàng chip dưới phần thân hộp tạo, 22/10/2026) menu lật lên và mép trên ra ngoài màn hình. Điện thoại là tấm đáy nên bỏ qua.
+ */
+export const MENU_POPUP_FIT_CLASS = "md:flex md:max-h-[var(--available-height)] md:flex-col";
+
+/**
  * Điện thoại (< md): menu/popover thành bottom sheet kiểu Linear mobile — lớp tối phía sau, khung bám đáy rộng hết màn,
  * bo góc trên, thanh kéo + tiêu đề (`MenuSheetHeader`), hàng cao 40px cho ngón tay. Từ md trở lên giữ popup như cũ.
  * Positioner của Base UI ghi `position/top/left/transform` inline nên các lớp vị trí phải `!` mới thắng.

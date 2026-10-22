@@ -77,7 +77,7 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
 export type { PersonnelOption as TaskPersonnelOption } from "@/hooks/use-personnel-list";
 import type { PersonnelOption } from "@/hooks/use-personnel-list";
 import { Pressable } from "@/components/ui/pressable";
-import { MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { MENU_POPUP_FIT_CLASS, MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 import { Spinner } from "@/components/ui/spinner";
 export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, loading, onSelect }: {
@@ -120,7 +120,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
       <Combobox.Portal>
         <Combobox.Backdrop className={SHEET_BACKDROP_CLASS} />
         <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={8}>
-          <Combobox.Popup className={cn(propertyPopupClassName, "w-64 max-w-[var(--available-width)]", SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")} style={propertyMotionStyle}>
+          <Combobox.Popup className={cn(propertyPopupClassName, "w-64 max-w-[var(--available-width)]", MENU_POPUP_FIT_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")} style={propertyMotionStyle}>
             {open && <SheetKeyboardSync />}
             <MenuSheetHeader title="Người phụ trách" />
             <Combobox.InputGroup className="m-1 border-b border-border/40 pb-1.5">
@@ -129,7 +129,7 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
             <Combobox.Empty>
               <div className="px-2 py-3 text-center text-xs text-muted-foreground">{loading ? "Đang tải danh sách cán bộ…" : "Không tìm thấy cán bộ phù hợp"}</div>
             </Combobox.Empty>
-            <Combobox.List className="max-h-60 overflow-y-auto overscroll-contain outline-none max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
+            <Combobox.List className="max-h-60 min-h-0 overflow-y-auto overscroll-contain outline-none max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
               {(person) => (
                 <Combobox.Item key={person.id} value={person} className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs font-normal outline-none data-[highlighted]:bg-muted data-[selected]:bg-accent data-[selected]:font-medium">
                   <span className="flex min-w-0 items-center gap-2">

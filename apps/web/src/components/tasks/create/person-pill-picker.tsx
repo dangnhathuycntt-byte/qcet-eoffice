@@ -8,7 +8,7 @@ import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { propertyTriggerVariants } from "@/components/ui/property-control-styles";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MENU_POPUP_FIT_CLASS, MenuSheetHeader, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import type { DepartmentPersonnel } from "@/hooks/use-department-list";
 
@@ -111,7 +111,7 @@ export function PersonPillPicker({
         <Combobox.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12}>
           <Combobox.Popup
             aria-label="Chọn người chủ trì"
-            className={cn("w-64 max-w-[var(--available-width)]", MENU_POPUP_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
+            className={cn("w-64 max-w-[var(--available-width)]", MENU_POPUP_CLASS, MENU_POPUP_FIT_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
           >
             <MenuSheetHeader title="Người chủ trì" />
             <Combobox.Input aria-label="Tìm người chủ trì" placeholder="Tìm người…" render={<Input variant="menu" className="mb-1 border-b border-border/60" />} />
@@ -120,7 +120,7 @@ export function PersonPillPicker({
                 {people.length === 0 ? (loading ? "Đang tải danh sách…" : "Chưa có nhân sự trong đơn vị này") : "Không tìm thấy người phù hợp"}
               </div>
             </Combobox.Empty>
-            <Combobox.List className="max-h-56 overflow-y-auto overscroll-contain outline-none data-[empty]:p-0 max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
+            <Combobox.List className="max-h-56 min-h-0 overflow-y-auto overscroll-contain outline-none data-[empty]:p-0 max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
               {(person: DepartmentPersonnel) => (
                 <Combobox.Item key={person.id} value={person} className={MENU_OPTION_ROW_CLASS}>
                   <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />

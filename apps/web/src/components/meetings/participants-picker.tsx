@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { MenuActionItem, MenuContent, MenuOptionItem, MenuRoot, MenuSeparator, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
+import { MENU_POPUP_FIT_CLASS, MenuActionItem, MenuContent, MenuOptionItem, MenuRoot, MenuSeparator, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
 import { useDepartmentList } from "@/hooks/use-department-list";
 
 export interface MeetingPerson {
@@ -94,6 +94,9 @@ const MENU_NAV_KEYS = ["ArrowDown", "ArrowUp", "Escape", "Enter", "Tab"];
  * tìm có hàng "Phạm vi" mở menu con Toàn trường, Ban Giám hiệu, Trưởng đơn vị… (người dùng yêu cầu "thêm một li là phạm
  * vi: toàn trường, trưởng đơn vị" 22/10/2026; trước đó "Toàn trường" là một hàng riêng).
  */
+// Danh sách từng tự trừ 48px cho ô tìm nên khi có thêm hàng "Phạm vi" menu cao hơn chỗ trống (22/10/2026)
+const PEOPLE_MENU_CLASS = cn("w-64", MENU_POPUP_FIT_CLASS);
+
 function PeopleMenuBody({
   directory,
   query,
@@ -202,11 +205,12 @@ function PeopleMenuBody({
           <MenuSeparator />
         </>
       ) : null}
-      {/* Đủ chỗ cho cả 15 đơn vị khi màn cao; màn thấp thì vừa chỗ còn lại (trừ ô tìm). Danh sách đơn vị cao ít nhất ~7
-          hàng: dưới nút không đủ chỗ thì menu lật lên trên thay vì co còn vài hàng */}
+      {/* Đủ chỗ cho cả 15 đơn vị khi màn cao; màn thấp thì chỉ danh sách co lại vừa chỗ còn lại (khung menu cao tối đa bằng
+          chỗ trống, `MENU_POPUP_FIT_CLASS`). Danh sách đơn vị cao ít nhất ~7 hàng: dưới nút không đủ chỗ thì menu lật lên trên
+          thay vì co còn vài hàng */}
       <div
         className={cn(
-          "max-h-[min(420px,calc(var(--available-height)-48px))] overflow-y-auto overscroll-contain max-md:max-h-none",
+          "max-h-[420px] min-h-0 overflow-y-auto overscroll-contain max-md:max-h-none",
           !folded && units.length >= 7 && "min-h-48 max-md:min-h-0"
         )}
       >
@@ -316,7 +320,7 @@ export function ParticipantsPicker({
           <span className="truncate">{value.length > 0 ? `${value.length} người` : "Thành phần"}</span>
         </MenuTrigger>
       )}
-      <MenuContent align={align} mobileSheet sheetTitle="Thành phần" positionerClassName="z-[60]" className="w-64" aria-label="Chọn người dự họp">
+      <MenuContent align={align} mobileSheet sheetTitle="Thành phần" positionerClassName="z-[60]" className={PEOPLE_MENU_CLASS} aria-label="Chọn người dự họp">
         <PeopleMenuBody
           directory={directory}
           query={query}
@@ -369,7 +373,7 @@ export function ChairPicker({
         {value ? <UserAvatar name={value.name} avatarUrl={value.avatarUrl} size="xs" /> : <User className="size-3.5 text-muted-foreground" />}
         <span className="max-w-[140px] truncate">{value?.name ?? emptyLabel}</span>
       </MenuTrigger>
-      <MenuContent align="start" mobileSheet sheetTitle="Chủ tọa" positionerClassName="z-[60]" className="w-64" aria-label="Chọn chủ tọa">
+      <MenuContent align="start" mobileSheet sheetTitle="Chủ tọa" positionerClassName="z-[60]" className={PEOPLE_MENU_CLASS} aria-label="Chọn chủ tọa">
         <PeopleMenuBody
           directory={directory}
           query={query}

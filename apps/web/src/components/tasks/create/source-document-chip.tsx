@@ -6,7 +6,7 @@ import { FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
+import { MENU_OPTION_ROW_CLASS, MENU_POPUP_CLASS, MENU_POPUP_FIT_CLASS, MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 export interface SourceDocumentOption {
   id: string;
@@ -137,7 +137,7 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
           {/* Rộng hơn menu thường (384px) vì trích yếu là nội dung chính cần đọc được */}
           <Combobox.Popup
             aria-label="Chọn văn bản nguồn"
-            className={cn("w-96 max-w-[var(--available-width)]", MENU_POPUP_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
+            className={cn("w-96 max-w-[var(--available-width)]", MENU_POPUP_CLASS, MENU_POPUP_FIT_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
           >
             {open && <SheetKeyboardSync />}
             <MenuSheetHeader title="Văn bản nguồn" />
@@ -157,7 +157,7 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
                       : "Không có văn bản đến nào chưa gắn nhiệm vụ"}
               </div>
             </Combobox.Empty>
-            <Combobox.List className="max-h-64 overflow-y-auto overscroll-contain outline-none data-[empty]:p-0 max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
+            <Combobox.List className="max-h-64 min-h-0 overflow-y-auto overscroll-contain outline-none data-[empty]:p-0 max-md:max-h-[calc(55dvh-var(--keyboard-height,0px))]">
               {(opt: SourceDocumentOption) =>
                 opt.id === UNLINK_OPTION.id ? (
                   <Combobox.Item key={opt.id} value={opt} className={cn(MENU_OPTION_ROW_CLASS, "text-muted-foreground")}>
