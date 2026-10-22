@@ -1,6 +1,9 @@
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { loadEnvConfig } from '@next/env';
 
 loadEnvConfig(process.cwd());
@@ -37,6 +40,9 @@ const GATEWAY_ENV = {
 
 const userIds: string[] = [];
 const convIds: string[] = [];
+// Lượt có tệp lưu FileObject và ghi tệp ra UPLOADS_DIR: dùng thư mục tạm, dọn trước khi xóa người dùng (khóa ngoại uploaded_by_id)
+let uploadsDir = '';
+let originalUploadsDir: string | undefined;
 
 interface SentGatewayRequest {
   body: { tools?: Array<{ function: { name: string } }>; messages: Array<{ role: string; content: unknown }> };
@@ -140,14 +146,23 @@ describe('POST /api/assistant/chat', () => {
   let stranger: User;
 
   before(async () => {
+    originalUploadsDir = process.env.UPLOADS_DIR;
+    uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qcet-assistant-route-'));
+    process.env.UPLOADS_DIR = uploadsDir;
     owner = await makeUser('chu');
     stranger = await makeUser('la');
   });
 
   after(async () => {
+    const files = await prisma.fileObject.findMany({ where: { uploadedById: { in: userIds } }, select: { id: true } });
+    await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: files.map((file) => file.id) } } });
+    await prisma.fileObject.deleteMany({ where: { uploadedById: { in: userIds } } });
     await prisma.auditEvent.deleteMany({ where: { entityId: { in: convIds } } });
     await prisma.assistantConversation.deleteMany({ where: { id: { in: convIds } } });
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    fs.rmSync(uploadsDir, { recursive: true, force: true });
+    if (originalUploadsDir === undefined) delete process.env.UPLOADS_DIR;
+    else process.env.UPLOADS_DIR = originalUploadsDir;
     globalThis.fetch = realFetch;
     resetFeatureFlagOverrides();
   });
