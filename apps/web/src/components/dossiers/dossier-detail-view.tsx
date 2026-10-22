@@ -31,8 +31,10 @@ import { confirmAction } from "@/components/ui/confirm-host";
 import { DossierDisposalPanel } from "./dossier-disposal-panel";
 import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
-import { Pressable } from "@/components/ui/pressable";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { Textarea } from "@/components/ui/textarea";
+import { DialogFooter, DialogForm, FieldError, StandardDialog } from "@/components/ui/dialog";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -96,7 +98,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   },
   ACTIVE: {
     label: "Hoạt động",
-    className: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+    className: "bg-muted text-muted-foreground border-border/60",
   },
   CLOSED: {
     label: "Đã đóng",
@@ -110,13 +112,14 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
     label: "Đã nộp lưu trữ",
     className: "bg-warning/10 text-warning border-warning/20",
   },
+  // Trạng thái cuối chữ mờ như cột Trạng thái của danh sách hồ sơ; chỉ hai bước còn việc phải làm mới tô màu cảnh báo
   ACCEPTED: {
     label: "Đã chấp nhận",
-    className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+    className: "bg-muted/60 text-muted-foreground border-border/40",
   },
   ARCHIVED: {
     label: "Đã lưu trữ",
-    className: "bg-emerald-600/10 text-emerald-800 border-emerald-600/20",
+    className: "bg-muted/60 text-muted-foreground border-border/40",
   },
 };
 
@@ -148,6 +151,13 @@ const ITEM_TYPE_LABEL: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Lỗi thao tác từ API (RFC 9457 `detail` hoặc `error`); không đọc được thì nói chung. */
+async function readActionError(res: Response): Promise<string> {
+  const json = await res.json().catch(() => null);
+  const detail = json && (json.detail || json.error?.message || json.error || json.title);
+  return typeof detail === "string" && detail ? detail : "Chưa thực hiện được thao tác. Thử lại sau ít phút.";
+}
 
 function formatDate(raw: string | null | undefined): string {
   if (!raw) return "";
@@ -240,6 +250,14 @@ export function DossierDetailView({
 }: DossierDetailViewProps) {
   const router = useRouter();
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
+  // Lỗi thao tác hiện ngay dưới hàng nút (không dùng hộp alert của trình duyệt)
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [rejectOpen, setRejectOpen] = React.useState(false);
+  const [rejectReason, setRejectReason] = React.useState("");
+  const [rejectError, setRejectError] = React.useState<string | null>(null);
+  const [rejectSubmitError, setRejectSubmitError] = React.useState<string | null>(null);
+  const rejectReasonRef = React.useRef<HTMLTextAreaElement>(null);
+  const rejectReasonId = React.useId();
 
   const statusCfg = STATUS_CONFIG[dossier.status] ?? {
     label: dossier.status,
@@ -255,6 +273,7 @@ export function DossierDetailView({
   ) {
     if (!(await confirmAction({ title: confirmMsg }))) return;
     setPendingAction(actionPath);
+    setActionError(null);
     try {
       const res = await fetch(
         `/api/dossiers/${dossier.id}/actions/${actionPath}`,
@@ -266,42 +285,52 @@ export function DossierDetailView({
         },
       );
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Lỗi không xác định" }));
-        window.alert(err.error ?? "Thao tác thất bại");
+        setActionError(await readActionError(res));
         return;
       }
       router.refresh();
     } catch {
-      window.alert("Lỗi kết nối. Vui lòng thử lại.");
+      setActionError("Mất kết nối tới máy chủ. Kiểm tra mạng rồi thử lại.");
     } finally {
       setPendingAction(null);
     }
   }
 
   function handleRejectArchive() {
-    const reason = window.prompt("Nhập lý do từ chối lưu trữ:");
-    if (!reason || reason.trim().length === 0) return;
+    setRejectReason("");
+    setRejectError(null);
+    setRejectSubmitError(null);
+    setRejectOpen(true);
+  }
+
+  /** Từ chối lưu trữ: lý do bắt buộc, thiếu thì báo dưới ô và đưa con trỏ về ô (nút chính không khóa vì thiếu chữ). */
+  async function submitRejectArchive() {
+    const reason = rejectReason.trim();
+    if (!reason) {
+      setRejectError("Nhập lý do để người nộp biết cần bổ sung gì.");
+      rejectReasonRef.current?.focus();
+      return;
+    }
     setPendingAction("reject-archive");
-    fetch(`/api/dossiers/${dossier.id}/actions/reject-archive`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ returnReason: reason.trim() }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Lỗi không xác định" }));
-          window.alert(err.error ?? "Thao tác thất bại");
-          return;
-        }
-        router.refresh();
-      })
-      .catch(() => {
-        window.alert("Lỗi kết nối. Vui lòng thử lại.");
-      })
-      .finally(() => {
-        setPendingAction(null);
+    setRejectSubmitError(null);
+    try {
+      const res = await fetch(`/api/dossiers/${dossier.id}/actions/reject-archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ returnReason: reason }),
       });
+      if (!res.ok) {
+        setRejectSubmitError(await readActionError(res));
+        return;
+      }
+      setRejectOpen(false);
+      router.refresh();
+    } catch {
+      setRejectSubmitError("Mất kết nối tới máy chủ. Kiểm tra mạng rồi thử lại.");
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   // ------- Compute visible actions based on status + role -------
@@ -432,7 +461,7 @@ export function DossierDetailView({
                   <Hash
                     className="size-3.5 text-muted-foreground"
                   />
-                  <span className="font-mono font-medium">
+                  <span className="font-medium tabular-nums">
                     {dossier.code}
                   </span>
                 </span>
@@ -470,34 +499,23 @@ export function DossierDetailView({
           <div className="flex flex-wrap items-center gap-2">
             {actions.map((action) => {
               const Icon = action.icon;
-              const isLoading = pendingAction === action.key;
               return (
-                <Pressable
+                <Button
                   key={action.key}
-                  disabled={pendingAction !== null}
+                  size="sm"
+                  variant={action.style === "primary" ? "default" : action.style === "destructive" ? "destructive" : "outline"}
+                  disabled={pendingAction !== null && pendingAction !== action.key}
+                  loading={pendingAction === action.key}
                   onClick={action.handler}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 rounded-lg text-xs font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
-                    action.style === "primary" &&
-                      "bg-foreground text-background hover:bg-foreground/90",
-                    action.style === "secondary" &&
-                      "border border-border text-foreground hover:bg-muted/60",
-                    action.style === "destructive" &&
-                      "border border-red-300 text-red-700 hover:bg-red-50",
-                  )}
-                  style={{ transition: `opacity, transform ${motionTransition.micro.duration}s` }}
                 >
-                  {isLoading ? (
-                    <Spinner />
-                  ) : (
-                    <Icon className="size-3.5" />
-                  )}
+                  <Icon />
                   {action.label}
-                </Pressable>
+                </Button>
               );
             })}
           </div>
         )}
+        {actionError ? <InlineAlert variant="error">{actionError}</InlineAlert> : null}
 
         {/* 2-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
@@ -593,7 +611,7 @@ export function DossierDetailView({
                           <TableCell className={cn("truncate text-xs text-muted-foreground", ITEM_COLUMN_CLASS.type)}>
                             {ITEM_TYPE_LABEL[item.itemType] ?? item.itemType}
                           </TableCell>
-                          <TableCell className={cn("truncate font-mono text-xs", ITEM_COLUMN_CLASS.number)}>
+                          <TableCell className={cn("truncate text-xs tabular-nums", ITEM_COLUMN_CLASS.number)}>
                             {item.documentNumber ?? <TableEmptyValue />}
                           </TableCell>
                           <TableCell className={cn("whitespace-nowrap text-xs tabular-nums text-muted-foreground", ITEM_COLUMN_CLASS.date)}>
@@ -708,6 +726,50 @@ export function DossierDetailView({
             </SectionCard>
           </div>
         </div>
+
+        <StandardDialog
+          open={rejectOpen}
+          onOpenChange={(open) => {
+            if (!open && pendingAction !== "reject-archive") setRejectOpen(false);
+          }}
+          title="Từ chối lưu trữ"
+          description="Hồ sơ trả về người nộp kèm lý do để bổ sung."
+          size="sm"
+          compact
+        >
+          <DialogForm onSubmit={() => void submitRejectArchive()}>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={rejectReasonId} className="text-xs font-medium text-foreground">
+                Lý do từ chối
+              </label>
+              <Textarea
+                ref={rejectReasonRef}
+                id={rejectReasonId}
+                compact
+                autoFocus
+                rows={3}
+                className="min-h-20"
+                value={rejectReason}
+                aria-invalid={rejectError ? true : undefined}
+                aria-describedby={rejectError ? `${rejectReasonId}-error` : undefined}
+                onChange={(event) => {
+                  setRejectReason(event.target.value);
+                  setRejectError(null);
+                }}
+              />
+              {rejectError ? <FieldError id={`${rejectReasonId}-error`}>{rejectError}</FieldError> : null}
+            </div>
+            {rejectSubmitError ? <InlineAlert variant="error">{rejectSubmitError}</InlineAlert> : null}
+            <DialogFooter>
+              <Button variant="ghost" size="sm" onClick={() => setRejectOpen(false)} disabled={pendingAction === "reject-archive"}>
+                Hủy
+              </Button>
+              <Button type="submit" size="sm" variant="destructive" loading={pendingAction === "reject-archive"}>
+                Từ chối lưu trữ
+              </Button>
+            </DialogFooter>
+          </DialogForm>
+        </StandardDialog>
       </m.div>
     </AnimatePresence>
   );
