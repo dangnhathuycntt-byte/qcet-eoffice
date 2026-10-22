@@ -186,7 +186,7 @@ export const DOC_GROUPS: DocGroup[] = [
           {
             type: "ul",
             items: [
-              "**Hồ sơ cá nhân**: mở hộp hồ sơ cá nhân.",
+              "**Hồ sơ cá nhân**: mở trang Bắt đầu sử dụng để sửa hồ sơ và thiết lập Trợ lý.",
               "**Cài đặt hệ thống**: mở trang cài đặt.",
               "**Tài liệu hướng dẫn**: mở trang tài liệu này.",
               "**Cài ứng dụng trên điện thoại**: mở hướng dẫn cài QCET E-Office lên điện thoại.",
@@ -1469,16 +1469,16 @@ export const DOC_GROUPS: DocGroup[] = [
         slug: "ho-so-ca-nhan",
         title: "Hồ sơ cá nhân",
         description:
-          "Xem và cập nhật họ và tên, chức danh và số điện thoại liên hệ trong hồ sơ cá nhân của Thầy/Cô.",
+          "Xác nhận họ và tên, chức danh, số điện thoại và thiết lập cách Trợ lý làm việc cùng Thầy/Cô ở trang Bắt đầu sử dụng.",
         icon: "UserCircle",
         blocks: [
           {
             type: "p",
-            text: "Hồ sơ cá nhân cho Thầy/Cô xem tài khoản đang đăng nhập và cập nhật ba thông tin: họ và tên, chức danh và số điện thoại. Vai trò điều hành chỉ để xem và do Quản trị viên hệ thống quản lý.",
+            text: "Hồ sơ cá nhân nằm ở trang **Bắt đầu sử dụng**. Lần đầu vào hệ thống, trang này hiện trước trang Thầy/Cô định mở; làm xong hoặc nhấn **Bỏ qua** thì vào thẳng trang đó và không bị hỏi lại.",
           },
           {
             type: "h2",
-            text: "Mở hồ sơ cá nhân",
+            text: "Mở lại trang",
           },
           {
             type: "ol",
@@ -1489,58 +1489,37 @@ export const DOC_GROUPS: DocGroup[] = [
           },
           {
             type: "p",
-            text: "Trên điện thoại, mở menu của ứng dụng rồi chọn **Hồ sơ cá nhân**. Hộp thoại có tiêu đề **Hồ sơ Cán bộ & Viên chức**, email của Thầy/Cô nằm ngay bên dưới.",
+            text: "Trên điện thoại, mở menu của ứng dụng rồi chọn **Hồ sơ cá nhân**.",
           },
           {
             type: "h2",
-            text: "Các trường thông tin",
-          },
-          {
-            type: "ul",
-            items: [
-              "**Họ và tên đầy đủ**: bắt buộc nhập.",
-              "**Chức danh / Vị trí**: nếu để trống, hệ thống lưu là Viên chức.",
-              "**Số điện thoại liên hệ**: có thể để trống.",
-              "**Đơn vị / Khoa / Phòng ban**: khi Nhà trường đã chuẩn hóa đơn vị, ô này hiện nhãn **Chuẩn hóa** và không sửa được. Khi chưa chuẩn hóa, ô là danh sách chọn, nhưng lựa chọn đơn vị không được lưu từ hộp thoại này.",
-              "**Phân quyền điều hành (Vai trò hệ thống)**: nhãn **Chỉ đọc**. Quản trị viên hệ thống quản lý phần này theo cơ cấu tổ chức của Nhà trường.",
-            ],
-          },
-          {
-            type: "p",
-            text: "Ô **Tiểu sử / Giới thiệu** có trong hộp thoại nhưng chưa được lưu khi nhấn **Lưu thay đổi**.",
-          },
-          {
-            type: "h2",
-            text: "Lưu thay đổi",
+            text: "Các bước",
           },
           {
             type: "ol",
             items: [
-              "Sửa các trường cần cập nhật.",
-              "Nhấn **Lưu thay đổi**. Trong lúc lưu, nút hiện **Đang lưu...**.",
-              "Khi thành công, hộp thoại hiện thông báo “Cập nhật thông tin cán bộ thành công!” và tự đóng sau khoảng 0,8 giây.",
+              "**Hồ sơ**: họ và tên (bắt buộc), chức danh và số điện thoại (không bắt buộc). Email, đơn vị và vai trò chỉ để xem; đơn vị do Quản trị viên hệ thống gán theo phân công vị trí việc làm.",
+              "**Trợ lý xưng hô thế nào**: chọn cách Trợ lý gọi Thầy/Cô (Thầy, Cô, Anh, Chị kèm tên, hoặc chỉ tên) và cách trả lời (ngắn gọn hoặc đầy đủ).",
+              "**Trợ lý giúp gì trước**: chọn việc cần giúp (nhiệm vụ, văn bản cần xử lý, lịch họp, việc hôm nay) và bật hoặc tắt bản tin sáng. Ô **Trợ lý sẽ ghi nhớ** soạn sẵn từ lựa chọn và sửa được; nội dung lưu vào Hướng dẫn riêng trong Cài đặt Trợ lý.",
+              "**Hỏi Trợ lý câu đầu tiên**: chọn một câu gợi ý rồi nhấn **Mở Trợ lý**; câu hỏi được điền sẵn để Thầy/Cô xem lại rồi tự gửi.",
             ],
-          },
-          {
-            type: "p",
-            text: "Nếu lưu thất bại, thông báo lỗi màu đỏ hiện ngay trong hộp thoại. Nội dung đang nhập vẫn còn để Thầy/Cô sửa và lưu lại.",
           },
           {
             type: "callout",
             tone: "info",
-            text: "Ở lần đăng nhập đầu tiên, hộp thoại có khung chào mừng cho biết tài khoản email trường đã được kích hoạt. Hãy hoàn thiện chức danh và số điện thoại để thuận tiện điều hành công việc.",
+            text: "Khi Trợ lý đang tắt, trang chỉ có bước Hồ sơ.",
           },
           {
             type: "h2",
-            text: "Đóng hộp thoại",
+            text: "Lưu và thoát",
           },
           {
             type: "p",
-            text: "Nhấn biểu tượng dấu X (nhãn **Đóng**), nhấn vùng nền bên ngoài hoặc nhấn phím `Esc`. Các thay đổi chưa lưu sẽ mất.",
+            text: "Mỗi bước lưu khi nhấn **Tiếp tục** (bước Trợ lý giúp gì trước là **Lưu và tiếp tục**). Nhấn **Bỏ qua** (hoặc **Đóng** khi mở lại từ menu) thì thoát ngay; thay đổi chưa lưu ở bước đang đứng sẽ mất. Nút lùi của trình duyệt quay về bước trước.",
           },
           {
             type: "p",
-            text: "Với tài khoản chưa liên kết Khoa hoặc Phòng ban, hệ thống có thể tự mở hồ sơ này một lần trong mỗi phiên làm việc.",
+            text: "Nếu lưu thất bại, thông báo lỗi màu đỏ hiện ngay trên trang và nội dung đang nhập vẫn còn để Thầy/Cô sửa và lưu lại.",
           },
         ],
       },
