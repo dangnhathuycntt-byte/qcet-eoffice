@@ -329,19 +329,35 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
 
 
 /**
- * Độ rộng cột bảng nhiệm vụ — nguồn duy nhất cho `<col>`, `<th>` và `<td>`.
+ * Độ rộng cột bảng nhiệm vụ cho `<th>` và `<td>` (`<col>` dùng `TASK_COL_WIDTH_CLASS` cùng mốc).
  * Cột phụ tự ẩn theo độ rộng khung bảng (container query, cần `@container` ở khung cuộn)
  * để Tiêu đề, Hạn và Trạng thái luôn thấy được mà không phải cuộn ngang.
  * Ẩn theo thứ tự: ngày tạo/bắt đầu → đơn vị, phối hợp → phụ trách → ưu tiên.
  */
 export const TASK_COLUMN_CLASS = {
   title: "min-w-[220px]",
-  priority: "w-[84px] @max-[560px]:hidden",
-  leadAssignee: "w-[184px] @max-[760px]:hidden",
-  coAssignees: "w-[110px] @max-[940px]:hidden",
-  department: "w-[176px] @max-[940px]:hidden",
-  startDate: "w-[80px] @max-[1120px]:hidden",
+  priority: "w-[84px] @max-[560px]:cell-collapse",
+  leadAssignee: "w-[184px] @max-[760px]:cell-collapse",
+  coAssignees: "w-[110px] @max-[940px]:cell-collapse",
+  department: "w-[176px] @max-[940px]:cell-collapse",
+  startDate: "w-[80px] @max-[1120px]:cell-collapse",
   dueDate: "w-[96px]",
-  createdAt: "w-[80px] @max-[1120px]:hidden",
+  createdAt: "w-[80px] @max-[1120px]:cell-collapse",
+  status: "w-[148px]",
+} as const;
+
+/**
+ * Bề rộng trên `<col>`, cùng mốc với `TASK_COLUMN_CLASS`: cột bớt đi thu về 0 và ô `cell-collapse` (giữ chỗ trong lưới,
+ * vô hình), không `hidden`, để hàng nhóm `colSpan={totalColumns}` không chia phần cột Tiêu đề. Xem `cell-collapse` ở `globals.css`.
+ */
+export const TASK_COL_WIDTH_CLASS = {
+  title: "",
+  priority: "w-[84px] @max-[560px]:w-0",
+  leadAssignee: "w-[184px] @max-[760px]:w-0",
+  coAssignees: "w-[110px] @max-[940px]:w-0",
+  department: "w-[176px] @max-[940px]:w-0",
+  startDate: "w-[80px] @max-[1120px]:w-0",
+  dueDate: "w-[96px]",
+  createdAt: "w-[80px] @max-[1120px]:w-0",
   status: "w-[148px]",
 } as const;

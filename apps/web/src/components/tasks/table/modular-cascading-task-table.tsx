@@ -42,7 +42,7 @@ import type {
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_DENSITY,
-  TASK_COLUMN_CLASS,
+  TASK_COL_WIDTH_CLASS,
 } from "./constants";
 import {
   filterTasks,
@@ -1522,15 +1522,15 @@ export function ModularCascadingTaskTable({
           <div className="hidden md:block">
             <Table density="two-line" className="table-fixed" containerClassName="@container overflow-x-clip thin-scrollbar">
                 <colgroup>
-                  <col className={TASK_COLUMN_CLASS.title} />
-                  {effectiveVisibleColumns.priority !== false && <col className={TASK_COLUMN_CLASS.priority} />}
-                  {effectiveVisibleColumns.leadAssignee !== false && <col className={TASK_COLUMN_CLASS.leadAssignee} />}
-                  {effectiveVisibleColumns.coAssignees === true && <col className={TASK_COLUMN_CLASS.coAssignees} />}
-                  {effectiveVisibleColumns.department !== false && <col className={TASK_COLUMN_CLASS.department} />}
-                  {effectiveVisibleColumns.startDate === true && <col className={TASK_COLUMN_CLASS.startDate} />}
-                  {effectiveVisibleColumns.dueDate !== false && <col className={TASK_COLUMN_CLASS.dueDate} />}
-                  {effectiveVisibleColumns.createdAt === true && <col className={TASK_COLUMN_CLASS.createdAt} />}
-                  {effectiveVisibleColumns.status === true && <col className={TASK_COLUMN_CLASS.status} />}
+                  <col />
+                  {effectiveVisibleColumns.priority !== false && <col className={TASK_COL_WIDTH_CLASS.priority} />}
+                  {effectiveVisibleColumns.leadAssignee !== false && <col className={TASK_COL_WIDTH_CLASS.leadAssignee} />}
+                  {effectiveVisibleColumns.coAssignees === true && <col className={TASK_COL_WIDTH_CLASS.coAssignees} />}
+                  {effectiveVisibleColumns.department !== false && <col className={TASK_COL_WIDTH_CLASS.department} />}
+                  {effectiveVisibleColumns.startDate === true && <col className={TASK_COL_WIDTH_CLASS.startDate} />}
+                  {effectiveVisibleColumns.dueDate !== false && <col className={TASK_COL_WIDTH_CLASS.dueDate} />}
+                  {effectiveVisibleColumns.createdAt === true && <col className={TASK_COL_WIDTH_CLASS.createdAt} />}
+                  {effectiveVisibleColumns.status === true && <col className={TASK_COL_WIDTH_CLASS.status} />}
                 </colgroup>
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
