@@ -130,21 +130,33 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
   // Khi mất session hoặc chưa đăng nhập trên các trang bảo vệ: điều hướng an toàn về /login
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")) {
-      return;
-    }
-    // Đang đăng xuất thì `logout()` tự chuyển trang sau khi máy chủ xóa phiên
-    if (isLogoutInProgress()) return;
-    if (!isLoading && !isAuthenticated && !user && !isPublicRoute && !isRedirectingRef.current) {
-      isRedirectingRef.current = true;
-      const fullPath = `${window.location.pathname}${window.location.search}`;
-      const safeReturnTo = sanitizeRedirectUrl(fullPath);
-      const redirectUrl =
-        safeReturnTo && safeReturnTo !== "/tasks" && safeReturnTo !== "/"
-          ? `/login?returnTo=${encodeURIComponent(safeReturnTo)}`
-          : "/login";
-      window.location.replace(redirectUrl);
-    }
+    const redirectIfSignedOut = () => {
+      if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")) {
+        return;
+      }
+      // Đang đăng xuất thì `logout()` tự chuyển trang sau khi máy chủ xóa phiên
+      if (isLogoutInProgress()) return;
+      if (!isLoading && !isAuthenticated && !user && !isPublicRoute && !isRedirectingRef.current) {
+        isRedirectingRef.current = true;
+        const fullPath = `${window.location.pathname}${window.location.search}`;
+        const safeReturnTo = sanitizeRedirectUrl(fullPath);
+        const redirectUrl =
+          safeReturnTo && safeReturnTo !== "/tasks" && safeReturnTo !== "/"
+            ? `/login?returnTo=${encodeURIComponent(safeReturnTo)}`
+            : "/login";
+        window.location.replace(redirectUrl);
+      }
+    };
+    redirectIfSignedOut();
+    // Bấm Back sau khi đăng xuất, trình duyệt khôi phục trang từ bfcache với trạng thái chưa đăng nhập nhưng hiệu ứng không chạy lại:
+    // không xử lý thì kẹt ở màn "Đang chuyển hướng".
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      isRedirectingRef.current = false;
+      redirectIfSignedOut();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, [isLoading, isAuthenticated, user, isPublicRoute]);
 
   // Người chưa onboarding (`onboardedAt` null, phiên máy chủ) vào trang nào cũng sang /onboarding trước, xong quay lại trang đó.
