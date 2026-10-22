@@ -151,12 +151,12 @@ function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
   return <td data-slot="table-cell" className={cn("align-middle text-foreground", CELL_PADDING, className)} {...props} />;
 }
 
-/** Ô chưa có dữ liệu: gạch ngang mờ cho mắt, "Chưa có" cho trình đọc màn hình. */
-function TableEmptyValue() {
+/** Ô chưa có dữ liệu: gạch ngang mờ cho mắt, "Chưa có" (hoặc `label` cụ thể hơn, vd. "Chưa có hạn xử lý") cho trình đọc màn hình. */
+function TableEmptyValue({ label = "Chưa có" }: { label?: string }) {
   return (
     <span className="text-xs text-muted-foreground/50">
       <span aria-hidden="true">–</span>
-      <span className="sr-only">Chưa có</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

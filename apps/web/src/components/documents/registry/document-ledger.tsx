@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
-import { CalendarPlus, ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
+import { ChevronDown, Plus, Inbox, SearchX } from "lucide-react";
 import { MenuContent, MenuOptionItem, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import type { OfficialDocument } from "@qcet/contracts/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -46,7 +46,8 @@ import {
   todayInVietnam,
 } from "@qcet/shared/lib/documents/document-ledger-format";
 import { Pressable } from "@/components/ui/pressable";
-import { TableRowActions, TableRowSelector, tableRowBackgroundClass } from "@/components/ui/table";
+import { TableEmptyValue, TableRowActions, TableRowSelector, tableRowBackgroundClass } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const URGENCY_OPTIONS = [
   { value: "ALL", label: "Tất cả mức khẩn" },
@@ -64,12 +65,14 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Đã lập hồ sơ" },
 ];
 
-/** Cột tùy chọn của sổ. Văn bản và chọn dòng luôn hiển thị. */
+/** Cột tùy chọn của sổ (mỗi cột một track của lưới). Văn bản và chọn dòng luôn hiển thị. */
 export type LedgerColumnId = "urgency" | "issuingAuthority" | "leadUnit" | "dueDate" | "issuedDate" | "status";
 
-export type LedgerColumnVisibility = Record<LedgerColumnId, boolean>;
+/** Thuộc tính hiển thị: các cột tùy chọn và dòng số, ký hiệu dưới trích yếu (không phải track riêng). */
+export type LedgerColumnVisibility = Record<LedgerColumnId | "documentNumber", boolean>;
 
 export const DEFAULT_LEDGER_COLUMNS: LedgerColumnVisibility = {
+  documentNumber: true,
   urgency: true,
   issuingAuthority: true,
   leadUnit: true,
@@ -87,19 +90,28 @@ const LEDGER_COLUMN_OPTIONS: Array<{ id: LedgerColumnId; label: string }> = [
   { id: "status", label: "Bước xử lý" },
 ];
 
+/** Thuộc tính hiển thị trong popover "Hiển thị": số, ký hiệu (dòng dưới trích yếu) rồi các cột. */
+const LEDGER_DISPLAY_OPTIONS: Array<{ id: keyof LedgerColumnVisibility; label: string }> = [
+  { id: "documentNumber", label: "Số, ký hiệu" },
+  ...LEDGER_COLUMN_OPTIONS,
+];
+
 /*
  * Độ rộng cột (CSS px) theo ba mức của chính bảng (SPEC §17.4B), không theo viewport:
  * hẹp < 720px: chọn · văn bản · hạn · bước xử lý;
  * vừa 720–1099px: thêm mức khẩn (chỉ icon) và ngày ban hành;
- * rộng ≥ 1100px: thêm cơ quan ban hành, chủ trì; mức khẩn có nhãn.
+ * rộng ≥ 1100px: thêm cơ quan ban hành, chủ trì; văn bản khẩn có nhãn mức khẩn.
+ * Độ rộng đo bằng chữ thật (text-xs): "Thượng khẩn" 77px + icon 16px + khe, ngày "20/09/2026" 76px + icon 16px.
  */
 const LEDGER_COLUMN_WIDTH: Record<LedgerColumnId, string> = {
-  urgency: "112px",
-  // Giãn theo chỗ trống (trích yếu vẫn chiếm phần lớn) để tên cơ quan/đơn vị không bị cắt
+  urgency: "104px",
+  // Giãn theo chỗ trống (trích yếu vẫn chiếm phần lớn) để tên cơ quan/đơn vị không bị cắt; mỗi hàng là một lưới riêng nên
+  // chỉ dùng px/fr (auto sẽ lệch cột giữa các hàng)
   issuingAuthority: "minmax(144px,0.4fr)",
   leadUnit: "minmax(144px,0.4fr)",
-  dueDate: "96px",
-  issuedDate: "96px",
+  dueDate: "104px",
+  // Ngày không icon như cột Ngày tạo của bảng Nhiệm vụ; 88px vừa tiêu đề "Ngày ban hành"
+  issuedDate: "88px",
   status: "112px",
 };
 
@@ -222,6 +234,8 @@ interface LedgerFilterCategory {
 
 export interface DocumentLedgerToolbarProps {
   title: string;
+  /** Số văn bản của sổ đang xem, cạnh tiêu đề; null khi đang tải, lỗi hoặc khi hàng bộ lọc đã hiện số kết quả (không lặp hai nơi). */
+  count?: number | null;
   searchValue: string;
   onSearchChange: (value: string) => void;
   urgency: string;
@@ -248,6 +262,7 @@ export interface DocumentLedgerToolbarProps {
 
 export function DocumentLedgerToolbar({
   title,
+  count = null,
   searchValue,
   onSearchChange,
   urgency,
@@ -351,8 +366,14 @@ export function DocumentLedgerToolbar({
       {/* Điện thoại: nút mở sidebar thay cho thanh trên cùng (như Linear) */}
       <MobileMenuButton className="-ml-1.5 md:hidden" />
       {/* Tiêu đề không bị cắt: pane hẹp thì ô tìm co lại trước (min 96px), không phải tiêu đề */}
-      <div className="flex min-w-fit flex-1 items-center pr-3 max-md:h-11">
+      <div className="flex min-w-fit flex-1 items-center gap-2 pr-3 max-md:h-11">
         <h1 className="whitespace-nowrap text-compact font-semibold text-foreground select-none">{title}</h1>
+        {count != null ? (
+          <span data-slot="document-ledger-count" className="text-xs tabular-nums text-muted-foreground">
+            {count}
+            <span className="sr-only"> văn bản</span>
+          </span>
+        ) : null}
       </div>
       {/* Điện thoại: "+" trơn ở góc phải hàng đầu (nhãn đọc qua aria-label) */}
       {primaryActionLabel && onPrimaryAction ? (
@@ -445,7 +466,7 @@ export function DocumentLedgerToolbar({
           <div className="flex flex-col gap-2 p-2">
             <p className="text-xs font-medium text-muted-foreground">Thuộc tính hiển thị</p>
             <div className="flex flex-wrap gap-1.5">
-              {LEDGER_COLUMN_OPTIONS.map((opt) => (
+              {LEDGER_DISPLAY_OPTIONS.map((opt) => (
                 <PropertyToggleChip
                   key={opt.id}
                   pressed={visibleColumns[opt.id]}
@@ -513,9 +534,10 @@ export function DocumentActiveFilters({ filters, onClearAll, total }: DocumentAc
  * Ba mẫu lưới theo độ rộng của chính bảng (container query), không theo viewport:
  * hẹp (< 720px, Quick View đang mở) / vừa / rộng (≥ 1100px, thêm cơ quan ban hành và chủ trì).
  * Ô nào không có trong mẫu của mức hiện tại phải ẩn để các ô còn lại vẫn thẳng hàng.
- * Hàng tối thiểu 40px, tiêu đề cột 32px chữ thường như bảng dùng chung (`ui/table`, lấy từ bảng Nhiệm vụ 21/10/2026); ô chọn,
- * nút "⋯" và màu trạng thái hàng cũng lấy từ đó. Từ md đệm trái 24px để ô chọn thẳng cột với ô chọn của bảng Nhiệm vụ.
- * Trích yếu một dòng (cắt cuối, có tooltip); tên cơ quan ban hành/chủ trì không cắt mà xuống tối đa 2 dòng (hàng 48px).
+ * Hàng 48px hai dòng (trích yếu, dưới là số, ký hiệu) như hàng bảng Nhiệm vụ; tắt số, ký hiệu thì hàng một dòng 40px. Tiêu đề cột
+ * 32px chữ thường như bảng dùng chung (`ui/table`, lấy từ bảng Nhiệm vụ 21/10/2026); ô chọn, nút "⋯" và màu trạng thái hàng cũng
+ * lấy từ đó. Từ md đệm trái 24px để ô chọn thẳng cột với ô chọn của bảng Nhiệm vụ.
+ * Trích yếu một dòng (cắt cuối, có tooltip); tên cơ quan ban hành/chủ trì không cắt mà xuống tối đa 2 dòng (vừa hàng 48px).
  */
 const GRID =
   "grid min-h-10 items-center py-1 gap-x-2 px-2 md:pl-6 md:pr-5 [grid-template-columns:var(--ledger-cols-sm)] @[720px]/ledger:[grid-template-columns:var(--ledger-cols)] @[1100px]/ledger:[grid-template-columns:var(--ledger-cols-xl)]";
@@ -550,17 +572,18 @@ function urgencyText(doc: OfficialDocument): { label: string; toneClass: string 
 }
 
 /**
- * Mỗi mức khẩn một icon riêng (theo bộ icon độ ưu tiên): Hỏa tốc = dấu chấm than, Thượng khẩn = 3 cột,
- * Khẩn = 2 cột, Thường = 1 cột. Màu không thay nhãn: tên luôn có trong nhãn truy cập và tooltip.
+ * Mức khẩn dùng bộ icon độ ưu tiên: Hỏa tốc = dấu chấm than, Thượng khẩn = 3 cột, Khẩn = 2 cột. Văn bản thường không có độ khẩn
+ * (NĐ 30/2020 chỉ đóng dấu Khẩn, Thượng khẩn, Hỏa tốc) nên chỉ hiện ba gạch mờ như "Không ưu tiên" của bảng Nhiệm vụ, không có chữ
+ * "Thường" và cột tín hiệu xám trên mọi hàng. Màu không thay nhãn: tên luôn có trong nhãn truy cập và tooltip.
  */
-const URGENCY_ICON: Record<string, string> = { flash: "URGENT", top_urgent: "HIGH", urgent: "NORMAL", normal: "LOW" };
+const URGENCY_ICON: Record<string, string> = { flash: "URGENT", top_urgent: "HIGH", urgent: "NORMAL", normal: "NONE" };
 
 function UrgencyIcon({ doc, className }: { doc: OfficialDocument; className?: string }) {
   const urgent = urgencyText(doc);
   return (
     <PrioritySignalBars
-      priority={URGENCY_ICON[doc.urgency] ?? "LOW"}
-      className={cn(urgent ? urgent.toneClass : "text-muted-foreground/60", className)}
+      priority={URGENCY_ICON[doc.urgency] ?? "NONE"}
+      className={cn(urgent ? urgent.toneClass : "text-muted-foreground/50", className)}
       ariaLabel={`Mức khẩn: ${urgent?.label ?? "Thường"}`}
     />
   );
@@ -569,44 +592,34 @@ function UrgencyIcon({ doc, className }: { doc: OfficialDocument; className?: st
 function UrgencyCell({ doc }: { doc: OfficialDocument }) {
   const urgent = urgencyText(doc);
   return (
-    <span className={cn("inline-flex min-w-0 items-center gap-1 text-xs font-medium", urgent ? urgent.toneClass : "text-muted-foreground")}>
+    <span className={cn("flex min-w-0 items-center gap-1 text-xs font-medium", urgent?.toneClass)}>
       <UrgencyIcon doc={doc} />
-      {/* Nhãn chỉ hiện ở mức rộng (cột 112px); mức vừa chỉ icon, tên nằm ở nhãn truy cập/tooltip */}
-      <span className="hidden truncate @[1100px]/ledger:inline">{urgent?.label ?? "Thường"}</span>
+      {/* Nhãn chỉ cho văn bản khẩn và chỉ ở mức rộng; mức vừa chỉ icon, tên nằm ở nhãn truy cập/tooltip */}
+      {urgent ? <span className="hidden truncate @[1100px]/ledger:inline">{urgent.label}</span> : null}
     </span>
   );
 }
 
-function EmptyCell({ label }: { label: string }) {
-  return (
-    <span className="text-xs text-muted-foreground/60">
-      <span aria-hidden="true">—</span>
-      <span className="sr-only">{label}</span>
-    </span>
-  );
-}
-
+/** Hạn xử lý như cột Hạn của bảng Nhiệm vụ (`TaskDateValue`): icon và chữ cùng màu theo độ gấp, không tô đậm. */
 function DueCell({ doc, today, filterYear }: { doc: OfficialDocument; today: string; filterYear?: number }) {
-  if (!doc.dueDate) return <EmptyCell label="Chưa có hạn xử lý" />;
+  if (!doc.dueDate) return <TableEmptyValue label="Chưa có hạn xử lý" />;
   const note = getLedgerDueNote(doc.dueDate, isLedgerDone(doc.status), today);
   const Icon = !note ? TaskIconDueClosed : note.tone === "danger" ? TaskIconDueOverdue : note.tone === "warning" ? TaskIconDueSoon : TaskIconDue;
+  const tone = note?.tone === "danger" ? TONE_TEXT.danger : note?.tone === "warning" ? TONE_TEXT.warning : TONE_TEXT.muted;
   return (
     <span className="inline-flex min-w-0 items-center gap-2 tabular-nums text-xs" title={`Hạn ${formatLedgerDate(doc.dueDate)}${note ? ` · ${note.text}` : ""}`}>
-      <Icon
-        className={cn("size-4 shrink-0", note?.tone === "danger" ? "text-destructive" : note?.tone === "warning" ? "text-warning" : "text-muted-foreground/70")}
-      />
-      <span className={cn("truncate font-medium", note ? "text-foreground" : "text-muted-foreground")}>{formatLedgerCellDate(doc.dueDate, filterYear)}</span>
+      <Icon className={cn("size-4 shrink-0", note && note.tone !== "muted" ? tone : "text-muted-foreground/70")} />
+      <span className={cn("truncate", tone)}>{formatLedgerCellDate(doc.dueDate, filterYear)}</span>
       {note ? <span className="sr-only">{note.text}</span> : null}
     </span>
   );
 }
 
 function IssuedDateCell({ doc, filterYear }: { doc: OfficialDocument; filterYear?: number }) {
-  if (!doc.issuedDate) return <EmptyCell label="Chưa có ngày ban hành" />;
+  if (!doc.issuedDate) return <TableEmptyValue label="Chưa có ngày ban hành" />;
   return (
-    <span className="inline-flex min-w-0 items-center gap-1 tabular-nums text-xs text-muted-foreground" title={`Ban hành ${formatLedgerDate(doc.issuedDate)}`}>
-      <CalendarPlus className="size-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
-      <span className="truncate">{formatLedgerCellDate(doc.issuedDate, filterYear)}</span>
+    <span className="block truncate tabular-nums text-xs text-muted-foreground" title={`Ban hành ${formatLedgerDate(doc.issuedDate)}`}>
+      {formatLedgerCellDate(doc.issuedDate, filterYear)}
     </span>
   );
 }
@@ -743,7 +756,8 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHead
       }}
       className={cn(
         GRID,
-        // Điện thoại: hàng 48px như danh sách nhiệm vụ và Projects của Linear mobile (máy tính giữ 40px)
+        // Có dòng số, ký hiệu: hàng hai dòng 48px như hàng bảng Nhiệm vụ. Điện thoại luôn 48px như danh sách nhiệm vụ của Linear mobile
+        visibleColumns.documentNumber && "min-h-12",
         "group cursor-pointer select-none text-foreground transition-colors outline-none max-md:min-h-12",
         "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
@@ -765,22 +779,25 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHead
       <span role="cell" className="flex min-w-0 items-center gap-1.5">
         {/* Bảng hẹp không có cột mức khẩn: văn bản khẩn hiện icon ngay đầu ô */}
         {visibleColumns.urgency && urgent ? <UrgencyIcon doc={doc} className="@[720px]/ledger:hidden" /> : null}
-        <Tooltip open={wantTooltip && truncated} onOpenChange={setHover}>
-          <TooltipTrigger asChild>
-            <span ref={summaryRef} className="min-w-0 truncate text-compact font-medium text-foreground transition-colors group-hover:text-primary">
+        {/* Số, ký hiệu ở dòng dưới trích yếu (như dòng phụ của hàng điện thoại), không chen sau trích yếu rồi bị cắt mất */}
+        <span className="flex min-w-0 flex-col">
+          <Tooltip open={wantTooltip && truncated} onOpenChange={setHover}>
+            <TooltipTrigger asChild>
+              <span ref={summaryRef} className="min-w-0 truncate text-compact font-medium text-foreground transition-colors group-hover:text-primary">
+                {doc.summary}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6} className="max-w-96 flex-col items-start gap-0.5 whitespace-normal py-1.5 leading-snug">
               {doc.summary}
+              {identifiers ? <span className="block font-normal tabular-nums opacity-70">{identifiers}</span> : null}
+            </TooltipContent>
+          </Tooltip>
+          {visibleColumns.documentNumber && doc.documentNumber ? (
+            <span data-slot="document-number" className="truncate text-xs tabular-nums text-muted-foreground" title={`Số, ký hiệu: ${doc.documentNumber}`}>
+              {doc.documentNumber}
             </span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6} className="max-w-96 flex-col items-start gap-0.5 whitespace-normal py-1.5 leading-snug">
-            {doc.summary}
-            {identifiers ? <span className="block font-mono font-normal opacity-70">{identifiers}</span> : null}
-          </TooltipContent>
-        </Tooltip>
-        {doc.documentNumber ? (
-          <span className="hidden min-w-0 max-w-40 shrink-[2] truncate font-mono text-xs text-muted-foreground @[1100px]/ledger:inline" title={`Số, ký hiệu: ${doc.documentNumber}`}>
-            {doc.documentNumber}
-          </span>
-        ) : null}
+          ) : null}
+        </span>
         {onRowMenu ? (
           <TableRowActions
             label={`Thao tác văn bản ${doc.documentNumber || no || doc.summary}`}
@@ -795,12 +812,12 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHead
       {visibleColumns.urgency ? <span role="cell" className={FROM_MEDIUM}><UrgencyCell doc={doc} /></span> : null}
       {visibleColumns.issuingAuthority ? (
         <span role="cell" className={cn(FROM_WIDE, "min-w-0")}>
-          <span className={WRAP_TEXT}>{doc.issuingAuthority || <EmptyCell label="Chưa có cơ quan ban hành" />}</span>
+          {doc.issuingAuthority ? <span className={WRAP_TEXT}>{doc.issuingAuthority}</span> : <TableEmptyValue label="Chưa có cơ quan ban hành" />}
         </span>
       ) : null}
       {visibleColumns.leadUnit ? (
         <span role="cell" className={cn(FROM_WIDE, "min-w-0")}>
-          <span className={WRAP_TEXT}>{unit || <EmptyCell label="Chưa có đơn vị chủ trì" />}</span>
+          {unit ? <span className={WRAP_TEXT}>{unit}</span> : <TableEmptyValue label="Chưa có đơn vị chủ trì" />}
         </span>
       ) : null}
       {visibleColumns.dueDate ? <span role="cell" className="flex min-w-0"><DueCell doc={doc} today={today} filterYear={filterYear} /></span> : null}
@@ -811,6 +828,28 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHead
           <span className="truncate font-medium">{step.label}</span>
         </span>
       ) : null}
+    </div>
+  );
+}
+
+/** Hàng giữ chỗ cùng lưới, cùng ô ẩn/hiện theo mức như hàng thật: lúc tải trông như bảng sắp hiện chứ không phải một vạch dài. */
+function LedgerSkeletonRow({ index, visibleColumns }: { index: number; visibleColumns: LedgerColumnVisibility }) {
+  const bar = "h-3 rounded";
+  return (
+    <div aria-hidden="true" className={cn(GRID, visibleColumns.documentNumber && "min-h-12", "max-md:min-h-12")}>
+      <span className="flex items-center justify-center">
+        <Skeleton className="size-3.5 rounded-[4px]" />
+      </span>
+      <span className="flex min-w-0 flex-col gap-1.5">
+        <Skeleton className={bar} style={{ width: `${45 + ((index * 17) % 40)}%` }} />
+        {visibleColumns.documentNumber ? <Skeleton className="h-2.5 w-24 rounded" /> : null}
+      </span>
+      {visibleColumns.urgency ? <span className={FROM_MEDIUM}><Skeleton className={cn(bar, "w-4")} /></span> : null}
+      {visibleColumns.issuingAuthority ? <span className={FROM_WIDE}><Skeleton className={cn(bar, index % 3 ? "w-24" : "w-28")} /></span> : null}
+      {visibleColumns.leadUnit ? <span className={FROM_WIDE}><Skeleton className={cn(bar, index % 2 ? "w-20" : "w-24")} /></span> : null}
+      {visibleColumns.dueDate ? <span><Skeleton className={cn(bar, "w-16")} /></span> : null}
+      {visibleColumns.issuedDate ? <span className={FROM_MEDIUM}><Skeleton className={cn(bar, "w-14")} /></span> : null}
+      {visibleColumns.status ? <span><Skeleton className={cn(bar, "w-20")} /></span> : null}
     </div>
   );
 }
@@ -877,10 +916,7 @@ export function DocumentLedgerTable({
       <div role="table" aria-busy="true" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger" style={wrapperStyle}>
         {header}
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex h-10 items-center gap-2 px-2 animate-pulse max-md:h-12">
-            <div className="size-4 shrink-0 rounded-[4px] bg-muted/50" />
-            <div className="h-3 rounded bg-muted/70" style={{ width: `${40 + ((i * 17) % 35)}%` }} />
-          </div>
+          <LedgerSkeletonRow key={i} index={i} visibleColumns={visibleColumns} />
         ))}
       </div>
     );

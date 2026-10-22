@@ -181,12 +181,12 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
         setDocuments(mapped);
         setTotalCount(json.total ?? mapped.length);
       } else {
-        setFetchError("Không thể tải danh sách văn bản từ máy chủ");
+        setFetchError("Máy chủ chưa trả được danh sách. Thử lại sau ít phút.");
       }
     } catch (err: unknown) {
       if ((err as { name?: string })?.name !== "AbortError") {
         console.error("Fetch error:", err);
-        setFetchError("Lỗi kết nối máy chủ khi tải danh sách văn bản");
+        setFetchError("Mất kết nối tới máy chủ. Kiểm tra mạng rồi thử lại.");
       }
     } finally {
       if (!signal?.aborted) setIsLoading(false);
@@ -410,6 +410,7 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
             <header className="shrink-0 border-b border-border/60 px-4 pb-2 pt-2.5 max-md:overflow-x-clip max-md:border-b-0 max-md:pb-0 max-md:pt-[env(safe-area-inset-top,0px)] sm:px-6">
               <DocumentLedgerToolbar
                 title={typeTitle[filters.type] ?? "Sổ văn bản"}
+                count={isLoading || fetchError || totalCount === 0 || activeFilters.some((f) => f.id !== "bucket") ? null : totalCount}
                 searchValue={searchInputValue}
                 onSearchChange={setSearchInputValue}
                 urgency={filters.urgency}
