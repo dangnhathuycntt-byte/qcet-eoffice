@@ -203,7 +203,7 @@ export function DialogComposeHeader({ items }: { items: React.ReactNode[] }) {
 }
 
 /** Nút phóng to/thu nhỏ hộp tạo/soạn, tròn 28px; chỉ từ md (điện thoại hộp đã là tấm đáy hoặc gần hết màn). */
-export function DialogExpandButton({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+function DialogExpandButton({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
   const label = expanded ? "Thu nhỏ" : "Phóng to";
   return (
     <Button variant="ghost" size="icon-xs" aria-label={label} title={label} onClick={onToggle} className="rounded-full max-md:hidden">
