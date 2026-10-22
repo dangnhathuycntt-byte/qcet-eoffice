@@ -111,6 +111,8 @@ export interface DocumentItem {
   /** Người đang xem đã đánh dấu văn bản này. */
   marked?: boolean;
   outgoingWorkflow?: any;
+  /** Nơi nhận có định danh của văn bản đi; đơn vị trong trường đọc được văn bản từ lúc phát hành (ADR-015). */
+  outgoingRecipients?: Array<{ kind: string; unitId: string | null }>;
   signatures?: any[];
   linkedTaskId?: string | null;
   linkedTask?: {

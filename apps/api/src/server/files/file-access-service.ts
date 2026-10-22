@@ -142,6 +142,9 @@ export async function authorizeFileObjectDownload({
               directives: true,
               incomingWorkflow: { include: { unitAssignments: true } },
               linkedTask: { select: { leadUnitId: true } },
+              // Đơn vị nhận văn bản đi đã phát hành đọc được văn bản, nên tải được tệp (ADR-015).
+              outgoingWorkflow: { select: { status: true } },
+              outgoingRecipients: { select: { kind: true, unitId: true } },
             },
           },
         },
@@ -325,6 +328,8 @@ export async function authorizeLegacyFilePathDownload({
             },
           },
           linkedTask: { select: { leadUnitId: true } },
+          outgoingWorkflow: { select: { status: true } },
+          outgoingRecipients: { select: { kind: true, unitId: true } },
         },
       },
     },

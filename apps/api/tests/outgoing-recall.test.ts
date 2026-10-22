@@ -97,18 +97,19 @@ describe('V-05 thu hồi văn bản đi', () => {
     assert.equal(evaluateReplacementTarget('DRAFT', []).ok, false);
   });
 
+  // QCET chỉ gửi nhận trong trường (ADR-015): nơi nhận là đơn vị trong trường; tên cơ quan ngoài trường bị route từ chối
+  // (outgoing-delivery.test.ts). Dòng EXTERNAL dưới đây chỉ còn là dữ liệu cũ, văn thư vẫn ghi nhận được.
   test('phát hành với nơi nhận có định danh: dòng nơi nhận và danh sách văn bản được dựng', async () => {
     const doc = await makeDoc('issue', OutgoingDocumentStatus.ORGANIZATION_SIGNED);
     const res = await OutgoingDocumentService.issueDocument(
-      { documentId: doc.id, recipients: [{ unitId }, { name: 'Sở Giáo dục' }, { name: 'sở giáo dục' }, { unitId }] },
+      { documentId: doc.id, recipients: [{ unitId }, { unitId }] },
       { id: u.clerk, email: 'clerk@x', name: 'clerk', role: 'VAN_THU' } as never
     );
     assert.equal(res.status, OutgoingDocumentStatus.ISSUED);
     const rows = await prisma.outgoingDocumentRecipient.findMany({ where: { documentId: doc.id } });
-    assert.equal(rows.length, 2, 'trùng đơn vị hoặc tên bị gộp');
+    assert.equal(rows.length, 1, 'trùng đơn vị bị gộp');
     assert.ok(rows.some((r) => r.kind === 'INTERNAL_UNIT' && r.unitId === unitId && r.name.includes('Đơn vị nhận')));
-    assert.ok(rows.some((r) => r.kind === 'EXTERNAL' && r.name === 'Sở Giáo dục'));
-    assert.match(res.recipientList ?? '', /Sở Giáo dục/);
+    assert.match(res.recipientList ?? '', /Đơn vị nhận/);
   });
 
   test('chỉ Văn thư thu hồi; lý do bắt buộc; thu hồi xong giữ số và trạng thái đã thu hồi (AC-V05-2)', async () => {
@@ -146,7 +147,7 @@ describe('V-05 thu hồi văn bản đi', () => {
     assert.equal((await prisma.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: doc.id } })).status, OutgoingDocumentStatus.ISSUED);
   });
 
-  test('chỉ Văn thư ghi nhận tiếp nhận, và chỉ khi văn bản đang phát hành', async () => {
+  test('nơi nhận ngoài trường (dữ liệu cũ): chỉ Văn thư ghi nhận tiếp nhận, và chỉ khi văn bản đang phát hành', async () => {
     const doc = await makeDoc('confirm', OutgoingDocumentStatus.ISSUED, { recipients: [{ name: 'Sở E' }] });
     const recipientId = doc.outgoingRecipients[0].id;
     for (const key of ['staff', 'owner', 'rector']) {
@@ -195,7 +196,7 @@ describe('V-05 thu hồi văn bản đi', () => {
     const live = await makeDoc('state-live', OutgoingDocumentStatus.ISSUED, { recipients: [{ name: 'Sở I' }] });
     const asClerk = await getRecipientsState(session('clerk'), live.id);
     assert.equal(asClerk.canRecall, true);
-    assert.equal(asClerk.canConfirmReceipt, true);
+    assert.equal(asClerk.recipients[0].canConfirm, true, 'văn thư ghi nhận nơi nhận ngoài trường (dữ liệu cũ)');
     assert.equal(asClerk.recallBlockedReason, null);
 
     const asRector = await getRecipientsState(session('rector'), live.id);

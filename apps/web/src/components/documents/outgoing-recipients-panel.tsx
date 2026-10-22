@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
 
 interface State {
   status: string;
-  recipients: Array<{ id: string; kind: string; name: string; receivedAt: string | null }>;
+  /** `canConfirm`: người xem ghi nhận được nơi nhận này (trưởng đơn vị nhận với đơn vị mình). */
+  recipients: Array<{ id: string; kind: string; name: string; receivedAt: string | null; canConfirm: boolean }>;
   recall: { recalledAt: string; reason: string | null } | null;
   replaces: { documentId: string; numberStr: string | null } | null;
   replacedBy: { documentId: string; numberStr: string | null } | null;
   canRecall: boolean;
-  canConfirmReceipt: boolean;
   canIssue: boolean;
   replaceCandidates: Array<{ documentId: string; numberStr: string | null; title: string }>;
   recallBlockedReason: string | null;
@@ -33,7 +33,8 @@ async function readError(res: Response, fallback: string): Promise<string> {
 const formatDate = (raw: string) => new Date(raw).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 
 /**
- * Nơi nhận có định danh, phát hành, ghi nhận tiếp nhận và thu hồi văn bản đi (V-05a, V-05).
+ * Nơi nhận có định danh, phát hành, tiếp nhận và thu hồi văn bản đi (V-05a, V-05). QCET chỉ gửi nhận trong trường
+ * (ADR-015): nơi nhận là đơn vị trong trường, trưởng đơn vị nhận bấm "Tiếp nhận" cho đơn vị mình.
  * Quyền lấy từ server (GET /outgoing-recipients) nên nút chỉ hiện khi người xem thực sự làm được.
  */
 export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { documentId: string; onChanged?: () => void; className?: string }) {
@@ -43,7 +44,6 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
   const [busy, setBusy] = React.useState(false);
   const [mode, setMode] = React.useState<Mode>("idle");
   const [units, setUnits] = React.useState<string[]>([]);
-  const [external, setExternal] = React.useState("");
   const [replacesId, setReplacesId] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
 
@@ -80,7 +80,6 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
       if (!res.ok) throw new Error(await readError(res, fallback));
       setMode("idle");
       setUnits([]);
-      setExternal("");
       setReplacesId(null);
       setReason("");
       await load();
@@ -98,11 +97,13 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
   const hasContent = state.recipients.length > 0 || state.canIssue || state.recall || state.replaces || state.replacedBy;
   if (!hasContent) return null;
 
-  const externalNames = external
-    .split(/[\n;]+/)
-    .map((x) => x.trim())
-    .filter(Boolean);
-  const recipientsPayload = [...units.map((unitId) => ({ unitId })), ...externalNames.map((name) => ({ name }))];
+  const issue = () => {
+    if (units.length === 0) {
+      setError("Chọn ít nhất một đơn vị nhận văn bản");
+      return;
+    }
+    void call("issue", { recipients: units.map((unitId) => ({ unitId })), ...(replacesId ? { replacesDocumentId: replacesId } : {}) }, "Không phát hành được văn bản");
+  };
 
   return (
     <section aria-label="Theo dõi nơi nhận" className={cn("space-y-2", className)}>
@@ -118,9 +119,9 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
               <span className="min-w-0 truncate text-foreground" title={r.name}>{r.name}</span>
               {r.receivedAt ? (
                 <span className="shrink-0 text-muted-foreground">Đã nhận {formatDate(r.receivedAt)}</span>
-              ) : state.canConfirmReceipt ? (
-                <Button size="xs" variant="ghost" disabled={busy} onClick={() => void call("confirm-receipt", { recipientId: r.id }, "Không ghi nhận được")}>
-                  Ghi nhận đã nhận
+              ) : r.canConfirm ? (
+                <Button size="xs" variant="ghost" disabled={busy} onClick={() => void call("confirm-receipt", { recipientId: r.id }, "Không tiếp nhận được")}>
+                  {r.kind === "INTERNAL_UNIT" ? "Tiếp nhận" : "Ghi nhận đã nhận"}
                 </Button>
               ) : (
                 <span className="shrink-0 text-muted-foreground">Chưa nhận</span>
@@ -162,21 +163,18 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
             {departments.map((d) => (
               <li key={d.id}>
                 <label className="flex cursor-pointer items-center gap-2 text-compact">
-                  <Checkbox checked={units.includes(d.id)} onChange={(e) => setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)))} />
+                  <Checkbox
+                    checked={units.includes(d.id)}
+                    onChange={(e) => {
+                      setUnits((prev) => (e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id)));
+                      setError(null);
+                    }}
+                  />
                   <span>{d.name}</span>
                 </label>
               </li>
             ))}
           </ul>
-          <Textarea
-            compact
-            value={external}
-            maxLength={2000}
-            aria-label="Cơ quan, tổ chức ngoài trường"
-            placeholder="Cơ quan, tổ chức ngoài trường (mỗi nơi một dòng)"
-            onChange={(e) => setExternal(e.target.value)}
-            className="min-h-14"
-          />
           {state.replaceCandidates.length > 0 && (
             <Select
               compact
@@ -189,13 +187,7 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
             />
           )}
           <div className="flex gap-1.5">
-            <Button
-              size="xs"
-              disabled={busy || recipientsPayload.length === 0}
-              onClick={() =>
-                void call("issue", { recipients: recipientsPayload, ...(replacesId ? { replacesDocumentId: replacesId } : {}) }, "Không phát hành được văn bản")
-              }
-            >
+            <Button size="xs" loading={busy} onClick={issue}>
               Phát hành
             </Button>
             <Button size="xs" variant="ghost" onClick={() => setMode("idle")}>Hủy</Button>

@@ -151,10 +151,10 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
   outgoingDocuments: {
     key: "outgoingDocuments",
     description:
-      "Phased rollout flag for outgoing document composition and dispatch. " +
-      "Implementation complete: compose/detail/review/sign/number/issue/deliver workflow, " +
-      "60/60 state machine tests pass. Disabled by default; enable when ready for pilot.",
-    defaultValue: false,
+      "Outgoing document composition and dispatch (compose/review/sign/number/issue/deliver). " +
+      "Enabled by default since composing an outgoing document is the only way to send a document " +
+      "inside the school (ADR-015); set FEATURE_FLAG_OUTGOING_DOCUMENTS=false to hide the composer.",
+    defaultValue: true,
     isKillSwitch: false,
     isPublic: true,
   },

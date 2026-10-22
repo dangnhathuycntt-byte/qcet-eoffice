@@ -12,7 +12,12 @@ import type {
 import { getNextRegistrationNumber } from "./numbering-engine";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
-import { buildDocumentReadWhere, canUpdateDocument } from "@/server/policies/document-policy";
+import {
+  buildDocumentReadWhere,
+  buildInboxTypeWhere,
+  canUpdateDocument,
+  documentUserUnitIds,
+} from "@/server/policies/document-policy";
 import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import {
   isDocumentImmutable,
@@ -172,6 +177,8 @@ const defaultInclude = {
     },
   },
   outgoingWorkflow: true,
+  // Nơi nhận trong trường: quyền đọc văn bản đi đã phát hành của đơn vị nhận (ADR-015, `deliveredUnitIds`).
+  outgoingRecipients: { select: { kind: true, unitId: true } },
   signatures: true,
 };
 
@@ -260,6 +267,7 @@ export function mapPrismaDocumentToItem(rawRecord: any): DocumentItem {
 
     incomingWorkflow: record.incomingWorkflow || null,
     outgoingWorkflow: record.outgoingWorkflow || null,
+    outgoingRecipients: record.outgoingRecipients || [],
     signatures: record.signatures || [],
     linkedTaskId: record.linkedTaskId || null,
     linkedTask: record.linkedTask
@@ -406,15 +414,20 @@ export async function listDocuments(
 ): Promise<ListDocumentsResult> {
   const db = client || defaultPrisma;
   const queryConditions: Prisma.DocumentWhereInput[] = [];
+  const effectiveUser = filter.authUser || filter.userContext;
+  // Sổ Văn bản đến của một người gồm cả văn bản đi đã phát hành tới đơn vị của họ (ADR-015).
+  const inboxUnitIds = filter.type === "VAN_BAN_DEN" && effectiveUser ? documentUserUnitIds(effectiveUser) : undefined;
 
   if (filter.type) {
-    queryConditions.push({ type: filter.type as any });
+    queryConditions.push(
+      filter.type === "VAN_BAN_DEN" && effectiveUser ? buildInboxTypeWhere(effectiveUser) : { type: filter.type as any }
+    );
   }
   if (filter.documentYear) {
     queryConditions.push({ documentYear: Number(filter.documentYear) });
   }
   if (filter.bucket && (filter.type === "VAN_BAN_DEN" || filter.type === "VAN_BAN_DI")) {
-    const bucketWhere = buildDocumentBucketWhere(filter.type, filter.bucket);
+    const bucketWhere = buildDocumentBucketWhere(filter.type, filter.bucket, inboxUnitIds);
     if (bucketWhere) queryConditions.push(bucketWhere);
   }
   if (filter.status) {
@@ -445,9 +458,10 @@ export async function listDocuments(
     });
   }
 
-  const effectiveUser = filter.authUser || filter.userContext;
+  // Sổ Văn bản đi không tính văn bản đơn vị khác gửi tới: nơi nhận thấy chúng ở sổ Văn bản đến.
   const aclCondition =
-    filter.aclWhere || (effectiveUser ? buildDocumentReadWhere(effectiveUser) : undefined);
+    filter.aclWhere ||
+    (effectiveUser ? buildDocumentReadWhere(effectiveUser, { delivered: filter.type !== "VAN_BAN_DI" }) : undefined);
 
   const andClauses: Prisma.DocumentWhereInput[] = [...queryConditions];
   if (aclCondition) {
@@ -784,26 +798,42 @@ export async function addUploadedFileAttachment({
 }
 
 /**
- * Số liệu thô cho thống kê sổ văn bản, trong phạm vi `aclWhere` của người xem.
- * Route tự tổng hợp theo loại/trạng thái từ các dòng `groupBy`.
+ * Số liệu thô cho thống kê sổ văn bản, trong phạm vi người xem đọc được.
+ * Route tự tổng hợp theo loại/trạng thái từ các dòng `groupBy`. Sổ Văn bản đến và Văn bản đi đếm đúng như danh sách
+ * (`listDocuments`): văn bản đi đã phát hành tới đơn vị người xem nằm ở sổ đến, không nằm ở sổ đi (ADR-015).
  */
 export async function getDocumentStatsRows({
-  aclWhere,
+  authContext,
   scopedType,
   now,
 }: {
-  aclWhere: Prisma.DocumentWhereInput;
+  authContext: AuthorizationContext;
   scopedType: DocumentTypeCode | null;
   now: Date;
 }) {
-  const baseFilter = { AND: [{ archivedAt: null }, aclWhere] };
+  const baseFilter = { AND: [{ archivedAt: null }, buildDocumentReadWhere(authContext)] };
+  const inboxUnitIds = documentUserUnitIds(authContext);
+  const typeWhere = (type: DocumentTypeCode): Prisma.DocumentWhereInput =>
+    type === "VAN_BAN_DEN"
+      ? buildInboxTypeWhere(authContext)
+      : type === "VAN_BAN_DI"
+      ? { AND: [{ type }, buildDocumentReadWhere(authContext, { delivered: false })] }
+      : { type };
   // Các chỉ số trạng thái/khẩn/trễ hạn bám theo loại văn bản đang xem (nếu có).
-  const scopedFilter = scopedType ? { AND: [baseFilter, { type: scopedType }] } : baseFilter;
+  const scopedFilter = scopedType ? { AND: [baseFilter, typeWhere(scopedType)] } : baseFilter;
 
   const countBucket = (type: "VAN_BAN_DEN" | "VAN_BAN_DI", bucket: "pending" | "done" | "issued") =>
     defaultPrisma.document.count({
-      where: { AND: [baseFilter, { type }, buildDocumentBucketWhere(type, bucket) ?? {}] },
+      where: {
+        AND: [
+          baseFilter,
+          typeWhere(type),
+          buildDocumentBucketWhere(type, bucket, type === "VAN_BAN_DEN" ? inboxUnitIds : undefined) ?? {},
+        ],
+      },
     });
+  const countType = (type: DocumentTypeCode) =>
+    defaultPrisma.document.count({ where: { AND: [baseFilter, typeWhere(type)] } });
 
   const [
     byType,
@@ -811,6 +841,8 @@ export async function getDocumentStatsRows({
     urgent,
     overdue,
     linkedTasks,
+    incomingTotal,
+    outgoingTotal,
     incomingPending,
     incomingDone,
     outgoingPending,
@@ -838,6 +870,8 @@ export async function getDocumentStatsRows({
         linkedTaskId: { not: null },
       },
     }),
+    countType("VAN_BAN_DEN"),
+    countType("VAN_BAN_DI"),
     countBucket("VAN_BAN_DEN", "pending"),
     countBucket("VAN_BAN_DEN", "done"),
     countBucket("VAN_BAN_DI", "pending"),
@@ -851,6 +885,8 @@ export async function getDocumentStatsRows({
     urgent,
     overdue,
     linkedTasks,
+    incomingTotal,
+    outgoingTotal,
     incomingPending,
     incomingDone,
     outgoingPending,

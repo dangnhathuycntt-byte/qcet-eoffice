@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
-import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { DOCUMENT_DONE_STATUSES } from "@qcet/shared/lib/documents/document-sidebar-buckets";
 import { getDocumentStatsRows } from "@/server/documents/document-service";
 import { canViewApprovalReport } from "@/server/documents/submission-approval-service";
@@ -22,7 +21,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const now = new Date();
     // ACL: scope document counts to what the authenticated user can read
-    const aclWhere = buildDocumentReadWhere(await loadCachedAuthorizationContext(authUser.id));
+    const authContext = await loadCachedAuthorizationContext(authUser.id);
     const typeParam = request.nextUrl.searchParams.get("type");
     const scopedType = resolveDocumentTypeParam(typeParam);
 
@@ -33,6 +32,8 @@ export async function GET(request: NextRequest): Promise<Response> {
         urgent,
         overdue,
         linkedTasks,
+        incomingTotal,
+        outgoingTotal,
         incomingPending,
         incomingDone,
         outgoingPending,
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       },
       canSeeApprovalReport,
     ] = await Promise.all([
-      getDocumentStatsRows({ aclWhere, scopedType, now }),
+      getDocumentStatsRows({ authContext, scopedType, now }),
       canViewApprovalReport(authUser),
     ]);
 
@@ -49,8 +50,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     const typeCount = (...types: string[]) => countOf(byType.filter((row) => types.includes(row.type)));
     const statusCount = (...statuses: string[]) => countOf(byStatus.filter((row) => statuses.includes(row.status)));
     const total = countOf(byType);
-    const incoming = typeCount("VAN_BAN_DEN");
-    const outgoing = typeCount("VAN_BAN_DI");
+    // Sổ đến gồm văn bản đi đã phát hành tới đơn vị người xem, sổ đi không gồm (đếm như danh sách, ADR-015).
+    const incoming = incomingTotal;
+    const outgoing = outgoingTotal;
     const internal = typeCount("TO_TRINH_NOI_BO");
     const pending = statusCount("CHO_PHAN_CONG");
     const processing = statusCount("DANG_XU_LY", "CHO_PHE_DUYET");

@@ -1,6 +1,7 @@
 /**
  * Nơi nhận có định danh của văn bản đi (V-05a), thu hồi và ghi nhận tiếp nhận (V-05).
- * Quyền kiểm bằng engine canonical (capability `document.outgoing.recall` và `.confirm_receipt`).
+ * Quyền thu hồi kiểm bằng engine canonical (`document.outgoing.recall`). Tiếp nhận như nhận thư (ADR-015): đơn vị trong
+ * trường do trưởng đơn vị nhận tự bấm; cơ quan ngoài trường do văn thư bên gửi ghi nhận (`.confirm_receipt`).
  */
 import { z } from "zod";
 import { OutgoingDocumentStatus, OutgoingRecipientKind, DocumentStatus, type Prisma } from "@prisma/client";
@@ -8,18 +9,19 @@ import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@qcet/db/outbox";
-import { ConflictError, NotFoundError, ValidationError } from "@/server/api/errors";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 import { loadContext, canDo, assertCan } from "@/server/documents/authorize-on-document";
+import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
+import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { evaluateRecall, evaluateReplacementTarget } from "@qcet/shared/domain/documents/recall-rules";
+import { AWAITING_RECEIPT_STATUSES } from "@qcet/shared/domain/documents/delivery-rules";
 
+// QCET chỉ gửi nhận trong trường (ADR-015): nơi nhận là đơn vị trong trường, không nhận tên cơ quan ngoài trường.
+const RECIPIENT_UNIT_REQUIRED = "Nơi nhận phải là đơn vị trong trường";
 export const RecipientInputSchema = z
-  .object({
-    unitId: z.string().trim().min(1).optional(),
-    name: z.string().trim().min(1).max(300).optional(),
-  })
-  .strict()
-  .refine((v) => v.unitId || v.name, { message: "Nơi nhận cần đơn vị hoặc tên cơ quan" });
+  .object({ unitId: z.string({ error: RECIPIENT_UNIT_REQUIRED }).trim().min(1, RECIPIENT_UNIT_REQUIRED) })
+  .strict();
 
 export const RecipientsSchema = z.array(RecipientInputSchema).max(100);
 export type RecipientInput = z.infer<typeof RecipientInputSchema>;
@@ -30,29 +32,16 @@ export const RecallSchema = z
 
 export const ConfirmReceiptSchema = z.object({ recipientId: z.string().trim().min(1) }).strict();
 
-/** Chuyển danh sách nhập thành dòng nơi nhận; đơn vị trong trường lấy tên từ danh mục, trùng nhau bị gộp. */
+/** Chuyển danh sách nhập thành dòng nơi nhận; tên đơn vị lấy từ danh mục, trùng nhau bị gộp. */
 export async function resolveRecipientRows(tx: Prisma.TransactionClient, inputs: RecipientInput[]) {
-  const unitIds = [...new Set(inputs.map((i) => i.unitId).filter((x): x is string => Boolean(x)))];
+  const unitIds = [...new Set(inputs.map((i) => i.unitId))];
   const units = unitIds.length ? await tx.organizationalUnit.findMany({ where: { id: { in: unitIds } }, select: { id: true, name: true } }) : [];
   const byId = new Map(units.map((u) => [u.id, u.name]));
-  const seen = new Set<string>();
-  const rows: Array<{ kind: OutgoingRecipientKind; unitId: string | null; name: string }> = [];
-  for (const input of inputs) {
-    if (input.unitId) {
-      const name = byId.get(input.unitId);
-      if (!name) throw new ValidationError("Đơn vị nhận không tồn tại", undefined, "RECIPIENT_UNIT_NOT_FOUND");
-      if (seen.has(`u:${input.unitId}`)) continue;
-      seen.add(`u:${input.unitId}`);
-      rows.push({ kind: OutgoingRecipientKind.INTERNAL_UNIT, unitId: input.unitId, name });
-    } else {
-      const name = input.name!;
-      const key = `e:${name.toLowerCase()}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      rows.push({ kind: OutgoingRecipientKind.EXTERNAL, unitId: null, name });
-    }
-  }
-  return rows;
+  return unitIds.map((unitId) => {
+    const name = byId.get(unitId);
+    if (!name) throw new ValidationError("Đơn vị nhận không tồn tại", undefined, "RECIPIENT_UNIT_NOT_FOUND");
+    return { kind: OutgoingRecipientKind.INTERNAL_UNIT, unitId: unitId as string | null, name };
+  });
 }
 
 /** Kiểm tra văn bản được thay thế (Q10) và chưa có văn bản nào thay thế nó. */
@@ -104,15 +93,30 @@ async function listReplaceCandidates(selfId: string) {
     .map((r) => ({ documentId: r.documentId, numberStr: r.outgoingNumberStr, title: r.document.summary }));
 }
 
+/**
+ * Ai ghi nhận một nơi nhận đã tiếp nhận: đơn vị trong trường do chính trưởng đơn vị đó bấm "Tiếp nhận";
+ * cơ quan ngoài trường không có tài khoản nên văn thư bên gửi ghi nhận thay.
+ */
+function canConfirmRecipient(
+  ctx: AuthorizationContext,
+  recipient: { kind: OutgoingRecipientKind; unitId: string | null },
+  doc: Parameters<typeof canDo>[2]
+): boolean {
+  if (recipient.kind === OutgoingRecipientKind.INTERNAL_UNIT) {
+    return Boolean(recipient.unitId) && ctx.positions.some((p) => p.unitId === recipient.unitId && isUnitLeaderPosition(p.positionCode));
+  }
+  return canDo(ctx, "document.outgoing.confirm_receipt", doc);
+}
+
 export interface RecipientsState {
   documentId: string;
   status: string;
-  recipients: Array<{ id: string; kind: string; name: string; unitId: string | null; receivedAt: string | null }>;
+  /** `canConfirm`: người xem ghi nhận được nơi nhận này đã tiếp nhận (văn bản đang chờ tiếp nhận). */
+  recipients: Array<{ id: string; kind: string; name: string; unitId: string | null; receivedAt: string | null; canConfirm: boolean }>;
   recall: { recalledAt: string; reason: string | null } | null;
   replaces: { documentId: string; numberStr: string | null } | null;
   replacedBy: { documentId: string; numberStr: string | null } | null;
   canRecall: boolean;
-  canConfirmReceipt: boolean;
   /** Văn thư phát hành được (đã đóng dấu cơ quan, chưa phát hành). */
   canIssue: boolean;
   /** Văn bản có thể được thay thế khi phát hành: đã thu hồi hoặc đã có nơi nhận tiếp nhận, chưa có bản thay thế. */
@@ -135,32 +139,48 @@ export async function getRecipientsState(session: SessionPayload, documentId: st
   const verdict = evaluateRecall(wf.status, wf.document.outgoingRecipients);
   const canRecall = canDo(ctx, "document.outgoing.recall", wf.document);
   const canIssue = wf.status === OutgoingDocumentStatus.ORGANIZATION_SIGNED && canDo(ctx, "document.outgoing.issue", wf.document);
+  const awaitingReceipt = (AWAITING_RECEIPT_STATUSES as readonly string[]).includes(wf.status);
   return {
     documentId,
     status: wf.status,
-    recipients: wf.document.outgoingRecipients.map((r) => ({ id: r.id, kind: r.kind, name: r.name, unitId: r.unitId, receivedAt: r.receivedAt?.toISOString() ?? null })),
+    recipients: wf.document.outgoingRecipients.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      name: r.name,
+      unitId: r.unitId,
+      receivedAt: r.receivedAt?.toISOString() ?? null,
+      canConfirm: awaitingReceipt && !r.receivedAt && canConfirmRecipient(ctx, r, wf.document),
+    })),
     recall: wf.recalledAt ? { recalledAt: wf.recalledAt.toISOString(), reason: wf.recallReason } : null,
     replaces: replaces ? { documentId: replaces.documentId, numberStr: replaces.outgoingNumberStr } : null,
     replacedBy: replacedBy ? { documentId: replacedBy.documentId, numberStr: replacedBy.outgoingNumberStr } : null,
     canRecall: canRecall && verdict.ok,
-    canConfirmReceipt: canDo(ctx, "document.outgoing.confirm_receipt", wf.document) && ["ISSUED", "DELIVERED"].includes(wf.status),
     canIssue,
     replaceCandidates: canIssue ? await listReplaceCandidates(documentId) : [],
     recallBlockedReason: canRecall && !verdict.ok && wf.status !== OutgoingDocumentStatus.RECALLED ? verdict.message : null,
   };
 }
 
-/** Văn thư ghi nhận một nơi nhận đã tiếp nhận văn bản. Từ lúc này văn bản không thu hồi được nữa. */
+/**
+ * Nơi nhận tiếp nhận văn bản: trưởng đơn vị nhận bấm cho đơn vị mình, văn thư bên gửi ghi nhận cho cơ quan ngoài trường.
+ * Từ lúc này văn bản không thu hồi được nữa.
+ */
 export async function confirmReceipt(session: SessionPayload, documentId: string, input: unknown, now = new Date()) {
   const { recipientId } = ConfirmReceiptSchema.parse(input);
   const ctx = await loadContext(session);
   const wf = await loadOutgoing(documentId);
-  assertCan(ctx, "document.outgoing.confirm_receipt", wf.document);
-  if (!["ISSUED", "DELIVERED"].includes(wf.status)) {
-    throw new ConflictError("Chỉ ghi nhận tiếp nhận cho văn bản đã phát hành và chưa thu hồi", "OUTGOING_NOT_ISSUED");
-  }
   const recipient = wf.document.outgoingRecipients.find((r) => r.id === recipientId);
   if (!recipient) throw new NotFoundError("Không tìm thấy nơi nhận", "RECIPIENT_NOT_FOUND");
+  if (!canConfirmRecipient(ctx, recipient, wf.document)) {
+    throw new ForbiddenError(
+      recipient.kind === OutgoingRecipientKind.INTERNAL_UNIT
+        ? "Chỉ trưởng đơn vị nhận mới tiếp nhận văn bản cho đơn vị mình"
+        : "Chỉ văn thư mới ghi nhận cơ quan ngoài trường đã nhận văn bản"
+    );
+  }
+  if (!(AWAITING_RECEIPT_STATUSES as readonly string[]).includes(wf.status)) {
+    throw new ConflictError("Chỉ ghi nhận tiếp nhận cho văn bản đã phát hành và chưa thu hồi", "OUTGOING_NOT_ISSUED");
+  }
   if (recipient.receivedAt) return { recipientId, receivedAt: recipient.receivedAt.toISOString(), changed: false };
 
   return prisma.$transaction(async (tx) => {

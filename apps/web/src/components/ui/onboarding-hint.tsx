@@ -88,7 +88,7 @@ export function CreateButtonWithHint({
 }: {
   /** Khóa nhớ "đã xem" theo người dùng, mỗi trang trống một khóa (vd. "tasks", "documents-inbox"). */
   hintId: string;
-  /** Nhãn nút tạo mới (vd. "Tạo việc", "Vào sổ văn bản đến"). */
+  /** Nhãn nút tạo mới (vd. "Tạo việc", "Soạn văn bản đi"). */
   label: string;
   onClick: () => void;
   title: string;

@@ -9,7 +9,7 @@ import {
   MAX_JSON_BODY_SIZE,
 } from "@/server/api/validation";
 import { assertRateLimit } from "@/server/security/rate-limit";
-import { canReadDocument, canCreateDocument } from "@/server/policies/document-policy";
+import { canReadDocument, canCreateDocument, INCOMING_CREATE_FORBIDDEN_MESSAGE } from "@/server/policies/document-policy";
 import { toDocumentListDTOArray, toDocumentDetailDTO } from "@/server/dto/document-dto";
 import { DocumentQuerySchema, CreateDocumentSchema } from "@qcet/contracts/documents";
 import {
@@ -20,7 +20,6 @@ import {
   type ListDocumentsFilter,
 } from "@/server/documents/document-service";
 import { validateDocumentCreatePayload } from "@/lib/documents/document-validator";
-import { assertNoSuspectedDuplicate } from "@/server/documents/duplicate-check";
 import { AuthorizationError, ValidationError } from "@/server/api/errors";
 import type { DocumentType } from "@qcet/contracts/types/document";
 import { resolveDocumentTypeParam } from "@qcet/shared/domain/documents/document-type-param";
@@ -134,6 +133,9 @@ export async function POST(request: NextRequest) {
     }
 
     const docType: DocumentType = resolveDocumentTypeParam(validated.type) ?? "VAN_BAN_DEN";
+    if (!canCreateDocument(authUser, docType)) {
+      throw new AuthorizationError(INCOMING_CREATE_FORBIDDEN_MESSAGE, "FORBIDDEN");
+    }
 
     // Nhánh văn bản đi: gọi OutgoingDocumentService để đảm bảo DocumentOutgoingWorkflow
     // luôn được tạo cùng Document (Decree 30/2020/ND-CP compliance).
@@ -167,14 +169,6 @@ export async function POST(request: NextRequest) {
           requestId: context.requestId,
         }
       );
-    }
-
-    if (docType === "VAN_BAN_DEN") {
-      await assertNoSuspectedDuplicate(authUser, {
-        originalNumber: validated.originalNumber || validated.documentNumber,
-        issuingAuthority: validated.issuingAuthority,
-        acknowledgeDuplicate: validated.acknowledgeDuplicate,
-      });
     }
 
     const payload: CreateDocumentPayload = {

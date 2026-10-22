@@ -26,6 +26,7 @@ import {
 } from '@/server/authorization/document-classification';
 import { isDocumentImmutable } from '@/server/documents/state-machine';
 import { isUnitLeaderPosition } from '@/server/authorization/authorization-engine';
+import { DELIVERED_OUTGOING_STATUSES } from '@qcet/shared/domain/documents/delivery-rules';
 
 export interface DocumentEntity extends DocumentClassificationTarget {
   id: string;
@@ -69,11 +70,17 @@ export function canReadDocument(
 }
 
 /**
- * Checks if user can create a document.
+ * Checks if user can create a document of the given type.
+ * QCET chỉ gửi nhận trong trường (ADR-015): không ai tạo văn bản đến, kể cả văn thư; văn bản đến của một đơn vị
+ * là văn bản đi đã phát hành có đơn vị đó trong nơi nhận.
  */
-export function canCreateDocument(user: AuthenticatedUser): boolean {
-  return Boolean(user && user.id);
+export function canCreateDocument(user: AuthenticatedUser, type?: string | null): boolean {
+  if (!user || !user.id) return false;
+  return type !== 'VAN_BAN_DEN';
 }
+
+export const INCOMING_CREATE_FORBIDDEN_MESSAGE =
+  'Không tạo văn bản đến: QCET chỉ gửi nhận trong trường, văn bản đến phát sinh khi đơn vị gửi phát hành văn bản đi.';
 
 /**
  * Checks if user can update document metadata or content.
@@ -181,6 +188,47 @@ export function canDeleteDocument(
   return false;
 }
 
+function userOf(userOrContext: AuthenticatedUser | AuthorizationContext): AuthenticatedUser {
+  return 'user' in (userOrContext as any) && (userOrContext as any).user
+    ? (userOrContext as any).user
+    : (userOrContext as AuthenticatedUser);
+}
+
+/**
+ * Mọi đơn vị người dùng thuộc về (kể cả kiêm nhiệm), cùng tập với quy tắc `canAccessClassification`;
+ * chỉ lấy đơn vị đầu tiên thì người kiêm nhiệm không thấy văn bản của đơn vị còn lại dù mở chi tiết được.
+ */
+export function documentUserUnitIds(userOrContext: AuthenticatedUser | AuthorizationContext): string[] {
+  const user = userOf(userOrContext);
+  return [
+    ...new Set<string>(
+      [
+        ...(((userOrContext as any)?.primaryUnitIds ?? []) as string[]),
+        ...(((userOrContext as any)?.positions ?? []) as Array<{ unitId?: string | null }>).map((p) => p.unitId ?? ''),
+        (user as any)?.departmentId ?? '',
+      ].filter(Boolean)
+    ),
+  ];
+}
+
+/** Văn bản đi đã phát hành có một trong các đơn vị này trong nơi nhận (văn bản "đến" của đơn vị, ADR-015). */
+export function deliveredToUnitsWhere(unitIds: string[]): Prisma.DocumentWhereInput {
+  if (unitIds.length === 0) return { id: { in: [] } };
+  return {
+    type: 'VAN_BAN_DI',
+    outgoingWorkflow: { is: { status: { in: [...DELIVERED_OUTGOING_STATUSES] } } },
+    outgoingRecipients: { some: { kind: 'INTERNAL_UNIT', unitId: { in: unitIds } } },
+  };
+}
+
+/**
+ * Sổ "Văn bản đến" của người dùng: văn bản đến đã vào sổ, cộng văn bản đi đã phát hành tới đơn vị của họ.
+ * Ghép thêm `buildDocumentReadWhere` để lọc theo quyền đọc.
+ */
+export function buildInboxTypeWhere(userOrContext: AuthenticatedUser | AuthorizationContext): Prisma.DocumentWhereInput {
+  return { OR: [{ type: 'VAN_BAN_DEN' }, deliveredToUnitsWhere(documentUserUnitIds(userOrContext))] };
+}
+
 /**
  * Builds the database-level Prisma WHERE clause for document access control (ACL)
  * enforcing Decree 30/2020 and institutional governance rules before pagination.
@@ -191,19 +239,24 @@ export function canDeleteDocument(
  * - Lead user: leadUserId = user.id
  * - Unit match: user's unit = incomingWorkflow.leadUnitId, or the lead unit of
  *   the task generated from a directive (linkedTask.leadUnitId)
+ * - Delivered: issued outgoing documents with the user's unit among internal recipients (ADR-015)
  * - Handling confidential / restricted documents: securityLevel != TUYET_MAT
  */
 export function buildDocumentReadWhere(
-  userOrContext?: AuthenticatedUser | AuthorizationContext | null
+  userOrContext?: AuthenticatedUser | AuthorizationContext | null,
+  options: {
+    /**
+     * Tính cả văn bản đi đã phát hành tới đơn vị của người dùng (mặc định có). Sổ "Văn bản đi" tắt đi để nơi nhận
+     * không thấy văn bản của đơn vị khác trong sổ đi của mình.
+     */
+    delivered?: boolean;
+  } = {}
 ): Prisma.DocumentWhereInput {
   if (!userOrContext) {
     return { id: '__DENY_ANONYMOUS__' };
   }
 
-  const user =
-    'user' in (userOrContext as any) && (userOrContext as any).user
-      ? (userOrContext as any).user
-      : (userOrContext as AuthenticatedUser);
+  const user = userOf(userOrContext);
 
   const userId = (userOrContext as any)?.userId || user?.id;
   if (!userId) {
@@ -212,17 +265,7 @@ export function buildDocumentReadWhere(
 
   const role = normalizeRole(user?.role);
   const positionCode = ((user as any)?.positionCode || '').toUpperCase();
-  // Mọi đơn vị người dùng thuộc về (kể cả kiêm nhiệm), cùng tập với quy tắc `canAccessClassification`;
-  // chỉ lấy đơn vị đầu tiên thì người kiêm nhiệm không thấy văn bản của đơn vị còn lại dù mở chi tiết được.
-  const userUnitIds = [
-    ...new Set<string>(
-      [
-        ...(((userOrContext as any)?.primaryUnitIds ?? []) as string[]),
-        ...(((userOrContext as any)?.positions ?? []) as Array<{ unitId?: string | null }>).map((p) => p.unitId ?? ''),
-        (user as any)?.departmentId ?? '',
-      ].filter(Boolean)
-    ),
-  ];
+  const userUnitIds = documentUserUnitIds(userOrContext);
 
   // 1. Handling confidential / restricted documents (classification != TUYET_MAT):
   // State secrets (TUYET_MAT) are strictly forbidden from regular document queries
@@ -291,6 +334,9 @@ export function buildDocumentReadWhere(
       { incomingWorkflow: { is: { leadUnitId: unitId } } },
       { linkedTask: { is: { leadUnitId: unitId } } }
     );
+  }
+  if (options.delivered !== false && userUnitIds.length > 0) {
+    orConditions.push(deliveredToUnitsWhere(userUnitIds));
   }
 
   return {

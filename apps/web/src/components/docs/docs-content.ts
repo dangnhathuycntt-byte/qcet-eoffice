@@ -864,41 +864,34 @@ export const DOC_GROUPS: DocGroup[] = [
         slug: "van-ban-den",
         title: "Văn bản đến",
         description:
-          "Vào sổ, bút phê, giao đơn vị chủ trì và theo dõi xử lý văn bản đến.",
+          "Nhận văn bản các đơn vị trong trường gửi tới, tiếp nhận và theo dõi xử lý.",
         icon: "FileInput",
         blocks: [
           {
             type: "p",
-            text: "Văn bản đến là văn bản từ cơ quan bên ngoài gửi tới trường, đi qua bút phê, phân công và xử lý sau khi vào sổ.",
+            text: "QCET chỉ gửi nhận trong trường nên không ai tạo văn bản đến bằng tay. Khi một đơn vị phát hành văn bản đi có đơn vị bạn trong nơi nhận, văn bản đó hiện trong **Văn bản đến** của đơn vị bạn; số đến là số của văn bản đi.",
           },
           {
             type: "h2",
-            text: "Vào sổ văn bản",
-          },
-          {
-            type: "p",
-            text: "Mở **Văn bản đến** trong nhóm **Văn bản** ở thanh bên, rồi bấm **Vào sổ văn bản đến**.",
+            text: "Nhận và tiếp nhận văn bản",
           },
           {
             type: "ol",
             items: [
-              "Điền **Số, ký hiệu** và **Cơ quan ban hành** theo văn bản gốc. Cả hai đều bắt buộc.",
-              "Kiểm tra **Ngày ban hành**. Mặc định là ngày hôm nay.",
-              "Ghi **Trích yếu nội dung** ngắn gọn (bắt buộc).",
-              "Chọn **Đơn vị chủ trì xử lý** nếu đã biết. Để trống thì hiện **Chưa phân công**.",
-              "Nếu cần, bấm **Thêm thông tin** để mở **Thể loại**, **Mức khẩn**, **Hạn giải quyết**; bấm **Đính kèm tệp** để chọn tệp PDF hoặc Word, tối đa 10MB.",
-              "Bấm **Vào sổ** để lưu.",
+              "Trưởng đơn vị nhận được thông báo **Có văn bản gửi đến đơn vị bạn**. Mọi người trong đơn vị đều mở được văn bản trong **Văn bản đến**.",
+              "Mở văn bản. Ở khối **Theo dõi nơi nhận**, Trưởng đơn vị bấm **Tiếp nhận** ở dòng đơn vị mình.",
+              "Văn bản chuyển từ **Chờ xử lý** sang **Đã xử lý**.",
             ],
           },
           {
             type: "callout",
-            tone: "warning",
-            text: "Nếu số ký hiệu và cơ quan ban hành trùng với văn bản đã vào sổ, hệ thống cảnh báo và hiện số đến của văn bản cũ. Nếu vẫn cần vào sổ, bấm **Vào sổ** thêm một lần.",
+            tone: "info",
+            text: "Khi đã có đơn vị tiếp nhận, đơn vị gửi không thu hồi được văn bản nữa mà phải phát hành văn bản thay thế với số mới.",
           },
           {
             type: "callout",
             tone: "info",
-            text: "Nếu văn bản đã lưu nhưng tệp chưa đính kèm được, hộp thoại sẽ báo và nút chính đổi thành **Đóng**. Khi đó, dùng **Thêm tệp** trong menu **Thao tác khác** của văn bản.",
+            text: "Các bước bút phê, phân công và lưu hồ sơ bên dưới dành cho văn bản đến đã vào sổ trước khi QCET bỏ bước vào sổ.",
           },
           {
             type: "h2",
@@ -940,7 +933,7 @@ export const DOC_GROUPS: DocGroup[] = [
           },
           {
             type: "p",
-            text: "Ở thanh bên, **Chờ xử lý** gồm văn bản chưa hoàn thành; **Đã xử lý** gồm văn bản đã hoàn thành, đã lập hồ sơ hoặc đã lưu trữ. Nhãn trạng thái trong danh sách gồm **Mới nhận**, **Đã đăng ký**, **Chờ bút phê**, **Đã chuyển**, **Đang xử lý**, **Hoàn thành**, **Đã lập hồ sơ** và **Đã lưu trữ**.",
+            text: "Ở thanh bên, **Chờ xử lý** gồm văn bản đơn vị bạn chưa tiếp nhận và văn bản chưa hoàn thành; **Đã xử lý** gồm văn bản đã tiếp nhận, đã hoàn thành, đã lập hồ sơ hoặc đã lưu trữ. Nhãn trạng thái trong danh sách gồm **Mới nhận**, **Đã đăng ký**, **Chờ bút phê**, **Đã chuyển**, **Đang xử lý**, **Hoàn thành**, **Đã lập hồ sơ** và **Đã lưu trữ**.",
           },
         ],
       },
@@ -953,7 +946,7 @@ export const DOC_GROUPS: DocGroup[] = [
         blocks: [
           {
             type: "p",
-            text: "Văn bản đi là văn bản do trường ban hành gửi ra ngoài hoặc gửi các đơn vị. Mỗi văn bản đi qua các bước duyệt, ký và cấp số trước khi phát hành.",
+            text: "Văn bản đi là văn bản do trường ban hành gửi các đơn vị trong trường. Mỗi văn bản đi qua các bước duyệt, ký và cấp số trước khi phát hành; phát hành xong, văn bản hiện trong **Văn bản đến** của các đơn vị nhận.",
           },
           {
             type: "h2",
@@ -1012,14 +1005,14 @@ export const DOC_GROUPS: DocGroup[] = [
             type: "ol",
             items: [
               "Bấm **Phát hành**.",
-              "Tích các đơn vị nhận văn bản trong danh sách. Nhập cơ quan ngoài trường vào ô **Cơ quan, tổ chức ngoài trường**, mỗi nơi một dòng. Cần chọn ít nhất một nơi nhận.",
+              "Tích các đơn vị nhận văn bản trong danh sách. Cần chọn ít nhất một đơn vị.",
               "Tùy chọn: chọn **văn bản được thay thế** nếu có văn bản đã thu hồi hoặc đã có nơi nhận tiếp nhận.",
               "Bấm **Phát hành** để xác nhận.",
             ],
           },
           {
             type: "p",
-            text: "Khi nơi nhận đã tiếp nhận, Văn thư bấm **Ghi nhận đã nhận** ở từng nơi.",
+            text: "Trưởng đơn vị nhận bấm **Tiếp nhận** cho đơn vị mình; khối **Theo dõi nơi nhận** hiện ngày từng đơn vị đã nhận.",
           },
           {
             type: "h2",

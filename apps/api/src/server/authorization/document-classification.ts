@@ -31,6 +31,7 @@ import type {
 import { AuthorizationContextModel, SystemRole } from './authorization-context';
 import type { AuthenticatedUser } from '@/server/api/request-context';
 import { isExecutivePosition } from './authorization-engine';
+import { deliveredUnitIds } from '@qcet/shared/domain/documents/delivery-rules';
 
 export type DocumentApplicationClassification =
   | 'PUBLIC'
@@ -71,6 +72,9 @@ export interface DocumentClassificationTarget {
   hasConsentOrLegalBasis?: boolean;
   directives?: any[] | null;
   incomingWorkflow?: any | null;
+  /** Văn bản đi đã phát hành: đơn vị có tên trong nơi nhận được đọc như văn bản đến của mình (ADR-015). */
+  outgoingWorkflow?: { status?: string | null } | null;
+  outgoingRecipients?: Array<{ kind?: string | null; unitId?: string | null }> | null;
   /**
    * Nhiệm vụ liên kết (nếu truy vấn có nạp). Chỉ `leadUnitId` được dùng để xác định đơn vị xử lý văn bản.
    * `Task.scope` (SCHOOL/DEPARTMENT/INDIVIDUAL) là phạm vi hiển thị của nhiệm vụ, không cấp quyền đọc văn bản.
@@ -401,6 +405,10 @@ function extractDocumentUnitIds(doc: DocumentClassificationTarget): string[] {
       }
     }
   }
+
+  // Văn bản đi đã phát hành: đơn vị nhận trong trường là nơi văn bản này "đến" (ADR-015), cần nạp
+  // `outgoingWorkflow.status` và `outgoingRecipients` thì mới tính được.
+  units.push(...deliveredUnitIds(doc));
 
   return units;
 }

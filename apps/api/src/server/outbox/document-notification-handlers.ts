@@ -7,6 +7,7 @@ import { OutboxEventType, type DbClient, type OutboxHandlerMap } from "@qcet/db/
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
 import { logger } from "@/server/observability/logger";
 import { recipientsForPendingSteps } from "@/server/documents/submission-approval-service";
+import { AWAITING_RECEIPT_STATUSES } from "@qcet/shared/domain/documents/delivery-rules";
 import type { OutboxEvent } from "@prisma/client";
 
 function payloadOf(event: OutboxEvent): Record<string, unknown> {
@@ -171,6 +172,32 @@ export const DOCUMENT_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
       type: "document_returned",
       title: "Văn bản bị trả lại",
       body: `${docLabel(doc)}. Lý do: ${reason ?? "không nêu"}. Cần chuyển cho đơn vị khác.`,
+    });
+  },
+
+  // Văn bản đi được phát hành: báo trưởng các đơn vị trong trường có tên trong nơi nhận (văn bản đến của đơn vị, ADR-015).
+  // Sự kiện cũ của bước vào sổ văn bản đến (đã bỏ) cũng mang loại này nhưng không phải văn bản đi: bỏ qua, không báo ai.
+  [OutboxEventType.DOCUMENT_ISSUED_NOTIFICATION]: async (event, context) => {
+    const db = context?.client as DbClient;
+    const p = payloadOf(event);
+    const documentId = str(p, "documentId") ?? event.aggregateId;
+    const doc = await db.document.findUnique({
+      where: { id: documentId },
+      include: {
+        outgoingWorkflow: { select: { status: true, outgoingNumberStr: true } },
+        outgoingRecipients: { where: { kind: "INTERNAL_UNIT", unitId: { not: null }, receivedAt: null } },
+      },
+    });
+    if (!doc || doc.type !== "VAN_BAN_DI") return { skipped: "not_outgoing" };
+    if (!(AWAITING_RECEIPT_STATUSES as readonly string[]).includes(doc.outgoingWorkflow?.status ?? "")) return { skipped: "not_awaiting_receipt" };
+    const leaders: string[] = [];
+    for (const r of doc.outgoingRecipients) if (r.unitId) leaders.push(...(await unitLeaderIds(db, r.unitId)));
+    if (leaders.length === 0) return { skipped: "no_internal_recipient_leader" };
+    const summary = doc.summary.length > 60 ? `${doc.summary.slice(0, 57)}...` : doc.summary;
+    return notifyUsers(db, doc.id, leaders, str(p, "issuerId"), {
+      type: "document_delivered",
+      title: "Có văn bản gửi đến đơn vị bạn",
+      body: `Văn bản số ${doc.outgoingWorkflow?.outgoingNumberStr ?? "—"}: ${summary}. Mở văn bản để tiếp nhận.`,
     });
   },
 

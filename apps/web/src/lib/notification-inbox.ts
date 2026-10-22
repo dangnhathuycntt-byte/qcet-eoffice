@@ -96,6 +96,7 @@ const EVENT_LABELS: Record<string, string> = {
   submission_consult: "Xin ý kiến",
   submission_consult_answered: "Ý kiến trả lời",
   document_returned: "Văn bản bị trả lại",
+  document_delivered: "Văn bản gửi đến",
   document_rerouted: "Văn bản chuyển đơn vị",
   document_recalled: "Văn bản bị thu hồi",
   extension_requested: "Xin gia hạn",
