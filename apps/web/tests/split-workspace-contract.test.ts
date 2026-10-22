@@ -32,16 +32,19 @@ test("khung workspace dùng chung khớp giữa CSS module và Sổ văn bản",
   assert.match(registry, /\bp-2\b/, "padding 8px = calc(var(--spacing) * 2)");
 });
 
-test("thẻ workspace: bo xl, viền mảnh, nền card, cuộn trong thẻ", () => {
+// Khung trang đã duyệt 22/10/2026 (docs/ux/LINEAR_DESIGN_TOKENS.md mục 8): bo 12px, viền hairline, bóng thấp như WorkspacePageCard
+test("thẻ workspace: bo 12px, viền hairline, bóng thấp, nền card, cuộn trong thẻ", () => {
   const card = declarations(".card");
-  assert.equal(card["border-radius"], "var(--radius-xl)");
-  assert.equal(card.border, "1px solid var(--border)");
+  assert.equal(card["border-radius"], "var(--radius-md)");
+  assert.equal(card.border, "var(--border-hairline) solid var(--border)");
+  assert.equal(card["box-shadow"], "var(--shadow-low)");
   assert.equal(card.background, "var(--card)");
   assert.equal(card.overflow, "hidden");
   assert.equal(card.display, "flex");
   assert.equal(card["flex-direction"], "column");
-  assert.match(registry, /rounded-xl/);
-  assert.match(registry, /border border-border/);
+  assert.match(registry, /rounded-md/);
+  assert.match(registry, /border-hairline border-border/);
+  assert.match(registry, /shadow-low/);
   assert.match(registry, /bg-card/);
   assert.match(registry, /overflow-hidden/);
   assert.match(registry, /@container/);

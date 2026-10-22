@@ -12,12 +12,14 @@
   padding: calc(var(--spacing) * 2);
 }
 
-/* Một thẻ của workspace: viền mảnh, bo xl, nền card, cuộn bên trong */
+/* Một thẻ của workspace theo khung trang đã duyệt 22/10/2026 (như `WorkspacePageCard`): bo 12px, viền hairline, bóng thấp,
+   nền card, cuộn bên trong */
 .card {
   min-width: 0;
   min-height: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  border: var(--border-hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-low);
   background: var(--card);
   overflow: hidden;
   display: flex;
