@@ -510,7 +510,7 @@ export function AuthProvider({
     }
 
     // Bước 4–5 là dọn dẹp sau khi đã gọi xóa phiên ở máy chủ: treo (IndexedDB bị chặn, Auth.js không phản hồi) thì vẫn sang /login.
-    window.setTimeout(() => window.location.replace("/login"), 3000);
+    const cleanupDeadline = window.setTimeout(() => window.location.replace("/login"), 3000);
 
     // 4. Purge user offline data
     if (userIdToPurge) {
@@ -529,6 +529,7 @@ export function AuthProvider({
         window.location.replace("/login");
       }
     } finally {
+      window.clearTimeout(cleanupDeadline);
       logoutInProgress = false;
     }
   }, [user?.id]);
