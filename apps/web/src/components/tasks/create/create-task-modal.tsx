@@ -14,7 +14,7 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { Select } from "@base-ui/react/select";
 import { Dialog } from "@base-ui/react/dialog";
-import { DialogBreadcrumb, SubmitShortcutHint } from "@/components/ui/dialog";
+import { DialogBreadcrumb, DialogComposeBody, DialogComposeFooter, DialogComposeProperties, DialogExpandButton, SubmitShortcutHint } from "@/components/ui/dialog";
 import { useModifierKey } from "@/hooks/use-modifier-key";
 import type { CreateTaskLevel } from "@/lib/adapters/create-task-mapper";
 import {
@@ -57,7 +57,7 @@ const DESCRIPTION_PLACEHOLDER = "Nội dung chỉ đạo, căn cứ pháp lý, y
 function DescriptionFallback({ value }: { value?: string }) {
   const text = value ? contentToPlainText(value) : "";
   return (
-    <p aria-hidden="true" className={cn("min-h-[140px] whitespace-pre-line text-sm leading-relaxed", text ? "text-foreground" : "text-foreground/33")}>
+    <p aria-hidden="true" className={cn("min-h-16 whitespace-pre-line text-sm leading-relaxed", text ? "text-foreground" : "text-foreground/33")}>
       {text || DESCRIPTION_PLACEHOLDER}
     </p>
   );
@@ -233,6 +233,9 @@ export function CreateTaskModal({
   // Agent soạn nháp (panel bên phải như "Create with Agent" của Linear), chỉ màn rộng ≥ lg
   const agentAvailable = useTaskAgentAvailable(isOpen);
   const [agentOpen, setAgentOpen] = React.useState(false);
+  // Phóng to như hộp Soạn văn bản đi/Tạo cuộc họp (giữ qua các lần mở); mở Agent thì hộp luôn cao hết khung
+  const [expanded, setExpanded] = React.useState(false);
+  const tall = expanded || agentOpen;
   // Ẩn panel vẫn giữ cuộc trò chuyện; đóng hộp mới bỏ
   const [agentStarted, setAgentStarted] = React.useState(false);
   const agentToggleRef = React.useRef<HTMLButtonElement>(null);
@@ -547,23 +550,25 @@ export function CreateTaskModal({
             // Mở hộp thì focus ngay ô tên (Base UI làm sau khi gắn), không chuyển focus giữa lúc hộp đang phóng to
             initialFocus={focusTitleEnd}
             className={cn(
-              "group/dlg pointer-events-none fixed inset-0 z-50 flex items-start justify-center px-3 py-[6vh] outline-none max-md:p-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+47px)] max-md:pb-[max(calc(env(safe-area-inset-bottom,0px)+47px),calc(var(--keyboard-height,0px)+8px))]",
+              "group/dlg pointer-events-none fixed inset-0 z-50 flex items-start justify-center px-3 pt-[10vh] pb-[5vh] outline-none max-md:p-3 max-md:pt-[calc(env(safe-area-inset-top,0px)+47px)] max-md:pb-[max(calc(env(safe-area-inset-bottom,0px)+47px),calc(var(--keyboard-height,0px)+8px))]",
               // Desktop: phóng từ 95% kèm hiện dần như hộp của Linear (đo 16/10/2026: scale 0,95 → 1, xong ~200ms); điện thoại trượt lên ở khung bên dưới
               "md:transition-[opacity,scale] md:duration-[var(--motion-duration-panel)] md:ease-[var(--motion-ease-enter)] md:data-[starting-style]:scale-95 md:data-[starting-style]:opacity-0 md:data-[ending-style]:scale-95 md:data-[ending-style]:opacity-0 md:data-[ending-style]:duration-[var(--motion-duration-normal)] md:data-[ending-style]:ease-[var(--motion-ease-exit)]",
             )}
           >
             {/* Điện thoại: đẩy hộp lên khi bàn phím ảo hiện (như sheet chọn thuộc tính) */}
             {isOpen ? <SheetKeyboardSync /> : null}
-            {/* Khung ngoài theo hộp New project của Linear (đo 16/10/2026): rộng 920px, cao hết màn trừ 6vh trên/dưới.
-                Mở Agent thì nới rộng, chuyển nền màu sidebar và bọc thẻ form như "Create with Agent"
-                (max-width 220ms trễ 80ms, nền 100ms; thẻ form thụt vào 8px, bo 12px = rounded-md) */}
+            {/* Khung theo hộp New issue của Linear như hộp Soạn văn bản đi/Tạo cuộc họp (người dùng: "chuyển đổi luôn cho phù
+                hợp" 22/10/2026; từ 16/10 là hộp New project rộng 920px cao hết màn): cách mép trên 10%, rộng 720px, cao theo nội
+                dung tới 85% màn; phóng to 820px cao hết khung. Mở Agent thì cao hết khung, nới rộng, chuyển nền màu sidebar và bọc
+                thẻ form như "Create with Agent" (max-width 220ms trễ 80ms, nền 100ms; thẻ form thụt vào 8px, bo 12px = rounded-md) */}
             <div
               data-slot="create-task-shell"
               className={cn(
-                "pointer-events-auto relative flex h-full w-full max-w-[920px] overflow-hidden rounded-2xl bg-background shadow-dialog border-0",
+                "pointer-events-auto relative flex max-h-full w-full max-w-[720px] overflow-hidden rounded-2xl bg-background shadow-dialog border-0",
+                tall && "md:h-full md:max-w-[820px]",
                 "lg:[transition:max-width_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,background-color_100ms_ease] motion-reduce:lg:[transition:none]",
-                // 920 thẻ + 16 lề + 380 panel
-                agentOpen && "lg:max-w-[1316px] lg:bg-sidebar",
+                // 820 thẻ + 16 lề + 380 panel
+                agentOpen && "lg:max-w-[1216px] lg:bg-sidebar",
                 // Điện thoại: thẻ cao gần hết màn hình như hộp tạo mới của Linear
                 "max-md:h-full max-md:max-h-none max-md:min-h-0",
                 // Điện thoại: trượt lên từ đáy như sheet (dự án không nạp tw-animate nên dùng data-starting-style của Dialog)
@@ -574,10 +579,10 @@ export function CreateTaskModal({
               <div
                 data-slot="create-task-modal"
                 className={cn(
-                  "relative flex w-full shrink-0 basis-full max-w-[920px] flex-col overflow-hidden bg-background",
+                  "relative flex w-full shrink-0 basis-full max-w-[820px] flex-col overflow-hidden bg-background",
                   "lg:[transition:max-width_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,margin_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,border-radius_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,box-shadow_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms] motion-reduce:lg:[transition:none]",
                   // Màn lg hẹp (khung không nới đủ 1316px): thẻ co lại chừa chỗ panel, tính theo viewport để không co theo khung đang nới
-                  agentOpen && "lg:m-2 lg:max-w-[min(920px,calc(100vw-420px))] lg:rounded-md lg:shadow-[inset_0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]",
+                  agentOpen && "lg:m-2 lg:max-w-[min(820px,calc(100vw-420px))] lg:rounded-md lg:shadow-[inset_0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]",
                 )}
               >
                 {/* ── Modal Top Header ──────────────────────────── */}
@@ -593,32 +598,36 @@ export function CreateTaskModal({
                     }
                   />
 
-                  {agentAvailable && !agentOpen && (
+                  <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                    {agentAvailable && !agentOpen && (
+                      <Button
+                        ref={agentToggleRef}
+                        variant="toolbar"
+                        size="pill-xs"
+                        onClick={() => {
+                          setAgentStarted(true);
+                          setAgentOpen(true);
+                        }}
+                        aria-expanded="false"
+                        className="mr-1.5 shrink-0 max-lg:hidden"
+                      >
+                        <AgentIcon data-icon="inline-start" />
+                        Tạo với Agent
+                      </Button>
+                    )}
+                    {/* Mở Agent thì hộp đã cao hết khung */}
+                    {agentOpen ? null : <DialogExpandButton expanded={expanded} onToggle={() => setExpanded((value) => !value)} />}
                     <Button
-                      ref={agentToggleRef}
-                      variant="toolbar"
-                      size="pill-xs"
-                      onClick={() => {
-                        setAgentStarted(true);
-                        setAgentOpen(true);
-                      }}
-                      aria-expanded="false"
-                      className="ml-auto shrink-0 max-lg:hidden"
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={handleRequestClose}
+                      aria-label="Đóng"
+                      title="Đóng (Esc)"
+                      className={cn("shrink-0 rounded-full max-md:size-8", agentOpen && "lg:hidden")}
                     >
-                      <AgentIcon data-icon="inline-start" />
-                      Tạo với Agent
+                      <X />
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={handleRequestClose}
-                    aria-label="Đóng"
-                    title="Đóng (Esc)"
-                    className={cn("ml-auto shrink-0 rounded-full max-md:size-8", agentAvailable && !agentOpen && "lg:ml-0", agentOpen && "lg:hidden")}
-                  >
-                    <X />
-                  </Button>
+                  </div>
                 </header>
 
                 {/* ── Restored Draft Banner ────────────────────── */}
@@ -653,8 +662,8 @@ export function CreateTaskModal({
                   </div>
                 )}
 
-                {/* ── Thân: tên, hàng thuộc tính, mô tả (thứ tự như hộp New project của Linear) ── */}
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-4 md:px-6">
+                {/* ── Thân: tên, mô tả, việc con; hàng thuộc tính và chân hộp ngoài vùng cuộn (như hộp New issue của Linear) ── */}
+                <DialogComposeBody>
                   {/* 1. Task Title (P0 Field) */}
                   <div className="space-y-0.5 shrink-0">
                     <label htmlFor="create-task-title" className="sr-only">
@@ -711,185 +720,9 @@ export function CreateTaskModal({
                     )}
                   </div>
 
-                  {/* 2. Thuộc tính: pill ngay dưới tên, luôn thấy kể cả khi mô tả dài */}
-                  <div className="mt-2.5 flex shrink-0 flex-wrap items-center gap-2">
-                    {/* 3.0 Đơn vị chủ trì, luôn hiện (người dùng yêu cầu 21/10/2026): mặc định đơn vị của người tạo; người không thuộc
-                        lãnh đạo chỉ có đơn vị mình (máy chủ chặn tạo ngoài đơn vị). Đổi đơn vị thì xóa chủ trì đã chọn và mở luôn
-                        danh sách nhân sự của đơn vị mới: chọn đơn vị → chọn người chủ trì. */}
-                    {(form.availableDepartments.length > 0 || form.isLoadingDepartments) && (
-                    <Select.Root
-                      value={form.formData.selectedDeptCode}
-                      open={openDropdown === "dept"}
-                      onOpenChange={(open, details) => {
-                        setOpenDropdown(open ? "dept" : null);
-                        if (!open && details.reason === "item-press") {
-                          setDeptPicked(true);
-                          // Chọn lại đúng đơn vị đang có mà chưa có chủ trì: vẫn đi tiếp sang chọn người như khi đổi đơn vị
-                          if (!form.formData.leadAssigneeId) window.setTimeout(() => setOpenDropdown("dri"), 0);
-                        }
-                      }}
-                      onValueChange={(code) => {
-                        if (!code || code === form.formData.selectedDeptCode) return;
-                        form.setField("selectedDeptCode", code);
-                        form.setField("leadAssigneeId", "");
-                        // Sau khi menu đơn vị đóng (cùng lượt bấm nó đặt openDropdown về null)
-                        window.setTimeout(() => setOpenDropdown("dri"), 0);
-                      }}
-                    >
-                        {/* Chưa bấm chọn và đang ở đơn vị mặc định thì chỉ ghi "Đơn vị" mờ như các chip chưa chọn (người dùng: "để mỗi chữ
-                            đơn vị thôi rồi chọn cho đẹp" 21/10/2026); bấm chọn (kể cả đơn vị mặc định) thì hiện tên. Tên đầy đủ luôn ở
-                            tooltip và nhãn đọc màn hình. */}
-                        <Select.Trigger
-                          aria-label={`Đơn vị: ${currentDeptName}`}
-                          title={`Đơn vị: ${currentDeptName}`}
-                          disabled={form.availableDepartments.length === 0}
-                          className={cn(PROPERTY_PILL_CLASS, deptIsDefault && "text-muted-foreground")}
-                        >
-                          <Building2 className="text-muted-foreground" />
-                          <span className="max-w-[240px] truncate max-md:max-w-[120px]">{deptIsDefault ? "Đơn vị" : currentDeptName}</span>
-                        </Select.Trigger>
-
-                        <Select.Portal>
-                          <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
-                          <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12} alignItemWithTrigger={false}>
-                            <Select.Popup
-                              style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                              className={cn("w-64", MENU_POPUP_CLASS, SHEET_POPUP_CLASS)}
-                              aria-label="Chọn đơn vị phòng ban"
-                            >
-                              <MenuSheetHeader title="Đơn vị" />
-                              <Select.List>
-                                {form.availableDepartments.map((dept) => (
-                                  <Select.Item key={dept.code} value={dept.code} className={MENU_OPTION_ROW_CLASS}>
-                                    <Select.ItemText className="truncate">{dept.name}</Select.ItemText>
-                                  </Select.Item>
-                                ))}
-                              </Select.List>
-                            </Select.Popup>
-                          </Select.Positioner>
-                        </Select.Portal>
-                    </Select.Root>
-                    )}
-
-                    {/* 3.1 Lead Assignee (DRI) Chip (P0 Field) */}
-                    <PersonPillPicker
-                      people={form.availablePersonnel}
-                      valueId={form.formData.leadAssigneeId}
-                      onSelect={(person) => {
-                        form.setField("leadAssigneeId", person.id);
-                        if (form.fieldErrors.lead) form.setFieldErrors((prev) => ({ ...prev, lead: undefined }));
-                      }}
-                      open={openDropdown === "dri"}
-                      onOpenChange={(open) => setOpenDropdown(open ? "dri" : null)}
-                      loading={form.isLoadingDepartments}
-                      invalid={Boolean(form.fieldErrors.lead)}
-                      required
-                      compactWhenEmpty
-                      triggerRef={leadTriggerRef}
-                    />
-
-                    {/* 3.2 Start Date Chip */}
-                    <VietnameseDatePicker
-                      id="create-task-start-date"
-                      value={form.formData.startDate}
-                      onChange={(val) => form.setField("startDate", val)}
-                      label={form.formData.startDate ? "Bắt đầu:" : undefined}
-                      variant="pill"
-                      // Bọc inline-block lệch dòng 1px so với các pill khác trong hàng flex
-                      className="flex"
-                      compactWhenEmpty
-                      error={Boolean(form.fieldErrors.startDate)}
-                      icon={<Calendar className="text-muted-foreground" />}
-                      placeholder="Bắt đầu"
-                    />
-
-                    {/* 3.3 Target Due Date Chip (P0 Field) */}
-                    <VietnameseDatePicker
-                      id="create-task-due-date"
-                      value={form.formData.dueDate}
-                      required
-                      onChange={(val) => {
-                        form.setField("dueDate", val);
-                        if (form.fieldErrors.dueDate) {
-                          form.setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
-                        }
-                      }}
-                      label={form.formData.dueDate ? "Hạn:" : undefined}
-                      variant="pill"
-                      className="flex"
-                      compactWhenEmpty
-                      error={Boolean(form.fieldErrors.dueDate)}
-                      icon={<CalendarClock className={form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground"} />}
-                      // Nhãn ngắn như "Target" của Linear; tooltip và tên đọc màn hình vẫn là "Hạn hoàn thành"
-                      placeholder="Hạn"
-                      title="Hạn hoàn thành"
-                    />
-
-                    {/* 3.4 Priority Chip: đứng ngay trước Văn bản (người dùng chọn 16/10/2026) */}
-                    <Select.Root
-                      value={form.formData.priority}
-                      open={openDropdown === "priority"}
-                      onOpenChange={(open) => setOpenDropdown(open ? "priority" : null)}
-                      onValueChange={(p) => {
-                        if (p) form.setField("priority", p);
-                      }}
-                    >
-                        <Select.Trigger
-                          aria-label={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
-                          title={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
-                          className={cn(PROPERTY_PILL_CLASS, "max-md:aspect-square max-md:gap-0 max-md:px-0")}
-                        >
-                          {/* Icon 14px như các chip bên cạnh (component vẽ sẵn 16px) */}
-                          <PrioritySignalBars priority={toSignalPriority(form.formData.priority)} className="shrink-0 [&_svg]:size-3.5" />
-                          <span className="max-md:hidden">{PRIORITY_CONFIG[form.formData.priority].label}</span>
-                        </Select.Trigger>
-
-                        <Select.Portal>
-                          <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
-                          <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12} alignItemWithTrigger={false}>
-                            <Select.Popup
-                              style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-                              className={cn("w-56", MENU_POPUP_CLASS, SHEET_POPUP_CLASS)}
-                              aria-label="Chọn mức độ ưu tiên"
-                            >
-                              <MenuSheetHeader title="Mức ưu tiên" />
-                              <Select.List>
-                                {PRIORITY_KEYS.map((p) => (
-                                  <Select.Item key={p} value={p} className={MENU_OPTION_ROW_CLASS}>
-                                    <PrioritySignalBars priority={toSignalPriority(p)} className="shrink-0" />
-                                    <Select.ItemText>{PRIORITY_CONFIG[p].label}</Select.ItemText>
-                                  </Select.Item>
-                                ))}
-                              </Select.List>
-                            </Select.Popup>
-                          </Select.Positioner>
-                        </Select.Portal>
-                    </Select.Root>
-
-                    {/* 3.5 Văn bản nguồn (chỉ nhiệm vụ gốc, và khi không mở từ chính văn bản) */}
-                    {!hideSourceDocument && !initialParentTaskId ? (
-                      <SourceDocumentChip
-                        value={sourceDocument}
-                        onChange={setSourceDocument}
-                        open={openDropdown === "document"}
-                        onOpenChange={(open) => setOpenDropdown(open ? "document" : null)}
-                      />
-                    ) : null}
-                  </div>
-                  {requiredErrorText && (
-                    <p role="alert" className="sr-only">
-                      {requiredErrorText}
-                    </p>
-                  )}
-                  {fieldErrorText && (
-                    <p role="alert" className="mt-1.5 shrink-0 text-xs font-medium text-destructive">
-                      {fieldErrorText}
-                    </p>
-                  )}
-
-                  {/* 3. Mô tả: kẻ ngang ngăn với phần thuộc tính, chiếm hết phần còn lại như hộp New project của Linear */}
-                  <div className="mt-5 flex min-h-[160px] flex-1 flex-col border-t border-border/60 pt-6 pb-4 max-md:mt-4 max-md:pt-4">
-                    <div id="create-task-description" ref={descriptionRef} className="flex min-h-[140px] flex-1 flex-col">
+                  {/* 2. Mô tả ngay dưới tên, không đường kẻ; hộp phóng to (hoặc mở Agent) thì chiếm hết phần còn lại */}
+                  <div className="mt-2 flex min-h-16 flex-1 flex-col">
+                    <div id="create-task-description" ref={descriptionRef} className="flex min-h-16 flex-1 flex-col">
                       {/* Gắn editor sau khi hộp phóng to xong: dựng Plate mất ~60ms, chạy giữa hiệu ứng mở làm khựng khung hình */}
                       {!editorMounted ? (
                         <DescriptionFallback value={form.formData.description} />
@@ -908,7 +741,7 @@ export function CreateTaskModal({
                     </div>
                   </div>
 
-                  {/* 4. Việc con tạo kèm (như Milestones của Linear); đang giao việc con thì không có */}
+                  {/* 3. Việc con tạo kèm (như Milestones của Linear); đang giao việc con thì không có */}
                   {!initialParentTaskId && (
                     <CreateTaskSubtasks
                       items={form.formData.subtasks}
@@ -918,36 +751,214 @@ export function CreateTaskModal({
                       parentLeadId={form.formData.leadAssigneeId}
                       parentDueDate={form.formData.dueDate}
                       error={form.fieldErrors.subtasks}
-                      className="mb-4 shrink-0"
+                      className="mt-4 shrink-0"
                     />
                   )}
-                </div>
+                </DialogComposeBody>
+
+                {/* 4. Thuộc tính: hàng chip dưới phần thân, luôn thấy kể cả khi mô tả dài */}
+                <DialogComposeProperties
+                  errors={
+                    <>
+                      {requiredErrorText && (
+                        <p role="alert" className="sr-only">
+                          {requiredErrorText}
+                        </p>
+                      )}
+                      {fieldErrorText && (
+                        <p role="alert" className="text-xs font-medium text-destructive">
+                          {fieldErrorText}
+                        </p>
+                      )}
+                    </>
+                  }
+                >
+                  {/* 4.0 Đơn vị chủ trì, luôn hiện (người dùng yêu cầu 21/10/2026): mặc định đơn vị của người tạo; người không thuộc
+                      lãnh đạo chỉ có đơn vị mình (máy chủ chặn tạo ngoài đơn vị). Đổi đơn vị thì xóa chủ trì đã chọn và mở luôn
+                      danh sách nhân sự của đơn vị mới: chọn đơn vị → chọn người chủ trì. */}
+                  {(form.availableDepartments.length > 0 || form.isLoadingDepartments) && (
+                  <Select.Root
+                    value={form.formData.selectedDeptCode}
+                    open={openDropdown === "dept"}
+                    onOpenChange={(open, details) => {
+                      setOpenDropdown(open ? "dept" : null);
+                      if (!open && details.reason === "item-press") {
+                        setDeptPicked(true);
+                        // Chọn lại đúng đơn vị đang có mà chưa có chủ trì: vẫn đi tiếp sang chọn người như khi đổi đơn vị
+                        if (!form.formData.leadAssigneeId) window.setTimeout(() => setOpenDropdown("dri"), 0);
+                      }
+                    }}
+                    onValueChange={(code) => {
+                      if (!code || code === form.formData.selectedDeptCode) return;
+                      form.setField("selectedDeptCode", code);
+                      form.setField("leadAssigneeId", "");
+                      // Sau khi menu đơn vị đóng (cùng lượt bấm nó đặt openDropdown về null)
+                      window.setTimeout(() => setOpenDropdown("dri"), 0);
+                    }}
+                  >
+                      {/* Chưa bấm chọn và đang ở đơn vị mặc định thì chỉ ghi "Đơn vị" mờ như các chip chưa chọn (người dùng: "để mỗi chữ
+                          đơn vị thôi rồi chọn cho đẹp" 21/10/2026); bấm chọn (kể cả đơn vị mặc định) thì hiện tên. Tên đầy đủ luôn ở
+                          tooltip và nhãn đọc màn hình. */}
+                      <Select.Trigger
+                        aria-label={`Đơn vị: ${currentDeptName}`}
+                        title={`Đơn vị: ${currentDeptName}`}
+                        disabled={form.availableDepartments.length === 0}
+                        className={cn(PROPERTY_PILL_CLASS, deptIsDefault && "text-muted-foreground")}
+                      >
+                        <Building2 className="text-muted-foreground" />
+                        <span className="max-w-[240px] truncate max-md:max-w-[120px]">{deptIsDefault ? "Đơn vị" : currentDeptName}</span>
+                      </Select.Trigger>
+
+                      <Select.Portal>
+                        <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
+                        <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12} alignItemWithTrigger={false}>
+                          <Select.Popup
+                            style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+                            className={cn("w-64", MENU_POPUP_CLASS, SHEET_POPUP_CLASS)}
+                            aria-label="Chọn đơn vị phòng ban"
+                          >
+                            <MenuSheetHeader title="Đơn vị" />
+                            <Select.List>
+                              {form.availableDepartments.map((dept) => (
+                                <Select.Item key={dept.code} value={dept.code} className={MENU_OPTION_ROW_CLASS}>
+                                  <Select.ItemText className="truncate">{dept.name}</Select.ItemText>
+                                </Select.Item>
+                              ))}
+                            </Select.List>
+                          </Select.Popup>
+                        </Select.Positioner>
+                      </Select.Portal>
+                  </Select.Root>
+                  )}
+
+                  {/* 4.1 Lead Assignee (DRI) Chip (P0 Field) */}
+                  <PersonPillPicker
+                    people={form.availablePersonnel}
+                    valueId={form.formData.leadAssigneeId}
+                    onSelect={(person) => {
+                      form.setField("leadAssigneeId", person.id);
+                      if (form.fieldErrors.lead) form.setFieldErrors((prev) => ({ ...prev, lead: undefined }));
+                    }}
+                    open={openDropdown === "dri"}
+                    onOpenChange={(open) => setOpenDropdown(open ? "dri" : null)}
+                    loading={form.isLoadingDepartments}
+                    invalid={Boolean(form.fieldErrors.lead)}
+                    required
+                    compactWhenEmpty
+                    triggerRef={leadTriggerRef}
+                  />
+
+                  {/* 4.2 Start Date Chip */}
+                  <VietnameseDatePicker
+                    id="create-task-start-date"
+                    value={form.formData.startDate}
+                    onChange={(val) => form.setField("startDate", val)}
+                    label={form.formData.startDate ? "Bắt đầu:" : undefined}
+                    variant="pill"
+                    // Bọc inline-block lệch dòng 1px so với các pill khác trong hàng flex
+                    className="flex"
+                    compactWhenEmpty
+                    error={Boolean(form.fieldErrors.startDate)}
+                    icon={<Calendar className="text-muted-foreground" />}
+                    placeholder="Bắt đầu"
+                  />
+
+                  {/* 4.3 Target Due Date Chip (P0 Field) */}
+                  <VietnameseDatePicker
+                    id="create-task-due-date"
+                    value={form.formData.dueDate}
+                    required
+                    onChange={(val) => {
+                      form.setField("dueDate", val);
+                      if (form.fieldErrors.dueDate) {
+                        form.setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
+                      }
+                    }}
+                    label={form.formData.dueDate ? "Hạn:" : undefined}
+                    variant="pill"
+                    className="flex"
+                    compactWhenEmpty
+                    error={Boolean(form.fieldErrors.dueDate)}
+                    icon={<CalendarClock className={form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground"} />}
+                    // Nhãn ngắn như "Target" của Linear; tooltip và tên đọc màn hình vẫn là "Hạn hoàn thành"
+                    placeholder="Hạn"
+                    title="Hạn hoàn thành"
+                  />
+
+                  {/* 4.4 Priority Chip: đứng ngay trước Văn bản (người dùng chọn 16/10/2026) */}
+                  <Select.Root
+                    value={form.formData.priority}
+                    open={openDropdown === "priority"}
+                    onOpenChange={(open) => setOpenDropdown(open ? "priority" : null)}
+                    onValueChange={(p) => {
+                      if (p) form.setField("priority", p);
+                    }}
+                  >
+                      <Select.Trigger
+                        aria-label={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
+                        title={`Mức ưu tiên: ${PRIORITY_CONFIG[form.formData.priority].label}`}
+                        className={cn(PROPERTY_PILL_CLASS, "max-md:aspect-square max-md:gap-0 max-md:px-0")}
+                      >
+                        {/* Icon 14px như các chip bên cạnh (component vẽ sẵn 16px) */}
+                        <PrioritySignalBars priority={toSignalPriority(form.formData.priority)} className="shrink-0 [&_svg]:size-3.5" />
+                        <span className="max-md:hidden">{PRIORITY_CONFIG[form.formData.priority].label}</span>
+                      </Select.Trigger>
+
+                      <Select.Portal>
+                        <Select.Backdrop className={SHEET_BACKDROP_CLASS} />
+                        <Select.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)} side="bottom" align="start" sideOffset={4} collisionPadding={12} alignItemWithTrigger={false}>
+                          <Select.Popup
+                            style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+                            className={cn("w-56", MENU_POPUP_CLASS, SHEET_POPUP_CLASS)}
+                            aria-label="Chọn mức độ ưu tiên"
+                          >
+                            <MenuSheetHeader title="Mức ưu tiên" />
+                            <Select.List>
+                              {PRIORITY_KEYS.map((p) => (
+                                <Select.Item key={p} value={p} className={MENU_OPTION_ROW_CLASS}>
+                                  <PrioritySignalBars priority={toSignalPriority(p)} className="shrink-0" />
+                                  <Select.ItemText>{PRIORITY_CONFIG[p].label}</Select.ItemText>
+                                </Select.Item>
+                              ))}
+                            </Select.List>
+                          </Select.Popup>
+                        </Select.Positioner>
+                      </Select.Portal>
+                  </Select.Root>
+
+                  {/* 4.5 Văn bản nguồn (chỉ nhiệm vụ gốc, và khi không mở từ chính văn bản) */}
+                  {!hideSourceDocument && !initialParentTaskId ? (
+                    <SourceDocumentChip
+                      value={sourceDocument}
+                      onChange={setSourceDocument}
+                      open={openDropdown === "document"}
+                      onOpenChange={(open) => setOpenDropdown(open ? "document" : null)}
+                    />
+                  ) : null}
+                </DialogComposeProperties>
 
                 {/* ── Modal Bottom Footer ──────────────────────── */}
-                <footer className="flex shrink-0 items-center justify-between border-t border-border/60 bg-background px-5 py-3">
-                  {/* Chỉ nút chính; đóng bằng Esc hoặc nhấn ra ngoài */}
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Button
-                      size="pill"
-                      onClick={handleFormSubmit}
-                      loading={form.isSubmitting || contextUpload.pending > 0}
-                      // Luôn bấm được như Linear: thiếu tên thì báo lỗi và đưa con trỏ về ô tên, không để nút mờ không rõ lý do
-                      aria-keyshortcuts="Meta+Enter Control+Enter"
-                      title={`${modKey} + Enter`}
-                      className="max-md:px-4"
-                    >
-                      <span>
-                        {form.isSubmitting
-                          ? initialParentTaskId ? "Đang giao việc…" : "Đang tạo…"
-                          : contextUpload.pending > 0 ? "Đang đính kèm tệp…"
-                          : initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}
-                      </span>
-                      {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
-                      {form.isSubmitting || contextUpload.pending > 0 ? null : <SubmitShortcutHint />}
-                    </Button>
-
-                  </div>
-                </footer>
+                {/* Không kẻ trên như hộp New issue; chỉ nút chính, đóng bằng Esc, nút × hoặc nhấn ra ngoài */}
+                <DialogComposeFooter>
+                  <Button
+                    size="pill"
+                    onClick={handleFormSubmit}
+                    loading={form.isSubmitting || contextUpload.pending > 0}
+                    // Luôn bấm được như Linear: thiếu tên thì báo lỗi và đưa con trỏ về ô tên, không để nút mờ không rõ lý do
+                    aria-keyshortcuts="Meta+Enter Control+Enter"
+                    title={`${modKey} + Enter`}
+                    className="max-md:px-4"
+                  >
+                    <span>
+                      {form.isSubmitting
+                        ? initialParentTaskId ? "Đang giao việc…" : "Đang tạo…"
+                        : contextUpload.pending > 0 ? "Đang đính kèm tệp…"
+                        : initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}
+                    </span>
+                    {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
+                    {form.isSubmitting || contextUpload.pending > 0 ? null : <SubmitShortcutHint />}
+                  </Button>
+                </DialogComposeFooter>
               </div>
               {agentStarted && (
                 <TaskAgentPanel

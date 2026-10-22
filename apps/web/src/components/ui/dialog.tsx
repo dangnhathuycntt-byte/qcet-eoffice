@@ -189,21 +189,26 @@ export function DialogBreadcrumb({ items, icon, className }: { items: React.Reac
  */
 export function DialogComposeHeader({ items }: { items: React.ReactNode[] }) {
   const compose = React.useContext(ComposeExpandContext);
-  const expandLabel = compose?.expanded ? "Thu nhỏ" : "Phóng to";
   return (
     <header className="flex shrink-0 items-center gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
       <DialogBreadcrumb items={items} />
       <div className="ml-auto flex shrink-0 items-center gap-0.5">
-        {compose ? (
-          <Button variant="ghost" size="icon-xs" aria-label={expandLabel} title={expandLabel} onClick={compose.toggle} className="rounded-full max-md:hidden">
-            {compose.expanded ? <Minimize2 /> : <Maximize2 />}
-          </Button>
-        ) : null}
+        {compose ? <DialogExpandButton expanded={compose.expanded} onToggle={compose.toggle} /> : null}
         <BaseDialog.Close render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="rounded-full max-md:size-8" />}>
           <X />
         </BaseDialog.Close>
       </div>
     </header>
+  );
+}
+
+/** Nút phóng to/thu nhỏ hộp tạo/soạn, tròn 28px; chỉ từ md (điện thoại hộp đã là tấm đáy hoặc gần hết màn). */
+export function DialogExpandButton({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  const label = expanded ? "Thu nhỏ" : "Phóng to";
+  return (
+    <Button variant="ghost" size="icon-xs" aria-label={label} title={label} onClick={onToggle} className="rounded-full max-md:hidden">
+      {expanded ? <Minimize2 /> : <Maximize2 />}
+    </Button>
   );
 }
 

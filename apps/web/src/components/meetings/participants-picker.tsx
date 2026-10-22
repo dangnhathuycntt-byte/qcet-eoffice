@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { MenuActionItem, MenuContent, MenuOptionItem, MenuRoot, MenuSeparator, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
+import { MENU_POPUP_FIT_CLASS, MenuActionItem, MenuContent, MenuOptionItem, MenuRoot, MenuSeparator, MenuSubmenu, MenuTrigger } from "@/components/ui/menu";
 import { useDepartmentList } from "@/hooks/use-department-list";
 
 export interface MeetingPerson {
@@ -94,12 +94,8 @@ const MENU_NAV_KEYS = ["ArrowDown", "ArrowUp", "Escape", "Enter", "Tab"];
  * tìm có hàng "Phạm vi" mở menu con Toàn trường, Ban Giám hiệu, Trưởng đơn vị… (người dùng yêu cầu "thêm một li là phạm
  * vi: toàn trường, trưởng đơn vị" 22/10/2026; trước đó "Toàn trường" là một hàng riêng).
  */
-/**
- * Khung menu chọn người: cao tối đa bằng chỗ trống cạnh nút (`--available-height` của Base UI), chỉ danh sách đơn vị co lại.
- * Trước đây danh sách tự trừ 48px cho ô tìm nên khi có thêm hàng "Phạm vi" menu cao hơn chỗ trống; chip nằm thấp (hàng chip
- * dưới phần thân hộp Tạo cuộc họp) thì menu lật lên và ô tìm ra ngoài màn hình (22/10/2026).
- */
-const PEOPLE_MENU_CLASS = "w-64 md:flex md:max-h-[var(--available-height)] md:flex-col";
+// Danh sách từng tự trừ 48px cho ô tìm nên khi có thêm hàng "Phạm vi" menu cao hơn chỗ trống (22/10/2026)
+const PEOPLE_MENU_CLASS = cn("w-64", MENU_POPUP_FIT_CLASS);
 
 function PeopleMenuBody({
   directory,
@@ -210,7 +206,7 @@ function PeopleMenuBody({
         </>
       ) : null}
       {/* Đủ chỗ cho cả 15 đơn vị khi màn cao; màn thấp thì chỉ danh sách co lại vừa chỗ còn lại (khung menu cao tối đa bằng
-          chỗ trống, `PEOPLE_MENU_CLASS`). Danh sách đơn vị cao ít nhất ~7 hàng: dưới nút không đủ chỗ thì menu lật lên trên
+          chỗ trống, `MENU_POPUP_FIT_CLASS`). Danh sách đơn vị cao ít nhất ~7 hàng: dưới nút không đủ chỗ thì menu lật lên trên
           thay vì co còn vài hàng */}
       <div
         className={cn(

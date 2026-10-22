@@ -82,9 +82,12 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("Dialog.Portal"), "Source must use Base UI Dialog.Portal");
 
     // Dimensions
-    // Theo hộp New project của Linear (người dùng chọn 16/10/2026): rộng 920px, cao hết màn trừ 6vh trên/dưới
-    assert.ok(source.includes("py-[6vh]"), "Popup must keep 6vh top/bottom margins like Linear's project modal");
-    assert.ok(source.includes("max-w-[920px]"), "Source must define max-w-[920px] composer width");
+    // Theo hộp New issue của Linear như Soạn văn bản đi/Tạo cuộc họp (người dùng: "chuyển đổi luôn cho phù hợp" 22/10/2026;
+    // trước đó hộp New project 920px, cách mép 6vh): cách mép trên 10%, rộng 720px, phóng to (hoặc mở Agent) 820px cao hết khung
+    assert.ok(source.includes("pt-[10vh] pb-[5vh]"), "Popup must sit 10% from the top like the other dialogs");
+    assert.ok(source.includes("max-w-[720px]"), "Source must define max-w-[720px] composer width");
+    assert.ok(source.includes('tall && "md:h-full md:max-w-[820px]"'), "Expanded (or Agent open) composer must be 820px and full height");
+    assert.ok(source.includes("<DialogExpandButton"), "Header must expose the expand toggle");
 
     // Title & Summary Inputs (title uses ternary for subtask vs task placeholder)
     assert.ok(source.includes('"Tên nhiệm vụ"'), "Source must have task title placeholder");
@@ -110,8 +113,9 @@ describe("Compact Composer Modal - Production Specification", () => {
     assert.ok(source.includes("<PersonPillPicker") && pickerSource.includes('"Chủ trì"'), "Source must have DRI (Chủ trì) property chip");
     assert.ok(source.includes("Bắt đầu:"), "Source must have Start date property chip");
     assert.ok(source.includes("Hạn:"), "Source must have Due date property chip");
-    // Hàng thuộc tính nằm ngay dưới tên, trên mô tả, như hộp New project của Linear (đổi theo yêu cầu 16/10/2026)
-    assert.ok(source.indexOf('aria-label="Chọn mức độ ưu tiên"') < source.indexOf('id="create-task-description"'), "Property chips must sit between the title and the description");
+    // Mô tả ngay dưới tên, hàng thuộc tính dưới phần thân ngoài vùng cuộn, như hộp New issue của Linear (22/10/2026)
+    assert.ok(source.indexOf('id="create-task-description"') < source.indexOf('aria-label="Chọn mức độ ưu tiên"'), "Description must sit right under the title, property chips after the body");
+    assert.ok(source.indexOf("</DialogComposeBody>") < source.indexOf("<DialogComposeProperties"), "Property chips must sit outside the scrolling body");
     assert.ok(source.includes('aria-label="Đóng"'), "Header must expose a visible close button");
   });
 
