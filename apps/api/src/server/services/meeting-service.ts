@@ -86,6 +86,25 @@ export function buildMeetingResource(meeting: {
   };
 }
 
+/**
+ * Kiểm `meeting.read` trên cuộc họp đã đọc (cần `participants`, `body.memberships`…) và trả các thao tác người xem
+ * làm được; không có quyền thì ném AuthorizationError. Dùng chung cho GET /api/meetings/[id] và page-data của trang.
+ */
+export function authorizeMeetingRead(
+  authContext: AuthorizationContext,
+  meeting: Parameters<typeof buildMeetingResource>[0]
+) {
+  const meetingResource = buildMeetingResource(meeting);
+  const authResult = authorize(authContext, 'meeting.read', meetingResource);
+  if (!authResult.allowed) {
+    throw new AuthorizationError(
+      authResult.reason || 'Không có quyền truy cập cuộc họp.',
+      authResult.rejectionCode || 'INSUFFICIENT_RELATIONSHIP'
+    );
+  }
+  return computeAvailableActions(authContext, meetingResource);
+}
+
 export function buildMeetingReadWhere(
   context: AuthorizationContext
 ): Prisma.MeetingWhereInput {
@@ -983,16 +1002,7 @@ export class MeetingService {
           ? await loadAuthorizationContext(contextOrUserId)
           : contextOrUserId;
 
-      const meetingResource = buildMeetingResource(meeting);
-      const authResult = authorize(authContext, 'meeting.read', meetingResource);
-      if (!authResult.allowed) {
-        throw new AuthorizationError(
-          authResult.reason || 'Không có quyền truy cập cuộc họp.',
-          authResult.rejectionCode || 'INSUFFICIENT_RELATIONSHIP'
-        );
-      }
-
-      const availableActions = computeAvailableActions(authContext, meetingResource);
+      const availableActions = authorizeMeetingRead(authContext, meeting);
       return { ...meeting, availableActions };
     }
 
