@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +30,8 @@ export interface TaskDeclineProps {
   /** Người chủ trì hiện tại: lời từ chối chỉ còn hiệu lực tới khi giao người khác. */
   leadId?: string;
   onVersionChange?: (version: number) => void;
+  /** Dữ liệu khối gửi kèm page-data: có thì lần mở trang không gọi GET riêng. */
+  initialData?: Record<string, unknown>;
   className?: string;
 }
 
@@ -36,8 +39,9 @@ export interface TaskDeclineProps {
  * Từ chối nhận việc (T-02). Không có trạng thái "từ chối" (ADR-003): người chủ trì giữ nguyên
  * cho đến khi người giao giao lại, nên khối này chỉ ghi lý do và báo cho mọi người trong nhiệm vụ.
  */
-export function TaskDecline({ taskId, version, status, leadId, onVersionChange, className }: TaskDeclineProps) {
-  const [state, setState] = React.useState<DeclineState | null>(null);
+export function TaskDecline({ taskId, version, status, leadId, onVersionChange, initialData, className }: TaskDeclineProps) {
+  const { seed, skipLoad } = useBlockSeed(initialData as DeclineState | undefined);
+  const [state, setState] = React.useState<DeclineState | null>(seed);
   const [open, setOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -56,6 +60,7 @@ export function TaskDecline({ taskId, version, status, leadId, onVersionChange, 
   // Tải lại khi trạng thái hoặc người chủ trì đổi, không theo `version`: mô tả tự lưu sau mỗi lần ngừng gõ làm tăng version,
   // trước đây mỗi lần lưu kéo theo một GET (gửi lời từ chối thì `submit` tự tải lại).
   React.useEffect(() => {
+    if (skipLoad(`${taskId}|${status ?? ""}|${leadId ?? ""}`)) return;
     void load();
   }, [load, status, leadId]);
 

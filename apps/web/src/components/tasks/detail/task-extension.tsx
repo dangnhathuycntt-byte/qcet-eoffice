@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +55,8 @@ export interface TaskExtensionProps {
   status?: string;
   /** Báo trang cập nhật hạn và phiên bản sau khi hạn đổi hoặc yêu cầu được tạo. */
   onTaskChange?: (change: { version: number; dueDate?: string }) => void;
+  /** Dữ liệu khối gửi kèm page-data: có thì lần mở trang không gọi GET riêng. */
+  initialData?: Record<string, unknown>;
   className?: string;
 }
 
@@ -63,8 +66,9 @@ type Mode = "idle" | "request" | "reject" | "counter";
  * Xin gia hạn (T-01). Người thực hiện chính xin; người giao đồng ý, từ chối kèm lý do
  * hoặc đề xuất hạn khác; người xin nhận hoặc không nhận hạn đề xuất.
  */
-export function TaskExtension({ taskId, version, status, onTaskChange, className }: TaskExtensionProps) {
-  const [view, setView] = React.useState<ExtensionView | null>(null);
+export function TaskExtension({ taskId, version, status, onTaskChange, initialData, className }: TaskExtensionProps) {
+  const { seed, skipLoad } = useBlockSeed(initialData as ExtensionView | undefined);
+  const [view, setView] = React.useState<ExtensionView | null>(seed);
   const [error, setError] = React.useState<string | null>(null);
   const [mode, setMode] = React.useState<Mode>("idle");
   const [date, setDate] = React.useState("");
@@ -83,6 +87,7 @@ export function TaskExtension({ taskId, version, status, onTaskChange, className
   }, [taskId]);
 
   React.useEffect(() => {
+    if (skipLoad(`${taskId}|${status ?? ""}`)) return;
     void load();
   }, [load, status]);
 

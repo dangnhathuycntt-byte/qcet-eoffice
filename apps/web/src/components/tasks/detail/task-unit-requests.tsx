@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
@@ -47,8 +48,21 @@ async function readError(res: Response, fallback: string): Promise<string> {
  * Phối hợp liên đơn vị (T-12): người giao đề nghị đơn vị khác cử người; trưởng đơn vị đó trả lời.
  * Chỉ hiện khi người xem gửi được yêu cầu hoặc nhiệm vụ đã có yêu cầu.
  */
-export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: string; onChanged?: () => void; className?: string }) {
-  const [state, setState] = React.useState<{ requests: RequestView[]; canRequest: boolean } | null>(null);
+export function TaskUnitRequests({
+  taskId,
+  onChanged,
+  initialData,
+  className,
+}: {
+  taskId: string;
+  onChanged?: () => void;
+  /** Dữ liệu khối gửi kèm page-data: có thì lần mở trang không gọi GET riêng. */
+  initialData?: Record<string, unknown>;
+  className?: string;
+}) {
+  type UnitRequestsView = { requests: RequestView[]; canRequest: boolean };
+  const { seed, skipLoad } = useBlockSeed(initialData as UnitRequestsView | undefined);
+  const [state, setState] = React.useState<UnitRequestsView | null>(seed);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
@@ -71,6 +85,7 @@ export function TaskUnitRequests({ taskId, onChanged, className }: { taskId: str
   }, [taskId]);
 
   React.useEffect(() => {
+    if (skipLoad(taskId)) return;
     void load();
   }, [load]);
 

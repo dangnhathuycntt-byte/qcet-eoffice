@@ -20,6 +20,13 @@ import { GET as getTasksPageData } from "../src/app/api/page-data/tasks/route";
 import { GET as getTaskDetailPageData } from "../src/app/api/page-data/tasks/[id]/route";
 import { GET as getMeetingPageData } from "../src/app/api/page-data/meetings/[id]/route";
 import { GET as getDossierPageData } from "../src/app/api/page-data/dossiers/[id]/route";
+import { GET as getTaskComments } from "../src/app/api/tasks/[id]/comments/route";
+import { GET as getTaskCriteria } from "../src/app/api/tasks/[id]/criteria/route";
+import { GET as getTaskExtensions } from "../src/app/api/tasks/[id]/extensions/route";
+import { GET as getTaskApprovalProcess } from "../src/app/api/tasks/[id]/approval-process/route";
+import { GET as getTaskBackupReviewer } from "../src/app/api/tasks/[id]/backup-reviewer/route";
+import { GET as getTaskUnitRequests } from "../src/app/api/tasks/[id]/unit-requests/route";
+import { GET as getTaskDecline } from "../src/app/api/tasks/[id]/actions/decline/route";
 import { taskQueryService } from "../src/server/tasks";
 import { loadAuthorizationContext } from "../src/server/authorization/authorization-context-service";
 import { buildTaskResource, computeAvailableActions } from "../src/server/authorization/available-actions";
@@ -176,6 +183,28 @@ describe("GET /api/page-data/*", () => {
     assert.equal(body.currentUser.id, users.owner.id);
     assert.equal(body.currentUser.name, users.owner.name);
     assert.deepEqual(unexpectedNonJson(captured[0]), []);
+  });
+
+  test("tasks/[id]: khối phụ gửi kèm trang giống hệt GET riêng của từng khối", async () => {
+    const response = await getTaskDetailPageData(request(`/api/page-data/tasks/${parentTaskId}`, "owner"), params(parentTaskId));
+    const body = TaskDetailPageDataSchema.parse(await response.json());
+    assert.equal(body.outcome, "render");
+    if (body.outcome !== "render") return;
+    const routes = {
+      comments: getTaskComments,
+      criteria: getTaskCriteria,
+      extensions: getTaskExtensions,
+      approvalProcess: getTaskApprovalProcess,
+      backupReviewer: getTaskBackupReviewer,
+      unitRequests: getTaskUnitRequests,
+      decline: getTaskDecline,
+    } as const;
+    assert.deepEqual(Object.keys(body.blocks ?? {}).sort(), Object.keys(routes).sort());
+    for (const [key, GET] of Object.entries(routes)) {
+      const own = await GET(request(`/api/tasks/${parentTaskId}/${key}`, "owner"), params(parentTaskId) as never);
+      assert.equal(own.status, 200, key);
+      assert.deepEqual(body.blocks?.[key as keyof typeof routes], await own.json(), key);
+    }
   });
 
   test("tasks/[id]: việc con chuyển về trang nhiệm vụ gốc", async () => {

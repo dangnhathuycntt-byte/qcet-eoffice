@@ -10,6 +10,7 @@ import { Dialog as ProgressDialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@qcet/contracts/types/dashboard";
 import { isSchoolTask } from "@qcet/contracts/types/dashboard";
+import type { TaskDetailBlocks } from "@qcet/contracts/page-data";
 import { useAuth } from "@/lib/auth-context";
 import { useSidebarLayout } from "@/components/layout/sidebar-context";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,8 @@ export interface TaskDetailPageProps {
   canEdit?: boolean;
   /** Independently authorized peek targets (descendants with availableActions) */
   peekTasks?: StaffTask[];
+  /** Dữ liệu các khối phụ (bình luận, tiêu chí, gia hạn…) gửi kèm page-data */
+  blocks?: TaskDetailBlocks;
 }
 
 const PEEK_STORAGE_KEY = "qcet_subtask_peek_width";
@@ -76,6 +79,7 @@ export function TaskDetailPage({
   currentUser: serverUser,
   canEdit = false,
   peekTasks: _peekTasks,
+  blocks,
 }: TaskDetailPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -769,6 +773,7 @@ export function TaskDetailPage({
         version={Number((task as any).version ?? 0)}
         status={String((task as any).status ?? "")}
         leadId={(task as any).leadAssigneeId || (task as any).assigneeId}
+        initialData={blocks?.decline}
         onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
         className={inspectorVisible ? "basis-full pl-2 pr-0" : undefined}
       />
@@ -887,7 +892,7 @@ export function TaskDetailPage({
               />
 
               {/* Bình luận kiểu Notion ngay dưới tên nhiệm vụ: mô tả dài không đẩy bình luận khuất xuống */}
-              <TaskComments taskId={task.id} className="mb-4 mt-6 border-b border-border/60 pb-3" />
+              <TaskComments taskId={task.id} initialData={blocks?.comments} className="mb-4 mt-6 border-b border-border/60 pb-3" />
 
               <TaskDescriptionEditor
                 currentUser={currentUser}
@@ -919,20 +924,22 @@ export function TaskDetailPage({
                 onTaskChange={({ version, dueDate }) =>
                   setTask((prev) => ({ ...prev, version, ...(dueDate ? { dueDate } : {}) }) as any)
                 }
+                initialData={blocks?.extensions}
               />
 
               <TaskPeople taskId={task.id} onVersionChange={(version) => setTask((prev) => ((prev as any).version === version ? prev : ({ ...prev, version } as any)))} />
 
-              <TaskApprovalProcess taskId={task.id} />
-              <TaskBackupReviewer taskId={task.id} />
+              <TaskApprovalProcess taskId={task.id} initialData={blocks?.approvalProcess} />
+              <TaskBackupReviewer taskId={task.id} initialData={blocks?.backupReviewer} />
 
-              <TaskUnitRequests taskId={task.id} />
+              <TaskUnitRequests taskId={task.id} initialData={blocks?.unitRequests} />
 
               <TaskCriteria
                 taskId={task.id}
                 version={Number((task as any).version ?? 0)}
                 status={String((task as any).status ?? "")}
                 onVersionChange={(version) => setTask((prev) => ({ ...prev, version }) as any)}
+                initialData={blocks?.criteria}
               />
 
               {/* Điện thoại: không đặt hàng "+ Thêm" dưới trình soạn thảo (người dùng chốt 14/10/2026) */}

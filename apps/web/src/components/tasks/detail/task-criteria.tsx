@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,6 +40,8 @@ export interface TaskCriteriaProps {
   onVersionChange?: (version: number) => void;
   /** Đổi trạng thái nhiệm vụ làm tải lại (ví dụ vừa nộp duyệt). */
   status?: string;
+  /** Dữ liệu khối gửi kèm page-data: có thì lần mở trang không gọi GET riêng. */
+  initialData?: Record<string, unknown>;
   className?: string;
 }
 
@@ -47,8 +50,9 @@ export interface TaskCriteriaProps {
  * người duyệt đánh dấu từng tiêu chí khi chờ duyệt. Còn tiêu chí chưa đạt vẫn duyệt được
  * (quyết định Q3), nên chỉ hiện cảnh báo.
  */
-export function TaskCriteria({ taskId, version, onVersionChange, status, className }: TaskCriteriaProps) {
-  const [view, setView] = React.useState<CriteriaView | null>(null);
+export function TaskCriteria({ taskId, version, onVersionChange, status, initialData, className }: TaskCriteriaProps) {
+  const { seed, skipLoad } = useBlockSeed(initialData as CriteriaView | undefined);
+  const [view, setView] = React.useState<CriteriaView | null>(seed);
   const [error, setError] = React.useState<string | null>(null);
   const [editing, setEditing] = React.useState(false);
   const [drafts, setDrafts] = React.useState<Array<{ id?: string; text: string }>>([]);
@@ -67,6 +71,7 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, classNa
   }, [taskId]);
 
   React.useEffect(() => {
+    if (skipLoad(`${taskId}|${status ?? ""}`)) return;
     void load();
   }, [load, status]);
 

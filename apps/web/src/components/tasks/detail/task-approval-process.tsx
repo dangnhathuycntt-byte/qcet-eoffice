@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
@@ -59,8 +60,18 @@ async function readError(res: Response, fallback: string): Promise<string> {
  * Luồng duyệt nhiều bước (T-05): người giao lập các bước khi nhiệm vụ chờ duyệt; mỗi bước có người duyệt và
  * tùy chọn người dự phòng (nhận việc khi bước chờ quá 4 ngày). Chỉ hiện khi đã có luồng hoặc người xem lập được.
  */
-export function TaskApprovalProcess({ taskId, className }: { taskId: string; className?: string }) {
-  const [view, setView] = React.useState<ProcessView | null>(null);
+export function TaskApprovalProcess({
+  taskId,
+  initialData,
+  className,
+}: {
+  taskId: string;
+  /** Dữ liệu khối gửi kèm page-data: có thì lần mở trang không gọi GET riêng. */
+  initialData?: Record<string, unknown>;
+  className?: string;
+}) {
+  const { seed, skipLoad } = useBlockSeed(initialData as ProcessView | undefined);
+  const [view, setView] = React.useState<ProcessView | null>(seed);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [editing, setEditing] = React.useState(false);
@@ -81,6 +92,7 @@ export function TaskApprovalProcess({ taskId, className }: { taskId: string; cla
   }, [taskId]);
 
   React.useEffect(() => {
+    if (skipLoad(taskId)) return;
     void load();
   }, [load]);
 

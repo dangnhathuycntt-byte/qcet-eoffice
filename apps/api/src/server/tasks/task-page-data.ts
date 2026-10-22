@@ -1,6 +1,15 @@
 import { prisma } from "@qcet/db/prisma";
 import { getAuditActionLabel } from "@qcet/shared/lib/tasks/activity-feed-aggregator";
 import type { RawTaskEntity } from "@/server/tasks/task-detail-context";
+import type { SessionPayload } from "@/lib/jwt-session";
+import type { TaskDetailBlocks } from "@qcet/contracts/page-data";
+import { listTaskComments } from "@/server/tasks/task-comment-service";
+import { getTaskCriteria } from "@/server/tasks/task-criteria-service";
+import { getTaskExtensions } from "@/server/tasks/task-extension-service";
+import { getApprovalProcess } from "@/server/tasks/task-approval-process-service";
+import { getBackupReviewer } from "@/server/tasks/task-backup-reviewer-service";
+import { listTaskUnitRequests } from "@/server/tasks/task-unit-request-service";
+import { getDeclineState } from "@/server/tasks/task-decline-service";
 
 // Dữ liệu đọc cho trang chi tiết nhiệm vụ (GET /api/page-data/tasks/[id], trang src/app/tasks/[id]/page.tsx gọi).
 // Route gọi hàm này sau khi đã xác thực và resolveTaskDetailContext cho phép hiển thị.
@@ -130,4 +139,30 @@ export async function loadTaskDetailAuditEvents(id: string, rawTask: RawTaskEnti
   });
 
   return combinedAuditEvents;
+}
+
+/**
+ * Dữ liệu các khối phụ của trang (bình luận, tiêu chí, gia hạn…), cùng dịch vụ và cùng kiểm quyền với
+ * GET /api/tasks/[id]/<khối>, để trang không phải gửi thêm 7 request khi mở. Khối nào lỗi (không có quyền…)
+ * thì vắng mặt: khối đó tự gọi route của nó như trước.
+ */
+export async function loadTaskDetailBlocks(session: SessionPayload, taskId: string): Promise<TaskDetailBlocks> {
+  const loaders = {
+    comments: () => listTaskComments(session, taskId),
+    criteria: () => getTaskCriteria(session, taskId),
+    extensions: () => getTaskExtensions(session, taskId),
+    approvalProcess: () => getApprovalProcess(session, taskId),
+    backupReviewer: () => getBackupReviewer(session, taskId),
+    unitRequests: () => listTaskUnitRequests(session, taskId),
+    decline: () => getDeclineState(session, taskId),
+  } satisfies Record<keyof TaskDetailBlocks, () => Promise<unknown>>;
+  const entries = Object.entries(loaders);
+  const settled = await Promise.allSettled(entries.map(([, load]) => load()));
+  // Qua JSON như route của từng khối (Date thành chuỗi ISO): page-data không mang Date (xem api-page-data-routes.test.ts)
+  return Object.fromEntries(
+    entries.flatMap(([key], i) => {
+      const result = settled[i];
+      return result.status === "fulfilled" ? [[key, JSON.parse(JSON.stringify(result.value))]] : [];
+    })
+  );
 }

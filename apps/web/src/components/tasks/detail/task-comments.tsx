@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { fetchWithRetry, RATE_LIMIT_MESSAGE } from "@/lib/fetch-with-retry";
+import { useBlockSeed } from "@/hooks/use-block-seed";
 import { ArrowUp, AtSign, ChevronRight, MoreHorizontal, Pencil, SmilePlus, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-host";
@@ -193,10 +194,13 @@ export interface TaskCommentsProps {
   taskId: string;
   /** Người dùng này có được bình luận không (theo quyền server trả về qua availableActions). */
   canComment?: boolean;
+  /** Dữ liệu GET /api/tasks/[id]/comments gửi kèm page-data: có thì lần mở trang không gọi GET riêng. */
+  initialData?: Record<string, unknown>;
   className?: string;
 }
 
 type Viewer = { id: string; name: string; avatarUrl: string | null };
+type CommentList = { comments?: CommentView[]; participants?: MentionCandidate[]; viewer?: Viewer | null; canComment?: boolean };
 
 /** Quá số này thì gập bình luận cũ, chỉ hiện các bình luận mới nhất để không đẩy mô tả xuống quá xa. */
 const VISIBLE_COMMENTS = 3;
@@ -214,10 +218,11 @@ export function isCommentListCollapsed(preferCollapsed: boolean, commentCount: n
  * ô "Thêm bình luận…" một dòng có avatar ở cuối (Enter gửi, Shift+Enter xuống dòng, gõ @ để nhắc tên).
  * Nội dung hiển thị dạng văn bản thuần (React tự thoát ký tự).
  */
-export function TaskComments({ taskId, canComment: canCommentProp = true, className }: TaskCommentsProps) {
-  const [comments, setComments] = React.useState<CommentView[]>([]);
-  const [participants, setParticipants] = React.useState<MentionCandidate[]>([]);
-  const [status, setStatus] = React.useState<"loading" | "ready" | "error">("loading");
+export function TaskComments({ taskId, canComment: canCommentProp = true, initialData, className }: TaskCommentsProps) {
+  const { seed, skipLoad } = useBlockSeed(initialData as CommentList | undefined);
+  const [comments, setComments] = React.useState<CommentView[]>(seed?.comments ?? []);
+  const [participants, setParticipants] = React.useState<MentionCandidate[]>(seed?.participants ?? []);
+  const [status, setStatus] = React.useState<"loading" | "ready" | "error">(seed ? "ready" : "loading");
   const [error, setError] = React.useState<string | null>(null);
 
   const [draft, setDraft] = React.useState("");
@@ -229,8 +234,8 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editDraft, setEditDraft] = React.useState("");
-  const [viewer, setViewer] = React.useState<Viewer | null>(null);
-  const [serverCanComment, setServerCanComment] = React.useState(true);
+  const [viewer, setViewer] = React.useState<Viewer | null>(seed?.viewer ?? null);
+  const [serverCanComment, setServerCanComment] = React.useState(seed?.canComment !== false);
   const [showAll, setShowAll] = React.useState(false);
   const canComment = canCommentProp && serverCanComment;
 
@@ -277,7 +282,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
     try {
       const res = await fetchWithRetry(`/api/tasks/${taskId}/comments`, { cache: "no-store" });
       if (!res.ok) throw new Error(await readError(res, "Không tải được bình luận"));
-      const json = await res.json();
+      const json: CommentList = await res.json();
       setComments(json.comments ?? []);
       setParticipants(json.participants ?? []);
       setViewer(json.viewer ?? null);
@@ -290,6 +295,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, classN
   }, [taskId]);
 
   React.useEffect(() => {
+    if (skipLoad(taskId)) return;
     void load();
   }, [load]);
 

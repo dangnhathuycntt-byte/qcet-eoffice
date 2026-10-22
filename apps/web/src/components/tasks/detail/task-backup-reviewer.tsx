@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
+import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Select } from "@/components/ui/select";
@@ -23,8 +24,18 @@ async function readError(res: Response, fallback: string): Promise<string> {
  * Người duyệt dự phòng (T-05): chỉ nhận việc khi kết quả chờ duyệt đủ 96 giờ.
  * Chỉ hiện cho người giao (canEdit) hoặc khi đã có người dự phòng.
  */
-export function TaskBackupReviewer({ taskId, className }: { taskId: string; className?: string }) {
-  const [view, setView] = React.useState<BackupView | null>(null);
+export function TaskBackupReviewer({
+  taskId,
+  initialData,
+  className,
+}: {
+  taskId: string;
+  /** Dữ liệu khối gửi kèm page-data: có thì lần mở trang không gọi GET riêng. */
+  initialData?: Record<string, unknown>;
+  className?: string;
+}) {
+  const { seed, skipLoad } = useBlockSeed(initialData as BackupView | undefined);
+  const [view, setView] = React.useState<BackupView | null>(seed);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [editing, setEditing] = React.useState(false);
@@ -45,6 +56,7 @@ export function TaskBackupReviewer({ taskId, className }: { taskId: string; clas
   }, [taskId]);
 
   React.useEffect(() => {
+    if (skipLoad(taskId)) return;
     void load();
   }, [load]);
 

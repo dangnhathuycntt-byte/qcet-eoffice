@@ -103,6 +103,23 @@ export const TaskAuditEventSchema = z.object({
 });
 
 /**
+ * Dữ liệu các khối phụ gửi kèm trang chi tiết, mỗi khối cùng dạng với GET /api/tasks/[id]/<khối>
+ * (`comments`, `criteria`, `extensions`, `approval-process`, `backup-reviewer`, `unit-requests`, `actions/decline`).
+ * Khối vắng mặt (lỗi, không có quyền, API cũ) thì giao diện tự gọi route của khối.
+ */
+const TaskDetailBlockSchema = z.record(z.string(), z.unknown());
+export const TaskDetailBlocksSchema = z.object({
+  comments: TaskDetailBlockSchema.optional(),
+  criteria: TaskDetailBlockSchema.optional(),
+  extensions: TaskDetailBlockSchema.optional(),
+  approvalProcess: TaskDetailBlockSchema.optional(),
+  backupReviewer: TaskDetailBlockSchema.optional(),
+  unitRequests: TaskDetailBlockSchema.optional(),
+  decline: TaskDetailBlockSchema.optional(),
+});
+export type TaskDetailBlocks = z.infer<typeof TaskDetailBlocksSchema>;
+
+/**
  * `GET /api/page-data/tasks/[id]?<query của trang>`: chuyển về nhiệm vụ gốc (đường dẫn tương đối)
  * hoặc dữ liệu để vẽ. Không có hoặc không được đọc: 404.
  */
@@ -115,6 +132,7 @@ export const TaskDetailPageDataSchema = z.discriminatedUnion("outcome", [
     canEdit: z.boolean(),
     peekTasks: z.array(StaffTaskSchema).optional(),
     currentUser: PageUserSchema.extend({ email: z.string(), department: z.string() }),
+    blocks: TaskDetailBlocksSchema.optional(),
   }),
 ]);
 export type TaskDetailPageData = z.infer<typeof TaskDetailPageDataSchema>;

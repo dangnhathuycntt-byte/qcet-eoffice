@@ -54,7 +54,7 @@ export default async function Page({ params, searchParams }: TaskDetailPageParam
     redirect(result.data.redirectTo);
   }
 
-  const { task, auditEvents, currentUser, canEdit, peekTasks } = result.data;
+  const { task, auditEvents, currentUser, canEdit, peekTasks, blocks } = result.data;
 
   return (
     <TaskDetailPage
@@ -63,6 +63,7 @@ export default async function Page({ params, searchParams }: TaskDetailPageParam
       currentUser={currentUser}
       canEdit={canEdit}
       peekTasks={peekTasks}
+      blocks={blocks}
     />
   );
 }

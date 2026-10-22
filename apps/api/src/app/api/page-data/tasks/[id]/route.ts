@@ -16,7 +16,8 @@ import { taskQueryService } from "@/server/tasks";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { dbReadScope } from "@/server/tasks/staff-read-scope";
 import { resolveTaskDetailContext } from "@/server/tasks/task-detail-context";
-import { loadTaskDetailAuditEvents } from "@/server/tasks/task-page-data";
+import { loadTaskDetailAuditEvents, loadTaskDetailBlocks } from "@/server/tasks/task-page-data";
+import type { SessionPayload } from "@/lib/jwt-session";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
@@ -83,7 +84,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       (mappedTask as any).completedSubTasks = result.rawCompletedSubTaskCount;
     }
 
-    const auditEvents = await loadTaskDetailAuditEvents(id, rawTask);
+    const [auditEvents, blocks] = await Promise.all([
+      loadTaskDetailAuditEvents(id, rawTask),
+      loadTaskDetailBlocks(user as unknown as SessionPayload, rawTask.id),
+    ]);
 
     const data: TaskDetailPageData = {
       outcome: "render",
@@ -91,6 +95,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       auditEvents,
       canEdit,
       peekTasks: result.peekTasks,
+      blocks,
       currentUser: {
         id: user.id,
         name: user.name || "Người dùng",
