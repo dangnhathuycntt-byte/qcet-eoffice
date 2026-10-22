@@ -434,7 +434,6 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
             </Button>
           </DialogComposeFooter>
           {isDragging ? (
-            // Bo đồng tâm với hộp: 16px − lề 8px
             <div
               aria-hidden
               className="pointer-events-none absolute inset-2 z-10 flex flex-col items-center justify-center gap-1 rounded-sm border border-dashed border-primary/60 bg-background/90"
