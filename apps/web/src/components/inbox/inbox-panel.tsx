@@ -623,8 +623,8 @@ function InboxPanelBody({
 
   return (
     <>
-      {/* Tiêu đề như tiêu đề trang (cao bằng thanh đầu của trang, mặc định 44px; đường kẻ dưới; chữ 13px đậm vừa) để khung cùng nhịp với trang phía sau */}
-      <div style={{ height: headerHeight }} className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 pl-4 pr-2">
+      {/* Tiêu đề như tiêu đề trang (cao bằng thanh đầu của trang, mặc định 44px; không kẻ dưới như header trang; chữ 13px đậm vừa) để khung cùng nhịp với trang phía sau */}
+      <div style={{ height: headerHeight }} className="flex h-11 shrink-0 items-center gap-1 pl-4 pr-2">
         <h2 className="min-w-0 flex-1 truncate text-compact font-medium text-foreground">Hộp thư</h2>
         <MenuRoot>
           <MenuTrigger
