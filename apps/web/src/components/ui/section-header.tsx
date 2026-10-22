@@ -43,7 +43,7 @@ export function SectionHeader({
   );
 }
 
-/** Một dòng trong danh sách của khối quy trình: nội dung bên trái cắt cuối, phần trạng thái/thao tác bên phải, chữ 12px. */
+/** Một dòng trong danh sách (`ul`/`ol`) của khối quy trình: nội dung bên trái cắt cuối, phần trạng thái/thao tác bên phải, chữ 12px. */
 export function SectionRow({ className, ...props }: React.LiHTMLAttributes<HTMLLIElement>) {
   return <li className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs", className)} {...props} />;
 }
