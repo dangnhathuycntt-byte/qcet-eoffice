@@ -4,6 +4,7 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { TaskIconChecklist, TaskIconClose } from "@qcet/shared/lib/icons/task-icons";
 import { Button, type ButtonProps } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 
 /**
@@ -83,9 +84,7 @@ export function SelectionActionBar({ count, total, noun, onClear, busy = false, 
         >
           <TaskIconClose className="size-4" />
           <span className="max-sm:hidden">Bỏ chọn</span>
-          <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-0.5 font-sans text-xs leading-none text-muted-foreground max-sm:hidden">
-            Esc
-          </kbd>
+          <Kbd className="max-sm:hidden">Esc</Kbd>
         </Button>
         {/* Điện thoại: ngắt hàng sau nút bỏ chọn để các thao tác nằm riêng hàng dưới */}
         <div aria-hidden="true" className="hidden h-0 basis-full max-sm:order-1 max-sm:block" />

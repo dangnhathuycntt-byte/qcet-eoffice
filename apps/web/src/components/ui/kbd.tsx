@@ -1,12 +1,15 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/** Một phím trên bàn phím (gợi ý phím tắt): ô nhỏ viền mảnh, chữ phụ, cao 20px. */
+/**
+ * Một phím trên bàn phím (gợi ý phím tắt), như keycap của Linear (đo 22/10/2026): nền trong suốt, viền mảnh, chữ 11px phụ,
+ * cao 20px, bo 4px.
+ */
 export function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
     <kbd
       className={cn(
-        "inline-flex h-5 min-w-5 items-center justify-center rounded border border-border bg-muted px-1 font-sans text-xs text-muted-foreground",
+        "inline-flex h-5 min-w-5 items-center justify-center rounded border-hairline border-border px-1 font-sans text-micro text-muted-foreground",
         className
       )}
       {...props}

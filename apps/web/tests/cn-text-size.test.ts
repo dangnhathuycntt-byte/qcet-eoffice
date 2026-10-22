@@ -6,6 +6,12 @@ describe("cn với cỡ chữ tùy biến của theme", () => {
   it("giữ text-compact khi đi cùng màu chữ", () => {
     assert.equal(cn("text-compact text-foreground"), "text-compact text-foreground");
     assert.equal(cn("text-hero", "text-muted-foreground"), "text-hero text-muted-foreground");
+    assert.equal(cn("text-micro text-muted-foreground"), "text-micro text-muted-foreground");
+  });
+
+  it("giữ border-hairline (độ dày) khi đi cùng màu viền", () => {
+    assert.equal(cn("border-hairline border-border"), "border-hairline border-border");
+    assert.equal(cn("border border-border", "border-hairline"), "border-border border-hairline");
   });
 
   it("vẫn gộp đúng khi hai cỡ chữ xung đột: cỡ sau thắng", () => {

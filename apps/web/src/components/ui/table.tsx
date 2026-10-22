@@ -37,7 +37,9 @@ export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> 
 function Table({ className, density = "one-line", containerClassName, ...props }: TableProps) {
   return (
     <TableDensityContext.Provider value={density}>
-      <div data-slot="table-container" className={cn("relative w-full overflow-x-auto", containerClassName)}>
+      {/* Đệm ngang 8px: nền hàng (rê chuột, đang chọn) lùi khỏi mép thẻ 8px và bo 8px như danh sách của Linear (đo 22/10/2026);
+          ô đầu/cuối bớt đúng 8px (`CELL_PADDING`) nên chữ vẫn thẳng mép với thanh công cụ. */}
+      <div data-slot="table-container" className={cn("relative w-full overflow-x-auto px-2", containerClassName)}>
         <table data-slot="table" className={cn("w-full caption-bottom border-collapse text-left text-compact", className)} {...props} />
       </div>
     </TableDensityContext.Provider>
@@ -71,10 +73,10 @@ export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement>
   groupPosition?: SelectionGroupPosition | null;
 }
 
-const ROUND_TOP = "[&>td:first-child]:rounded-tl-md [&>td:last-child]:rounded-tr-md";
-const ROUND_BOTTOM = "[&>td:first-child]:rounded-bl-md [&>td:last-child]:rounded-br-md";
+const ROUND_TOP = "[&>td:first-child]:rounded-tl-sm [&>td:last-child]:rounded-tr-sm";
+const ROUND_BOTTOM = "[&>td:first-child]:rounded-bl-sm [&>td:last-child]:rounded-br-sm";
 // Hàng chưa chọn chỉ bo góc khi có nền riêng. Bo sẵn thì lúc bỏ chọn hàng loạt, nền đang mờ dần lộ góc bo rời rạc giữa các hàng.
-const ROUND_ON_HOVER = "hover:[&>td:first-child]:rounded-l-md hover:[&>td:last-child]:rounded-r-md";
+const ROUND_ON_HOVER = "hover:[&>td:first-child]:rounded-l-sm hover:[&>td:last-child]:rounded-r-sm";
 
 function rowRadiusClass(selected: boolean, standalone: boolean, interactive: boolean, groupPosition: SelectionGroupPosition | null) {
   if (selected) {
@@ -133,8 +135,11 @@ function TableRow({
   );
 }
 
-/** Đệm ô: 12px hai bên, cột đầu và cột cuối 16px (20px từ `sm`) cho thẳng mép với thanh công cụ phía trên. */
-const CELL_PADDING = "px-3 py-1.5 first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5";
+/**
+ * Đệm ô: 12px hai bên; cột đầu và cột cuối 8px (12px từ `sm`), cộng đệm 8px của khung bảng thành 16px (20px) cho thẳng mép với
+ * thanh công cụ phía trên.
+ */
+const CELL_PADDING = "px-3 py-1.5 first:pl-2 last:pr-2 sm:first:pl-3 sm:last:pr-3";
 
 function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (

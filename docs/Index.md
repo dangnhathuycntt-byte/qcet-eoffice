@@ -16,6 +16,8 @@ Hướng dẫn agent duy nhất: [AGENTS.md](../AGENTS.md). Chỉ đọc phần 
 | Bộ thiết kế được chọn | `design-archives/qcet-design-nen-tang-nhiem-vu.zip` (bản lưu cục bộ; chưa có thư mục giải nén trong checkout) |
 | Bảng bàn giao để tham khảo | [Design handoff](design-handoff/INDEX.md); không tự thay thế bộ được chọn |
 | Thuật ngữ giao diện | [Từ vựng QCET](ux/QCET_UI_VOCABULARY.md) |
+| Nguyên tắc UI/UX của Linear và Asana | [Linear & Asana](ux/LINEAR_ASANA_UI_UX_PRINCIPLES.md): nghiên cứu web 22/10/2026, tham khảo, không phải việc cần làm |
+| Token thiết kế Linear (màu, chữ, bo góc, khoảng cách, bóng, chuyển động) | [Linear design tokens](ux/LINEAR_DESIGN_TOKENS.md): đo 22/10/2026 và đối chiếu QCET; mục 8 là đề xuất chưa duyệt |
 | HTML/ảnh tham khảo cũ | [UX references](ux/references/); không phải hướng dẫn thực thi |
 | API | [OpenAPI](api/openapi.yaml) |
 | Bảo mật | [Security](security/) |

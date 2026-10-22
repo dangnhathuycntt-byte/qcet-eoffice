@@ -9,12 +9,13 @@ import { cn } from "@/lib/utils";
 
 /**
  * Khung tiêu đề 44px tràn mép của trang danh sách trong khung một thẻ (Nhiệm vụ, Cuộc họp; khung do `app-shell` dựng, lề
- * ngang 16px điện thoại / 18px máy tính nên hàng này kéo âm đúng chừng ấy để đường kẻ dưới chạm hai mép thẻ). Tiêu đề trang
- * bên trái, nút tạo mới bên phải; điện thoại có thêm nút mở sidebar thay cho thanh trên cùng (như Linear).
+ * ngang 16px điện thoại / 18px máy tính nên hàng này kéo âm đúng chừng ấy để chạm hai mép thẻ). Không kẻ đáy: header của Linear
+ * tách khỏi nội dung bằng khoảng trắng (đo 22/10/2026). Tiêu đề trang bên trái, nút tạo mới bên phải; điện thoại có thêm nút
+ * mở sidebar thay cho thanh trên cùng (như Linear).
  */
 export function ListPageHeader({ title, action }: { title: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="-mx-4 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-[calc(100%+32px)] min-w-0 items-center justify-between gap-3 border-b border-border/60 px-4 pt-[env(safe-area-inset-top,0px)] md:-mx-[18px] md:h-11 md:w-[calc(100%+36px)] md:px-[18px] md:pt-0">
+    <div className="-mx-4 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-[calc(100%+32px)] min-w-0 items-center justify-between gap-3 px-4 pt-[env(safe-area-inset-top,0px)] md:-mx-[18px] md:h-11 md:w-[calc(100%+36px)] md:px-[18px] md:pt-0">
       <div className="flex min-w-0 items-center gap-2">
         <MobileMenuButton className="-ml-1.5 md:hidden" />
         {title}

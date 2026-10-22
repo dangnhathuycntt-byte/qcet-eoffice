@@ -116,6 +116,10 @@
   --color-on-action: #FAFAFA;
   --color-text-primary: var(--gray-12);
   --color-text-secondary: var(--gray-11);
+  /* Bốn mức chữ như Linear (đo 22/10/2026): foreground (tiêu đề, tên) · body-foreground (thân văn bản soạn) ·
+     muted-foreground (phụ) · faint (placeholder, gợi ý mờ) */
+  --color-body-foreground: var(--body-foreground);
+  --color-faint: var(--gray-8);
   --color-feedback-danger: #B91C1C;
   --color-feedback-danger-bg: #FBEDED;
   --color-foreground: var(--foreground);
@@ -131,6 +135,9 @@
   --font-size-hero: var(--font-size-hero);
   --text-compact: 13px;
   --text-compact--line-height: 18px;
+  /* Cỡ duy nhất dưới 12px: chỉ cho keycap (`Kbd`) và gợi ý phím tắt trong menu, như Linear (11px, đo 22/10/2026) */
+  --text-micro: 11px;
+  --text-micro--line-height: 16px;
   --text-hero: 28px;
   --text-hero--line-height: 36px;
   /* Tài liệu hướng dẫn /docs (đo linear.app/docs 14/10/2026): thân bài 15/24, tiêu đề trang 32/36, tiêu đề trang chủ docs 40/44 */
@@ -186,6 +193,7 @@
   --color-card: var(--card);
   --shadow-subtle: none;
   --shadow-card: none;
+  --shadow-low: var(--shadow-low);
   --shadow-dropdown: var(--shadow-menu);
   --shadow-menu: var(--shadow-menu);
   --shadow-dialog: var(--shadow-dialog);
@@ -230,17 +238,20 @@
   --gray-0: #FFFFFF; /* #FFFFFF · raised: nút, ô nhập nổi, popover, menu */
   --gray-1: #EFEFF0; /* #EFEFF0 · app canvas: sidebar, nền quanh thẻ nội dung */
   --gray-2: #F9F9FA; /* #F9F9FA · panel: thẻ nội dung, bảng */
-  --gray-3: #F2F4F7; /* #F2F4F7 · control (input, secondary button) */
-  --gray-4: #EAEDF1; /* #EAEDF1 · hover */
-  --gray-5: #DEE2E8; /* #DEE2E8 · neutral separator */
-  --gray-6: #DADDE2; /* #DADDE2 · mark (unchecked box, thin bars) */
-  --gray-7: #C9CDD3; /* #C9CDD3 · faint (handles) */
-  --gray-8: #9AA0A9; /* #9AA0A9 · disabled (contrast-exempt) */
+  /* gray-3…8, 11 và control-edge: xám trung tính kiểu Linear (LCH hue 282, chroma 0.5–1.25), giữ nguyên độ sáng L* của bản
+     ánh xanh cũ nên mọi tỉ lệ tương phản giữ nguyên (lệch ≤ 0.03; đổi 22/10/2026) */
+  --gray-3: #F4F4F5; /* #F4F4F5 · control (input, secondary button) */
+  --gray-4: #EDEDEE; /* #EDEDEE · hover */
+  --gray-5: #E1E2E3; /* #E1E2E3 · neutral separator */
+  --gray-6: #DDDDDE; /* #DDDDDE · mark (unchecked box, thin bars) */
+  --gray-7: #CCCDCE; /* #CCCDCE · faint (handles) */
+  --gray-8: #9F9FA2; /* #9F9FA2 · disabled, placeholder (mức chữ mờ, contrast-exempt) */
   --gray-9: #0058A0; /* #0058A0 · action (brand blue) */
   --gray-10: #004A88; /* #004A88 · action hover */
-  --gray-11: #5F6671; /* #5F6671 · text secondary (5.8:1) */
+  --gray-11: #656567; /* #656567 · text secondary (5.8:1) */
   --gray-12: #1A1D23; /* #1A1D23 · text primary */
-  --control-edge: #888D96; /* nét điều khiển rỗng: 3.4:1 trên trắng, 3.03:1 trên #F2F4F7 (WCAG 1.4.11) */
+  --body-foreground: #2F2F31; /* thân văn bản soạn (mô tả việc, bình luận): mức chữ 2 của Linear, nhạt hơn tiêu đề một bậc */
+  --control-edge: #8C8D8F; /* nét điều khiển rỗng: 3.3:1 trên trắng, 3.02:1 trên #F4F4F5 (WCAG 1.4.11) */
 
   /* Accent ramp (xanh trường). Màu hành động và vùng đang chọn; chỉ thông tin mới dùng màu khác. */
   --accent-3: #E1EBF8; /* xanh nhạt; vùng đang chọn đã chuyển sang xám trung tính (--selected), hiện không còn nơi dùng */
@@ -282,7 +293,7 @@
   --brand: #0058A0; /* xanh logo trường, tương phản 7.6:1 */
   --brand-accent: #F8F000; /* vàng logo trường */
   --icon-accent: #C0D0F4; /* nền chip icon nghiệp vụ và mảng nhấn */
-  --overlay: rgba(0, 0, 0, 0.40); /* lớp tối sau hộp thoại */
+  --overlay: rgba(0, 0, 0, 0.25); /* lớp tối sau hộp thoại (Linear 25%, đo 22/10/2026) */
   --scrim-strong: rgba(16, 16, 18, 0.96); /* nền trình xem ảnh: bề mặt tối duy nhất của giao diện sáng (như trình xem ảnh của Google Keep) */
   --on-action: #FAFAFA; /* chữ trên nút chính */
   /* Borders are being phased out; until components stop using them keep them faint. */
@@ -291,9 +302,14 @@
   --ring: var(--gray-8);
 
   /* Elevation tokens chuẩn: 2 token cho overlay nổi (hộp thoại, popover/menu) và 1 cho khung trượt từ cạnh */
-  --shadow-dialog: 0 24px 60px -20px rgb(0 0 0 / 0.35);
-  /* Viền mảnh 1px + 3 lớp bóng (theo Linear): popover trắng trên nền trắng vẫn tách khỏi bảng phía sau */
-  --shadow-menu: 0 0 0 1px rgb(26 29 35 / 0.09), 0 8px 24px rgb(26 29 35 / 0.08), 0 3px 8px rgb(26 29 35 / 0.06), 0 1px 1px rgb(26 29 35 / 0.06);
+  /* Số đo Linear 22/10/2026 (docs/ux/LINEAR_DESIGN_TOKENS.md mục 5). Vòng 0.5px thay viền hairline vì các khung này `border-0`. */
+  --shadow-dialog: 0 0 0 0.5px rgb(0 0 0 / 0.09), 0 9px 48px rgb(0 0 0 / 0.08), 0 6px 24px rgb(0 0 0 / 0.10), 0 1px 1px rgb(0 0 0 / 0.04);
+  /* Vòng 0.5px + 3 lớp bóng: popover trắng trên nền trắng vẫn tách khỏi bảng phía sau */
+  --shadow-menu: 0 0 0 0.5px rgb(0 0 0 / 0.09), 0 6px 18px rgb(0 0 0 / 0.02), 0 3px 9px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.04);
+  /* Bóng thấp của khung trang (thẻ nội dung trên canvas), như khung nội dung của Linear */
+  --shadow-low: 0 3px 6px -2px rgb(0 0 0 / 0.02), 0 1px 1px rgb(0 0 0 / 0.04);
+  /* Viền mảnh: 0.5px trên màn mật độ cao (như Linear), 1px trên màn thường để không mờ thành vạch nửa điểm ảnh */
+  --border-hairline: 1px;
   --shadow-dropdown: var(--shadow-menu);
   /* Khung trượt ra trong thẻ trang (Hộp thư ở thanh bên): chỉ bóng ngang rất nhẹ về bên phải, kèm viền phải của khung; không nổi như popover */
   --shadow-sheet: 6px 0 16px -8px rgb(26 29 35 / 0.10);
@@ -312,7 +328,7 @@
   --radius-card: 14px;
   --radius-panel: 16px;
   --radius-login: 24px;
-  --radius-menu: 0.875rem;
+  --radius-menu: 0.75rem; /* 12px; mục bên trong bo 8px (`rounded-sm`) cách mép 4px nên hai góc gần đồng tâm, như Linear */
 
   /* Spacing Tokens theo lưới 4 (inset / stack / inline) */
   --space-inset-xs: 4px;
@@ -419,7 +435,7 @@
   --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --motion-duration-micro: 80ms;
+  --motion-duration-micro: 100ms;
   --motion-duration-fast: 140ms;
   --motion-duration-normal: 180ms;
   --motion-duration-panel: 260ms;
@@ -862,6 +878,17 @@
   }
 }
 
+@media (min-resolution: 2dppx) {
+  :root {
+    --border-hairline: 0.5px;
+  }
+}
+
+/* Viền mảnh kiểu Linear (keycap, khung trang): 0.5px trên màn mật độ cao, 1px trên màn thường. Đi kèm màu viền (`border-border`). */
+@utility border-hairline {
+  border-width: var(--border-hairline);
+}
+
 @utility content-auto {
   content-visibility: auto;
   contain-intrinsic-size: 1px 64px;
@@ -938,6 +965,9 @@
   .shadow-dialog {
     box-shadow: var(--shadow-dialog);
   }
+  .shadow-low {
+    box-shadow: var(--shadow-low);
+  }
   .shadow-sheet {
     box-shadow: var(--shadow-sheet);
   }
@@ -963,6 +993,10 @@
     inset 0 var(--row-ring-w, 0px) 0 0 var(--row-ring-c, transparent),
     inset 0 calc(var(--row-ring-w, 0px) * -1) 0 0 var(--row-ring-c, transparent),
     1px 0 0 0 var(--row-bg, transparent);
+}
+/* Nền rê chuột hiện ngay, rời chuột thì mờ dần 150ms (Linear: highlightFadeIn 0s, highlightFadeOut 150ms) */
+[data-table-row]:hover > td {
+  transition-duration: 0s;
 }
 [data-table-row] > td:first-child {
   box-shadow:

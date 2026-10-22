@@ -690,7 +690,7 @@ export function CreateTaskModal({
                       }}
                       placeholder={initialParentTaskId ? "Tên việc con" : "Tên nhiệm vụ"}
                       className={cn(
-                        "block w-full resize-none overflow-hidden text-2xl font-semibold text-foreground placeholder:text-muted-foreground/60 bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-normal max-md:text-xl",
+                        "block w-full resize-none overflow-hidden text-2xl font-semibold text-foreground placeholder:text-faint bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-normal max-md:text-xl",
                         form.fieldErrors.title && "placeholder:text-destructive/60 text-destructive",
                       )}
                     />
@@ -945,7 +945,7 @@ export function CreateTaskModal({
                       </span>
                       {/* Phím tắt nằm gọn trong nút, nhạt hơn nhãn */}
                       {form.isSubmitting || contextUpload.pending > 0 ? null : (
-                        <kbd className="hidden sm:inline font-sans text-xs text-primary-foreground/60" aria-hidden="true">
+                        <kbd className="hidden sm:inline font-sans text-micro text-primary-foreground/60" aria-hidden="true">
                           {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
                         </kbd>
                       )}

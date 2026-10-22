@@ -18,17 +18,20 @@ import { useIsPhone } from "@/hooks/use-is-phone";
 const SELECTED_RUN_CLASS =
   "[&[data-selected]:has(+[data-selected])]:rounded-b-none [[data-selected]+&[data-selected]]:rounded-t-none [&[aria-current=true]:has(+[aria-current=true])]:rounded-b-none [[aria-current=true]+&[aria-current=true]]:rounded-t-none";
 
-/** Hàng mục menu chuẩn: cao 28px, chữ 12px, icon 16px, hover nền accent (dùng chung menu thao tác và bộ lọc) */
-export const MENU_ROW_CLASS = `flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors duration-75 outline-none hover:bg-accent focus-visible:bg-accent ${SELECTED_RUN_CLASS}`;
+/**
+ * Hàng mục menu chuẩn (dùng chung menu thao tác và bộ lọc), theo menu của Linear (đo 22/10/2026): cao 32px, chữ 13px, icon 16px,
+ * bo 8px (đồng tâm với khung bo 12px đệm 4px). Nền tô sáng hiện ngay khi trỏ tới, rời đi thì mờ dần 150ms.
+ */
+export const MENU_ROW_CLASS = `flex w-full items-center gap-2 px-2 h-8 rounded-sm text-left text-compact text-foreground cursor-pointer transition-colors duration-150 hover:duration-0 focus-visible:duration-0 outline-none hover:bg-accent focus-visible:bg-accent ${SELECTED_RUN_CLASS}`;
 
 /**
  * Hàng chọn giá trị trong Select/Combobox (danh sách có điều hướng phím): mục đang trỏ tới (chuột/phím) nền nhạt,
  * mục đã chọn nền accent + chữ đậm, không tick. Hai trạng thái khác màu để không lẫn khi trỏ vào mục khác.
  */
-export const MENU_OPTION_ROW_CLASS = `${MENU_ROW_CLASS} hover:bg-transparent data-[highlighted]:bg-muted data-[selected]:bg-accent data-[selected]:font-medium`;
+export const MENU_OPTION_ROW_CLASS = `${MENU_ROW_CLASS} hover:bg-transparent data-[highlighted]:bg-muted data-[highlighted]:duration-0 data-[selected]:bg-accent data-[selected]:font-medium`;
 /** Khung popup menu: bo góc theo token, không viền, bóng menu. Chuyển động do `MenuPopup` (motion) đảm nhiệm. */
 export const MENU_POPUP_CLASS =
-  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] data-[closed]:hidden";
+  "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-compact text-popover-foreground shadow-menu outline-none z-50 origin-[var(--transform-origin)] data-[closed]:hidden";
 
 /**
  * Điện thoại (< md): menu/popover thành bottom sheet kiểu Linear mobile — lớp tối phía sau, khung bám đáy rộng hết màn,
@@ -190,7 +193,7 @@ export const MenuOptionItem = React.forwardRef<HTMLDivElement, MenuOptionItemPro
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {hint ? <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground/80">{hint}</span> : null}
       {/* Phím tắt chỉ có nghĩa với bàn phím: bottom sheet trên điện thoại ẩn đi (như menu chuột phải của Nhiệm vụ) */}
-      {shortcut ? <kbd className="shrink-0 font-sans text-xs font-normal tabular-nums text-muted-foreground/80 max-md:hidden">{shortcut}</kbd> : null}
+      {shortcut ? <kbd className="shrink-0 font-sans text-micro font-medium tabular-nums text-muted-foreground max-md:hidden">{shortcut}</kbd> : null}
     </BaseMenu.Item>
   )
 );

@@ -11,10 +11,10 @@ export function DocumentRegistrySkeleton({ rows = 10, cards = 8 }: { rows?: numb
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col" role="status" aria-busy="true" aria-label="Đang tải sổ văn bản" data-slot="document-registry-skeleton">
       <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-1.5 p-2 max-md:gap-0 max-md:p-0">
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card motion-safe:animate-pulse max-md:rounded-none max-md:border-0">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border-hairline border-border bg-card shadow-low motion-safe:animate-pulse max-md:rounded-none max-md:border-0">
           {/* Desktop */}
           <div className="hidden sm:block">
-            <div className="flex h-[46px] items-center gap-1.5 border-b border-border/60 px-6">
+            <div className="flex h-[46px] items-center gap-1.5 px-6">
               <Skeleton className="h-3.5 w-24 rounded" />
               <span className="flex-1" />
               <Skeleton className="h-7 w-44 rounded-full" />
@@ -43,7 +43,7 @@ export function DocumentRegistrySkeleton({ rows = 10, cards = 8 }: { rows?: numb
 
           {/* Điện thoại */}
           <div className="sm:hidden">
-            <div className="flex h-11 items-center gap-2 border-b border-border/60 px-4">
+            <div className="flex h-11 items-center gap-2 px-4">
               <Skeleton className="size-5" />
               <Skeleton className="h-4 w-28" />
               <span className="flex-1" />
