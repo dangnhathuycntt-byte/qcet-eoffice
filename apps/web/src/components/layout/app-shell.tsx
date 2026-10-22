@@ -233,11 +233,12 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
           className={isWorkspaceShell
             ? "flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
             : isFullHeightPane
-            ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:ml-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-2xl md:border md:border-border md:bg-card md:shadow-2xs outline-none overflow-hidden"
+            ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:ml-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-md md:border-hairline md:border-border md:bg-card md:shadow-low outline-none overflow-hidden"
             : cn(
-                "flex-1 flex flex-col md:ml-2 md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
+                // Khung nội dung như Linear (đo 22/10/2026): bo 12px, viền mảnh, bóng thấp
+                "flex-1 flex flex-col md:ml-2 md:border-t-(length:--border-hairline) md:border-l-(length:--border-hairline) md:border-border md:bg-card md:shadow-low min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
                 // Trang danh sách (Nhiệm vụ, Cuộc họp): khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết
-                isListPage ? "md:rounded-2xl md:border-r md:border-b md:mr-2 md:mb-2" : "md:rounded-tl-2xl",
+                isListPage ? "md:rounded-md md:border-r-(length:--border-hairline) md:border-b-(length:--border-hairline) md:mr-2 md:mb-2" : "md:rounded-tl-md",
                 hideDesktopTopbar && (isListPage ? "md:mt-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px-var(--app-statusbar))]")
               )}
         >

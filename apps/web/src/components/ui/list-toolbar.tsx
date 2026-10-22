@@ -60,7 +60,7 @@ export interface ListToolbarSearchProps extends Omit<React.InputHTMLAttributes<H
 }
 
 const searchKbdClass =
-  "hidden h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/60 px-1 font-mono text-xs leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex";
+  "hidden h-4 min-w-4 items-center justify-center rounded border-hairline border-border px-1 font-sans text-micro leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex";
 
 /**
  * Ô tìm kiếm của thanh công cụ danh sách (người dùng 21/10/2026 "research cải thiện ui ux component này"; theo Search Input
@@ -113,7 +113,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
           onBlur?.(e);
         }}
         className={cn(
-          `h-8 sm:h-7 w-full rounded-full border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-muted-foreground/70 shadow-2xs hover:border-border outline-none ${fieldFocusRingClass} focus-visible:-outline-offset-1 transition-colors`,
+          `h-8 sm:h-7 w-full rounded-full border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-faint shadow-2xs hover:border-border outline-none ${fieldFocusRingClass} focus-visible:-outline-offset-1 transition-colors`,
           className
         )}
         {...inputProps}

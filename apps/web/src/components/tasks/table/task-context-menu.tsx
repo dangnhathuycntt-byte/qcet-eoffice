@@ -68,7 +68,7 @@ const isDesktopPopover = () => typeof window !== "undefined" && window.matchMedi
 
 /** Phím tắt chỉ có nghĩa với bàn phím: điện thoại (bottom sheet) ẩn đi cho hàng thoáng. */
 function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="font-sans text-xs tabular-nums text-muted-foreground/80 max-md:hidden">{children}</kbd>;
+  return <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground max-md:hidden">{children}</kbd>;
 }
 
 /** Hàng thao tác ở menu chính: icon · nhãn · phím tắt. */
@@ -168,7 +168,7 @@ function SubmenuRow({
           role="menu"
           className={cn(
             panelPlacementClass,
-            "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs shadow-menu animate-in fade-in-0 zoom-in-95 duration-100 z-50",
+            "rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-compact shadow-menu animate-in fade-in-0 zoom-in-95 duration-100 z-50",
             panelClassName,
             MOBILE_INLINE_PANEL
           )}
@@ -207,7 +207,7 @@ function OptionRow({
       {leading ? <span className="flex size-4 shrink-0 items-center justify-center">{leading}</span> : null}
       <span className="flex-1 truncate">{label}</span>
       {/* hint 0 (phím Không ưu tiên) vẫn phải hiện */}
-      {hint != null && hint !== "" ? <span className={cn("text-xs tabular-nums text-muted-foreground/80", hintIsKey && "max-md:hidden")}>{hint}</span> : null}
+      {hint != null && hint !== "" ? <span className={cn("tabular-nums", hintIsKey ? "text-micro font-medium text-muted-foreground max-md:hidden" : "text-xs text-muted-foreground/80")}>{hint}</span> : null}
       {selected ? <Check className="size-3.5 shrink-0 text-foreground" /> : null}
     </Pressable>
   );
@@ -525,7 +525,7 @@ export function TaskContextMenu({
       ref={menuRef}
       aria-label="Thao tác nhanh nhiệm vụ"
       className={cn(
-        "w-60 select-none rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu origin-top-left animate-in fade-in-0 zoom-in-95 duration-100",
+        "w-60 select-none rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-compact text-popover-foreground shadow-menu origin-top-left animate-in fade-in-0 zoom-in-95 duration-100",
         SHEET_POPUP_CLASS,
         "max-md:animate-none max-md:[&_[data-submenu]>[aria-haspopup=true][aria-expanded=true]]:hidden max-md:[&_[data-slot=menu-submenu-title]]:hidden",
         activeSubmenu && SUBMENU_ONLY_ON_MOBILE[activeSubmenu]

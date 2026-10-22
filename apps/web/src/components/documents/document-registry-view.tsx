@@ -30,7 +30,7 @@ const PANE_WIDTH_KEY = "qcet_document_pane_width";
  */
 // Điện thoại: tràn mép như Linear (không padding, thẻ không viền/bo); từ md giữ khung hai thẻ
 const SPLIT_WORKSPACE = "grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-1.5 p-2 max-md:gap-0 max-md:p-0";
-const WORKSPACE_CARD = "@container flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-foreground";
+const WORKSPACE_CARD = "@container flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border-hairline border-border bg-card text-foreground shadow-low max-md:shadow-none";
 
 interface ApiDoc {
   id: string; type: string; urgency: string; status: string;
@@ -407,7 +407,7 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
           style={paneVisible ? { gridTemplateColumns: `minmax(0, 1fr) min(75vw, ${layout.width}px)` } : undefined}
         >
           <section className={cn(WORKSPACE_CARD, "max-md:rounded-none max-md:border-0")} data-slot="document-list-card" aria-label="Sổ văn bản">
-            <header className="shrink-0 border-b border-border/60 px-4 pb-2 pt-2.5 max-md:overflow-x-clip max-md:border-b-0 max-md:pb-0 max-md:pt-[env(safe-area-inset-top,0px)] sm:px-6">
+            <header className="shrink-0 px-4 pb-2 pt-2.5 max-md:overflow-x-clip max-md:pb-0 max-md:pt-[env(safe-area-inset-top,0px)] sm:px-6">
               <DocumentLedgerToolbar
                 title={typeTitle[filters.type] ?? "Sổ văn bản"}
                 count={isLoading || fetchError || totalCount === 0 || activeFilters.some((f) => f.id !== "bucket") ? null : totalCount}

@@ -17,6 +17,7 @@ import {
 import { TaskIconDisplay } from "@qcet/shared/lib/icons/task-icons";
 import type { SchoolTask, TaskCategory } from "@qcet/contracts/types/dashboard";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ListToolbarPopover } from "@/components/ui/list-toolbar";
@@ -625,7 +626,7 @@ export function TaskTableToolbar({
             placeholder="Tìm theo tên, mã nhiệm vụ..."
             disabled={loading}
             aria-label="Tìm kiếm nhiệm vụ"
-            className="w-full h-9 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
+            className="w-full h-9 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
           />
           {localQuery && (
             <Button
@@ -1001,7 +1002,7 @@ export function TaskTableToolbar({
               placeholder={searchPlaceholder}
               disabled={loading}
               aria-label="Tìm kiếm nhiệm vụ"
-              className="w-full h-8.5 pl-8.5 pr-14 rounded-lg border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/80 transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
+              className="w-full h-8.5 pl-8.5 pr-14 rounded-lg border border-border/70 bg-card text-xs text-foreground placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/80 transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {localQuery ? (
@@ -1013,9 +1014,7 @@ export function TaskTableToolbar({
                   <X className="size-3.5" />
                 </Pressable>
               ) : (
-                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/70 select-none">
-                  /
-                </kbd>
+                <Kbd className="hidden h-4 min-w-4 select-none sm:inline-flex">/</Kbd>
               )}
             </div>
           </div>

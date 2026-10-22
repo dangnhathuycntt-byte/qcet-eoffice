@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function MeetingsLoading() {
   return (
     <div className="flex flex-col animate-pulse" role="status" aria-label="Đang tải danh sách cuộc họp…">
-      <div className="-mx-4 flex h-11 items-center justify-between gap-3 border-b border-border/60 px-4 md:-mx-[18px] md:px-[18px]">
+      <div className="-mx-4 flex h-11 items-center justify-between gap-3 px-4 md:-mx-[18px] md:px-[18px]">
         <Skeleton className="h-3.5 w-20" />
         <Skeleton className="h-7 w-28 rounded-full max-md:w-8" />
       </div>

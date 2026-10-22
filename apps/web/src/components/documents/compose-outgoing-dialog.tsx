@@ -281,7 +281,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
                   e.currentTarget.form?.requestSubmit();
                 }}
                 placeholder="Trích yếu"
-                className="min-h-0 py-0 text-2xl font-semibold leading-normal placeholder:text-muted-foreground/60 aria-invalid:text-foreground aria-invalid:placeholder:text-destructive/60 max-md:text-xl sm:min-h-0"
+                className="min-h-0 py-0 text-2xl font-semibold leading-normal placeholder:text-faint aria-invalid:text-foreground aria-invalid:placeholder:text-destructive/60 max-md:text-xl sm:min-h-0"
               />
               {fieldErrors.summary ? <FieldError id="compose-outgoing-summary-error">{fieldErrors.summary}</FieldError> : null}
             </div>
@@ -456,7 +456,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
             >
               <span>{savedWithoutFiles ? "Đóng" : isSubmitting ? "Đang lưu…" : "Lưu bản nháp"}</span>
               {isSubmitting || savedWithoutFiles ? null : (
-                <kbd className="hidden font-sans text-xs text-primary-foreground/60 sm:inline" aria-hidden="true">
+                <kbd className="hidden font-sans text-micro text-primary-foreground/60 sm:inline" aria-hidden="true">
                   {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
                 </kbd>
               )}

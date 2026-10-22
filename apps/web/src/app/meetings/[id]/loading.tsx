@@ -9,7 +9,7 @@ export default function MeetingDetailLoading() {
   return (
     <div className="flex min-h-0 flex-1 flex-col animate-pulse" role="status" aria-label="Đang tải cuộc họp…">
       <div className="grid min-h-0 flex-1 p-2 max-md:p-0">
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-md border-hairline border-border bg-card shadow-low max-md:rounded-none max-md:border-0 max-md:shadow-none">
           {/* Dưới 1024px thanh đầu hai hàng 44px như trang thật: khung giữ đủ 88px để nội dung không nhảy khi tải xong */}
           <div className="flex h-10 items-center justify-between border-b border-border/40 px-[18px] max-lg:h-[calc(88px+env(safe-area-inset-top,0px))] max-lg:border-b-0 max-lg:px-4 max-lg:pb-11 max-lg:pt-[env(safe-area-inset-top,0px)]">
             <Skeleton className="h-3.5 w-48" />

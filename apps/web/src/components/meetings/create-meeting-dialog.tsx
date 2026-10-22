@@ -330,7 +330,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
           >
             <span>{saving ? "Đang tạo…" : "Tạo cuộc họp"}</span>
             {saving ? null : (
-              <kbd className="hidden font-sans text-xs text-primary-foreground/60 sm:inline" aria-hidden="true">
+              <kbd className="hidden font-sans text-micro text-primary-foreground/60 sm:inline" aria-hidden="true">
                 {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
               </kbd>
             )}

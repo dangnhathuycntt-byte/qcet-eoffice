@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
 import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
 import { Pressable } from "@/components/ui/pressable";
+import { Kbd } from "@/components/ui/kbd";
 
 /**
  * Cộng `daysToAdd` ngày vào `baseDate` (hạn hiện tại; mặc định hôm nay) theo UTC để không lệch ngày.
@@ -145,7 +146,7 @@ function BulkMenu({
       <MenuPortal>
         <MenuPositioner side="top" align="start" sideOffset={8} className="z-50">
           <MenuPopup
-            className="min-w-56 rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-xs text-popover-foreground shadow-menu outline-none origin-bottom-left animate-in fade-in-0 zoom-in-95 duration-100"
+            className="min-w-56 rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-compact text-popover-foreground shadow-menu outline-none origin-bottom-left animate-in fade-in-0 zoom-in-95 duration-100"
             onKeyDown={(e) => {
               if (onDigit && /^[0-9]$/.test(e.key) && onDigit(Number(e.key))) {
                 e.preventDefault();
@@ -297,7 +298,7 @@ export function BatchActionBar({
                   <TaskStatusCircle status={option.value} />
                   <span>{option.label}</span>
                 </span>
-                <kbd className="font-sans text-xs tabular-nums text-muted-foreground">{index + 1}</kbd>
+                <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground">{index + 1}</kbd>
               </MenuItem>
             ))}
           </BulkMenu>
@@ -338,7 +339,7 @@ export function BatchActionBar({
             {PRIORITY_DISPLAY_CONFIG.map((option, index) => (
               <MenuItem key={option.value} className={menuItemCls} onClick={() => onBulkPriorityChange(option.value as BulkPriority)}>
                 <span>{option.label}</span>
-                <kbd className="font-sans text-xs tabular-nums text-muted-foreground">{index}</kbd>
+                <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground">{index}</kbd>
               </MenuItem>
             ))}
           </BulkMenu>
@@ -368,9 +369,7 @@ export function BatchActionBar({
                   onClick={() => onBulkExtendDeadline(option.days)}
                 >
                   <span>{option.label}</span>
-                  <span className="flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
-                    <kbd className="font-sans">{BULK_DEADLINE_OPTIONS.indexOf(option) + 1}</kbd>
-                  </span>
+                  <kbd className="font-sans text-micro font-medium tabular-nums text-muted-foreground">{BULK_DEADLINE_OPTIONS.indexOf(option) + 1}</kbd>
                 </MenuItem>
               );
             })}
@@ -421,9 +420,7 @@ export function BatchActionBar({
         >
           <TaskIconClose className="size-4 shrink-0" />
           <span className="hidden sm:inline">Bỏ chọn</span>
-          <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-0.5 font-sans text-xs text-muted-foreground leading-none">
-            Esc
-          </kbd>
+          <Kbd>Esc</Kbd>
         </Pressable>
       </div>
     </aside>

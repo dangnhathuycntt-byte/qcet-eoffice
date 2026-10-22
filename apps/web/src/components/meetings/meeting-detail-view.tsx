@@ -542,7 +542,7 @@ export function MeetingDetailView({ meeting, currentUser }: MeetingDetailViewPro
       <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] p-2 max-md:p-0">
         <div
           data-slot="meeting-workspace"
-          className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card max-md:rounded-none max-md:border-0"
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border-hairline border-border bg-card shadow-low max-md:rounded-none max-md:border-0 max-md:shadow-none"
         >
           {/* Màn hẹp: hai hàng 44px như chi tiết nhiệm vụ trên điện thoại; hàng trên menu, tên, liên kết, "⋯" (luôn cuối bên
               phải; kẻ mảnh bên dưới), hàng dưới nút Thuộc tính. Không còn nút "Bắt đầu họp" (người dùng bỏ 21/10/2026) */}

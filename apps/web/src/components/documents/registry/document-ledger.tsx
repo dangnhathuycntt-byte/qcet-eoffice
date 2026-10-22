@@ -540,7 +540,7 @@ export function DocumentActiveFilters({ filters, onClearAll, total }: DocumentAc
  * Trích yếu một dòng (cắt cuối, có tooltip); tên cơ quan ban hành/chủ trì không cắt mà xuống tối đa 2 dòng (vừa hàng 48px).
  */
 const GRID =
-  "grid min-h-10 items-center py-1 gap-x-2 px-2 md:pl-6 md:pr-5 [grid-template-columns:var(--ledger-cols-sm)] @[720px]/ledger:[grid-template-columns:var(--ledger-cols)] @[1100px]/ledger:[grid-template-columns:var(--ledger-cols-xl)]";
+  "grid min-h-10 items-center py-1 gap-x-2 px-0 md:pl-4 md:pr-3 [grid-template-columns:var(--ledger-cols-sm)] @[720px]/ledger:[grid-template-columns:var(--ledger-cols)] @[1100px]/ledger:[grid-template-columns:var(--ledger-cols-xl)]";
 /** Ô ẩn ở mức hẹp, hiện từ mức vừa. */
 const FROM_MEDIUM = "hidden @[720px]/ledger:block";
 /** Ô ẩn dưới mức rộng, hiện từ mức rộng. */
@@ -761,7 +761,7 @@ function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHead
         "group cursor-pointer select-none text-foreground transition-colors outline-none max-md:min-h-12",
         "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         // Các hàng đang chọn liền nhau gộp thành một khối: chỉ bo góc ngoài của khối
-        !selected || groupPosition === "only" || !groupPosition ? "rounded-md" : groupPosition === "first" ? "rounded-t-md" : groupPosition === "last" ? "rounded-b-md" : "rounded-none",
+        !selected || groupPosition === "only" || !groupPosition ? "rounded-sm" : groupPosition === "first" ? "rounded-t-sm" : groupPosition === "last" ? "rounded-b-sm" : "rounded-none",
         "bg-(--row-bg)",
         tableRowBackgroundClass({ interactive: true, selected, current: isOpen, previewing: false, menuTarget })
       )}
@@ -913,7 +913,7 @@ export function DocumentLedgerTable({
 
   if (isLoading) {
     return (
-      <div role="table" aria-busy="true" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger" style={wrapperStyle}>
+      <div role="table" aria-busy="true" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger px-2" style={wrapperStyle}>
         {header}
         {Array.from({ length: 10 }).map((_, i) => (
           <LedgerSkeletonRow key={i} index={i} visibleColumns={visibleColumns} />
@@ -951,7 +951,7 @@ export function DocumentLedgerTable({
   const groupPositions = getSelectionGroupPositions(documents.map((d) => d.id), selectedIds);
 
   return (
-    <div role="table" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger" style={wrapperStyle}>
+    <div role="table" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger px-2" style={wrapperStyle}>
       {header}
       {documents.map((doc) => (
         <LedgerRow

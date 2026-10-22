@@ -993,7 +993,7 @@ function ImageEl({ attributes, children, element }: any) {
                     (ev.target as HTMLElement).blur();
                   }
                 }}
-                className="block w-full text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40 max-sm:-mx-[16.667%] max-sm:-my-1 max-sm:w-[133.333%] max-sm:max-w-none max-sm:scale-75"
+                className="block w-full text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-faint max-sm:-mx-[16.667%] max-sm:-my-1 max-sm:w-[133.333%] max-sm:max-w-none max-sm:scale-75"
               />
               </div>
             ) : caption ? (
@@ -2242,8 +2242,8 @@ function SlashMenu({
                   onMouseMove={() => setActiveIndex((prev) => (prev === idx ? prev : idx))}
                   onClick={() => onSelect(opt)}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-foreground transition-colors duration-75",
-                    isSelected && "bg-accent"
+                    "flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left text-foreground transition-colors duration-150",
+                    isSelected && "bg-accent duration-0"
                   )}
                 >
                   <Icon className={cn("size-4 shrink-0", isSelected ? "text-foreground" : "text-muted-foreground")} />
@@ -2855,7 +2855,7 @@ export function TaskBlockEditor({
                   readOnly={!canEdit}
                   aria-label={ariaLabel}
                   placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
-                  className={cn("outline-none text-sm leading-relaxed flex-1", compose ? "pb-4" : "pl-8 sm:pl-9 pr-4 pb-32")}
+                  className={cn("outline-none text-sm leading-relaxed text-body-foreground flex-1", compose ? "pb-4" : "pl-8 sm:pl-9 pr-4 pb-32")}
                   onBlur={() => {
                     // Cùng sửa thì không dọn: khối rỗng có thể là khối người khác vừa tạo và đang gõ
                     if (canEdit && !collabRef.current) pruneEmptyBlocks(editor);

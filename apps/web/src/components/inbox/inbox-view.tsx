@@ -627,7 +627,7 @@ export function InboxView() {
           )}
         >
           {/* Điện thoại: header riêng thay topbar chung (nút mở sidebar, chừa safe area) như trang Nhiệm vụ */}
-          <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border/60 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
+          <div className="flex h-11 shrink-0 items-center gap-1 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
             <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
             {searchOpen ? (
               // Tìm ngay trên hàng tiêu đề như Linear: không thêm hàng, không khung viền

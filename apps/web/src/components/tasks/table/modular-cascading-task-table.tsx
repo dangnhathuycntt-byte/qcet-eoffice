@@ -1575,7 +1575,7 @@ export function ModularCascadingTaskTable({
                             onClick={() => toggleGroupCollapse(group.key)}
                           >
                             <td colSpan={totalColumns} className="px-0 py-px">
-                              <div className="flex h-9 items-center justify-between gap-2 rounded-md bg-muted pl-7 pr-2 transition-colors group-hover/gh:bg-accent">
+                              <div className="flex h-9 items-center justify-between gap-2 rounded-sm bg-muted pl-5 pr-2 transition-colors group-hover/gh:bg-accent">
                                 {/* Không mũi tên: cả cụm icon + tên + số là nút mở/thu nhóm (bàn phím dùng được) */}
                                 <Pressable
                                   onClick={(e) => {

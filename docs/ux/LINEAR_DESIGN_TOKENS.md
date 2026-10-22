@@ -2,7 +2,7 @@
 
 Đo ngày 22/10/2026. Tài liệu này ghi **số đo cụ thể** (màu, chữ, bo góc, khoảng cách, bóng, chuyển động, trạng thái). Nguyên tắc đằng sau các số đo nằm ở [LINEAR_ASANA_UI_UX_PRINCIPLES.md](LINEAR_ASANA_UI_UX_PRINCIPLES.md).
 
-Trạng thái: **tham khảo**. Mục 8 là **đề xuất chưa duyệt**; đợt này không sửa code. Quyết định đã duyệt của QCET ở [AGENTS.md](../../AGENTS.md) và [DESIGN.md](../../DESIGN.md) vẫn được ưu tiên.
+Trạng thái: **tham khảo**. Đề xuất ở mục 8 đã được người dùng duyệt ngày 22/10/2026 ("đồng ý làm toàn bộ") và áp dụng trên nhánh `feat/linear-tokens`, trừ nhóm Giữ; kết quả ở mục 8.4. Quyết định đã duyệt của QCET ở [AGENTS.md](../../AGENTS.md) và [DESIGN.md](../../DESIGN.md) vẫn được ưu tiên.
 
 ## 0. Nguồn và cách đo
 
@@ -277,9 +277,9 @@ Nghĩa là vùng tô sáng **hiện ngay** khi rê chuột hoặc focus, nhưng 
 
 ## 8. Đối chiếu QCET và đề xuất
 
-> **Đề xuất, chưa duyệt; đợt này không sửa code.**
+> **Đã duyệt 22/10/2026, áp dụng trên `feat/linear-tokens` trừ nhóm Giữ (mục 8.4).**
 >
-> Cột QCET lấy từ code ngày 22/10/2026. Đường dẫn rút gọn:
+> Cột QCET là code ngày 22/10/2026, **trước** khi áp dụng. Đường dẫn rút gọn:
 >
 > | Viết tắt | Đường dẫn |
 > |---|---|
@@ -329,7 +329,7 @@ Nhóm **Nhanh** là thay đổi token, ít rủi ro. Nhóm **Cần duyệt** đ�
 | 18 | Màu accent | Indigo, chỉ cho nút chính, focus, vùng chọn | Xanh thương hiệu `#0058A0` | Giữ màu thương hiệu; học cách dùng accent **thật ít** | Giữ |
 | 19 | Dark mode | Sinh từ 3 đầu vào (base/accent/contrast) + preset tương phản cao | Không có dark mode (G:74; `<html class="light">`) | Nếu làm dark mode sau này: sinh theme từ OKLCH với biến contrast và hỗ trợ `prefers-contrast: more` | Cần duyệt |
 | 20 | Thuộc tính trang chi tiết | Nút viên thuốc không nhãn, gom dưới tiêu đề nhóm | Lưới nhãn–giá trị (quy tắc trong AGENTS.md) | **Giữ quy tắc đã duyệt**; chỉ ghi nhận khác biệt | Giữ |
-| 21 | Hàng bảng Nhiệm vụ | Hàng issue 44px (đã đo); bảng Projects chưa đo | 48px, "như bảng Projects của Linear" (AGENTS.md) | Không kết luận được vì đợt này chưa đo bảng Projects | — |
+| 21 | Hàng bảng Nhiệm vụ | Hàng issue 44px; hàng bảng Projects **48px** (đo 22/10/2026, mục 8.4) | 48px, "như bảng Projects của Linear" (AGENTS.md) | Đã khớp, giữ 48px | Giữ |
 | 22 | Token khai báo nhưng không dùng | — | Khối `--control-height*`, `--row-height-*`, `--menu-item-height`, `--space-*`… (G:318–408) không component nào dùng | Hoặc nối vào component, hoặc dọn trong một đợt riêng | Cần duyệt |
 
 ### 8.3. Thứ tự gợi ý nếu được duyệt
@@ -338,10 +338,29 @@ Nhóm **Nhanh** là thay đổi token, ít rủi ro. Nhóm **Cần duyệt** đ�
 2. **Bo đồng tâm cho menu** (mục 9) và **keycap** (mục 11): sửa trong `ui/`, ảnh hưởng toàn app nên đo DOM lại sau khi sửa.
 3. **Bố cục khung trang và hàng** (mục 12, 13, 14): làm thử trên một trang danh sách, đối chiếu với trang Nhiệm vụ rồi mới nhân rộng.
 
+### 8.4. Đã áp dụng (22/10/2026, nhánh `feat/linear-tokens`)
+
+| # | Đã làm | Chỗ sửa |
+|---|---|---|
+| 1, 2 | Thang xám `--gray-3`…`--gray-8`, `--gray-11`, `--control-edge` sang xám trung tính, giữ độ sáng L* (tương phản không đổi: chữ phụ 5.8:1 trên trắng, nét điều khiển 3.02:1 trên `--gray-3`) | `G` |
+| 3 | Thêm `text-body-foreground` `#2F2F31` (thân editor, bình luận) và `text-faint` = `--gray-8` `#9F9FA2` (mọi placeholder) | `G`, `ui/input`, `ui/textarea`, `ui/list-toolbar`, editor, bình luận, các hộp tạo |
+| 4, 5 | `--overlay` 25%; `--shadow-dialog` vòng 0.5px + 3 lớp của Linear | `G` |
+| 8 | Mục menu 32px, chữ 13px (`text-compact`) cho menu, menu chuột phải, menu "/", thanh thao tác hàng loạt, bảng lệnh ⌘K, `Select` compact | `ui/menu`, `ui/select`, các menu riêng |
+| 9, 10 | `--radius-menu` 12px, mục bo 8px; `--shadow-menu` vòng 0.5px | `G`, `ui/menu`, `ui/select` |
+| 11 | `Kbd` nền trong suốt, `border-hairline`, chữ `text-micro` 11px (thêm cỡ này vào thang, chỉ cho keycap và gợi ý phím tắt) | `ui/kbd`, `G`, `lib/utils.ts` (tailwind-merge) |
+| 12 | Khung bảng `px-2`, ô đầu/cuối bớt 8px: chữ giữ chỗ cũ, nền rê/chọn lùi 8px bo 8px, bật ngay khi rê; hàng nhóm và sổ văn bản theo cùng kiểu | `ui/table`, `G`, bảng Nhiệm vụ, `/org`, sổ văn bản |
+| 13 | Khung trang và thẻ trang bo 12px, `border-hairline` (0.5px trên màn ≥ 2x), `shadow-low` | `layout/app-shell`, `ws/page-card`, sổ văn bản, chi tiết cuộc họp và khung chờ |
+| 14 | Bỏ kẻ đáy header 44px | `ws/list-page-header`, `ws/page-card`, Hộp thư, Ghi chú, khung chờ |
+| 16 | `--motion-duration-micro` 100ms; mục menu và hàng bảng tô ngay (0s), mờ 150ms | `G`, `ui/menu` |
+
+Không làm (nhóm Giữ): 6, 7, 15, 17, 18, 19, 20, 22.
+
+Bảng Projects của Linear (đo DOM 22/10/2026, theme Light): hàng 48px, tên 13px/500; tiêu đề cột 32px, chữ 12px/450, không kẻ đáy; vùng tô sáng là `::before` lùi 8px hai bên, bo 8px, như hàng issue.
+
 ## 9. Chưa đo
 
 - Theme Dark trên DOM thật (chỉ có input và hex khung khởi động).
-- Bảng Projects, board, Inbox, timeline, Settings, giao diện điện thoại.
+- Board, Inbox, timeline, Settings, giao diện điện thoại.
 - Thời lượng và easing thực tế khi mở/đóng menu, hộp thoại.
 - Empty state, toast, trạng thái lỗi.
 
