@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter, DialogForm, FieldError, StandardDialog } from "@/components/ui/dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -97,6 +98,17 @@ function SectionLabel({ children, htmlFor }: { children: React.ReactNode; htmlFo
   );
 }
 
+/** Danh sách đang tải: khung hàng giữ chỗ cùng chiều cao hàng thật, không để dòng chữ "Đang tải…". */
+function ListSkeleton({ rowClassName }: { rowClassName: string }) {
+  return (
+    <div aria-busy className="flex flex-col gap-2">
+      {Array.from({ length: 3 }, (_, i) => (
+        <Skeleton key={i} className={`${rowClassName} w-full`} />
+      ))}
+    </div>
+  );
+}
+
 function GeneralSettings() {
   const { showToast } = useFeedback();
   const [prefs, setPrefs] = React.useState<AssistantPreferencesDTO | null>(null);
@@ -134,7 +146,15 @@ function GeneralSettings() {
   };
 
   if (error) return <InlineAlert variant="error">{error}</InlineAlert>;
-  if (!prefs) return <p className="text-xs text-muted-foreground">Đang tải…</p>;
+  if (!prefs) {
+    return (
+      <div aria-busy className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
   const changed = draft.trim() !== prefs.instructions;
   return (
     <div className="flex flex-col gap-5">
@@ -223,7 +243,7 @@ function MemorySettings() {
   };
 
   if (error) return <InlineAlert variant="error">{error}</InlineAlert>;
-  if (!memories) return <p className="text-xs text-muted-foreground">Đang tải…</p>;
+  if (!memories) return <ListSkeleton rowClassName="h-10" />;
   const full = memories.length >= ASSISTANT_MEMORIES_PER_USER;
   return (
     <div className="flex flex-col gap-3">
@@ -309,7 +329,7 @@ function SkillSettings() {
         Câu lệnh lưu sẵn cho việc hay làm. Gõ &quot;/&quot; ở đầu ô hỏi để chọn; chữ của kỹ năng được đưa vào ô để Thầy/Cô xem và sửa trước khi gửi.
       </p>
       {skills === null ? (
-        <p className="text-xs text-muted-foreground">Đang tải…</p>
+        <ListSkeleton rowClassName="h-12" />
       ) : skills.length === 0 ? (
         <p className="text-xs text-muted-foreground">Chưa có kỹ năng.</p>
       ) : (

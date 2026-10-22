@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface InboxRow {
   id: string;
@@ -101,7 +102,16 @@ export function UnitRequestInbox({ className }: { className?: string }) {
     }
   };
 
-  if (rows === null && !error) return <p className={cn("text-xs text-muted-foreground", className)}>Đang tải…</p>;
+  // Giữ chỗ bằng khung thẻ như các trang danh sách khác, không để dòng chữ "Đang tải…" lơ lửng (người dùng báo 22/10/2026)
+  if (rows === null && !error) {
+    return (
+      <div aria-busy className={cn("flex flex-col gap-2", className)}>
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-15 w-full" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <section aria-label="Yêu cầu phối hợp" className={cn("empty-fill space-y-2", className)}>

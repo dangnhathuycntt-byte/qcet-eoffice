@@ -12,6 +12,7 @@ import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { PRIORITY_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { WorkspacePageCard } from "@/components/workspace/page-card";
 import { useAuth } from "@/lib/auth-context";
 import { isUserExecutive, isUserUnitHead } from "@qcet/shared/domain/tasks/attention-resolver";
@@ -174,6 +175,15 @@ export function TaskTemplatesManager({ className }: { className?: string }) {
     >
       <section aria-label="Mẫu nhiệm vụ" className={cn("empty-fill space-y-3", className)}>
         {error && <InlineAlert variant="error">{error}</InlineAlert>}
+
+        {/* Đang tải: khung thẻ giữ chỗ, không để trang trắng tới khi có dữ liệu (người dùng báo 22/10/2026) */}
+        {templates === null && !error && (
+          <div aria-busy className="flex flex-col gap-2">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Skeleton key={i} className="h-15 w-full" />
+            ))}
+          </div>
+        )}
 
         {form && (
           <div className="space-y-2 rounded-lg border border-border bg-card p-3">
