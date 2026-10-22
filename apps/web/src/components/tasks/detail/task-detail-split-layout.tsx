@@ -54,13 +54,15 @@ export function TaskDetailSplitLayout({
   // Màn rộng: cột nội dung và cột thuộc tính cuộn riêng như Linear, cột thuộc tính đứng yên khi cuộn nội dung (người dùng yêu
   // cầu 21/10/2026 "cột properties cố định, scroll nội dung thôi"). Hàng này cao đúng bằng vùng cuộn của trang (flex-1 min-h-0)
   // nên mỗi cột tự cuộn trong chiều cao đó; vùng cuộn của trang không còn gì để cuộn.
+  // -ml-8 pl-8: tay kéo khối của mô tả lùi ra ngoài khối 28px (-ml-7, nằm ở lề canvas); vùng cuộn này cắt theo mép trái của
+  // nó nên phải lấn sang lề canvas để tay kéo không bị cắt mất (người dùng báo mất "6 chấm" 22/10/2026), chữ giữ nguyên chỗ.
   return (
     <div className={cn("flex flex-1 min-h-0 min-w-0", className)}>
       <div
         data-slot="task-detail-main"
         className={cn(
           "flex-1 min-h-0 min-w-0 flex flex-col",
-          inspectorOpen && "pr-6 pb-16 overflow-y-auto overflow-x-hidden overscroll-contain thin-scrollbar [overflow-anchor:none]"
+          inspectorOpen && "-ml-8 pl-8 pr-6 pb-16 overflow-y-auto overflow-x-hidden overscroll-contain thin-scrollbar [overflow-anchor:none]"
         )}
       >
         {children}

@@ -30,3 +30,18 @@ test("closed inspector leaves the full width for content", () => {
   assert.ok(!html.includes("Properties"), "Properties panel must not render when closed");
   assert.ok(!html.includes("w-[340px]"), "No fixed sidebar width when inspector is closed");
 });
+
+test("cột nội dung cuộn riêng lấn ra lề canvas để tay kéo khối (-ml-7) không bị cắt", () => {
+  // CSS trang chi tiết bỏ khe trái của editor, tay kéo nằm ở lề canvas; vùng cuộn overflow-x-hidden phải phủ cả lề đó
+  // (người dùng báo mất "6 chấm" 22/10/2026)
+  const html = renderToStaticMarkup(React.createElement(TaskDetailSplitLayout, {
+    inspectorOpen: true,
+    onToggleInspector: () => {},
+    children: "Main content",
+    inspector: "Properties",
+  }));
+  const mainClass = /data-slot="task-detail-main" class="([^"]*)"/.exec(html)?.[1] ?? "";
+  assert.match(mainClass, /\boverflow-x-hidden\b/);
+  assert.match(mainClass, /(^|\s)-ml-8(\s|$)/, "vùng cuộn phải lấn sang trái ≥ 28px (tay kéo -ml-7)");
+  assert.match(mainClass, /(^|\s)pl-8(\s|$)/, "bù lại bằng pl-8 để chữ giữ nguyên chỗ");
+});

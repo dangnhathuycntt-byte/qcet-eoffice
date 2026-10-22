@@ -190,7 +190,8 @@
 .content > * + * { margin-top: 16px; }
 .content > [data-slot='task-block-editor'] { margin-top: 12px; }
 /* Bỏ khe 36px bên trái của trình soạn: tay nắm kéo khối vốn lùi ra ngoài khối (-ml-7) nên nằm ở lề canvas,
-   chữ mô tả thẳng hàng tiêu đề (kiểu Notion). Lề canvas nhỏ nhất 24px vẫn chứa đủ tay nắm 24px. */
+   chữ mô tả thẳng hàng tiêu đề (kiểu Notion). Lề canvas nhỏ nhất 24px vẫn chứa đủ tay nắm 24px. Vùng cuộn nào bọc
+   giữa canvas và mô tả (cột nội dung `task-detail-main`) phải lấn ra lề canvas (-ml-8 pl-8), kẻo cắt mất tay nắm. */
 .content > [data-slot='task-block-editor'] [data-slate-editor] { padding-left: 0; }
 /* Ngăn việc con dùng cùng quy tắc: mô tả thẳng hàng tên việc con, lề 24px của ngăn chứa tay nắm kéo khối */
 .peekSurface [data-slot='task-block-editor'] [data-slate-editor] { padding-left: 0; }
