@@ -1,7 +1,9 @@
 /**
  * GET /api/documents/incoming chỉ liệt kê văn bản người xem được đọc (`buildDocumentReadWhere`,
  * ngữ cảnh phân quyền đầy đủ), lọc trước phân trang để `total` không lộ số lượng.
- * Danh sách phải khớp theo id với GET /api/documents cho cùng người dùng (cùng điều kiện đọc).
+ * Với văn bản đến đã vào sổ (dữ liệu của test, lọc theo `runId`), danh sách phải khớp theo id với GET /api/documents
+ * cho cùng người dùng (cùng điều kiện đọc). Sổ đến của GET /api/documents còn gồm văn bản đi đã phát hành tới đơn vị
+ * người xem (ADR-015); văn bản đó không có quy trình văn bản đến nên không có ở đây.
  * Chạy trên qcet_test, chỉ xóa bản ghi do test tạo.
  */
 import { describe, it, before, after } from "node:test";

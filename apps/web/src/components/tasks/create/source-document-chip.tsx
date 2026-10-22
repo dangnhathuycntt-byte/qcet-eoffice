@@ -17,6 +17,7 @@ export interface SourceDocumentOption {
 
 interface ApiDocumentRow {
   id: string;
+  type?: string;
   status?: string;
   linkedTaskId?: string | null;
   originalNumber?: string | null;
@@ -82,7 +83,9 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
         if (!res.ok) throw new Error(String(res.status));
         const json = await res.json();
         const rows: ApiDocumentRow[] = Array.isArray(json.data) ? json.data : [];
-        setOptions(rows.filter((r) => !r.linkedTaskId && !UNLINKABLE_STATUSES.has(r.status ?? "")).map(toOption));
+        // Sổ đến có cả văn bản đi đơn vị khác gửi tới (ADR-015); chưa giao việc từ văn bản đó được vì mỗi văn bản chỉ
+        // liên kết một nhiệm vụ, nên chỉ lấy văn bản đến như trước.
+        setOptions(rows.filter((r) => r.type === "VAN_BAN_DEN" && !r.linkedTaskId && !UNLINKABLE_STATUSES.has(r.status ?? "")).map(toOption));
         setStatus("idle");
       } catch (err) {
         if ((err as { name?: string })?.name !== "AbortError") setStatus("error");

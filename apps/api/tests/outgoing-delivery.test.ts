@@ -15,6 +15,8 @@ import { confirmReceipt, getRecipientsState, recallOutgoing, RecipientsSchema } 
 import { runOutboxCycle } from '../src/server/outbox/outbox-worker';
 import { ApiError } from '../src/server/api/errors';
 import { authorizeFileObjectDownload } from '../src/server/files/file-access-service';
+import { listReadableDocuments } from '../src/server/assistant/assistant-tool-documents';
+import { loadAuthorizationContext } from '../src/server/authorization/authorization-context-service';
 import { GET as listDocumentsRoute, POST as createDocumentRoute } from '../src/app/api/documents/route';
 import { POST as registerIncomingRoute } from '../src/app/api/documents/incoming/route';
 import { GET as getDocumentRoute } from '../src/app/api/documents/[id]/route';
@@ -172,6 +174,12 @@ describe('ADR-015 văn bản đến phát sinh từ phát hành văn bản đi',
 
     assert.ok(!(await listIds('outsider', 'type=VAN_BAN_DEN')).includes(doc.id));
     assert.equal(await detailStatus('outsider', doc.id), 403);
+
+    // Trợ lý đọc cùng sổ: văn bản đến gồm văn bản được gửi tới, văn bản đi thì không.
+    const authz = await loadAuthorizationContext(u.staff.id, new Date());
+    const asked = async (type: DocumentType) => (await listReadableDocuments(authz, { type, query: runId, limit: 20 })).documents.map((d) => d.id);
+    assert.ok((await asked(DocumentType.VAN_BAN_DEN)).includes(doc.id));
+    assert.ok(!(await asked(DocumentType.VAN_BAN_DI)).includes(doc.id));
 
     // Bên gửi vẫn thấy ở sổ đi như trước, không thấy ở sổ đến (đơn vị gửi không có trong nơi nhận).
     assert.ok((await listIds('drafter', 'type=VAN_BAN_DI')).includes(doc.id));
