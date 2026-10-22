@@ -37,6 +37,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
   let testDocId: string;
   let testAttachmentId: string;
   let testCanonicalFileId: string;
+  let testCanonicalAttachmentId: string;
   let testPendingFileId: string;
   let testOrphanFileId: string;
   let uploadedFileObjectId = "";
@@ -241,7 +242,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       },
     });
     testCanonicalFileId = canonicalFile.id;
-    await prisma.documentAttachment.create({
+    const canonicalAttachment = await prisma.documentAttachment.create({
       data: {
         documentId: doc.id,
         fileName: "canonical.pdf",
@@ -251,6 +252,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         mimeType: "application/pdf",
       },
     });
+    testCanonicalAttachmentId = canonicalAttachment.id;
 
     const pendingFile = await prisma.fileObject.create({
       data: {
@@ -610,6 +612,16 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         allowed.headers.get("content-disposition"),
         `inline; filename="canonical.pdf"; filename*=UTF-8''canonical.pdf`
       );
+    });
+
+    // Trình duyệt gọi qua rewrite của web nên req.url là địa chỉ nội bộ của api; proxy của Next không sửa Location tuyệt đối
+    // (22/10/2026), chuyển hướng phải là đường dẫn tương đối để trình duyệt ở lại tên miền công khai.
+    test("tệp đính kèm có FileObject: tải theo đường cũ chuyển sang /api/file-objects bằng đường dẫn tương đối", async () => {
+      const res = await downloadDocumentRoute(
+        createRequest(`http://127.0.0.1:3100/api/documents/download?attachmentId=${testCanonicalAttachmentId}`, { token: deptBToken })
+      );
+      assert.equal(res.status, 307);
+      assert.equal(res.headers.get("location"), `/api/file-objects/${testCanonicalFileId}`);
     });
 
     test("canonical FileObject: thành viên đơn vị chủ trì đọc được tệp của văn bản nội bộ do đơn vị mình xử lý", async () => {
