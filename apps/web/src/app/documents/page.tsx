@@ -13,12 +13,16 @@ export const metadata: Metadata = {
     "Sổ quản lý văn bản, công văn đi - đến, tờ trình duyệt và liên thông nhiệm vụ Nghị định 30/2020/NĐ-CP - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
 };
 
-export default async function DocumentsPage() {
+export default async function DocumentsPage(props: { searchParams?: Promise<Record<string, string | string[] | undefined>> } = {}) {
   const session = await getWebSession();
 
   if (!session) {
     redirect(`/login?returnTo=${encodeURIComponent("/documents")}`);
   }
+
+  // Liên kết cũ của mục "Hồ sơ công việc" ở sidebar (trước 22/10/2026 trỏ nhầm vào sổ văn bản): chuyển sang trang hồ sơ
+  const params = props.searchParams ? await props.searchParams : {};
+  if (params.tab === "dossiers") redirect("/dossiers");
 
   const runtimeConfig = await getRuntimeConfig();
 

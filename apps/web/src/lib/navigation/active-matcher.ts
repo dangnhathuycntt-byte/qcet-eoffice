@@ -57,8 +57,8 @@ export function isNotesPath(pathname: string | null | undefined): boolean {
   return normalizePath(pathname ?? "") === "/notes";
 }
 
-/** Trang tự dựng khung một thẻ (`WorkspacePageCard`): Cơ cấu & Danh bạ, Báo cáo và các trang trong menu "Thêm". */
-const CARD_PAGES = new Set(["/org", "/reports", "/settings", "/delegations", "/search", "/admin/users", "/admin/audit", "/admin/dossiers"]);
+/** Trang tự dựng khung một thẻ (`WorkspacePageCard`): Cơ cấu & Danh bạ, Báo cáo, các trang trong menu "Thêm" và Hồ sơ công việc. */
+const CARD_PAGES = new Set(["/org", "/reports", "/settings", "/delegations", "/search", "/admin/users", "/admin/audit", "/admin/dossiers", "/dossiers"]);
 
 export function isCardPagePath(pathname: string | null | undefined): boolean {
   return CARD_PAGES.has(normalizePath(pathname ?? ""));
