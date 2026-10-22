@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { School, User, UserX, Users } from "lucide-react";
+import { GraduationCap, Landmark, RotateCw, School, Target, User, UserCheck, UserCog, UserX, Users } from "lucide-react";
 import { foldVietnamese } from "@qcet/shared/lib/search/vietnamese-search";
 import { MENTION_ALL_NAME } from "@qcet/shared/domain/tasks/comment-mentions";
+import { audienceScopeGroups, type AudienceScopeId } from "@qcet/shared/domain/meetings/audience-scopes";
 import { cn } from "@/lib/utils";
 import { PROPERTY_PILL_CLASS } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,8 @@ export interface MeetingPerson {
   email?: string;
   avatarUrl?: string | null;
   departmentName?: string;
+  /** Mã chức vụ ở mọi đơn vị người đó có mặt: để chọn nhanh theo phạm vi (Ban Giám hiệu, trưởng đơn vị…) */
+  positionCodes?: string[];
 }
 
 interface MeetingUnit {
@@ -33,6 +36,9 @@ export interface MeetingDirectory {
   /** Mỗi người một lần, xếp theo tên (kết quả tìm) */
   people: MeetingPerson[];
   loading: boolean;
+  /** Tải danh bạ lỗi (không phải danh bạ trống): menu hiện "Thử lại" */
+  failed: boolean;
+  reload: () => void;
 }
 
 /** Số avatar xếp chồng trên chip trước khi chỉ còn số đếm. */
@@ -43,7 +49,7 @@ const STACK_MAX = 3;
  * có trong mọi đơn vị của mình nhưng là một người; tên đơn vị kèm theo người là đơn vị đầu tiên.
  */
 export function useMeetingPeople(enabled: boolean): MeetingDirectory {
-  const { departments, isLoading } = useDepartmentList({ includePersonnel: true, enabled });
+  const { departments, isLoading, error, reload } = useDepartmentList({ includePersonnel: true, enabled });
   return React.useMemo(() => {
     const byId = new Map<string, MeetingPerson>();
     const units: MeetingUnit[] = [];
@@ -54,16 +60,27 @@ export function useMeetingPeople(enabled: boolean): MeetingDirectory {
       const label = department.shortName || department.name;
       const people = (department.personnel ?? []).map((person) => {
         const known = byId.get(person.id);
-        if (known) return known;
-        const entry: MeetingPerson = { id: person.id, name: person.name, email: person.email, avatarUrl: person.avatarUrl, departmentName: label };
+        if (known) {
+          // Người kiêm nhiệm: gom mã chức vụ của mọi đơn vị (giảng viên ở khoa này, trưởng phòng ở nơi kia)
+          if (person.positionCode && !known.positionCodes?.includes(person.positionCode)) known.positionCodes = [...(known.positionCodes ?? []), person.positionCode];
+          return known;
+        }
+        const entry: MeetingPerson = {
+          id: person.id,
+          name: person.name,
+          email: person.email,
+          avatarUrl: person.avatarUrl,
+          departmentName: label,
+          positionCodes: person.positionCode ? [person.positionCode] : [],
+        };
         byId.set(person.id, entry);
         return entry;
       });
       if (people.length > 0) units.push({ id: department.id, name: department.name, label, people });
     }
     const people = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "vi"));
-    return { units, people, loading: isLoading };
-  }, [departments, isLoading]);
+    return { units, people, loading: isLoading, failed: error, reload };
+  }, [departments, isLoading, error, reload]);
 }
 
 /** Ô tìm trong menu: chữ gõ vào ô, không để menu bắt làm phím nhảy mục; mũi tên, Enter, Esc, Tab vẫn điều hướng menu. */
@@ -74,7 +91,8 @@ const MENU_NAV_KEYS = ["ArrowDown", "ArrowUp", "Escape", "Enter", "Tab"];
  * người dùng yêu cầu "2 sub menu là đơn vị - nhân sự" 20/10/2026). Đang gõ tìm thì hiện thẳng người khớp ở cả trường.
  * Đơn vị có người đang chọn thì chữ đậm và ghi số bên phải. Có `onPickAll` (chọn nhiều) thì đầu mỗi menu con có dòng "all"
  * chọn cả đơn vị, cùng tên với "@all" của bình luận (người dùng yêu cầu "thêm @all cho từng đơn vị" 21/10/2026), và dưới ô
- * tìm có dòng "Toàn trường" chọn mọi người (người dùng yêu cầu cùng ngày).
+ * tìm có hàng "Phạm vi" mở menu con Toàn trường, Ban Giám hiệu, Trưởng đơn vị… (người dùng yêu cầu "thêm một li là phạm
+ * vi: toàn trường, trưởng đơn vị" 22/10/2026; trước đó "Toàn trường" là một hàng riêng).
  */
 function PeopleMenuBody({
   directory,
@@ -148,6 +166,14 @@ function PeopleMenuBody({
     </MenuOptionItem>
   );
   const everyone = directory.people.filter(visible);
+  const scopeGroups = audienceScopeGroups(everyone);
+  const SCOPE_ICONS: Record<AudienceScopeId, React.ReactNode> = {
+    all: <School className="size-3" />,
+    executive: <Landmark className="size-3" />,
+    "unit-head": <UserCog className="size-3" />,
+    "unit-deputy": <UserCheck className="size-3" />,
+    lecturer: <GraduationCap className="size-3" />,
+  };
 
   return (
     <>
@@ -166,7 +192,13 @@ function PeopleMenuBody({
       {topRows}
       {onPickAll && !folded && everyone.length > 0 ? (
         <>
-          {groupRow(everyone, "Toàn trường", `Chọn cả ${everyone.length} cán bộ của trường`, <School className="size-3" />)}
+          <MenuSubmenu label="Phạm vi" icon={<Target />} title="Phạm vi" popupClassName="w-64" side="right">
+            {scopeGroups.map((group) => (
+              <React.Fragment key={group.id}>
+                {groupRow(group.people, group.label, `Chọn ${group.people.length} người: ${group.label.toLowerCase()}`, SCOPE_ICONS[group.id])}
+              </React.Fragment>
+            ))}
+          </MenuSubmenu>
           <MenuSeparator />
         </>
       ) : null}
@@ -197,7 +229,16 @@ function PeopleMenuBody({
                   </MenuSubmenu>
                 );
               })
-            : note(directory.loading ? "Đang tải danh sách…" : "Chưa có danh sách cán bộ")}
+            : directory.failed
+              ? (
+                <>
+                  {note("Chưa tải được danh sách cán bộ.")}
+                  <MenuOptionItem leading={<RotateCw />} onClick={directory.reload}>
+                    Thử lại
+                  </MenuOptionItem>
+                </>
+              )
+              : note(directory.loading ? "Đang tải danh sách…" : "Chưa có danh sách cán bộ")}
       </div>
     </>
   );
