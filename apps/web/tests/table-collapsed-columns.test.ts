@@ -29,25 +29,30 @@ describe("cột thu gọn của bảng có hàng colSpan", () => {
   });
 
   test("bảng có <colgroup> trong web không ẩn <col> hay ô bằng display:none", () => {
-    const files: string[] = [];
+    const sources = new Map<string, string>();
     const walk = (dir: string) => {
       for (const name of readdirSync(dir)) {
         const path = join(dir, name);
         if (statSync(path).isDirectory()) walk(path);
-        else if (path.endsWith(".tsx")) files.push(path);
+        else if (/\.tsx?$/.test(path)) sources.set(path, readFileSync(path, "utf8"));
       }
     };
     walk(join(import.meta.dirname, "../src"));
+    // Hằng lớp dạng `const NAME = { … } as const` ở bất kỳ tệp nào (bảng Nhiệm vụ để ở constants.ts): xét theo giá trị, không theo tên
+    const constBlocks = new Map<string, string>();
+    for (const source of sources.values()) {
+      for (const m of source.matchAll(/const\s+(\w+)\s*=\s*\{([\s\S]*?)\}\s*as const/g)) constBlocks.set(m[1], m[2]);
+    }
     const offenders: string[] = [];
-    for (const file of files) {
-      const source = readFileSync(file, "utf8");
+    for (const [file, source] of sources) {
+      const where = file.split("/src/")[1];
       for (const match of source.matchAll(/<col\b[^>]*className=\{?["'`]?([^}>]*)/g)) {
         const expr = match[1];
-        // Lớp chữ trực tiếp có "hidden", hoặc dùng hằng lớp của ô (`*_COLUMN_CLASS`, `*_CELL_CLASS`) vốn có `:hidden`
-        if (/\bhidden\b/.test(expr) || /\b\w+_(?:COLUMN|CELL)_CLASS\b/.test(expr)) offenders.push(`${file.split("/src/")[1]}: ${match[0]}`);
+        const viaConst = [...expr.matchAll(/\b(\w+)\.\w+/g)].some((m) => /\bhidden\b/.test(constBlocks.get(m[1]) ?? ""));
+        if (/\bhidden\b/.test(expr) || viaConst) offenders.push(`${where}: ${match[0]}`);
       }
       if (source.includes("<colgroup>")) {
-        for (const match of source.matchAll(/@max-\[\d+px\]:hidden/g)) offenders.push(`${file.split("/src/")[1]}: ${match[0]}`);
+        for (const match of source.matchAll(/@max-\[\d+px\]:hidden/g)) offenders.push(`${where}: ${match[0]}`);
       }
     }
     assert.deepEqual(offenders, []);

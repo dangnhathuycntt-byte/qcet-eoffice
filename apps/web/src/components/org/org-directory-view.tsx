@@ -306,6 +306,7 @@ export function OrgDirectoryView() {
               leadersOnly={leadersOnly}
               query={query}
               selectedKey={selectedKey}
+              opensDialog={!isWide}
               onClearUnit={() => setUnitCode(null)}
               onClearLeaders={() => setLeadersOnly(false)}
               onClearAll={() => {
@@ -407,6 +408,7 @@ function PeopleTab({
   leadersOnly,
   query,
   selectedKey,
+  opensDialog,
   onClearUnit,
   onClearLeaders,
   onClearAll,
@@ -417,6 +419,8 @@ function PeopleTab({
   leadersOnly: boolean;
   query: string;
   selectedKey: string | null;
+  /** Hẹp: bấm hàng mở hộp thoại; rộng thì mở panel bên cạnh (không phải popup). */
+  opensDialog: boolean;
   onClearUnit: () => void;
   onClearLeaders: () => void;
   onClearAll: () => void;
@@ -487,7 +491,7 @@ function PeopleTab({
                             e.stopPropagation();
                             onOpenPerson(key);
                           }}
-                          aria-haspopup="dialog"
+                          aria-haspopup={opensDialog ? "dialog" : undefined}
                           className="flex w-full min-w-0 items-center gap-2.5 rounded-sm text-left"
                         >
                           <UserAvatar name={member.name} avatarUrl={member.avatarUrl} size="md" />
@@ -673,8 +677,8 @@ function PersonDetails({ person, directory, onOpenUnit }: { person: OrgMember; d
       {/* Chức vụ đã ở đầu panel/hộp; giữ nhiều chức vụ thì ghi chức vụ dưới từng đơn vị */}
       <dt className="text-xs leading-5 text-muted-foreground">Đơn vị</dt>
       <dd className="flex flex-col gap-2">
-        {roles.map(({ unit, position }) => (
-          <span key={unit.id} className="flex flex-col items-start">
+        {roles.map(({ unit, position }, i) => (
+          <span key={`${unit.id}:${i}`} className="flex flex-col items-start">
             <Pressable onClick={() => onOpenUnit(unit)} className="rounded-sm text-left leading-5 underline-offset-2 hover:underline">
               {unit.name}
             </Pressable>
