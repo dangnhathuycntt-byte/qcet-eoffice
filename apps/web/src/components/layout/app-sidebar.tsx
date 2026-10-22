@@ -12,7 +12,6 @@ import {
   LogOut,
 } from "lucide-react";
 import { SidebarNavList } from "@/components/layout/sidebar-nav-list";
-import dynamic from "next/dynamic";
 import {
   getSidebarNavItems,
   type CanonicalRouteConfig,
@@ -27,7 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
 import { Menu } from "@base-ui/react/menu";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
@@ -35,10 +34,6 @@ import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
 import { MENU_POPUP_CLASS, MenuActionItem, MenuSeparator } from "@/components/ui/menu";
 import { OPEN_INBOX_EVENT, SidebarInbox } from "@/components/inbox/inbox-panel";
-const UserProfileModal = dynamic(
-  () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
-  { ssr: false }
-);
 
 const ICON_MAP: Record<CanonicalRouteConfig["iconName"], React.ComponentType<any>> = {
   LayoutDashboard: (props: any) => <QcetIcon name="dashboard" size={16} {...props} />,
@@ -157,28 +152,10 @@ export function AppSidebar() {
     sidebarWidthMotion,
   } = useSidebar();
   const router = useRouter();
-  const { user, logout, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
+  const { user, logout, isOfflineReadOnly } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const accountTriggerRef = React.useRef<HTMLButtonElement>(null);
-
-  // Automatic profile prompt on first visit if user has unassigned department
-  React.useEffect(() => {
-    if (typeof window === "undefined" || !user) return;
-    try {
-      if (shouldPromptUnassignedDepartment(user, window.sessionStorage)) {
-        setIsProfileModalOpen(true);
-        try {
-          window.sessionStorage.setItem("qcet_profile_unassigned_prompted", "true");
-          window.sessionStorage.setItem("qcet_dept_prompt_dismissed", "true");
-        } catch {
-          // ignore storage access restrictions
-        }
-      }
-    } catch {
-      // ignore storage access restrictions
-    }
-  }, [user, setIsProfileModalOpen]);
 
   // Maintenance dialog state
   const [maintenanceDialog, setMaintenanceDialog] = React.useState<{
@@ -317,7 +294,7 @@ export function AppSidebar() {
                         )}
 
                         <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
-                        <MenuActionItem leading={<User />} onClick={() => setIsProfileModalOpen(true)}>
+                        <MenuActionItem leading={<User />} render={<Link href="/onboarding" />}>
                           Hồ sơ cá nhân
                         </MenuActionItem>
                         <MenuActionItem leading={<Settings />} render={<Link href="/settings" />}>
@@ -385,9 +362,6 @@ export function AppSidebar() {
             </TooltipContent>
           </Tooltip>
         </m.div>
-
-        {/* User Profile Modal Container */}
-        <UserProfileModal />
 
         {/* Maintenance Dialog Modal */}
         <MaintenanceDialog

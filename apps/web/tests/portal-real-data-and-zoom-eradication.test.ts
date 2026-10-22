@@ -32,8 +32,7 @@ function createMockAuthContext(overrides: Partial<AuthContextType> = {}): AuthCo
     }),
     updateProfile: async () => ({ success: true }),
     logout: async () => {},
-    isProfileModalOpen: false,
-    setIsProfileModalOpen: () => {},
+    completeOnboarding: async () => ({ success: true }),
     isLoading: false,
   };
   return Object.assign(base, overrides);

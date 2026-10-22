@@ -30,7 +30,7 @@ const ICON_CLASS = "size-3.5 shrink-0";
  * kèm các thao tác tài khoản và ứng dụng. Mở bằng sự kiện `qcet:open-mobile-menu`.
  */
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
-  const { user, logout, setIsProfileModalOpen } = useAuth();
+  const { user, logout } = useAuth();
   const [isTestingPush, setIsTestingPush] = React.useState(false);
 
   // Đóng bàn phím ảo nếu đang mở khi drawer hiện ra
@@ -82,18 +82,17 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 </div>
               </div>
 
-              <Pressable
+              <Link
+                href="/onboarding"
                 onClick={() => {
                   triggerHaptic("light");
                   close();
-                  if (setIsProfileModalOpen) setIsProfileModalOpen(true);
-                  else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("qcet:open-profile-modal"));
                 }}
                 className={ROW_CLASS}
               >
                 <User className={ICON_CLASS} />
                 <span className="flex-1 truncate text-left">Hồ sơ cá nhân</span>
-              </Pressable>
+              </Link>
 
               {isSupported ? (
                 <Pressable

@@ -47,8 +47,8 @@ export interface AuthContextType {
     updates: Partial<AuthUser>
   ) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   logout: () => Promise<void>;
-  isProfileModalOpen: boolean;
-  setIsProfileModalOpen: (open: boolean) => void;
+  /** Ghi nhận đã xong onboarding (`POST /api/auth/onboarding`) và cập nhật `user.onboardedAt`. */
+  completeOnboarding: () => Promise<{ success: boolean; error?: string }>;
   isLoading?: boolean;
 }
 
@@ -138,25 +138,6 @@ export function isUserUnassignedDepartment(
   return false;
 }
 
-export const UNASSIGNED_DEPT_PROMPT_KEY = "qcet_profile_unassigned_prompted";
-export const UNASSIGNED_DEPT_DISMISSED_KEY = "qcet_dept_prompt_dismissed";
-
-export function shouldPromptUnassignedDepartment(
-  user?: { role?: string; department?: string | null; departmentCode?: string | null } | null,
-  storage?: { getItem: (key: string) => string | null } | null
-): boolean {
-  if (!user || !isUserUnassignedDepartment(user)) return false;
-  if (!storage) return false;
-  try {
-    const prompted =
-      storage.getItem(UNASSIGNED_DEPT_PROMPT_KEY) ||
-      storage.getItem(UNASSIGNED_DEPT_DISMISSED_KEY);
-    return !prompted;
-  } catch {
-    return false;
-  }
-}
-
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
@@ -172,8 +153,7 @@ export const AuthContext = createContext<AuthContextType>({
   },
   updateProfile: async () => ({ success: false, error: "Not initialized" }),
   logout: async () => {},
-  isProfileModalOpen: false,
-  setIsProfileModalOpen: () => {},
+  completeOnboarding: async () => ({ success: false, error: "Not initialized" }),
   isLoading: true,
 });
 
@@ -348,7 +328,6 @@ export function AuthProvider({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(seed?.isAuthenticated ?? false);
   const [isOfflineReadOnly, setIsOfflineReadOnly] = useState<boolean>(seed?.isOfflineReadOnly ?? false);
   const [canMutate, setCanMutate] = useState<boolean>(seed?.canMutate ?? false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(!seed);
 
   // Helper to load registered users from localStorage
@@ -494,8 +473,6 @@ export function AuthProvider({
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
         localStorage.removeItem(REGISTERED_USERS_KEY);
-        localStorage.removeItem(UNASSIGNED_DEPT_PROMPT_KEY);
-        localStorage.removeItem(UNASSIGNED_DEPT_DISMISSED_KEY);
       } catch {
         // ignore
       }
@@ -736,6 +713,24 @@ export function AuthProvider({
     [canMutate, authState]
   );
 
+  const completeOnboarding = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch("/api/auth/onboarding", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error?.message || data.error || "Chưa lưu được trạng thái bắt đầu sử dụng" };
+      }
+      const onboardedAt: string = data.user?.onboardedAt ?? new Date().toISOString();
+      setUser((prev) => (prev ? { ...prev, onboardedAt } : prev));
+      setAuthState((prev) =>
+        prev.status === "authenticated" ? { ...prev, user: { ...prev.user, onboardedAt } } : prev
+      );
+      return { success: true };
+    } catch {
+      return { success: false, error: "Lỗi kết nối, chưa lưu được trạng thái bắt đầu sử dụng" };
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -751,8 +746,7 @@ export function AuthProvider({
         loginWithGoogle,
         updateProfile,
         logout,
-        isProfileModalOpen,
-        setIsProfileModalOpen,
+        completeOnboarding,
         isLoading,
       }}
     >

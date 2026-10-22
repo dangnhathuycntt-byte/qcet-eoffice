@@ -45,7 +45,7 @@ const TASK_DETAIL_PRELOAD = [
  * - Table Engine: ModularCascadingTaskTable
  * - Detail Panel: TaskDetailSideSheet
  * - Creation Dialog: CreateTaskModal
- * - Unassigned Guard: UnassignedDepartmentState with setIsProfileModalOpen
+ * - Unassigned Guard: UnassignedDepartmentState
  * - Status Mutation: PATCH /api/tasks/${taskId} with previousData rollback snapshot
  * - Task Creation: POST /api/tasks with previousData rollback snapshot
  * - Live Sync: /api/dashboard/overview

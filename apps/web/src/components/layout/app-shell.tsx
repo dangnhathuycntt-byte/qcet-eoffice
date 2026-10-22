@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   SidebarProvider,
@@ -16,6 +16,7 @@ import { AgentModelsProvider } from "@/components/agent-chat/agent-models";
 import type { AgentModelCatalog } from "@qcet/shared/domain/agent/agent-models";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@qcet/shared/lib/login-helpers";
+import { shouldRedirectToOnboarding } from "@/lib/onboarding";
 import { isAssistantPath, isCardPagePath, isMeetingDetailPath, isNotesPath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
 import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
@@ -143,6 +144,17 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
     }
   }, [isLoading, isAuthenticated, user, isPublicRoute]);
 
+  // Người chưa onboarding (`onboardedAt` null, phiên máy chủ) vào trang nào cũng sang /onboarding trước, xong quay lại trang đó.
+  // Phiên có sẵn từ server nên lần vẽ đầu đã biết, không lóe trang rồi mới chuyển.
+  const router = useRouter();
+  const isOnboardingRoute = pathname === "/onboarding";
+  const needsOnboarding = !isPublicRoute && shouldRedirectToOnboarding(user, isAuthenticated, pathname);
+  React.useEffect(() => {
+    if (!needsOnboarding) return;
+    const safeNext = sanitizeRedirectUrl(`${window.location.pathname}${window.location.search}`);
+    router.replace(safeNext && safeNext !== "/tasks" && safeNext !== "/" ? `/onboarding?next=${encodeURIComponent(safeNext)}` : "/onboarding");
+  }, [needsOnboarding, router]);
+
   if (isPublicRoute) {
     return <>{children}</>;
   }
@@ -157,6 +169,15 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
         </div>
       </div>
     );
+  }
+
+  // Onboarding cần đăng nhập nhưng là trang riêng toàn màn hình: không sidebar, thanh trên hay thanh Trợ lý
+  if (isOnboardingRoute) {
+    return <>{children}</>;
+  }
+
+  if (needsOnboarding) {
+    return <div className="min-h-[100dvh] bg-background" aria-busy="true" />;
   }
 
   return (

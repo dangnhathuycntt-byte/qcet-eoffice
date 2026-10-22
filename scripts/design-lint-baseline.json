@@ -183,31 +183,6 @@
     },
     {
       "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
-      "text": "<input"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
-      "text": "<select"
-    },
-    {
-      "ruleId": "no-raw-control",
-      "file": "apps/web/src/components/auth/user-profile-modal.tsx",
-      "text": "<textarea"
-    },
-    {
-      "ruleId": "no-raw-control",
       "file": "apps/web/src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "<input"
     },

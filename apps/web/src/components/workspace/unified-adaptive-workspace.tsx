@@ -573,7 +573,6 @@ function UnifiedAdaptiveWorkspaceInner({
 
   const effectiveUser = initialUser || auth.user;
   const user = effectiveUser || fallbackUser;
-  const setIsProfileModalOpen = auth.setIsProfileModalOpen;
 
   // Internal task collection for standalone/uncontrolled mode
   const [internalTasks, setInternalTasks] = React.useState<SchoolTask[]>(() =>
@@ -2343,7 +2342,7 @@ function UnifiedAdaptiveWorkspaceInner({
 
             {/* Unassigned Department State or Empty State or Table/Kanban */}
             {activeScope === "unit" && isUnassigned ? (
-              <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
+              <UnassignedDepartmentState />
             ) : tasks.length === 0 && !initialLoading && !isLoading && !isInternalLoading ? (
               <TaskEmptyState
                 onAddTask={handleCreateTaskClick}
@@ -2424,7 +2423,7 @@ function UnifiedAdaptiveWorkspaceInner({
           >
             {/* Unassigned Department State or Empty State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
-            <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
+            <UnassignedDepartmentState />
           ) : tasks.length === 0 && !initialLoading && !isLoading && !isInternalLoading ? (
               <TaskEmptyState
                 onAddTask={handleCreateTaskClick}
