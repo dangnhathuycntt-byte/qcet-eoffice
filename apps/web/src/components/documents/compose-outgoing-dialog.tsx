@@ -213,12 +213,12 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
       title="Soạn văn bản đi"
       showHeader={false}
       size="lg"
-      className="gap-0 p-0 sm:max-w-[680px] sm:p-0 max-md:pb-0!"
+      className="gap-0 bg-background p-0 sm:p-0 max-md:pb-0!"
     >
       <DialogForm onSubmit={() => void handleSubmit()} className="min-h-0 flex-1 gap-0">
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-5 py-2.5 sm:px-6">
-          <DialogBreadcrumb icon={<FileText className="size-3.5 shrink-0" aria-hidden />} items={["Văn bản đi", "Soạn dự thảo"]} />
-          <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 max-md:size-8" />}>
+        <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
+          <DialogBreadcrumb items={["Văn bản đi", "Soạn dự thảo"]} />
+          <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 rounded-full max-md:size-8" />}>
             <X />
           </DialogClose>
         </header>
@@ -231,8 +231,8 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
           </div>
         ) : null}
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4 sm:px-6">
-          <div className="flex flex-col gap-1">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-4 md:px-6">
+          <div className="flex shrink-0 flex-col gap-0.5">
             <label htmlFor="compose-outgoing-summary" className="sr-only">
               Trích yếu
             </label>
@@ -262,13 +262,13 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
                 e.currentTarget.form?.requestSubmit();
               }}
               placeholder="Trích yếu: V/v …"
-              className="min-h-0 py-0 text-lg font-semibold leading-snug placeholder:text-muted-foreground/60 aria-invalid:text-foreground aria-invalid:placeholder:text-destructive/60 sm:min-h-0"
+              className="min-h-0 py-0 text-2xl font-semibold leading-normal placeholder:text-muted-foreground/60 aria-invalid:text-foreground aria-invalid:placeholder:text-destructive/60 max-md:text-xl sm:min-h-0"
             />
             {fieldErrors.summary ? <FieldError id="compose-outgoing-summary-error">{fieldErrors.summary}</FieldError> : null}
           </div>
 
-          {/* Hàng chip thuộc tính như hộp Tạo cuộc họp: điện thoại tự xuống dòng */}
-          <div className="flex flex-wrap items-center gap-1.5">
+          {/* Hàng chip thuộc tính như hộp Tạo nhiệm vụ (đo 22/10/2026): cách tên 10px, chip cách nhau 8px; điện thoại tự xuống dòng */}
+          <div className="mt-2.5 flex shrink-0 flex-wrap items-center gap-2">
             <Select
               variant="pill"
               icon={<FileText className="text-muted-foreground" />}
@@ -328,129 +328,130 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
             />
           </div>
 
-          <div aria-hidden className="h-px bg-border" />
-
-          {/* Tệp dự thảo: bắt buộc, nhiều tệp, kéo thả hoặc chọn; tải lên sau khi bản nháp được tạo */}
-          <div className="flex flex-col gap-1">
-            <input type="file"
-              ref={fileInputRef}
-              multiple
-              accept={DRAFT_FILE_ACCEPT}
-              onChange={handleFilesPicked}
-              className="sr-only"
-              aria-label="Chọn tệp dự thảo"
-              tabIndex={-1}
-            />
-            <div
-              onDragOver={(e) => {
-                if (!canEditFiles || !e.dataTransfer.types.includes("Files")) return;
-                e.preventDefault();
-                setIsDragging(true);
-              }}
-              onDragLeave={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDragging(false);
-              }}
-              onDrop={(e) => {
-                if (!canEditFiles) return;
-                e.preventDefault();
-                setIsDragging(false);
-                addFiles(Array.from(e.dataTransfer.files));
-              }}
-              // Vùng trống bấm được cả ô (mục tiêu chạm đủ lớn trên điện thoại); bàn phím dùng nút "chọn tệp" bên trong, click nổi bọt lên đây
-              onClick={canEditFiles && files.length === 0 ? () => fileInputRef.current?.click() : undefined}
-              className={cn(
-                "flex flex-col rounded-lg border border-dashed transition-colors duration-100 motion-reduce:transition-none",
-                files.length === 0 ? "items-center gap-0.5 px-3 py-3.5 text-center" : "gap-1 p-1.5",
-                canEditFiles && files.length === 0 && "cursor-pointer hover:bg-accent/40",
-                isDragging
-                  ? "border-primary/60 bg-selected"
-                  : fieldErrors.files && files.length === 0
-                    ? "border-destructive/60"
-                    : files.length === 0
-                      ? "border-muted-foreground/30"
-                      : "border-transparent",
-              )}
-            >
-              {files.length > 0 ? (
-                <ul className="flex flex-col gap-1">
-                  {files.map((file) => (
-                    <li key={`${file.name}-${file.size}`} className="flex h-8 min-w-0 items-center gap-2 rounded-md bg-secondary pl-2 pr-1 text-compact text-foreground">
-                      <FileTypeIcon fileName={file.name} mimeType={file.type} />
-                      <span className="min-w-0 flex-1 truncate" title={file.name}>{file.name}</span>
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatBytes(file.size)}</span>
-                      {canEditFiles ? (
-                        <Pressable
-                          aria-label={`Bỏ tệp ${file.name}`}
-                          onClick={() => setFiles((prev) => prev.filter((f) => f !== file))}
-                          className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          <X className="size-3.5" />
-                        </Pressable>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <FileUp className="size-4 text-muted-foreground" aria-hidden />
-              )}
-              {canEditFiles ? (
-                files.length === 0 ? (
-                  <>
-                    <p className="text-compact text-foreground">
-                      {/* Điện thoại không kéo thả được: chỉ còn lời mời chọn tệp */}
-                      <span className="max-sm:hidden">Kéo thả tệp dự thảo vào đây hoặc </span>
-                      <Pressable
-                        ref={attachRef}
-                        aria-invalid={Boolean(fieldErrors.files) || undefined}
-                        aria-describedby={fieldErrors.files ? "compose-outgoing-files-error" : undefined}
-                        className="rounded-sm font-medium underline underline-offset-2 hover:text-primary"
-                      >
-                        <span className="max-sm:hidden">chọn tệp</span>
-                        <span className="sm:hidden">Chọn tệp dự thảo</span>
-                      </Pressable>
-                    </p>
-                    <p className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</p>
-                  </>
+          {/* Từ đường kẻ trở xuống như phần mô tả của hộp Tạo nhiệm vụ: cách chip 20px, đệm trên 24px, đệm dưới 16px */}
+          <div className="mt-5 flex flex-col gap-4 border-t border-border/60 pt-6 pb-4">
+            {/* Tệp dự thảo: bắt buộc, nhiều tệp, kéo thả hoặc chọn; tải lên sau khi bản nháp được tạo */}
+            <div className="flex flex-col gap-1">
+              <input type="file"
+                ref={fileInputRef}
+                multiple
+                accept={DRAFT_FILE_ACCEPT}
+                onChange={handleFilesPicked}
+                className="sr-only"
+                aria-label="Chọn tệp dự thảo"
+                tabIndex={-1}
+              />
+              <div
+                onDragOver={(e) => {
+                  if (!canEditFiles || !e.dataTransfer.types.includes("Files")) return;
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDragging(false);
+                }}
+                onDrop={(e) => {
+                  if (!canEditFiles) return;
+                  e.preventDefault();
+                  setIsDragging(false);
+                  addFiles(Array.from(e.dataTransfer.files));
+                }}
+                // Vùng trống bấm được cả ô (mục tiêu chạm đủ lớn trên điện thoại); bàn phím dùng nút "chọn tệp" bên trong, click nổi bọt lên đây
+                onClick={canEditFiles && files.length === 0 ? () => fileInputRef.current?.click() : undefined}
+                className={cn(
+                  "flex flex-col rounded-lg border border-dashed transition-colors duration-100 motion-reduce:transition-none",
+                  files.length === 0 ? "items-center gap-0.5 px-3 py-3.5 text-center" : "gap-1 p-1.5",
+                  canEditFiles && files.length === 0 && "cursor-pointer hover:bg-accent/40",
+                  isDragging
+                    ? "border-primary/60 bg-selected"
+                    : fieldErrors.files && files.length === 0
+                      ? "border-destructive/60"
+                      : files.length === 0
+                        ? "border-muted-foreground/30"
+                        : "border-transparent",
+                )}
+              >
+                {files.length > 0 ? (
+                  <ul className="flex flex-col gap-1">
+                    {files.map((file) => (
+                      <li key={`${file.name}-${file.size}`} className="flex h-8 min-w-0 items-center gap-2 rounded-md bg-secondary pl-2 pr-1 text-compact text-foreground">
+                        <FileTypeIcon fileName={file.name} mimeType={file.type} />
+                        <span className="min-w-0 flex-1 truncate" title={file.name}>{file.name}</span>
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatBytes(file.size)}</span>
+                        {canEditFiles ? (
+                          <Pressable
+                            aria-label={`Bỏ tệp ${file.name}`}
+                            onClick={() => setFiles((prev) => prev.filter((f) => f !== file))}
+                            className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <X className="size-3.5" />
+                          </Pressable>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      ref={attachRef}
-                      size="xs"
-                      variant="ghost"
-                      aria-describedby={fieldErrors.files ? "compose-outgoing-files-error" : undefined}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <FileUp />
-                      Thêm tệp
-                    </Button>
-                    <span className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</span>
-                  </div>
-                )
-              ) : null}
+                  <FileUp className="size-4 text-muted-foreground" aria-hidden />
+                )}
+                {canEditFiles ? (
+                  files.length === 0 ? (
+                    <>
+                      <p className="text-compact text-foreground">
+                        {/* Điện thoại không kéo thả được: chỉ còn lời mời chọn tệp */}
+                        <span className="max-sm:hidden">Kéo thả tệp dự thảo vào đây hoặc </span>
+                        <Pressable
+                          ref={attachRef}
+                          aria-invalid={Boolean(fieldErrors.files) || undefined}
+                          aria-describedby={fieldErrors.files ? "compose-outgoing-files-error" : undefined}
+                          className="rounded-sm font-medium underline underline-offset-2 hover:text-primary"
+                        >
+                          <span className="max-sm:hidden">chọn tệp</span>
+                          <span className="sm:hidden">Chọn tệp dự thảo</span>
+                        </Pressable>
+                      </p>
+                      <p className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</p>
+                    </>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        ref={attachRef}
+                        size="xs"
+                        variant="ghost"
+                        aria-describedby={fieldErrors.files ? "compose-outgoing-files-error" : undefined}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <FileUp />
+                        Thêm tệp
+                      </Button>
+                      <span className="text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</span>
+                    </div>
+                  )
+                ) : null}
+              </div>
+              {fieldErrors.files ? <FieldError id="compose-outgoing-files-error">{fieldErrors.files}</FieldError> : null}
             </div>
-            {fieldErrors.files ? <FieldError id="compose-outgoing-files-error">{fieldErrors.files}</FieldError> : null}
-          </div>
 
-          <label htmlFor="compose-outgoing-notes" className="sr-only">
-            Ghi chú
-          </label>
-          <Textarea
-            id="compose-outgoing-notes"
-            variant="bare"
-            compact
-            autoResize
-            rows={1}
-            value={notes}
-            maxLength={2000}
-            countOnlyNearLimit
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ghi chú gửi kèm cho người xử lý tiếp theo (không bắt buộc)"
-            disabled={savedWithoutFiles}
-            className="min-h-10 sm:min-h-10"
-          />
+            <label htmlFor="compose-outgoing-notes" className="sr-only">
+              Ghi chú
+            </label>
+            <Textarea
+              id="compose-outgoing-notes"
+              variant="bare"
+              compact
+              autoResize
+              rows={1}
+              value={notes}
+              maxLength={2000}
+              countOnlyNearLimit
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ghi chú gửi kèm cho người xử lý tiếp theo (không bắt buộc)"
+              disabled={savedWithoutFiles}
+              className="min-h-10 text-sm leading-relaxed sm:min-h-10"
+            />
+          </div>
         </div>
 
-        <DialogFooter className="shrink-0 items-center border-t border-border/60 bg-muted/20 px-5 py-2.5 sm:px-6 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
+        <DialogFooter className="shrink-0 items-center border-t border-border/60 px-5 py-3 md:pl-6 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
           <p className="mr-auto min-w-0 text-xs text-muted-foreground max-sm:hidden">Số và ngày ban hành do văn thư cấp khi phát hành.</p>
           {savedWithoutFiles ? null : (
             <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
