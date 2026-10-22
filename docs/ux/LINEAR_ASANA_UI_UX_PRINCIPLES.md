@@ -1,6 +1,6 @@
 # Nguyên tắc UI/UX của Linear và Asana
 
-Nghiên cứu web ngày 22/10/2026. Tài liệu **tham khảo**: không phải quyết định đã duyệt cho QCET và không tạo thêm việc. Quyết định giao diện của QCET nằm ở [AGENTS.md](../../AGENTS.md) và [DESIGN.md](../../DESIGN.md); nguyên lý UX chung (Fitts, Hick, Gestalt…) ở [WORLD_CLASS_UI_UX_PRINCIPLES.md](WORLD_CLASS_UI_UX_PRINCIPLES.md). Số đo cụ thể của Linear (màu, chữ, bo góc, khoảng cách, bóng, chuyển động) và bảng đối chiếu QCET ở [LINEAR_DESIGN_TOKENS.md](LINEAR_DESIGN_TOKENS.md).
+Nghiên cứu web ngày 22/10/2026. **Nguồn của quy tắc UI/UX**: người dùng duyệt ngày 22/10/2026 cho mục 4 (bài học chung) và phần giao diện, tương tác của mục 1.2–1.3 thành quy tắc, đã rút gọn thành mục "Nguyên tắc UI/UX rút từ Linear và Asana" trong [AGENTS.md](../../AGENTS.md); bản ở AGENTS.md là bản phải theo. Phần còn lại (triết lý, quy trình làm sản phẩm, AI của Asana, so sánh) là bối cảnh giải thích, không tạo thêm việc. Số đo và quyết định giao diện của QCET nằm ở [DESIGN.md](../../DESIGN.md); nguyên lý UX chung (Fitts, Hick, Gestalt…) ở [WORLD_CLASS_UI_UX_PRINCIPLES.md](WORLD_CLASS_UI_UX_PRINCIPLES.md). Số đo cụ thể của Linear (màu, chữ, bo góc, khoảng cách, bóng, chuyển động) và bảng đối chiếu QCET ở [LINEAR_DESIGN_TOKENS.md](LINEAR_DESIGN_TOKENS.md).
 
 **Cách đọc nguồn**
 
@@ -271,7 +271,7 @@ Theo [Asana keyboard shortcuts](https://help.asana.com/s/article/keyboard-shortc
 
 ## 4. Bài học rút ra chung
 
-Phần tổng hợp chung của hai bên. Không phải yêu cầu triển khai cho QCET.
+Phần tổng hợp chung của hai bên. Đã thành quy tắc QCET (duyệt 22/10/2026) ở mục "Nguyên tắc UI/UX rút từ Linear và Asana" của [AGENTS.md](../../AGENTS.md); mục 9 (quy trình chất lượng) giữ làm bối cảnh.
 
 1. **Tiêu điểm thuộc về nội dung.** Linear làm tối sidebar để "không tranh sự chú ý chưa xứng"; Asana chỉ làm phân tâm bằng thay đổi liên quan tới người dùng. Phần điều hướng và khung phải lùi lại.
 2. **Màu và chuyển động là tín hiệu, không phải trang trí.** Asana dành màu cho tạo/hành động/hoàn thành; Linear giảm chrome xanh, bớt icon và nền màu.
@@ -284,7 +284,7 @@ Phần tổng hợp chung của hai bên. Không phải yêu cầu triển khai 
 9. **Chất lượng là thói quen của cả đội**: sửa lỗi nhỏ hằng tuần, zero-bug, thu hẹp trình duyệt để tìm control vỡ, giảm phạm vi để giữ chất lượng.
 10. **AI phải nhìn thấy được và chịu trách nhiệm được**: con người quyết, AI không vượt quyền người gọi, có nhật ký và cổng duyệt trước thao tác nhạy cảm.
 
-Liên hệ QCET: AGENTS.md và DESIGN.md đã chốt thang kích thước "kiểu Linear" (chữ 13px, hàng bảng Nhiệm vụ 48px, control 28px…) và quy tắc hành vi menu, hộp thoại. Tài liệu này giải thích nguyên tắc gốc đằng sau các lựa chọn đó, không thay thế chúng.
+Liên hệ QCET: AGENTS.md và DESIGN.md đã chốt thang kích thước "kiểu Linear" (chữ 13px, hàng bảng Nhiệm vụ 48px, control 28px…) và quy tắc hành vi menu, hộp thoại. Tài liệu này giải thích nguyên tắc gốc đằng sau các lựa chọn đó và quy tắc trong AGENTS.md; khi khác nhau, AGENTS.md và DESIGN.md thắng.
 
 ---
 

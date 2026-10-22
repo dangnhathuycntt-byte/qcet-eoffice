@@ -2,7 +2,7 @@
 
 Đo ngày 22/10/2026. Tài liệu này ghi **số đo cụ thể** (màu, chữ, bo góc, khoảng cách, bóng, chuyển động, trạng thái). Nguyên tắc đằng sau các số đo nằm ở [LINEAR_ASANA_UI_UX_PRINCIPLES.md](LINEAR_ASANA_UI_UX_PRINCIPLES.md).
 
-Trạng thái: **tham khảo**. Đề xuất ở mục 8 đã được người dùng duyệt ngày 22/10/2026 ("đồng ý làm toàn bộ") và áp dụng trên nhánh `feat/linear-tokens`, trừ nhóm Giữ; kết quả ở mục 8.4. Quyết định đã duyệt của QCET ở [AGENTS.md](../../AGENTS.md) và [DESIGN.md](../../DESIGN.md) vẫn được ưu tiên.
+Trạng thái: **số đo chuẩn để đối chiếu** cho quy tắc UI/UX ở [AGENTS.md](../../AGENTS.md) (duyệt 22/10/2026). Mục 1–7 là số của Linear, không tự thành giá trị QCET: giá trị QCET đang dùng nằm ở [DESIGN.md](../../DESIGN.md) và `globals.css`, thắng khi khác; các điểm cố ý không theo Linear là nhóm Giữ ở mục 8.2. Đề xuất ở mục 8 đã được người dùng duyệt ngày 22/10/2026 ("đồng ý làm toàn bộ") và áp dụng trên nhánh `feat/linear-tokens`, trừ nhóm Giữ; kết quả ở mục 8.4. Quyết định đã duyệt của QCET ở [AGENTS.md](../../AGENTS.md) và [DESIGN.md](../../DESIGN.md) vẫn được ưu tiên.
 
 ## 0. Nguồn và cách đo
 

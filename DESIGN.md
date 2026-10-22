@@ -10,6 +10,7 @@ Hướng dẫn agent nằm ở [AGENTS.md](AGENTS.md). Tệp này ghi **hiện t
 - Ảnh, họa tiết: [public/design/](apps/web/public/design/); icon lớn trạng thái trống vẽ bằng code ở [empty-glyphs](apps/web/src/components/ui/empty-glyphs.tsx).
 - Hàng rào: `npm run lint` ([lint.mjs](scripts/lint.mjs)) chặn control tự dựng, màu thô, cỡ chữ lẻ; nợ cũ ở [design-lint-baseline.json](scripts/design-lint-baseline.json).
 - [Bảng bàn giao](docs/design-handoff/INDEX.md) là tài liệu tham khảo, không tự thay quyết định đã duyệt.
+- Nguyên tắc UI/UX (quy tắc ở mục "Nguyên tắc UI/UX rút từ Linear và Asana" của [AGENTS.md](AGENTS.md), duyệt 22/10/2026): lý do ở [Linear & Asana](docs/ux/LINEAR_ASANA_UI_UX_PRINCIPLES.md), số đo Linear để đối chiếu ở [Linear design tokens](docs/ux/LINEAR_DESIGN_TOKENS.md). Giá trị trong tệp này thắng khi khác số của Linear.
 - Thuật ngữ: [QCET UI Vocabulary](docs/ux/QCET_UI_VOCABULARY.md). Nghiệp vụ và phân quyền: [mục lục](docs/Index.md). Ví dụ trong bảng thiết kế không quyết định nghiệp vụ.
 - Chưa có bộ thiết kế được duyệt cho phân hệ Văn bản. Gói `qcet-design-nen-tang-nhiem-vu.zip` từng được nhắc ở bản cũ hiện không có trong repo.
 
