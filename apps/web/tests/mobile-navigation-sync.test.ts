@@ -31,20 +31,14 @@ describe("Task 6: Mobile Navigation Synchronization & Touch Ergonomics", () => {
 
   describe("2. Active State Matching via isRouteActive", () => {
     it("isRouteActive accurately computes bottom bar active state matrix", () => {
-      const deskItem = CANONICAL_ROUTES.find((r) => r.id === "desk")!;
+      const inboxItem = CANONICAL_ROUTES.find((r) => r.id === "inbox")!;
       const tasksItem = CANONICAL_ROUTES.find((r) => r.id === "tasks")!;
       const docsItem = CANONICAL_ROUTES.find((r) => r.id === "documents")!;
       const calendarItem = CANONICAL_ROUTES.find((r) => r.id === "meetings")!;
 
-      // On root without query: desk is active, others are not
-      assert.equal(isRouteActive(deskItem.href, "/", null, deskItem.aliases), true);
-      assert.equal(isRouteActive(tasksItem.href, "/", null, tasksItem.aliases), false);
-      assert.equal(isRouteActive(docsItem.href, "/", null, docsItem.aliases), false);
-      assert.equal(isRouteActive(calendarItem.href, "/", null, calendarItem.aliases), false);
-
-      // On root with ?zone=tasks: tasks is active, desk is not
+      // On root with ?zone=tasks (link cũ, trang `/` chuyển tới /tasks): tasks is active, inbox is not
       const taskParams = new URLSearchParams("zone=tasks");
-      assert.equal(isRouteActive(deskItem.href, "/", taskParams, deskItem.aliases), false);
+      assert.equal(isRouteActive(inboxItem.href, "/", taskParams, inboxItem.aliases), false);
       assert.equal(isRouteActive(tasksItem.href, "/", taskParams, tasksItem.aliases), true);
 
       // On /tasks direct path: tasks is active
@@ -55,11 +49,15 @@ describe("Task 6: Mobile Navigation Synchronization & Touch Ergonomics", () => {
 
       // On /documents: documents is active
       assert.equal(isRouteActive(docsItem.href, "/documents", null, docsItem.aliases), true);
-      assert.equal(isRouteActive(deskItem.href, "/documents", null, deskItem.aliases), false);
+      assert.equal(isRouteActive(inboxItem.href, "/documents", null, inboxItem.aliases), false);
 
       // On /calendar: calendar is active
       assert.equal(isRouteActive(calendarItem.href, "/calendar", null, calendarItem.aliases), true);
-      assert.equal(isRouteActive(deskItem.href, "/calendar", null, deskItem.aliases), false);
+      assert.equal(isRouteActive(inboxItem.href, "/calendar", null, inboxItem.aliases), false);
+
+      // On /notifications (alias cũ của Hộp thư): inbox is active
+      assert.equal(isRouteActive(inboxItem.href, "/notifications", null, inboxItem.aliases), true);
+      assert.equal(isRouteActive(tasksItem.href, "/notifications", null, tasksItem.aliases), false);
     });
   });
 

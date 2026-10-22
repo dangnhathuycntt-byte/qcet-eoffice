@@ -239,7 +239,7 @@ export const DOC_GROUPS: DocGroup[] = [
             type: "ul",
             items: [
               "`Ctrl` + `B` hoặc `⌘` + `B`: thu gọn hoặc mở rộng thanh bên.",
-              "`1`, `2`, `3`, `5`: mở lần lượt **Hộp thư**, **Nhiệm vụ**, **Cuộc họp**, **Cơ cấu & Danh bạ**. Phím `4` hiện không chuyển trang.",
+              "`1` đến `5`: mở lần lượt **Hộp thư**, **Nhiệm vụ**, **Cuộc họp**, **Văn bản & Công văn**, **Cơ cấu & Danh bạ**.",
               "`C`: mở hộp tạo nhiệm vụ mới trên trang **Nhiệm vụ**. Nhấn `N` rồi `P` liền nhau cũng mở hộp này.",
               "`Esc`: đóng hộp thoại hoặc bảng đang mở.",
             ],

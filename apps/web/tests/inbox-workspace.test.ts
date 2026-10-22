@@ -132,12 +132,12 @@ describe("QCET App Shell & Inbox Test Suite", () => {
   });
 
   describe("3. Desktop Layout & Mobile Header Invariants", () => {
-    test("sidebar nav items start with desk and tasks, including inbox in canonical list", () => {
+    test("sidebar nav items start with inbox and tasks (no Tổng quan since 19/10/2026)", () => {
       const items = getSidebarNavItems();
-      assert.equal(items[0].id, "desk");
-      assert.equal(items[1].id, "tasks");
-      assert.equal(items[2].id, "meetings");
-      assert.equal(items[3].id, "inbox");
+      assert.deepEqual(
+        items.map((i) => i.id),
+        ["inbox", "tasks", "meetings", "documents", "org", "settings"]
+      );
     });
   });
 

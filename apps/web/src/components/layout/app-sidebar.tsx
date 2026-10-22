@@ -130,10 +130,6 @@ export function handleSidebarShortcut(
     const items = getSidebarNavItems().filter((i) => i.id !== "settings");
     const targetItem = items[navIndex - 1];
     if (targetItem && options.onNavigate) {
-      if (targetItem.id === "documents") {
-        e.preventDefault?.();
-        return true;
-      }
       e.preventDefault?.();
       options.onNavigate(targetItem.href);
       return true;

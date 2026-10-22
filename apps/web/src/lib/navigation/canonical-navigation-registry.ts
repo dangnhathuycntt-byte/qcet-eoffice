@@ -125,8 +125,9 @@ export function resolveCanonicalHref(pathname: string, searchParams?: URLSearchP
   const cleanPath = pathname.split("?")[0].split("#")[0].trim();
   const params = typeof searchParams === "string" ? new URLSearchParams(searchParams) : searchParams;
 
+  // `/dashboard` chuyển tới Nhiệm vụ như redirect ở next.config.ts (bỏ Tổng quan 19/10/2026)
   if (cleanPath === "/dashboard") {
-    return "/";
+    return "/tasks";
   }
 
   if (cleanPath === "/unit-tasks") {
