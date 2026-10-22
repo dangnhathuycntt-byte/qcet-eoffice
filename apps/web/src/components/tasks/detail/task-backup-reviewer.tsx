@@ -5,6 +5,7 @@ import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
@@ -107,10 +108,7 @@ export function TaskBackupReviewer({
 
   return (
     <section aria-label="Người duyệt dự phòng" className={cn("space-y-1.5", className)}>
-      <div className="flex items-center gap-2">
-        <h2 className="text-compact font-semibold text-foreground tracking-tight">Người duyệt dự phòng</h2>
-        {view.backup?.active ? <span className="text-xs text-warning">Đang duyệt thay</span> : null}
-      </div>
+      <SectionHeader title="Người duyệt dự phòng" meta={view.backup?.active ? "Đang duyệt thay" : null} metaTone="warning" />
 
       {view.backup && !editing ? (
         <p className="text-compact text-foreground">

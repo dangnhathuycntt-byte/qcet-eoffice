@@ -29,7 +29,7 @@ import { MeetingRecordingPanel } from "@/components/meetings/meeting-recording-p
 import { MinutesText } from "@/components/meetings/minutes-text";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
 import { MEETING_STATUS_TONE_CLASS, meetingStatus } from "@/components/meetings/meeting-status";
-import { SectionCard } from "@/components/meetings/section-card";
+import { SectionCard } from "@/components/ui/section-card";
 
 type MeetingData = MeetingDetailPageData["meeting"];
 type ParticipantData = MeetingData["participants"][number];
@@ -738,7 +738,7 @@ function MeetingMoreMenu({
         ) : null}
         {onCancel ? (
           <>
-            <MenuSeparator className="my-1 border-t border-border/40" />
+            <MenuSeparator />
             <MenuActionItem destructive leading={<CalendarX2 className="size-4" />} onClick={onCancel}>
               Hủy cuộc họp
             </MenuActionItem>

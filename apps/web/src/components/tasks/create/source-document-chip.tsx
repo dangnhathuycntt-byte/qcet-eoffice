@@ -144,9 +144,8 @@ export function SourceDocumentChip({ value, onChange, open, onOpenChange }: Sour
             <Combobox.Input
               aria-label="Tìm văn bản đến"
               placeholder="Tìm số, ký hiệu, trích yếu…"
-              render={<Input variant="menu" />}
+              render={<Input variant="menu" className="mb-1 border-b border-border/60" />}
             />
-            <div aria-hidden className="-mx-1 my-1 h-px bg-border" />
             <Combobox.Empty>
               <div className={cn("px-2 py-1.5 text-xs", status === "error" ? "text-destructive" : "text-muted-foreground")}>
                 {status === "loading"

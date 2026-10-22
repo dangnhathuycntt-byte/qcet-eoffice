@@ -4,6 +4,7 @@ import * as React from "react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { SectionHeader, SectionRow } from "@/components/ui/section-header";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
@@ -117,10 +118,10 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
 
   return (
     <section aria-label="Người tham gia" className={cn("space-y-1.5", className)}>
-      <h2 className="text-compact font-semibold text-foreground tracking-tight">Người tham gia</h2>
+      <SectionHeader title="Người tham gia" />
       <ul className="space-y-0.5">
         {view.people.map((p) => (
-          <li key={`${p.userId}-${p.role}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
+          <SectionRow key={`${p.userId}-${p.role}`}>
             <span className="min-w-0 truncate text-foreground">{p.name}</span>
             <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
               {p.roleLabel}
@@ -130,7 +131,7 @@ export function TaskPeople({ taskId, onVersionChange, className }: { taskId: str
                 </Button>
               ) : null}
             </span>
-          </li>
+          </SectionRow>
         ))}
       </ul>
 

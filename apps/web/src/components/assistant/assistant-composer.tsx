@@ -13,10 +13,8 @@ import { foldSkillText, useAssistantSkills } from "@/components/assistant/use-as
 import { isSendKey, isStopKey } from "@/components/assistant/assistant-model";
 import { AgentModelPicker } from "@/components/agent-chat/agent-model-picker";
 import { AttachmentCard, type ChatAttachment } from "@/components/agent-chat/agent-attachments";
+import { AGENT_COMPOSER_CLASS, AGENT_COMPOSER_INPUT_CLASS, AgentDropOverlay } from "@/components/agent-chat/agent-chat-parts";
 import { TASK_AGENT_ATTACHMENT_ACCEPT } from "@qcet/shared/domain/tasks/task-agent-attachments";
-
-/** Viền mảnh và bóng rất nhẹ của thẻ soạn, như thẻ ô soạn của Linear. */
-const COMPOSER_RING = "shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]";
 
 export interface AssistantComposerProps {
   value: string;
@@ -134,7 +132,7 @@ export function AssistantComposer({
 
       {/* Kéo thả ảnh/tệp vào thẻ soạn như panel Agent tạo nhiệm vụ */}
       <div
-        className={cn("relative flex flex-col gap-1 rounded-xl bg-background p-2", COMPOSER_RING)}
+        className={cn("relative", AGENT_COMPOSER_CLASS)}
         onDragOver={(e) => {
           if (!acceptsFiles || !e.dataTransfer.types.includes("Files")) return;
           e.preventDefault();
@@ -160,11 +158,11 @@ export function AssistantComposer({
         <label htmlFor={inputId} className="sr-only">
           Hỏi Trợ lý
         </label>
-        {/* overflow-y-auto đứng sau overflow-hidden của autoResize trong CSS (Tailwind v4 xếp theo thuộc tính) nên thắng */}
         <Textarea
           id={inputId}
           ref={inputRef}
           compact
+          variant="bare"
           autoResize
           rows={variant === "hero" ? 2 : 1}
           value={value}
@@ -211,7 +209,7 @@ export function AssistantComposer({
           countOnlyNearLimit
           disabled={disabled}
           placeholder="Hỏi về nhiệm vụ, văn bản, lịch họp…"
-          className="max-h-40 overflow-y-auto bg-transparent px-1 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
+          className={AGENT_COMPOSER_INPUT_CLASS}
         />
 
         <div className="flex min-w-0 items-center gap-2">
@@ -339,9 +337,7 @@ export function AssistantComposer({
         ) : null}
 
         {dragging ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/40 bg-background/85 text-compact font-medium text-foreground">
-            Thả ảnh hoặc tệp để gửi cho Trợ lý
-          </div>
+          <AgentDropOverlay>Thả ảnh hoặc tệp để gửi cho Trợ lý</AgentDropOverlay>
         ) : null}
       </div>
     </div>

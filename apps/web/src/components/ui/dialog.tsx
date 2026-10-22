@@ -6,6 +6,7 @@ import { ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SHEET_MOTION_CLASS, SheetKeyboardSync } from "@/components/ui/menu";
+import { useModifierKey } from "@/hooks/use-modifier-key";
 
 // Namespace primitives re-export
 export const Dialog = BaseDialog;
@@ -33,6 +34,11 @@ export interface StandardDialogProps {
   compact?: boolean;
   /** Phần tử nhận focus khi mở (Base UI `initialFocus`); mặc định là phần tử tab được đầu tiên. */
   initialFocus?: React.ComponentProps<typeof BaseDialog.Popup>["initialFocus"];
+  /**
+   * compose: hộp tạo/soạn theo khung hộp Tạo nhiệm vụ (Soạn văn bản đi, Tạo cuộc họp): nền trắng, không đệm để
+   * `DialogComposeHeader`, phần thân và `DialogComposeFooter` tự chia lề. Dùng kèm `showHeader={false}`.
+   */
+  variant?: "default" | "compose";
 }
 
 const sizeClasses: Record<NonNullable<StandardDialogProps["size"]>, string> = {
@@ -62,6 +68,7 @@ export function StandardDialog({
   showHeader = true,
   compact = false,
   initialFocus,
+  variant = "default",
 }: StandardDialogProps) {
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
@@ -76,6 +83,7 @@ export function StandardDialog({
             "max-md:inset-x-0 max-md:w-full max-md:top-auto max-md:bottom-[var(--keyboard-height,0px)] max-md:translate-x-0 max-md:max-w-none! max-md:max-h-[calc(85dvh-var(--keyboard-height,0px))]! max-md:rounded-b-none max-md:pt-0! max-md:pb-[calc(env(safe-area-inset-bottom,0px)+24px)]!",
             SHEET_MOTION_CLASS,
             sizeClasses[size],
+            variant === "compose" && "gap-0 bg-background p-0 sm:p-0 max-md:pb-0!",
             className
           )}
         >
@@ -163,6 +171,37 @@ export function DialogBreadcrumb({ items, icon, className }: { items: React.Reac
         </React.Fragment>
       ))}
     </div>
+  );
+}
+
+/** Đầu hộp tạo/soạn (`StandardDialog variant="compose"`): dòng `DialogBreadcrumb` và nút đóng tròn, lề 20/20/0/24 như hộp Tạo nhiệm vụ. */
+export function DialogComposeHeader({ items }: { items: React.ReactNode[] }) {
+  return (
+    <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
+      <DialogBreadcrumb items={items} />
+      <BaseDialog.Close render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 rounded-full max-md:size-8" />}>
+        <X />
+      </BaseDialog.Close>
+    </header>
+  );
+}
+
+/** Chân hộp tạo/soạn: nền trắng kẻ trên, lề 12/20, chừa vùng an toàn đáy trên điện thoại. */
+export function DialogComposeFooter({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <DialogFooter className={cn("shrink-0 items-center border-t border-border/60 px-5 py-3 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]", className)}>
+      {children}
+    </DialogFooter>
+  );
+}
+
+/** Phím tắt gửi nằm gọn trong nút chính của hộp tạo/soạn (⌘↵ hoặc Ctrl ↵), nhạt hơn nhãn, ẩn trên điện thoại. */
+export function SubmitShortcutHint() {
+  const modKey = useModifierKey();
+  return (
+    <kbd aria-hidden="true" className="hidden font-sans text-micro text-primary-foreground/60 sm:inline">
+      {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
+    </kbd>
   );
 }
 

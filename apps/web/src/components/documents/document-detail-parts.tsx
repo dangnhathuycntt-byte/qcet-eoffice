@@ -52,32 +52,6 @@ export function MetaInline({ items, className }: { items: React.ReactNode[]; cla
   );
 }
 
-/** Thẻ trong cột thuộc tính, giống thẻ "Thuộc tính"/"Việc con" của nhiệm vụ. */
-export function InspectorCard({
-  title,
-  count,
-  action,
-  children,
-}: {
-  title: string;
-  count?: number;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-[10px] border border-border bg-card p-3 text-xs">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-          {title}
-          {typeof count === "number" ? <span className="font-normal tabular-nums text-muted-foreground">{count}</span> : null}
-        </h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 /** Dòng thuộc tính: nhãn 96px (Quick View `wide`: 112px cho nhãn "Cơ quan ban hành"), giá trị canh trái ngay cạnh nhãn. */
 export function InspectorRow({
   label,

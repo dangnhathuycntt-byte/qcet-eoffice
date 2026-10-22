@@ -2,18 +2,18 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, X } from "lucide-react";
+import { Calendar, Clock, MapPin } from "lucide-react";
 import { getTodayIctDate } from "@qcet/shared/lib/academic-calendar";
 import { cn } from "@/lib/utils";
 import { Button, PROPERTY_PILL_CLASS } from "@/components/ui/button";
-import { DialogBreadcrumb, DialogClose, DialogFooter, DialogForm, FieldError, StandardDialog } from "@/components/ui/dialog";
+import { DialogComposeFooter, DialogComposeHeader, DialogForm, FieldError, StandardDialog, SubmitShortcutHint } from "@/components/ui/dialog";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
 import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
-import { getPlatformModifierKey } from "@/lib/shortcuts/platform";
+import { useModifierKey } from "@/hooks/use-modifier-key";
 import { useAuth } from "@/lib/auth-context";
 import { responseMessage } from "@/components/meetings/meeting-client";
 import { ChairPicker, ParticipantsPicker, useMeetingPeople, type MeetingPerson } from "@/components/meetings/participants-picker";
@@ -53,7 +53,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
   const [errors, setErrors] = React.useState<Partial<Record<FieldName, string>>>({});
   const [failure, setFailure] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
-  const [modKey, setModKey] = React.useState<"⌘" | "Ctrl">("Ctrl");
+  const modKey = useModifierKey();
   const titleRef = React.useRef<HTMLInputElement>(null);
   const endRef = React.useRef<HTMLInputElement>(null);
   const dateWrapRef = React.useRef<HTMLDivElement>(null);
@@ -76,7 +76,6 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
     setOpenPicker(null);
     setErrors({});
     setFailure(null);
-    setModKey(getPlatformModifierKey());
   }, [open]);
 
   const isDirty = Boolean(title.trim() || location.trim() || agenda.trim() || chair || attendees.length > 0);
@@ -147,18 +146,13 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
       title="Tạo cuộc họp"
       showHeader={false}
       size="lg"
-      className="gap-0 bg-background p-0 sm:p-0 max-md:pb-0!"
+      variant="compose"
     >
       {/* Khung theo hộp Tạo nhiệm vụ như hộp Soạn văn bản đi (người dùng: "đồng bộ hộp tạo cuộc họp theo khung mới" 22/10/2026):
           nền trắng, đầu hộp không kẻ đệm 20/20/0/24, tên 24px, chip cách tên 10px, đường kẻ là viền trên của phần nội dung,
           chân hộp trắng kẻ trên. Đầu hộp chỉ một dòng 12px (người dùng: "xoá cho gọn" tiêu đề 16px và câu mô tả 20/10/2026) */}
       <DialogForm onSubmit={() => void submit()} className="min-h-0 flex-1 gap-0">
-        <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-5 max-md:pt-3 md:pl-6">
-          <DialogBreadcrumb items={["Cuộc họp", "Tạo mới"]} />
-          <DialogClose render={<Button variant="ghost" size="icon-xs" aria-label="Đóng" title="Đóng (Esc)" className="shrink-0 rounded-full max-md:size-8" />}>
-            <X />
-          </DialogClose>
-        </header>
+        <DialogComposeHeader items={["Cuộc họp", "Tạo mới"]} />
 
         {/* Lỗi gửi nằm ngoài vùng cuộn như hộp Tạo nhiệm vụ để luôn thấy */}
         {failure ? (
@@ -316,7 +310,7 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 items-center border-t border-border/60 px-5 py-3 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
+        <DialogComposeFooter>
           <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
             Hủy
           </Button>
@@ -329,13 +323,9 @@ export function CreateMeetingDialog({ open, onOpenChange }: { open: boolean; onO
             className="max-md:px-4"
           >
             <span>{saving ? "Đang tạo…" : "Tạo cuộc họp"}</span>
-            {saving ? null : (
-              <kbd className="hidden font-sans text-micro text-primary-foreground/60 sm:inline" aria-hidden="true">
-                {modKey === "⌘" ? "⌘↵" : "Ctrl ↵"}
-              </kbd>
-            )}
+            {saving ? null : <SubmitShortcutHint />}
           </Button>
-        </DialogFooter>
+        </DialogComposeFooter>
       </DialogForm>
     </StandardDialog>
   );

@@ -75,7 +75,7 @@ export function MeetingRowMenu({ meeting, anchor, open, onOpenChange, onCancel }
         <MenuActionItem leading={<TaskIconView className={icon} />} shortcut="Enter" onClick={() => router.push(meetingPath(meeting.id))}>
           Xem chi tiết
         </MenuActionItem>
-        <MenuSeparator className="my-1 border-t border-border/40" />
+        <MenuSeparator />
         <MenuActionItem
           leading={<TaskIconLink className={icon} />}
           onClick={() => void copy(`${window.location.origin}${meetingPath(meeting.id)}`, "Đã sao chép liên kết")}
@@ -92,7 +92,7 @@ export function MeetingRowMenu({ meeting, anchor, open, onOpenChange, onCancel }
         ) : null}
         {canCancelMeeting(meeting) ? (
           <>
-            <MenuSeparator className="my-1 border-t border-border/40" />
+            <MenuSeparator />
             <MenuActionItem destructive leading={<CalendarX2 className="size-4" />} onClick={() => onCancel(meeting)}>
               Hủy cuộc họp
             </MenuActionItem>

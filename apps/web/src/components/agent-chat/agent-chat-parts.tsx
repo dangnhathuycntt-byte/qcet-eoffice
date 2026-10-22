@@ -4,11 +4,38 @@ import * as React from "react";
 import Link from "next/link";
 import { Check, Copy, FileText, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, RAISED_RING_CLASS } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
 import type { AssistantSourceRef } from "@qcet/contracts/assistant";
 import { linkSourceCodes } from "@qcet/shared/domain/assistant/assistant-sources";
 import { parseAgentReply, type AgentReplyInline } from "@qcet/shared/domain/tasks/agent-reply-format";
+
+/** Khung ô soạn tin của Trợ lý và Agent soạn nhiệm vụ: thẻ trắng bo 16px, vòng viền mảnh như ô soạn của Linear. */
+export const AGENT_COMPOSER_CLASS = cn("flex flex-col gap-1 rounded-xl bg-background p-2", RAISED_RING_CLASS);
+
+/**
+ * Ô chữ trong khung soạn (`Textarea compact autoResize variant="bare"`): giãn theo nội dung tới 160px rồi cuộn. `overflow-y-auto`
+ * đứng sau `overflow-hidden` của autoResize trong CSS (Tailwind v4 xếp theo thuộc tính) nên thắng.
+ */
+export const AGENT_COMPOSER_INPUT_CLASS = "max-h-40 overflow-y-auto px-1";
+
+/** Suy nghĩ tới dần khi chưa có chữ trả lời: giữ dòng mới nhất ở đáy, dòng cũ mờ dần phía trên. */
+export function AgentThinkingStream({ text }: { text: string }) {
+  return (
+    <div className="flex max-h-28 flex-col justify-end overflow-hidden break-words border-l-2 border-border pl-3 text-xs leading-relaxed text-muted-foreground [mask-image:linear-gradient(to_bottom,transparent,black_2.5rem)]">
+      <p className="whitespace-pre-wrap">{text}</p>
+    </div>
+  );
+}
+
+/** Khung báo đang kéo tệp vào ô soạn; phủ lên khối `relative` chứa nó, không bắt chuột để khối dưới vẫn nhận `drop`. */
+export function AgentDropOverlay({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/40 bg-background/85 text-compact font-medium text-foreground", className)}>
+      {children}
+    </div>
+  );
+}
 
 /** Chữ trong một đoạn; có `sources` thì mã của nguồn thành link tới trang của nó. */
 function linkedNodes(text: string, sources?: AssistantSourceRef[]): React.ReactNode {

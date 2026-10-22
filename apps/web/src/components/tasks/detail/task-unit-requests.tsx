@@ -5,6 +5,7 @@ import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { SectionHeader, SectionRow } from "@/components/ui/section-header";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
@@ -147,11 +148,11 @@ export function TaskUnitRequests({
 
   return (
     <section aria-label="Phối hợp liên đơn vị" data-notification-focus="unit-requests" className={cn("space-y-1.5", className)}>
-      <h2 className="text-compact font-semibold text-foreground tracking-tight">Phối hợp liên đơn vị</h2>
+      <SectionHeader title="Phối hợp liên đơn vị" />
       {state.requests.length > 0 && (
         <ul className="space-y-0.5">
           {state.requests.map((r) => (
-            <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
+            <SectionRow key={r.id}>
               <span className="min-w-0 truncate text-foreground" title={r.note ?? undefined}>
                 {r.targetUnit.name}
                 {r.assignee ? <span className="text-muted-foreground"> · {r.assignee.name}</span> : null}
@@ -173,7 +174,7 @@ export function TaskUnitRequests({
                   </Button>
                 ) : null}
               </span>
-            </li>
+            </SectionRow>
           ))}
         </ul>
       )}

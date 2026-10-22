@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Pressable } from "@/components/ui/pressable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFeedback } from "@/components/ui/feedback-layer";
-import { SectionCard } from "@/components/meetings/section-card";
+import { SectionCard } from "@/components/ui/section-card";
 import { RecordingResult } from "@/components/meetings/recording-result";
 import { RecordingPlayer } from "@/components/meetings/recording-player";
 import { RecordingWaveform } from "@/components/meetings/recording-waveform";

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { confirmAction } from "@/components/ui/confirm-host";
+import { SectionHeader } from "@/components/ui/section-header";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { isSafeUrl } from "@qcet/shared/lib/url-utils";
 import { cn } from "@/lib/utils";
@@ -124,15 +125,17 @@ export function TaskDeliverables({
 
   return (
     <section aria-label="Minh chứng" data-notification-focus="deliverables" className={cn("space-y-1.5", className)}>
-      <div className="flex items-center gap-2">
-        <h2 className="text-compact font-semibold text-foreground tracking-tight">Minh chứng</h2>
-        <span className="text-xs tabular-nums text-muted-foreground">{deliverables.length}</span>
-        {canSubmit && !adding ? (
-          <Button size="xs" variant="ghost" className="ml-auto" onClick={() => setAdding(true)}>
-            Thêm
-          </Button>
-        ) : null}
-      </div>
+      <SectionHeader
+        title="Minh chứng"
+        meta={deliverables.length}
+        action={
+          canSubmit && !adding ? (
+            <Button size="xs" variant="ghost" onClick={() => setAdding(true)}>
+              Thêm
+            </Button>
+          ) : null
+        }
+      />
 
       <ul className="space-y-0.5">
         {deliverables.map((item) => {

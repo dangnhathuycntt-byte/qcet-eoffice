@@ -179,7 +179,7 @@ export function AssistantHeader({
               <MenuActionItem leading={<Pencil />} onClick={startRename} disabled={titleLoading}>
                 Đổi tên
               </MenuActionItem>
-              <MenuSeparator className="my-1 border-t border-border/40" />
+              <MenuSeparator />
               <MenuActionItem leading={<Trash2 />} destructive onClick={onDeleteRequest}>
                 Xóa
               </MenuActionItem>

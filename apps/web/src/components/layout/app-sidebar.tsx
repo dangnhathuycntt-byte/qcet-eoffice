@@ -290,7 +290,7 @@ export function AppSidebar() {
                           </div>
                         )}
 
-                        <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+                        <MenuSeparator />
                         <MenuActionItem leading={<User />} render={<Link href="/onboarding" />}>
                           Hồ sơ cá nhân
                         </MenuActionItem>
@@ -298,7 +298,7 @@ export function AppSidebar() {
                           Cài đặt hệ thống
                         </MenuActionItem>
 
-                        <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+                        <MenuSeparator />
                         <MenuActionItem leading={<BookOpen />} render={<Link href="/docs" />}>
                           Tài liệu hướng dẫn
                         </MenuActionItem>
@@ -309,7 +309,7 @@ export function AppSidebar() {
                           Cài ứng dụng trên điện thoại
                         </MenuActionItem>
 
-                        <MenuSeparator className="-mx-1 my-1 h-px bg-border/60" />
+                        <MenuSeparator />
                         <MenuActionItem leading={<LogOut />} destructive onClick={() => logout()}>
                           Đăng xuất
                         </MenuActionItem>

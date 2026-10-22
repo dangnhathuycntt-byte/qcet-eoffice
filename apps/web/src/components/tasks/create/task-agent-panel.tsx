@@ -8,7 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { AgentIcon } from "@/components/icons/agent-icon";
-import { AgentEmptyPattern, AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
+import {
+  AGENT_COMPOSER_CLASS,
+  AGENT_COMPOSER_INPUT_CLASS,
+  AgentDropOverlay,
+  AgentEmptyPattern,
+  AgentReplyText,
+  AgentThinkingStream,
+  AgentWorkLog,
+  CopyMessageButton,
+} from "@/components/agent-chat/agent-chat-parts";
 import { AttachmentCard, createChatAttachment, type ChatAttachment } from "@/components/agent-chat/agent-attachments";
 import { AgentModelPicker } from "@/components/agent-chat/agent-model-picker";
 import { useAgentModel } from "@/components/agent-chat/agent-models";
@@ -63,8 +72,6 @@ interface ChatMessage {
 
 /** Câu mặc định khi chỉ gửi tệp, không gõ chữ. */
 const ATTACHMENT_ONLY_PROMPT = "Soạn nhiệm vụ từ tệp đính kèm.";
-
-const RING = "shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]";
 
 export interface TaskAgentPanelProps {
   departmentName: string;
@@ -400,9 +407,7 @@ export function TaskAgentPanel({
             ))}
             {/* Suy nghĩ tới dần: giữ dòng mới nhất ở đáy, dòng cũ mờ dần phía trên */}
             {live?.thinking && (
-              <div className="flex max-h-28 flex-col justify-end overflow-hidden border-l-2 border-border pl-3 text-xs leading-relaxed text-muted-foreground [mask-image:linear-gradient(to_bottom,transparent,black_2.5rem)]">
-                <p className="whitespace-pre-wrap">{live.thinking}</p>
-              </div>
+              <AgentThinkingStream text={live.thinking} />
             )}
           </div>
         )}
@@ -416,7 +421,7 @@ export function TaskAgentPanel({
 
       <div className="shrink-0 p-2 pt-0">
         {/* Như Linear: khung ô soạn giữ nguyên viền mảnh khi đang gõ, chỉ có con trỏ nhập báo focus */}
-        <div className={cn("flex flex-col gap-1 rounded-xl bg-background p-2", RING)}>
+        <div className={AGENT_COMPOSER_CLASS}>
           {files.length > 0 && (
             <div data-image-viewer-group="" className="flex flex-wrap gap-1.5 px-1 pt-1">
               {files.map((a) => (
@@ -431,6 +436,7 @@ export function TaskAgentPanel({
             id="task-agent-input"
             ref={inputRef}
             compact
+            variant="bare"
             autoResize
             autoFocus={focusOnMount}
             rows={1}
@@ -441,7 +447,7 @@ export function TaskAgentPanel({
             maxLength={2000}
             countOnlyNearLimit
             placeholder="Tả việc cần giao cho Agent…"
-            className="max-h-40 overflow-y-auto bg-transparent px-1 hover:bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
+            className={AGENT_COMPOSER_INPUT_CLASS}
           />
           {/* Như Linear: model, ghim cạnh nút gửi ở bên phải */}
           <div className="flex items-center justify-end gap-2">
@@ -494,9 +500,7 @@ export function TaskAgentPanel({
       </div>
 
       {dragging && (
-        <div className="pointer-events-none absolute inset-2 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/40 bg-background/85 text-compact font-medium text-foreground">
-          Thả ảnh hoặc tệp để gửi cho Agent
-        </div>
+        <AgentDropOverlay className="inset-2">Thả ảnh hoặc tệp để gửi cho Agent</AgentDropOverlay>
       )}
     </aside>
   );

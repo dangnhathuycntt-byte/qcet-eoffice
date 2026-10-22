@@ -4,6 +4,7 @@ import * as React from "react";
 import { X, ArrowRight, ChevronUp, ChevronDown } from "lucide-react";
 import { StandardDialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { KeyHint } from "@/components/ui/kbd";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { InspectorRow } from "@/components/documents/document-detail-parts";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
@@ -321,9 +322,9 @@ export function TaskPeekPreviewModal({
       {/* Footer: phím tắt (ẩn trên điện thoại vì không có bàn phím) và Mở chi tiết */}
       <div className="flex h-8 shrink-0 items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs text-muted-foreground select-none max-md:h-auto">
         <div className="flex items-center gap-3 max-md:hidden" aria-hidden="true">
-          <span><kbd className="font-sans text-foreground/70">Space</kbd> Đóng</span>
-          <span><kbd className="font-sans text-foreground/70">↑↓</kbd> Chuyển</span>
-          <span><kbd className="font-sans text-foreground/70">Enter</kbd> Mở chi tiết</span>
+          <KeyHint keys={["Space"]} label="Đóng" />
+          <KeyHint keys={["↑", "↓"]} label="Chuyển" />
+          <KeyHint keys={["Enter"]} label="Mở chi tiết" />
         </div>
         <Button variant="ghost" size="xs" onClick={() => onOpenDetail(task)} className="ml-auto">
           Mở chi tiết

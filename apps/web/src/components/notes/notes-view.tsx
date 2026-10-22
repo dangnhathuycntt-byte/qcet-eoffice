@@ -2,17 +2,15 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
 import type { PersonalNote, PersonalNoteSummary } from "@qcet/contracts/personal-notes";
 import { toNoteCardFields } from "@qcet/shared/domain/notes/note-preview";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StandardDialog } from "@/components/ui/dialog";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
-import { MobileMenuButton } from "@/components/layout/mobile-menu-button";
+import { PaneSearchHeader } from "@/components/workspace/pane-search-header";
 import { NoteCard } from "@/components/notes/note-card";
 import { NoteEditor, preloadNoteBodyEditor } from "@/components/notes/note-editor";
 import { NoteMasonry } from "@/components/notes/note-masonry";
@@ -310,55 +308,16 @@ export function NotesView() {
 
   return (
     <div data-slot="notes-workspace" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex h-11 shrink-0 items-center gap-1 px-4 max-md:h-[calc(44px+env(safe-area-inset-top,0px))] max-md:pt-[env(safe-area-inset-top,0px)]">
-        <MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />
-        {searchOpen ? (
-          <>
-            <Search aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              variant="menu"
-              type="text"
-              value={queryInput}
-              maxLength={100}
-              autoFocus
-              onChange={(event) => setQueryInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Escape") return;
-                event.preventDefault();
-                event.stopPropagation();
-                if (queryInput) setQueryInput("");
-                else setSearchOpen(false);
-              }}
-              placeholder="Tìm trong ghi chú"
-              aria-label="Tìm kiếm ghi chú"
-              className="h-7 min-w-0 flex-1 px-1.5 text-compact sm:h-7 sm:text-compact"
-            />
-          </>
-        ) : (
-          <h1 className="truncate text-compact font-medium text-foreground">Ghi chú cá nhân</h1>
-        )}
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
-          {searchOpen ? (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Đóng tìm kiếm"
-              title="Đóng tìm kiếm (Esc)"
-              onClick={() => {
-                setQueryInput("");
-                setSearchOpen(false);
-              }}
-            >
-              <X />
-            </Button>
-          ) : (
-            <Button variant="ghost" size="icon-xs" aria-label="Tìm kiếm ghi chú" title="Tìm kiếm" onClick={() => setSearchOpen(true)}>
-              <Search />
-            </Button>
-          )}
-        </div>
-      </header>
+      <PaneSearchHeader
+        title="Ghi chú cá nhân"
+        searchOpen={searchOpen}
+        onSearchOpenChange={setSearchOpen}
+        query={queryInput}
+        onQueryChange={setQueryInput}
+        searchLabel="Tìm kiếm ghi chú"
+        searchPlaceholder="Tìm trong ghi chú"
+        inputRef={searchInputRef}
+      />
 
       <div data-slot="notes-board" className="thin-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
         <div className="empty-fill px-4 pb-16 pt-6 sm:px-6">

@@ -16,3 +16,15 @@ export function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
     />
   );
 }
+
+/** Gợi ý phím tắt ở chân khung (Hộp thư, xem nhanh nhiệm vụ): các phím `Kbd` rồi nhãn, chữ theo khối chứa (`text-xs` mờ). */
+export function KeyHint({ keys, label }: { keys: string[]; label: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-1">
+      {keys.map((key) => (
+        <Kbd key={key}>{key}</Kbd>
+      ))}
+      {label}
+    </span>
+  );
+}

@@ -4,7 +4,7 @@ import * as React from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/pwa/storage-manager";
-import { Button } from "@/components/ui/button";
+import { Button, RAISED_RING_CLASS } from "@/components/ui/button";
 import { FileTypeIcon } from "@/components/documents/file-type-icon";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { ImageViewerTrigger } from "@/components/ui/image-viewer";
@@ -31,8 +31,6 @@ export function createChatAttachment(file: File, previewUrls: Set<string>): Chat
   return { id: crypto.randomUUID(), file, kind, previewUrl };
 }
 
-const RING = "shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]";
-
 /**
  * Thẻ ảnh/tệp như Linear: ảnh hiện hình thu nhỏ (bấm để xem lớn; khối chứa gắn `data-image-viewer-group` để xem nối tiếp các
  * ảnh cùng tin nhắn hoặc cùng ô soạn), tệp hiện icon loại tệp, tên và dung lượng.
@@ -57,14 +55,14 @@ export function AttachmentCard({ attachment, onRemove, compact = false }: { atta
       <div className="relative shrink-0">
         <ImageViewerTrigger src={attachment.previewUrl} title={file.name} className="rounded-lg">
           {/* Ảnh cục bộ (object URL) nên không qua next/image */}
-          <img src={attachment.previewUrl} alt={file.name} title={file.name} draggable={false} className={cn("rounded-lg object-cover", RING, compact ? "size-14" : "size-24")} />
+          <img src={attachment.previewUrl} alt={file.name} title={file.name} draggable={false} className={cn("rounded-lg object-cover", RAISED_RING_CLASS, compact ? "size-14" : "size-24")} />
         </ImageViewerTrigger>
         {remove}
       </div>
     );
   }
   return (
-    <div className={cn("relative flex min-w-0 items-center gap-2 rounded-lg bg-background px-2.5 py-2", RING, compact ? "w-[calc(50%-0.1875rem)]" : "w-60 max-w-full")}>
+    <div className={cn("relative flex min-w-0 items-center gap-2 rounded-lg bg-background px-2.5 py-2", RAISED_RING_CLASS, compact ? "w-[calc(50%-0.1875rem)]" : "w-60 max-w-full")}>
       <FileTypeIcon fileName={file.name} mimeType={file.type} className="size-6" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-compact text-foreground" title={file.name}>
@@ -87,7 +85,7 @@ export function StoredAttachmentCard({ attachment }: { attachment: AssistantAtta
     return (
       <ImageViewerTrigger src={attachment.url} title={attachment.name} className="shrink-0 rounded-lg">
         {/* Ảnh qua API tệp có kiểm quyền nên không qua next/image */}
-        <img src={attachment.url} alt={attachment.name} title={attachment.name} loading="lazy" draggable={false} className={cn("size-24 rounded-lg bg-muted object-cover", RING)} />
+        <img src={attachment.url} alt={attachment.name} title={attachment.name} loading="lazy" draggable={false} className={cn("size-24 rounded-lg bg-muted object-cover", RAISED_RING_CLASS)} />
       </ImageViewerTrigger>
     );
   }
@@ -97,7 +95,7 @@ export function StoredAttachmentCard({ attachment }: { attachment: AssistantAtta
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className={cn("flex w-60 max-w-full min-w-0 items-center gap-2 rounded-lg bg-background px-2.5 py-2 transition-colors hover:bg-accent/40", RING, focusRingClass)}
+      className={cn("flex w-60 max-w-full min-w-0 items-center gap-2 rounded-lg bg-background px-2.5 py-2 transition-colors hover:bg-accent/40", RAISED_RING_CLASS, focusRingClass)}
     >
       <FileTypeIcon fileName={attachment.name} className="size-6" />
       <div className="min-w-0 flex-1">

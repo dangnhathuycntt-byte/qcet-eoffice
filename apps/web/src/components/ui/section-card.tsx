@@ -2,8 +2,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Một khối của trang chi tiết cuộc họp.
- * - `card` (cột phải): cùng kiểu thẻ "Thuộc tính"/"Việc con" của chi tiết nhiệm vụ, viền mảnh bo 10px, tiêu đề 12px đậm (kèm
+ * Một khối của trang chi tiết (cuộc họp, văn bản).
+ * - `card` (cột phải): thẻ thuộc tính, viền mảnh bo 10px, tiêu đề 12px đậm (kèm
  *   số đếm mờ) và thao tác nhỏ bên phải, không icon.
  * - `plain` (cột chính, như trang tài liệu của Notion/Granola và trang issue của Linear): không viền, không nền; khối cách
  *   khối trên bằng một đường kẻ mảnh. Tiêu đề là nhãn 12px mờ như "Nội dung và chương trình", để tiêu đề mục 13px đậm bên

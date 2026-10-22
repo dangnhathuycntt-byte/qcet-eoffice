@@ -42,11 +42,11 @@ const HEADERS: HeaderCase[] = [
   },
   {
     file: "src/components/inbox/inbox-view.tsx",
-    from: '<MobileMenuButton className="-ml-1.5 mr-1 md:hidden" />',
+    from: "<PaneSearchHeader",
     to: '{(readFilter !== "all" || category !== "all") && (',
     overflow: 'aria-label="Tùy chọn hộp thư"',
     overflowEnd: "</MenuRoot>",
-    before: ['aria-label="Tìm kiếm thông báo"', 'aria-label="Lọc thông báo"'],
+    before: ['searchLabel="Tìm kiếm thông báo"', 'aria-label="Lọc thông báo"'],
   },
   {
     file: "src/components/inbox/inbox-panel.tsx",
@@ -73,6 +73,12 @@ const HEADERS: HeaderCase[] = [
     before: ['label="Đóng"', 'label="Thu nhỏ"', "Mở trong trang Trợ lý", "<h2"],
   },
 ];
+
+test("đầu khung có ô tìm (PaneSearchHeader) đặt nút tìm trước actions, nên \"⋯\" truyền qua actions vẫn là nút cuối", () => {
+  const source = readFileSync("src/components/workspace/pane-search-header.tsx", "utf8");
+  const right = source.slice(source.indexOf('<div className="ml-auto'));
+  assert.ok(right.lastIndexOf("</Button>") >= 0 && right.indexOf("{actions}") > right.lastIndexOf("</Button>"));
+});
 
 for (const c of HEADERS) {
   test(`"⋯" là nút cuối bên phải ở ${c.file}`, () => {

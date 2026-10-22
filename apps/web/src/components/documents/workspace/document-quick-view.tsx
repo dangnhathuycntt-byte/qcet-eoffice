@@ -62,7 +62,7 @@ function MoreActionsMenu({
             <MenuActionItem leading={<AgentIcon className="size-4" />} render={<Link href={askAssistantHref} />}>
               Hỏi Trợ lý
             </MenuActionItem>
-            <MenuSeparator className="my-1 border-t border-border/40" />
+            <MenuSeparator />
           </>
         ) : null}
         {onEdit ? (
@@ -71,7 +71,7 @@ function MoreActionsMenu({
         {onAddFiles ? (
           <MenuActionItem leading={<Paperclip />} onClick={onAddFiles}>Thêm tệp</MenuActionItem>
         ) : null}
-        {onEdit || onAddFiles ? <MenuSeparator className="my-1 border-t border-border/40" /> : null}
+        {onEdit || onAddFiles ? <MenuSeparator /> : null}
         <MenuActionItem leading={<Printer />} onClick={onPrint}>In phiếu văn bản</MenuActionItem>
         {onViewSignature ? (
           <MenuActionItem leading={<Stamp />} onClick={onViewSignature}>Xem chữ ký số</MenuActionItem>
