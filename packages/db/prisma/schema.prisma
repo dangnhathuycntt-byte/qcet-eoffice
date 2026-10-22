@@ -428,6 +428,9 @@ model Document {
   @@index([type, status, dueDate])
   @@index([status, urgency, dueDate])
   @@index([originalNumber])
+  // Lọc danh sách văn bản theo quyền (document-policy: người đăng ký, người chủ trì)
+  @@index([registeredById])
+  @@index([leadUserId])
   @@map("documents")
 }
 
@@ -657,6 +660,7 @@ model DocumentApprovalWorkflow {
   updatedAt     DateTime                @updatedAt @map("updated_at")
 
   @@index([status])
+  @@index([submittedById])
   @@map("document_approval_workflows")
 }
 
@@ -680,6 +684,7 @@ model DocumentApprovalStep {
 
   @@index([workflowId, round, status])
   @@index([unitId, status])
+  @@index([approverUserId])
   @@map("document_approval_steps")
 }
 
@@ -699,6 +704,7 @@ model DocumentConsultation {
 
   @@index([workflowId, createdAt])
   @@index([consultantId, answeredAt])
+  @@index([askedById])
   @@map("document_consultations")
 }
 
