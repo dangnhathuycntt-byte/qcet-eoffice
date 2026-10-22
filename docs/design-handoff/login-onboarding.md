@@ -16,6 +16,8 @@ Xuất từ canvas QCET E-Office, trang "Đăng nhập & onboarding", bản 308 
 
 ## Quyết định
 
+> **Cập nhật 22/10/2026 (người dùng yêu cầu thay hộp "Hồ sơ Cán bộ & Viên chức" bằng trang onboarding "theo hướng giao tiếp với agent"):** có lại onboarding toàn màn hình ở `/onboarding` (`apps/web/src/components/onboarding/`), hướng tới Trợ lý: hồ sơ → Trợ lý xưng hô và cách trả lời → việc cần giúp, bản tin sáng (ghép thành Hướng dẫn riêng sửa được) → câu hỏi đầu tiên mở Trợ lý với câu hỏi điền sẵn, không tự gửi. Người chưa onboarding (`onboardedAt` null) được chuyển sang trang này một lần trước trang định mở rồi về đúng trang đó; "Bỏ qua" cũng ghi nhận nên không hỏi lại; "Hồ sơ cá nhân" mở lại trang. Quyết định 1 dưới đây (không có onboarding toàn màn hình, vào thẳng trang đích) thôi áp dụng; thẻ gợi ý ở trang trống (`onboarding-hint.tsx`) và quyết định 3 vẫn giữ.
+
 > **Cập nhật 14/10/2026 (người dùng chốt):** bỏ hẳn Feature guide (3 thẻ 1/3–3/3), hộp "Hướng dẫn sử dụng" và mục Trợ giúp → Hướng dẫn. Hướng dẫn bước đầu giờ là thẻ gợi ý ở trang trống (`src/components/ui/onboarding-hint.tsx`), bật bằng nút "Hướng dẫn" cạnh nút tạo mới. Quyết định 1 (không có onboarding toàn màn hình) và 3 vẫn giữ; phần Feature guide ở quyết định 1, 2, 4 và dòng Feature guide trong bảng đối chiếu bên dưới không còn áp dụng.
 
 1. **Không còn onboarding toàn màn hình.** Sau đăng nhập vào thẳng nơi đang định tới (mặc định Nhiệm vụ). Hướng dẫn là Feature guide: tối đa 3 thẻ mỗi màn hình, chỉ hiện lần đầu mở màn hình đó, tắt bằng Xong, bấm ra ngoài hoặc Esc; tắt rồi không hiện lại; xem lại ở Trợ giúp → Hướng dẫn.
