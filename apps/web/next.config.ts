@@ -55,6 +55,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: repoRoot,
   },
+  // `next dev` (16.2+) tự ghi AGENTS.md vào thư mục app; repo giữ một AGENTS.md ở gốc, đã trỏ tới node_modules/next/dist/docs
+  agentRules: false,
   transpilePackages: ["@qcet/contracts", "@qcet/shared"],
   experimental: {
     // @qcet/* là mã nguồn TS ngoài thư mục app (tsconfig paths)
