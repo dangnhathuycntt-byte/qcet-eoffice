@@ -26,6 +26,7 @@ import {
   buildTaskContext,
 } from "@qcet/shared/domain/tasks/state-machine";
 
+import { Pressable } from "@/components/ui/pressable";
 export interface SubtaskDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -418,26 +419,24 @@ export function SubtaskDetailDrawer({
           <div className="flex items-center gap-1 min-w-0">
             {onSelectSibling && siblingTotal > 1 && (
               <div className="flex items-center">
-                <button
-                  type="button"
+                <Pressable
                   disabled={currentIndex <= 0}
                   onClick={() => currentIndex > 0 && onSelectSibling(siblings[currentIndex - 1])}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
                   aria-label="Việc con trước"
                   title="Việc con trước (↑)"
                 >
                   <ChevronLeft className="size-4" />
-                </button>
-                <button
-                  type="button"
+                </Pressable>
+                <Pressable
                   disabled={currentIndex >= siblingTotal - 1}
                   onClick={() => currentIndex < siblingTotal - 1 && onSelectSibling(siblings[currentIndex + 1])}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
                   aria-label="Việc con tiếp theo"
                   title="Việc con tiếp theo (↓)"
                 >
                   <ChevronRight className="size-4" />
-                </button>
+                </Pressable>
               </div>
             )}
             <span className="text-xs font-medium text-foreground truncate pl-1">Việc con</span>
@@ -450,25 +449,23 @@ export function SubtaskDetailDrawer({
 
           <div className="flex items-center gap-0.5">
             {onAddSubtask && (
-              <button
-                type="button"
+              <Pressable
                 onClick={onAddSubtask}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                 title="Thêm việc con"
                 aria-label="Thêm việc con"
               >
                 <Plus className="size-4" />
-              </button>
+              </Pressable>
             )}
-            <button
-              type="button"
+            <Pressable
               onClick={onClose}
-              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title="Đóng (Esc)"
               aria-label="Đóng chi tiết việc con"
             >
               <X className="size-4" />
-            </button>
+            </Pressable>
           </div>
         </div>
 

@@ -13,7 +13,6 @@ import {
   RefreshCw,
   AlertTriangle,
   Inbox,
-  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -37,6 +36,7 @@ import {
 } from "@/lib/motion/variants";
 import { Pressable } from "@/components/ui/pressable";
 
+import { Spinner } from "@/components/ui/spinner";
 const PAGE_SIZE = 20;
 
 export function NotificationCenter() {
@@ -153,27 +153,25 @@ export function NotificationCenter() {
 
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <button
-              type="button"
+            <Pressable
               onClick={markAllAsRead}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[44px] sm:min-h-0"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors active:scale-[0.98] min-h-[44px] sm:min-h-0"
             >
               <CheckCheck size={14} />
               <span>Đánh dấu tất cả đã đọc</span>
-            </button>
+            </Pressable>
           )}
-          <button
-            type="button"
+          <Pressable
             onClick={fetchNotifications}
             disabled={isLoading}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer disabled:opacity-50 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[44px] sm:min-h-0"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50 active:scale-[0.98] min-h-[44px] sm:min-h-0"
             title="Làm mới"
           >
             <RefreshCw
               size={16}
               className={cn(isLoading && "animate-spin")}
             />
-          </button>
+          </Pressable>
         </div>
       </div>
 
@@ -185,15 +183,14 @@ export function NotificationCenter() {
             { key: "unread", label: "Chưa đọc" },
           ] as const
         ).map((tab) => (
-          <button
+          <Pressable
             key={tab.key}
-            type="button"
             onClick={() => {
               setFilter(tab.key);
               setVisibleCount(PAGE_SIZE);
             }}
             className={cn(
-              "px-4 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring min-h-[44px] sm:min-h-0",
+              "px-4 py-1.5 rounded-lg text-xs font-medium transition-colors active:scale-[0.98] min-h-[44px] sm:min-h-0",
               filter === tab.key
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -205,7 +202,7 @@ export function NotificationCenter() {
                 {unreadCount}
               </span>
             )}
-          </button>
+          </Pressable>
         ))}
       </div>
 
@@ -220,7 +217,7 @@ export function NotificationCenter() {
             exit="exit"
             className="flex flex-col items-center justify-center py-20 text-muted-foreground"
           >
-            <Loader2 size={24} className="animate-spin mb-3" />
+            <Spinner className="mb-3 size-6" />
             <p className="text-sm">Đang tải thông báo...</p>
           </m.div>
         )}
@@ -307,14 +304,13 @@ export function NotificationCenter() {
                 {/* Load more */}
                 {hasMore && (
                   <div className="flex justify-center pt-2 pb-4">
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                      className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/60 transition-colors cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[44px] sm:min-h-0"
+                      className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/60 transition-colors active:scale-[0.98] min-h-[44px] sm:min-h-0"
                     >
                       Xem thêm ({filteredNotifications.length - visibleCount} thông báo
                       còn lại)
-                    </button>
+                    </Pressable>
                   </div>
                 )}
               </div>
@@ -461,18 +457,17 @@ function NotificationCenterRow({ item, onRead }: NotificationCenterRowProps) {
       <div className="self-center shrink-0 flex items-center gap-1.5">
         {!item.isRead && (
           <>
-            <button
-              type="button"
+            <Pressable
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 onRead();
               }}
-              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-muted hover:shadow-xs text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-[0.98] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-muted hover:shadow-xs text-muted-foreground hover:text-foreground transition-all active:scale-[0.98] focus-visible:opacity-100"
               title="Đánh dấu là đã đọc"
             >
               <Check size={14} />
-            </button>
+            </Pressable>
             <span className="size-2 rounded-full bg-primary ring-2 ring-primary/20 group-hover:hidden" />
           </>
         )}

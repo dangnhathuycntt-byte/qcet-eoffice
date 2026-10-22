@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AttentionBadge } from "./attention-badge";
 
+import { Pressable } from "@/components/ui/pressable";
 export interface ActionQueueTabItem {
   id: string;
   label: string;
@@ -123,14 +124,12 @@ export function ActionQueueShell({
           {headerRight}
 
           {collapsible && hasItems && (
-            <button
-              type="button"
+            <Pressable
               onClick={() => setIsCollapsed((prev) => !prev)}
               aria-expanded={!isCollapsed}
               aria-label={isCollapsed ? "Mở rộng hàng đợi" : "Thu gọn hàng đợi"}
               className={cn(
                 "inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-control bg-secondary text-foreground hover:bg-accent transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
               )}
             >
               {isCollapsed ? (
@@ -138,7 +137,7 @@ export function ActionQueueShell({
               ) : (
                 <ChevronUp className="size-5" aria-hidden="true" />
               )}
-            </button>
+            </Pressable>
           )}
         </div>
       </div>
@@ -148,31 +147,29 @@ export function ActionQueueShell({
         <div
           role="tablist"
           aria-label="Lọc danh mục hàng đợi"
-          className="flex items-center gap-1.5 p-2 bg-slate-100/60 border-b border-slate-200 overflow-x-auto no-scrollbar"
+          className="flex items-center gap-1.5 p-2 bg-secondary/60 border-b border-border overflow-x-auto no-scrollbar"
         >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const IconComponent = tab.icon || Layers;
 
             return (
-              <button
+              <Pressable
                 key={tab.id}
-                type="button"
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
                   "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold min-h-[44px] transition-all select-none shrink-0",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1",
                   isActive
-                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                    ? "bg-background text-foreground shadow-xs border border-border"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/60"
                 )}
               >
                 <IconComponent
                   className={cn(
                     "size-4",
-                    isActive ? "text-blue-600" : "text-slate-500"
+                    isActive ? "text-primary" : "text-muted-foreground"
                   )}
                   aria-hidden="true"
                 />
@@ -182,12 +179,12 @@ export function ActionQueueShell({
                     "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 font-mono text-xs font-bold",
                     isActive
                       ? "bg-blue-50 text-blue-800 border border-blue-200"
-                      : "bg-slate-200 text-slate-700"
+                      : "bg-accent text-foreground"
                   )}
                 >
                   {tab.count}
                 </span>
-              </button>
+              </Pressable>
             );
           })}
         </div>
@@ -206,15 +203,15 @@ export function ActionQueueShell({
               >
                 <Inbox className="size-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">{emptyTitle}</h3>
-              <p className="text-xs sm:text-sm text-slate-700 max-w-md mt-1">
+              <h3 className="text-base font-bold text-foreground">{emptyTitle}</h3>
+              <p className="text-xs sm:text-sm text-foreground max-w-md mt-1">
                 {emptyDescription}
               </p>
             </div>
           )}
 
           {footerSlot && (
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
               {footerSlot}
             </div>
           )}

@@ -210,14 +210,13 @@ export function OfflineConflictDialog({
             </div>
           </div>
 
-          <button
-            type="button"
+          <Pressable
             onClick={handleDismiss}
-            className="size-11 min-h-[44px] min-w-[44px] shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="size-11 min-h-[44px] min-w-[44px] shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             aria-label="Đóng hộp thoại xung đột"
           >
             <X className="size-5" />
-          </button>
+          </Pressable>
         </div>
 
         {/* Body Content */}

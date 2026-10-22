@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   UploadCloud,
   Link as LinkIcon,
-  Loader2,
   AlertCircle,
   Paperclip,
   Send,
@@ -19,6 +18,10 @@ import { cn } from "@/lib/utils";
 import { scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 import { Pressable } from "@/components/ui/pressable";
 
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 // ============================================================================
 // 1. Constants & Helper Utilities
 // ============================================================================
@@ -439,10 +442,9 @@ export function SubmitDeliverableModal({
                     : "border-border/70 hover:border-primary/50 hover:bg-muted/30 bg-muted/10"
                 )}
               >
-                <input
+                <input type="file"
                   ref={fileInputRef}
                   id="deliverable-file-upload"
-                  type="file"
                   onChange={handleFileInputChange}
                   className="hidden"
                   accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.zip,.rar,.7z"
@@ -497,21 +499,15 @@ export function SubmitDeliverableModal({
                   {deliverableName.length}/120
                 </span>
               </label>
-              <input
+              <Input
                 ref={nameInputRef}
                 id="deliverable-name-input"
-                type="text"
                 maxLength={120}
                 value={deliverableName}
                 onChange={handleNameChange}
                 onFocus={() => scrollActiveInputIntoView()}
                 placeholder="VD: Báo cáo kết quả kiểm định số 12/BC-KĐCL.pdf"
-                className={cn(
-                  "w-full min-h-[44px] h-11 sm:h-10 rounded-xl border bg-background px-3 py-2 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors",
-                  errorMessage && !deliverableName.trim()
-                    ? "border-destructive focus:border-destructive focus:ring-destructive/30"
-                    : "border-border/70"
-                )}
+                aria-invalid={Boolean(errorMessage && !deliverableName.trim()) || undefined}
               />
               {errorMessage && !deliverableName.trim() && (
                 <p className="text-xs text-destructive flex items-center gap-1 mt-1">
@@ -531,18 +527,13 @@ export function SubmitDeliverableModal({
                 >
                   Loại định dạng
                 </label>
-                <select
+                <Select
                   id="file-type-select"
                   value={fileType}
-                  onChange={(e) => handleFileTypeChange(e.target.value)}
-                  className="w-full min-h-[44px] h-11 sm:h-10 rounded-xl border border-border/70 bg-background px-3 py-2 text-base sm:text-xs text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring cursor-pointer"
-                >
-                  {SUPPORTED_FILE_TYPES.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(v) => { if (v) handleFileTypeChange(v); }}
+                  positionerClassName="z-50"
+                  options={SUPPORTED_FILE_TYPES.map((type) => ({ value: type.id, label: type.label }))}
+                />
               </div>
 
               {/* Online URL */}
@@ -557,14 +548,13 @@ export function SubmitDeliverableModal({
                   </span>
                   <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
                 </label>
-                <input
+                <Input
                   id="deliverable-link"
-                  type="text"
                   value={url}
                   onChange={handleUrlChange}
                   onFocus={() => scrollActiveInputIntoView()}
                   placeholder="https://drive.google.com/..."
-                  className="w-full min-h-[44px] h-11 sm:h-10 rounded-xl border border-border/70 bg-background px-3 py-2 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring font-mono"
+                  className="w-full min-h-[44px] font-mono"
                 />
               </div>
             </div>
@@ -578,14 +568,14 @@ export function SubmitDeliverableModal({
                 <span>Nội dung giải trình / Ghi chú gửi cấp phê duyệt</span>
                 <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
               </label>
-              <textarea
+              <Textarea
                 id="deliverable-summary"
                 rows={3}
                 value={note}
                 onChange={handleNoteChange}
                 onFocus={() => scrollActiveInputIntoView()}
                 placeholder="Tóm tắt nội dung hoàn thành, giải trình các điểm nổi bật hoặc lưu ý khi thẩm định..."
-                className="w-full min-h-[88px] rounded-xl border border-border/70 bg-background p-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none leading-relaxed"
+                className="w-full min-h-[88px] resize-none leading-relaxed"
               />
             </div>
           </div>
@@ -609,7 +599,7 @@ export function SubmitDeliverableModal({
             >
               {submittingNow ? (
                 <>
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Spinner />
                   <span>Đang nộp minh chứng...</span>
                 </>
               ) : (

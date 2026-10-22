@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { Pressable } from "@/components/ui/pressable";
 
+import { Input } from "@/components/ui/input";
 interface ShortcutGroup {
   id: string;
   title: string;
@@ -150,12 +151,13 @@ export function GlobalShortcutsModal() {
         {/* Quick Search in Shortcuts */}
         <div className="border-b border-border px-6 py-2.5 flex items-center gap-2 bg-muted/20">
           <Search size={14} className="text-muted-foreground/60 shrink-0" />
-          <input
-            type="text"
+          <Input
+            variant="menu"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm phím tắt (Space, J, K, C, ⌘K...)"
-            className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
+            aria-label="Tìm kiếm phím tắt"
+            className="h-auto px-0"
             autoFocus
           />
           {searchQuery && (

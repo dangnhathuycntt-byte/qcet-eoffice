@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bookmark, BookmarkCheck, Check, Loader2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -16,6 +16,7 @@ import { buildIncomingQuotes, formatShortDateTime, getIncomingActions, getIncomi
 import { InspectorRow, SectionHeading } from "../document-detail-parts";
 import { IncomingForwardDialog, type ForwardMode, type ForwardPayload } from "./incoming-forward-dialog";
 
+import { Spinner } from "@/components/ui/spinner";
 /** Thao tác theo bước của văn bản đến; hiện theo vai trò, server kiểm quyền khi thực thi. */
 export function IncomingWorkflowActions({
   documentId,
@@ -103,7 +104,7 @@ export function IncomingWorkflowActions({
         disabled={!action || pending !== null}
         onClick={action ? () => void run(action) : undefined}
       >
-        {action && pending === action.key ? <Loader2 className="size-3 animate-spin" /> : null}
+        {action && pending === action.key ? <Spinner size="xs" /> : null}
         {action?.label ?? fallbackLabel}
       </Button>
     </span>

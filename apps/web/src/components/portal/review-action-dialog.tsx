@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   XCircle,
   MessageSquare,
-  Loader2,
   ExternalLink,
   FileText,
 } from "lucide-react";
@@ -23,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 import { Pressable } from "@/components/ui/pressable";
 
+import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 // ============================================================================
 // 1. Constants & Validation Helpers
 // ============================================================================
@@ -329,17 +330,16 @@ export function ReviewActionDialog({
                 const isSelected = decision === opt.id;
 
                 return (
-                  <button
+                  <Pressable
                     key={opt.id}
-                    type="button"
                     role="radio"
                     aria-checked={isSelected}
                     tabIndex={isSelected ? 0 : -1}
                     onClick={() => handleDecisionChange(opt.id)}
                     disabled={isProcessing}
                     className={cn(
-                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer select-none min-h-[56px] active:scale-[0.98]",
-                      "hover:border-primary/50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
+                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all select-none min-h-[56px] active:scale-[0.98]",
+                      "hover:border-primary/50 focus:outline-hidden",
                       isSelected
                         ? opt.accentColor === "emerald"
                           ? "border-emerald-600 bg-emerald-500/10 text-emerald-950 shadow-xs"
@@ -385,7 +385,7 @@ export function ReviewActionDialog({
                     <span className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {opt.subtitle}
                     </span>
-                  </button>
+                  </Pressable>
                 );
               })}
             </div>
@@ -420,7 +420,7 @@ export function ReviewActionDialog({
               </span>
             </div>
 
-            <textarea
+            <Textarea
               id="review-approval-comment"
               rows={4}
               value={comment}
@@ -434,15 +434,8 @@ export function ReviewActionDialog({
                   ? "Nêu rõ các nội dung, số liệu, minh chứng cụ thể cần sửa đổi hoặc bổ sung..."
                   : "Nêu rõ lý do không nghiệm thu, căn cứ từ chối hồ sơ này..."
               }
-              className={cn(
-                "w-full min-h-[96px] rounded-xl border bg-background px-3.5 py-2.5 text-base sm:text-sm transition-colors",
-                "placeholder:text-muted-foreground/60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 leading-relaxed",
-                validationError
-                  ? "border-destructive focus:border-destructive"
-                  : isCommentRequired && commentCharCount === 0
-                  ? "border-warning/70 focus:border-warning"
-                  : "border-border/80 focus:border-primary"
-              )}
+              aria-invalid={validationError ? true : undefined}
+              className="leading-relaxed"
             />
 
             {/* Validation Error Message */}
@@ -505,7 +498,7 @@ export function ReviewActionDialog({
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Spinner size="md" className="mr-2" />
                   <span>Đang xử lý...</span>
                 </>
               ) : (

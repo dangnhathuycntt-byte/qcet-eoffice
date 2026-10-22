@@ -21,6 +21,7 @@ import { downloadCsv, toCsv } from "@/lib/csv";
 import { todayInVietnam } from "@qcet/shared/lib/documents/document-ledger-format";
 import { documentCsvRows } from "./document-list-export";
 
+import { Spinner } from "@/components/ui/spinner";
 // Hoàn tất hàng loạt đã bỏ: giải quyết văn bản cần báo cáo kết quả và hồ sơ như thao tác đơn lẻ.
 export type BulkActionType = "assign-unit" | "file";
 
@@ -457,7 +458,7 @@ export function DocumentBulkToolbar({
             </Button>
 
             <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="animate-spin motion-reduce:animate-none" />}
+              {isSubmitting && <Spinner size="md" className="motion-reduce:animate-none" />}
               <span>
                 {isSubmitting
                   ? "Đang xử lý..."

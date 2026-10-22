@@ -397,27 +397,25 @@ export function BatchActionBar({
         {onBulkDelete && (
           <>
             {divider}
-            <button
-              type="button"
+            <Pressable
               onClick={() => onBulkDelete(selectedIds)}
               disabled={isLoading}
-              className="h-7 px-2.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 active:bg-destructive/20 inline-flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+              className="h-7 px-2.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 active:bg-destructive/20 inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:pointer-events-none"
               aria-label="Xóa các công việc đã chọn"
             >
               <TaskIconTrash className="size-4 shrink-0" />
               <span className="hidden sm:inline">Xóa</span>
-            </button>
+            </Pressable>
           </>
         )}
 
         {divider}
 
         {/* Bỏ chọn (Esc) */}
-        <button
-          type="button"
+        <Pressable
           onClick={onClearSelection}
           disabled={isLoading}
-          className="h-7 pl-2 pr-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted/70 inline-flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="h-7 pl-2 pr-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted/70 inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
           aria-label="Bỏ chọn tất cả công việc"
           title="Bỏ chọn (Esc)"
         >
@@ -426,7 +424,7 @@ export function BatchActionBar({
           <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-0.5 font-sans text-xs text-muted-foreground leading-none">
             Esc
           </kbd>
-        </button>
+        </Pressable>
       </div>
     </aside>
   );

@@ -13,6 +13,7 @@ import { getDueIndicator, getSlaBadgeStatus } from "@/components/tasks/table/uti
 import { formatCompactDate, formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { useTrackOpenPopover } from "./popover-escape-guard";
 
+import { Pressable } from "@/components/ui/pressable";
 /** Tiêu đề chính là trích yếu; số, ký hiệu và nguồn là dòng phụ. */
 export function DocumentTitleBlock({
   eyebrow,
@@ -259,13 +260,12 @@ export function LinkedTaskSection({
 }) {
   if (!task && hideWhenEmpty) return null;
   const createButton = onCreate ? (
-    <button
-      type="button"
+    <Pressable
       onClick={onCreate}
-      className="cursor-pointer rounded-sm text-foreground underline decoration-border underline-offset-3 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      className="rounded-sm text-foreground underline decoration-border underline-offset-3 hover:decoration-foreground"
     >
       Tạo nhiệm vụ
-    </button>
+    </Pressable>
   ) : null;
   const errorLine = error ? <p role="alert" className="pt-1 text-xs text-destructive">{error}</p> : null;
   if (inline) {

@@ -400,14 +400,13 @@ function LoginFormContent() {
               const bgColors = ["#B9C7D6", "#D6C7B9", "#C2D2BE", "#CDBFD6"];
               const bgColor = bgColors[idx % bgColors.length];
               return (
-                <button
+                <Pressable
                   key={acc.email}
-                  type="button"
                   onClick={() => {
                     setIsQuickLogging(true);
                     signIn("google", { callbackUrl: targetUrl }, { login_hint: acc.email }).catch(() => setIsQuickLogging(false));
                   }}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-muted p-3 text-left transition-all duration-150 active:scale-[0.98] hover:bg-bg-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="flex w-full items-center gap-3 rounded-2xl bg-muted p-3 text-left transition-all duration-150 active:scale-[0.98] hover:bg-bg-hover"
                 >
                   {acc.avatar ? (
                     <img src={acc.avatar} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
@@ -420,23 +419,22 @@ function LoginFormContent() {
                     <div className="truncate text-sm font-semibold leading-5 text-foreground">{acc.name}</div>
                     <div className="truncate text-xs leading-[18px] text-muted-foreground">{acc.email}</div>
                   </div>
-                </button>
+                </Pressable>
               );
             })}
           </div>
 
           <div className="mt-4 w-full flex flex-col items-center">
-            <button
-              type="button"
+            <Pressable
               onClick={() => {
                 setChooseOther(true);
                 router.push("/login?startGoogle=1&prompt=select_account");
               }}
-              className="text-[13.5px] font-medium underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 flex items-center"
+              className="text-compact font-medium underline underline-offset-[3px] h-10 flex items-center"
               style={{ color: C.fg }}
             >
               Dùng tài khoản khác
-            </button>
+            </Pressable>
           </div>
           <p className="mt-2 text-xs leading-relaxed text-center" style={{ color: C.sub }}>QCET E-Office chỉ nhận tên và email của bạn.</p>
         </div>
@@ -462,11 +460,10 @@ function LoginFormContent() {
           <h1 className="mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]" style={{ color: C.fg }}>Đăng nhập</h1>
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Chào mừng quay lại</p>
 
-          <button
-            type="button"
+          <Pressable
             disabled={isQuickLogging}
             onClick={handleQuickLogin}
-            className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-border bg-white p-3 text-left shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-150 active:scale-[0.98] hover:border-[var(--gray-7)] hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)] cursor-pointer disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-border bg-white p-3 text-left shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-150 active:scale-[0.98] hover:border-[var(--gray-7)] hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)] disabled:cursor-default"
           >
             {lastUser.avatar ? (
               <img src={lastUser.avatar} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
@@ -484,17 +481,16 @@ function LoginFormContent() {
             ) : (
               <ArrowRight className="size-4 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5" style={{ color: C.sub }} aria-hidden="true" />
             )}
-          </button>
+          </Pressable>
 
           <div className="mt-3.5 w-full flex flex-col items-center">
-            <button
-              type="button"
+            <Pressable
               onClick={() => setChooseOther(true)}
-              className="text-sm font-medium underline underline-offset-[3px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary h-10 flex items-center"
+              className="text-sm font-medium underline underline-offset-[3px] transition-colors h-10 flex items-center"
               style={{ color: C.fg }}
             >
               Dùng tài khoản khác
-            </button>
+            </Pressable>
           </div>
           <p className="mt-2 text-xs leading-relaxed text-center" style={{ color: C.sub }}>QCET E-Office chỉ nhận tên và email của bạn.</p>
         </div>

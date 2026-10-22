@@ -519,8 +519,9 @@ function ElectronicSealSvg({
       className="size-36 text-red-600 drop-shadow-sm select-none"
       aria-label="Con dấu điện tử cơ quan"
     >
-      {/* Outer double red ring */}
+      {/* Outer double red ring. design-lint-ignore icon-stroke-width: con dấu vẽ tay, nét theo hình con dấu, không phải icon Lucide */}
       <circle cx="100" cy="100" r="94" fill="none" stroke="currentColor" strokeWidth="3.5" />
+      {/* design-lint-ignore icon-stroke-width: vòng trong của con dấu vẽ tay */}
       <circle cx="100" cy="100" r="87" fill="none" stroke="currentColor" strokeWidth="1.2" />
 
       {/* Center 5-pointed star */}
@@ -578,18 +579,22 @@ function SignatureStrokeSvg({ name }: { name: string }) {
       {/* Dynamic elegant signature calligraphy stroke */}
       <path
         d="M20 50 C 40 20, 60 10, 80 40 C 95 65, 110 20, 130 35 C 145 45, 160 15, 180 30 C 195 40, 210 25, 225 35"
+        // design-lint-ignore icon-stroke-width: nét chữ ký vẽ tay, không phải icon Lucide
         strokeWidth="2.8"
       />
       <path
         d="M35 55 C 80 65, 140 60, 215 48"
+        // design-lint-ignore icon-stroke-width: nét chữ ký vẽ tay, không phải icon Lucide
         strokeWidth="2.2"
       />
       <path
         d="M60 25 C 75 45, 85 55, 95 30"
+        // design-lint-ignore icon-stroke-width: nét chữ ký vẽ tay, không phải icon Lucide
         strokeWidth="1.8"
       />
       <path
         d="M135 25 Q 150 60 165 28"
+        // design-lint-ignore icon-stroke-width: nét chữ ký vẽ tay, không phải icon Lucide
         strokeWidth="1.8"
       />
     </svg>

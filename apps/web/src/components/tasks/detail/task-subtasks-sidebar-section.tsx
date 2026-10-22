@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { formatCompactDate, formatDisplayDate } from "@qcet/shared/lib/format/date";
 import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
 
+import { Pressable } from "@/components/ui/pressable";
 export interface TaskSubtasksSidebarSectionProps {
   subTasks: StaffTask[];
   activeSubtaskId?: string | null;
@@ -47,11 +48,10 @@ function SubtaskRow({
 
   return (
     <m.div variants={listItemVariants}>
-      <button
-        type="button"
+      <Pressable
         onClick={() => onSelect(subtask)}
         className={cn(
-          "w-full group/sub flex items-center gap-2.5 min-h-8 px-2 py-1 rounded-lg text-left text-compact leading-snug transition-colors cursor-pointer hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
+          "w-full group/sub flex items-center gap-2.5 min-h-8 px-2 py-1 rounded-lg text-left text-compact leading-snug transition-colors hover:bg-muted/50",
           isActive ? "bg-selected" : ""
         )}
         title={subtask.title}
@@ -94,7 +94,7 @@ function SubtaskRow({
             {formattedDueDate}
           </span>
         )}
-      </button>
+      </Pressable>
     </m.div>
   );
 }
@@ -152,15 +152,14 @@ export function TaskSubtasksSidebarSection({
           )}
         </div>
         {onAddSubtask && (
-          <button
-            type="button"
+          <Pressable
             onClick={onAddSubtask}
-            className="inline-flex items-center gap-1 h-7 px-1.5 -mr-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+            className="inline-flex items-center gap-1 h-7 px-1.5 -mr-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
             title="Tạo việc con"
           >
             <Plus className="size-3.5" />
             <span>Thêm</span>
-          </button>
+          </Pressable>
         )}
       </div>
 

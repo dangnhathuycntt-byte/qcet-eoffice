@@ -21,6 +21,7 @@ import { AgentIcon } from "@/components/icons/agent-icon";
 import { useRuntimeFeature } from "@/lib/runtime-features";
 import { isAssistantEligibleDocument } from "@qcet/shared/domain/assistant/assistant-document-eligibility";
 
+import { Spinner } from "@/components/ui/spinner";
 /** Chỉ in khối chi tiết (`document-quick-body`); phần còn lại của trang bị ẩn khi in. */
 const PRINT_DETAIL_CSS = `@media print {
   body * { visibility: hidden !important; }
@@ -290,7 +291,7 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
         )}
         {upload.busy ? (
           <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            <Spinner />
             Đang tải tệp lên…
           </p>
         ) : upload.error ? (

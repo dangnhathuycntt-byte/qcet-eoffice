@@ -8,7 +8,6 @@ import {
   FileText,
   Trash2,
   Check,
-  Loader2,
   ShieldCheck,
 } from "lucide-react";
 import { confirmAction } from "@/components/ui/confirm-host";
@@ -16,6 +15,10 @@ import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { isSafeUrl } from "@qcet/shared/lib/url-utils";
 
+import { Pressable } from "@/components/ui/pressable";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 export interface DeliverableItem {
   id: string;
   title: string;
@@ -92,16 +95,15 @@ export function TaskEvidenceSection({
         </div>
 
         {canEdit && (
-          <button
-            type="button"
+          <Pressable
             onClick={() => setIsAdding(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors shadow-2xs"
             title="Đính kèm minh chứng hoặc liên kết kết quả"
             aria-label="Đính kèm minh chứng hoặc liên kết kết quả"
           >
             <Plus className="size-3.5 text-primary" />
             <span>Thêm minh chứng</span>
-          </button>
+          </Pressable>
         )}
       </div>
 
@@ -113,59 +115,60 @@ export function TaskEvidenceSection({
         >
           <div className="space-y-1">
             <label className="text-xs font-semibold text-foreground">Tên minh chứng / sản phẩm *</label>
-            <input
-              type="text"
+            <Input
+              compact
               required
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="VD: Báo cáo kết quả khảo sát, Quyết định phê duyệt..."
-              className="w-full text-xs font-medium text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
+              className="w-full font-medium"
             />
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Đường dẫn tệp / liên kết lưu trữ</label>
-            <input
+            <Input
+              compact
               type="url"
               value={fileUrl}
               onChange={(e) => setFileUrl(e.target.value)}
               placeholder="https://drive.google.com/... hoặc https://..."
-              className="w-full text-xs font-medium text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
+              className="w-full font-medium"
             />
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Ghi chú bổ sung</label>
-            <textarea
+            <Textarea
+              compact
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Mô tả nội dung hoặc lưu ý..."
               rows={2}
-              className="w-full text-xs font-medium text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden resize-none"
+              className="w-full font-medium resize-none min-h-0"
             />
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
+            <Pressable
               onClick={() => setIsAdding(false)}
-              className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-md border border-border bg-background transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+              className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-md border border-border bg-background transition-colors"
             >
               Hủy
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="submit"
               disabled={isSubmitting || !title.trim()}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {isSubmitting ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Spinner />
               ) : (
                 <Check className="size-3.5" />
               )}
               <span>Lưu minh chứng</span>
-            </button>
+            </Pressable>
           </div>
         </form>
       )}
@@ -177,14 +180,13 @@ export function TaskEvidenceSection({
             Chưa có sản phẩm bàn giao hoặc minh chứng nào được đính kèm.
           </p>
           {canEdit && (
-            <button
-              type="button"
+            <Pressable
               onClick={() => setIsAdding(true)}
-              className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden rounded"
+              className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 rounded"
             >
               <Plus className="size-3" />
               <span>Thêm minh chứng đầu tiên</span>
-            </button>
+            </Pressable>
           )}
         </div>
       ) : (
@@ -254,8 +256,7 @@ export function TaskEvidenceSection({
                   )}
 
                   {canEdit && onDeleteDeliverable && (
-                    <button
-                      type="button"
+                    <Pressable
                       onClick={async () => {
                         const ok = await confirmAction({
                           title: "Xóa minh chứng?",
@@ -264,12 +265,12 @@ export function TaskEvidenceSection({
                         });
                         if (ok) void onDeleteDeliverable(item.id);
                       }}
-                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-destructive rounded transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:opacity-100"
+                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-destructive rounded transition-all focus-visible:opacity-100"
                       title="Xóa minh chứng"
                       aria-label="Xóa minh chứng"
                     >
                       <Trash2 className="size-3.5" />
-                    </button>
+                    </Pressable>
                   )}
                 </div>
               </div>

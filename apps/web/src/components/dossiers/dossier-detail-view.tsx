@@ -13,7 +13,6 @@ import {
   FileText,
   FolderArchive,
   Hash,
-  Loader2,
   Lock,
   MapPin,
   Send,
@@ -32,6 +31,8 @@ import { confirmAction } from "@/components/ui/confirm-host";
 import { DossierDisposalPanel } from "./dossier-disposal-panel";
 import { getDocumentHref } from "@qcet/shared/lib/documents/document-view-model";
 
+import { Pressable } from "@/components/ui/pressable";
+import { Spinner } from "@/components/ui/spinner";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -471,13 +472,12 @@ export function DossierDetailView({
               const Icon = action.icon;
               const isLoading = pendingAction === action.key;
               return (
-                <button
+                <Pressable
                   key={action.key}
-                  type="button"
                   disabled={pendingAction !== null}
                   onClick={action.handler}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 rounded-lg text-xs font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    "inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 rounded-lg text-xs font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
                     action.style === "primary" &&
                       "bg-foreground text-background hover:bg-foreground/90",
                     action.style === "secondary" &&
@@ -488,12 +488,12 @@ export function DossierDetailView({
                   style={{ transition: `opacity, transform ${motionTransition.micro.duration}s` }}
                 >
                   {isLoading ? (
-                    <Loader2 className="size-3.5 animate-spin" />
+                    <Spinner />
                   ) : (
                     <Icon className="size-3.5" />
                   )}
                   {action.label}
-                </button>
+                </Pressable>
               );
             })}
           </div>

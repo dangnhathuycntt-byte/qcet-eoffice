@@ -7,6 +7,7 @@ import { getTaskContentPreview } from "@/lib/task-content-preview";
 import { formatCompactDate } from "@qcet/shared/lib/format/date";
 import type { StaffTask } from "@qcet/contracts/types/dashboard";
 
+import { Pressable } from "@/components/ui/pressable";
 export interface SubtaskOutlineRailProps {
   subTasks: StaffTask[];
   activeSubtaskId?: string | null;
@@ -84,13 +85,12 @@ export function SubtaskOutlineRail({
           const isHover = st.id === hoverId;
           return (
             <li key={st.id} data-tick-id={st.id}>
-              <button
-                type="button"
+              <Pressable
                 onClick={() => onSelectSubtask(st)}
                 onFocus={() => focusTick(st.id)}
                 aria-label={`Mở việc con: ${st.title}`}
                 aria-current={isActive ? "true" : undefined}
-                className="flex h-4 w-6 items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                className="flex h-4 w-6 items-center rounded-sm"
               >
                 <span
                   style={{ width: isActive || isHover ? 24 : tickWidth(st.title) }}
@@ -99,7 +99,7 @@ export function SubtaskOutlineRail({
                     isActive ? "bg-foreground" : isHover ? "bg-foreground/70" : "bg-muted-foreground/35"
                   )}
                 />
-              </button>
+              </Pressable>
             </li>
           );
         })}

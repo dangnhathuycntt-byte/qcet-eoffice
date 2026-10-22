@@ -12,6 +12,7 @@ import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { STEP_STATUS_LABEL, WORKFLOW_STATUS_LABEL } from "@qcet/shared/domain/documents/submission-rules";
 import { cn } from "@/lib/utils";
 
+import { Input } from "@/components/ui/input";
 type Decision = "APPROVE" | "REVISION" | "REJECT";
 
 interface Step {
@@ -186,12 +187,13 @@ export function SubmissionApprovalPanel({
     <div className="-mx-4 -mb-4 flex min-h-0 flex-col sm:-mx-6 sm:-mb-6">
       <label className="flex h-10 items-center gap-2 border-y border-border px-4 sm:px-6">
         <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <input
+        <Input
+          variant="menu"
           value={unitQuery}
           onChange={(e) => setUnitQuery(e.target.value)}
           placeholder="Tìm đơn vị liên quan"
           aria-label="Tìm đơn vị liên quan"
-          className="h-full min-w-0 flex-1 bg-transparent text-compact text-foreground outline-none placeholder:text-muted-foreground"
+          className="h-full min-w-0 flex-1 px-0 sm:text-compact"
           autoFocus
         />
       </label>
@@ -222,6 +224,7 @@ export function SubmissionApprovalPanel({
               return (
                 <li key={d.id}>
                   <label className={cn(ROW, "cursor-pointer transition-colors hover:bg-accent")}>
+                    {/* design-lint-ignore no-raw-control: ô tích ẩn giữ trạng thái cho trình đọc màn hình, dấu chọn vẽ bằng checkMark cạnh tên đơn vị */}
                     <input
                       type="checkbox"
                       className="peer sr-only"

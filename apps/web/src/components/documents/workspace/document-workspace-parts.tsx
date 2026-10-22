@@ -21,6 +21,7 @@ import { DocumentEditActions } from "./document-edit";
 import { OutgoingWorkflowStepper } from "../outgoing-workflow-stepper";
 import { CollapsibleSection, DetailsPopover, DocumentTitleBlock, InspectorRow, LinkedTaskSection, MetaInline, SectionHeading } from "../document-detail-parts";
 
+import { Pressable } from "@/components/ui/pressable";
 const STEP_STATUS: Record<LedgerStepKind, string> = {
   new: "NOT_STARTED",
   progress: "IN_PROGRESS",
@@ -174,14 +175,13 @@ function QuickTitle({ title }: { title: string }) {
         {title}
       </h2>
       {overflowing || expanded ? (
-        <button
-          type="button"
+        <Pressable
           onClick={() => setExpanded((value) => !value)}
           aria-expanded={expanded}
-          className="-mx-1 mt-0.5 h-6 cursor-pointer rounded-md px-1 text-xs text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="-mx-1 mt-0.5 h-6 rounded-md px-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           {expanded ? "Thu gọn" : "Xem thêm"}
-        </button>
+        </Pressable>
       ) : null}
     </div>
   );
@@ -394,14 +394,13 @@ function LinkedTaskCreateSection({ vm, onLinked, inline }: { vm: DocumentViewMod
   const error = unlinkedTaskId ? (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
       <span>Đã tạo nhiệm vụ nhưng chưa gắn được vào văn bản.</span>
-      <button
-        type="button"
+      <Pressable
         disabled={linking}
         onClick={() => void link(unlinkedTaskId)}
-        className="cursor-pointer rounded-sm text-foreground underline decoration-border underline-offset-3 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        className="rounded-sm text-foreground underline decoration-border underline-offset-3 hover:decoration-foreground disabled:opacity-50"
       >
         {linking ? "Đang gắn…" : "Gắn lại"}
-      </button>
+      </Pressable>
       <a
         href={`/tasks/${unlinkedTaskId}`}
         className="rounded-sm text-foreground underline decoration-border underline-offset-3 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring"

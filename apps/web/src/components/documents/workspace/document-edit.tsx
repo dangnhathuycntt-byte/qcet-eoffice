@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Paperclip, Pencil } from "lucide-react";
+import { Paperclip, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StandardDialog } from "@/components/ui/dialog";
 import { FormField } from "@/components/ui/form-field";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { DocumentItem } from "@qcet/contracts/types/document";
 
+import { Spinner } from "@/components/ui/spinner";
 /** Giới hạn của `POST /api/upload`: chặn sớm để báo đúng tên tệp. */
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -167,7 +168,7 @@ export function DocumentEditDialog({
             Hủy
           </Button>
           <Button type="submit" size="sm" disabled={saving}>
-            {saving ? <Loader2 className="size-3 animate-spin" /> : null}
+            {saving ? <Spinner size="xs" /> : null}
             Lưu
           </Button>
         </div>
@@ -225,9 +226,8 @@ export function useAddDocumentFiles(documentId: string, onAdded?: () => void) {
   }
 
   const input = (
-    <input
+    <input type="file"
       ref={inputRef}
-      type="file"
       multiple
       hidden
       accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
@@ -258,7 +258,7 @@ export function AddDocumentFileButton({
     <span className={cn("inline-flex flex-col items-start", className)}>
       {input}
       <Button variant="ghost" size="sm" disabled={busy} onClick={open}>
-        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Paperclip className="size-3.5" />}
+        {busy ? <Spinner /> : <Paperclip className="size-3.5" />}
         {busy ? "Đang tải lên…" : children}
       </Button>
       {error ? <span role="alert" className="pt-1 text-xs text-destructive">{error}</span> : null}

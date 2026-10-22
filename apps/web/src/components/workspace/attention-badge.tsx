@@ -66,8 +66,8 @@ const levelConfigs: Record<
   neutral: {
     icon: Clock,
     classes:
-      "bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200/80",
-    iconColor: "text-slate-600",
+      "bg-secondary text-foreground border-border hover:bg-accent/80",
+    iconColor: "text-muted-foreground",
   },
 };
 

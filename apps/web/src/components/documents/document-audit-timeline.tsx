@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { fetchDocumentAuditTimeline, isEmptyTimeline } from "@/lib/documents/audit-timeline-client";
 import { formatShortDateTime } from "@/lib/documents/incoming-workflow";
 
+import { Pressable } from "@/components/ui/pressable";
 export type {
   DocumentTimelineStep,
   DocumentAuditLogItem,
@@ -92,13 +93,12 @@ export function DocumentAuditTimeline({ documentId, className, refreshKey }: Doc
       {error && !timelineData ? (
         <p role="alert" className="flex items-center gap-1.5 py-1 text-xs text-muted-foreground">
           Không tải được luân chuyển.
-          <button
-            type="button"
+          <Pressable
             onClick={fetchTimeline}
-            className="cursor-pointer rounded-sm text-foreground underline decoration-border underline-offset-3 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-sm text-foreground underline decoration-border underline-offset-3 hover:decoration-foreground"
           >
             Thử lại
-          </button>
+          </Pressable>
         </p>
       ) : null}
 

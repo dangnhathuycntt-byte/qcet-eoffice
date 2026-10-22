@@ -3,7 +3,6 @@
 // Task progress composer modal component with direct update-progress domain integration
 import * as React from "react";
 import {
-  Loader2,
   Check,
   Edit2,
 } from "lucide-react";
@@ -13,6 +12,10 @@ import type { TaskStatus } from "@qcet/contracts/types/dashboard";
 import type { ProgressResult } from "./task-detail-state";
 import { updateTaskProgress } from "@/lib/tasks/task-actions";
 
+import { Pressable } from "@/components/ui/pressable";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 export interface TaskProgressComposerProps {
   taskId: string;
   initialProgress: number;
@@ -107,14 +110,13 @@ export function TaskProgressComposer({
         </span>
 
         {canEdit && !isEditing && !isAutoCalculated && (
-          <button
-            type="button"
+          <Pressable
             onClick={() => setIsEditing(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors"
           >
             <Edit2 className="size-3" />
             <span>Cập nhật</span>
-          </button>
+          </Pressable>
         )}
       </div>
 
@@ -172,8 +174,9 @@ export function TaskProgressComposer({
                 <p className="text-xs font-medium text-foreground">Mức độ hoàn thành</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">Chọn một mốc hoặc nhập số chính xác.</p>
               </div>
-              <label className="flex h-9 items-center rounded-md border border-border bg-background px-2 focus-within:border-foreground/40">
-              <input
+              <label className="flex items-center gap-1">
+              <Input
+                compact
                 type="number"
                 min="0"
                 max="100"
@@ -185,31 +188,30 @@ export function TaskProgressComposer({
                     setProgress(Math.min(100, Math.max(0, val)));
                   }
                 }}
-                className="w-12 bg-transparent text-right text-sm font-mono font-semibold tabular-nums text-foreground outline-none disabled:opacity-50"
+                className="w-14 text-right font-mono font-semibold tabular-nums"
                 aria-label="Nhập số phần trăm tiến độ"
               />
-                <span className="ml-0.5 text-xs text-muted-foreground">%</span>
+                <span className="text-xs text-muted-foreground">%</span>
               </label>
             </div>
 
             {/* Quick preset buttons */}
             <div className="grid grid-cols-5 gap-1.5" aria-label="Các mốc tiến độ">
               {[0, 25, 50, 75, 100].map((value) => (
-                <button
+                <Pressable
                   key={value}
-                  type="button"
                   onClick={() => handleApplyPreset(value)}
                   disabled={isSubmitting}
                   aria-pressed={progress === value}
                   className={cn(
-                    "h-8 rounded-md border text-xs font-medium tabular-nums transition-colors cursor-pointer disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
+                    "h-8 rounded-md border text-xs font-medium tabular-nums transition-colors disabled:opacity-40",
                     progress === value
                       ? "border-foreground/20 bg-foreground text-background"
                       : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   {value}%
-                </button>
+                </Pressable>
               ))}
             </div>
             {progress === 100 && (
@@ -218,13 +220,14 @@ export function TaskProgressComposer({
           </div>
 
           {/* Note Input */}
-          <textarea
+          <Textarea
+            compact
             value={note}
             onChange={(e) => setNote(e.target.value)}
             disabled={!canEdit || isSubmitting}
             placeholder="Ghi chú nội dung tiến độ hoặc công việc đã hoàn thành..."
             rows={2}
-            className="w-full text-xs font-sans text-foreground bg-muted/25 p-3 rounded-lg border border-transparent focus:border-border focus:bg-background focus:outline-none resize-none disabled:opacity-50"
+            className="w-full resize-none min-h-0"
             aria-label="Ghi chú cập nhật tiến độ"
           />
 
@@ -243,26 +246,25 @@ export function TaskProgressComposer({
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
+              <Pressable
                 onClick={() => {
                   setProgress(initialProgress);
                   setNote("");
                   setIsEditing(false);
                 }}
                 disabled={isSubmitting}
-                className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
               >
                 Hủy
-              </button>
-              <button
+              </Pressable>
+              <Pressable
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 shadow-2xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-2xs"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="size-3 animate-spin" />
+                    <Spinner size="xs" />
                     <span>Đang lưu...</span>
                   </>
                 ) : (
@@ -271,7 +273,7 @@ export function TaskProgressComposer({
                     <span>Lưu tiến độ</span>
                   </>
                 )}
-              </button>
+              </Pressable>
             </div>
           </div>
         </form>

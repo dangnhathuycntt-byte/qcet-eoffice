@@ -76,6 +76,8 @@ import {
   TASK_LEVEL_CONFIG,
 } from "@/lib/task-detail-helpers";
 
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 export { isSchoolTask };
 
 /**
@@ -1305,13 +1307,13 @@ export function TaskDetailSideSheet({
                       >
                         Tên tài liệu / sản phẩm minh chứng
                       </label>
-                      <input
+                      <Input
+                        compact
                         id="deliverable-name"
-                        type="text"
                         value={deliverableName}
                         onChange={(e) => setDeliverableName(e.target.value)}
                         placeholder="Ví dụ: Báo cáo kết quả triển khai, slide thuyết trình..."
-                        className="w-full rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+                        className="w-full"
                       />
                     </div>
 
@@ -1322,13 +1324,14 @@ export function TaskDetailSideSheet({
                       >
                         Đường dẫn tài liệu / tệp đính kèm (Drive, Cloud, File URL)
                       </label>
-                      <input
+                      <Input
+                        compact
                         id="deliverable-url"
                         type="url"
                         value={deliverableUrl}
                         onChange={(e) => setDeliverableUrl(e.target.value)}
                         placeholder="https://drive.google.com/..."
-                        className="w-full rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring font-mono text-xs"
+                        className="w-full font-mono"
                       />
                     </div>
 
@@ -1339,13 +1342,14 @@ export function TaskDetailSideSheet({
                       >
                         Mô tả tóm tắt kết quả công việc
                       </label>
-                      <textarea
+                      <Textarea
+                        compact
                         id="deliverable-notes"
                         rows={2}
                         value={deliverableNotes}
                         onChange={(e) => setDeliverableNotes(e.target.value)}
                         placeholder="Tóm tắt nội dung đã hoàn thành, sản phẩm bàn giao..."
-                        className="w-full rounded-lg border border-border/60 bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none"
+                        className="w-full resize-none min-h-0"
                       />
                     </div>
                   </div>
@@ -1910,7 +1914,7 @@ export function TaskDetailSideSheet({
                         <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap pl-6 sm:pl-0">
                           {/* Single DRI: Đúng 1 người phụ trách */}
                           <div
-                            className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/80"
+                            className="flex items-center gap-1.5 text-xs font-medium text-foreground bg-secondary px-2 py-0.5 rounded border border-border/80"
                             title={`Người phụ trách duy nhất: ${sub.assigneeName || "Chưa phân công"}`}
                           >
                             <UserAvatar
@@ -1919,7 +1923,7 @@ export function TaskDetailSideSheet({
                               size="xs"
                               className="border border-border/60"
                             />
-                            <span className="truncate max-w-[120px] font-medium text-slate-800">
+                            <span className="truncate max-w-[120px] font-medium text-foreground">
                               {sub.assigneeName || "Chưa phân công"}
                             </span>
                           </div>
@@ -2223,7 +2227,8 @@ export function TaskDetailSideSheet({
                     >
                       Lý do yêu cầu sửa đổi (bắt buộc)
                     </label>
-                    <textarea
+                    <Textarea
+                      compact
                       id="rejection-reason"
                       rows={3}
                       value={rejectionReasonInput}
@@ -2232,7 +2237,7 @@ export function TaskDetailSideSheet({
                         if (rejectionError) setRejectionError(null);
                       }}
                       placeholder="Ví dụ: Thiếu số liệu khảo sát phụ lục 2, cần bổ sung chữ ký số của trưởng bộ môn..."
-                      className="w-full rounded-lg border border-border/60 bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none"
+                      className="w-full resize-none min-h-0"
                       autoFocus
                     />
                   </div>
